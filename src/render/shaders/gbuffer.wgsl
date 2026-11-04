@@ -64,6 +64,7 @@ struct BoxVOut {
   @location(5) @interpolate(flat) mark: u32,                 // the box's MARKING slot (1-based first record in the tail of boxMat; 0 = none, or markings off) — markings.wgsl
   @location(6) lc: vec3f,                                    // GBAA: the corner in BOX units (interpolated across the face: the fragment's box-local position) …
   @location(7) @interpolate(flat) hf: vec4f,                 // … and the box's half-extents + the face index (w) it lies on — boxEdgeOffset
+  @location(8) @interpolate(flat) look: u32,                 // THE LOOK PROTOTYPE (look.wgsl): the box's material class (common.wgsl boxStuff), read once a corner — 0 on every other page
 };
 
 fn cubeCorner(vi: u32) -> vec3f {
@@ -113,6 +114,7 @@ fn cubeNormal(vi: u32) -> vec3f {
   o.pos = frame.viewProj * vec4f(wp, 1.0);
   o.normal = quatRotate(q, ln);
   o.albedo = boxAlbedo(bi);
+  if (LOOK) { o.look = boxStuff(bi); }
   o.id = bi | (boxOwner(b) << 20u) | (select(0u, 1u, cap) << 29u);
   o.wp = wp;
   // motion: the same corner under last frame's transform of THIS box — by its motion identity when the CPU named one (pslot: the index its key had last frame, whatever spawned or died
@@ -141,41 +143,58 @@ fn cubeNormal(vi: u32) -> vec3f {
 
 @fragment fn fsBox(v: BoxVOut) -> GOut {
   var o: GOut;
-  var albedo = v.albedo; var n = normalize(v.normal); var keep = 1.0;   // keep: the albedo target's alpha — 1 everywhere unless a decal's soot asks composite to hold the glossy floors' specular back there
+  var albedo = v.albedo; var n = normalize(v.normal); var keep = 1.0; let gn = n;   // (gn: the face itself, whatever a layer below does to n)   // keep: the albedo target's alpha — 1 everywhere unless a decal's soot asks composite to hold the glossy floors' specular back there
   let dwx = dpdx(v.wp); let dwy = dpdy(v.wp);                             // the world position's screen derivatives (uniform control flow, two subtractions a pixel): the markings' texel-edge AA is analytic against them
   let dlx = dpdx(v.lc); let dly = dpdy(v.lc);                             // … and the box-local position's, for the GBAA edge distance (boxEdgeOffset)
   // the material (renderer v3 phase 4): the box's finish — a section cap (id bit 29) is a diagram, not a surface: matte
   let bi = v.id & 0xFFFFFu; let cap = ((v.id >> 29u) & 1u) != 0u;
   var rough = 1.0; var metal = 0.0; var wetG = false;
   if (!cap) { let fin = boxFinish(bi); rough = fin.rough; metal = select(0.0, 1.0, fin.metal); wetG = fin.aniso; }
+  let lookW = LOOK && !cap && lookWears(n, bi, v.hf);                    // (ONE layer wears this pixel's floor and skirting: the look's, where it dresses the pixel and its Weather row is up — look.wgsl lookWears; both layers are told)
   if (frame.matCfg.w > 0.0 && !cap) {                                    // the DETAIL layer (detailSurface below): wear you can explain, at the primary hit only — 0 = nothing here runs, the pixel exactly as it was
-    let dt = detailSurface(v.wp, n, bi, albedo, rough, metal, frame.matCfg.w);
+    let dt = detailSurface(v.wp, n, bi, albedo, rough, metal, frame.matCfg.w, lookW);
     albedo = dt.albedo; rough = dt.rough; metal = dt.metal;
   }
+  var lookTilt = false;
+  if (LOOK && !cap) {                                                    // THE LOOK PROTOTYPE (look.wgsl; the page /look — dead code on every other): the paint drawn off its material's maps, weathered as the building is, a small box's edges rounded
+    let lk = lookSurface(v.look, v.wp, n, bi, v.lc, v.hf, albedo, rough, dwx, dwy, distance(v.wp, frame.camPos) * 2.0 * frame.post.w * frame.invScreen.y, lookW);
+    albedo = lk.albedo; rough = lk.rough;
+    n = lk.n; lookTilt = lk.tilted;
+  }
+  if (SURF_TRY && !LOOK && !cap) {                                                // SURFACES, A TRY (surface.wgsl; ?surf at boot — dead code on every other page): a paint drawn as the stuff it stands for, after the wear, before the markings
+    let sf = surfaceTry(v.wp, n, bi, v.lc, v.hf, v.albedo, albedo, rough, distance(v.wp, frame.camPos) * 2.0 * frame.post.w * frame.invScreen.y);
+    albedo = sf.albedo; n = sf.n; rough = sf.rough;
+  }
   let wetK = floor(frame.rtCfg.z * 0.5) * 0.1;                           // WET GROUND (detail.wgsl wetGround; settings.wetBreakup rides rtCfg.z as 2 × tenths — 0 = nothing here runs)
-  if (wetK > 0.0 && wetG && n.y > 0.9) { rough = wetGround(v.wp, rough, wetK); }
+  if (wetK > 0.0 && wetG && select(n.y, gn.y, LOOK) > 0.9) { rough = wetGround(v.wp, rough, wetK); }
   if (v.mark != 0u && !cap) {                                             // MARKINGS (markings.wgsl): the pixel-art signifiers on this box's faces — albedo + roughness only, after the wear, before the encounter's marks
-    let mk = markSurfaceGB(v.mark, bi, v.wp, n, dwx, dwy, albedo, rough);
+    let mk = markSurfaceGB(v.mark, bi, v.wp, n, dwx, dwy, albedo, rough, lookMarkSoft(), lookTrod());
     albedo = mk.albedo; rough = mk.rough;
   }
   if (SNOW_SURF && !cap && snowCfg.p[1].z > 0.5 && f32(bi) < snowCfg.p[1].w) {   // THE SNOW'S SURFACE (snow.wgsl; a snow level with its look on — dead code on every other page): the ground and every snow-painted box of the level file are shaded off the level's snow field, after the markings, before the encounter's marks
     let snowPaint = snowIsPaint(v.albedo);
-    let snowGround = n.y > 0.9 && v.wp.y < 0.03 && v.wp.y > -0.01 && (boxGeo[bi].flags & BOX_EMISSIVE) == 0u;
+    let snowGround = select(n.y, gn.y, LOOK) > 0.9 && v.wp.y < 0.03 && v.wp.y > -0.01 && (boxGeo[bi].flags & BOX_EMISSIVE) == 0u;
     if (snowGround || snowPaint || (v.hf.y < 0.016 && v.wp.y < 0.035)) {
-      let sb = snowBox(v.wp, n, bi, v.lc, v.hf, snowGround, snowPaint, snowIsLay(v.albedo), albedo, rough, distance(v.wp, frame.camPos) * 2.0 * frame.post.w * frame.invScreen.y);
+      let sb = snowBox(v.wp, select(n, gn, lookTilt), bi, v.lc, v.hf, snowGround, snowPaint, snowIsLay(v.albedo), albedo, rough, distance(v.wp, frame.camPos) * 2.0 * frame.post.w * frame.invScreen.y);
       if (sb.gone) { discard; }
-      albedo = sb.albedo; n = sb.n; rough = sb.rough; metal = metal * (1.0 - sb.amt);
+      if (!lookTilt || sb.amt > 0.0) { albedo = sb.albedo; n = sb.n; rough = sb.rough; metal = metal * (1.0 - sb.amt); lookTilt = false; }   // (THE LOOK PROTOTYPE: where no snow lies the relief stays; where it does, the pixel is the snow's, normal and alpha)
+      if (LOOK && snowGround && sb.amt > 0.5) { let lg = lookGround(v.wp, n, rough, distance(v.wp, frame.camPos) * 2.0 * frame.post.w * frame.invScreen.y); n = lg.n; rough = lg.rough; }   // THE LOOK PROTOTYPE (look.wgsl lookGround): lying snow's relief × the panel's number, and its crust
       if (SNOW_GLOW || SNOW_SPARKLE) { o.normal.a = sb.amt * 0.6667; }   // SNOW GLOW, SNOW SPARKLE (composite.wgsl snowGlow): how much of this pixel is snow, held in `o` (zero until here) for the output line below
     }
   }
+  if (LOOK && SNOW_SURF && !cap && snowCfg.p[1].z > 0.5 && f32(bi) < snowCfg.p[1].w) { let ls = lookSnow(v.look, v.wp, gn, bi, v.lc, v.hf, v.albedo, albedo, rough, distance(v.wp, frame.camPos) * 2.0 * frame.post.w * frame.invScreen.y); if (ls.amt > 0.0) { albedo = ls.albedo; rough = ls.rough; metal = metal * (1.0 - ls.amt); if (ls.bank) { n = ls.n; lookTilt = false; if (SNOW_GLOW || SNOW_SPARKLE) { o.normal.a = ls.amt * 0.6667; } } } }   // THE LOOK PROTOTYPE on a snow level (look.wgsl lookSnow; a box of the level file, as the snow above): snow against the foot of what stands in the open and on what was left out. A BANK is snow to the glow and the sparkle and keeps none of the wall's relief; a grain stuck higher up is paint and finish only
   if ((frame.flags & FLAG_DECALS) != 0u) {                              // decals (experiment E1, decals.wgsl): the marks registered in this pixel's 1 m cell edit what is stored — so every light that reads the g-buffer answers to them
     let fp = distance(v.wp, frame.camPos) * 2.0 * frame.post.w * frame.invScreen.y;   // this pixel's footprint on the surface (m): edges are softened over it, sub-pixel texture fades under it
+    let nl = n; if (lookTilt) { n = gn; }                              // (THE LOOK PROTOTYPE: a mark is laid on the FACE, and the relief put back under it below)
+    dkWet = select(0.0, 1.0, wetG && n.y > 0.9);                       // (decals.wgsl: a mark on wet ground is wet too)
     var d = decalSurface(v.wp, n, v.id & 0xFFFFFu, albedo, fp);
     for (var r = 1u; r < DECAL_REPEAT; r++) { let e = decalSurface(v.wp + vec3f(f32(r) * 1e-7), n, v.id & 0xFFFFFu, albedo, fp); d.keep = min(d.keep, e.keep + 1e-6 * e.albedo.x); }   // (measurement only, DECAL_REPEAT is 1 in production: the loop never runs)
     albedo = d.albedo; n = d.n; keep = d.keep;
+    if (lookTilt) { n = normalize(n + nl - gn); let c = dot(n, gn); if (c < 0.8773) { n = normalize(gn * 0.8773 + normalize(n - gn * c) * 0.48); } }   // (… held inside LOOK_MAX_TILT again, mark and relief together: lookGeoN must find this face)
   }
   o.albedo = vec4f(albedo, keep);
   o.normal = vec4f(n * 0.5 + 0.5, select(1.0, 1.0 - o.normal.a, SNOW_GLOW || SNOW_SPARKLE));   // (.a: 1 = not snow, as every writer of this target stores it; SNOW GLOW or SNOW SPARKLE: 2∕3 = thin snow, 1∕3 = snow — the target's two spare bits, read by composite.wgsl snowGlowAmt alone)
+  if (LOOK && lookTilt) { o.normal.a = 0.0; }   // THE LOOK PROTOTYPE: the alpha's fourth code = this normal carries the look's relief (common.wgsl lookGeoN gives the face back)
   o.id = v.id;
   o.vel = motionOf(v.wp, v.wpPrev);
   o.mat = vec2f(rough, metal);
@@ -261,7 +280,9 @@ fn slotAlbedo(slot: u32, tint: vec3f, tint2: vec3f) -> vec3f {
   if (H0.x > 0.5) {   // this man is shaded per material slot
     let sr = mb + 2u + 2u * min(u32(slotGeo.x + 0.5), 10u);
     let A = charMats[sr]; let B = charMats[sr + 1u]; let H1 = charMats[mb + 1u];
-    o.albedo = A.xyz; o.fin = vec4f(A.w, B.x, B.y, 1.0); o.mvar = vec4f(B.z, B.w, H0.w, H1.w); o.grime = vec4f(H1.xyz, H0.y); o.geo = vec2f(slotGeo.y, H0.z);
+    o.albedo = A.xyz; o.fin = vec4f(A.w, B.x, B.y, 1.0);
+    if (LOOK) { o.fin.w = 1.0 + f32(min(u32(slotGeo.x + 0.5), 10u) + 16u * min(u32(H0.x - 0.5), 4u) + 128u * (u32(matSel + 0.5) >> 4u)); }   // THE LOOK PROTOTYPE (look.wgsl lookMan): which slot this is, whose side he is on and which part of the cast it belongs to, for the fragment
+    o.mvar = vec4f(B.z, B.w, H0.w, H1.w); o.grime = vec4f(H1.xyz, H0.y); o.geo = vec2f(slotGeo.y, H0.z);
   }
   o.id = 0xFFFFFu | (ch.owner << 20u) | (1u << 28u);
   o.mp = position; o.wp = wp.xyz;
@@ -386,7 +407,8 @@ fn packWet(rough: f32, gain: f32, tilt: vec2f) -> u32 {
 @fragment fn fsSkin(v: SkinVOut) -> GOut {
   var o: GOut;
   var albedo = v.albedo; var id = v.id;
-  let n = normalize(v.normal);
+  var n = normalize(v.normal);
+  let lmx = dpdx(v.mp); let lmy = dpdy(v.mp); let lwx = dpdx(v.wp); let lwy = dpdy(v.wp);   // THE LOOK PROTOTYPE (look.wgsl lookMan): the steps its relief stands on, taken here in uniform flow
   // how fast the normal turns across this pixel (uniform control flow: derivatives of the interpolated normal, two subtractions a pixel) — the wet coat's
   // specular anti-aliasing below: a limb 5 cm in radius turns several degrees within one pixel from up here, and a lobe narrower than that would light one
   // pixel in three along it and crawl as he moves (Tokuyoshi & Kaplanyan's kernel: alpha² += ½·Var(n), capped)
@@ -404,6 +426,10 @@ fn packWet(rough: f32, gain: f32, tilt: vec2f) -> u32 {
     albedo = mix(albedo, v.grime.xyz, clamp(dust, 0.0, 1.0) * 0.6);
     dRough = mix(v.fin.x, 0.65, clamp(dust + 0.5 * crease - 0.25 * ridge, 0.0, 1.0));           // dust and creases dull it, a rubbed ridge is a touch shinier
     dGain = v.fin.y * (1.0 - 0.7 * clamp(dust, 0.0, 1.0)) * (1.0 - 0.5 * crease);
+    if (LOOK) {   // THE LOOK PROTOTYPE (look.wgsl lookMan; dead code on every other page): the slot drawn as the stuff it is
+      let lm = lookMan(u32(v.fin.w - 0.5), v.mp, lmx, lmy, lwx, lwy, n, albedo, dRough, dGain, v.geo.x, vec4f(v.grime.xyz, clamp(dust, 0.0, 1.0)), (v.id >> 20u) & 0xFFu, distance(v.wp, frame.camPos) * 2.0 * frame.post.w * frame.invScreen.y);
+      albedo = lm.albedo; n = lm.n; dRough = lm.rough; dGain = lm.gain;
+    }
     let aaRough = pow(clamp(pow(dRough, 4.0) + nKr2, 0.0, 1.0), 0.25);                            // the wet coat's specular anti-aliasing (below), for the same reason
     id = (v.id & 0xFFF00000u) | packWet(aaRough, dGain, vec2f(0.0)) | (1u << 30u);
   }

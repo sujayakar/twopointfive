@@ -3,14 +3,11 @@
 // squad with no pairs), and a ring at the feet of each man an open order menu goes to (and a gold one at the feet of whoever's menu it is). Floor geometry projected through the camera into the overlay's SVG,
 // under the close-in windows and the throw arc; drawn through walls (it is our own plan). Something waiting on the player's key has a bar across its
 // doorway (along its wall's foot), and the key on the one the key would send now. No words but that key and the tags.
-// A GAME OF SEVERAL PLAYERS (game/seats.ts): the other players' squads' plans are drawn too, by the same code off each one's own orders (`plansToDraw`),
-// FAINTER (`PLAN.others`) — all but a throw, whose arc and reach are as strong on every page: where a frag lands is everybody's to know. The maintainer,
-// 11-03, playing two seats: "seeing your teammates squad path overlays (but probably fainter than yours) would be great".
 // index.html `.plan …` is the look; `PLAN.on` false (`?noplan`) = the group stays empty. An attribute is written only when it changes.
 import type { Game, Guard } from '../game/game';
 import type { FollowCamera } from '../game/camera';
 import type { Vec3 } from '../math/vec';
-import { floorPlan, PLAN, capOf, type FloorPlan, type PlanDoor, type PlanKept, type PlanLeg } from '../game/floorplan';
+import { floorPlan, PLAN, capOf, type PlanKept, type PlanLeg } from '../game/floorplan';
 
 const NS = 'http://www.w3.org/2000/svg';
 const Y = 0.04;          // just off the floor
@@ -20,25 +17,7 @@ const TAG_DROP = 15;     // px: a standing man's tag sits under his ring, clear 
 /** each man's kept legs and the tables the grid is searched on (game/floorplan.ts PlanKept): the PICTURE'S own — a game drawn and the same game not
  *  drawn hold the same state */
 const keptLegs = new WeakMap<Guard, PlanLeg[]>();
-const keptOf: PlanKept[] = [];
-/** a seat's own store (the legs are a man's, and a man is one seat's; the grid's tables and the throw page's are whoever asks) */
-const keptFor = (seat: number): PlanKept => keptOf[seat] ??= { get: gd => keptLegs.get(gd), set: (gd, L) => keptLegs.set(gd, L), nav: {} };
-/** the same wait in two plans (a door's, or a wall's two ends) */
-const sameWait = (a: PlanDoor, b: PlanDoor): boolean => (!!a.door && a.door === b.door) || (Math.abs(a.a[0] - b.a[0]) + Math.abs(a.a[2] - b.a[2]) + Math.abs(a.b[0] - b.b[0]) + Math.abs(a.b[2] - b.b[2]) < 0.02);
-/** THE PLANS A FRAME DRAWS, the page's own seat's first and whole, at `k` 1; then, in a game of several players, each other seat's as another's
- *  (floorplan.ts PlanFor: asked of that seat's view, on a store of its own) at `k` PLAN.others. A wait both plans list — the drill's door is the
- *  world's, and two squads can stack on one door — is on the page ONCE, as the seat's own, with its key. Asked by the check too */
-export function plansToDraw(game: Game): { P: FloorPlan; k: number }[] {
-  const me = game.hostSeat(), mine = floorPlan(me.view, keptFor(me.index)), out = [{ P: mine, k: 1 }];
-  if (game.seats.length === 1 || !(PLAN.others > 0)) return out;
-  const reading = !!me.view.orders.menu;
-  for (const s of game.seats) if (s !== me) {
-    const P = floorPlan(s.view, keptFor(s.index), { own: false, reading });
-    P.doors = P.doors.filter(d => !mine.doors.some(o => sameWait(o, d)));
-    out.push({ P, k: PLAN.others });
-  }
-  return out;
-}
+const kept: PlanKept = { get: gd => keptLegs.get(gd), set: (gd, L) => keptLegs.set(gd, L), nav: {} };
 
 interface ManEls { g: SVGGElement; way: SVGPathElement; mark: SVGPolygonElement; fan: SVGPolygonElement; sight: SVGLineElement; feet: SVGPolygonElement; tag: SVGTextElement }
 interface ThrowEls { g: SVGGElement; reach: SVGPolygonElement; walk: SVGPathElement; spot: SVGPolygonElement; who: SVGPolygonElement; arc: SVGPathElement; land: SVGPolygonElement; tag: SVGTextElement }
@@ -112,9 +91,9 @@ export class PlanFloor {
     return E;
   }
   update(game: Game, cam: FollowCamera, w: number, h: number) {
-    const bc = document.body.classList, plans = PLAN.on && !(bc.contains('blinded') || bc.contains('attract')) ? plansToDraw(game) : [];   // (hidden by the page under those: nothing asked)
+    const bc = document.body.classList, P = PLAN.on && !(bc.contains('blinded') || bc.contains('attract')) ? floorPlan(game, kept) : null;   // (hidden by the page under those: nothing asked)
     let n = 0, k = 0, nd = 0, nt = 0, nl = 0, you = false;
-    for (const { P, k: dim } of plans) {
+    if (P) {
       const f1 = (v: number) => v.toFixed(1);
       const px = (x: number, z: number): [number, number] | null => { const [sx, sy, v] = cam.project([x, Y, z], w, h, Infinity, NEAR_W); return v ? [sx, sy] : null; };
       const pt = (x: number, z: number): string | null => { const q = px(x, z); return q ? `${f1(q[0])},${f1(q[1])}` : null; };
@@ -130,7 +109,7 @@ export class PlanFloor {
         const fresh = Math.max(0, 1 - m.age / Math.max(0.1, PLAN.freshSecs));
         const walking = !m.there && m.path.length > 1;
         const k0 = (m.held ? 0.6 : 1) * (walking ? PLAN.walkDim + (1 - PLAN.walkDim) * fresh : PLAN.restDim + (1 - PLAN.restDim) * fresh);
-        this.put(E.g, 'opacity', ((P.mode ? k0 : k0 * Math.min(1, fresh / 0.4)) * dim).toFixed(2));   // (outside the order mode an order just given goes out with its age)
+        this.put(E.g, 'opacity', (P.mode ? k0 : k0 * Math.min(1, fresh / 0.4)).toFixed(2));   // (outside the order mode an order just given goes out with its age)
         const c = px(m.mark[0], m.mark[2]);
         // the way: broken, never bridged, where a point of it cannot be projected
         let d = '';
@@ -172,7 +151,7 @@ export class PlanFloor {
       };
       for (const T of P.throws) {
         const E = this.throwEls(nt++); this.show(E.g, true);
-        this.put(E.g, 'class', T.tone ? `t-${T.tone}` : ''); this.put(E.g, 'opacity', T.preview ? '0.60' : '0.95');   // (never fainter for being another's: see the head)
+        this.put(E.g, 'class', T.tone ? `t-${T.tone}` : ''); this.put(E.g, 'opacity', T.preview ? '0.60' : '0.95');
         const poly = (e: SVGPolygonElement, s: string | null) => { this.show(e, !!s); if (s) this.put(e, 'points', s); };
         const p = T.gd.char.pos, walking = T.walk.length > 1;
         poly(E.who, PLAN.who ? ring(p, PLAN.ringM * 1.35) : null);
@@ -188,7 +167,7 @@ export class PlanFloor {
       // the key alone, a step ahead of him — a bar there crossed the cap and read as a key struck out)
       for (const dr of P.doors) {
         const a = px(dr.a[0], dr.a[2]), b = px(dr.b[0], dr.b[2]); if (!a || !b) continue;
-        const E = this.doorEls(nd++), c = capOf(dr); this.show(E.g, true); this.put(E.g, 'opacity', dim.toFixed(2));
+        const E = this.doorEls(nd++), c = capOf(dr); this.show(E.g, true);
         this.put(E.g, 'class', `pdoor w-${dr.why}${dr.tone ? ` t-${dr.tone}` : ''}${dr.now ? ' now' : ''}${c === 'lit' ? ' lit live' : c === 'dark' ? ' lit' : ''}`);
         this.show(E.bar, dr.why !== 'pair' || !PLAN.keyLit); this.put(E.bar, 'x1', f1(a[0])); this.put(E.bar, 'y1', f1(a[1])); this.put(E.bar, 'x2', f1(b[0])); this.put(E.bar, 'y2', f1(b[1]));
         const cap = c !== 'none', mx = (a[0] + b[0]) / 2, my = (a[1] + b[1]) / 2;
@@ -198,7 +177,7 @@ export class PlanFloor {
       // a plan laid for the word (planlay.ts): each man's way from his feet, broken wide, a ring at his feet, the door's bar or the spot's ring, the key on it
       for (const L of P.laid) {
         const E = this.laidEls(nl++); this.show(E.g, true);
-        this.put(E.g, 'class', `laid${L.tone ? ` t-${L.tone}` : ''}`); this.put(E.g, 'opacity', (L.k * dim).toFixed(2));
+        this.put(E.g, 'class', `laid${L.tone ? ` t-${L.tone}` : ''}`); this.put(E.g, 'opacity', L.k.toFixed(2));
         for (let i = 0; i < Math.max(L.ways.length, E.ways.length); i++) {
           const e = E.ways[i] ?? (E.ways[i] = E.g.insertBefore(this.el(E.g, 'path', 'pp'), E.g.firstChild)), d = i < L.ways.length ? way(L.ways[i], false) : '';
           this.show(e, !!d); if (d) this.put(e, 'd', d);
@@ -211,7 +190,7 @@ export class PlanFloor {
         this.show(E.bar, bar); if (a && b) { this.put(E.bar, 'x1', f1(a[0])); this.put(E.bar, 'y1', f1(a[1])); this.put(E.bar, 'x2', f1(b[0])); this.put(E.bar, 'y2', f1(b[1])); }
         const sr = !bar && L.at && PLAN.marks ? ring(L.at, PLAN.ringM) : null;
         this.show(E.spot, !!sr); if (sr) this.put(E.spot, 'points', sr);
-        const c = a && b ? [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2] : L.at ? px(L.at[0], L.at[2]) : L.feet[0] ? px(L.feet[0][0], L.feet[0][2]) : null, cap = !!c && PLAN.word && !!L.key;
+        const c = a && b ? [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2] : L.at ? px(L.at[0], L.at[2]) : L.feet[0] ? px(L.feet[0][0], L.feet[0][2]) : null, cap = !!c && PLAN.word;
         this.show(E.cap, cap); this.show(E.key, cap);
         if (cap && c) { const dy = bar || L.at ? 0 : TAG_DROP + 4; this.put(E.cap, 'x', f1(c[0] - 7.5)); this.put(E.cap, 'y', f1(c[1] + dy - 7.5)); this.put(E.key, 'x', f1(c[0])); this.put(E.key, 'y', f1(c[1] + dy)); this.put(E.key, 'text', L.key); }
       }

@@ -19,10 +19,6 @@ import { mapOf } from '../game/replaybuf';
 import type { ReplayMap } from '../replay/format';
 import { gearText } from '../game/gear';
 import { textZoom } from './textsize';
-import { shownName } from '../host/names';
-/** what to write for the man with this id whom the take itself calls `was` (mountRecap hands the page's: a player's picked name) */
-type NameOf = (id: number, was: string) => string;
-const AS_KEPT: NameOf = (_id, was) => was;
 
 // the menu theme's tokens (ui/theme.ts), as literals: a canvas cannot read a CSS variable
 const BASE = '#0c0b09', BRIGHT = '#f0e9d9', SOFT = '#a0977f', DIM = '#938b76', ACCENT_RGB = '240,145,46', ACCENT = `rgb(${ACCENT_RGB})`, EDGE = '214,200,170';
@@ -102,7 +98,7 @@ function drawFloor(ctx: CanvasRenderingContext2D, W: number, H: number, dpr: num
 }
 
 /** One moment of a take over a floor already drawn. `t` in the take's own clock (game seconds). */
-export function drawRecap(ctx: CanvasRenderingContext2D, dpr: number, T: RecapTake, f: RecapFit, t: number, nameOf: NameOf = AS_KEPT): void {
+export function drawRecap(ctx: CanvasRenderingContext2D, dpr: number, T: RecapTake, f: RecapFit, t: number): void {
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0); ctx.lineCap = 'round'; ctx.lineJoin = 'round';
   const X = (x: number) => f.ox + x * f.s, Y = (z: number) => f.oy + z * f.s;
   const d = T.death, F = frameAt(T, t), men = recapMenAt(T, t), fell = t >= d.t - 1e-6;
@@ -178,15 +174,15 @@ export function drawRecap(ctx: CanvasRenderingContext2D, dpr: number, T: RecapTa
   if (!Number.isFinite(sx) && fell && d.byAt && d.by >= 0) { sx = X(d.byAt[0]); sy = Y(d.byAt[1]); }
   // each name on the side of its man away from the other one
   const up = !Number.isFinite(sy) || sy <= Y(vz) ? -1 : 1;
-  if (d.by !== d.victim) label(nameOf(d.by, d.byName).toUpperCase(), sx, sy + up * (r0 + 11), ACCENT);
-  label(nameOf(d.victim, d.name).toUpperCase(), X(vx), Y(vz) - up * (r0 + 11), BRIGHT);
+  if (d.by !== d.victim) label(d.byName.toUpperCase(), sx, sy + up * (r0 + 11), ACCENT);
+  label(d.name.toUpperCase(), X(vx), Y(vz) - up * (r0 + 11), BRIGHT);
 }
 
 /** The three labels under the plan: who · with what · from how far. Nothing for a death nobody can be named for. */
-export function recapLabels(T: RecapTake, nameOf: NameOf = AS_KEPT): string[] {
+export function recapLabels(T: RecapTake): string[] {
   const d = T.death; if (d.cause === 'unknown') return [];
   const out: string[] = [];
-  if (d.byName) out.push(nameOf(d.by, d.byName));
+  if (d.byName) out.push(d.byName);
   if (d.cause === 'round' && d.weapon) out.push(gearText(d.weapon)); else if (d.cause === 'blast') out.push('blast');
   if (d.dist >= 0.5) out.push(`${d.dist < 10 ? d.dist.toFixed(1) : Math.round(d.dist)} m`);
   return out;
@@ -198,7 +194,6 @@ export function recapSpan(T: RecapTake): [number, number] { const a = T.frames[0
 export function mountRecap(host: HTMLElement, game: Game): RecapUi | null {
   const G = globalThis as any;
   const R: DeathRecap | null = deathRecapOf(game); if (!R) { G.__recap = null; return null; }
-  const nameOf: NameOf = (id, was) => shownName(game, id, was);
   const takes = R.takes.slice();   // as they stand now: while the player is down the record's own list is live, and a chip must keep showing the man it names
   const root = el('div', 'db-recap'); host.appendChild(root);
   const cv = el('canvas', 'db-recap-cv') as HTMLCanvasElement; root.appendChild(cv);
@@ -221,7 +216,7 @@ export function mountRecap(host: HTMLElement, game: Game): RecapUi | null {
     if (!ctx) return; const T = ui.take;
     ctx.setTransform(1, 0, 0, 1, 0, 0);
     if (floor && fctx) ctx.drawImage(floor, 0, 0); else if (map) drawFloor(ctx, VIEW_W, VIEW_H, dpr, map, fit);
-    drawRecap(ctx, dpr, T, fit, t, nameOf);
+    drawRecap(ctx, dpr, T, fit, t);
     if (clock) {   // the clock: a line along the foot, the fall its orange tick
       const y = VIEW_H - 1.5, kd = span[1] > span[0] ? (T.death.t - span[0]) / (span[1] - span[0]) : 1;
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0); ctx.lineCap = 'butt';
@@ -248,7 +243,7 @@ export function mountRecap(host: HTMLElement, game: Game): RecapUi | null {
     const T = takes[Math.max(0, Math.min(takes.length - 1, i))]; ui.take = T;
     fit = recapFit(T, VIEW_W, VIEW_H); span = recapSpan(T);
     if (fctx && map) drawFloor(fctx, VIEW_W, VIEW_H, dpr, map, fit);
-    cap.textContent = ''; const labels = recapLabels(T, nameOf);
+    cap.textContent = ''; const labels = recapLabels(T);
     labels.forEach((s, n) => { const e = el(n === 0 && T.death.byName ? 'b' : 'span'); e.textContent = s; cap.appendChild(e); });
     cap.style.display = labels.length ? '' : 'none';
     chips.forEach((c, n) => c.classList.toggle('on', takes[n] === T));
@@ -258,7 +253,7 @@ export function mountRecap(host: HTMLElement, game: Game): RecapUi | null {
   }
   if (takes.length > 1) {   // more than one of ours lost: a chip a man, the one shown lit. The mouse's alone: a chip never takes the keyboard (Enter stays the card's)
     const who = el('div', 'db-recap-who');
-    takes.forEach((T, n) => { const b = el('button', 'db-recap-chip') as HTMLButtonElement; b.type = 'button'; b.tabIndex = -1; b.textContent = nameOf(T.death.victim, T.death.name);
+    takes.forEach((T, n) => { const b = el('button', 'db-recap-chip') as HTMLButtonElement; b.type = 'button'; b.tabIndex = -1; b.textContent = T.death.name;
       b.addEventListener?.('mousedown', e => e.preventDefault()); b.addEventListener?.('click', () => show(n)); who.appendChild(b); chips.push(b); });
     root.appendChild(who);
   }

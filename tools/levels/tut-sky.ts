@@ -42,7 +42,6 @@
 // the shutters. ON THEIR OWN FUEL: the brazier in the yard, two stoves, the bread oven, the lanterns, the gun truck's head lamps. ON A BATTERY, and only when
 // the mains are out: five red beacons (the yard wall, the bunkhouse, the gate, the tea room, the tunnel's mouth).
 import type { Vec3 } from '../../src/math/vec';
-import { pickupLens } from '../../src/scene/carShapes';
 import type { Level, LevelDoorDef } from '../../src/scene/level';
 import type { LessonData, LevelScenarios, Rect, StructureData } from '../../src/scene/scenarios';
 import type { SurfacesData } from '../../src/scene/levelData';
@@ -354,9 +353,9 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
 
   // ---- THE ROAD'S TWO PARTIES (kept) ----
   grp('road.squad');
-  const PA = G.pickup(TRUCK_A.x, TRUCK_A.z, TRUCK_A.yaw, 'truckWhite', { load: 'crates' });
-  const PB = G.pickup(TRUCK_B.x, TRUCK_B.z, TRUCK_B.yaw, 'truckTan', { load: 'sacks' });
-  for (const [v, P] of [[TRUCK_A, PA], [TRUCK_B, PB]] as const) G.lay(v.x, v.z, v.yaw, P.tops.roof, 0.36, 0, 1.58, 1.58 + 0.03, 0.5, 0.65, S.snow);   // a dusting on each cab's roof: they have not stood long
+  G.pickup(TRUCK_A.x, TRUCK_A.z, TRUCK_A.yaw, 'truckWhite', { load: 'crates' });
+  G.pickup(TRUCK_B.x, TRUCK_B.z, TRUCK_B.yaw, 'truckTan', { load: 'sacks' });
+  for (const v of [TRUCK_A, TRUCK_B]) { const c = at(v, 0.36, 0, 0); cap(c[0], c[2], 1.0, 1.3, 1.58, v.yaw, 0.03); }   // a dusting on each cab's roof: they have not stood long
   grp('road.block');
   G.sandbags(33.2, 21.5, 1.5, HALF, 4); G.sandbags(33.6, 24.5, 1.5, HALF, 4);                 // the roadblock: a low wall across each lane, and a gap between them a man walks through (1.5 m: the walk grid wants a clear cell and a half)
   cap(33.2, 21.5, 0.3, 1.3, 0.8, 0, 0.04); cap(33.6, 24.5, 0.3, 1.3, 0.8, 0, 0.04);
@@ -365,7 +364,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
   // its two head lamps, lit: the road between the two parties is theirs (its own battery: the mains box does not reach them; a round puts one out)
   grp('road.lamps');
   for (const [k, lz] of [[0, -0.66], [1, 0.66]] as const) {
-    const lens = add({ c: at(GUN_TRUCK, 2.49, 0.69, lz), h: [0.02, 0.06, 0.13], yaw: GUN_TRUCK.yaw, ...M.plasticWhite, emissive: [26, 24, 20], flags: BoxFlag.NoShadow, shape: pickupLens([0.02, 0.06, 0.13], [2.49, 0, lz]) });
+    const lens = add({ c: at(GUN_TRUCK, 2.49, 0.69, lz), h: [0.02, 0.06, 0.13], yaw: GUN_TRUCK.yaw, ...M.plasticWhite, emissive: [26, 24, 20], flags: BoxFlag.NoShadow });
     const d = at({ x: 0, z: 0, yaw: GUN_TRUCK.yaw }, 1, 0, 0);
     lights.push({ kind: 'spot', pos: at(GUN_TRUCK, 2.6, 0.69, lz), dir: norm([d[0], -0.035, d[2]]), color: [1.0, 0.93, 0.8], intensity: 120, range: 26, innerDeg: 9, outerDeg: 24,
       name: `gun_truck_lamp_${k}`, group: 'exterior', enabled: true, volumetric: 0.35, fixtureBox: lens, radius: 0.07, mains: false });

@@ -3,11 +3,8 @@ import { Quat, Vec3 } from '../math/vec';
 import { lookDress } from '../scene/look';
 
 export interface GltfNode { name: string; parent: number; children: number[]; t: Vec3; r: Quat; s: Vec3; }
-export interface Track { readonly node: number; readonly path: 0 | 1 | 2; readonly times: Float32Array; readonly values: Float32Array; readonly step: boolean; } // path: 0 T, 1 R, 2 S
-/** AUTHORED DATA, NEVER WRITTEN AFTER IT IS LOADED: anim/skeleton.ts keeps what it works out of a clip beside the clip's object (which tracks share their key
- *  times; the Rust module's copy of it), once. A different animation is a different Clip object, never this one changed: the fields are readonly for that
- *  (the compiler holds the fields and the list; what is IN a track's arrays it cannot, and the rule stands for them as well). */
-export interface Clip { readonly name: string; readonly duration: number; readonly tracks: readonly Track[]; }
+export interface Track { node: number; path: 0 | 1 | 2; times: Float32Array; values: Float32Array; step: boolean; } // path: 0 T, 1 R, 2 S
+export interface Clip { name: string; duration: number; tracks: Track[]; }
 export interface SkinData { joints: number[]; inverseBind: Float32Array; } // joints: node indices; inverseBind: 16 floats per joint
 export interface MeshData {
   positions: Float32Array; normals: Float32Array; weights: Float32Array; joints: Uint8Array | Uint16Array; matSel: Float32Array;

@@ -28,7 +28,6 @@
 //
 // With the flag off none of this runs: tick() returns on its first line and the layout seam is null. (src/game is one import cycle: the tables below are plain
 // literals, nothing here is built from another game module's exports at module load.)
-import { allDown } from './seats';
 import { Vec3, v3 } from '../math/vec';
 import { mulberry32 } from '../math/dice';
 import type { Game, Guard } from './game';
@@ -351,11 +350,11 @@ export class RoomClearScenario {
       const left = this.rooms.filter(r => !r.cleared).length, said = clearWords(g, this.clearDue); this.clearDue = []; this.clearAt = NaN;
       if (K.announce && left > 0 && !this.end) g.msg(`${said} — ${left} room${left > 1 ? 's' : ''} to go`);
     }
-    const pairUp = nb.ops.filter(o => o.state !== 'dead').length, play = !this.end && !allDown(g) && live.length > 0;
+    const pairUp = nb.ops.filter(o => o.state !== 'dead').length, play = !this.end && !g.player.down && live.length > 0;
     if (!this.pairSaid && pairUp === 0 && nb.ops.length) { this.pairSaid = true; this.note('pair:down'); if (!K.pairOnly && play) g.msg(`${nb.ops.length > 2 ? 'the whole squad is' : nb.ops.length > 1 ? 'both teammates are' : 'your teammate is'} down, so the rest is up to you`); }
     if (!this.entrySaid && nb.state === 'failed') { this.entrySaid = true; if (pairUp > 0 && play) g.msg(`your point man is down at the door, so you'll have to take the ${this.drillRoom()?.name ?? 'room'} yourself`); }   // (the drill's entry is off with a man still up: he holds where he stands — nightbreach.ts)
     if (this.end) return;
-    if (allDown(g)) this.finish('wiped', 'player down');   // (first: the last defender and Sam down inside one frame is no win — the mission has failed and the down card is coming)
+    if (g.player.down) this.finish('wiped', 'player down');   // (first: the last defender and Sam down inside one frame is no win — the mission has failed and the down card is coming)
     else if (g.rails?.endsNow()) this.finish('taken', 'the mission is done');   // (a tutorial mission — rails.ts — is over when its last step is, whoever is still in a room)
     else if (g.rails?.holdsEnd()) { if (pairUp === 0 && nb.ops.length && (K.pairOnly || g.rails.skyOn)) this.finish('wiped', nb.ops.length > 2 ? 'the squad down' : 'the pair down'); }   // …and not before it (the men of a later beat are not on the floor yet) — but a team that is all down has still lost
     else if (live.length === 0 && !responseUp(g)) this.finish('taken', `${this.rooms.length} rooms clear, ${nb.ops.length ? `${pairUp} of ${nb.ops.length} teammates up` : 'alone'}`);
@@ -373,11 +372,11 @@ export class RoomClearScenario {
   }
   private finish(end: RoomClearEnd, why: string) {
     this.end = end; this.endAt = this.g.time; this.endWhy = why; this.obj = null; this.note(`end:${end}`);
-    this.endSay = w(end === 'wiped' && allDown(this.g) && this.g.nightBreach.ops.some(o => o.state !== 'dead') ? 'player down' : 'team wiped', 'team wiped');
+    this.endSay = w(end === 'wiped' && this.g.player.down && this.g.nightBreach.ops.some(o => o.state !== 'dead') ? 'player down' : 'team wiped', 'team wiped');
     const loose = end === 'taken' && this.g.snatch?.active && this.g.snatch.owes ? this.g.snatch.objective()?.text.replace(/^objective ▸ /, '') : null;   // (a snatch level, snatch.ts: the house is the team's and the man is not — it is not over)
     // (a defuse mission whose charge has gone off stays FAILED — defuse.ts: the house taken after that is said as what it is, never as a win)
     if (end === 'taken' && this.g.defuse?.active && this.g.defuse.end === 'failed') { this.g.msg(`you took the house too late. a charge went off, so you still failed the mission. press Shift+Enter to restart`); return; }
-    this.g.msg(loose ? `structure taken — ${why}. it's not over yet: ${loose}` : end === 'taken' ? `structure taken — ${why}. press Shift+Enter to restart` : this.endSay === 'player down' ? 'the mission is over. press Enter to restart' : `team wiped — ${why}. press ${allDown(this.g) ? 'Enter' : 'Shift+Enter'} to restart`);
+    this.g.msg(loose ? `structure taken — ${why}. it's not over yet: ${loose}` : end === 'taken' ? `structure taken — ${why}. press Shift+Enter to restart` : this.endSay === 'player down' ? 'the mission is over. press Enter to restart' : `team wiped — ${why}. press ${this.g.player.down ? 'Enter' : 'Shift+Enter'} to restart`);
   }
 
   /** where it stands, in one word */

@@ -90,12 +90,10 @@ function rawWalk(g: Game, from: number, parts: Record<string, number> | null): n
   const str = (s: string) => { for (let i = 0; i < s.length; i++) h = Math.imul(h ^ s.charCodeAt(i), 0x01000193) >>> 0; };
   const man = (c: RawMan) => { for (let k = 0; k < 3; k++) { num(c.pos[k]); num(c.vel?.[k] ?? 0); } num(c.bodyYaw); num(c.aimYaw); num(c.aimPitch ?? 0); };
   const cut = (name: string) => { if (parts) { parts[name] = h; h = RAW_BITS_SEED; } };
-  const G = g as unknown as { time: number; seats: { view: { player: { char: RawMan; visibility?: number; noise?: number } } }[]; guards: { char: RawMan; awareness?: number; state: unknown; wait?: number }[];
+  const G = g as unknown as { time: number; player: { char: RawMan; visibility?: number; noise?: number }; guards: { char: RawMan; awareness?: number; state: unknown; wait?: number }[];
     civilians?: { char: RawMan; state: unknown }[]; doors: { list: { angle: number }[] }; props: { props: { x: number; z: number; yaw: number }[] }; items: { items: { pos: number[] }[] };
     destr?: { debris?: { chunks?: { box: { c: number[] } }[] } }; events: unknown[]; eventSeq?: number };
-  num(G.time); cut('clock');
-  // (EVERY player's man, in seat order — never `g.player`, which outside a tick is the man of whichever seat this host shows: two machines of one game would fold two different men. One seat: the same word as ever)
-  for (const s of G.seats) man(s.view.player.char); cut('sam'); for (const s of G.seats) { num(s.view.player.visibility ?? 0); num(s.view.player.noise ?? 0); } cut('samSeenHeard');
+  num(G.time); cut('clock'); man(G.player.char); cut('sam'); num(G.player.visibility ?? 0); num(G.player.noise ?? 0); cut('samSeenHeard');
   for (const gd of G.guards) { man(gd.char); num(gd.awareness ?? 0); str(String(gd.state)); num(gd.wait ?? 0); } cut('men');
   for (const cv of G.civilians ?? []) { man(cv.char); str(String(cv.state)); } cut('civilians');
   for (const d of G.doors.list) num(d.angle); cut('doors');

@@ -4,7 +4,7 @@
 // footprint is fitted by levelLoad.ts fitPropFootprint, as officeKit's are; officeGen.ts does not import this file. Units: metres. +X east, +Z south, +Y up. Floor top y = 0.
 import { Vec3 } from '../math/vec';
 import { Box, BoxFlag, makeBox } from './boxes';
-import { carShapes, hubPaint } from './carShapes';
+import { saidFor, type BoxStuff } from './stuff';
 import { WORLD } from './world';
 import type { Level, LightDef, LevelDoorDef, PropKind, PropPart, PropDef } from './level';
 import { MarkingDef, MARKING_TEXEL } from './markings';
@@ -153,19 +153,19 @@ export const floorFinish = (k: LevelKit, x0: number, z0: number, x1: number, z1:
 export const POLISHED: Partial<Box> = { flags: BoxFlag.Gloss };
 /** the ceiling over a footprint: light-only (NoPrimary — the top-down camera looks through it) */
 export const ceiling = (k: LevelKit, x0: number, z0: number, x1: number, z1: number) => slab(k, x0, KIT_H, z0, x1, KIT_H + 0.2, z1, C.ceiling, { flags: BoxFlag.NoPrimary });
-/** a rug / mat: a decal (no rays, no footstep material) */
-export const rug = (k: LevelKit, x: number, z: number, w: number, d: number, albedo: Vec3, yaw = 0) => add(k, { c: [x, 0.018, z], h: [w / 2, 0.006, d / 2], yaw, albedo, flags: BoxFlag.NoShadow });
+/** a rug / mat: a decal (no rays, no footstep material), and cloth in whatever colour (floor paint is no rug: lay it as its own flat box) */
+export const rug = (k: LevelKit, x: number, z: number, w: number, d: number, albedo: Vec3, yaw = 0) => add(k, { c: [x, 0.018, z], h: [w / 2, 0.006, d / 2], yaw, albedo, stuff: 'cloth', flags: BoxFlag.NoShadow });
 
 // ---- fixed furniture ----
 /** Local→world frame of a yawed piece at (x, z): local +X → world (cos yaw, −sin yaw), local +Z → (sin yaw, cos yaw). */
 export const frameAt = (x: number, z: number, yaw: number) => { const cs = Math.cos(yaw), sn = Math.sin(yaw); return (lx: number, ly: number, lz: number): Vec3 => [x + cs * lx + sn * lz, ly, z - sn * lx + cs * lz]; };
 /** a desk: top (0.76 m), two side panels, a modesty panel on local −Z (the sitter is on +Z) */
 export function desk(k: LevelKit, x: number, z: number, w: number, d: number, yaw = 0, albedo: Vec3 = C.wood): void {
-  const at = frameAt(x, z, yaw);
-  add(k, { c: at(0, 0.735, 0), h: [w / 2, 0.025, d / 2], yaw, albedo });
-  add(k, { c: at(-w / 2 + 0.03, 0.36, 0), h: [0.025, 0.36, d / 2 - 0.02], yaw, albedo });
-  add(k, { c: at(w / 2 - 0.03, 0.36, 0), h: [0.025, 0.36, d / 2 - 0.02], yaw, albedo });
-  add(k, { c: at(0, 0.45, -d / 2 + 0.03), h: [w / 2 - 0.05, 0.25, 0.012], yaw, albedo });
+  const at = frameAt(x, z, yaw), made = saidFor('veneer', albedo, C.wood, C.woodDark);   // (a desk in the kit's wood is veneer; in another paint it is what that paint is: a steel bench, a white table)
+  add(k, { c: at(0, 0.735, 0), h: [w / 2, 0.025, d / 2], yaw, albedo, ...made });
+  add(k, { c: at(-w / 2 + 0.03, 0.36, 0), h: [0.025, 0.36, d / 2 - 0.02], yaw, albedo, ...made });
+  add(k, { c: at(w / 2 - 0.03, 0.36, 0), h: [0.025, 0.36, d / 2 - 0.02], yaw, albedo, ...made });
+  add(k, { c: at(0, 0.45, -d / 2 + 0.03), h: [w / 2 - 0.05, 0.25, 0.012], yaw, albedo, ...made });
 }
 /** a monitor (screen faces local +Z) on a surface at `baseY` (a desk 0.76) + its keyboard; `on` = a lit screen, a switchable in group 'monitors'. Returns the screen's box. */
 export function monitor(k: LevelKit, x: number, z: number, yaw: number, on: boolean, baseY = 0.76, keyboard = true): number {
@@ -180,7 +180,7 @@ export function monitor(k: LevelKit, x: number, z: number, yaw: number, on: bool
 }
 /** a filing cabinet (0.46 × 1.32 × 0.6), drawer fronts on local −Z */
 export function cabinet(k: LevelKit, x: number, z: number, yaw: number): number {
-  return add(k, { c: [x, 0.66, z], h: [0.23, 0.66, 0.3], yaw, albedo: [0.58, 0.58, 0.56], ...mk(k, MD.cabinetMarks([0.23, 0.66, 0.3], k.texel)) });
+  return add(k, { c: [x, 0.66, z], h: [0.23, 0.66, 0.3], yaw, albedo: [0.58, 0.58, 0.56], stuff: 'steel', ...mk(k, MD.cabinetMarks([0.23, 0.66, 0.3], k.texel)) });
 }
 /** two sheets of paper on a surface at height y */
 export function papers(k: LevelKit, x: number, y: number, z: number, yaw = 0, scribble = false): void {
@@ -197,16 +197,14 @@ export function bench(k: LevelKit, x: number, z: number, yaw: number): void {
   add(k, { c: [x, 0.42, z], h: [0.7, 0.03, 0.2], yaw, albedo: C.woodDark });
   for (const sx of [-0.6, 0.6]) add(k, { c: at(sx, 0.2, 0), h: [0.03, 0.2, 0.18], yaw, albedo: C.metal });
 }
-/** a parked car, 4.4 × 1.7 m, local +X forward. Hands back the shapes its boxes say */
-export function car(k: LevelKit, x: number, z: number, yaw: number, body: Vec3) {
+/** a parked car, 4.4 × 1.7 m, local +X forward */
+export function car(k: LevelKit, x: number, z: number, yaw: number, body: Vec3): void {
   const at = frameAt(x, z, yaw);
-  const S = carShapes({ hub: hubPaint([0.5, 0.52, 0.53]) });   // (S: the shape each box says — scene/carShapes.ts)
-  add(k, { c: [x, 0.62, z], h: [2.2, 0.34, 0.86], yaw, albedo: body, shape: S.body });
-  add(k, { c: at(-0.25, 1.2, 0), h: [1.25, 0.27, 0.8], yaw, albedo: [0.07, 0.08, 0.1], shape: S.glass });
-  add(k, { c: at(-0.25, 1.49, 0), h: [1.15, 0.03, 0.76], yaw, albedo: body, shape: S.roof });
-  for (const [lx, lz] of [[1.35, 0.8], [1.35, -0.8], [-1.4, 0.8], [-1.4, -0.8]]) add(k, { c: at(lx, 0.3, lz), h: [0.32, 0.3, 0.12], yaw, albedo: [0.04, 0.04, 0.045], shape: S.wheel(Math.sign(lz)) });
-  for (const lz of [0.62, -0.62]) { add(k, { c: at(2.2, 0.7, lz), h: [0.02, 0.07, 0.14], yaw, albedo: [0.8, 0.8, 0.75], flags: BoxFlag.NoShadow, shape: S.head(Math.sign(lz)) }); add(k, { c: at(-2.2, 0.75, lz), h: [0.02, 0.06, 0.16], yaw, albedo: [0.3, 0.02, 0.02], emissive: [0.5, 0.03, 0.02], flags: BoxFlag.NoShadow, shape: S.tail(Math.sign(lz)) }); }
-  return S;   // (the shapes it says, its `tops` among them: what a level stands on its roof is fitted by carShapes.ts feetOn / layOn)
+  add(k, { c: [x, 0.62, z], h: [2.2, 0.34, 0.86], yaw, albedo: body });
+  add(k, { c: at(-0.25, 1.2, 0), h: [1.25, 0.27, 0.8], yaw, albedo: [0.07, 0.08, 0.1] });
+  add(k, { c: at(-0.25, 1.49, 0), h: [1.15, 0.03, 0.76], yaw, albedo: body });
+  for (const [lx, lz] of [[1.35, 0.8], [1.35, -0.8], [-1.4, 0.8], [-1.4, -0.8]]) add(k, { c: at(lx, 0.3, lz), h: [0.32, 0.3, 0.12], yaw, albedo: [0.04, 0.04, 0.045] });
+  for (const lz of [0.62, -0.62]) { add(k, { c: at(2.2, 0.7, lz), h: [0.02, 0.07, 0.14], yaw, albedo: [0.8, 0.8, 0.75], flags: BoxFlag.NoShadow }); add(k, { c: at(-2.2, 0.75, lz), h: [0.02, 0.06, 0.16], yaw, albedo: [0.3, 0.02, 0.02], emissive: [0.5, 0.03, 0.02], flags: BoxFlag.NoShadow }); }
 }
 /** open steel shelving w × d, `levels` shelves up to `hgt`, cartons on most of them (see-through between the cartons: it is NOT a wall to eyes or rounds) */
 export function shelf(k: LevelKit, x: number, z: number, w: number, d: number, yaw: number, levels = 4, hgt = 2.0): void {
@@ -250,9 +248,11 @@ export function prop(k: LevelKit, kind: PropKind, x: number, z: number, yaw: num
   fitProp(p); if (half) p.half = half; k.props.push(p); return p;
 }
 /** an office chair on casters; the sitter faces local −Z (the back is on +Z) */
-export function chair(k: LevelKit, x: number, z: number, yaw: number, albedo: Vec3 = C.chair): void {
+/** `made` = what the seat and back are, said by a caller that hands a paint of its own (the kit's chair paint says fabric by its name) */
+export function chair(k: LevelKit, x: number, z: number, yaw: number, albedo: Vec3 = C.chair, made?: BoxStuff): void {
+  const says = made !== undefined ? { stuff: made } : {};
   prop(k, 'chair', x, z, yaw, 12, [
-    { off: [0, 0.46, 0], h: [0.24, 0.04, 0.24], yaw: 0, albedo }, { off: [0, 0.8, 0.22], h: [0.23, 0.3, 0.035], yaw: 0, albedo },
+    { off: [0, 0.46, 0], h: [0.24, 0.04, 0.24], yaw: 0, albedo, ...says }, { off: [0, 0.8, 0.22], h: [0.23, 0.3, 0.035], yaw: 0, albedo, ...says },
     { off: [0, 0.22, 0], h: [0.04, 0.22, 0.04], yaw: 0, albedo: C.black }, { off: [0, 0.03, 0], h: [0.25, 0.03, 0.05], yaw: 0, albedo: C.black }, { off: [0, 0.03, 0], h: [0.05, 0.03, 0.25], yaw: 0, albedo: C.black },
   ]);
 }

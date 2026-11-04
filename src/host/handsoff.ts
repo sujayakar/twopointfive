@@ -18,7 +18,6 @@ import type { Input } from '../game/input';
 import type { FollowCamera } from '../game/camera';
 import type { OrderTarget } from '../game/orders';
 import { ORDERS } from '../game/orders';
-import { CMDRING } from '../game/cmdring';
 import { autoPick } from '../game/autopilot';   // (asked inside enter() only)
 import { INTERACT_KEY } from '../game/consts';
 import type { View } from './hud';
@@ -114,9 +113,7 @@ export class HandsOff {
   private *ticks(n: number): Script { for (let i = 0; i < n; i++) yield; }
   private *wait(secs: number): Script { const t1 = this.t + secs; while (this.t < t1 - 1e-6) yield; }
   private *until(pred: () => boolean, secs: number): Script<boolean> { const t1 = this.t + secs; while (this.t < t1 - 1e-6 && !pred()) yield; return pred(); }
-  /** (the squad's key is never pressed twice inside CMDRING.twice's window: this player's second press is a second try at an order, never 'fall in') */
-  private *key(code: string): Script { if (code === ORDERS.quickKey && CMDRING.twice) { while (this.t < this.keyT + CMDRING.twiceSecs + 0.05) yield; this.keyT = this.t; } this.I.pressed.add(code); yield; }
-  private keyT = -9;
+  private *key(code: string): Script { this.I.pressed.add(code); yield; }
   /** a question that costs a path search, asked four times a second and not every tick (his thinking is inside the frames a benchmark times) */
   private slow(f: () => boolean, every = 0.25): () => boolean { let next = -1, v = false; return () => { if (this.t >= next) { next = this.t + every; v = f(); } return v; }; }
 

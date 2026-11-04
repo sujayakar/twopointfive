@@ -45,7 +45,6 @@
 // ahead and behind and take nothing — `live` says what went uncovered), a room known clear does not lower its doors' weight, the men's lights stay as their order has them (dark under
 // 'fall in' in the room clear), nobody calls what he takes aloud (the rescue flow's own men still do).
 // (src/game is one import cycle: nothing below is built from another game module's exports at module load.)
-import { men as players, orderOf, ordersOf, teamMen, teamActive, viewOf } from './seats';
 import { SideMap } from '../math/side';
 import { Vec3, v3, wrapAngle, damp } from '../math/vec';
 import type { Game, Guard } from './game';
@@ -303,11 +302,11 @@ export class Cover {
     // (on the walk he keeps up with the file, gun forward: his rear is his for the last steps and on the mark — but a door standing open by the way is his the whole walk: walkOnly)
     if (flat(gd.char.pos, A.post) > COVER.rearWalkM && !(DOORMANNERS.on && DOORMANNERS.stand && DOORMANNERS.watch)) return false;
     // (rearwatch.ts: the man an entry left outside on the way behind is not 'alone on a door' — his mates went through it, and their backs are what he keeps)
-    return COVER.stacked && (!!rearPinOf(viewOf(this.g, gd), gd)?.out || teamMen(this.g).some(o => { if (o === gd) return false; const B = orderOf(this.g, o); return !!B && !!B.post && !B.spare && B.door === A.door; }));
+    return COVER.stacked && (!!rearPinOf(this.g, gd)?.out || this.g.orders.men().some(o => { if (o === gd) return false; const B = this.g.orders.of(o); return !!B && !!B.post && !B.spare && B.door === A.door; }));
   }
   private free(gd: Guard): Assignment | null {
     const g = this.g; if (gd.state === 'dead' || !gd.script || g.time < gd.dazzledUntil || gd.held) return null;
-    const A = orderOf(g, gd); if (!A) return null;
+    const A = g.orders.of(gd); if (!A) return null;
     if (!(A.order === 'fallIn' || (A.order === 'hold' && !A.watch) || this.spare(gd, A))) return null;   // (… or his order leaves his eyes spare: on its mark, and on the walk to it)
     if (g.fight.engaged(gd)) return null;
     // a contact still warm is his before any opening is: a man who had a living enemy in his eyes inside COVER.contactSecs keeps looking where his order and the
@@ -362,12 +361,12 @@ export class Cover {
   /** Once a frame from Game.update, before the orders pose the men. */
   tick() {
     const g = this.g, K = COVER;
-    if (!K.on || !teamActive(g)) { if (this.jobs.size || this.kept.size || this.outs.size) this.dropAll(); this.steps.clear(); this.live = []; this.men = []; return; }
+    if (!K.on || !g.orders.active) { if (this.jobs.size || this.kept.size || this.outs.size) this.dropAll(); this.steps.clear(); this.live = []; this.men = []; return; }
     for (const [gd] of [...this.jobs]) if (!this.free(gd)) this.drop(gd, true);   // (an order, a drill, a fight: his job goes the frame it has him)
     for (const [gd, k] of [...this.kept]) {   // (… and so does a gun left on an opening the deal has let go of; its time up, the order's own watch has it back)
       if (!REAR.settle || !this.free(gd)) this.unkeep(gd, true); else if (Math.abs(g.time - k.t) >= REAR.secs) this.unkeep(gd); }
     for (const [gd] of [...this.outs]) if (!K.backTurn || !this.free(gd)) this.unturn(gd);   // (… and the man coming out of a back-pedal: taken, his feet and gun are given back as a job's are)
-    for (const gd of teamMen(g)) { const v = gd.char.vel; if (Math.hypot(v[0], v[2]) > 0.3) this.heading.set(gd, Math.atan2(v[0], v[2])); }
+    for (const gd of g.orders.men()) { const v = gd.char.vel; if (Math.hypot(v[0], v[2]) > 0.3) this.heading.set(gd, Math.atan2(v[0], v[2])); }
     if (g.time < this.dealAt) return;
     this.dealAt = g.time + K.dealSecs;
     if (this.nav !== g.col.nav) this.build();
@@ -375,14 +374,15 @@ export class Cover {
   }
 
   private deal() {
-    const g = this.g, K = COVER, sams = players(g).filter(pl => !pl.down).map(pl => pl.char);   // (the players still up: an opening one of them is on needs no man)
-    const squad = teamMen(g), list: [Guard, Assignment][] = [];
+    const g = this.g, K = COVER, sam = g.player.char, samUp = !g.player.down;
+    const squad = g.orders.men(), list: [Guard, Assignment][] = [];
     for (const gd of squad) { const A = this.free(gd); if (A) list.push([gd, A]); }
     list.sort((a, b) => (a[1].post === null ? a[1].follow : 100) - (b[1].post === null ? b[1].follow : 100));
     const men = this.men = list.map(x => x[0]), asgOf = new Map(list); this.stats.deals++;
     if (!men.length) { this.live = []; this.pruneSteps(); return; }   // (nobody free — a contact has them all: a step taken stands through it, as stepDeal says)
     const file = list.filter(x => x[1].post === null).map(x => x[0]);
-    const bodies: Vec3[] = squad.map(gd => gd.char.pos); for (const sam of sams) bodies.push(sam.pos);
+    const bodies: Vec3[] = squad.map(gd => gd.char.pos); if (samUp) bodies.push(sam.pos);
+    const samEye = this.eyeOf(sam.pos);
     const near = (p: Vec3) => { let d = Infinity; for (const b of bodies) d = Math.min(d, flat(b, p)); return d; };
     // (nobody is dealt an opening he would have to cover THROUGH one of his own: Sam or a mate within COVER.lane of the line from him to it — the game's own
     //  muzzle discipline would only bring his gun down. The man already on it keeps it to a narrower lane: a mate brushing the line does not cost him the job.)
@@ -401,8 +401,8 @@ export class Cover {
     // (poseFor's own rule, on his pace: over backIn he does not START walking backwards, over backOut he stops)
     const fast = (gd: Guard) => { const J = this.jobs.get(gd); return Math.max(spd.get(gd)!, J?.pace ?? 0) > (J?.back ? K.backOut : K.backIn); };
     const runs = (gd: Guard, at: Vec3) => fast(gd) && behindOf(gd, at);
-    const samOn = (o: Opening) => o.kind !== 'rear' && sams.some(sam => Math.abs(wrapAngle(yawTo(sam.pos, o.at) - sam.aimYaw)) < K.samDeg * Math.PI / 180 && this.line(this.eyeOf(sam.pos), o));
-    const heldBy = (o: Opening) => o.kind !== 'rear' && squad.some(gd => { if (men.includes(gd)) return false; const A = orderOf(g, gd); if (!A || !A.post || flat(gd.char.pos, A.post) > 1.5) return false;
+    const samOn = (o: Opening) => samUp && o.kind !== 'rear' && Math.abs(wrapAngle(yawTo(sam.pos, o.at) - sam.aimYaw)) < K.samDeg * Math.PI / 180 && this.line(samEye, o);
+    const heldBy = (o: Opening) => o.kind !== 'rear' && squad.some(gd => { if (men.includes(gd)) return false; const A = g.orders.of(gd); if (!A || !A.post || flat(gd.char.pos, A.post) > 1.5) return false;
       return (!!o.door && A.door === o.door) || (!!A.watch && flat(A.watch, o.at) < 1.5); });
     // ---- the live openings
     let live: LiveOpening[] = []; const openDoors: Opening[] = [];   // (… and every door standing open that the squad is neither in nor going through and that is neither on Sam's gun nor a posted man's, seen or not: stepDeal)
@@ -437,7 +437,7 @@ export class Cover {
       const lp = last.char.pos; let back: Vec3 | null = null;
       // (… and BEHIND him: a man still running up from far back has that point ahead of him, on the way to his place — no rear until he is in the file)
       const lway = ways.get(last) ?? null;
-      for (const k of [1, 0.6, 0.35]) { const q = ordersOf(g, last).trailBack(last, K.rearM * k); if (!q || flat(q, lp) <= 1.2) continue;
+      for (const k of [1, 0.6, 0.35]) { const q = g.orders.trailBack(last, K.rearM * k); if (!q || flat(q, lp) <= 1.2) continue;
         if (lway !== null && Math.abs(wrapAngle(yawTo(lp, q) - lway)) < Math.PI / 2) continue;
         if (!g.col.segmentBlocked(this.eyeOf(lp), [q[0], CHEST, q[2]])) { back = q; break; } }
       if (fast(last)) back = null;
@@ -481,7 +481,7 @@ export class Cover {
     // ---- THE REAR MAN OF A STACK with an open way at its back (rearwatch.ts): that way is HIS, ahead of every dealing below and whatever kept it out of the
     // list above (a mate by its frame, a mate brushing his lane, the walk's narrower list) — while he has a line to it from where he is
     const pins: [Guard, LiveOpening][] = [];
-    for (const [gd] of list) { const P = rearPinOf(viewOf(g, gd), gd); if (!P) continue;
+    for (const [gd] of list) { const P = rearPinOf(g, gd); if (!P) continue;
       // (his line cut for a moment and the pin kept — REARWATCH.grace: the point he had; a step short of a mark the door tool has just moved: the point that
       //  mark sees, so he does not turn to something else for the half second the step takes)
       const o = P.o, J0 = this.jobs.get(gd), post = P.A.post, to = rearSees(g, gd.char.pos, o, P.front) ?? (J0 && !J0.off && J0.o === o ? J0.to : null)
@@ -538,7 +538,7 @@ export class Cover {
    *  (orders.ts asks stepOf: a follower's goal while Sam stands, a plain holder's mark moved); the next deal finds him with a line and weighs the door as any
    *  other. The counts are kept whatever the switch says: they are the before and after. */
   private stepDeal(list: [Guard, Assignment][], asgOf: Map<Guard, Assignment>, got: Map<Guard, LiveOpening>, live: LiveOpening[], open: Opening[], bodies: Vec3[], spd: Map<Guard, number>, wOf: (o: Opening) => number, rearMan: Guard | null) {
-    const g = this.g, K = COVER, t = g.time;
+    const g = this.g, K = COVER, t = g.time, samStill = g.orders.samStopped;
     // (a step stands while the order it was taken under does — through a contact, a fight, a blinding: he does not walk back to his place and out again —
     //  and, for a follower, while Sam stands)
     this.pruneSteps();
@@ -556,7 +556,7 @@ export class Cover {
       if (S && !S.saw && L && L.o === S.o && L.by === gd) { S.saw = true; this.stats.stepSaw++; }
       // (his order lets his feet go: under 'fall in' while Sam stands, or holding a spot with nothing named — never a stack's rear man, a man an entry left on
       //  his point, or the last man of a file whose rear is his outright)
-      const mayStep = A.post === null ? ordersOf(g, gd).samStopped : A.order === 'hold' && !A.watch && !A.spare && !A.via.length;
+      const mayStep = A.post === null ? samStill : A.order === 'hold' && !A.watch && !A.spare && !A.via.length;
       const placed = A.post !== null || !(K.stepPlaceM > 0) || flat(p, A.goal) <= K.stepPlaceM;
       if (mayStep && still && placed && gd !== rearMan && t - Math.max(this.stood.get(gd)!, A.t0) >= K.stepAfter && t >= (this.noStep.get(gd) ?? 0)) ready.push(gd);   // (… nor in the first moments of an order: 'fall in' given on the walk reads as Sam standing for a frame)
     }
@@ -582,8 +582,8 @@ export class Cover {
   }
   /** the steps that no longer stand: the switch off, the man down, his order another one, a follower whose Sam walks again */
   private pruneSteps() {
-    const g = this.g;
-    for (const [gd, S] of [...this.steps]) { const A = orderOf(g, gd); if (!COVER.step || gd.state === 'dead' || A !== S.A || (A.post === null && !ordersOf(g, gd).samStopped)) this.steps.delete(gd); }
+    const g = this.g, samStill = g.orders.samStopped;
+    for (const [gd, S] of [...this.steps]) { const A = g.orders.of(gd); if (!COVER.step || gd.state === 'dead' || A !== S.A || (A.post === null && !samStill)) this.steps.delete(gd); }
   }
   /** the spot a man steps to to see through open door `o`: within COVER.stepM of `from` (the place his order gave him), on his own side of the door, free floor
    *  reached in a straight walk, in no opening (COVER.stepOffM clear of every one's width), not on a mate nor on a mate's step, with a line from his eye INTO
@@ -595,7 +595,7 @@ export class Cover {
     const s = side(p) >= 0 ? 1 : -1, d0 = flat(p, o.at);
     const beyond: Vec3 = [o.at[0] - o.n[0] * s * 0.8, CHEST, o.at[2] - o.n[1] * s * 0.8];
     // (the guns already up: every mate's line to what he was dealt, and Sam's own — nobody steps into one)
-    const guns: [Vec3, Vec3][] = players(g).filter(pl => !pl.down).map(pl => pl.char).map(sam => [sam.pos, [sam.pos[0] + Math.sin(sam.aimYaw) * 8, 0, sam.pos[2] + Math.cos(sam.aimYaw) * 8]]);
+    const sam = g.player.char, guns: [Vec3, Vec3][] = g.player.down ? [] : [[sam.pos, [sam.pos[0] + Math.sin(sam.aimYaw) * 8, 0, sam.pos[2] + Math.cos(sam.aimYaw) * 8]]];
     for (const [m, J] of this.jobs) if (m !== gd && !J.off) guns.push([m.char.pos, J.to]);
     const inLane = (x: Vec3, a: Vec3, b: Vec3) => { const dx = b[0] - a[0], dz = b[2] - a[2], len = Math.hypot(dx, dz) || 1, sx = x[0] - a[0], sz = x[2] - a[2], along = (sx * dx + sz * dz) / len; return along > 0.15 && along < len && Math.abs(sx * dz - sz * dx) / len < K.lane; };
     let best: Vec3 | null = null, bc = Infinity;
@@ -628,7 +628,7 @@ export class Cover {
     const J = this.jobs.get(gd); if (!J) return; this.jobs.delete(gd); this.note(gd, null);
     // (REAR.settle: the deal has let go of him and nothing else has taken him — his gun stays where it is a moment longer; see keptOf)
     if (!taken && REAR.settle && !J.off && gd.script?.aimAt === J.aim) {
-      const A = orderOf(this.g, gd) ?? J.A;   // (the order he is under NOW: a job outlives a re-order that leaves him free, J.A is the one it was dealt under)
+      const A = this.g.orders.of(gd) ?? J.A;   // (the order he is under NOW: a job outlives a re-order that leaves him free, J.A is the one it was dealt under)
       if (REAR.file || (!!A.spare && !!A.post && !!A.from)) { J.to = [J.to[0], J.to[1], J.to[2]]; this.kept.set(gd, { J, t: this.g.time }); this.stats.kept++; return; }   // (its own copy of the point: the file's rear is one object the next deal moves for whoever is last by then)
     }
     if (!taken) this.turnFrom(gd, J);
@@ -673,13 +673,13 @@ export class Cover {
     const k = this.kept.get(gd); if (!k) return null;
     const g = this.g, J = k.J, p = gd.char.pos;
     if (Math.abs(g.time - k.t) >= REAR.secs || gd.script?.aimAt !== J.aim) return null;
-    const A = orderOf(g, gd); if (!A) return null; J.A = A;   // (told to stack meanwhile, his eyes still spare: the gun does not start for the door and come back)
+    const A = g.orders.of(gd); if (!A) return null; J.A = A;   // (told to stack meanwhile, his eyes still spare: the gun does not start for the door and come back)
     const dx = J.to[0] - p[0], dz = J.to[2] - p[2], len = Math.hypot(dx, dz) || 1, fx = dx / len, fz = dz / len;
     if (len < COVER.inM) return null;
     // (… in the line as far as the opening and a step beyond it, or standing in the opening: the deal takes a job for either, and so does this)
     const ours = (b: Vec3) => { const sx = b[0] - p[0], sz = b[2] - p[2], along = sx * fx + sz * fz; return (along > 0.15 && along < len + COVER.inM && Math.abs(sx * fz - sz * fx) < COVER.laneKeep) || flat(b, J.to) < COVER.inM; };
-    for (const pl of players(g)) if (!pl.down && ours(pl.char.pos)) return null;
-    for (const m of teamMen(g)) if (m !== gd && m.state !== 'dead' && ours(m.char.pos)) return null;
+    if (!g.player.down && ours(g.player.char.pos)) return null;
+    for (const m of g.orders.men()) if (m !== gd && m.state !== 'dead' && ours(m.char.pos)) return null;
     return J;
   }
   private dropAll() { for (const gd of [...this.jobs.keys()]) this.drop(gd, true); for (const gd of [...this.kept.keys()]) this.unkeep(gd, true); for (const gd of [...this.outs.keys()]) this.unturn(gd); }
