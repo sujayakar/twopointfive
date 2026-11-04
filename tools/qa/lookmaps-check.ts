@@ -6,7 +6,9 @@
 import { readFileSync } from 'node:fs';
 import { ROOT } from './headless.ts';
 const { lookLayer, lookLayerSliced, lookMip, lookStuffOf, LOOK_LAYERS, LOOK_PAINTED, LOOK_NAMES, LOOK_N, LOOK_ROUGH, LOOK_TILE, LOOK_WITH, LOOK_BUILT, LOOK_FADES, LOOK_SOAKS, LOOK_WORN, LOOK_UNIT, LOOK_LAY } = await import(`${ROOT}/src/render/lookTex.ts`);
-const { GBuffer, LOOK_OF, LOOK_MATCH, LOOK_DEFAULTS, LOOK_WORD, lookStuff, lookWordOf, lookAmounts, lookNeedPaints, lookForget } = await import(`${ROOT}/src/render/gbuffer.ts`);
+const { GBuffer, LOOK_DEFAULTS, LOOK_WORD, lookWordOf, lookCoreOf, lookAmounts, lookNeed, lookForget } = await import(`${ROOT}/src/render/gbuffer.ts`);
+const { PAINT_STUFF, paintOf, toned, worded } = await import(`${ROOT}/src/scene/stuff.ts`);
+const makeBox0 = (p: { albedo: number[] }): any => ({ c: [3, 1, 4], h: [0.5, 0.5, 0.5], yaw: 0, emissive: [0, 0, 0], flags: 0, owner: 0, cutHeight: 1e6, ...p });   // (a box as scene/boxes.ts makeBox makes it, with the albedo array handed over as it is)
 const { GWOT_PALETTE } = await import(`${ROOT}/src/scene/gwotPalette.ts`);
 
 const BRK = process.env.LOOKMAPS_BREAK === '1';
@@ -82,18 +84,21 @@ const hollowsOf = (b: Uint8Array) => { let s = 0; for (let i = 3; i < b.length; 
     if (Math.max(...m0.map((v, c) => Math.abs(v - m1[c]))) > 0.012) bad.push(`${LOOK_NAMES[l]}: paint × ${m0.map(v => v.toFixed(3)).join(' ')} at full size, × ${m1.map(v => v.toFixed(3)).join(' ')} at 8 texels`);
   }
   check(bad.length === 0, 'every normal is a direction, every finish is about its layer\'s own, and a layer read from far off is the same paint as up close', bad.join(' · ')); }
-// 8. what a box is made of is the box's own word, decided from its authored paint
-{ const P = GWOT_PALETTE as Record<string, number[]>, names = Object.keys(P), of = LOOK_OF as Record<string, number>;
-  const wrong = names.filter(m => lookStuff(P[m]) !== (of[m] ?? 0)).map(m => `${m} is drawn as class ${lookStuff(P[m])}, its row says ${of[m] ?? 0}`);
-  check(wrong.length === 0, `every one of the palette's ${names.length} paints is drawn as its own row's stuff (${Object.keys(of).length} have a material, the rest are plain)`, wrong.join(' · '));
-  // a paint worn dark in one piece is still its stuff, unless the worn colour IS another paint: then it is that paint, as it is to a round. Counted, so a new paint that adds one is seen
-  const taken: string[] = [];
-  for (const p of Object.keys(of)) for (const q of names) { if (q === p || (of[q] ?? 0) === of[p]) continue;
-    for (let k = LOOK_MATCH.darkLo + 0.0025; k < LOOK_MATCH.darkHi; k += 0.0025) if (P[p].every((v, c) => Math.abs(v * k - P[q][c]) < LOOK_MATCH.near)) { taken.push(`${p} × ${k.toFixed(2)} = ${q}`); break; } }
-  const worn = (m: string, k: number) => lookStuff(P[m].map(v => v * k));
-  check(worn('dust', 0.7) === of.dust && worn('mud', 0.84) === of.mud && worn('slab', 0.6) === of.slab && worn('gravel', 0.5) === 0 && taken.length <= 10,
-    'a paint worn dark in one piece (a trodden patch, a door\'s wear) is still its stuff; a worn colour that is another paint\'s own is that paint, and there are no more such pairs than there were',
-    `${taken.length} pairs: ${taken.join(' · ')}`);
+// 8. what a box is made of is the box's own word: a palette paint handed over is made of what its name says, and a tone of it is the same stuff
+{ const P = GWOT_PALETTE as Record<string, number[]>, names = Object.keys(P), T = PAINT_STUFF as Record<string, string>, word = lookWordOf();
+  const drawn = (albedo: number[]) => word(worded(makeBox0({ albedo })), false) & (LOOK_WORD.stuffs - 1);
+  const wrong = names.filter(m => drawn(P[m]) !== lookStuffOf(T[m])).map(m => `${m} is drawn as class ${drawn(P[m])}, its name says ${T[m]}`);
+  check(wrong.length === 0 && names.every(m => paintOf(P[m])?.name === m), `every one of the palette's ${names.length} paints, handed over as the palette's own row, is made of what its name says (${names.filter(m => lookStuffOf(T[m]) > 0).length} have a material, the rest are plain); the same numbers written out again are nobody's paint`,
+    wrong.join(' · ') || `a copy of mud's numbers: class ${drawn([...P.mud])}`);
+  // a paint worn dark in one piece is still its stuff, HOWEVER dark, and whatever other paint its darkened numbers happen to be: the colour rule took a worn colour
+  // that was another paint's own for that paint (the pairs are counted here with that rule's two numbers, so the list is the one it had) and lost one worn past 0.55
+  const NEAR = 0.006, LO = 0.55, HI = 0.99, taken: string[] = []; let kept = 0;
+  for (const p of names) for (const q of names) { if (q === p || T[q] === T[p] || lookStuffOf(T[p]) === 0) continue;
+    for (let k = LO + 0.0025; k < HI; k += 0.0025) if (P[p].every((v, c) => Math.abs(v * k - P[q][c]) < NEAR)) { taken.push(`${p} × ${k.toFixed(2)} = ${q}`); if (drawn(toned(P[p], k)) === lookStuffOf(T[p])) kept++; break; } }
+  const worn = (m: string, k: number) => drawn(toned(P[m], k));
+  check(worn('dust', 0.7) === lookStuffOf('earth') && worn('mud', 0.84) === lookStuffOf('mud wall') && worn('slab', 0.6) === lookStuffOf('slab') && worn('gravel', 0.5) === lookStuffOf('gravel') && worn('gravel', 0.1) === lookStuffOf('gravel') && taken.length > 5 && kept === taken.length && drawn(P.dust.map(v => v * 0.7)) === 0,
+    'a paint worn dark in one piece (a trodden patch, a door\'s wear) is still its stuff, however dark it is worn; a worn colour whose numbers are another paint\'s own is still the paint it was worn from; a tone made by arithmetic alone, with nobody saying what it is a tone of, is nobody\'s paint',
+    `${taken.length} pairs the colour rule confused, ${kept} now their own: ${taken.join(' · ')}`);
   // on a real level, through the real pack: the word above the finish, the finish under it, what moves, and a number that is the box's own
   const { parseLevelData } = await import(`${ROOT}/src/scene/levelData.ts`), { loadLevel } = await import(`${ROOT}/src/scene/levelLoad.ts`), { standUp } = await import('./headless.ts'), { matWord, makeBox, MAT_STRIDE } = await import(`${ROOT}/src/scene/boxes.ts`);
   const stand = async (file: string) => { const l0 = console.log, w0 = console.warn; console.log = console.warn = () => { };
@@ -101,36 +106,36 @@ const hollowsOf = (b: Uint8Array) => { let s = 0; for (let i = 3; i < b.length; 
     console.log = l0; console.warn = w0; return W; };
   { const world = (await stand('smoke-lab')).game.engine.world, word = (i: number) => world.matData[i * MAT_STRIDE + 7], all = () => [...world.statics, ...world.dynamics];
     world.forgetSent(); world.upload(); const plain = all().every((b: any, i: number) => word(i) === Math.fround(matWord(b)));
-    world.setStuffOf(lookWordOf()); world.upload();   // (on the page the engine sets it before the first box is packed; the setter has every static packed again)
+    world.setStuffOf(lookWordOf(), lookCoreOf()); world.upload();   // (on the page the engine sets it before the first box is packed; the setter has every static packed again)
     const nS = world.statics.length, boxes = all(); let classed = 0, finishOff = 0, classOff = 0, said = 0, movesOff = 0, saltOff = 0; const salts = new Set<number>(), mine = new Map<any, number>();
     boxes.forEach((b: any, i: number) => { const lw = Math.floor(word(i) / 8), c = lw & (LOOK_WORD.stuffs - 1), mv = (lw & LOOK_WORD.moves) !== 0, salt = Math.floor(lw / LOOK_WORD.own);
-      if (c !== (b.stuff !== undefined ? lookStuffOf(b.stuff) : lookStuff(b.albedo))) classOff++; if (b.stuff !== undefined) said++; if (Math.abs(word(i) - 8 * lw - matWord(b)) > 2e-3) finishOff++; if (c > 0) classed++; if (mv !== (i >= nS)) movesOff++; if (salt >= LOOK_WORD.owns) saltOff++; if (mv) { salts.add(salt); mine.set(b, lw); } });
+      if (c !== lookStuffOf(b.stuff)) classOff++; if (b.stuff !== undefined) said++; if (Math.abs(word(i) - 8 * lw - matWord(b)) > 2e-3) finishOff++; if (c > 0) classed++; if (mv !== (i >= nS)) movesOff++; if (salt >= LOOK_WORD.owns) saltOff++; if (mv) { salts.add(salt); mine.set(b, lw); } });
     // a wall goes: a static is appended, and every box after it has a new place in the list
     world.addStatic(makeBox({ c: [1, 0.5, 1], h: [0.2, 0.5, 0.2], albedo: [0.3, 0.3, 0.3] })); world.upload();
     let jumped = 0; world.dynamics.forEach((b: any, k: number) => { if (Math.floor(word(world.statics.length + k) / 8) !== mine.get(b)) jumped++; });
     check(plain && classOff === 0 && finishOff === 0 && classed > boxes.length / 2 && movesOff === 0 && saltOff === 0 && mine.size > 4 && salts.size > 2 && jumped === 0 && world.statics.length === nS + 1,
-      'on a level, through the real pack: with nobody asking, the finish word is as it ever was; on the look page every box carries its stuff (the word it says, or else what its paint is) above its finish and the finish reads back (to a 500th: the word shares the float); a box past the statics, and no other, says it moves; and when a static is appended no mover\'s word changes, though every mover\'s place in the list does',
-      `smoke-lab: ${boxes.length} boxes, ${classed} with a material, ${classOff} not their own word's or their paint's (${said} say a word), ${finishOff} finishes moved, ${mine.size} movers with ${salts.size} numbers between them, ${movesOff} wrong about moving, ${jumped} changed when a static was added`); }
+      'on a level, through the real pack: with nobody asking, the finish word is as it ever was; on the look page every box carries its stuff (the word it says, nothing else) above its finish and the finish reads back (to a 500th: the word shares the float); a box past the statics, and no other, says it moves; and when a static is appended no mover\'s word changes, though every mover\'s place in the list does',
+      `smoke-lab: ${boxes.length} boxes, ${classed} with a material, ${classOff} not their own word's (${said} say a word), ${finishOff} finishes moved, ${mine.size} movers with ${salts.size} numbers between them, ${movesOff} wrong about moving, ${jumped} changed when a static was added`); }
   // the rain, by the game's own weather: a level whose lot is gravel and stands wet
   { const g = (await stand('consulate-gwot')).game, world = g.engine.world, st = world.statics as any[];
     const li = st.findIndex(b => b.c[1] < 0 && b.c[1] + b.h[1] > -0.01 && b.h[0] > 18 && b.h[2] > 12), lot = st[li], dry = li < 0 ? undefined : g.weather.dryPaint(lot);
     const cls = (i: number) => Math.floor(world.matData[i * MAT_STRIDE + 7] / 8) & (LOOK_WORD.stuffs - 1);
-    world.setStuffOf(lookWordOf()); world.upload(); const blind = li < 0 ? -1 : cls(li);
-    world.setStuffOf(lookWordOf((b: any) => g.weather.dryPaint(b))); world.upload(); const told = li < 0 ? -1 : cls(li);
+    world.setStuffOf(lookWordOf(), lookCoreOf()); world.upload(); const told = li < 0 ? -1 : cls(li);
     // … and a picked rain, which darkens every other open slab for the picture alone (Box.wetK): the paint is untouched, the colour a corner is handed is not
     const W2 = await stand('compound-gwot'), g2 = W2.game, w2 = g2.engine.world, st2 = w2.statics as any[]; g2.weather.setKind('rain'); for (let i = 0; i < 10; i++) W2.step(1 / 60);
-    w2.setStuffOf(lookWordOf((b: any) => g2.weather.dryPaint(b))); w2.upload();
+    w2.setStuffOf(lookWordOf(), lookCoreOf()); w2.upload();
     const wetOnly = st2.filter(b => b.wetK !== undefined), cls2 = (i: number) => Math.floor(w2.matData[i * MAT_STRIDE + 7] / 8) & (LOOK_WORD.stuffs - 1);
-    const wetOff = wetOnly.filter(b => cls2(st2.indexOf(b)) !== lookStuff(b.albedo) || lookStuff(b.albedo) === 0).length;
+    const wetOff = wetOnly.filter(b => cls2(st2.indexOf(b)) !== lookStuffOf(b.stuff) || lookStuffOf(b.stuff) === 0).length;
     const darker = wetOnly.filter(b => { const m = st2.indexOf(b) * MAT_STRIDE; return Math.abs(w2.matData[m] - b.albedo[0] * b.wetK) < 1e-4 && b.wetK < 1; }).length;
-    check(li >= 0 && !!dry && lookStuff(dry) === of.gravel && lookStuff(lot.albedo) !== of.gravel && told === of.gravel && blind !== of.gravel && wetOnly.length > 0 && wetOff === 0 && darker === wetOnly.length,
-      'rain does not change what a thing is made of: the game\'s own weather darkens a gravel lot in place, and the lot is still gravel because its word is asked of the paint it had dry (asked of the colour it has now, it was not); and a slab a picked rain darkens for the picture alone is handed to the shader darker and keeps its paint and so its stuff (what the darker colour of a concrete slab or of gravel would be read as is the line above: nothing)',
-      li < 0 ? 'consulate-gwot: no lot found' : `consulate-gwot: the lot's paint now ${lot.albedo.map((v: number) => v.toFixed(3)).join(' ')} (class ${lookStuff(lot.albedo)}), dry ${dry ? [...dry].map((v: number) => v.toFixed(3)).join(' ') : 'not kept'} (class ${dry ? lookStuff(dry) : '?'}); packed as ${told}, and as ${blind} with the weather not asked; compound-gwot under a picked rain: ${wetOnly.length} slab wet for the picture alone, ${darker} handed darker, ${wetOff} not its paint's stuff`); }
+    const soaked = !!dry && lot.albedo.some((v: number, c: number) => Math.abs(v - dry[c]) > 0.01);
+    check(li >= 0 && soaked && lot.stuff === 'gravel' && told === lookStuffOf('gravel') && wetOnly.length > 0 && wetOff === 0 && darker === wetOnly.length,
+      'rain does not change what a thing is made of: the game\'s own weather darkens a gravel lot in place, and the lot is still gravel because it SAYS gravel (nobody is asked the paint it had dry: no colour is read); and a slab a picked rain darkens for the picture alone is handed to the shader darker and is still what it says',
+      li < 0 ? 'consulate-gwot: no lot found' : `consulate-gwot: the lot's paint now ${lot.albedo.map((v: number) => v.toFixed(3)).join(' ')}, dry ${dry ? [...dry].map((v: number) => v.toFixed(3)).join(' ') : 'not kept'}; it says ${lot.stuff}, packed as ${told}; compound-gwot under a picked rain: ${wetOnly.length} slab wet for the picture alone, ${darker} handed darker, ${wetOff} not what it says`); }
   const gsrc = readFileSync(`${ROOT}/src/render/shaders/gbuffer.wgsl`, 'utf8'), csrc = readFileSync(`${ROOT}/src/render/shaders/common.wgsl`, 'utf8'), lsrc = readFileSync(`${ROOT}/src/render/shaders/look.wgsl`, 'utf8'), msrc = readFileSync(`${ROOT}/src/main.ts`, 'utf8');
   check(/if \(LOOK\) \{ o\.look = boxStuff\(bi\); \}/.test(gsrc) && !/lookClass\(o\.albedo\)/.test(gsrc) && /fn boxLook\(i: u32\) -> u32 \{ return u32\(boxMat\[i \* 4u \+ 1u\]\.w \* 0\.125\); \}/.test(csrc) && /fn boxStuff\(i: u32\) -> u32 \{ return boxLook\(i\) & 31u; \}/.test(csrc) && LOOK_WORD.stuffs === 32
     && /if \(LOOK\) \{ w -= 8\.0 \* floor\(w \* 0\.125\); \}/.test(csrc) && /let word = boxLook\(bi\); let moves = \(word & 32u\) != 0u;/.test(lsrc) && LOOK_WORD.moves === 32 && /let salt = word >> 6u;/.test(lsrc) && LOOK_WORD.own === 64 && /\|\| moves\) \{/.test(lsrc) && !/bi % (7|13)u/.test(lsrc)
-    && /mix\(1\.0, 0\.5 \+ cav, k2\.z\)/.test(lsrc) && /setStuffOf\(lookWordOf\(b => game\.weather\.dryPaint\(b\)[,)]/.test(msrc) && /for \(const b of engine\.world\.statics\) word\(b, false\); for \(const d of game\.doors\.list\) word\(d\.box, true\); for \(const p of game\.props\.all\) for \(const b of p\.boxes\) word\(b, true\)/.test(msrc) && /await Promise\.all\(\[engineInit, smokeInit, lookMaps, /.test(msrc),
-    'the shader reads the box\'s word and takes it off the finish: no box is told what it is made of by the colour a corner is handed or how to lay its map by its place in the list, the hollows are drawn round a half, the page asks the weather for a soaked slab\'s dry paint and waits for the level\'s maps before its first frame'); }
+    && /mix\(1\.0, 0\.5 \+ cav, k2\.z\)/.test(lsrc) && /this\.world\.setStuffOf\(lookWordOf\(\), lookCoreOf\(\)\)/.test(readFileSync(`${ROOT}/src/engine.ts`, 'utf8')) && /for \(const b of engine\.world\.statics\) word\(b, false\); for \(const d of game\.doors\.list\) word\(d\.box, true\); for \(const p of game\.props\.all\) for \(const b of p\.boxes\) word\(b, true\)/.test(msrc) && /await Promise\.all\(\[engineInit, smokeInit, lookMaps, /.test(msrc),
+    'the shader reads the box\'s word and takes it off the finish: no box is told what it is made of by the colour a corner is handed or how to lay its map by its place in the list, the hollows are drawn round a half, the page makes the word from what each box says and waits for the level\'s maps before its first frame'); }
 // 9. a stuff's number: asked by name, the shader's own names agree, and the box's word still holds the finish to a 500th under the largest word there can be
 { const lsrc = readFileSync(`${ROOT}/src/render/shaders/look.wgsl`, 'utf8'), ssrc = readFileSync(`${ROOT}/src/render/shaders/surface.wgsl`, 'utf8');
   const named: [string, string, string][] = [['mud wall', 'SURF_MUD', ssrc], ['wood', 'SURF_WOOD', ssrc], ['sheet', 'SURF_SHEET', ssrc], ['cloth', 'LOOK_CLOTH', lsrc], ['metal', 'LOOK_METAL', lsrc], ['paint', 'LOOK_PAINT', lsrc], ['veneer', 'LOOK_VENEER', lsrc], ['plastic', 'LOOK_PLASTIC', lsrc], ['fabric', 'LOOK_FABRIC', lsrc], ['steel', 'LOOK_STEEL', lsrc], ['carpaint', 'LOOK_CARPAINT', lsrc]];
@@ -158,7 +163,7 @@ const hollowsOf = (b: Uint8Array) => { let s = 0; for (let i = 3; i < b.length; 
   let mips = 1; for (let n = LOOK_N; n > 1; n >>= 1) mips++;
   const L = (name: string) => (LOOK_NAMES as readonly string[]).indexOf(name);
   await G.fillLook(); const boot = { made: [...G.lookMade], writes: writes.length, slots: slotsOf(bufs[bufs.length - 1]), texes: texes.length };
-  const P = GWOT_PALETTE as Record<string, number[]>; lookNeedPaints([P.mud, P.dirt, P.paintBlue]); await G.needLook();
+  lookNeed(['mud wall', 'earth', 'paint']); await G.needLook();
   const level = { made: [...G.lookMade], writes: writes.length, slots: slotsOf(bufs[bufs.length - 1]), texes: [...texes] };
   await G.needLook(); const again = writes.length; lookForget();
   // … at every write of the block: a stuff has a slot only when every layer its drawing reads has one (the mud wall waited for its stone and brick), and
