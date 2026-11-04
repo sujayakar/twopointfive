@@ -52,7 +52,7 @@ function range(W: any) {
       if (v3.distXZ(c.pos, p) < 0.1) return p; }
     return null; };
   /** `n` rounds at box i's middle from where he stands. Returns what the game asked of the particles (kind → how many, summed), the damage marks it laid
-   *  on that box ('bullet' = a round's hole; 'damage 2' = the crack, 'damage 0' the chaos lane's dent), and how many of the rounds met box i. `chaos`: the
+   *  on that box ('bullet' = a round's hole; 'damage 9' = the crack, 'damage 0' the chaos lane's dent), and how many of the rounds met box i. `chaos`: the
    *  chaos lane's dial for the volley (0 = the lane does nothing with the rounds it is told of); `cold` false = on the floor's heat as it stands */
   const fire = (i: number, n = 2, low = 0, chaos = 1, cold = true) => { const b = st[i], to = aimAt(i, low), e = game.engine as any, was = { p: e.particles, s: e.settings.gpuParticles, add: game.decals.add, round: game.destr.round, en: game.decals.enabled, chaos: game.tune.chaos };
     const emits: { kind: string; at: number[]; n: number }[] = [], hits: number[][] = [], marks: string[] = []; let met = 0;
@@ -114,9 +114,9 @@ export async function hitstuffCheck(): Promise<boolean> {
     up(true); const solid = solidGlass(G), glassUp = pG ? R.fire(glass) : null, glassCold = pG ? R.fire(glass, 2, 0, 0) : null;
     const stands = G.flags === flags0 && !!pG && R.game.col.raycast([pG[0], 1.35, pG[2]], v3.normalize(v3.sub(G.c, [pG[0], 1.35, pG[2]])), 60)?.index === glass;
     up(false); const glassDown = pG ? R.fire(glass) : null;
-    line(!!glassUp && !!glassCold && !!glassDown && (solid || BREAK) && glassUp.met === 2 && count(glassUp, 'damage 2') === glassUp.marks.length && glassUp.marks.length === glassDown.marks.length && glassUp.marks.length >= 2 && glassUp.dust === 0 && glassUp.chips > 0 && glassUp.chips <= 2 * 3
-      && count(glassCold, 'damage 2') === 2 && count(glassCold, 'bullet') === 0 && stands && (G.flags & BoxFlag.Glass) === 0
-      && count(glassDown, 'damage 2') === 0 && count(glassDown, 'bullet') === 2,
+    line(!!glassUp && !!glassCold && !!glassDown && (solid || BREAK) && glassUp.met === 2 && count(glassUp, 'damage 9') === glassUp.marks.length && glassUp.marks.length === glassDown.marks.length && glassUp.marks.length >= 2 && glassUp.dust === 0 && glassUp.chips > 0 && glassUp.chips <= 2 * 3
+      && count(glassCold, 'damage 9') === 2 && count(glassCold, 'bullet') === 0 && stands && (G.flags & BoxFlag.Glass) === 0
+      && count(glassDown, 'damage 9') === 0 && count(glassDown, 'bullet') === 2,
       '3 the car\'s glass saying \'glass\' is a solid thing of glass and not a pane: with the rule up each of two rounds leaves the crack on that box in place of the hole, and where the chaos lane drew the dent of the metal its dark paint was taken for it draws a crack too — as many marks as with the rule down — a pinch of glass (three chips a round, no more) and no dust — with the chaos lane off too, round for round — and the box stands as it stood (the next round meets it); with the rule down each leaves its hole and no crack',
       `solid glass ${solid} · up: ${glassUp ? say(glassUp) : 'no spot'} · the chaos lane off: ${glassCold ? say(glassCold) : 'no spot'} · stands ${stands} · down: ${glassDown ? say(glassDown) : 'no spot'}`);
 
