@@ -42,7 +42,7 @@ export function bulletMark(g: Game, hitP: Vec3, n: Vec3, s: Surface, def: Weapon
   const rifle = def.cls !== 'pistol';
   // GLASS THAT IS NOT A PANE, by the box's own word (particleFx.ts HITSTUFF: a car's window, with nothing modelled behind it): the crack a dead screen has,
   // in place of the hole — every round, and the box stands. Picture only, as the hole is.
-  if (solidGlass(s.box)) { const K = SOLID_GLASS_CRACK; g.decals.add('damage', hitP, n, def.pellets ? K.pellet : rifle ? K.rifle : K.pistol, { param: 2 + K.strength, clampTo: s.box, attach: s.dynamic ? s.box : undefined }); return; }
+  if (solidGlass(s.box)) { const K = SOLID_GLASS_CRACK; g.decals.add('damage', hitP, n, def.pellets ? K.pellet : rifle ? K.rifle : K.pistol, { param: K.look + K.strength, clampTo: s.box, attach: s.dynamic ? s.box : undefined }); return; }
   g.decals.add('bullet', hitP, n, rifle ? 0.031 : 0.025, { param: Math.max(0.75, Math.min(1.6, mm / 6)) * (rifle ? 1.1 : 1), clampTo: s.box, attach: s.dynamic ? s.box : undefined });
 }
 

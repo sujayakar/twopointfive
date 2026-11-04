@@ -1031,18 +1031,23 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   words first (the library's rule that a repaint drops the word would have to become "what a thing IS" beside "how it is drawn").
   TWO NEW WORDS A BOX MAY SAY (`stuff.ts BOX_STUFFS`; the look has no material for either and draws them plain by the box's finish): `'glass'`, a SOLID
   thing of glass with nothing modelled behind it — not a pane: a sheet a round shatters says so with `BoxFlag.Glass` and is the pane engine's, as it was —
-  and `'rubber'` (a tyre is dark, and by its colour was metal). A round into solid glass (`solidGlass`) leaves the CRACK a dead screen has in place of the
-  hole, every round and whatever the chaos dial says, a pinch of glass (`SOLID_GLASS_CHIPS` 3) and no burst, and the box stands; a shell lays a small crack a pellet (`SOLID_GLASS_CRACK`). A THING THE WALL ENGINE BREAKS SHOULD NOT SAY 'glass'
+  and `'rubber'` (a tyre is dark, and by its colour was metal). A round into solid glass (`solidGlass`) leaves a CRACK in place of the
+  hole (`decals.wgsl damageMark` look 9: a dead screen's star drawn PALE and millimetres wide; the screens' own black hairlines showed nothing on dark
+  glass when a cloud NVIDIA card first drew them, 11-04), every round and whatever the chaos dial says, a pinch of glass (`SOLID_GLASS_CHIPS` 3) and no burst, and the box stands; a shell lays a small crack a pellet (`SOLID_GLASS_CRACK`). A THING THE WALL ENGINE BREAKS SHOULD NOT SAY 'glass'
   (its wear rides a round's hole, and solid glass is given a crack in the hole's place; no level has one). METAL THROWS NO CHIPS with
   the rule on, anywhere (the row's two dark flecks; the sparks and the dent stay). ALSO CHANGED IN THE PICTURE, since they say words already: the office's
   cubicle partitions say 'fabric' and throw cloth where they threw gypsum (the chaos lane has always read them as cloth), a sofa throws cloth where it threw
   concrete, a cabinet that says 'steel' sparks where a pale one threw gypsum.
+  A MARK ON A CUT FACE LIES WHERE THE ROUND MET IT (`render/decals.ts Decals.onCut`, raised by the page, `?markcut=0`; found by the first GPU still of a shot
+  car): a mark clamped to its box was pulled onto the face of the box's UNCUT shape, so on a leaning pane, a rounded nose or a crowned bonnet it stood
+  centimetres off the surface (87 mm on a pane leaning 12 degrees) and the shader's plane test dropped it: no round ever left a mark on a cut face. The
+  picture's alone (where a mark is drawn, never whether one is laid); check line 7.
   SWITCH: ON in the page (`?hitstuff=0` = by the colour, as it was), OFF in the module and on the frozen stand (`TPS_HITSTUFF=1`), a `FROZEN_HOLDS` row, in
   the registry and the journal (a recording from before the table plays with it off: `applyKnobs`; the rule is read at each hit). On or off, the same run.
   WHO SAYS A WORD TODAY: on the preview the trial cars (`scene/carTry.ts`: body 'carpaint', glass 'glass', tyres 'rubber', trim 'plastic', hubs 'steel'),
   the office's desks, partitions, sofas and cabinets, `levels/white-roof.json`. THE KITS' OWN VEHICLES SAY NOTHING YET (check line 1 holds that): they say
   theirs when `stuff` is in the build and the vehicles' lasting shapes are.
-  CHECK: `bun run tools/qa/hitstuff-check.ts` (`probes.ts hitstuff`, family `destruction`; `HITSTUFF_BREAK=1` fails lines 2, 3 and 4), seven lines on both
+  CHECK: `bun run tools/qa/hitstuff-check.ts` (`probes.ts hitstuff`, family `destruction`; `HITSTUFF_BREAK=1` fails lines 2, 3, 4 and 7), eight lines on both
   stands, real rounds on the office with a stand-in for the GPU particles that keeps what the game asks of them at the hit: the car's body by its paint,
   the same up as down; saying 'carpaint', sparks, no chips, no dust; a tyre saying 'rubber', plastic's chips and no dent; the glass saying 'glass', the
   crack in place of the hole on every round, with the chaos lane off too, six chips from two rounds and the box standing; a cabinet that is metal by its
@@ -1052,4 +1057,4 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   MEASURED ON: one seed (1) of `levels/office.json`, both stands, by this check; a reviewer's stress run (72 to 84 rounds at the dial's top, words put on
   breakable partitions and a wall, wall wear live) had the same digest, lane die, counters, cells opened and props up as down. No play-through tally
   was taken: nothing the tally reads can move. NOT DONE: nothing here has been
-  seen on a GPU; the crack is the screens' mark at the screens' size and nobody has looked at it on a car's window.
+  seen on a GPU; SEEN on a cloud NVIDIA card (Vulkan), the preview's library hall, 11-04: sparks off the body and its holes, no chips off the body, the window standing.

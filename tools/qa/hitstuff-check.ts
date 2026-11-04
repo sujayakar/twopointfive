@@ -19,6 +19,7 @@ const { fireWeapon } = await import(`${ROOT}/src/game/combat.ts`);
 const { BoxFlag } = await import(`${ROOT}/src/scene/boxes.ts`);
 const { v3 } = await import(`${ROOT}/src/math/vec.ts`);
 
+type Vec3 = [number, number, number];
 const DT = 1 / 60, BREAK = process.env.HITSTUFF_BREAK === '1', VERBOSE = !!process.env.HITSTUFF_VERBOSE, FILE = 'office.json';
 function seeded(seed: number) { let a = seed >>> 0; return () => { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
 async function hushed<T>(f: () => T | Promise<T>): Promise<T> { const log = console.log, warn = console.warn; if (!VERBOSE) console.log = console.warn = () => { }; try { return await f(); } finally { console.log = log; console.warn = warn; } }
@@ -52,7 +53,7 @@ function range(W: any) {
       if (v3.distXZ(c.pos, p) < 0.1) return p; }
     return null; };
   /** `n` rounds at box i's middle from where he stands. Returns what the game asked of the particles (kind → how many, summed), the damage marks it laid
-   *  on that box ('bullet' = a round's hole; 'damage 2' = the crack, 'damage 0' the chaos lane's dent), and how many of the rounds met box i. `chaos`: the
+   *  on that box ('bullet' = a round's hole; 'damage 9' = the crack, 'damage 0' the chaos lane's dent), and how many of the rounds met box i. `chaos`: the
    *  chaos lane's dial for the volley (0 = the lane does nothing with the rounds it is told of); `cold` false = on the floor's heat as it stands */
   const fire = (i: number, n = 2, low = 0, chaos = 1, cold = true) => { const b = st[i], to = aimAt(i, low), e = game.engine as any, was = { p: e.particles, s: e.settings.gpuParticles, add: game.decals.add, round: game.destr.round, en: game.decals.enabled, chaos: game.tune.chaos };
     const emits: { kind: string; at: number[]; n: number }[] = [], hits: number[][] = [], marks: string[] = []; let met = 0;
@@ -114,9 +115,9 @@ export async function hitstuffCheck(): Promise<boolean> {
     up(true); const solid = solidGlass(G), glassUp = pG ? R.fire(glass) : null, glassCold = pG ? R.fire(glass, 2, 0, 0) : null;
     const stands = G.flags === flags0 && !!pG && R.game.col.raycast([pG[0], 1.35, pG[2]], v3.normalize(v3.sub(G.c, [pG[0], 1.35, pG[2]])), 60)?.index === glass;
     up(false); const glassDown = pG ? R.fire(glass) : null;
-    line(!!glassUp && !!glassCold && !!glassDown && (solid || BREAK) && glassUp.met === 2 && count(glassUp, 'damage 2') === glassUp.marks.length && glassUp.marks.length === glassDown.marks.length && glassUp.marks.length >= 2 && glassUp.dust === 0 && glassUp.chips > 0 && glassUp.chips <= 2 * 3
-      && count(glassCold, 'damage 2') === 2 && count(glassCold, 'bullet') === 0 && stands && (G.flags & BoxFlag.Glass) === 0
-      && count(glassDown, 'damage 2') === 0 && count(glassDown, 'bullet') === 2,
+    line(!!glassUp && !!glassCold && !!glassDown && (solid || BREAK) && glassUp.met === 2 && count(glassUp, 'damage 9') === glassUp.marks.length && glassUp.marks.length === glassDown.marks.length && glassUp.marks.length >= 2 && glassUp.dust === 0 && glassUp.chips > 0 && glassUp.chips <= 2 * 3
+      && count(glassCold, 'damage 9') === 2 && count(glassCold, 'bullet') === 0 && stands && (G.flags & BoxFlag.Glass) === 0
+      && count(glassDown, 'damage 9') === 0 && count(glassDown, 'bullet') === 2,
       '3 the car\'s glass saying \'glass\' is a solid thing of glass and not a pane: with the rule up each of two rounds leaves the crack on that box in place of the hole, and where the chaos lane drew the dent of the metal its dark paint was taken for it draws a crack too — as many marks as with the rule down — a pinch of glass (three chips a round, no more) and no dust — with the chaos lane off too, round for round — and the box stands as it stood (the next round meets it); with the rule down each leaves its hole and no crack',
       `solid glass ${solid} · up: ${glassUp ? say(glassUp) : 'no spot'} · the chaos lane off: ${glassCold ? say(glassCold) : 'no spot'} · stands ${stands} · down: ${glassDown ? say(glassDown) : 'no spot'}`);
 
@@ -165,6 +166,20 @@ export async function hitstuffCheck(): Promise<boolean> {
       line(stale.length === 0 && ['glass', 'rubber', 'carpaint', 'steel'].every(w => (HIT_STUFFS as string[]).includes(w)) && !(HIT_STUFFS as string[]).includes('paint') && !(HIT_STUFFS as string[]).includes('enamel') && errs.length === 0 && back === 'glass, rubber' && guarded && before === false && kept === true && PR.FROZEN_HOLDS['HITSTUFF.on'] === 'TPS_HITSTUFF=1' && SE.STAND_ENV.includes('TPS_HITSTUFF') && KN.JOURNAL_KNOBS.includes('HITSTUFF'),
         '6 every word the picture of a hit reads is a stuff a box may say — \'glass\' and \'rubber\' among them, and never \'paint\' or \'enamel\', which are a coat on anything — the level lint takes boxes that say the two and writes them back, and a word that is no stuff at all is read as none; a recording from before the table plays with the rule down and one made with it up keeps it; the stands\' list has the row and the word, and the journal the table',
         `${(HIT_STUFFS as string[]).length} words${stale.length ? `, not a box's: ${stale.join(', ')}` : ''} · lint errors ${errs.length}${errs.length ? ` (${errs[0].msg ?? errs[0]})` : ''} · written back ${back} · a word that is none ${guarded} · applyKnobs without the table: ${before} · recorded up: ${kept} · FROZEN_HOLDS ${PR.FROZEN_HOLDS['HITSTUFF.on'] ?? 'no row'} · STAND_ENV ${SE.STAND_ENV.includes('TPS_HITSTUFF')} · journal ${KN.JOURNAL_KNOBS.includes('HITSTUFF')}`); }
+
+    // (7) a mark on a cut face lies where the round met it (render/decals.ts onCut, the page's word): on a box with a leaning face, a mark laid at a point
+    //     of that face stays there with the word up, and with it down is pulled out to the uncut box's face, centimetres off the surface
+    { const { cutPlane, cutRecord } = await import(`${ROOT}/src/scene/cut.ts`), { makeBox } = await import(`${ROOT}/src/scene/boxes.ts`), D = W.game.decals;
+      const h: Vec3 = [0.6, 0.27, 0.8], t = 12 * Math.PI / 180, nl: Vec3 = [0, Math.sin(t), Math.cos(t)], dl = Math.cos(t) * h[2] - Math.sin(t) * h[1];   // (the +z face leaned in 12° about its bottom edge)
+      const b: any = makeBox({ c: [2, 1.2, 3], h, yaw: 0, albedo: [0.07, 0.08, 0.1] }); b.cut = cutRecord(h, [cutPlane(nl, dl)]).cut;
+      const lp: Vec3 = [0.1, 0.15, (dl - nl[1] * 0.15) / nl[2]], p: Vec3 = [b.c[0] + lp[0], b.c[1] + lp[1], b.c[2] + lp[2]], flat: Vec3 = [b.c[0] + 0.1, b.c[1] - 0.26, b.c[2] + h[2]];
+      const was7 = { on: D.onCut, en: D.enabled, n: D.list.length }; D.enabled = true; let up7: any, down7: any, face7: any;
+      try { D.onCut = !BREAK; up7 = D.add('bullet', p, nl, 0.03, { clampTo: b }); face7 = D.add('bullet', flat, [0, 0, 1], 0.03, { clampTo: b }); D.onCut = false; down7 = D.add('bullet', p, nl, 0.03, { clampTo: b }); }
+      finally { D.onCut = was7.on; D.enabled = was7.en; D.list.length = was7.n; }
+      const off = (d: any) => d ? Math.abs((d.pos[0] - b.c[0]) * nl[0] + (d.pos[1] - b.c[1]) * nl[1] + (d.pos[2] - b.c[2]) * nl[2] - dl) : 9;
+      line(!!up7 && !!down7 && !!face7 && off(up7) < 1e-6 && v3.dist(up7.pos, p) < 1e-6 && off(down7) > 0.02 && Math.abs(face7.pos[2] - (b.c[2] + h[2])) < 1e-9 && cutRecord(h, [cutPlane(nl, dl)]).cut.length === 1,
+        '7 a mark on a cut face lies where the round met it: laid at a point of a pane\'s leaning face, with the page\'s word up it stays on that face, and with it down it is pulled out to the uncut box\'s face, centimetres off the glass, where the shader drops it; a mark on a face the cut left alone is laid on that face either way',
+        `off the leaning face: ${(off(up7) * 1000).toFixed(2)} mm with the word up, ${(off(down7) * 1000).toFixed(1)} mm with it down · on the plain face ${face7 ? Math.abs(face7.pos[2] - (b.c[2] + h[2])).toExponential(1) : '-'}`); }
   } catch (e) { console.log(`- FAIL — the check threw\n    ${e instanceof Error ? e.stack : String(e)}`); all = false; }
   finally { Object.assign(HITSTUFF, was); Math.random = rnd; }
   console.log(`=== hitstuff: ${all ? 'ALL PASS' : 'FAIL'} ===`);

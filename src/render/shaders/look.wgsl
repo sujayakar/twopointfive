@@ -28,14 +28,6 @@ struct LookCfg { a: vec4f, b: vec4f, c: vec4f, d: vec4f, e: vec4f, f: vec4f, g: 
 
 const LOOK_TILE: f32 = 2.0;        // metres a map covers (render/lookTex.ts LOOK_TILE)
 const LOOK_MAX_TILT: f32 = 0.48;   // the tangent part of the shading normal is held under this (29°): lookGeoN's snap back to the face must never pick a neighbour, and a wall's facet never reads as a top (fogofwar.wgsl asks N.y > 0.5)
-const LOOK_CLOTH: u32 = 9u;        // the look's own classes, after surface.wgsl's eight: sackcloth, canvas, blankets, rugs
-const LOOK_METAL: u32 = 10u;       // bare iron, rusted
-const LOOK_PAINT: u32 = 11u;       // old paint on steel or boards: drums, gates, a truck
-const LOOK_VENEER: u32 = 12u;      // from here the stuffs of things made in a factory and kept indoors (lookTex.ts): a desk's top
-const LOOK_PLASTIC: u32 = 13u;     // a chair's shell
-const LOOK_FABRIC: u32 = 14u;      // a chair's seat, a partition
-const LOOK_STEEL: u32 = 15u;       // painted steel, kept: a cabinet, shelving, a window's frame
-const LOOK_CARPAINT: u32 = 16u;    // a car's body: enamel under a clear coat, road dust (the shine is the box's own finish)
 const LOOK_MIN_TILT: f32 = 0.02;   // … and under this the pixel is the face, unmarked (a flat stretch of a map costs no second light score)
 
 /** how far a box's markings are drawn as brushed paint in place of square cells (the panel's Painted marks row) */
@@ -197,9 +189,10 @@ fn lookSurface(cls0: u32, wp: vec3f, n: vec3f, bi: u32, lc: vec3f, hf: vec4f, al
   }
   let plane = i32(floor((dot(b.c, n) + hf.xyz[ax]) * 100.0 + 0.31));   // (the plane this face lies in, to the centimetre, FROM THE BOX and not from the pixel: one number a face, so nothing keyed on it can speckle; two boxes of one wall have one plane)
   if (cls != 0u) {
+    let row = clamp(i32(cls) - 1, 0, LOOK_LAYERS - 1); let thing = LOOK_THING[row]; let runs = LOOK_LAY[row].w; let under = LOOK_UNDER[row];   // (the stuff's own row, lookTex.ts STUFFS: every rule below that goes by what a thing is made of reads it here, and names no stuff)
     if (keep.x < 0.5 || moves) {   // (keep.x, the stuff's own row: built in place = by the world. Boards, sheet, cloth and what a factory made are the box's own)   // the box's own: a door carries its boards round with it, and ANYTHING THAT MOVES carries its map (a cream leaf, a clay jar: laid by the world, the plaster stood still while the door swung through it)
-      if ((cls < LOOK_CLOTH || cls == LOOK_VENEER) && dot(abs(eb), hf.xyz) > dot(abs(ea), hf.xyz) && (lying || cls == SURF_WOOD || cls == LOOK_VENEER)) { let t = ea; ea = eb; eb = t; }   // boards run the long way; a standing sheet's ribs run up
-      if (cls == SURF_SHEET && min(dot(abs(eb), hf.xyz), dot(abs(ea), hf.xyz)) < 0.2) { return o; }                       // a bucket is not a roof sheet
+      if (runs > 0.5 && dot(abs(eb), hf.xyz) > dot(abs(ea), hf.xyz) && (lying || runs > 1.5)) { let t = ea; ea = eb; eb = t; }   // the stuff's `runs`: boards run the long way; a standing sheet's ribs run up
+      if (thing.x > 0.0 && min(dot(abs(eb), hf.xyz), dot(abs(ea), hf.xyz)) < thing.x) { return o; }                       // its `least`: a bucket is not a roof sheet
       uv = vec2f(dot(lc, ea), dot(lc, eb)) + vec2f(0.37, 0.61) * f32(salt);   // (every one of the box's 91 numbers its own place on the map: at seven places, two lids in a yard wore one chip; 45 since the word made room for 31 stuffs)
       T = quatRotate(q, ea); B = quatRotate(q, eb);
     } else if (lying) { T = vec3f(1.0, 0.0, 0.0); B = vec3f(0.0, 0.0, 1.0); uv = wp.xz; }
@@ -229,8 +222,8 @@ fn lookSurface(cls0: u32, wp: vec3f, n: vec3f, bi: u32, lc: vec3f, hf: vec4f, al
     // stones' heads with a rounded lip; and where the render has let go, in patches that gather above the plinth, the mud brick under it ('mud brick'), a
     // finger's depth back behind a broken edge. Big, specific relief with hard edges: what one low lamp along a wall picks out.
     let km = lookCfg.f.w;
-    if (km > 0.0 && cls == SURF_MUD && !lying && !moves && max(b.h.x, b.h.z) > 0.3 && b.h.y > 0.12) {   // (any piece of a wall, so a patch does not stop at the seam where two boxes of one wall meet; the plinth is by world height)
-      let sv = lookTap(LOOK_L_STONE, st + vec2f(0.13, 0.0), dx, dy);
+    if (km > 0.0 && under.x >= 0.0 && !lying && !moves && max(b.h.x, b.h.z) > under.z && b.h.y > under.w) {   // (any piece of a wall, so a patch does not stop at the seam where two boxes of one wall meet; the plinth is by world height)
+      let sv = lookTap(i32(under.x), st + vec2f(0.13, 0.0), dx, dy);   // (its `under`: the plinth's layer)
       let line = (0.34 + 0.4 * detailNoise(vec2f(uv.x * 0.31, 7.7)) + 0.1 * detailNoise(vec2f(uv.x * 1.9, 2.2))) * min(km, 1.0);
       let e = wp.y - line - 0.09 * (sv.a.a - 0.5);                              // under 0: stone (the render's edge follows the stones' heads)
       let stone = 1.0 - smoothstep(-0.012, 0.0, e);
@@ -243,7 +236,7 @@ fn lookSurface(cls0: u32, wp: vec3f, n: vec3f, bi: u32, lc: vec3f, hf: vec4f, al
       let thr = 0.75 - 0.04 * min(km, 1.5) - 0.1 * (1.0 - smoothstep(0.2, 1.1, e));             // (most just above the plinth, where the splash works on it)
       let pm = lookSlow(pq) + 0.1 * (tp.a.a - 0.5) + 0.06 * (detailNoise(uv * 11.0) - 0.5);       // ragged by the render's own lumps
       if (pm > thr - 0.04 && stone < 1.0) {
-        let bv = lookTap(LOOK_L_BRICK, st + vec2f(0.0, 0.031), dx, dy);
+        let bv = lookTap(i32(under.y), st + vec2f(0.0, 0.031), dx, dy);   // (… and the core's)
         let hole = smoothstep(thr, thr + 0.01, pm) * (1.0 - stone);
         let g = vec2f(lookSlow(pq + vec2f(0.04, 0.0)) - lookSlow(pq - vec2f(0.04, 0.0)), lookSlow(pq + vec2f(0.0, 0.04)) - lookSlow(pq - vec2f(0.0, 0.04))) * vec2f(1.3, 1.6);
         let rim = smoothstep(thr - 0.035, thr, pm) * (1.0 - smoothstep(thr, thr + 0.01, pm)) * (1.0 - stone);
@@ -253,13 +246,13 @@ fn lookSurface(cls0: u32, wp: vec3f, n: vec3f, bi: u32, lc: vec3f, hf: vec4f, al
       }
     }
     // ---- WEATHER on the ground: the level's traffic map (r = walked, g = close to a wall)
-    if (k.w > 0.0 && wild > 0.0 && lying && n.y > 0.0 && wp.y < 0.25) {   // (wild: not on a floor somebody keeps)
+    if (k.w > 0.0 && wild > 0.0 && lying && n.y > 0.0 && wp.y < LOOK_GROUND.x) {   // (wild: not on a floor somebody keeps; LOOK_GROUND: a top this low is ground)
       let wm = lookWay;   // (read once, above)
       let rag = lookSlow(uv * 0.9);
       let walked = clamp(wm.x * (0.5 + rag), 0.0, 1.0) * k.w * select(1.0, step(0.6, roughIn), wears);   // (a floor with a finish has its lane from the detail layer's scuff, above: one answer a mark)
       let lee = smoothstep(0.25, 0.75, wm.y * (0.55 + 0.9 * rag)) * k.w;      // against the walls, where nobody treads
-      if (cls == SURF_EARTH && lee > 0.02) {                                   // stones and rubbish work their way to the wall's foot: the gravel map comes up through the earth by height
-        let gv = lookTap(LOOK_L_GRAVEL, st * 1.3 + vec2f(0.21, 0.43), dx * 1.3, dy * 1.3);
+      if (thing.y >= 0.0 && lee > 0.02) {                                      // the stuff's `foot`: stones and rubbish work their way to the wall's foot, another stuff's map coming up through this one by height
+        let gv = lookTap(i32(thing.y), st * 1.3 + vec2f(0.21, 0.43), dx * 1.3, dy * 1.3);
         let up = smoothstep(0.45, 0.75, lee * 0.9 + (gv.a.a - 0.55) * 0.9);
         mult = mix(mult, gv.a.rgb * 2.0 * vec3f(0.82, 0.8, 0.78), up); tn = mix(tn, gv.b.xy * 2.0 - 1.0, up); cav = mix(cav, gv.b.a, up); dr = mix(dr, -0.06, up);
       }
@@ -272,7 +265,7 @@ fn lookSurface(cls0: u32, wp: vec3f, n: vec3f, bi: u32, lc: vec3f, hf: vec4f, al
     tilt = tn * k.y;
     // ---- a snow level's bare ground (earth a man cleared, a rut): within a stride of lying snow it is frozen — ice in the low places, dark and smooth enough to
     // show a lamp, and frost grains over the rest, thinning away from the snow
-    if (SNOW_SURF && lookCfg.e.w > 0.0 && snowCfg.p[1].z > 0.5 && lying && n.y > 0.0 && wp.y < 0.06 && (cls == SURF_EARTH || cls == SURF_GRAVEL)) {
+    if (SNOW_SURF && lookCfg.e.w > 0.0 && snowCfg.p[1].z > 0.5 && lying && n.y > 0.0 && wp.y < LOOK_GROUND.y && thing.z > 0.5) {   // (the stuff's `ground`)
       let e = 0.3;   // (the field knows no roof here: a floor of earth inside an outer wall takes a hand's width of this along the wall — known, left)
       let near = max(max(snowField(wp.xz + vec2f(e, 0.0)).y, snowField(wp.xz - vec2f(e, 0.0)).y), max(snowField(wp.xz + vec2f(0.0, e)).y, snowField(wp.xz - vec2f(0.0, e)).y));
       if (near > 0.02) {
@@ -294,7 +287,7 @@ fn lookSurface(cls0: u32, wp: vec3f, n: vec3f, bi: u32, lc: vec3f, hf: vec4f, al
     alb *= mix(vec3f(1.0), mix(vec3f(1.05, 1.0, 0.93), vec3f(0.95, 1.0, 1.06), smoothstep(0.3, 0.7, detailNoise(uv * 0.13 + vec2f(9.7, 4.2)))), 0.6 * k.w);   // … and no two stretches quite one hue
     if (!lying && keep.z > 0.5) {   // (lookTex.ts LOOK_SOAKS: not boards, not what a factory made, not a place somebody keeps)
       let foot0 = b.c.y - b.h.y;
-      if (foot0 < 0.12) {                                                       // the wall stands on the ground: splash, damp and the dirt the rain throws up, to a ragged line
+      if (foot0 < LOOK_GROUND.z) {                                              // the wall stands on the ground: splash, damp and the dirt the rain throws up, to a ragged line
         let line = 0.18 + 0.55 * detailNoise(vec2f(uv.x * 0.7, 3.3)) + 0.16 * detailNoise(vec2f(uv.x * 6.0, 9.1)) + 0.05 * detailNoise(uv * vec2f(23.0, 9.0));
         let foot = (1.0 - smoothstep(0.0, line, wp.y)) * k.w;
         let rim = smoothstep(line * 0.72, line, wp.y) * (1.0 - smoothstep(line, line * 1.18, wp.y)) * k.w;   // the tide mark: salts left where the damp stops
@@ -322,7 +315,7 @@ fn lookSurface(cls0: u32, wp: vec3f, n: vec3f, bi: u32, lc: vec3f, hf: vec4f, al
     alb = mix(alb, mix(alb, vec3f(0.4, 0.39, 0.38), 0.75), knock); rough += 0.22 * knock;
   }
   // ---- EDGES: a small box's arrises rounded and rubbed (a crate, a table, a sill — not a wall, whose boxes meet their neighbours edge to edge)
-  if (k2.y > 0.0 && max(b.h.x, b.h.z) < 0.65 && b.h.y < 0.8 && min(b.h.x, min(b.h.y, b.h.z)) > 0.02) {   // (half-extents: under 1.3 m on its long side and 1.6 m tall)
+  if (k2.y > 0.0 && max(b.h.x, b.h.z) < LOOK_HANDLED.x && b.h.y < LOOK_HANDLED.y && min(b.h.x, min(b.h.y, b.h.z)) > LOOK_HANDLED.z) {   // (lookTex.ts LOOK_HANDLED: what a hand moves, by its size, as half-extents)
     let ha = dot(abs(ea), hf.xyz); let hb = dot(abs(eb), hf.xyz);
     let pa = dot(lc, ea); let pb = dot(lc, eb);
     let da = ha - abs(pa); let db = hb - abs(pb);                              // metres in from the face's two pairs of edges
@@ -330,7 +323,7 @@ fn lookSurface(cls0: u32, wp: vec3f, n: vec3f, bi: u32, lc: vec3f, hf: vec4f, al
     let wa = 1.0 - smoothstep(0.0, r, da); let wb = 1.0 - smoothstep(0.0, r, db);
     if (wa + wb > 0.0) {
       let TA = quatRotate(q, ea); let TB = quatRotate(q, eb);
-      let floorEdge = !lying && b.c.y - b.h.y < 0.05;                           // where a face meets the ground there is no arris to round
+      let floorEdge = !lying && stands;                                         // where a face meets the ground there is no arris to round
       var e = vec2f(wa * wa * sign(pa), wb * wb * sign(pb)) * 0.6 * k2.y;
       var wear = max(wa, wb);
       if (floorEdge) { if (abs(TA.y) > 0.5 && pa * TA.y < 0.0) { e.x = 0.0; wear = wb; } if (abs(TB.y) > 0.5 && pb * TB.y < 0.0) { e.y = 0.0; wear = wa; } }
@@ -357,12 +350,12 @@ struct LookSnow { albedo: vec3f, n: vec3f, rough: f32, amt: f32, bank: bool };  
 fn lookSnow(cls: u32, wp: vec3f, gn: vec3f, bi: u32, lc: vec3f, hf: vec4f, paint: vec3f, albedoIn: vec3f, roughIn: f32, fp: f32) -> LookSnow {
   var o: LookSnow; o.albedo = albedoIn; o.n = gn; o.rough = roughIn; o.amt = 0.0; o.bank = false;
   let ks = lookCfg.e.w;
-  if (ks <= 0.0 || hf.w < 0.0 || cls == LOOK_METAL) { return o; }   // (bare iron stays bare: on a snow level it is a stove, a flue or a brazier)
+  if (ks <= 0.0 || hf.w < 0.0 || (cls != 0u && LOOK_THING[clamp(i32(cls) - 1, 0, LOOK_LAYERS - 1)].w > 0.5)) { return o; }   // (the stuff's `sheds`: bare iron stays bare, on a snow level it is a stove, a flue or a brazier)
   let b = boxGeo[bi];
   if ((b.flags & (BOX_EMISSIVE | BOX_ROT | BOX_GLASS)) != 0u || snowIsPaint(paint) || snowIsLay(paint)) { return o; }
   var amt = 0.0; var up = vec3f(0.0, 1.0, 0.0); var at = wp; var bank = true;
   if (gn.y > 0.9) {
-    if (wp.y < 0.06) { return o; }                               // the ground is the field's
+    if (wp.y < LOOK_GROUND.y) { return o; }                      // the ground is the field's
     let open = smoothstep(0.05, 0.4, snowField(wp.xz).y);       // not under a roof
     if (open <= 0.0) { return o; }
     let da = hf.x - abs(lc.x); let db = hf.z - abs(lc.z);

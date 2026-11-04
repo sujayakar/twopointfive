@@ -594,7 +594,7 @@ export class Destruction {
     const said = look !== 2 ? saidSurf(box) : undefined;
     if (said === 'metal') { look = 0; r = rifle ? 0.045 : 0.036; s = rifle ? 0.9 : 0.7; }
     else if (said === 'fabric' || said === 'carpet') { look = 1; r = rifle ? 0.075 : 0.06; s = 0.85; }
-    else if (said === 'glass') { look = 2; r = rifle ? SOLID_GLASS_CRACK.rifle : SOLID_GLASS_CRACK.pistol; s = SOLID_GLASS_CRACK.strength; }
+    else if (said === 'glass') { look = SOLID_GLASS_CRACK.look; r = rifle ? SOLID_GLASS_CRACK.rifle : SOLID_GLASS_CRACK.pistol; s = SOLID_GLASS_CRACK.strength; }
     else if (said !== undefined) { g.decals.add('chip', p, n, 0.013, { clampTo: box, attach: dynamic ? box : undefined }); return; }   // (a chip out of the finish — marks.ts chipMark's record; never a second 'bullet': a wall's wear takes the newest hole for the round's own, wallwear.ts)
     g.decals.add('damage', p, n, r * (0.85 + 0.3 * rj), { param: look + Math.min(0.999, s), clampTo: box, attach: dynamic ? box : undefined });
   }
