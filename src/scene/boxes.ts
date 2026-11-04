@@ -34,6 +34,9 @@ export const BoxFlag = {
   // breaks it and a line of fire passes one while WINBARS.on is up (game/winbars.ts; collision.ts shotBlocked's `firePass`); read by nothing else.
   Bar: 1 << 19,
 } as const;
+/** A DRAWN-ONLY SHEET (a stain, ruts, a painted line, a poster: something the picture shows that no ray and no body meets) is a box whose flags under this
+ *  mask are NoShadow alone; a SOLID thing is one with none of them */
+export const SHEET_MASK = BoxFlag.NoPrimary | BoxFlag.NoShadow | BoxFlag.Glass | BoxFlag.Dynamic;
 /** the most panes SceneInfo.glass carries to the GPU (nearest to the camera's look-at first when a level has more) */
 export const MAX_GLASS = 32;
 /** the GPU flag bit of a ROUND box (common.wgsl GEO_ROUND; scene/round.ts). Bit 3 of the geo flags word, which on the CPU is Dynamic: no shader reads that one, and
