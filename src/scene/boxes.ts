@@ -194,10 +194,6 @@ export class BoxWorld {
   private mkeyPrev = new Map<number, number>(); private mkeyCur = new Map<number, number>();
   /** how the last upload's dynamics were matched: keyed and found / keyed but new / unkeyed (index rule) */
   mkeyStats = { matched: 0, fresh: 0, unkeyed: 0 };
-  /** PICTURE ONLY, the page's: called at the head of every pack, whoever asked for the picture (the frame, a still, a replay's tape). For a drawn-only box
-   *  whose look is a function of another's AS IT IS NOW (scene/groundBeyond.ts: the ground past the level's edge follows the slab). null everywhere else,
-   *  the headless harness among them; it must write nothing a ray, a sweep or the simulation reads. */
-  beforePack: (() => void) | null = null;
   /** Combined list uploaded this frame (statics first, then dynamics). */
   all: Box[] = [];
   maxBoxes: number;
@@ -527,7 +523,6 @@ export class BoxWorld {
   /** Rebuild combined list, pack, grid, and upload. Call once per frame after dynamics are set. `between` = a pack BETWEEN two game ticks of one drawn frame (host/loop.ts,
    *  the fixed step): everything as ever, but the motion-identity map stays the last DRAWN frame's, so the pack that is drawn still resolves 'where was this box last frame'. */
   upload(between = false) {
-    this.beforePack?.();
     const all = this.all; all.length = 0;
     for (const b of this.statics) all.push(b); for (const b of this.dynamics) all.push(b);
     if (all.length > this.maxBoxes) throw new Error(`too many boxes: ${all.length}`);

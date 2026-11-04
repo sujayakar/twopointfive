@@ -109,7 +109,7 @@ export function buildSnowField(level: Level, opts: { wind?: readonly [number, nu
   const ox = WORLD.min[0], oz = WORLD.min[2]; const N = w * h;
   // the ground: the biggest snow-painted slab whose top is the floor
   let slab = -1, slabArea = 0;
-  boxes.forEach((b, i) => { if (snowPaintOf(b) === 'snow' && !(b.flags & BoxFlag.NoShadow) && Math.abs(b.c[1] + b.h[1]) < 0.01 && b.h[0] * b.h[2] > slabArea) { slab = i; slabArea = b.h[0] * b.h[2]; } });   // (not a box no ray meets: the ground laid past the level's edge, scene/groundBeyond.ts, is wider than the slab and is not it)
+  boxes.forEach((b, i) => { if (snowPaintOf(b) === 'snow' && Math.abs(b.c[1] + b.h[1]) < 0.01 && b.h[0] * b.h[2] > slabArea) { slab = i; slabArea = b.h[0] * b.h[2]; } });
   if (slab < 0) return null;
   const cover = new Float32Array(N), packed = new Float32Array(N), old = new Float32Array(N), mound = new Float32Array(N), hard = new Float32Array(N), roof = new Float32Array(N);
   /** every texel within `pad` of box b's plan rectangle: fn(index, signed distance to the rectangle in m (inside < 0), world x, world z, the same distance asked

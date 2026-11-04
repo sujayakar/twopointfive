@@ -734,34 +734,20 @@ fn lookExpoGain(here: f32, own: f32, near: f32) -> f32 { let g = lookGainsOwn(he
 /** light `c` of this pixel, before any gain, as its place shows it (place_common.wgsl lookShowBy: THE ONE RULE for the diffuse, the mirrors, the gloss
  *  and the men's finish); `g` = lookShadeGain's gain, which is all there is where the model has not spoken for the pixel */
 fn lookShow(c: vec3f, g: f32) -> vec3f { if (lookNow.w > 0.5) { return lookShowBy(c, lookNow.xyz); } return c * g; }
-/** the level the pixel's place is shown by, and the brightest place a stride away (x, y; `here` and `near` to lookExpoGain). The place is the field's; where
- *  the field has no answer, or two (a wall's own cell), this function's own read settles it: the one call of it, so the kernel carries one box walk and
- *  not two. */
-fn lookPlaceLevels(P: vec3f, N: vec3f, skip: u32) -> vec2f {
-  let pick = lookPlaceField(P + N * 0.3); if (pick.x > -500.0 && pick.x - pick.y < 0.5) { return vec2f(exp2(pick.x), exp2(pick.z)); }
+/** the gain the pixel's place is shown by now (1 where the model is not on); what the place sends the eye then goes through lookShow.
+ *  `Eown` = the light on the pixel at its true strength, as the field holds light (the caller's: what is drawn whole, and the bounce over the scale it is
+ *  drawn by), for the Light in order row alone. The place is the field's; where the field has no answer, or two (a wall's own cell), this function's own
+ *  read settles it: the one call of it, so the kernel carries one box walk and not two. */
+fn lookShadeGain(P: vec3f, N: vec3f, Eown: f32, skip: u32) -> f32 {
+  if (!(frame.eyeCfg.w < 0.0)) { return 1.0; }
+  let pick = lookPlaceField(P + N * 0.3); if (pick.x > -500.0 && pick.x - pick.y < 0.5) { return lookExpoGain(exp2(pick.x), Eown, exp2(pick.z)); }
   let here = lookPlaceHere(P + N * 0.3, skip);
   // (in a wall's cell between two places: the one whose level is nearer what the cache holds at this pixel, read on this side of the wall)
   // (the field's levels are the light falling on the floor and `here` is the mean light in the air: brought to the field's by what each says of the open air)
   var h = here; let sky = placeWord(2); if (placeWord(1) > 0.5 && sky > -500.0) { h = here * exp2(sky) / max(frame.shadeCfg.y, 1e-9); }
   var near = h;
   if (pick.x > -500.0) { let l = log2(max(h, 1e-9)); let up = abs(l - pick.x) <= abs(l - pick.y); h = exp2(select(pick.y, pick.x, up)); near = max(h, exp2(select(pick.w, pick.z, up))); }
-  return vec2f(h, near);
-}
-/** the gain the pixel's place is shown by now (1 where the model is not on); what the place sends the eye then goes through lookShow.
- *  `Eown` = the light on the pixel at its true strength, as the field holds light (the caller's: what is drawn whole, and the bounce over the scale it is
- *  drawn by), for the Light in order row alone.
- *  PAST THE MAP'S EDGE (render/frame.ts MAP_EDGE; `rim` = the prelude's rimShare of the pixel's own point) the field has no cells and every read is the
- *  rim's. It stands whole for a metre: a man leaning out is of the place he stands in. Over the next three the two LEVELS it comes to are let go of for
- *  the open air's, in stops; from there on the place is the open air and nothing is read, before the field is live too (the open air is then the
- *  frame's own word for it). On the map and a metre past it the levels are the levels they were, untouched. One way out, so the kernel carries the
- *  model once. */
-fn lookShadeGain(P: vec3f, N: vec3f, Eown: f32, skip: u32) -> f32 {
-  if (!(frame.eyeCfg.w < 0.0)) { return 1.0; }
-  let rim = rimShare(pastMap(P.xz));
-  // (the open air's level in the measure lookPlaceLevels answers in: the field's own once it is live with a level for the open air, the frame's word until then)
-  var lv = vec2f(select(frame.shadeCfg.y, exp2(placeWord(2)), placeWord(1) > 0.5 && placeWord(2) > -500.0));
-  if (rim > 0.0) { let open = lv; lv = lookPlaceLevels(P, N, skip); if (rim < 1.0) { lv = exp2(mix(log2(max(open, vec2f(1e-9))), log2(max(lv, vec2f(1e-9))), rim)); } }
-  return lookExpoGain(lv.x, Eown, lv.y);
+  return lookExpoGain(h, Eown, near);
 }
 fn linearToSrgb(c: vec3f) -> vec3f {
   return select(1.055 * pow(c, vec3f(1.0 / 2.4)) - 0.055, c * 12.92, c <= vec3f(0.0031308));
