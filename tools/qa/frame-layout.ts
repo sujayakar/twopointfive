@@ -68,7 +68,7 @@ const writers: [string, RegExp][] = [
   ['eyeCfg', /f\[(\d+)\] = ey\[0\];/],   // (written through `ey = p.eyeCfg ?? ZERO4`: the look prototype's Eyes follow Sam row)
   ['gradeCfg', /f\[(\d+)\] = gr\[0\];/],   // (written through `gr = p.gradeCfg ?? ZERO4`: the look prototype's Contrast row, which the one exposure model tones a place by)
   ['lampCfg', /f\[(\d+)\] = lc\[0\];/],   // (written through `lc = p.lampCfg ?? ZERO4`: the look prototype's Light stays in its room row by day)
-  ['sideCfg', /u\[(\d+)\] = sd \? 1 : 0;/], ['sides', /u\.set\(sd, (\d+)\);/], ['sideCols', /u\.set\(sc, (\d+)\);/], ['placeCfg', /f\[(\d+)\] = pc\[0\];/],   // (the look prototype's Walls have two sides row: the flag, then render/wallSides.ts's words)
+  ['sideCfg', /u\[(\d+)\] = sd && sc \? 1 : 0;/], ['sides', /u\.set\(sd, (\d+)\);/], ['sideCols', /u\.set\(sc, (\d+)\);/], ['placeCfg', /f\[(\d+)\] = pc\[0\];/],   // (the look prototype's Walls have two sides row: the flag, up with the column table, then render/wallSides.ts's words, which the exposure reads too)
 ];
 { const rows: string[] = []; let bad = 0, missing = 0;
   for (const [name, re] of writers) {

@@ -169,22 +169,26 @@ fn sideAt(x: f32, z: f32) -> u32 {
   if (c.x < 0 || c.y < 0 || c.x >= SIDE_W || c.y >= SIDE_H) { return SIDE_UNKNOWN; }
   let k = u32(c.y * SIDE_W + c.x); let w = frame.sides[k >> 2u][k & 3u]; let kind = w & 3u;
   if (kind == 0u) { return (w >> 2u) & 31u; }
+  if (kind == 3u) { return SIDE_DOOR; }   // (a doorway's cell that knows its door's line: every place's to a read of the cache; sideLine reads its line)
   if (kind != 1u) { return SIDE_UNKNOWN; }
   let m = q / SIDE_RES;   // (metres from the map's corner)
   let line = (vec2f(c) + 0.5) / SIDE_RES + (vec2f(f32((w >> 3u) & 31u), f32((w >> 9u) & 31u)) - 15.5) * 0.025;
   let hx = select(0u, 1u, ((w >> 2u) & 1u) == 1u && m.x >= line.x); let hz = select(0u, 2u, ((w >> 8u) & 1u) == 1u && m.y >= line.y);
   return (w >> (14u + 4u * (hx + hz))) & 15u;
 }
-/// … and for a point in a wall's cell that knows its lines: the step, in cells, away from those lines toward the point's own side (0 on an axis the cell has no
-/// line across); (0, 0) anywhere else. The first cell that is no wall along it is the place the point is in (composite.wgsl lookPlaceField).
-fn sideOut(x: f32, z: f32) -> vec2i {
-  let q = (vec2f(x, z) - RC_MIN.xz) * SIDE_RES; let c = vec2i(floor(q));
-  if (c.x < 0 || c.y < 0 || c.x >= SIDE_W || c.y >= SIDE_H) { return vec2i(0); }
+/// … and THE LINES OF ONE CELL of the plan, asked of any point: how far past each line of cell `c` the point `m` (metres from the map's corner) is, toward +x
+/// and +z. 0 on an axis the cell has no line across, and never 0 on one it has (a point on a line is on its high side, as sideAt has it); (0, 0) for a cell
+/// with no lines (a free cell, a doorway by a shape the plan cannot read, a wall that says nothing) and off the map. The cells with lines are a wall's
+/// (kind 1) and a doorway's (kind 3: its door's line, or its run's own middle). The sign is the step, in cells, toward the point's own side.
+fn sideLine(c: vec2i, m: vec2f) -> vec2f {
+  if (c.x < 0 || c.y < 0 || c.x >= SIDE_W || c.y >= SIDE_H) { return vec2f(0.0); }
   let k = u32(c.y * SIDE_W + c.x); let w = frame.sides[k >> 2u][k & 3u];
-  if ((w & 3u) != 1u) { return vec2i(0); }
-  let m = q / SIDE_RES; let line = (vec2f(c) + 0.5) / SIDE_RES + (vec2f(f32((w >> 3u) & 31u), f32((w >> 9u) & 31u)) - 15.5) * 0.025;
-  return vec2i(select(0, select(-1, 1, m.x >= line.x), ((w >> 2u) & 1u) == 1u), select(0, select(-1, 1, m.y >= line.y), ((w >> 8u) & 1u) == 1u));
+  if ((w & 1u) == 0u) { return vec2f(0.0); }
+  let d = m - ((vec2f(c) + 0.5) / SIDE_RES + (vec2f(f32((w >> 3u) & 31u), f32((w >> 9u) & 31u)) - 15.5) * 0.025);
+  return vec2f(select(0.0, select(min(d.x, -1e-6), max(d.x, 1e-6), d.x >= 0.0), ((w >> 2u) & 1u) == 1u), select(0.0, select(min(d.y, -1e-6), max(d.y, 1e-6), d.y >= 0.0), ((w >> 8u) & 1u) == 1u));
 }
+/// is cell `c` a doorway's that knows its line (kind 3)
+fn sideIsDoor(c: vec2i) -> bool { if (c.x < 0 || c.y < 0 || c.x >= SIDE_W || c.y >= SIDE_H) { return false; } let k = u32(c.y * SIDE_W + c.x); return (frame.sides[k >> 2u][k & 3u] & 3u) == 3u; }
 /** the albedo SECONDARY rays see (gather / cascade / probe / card hits): the box's albedo with its markings' area average folded in on the CPU (boxes.ts upload) — the very same three floats as boxAlbedo for a box without markings, or with markings off */
 fn boxAlbedoSec(i: u32) -> vec3f { return boxMat[i * 4u + 3u].xyz; }
 /** × the emission of the box's emissive markings (a switchable's supply factor: game/lighting.ts) */
