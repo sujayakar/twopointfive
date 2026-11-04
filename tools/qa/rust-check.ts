@@ -136,7 +136,7 @@ if (args[0] === '--run') {
     const r = (update as (...x: unknown[]) => unknown).apply(this, a); h = rawBits(this as never, h); ticks++;
     { const d = (this as any).dice; if (d) { if (d.home) homed++; draws = d.n; } }
     { const ps = (this as any).poseSets; if (ps.length) posed++; sets = ps.length;
-      // (the red path of the poses at home: from the fiftieth such tick a pose's floats are handed to the TypeScript one node off from where the module has them)
+      // (the red path of the poses at home: from the fiftieth such tick a pose's floats are handed to the TypeScript ten singles off from where the module has them)
       if (BREAK && posed === 50) { const f = ST.SimState.prototype.f32; ST.SimState.prototype.f32 = function (this: unknown, at: number, n: number) { return f.call(this, at + 40, n); }; } }
     return r;
   } as typeof update;

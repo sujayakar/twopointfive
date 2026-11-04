@@ -45,8 +45,12 @@ pub struct Track {
     /// where its times start in `pool`; its values follow them
     pub at: u32,
     pub keys: u32,
-    /// where in a pose its values go: node × NODE + (0 translation · 3 rotation · 7 scale)
+    /// where in a pose its values go, as ONE NUMBER OF THE CLIP'S OWN (what a clip is known by): node × NODE + its first channel (0 translation ·
+    /// 3 rotation · 7 scale) …
     pub out: u32,
+    /// … and as a sample needs it: the node, and that first channel. The place in a pose is `chan * rows + node`, the pose's own rows (skeleton.rs)
+    pub node: u16,
+    pub chan: u16,
     /// 3, or 4 for a rotation
     pub comps: u32,
     /// the value of the key before, not the line between two
@@ -108,7 +112,7 @@ pub struct Table {
 }
 static mut ALL: Table = Table {
     clips: [Clip { duration: 0.0, track0: 0, tracks: 0, nodes: 0, word: 0 }; CLIPS + 1],
-    tracks: [Track { at: 0, keys: 0, out: 0, comps: 0, step: false, line: 0 }; TRACKS],
+    tracks: [Track { at: 0, keys: 0, out: 0, node: 0, chan: 0, comps: 0, step: false, line: 0 }; TRACKS],
     pool: [S::ZERO; POOL],
     n_clips: 0,
     n_tracks: 0,
@@ -154,7 +158,8 @@ pub fn track(node: usize, path: u32, step: bool, keys: usize) -> u32 {
     }
     let c = &mut t.clips[t.n_clips];
     let k = (c.track0 + c.tracks) as usize;
-    t.tracks[k] = Track { at: t.used as u32, keys: keys as u32, out: (node * NODE + if path == 0 { 0 } else if path == 1 { 3 } else { 7 }) as u32, comps: comps as u32, step, line: LINES as u32 };
+    let chan = if path == 0 { 0 } else if path == 1 { 3 } else { 7 };
+    t.tracks[k] = Track { at: t.used as u32, keys: keys as u32, out: (node * NODE + chan) as u32, node: node as u16, chan: chan as u16, comps: comps as u32, step, line: LINES as u32 };
     c.tracks += 1;
     if node as u32 + 1 > c.nodes {
         c.nodes = node as u32 + 1;
@@ -286,10 +291,13 @@ pub fn sample(d: &mut [S], c: usize, mut t: f64, looped: bool) {
         t = js_min(js_max(t, 0.0), dur);
     }
     let pool = &tb.pool[..];
+    let rows = d.len() / NODE;
     let mut on = [Place { how: UNSET, lo: 0, f: 0.0 }; LINES];
     for k in cl.track0 as usize..(cl.track0 + cl.tracks) as usize {
         let tr = tb.tracks[k];
-        let (n, comps, o) = (tr.keys as usize, tr.comps as usize, tr.out as usize);
+        let (n, comps) = (tr.keys as usize, tr.comps as usize);
+        // the track's first channel of its node; the next is a column on
+        let o = tr.chan as usize * rows + tr.node as usize;
         let times = tr.at as usize;
         let vals = times + n;
         let p = if (tr.line as usize) < LINES {
@@ -305,7 +313,7 @@ pub fn sample(d: &mut [S], c: usize, mut t: f64, looped: bool) {
         if p.how != BETWEEN || tr.step {
             // a key's own values: the first, the last, or the one before
             for c in 0..comps {
-                d[o + c] = pool[a + c];
+                d[o + c * rows] = pool[a + c];
             }
             continue;
         }
@@ -313,7 +321,7 @@ pub fn sample(d: &mut [S], c: usize, mut t: f64, looped: bool) {
         if comps == 3 {
             for c in 0..3 {
                 let (av, bv) = (get(pool, a + c), get(pool, b + c));
-                put(d, o + c, av + (bv - av) * f);
+                put(d, o + c * rows, av + (bv - av) * f);
             }
         } else {
             // the shorter way round, then made a unit again
@@ -325,7 +333,7 @@ pub fn sample(d: &mut [S], c: usize, mut t: f64, looped: bool) {
                 bz = -bz;
                 bw = -bw;
             }
-            store_unit(d, o, ax + (bx - ax) * f, ay + (by - ay) * f, az + (bz - az) * f, aw + (bw - aw) * f);
+            store_unit(d, o, rows, ax + (bx - ax) * f, ay + (by - ay) * f, az + (bz - az) * f, aw + (bw - aw) * f);
         }
     }
 }

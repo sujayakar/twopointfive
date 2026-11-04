@@ -62,7 +62,7 @@ first system across (the game's own maths). No rule of play has changed and noth
     time is: the sight pass was its lines, so the row has no gain of its own. ON where `lines` is (`RUST_ON`): it rides the lines' copy and costs nothing of its own.
   - `poses` — two things under one row. THE POSES A CHARACTER KEEPS from one tick to the next (`src/anim/skeleton.ts Pose`, made through its animator's
     `PoseSet`: the blend's stages, the layers' own buffers) live in the game's block of the module's memory (`rust/sim/src/poses.rs`, a tenant:
-    `src/game/posehome.ts`; the bullet "State in the module is state of the game"). `Pose.data` is the floats wherever they are, asked for at each
+    `src/game/posehome.ts`; the bullet "State in the module is state of the game"). `Pose.cols` is the floats wherever they are (ten columns, a node a row: the bullet "The data's layout"), asked for at each
     use and never kept in a field, so the layers of `game/character.ts` (TypeScript still) read and write the same expression either way. And THE POSING
     FUNCTIONS (`sampleClip`, `blendPose`, `PoseFK.run` / `runFrom` / `parentRot`, `rotateLocal`, `rotateModel`, `setModelRot`, `twoBoneIK`) are asked of `skeleton.rs`. A
     question says where its pose is: in game `g`'s pool, where it is worked on in place, or (`g` = −1: a function's scratch pose, a pose whose block
@@ -452,8 +452,8 @@ first system across (the game's own maths). No rule of play has changed and noth
     write and the next tick. So `RUST_BREAK=1 --missions` is red by the maths, and `--missions
     --rows lines` under the break word now says so itself (`THE RED PATH IS NOT RED FOR the section missions`, exit 3). What holds those seven
     rows on the red path is their differential, by row. THE POSES had no break in a mission until they lived in the block; now, from the fiftieth
-    tick that ends with poses at home, a pose's floats are handed to the TypeScript one node off (`rust-check --run`), and `RUST_BREAK=1
-    --missions --rows poses` differs (hostage-rescue: 3,345 ticks against 3,766, other bits; exit 1). NOT DONE: a break that turns each row's own answers where they come back from the
+    tick that ends with poses at home, a pose's floats are handed to the TypeScript ten singles off (`rust-check --run`), and `RUST_BREAK=1
+    --missions --rows poses` differs (hostage-rescue: 2,192 ticks against 3,766, other bits; exit 1). NOT DONE: a break that turns each row's own answers where they come back from the
     module (as the fog's does), so that a mission under the break word is red for every row raised alone.
   - **What `missions` holds of the fog, measured** (that row alone, the turned answer above): the bits differ on four of the five runs (not
     hostage-rescue), so a man shown who should not be reaches the state; with only "nobody sees" one call in seven, hostage-rescue and
@@ -598,7 +598,7 @@ first system across (the game's own maths). No rule of play has changed and noth
     `statediff-check` with the rows up; `rollback-check --static`; the page check (`rust-page.cjs`: `systems` raises the row, 240 frames to the
     bit by digest and by every frame's bits). WHAT A TICK COSTS (`tickcost --each --list --rounds 3`, three missions, the three stands run SIDE
     BY SIDE on one box so each is slower than alone): 4.72 ms before the change, 4.68 with the row off, 4.73 with it on, every run to the bit.
-    So the poses at home buy no time by themselves: about 500 posing questions a tick still cross, and `Pose.data` under the row is a lookup;
+    So the poses at home buy no time by themselves: about 500 posing questions a tick still cross, and `Pose.cols` under the row is a lookup;
     the time comes when a layer that reads them runs in the module. The module's memory is 2 MB a slot larger (the pool, four slots), on every
     stand, row on or off. NOT DONE, and only with the row on: more games alive than the module has slots (a tool, never the page or a server
     of one game) park and bring a whole live block a tick each; a man who leaves re-packs every pose of the game (rare: a restart, a bench).
@@ -1055,6 +1055,62 @@ first system across (the game's own maths). No rule of play has changed and noth
   NOT DONE: never seen on a GPU, and nobody has played with a row on. No NETWORKED page was opened with an off word in a browser (the replay's page was;
   a client takes the same two steps, and a server with the rows on and a seat with them off agreed on 30 of 30 state words in one headless run by the
   multiplayer task). `tour` and `soak` were not run again after the review's mends.
+- **The data's layout** (2026-11-03; the maintainer: "we should also start changing our data layout to be more cache and simd friendly"). MEASURED
+  FIRST, one blend of two 55-node poses in a module, an x86 cloud box, bun 1.4 | node 24: as it stood (ten singles a node, worked in doubles) 1334 |
+  1391 ns · the same arithmetic over columns 1334 | 1390 · columns, two lanes of doubles, THE SAME BITS 1204 | 964 · doubles, the length a plain root
+  832 | 916 · singles, four lanes, over the store as it stood (four nodes turned into columns on the way in and back on the way out) 730 | 287 ·
+  singles, four lanes, columns, the compensated length 299 | 291 · singles, four lanes, columns, a plain root 157 | 166. WHAT IT SAYS: this game's
+  data is small (a pose 2 KB, a level's boxes 100 KB, 16 men), so it sits in the nearest caches however it is laid out and COLUMNS ALONE GAIN
+  NOTHING AND COST NOTHING; lanes of doubles gain little where the work is divides and a root (the compensated length is eight divides and a root a
+  node); columns and singles pay only TOGETHER. So the layout is what lets a lane kernel pay, and whether a kernel may be worked in singles is a
+  rule of play (it moves the last bits: a switch, the maintainer's call). Not measured: Apple silicon; the sampler and the run forward.
+  - THE RULES for a family's state (every part written from here on; a part already in the build is re-laid with its owner):
+    1. ROWS ARE DENSE: a thing is a row 0..n-1, the live ones first, and a count; whoever names a row from outside names it by an id that does not
+       move and a small id-to-row table.
+    2. A COLUMN IS AS NARROW AS ITS VALUES: a family's truths are bits of one `u32`, an id or an index a `u16` or `u32`, a kind a `u8`; a clock, a
+       length or an angle stays a double while its rule is worked in doubles.
+    3. HOT BEFORE COLD, and what changes every tick apart from what seldom does (a snapshot shares the 4 KB pieces that stood still).
+    4. WHOLE VECTORS: a column starts on a 16-byte boundary and holds a multiple of 4 rows, so a kernel has no tail. The rows past the last thing
+       are zeros and a kernel that works them must leave them zeros (they are state: a snapshot folds them).
+    5. A COMPONENT A COLUMN (x[], y[], z[]), wherever a kernel does one thing to many rows; what it needs worked out (the cos and sin of a yaw) is a
+       column beside its source.
+    6. WALK ORDER: what a kernel visits together lies together in the order it visits.
+    7. Fixed-width SIMD only (the line, above), and a rule of play is not re-defined in singles to get four lanes without the maintainer's word.
+  - **A POSE IS TEN COLUMNS** (`src/anim/skeleton.ts Pose`, `rust/sim/src/skeleton.rs rows`): channel c of node i is `cols[c * rows + i]`, `rows` =
+    the nodes rounded up to 4 (55 → 56), where it was `data[i * 10 + c]`. In an array of the pose's own and in the game's block alike (the pool hands
+    out `singles(nodes)`, and every pose starts on a 16-byte boundary: `state.rs` asserts the part does). The accessor was RENAMED (`data` → `cols`)
+    so that the type check names every reader: a reader left on the old index would have compiled and read another node's numbers. A rotation's
+    four numbers stand `rows` apart, so the helpers that take "where a rotation is" take that stride (`character.ts qAng`, `qTurnBy`, `qTurnTo`;
+    `skeleton.rs store_unit`). A clip's track keeps its own number of where it writes (node × 10 + channel: what a clip is known by) and a sample
+    turns it into the place in the pose it is writing (`Track.node`, `Track.chan`). WHAT COLUMNS TOOK AWAY, and what stands in its place: a node
+    past the pose used to fall off the end of the array and write nothing; in columns that place is another node's, so `sampleClip` skips a
+    track of a node the pose has not, `setRot` / `setPos` / `rotateLocal` / `rotateModel` / `setModelRot` write nothing for a node that is none
+    (as `skeleton.rs ask_turn` always did), `restPose` and `Pose.copy` throw on a pose of another size, `character.ts sampleAt0` keeps the row
+    count its slots were found for, and the bench reads back only the nodes' rows (the rows past them are another question's leavings there).
+    The index is WRITTEN OUT at each site (`d[3 * N + i]`), not asked of a helper: a call a single is what the TypeScript twin pays for most.
+    The price is that a tool which reads a pose through `any` is not named by the type check: `grep -n 'cols\b' tools/qa` finds them
+    (`pose-ident`, `simstate-check`, `stealthpose-check`, `moves-probes`, `pose-fold`). The poses' part of the block is version 2 and the
+    module's version went up with it, so a block or a built.ts from before is refused, not read sideways.
+  - THE ANIMATOR'S LAYERS (`rust/sim/src/layers.rs`, the walk's row) reach a pose's single through `ch` / `set_ch` and nothing else, so the
+    columns were those two lines there (`c * (d.len() / NODE) + i`: a layer is handed exactly a pose's singles, `skeleton.rs with_pose`, so its
+    rows are their count over NODE), the slice `with_pose` hands over (`singles(n)`), and the stride in `set_unit` and `Fk::part`. On the
+    TypeScript side `skeleton.ts layerBoth` compares `pose.cols` and names a differing single by node and column, the jog's seam keeps a node and
+    no offset, and `handsPassOwn` reads `cols` with `N = rows`. Nothing inside a layer changed.
+  - NO RULE CHANGED and no switch: the same game to the bit. WHAT WAS RUN, all headless (bun 1.4 and node 24, a cloud box), on the build's head of
+    2026-11-03 with the rows that are on: `pose-ident` (the module against the TypeScript on the functions the module answers: 204,131 questions,
+    none differing, red under `RUST_BREAK=1`; its node-past-the-pose case now holds the pose it must give); `layer-ident` (every layer the same
+    pose both ways, red under the break word); `rust-check --missions --rows poses,walk` to the bit under bun and node, and with every row;
+    `tickcost --each --list` on the five missions against the build before, 38,634 ticks TO THE BIT with the rows as the page has them and with
+    `TPS_RUSTPOSES=1 TPS_RUSTWALK=1`, 2.01 and 2.02 ms a tick (and 1.97 and 1.98 with those two rows up): nothing, as measured before it was
+    built; and, because the run's bits fold where a man is and not how he is posed, `tools/qa/pose-fold.ts` (NEW: every kept pose, skinning
+    matrix, bone and ragdoll particle of every character after every tick, in one word) on hostage-rescue:1 and compound-four:1 (shipped stand;
+    the first also with the poses' row up, and with the poses' and the walk's) and warehouse-four:1 (frozen): the build before and this one print
+    the same three words. The animator's families on BOTH stands (`moves`, `hands`, `kitanim`, `stealthpose`, `wall-pose`, `gunhand`,
+    `handwork`: no FAIL line), `rollback-check` on both stands with `TPS_RUSTPOSES=1 TPS_RUSTWALK=1`, `seats-check`, `simstate-check`,
+    `savefile-check` on both stands (a save holds no pose: a man is posed again on a load), `rust-check` (red under the break word), and the
+    page (`rust-page.cjs`, Chromium on the software adapter, the frames not drawn: seven jobs, 240 frames the same by digest and bits with every
+    row up, as a player opens it, with the maths alone, and with no WebAssembly). NEVER SEEN ON A GPU: `SkeletonInstance.update` (the skinning
+    matrices the picture draws from) was re-indexed, and what holds it is the fold above, not an eye. One seed a run.
 - **Found, not changed.** `tools/qa/exact-check.ts` is red on the build this was cut from, on three sites that are nobody's Rust: a `Math.tan` worked out as
   `scene/round.ts` loads, and a cube and a power of two written with `**` in `game/stalk.ts` and `game/showwhy.ts`. Each is the engine's arithmetic inside
   the game, the thing this work exists to end; they are their owners' to mend and a port of those files must not copy them.
