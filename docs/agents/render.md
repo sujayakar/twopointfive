@@ -1524,14 +1524,26 @@ interleaved and filtered to their quiet minimum, and a row whose p75 sits far ab
   the world's rectangle to 0 a metre past it, so no light in the air is counted past the rim. Seen after, the same still: black past the rim with the
   lot's own air a soft edge. NOT TOUCHED: a weather kind's fog still lies over the void (`wxFogApply`, the weather's own 10-15 rule); the snow that falls
   past the rim (`SNOW_LOOK.past`) now falls against black. No switch yet: it is a FINAL of its own after the join. Never seen on a GPU.
-- **STONES GATHER WHERE A SPOT IS SHELTERED, NOT ROUND EVERY LEG** (11-03; `render/wear.ts`, SHARED WITH THE BUILD: the traffic map's wall channel, read by
-  `detail.wgsl`'s grime band on every page and by `look.wgsl`'s gravel at a wall's foot). The maintainer, the smoke lab's shed: "circles on ground near table
-  legs are weird". The channel was 1 at the foot of ANYTHING standing on the floor, to 0 at 16 cm: a 4 cm table leg had a round band half a metre across, and
-  on the look page the gravel came up in it as a ring of stones. It is now × how sheltered the spot is: the share of the floor within 0.3 m that such things
-  stand on (counted at the thing's own size, 3 cm taps), nothing under 4 %, whole from 12 %. A wall's foot is a third and keeps its band to the bit of the
-  old number; a leg is 0.6 % and a 10 cm post 3.5 %: none; a 24 cm pier keeps it. MOVED IN THE BUILD'S PICTURE TOO (picture only, no digest): the grime ring
-  at furniture legs and thin posts goes; of the band's texels 3.9 % are lower on the smoke lab, 3.4 % on the pass, 12.8 % on the office (desk and chair
-  legs), none higher. `probes.ts materials-wear` has a line for it. Never seen on a GPU.
+- **STONES GATHER ALONG A LONG FACE, NOT ROUND A THING PUT DOWN** (11-04, in place of 11-03's shelter rule; `render/wear.ts buildWearMap(level, nav, longFoot)`,
+  `faceRuns`, `bandByFaces`). THE SWITCH: on the look's page only (`game.ts` asks for it when `lookConfig.on`), and `?longfoot=0` there is the band as every
+  other page has it. Every other page has the traffic map's wall channel byte for byte as it always was (`bandByOccupancy`, the old code whole; checked
+  against the old file on all 58 level files, and `probes.ts materials-wear` holds its sum on the office), so `detail.wgsl`'s grime band in the build does
+  not move. The maintainer, 11-03 on the smoke lab's shed with the look on: "circles on ground near table legs are weird"; his 11-04 shots of a dressed yard
+  (said of the paint, next bullet) show the same dark ring of stones at every crate, bench foot and stall post. The channel is 1 at the foot of ANYTHING
+  standing on the floor, to 0 at 16 cm, and `look.wgsl` brings the gravel up in it and darkens it. On the look's page each FACE of a standing box now lays its
+  band × how long the straight line of faces is that it is a piece of: faces that look the same way (3°), lie within 12 cm of this face's plane (a wall's
+  pillar, a board leant on it) and meet end to end (3 cm). Nothing under 1.25 m, the whole band from 2.5 m. Asked face by face, never as groups of boxes; each
+  box lays its band exact from its own rectangle (no occupancy, no distance transform: a turned wall has no steps) and a texel keeps the most any box gives
+  it. A wall keeps its band at any yaw, beside a crate pushed against it, and along a front of piers and window sills whichever way it lies; a table leg, a
+  post, a pier, a crate, a crate against a wall or touching a corner pillar have none; a block or a row of crates has it along its long sides and not at its
+  ends. A band is a strip along something; round a prop it was a halo. KNOWN: a piece of wall under 1.25 m between two doorways has none (a lintel does not
+  carry the line). TWO WAYS TO MAKE ONE CHANNEL until the look is the page: then `bandByOccupancy` goes. THE THREE TRIES BEFORE THIS, for whoever is tempted:
+  (1) the share of floor stood on within 0.3 m (11-03, commit 693b7403) cleared legs and left every crate its ring; (2) the longest straight run of stood-on
+  texels lost the band at the steps of a turned wall, cut a wall's band where a crate stood against a block, and gave a long block a band at its corners;
+  (3) joining BOXES that lie in line into one foot (a union) joined a crate to a wall through the wall's pillar, measured a segmented front across itself
+  when a cabinet stood end-on to it, and depended on which way a square box was described. `WEARFOOT_BREAK=1` (the band as every other page has it) fails the
+  probe's line. On the dressed yard's map 31 % of the band's texels are gone, on the crossing 30 %; 4 ms a level, 14 at most (2000 boxes at random yaws:
+  about 0.15 s). Seen as a map; the still drawn was of try (3); never seen on a GPU.
 - **A WET COAT DOES NOT MIRROR A LIGHT IT CANNOT SEE** (11-01; `composite.wgsl wetCoatSpec`, `WET_HIDDEN` 8). The maintainer: "still lots of fireflies/sparkles
   in that room", "some on the shadowed side too", "lots of temporal instability on the guy's back too". The sheen scaled every light's lobe by its class's shadowed
   over unshadowed light; in a shut room by day the hidden sun is the whole unshadowed sum, so its lobe was drawn at the bulb's strength. A light whose
