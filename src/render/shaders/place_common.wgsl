@@ -1,6 +1,6 @@
 // THE LOOK PROTOTYPE — A PLACE AND WHAT IT IS SHOWN BY, for every program that sends a place's light to the eye (the composite's surfaces and their
 // mirrors, the volumetric march's air). One text, pasted in front of each kernel that binds the place field as `placeBuf` (render/passes.ts): the level of
-// a place, the gain the One exposure row shows it by, and the one rule for light brighter than the place's own. Nothing here reads a texture or a light.
+// a place, the gain the one exposure model shows it by, and the one rule for light brighter than the place's own. Nothing here reads a texture or a light.
 // The long account of the exposure is in composite.wgsl, over lookShadeGain.
 const EXPO_BAND = 1.25;
 const EXPO_KEY = 1.8;        // THE KEY where the field has no middle word to say it: with Sam in a dark place the whole picture is exposed up to this many times over the open air's low level, in full from a place 3 times under the open
@@ -24,7 +24,7 @@ fn placeWord(k: i32) -> f32 { let i = PLACE_W * PLACE_H + k; return placeBuf.v[i
 fn lookRoll(l: f32, g: f32) -> f32 {
   var P = select(frame.shadeCfg.w, frame.gradeCfg.y, frame.gradeCfg.y > 0.0);
   if (frame.placeCfg.z > 0.0) { P = max(P, EXPO_LAMP); }   // (the One exposure at every hour row: a room brought to the night's own picture has the night's white, where the hour's sunlit ground is dimmer than that: a night, dawn, dusk, a grey day)
-  if (!(frame.eyeCfg.w < 0.0 && P > 0.0 && g > 1.0 && l > P)) { return 1.0; }   // (the One exposure row only: the rows before it are as they were)
+  if (!(frame.eyeCfg.w < 0.0 && P > 0.0 && g > 1.0 && l > P)) { return 1.0; }   // (only for a place the model has brought up)
   let room = (EXPO_TOP - 1.0) * P;
   return mix(1.0, (P + room * (1.0 - exp(-(l - P) / room))) / l, clamp((g - 1.0) * 2.0, 0.0, 1.0));
 }
