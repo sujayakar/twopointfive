@@ -120,13 +120,15 @@ export async function hitstuffCheck(): Promise<boolean> {
       '3 the car\'s glass saying \'glass\' is a solid thing of glass and not a pane: with the rule up each of two rounds leaves the crack on that box in place of the hole, and where the chaos lane drew the dent of the metal its dark paint was taken for it draws a crack too — as many marks as with the rule down — a pinch of glass (three chips a round, no more) and no dust — with the chaos lane off too, round for round — and the box stands as it stood (the next round meets it); with the rule down each leaves its hole and no crack',
       `solid glass ${solid} · up: ${glassUp ? say(glassUp) : 'no spot'} · the chaos lane off: ${glassCold ? say(glassCold) : 'no spot'} · stands ${stands} · down: ${glassDown ? say(glassDown) : 'no spot'}`);
 
-    // (4) a thing that is metal by its paint and says nothing: no chips with the rule up, the two flecks a round threw with it down
-    const metalOf = (Q: ReturnType<typeof range>) => Q.st.map((b: any, i: number) => i).filter((i: number) => { const b = Q.st[i]; return b.stuff === undefined && !(b.flags & (BoxFlag.Glass | BoxFlag.NoShadow | BoxFlag.NoPrimary | BoxFlag.Dynamic)) && !b.rot && surfOf(b.albedo) === 'metal' && b.h[1] > 0.5 && b.c[1] - b.h[1] < 0.6 && b.c[1] + b.h[1] > 1.5 && Math.max(b.h[0], b.h[2]) > 0.25 && !Q.game.destr.itemOf(i); });
+    // (4) a thing that is metal by its paint, and says it is or says nothing (every box of a level file says what its row is made of since 11-04: a cabinet
+    //     says steel): no chips with the rule up, the two flecks a round threw with it down
+    const METAL_WORDS: readonly (string | undefined)[] = [undefined, 'steel', 'metal', 'sheet'];
+    const metalOf = (Q: ReturnType<typeof range>) => Q.st.map((b: any, i: number) => i).filter((i: number) => { const b = Q.st[i]; return METAL_WORDS.includes(b.stuff) && !(b.flags & (BoxFlag.Glass | BoxFlag.NoShadow | BoxFlag.NoPrimary | BoxFlag.Dynamic)) && !b.rot && surfOf(b.albedo) === 'metal' && b.h[1] > 0.5 && b.c[1] - b.h[1] < 0.6 && b.c[1] + b.h[1] > 1.5 && Math.max(b.h[0], b.h[2]) > 0.25 && !Q.game.destr.itemOf(i); });
     const first = (Q: ReturnType<typeof range>, cand: number[]): number => { for (const i of cand.slice(0, 40)) if (Q.spot(i)) return i; return -1; };
     { const cand = metalOf(R), m = first(R, cand);
       up(true); const metalUp = m >= 0 ? R.fire(m, 1) : null; up(false); const metalDown = m >= 0 ? R.fire(m, 1) : null;
       line(!!metalUp && !!metalDown && metalUp.met === 1 && metalDown.met === 1 && metalUp.chips === 0 && metalUp.spark > 0 && metalUp.spark === metalDown.spark && metalDown.chips > 0 && metalDown.chips <= 3,
-        '4 a thing that is metal by its paint and says nothing (a cabinet, a rack): a round knocks the same sparks out of it either way, no chips with the rule up, and with it down the two flecks it threw before',
+        '4 a thing that is metal by its paint, and says so or says nothing (a cabinet, a rack): a round knocks the same sparks out of it either way, no chips with the rule up, and with it down the two flecks it threw before',
         `box ${m} of ${cand.length} · up: ${metalUp ? say(metalUp) : 'no spot'} · down: ${metalDown ? say(metalDown) : 'no spot'}`); }
 
     // (5) A RULE OF THE PICTURE: the run is the same run with the rule up as down — by digest, by the chaos lane's own die and counters, and by how many
