@@ -194,11 +194,19 @@ interleaved and filtered to their quiet minimum, and a row whose p75 sits far ab
   `pace` row (the display as read, every which frame, frames on the GPU of how many, the share of the frames asked for since the strip was last written
   that found no room; 'not waiting for the gpu' where the rule is not acting); `__pace()` adds `{flight, flying, held, lost}`. Checks:
   `tools/qa/pace-check.ts` (120 Hz with no rate held and the GPU at 17 ms: two with the GPU at the most and the GPU's own 58.8 frames a second; the
-  ladder's 60 with the work at 15 and at 20 ms; a 60 Hz display at 5 and 25 ms; at one; the page measuring; each answer its own frame's; two frames
+  ladder's 60 with the work at 15 and at 20 ms; a 60 Hz display at 5 and 25 ms; at one; the boot's calibration (nothing held, frames pile up); a benchmark at the card's own pace; each answer its own frame's; two frames
   never answered for; A TAB THAT SLEEPS with two frames in flight, four ways: asleep 3 s with the answers come meanwhile it draws every frame at once;
   asleep 30 s and never answered both are given up on the first frame back; asleep 3 s with the GPU still at the two it holds six display frames and
-  draws on; asleep 3 s and never answered it waits, ten seconds from the hand-over at the most; the wiring; 51 lines on each stand; `FLIGHT_BREAK=1`
-  fails 9 on each stand: frames pile up without end). ON THE REAL PAGE (headless Chromium 153,
+  draws on; asleep 3 s and never answered it waits, ten seconds from the hand-over at the most; the wiring; 53 lines on each stand; `FLIGHT_BREAK=1`
+  fails 10 on each stand: frames pile up without end). A BENCHMARK AND AN F8 SWEEP WAIT TOO (2026-11-04; until then every measuring page was left
+  out, 'which wants its frames as they come'). On a display the browser holds a page's frames back by itself, and a sweep on a 120 Hz laptop with
+  15 ms of GPU work repeated to a tenth of a millisecond over three rounds. A headless browser on a cloud card has no display: on a scene over
+  16.7 ms the page handed over a frame every 16.7 ms whatever the card did, the queue grew for as long as the scene was held (found by the pricing
+  run, which measured the GPU's 'done' 115 to 629 frames late), a row flipped in a sweep reached the passes' stamps in another row's turn, and the
+  card's frame rate read the display's 60. Two benchmark cards of one build on two such boxes agreed on GPU time to 2 % on eight lines of nine and disagreed
+  on their sweep rows (mesh shadows off 'gave back' 1.1 ms on one and cost 0.6 on the other). With the wait, a measuring page is at most two frames ahead of the GPU, as a player's is; where the card
+  keeps up nothing is held. Only the boot's calibration (a second and a half that counts frames as they come; on the software adapter the wait
+  would stretch it by minutes) and `?kitview` still say room 0. The even pace and giving way stay off while measuring, as before. ON THE REAL PAGE (headless Chromium 153,
   software adapter, not driven):
   the title at 640 x 360, very low, watched for seven minutes after it came ready. It came ready as ever, drew 20 frames in
   those minutes, never had more than two with the GPU, and printed no error. A frame takes about 11 s on this adapter, so every one of them outlasted

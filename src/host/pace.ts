@@ -110,8 +110,8 @@ export function periodOf(G: readonly number[]): number {
 
 export interface Pacer {
   /** a frame callback stamped `ts` (ms), with the rate being held (0 = none: every frame is worked, and the period is still read). `away` = nobody is at this
-   *  window (it gives way, under `giveway`). `room` = how many frames may be with the GPU when this one is begun (0 = any number: the page is measuring the
-   *  machine; left out = `flight`). true = pass this display frame over whole (touch nothing: the next worked frame takes the real time). */
+   *  window (it gives way, under `giveway`). `room` = how many frames may be with the GPU when this one is begun (0 = any number: the boot's
+   *  calibration, and ?kitview; left out = `flight`). true = pass this display frame over whole (touch nothing: the next worked frame takes the real time). */
   skip(ts: number | undefined, target: number, away?: boolean, room?: number): boolean;
   /** a worked frame has handed its work to the GPU, at `now` (ms): the word to give `done` back when the queue says that frame is finished, at `now`, with
    *  the GPU's own timing of a frame's passes where the page has one (`own`, ms; 0 = none). An answer for a frame already given up as lost changes nothing */
