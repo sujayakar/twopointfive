@@ -727,7 +727,8 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   LEFT: a LOOSE drum, bucket or stool is a prop, and a prop's part cannot say it is round (the rule looks in a level's boxes). Writing a prop's body as
   slabs was tried and dropped: a blast throws a prop part by part, so a drum went as four overlapping slabs against the blast's piece budget, and the
   two squares of a small one stand outside the footprint it collides with. The mend is a part that says it is round, in the simulation and the picture.
-  Other writers of the same numbers by hand, not touched: `lived-quiet.ts rnd` and `oct`, `lived-train.ts rd`.
+  Other writers of the same numbers by hand: `lived-train.ts rd` (its own two squares at 0.9 r; not touched). `lived-quiet.ts` writes its rounds with
+  `roundSlabs` (its one `round` tool; see the library's bullet on one name, one piece).
   CHECKED (both stands): typecheck; `export.ts --check` every level (tut-queue stale and train-ground throwing before and after); `lived-check` every
   level; `level-needs --run` depot and hall; `probes.ts round` (its line 7 was red before this step). NOT SEEN ON A GPU; nobody has played it.
 - **Six ground and yard pieces joined the 2010s kit** (dress every level, 11-03; no switch: the kit only, no level lays them in this step; `src/scene/gwotKit.ts`).
@@ -822,10 +823,14 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   tables give to different colours (canvas three times); four pieces no level lays (`officeKit.paneZ`, `livedTrain.helmet`, `toolRoll`, `spools`);
   `levelKit.ts`'s copies of the office's pieces are plain functions that take the kit first, so they go through no door and the four levels built on them
   (defuse, floodlit, mousehole, records) show no office pieces. Never seen on a GPU: the catalogue's pictures are drawn by the script.
-- **The library, one name one piece: what the catalogue counts (11-04; tools and docs, no level file moves).** A kit's piece
+- **The library, one name one piece: what the catalogue counts, and the quiet pair's rounds (11-04; tools and docs, no level file moves).** A kit's piece
   that lays nothing of its own, only ONE piece of another kit, IS that piece: `library.ts` lays each piece alone with the door watched, and when the only
   thing laid from inside it is one other piece and the box, prop, lamp and fixture lists grew by exactly that piece's, the row says so (`is` in `--json`,
   *(is `officeKit.chair`)* on the page, and the table "One piece, handed out by more than one kit"). Such a piece is no second way of building its name, so
   "One name, more than one piece" lists a name only for pieces that are their own: 14 names now (it was 18; `chair` and `papers` in the lived kit are the
   office's taken into a room, and the look kit's `wallX` / `wallZ` are the host's wall in a palette paint). TO MAKE TWO KITS' PIECES ONE: have the second
-  kit call the first kit's piece and add nothing, as `livedKit.chair` does; the catalogue then counts one.
+  kit call the first kit's piece and add nothing, as `livedKit.chair` does; the catalogue then counts one. `tools/levels/lived-quiet.ts` had two tools
+  that wrote a round by hand (`rnd` under 0.2 m, `oct` from it): they are one `round(x, z, y0, y1, r, m, solid)` on `gwotKit.ts roundSlabs`, the same boxes
+  to the last digit (`export.ts --check` up to date on crossing and quiet-relay). ONE CALL kept its old shape by hand: the cable reel's barrel in
+  `crossing.ts` is two squares at 0.26 m, which `round` would write as an octagon and move the level file; it becomes `L.round` in the step that moves
+  that file. STILL BY HAND: `lived-train.ts rd` (0.9 r, a 3 mm step), which moves the training levels' files when it is folded.
