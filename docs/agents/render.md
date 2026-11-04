@@ -1949,6 +1949,38 @@ interleaved and filtered to their quiet minimum, and a row whose p75 sits far ab
   a foot at a right angle, where the plain blend read 330; a brick's face beside a bevel 25° off takes 3.8 of 10 where it took 5.5;
   `REFLUP_BREAK=1` = the plain blend, fails), `shaderrows-check` (the compact composite re-stamped), all 69 shader texts compile. DRAWN, software adapter, the service door's jamb from
   inside at midday, the specular view: the white bar up the jamb (a neighbour's sunlit texel under the room's gain) went from 88 bright pixels to 2; a shorter bar lower on the same jamb is unchanged at 75, so it is the jamb's own highlight and not a neighbour's texel, and the bricks' hooks beside the door stay as said above. The page booted and drew with no page or GPU error (120 programs; that boot also carried the daylight pieces of the bullet below). NEVER SEEN ON A GPU, and not timed there.
+- **AN OPENING'S DAYLIGHT IS ADDED UP PIECE BY PIECE, NOT POINT BY POINT** (11-04; the look's page, where the openings' lights are; no switch
+  and no second path: `common.wgsl portalFlux`, `portalFaces`, with `portalPiece`, `portalCorners`, `portalQuad`, `portalEdge`, `portalEnds`,
+  `portalMean`, `portalSolid`, `portalAbove`; `direct_common.wgsl shadowSample`). The maintainer on his M4 at dusk: "orange door has horizontal
+  banding when open, not when closed". DRAWN FIRST: the white roof's service door at dusk, its leaf swung into the room, on the software adapter:
+  eight bands up the leaf, plain in the direct light's view. THE CAUSE: the light an opening sends was the mean of eight points, one to each
+  eighth of its height. From a metre off that is a fair sum. On a face a hand from the opening (a leaf across the doorway's end, a floor at the
+  sill, a probe by the door) each point was its own blob: up the check's leaf the light ran from 0.71 to 1.47 × the true sum and stepped by half
+  of it between heights 5 cm apart; over a set of near, wide and leaning cases the eight points ran from nothing to 2.2 ×. THE RULE: a patch of
+  EVEN brightness sends a face exactly what the angles its edges subtend say (a polygon's vector irradiance, Lambert's sum over the edges, the
+  patch cut at the face's own horizon first). So the part of the rectangle a point sees (`portalSeen`) is cut into five pieces that are each
+  nearly even: the ground's, below the receiver's own height, which IS one brightness; and the sky above it in two halves along the wall (halves
+  by angle from the receiver, so a long opening seen from close is not one piece), each half cut where `skyRadiance`'s ramp from the horizon ends
+  over its middle (by height over distance: the cut moves with the receiver and is no line on a wall). A sky piece's brightness runs straight
+  from its foot to its head and so, near enough, does how squarely the face takes it: it counts as bright as the mean of the one weighed by the
+  other, read where the part of it the face sees lies, with the cosines as they are so that nothing steps as an end goes under a face's horizon
+  (`portalMean`). The angle over its sine is the two-quadratics fit area lights are drawn with (no arc function a pixel), the sine past a right
+  angle the cross product's own length. WHAT IS EXACT IS THE GEOMETRY; the sky's ramp is followed to a few per cent from a metre off, a floor at
+  the sill of a long opening reads a fifth over, and the worst the check found is 1.3 × (the game's skies are far gentler than the check's eight
+  to one). THE EIGHT POINTS STAY as what a shadow ray is AIMED by, where a point is all a ray can be, and are now laid in the part of the seen
+  rectangle above the face's own horizon (`portalAbove`): a face that takes a sliver of the opening has its rays on the sliver, where it had a
+  quarter of its light and a flicker. THE CACHE'S DICE give up the sky by the same pieces, a face at a time (`portalFaces`: each of the six
+  faces' horizons cuts each piece; the mean takes its solid angle; the piece under the probe's height counts at the sky's own under-horizon
+  value read at its foot, 0.84 to 1.00 × what rays would bring, the safe side). COST, not timed on a GPU: five quads of four or five edges where
+  eight points stood, in every pass that scores a portal, and thirty in the dice a probe a portal; inlined `restir / main` 392 to 412 KB, `direct
+  / main` 470 to 485. Checks: `bun run tools/qa/probes.ts portal` on both stands, the mirror written as the shader is, flux and faces. Its older
+  lines read nearer the sums than they ever did: behind the yard wall 1.14 × a hand inside the sill (1.22) and 0.97 to 1.05 × from 1 m in; the
+  yard open 0.98 to 1.03 ×, a crate's top at 1.6 m 1.10 ×; nothing of the sky left in the three probes' dice (5.6 %); the ground line 0.98 to
+  1.08 ×. New lines. 4x: up a leaf across the doorway's end, 37 heights 5 cm apart, 1.02 to 1.16 × a sum of 400 by 400 rays, the largest step
+  3 %. 4w: 56 near, wide and leaning asks against 300 by 300 rays, 0.94 to 1.30 ×, eight in ten within 15 %; every one keeps all its rays; three
+  walks 0.5 mm at a time and two faces turned through a right angle never move by more than 0.14 % a step. 4v: the dice's sum at four probes,
+  23 faces, 0.84 to 1.00 ×. `PORTALBANDS_BREAK=1` = the eight points and rays laid over the whole seen part: 4x and 4w fail. The pins hold the
+  texts. `shaderrows-check`, all 69 shader texts compile, `tsc` both. DRAWN, software adapter, the white roof's service door swung in at dusk (the page booted and drew with no page or GPU error, 120 programs): the leaf's eight bands are gone in the direct light's own view and in the played picture; down the leaf, rows 10 px apart stepped by up to 8 % in a saw's teeth and now fall evenly, the largest step 2 to 3 %. (That boot also carried the reflection texel rule above.) NEVER SEEN ON A GPU, and not timed there.
 - **THE ROWS THE ONE EXPOSURE MODEL REPLACED ARE DELETED, AND ITS OWN ROW WITH THEM** (11-04; `composite.wgsl` and `compact/composite.wgsl
   lookShadeGain`, their caller, `engine.ts`, `ui/lookpanel.ts`; no switch: nothing a page draws with its rows as it opens was touched). The
   maintainer chose the model over mending the rows it replaced (10-31), and ruled every special case of the light fixed (11-04): the first of the
