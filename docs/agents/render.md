@@ -1759,14 +1759,17 @@ interleaved and filtered to their quiet minimum, and a row whose p75 sits far ab
   acting at midday too, and its going moves that.) COST, not measured: at night the frame runs the field's sweeps and the composite's place
   read, as a day does, also where every gain comes out 1 (the `dark` row at 0, the goggles down). NOT DONE: seen from inside a dark room, a
   moon patch on its floor is shown brighter than the moonlit ground outside the door (the Light in order row is bounded by the eyes' own
-  level, by day too); the lamps' haze and beams and the particles take no gain (as by day: `volumetrics.wgsl airShow`'s note), so a torch beam
+  level, by day too); the lamps' haze and beams take no gain (as by day: `volumetrics.wgsl airShow`'s note; lit particles do since 11-04: A LIT
+  PARTICLE IS SHOWN BY ITS PLACE), so a torch beam
   in a room brought up reads weaker against it; the light debug views are × the gain; on a switch of hour from the panel the field holds the
   old hour's units for the frames it takes to settle; the comments in the composite and the smoke march that say "1 at night" are true of the
   page as it opens and are to be mended when `hours` is its default; the Contrast row still fades by day (`lookgrade.ts`); the Room brightness
   row's light is not a night's (`lampCfg`); lamps are still the game's by night and real by day (`photometry.ts`). (The rows the model
   replaced went in the step after this one: the next bullet.) MEASURED on the software adapter and the CPU only: THE ROWS ON
   HAVE NEVER BEEN SEEN ON A GPU.
-- **A PIXEL'S PLACE IS READ OFF THE FLOOR PLAN, NEVER GUESSED** (11-04; the look page only, no row: it is the only path. `composite.wgsl` and
+- **A PIXEL'S PLACE IS READ OFF THE FLOOR PLAN, NEVER GUESSED** (11-04; the look page only, no row: it is the only path. (LATER THE SAME DAY the
+  rule's text, `lookPlaceLevels` with `placeBlend` and `placeSideCell`, moved word for word from the composite's two writings into
+  `place_common.wgsl`, the one text they are built with, when the particles' splat came to ask it: A LIT PARTICLE IS SHOWN BY ITS PLACE.) `composite.wgsl` and
   `compact/composite.wgsl lookPlaceLevels`, `placeBlend`, `placeAcross`, `placeSideCell`; `common.wgsl sideLine`, `sideIsDoor`;
   `place_field.wgsl placeSweep`, `hand`, `placeEye`; `render/wallSides.ts placeSides` kind 3; `scene/placePlan.ts placeMask`,
   `PlaceMap.shape`). The maintainer on his M4, the white roof at midday: "weird flash on the door when opening", "there's a dark band right by the
@@ -1857,6 +1860,34 @@ interleaved and filtered to their quiet minimum, and a row whose p75 sits far ab
   from 1.00 up to 1.6 and 2.7 before, and stays at 1.00 to 1.02 with the mend; in the picture the edge peaked at 1.63 on dust that is 1.25 lit and
   1.28 in shade, and peaks at 1.39 now (what the tone curve does to a tan as it darkens, and no more). NEVER SEEN ON A GPU, and not timed there:
   the kernel does the same work in another order.
+- **A LIT PARTICLE IS SHOWN BY ITS PLACE** (11-04; the look page only, under the one exposure model, with no word of its own: it rides the shade
+  row as the floor's gain does, and off the look page the splat's text never compiles the call in (`const LOOK`). `particles_draw.wgsl partShow`,
+  `vs` / `vsKind`, `partAt`; `place_common.wgsl lookPlaceLevels`, `lookGainsOwn`, `lookShowBy`, `lookAirGains`; `render/particles.ts setPlace`;
+  `render/placeField.ts placeNone`). The maintainer on his M4, the white roof at midday: "GPU particles (like casings) look like they're not lit".
+  THEY WERE LIT AND SHOWN WITH NO GAIN: the composite shows each place's surfaces by the place's gain and the smoke march its air, and the splat is
+  drawn after both. Brass on the floor of a room shown thirty times brighter was drawn at a thirtieth of the floor it lies on. A PARTICLE NOW ASKS
+  WHAT A POINT OF THE FLOOR ASKS, the same three functions in the same order: its place off the floor plan (so at a wall's foot it is of the room on
+  its side of the wall's line, in a doorway of the side of the door's line, and between two cells the blend), the Light in order row with the light
+  that falls on it, and the one rule for what a place sends the eye. For that the floor plan's rule moved, word for word, out of the composite's two
+  writings into `place_common.wgsl`, the one text the composite, every volumetric march and now the splat are built with. ONE CALL, where the vertex
+  stage hands its answer on (`vs` wraps the kinds' own writings, `vsKind`), so a new kind cannot miss it; the splat's module grew by one call's
+  text. Over the roofs and past the map's edge a particle is in the open air, as the air's own rule has it. The splat binds the place field at
+  group 1 binding 7 (a uniform in the vertex stage, 56 KB, under the default limit), handed each frame by the engine with the composite's; off the
+  look page both get the same zeros (`placeNone`, one a device). The smoke march's inline copy of the air's gains is `lookAirGains` now, the same
+  arithmetic. WHAT IS NOT IN IT, on purpose: A SPARK'S OWN LIGHT is sent on as it was. What a glowing thing is shown by (a lamp's face, a screen, a
+  spark, a fire) is one question and is not asked here: put through the rule as it stands, a spark in a dark room is held at the shoulder's top
+  through nearly all of its cooling and then cuts off. THE LIGHT ON A PARTICLE IS AN ESTIMATE: the sim hands the splat what the particle sends on,
+  in which the bounce is already × `indirectScale`, and the record has no free word for the light itself. The splat works it back (÷ the albedo's
+  brightness × π) and puts the bounce back at its true strength as far as the place's own level says it. Deep in a room that is the floor's own
+  number to the bit; where the bounce at the particle is three times its place's level and no lamp lights it, the particle reads 1.49 times over the
+  floor's share (`indirectScale` 0.35), and a case's glint reads the other way. Both only where a brighter place is a stride away, which is the only
+  place the row asks. The lasting mend is a word in the particle's record for the light on it. Check: `bun run tools/qa/lookexpo-check.ts` (the
+  splat's lines: the text of the call, of its three builds and of the field's hand-over, and the arithmetic of the estimate, mirrored;
+  `PARTSHOW_BREAK=1` shows a particle with no gain and must fail: 3 lines, on both stands), `tools/qa/wallsides-check.ts` (the rule is one text and
+  each of its three askers calls it once), all 69 shader texts compile, `shaderrows-check` (the compact march re-stamped). DRAWN, software adapter, the white roof's service room at midday with its door open (a room the
+  model shows by its own level, far over the frame's), 48 casings put on its floor: they read 161 of 255 by luminance on a floor at 217 before, dark
+  grey dashes, and 233 with the mend, pale gold (154, 161, 174 and 239, 233, 213); the page booted and drew with no page or GPU error. NEVER SEEN
+  ON A GPU. NOT DONE: a spark and the other glowing things; the lamps' haze and beams; a particle's own light carried from the sim.
 - **THE ROWS THE ONE EXPOSURE MODEL REPLACED ARE DELETED, AND ITS OWN ROW WITH THEM** (11-04; `composite.wgsl` and `compact/composite.wgsl
   lookShadeGain`, their caller, `engine.ts`, `ui/lookpanel.ts`; no switch: nothing a page draws with its rows as it opens was touched). The
   maintainer chose the model over mending the rows it replaced (10-31), and ruled every special case of the light fixed (11-04): the first of the
@@ -2133,7 +2164,8 @@ interleaved and filtered to their quiet minimum, and a row whose p75 sits far ab
   highlight, the men's finish (`composite.wgsl lookShow`, both twins), and the smoke march's light step by step (`volumetrics.wgsl airShow`, both twins: the
   air's place is the place field's cell under the step, `placeAir`; in a wall's cell the brightest free cell within two; over the ceiling's height the open
   air). The volumetric programs bind the place field at group 1 binding 5. NOT YET THROUGH IT: a lamp's own haze and marched beams and the dust volume
-  (they still take no gain), a glowing face, particles. Debug view 10 (specular) is where the men's highlight shows. Check: `bun run
+  (they still take no gain), a glowing face, a spark's own light (lit particles go through it since 11-04: A LIT PARTICLE IS SHOWN BY ITS PLACE).
+  Debug view 10 (specular) is where the men's highlight shows. Check: `bun run
   tools/qa/lookexpo-check.ts` (its CPU mirror of the three gains; a store 4,000 times under the yard seen from the yard: a glint keeps its ratio to the
   floor as from inside and is never over 0.20 of sunlit ground, where a glint a hundred times the floor used to be handed on at 1.23 of it beside a floor at
   0.012; the volumetric texts and the wiring are read; `LOOKEXPO_BREAK=1` fails). Seen on the software adapter only: one boot of the look page (119 programs,

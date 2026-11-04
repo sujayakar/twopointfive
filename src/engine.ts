@@ -627,7 +627,7 @@ export class Engine {
     this.lights.dayExp = lookConfig.lamps > 0 ? hourExp : 1; this.lights.dayAmount = lookConfig.lamps;   // (THE LOOK PROTOTYPE's real light values: render/photometry.ts)
     const numLights = this.lights.upload(time, this.dayLights);
     let portal0 = 0; for (const l of this.dayLights) if ((l.slot ?? -1) >= 0 && (!portal0 || l.slot! + 1 < portal0)) portal0 = l.slot! + 1;   // (the list's first portal, + 1: frame.placeCfg.y, common.wgsl skyKeep)
-    const place = placeOn && this.place?.ready ? this.place : null; this.passes.setPlace(place ? place.buffer : null);
+    const place = placeOn && this.place?.ready ? this.place : null; { const pb = place ? place.buffer : null; this.passes.setPlace(pb); this.particles?.setPlace(pb); }   // (the composite's, the smoke march's and the particles' splat's: one field, or the zeros that say none)
     const placeSnap = this.lookEye.snap || this.placeWas !== place;   // (a first frame, a restart, a still, a field just come live: the field and its eye are settled outright; cleared below once a field has been stepped)
     const powder = this.powderLive(); this.passes.setPowder(powder?.ready ? powder.view : null);   // (THE LOOK PROTOTYPE's loose snow in the air, above)
     const veil = powder?.ready ? lookVeilFrame({ x: WORLD.min[0], z: WORLD.min[2], w: WORLD.max[0] - WORLD.min[0], d: WORLD.max[2] - WORLD.min[2] }, 1, this.lights.lights) : null;   // (null anywhere else = the frame's two fields stay zeros)

@@ -1,6 +1,6 @@
 // Screen-space lighting passes: direct (full res), indirect gather (half — a third with the lossy option), volumetrics (half — a quarter likewise), composite, then EITHER the TAAU resolve
 // (internal → output resolution, taau.wgsl) + bloom + post + sharpen/grain at output resolution, OR (TAAU off) bloom + post + FXAA/grain at internal resolution as it always was.
-import { PLACE_BYTES } from './placeField';
+import { placeNone } from './placeField';
 import { makeBuffer, makeShader, computePipelineAsync, laterPipelineAsync, laterRenderPipelineAsync, renderPipelineAsync, writeWordsIfChanged, PIPE_QUEUE, pipelineProgress, laterProgress } from '../gpu/device';
 import { shaderText } from '../gpu/wgslTrim';
 import { KERNELS, COMPACT } from './kernels';   // (the ten kernels that exist in two writings come from there: today's, or the compact set with its row on)
@@ -638,7 +638,7 @@ export class LightingPasses implements CutSwappable {
       { binding: 2, visibility: CS, texture: tex2d('unfilterable-float') }, { binding: 3, visibility: CS, texture: tex2d('unfilterable-float') },
       { binding: 4, visibility: CS, storageTexture: { access: 'write-only', format: 'r32uint', viewDimension: '2d' } } ] });
     this.decalDummy = makeBuffer(device, 32, GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST, 'decalDummy');
-    this.placeNone = device.createBuffer({ label: 'placeNone', size: PLACE_BYTES, usage: GPUBufferUsage.UNIFORM });   // (never written: all zeros = no field)
+    this.placeNone = placeNone(device);   // (never written: all zeros = no field; the one the particles' splat is handed too)
     this.powderNone = device.createTexture({ label: 'powderNone', size: [1, 1], format: 'rgba16float', usage: GPUTextureUsage.TEXTURE_BINDING }).createView();   // (never written: all zeros = no powder)
     this.lFxaa = device.createBindGroupLayout({ label: 'fxaa', entries: [
       { binding: 0, visibility: FS, texture: tex2d('float') },
