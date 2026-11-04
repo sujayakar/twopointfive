@@ -2743,7 +2743,7 @@ interleaved and filtered to their quiet minimum, and a row whose p75 sits far ab
   (the loader puts the word on the box; a box written as numbers has no row and says its own); the look reads `Box.stuff` and nothing else.
   GONE: `gbuffer.ts classWgsl`, `lookStuff`, `lookNamed`, the palette match and its darkened test (CPU and the generated WGSL `lookClass` /
   `surfClass`), `levelKit` and `officeGen FINISH_BY_ALBEDO`, `?names=0`, `?words=0`, and SURFACES, A TRY (`?surf`, `SURF_TRY`, `surfTryConfig`;
-  the look page replaced it; `shaders/surface.wgsl` is eight constants `look.wgsl` still names, until those become row words).
+  the look page replaced it; `shaders/surface.wgsl`, the last of it, went with the next bullet).
   IN CODE A PAINT IS KNOWN BY THE ARRAY HANDED OVER, never by its numbers (`stuff.ts namePaints`, `paintOf`): a kit's palette row carries its
   name, its finish and its word; a COPY of the numbers is nobody's paint, matte and plain, and nothing in the types says so: hand the row, tone
   it with `toned` / `tonedAs` (a tone of a paint is that paint's stuff), stand in for it with `gwotAs`, repaint a box with `repainted`, and
@@ -2801,6 +2801,25 @@ interleaved and filtered to their quiet minimum, and a row whose p75 sits far ab
   OUT of this: what a round, a charge and a blast make of a box (`STYLE.md`: the game reads paint). NEVER SEEN ON A GPU by a person. On
   the look's preview a cloud card drew eight scenes before and after with no error, the same pictures but for the words changed on
   purpose (an office car park no longer rusted iron); as joined to the build it has been drawn by nothing but the shader compiler.
+- **THE LOOK'S SHADER NAMES NO STUFF: WHAT IT DID BY NAME IS A WORD IN THE STUFF'S ROW** (11-04; `render/lookTex.ts STUFFS`, `gbuffer.ts
+  lookWgsl`, `shaders/look.wgsl lookSurface` and `lookSnow`). `look.wgsl` had eleven constants that were one stuff's number each
+  (`SURF_MUD` … `LOOK_CARPAINT`) and seven tests of a box's class against them; a new stuff could not be a mud wall's cousin without a
+  line of shader. Each is now a row word, read through the prelude: `runs` (which way a thing's grain or ribs run: 'long' on every face,
+  boards and a veneered top; 'flat' along a lying face and up a standing one, a sheet), `least` (half a face's width under which the map
+  is not shown: a bucket is not a roof sheet), `under` (what it is made of under its coat, with the least wall that shows it: a mud wall's
+  field-stone plinth and mud-brick core, MASONRY), `foot` (what works up through it at a wall's foot: gravel through earth), `ground`
+  (bare ground that freezes by lying snow), `sheds` (snow does not lie on it: bare iron). `LOOK_WITH`, the layers a layer needs made
+  with it, is derived from `under` and `foot`. Two tables that are not a stuff's (a plain box is rubbed too): `LOOK_HANDLED`, what a hand
+  moves has its arrises rubbed (the "edges under 1.3 m" rule: 1.3 long, 1.6 tall, 4 cm thin), and `LOOK_GROUND`, where the ground is for
+  what the weather does (a top under 0.25 m, the snow field's 0.06, a foot under 0.12 stands on it), metres above the level's floor.
+  The shader keeps the stuff's row at the head of its stuff branch (`let row = …; let thing = LOOK_THING[row]; …`) and tests a class only
+  against plain. `shaders/surface.wgsl` is deleted. STILL IN THE SHADER'S OWN WORDS, not this slice's: the heights of USE AND DIRT, the
+  one answer a mark (a lane, the band at a wall's foot, the skirting, the knocked coat: 0.25, 0.3, 0.15, 0.14 m, the look task's block),
+  the shapes of the effects themselves (how high a damp line wanders), and `LOOK_L_CLOTH`, the layer a man's clothes are woven from.
+  NO SWITCH and NO CHANGE OF PICTURE meant: every number is the number it was. THE CHECK: `lookmaps-check` line 9 holds that the shader's
+  text has no stuff's constant and no class test but against plain, and that for each of the 28 stuffs of that day the row says exactly
+  what the named rules said, six words each, the old rules written out in the check (`was`: a row changed on purpose changes it there);
+  `wgsl-compile`, all 68 texts. Never seen on a GPU by a person.
 - **MARKS AS PAINT, A FIRST TRY** (`shaders/markings.wgsl markSoft`, behind `lookMarkSoft()` = `lookCfg.g.x`, 0 off the look page by gbuffer.ts's
   stub; the maintainer, 10-23: "we also need to get away from the pixel art textures"). A marking is still the level's 2-bit cell bitmap (2.5 cm
   cells), but on the look page it is not drawn as squares: the coverage is read over a one-cell footprint, cut back at half cover along a ragged line
