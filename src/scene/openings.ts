@@ -20,6 +20,7 @@ import type { Vec3 } from '../math/vec';
 import { BoxFlag, type Box } from './boxes';
 import { WORLD } from './world';
 import { PLACE, PLACE_W, PLACE_H, PLACE_RES, placeWall, placeSolid, placeRoof, stampCells } from './placePlan';
+import { type Pt, narrowest, footprint, WAY } from './wayThrough';
 
 export const LOOK_OPENINGS = {
   ground: 0.5,    // what the ground outside sends back of the light on it (snow more, a shaded yard less)
@@ -39,7 +40,6 @@ export const LOOK_OPENINGS = {
   dy: 0.1,        // … and up it
   small: 0.25,    // m²: less open than this is not worth a light (a vent's slot, a hatch)
   crack: 0.12,    // m: a slit narrower than this along the wall is shut
-  play: 0.07,     // m: the play a shut leaf has in its frame, and a finger over (a 0.84 m leaf in a 0.9 m doorway has 6 cm, at one jamb or shared
                   // between the two): a gap of the narrowest way through is open by what it has over this (ajarOf)
   slit: 0.25,     // m: … and one lower than this up the wall (the gap between a shed's wall and its roof, a vent's slot: with it open no wall would be shut
                   // from the floor to the roof, and nothing would have a wall on either hand)
@@ -75,7 +75,6 @@ export interface Opening {
  *  above every sample). Of the things that move, a door's leaf alone (placeWall's own test: a man is no part of a wall). */
 const blocks = (b: Box, dynamic: boolean): boolean => (b.flags & (BoxFlag.Glass | BoxFlag.NoShadow)) === 0 && (!dynamic || placeWall(b) === 255);
 
-type Pt = readonly [number, number];
 interface Near { b: Box; c: number; sn: number; rn: number; cn: number }
 /** the boxes of `from` within reach of the line at L across `axis`, between s0 and s1 along it */
 function nearLine(from: readonly Box[], axis: 0 | 1, L: number, s0: number, s1: number, out: Near[]): void {
@@ -98,7 +97,7 @@ function crosses({ b, c, sn }: Near, axis: 0 | 1, a: number, e: number, s: numbe
   return true;
 }
 /** a box's footprint as corners in order, across the wall and along it */
-const outline = ({ b, c, sn }: Near, axis: 0 | 1): Pt[] => [[-1, -1], [1, -1], [1, 1], [-1, 1]].map(([i, j]): Pt => { const lx = i * b.h[0], lz = j * b.h[2], x = b.c[0] + c * lx + sn * lz, z = b.c[2] - sn * lx + c * lz; return axis === 0 ? [x, z] : [z, x]; });
+const outline = ({ b }: Near, axis: 0 | 1): Pt[] => { const f = footprint(b.c[0], b.c[2], b.h[0], b.h[2], b.yaw); return axis === 0 ? f : f.map(([x, z]): Pt => [z, x]); };
 /** `bits` (the heights open at place s along the line, one bit a sample of `dy`) less what the boxes of `near` cover there: a box covers a height when it
  *  stands in the straight way through, from `a` to `b` across the wall, at that place */
 function openAt(near: readonly Near[], axis: 0 | 1, a: number, e: number, s: number, nY: number, bits: number): number {
@@ -244,19 +243,6 @@ export function planOpenings(statics: readonly Box[]): Opening[] {
   return kept.slice(0, K.keep);
 }
 
-/** how far apart two outlines are in plan (each a segment or a convex outline, as corners in order): 0 where they touch, cross or one holds the other */
-function apart(A: readonly Pt[], B: readonly Pt[]): number {
-  const edges = (P: readonly Pt[]) => P.length === 2 ? 1 : P.length, side = (a: Pt, b: Pt, p: Pt) => (b[0] - a[0]) * (p[1] - a[1]) - (b[1] - a[1]) * (p[0] - a[0]);
-  const toSeg = (p: Pt, a: Pt, b: Pt) => { const ex = b[0] - a[0], ey = b[1] - a[1], l2 = ex * ex + ey * ey, t = l2 > 0 ? Math.max(0, Math.min(1, ((p[0] - a[0]) * ex + (p[1] - a[1]) * ey) / l2)) : 0; return Math.hypot(p[0] - a[0] - ex * t, p[1] - a[1] - ey * t); };
-  const holds = (P: readonly Pt[], p: Pt) => { if (P.length < 3) return false; let pos = 0, neg = 0; for (let i = 0; i < P.length; i++) { const k = side(P[i], P[(i + 1) % P.length], p); if (k > 0) pos++; else if (k < 0) neg++; } return (pos === 0) !== (neg === 0); };   // (all on one side; an outline with no area holds nothing)
-  if (holds(B, A[0]) || holds(A, B[0])) return 0;
-  let d = Infinity;
-  for (let i = 0; i < edges(A); i++) { const a0 = A[i], a1 = A[(i + 1) % A.length];
-    for (let j = 0; j < edges(B); j++) { const b0 = B[j], b1 = B[(j + 1) % B.length];
-      if (side(a0, a1, b0) * side(a0, a1, b1) < 0 && side(b0, b1, a0) * side(b0, b1, a1) < 0) return 0;   // (they cross)
-      d = Math.min(d, toSeg(a0, b0, b1), toSeg(a1, b0, b1), toSeg(b0, a0, a1), toSeg(b1, a0, a1)); } }
-  return d;
-}
 /** WHAT IS OPEN OF AN OPENING THAT THINGS HANG IN, TO A PORTAL (`ajar`): the narrowest way through it in plan, a height at a time. Its two jambs (the
  *  footprints of the boxes that end it, `cut.jambs`) and the boxes near it (a leaf, a pair of leaves, whatever `blocks` says stops light) are a chain
  *  across the doorway, and the light that gets through is what the gaps of the SHORTEST chain from jamb to jamb leave: the cut that lets least through.
@@ -275,12 +261,7 @@ function ajarOf(o: Opening, near: readonly Near[]): number {
     // the chain: node 0 and 1 the jambs (the boxes that end the opening; where it ends at no box, the wall's own depth at the last sample), then
     // the boxes that hang in it; the shortest way from 0 to 1 over the gaps between them
     const sLo = c.s0 + q0 * K.ds, sHi = c.s0 + (q1 + 1) * K.ds;
-    const nodes: (readonly Pt[])[] = [(q0 === 0 && c.jambs[0]) || [at(c.out, sLo), at(c.in, sLo)], (q1 === last && c.jambs[1]) || [at(c.out, sHi), at(c.in, sHi)], ...here], N = nodes.length;
-    // (jamb to jamb with nothing between is the doorway itself, and no chain. Each gap gives up the `play`: a gap narrower than that is no gap)
-    const dist = new Array<number>(N).fill(Infinity), done = new Array<boolean>(N).fill(false); dist[0] = 0;
-    for (let k = 0; k < N; k++) { let u = -1; for (let i = 0; i < N; i++) if (!done[i] && (u < 0 || dist[i] < dist[u])) u = i; done[u] = true;
-      for (let w = 0; w < N; w++) if (!done[w] && u + w !== 1) dist[w] = Math.min(dist[w], dist[u] + Math.max(0, apart(nodes[u], nodes[w]) - K.play)); }
-    wide[v] = Math.min(n * K.ds, dist[1]); hung[v] = 1;
+    wide[v] = Math.min(n * K.ds, narrowest((q0 === 0 && c.jambs[0]) || [at(c.out, sLo), at(c.in, sLo)], (q1 === last && c.jambs[1]) || [at(c.out, sHi), at(c.in, sHi)], here, WAY.play)); hung[v] = 1;
   }
   // a slit over a leaf's head or under its foot
   const most = Math.ceil(K.slit / K.dy - 1e-6) - 1;

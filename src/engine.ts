@@ -130,6 +130,9 @@ export class Engine {
   }
   /** … and the one map of the level both read (placeField.ts PlaceMap); which tables each frame block was last sent (WallSides.made; −1 = never) */
   readonly placeMap = new PlaceMap(); private sidesSent = -1; private sidesSentOut = -1;
+  /** … and, while doors open by degrees there (the look panel's row `doors`: no leaf is a wall in that map), the map the wall sides still read: a leaf
+   *  where it hangs, as they were made for */
+  private readonly sidesMap = new PlaceMap();
   place: PlaceField | null = null; private placeWas: PlaceField | null = null;
   /** THE LOOK PROTOTYPE, the exposure follows Sam (render/lookeye.ts): the eye as it stands, eased frame to frame. Picture only. */
   lookEye: LookEye = { log: 0, snap: true };
@@ -673,8 +676,10 @@ export class Engine {
     // meter reads the cache, so on the look page the row changes what the meter and the guards read): the cascades' hand-over overlap (render/rc.ts)
     // and the cache rays' bounce read (lighting_common.wgsl hitRadiance, FrameFlags.RcRoom). Both stop the open air's daylight reaching a shut room's probes.
     const lookSides = wallSidesConfig.on, lookGaps = lookSides || placeOn ? lookConfig.doorGaps?.() ?? [] : [];
-    if (lookSides || placeOn) this.placeMap.update(this.world.statics, this.world.dynamics, lookGaps);   // (the map of the level as it stands, ONE a frame: the wall sides read it here and the place field below)
-    if (lookSides) this.wallSides.update(this.world.statics, this.world.dynamics, lookGaps, this.rc.cfg.nx, this.rc.cfg.nz, this.placeMap.mask);   // (THE LOOK PROTOTYPE's Walls have two sides row: made again only when a wall, a door's line or a leaf's rest changes)
+    const byDegrees = placeOn && lookConfig.doorsBy > 0 && !!lookConfig.doorGaps;   // (the field's row: with no field the one map is the wall sides', as it was; and only where the doors' lines are told, or a leaf would be nowhere in the map)
+    if (lookSides || placeOn) this.placeMap.update(this.world.statics, this.world.dynamics, lookGaps, byDegrees);   // (the map of the level as it stands, ONE a frame: the wall sides read it here and the place field below)
+    if (lookSides && byDegrees) this.sidesMap.update(this.world.statics, this.world.dynamics, lookGaps);
+    if (lookSides) this.wallSides.update(this.world.statics, this.world.dynamics, lookGaps, this.rc.cfg.nx, this.rc.cfg.nz, (byDegrees ? this.sidesMap : this.placeMap).mask);   // (THE LOOK PROTOTYPE's Walls have two sides row: made again only when a wall, a door's line or a leaf's rest changes)
     const sidesStamp = lookSides && this.wallSides.fits ? this.wallSides.made : -1;   // (which tables the frame block carries this frame; −1 = none, the flag down)
     const lookRoom = lookConfig.on && lookConfig.rooms > 0; this.rc.setOverlap(lookRoom ? 1 : 0);
     const lampK = lookRoom && this.lights.dayExp < 1 ? Math.pow(this.lights.dayExp, Math.min(1, this.lights.dayAmount)) : 1;   // (× the night's strength a fixture is drawn at this hour, render/photometry.ts lightDayK: 1 at night, with the row down and off the look page. Every FIXED night level a lamp's light is tested against is held at this share below: the cache's shadow-ray threshold, the direct estimators' floor, the dim-pixel rule)

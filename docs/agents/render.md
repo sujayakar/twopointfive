@@ -1660,6 +1660,43 @@ interleaved and filtered to their quiet minimum, and a row whose p75 sits far ab
   hint for a blocker past the opening is the largest of a pixel's rays' and may smear a contact shadow in the same light; the sharp pass's one ray
   jumps between points along a line on the floor; the soft character path (off) stops a man's shadow at the opening's plane; the night's cost of a
   dozen more lights is not measured; a pixel's place near a door is still the floor plan's guess. Never seen on a GPU.
+- **DOORS OPEN BY DEGREES IN THE FLOOR PLAN** (11-04; the look panel's row `doors` "Doors open by degrees", `&look=doors:1`, 0 in the page until it has
+  been seen on a GPU; `scene/placePlan.ts placeMask` `steps`, `doorSteps`, `doorwayOpen`, `doorJambs`, `placeJamb`, `PlaceMap.update` `byDegrees`;
+  `scene/wayThrough.ts`; `shaders/place_field.wgsl hand`, `doorShut`). The maintainer, of a door opened on a dark room: "some odd brightness
+  swinging". FOUND in frame-by-frame recordings of the page on a real GPU (an NVIDIA card driven headless, the row not yet built) and worked out
+  again on the CPU: a leaf was stamped into the map as wall cells wherever it stood, so while a door swung the map's walls moved under the place
+  field (the pass's seven doors draw 120 different wall sets over their travel). On the white roof's lounge door the floor inside is held to the
+  yard's level from 0.40 to 0.64 rad, falls back to the dark room's own from 0.68 to 0.80 (the leaf's cells wall it off from the doorway, and the
+  floor is drawn six stops brighter for five frames: the recording's tiles there go 0.017 to 0.117 and back), and is held again from 0.84. WITH THE
+  ROW: no leaf is a wall where it hangs; each door's line carries HOW OPEN IT IS in the map's bits above the low three, as a step of 1 to
+  `DOOR_STEPS` (31), `DOOR_PER_STOP` (6) to a stop under wide open, so a step is the same sixth of a stop wherever it falls (0 = the map does not
+  say: a doorway by its shape, wide open); a door at step 0 is shut and its line a wall from jamb to jamb. HOW OPEN is the narrowest way through in
+  plan (`wayThrough.ts narrowest`, the measure a portal's open share is taken by, `openings.ts ajarOf`): the shortest chain of gaps from one end of
+  the door's line to the other over what a leaf shuts against there (`doorJambs`: the level's own boxes that stand from the floor to a door's head
+  within `WAY.play` of an end, `placeJamb`: a pier counts, a crate or a lintel does not) and the leaves near it, each gap less `WAY.play` (ONE number
+  now, `wayThrough.ts WAY`: `LOOK_OPENINGS.play` is gone), over the same chain with nothing hung. So the wall's own depth counts: the pass's tea room
+  door is shut to 0.25 rad, 0.26 of its doorway at 0.5 (the portal's measure says 0.26 there), 0.73 at 1.0, whole from about 1.4. IN THE FIELD the
+  pull across a doorway's cell is × that share, and the brightest place a stride away is handed out of the doorway dimmer by it ONCE, on the hand
+  that leaves the door's line (`max(0, giver's stops − taker's)`: two doors whose lines touch in a row are charged as the more shut of the two), a
+  stop for each halving, however many cells deep the line is. The floor inside a door gets that share of the yard's light and is shown by the level
+  of that share, so it should hold its brightness through the swing. A map with no such bits is every doorway as it was: `hand`'s arithmetic is the
+  old expression. THE WALL SIDES still read a map with the leaves in it (`engine.ts sidesMap`, drawn only while the row and the field are both on):
+  they were made for it, their check is red on the shipped stand at the base, and they are not this step's. COST: `PlaceMap.update` finds the jambs
+  again only when the walls' key moves and the steps only when a leaf has moved, so a level at rest pays two keys. ROW AT 0 IS THE BASE: on 60
+  levels with every door at seven positions the map, its key and `PlaceMap.update` are the head's byte for byte (840 maps, 420 updates), every
+  opening's open area is the head's (2807), and with every door shut the by-degrees walls are the old map's on all 60. CHECKS: `placedoors-check`
+  (both stands; its last three lines: every room its own place by degrees too; one wall set a door over the whole swing, the step never falls as a
+  door opens and is 31 at both ends of the travel of the pass's doors, the tea door's share pinned at five angles, the map the engine keeps equal to
+  a fresh one at 550 positions, after a wall goes and with the row put off and on; on every level, 580 doors, shut is shut, either end of a travel
+  is 30 or 31, and all 1160 line ends have a jamb; `DOORSBY_BREAK=1` draws those lines' map without the row and fails, `PLACEDOORS_BREAK=1` fails
+  too), `lookexpo-check` (the rule's text, the two constants against the plan's, and the rule written again: a stop under for a door half open,
+  through a wall one cell deep and through two), `place-field-page.cjs` on the software adapter (19 of 19: the second block is the rule's own answer
+  in every cell of seven scenes to 0.02 of a stop; the room's first cell is held to what a wide door gives less the stops the rule says; room A's
+  own level rises from shut to clear and is one level across at every step). MEASURED on the software adapter and the CPU only: THE ROW ON HAS NEVER
+  BEEN SEEN ON A GPU. NOT DONE: two leaves that meet in one doorway are two doors, each measured to the point they meet at (no level has such a
+  pair); a door whose travel stops short of about 1.4 rad rests a step or two under whole (the barracks' n3 at 30), which is what its leaf leaves of
+  the doorway; the threshold's own cells still hold a level of their own the moment a door leaves its frame (as they do without the row); the wall
+  sides, above; the eye's own easing is untouched.
 - **LIGHT KEEPS ITS ORDER WHERE TWO PLACES MEET** (11-04; the look panel's row `order` "Light in order", live, 1 on the look's page, 0 = as it was to
   the bit; `frame.placeCfg.x`, a new member, the last of the frame's head; `place_common.wgsl lookGainsOwn`, called by `composite.wgsl` and
   `compact/composite.wgsl lookExpoGain`; the place field's SECOND BLOCK, `render/placeField.ts PLACE_NEAR`, `place_field.wgsl hand`). The
