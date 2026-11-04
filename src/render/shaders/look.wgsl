@@ -34,6 +34,7 @@ const LOOK_VENEER: u32 = 12u;      // from here the stuffs of things made in a f
 const LOOK_PLASTIC: u32 = 13u;     // a chair's shell
 const LOOK_FABRIC: u32 = 14u;      // a chair's seat, a partition
 const LOOK_STEEL: u32 = 15u;       // painted steel, kept: a cabinet, shelving, a window's frame
+const LOOK_CARPAINT: u32 = 16u;    // a car's body: enamel under a clear coat, road dust (the shine is the box's own finish)
 const LOOK_MIN_TILT: f32 = 0.02;   // … and under this the pixel is the face, unmarked (a flat stretch of a map costs no second light score)
 
 /** how far a box's markings are drawn as brushed paint in place of square cells (the panel's Painted marks row) */
@@ -67,7 +68,7 @@ fn lookClots(p: vec2f, fp: f32, dens: f32, salt0: u32) -> f32 {
 }
 fn lookSurface(cls0: u32, wp: vec3f, n: vec3f, bi: u32, lc: vec3f, hf: vec4f, albedoIn: vec3f, roughIn: f32, dwx: vec3f, dwy: vec3f, fp: f32) -> LookOut {
   let cls = select(cls0, 0u, cls0 != 0u && lookSlot(i32(max(cls0, 1u)) - 1) < 0);   // (a stuff whose map is not made yet is drawn plain)
-  let kept = cls >= LOOK_VENEER && cls <= LOOK_STEEL;                           // made in a factory and kept indoors: no damp foot, no bleached head (BY NAME: a stuff added after these says here what it is)
+  let kept = (cls >= LOOK_VENEER && cls <= LOOK_STEEL) || cls == LOOK_CARPAINT;   // made in a factory and kept (indoors, or washed): no damp foot, no bleached head (BY NAME: a stuff added after these says here what it is)
   var o: LookOut; o.albedo = albedoIn; o.n = n; o.rough = roughIn; o.tilted = false;
   if (hf.w < 0.0 || (all(lookCfg.a == vec4f(0.0)) && all(lookCfg.b.xyz == vec3f(0.0)))) { return o; }   // (every amount at 0: the box as the game draws it, and none of the reads below)
   let b = boxGeo[bi];
