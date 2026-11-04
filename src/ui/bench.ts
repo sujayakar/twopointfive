@@ -53,6 +53,18 @@ export interface BenchOpts {
 export const BENCH_DEFAULTS: BenchOpts = { settleMs: 2000, measureMs: 4000, settleFrames: 3, measureFrames: 5, capMs: 20000, standInMs: 180000, waitMs: 45000, waitFrames: 30, slowMs: 125, awayMs: 3000, retries: 3, heavyHoldMs: 0, heavyCapMs: 300000, sceneCapMs: 600000, sweepSlowMs: 250 };
 /** the frames a benchmark's take may hold: its six minutes at 240 a second (the F9 recorder's own ten minutes at 60 are full inside the sweep at 120) */
 export const BENCH_FRAMES = 96000;
+/** WHAT A RUN'S CARD SAYS OF ITS PICTURE'S SIZE, where the row 'Hold frame rate' was off (`?adapt=0`, ui/quality.ts visitAdaptive: a run asked for at one size, so
+ *  that it can be held against another). It is said from the run's own lines, not from the switches: the page's lines (as it opened, each scene, the held
+ *  picture; a preset's line is another size by design) were all drawn at one size, or they were not and the card says why that can be. Nothing is said with the row on */
+export const SIZE_HELD = 'the picture\'s size was held still (Hold frame rate off, the tier pinned): the frames a second are this size\'s, not the game\'s as it plays';
+export const SIZE_AUTO = 'Hold frame rate was off with the tier on auto, so the tier moves in the size\'s place: pin one (quality=high) for a run at one size';
+export const SIZE_MOVED = 'Hold frame rate was off and the tier pinned, yet these lines were drawn at more than one size (a window resized, or the resolution moved by hand): they are not one size\'s';
+export function sizeNote(steps: readonly Pick<BenchStep, 'id' | 'res' | 'skipped'>[], quality: { adaptive?: boolean; auto?: boolean }): string | null {
+  if (quality.adaptive !== false) return null;
+  if (quality.auto !== false) return SIZE_AUTO;
+  const own = steps.filter(s => !s.skipped && (s.id === 'opened' || s.id === 'held' || s.id === 'scene' || s.id.startsWith('scene:')));
+  return own.every(s => s.res[0] === own[0].res[0] && s.res[1] === own[0].res[1]) ? SIZE_HELD : SIZE_MOVED;
+}
 
 /** what the page can say of the machine without asking anybody for anything */
 export interface BenchMachine {
@@ -577,6 +589,7 @@ export class Bench {
     if (!done) this.notes.push(`stopped early (${why})`);
     const timers = !!this.engine.timer?.enabled;
     if (!timers) this.notes.push('this browser gives no GPU timings: the frame time is the whole story here');
+    { const size = sizeNote(this.steps, this.quality); if (size) this.notes.push(size); }   // (a run asked for at one size, `?adapt=0`: said of every page's lines, here where the last of them is in)
     // (shaders still building behind the start: the timed windows wait for them, windowTick; a wait that ran out is noted there)
     const rows = this.deps.rows?.();
     const res: BenchResult = { version: 1, at: new Date().toISOString(), query: this.query, ...(rows ? { rows } : {}), machine: this.machine ?? { webgpu: this.engine.gpu?.adapterInfo ?? 'unknown', browser: '', os: '', userAgent: '', dpr: 1 },

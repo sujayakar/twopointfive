@@ -16,7 +16,7 @@
 //             not in a dump, so the window phase and the roomy count are tried over their few values and the best fit is named. Exit 1 if no start state reproduces the take.
 //   --selftest  synthetic closed-loop machines: what each aim must do (PASS / FAIL lines, exit 1 on a FAIL).
 import { readFileSync } from 'node:fs';
-import { PRESETS, REF, SCALE_FLOOR, LADDER, CLIMB, HOLD, PACED, SHED, sharpForce, AIM_DISPLAY, PLAN_BUDGET_MS, QUALITY_NAMES, ladderBands, ladderAimOf, displayRateOf, presetCost, plan, withSmoke, costTable, type QualityName, type Preset } from '../../src/ui/quality.ts';
+import { PRESETS, REF, SCALE_FLOOR, LADDER, CLIMB, HOLD, PACED, SHED, sharpForce, AIM_DISPLAY, PLAN_BUDGET_MS, QUALITY_NAMES, ladderBands, ladderAimOf, visitAdaptive, displayRateOf, presetCost, plan, withSmoke, costTable, type QualityName, type Preset } from '../../src/ui/quality.ts';
 import type { PerfDump, PerfFrame } from '../../src/ui/perfrec.ts';
 
 const G = globalThis as unknown as Record<string, any>;
@@ -93,7 +93,8 @@ let shedForce: boolean | undefined;
 function replay(d: PerfDump, aim: number, opts: { hz?: number; warm?: Warm } = {}): Result {
   const w = windowOf(d); const hz = opts.hz ?? hzOf(d); const S0 = d.settingsAtStart as Record<string, any>;
   const first = d.frames[0]; const { preset: p0, auto } = presetOfLabel(first.preset);
-  const { E, q } = mkQuality(w, p0, auto, S0, aim, hz, d.shedAtStart === true); if (pacedForce !== undefined) E.settings.ladderPaced = pacedForce; if (heldForce !== undefined) E.settings.ladderHeld = heldForce; else if (!('ladderHeld' in S0)) E.settings.ladderHeld = false;
+  const { E, q } = mkQuality(w, p0, auto, S0, aim, hz, d.shedAtStart === true); q.adaptive = first.adaptive !== false;   // (the take's own row 'Hold frame rate': a take recorded with it off, `?adapt=0`, is replayed with it off)
+  if (pacedForce !== undefined) E.settings.ladderPaced = pacedForce; if (heldForce !== undefined) E.settings.ladderHeld = heldForce; else if (!('ladderHeld' in S0)) E.settings.ladderHeld = false;
   if (shedForce !== undefined) E.settings.ladderShed = shedForce;
   if (!('smokeKeep' in S0)) E.settings.smokeKeep = 0;   // (… and before SMOKE KEEP: every preset on its own smoke rows)
   if (!('oneCacheGrid' in S0)) E.settings.oneCacheGrid = false;   // (a take from before ONE CACHE GRID: its low and verylow ran the coarse grid — the replayed ladder prices them so, as modelCost does)
@@ -244,6 +245,13 @@ function selftest(): boolean {
     check(!!cutAt && parseFloat(cutAt) < 24.5 && minOf(fightH) >= HOLD.cut * 60 - 0.5, `hold 60: cut within ${cutAt ? (parseFloat(cutAt) - 20).toFixed(1) : '?'} s of the fight starting, then ${minOf(fightH).toFixed(0)}‥${Math.max(...fightH).toFixed(0)} fps to its end at ×${h.E.settings.renderScale.toFixed(2)} — ${rh.moves.map(m => m.split(' (')[0]).join(' | ')}`);
     const n0 = rh.moves.length; const rh2 = run(h.q, h.E, 120, 120, load, { t0: 80 });
     check(h.E.settings.renderScale >= PRESETS.high.scale - 1e-6 && minOf(rh2.fps.slice(4)) >= HOLD.cut * 60 - 0.5, `the fight over: the pixels come back on measured headroom — ×${h.E.settings.renderScale.toFixed(2)} after two minutes, never under ${minOf(rh2.fps.slice(4)).toFixed(0)} fps on the way (${rh2.moves.length} moves: ${rh2.moves.map(m => m.split(' (')[0]).join(' | ')})`);
+    // THE SIZE HELD STILL (`?quality=high&adapt=0`, ui/quality.ts visitAdaptive: what two benchmark runs need to be held against each other): a tier pinned by hand
+    // with the row 'Hold frame rate' as that address has it, through a fight that takes high to 25 ms of union (36 fps): nothing moves the picture's size or its
+    // tier, under hold 60 and as now. ADAPT_BREAK=1: the word is left off the address (the row stays on) and both lines must FAIL
+    { const word = process.env.ADAPT_BREAK === '1' ? '?quality=high' : '?quality=high&adapt=0';
+      check(visitAdaptive('') && visitAdaptive('?quality=high') && visitAdaptive('?adapt=1') && visitAdaptive('?adapt') && !visitAdaptive('?adapt=0') && !visitAdaptive('?bench&quality=high&adapt=off') && !visitAdaptive('?adapt=false'), '?adapt= words: 0 (or off, false) is the row off; nothing, or anything else, leaves it on');
+      for (const aim of [60, 0]) { const z = mk(aim, 120); z.q.adaptive = visitAdaptive(word); const s0 = sc(z); const rz = run(z.q, z.E, 80, 120, t => at(t < 10 ? 11 : 25));
+        check(sc(z) === s0 && z.q.current === 'high' && !rz.moves.some(m => /↓|↑/.test(m)) && minOf(rz.fps.slice(16, 78)) < 40, `${word}, ${aim ? `hold ${aim}` : 'as now'}: through a fight at ${minOf(rz.fps.slice(16, 78)).toFixed(0)} fps the picture stays at ×${sc(z).toFixed(2)} of high (${words(rz.moves.filter(m => /↓|↑/.test(m)))})`); } }
     void n0;
     // (2) steady load: no oscillation
     const s = mk(60, 120); const rs = run(s.q, s.E, 300, 120, () => at(15.5)); const late = rs.moves.filter(m => parseFloat(m) > 30);

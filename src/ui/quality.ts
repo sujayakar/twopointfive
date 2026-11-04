@@ -427,8 +427,19 @@ const clamp01 = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(hi,
  *  even while it renders, which would keep calibration from ever running under test */
 const pageHidden = () => document.hidden && !window.__testVisible;
 
+/** THE ROW 'Hold frame rate' AS THIS VISIT'S ADDRESS HAS IT: on, unless the address says `?adapt=0` (or off / false). The word is the row's, for one visit, the
+ *  way `?quality=` is the tier's: nothing is written as the machine's choice, and Reset puts the visit's own value back (ui/options.ts). WHAT IT IS FOR: with
+ *  the row off and a tier pinned (`?quality=high&adapt=0`) nothing moves the picture's size (sample() returns on its second line), so two runs of a benchmark
+ *  draw the same pixels and their GPU milliseconds can be held against each other; with the row on, a heavier picture is paid for in resolution and the two
+ *  runs read alike. A benchmark carries the word from scene to scene (ui/benchrun.ts CARRIED) and its card says, from its own lines, whether the size was
+ *  held (ui/bench.ts sizeNote). With auto left on the word is still the row's: the tier moves in the size's place, so a held size wants a pinned tier, and
+ *  the card says so. THE KIT VIEW'S FRAME does not take the word (ui/kitView.ts leaves it off the frame's address): that page is always pinned to a tier,
+ *  its own pacer counts on the ladder cutting its size (host/kitView.ts), and it has no row to put it back. */
+export const visitAdaptive = (search: string): boolean => { const v = new URLSearchParams(search).get('adapt'); return !(v === '0' || v === 'off' || v === 'false'); };
+
 export class Quality {
   current: QualityName = 'high';
+  /** the row 'Hold frame rate' (Options > Graphics; Tab > Quality 'adaptive resolution'): the render size steps down under the frame rate's band and comes back. The page's boot sets it from the address (visitAdaptive above) */
   adaptive = true;
   /** 'auto': the preset itself moves with the measured frame rate (and the pick is remembered for the next visit) */
   auto = true;

@@ -2,7 +2,7 @@
 // each preset, the sweep inside the same take, the scene's tail; everything put back at the end and when stopped; a slow machine cut short; the text of the report;
 // a run over a set of scenes, one page each (the lines handed from page to page: src/ui/benchrun.ts on a fake tab), and the scenes' own table.
 // No browser, no GPU.   bun run tools/qa/bench-check.ts   (exit 0 = all pass; BENCH_BREAK=1 leaves a preset on at the end and must fail)
-import { Bench, benchReport, benchSaid, benchNotice, type BenchWent, BENCH_FRAMES, type BenchResult, type BenchScene, type BenchSweep, type BenchLeg } from '../../src/ui/bench';
+import { Bench, benchReport, benchSaid, benchNotice, type BenchWent, BENCH_FRAMES, SIZE_HELD, SIZE_AUTO, SIZE_MOVED, sizeNote, type BenchResult, type BenchScene, type BenchSweep, type BenchLeg } from '../../src/ui/bench';
 import { SHADER_ROW_WORDS } from '../../src/ui/shaderrows';
 import { SAVED, type Fate, type SavedFile } from '../../src/host/savefile';
 import { AUTO_LADDER } from '../../src/ui/quality';
@@ -50,7 +50,7 @@ function page(o: { slow?: number; scene?: 'none' | 'short' | 'full' | 'calm'; ti
     if (states[states.length - 1] !== bench.state) states.push(bench.state);
   };
   const run = (cap = 200000) => { for (let i = 0; i < cap && bench.active; i++) frame(); };
-  return { get closeCard() { return closeCard; }, cover(why: string | null) { covered = why; }, went, updates, get asked() { return asked; }, hide() { hidden = true; }, get live() { return live; }, frames, S, Q, rec, bench, frame, run, applied, events, shown, states, frozenIn, liveIn, smoke, get veil() { return veil; }, get dumps() { return dumps; }, get sceneStops() { return sceneStops; }, get swStops() { return swStops; }, get swOpts() { return swOpts; } };
+  return { get closeCard() { return closeCard; }, cover(why: string | null) { covered = why; }, went, updates, get asked() { return asked; }, hide() { hidden = true; }, get live() { return live; }, frames, S, Q, E, rec, bench, frame, run, applied, events, shown, states, frozenIn, liveIn, smoke, get veil() { return veil; }, get dumps() { return dumps; }, get sceneStops() { return sceneStops; }, get swStops() { return swStops; }, get swOpts() { return swOpts; } };
 }
 const before = (p: ReturnType<typeof page>) => JSON.stringify([p.S, p.Q.current, p.Q.auto, p.Q.climbed, [...p.Q.failed], [...p.Q.failCount], p.smoke.params.rbIters]);
 
@@ -264,6 +264,25 @@ const before = (p: ReturnType<typeof page>) => JSON.stringify([p.S, p.Q.current,
   // word dropped at the first scene that pair was one run twice
   { store.clear(); const t3 = tab('?bench&savepic=0'); benchBegin(false, t3); const u3 = new URLSearchParams(searchOf(t3.went[0]));
     check(u3.get('savepic') === '0' && benchLegOfPage(tab(searchOf(t3.went[0])))!.leg.notes.every(n => !/played without/.test(n)), `the save picture's word is on the first scene's address, and no note says it was left behind (${t3.went[0]})`); store.clear(); }
+  // …and the word that holds the picture's size still (`?bench&quality=high&adapt=0`, ui/quality.ts visitAdaptive): with it dropped at the first scene, a run asked
+  // at one size would be played at whatever size held the frame rate, and two runs' GPU milliseconds could not be held against each other
+  { store.clear(); const t4 = tab('?bench&quality=high&adapt=0'); benchBegin(false, t4); const u4 = new URLSearchParams(searchOf(t4.went[0])), pg4 = tab(searchOf(t4.went[0])), l4 = benchLegOfPage(pg4)!;
+    l4.leg.onward({ steps: [{ id: `scene:${l4.scene.id}` } as any], notes: l4.leg.notes, scenes: [], boot: null, away: 0 }); const v4 = new URLSearchParams(searchOf(pg4.went[0]));
+    check(u4.get('adapt') === '0' && u4.get('quality') === 'high' && v4.get('adapt') === '0' && v4.get('quality') === 'high' && l4.leg.notes.every(n => !/played without/.test(n)) && /VISIT_FLAGS = \[[^\n]*'adapt'[,\]]/.test(readFileSync(new URL('../../src/ui/replaykey.ts', import.meta.url), 'utf8')), `the size's word and the tier's are on the first scene's address and on the next, no note says either was left behind, and a replay's page keeps the word (${pg4.went[0]})`); store.clear(); }
+  // …the page reads the word once, after the tier's, and Reset puts the visit's own value back; the kit view's frame, which lives on its ladder, is not handed it
+  { const mainTs = readFileSync(new URL('../../src/main.ts', import.meta.url), 'utf8'), opts = readFileSync(new URL('../../src/ui/options.ts', import.meta.url), 'utf8'), kit = readFileSync(new URL('../../src/ui/kitView.ts', import.meta.url), 'utf8');
+    const tierAt = mainTs.indexOf('quality.apply(qp as QualityName)'), rowAt = mainTs.indexOf('quality.adaptive = visitAdaptive(location.search)');
+    check(tierAt > 0 && rowAt > tierAt && /reset = \(\) => \{[^\n]*quality\.adaptive = visitAdaptive\(/.test(opts) && /const raw = [^\n]*filter\(w => !\/\^adapt\(=\|\$\)\/\.test\(w\)\)/.test(kit), 'the page sets the row from the address after the tier\'s word, Options\' Reset puts the address\'s value back, and the kit view\'s frame is opened without the word'); }
+  // …and the card of a run made with the row off says what its own lines show: one size, or not
+  { const L = (id: string, w: number, skipped?: string) => ({ id, res: [w, 720] as [number, number], ...(skipped ? { skipped } : {}) });
+    const lines = [L('opened', 1280), L('scene:a', 1280), L('scene:b', 1280), L('held', 1280), L('verylow', 640), L('high', 1280), L('scene:c', 999, 'not played')];
+    check(sizeNote(lines, { adaptive: false, auto: false }) === SIZE_HELD && sizeNote([...lines, L('scene:d', 1024)], { adaptive: false, auto: false }) === SIZE_MOVED && sizeNote(lines, { adaptive: false, auto: true }) === SIZE_AUTO
+      && sizeNote(lines, { adaptive: true, auto: false }) === null && sizeNote(lines, {}) === null, 'the size\'s line: held where the page\'s own lines share one size (a preset\'s line and a scene not played do not count), moved where they do not, a pin asked for under auto, and nothing with the row on');
+    const said = (r: string, n: string) => r.split('\n').filter(l => l === n).length;
+    const run = (set: (p: ReturnType<typeof page>) => void, mid?: (p: ReturnType<typeof page>) => void) => { const p = page({ scene: 'short' }); set(p); p.bench.start(); if (mid) { for (let i = 0; i < 100000 && p.bench.state !== 'scene'; i++) p.frame(); mid(p); } p.run(); return p.bench.report; };
+    const held = run(p => { p.Q.adaptive = false; p.Q.auto = false; }), auto = run(p => { p.Q.adaptive = false; }), moved = run(p => { p.Q.adaptive = false; p.Q.auto = false; }, p => { p.E.width = 1024; }), on = run(p => { p.Q.adaptive = true; p.Q.auto = false; }), plain = run(() => {});
+    check(said(held, SIZE_HELD) === 1 && said(auto, SIZE_AUTO) === 1 && said(auto, SIZE_HELD) === 0 && said(moved, SIZE_MOVED) === 1 && said(moved, SIZE_HELD) === 0 && [on, plain].every(r => [SIZE_HELD, SIZE_AUTO, SIZE_MOVED].every(n => said(r, n) === 0)),
+      `a whole run's card: 'held' once with the row off and the tier pinned (${said(held, SIZE_HELD)}); under auto it asks for a pin (${said(auto, SIZE_AUTO)}); a window resized in the scene: 'more than one size' (${said(moved, SIZE_MOVED)}); with the row on, or a page that says nothing of it, no such line`); }
   // the scenes themselves
   const rows = BENCH_SCENES.map(S => SCENARIOS.find(e => e.id === S.scn));
   check(BENCH_SCENES.length >= 2 && rows.every(e => !!e && e.kind === 'roomclear' && e.squad === 4 && !!e.level) && new Set(BENCH_SCENES.map(S => S.id)).size === BENCH_SCENES.length && BENCH_SCENES.every(S => S.name.length <= 21 && Number.isInteger(S.seed) && S.secs >= 60), `every scene is a four-man room clear of the mission list on its own level, with a name that fits its column: ${BENCH_SCENES.map(S => `${S.id} = ${S.scn} seed ${S.seed}`).join(' · ')}`);

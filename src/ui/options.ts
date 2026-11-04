@@ -32,7 +32,7 @@ import { AUTOCAM } from '../host/autocam';
 import { keyCapEl, keyCapture, keyStop, keyWaiting, type KeyHost } from './keybinds';
 import { VOLUME_DEFAULTS } from '../audio/audio';   // (the mixer's levels on a fresh page: what Reset puts back)
 import type { MenuDeps } from './menu';
-import type { QualityName } from './quality';
+import { visitAdaptive, type QualityName } from './quality';
 
 export type OptionsTab = 'graphics' | 'audio' | 'game' | 'controls';
 export type OptionsDeps = Pick<MenuDeps, 'engine' | 'game' | 'quality' | 'audio' | 'overlay'>;
@@ -328,8 +328,8 @@ function render(S: Screen) {
     const ro = (globalThis as unknown as { __readout?: { on: boolean; set(v: boolean): void } }).__readout;
     if (ro) flip(body, 'Show frame rate', () => ro.on, v => ro.set(v), 'Show the readout in the top-left corner, with the frame rate, the GPU\'s milliseconds per pass, the counts, your light meter and each character\'s state.');
     const shaderReset = shaderRows({ sec, flip }, body);   // (ui/shaderrows.ts: the shader compiling rows on trial, each the next load's)
-    const pinned = (() => { try { const q = new URLSearchParams(globalThis.location?.search ?? '').get('quality'); return TIERS.find(t => t.v === q && t.v !== 'auto')?.v as QualityName | undefined; } catch { return undefined; } })();   // (`?quality=` pins this visit's tier: Reset puts THAT back)
-    reset = () => { shaderReset(); if (TEXTSIZE.on) setTextStep(null); quality.adaptive = true; if (wrote === G.exposure && turned > 0) G.exposure /= turned; turned = 1; wrote = null; ro?.set(false); if (pinned) { quality.auto = false; quality.apply(pinned); } else quality.setAuto(); };   // (apply, not pin: a URL's tier is this visit's, never written as this machine's choice)
+    const pinned = (() => { try { const q = new URLSearchParams(globalThis.location?.search ?? '').get('quality'); return TIERS.find(t => t.v === q && t.v !== 'auto')?.v as QualityName | undefined; } catch { return undefined; } })();   // (`?quality=` pins this visit's tier: Reset puts THAT back, and the row 'Hold frame rate' as the visit's `?adapt=` has it)
+    reset = () => { shaderReset(); if (TEXTSIZE.on) setTextStep(null); quality.adaptive = visitAdaptive(globalThis.location?.search ?? ''); if (wrote === G.exposure && turned > 0) G.exposure /= turned; turned = 1; wrote = null; ro?.set(false); if (pinned) { quality.auto = false; quality.apply(pinned); } else quality.setAuto(); };   // (apply, not pin: a URL's tier is this visit's, never written as this machine's choice)
   } else if (S.tab === 'audio') {
     const { audio } = deps, V = audio.volume, pct = (v: number) => `${Math.round(v * 100)} %`;
     const bus = (k: keyof typeof VOLUME_DEFAULTS, label: string, d: string) => range(body, label, 0, 1, 0.05, () => V[k], v => { V[k] = v; audio.setVolumes(); keep(); }, pct, d);

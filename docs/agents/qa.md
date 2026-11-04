@@ -434,7 +434,17 @@ but synthetic writes still work.
   record (`benchLegOfPage`), plays its part (`BenchLeg`) and hands its lines on with the next page's load; the last page shows the card, and Close (or an Esc
   with nothing to show) loads the address the run was asked on. Of the visitor's flags only `mute`, `nomusic`, `quality`, `pipequeue`, `shadertrim`, `shaderfold`, `savepic` (2026-11-02: until then
   `?bench&savepic=0` against `?bench`, the pair the save picture's bullet names, was one run twice), `pace` (11-03: a benchmark draws every display frame whatever the word says, as it
-  always did, so the word only rides along rather than be named as left behind: `docs/agents/render.md`), the backend's own words and the
+  always did, so the word only rides along rather than be named as left behind: `docs/agents/render.md`), `adapt` (11-04: `?bench&quality=high&adapt=0`
+  is a run at ONE SIZE: the row 'Hold frame rate' off for the visit, `ui/quality.ts visitAdaptive`. With a tier pinned and the row on, a heavier picture is
+  paid for in resolution, so two runs show the same frame rate and the same GPU milliseconds at different sizes; with the word nothing moves the size, the
+  lines of two runs are the same pixels. THE CARD SAYS WHAT ITS OWN LINES SHOW (`ui/bench.ts sizeNote`), not what the switches were: 'held still' where
+  the page's lines (as it opened, each scene, the held picture) were all drawn at one size; 'more than one size' where they were not (a window resized, the
+  resolution moved by hand); and under auto, where the tier moves in the size's place, it asks for a pinned tier. With the row on it says nothing. The kit
+  view's frame is opened without the word (it is pinned to a tier and its pacer counts on its ladder), and `ladder-replay.ts` replays a take with the row as
+  the take had it. Asked for by the look's join to read 'within a tenth of the GPU time with the look off'; whether a machine HOLDS 60 is still read on a run without
+  the word. `bench-check` has the word on both addresses, the page's wiring and the card's three lines (a whole run each); `ladder-replay.ts --selftest` plays a 36 fps fight
+  through a pinned High with the word under hold 60 and as now: nothing moves; `ADAPT_BREAK=1` leaves the word off and both lines fail. Never run on a
+  GPU), the backend's own words and the
   shader rows' words (`ui/shaderrows.ts SHADER_ROW_WORDS`, e.g. `compactshaders`) ride along: anything else would make it another fight than the set's, and
   the report has a note naming the words that were not kept. THE ROWS WERE DROPPED UNTIL 2026-10-27, so `?bench&compactshaders=1` measured the plain build
   on every scene (found by the maintainer, who saw no difference on a second run); a row set in Options always applied. Since then the report has a
