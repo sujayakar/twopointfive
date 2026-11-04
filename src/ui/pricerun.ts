@@ -7,7 +7,7 @@
 // address that asked says `downloads=1` (the run carries that word). Where neither took it the card says so and holds the file's own text under the table,
 // so Copy keeps the run.
 //   WHAT A LEVEL'S TWO PAGES DO. First its mission's own address ON THE LOOK PAGE, at the hour its row opens at, the die pinned: it plays a few seconds so the
-//   men stand where the mission puts them, then HOLDS THE WORLD STILL and times that one picture with the look's layers off and on in turn (off, on, off, on):
+//   men stand where the mission puts them (by the page's own loop, the last quarter second by its scripted step: PRICE.playS), then HOLDS THE WORLD STILL and times that one picture with the look's layers off and on in turn (off, on, off, on):
 //   the frame's time, and where the browser stamps the passes, the GPU's. Then the same mission on the page WITHOUT the look (no `look` on the address), held at
 //   the same step of the game's own clock and timed as it stands. Then the next level. Both are a run's pages (host/runpage.ts): the kit and the fog of war
 //   as the mission deals them, no sandbox row of this machine's, so the two pictures are of one scene. AND ONE RUNG OF THE QUALITY LADDER: a page of a run
@@ -65,11 +65,15 @@ export const PRICE_KEY = PRICE_LEVELS_WORD, PRICE_RUN_KEY = PRICE_RUN_WORD;
  *  printed beside and is inside `all` · and the ones that draw to the display, which `all` leaves out on every machine (gpu/timer.ts has all three and why) */
 const DRAWN = [...RENDER_PASSES], SURFACE = SURFACE_PASS, PRESENTS = [...PRESENT_PASSES];
 export const PRICE = {
-  /** seconds OF THE GAME'S OWN CLOCK the mission plays before its picture is held. THE PLAY IS STEPPED, NOT WATCHED: the page's loop is paused and the mission
-   *  played in fixed sixtieths by the page's own scripted step (main.ts `__runFrames`), `stepsAFrame` of them a display frame, to the first step at or past
-   *  this. A level's look page and its page without the look then stand on the same step whatever their frames did (watched from outside, a page on a cold
-   *  machine was once held 0.43 s late, 11-04). A mission whose clock does not run on a page nobody plays is held where it stands after twice the steps */
-  playS: 4, stepsAFrame: 2,
+  /** seconds OF THE GAME'S OWN CLOCK the mission plays before its picture is held, and how it is played. BY THE PAGE'S OWN LOOP, as a player's page plays
+   *  it, up to `stepS` short of that; THE LAST PART IS STEPPED: the loop is paused and the mission played in fixed sixtieths by the page's own scripted step
+   *  (main.ts `__runFrames`), `stepsAFrame` of them a display frame, to exactly the step asked. So a level's two pages stand on the same step whatever their
+   *  frames did (watched from outside to the end, a page on a cold machine was once held 0.43 s late, 11-04), and the picture is still one the loop drew:
+   *  PLAYED BY STEPS ALONE, A SNOW LEVEL HAD NO SNOW IN ITS AIR (11-04, a rented card: the page's first frame of its own clears the particles' ring, and
+   *  with the clock held nothing files a flake again; its fog pass read 1.4 ms too cheap). For that the page also draws `warmFrames` frames of its own with
+   *  the clock held before anything is played, which is all that stands between a fully stepped play (`stepS` ≥ `playS`: a check's) and that fault.
+   *  A mission whose clock does not run by itself on a page nobody plays (a lesson's card holds it) is seen to stand for `stuckS` and stepped the whole way */
+  playS: 4, stepS: 0.25, stepsAFrame: 2, warmFrames: 3, stuckS: 2,
   /** THE GPU CATCHES UP BEFORE ANYTHING IS TIMED: a boot hands it seconds of work (its pipelines, its first frames), and for a while after the queue's "done"
    *  comes many frames late whatever a frame costs (11-04, a rented card on a long run: hundreds of frames behind on a page with 6 ms of work, with the look
    *  and without). The held picture is drawn until a frame's work is done within `lagFrames` frames three times running, for at most this many seconds; a
@@ -307,9 +311,19 @@ async function price(c: Carry, i: number, loc: Location, view: ReturnType<typeof
   if (!failed) {
     say('the mission stands up');
     const G = w.__game, pace = w.__timeScale ?? 1; undo.push(() => { w.__timeScale = pace; });
-    if (G && w.__runFrames) {   // (the page's loop has been paused since before its boot: only the steps asked for here run the mission)
+    if (G && w.__runFrames) {   // (the page's loop has been paused since before its boot: the mission's clock stands at its start on both pages)
+      // the page's first frames of its own, with the clock held (PRICE.playS: what they clear, they clear before anything is in the air)
+      w.__timeScale = 0; w.__pauseLoop = loopWas; for (let k = 0; k < PRICE.warmFrames && !stopped; k++) await frame();
+      // … then the mission by the page's own loop, up to `stepS` short of the step asked for
+      w.__timeScale = pace;
+      { const live = PRICE.playS - PRICE.stepS; let at = G.time, since = performance.now();
+        while (!stopped && G.time < live - 1e-6) { await frame();
+          if (G.time > at + 1e-9) { at = G.time; since = performance.now(); }
+          else if (performance.now() - since > PRICE.stuckS * 1000) { notes.push(`the mission's clock does not run by itself on this page (it stood at ${G.time.toFixed(2)} s for ${PRICE.stuckS} s): played by the page's scripted step from there`); break; } } }
+      // … and the rest by the scripted step, to exactly that step
+      w.__pauseLoop = true;
       const most = 2 * Math.round(PRICE.playS * 60); let done = 0;
-      // (as many steps as are left and no more: a page whose own loop ran a frame before it was paused starts a step in, and must not be carried a step past)
+      // (as many steps as are left and no more: the loop's last frame may have carried the clock a step or two past where it was let go)
       while (!stopped && G.time < PRICE.playS - 1e-6 && done < most) { const left = Math.max(1, Math.round((PRICE.playS - G.time) * 60)), n = Math.min(PRICE.stepsAFrame, left, most - done); w.__runFrames(n, 1 / 60, [], true); done += n; await frame(); }
       if (G.time < PRICE.playS - 1e-6) notes.push(`the game's clock stood at ${G.time.toFixed(2)} s after ${done} steps: held there, not at ${PRICE.playS} s`);
       else if (G.time > PRICE.playS + 1 / 120) notes.push(`the mission had played ${G.time.toFixed(2)} s before the page could be held: held there, not at ${PRICE.playS} s`); }

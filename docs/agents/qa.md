@@ -535,7 +535,9 @@ but synthetic writes still work.
   quality ladder's switch off from before its first frame (`heldPage`), ITS LOOP HELD FROM BEFORE ITS BOOT (the mission is played by the page's own scripted
   step to one step on both pages), and never gives way to a window in focus elsewhere; it still waits for the GPU as a player's page does, and a frame's time is the
   time between two frames it DREW (`window.__pace`), so a level the GPU cannot hold sixty on reads as that and queues nothing ahead; a row says
-  its rung, its size and the step it was held at. IT IS A RUN'S PAGE
+  its rung, its size and the step it was held at. THE MISSION IS PLAYED BY THE PAGE'S OWN LOOP up to a quarter second short of that step and by the
+  scripted step for the rest, after a few frames of its own with the clock held: played by steps alone a snow level had no snow in its air (the page's first
+  frame of its own clears the particles' ring). IT IS A RUN'S PAGE
   (`host/runpage.ts`: `runPage` stands the load brief, the lost-device reload, the sandbox row and the look page's kit down, as on a benchmark's scene;
   `ownPage` keeps its own page under the kept-page rule, since a run walks by loading its next address). ITS FILE GOES OUT BY THE SAVE DOOR (kind `price`):
   to whoever listens, and to the browser as a download only with `downloads=1`, a flag the run carries with the benchmark's other carried words
