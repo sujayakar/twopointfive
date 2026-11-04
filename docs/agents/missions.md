@@ -1573,25 +1573,12 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   stencil ochre drew flat (110 decals); sack loads are `sandbag`, and one left out on the apron is under a tarp; three parking bays are painted by the
   staff door. No material, by the level audit: 8.8 % of the picture to 5.5 %; what is left is door leaves (painted at run time), cardboard, paper,
   plastic and rubber (plain by their rows). THE KIT PICTURE's hidden boom is named by its own group (`lived.boom`), not by four typed box numbers a
-  lived thing laid before them would move. THE HALL'S EXAMINING TABLE STANDS AGAINST ITS NORTH WALL (26.9, 11.65), west of the corner man's mark
-  (11-04; the maintainer: "move it"). Out in the lane (27.4, 12.9, where the older lived room had it) it lay on the one cheap line from the hall's
-  north door to the standing places outside the dock's north door, the line that skirts that door's own lane: a floor-squad man sent round to the dock
-  was priced 38 m round the racks where the bare hall gives 7.4, and refused, so that squad never went round to the dock. `wayround-check
-  warehouse-four` (shipped, seeds 1 to 3, 6336 asked): 58 lost and 26 squeezed with the older lived rooms, 54 and 28 as dressed, NONE lost and 28 with
-  the table moved, and its bar says `0 28`. The 28 are the impound bay on the foot of the south wall, where the older car stood too (26 the older
-  rooms had, and one way twice that the kit's longer pickup puts 9 cm across the check's 2 m line); the bay is left there on purpose: out at the lot's
-  edge it clears all 28 and also opens the wall's foot to the team's eyes, and the mission's two seeds got easier. WALL CHARGES: the table takes 11
-  places on the hall's north wall (757 places with lived rooms in, 768 as dressed, 754 before; 896 with them out), on purpose: a charge is not set
-  through a table. THE PICKUP'S LAMPS: the kit's pickup has the head and tail lamps `carlamps.ts` finds, so with lived rooms in (the shipped stand)
-  the warehouse has four vehicle lamps for targets, none glowing; `carlamps-check`'s table has the rows (`[0, 0, 0]` or `[2, 2, 0]`: none where lived
-  rooms are left out), and its line 1 does not count such a level among the files with vehicles on a stand that leaves lived rooms out. BASE: the
-  twin's own part moved, so `tools/qa/fixtures/level-base/warehouse-gwot.txt` holds its blob. MEASURED (headless): frozen stand and shipped with
-  `TPS_LIVED=0`, the play-through digests of all 21 missions on seeds 1 and 2 keep their word (42 of 42 each, against the step before); shipped, the
-  warehouse's two runs move their digest and end as before at the same second (taken at 210.2 s with 1 of 4 up, taken at 206.5 s with 2 of 4 up), and
-  every other run keeps its digest. `carlamps-check` on both stands (line 1 green; line 8 red as on the step before), `lived-check`,
-  `lived-stack-check` (no stack moves against the step before), `level-needs --run` on both stands, `export.ts --check`. The fingerprint MOVED on the
-  shipped stand: checkpoints, recordings and kept replays of the warehouse made before this step are refused. Stills on the software adapter only;
-  never seen on a GPU, never played by a person.
+  lived thing laid before them would move. BASE: the twin's own part moved, so `tools/qa/fixtures/level-base/warehouse-gwot.txt` holds its blob.
+  MEASURED (headless): frozen stand and shipped with `TPS_LIVED=0`, the play-through digests of all 21 missions on seeds 1 and 2 keep their word (42
+  of 42 each, against the step before); shipped, the warehouse's two runs move their digest and end as before at the same second (taken at 210.2 s
+  with 1 of 4 up, taken at 206.5 s with 2 of 4 up), and every other run keeps its digest. `lived-check`, `lived-stack-check` (no stack moves against
+  the step before), `level-needs --run` on both stands, `export.ts --check`. The fingerprint MOVED on the shipped stand: checkpoints, recordings and
+  kept replays of the warehouse made before this step are refused. Stills on the software adapter only; never seen on a GPU, never played by a person.
 - **The barracks' defenders are placed by hand** (`tools/levels/barracks.ts`: the hand placement merged over the build's four out-hung doors, both files the
   generator's; no switch: the level's data, and the page opens on it under `SAMESTART`). Placed: a GALLERY POST of two in the north gallery's east bay (`ngal_e`,
   a room in the data, no new geometry) — the arch man (31.0, 8.9) and the door man (32.6, 9.4), BOTH IN THE EAST OPENING — dark, looking across the yard at the lit south gallery; day room
@@ -1623,6 +1610,33 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   hand placement 9c346772, green on both stands now). A scripted commander, the one floor, never seen on a GPU, never played by a person. THE CHECKPOINT
   FINGERPRINT MOVED (899 boxes from 904, the shelf's geometry): old barracks checkpoints are refused, an old tape's re-run will not match. Page:
   rebuild/authored-levels/loud-levels.md.
+- **The barracks is dressed from the library** (dress every level, 11-03; no switch of its own: level data, its lived tier under `LIVED` and the look
+  twin's own part; `tools/levels/barracks.ts`, `barracks-gwot.ts`). LAID WITH THE KIT (`gwotKit(gwotOfOffice(K))` in the lived tier, so each piece
+  wears the look's paint in both files): the water barrel (the kit's drum), the firewood (its wood pile), the galley's gas bottles (loose now: a blast
+  throws one), the motorbike, the stones along the front walk (the kit's `kerbStones`). ROUND IN LIFE, the kit's `round`: the stock pots and the pan,
+  the laundry's three tubs and its boiler, the hearth's kettle, the chopping block. NEW, outside, free standing, 2 m and more off every outer wall (an
+  outer wall takes a charge wherever it is asked: `wallfurn-check` reads the same 952 of 1084 asks accepted as the step before): a fuel point in the
+  vehicle lot (three drums, two cans), the sentry's cold brazier, two drums and a pair of tyres south of the pallet at the south-east corner, and the
+  same whitewashed stones along the road round that corner, where the team starts. Tried and taken out: drill tyres in the yard (the square is the
+  level's fight and is kept bare; under its wall they also cost 14 charge places). ROUND THINGS: 0 to 18 by the round rule's finder (`0 18`, lived
+  rooms off then on, in `tools/qa/fixtures/round/barracks.txt` and `barracks-gwot.txt`). BEDDING is named by the palette's cloth rows (`coyote`
+  blankets, `rugRed` quilts, `rugNavy` serge, `sack` ticking; all drawn only), and a lived box in a palette paint is given that row's finish at the
+  end of the block, or the twin's reload check refuses the file. THE TWIN: `SKIN.own` says what the generator's own colours are (the pickup the
+  battalion's green, the settee red cloth, army paint olive; each lived floor the stuff it is: the grey door mat had come out galvanised sheet by the
+  shared rules); the armoury's cartons are olive tins and plywood cases, the stores pallet olive cases, the sentry box and the sign police green, the
+  hearth's cheeks mud brick. The laundry's boiler is `rust`, not galvanised: bright metal a probe's width from the east wall with the lot lamp behind
+  it is what the level command's `leak` note counts (25 things as before, the twin 15 against 16). No material, by the level audit: 6.8 % of the
+  picture to 4.7 %; what is left is door leaves (painted at run time), the pickup's glass, cardboard, white sheets, plastic and rubber. KEPT: the
+  pickup is two boxes of the level's own part (a base move), as are the cots, lockers and shelves. BOXES: the plain file is 979 against
+  `lived-check`'s warning at about 900 (899 before). BASE: the twin's own part moved, so `tools/qa/fixtures/level-base/barracks-gwot.txt` holds its
+  blob. MEASURED (headless): frozen stand and shipped with `TPS_LIVED=0`, the play-through digests of all 21 missions on seeds 1 and 2 keep their word
+  (42 of 42 each, against the step before); shipped, the barracks' two runs move and the scripted player loses both ways (seed 1 wiped at 76.1 s to
+  wiped at 91.2 s, seed 2 wiped at 106.8 s to wiped at 163.6 s), and every other run keeps its digest. Seed 1 parts at 21 s in the laundry, where two
+  men of the first entry pass the tubs, round now, on a line 0.2 m further south (read off a trace of both trees). `lived-check`, `lived-stack-check`
+  (no stack moves against the step before), `barracks-check --static` (its B2 line for the n_end entry red as on the step before), `level-needs --run`
+  on both stands, `export.ts --check`. The fingerprint MOVED on the shipped stand: checkpoints, recordings and kept replays of the barracks made
+  before this step are refused. The tallies in the bullet above were not re-read: they are a scripted commander's on 24 to 72 seeds, and furniture has
+  moved them before. Stills on the software adapter only; never seen on a GPU, never played by a person.
 - **`DARKFOE` and the loud levels' dark plans** (10-13, seeds 1-12, hard, the merged tree, on / held off with `TPS_DARKFOE=0` / the designer's same seeds before
   the rule): the compound's B (way 2, `PT_BREAKER=order PT_NV=1`) 12 · 39/48 / 12 · 33 / 11 · 33 — still the best answer; the warehouse's hall first in the dark
   5 · 11/48 / 4 · 8 / 6 · 11 — still the worst thing tried. `plan-fights.ts` reads no light anywhere (no `lightEstimateAt`, no `visibilityOf`).
