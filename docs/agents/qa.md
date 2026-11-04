@@ -413,7 +413,7 @@ but synthetic writes still work.
   kind, and the rows of the Rust module's twins. AND A VALUE THAT IS NOT THE PAGE'S, where the page itself says what that is: `--page page.json` is every
   table as a stand-up of the page left it (`TPS_PROFILE=shipped bun run tools/qa/stand-dump.ts --out page.json`, on the tree about to be folded), and a row
   the dump gives another value, or does not hold, is refused; so is a row whose write in the page rides a row that stays (`A = B && !q.has('noa')`: with
-  B's word on the address A was off too). `--trust ROW,ROW` takes the caller's word for those. (Reading the page's writes off the code was tried first and
+  B's word on the address A was off too). `--trust ROW,ROW` takes the caller's word for those. `--late ROW,ROW` takes it for a row the walk of load-time calls reached (the refusal names the chain of calls from the top-level statement: the walk follows every call a function could make, not the ones it does make), never for a read at a file's own top level. The journal's `if` that asks a recording for a retired row's own word goes with the write it guarded. (Reading the page's writes off the code was tried first and
   dropped: their order, an early return and a helper are the code's to run.) Exit 3 = some rows were refused and the rest done. A CALL IS NEVER FOLDED AWAY FOR ITS NAME: `x.get(k) && ROW` loses the call only where `get` is the language's own
   (a Map's), the function's body only reads, or the caller vouches for it (`--pure name,name`; the command line is then the record of what was vouched for).
   A game object's `get`, a getter (also under a type that calls it plain data, or reached by a key), a method some other class overrides, a function a `let`

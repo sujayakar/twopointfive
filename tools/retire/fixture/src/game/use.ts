@@ -46,6 +46,8 @@ const gv: GBase = new GSub();   // (typed as its base: the getter that runs is t
 interface Sink { push(x: number): void }
 const sink: Sink = { push(x: number): void { tell(x); } };
 const viaSink = { get v(): number { sink.push(3); return 1; } };   // (a getter that calls through an interface)
+/** a getter of the game's own that does something, named as a recording's key is (`k.tables`) */
+const reg = { get tables(): number { return tell(9); } }; void reg;
 /** a recording's own words: an untyped thing with a key named like the table */
 const fromFile = (f: any): boolean => f.tables.K.extra === true;
 const fastX = K.num > 2 && K.zero === 0; export { fastX };   // (rows whose own value is the page's: the same at load as later)

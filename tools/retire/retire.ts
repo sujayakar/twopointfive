@@ -22,6 +22,7 @@
 //   bun run tools/retire/retire.ts --page page.json --rows rows.json --write [--report out.json]    rows.json = [{ "row": "ORDERS.fileSpread", "value": true }, …]
 //   … --pure locks,allowed      functions the caller vouches only read, so a condition that calls one beside a retired row can go (see VOUCHED)
 //   … --trust ROW,ROW           rows whose value is the page's on the caller's word, where the tool cannot read the page's write of it (see TRUSTED)
+//   … --late ROW,ROW            rows a refusal said are read as a module loads, in a function the walk reached, and that the caller has read the chain of and vouches are not (see LATE)
 //   … --drop file.ts:name       a declaration out whole, with the statements that call it · --drop-at file.ts:line[:words]  one statement of a check
 // THE PROOF OF A RUN is not this tool's: both typechecks, then the page's stand run for run the same before and after (tools/qa/playthrough.ts digests under
 // TPS_PROFILE=shipped), and the frozen stand after equal to the frozen stand before with the retired rows' stand words raised. docs/agents/qa.md, "Retiring a switch".
@@ -51,6 +52,8 @@ const VOUCHED = new Set((arg('--pure') ?? '').split(',').map(x => x.trim()).filt
 /** `--trust ROW,ROW`: rows whose value the caller vouches IS the page's, where `--page`'s dump does not hold the row, or its write rides a row that stays and
  *  the caller has read that this is meant. Again the command line is the record. */
 const TRUSTED = new Set((arg('--trust') ?? '').split(',').map(x => x.trim()).filter(Boolean));
+/** --late ROW,ROW: the caller has read the chain of calls a refusal named and vouches that the row is NOT read before the page writes it (the walk follows every call a function could make, not the ones it does make as the module loads). Only a read inside a function is vouched for: one at a file's own top level is load time whatever anyone says. */
+const LATE = new Set((arg('--late') ?? '').split(',').map(x => x.trim()).filter(Boolean));
 const rows: Row[] = [];
 { const f = arg('--rows'); if (f) for (const r of JSON.parse(readFileSync(f, 'utf8')) as Row[]) rows.push(r);
   for (const a of argv) { const m = /^([A-Za-z_][\w.]*)=(.*)$/.exec(a); if (!m || a.startsWith('--')) continue; const raw = m[2], q = /^'(.*)'$|^"(.*)"$/.exec(raw);
@@ -83,6 +86,8 @@ const at = (sf: any, pos: number) => `${rel(sf.fileName)}:${sf.getLineAndCharact
 // ---- what the run decides, by file
 type FilePlan = { subs: Map<any, Value>; del: Set<any>; unassign: Set<any>; bare: Set<any>; hole: Set<any>; dropped: Span[] };   // hole: a place in a pattern left empty (`[, x] = kept`)   // bare: a `const x = f();` nothing reads any more — f() still runs, only the name goes
 const plans = new Map<string, FilePlan>();
+/** the journal's `if`s whose condition asks a recording for a retired row's own word */
+const recordingIfs = new Set<any>();
 const plan = (f: string) => { let p = plans.get(f); if (!p) { p = { subs: new Map(), del: new Set(), unassign: new Set(), bare: new Set(), hole: new Set(), dropped: [] }; plans.set(f, p); } return p; };
 const report = { retired: [] as string[], refused: [] as { row: string; why: string }[], notes: [] as string[], toolWrites: [] as { row: string; at: string; kind: string; text: string }[],
   dead: [] as string[], words: [] as string[], standWords: [] as string[], hooks: [] as string[], controls: [] as string[], files: 0 };
@@ -346,7 +351,7 @@ const keeper = (n: any, strict = false): any => { for (let c = n, p = n.parent; 
 let loadFnsMemo: Map<any, string> | null = null;
 function loadFns(): Map<any, string> { if (loadFnsMemo) return loadFnsMemo; const out = loadFnsMemo = new Map<any, string>(), calls = new Map<any, any[]>(), queue: any[] = [];
   // (the file a page of the tree names in a script tag is that page's own: the program that writes the switches and boots the game, not a module loading)
-  const pages = new Set<string>(); for (const h of readdirSync(ROOT)) if (h.endsWith('.html')) for (const m of readFileSync(join(ROOT, h), 'utf8').matchAll(/<script[^>]*\ssrc=["'](?:\.\/)?([^"']+\.ts)["']/g)) pages.add(m[1]);
+  const pages = new Set<string>(); for (const h of readdirSync(ROOT)) if (h.endsWith('.html')) for (const m of readFileSync(join(ROOT, h), 'utf8').matchAll(/<script[^>]*\ssrc=["'](?:\.?\/)?([^"']+\.ts)["']/g)) pages.add(m[1]);
   for (const f of files) { if (isTool(f)) continue; const sf = sfOf(f); if (!sf) continue; const entry = pages.has(rel(f));
     const visit = (n: any) => { if (n.kind === SK.CallExpression || n.kind === SK.NewExpression) { const k = keeper(n, true); if (k || !entry) { const l = calls.get(k); if (l) l.push(n); else calls.set(k, [n]); } } n.forEachChild(visit); }; visit(sf); }
   const bodies = (d: any, made: boolean): any[] => { if (!d || d.getSourceFile().isDeclarationFile) return [];
@@ -361,8 +366,9 @@ function loadFns(): Map<any, string> { if (loadFnsMemo) return loadFnsMemo; cons
   const mark = (fn: any, why: string) => { if (out.has(fn)) return; out.set(fn, why); queue.push(fn); };
   const follow = (from: any, why: (c: any) => string) => { for (const c of calls.get(from) ?? []) { for (const fn of named(c.expression, c.kind === SK.NewExpression)) mark(fn, why(c));
       for (const a of c.arguments ?? []) if (unparen(a).kind === SK.Identifier || unparen(a).kind === SK.PropertyAccessExpression) for (const fn of named(a, false)) mark(fn, why(c)); } };   // (a function handed to a call by its name may be run by it at once)
+  const nameOf = (c: any): string => { const e = unparen(c.expression); return (c.kind === SK.NewExpression ? 'new ' : '') + (e.kind === SK.PropertyAccessExpression ? e.name.text : e.kind === SK.Identifier ? e.text : '(…)'); };
   follow(null, c => `${at(c.getSourceFile(), c.getStart())} ${(c.getText() as string).slice(0, 50).replace(/\s+/g, ' ')}`);
-  while (queue.length) { const fn = queue.shift(), why = out.get(fn)!; follow(fn, () => why); }
+  while (queue.length) { const fn = queue.shift(), why = out.get(fn)!; follow(fn, c => why.split(' → ').length >= 8 ? why : `${why} → ${nameOf(c)}`); }   // (the chain of calls from the top-level statement, by name, for whoever reads the refusal)
   return out; }
 /** does this run as its module loads? With no function round it, yes; inside a function, where a module's top-level statement calls that function (or
  *  one that calls it, to the end), and inside a class's field or constructor, where a top-level statement makes an object of the class. */
@@ -401,11 +407,11 @@ for (const u of uses) {
   { let base = access; for (let i = 1; i < u.row.row.split('.').length; i++) base = base?.expression; const decl = tableOfRow.get(u.row.row), file = rel(u.sf.fileName), shown = ((stmtOf(access) ?? access).getText() as string).slice(0, 90).replace(/\s+/g, ' ');
     if (!u.named && livePath(access, decl)?.join('.') !== u.row.row.split('.').slice(1).join('.')) {
       if (tool) { note(`${where}: ${u.row.row} read on another thing of the table's type in a tool (left as it is): ${shown}`); continue; }
-      if (file === 'src/game/journal.ts') continue;   // (a recording's own word for the row: it goes with the journal's line for an old file, or the typecheck says where it stands)
+      if (file === 'src/game/journal.ts') { const iff = ts.findAncestor(access, (x: any) => x.kind === SK.IfStatement) as any; if (iff && access.getStart() >= iff.expression.getStart() && access.end <= iff.expression.end) recordingIfs.add(iff); continue; }   // (a recording's own word for the row: it goes with the journal's line for an old file, or the typecheck says where it stands)
       const snap = !isWrite && base ? snapshotOf(base, decl) : null;
       if (snap && (snap === 'deep' || u.row.row.split('.').length === 2)) { acts.push({ use: u, kind: 'readLoad', node: access }); loadRead.set(u.row.row, where); continue; }   // (a copy taken as the module loaded holds the row's own value, not the page's)
       refuse.set(u.row.row, `${where}: the same key on another thing of the table's type (${shown}): that is not the table, so its value there is not the page's. Fold it by hand first`); continue; }
-    if (!tool && atLoad(access)) { if (isWrite) loadWrite.add(u.row.row); else if (moduleVal.get(u.row.row) !== u.row.value) { refuse.set(u.row.row, `${where}: read as its module loads${viaCall(access)}, before the page has written it (${shown}): there it is still ${literal.get(u.row.row)}. Fold it by hand first`); continue; } } }
+    if (!tool && atLoad(access) && !(LATE.has(u.row.row) && atLoadWhy(access) !== '')) { if (isWrite) loadWrite.add(u.row.row); else if (moduleVal.get(u.row.row) !== u.row.value) { refuse.set(u.row.row, `${where}: read as its module loads${viaCall(access)}, before the page has written it (${shown}): there it is still ${literal.get(u.row.row)}. Fold it by hand first`); continue; } } }
   if (op.kind === SK.DeleteExpression) {   // (`delete file.tables.T.key`: a check making a file from before the key — the key is gone, so is the line)
     if (op.parent.kind === SK.ExpressionStatement) acts.push({ use: u, kind: 'delStmt', node: op.parent }); else acts.push({ use: u, kind: 'const', node: op });
     report.toolWrites.push({ row: u.row.row, at: where, kind: 'other', text: (stmtOf(op) ?? op).getText().slice(0, 100) }); continue; }
@@ -674,7 +680,7 @@ function render(n: any, P: FilePlan): string {
         return t; }
       const then = render(n.thenStatement, P), els = n.elseStatement ? render(n.elseStatement, P) : null, cond = render(n.expression, P);
       const thenGone = then === EMPTY || /^\{\s*\}$/.test(then), elseGone = els === null || els === EMPTY || /^\{\s*\}$/.test(els);
-      if (thenGone && elseGone) { if (pure(n.expression)) { drop(n.expression, P); return EMPTY; } return `${cond};`; }
+      if (thenGone && elseGone) { if (pure(n.expression) || recordingIfs.has(n)) { drop(n.expression, P); return EMPTY; } return `${cond};`; }   // (the journal's line for an old file asks the recording for the retired row's own word: with its write gone, the question goes too)
       if (thenGone) return `if (!(${cond})) ${els}`;
       const head = text.slice(n.getStart(sf), n.expression.getStart(sf)), mid = text.slice(n.expression.end, n.thenStatement.getStart(sf));
       // (an `if` inside this one, unbraced, that this run left without its `else`, or turned round: this one's own `else` would become the inner one's)
