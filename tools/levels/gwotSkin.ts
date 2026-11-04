@@ -155,7 +155,7 @@ export function skinLevel(level: Level, groups: string[], S: Skin = {}): SkinSta
     if (!m) { st.kept++; continue; }
     const sim: GwotSim = (name ?? (steel ? (surf0 === 'drywall' ? '~steelPale' : '~steel') : '~' + surf0)) as GwotSim;
     const before = { name, surf: surf0, cls: breakClassOf(b.albedo), steel: steelGrey(b.albedo), dark: lum(b.albedo) > 0.1, pale: lum(b.albedo) > 0.7 };
-    const old = b.albedo; b.albedo = gwotAs(m, sim); b.rough = GWOT_FINISH[m]?.rough ?? ROUGH_CLOTH;
+    const old = b.albedo; b.albedo = gwotAs(m, sim); b.rough = GWOT_FINISH[m]?.rough ?? ROUGH_CLOTH; delete b.stuff;   // (a word belongs to the paint it was said with: the skin's paint has a name of its own)
     if (!c.full) { if (GWOT_FINISH[m]?.metal) b.metal = true; else delete b.metal; }
     // THE CHECK: the game's own classifiers say the same of the box as before (a round, a charge, a blast and the destruction index read nothing else of a paint)
     const after = { name: paletteName(b.albedo), surf: surfOf(b.albedo), cls: breakClassOf(b.albedo), steel: steelGrey(b.albedo), dark: lum(b.albedo) > 0.1, pale: lum(b.albedo) > 0.7 };
@@ -174,7 +174,7 @@ export function skinLevel(level: Level, groups: string[], S: Skin = {}): SkinSta
       // (a prop that a blast takes apart is classed by its parts' paint like any box: the new paint stands for the old)
       const next = gwotAs(m, (name ?? (steel ? (surf === 'drywall' ? '~steelPale' : '~steel') : '~' + surf)) as GwotSim);
       if (paletteName(next) !== name || surfOf(next) !== surf || breakClassOf(next) !== breakClassOf(a) || steelGrey(next) !== steelGrey(a)) throw new Error(`skinLevel: prop ${k} (${p.kind}) part ${a.join(',')} → ${m} would change what the simulation reads`);
-      part.albedo = next; any = true; }
+      part.albedo = next; delete part.stuff; any = true; }   // (the part's word went with its old paint)
     if (any) st.props++;
   });
 

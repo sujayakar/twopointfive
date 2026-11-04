@@ -282,7 +282,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
   bin(17.7, 6.05); bin(12.3, 8.2); cardboardBox(31.2, 20.2, 0.55, 0.3);                 // loose things under the kitchen's window, by the shed's side, at the alley's end
   // (LOOSE THINGS — bins, cartons, chairs a man can shove — stand a leaf's length clear of every door on this level and out of the corridor: walking men
   //  bulldoze them along a wall, and one that ends up in a doorway jams the leaf)
-  rug(23.5, 26.0, 2.6, 3.6, DIRT);                                                      // the track through the main gate
+  add({ c: [23.5, 0.018, 26.0], h: [1.3, 0.006, 1.8], yaw: 0, albedo: DIRT, flags: BoxFlag.NoShadow });   // the track through the main gate (a rug's flat box, but earth and no rug: it says no cloth)
 
   // ---------------- the kitchen (x 13..18.5, z 6.5..11.5): k_s on the corridor, k_p into the pantry; a window north onto the back strip ----------------
   grp('kitchen');

@@ -55,6 +55,13 @@ export const stuffOfName = (name: string): Stuff | undefined => Object.hasOwn(PA
 /** WHAT A BOX MAY SAY IT IS MADE OF (Box.stuff, a level file's `stuff` on a box or a prop's part): a material of the look, plain, or waits. A material is a
  *  name the look has a NUMBER for (lookTex.ts lookStuffOf): the stone and the brick under a mud wall are layers the mud wall shows, and no box is made of them. */
 export const BOX_STUFFS: readonly string[] = [...LOOK_NAMES.filter(n => lookStuffOf(n) > 0), 'plain', 'waits'];
-export const boxStuffOk = (v: unknown): v is Exclude<Stuff, 'mixed'> => typeof v === 'string' && BOX_STUFFS.includes(v);
+/** what a box may say: any stuff the table of names may, but 'mixed' (a word about a NAME) and the two layers under a mud wall (no stuff: BOX_STUFFS) */
+export type BoxStuff = Exclude<Stuff, 'mixed' | 'field stone' | 'mud brick'>;
+export const boxStuffOk = (v: unknown): v is BoxStuff => typeof v === 'string' && BOX_STUFFS.includes(v);
+/** A WORD BELONGS TO THE PAINT IT WAS SAID WITH. A piece says what it is made of for its OWN paints (`own`) and no other: handed another paint (a desk's
+ *  shape as a steel bench, a white table) it says nothing, and that paint's name speaks. So does whoever REPAINTS a box (the look's skin, the editor, the
+ *  cars trial): a new paint drops the old word. Spread the answer into the box being made. */
+export const saidFor = <S extends BoxStuff>(stuff: S, paint: readonly number[], ...own: readonly (readonly number[])[]): { stuff?: S } =>
+  own.some(o => o[0] === paint[0] && o[1] === paint[1] && o[2] === paint[2]) ? { stuff } : {};
 /** a level's material rows as the look is handed them: a name and its colour */
 export type PaintRows = Readonly<Record<string, { albedo: readonly number[] }>>;
