@@ -9,7 +9,7 @@ import { PatrolRoute, Chokepoint, RoomClearPlan } from '../scene/level';
 import { Character, HOLD } from './character';
 import type { UpperMode } from './character';
 import { BoxFlag, rayBox } from '../scene/boxes';
-import { BOTH, type StaticCollision } from '../scene/collision';   // (read inside a function only: the check's count of answers given both ways)
+import { BOTH, BAKE_Y, type StaticCollision } from '../scene/collision';   // (read inside a function only: the check's count of answers given both ways)
 import { SENSE, type LightField } from './sense';   // (read inside functions only: the light model's switch and its field)
 import { SENSES } from '../scene/boxMirror';
 import { FOG, fogThrough } from './fogofwar';
@@ -1592,9 +1592,30 @@ function beamFan(d: Vec3): Vec3[] {
   const out: Vec3[] = []; for (const a of [0, -0.17, 0.17, -0.33, 0.33]) { const c = Math.cos(a), k = Math.sin(a); out.push([d[0] * c + d[2] * k, d[1], d[2] * c - d[0] * k]); }
   for (const e of [-0.3, 0.3]) out.push(v3.normalize([d[0], d[1] + e, d[2]])); return out;
 }
+const FLOOR_BREAK = (globalThis as { process?: { env?: Record<string, string | undefined> } }).process?.env?.WALLFLOOR_BREAK === '1';   // (QA: the floor is a wall again, as it was; the check of the line below must fail with this set)
+/** DOES A BEAM END WHOLE ON SOMETHING THAT STANDS IN FRONT OF HIM — the one reading the two wall rules below both ask: every ray of `fan` from `o` meets,
+ *  within `m`, something that stands. THE FLOOR IS NOT A WALL, and nor is what lies on it: the ground's own band is what the walk grid calls floor
+ *  (scene/collision.ts BAKE_Y: whatever tops out under it, feet cross). A ray is followed as it flies for as long as it is above that band; the rest of
+ *  it — down to where it would meet the ground, or to `m` — is asked along the band's top, where a wall, a leaf or a crate is in the way down to its foot
+ *  and the slab, a kerb or a blast's rubble is not. So a ray that comes down to the ground with nothing standing in its way has ended on the ground,
+ *  which is where a lowered gun's light or a hung torch is meant to fall, and that beam is not into a wall. (Before: the ground counted as "something
+ *  solid". A beam at low ready meets it 1.50 to 1.55 m from the lens, between the distance that put a weapon light out and the one that lit it again, so
+ *  one brush past a wall kept a teammate dark for the rest of his walk, in the open.) */
+function beamWalled(g: Game, o: Vec3, fan: Vec3[], m: number): boolean {
+  return fan.every(r => {
+    const dip = r[1] < 0 && !FLOOR_BREAK ? Math.max(0, (o[1] - BAKE_Y) / -r[1]) : m;   // (how far along it this ray is above the ground's band)
+    if (dip >= m) return g.col.segmentBlocked(o, [o[0] + r[0] * m, o[1] + r[1] * m, o[2] + r[2] * m]);
+    const p: Vec3 = [o[0] + r[0] * dip, BAKE_Y, o[2] + r[2] * dip];
+    if (dip > 0 && g.col.segmentBlocked(o, p)) return true;   // (something stands in its way before it is down)
+    const run = Math.min(m, o[1] / -r[1]) - dip;   // (what is left of it, to the ground or to `m`: over the same floor plan, along the band's top)
+    return run > 0 && g.col.segmentBlocked(p, [p[0] + r[0] * run, BAKE_Y, p[2] + r[2] * run]);
+  });
+}
+/** …asked of a beam laid by hand, from `o` along `d` (QA: the rule's check lays beams over open floor and at walls and reads them itself) */
+export function beamWalledAt(g: Game, o: Vec3, d: Vec3, m: number): boolean { return beamWalled(g, o, beamFan(d), m); }
 /** LIGHTS.wallOff (the maintainer, 10-22, off the first tutorial mission: "weird that they are shining the flashlight on the wall immediately in front of
- *  them"): a teammate's weapon light is dark while its WHOLE beam ends on something solid within `wallM` of the lens — the wall he walks up to a stack along,
- *  the truck he kneels behind, the dirt at his knee. Such a light shows him nothing and is the brightest thing in the picture. Asked of the beam as posed
+ *  them"): a teammate's weapon light is dark while its WHOLE beam ends on something that stands within `wallM` of the lens — the wall he walks up to a stack
+ *  along, the truck he kneels behind; never the ground (beamWalled, above: a gun at low ready lights the floor ahead of him, and burns). Such a light shows him nothing and is the brightest thing in the picture. Asked of the beam as posed
  *  this frame (the lens — where it will burn: this side of a wall it is pressed through — and where the gun points): the axis and six
  *  rays across the cone must ALL end inside `wallM` — a jamb met edge-on with the room open beyond it to part of the cone is not a wall, and that light
  *  burns. It goes dark once that has held `wallSecs` (a muzzle swept past a corner does not blink) and burns again the frame any ray runs clear to
@@ -1607,7 +1628,7 @@ function wallDark(g: Game, gd: Guard, held: Vec3 | undefined): boolean {
   const o = g.col.segmentBlocked(held, p) ? lensClear(g, held, p, g.engine.settings.flashlightRadius) : p, fan = beamFan(d);   // (a lens carried through the wall he stands at lights from this side of it — attachFlashlight, lighting.ts: asked from where it will burn)
   const hl = Math.hypot(d[0], d[2]) || 1, manIn = (m: number) => g.guards.some(x => { if (x === gd || x.state === 'dead' || x.team === 'operative') return false;   // (somebody not of his side in the beam, this side of what it ends on: a light with a man in it is not wasted — the walls are asked of the statics only)
     const vx = x.char.pos[0] - o[0], vz = x.char.pos[2] - o[2], l = Math.hypot(vx, vz); return l < m + 0.5 && (l < 0.3 || (vx * d[0] + vz * d[2]) / (l * hl) > 0.9); });
-  const ends = (m: number) => fan.every(r => g.col.segmentBlocked(o, [o[0] + r[0] * m, o[1] + r[1] * m, o[2] + r[2] * m])) && !manIn(m);
+  const ends = (m: number) => beamWalled(g, o, fan, m) && !manIn(m);
   const was = wallSeen.get(gd), s = was && t >= was.t && t - was.t <= 0.25 ? was : { t, since: t - LIGHTS.wallSecs, dark: false };   // (no reading a moment ago — a fresh man, a clock put back: this frame's reading stands at once)
   const near = ends(s.dark ? LIGHTS.wallBackM : LIGHTS.wallM), since = near ? s.since : t, dark = near && (s.dark || t - since >= LIGHTS.wallSecs - 1e-9);
   wallSeen.set(gd, { t, since, dark }); return dark;
@@ -1616,7 +1637,7 @@ const TORCH_WALL_BREAK = (globalThis as { process?: { env?: Record<string, strin
 const torchLowSeen = new SideMap<Guard, { t: number; low: boolean }>('guards.torchLowSeen');
 /** TORCH.wallLow (calmtorch.ts; the maintainer, 10-22, off the stealth tutorial: "another example of character shining flashlight at a small point in front
  *  of them. feels a bit weird but i'm not sure what the natural thing is here"): a man carrying a HAND torch — a patrol, a man gone to look — whose beam, as
- *  the relaxed carry would point it (his heading and chest, his aim's pitch), would end whole on something solid within `wallM` of his hand has nothing in
+ *  the relaxed carry would point it (his heading and chest, his aim's pitch), would end whole on something that stands within `wallM` of his hand (beamWalled: the ground is not a wall) has nothing in
  *  front of him to light: he lets the torch hang, its beam on the floor at his feet, until the carry runs clear to `wallBackM` again (he has turned, or
  *  walked on). Asked of the carry's own direction, never of the tipped beam (which always ends on the floor), so the answer does not chase itself. A weapon
  *  light is not a hand torch and is never asked: it points where the gun points. Off: the carry as it was. */
@@ -1624,7 +1645,7 @@ function torchLow(g: Game, gd: Guard): boolean {
   if (!(TORCH.wallLow || TORCH.wallDark) || TORCH_WALL_BREAK) return false;
   const c = gd.char, hand = c.bones.handR, t = g.time; if (!hand) return false;
   const d = torchCarryWant(c), was = torchLowSeen.get(gd), low0 = !!was && t >= was.t && t - was.t <= 0.25 && was.low, m = low0 ? TORCH.wallBackM : TORCH.wallM;
-  const low = beamFan(d).every(r => g.col.segmentBlocked(hand, [hand[0] + r[0] * m, hand[1] + r[1] * m, hand[2] + r[2] * m]));
+  const low = beamWalled(g, hand, beamFan(d), m);
   torchLowSeen.set(gd, { t, low }); return low;
 }
 /** what TORCH.wallLow last made of his carry, while that reading is fresh (QA) */

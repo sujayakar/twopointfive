@@ -31,6 +31,9 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   carry is clear; `wallDark`: out there, never tipped); `TORCHWALL_BREAK=1` fails it on both. The calm torch's own check and both tutorial scripted
   runs pass with it on. THE MAINTAINER'S CALL IS OPEN (hang, put out, or leave as it was): this default is the lean, not his pick. NOT MEASURED: what
   it does to a night of sneaking (a hanging torch lights the floor at his feet where it lit the wall). NEVER SEEN ON A GPU; nobody has played it.
+  11-04: "something solid" is something that STANDS: the reading is `guards.ts beamWalled`, shared with the teammates' weapon lights, and the ground
+  (the walk grid's floor band) is not a wall (`docs/agents/team-feel.md`, the wall rule's bullet). `torch-wall` reads the same on both stands, a
+  torch hung for 420 man-frames of 27000 before and after on the page's.
 - **The difficulty switch + the harder defenders (10-07;** record rebuild/harder-defenders/numbers.md, the two parts' own pages beside it):
   `src/game/difficulty.ts` is ONE row — the start card's *Defenders: standard | hard* over the scenario picker (ui/menu.ts `difficultyRow`), Tab ▸ Sandbox ▸
   Difficulty, `?hard` / `?hard=0` / `?difficulty=hard|standard` — over two tables that both ship OFF: `pressure.ts PRESSURE` (defenders come to a held room

@@ -5,12 +5,17 @@
 // (the lens to seven points across the beam, the rule's geometry at a margin either side of its two distances) and keeps its own clock:
 //   · with the switch off the flaw is there: frames of a burning light whose whole beam has ended at arm's length for longer than the rule would allow
 //   · with it on there is no such frame, and the rule did hold lights dark
-//   · it burns again at once: no frame where the rule has him dark and any ray runs clear past the far distance
+//   · it burns again at once: no frame where the rule has him dark and any ray runs clear past the far distance — or comes down to the ground with nothing
+//     standing in its way: the floor is not a wall
+//   · …asked of beams laid by hand over the floor, each read by what its rays END ON (the box world's own ray, not the rule's lines): one whose every ray
+//     lands on the ground is no wall to the rule, one whose every ray ends on something that stands inside the rule's distance is
 //   · nobody but the team is asked: no hostile man's reading is ever dark
 //   · off, nothing reads the rule's numbers: the same game frame for frame with them moved
 //   · the stand's own word, and a recording carries the key
 // What it cannot say: what any of it looks like (never seen on a GPU), or whether it helps a fight — that is playthrough.ts's tally.
 // The probe's own red path: WALLLIGHT_BREAK=1 bun run tools/qa/probes.ts light-wall must FAIL (the rule answers "not dark" with its switch on).
+// …and the floor's: WALLFLOOR_BREAK=1 must FAIL the line of beams laid by hand on both stands (the rule counts the ground as something solid, as it did
+// before 11-04) — and 'it burns again at once' wherever a play has a man at low ready beside a wall (the page's stand).
 import { ROOT } from './headless.ts';
 import { stage } from './bang-tally.ts';
 const GDM: any = await import(`${ROOT}/src/game/guards.ts`);
@@ -32,11 +37,44 @@ const doorsOf = (S: any): any[] => { const sam = S.g.player.char.pos; const c: {
 function fnv() { let h = 0x811c9dc5 >>> 0; return { eat: (s: string) => { for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 0x01000193) >>> 0; } }, hex: () => (h >>> 0).toString(16).padStart(8, '0') }; }
 const MARGIN = 0.15;
 /** seven directions across the beam: its axis, four turned about the vertical, one tipped up and one down */
-const fanOf = (d: number[]): number[][] => { const out: number[][] = []; for (const a of [0, -0.17, 0.17, -0.33, 0.33]) { const c = Math.cos(a), k = Math.sin(a); out.push([d[0] * c + d[2] * k, d[1], d[2] * c - d[0] * k]); } for (const e of [-0.3, 0.3]) { const v = [d[0], d[1] + e, d[2]], l = Math.hypot(v[0], v[1], v[2]) || 1; out.push([v[0] / l, v[1] / l, v[2] / l]); } return out; };
-/** the probe's own reading of a man's beam: does every ray from the lens to a point `m` along it end on something solid */
+export const fanOf = (d: number[]): number[][] => { const out: number[][] = []; for (const a of [0, -0.17, 0.17, -0.33, 0.33]) { const c = Math.cos(a), k = Math.sin(a); out.push([d[0] * c + d[2] * k, d[1], d[2] * c - d[0] * k]); } for (const e of [-0.3, 0.3]) { const v = [d[0], d[1] + e, d[2]], l = Math.hypot(v[0], v[1], v[2]) || 1; out.push([v[0] / l, v[1] / l, v[2] / l]); } return out; };
+const FLOOR_Y = 0.25;   // (the top of the ground's own band — what tops out under it, feet cross: scene/collision.ts BAKE_Y, spelt here because the probe's reading is its own)
+/** the probe's own reading of ONE RAY from `o` along `r`, by the rule's geometry: does it end, inside `m`, on something that STANDS — the ray is followed as
+ *  it flies while it is above the ground's band, and what is left of it (to the ground, or to `m`) is asked along the band's top, where a wall is in the way
+ *  down to its foot and the slab, a kerb or rubble is not. A ray that comes down to the ground with nothing standing in its way has not ended on a wall.
+ *  (flashweight-lights reads a dark man's beam with it too: one reading of "a wall" for the lights' checks.) */
+export const rayWalled = (g: any, o: number[], r: number[], m: number): boolean => {
+  const dip = r[1] < 0 ? Math.max(0, (o[1] - FLOOR_Y) / -r[1]) : m; if (dip >= m) return g.col.segmentBlocked(o, [o[0] + r[0] * m, o[1] + r[1] * m, o[2] + r[2] * m]);
+  const p = [o[0] + r[0] * dip, FLOOR_Y, o[2] + r[2] * dip]; if (dip > 0 && g.col.segmentBlocked(o, p)) return true;
+  const run = Math.min(m, o[1] / -r[1]) - dip; return run > 0 && g.col.segmentBlocked(p, [p[0] + r[0] * run, FLOOR_Y, p[2] + r[2] * run]); };
+/** …of a whole beam from `o` along `d`: every ray of it */
+const endsAt = (g: any, o: number[], d: number[], m: number): boolean => fanOf(d).every(r => rayWalled(g, o, r, m));
+/** …of a man's beam as posed, from where his lens will burn */
 const ends = (g: any, x: any, m: number): boolean => { const held = x.char.bones.upperArmR, p = x.flashlight.pos, d = x.flashlight.dir; if (!held) return false;
   const o = g.col.segmentBlocked(held, p) ? LTM.lensClear(g, held, p, g.engine.settings.flashlightRadius) : p;   // (a lens through the wall he stands at burns from this side of it)
-  return fanOf(d).every(r => g.col.segmentBlocked(o, [o[0] + r[0] * m, o[1] + r[1] * m, o[2] + r[2] * m])); };
+  return endsAt(g, o, d, m); };
+/** WHAT ONE RAY ENDS ON, by the box world's own ray (collision.ts raycast — the nearest thing it meets, not the rule's lines): 'ground' = the top of
+ *  something of the ground's band (the slab, a kerb) · 'stands' = something taller than a man's knee, met inside `m` less a margin · 'other' = nothing
+ *  inside `m` and a margin, a pane, a low thing's side, or anything inside a margin of the rule's distance: not judged */
+const GLASS = 1 << 17;
+const rayEndsOn = (g: any, o: number[], r: number[], m: number): 'ground' | 'stands' | 'other' => {
+  const h = g.col.raycast(o, r, m + 0.5); if (!h) return 'other';
+  const b = h.index >= 1e6 ? g.col.dynamicBoxes[h.index - 1e6] : g.col.boxes[h.index]; if (!b || (b.flags & GLASS) || b.rot) return 'other';
+  const top = b.c[1] + b.h[1];
+  return top <= FLOOR_Y && h.n[1] > 0.9 ? 'ground' : top > 0.6 && h.t < m - MARGIN ? 'stands' : 'other'; };
+/** BEAMS LAID BY HAND from where a man could stand, round where the team stands (the walkable spots of a metre lattice three metres each way; a lens at the
+ *  hip and at the shoulder; level, at low ready and steeper; eight headings), each read by the rule (guards.ts beamWalledAt) and by what its rays end on */
+function laid(g: any, m: number): { n: number; ground: number; groundWall: number; near: number; stands: number; standsOpen: number } {
+  const T = { n: 0, ground: 0, groundWall: 0, near: 0, stands: 0, standsOpen: 0 }, seen = new Set<string>();
+  for (const x of g.guards) { if (x.team !== 'operative' || !x.unit) continue; const p = x.char.pos;
+    for (let i = -3; i <= 3; i++) for (let j = -3; j <= 3; j++) { const sx = Math.round(p[0]) + i, sz = Math.round(p[2]) + j, key = `${sx},${sz}`; if (seen.has(key) || g.col.nav.isBlocked(sx, sz)) continue; seen.add(key);
+      for (const y of [0.9, 1.3]) for (const dy of [0, -0.65, -0.87]) for (let a = 0; a < 8; a++) {
+        const hl = Math.sqrt(1 - dy * dy), o = [sx, y, sz], d = [Math.sin(a * Math.PI / 4) * hl, dy, Math.cos(a * Math.PI / 4) * hl], on = fanOf(d).map(r => rayEndsOn(g, o, r, m));
+        const rule = !!GDM.beamWalledAt(g, o, d, m); T.n++;
+        if (on.every(e => e === 'ground')) { T.ground++; if (rule) T.groundWall++; if (o[1] / -d[1] < m - MARGIN) T.near++; }   // (`near`: its middle meets the ground inside the rule's distance — the beams the rule called a wall before)
+        if (on.every(e => e === 'stands')) { T.stands++; if (!rule) T.standsOpen++; } } } }
+  return T;
+}
 /** somebody who is not of his side stands in his beam inside `m` (+ `slack`): the rule's exemption, read by the probe at a margin either way */
 const manIn = (g: any, x: any, m: number, cos: number): boolean => { const o = x.flashlight.pos, d = x.flashlight.dir, hl = Math.hypot(d[0], d[2]) || 1;
   return g.guards.some((y: any) => { if (y === x || y.state === 'dead' || y.team === 'operative') return false; const vx = y.char.pos[0] - o[0], vz = y.char.pos[2] - o[2], l = Math.hypot(vx, vz); return l < m && (l < 0.3 || (vx * d[0] + vz * d[2]) / (l * hl) > cos); }); };
@@ -49,8 +87,9 @@ async function play(id: string, on: boolean, stood = false): Promise<Tally> {
   const frame = () => { step(); T.frames++; H.eat(JSON.stringify(digestGame(g, true)));
     for (const x of g.guards) { if (x.state === 'dead' || !x.flashlight) continue; const mate = x.team === 'operative' && !!x.unit; H.eat(`${x.flashlight.enabled ? 1 : 0}`);
       if (!mate) { if (GDM.wallDarkSeen(g, x)) T.foeDark++; if (x.flashlight.enabled && ends(g, x, LIGHTS.wallM - MARGIN)) T.foeNear++; continue; }
-      const n = ends(g, x, LIGHTS.wallM - MARGIN) && !manIn(g, x, LIGHTS.wallM + 1, 0.8) ? (near.get(x) ?? 0) + 1 : 0; near.set(x, n);   // (nobody anywhere near his beam: the frames the rule owes dark)
-      if (ends(g, x, LIGHTS.wallM - MARGIN) && manIn(g, x, LIGHTS.wallM - MARGIN, 0.95)) { T.manNear++; if (GDM.wallDarkSeen(g, x)) T.darkOnMan++; }   // (a man plainly in a beam that ends at arm's length: the frames it must burn)
+      const walled = ends(g, x, LIGHTS.wallM - MARGIN);   // (read once a man a frame)
+      const n = walled && !manIn(g, x, LIGHTS.wallM + 1, 0.8) ? (near.get(x) ?? 0) + 1 : 0; near.set(x, n);   // (nobody anywhere near his beam: the frames the rule owes dark)
+      if (walled && manIn(g, x, LIGHTS.wallM - MARGIN, 0.95)) { T.manNear++; if (GDM.wallDarkSeen(g, x)) T.darkOnMan++; }   // (a man plainly in a beam that ends at arm's length: the frames it must burn)
       if (x.flashlight.enabled) { T.lit++; if (n > (LIGHTS.wallSecs + 0.2) * 60) T.litNear++; }
       if (GDM.wallDarkSeen(g, x)) { T.dark++; if (!ends(g, x, LIGHTS.wallBackM + MARGIN)) T.darkClear++; } } };
   const sam = g.player.char.pos; await quiet(() => O.give('fallIn', O.targetAt([sam[0], 0, sam[2]]), 'all')); for (let f = 0; f < 120; f++) frame();
@@ -71,7 +110,9 @@ export async function lightWall(): Promise<boolean> {
     F.verdict(sum(on, 'litNear') === 0 && sum(on, 'dark') > 0, 'with it on there is no such frame, and the rule held lights dark', `man-frames lit into the wall ${sum(off, 'litNear')} → ${sum(on, 'litNear')} (want 0) · man-frames the rule had dark: ${sum(on, 'dark')} (${per('dark')})`);
     F.verdict(sum(onStood, 'litNear') === 0 && sum(onStood, 'darkClear') === 0, '… and the same with the light discipline rule and the goggles as the stand has them', `man-frames lit into the wall ${sum(offStood, 'litNear')} → ${sum(onStood, 'litNear')} (want 0) · lit at all ${sum(offStood, 'lit')} → ${sum(onStood, 'lit')} · the rule had dark ${sum(onStood, 'dark')}, with a ray clear ${sum(onStood, 'darkClear')} (want 0)`);
     F.verdict(sum(on, 'darkOnMan') + sum(onStood, 'darkOnMan') === 0, 'never dark on a man: with somebody who is not of his side plainly in the beam it burns, wall or no wall', `man-frames with a man in a beam that ends at arm's length: ${sum(on, 'manNear') + sum(onStood, 'manNear')} · of those the rule had dark: ${sum(on, 'darkOnMan') + sum(onStood, 'darkOnMan')} (want 0)`);
-    F.verdict(sum(on, 'darkClear') === 0, 'it burns again at once: never dark with a ray running clear past the far distance', `man-frames the rule had dark with a ray clear to ${(LIGHTS.wallBackM + MARGIN).toFixed(2)} m: ${sum(on, 'darkClear')} (want 0)`);
+    F.verdict(sum(on, 'darkClear') === 0, 'it burns again at once: never dark with a ray running clear past the far distance, or down to the ground with nothing standing in its way', `man-frames the rule had dark with a ray clear to ${(LIGHTS.wallBackM + MARGIN).toFixed(2)} m or to the ground: ${sum(on, 'darkClear')} (want 0)`);
+    { const S: any = await quiet(() => stage(ids[0], 1)), L = laid(S.g, LIGHTS.wallM);
+      F.verdict(L.near > 0 && L.groundWall === 0 && L.stands > 0 && L.standsOpen === 0, 'the floor is not a wall, asked of beams laid by hand and read by what their rays end on: one whose every ray lands on the ground is no wall to the rule, one whose every ray ends on something that stands is', `${ids[0]}: ${L.n} beams from where a man could stand · every ray on the ground ${L.ground} (the beam's middle inside ${(LIGHTS.wallM - MARGIN).toFixed(2)} m of the lens: ${L.near}), a wall to the rule ${L.groundWall} (want 0) · every ray on something that stands inside ${(LIGHTS.wallM - MARGIN).toFixed(2)} m ${L.stands}, no wall to the rule ${L.standsOpen} (want 0)`); }
     F.verdict(sum(on, 'foeDark') === 0 && sum(off, 'foeDark') === 0 && sum(onStood, 'foeDark') === 0, 'no reading is kept for a man who is not Sam\'s (the rule is one line: his team and his unit)', `readings dark on such a man: ${sum(on, 'foeDark') + sum(onStood, 'foeDark')} · their own lights burning into something at arm's length, left as they are: ${sum(on, 'foeNear')} man-frames`);
     { LIGHTS.wallM = 5; LIGHTS.wallBackM = 6; LIGHTS.wallSecs = 0; const moved = await play(ids[0], false); back();
       F.verdict(moved.hash === off[0].hash && moved.frames === off[0].frames, 'off, nothing reads it: the same game frame for frame with its numbers moved', `${ids[0]}: ${off[0].hash} · numbers moved ${moved.hash} (${moved.frames} frames)`); }
