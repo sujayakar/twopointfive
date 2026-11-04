@@ -39,6 +39,13 @@ async function armStandUp() {
  *  the shipped stand that is the `?noclose` page, which has to stay the build as it was. The mode's own rows and takes are family `close`. armStandUp lays
  *  the hold after the stand's own switches (every stand-up lays those afresh), says so once, and the mode is put back on when the probe is done. */
 const { CLOSE } = await import(`${ROOT}/src/game/close.ts`);
+const { KITANIM } = await import(`${ROOT}/src/game/kitanim.ts`);
+/** QA: controls-behind's red path — CONTROLSBEHIND_BREAK=1 makes the click of (d) and of (f) half a second after the rule's own window has shut (counted from the
+ *  frame the line counts from), so the round and the throw are LATE: both lines must fail, on both stands. */
+const LATE_BREAK = process.env.CONTROLSBEHIND_BREAK === '1';
+/** how many frames after a click its round (a gun still coming up) or its throw (a can still coming to the fist) may leave: the click's own frame — or, with
+ *  the kit's moves played, the longest the rule keeps such a click (KITANIM.clickKeep / throwKeep, read from the game's table) and a frame for the hand-over */
+const dueFrames = (keepSecs: number): number => 1 + (KITANIM.on ? Math.ceil(keepSecs / DT) + 1 : 0);
 const { HANDRING } = await import(`${ROOT}/src/game/handring.ts`);
 let oneButton = false, heldOff = false;
 async function oneButtonRows(probe: () => Promise<boolean>): Promise<boolean> {
@@ -697,17 +704,21 @@ async function controlsBehindRows() {
     const S = await hands(805, true); const { W, game, A } = S;
     W.cursorAt((A.char.bones.chest ?? v3.add(A.char.pos, [0, 1.2, 0])) as Vec3); W.step(DT);
     const ev: any[] = [];
-    W.input.clicked |= 1; stepCollect(W, game, 1, ev);
-    const td0 = !!game.player.takedown, hold0 = !!game.player.holding, shots1 = game.mission.stats.shots;
-    stepCollect(W, game, 60, ev);
+    // (the round is due by the rule's own clock, counted in frames from the click: see dueFrames. It is watched for a second past that too: one round, never two)
+    const due = dueFrames(KITANIM.clickKeep), lateAt = due + 30, shots0 = game.mission.stats.shots; let leftAt = -1;
+    if (!LATE_BREAK) W.input.clicked |= 1; stepCollect(W, game, 1, ev); if (game.mission.stats.shots > shots0) leftAt = 1;
+    const td0 = !!game.player.takedown, hold0 = !!game.player.holding;
+    for (let f = 2; f <= lateAt + due + 60; f++) { if (LATE_BREAK && f === lateAt) W.input.clicked |= 1; stepCollect(W, game, 1, ev); if (leftAt < 0 && game.mission.stats.shots > shots0) leftAt = f; }
+    const shots1 = game.mission.stats.shots - shots0;
     const loudShot = ev.some(e => e.kind === 'shot' );   // (a SHOT event from Sam — 'loud' no longer required: the suppressed pistol reports at level 0.6 / not loud by design since 08-09; the rule under test is 'drawn = a round, not a takedown')
     const fails: string[] = [];
     if (td0 || game.player.takedown) fails.push('a click with the gun out started the takedown');
     if (hold0 || game.player.holding) fails.push('a click with the gun out grabbed him');
-    if (shots1 !== 1) fails.push(`card shots ${shots1} on the click's frame (want 1: it fired)`);
+    if (leftAt < 0 || leftAt > due) fails.push(`the round left ${leftAt < 0 ? 'never' : `${leftAt} frames after the click`} (due by frame ${due}: ${KITANIM.on ? `a click on a gun coming up is kept ${KITANIM.clickKeep} s` : 'the click\'s own frame'})`);
+    if (shots1 !== 1) fails.push(`card shots ${shots1} by the end (want 1: it fired, once)`);
     if (!loudShot) fails.push('no loud \'shot\' event off the click');
     if (A.state === 'dead' && A.downKind !== 'shot') fails.push(`A went down '${A.downKind}' (a round makes 'shot')`);
-    verdict(fails.length === 0, '(d) pistol drawn, LMB behind him: fires (a shot event, quiet as the pistol now is), no takedown, no grab', `shots ${shots1}, loud shot event ${loudShot}, takedown ${td0}, A ${A.state}/${A.downKind ?? '—'}${fails.length ? '\n    ✗ ' + fails.join('\n    ✗ ') : ''}`);
+    verdict(fails.length === 0, '(d) pistol drawn, LMB behind him: fires (a shot event, quiet as the pistol now is), no takedown, no grab', `shots ${shots1}, the round left ${leftAt < 0 ? 'never' : `${leftAt} frame${leftAt === 1 ? '' : 's'} after the click`} (due by ${due}), loud shot event ${loudShot}, takedown ${td0}, A ${A.state}/${A.downKind ?? '—'}${fails.length ? '\n    ✗ ' + fails.join('\n    ✗ ') : ''}`);
   }
   // ---- (e) not behind him / behind but out of reach: Space (tapped, then held) and the hands-empty click all do nothing — no grab, no takedown (in front of him at
   //      arm's length he clocks Sam by himself, as ever — his eyes are not the point here; behind him out of reach he never knows)
@@ -734,15 +745,18 @@ async function controlsBehindRows() {
   {
     const S = await hands(807, true); const { W, game, A } = S; game.player.slot = 'smoke'; W.step(DT);
     const row = rowOf(game, A); const cans0 = game.player.canisters;
-    W.input.clicked |= 1; W.step(DT);
-    const td0 = !!game.player.takedown, threw = !!game.player.pendingThrow || game.player.canisters < cans0;
-    for (let i = 0; i < 60; i++) W.step(DT);
+    // (the throw is due by the rule's own clock, counted in frames from the click: see dueFrames)
+    const due = dueFrames(KITANIM.throwKeep), lateAt = due + 30, thrown = () => !!game.player.pendingThrow || game.player.canisters < cans0; let threwAt = -1;
+    if (!LATE_BREAK) W.input.clicked |= 1; W.step(DT); if (thrown()) threwAt = 1;
+    const td0 = !!game.player.takedown;
+    for (let f = 2; f <= lateAt + due + 60; f++) { if (LATE_BREAK && f === lateAt) W.input.clicked |= 1; W.step(DT); if (threwAt < 0 && thrown()) threwAt = f; }
+    const threw = threwAt >= 1 && threwAt <= due;
     const fails: string[] = [];
     if (!row?.inReach || !/^Space\s+grab him\s+·/.test(row.line2) || !/E\s+holster/.test(row.line2) || /pistol/.test(row.line2)) fails.push(`can-up row: "${row?.line2}" (want the plain grab, and E to holster for the takedown; no pistol)`);
     if (td0 || game.player.takedown || A.state === 'dead') fails.push(`the click with a can up took him down (takedown ${td0}, A ${A.state})`);
-    if (!threw) fails.push('the click did not throw the can');
+    if (!threw) fails.push(`the can left ${threwAt < 0 ? 'never' : `${threwAt} frames after the click`} (due by frame ${due}: ${KITANIM.on ? `a click on a can coming to the fist is kept ${KITANIM.throwKeep} s` : 'the click\'s own frame'})`);
     if (game.player.holding) fails.push('grabbed');
-    verdict(fails.length === 0, '(f) a canister up, LMB behind him: a throw, not the takedown (the row says holster first)', `row "${row?.line2}" · threw ${threw} (cans ${cans0} → ${game.player.canisters}) · takedown ${td0} · A ${A.state}${fails.length ? '\n    ✗ ' + fails.join('\n    ✗ ') : ''}`);
+    verdict(fails.length === 0, '(f) a canister up, LMB behind him: a throw, not the takedown (the row says holster first)', `row "${row?.line2}" · threw ${threw}, ${threwAt < 0 ? 'never' : `${threwAt} frame${threwAt === 1 ? '' : 's'} after the click`} (due by ${due}; cans ${cans0} → ${game.player.canisters}) · takedown ${td0} · A ${A.state}${fails.length ? '\n    ✗ ' + fails.join('\n    ✗ ') : ''}`);
   }
   console.log(`=== controls-behind: ${allPass ? 'ALL PASS' : 'FAILURES above'} ===`);
   return allPass;
