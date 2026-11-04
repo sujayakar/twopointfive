@@ -14,11 +14,12 @@ import { cutConfig, CUT_ROWS } from '../scene/cut';
 import snowSrc from './shaders/snow.wgsl' with { type: 'text' };   // THE SNOW'S SURFACE (render/snowField.ts): fsBox's snow + the hills' two entry points — dead code unless the prelude's SNOW_SURF is up
 import { SNOW_CFG_FLOATS } from './snowField';
 import gdownSrc from './shaders/gdown.wgsl' with { type: 'text' };     // SHARP DIRECT: the internal-size view of an output-size raster (encodeDown)
+import { LOOK_WITH, LOOK_PAINTED, lookLayerSliced, lookStuffOf, type LookName } from './lookTex';
 import surfaceSrc from './shaders/surface.wgsl' with { type: 'text' };   // SURFACES, A TRY (render/frame.ts surfTryConfig): fsBox's materials — dead code unless the prelude's SURF_TRY is up
 import lookSrc from './shaders/look.wgsl' with { type: 'text' };         // THE LOOK PROTOTYPE (render/frame.ts lookConfig): fsBox's materials off real maps — in the module only on that page
 import { LOOK_NAMES, LOOK_N, LOOK_LAYERS, LOOK_ROUGH, lookLayer, lookMip } from './lookTex';
 import { GWOT_PALETTE, type GwotMat } from '../scene/gwotPalette';
-import { PAINT_STUFF, stuffOfName, type PaintRows } from '../scene/stuff';
+import { PAINT_STUFF, BY_COLOUR, stuffOfName, type PaintRows } from '../scene/stuff';
 
 /** which stuff each paint of the 2010s palette is drawn as under the try (shaders/surface.wgsl's classes, by number); a paint with no row draws plain */
 const SURF_OF: Readonly<Partial<Record<GwotMat, number>>> = {
@@ -37,14 +38,12 @@ function classWgsl(name: string, of: Readonly<Partial<Record<GwotMat, number>>>)
   return `fn ${name}(a: vec3f) -> u32 {\n${exact.join('\n')}\n${dark.join('\n')}\n  return 0u;\n}\n`;
 }
 function surfaceWgsl(): string { return classWgsl('surfClass', SURF_OF) + surfaceSrc; }
-/** the look's class number of a stuff (look.wgsl: a layer of lookTex.ts LOOK_NAMES and one; 0 = drawn plain, which 'plain' and 'waits' both are) */
-export const lookClassOf = (stuff: string | undefined): number => stuff === undefined ? 0 : (LOOK_NAMES as readonly string[]).indexOf(stuff) + 1;
 /** WHAT A PAINT NAME IS DRAWN AS: scene/stuff.ts PAINT_STUFF as the look's class numbers, less the names that are mixed (those have no class of their own:
  *  the colour decides). The audit of a level reads this to tell a paint that is meant from one that got a material by the chance of its colour. */
-export const LOOK_BY_NAME: Readonly<Record<string, number>> = Object.fromEntries(Object.entries(PAINT_STUFF).filter(([, stuff]) => stuff !== 'mixed').map(([name, stuff]) => [name, lookClassOf(stuff)]));
+export const LOOK_BY_NAME: Readonly<Record<string, number>> = Object.fromEntries(Object.entries(PAINT_STUFF).filter(([, stuff]) => stuff !== 'mixed').map(([name, stuff]) => [name, lookStuffOf(stuff)]));
 /** THE LOOK PROTOTYPE's classes of the palette's rows: surface.wgsl's eight and three of its own (look.wgsl LOOK_CLOTH 9, LOOK_METAL 10, LOOK_PAINT 11), read
  *  off the table of names in its order (the shader's text below is written in this order, and a darkened paint is the first row it fits) */
-export const LOOK_OF: Readonly<Partial<Record<GwotMat, number>>> = Object.fromEntries(Object.entries(LOOK_BY_NAME).filter(([name, cls]) => cls > 0 && name in GWOT_PALETTE));
+export const LOOK_OF: Readonly<Partial<Record<GwotMat, number>>> = Object.fromEntries(Object.entries(PAINT_STUFF).filter(([name, stuff]) => BY_COLOUR.has(stuff) && name in GWOT_PALETTE).map(([name, stuff]) => [name, lookStuffOf(stuff)]));   // (a palette row of a stuff added since the eleven is found by its name only: scene/stuff.ts BY_COLOUR)
 
 /** WHAT A PAINT IS DRAWN AS (look.wgsl's classes; 0 = plain), by the rule lookClass writes out for the shader and with its numbers: the palette's own row first (a
  *  stand-in is that row), then a classed paint darkened in one piece (a worn patch is its ground × 0.7). The engine asks it of each box's AUTHORED paint and the
@@ -77,29 +76,41 @@ export function lookNamed(rows: PaintRows | null | undefined): Map<number, numbe
   const named = new Map<number, number>(), seen = new Set<number>();
   for (const [name, row] of Object.entries(rows ?? {})) {
     const key = paintKey(row.albedo); if (key < 0 || seen.has(key)) continue; seen.add(key);
-    const stuff = stuffOfName(name); if (stuff !== undefined && stuff !== 'mixed') named.set(key, lookClassOf(stuff));
+    const stuff = stuffOfName(name); if (stuff !== undefined && stuff !== 'mixed') named.set(key, lookStuffOf(stuff));
   }
   return named;
 }
-/** the cloth layer (lookTex.ts LOOK_NAMES): the one the men's cloth reads too */
-/** THE LOOK'S WORD FOR A BOX (scene/boxes.ts BoxWorld.stuffOf; common.wgsl boxLook): what it is made of (lookStuff, 4 bits), whether it MOVES (16: a box past the
- *  level's statics, rebuilt every frame, which carries its map with it), and a number of its own, 0‥90 (× 32), that shifts its map so two crates are not one crate
- *  twice. The number is the box's and not its place in the list: a breach appends statics and every later box's index moves, and by the index every door's boards
+/** the word's fields (common.wgsl boxStuff, look.wgsl lookSurface read the same): the stuff below `moves`, the box's own number × `own`, `owns` of them */
+export const LOOK_WORD = { stuffs: 32, moves: 32, own: 64, owns: 45 } as const;
+/** THE STUFFS SOME BOX HAS BEEN (bits by stuff number), and how many times that grew: the g-buffer makes a stuff's map the first time a box is one (needLook) */
+const SEEN = { bits: 0, grew: 0 };
+function lookSeen(stuff: number) { const bit = 1 << stuff; if (stuff > 0 && !(SEEN.bits & bit)) { SEEN.bits |= bit; SEEN.grew++; } }
+/** nothing has been any stuff yet (a check starts from here; the page never does: one level a page) */
+export function lookForget() { SEEN.bits = 0; SEEN.grew++; }
+/** say by colour what is about to be drawn: every paint handed here has its stuff's map made by the next needLook() (a check; the page asks its boxes their words: main.ts) */
+export function lookNeedPaints(paints: Iterable<Readonly<ArrayLike<number>>>) { for (const a of paints) lookSeen(lookStuff(a)); }
+/** THE LOOK'S WORD FOR A BOX (scene/boxes.ts BoxWorld.stuffOf; common.wgsl boxLook): what it is made of (lookStuff, 5 bits), whether it MOVES (a box past the
+ *  level's statics, rebuilt every frame, which carries its map with it: 32), and a number of its own, 0‥44 (× 64), that shifts its map so two crates are not one crate
+ *  twice. FIVE BITS OF STUFF, one of moving, then the number (11-04: it was four bits and 0‥90; the word rides one float above the finish, which is read to a
+ *  500th, and the float has no bit to spare, so the room for 31 stuffs is paid for by the number's range and nothing else). The number is the box's and not its place in the list: a breach appends statics and every later box's index moves, and by the index every door's boards
  *  jumped in the frame a wall went. A thing that moves is told by its motion key, or by its size; a thing that stands, by where it stands.
  *  (Known, left: a device's boxes are keyed by their order among the devices' boxes (game/devices.ts), so a tripwire's beam coming or going still moves the
  *  number of the device boxes after it; and two unkeyed movers of one size share a number.)
  *  `dry` = the paint a box had before the weather darkened it in place, if it did (game/weather.ts dryPaint): what a slab is made of is not changed by rain.
  *  `rows` = the paint rows of the level file the game stands on (levelLoad.ts levelFileOf): a paint one of them names is what its NAME says it is made of
- *  (lookNamed above), asked before any colour is weighed. None = by colour alone, as the look began. */
+ *  (lookNamed above), asked before any colour is weighed. None = by colour alone, as the look began. A box that says what it is made of itself (Box.stuff)
+ *  is that, before either: `rows` null puts the names off and the boxes' own words with them (`own` false). */
 export function lookWordOf(dry?: (b: Box) => Readonly<ArrayLike<number>> | undefined, rows?: PaintRows | null): (b: Box, moves: boolean) => number {
-  const named = lookNamed(rows);
+  const named = lookNamed(rows), own = rows !== null;
   return (b, moves) => {
     const paint = (b.aniso === true && dry?.(b)) || b.albedo;   // (aniso is the weather's mark: nothing is authored with it)
     let h: number;
     if (moves) h = b.mkey !== undefined ? Math.imul(b.mkey | 0, 0x9e3779b1) : Math.imul(Math.round(b.h[0] * 1000) + 131 * Math.round(b.h[1] * 1000) + 17161 * Math.round(b.h[2] * 1000), 0x9e3779b1);
     else h = Math.imul(Math.round(b.c[0] * 100) + 7919 * Math.round(b.c[1] * 100) + 104729 * Math.round(b.c[2] * 100), 0x9e3779b1);
     h ^= h >>> 15; h = Math.imul(h, 0x85ebca6b); h ^= h >>> 13;
-    return (named.size ? named.get(paintKey(paint)) ?? lookStuff(paint) : lookStuff(paint)) + (moves ? 16 : 0) + 32 * ((h >>> 0) % 91);
+    const stuff = own && b.stuff !== undefined ? lookStuffOf(b.stuff) : named.size ? named.get(paintKey(paint)) ?? lookStuff(paint) : lookStuff(paint);   // (the box's own word, then its paint's name, then its colour)
+    lookSeen(stuff); if (b.cutOld && b.cutCore) lookSeen(lookStuff(b.cutCore));   // (an OLD break's core is drawn as its own colour's stuff, gbuffer_cut.wgsl; a fresh break's core is a colour and no stuff)
+    return stuff + (moves ? LOOK_WORD.moves : 0) + LOOK_WORD.own * ((h >>> 0) % LOOK_WORD.owns);
   };
 }
 /** one turn of the event loop (a message, not a timer: a timer in a tab nobody is looking at is held to one a second) */
@@ -108,7 +119,7 @@ function nextTask(): Promise<void> {
 }
 /** look.wgsl on the look page; on every other, the few names fsBox's dead calls need and nothing else (no binding: the bind group is the page's as it was) */
 function lookWgsl(): string {
-  return lookConfig.on ? classWgsl('lookClass', LOOK_OF) + lookSrc : `struct LookOut { albedo: vec3f, n: vec3f, rough: f32, tilted: bool };
+  return lookConfig.on ? classWgsl('lookClass', LOOK_OF) + `const LOOK_L_STONE: i32 = ${LOOK_NAMES.indexOf('field stone')}; const LOOK_L_BRICK: i32 = ${LOOK_NAMES.indexOf('mud brick')}; const LOOK_L_GRAVEL: i32 = ${LOOK_NAMES.indexOf('gravel')}; const LOOK_L_CLOTH: i32 = ${LOOK_NAMES.indexOf('cloth')};\nconst LOOK_LAYERS: i32 = ${LOOK_LAYERS};\nconst LOOK_BASE = array<f32, ${LOOK_LAYERS}>(${LOOK_ROUGH.map(v => v.toFixed(3)).join(', ')});   // lookTex.ts LOOK_ROUGH: the roughness each layer is written around\n` + lookSrc : `struct LookOut { albedo: vec3f, n: vec3f, rough: f32, tilted: bool };
 fn lookSurface(cls: u32, wp: vec3f, n: vec3f, bi: u32, lc: vec3f, hf: vec4f, albedoIn: vec3f, roughIn: f32, dwx: vec3f, dwy: vec3f, fp: f32) -> LookOut { return LookOut(albedoIn, n, roughIn, false); }
 fn lookClass(a: vec3f) -> u32 { return 0u; }
 struct LookSnow { albedo: vec3f, n: vec3f, rough: f32, amt: f32, bank: bool };
@@ -144,6 +155,11 @@ export interface SkinnedDrawable {
    *  the whole mesh */
   drawRuns?(i: number): Uint32Array | null;
 }
+
+/** how long a piece of a layer's arithmetic may hold the page (ms): at the boot, behind the start card; and in play, between two frames */
+const LOOK_SLICE = { boot: 30, play: 3 } as const;
+/** look.wgsl LookCfg: eight rows of numbers, then the slot table (a number a layer, room for 36) */
+const LOOK_SLOT_ROWS = 9, LOOK_BLOCK = (8 + LOOK_SLOT_ROWS) * 16;
 
 export class GBuffer {
   width = 0; height = 0;
@@ -216,45 +232,84 @@ export class GBuffer {
     device.queue.writeBuffer(this.snowCfg, 0, new Float32Array(SNOW_CFG_FLOATS));
     if (lookConfig.on) this.makeLook();
   }
-  // ---- THE MATERIAL MAPS (render/lookTex.ts, shaders/look.wgsl; the look page only): two mipped texture arrays and the panel's numbers. The textures, the sampler
-  // and the uniform block are made with the rest of the buffers; the TEXELS are init()'s (fillLook), written a layer at a time while the boot's pipelines compile:
-  // thirteen layers are about six seconds of arithmetic, and in the constructor that was six seconds in front of the first compile, with the start card frozen.
+  // ---- THE MATERIAL MAPS (render/lookTex.ts, shaders/look.wgsl; the look page only): two mipped texture arrays and the panel's numbers.
+  // A LEVEL HAS THE MAPS IT DRAWS AND NO OTHERS (11-04, with the catalogue growing past a dozen stuffs: a layer is 2.8 MB and about half a second of arithmetic,
+  // and thirteen of them in the constructor had once been six seconds in front of the first compile). A stuff's layer is made the first time some box IS that
+  // stuff (lookWordOf says so; main.ts says a whole level's paints before its first frame, so nothing pops), into the next free SLOT of the arrays; the shader
+  // goes from a layer to its slot through the block's table and draws a stuff with no slot plain. The arrays are as long as the slots in use: when they are
+  // full they are made again longer and what they held is copied across on the GPU.
   private lookTex: [GPUTexture, GPUTexture] | null = null;
   private lookView: [GPUTextureView, GPUTextureView] | null = null; private lookSamp: GPUSampler | null = null; private lookCfg: GPUBuffer | null = null;
+  /** each layer's slot in the arrays (−1 = not made), how many slots are taken, and the SEEN count the last look at it was made at */
+  private lookSlot = new Int8Array(LOOK_LAYERS).fill(-1); private lookSlots = 0; private lookSeenAt = -1;
+  private lookEven = true; private lookMips = 1; private lookRoom = 1;   // (how many sizes a map has, and how many slots the arrays have room for)
+  private lookArrays(slots: number): [GPUTexture, GPUTexture] {
+    const d = this.device;
+    return [0, 1].map(i => d.createTexture({ label: i ? 'lookB' : 'lookA', size: [LOOK_N, LOOK_N, slots], mipLevelCount: this.lookMips, format: 'rgba8unorm', usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_DST | GPUTextureUsage.COPY_SRC })) as [GPUTexture, GPUTexture];
+  }
   private makeLook() {
-    const d = this.device; let mips = 1; for (let n = LOOK_N; n > 1; n >>= 1) mips++;
-    const tex = [0, 1].map(i => d.createTexture({ label: i ? 'lookB' : 'lookA', size: [LOOK_N, LOOK_N, LOOK_LAYERS], mipLevelCount: mips, format: 'rgba8unorm', usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_DST }));
-    this.lookTex = [tex[0], tex[1]];
-    this.lookView = [tex[0].createView({ dimension: '2d-array' }), tex[1].createView({ dimension: '2d-array' })];
+    const d = this.device; this.lookMips = 1; for (let n = LOOK_N; n > 1; n >>= 1) this.lookMips++;
+    this.lookEven = lookAmounts.even > 0;   // (read ONCE: the row says so, and a layer made later in play must be evened as the ones beside it were)
+    this.lookTex = this.lookArrays(1); this.lookRoom = 1;   // (one slot, nothing in it and nothing pointing at it: the bind group has its arrays from the first frame)
+    this.lookView = [this.lookTex[0].createView({ dimension: '2d-array' }), this.lookTex[1].createView({ dimension: '2d-array' })];
     this.lookSamp = d.createSampler({ label: 'look', addressModeU: 'repeat', addressModeV: 'repeat', magFilter: 'linear', minFilter: 'linear', mipmapFilter: 'linear', maxAnisotropy: 8 });
-    this.lookCfg = makeBuffer(d, 128, GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST, 'lookCfg');
+    this.lookCfg = makeBuffer(d, LOOK_BLOCK, GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST, 'lookCfg');
     this.setLook();
   }
-  /** the maps' texels, every mip of every layer: a layer, then the event loop (the start card draws, a compiled pipeline lands), then the next. One of Engine.init()'s
-   *  jobs: no frame is drawn before the last layer is in, so nothing pops. Nothing on a page without the look. A layer is still half a second in one piece. */
-  async fillLook(): Promise<void> {
-    const tex = this.lookTex; if (!tex) return;
+  /** the boot's share of the maps (one of Engine.init()'s jobs): the men's cloth, which every level draws. The level's own follow when it is stood up (needLook). */
+  fillLook(): Promise<void> { return this.needLook(); }
+  /** MAKE THE MAPS OF EVERY STUFF A BOX HAS BEEN SO FAR and of the layers their drawing reads beside their own (lookTex.ts LOOK_WITH), each once. A layer is
+   *  half a second of arithmetic: it is made in pieces of `sliceMs` with the event loop between them (the start card draws, a compiled pipeline lands, a frame is
+   *  drawn). Resolves when every one asked for up to now is in. Calls queue up behind each other, and one that failed does not stop the next. Nothing on a
+   *  page without the look. */
+  needLook(sliceMs: number = LOOK_SLICE.boot): Promise<void> { return this.lookJob = this.lookJob.catch(() => { /* its own caller was told */ }).then(() => this.makeLayers(sliceMs)); }
+  private lookJob: Promise<void> = Promise.resolve();
+  private async makeLayers(sliceMs: number): Promise<void> {
+    if (!this.lookTex) return;
     const t0 = typeof performance !== 'undefined' ? performance.now() : 0;
-    for (let l = 0; l < LOOK_LAYERS; l++) {
+    const want = new Set<number>([LOOK_NAMES.indexOf('cloth')]);   // (the men's cloth reads the cloth layer: look.wgsl lookMan)
+    for (let l = 0; l < LOOK_PAINTED; l++) if (SEEN.bits & (1 << (l + 1))) { want.add(l); for (const w of LOOK_WITH[LOOK_NAMES[l] as LookName] ?? []) want.add(LOOK_NAMES.indexOf(w)); }
+    const make = [...want].filter(l => this.lookSlot[l] < 0).sort((a, b) => a - b); if (!make.length) return;
+    const slots = this.lookSlots + make.length;
+    if (slots > this.lookRoom) {   // longer arrays, and what the old ones held copied over (a copy on the GPU: no layer is made twice)
+      const next = this.lookArrays(slots), enc = this.device.createCommandEncoder({ label: 'look maps grow' });
+      for (let i = 0; i < 2; i++) for (let mip = 0, n = LOOK_N; mip < this.lookMips && this.lookSlots > 0; mip++, n = Math.max(1, n >> 1)) enc.copyTextureToTexture({ texture: this.lookTex[i], mipLevel: mip }, { texture: next[i], mipLevel: mip }, [n, n, this.lookSlots]);
+      this.device.queue.submit([enc.finish()]);
+      const old = this.lookTex; this.lookTex = next; this.lookView = [next[0].createView({ dimension: '2d-array' }), next[1].createView({ dimension: '2d-array' })]; this.objBG = null;
+      old[0].destroy(); old[1].destroy(); this.lookRoom = slots;   // (a texture destroyed after a submit lives until the work submitted with it is done)
+    }
+    const tex = this.lookTex;
+    for (const l of make) {
       await nextTask();
-      const m = lookLayer(l, LOOK_N, lookAmounts.even > 0); let lv = [m.a, m.b];
-      if (l === LOOK_NAMES.indexOf('cloth')) { this.lookMen = [m.tone, m.hollow]; this.setLook(); }   // (the men's cloth was tuned against this layer as it fell: look.wgsl lookMan takes the evening back out)
+      const m = await lookLayerSliced(l, LOOK_N, this.lookEven, sliceMs, nextTask), slot = this.lookSlots; let lv = [m.a, m.b];
       for (let mip = 0, n = LOOK_N; n >= 1; mip++, n >>= 1) {
-        for (let i = 0; i < 2; i++) this.device.queue.writeTexture({ texture: tex[i], mipLevel: mip, origin: [0, 0, l] }, lv[i], { bytesPerRow: n * 4 }, [n, n, 1]);
+        for (let i = 0; i < 2; i++) this.device.queue.writeTexture({ texture: tex[i], mipLevel: mip, origin: [0, 0, slot] }, lv[i], { bytesPerRow: n * 4 }, [n, n, 1]);
         if (n > 1) lv = [lookMip(lv[0], n, false), lookMip(lv[1], n, true)];
       }
+      if (l === LOOK_NAMES.indexOf('cloth')) this.lookMen = [m.tone, m.hollow];   // (the men's cloth was tuned against this layer as it fell: look.wgsl lookMan takes the evening back out)
+      this.lookSlots++; this.lookMade.push(LOOK_NAMES[l]);
+      // a stuff is pointed at its slot only once every layer its drawing reads is in: until then it draws plain, never against an empty map
+      this.lookSlot[l] = slot; this.setLook();
     }
-    this.lookFillMs = (typeof performance !== 'undefined' ? performance.now() : 0) - t0;
+    this.lookFillMs += (typeof performance !== 'undefined' ? performance.now() : 0) - t0;
   }
-  /** how long the maps took to make, start to end, the boot's other work between the layers included (ms; 0 = none made) */
+  /** the layers made so far, in the order of their slots (a check reads it; from the console: __engine.gbuffer.lookMade) */
+  lookMade: string[] = [];
+  /** how long the maps have taken to make, each batch start to end, the boot's other work between the layers included (ms; 0 = none made) */
   lookFillMs = 0;
   /** the panel moved a number (lookAmounts): the uniform block again. Nothing on a page without the look. */
   setLook() {
     if (!this.lookCfg) return;
     const k = lookAmounts, c = k.clarity;   // CLARITY: one number over the layers that add contrast between neighbours (the relief's depth, the shadow in joints, the rubbed edges, the snow's prints). The maintainer, 10-25, on a GPU: the look "does feel a bit too 'high frequency' for me, like edges are cranked up (e.g. 'clarity' knob in lightroom)"
-    this.device.queue.writeBuffer(this.lookCfg, 0, new Float32Array([k.paint, k.relief * c, k.shine, k.weather, k.untile, k.edges * c, k.cavity * c, k.size, ...LOOK_ROUGH.slice(0, 11), k.snow, k.ground === 1 ? 1 : k.ground * c, k.crust, k.men, k.stone, k.marks, k.tailor, k.print, lookParts.suit + 64 * lookParts.rig, this.lookMen[0], this.lookMen[1], 0, 0]));
+    this.device.queue.writeBuffer(this.lookCfg, 0, new Float32Array([k.paint, k.relief * c, k.shine, k.weather, k.untile, k.edges * c, k.cavity * c, k.size, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, k.snow, k.ground === 1 ? 1 : k.ground * c, k.crust, k.men, k.stone, k.marks, k.tailor, k.print, lookParts.suit + 64 * lookParts.rig, this.lookMen[0], this.lookMen[1], 0, 0, ...this.lookSlotRows()]));
   }
-  /** the cloth layer's tone and hollow as lookLayer evened them (1 and 0 = it was not): the block's last row */
+  /** the block's slot table (look.wgsl LookCfg.s): a layer's slot in the arrays, −1 where it is not made OR where a layer its drawing reads is not made yet */
+  private lookSlotRows(): number[] {
+    const rows = new Array<number>(LOOK_SLOT_ROWS * 4).fill(-1);
+    for (let l = 0; l < LOOK_LAYERS; l++) rows[l] = this.lookSlot[l] >= 0 && (LOOK_WITH[LOOK_NAMES[l] as LookName] ?? []).every(w => this.lookSlot[LOOK_NAMES.indexOf(w)] >= 0) ? this.lookSlot[l] : -1;
+    return rows;
+  }
+  /** the cloth layer's tone and hollow as lookLayer evened them (1 and 0 = it was not): the eighth row's first two */
   private lookMen: [number, number] = [1, 0];
   // ---- THE SNOW'S SURFACE (render/snowField.ts, shaders/snow.wgsl): the field's texture, its uniform block, and the hills' mesh — one (tx, tz) per lattice quad, six corners each
   private snowTex: GPUTexture; private snowView: GPUTextureView; private readonly snowCfg: GPUBuffer;
@@ -438,6 +493,7 @@ export class GBuffer {
   }
 
   private objectBindGroup(visibleBuf: GPUBuffer, skin: SkinnedDrawable | null, dummy: GPUBuffer, decalBuf: GPUBuffer): GPUBindGroup {
+    if (this.lookTex && this.lookSeenAt !== SEEN.grew) { this.lookSeenAt = SEEN.grew; this.needLook(LOOK_SLICE.play).catch(e => console.error('look maps:', e)); }   // (a box has been a stuff nobody had been: its map is made a few milliseconds at a time behind the frames, and it draws plain until it is in)
     const jm = skin?.jointMats ?? dummy, ci = skin?.charInsts ?? dummy, cm = skin?.charMats ?? dummy;
     const key = `${idOf(visibleBuf)}:${idOf(jm)}:${idOf(ci)}:${idOf(decalBuf)}:${idOf(this.prevJoints)}:${idOf(this.wearTex)}:${idOf(cm)}:${idOf(this.snowTex)}:${idOf(this.trackTex)}`;
     if (this.objBG && this.objBGKey === key) return this.objBG;

@@ -27,6 +27,7 @@ import { SQUAD_MAX_MEN, QUIET_MAX_ROUTES } from './scenarios';
 import { CIVILIAN_TASKS } from './level';
 import { BoxFlag } from './boxes';
 import { MarkingDef, MAX_MARKS_PER_BOX, MARKING_TEXEL, markingErrors } from './markings';
+import { BOX_STUFFS, boxStuffOk } from './stuff';
 export type { MarkingDef } from './markings';
 
 export const LEVEL_DATA_VERSION = 1 as const;
@@ -83,6 +84,9 @@ export interface BoxData {
   emissive?: Vec3;
   /** the finish (see MaterialData): overrides the material's / gives an inline-albedo one-off one; absent = the material's, else matte / dielectric */
   rough?: number; metal?: boolean;
+  /** Box.stuff: what the box is made of, where its paint's name does not say it (scene/stuff.ts: a material of the look, 'plain' or 'waits'); absent = the
+   *  paint's name, then its colour. The look's alone: no rule of the game reads it. */
+  stuff?: string;
   flags?: FlagName[];
   /** Box.cutHeight (viewer stage back wall only); absent = never cut */
   cutHeight?: number;
@@ -92,7 +96,7 @@ export interface BoxData {
 }
 
 export type PropKindName = 'chair' | 'cardboard' | 'bin' | 'plant';
-export interface PropPartData { off: Vec3; h: Vec3; /** relative to the prop's heading; absent = 0 */ yaw?: number; material?: string; albedo?: Vec3; /** markings on the part's faces (as BoxData.markings) */ markings?: MarkingDef[]; }
+export interface PropPartData { off: Vec3; h: Vec3; /** relative to the prop's heading; absent = 0 */ yaw?: number; material?: string; albedo?: Vec3; /** as BoxData.stuff */ stuff?: string; /** markings on the part's faces (as BoxData.markings) */ markings?: MarkingDef[]; }
 /** Loose furniture (game/props.ts): a rigid group of parts standing on the floor at (x, z). `half` / `height` are normally FITTED from the parts by the loader
  *  (levelLoad.ts fitPropFootprint — the generator's own rule); store them only to override the fit (a plant's footprint is its foliage's flat sides). */
 export interface PropData { id: string; kind: PropKindName; /** PropDef.name; absent = id */ name?: string; floor?: string; x: number; z: number; /** heading; absent = 0 */ yaw?: number; mass: number; parts: PropPartData[]; half?: [number, number]; height?: number; }
@@ -225,8 +229,8 @@ export const KEYS = {
   meta: ['grid', 'bounds', 'generator', 'notes', 'markTexel'], bounds: ['min', 'max'], rect: ['x0', 'x1', 'z0', 'z1'],
   floor: ['id', 'name', 'y', 'ceiling'], material: ['albedo', 'rough', 'metal', 'notes'],
   surfaces: ['building', 'grassEdge', 'inside', 'outside', 'verge', 'zones'], zone: ['id', 'mat', 'x0', 'z0', 'x1', 'z1', 'notes'],
-  box: ['id', 'floor', 'group', 'name', 'c', 'h', 'yaw', 'rot', 'material', 'albedo', 'emissive', 'rough', 'metal', 'flags', 'cutHeight', 'markings'],
-  prop: ['id', 'kind', 'name', 'floor', 'x', 'z', 'yaw', 'mass', 'parts', 'half', 'height'], part: ['off', 'h', 'yaw', 'material', 'albedo', 'markings'],
+  box: ['id', 'floor', 'group', 'name', 'c', 'h', 'yaw', 'rot', 'material', 'albedo', 'emissive', 'rough', 'metal', 'stuff', 'flags', 'cutHeight', 'markings'],
+  prop: ['id', 'kind', 'name', 'floor', 'x', 'z', 'yaw', 'mass', 'parts', 'half', 'height'], part: ['off', 'h', 'yaw', 'material', 'albedo', 'stuff', 'markings'],
   marking: ['face', 'res', 'at', 'size', 'pal', 'cells'], markpal: ['albedo', 'mul', 'rough', 'emit'],   // (scene/markings.ts marking() / palEntry() write exactly these, in this order)
   light: ['id', 'kind', 'pos', 'dir', 'color', 'intensity', 'range', 'innerDeg', 'outerDeg', 'group', 'enabled', 'volumetric', 'radius', 'mains', 'broad', 'fixture'],
   switchable: ['id', 'boxes', 'group', 'on', 'baseEmissive', 'flicker', 'mains'],
@@ -331,6 +335,7 @@ export function validateLevelData(d: LevelData): string[] {
     paintOk(w, b); finishOk(w, b);
     if (b.emissive !== undefined && !(isVec(b.emissive) && b.emissive.every(x => x >= 0))) err(w, 'emissive must be Vec3 ≥ 0');
     if (b.flags !== undefined) { if (!Array.isArray(b.flags)) err(w, 'flags must be an array of names'); else for (const f of b.flags) if (!(AUTHORED_FLAGS as readonly string[]).includes(f)) err(w, `unknown / runtime-only flag '${show(f)}' (authored: ${AUTHORED_FLAGS.join(', ')})`); }
+    if (b.stuff !== undefined && !boxStuffOk(b.stuff)) err(w, `stuff '${show(b.stuff)}' is not a thing a box can be made of (${BOX_STUFFS.join(', ')})`);
     if (b.cutHeight !== undefined && !isNum(b.cutHeight)) err(w, 'cutHeight must be a number');
     if (b.name !== undefined && !isStr(b.name)) err(w, 'name must be a non-empty string'); if (b.group !== undefined && !isStr(b.group)) err(w, 'group must be a non-empty string');
     marksOk(w, b.markings, b.h, b.rot !== undefined);
@@ -345,7 +350,7 @@ export function validateLevelData(d: LevelData): string[] {
     for (const k of ['x', 'z', 'mass'] as const) if (!isNum(p[k])) err(w, `${k} must be a number`); if (p.yaw !== undefined && !isNum(p.yaw)) err(w, 'yaw must be a number'); if (isNum(p.mass) && p.mass <= 0) err(w, 'mass > 0');
     if (p.half !== undefined && !(isVec(p.half, 2) && p.half[0] > 0 && p.half[1] > 0)) err(w, 'half must be [hx, hz] > 0'); if (p.height !== undefined && !(isNum(p.height) && p.height > 0)) err(w, 'height > 0');
     const parts = recs(`${w}.parts`, p.parts); if (!parts.length) err(w, 'at least one part');
-    parts.forEach((q, j) => { if (!isObj(q)) return; const wq = `${w}.parts[${j}]`; known(wq, q, KEYS.part); if (!isVec(q.off)) err(wq, 'off Vec3'); if (!(isVec(q.h) && q.h.every(x => x >= 0))) err(wq, 'h Vec3 ≥ 0'); if (q.yaw !== undefined && !isNum(q.yaw)) err(wq, 'yaw number'); paintOk(wq, q); marksOk(wq, q.markings, q.h, false); });
+    parts.forEach((q, j) => { if (!isObj(q)) return; const wq = `${w}.parts[${j}]`; known(wq, q, KEYS.part); if (q.stuff !== undefined && !boxStuffOk(q.stuff)) err(wq, `stuff '${show(q.stuff)}' is not a thing a part can be made of (${BOX_STUFFS.join(', ')})`); if (!isVec(q.off)) err(wq, 'off Vec3'); if (!(isVec(q.h) && q.h.every(x => x >= 0))) err(wq, 'h Vec3 ≥ 0'); if (q.yaw !== undefined && !isNum(q.yaw)) err(wq, 'yaw number'); paintOk(wq, q); marksOk(wq, q.markings, q.h, false); });
   });
   // lights
   const lightOk = (w: string, l: LightData, moreBoxes?: ReadonlySet<string>) => {   // (`moreBoxes`: ids a fixture may also name — the boxes a Team & kit way adds beside its lamps)

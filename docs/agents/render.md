@@ -1532,6 +1532,36 @@ interleaved and filtered to their quiet minimum, and a row whose p75 sits far ab
   one blot; it is the whole number now (91 places; two unkeyed movers of one size still share one: `gbuffer.ts lookWordOf`). `lookmaps-check.ts` holds the
   tile (the widest bare patch reaches 12 cm at most, 0.2 to 2 % bare; the old tile fails that line). Not changed: what is under the paint is still a
   multiplier of the paint (dark and warm), so it cannot be rust on blue. Seen as a tile and in a software still; never seen on a GPU.
+- **FOUR OFFICE STUFFS, ROOM FOR 31, AND A LEVEL HAS THE MAPS IT DRAWS AND NO OTHERS** (11-04; `render/lookTex.ts`, `render/gbuffer.ts`, `shaders/look.wgsl`; the
+  look's page only). The maintainer, of a desk and a swivel chair in a dressed office at midday: "nicer materials on the chair and table". The look had one
+  wood (weathered planks with gaps), one cloth (a sack's weave) and one metal (iron gone to rust), so a desk drew as a pallet, a chair as a sandbag and steel
+  shelving as a wreck. NEW LAYERS, things made in a factory and kept indoors: `veneer` (leaves 40 cm wide, fine straight grain, pores, flush joints, no gaps or
+  knots; laid the long way like boards), `plastic` (one colour, a pebbled skin, hairline scratches, rubbed smooth where it is handled), `fabric` (a tight
+  two-yarn melange with a faint twill and pills where it is sat on), `steel` (a baked coat with the spray's orange peel, fine scratches, no rust and no chips:
+  `paint` is the coat left out). They take no damp foot and no bleached head (`kept` in `lookSurface`), and a third of the slow blotches. NO PALETTE ROW NAMES
+  THEM on this branch: a level's own table of paint names does (the dress goal's `scene/stuff.ts`), asking `lookStuffOf(name)` for the number. A STUFF'S
+  NUMBER is its place in `LOOK_NAMES` and one; new stuffs go in FRONT of the two masonry layers, whose places the shader is told (`LOOK_L_STONE`, `LOOK_L_BRICK`
+  in the prelude `gbuffer.ts lookWgsl` writes, with each layer's base roughness as a const array: the block's rows c, d, e.xyz are no longer read). THE WORD
+  (`lookWordOf`, `LOOK_WORD`; `common.wgsl boxStuff`): five bits of stuff, one of moving, then the box's own number, now 0 to 44 (it was four bits and 0 to
+  90): the word rides one float above the finish and the float had no bit to spare, so 31 stuffs are paid for by the number's range alone. THE MAPS: a layer
+  is 2.8 MB and about half a second of arithmetic, so a layer is made the first time a box IS that stuff (`lookWordOf` notes it; `main.ts` asks every static and
+  door leaf its word and names the props' paints before the first frame, and waits: `needLook`), with the layers its drawing reads (`LOOK_WITH`: a mud wall's stone and brick, earth's
+  gravel), into the next SLOT of arrays that are only as long as the slots in use (grown by a copy on the GPU). The block carries the table from layer to
+  slot (`LookCfg.s`, 272 bytes now); a stuff with no slot draws plain. The boot makes the men's cloth alone. A layer is made in SLICES (`lookLayerSliced`:
+  30 ms at the boot, 3 ms in play, the event loop between; one body with `lookLayer`, the same bytes), so a thing that first appears in play as a stuff no
+  static, door or prop was (a held thing, a thrown one) costs no frame: it draws plain for the second or so its map takes. The `even` row is read once, at the
+  making of the arrays. They take the `kept` rule BY NAME: a stuff added later says in `look.wgsl` how it is laid and whether the weather touches it. `lookmaps-check.ts` holds the names against the
+  shader's, the float, the slots and the block. Drawn as tiles (rebuild pictures); a software boot; never seen on a GPU.
+- **CAR PAINT IS A STUFF; ITS SHINE IS THE BOX'S** (11-04; `render/lookTex.ts carpaint`, stuff 16, `look.wgsl LOOK_CARPAINT`; the look's page only). The
+  maintainer, of the rounded cars in the dressed showroom: "i think the materials could use some work though. we already have some metal shaders right? maybe
+  we want a car paint material too?". A truck's body drew as old `paint` (chips and rust specks all over), a saloon's as nothing. The layer is an enamel
+  under a clear coat: one colour, the spray's orange peel as a wobble of the shine only, a film of road dust in soft patches that dulls the coat where it
+  lies, the runs a rain leaves down through it, hairline cloth marks, a stone chip the size of a lentil here and there (0.1 % bare). In colour it is nearly
+  flat ON PURPOSE: what it draws is where the coat is clean and where it is dulled (roughness 0.17 clean to 0.43 under dust). A MAP ONLY VARIES THE FINISH A
+  BOX WAS GIVEN (`rough + dr`), so the gloss is whoever makes the car's to say on each box, and smooth finishes are what the ray-traced reflections trace
+  (a cost to measure before a car park of them is a default). Agreed words, proposed to the cars part: body `carpaint`, roughness about 0.2, not metal (a
+  metallic paint: metal, 0.3); glass plain, 0.05 to 0.1; bumpers and arch trim `plastic`, 0.5; chrome and hubcaps `steel` with metal, 0.25; tyres plain, 0.9.
+  It takes the `kept` rule (no damp foot, no bleached head). Drawn as a tile; never seen on a page or a GPU.
 - **A WET COAT DOES NOT MIRROR A LIGHT IT CANNOT SEE** (11-01; `composite.wgsl wetCoatSpec`, `WET_HIDDEN` 8). The maintainer: "still lots of fireflies/sparkles
   in that room", "some on the shadowed side too", "lots of temporal instability on the guy's back too". The sheen scaled every light's lobe by its class's shadowed
   over unshadowed light; in a shut room by day the hidden sun is the whole unshadowed sum, so its lobe was drawn at the bulb's strength. A light whose
@@ -2226,9 +2256,24 @@ interleaved and filtered to their quiet minimum, and a row whose p75 sits far ab
   wiring. `lookmaps-check`'s text test of main.ts takes the second argument. NOT YET (the second slice, `stuff-by-name` in the dressing notes): a
   word on a box, which is what parts the mixed names and names a paint written as numbers; the level format's `stuff` on a box, a part and a row
   (a level's accent as a material); the cut core's class in `gbuffer_cut.wgsl` (still `lookClass` of the colour: an old break in an office
-  partition draws plain); `?surf` retired; a row on the look panel. KNOWN: the look's wood is planks and its cloth one coarse weave, so a desk is a
-  plank top and a swivel chair sackcloth until the look's veneer, fabric, plastic and clean steel land (asked 11-04, being drawn; a row each
-  then). Seen on the software adapter, and the first three commits of it by the maintainer on his GPU through the preview.
+  partition draws plain); `?surf` retired; a row on the look panel. THE LOOK'S FOUR OFFICE MATERIALS (veneer, plastic, fabric, steel; asked for this, 11-04) have their rows where a
+  name is one thing: `chair` is fabric, the four `plastic*` plastic, the office's `metal` steel. KNOWN: `wood` stays planks, because the name is a
+  bench, a crate and a pallet as well as a desk: a desk says veneer itself, with the second slice's word on a box. The class of a stuff is asked of
+  `lookTex.ts lookStuffOf`, the one table. Seen on the software adapter, and the first three commits of it by the maintainer on his GPU through the preview.
+- **A BOX SAYS WHAT IT IS MADE OF, SECOND SLICE** (`Box.stuff`, a level file's `stuff` on a box or a prop's part, `src/scene/stuff.ts BOX_STUFFS`;
+  the maintainer, 11-04, of the showroom's desk and chair: "nicer materials on the chair and table"). A paint's NAME cannot part a desk from a
+  bench (both `wood`) or a car body from a partition (a level file names a box by its colour), so the PIECE says it: `lookWordOf` asks the box's
+  own word first, then its paint's name, then its colour. One of the look's materials that has a number (`lookStuffOf`: the stone and brick
+  under a mud wall are refused), `plain`, or `waits`. PICTURE ONLY: no rule of the game reads it, a level's fingerprint does not, and
+  `lived-check` reads a base's boxes with today's words; `?names=0` puts it off with the names. Written in the file only where it was said
+  (after `metal`, before `flags`). A loose prop's part carries it to the box the game makes (`props.ts`), and the page asks each part its word
+  before the first frame so its map is made (`main.ts`). SAID SO FAR, by the office kit (`officeGen.ts`, `levelKit.ts`): a desk, counter, low
+  table, conference table and credenza veneer; cubicle partitions, couch and sofa fabric; cabinets steel; a rug cloth; an outside door's frame
+  steel, an inside one's veneer. The level files of the generators that lay them are re-written by words alone. CHECK: `stuff-check` line 7
+  (`STUFF_BREAK=1` red): a word over a name and a colour, through the file and back, on a prop's part, refused words, the page's ask;
+  `lookmaps-check` asks a box that says a word for that word. NOT YET: a broken piece and a cut core inherit the word; the lived kit, the
+  compound's stucco and door leaves say theirs; a row on the look panel. Seen on the software adapter (the showroom); never on a GPU by us:
+  the maintainer has it on the preview.
 - **MARKS AS PAINT, A FIRST TRY** (`shaders/markings.wgsl markSoft`, behind `lookMarkSoft()` = `lookCfg.g.x`, 0 off the look page by gbuffer.ts's
   stub; the maintainer, 10-23: "we also need to get away from the pixel art textures"). A marking is still the level's 2-bit cell bitmap (2.5 cm
   cells), but on the look page it is not drawn as squares: the coverage is read over a one-cell footprint, cut back at half cover along a ragged line

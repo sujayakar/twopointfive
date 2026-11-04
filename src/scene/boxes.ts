@@ -41,6 +41,8 @@ export const MAX_GLASS = 32;
  *  with the round's GPU half up it is not sent (BoxWorld.packBox). */
 export const BOX_ROUND_BIT = 8;
 
+/** what a box may say it is made of: anything the table of names may, but 'mixed' (that is a word about a NAME) */
+export type BoxStuff = Exclude<import('./stuff').Stuff, 'mixed'>;
 export interface Box {
   c: Vec3;            // center
   h: Vec3;            // half extents (local axes)
@@ -67,6 +69,11 @@ export interface Box {
    *  material / per box in the level file (levelData.ts MaterialData.rough / metal, BoxData.rough / metal); the three below reach the GPU as ONE float in boxMat row 1's w
    *  (matWord, decoded by common.wgsl boxFinish) — the g-buffer writes roughness / metalness per pixel from it (+ the detail layer), reflect.wgsl reads the anisotropy. */
   rough?: number; metal?: boolean;
+  /** WHAT THIS BOX IS MADE OF, said by whoever made it (scene/stuff.ts): a material of the look, 'plain' or 'waits'. A paint's NAME says it for most boxes
+   *  (the level's rows); a box says its own where it wears a paint for the colour alone (a car's body in the partition's blue) or a paint written as numbers.
+   *  The look reads it before any name or colour (render/gbuffer.ts lookWordOf); nothing in the simulation does. Authored (BoxData.stuff), or set by the code
+   *  that makes the box (a prop's part, a door's leaf). Absent = the paint's name, then its colour. */
+  stuff?: BoxStuff;
   /** anisotropic finish — the lobe stretched along the view direction so a lamp mirrors as a long streak, not a disc: the wet lot's standing water
    *  (game/weather.ts sets it with the rain; runtime only, never authored) */
   aniso?: boolean;

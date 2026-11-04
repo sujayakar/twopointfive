@@ -125,13 +125,13 @@ export function door(k: LevelKit, d: LevelDoorDef): LevelDoorDef {
   const t = d.exterior ? WALL_EXT : WALL_INT; const gap = d.width + 2 * JAMB_FACE; const alongX = Math.abs(Math.sin(d.closedDir)) < 0.5;
   const fwd = (alongX ? Math.cos(d.closedDir) : Math.sin(d.closedDir)) > 0, hl = alongX ? d.hinge[0] : d.hinge[1];
   const a = fwd ? hl - JAMB_FACE : hl + JAMB_FACE - gap; const w = alongX ? d.hinge[1] : d.hinge[0];   // gap start along the wall, wall line coordinate
-  const frameCol: Vec3 = d.exterior ? [0.2, 0.21, 0.23] : [0.3, 0.24, 0.17]; const hy = DOOR_HEAD / 2;
-  const jamb = (u: number) => alongX ? add(k, { c: [u, hy, w], h: [0.03, hy, t / 2 + 0.012], albedo: frameCol }) : add(k, { c: [w, hy, u], h: [t / 2 + 0.012, hy, 0.03], albedo: frameCol });
+  const frameCol: Vec3 = d.exterior ? [0.2, 0.21, 0.23] : [0.3, 0.24, 0.17], frameStuff = d.exterior ? 'steel' as const : 'veneer' as const; const hy = DOOR_HEAD / 2;   // (a paint written as numbers says what it is: scene/stuff.ts)
+  const jamb = (u: number) => alongX ? add(k, { c: [u, hy, w], h: [0.03, hy, t / 2 + 0.012], albedo: frameCol, stuff: frameStuff }) : add(k, { c: [w, hy, u], h: [t / 2 + 0.012, hy, 0.03], albedo: frameCol, stuff: frameStuff });
   jamb(a - 0.01); jamb(a + gap + 0.01);
   const hb = LEAF_H + 0.005, hc = (hb + DOOR_HEAD + 0.065) / 2, hh = (DOOR_HEAD + 0.065 - hb) / 2;   // the HEAD comes down past the top of the shut leaf (the leaf stands 1 cm off the floor: its top is LEAF_H + 0.01) — no slot over a shut door for light to pass through
-  if (alongX) add(k, { c: [a + gap / 2, hc, w], h: [gap / 2 + 0.04, hh, t / 2 + 0.012], albedo: frameCol }); else add(k, { c: [w, hc, a + gap / 2], h: [t / 2 + 0.012, hh, gap / 2 + 0.04], albedo: frameCol });
+  if (alongX) add(k, { c: [a + gap / 2, hc, w], h: [gap / 2 + 0.04, hh, t / 2 + 0.012], albedo: frameCol, stuff: frameStuff }); else add(k, { c: [w, hc, a + gap / 2], h: [t / 2 + 0.012, hh, gap / 2 + 0.04], albedo: frameCol, stuff: frameStuff });
   const sg = fwd ? 1 : -1;
-  const stop = (u0: number, u1: number) => { const m = sg * (u0 + u1) / 2, hu = (u1 - u0) / 2; return alongX ? add(k, { c: [d.hinge[0] + m, hy, w], h: [hu, hy, 0.02], albedo: frameCol }) : add(k, { c: [w, hy, d.hinge[1] + m], h: [0.02, hy, hu], albedo: frameCol }); };   // (u along the closed leaf from the hinge line)
+  const stop = (u0: number, u1: number) => { const m = sg * (u0 + u1) / 2, hu = (u1 - u0) / 2; return alongX ? add(k, { c: [d.hinge[0] + m, hy, w], h: [hu, hy, 0.02], albedo: frameCol, stuff: frameStuff }) : add(k, { c: [w, hy, d.hinge[1] + m], h: [0.02, hy, hu], albedo: frameCol, stuff: frameStuff }); };   // (u along the closed leaf from the hinge line)
   stop(-0.012, 0.024); stop(d.width - 0.004, d.width + 0.012);
   grp(k, was);
   return d;
@@ -153,7 +153,7 @@ export const POLISHED: Partial<Box> = { flags: BoxFlag.Gloss };
 /** the ceiling over a footprint: light-only (NoPrimary — the top-down camera looks through it) */
 export const ceiling = (k: LevelKit, x0: number, z0: number, x1: number, z1: number) => slab(k, x0, KIT_H, z0, x1, KIT_H + 0.2, z1, C.ceiling, { flags: BoxFlag.NoPrimary });
 /** a rug / mat: a decal (no rays, no footstep material) */
-export const rug = (k: LevelKit, x: number, z: number, w: number, d: number, albedo: Vec3, yaw = 0) => add(k, { c: [x, 0.018, z], h: [w / 2, 0.006, d / 2], yaw, albedo, flags: BoxFlag.NoShadow });
+export const rug = (k: LevelKit, x: number, z: number, w: number, d: number, albedo: Vec3, yaw = 0) => add(k, { c: [x, 0.018, z], h: [w / 2, 0.006, d / 2], yaw, albedo, stuff: 'cloth', flags: BoxFlag.NoShadow });
 
 // ---- fixed furniture ----
 /** Local→world frame of a yawed piece at (x, z): local +X → world (cos yaw, −sin yaw), local +Z → (sin yaw, cos yaw). */
@@ -161,10 +161,10 @@ export const frameAt = (x: number, z: number, yaw: number) => { const cs = Math.
 /** a desk: top (0.76 m), two side panels, a modesty panel on local −Z (the sitter is on +Z) */
 export function desk(k: LevelKit, x: number, z: number, w: number, d: number, yaw = 0, albedo: Vec3 = C.wood): void {
   const at = frameAt(x, z, yaw);
-  add(k, { c: at(0, 0.735, 0), h: [w / 2, 0.025, d / 2], yaw, albedo });
-  add(k, { c: at(-w / 2 + 0.03, 0.36, 0), h: [0.025, 0.36, d / 2 - 0.02], yaw, albedo });
-  add(k, { c: at(w / 2 - 0.03, 0.36, 0), h: [0.025, 0.36, d / 2 - 0.02], yaw, albedo });
-  add(k, { c: at(0, 0.45, -d / 2 + 0.03), h: [w / 2 - 0.05, 0.25, 0.012], yaw, albedo });
+  add(k, { c: at(0, 0.735, 0), h: [w / 2, 0.025, d / 2], yaw, albedo, stuff: 'veneer' });
+  add(k, { c: at(-w / 2 + 0.03, 0.36, 0), h: [0.025, 0.36, d / 2 - 0.02], yaw, albedo, stuff: 'veneer' });
+  add(k, { c: at(w / 2 - 0.03, 0.36, 0), h: [0.025, 0.36, d / 2 - 0.02], yaw, albedo, stuff: 'veneer' });
+  add(k, { c: at(0, 0.45, -d / 2 + 0.03), h: [w / 2 - 0.05, 0.25, 0.012], yaw, albedo, stuff: 'veneer' });
 }
 /** a monitor (screen faces local +Z) on a surface at `baseY` (a desk 0.76) + its keyboard; `on` = a lit screen, a switchable in group 'monitors'. Returns the screen's box. */
 export function monitor(k: LevelKit, x: number, z: number, yaw: number, on: boolean, baseY = 0.76, keyboard = true): number {
@@ -179,7 +179,7 @@ export function monitor(k: LevelKit, x: number, z: number, yaw: number, on: bool
 }
 /** a filing cabinet (0.46 × 1.32 × 0.6), drawer fronts on local −Z */
 export function cabinet(k: LevelKit, x: number, z: number, yaw: number): number {
-  return add(k, { c: [x, 0.66, z], h: [0.23, 0.66, 0.3], yaw, albedo: [0.58, 0.58, 0.56], ...mk(k, MD.cabinetMarks([0.23, 0.66, 0.3], k.texel)) });
+  return add(k, { c: [x, 0.66, z], h: [0.23, 0.66, 0.3], yaw, albedo: [0.58, 0.58, 0.56], stuff: 'steel', ...mk(k, MD.cabinetMarks([0.23, 0.66, 0.3], k.texel)) });
 }
 /** two sheets of paper on a surface at height y */
 export function papers(k: LevelKit, x: number, y: number, z: number, yaw = 0, scribble = false): void {
