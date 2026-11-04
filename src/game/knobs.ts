@@ -198,7 +198,10 @@ export const JOURNAL_KNOBS: readonly string[] = ['AIM', 'TAPSTEP', 'TRAINED', 'A
   // replays its squad loud through a brushed wall, and one from before the table was carried sneaks from the hold's first step
   'UNSEEN',
   // a window's bar breaks from one round (winbars.ts): a recording made with it on replays its bars going and its rounds flying on, one from before has every bar stop a round
-  'WINBARS'];
+  'WINBARS',
+  // a pose's bulk arithmetic in singles (anim/skeleton.ts POSEMATH): the last place of every blended and sampled pose turns on it, so a recording made with
+  // it on replays with it on, and one from before the table replays in doubles
+  'POSEMATH'];
 import { GUNWALL } from './gunwall';
 import { CLOSE } from './close';
 import { PLAN } from './floorplan';
@@ -256,6 +259,7 @@ import { SNATCHOUT } from './snatchout';
 import { RESCUEFLUSH } from './rescueflush';
 import { EXACT } from '../math/exact';
 import { RUST } from '../sim/sim';
+import { POSEMATH } from '../anim/skeleton';
 import { SENSE } from './sense';
 import { CMDCHECK } from './cmd';
 import { SEATS } from './seats';
@@ -464,6 +468,8 @@ export function knobRegistry(): Record<string, object> {
     EXACT,
     // which systems of the update run in the Rust module (src/sim/sim.ts RUST: setters — writing a row moves that system across)
     RUST,
+    // a pose's bulk arithmetic in singles (anim/skeleton.ts POSEMATH.singles: blendPose and sampleClip's step, in both languages)
+    POSEMATH,
     // the senses on the CPU (sense.ts SENSE.cpu, and its smoke model's numbers)
     SENSE,
     // a record from anyone (cmd.ts checkCmd: the switch and its bounds)

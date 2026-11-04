@@ -1321,6 +1321,8 @@ table! { Knob, KNOBS, KNOB_NAMES;
     SNEAK_GUN_IN_STAND_1 = "ANIM.SNEAK.gunInStand.1",
     SNEAK_GUN_IN_STAND_2 = "ANIM.SNEAK.gunInStand.2",
     SNEAK_HAND_IN = "ANIM.SNEAK.handIn",
+    // (not a layer's own: the rule a layer's blend and sample are worked by — single.rs, anim/skeleton.ts POSEMATH)
+    POSE_SINGLES = "POSEMATH.singles",
 }
 
 table! { Role, ROLES, ROLE_NAMES;

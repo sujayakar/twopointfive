@@ -120,6 +120,7 @@ import { RESCUEEND } from '../game/rescueend';
 import { SNATCHOUT } from '../game/snatchout';
 import { RESCUEFLUSH } from '../game/rescueflush';
 import { EXACT } from '../math/exact';
+import { POSEMATH } from '../anim/skeleton';
 import { rustRows, rustRow, rustOn, RUST_ON } from '../sim/sim';
 import { SENSE } from '../game/sense';
 import { CMDCHECK } from '../game/cmd';
@@ -419,6 +420,7 @@ export function pageSwitches(q: URLSearchParams): void {
   RESCUEFLUSH.on = !q.has('norescueflush');   // the men left alive come for the hostages (game/rescueflush.ts): once the team is loud and the room has fallen they are sent for it by its two doors in turn, said on their net, and a man with a line to a hostage has her — ON in the page; ?norescueflush = they stay where the fight left them, as it was
   RESCUECHECK.on = !q.has('norescuecheck');   // the rescue's men check in (game/rescuecheck.ts): a man of a hostage rescue's cast who stops answering their radio check is asked for by name and one man walks to his post, said on their net first; the captor's clock is not touched — ON in the page; ?norescuecheck = nobody there misses anybody, as it was
   EXACT.on = !q.has('noexact');   // the game's own maths (math/exact.ts): sin, cos, atan2 and the rest worked out the same on every JavaScript engine, so a page and a server (or the headless harness) compute one game from one seed and one set of inputs: ON in the page; ?noexact = the engine's own functions, as it was
+  POSEMATH.singles = q.get('posesingles') !== '0';   // a pose's bulk arithmetic in singles (anim/skeleton.ts): blendPose and sampleClip's step worked in singles, a rotation's length a plain root, in both languages — what lets the module work four nodes a step. ON in the page; ?posesingles=0 = in doubles, as it was
   pageRows(q);   // which systems run in the Rust module (src/sim/sim.ts RUST): the rows of RUST_ON are ON in the page — pageRows below has the words
   SENSE.cpu = q.has('cpusense');   // the senses on the CPU (game/sense.ts): OFF unless the URL says ?cpusense — the men see by the renderer's own light and smoke, as ever; on, by the game's own stand-ins, and a fight is then its seed and its inputs and nothing else (the same on a machine with no GPU). Whether the page plays on them is the maintainer's call.
   SENSE.grid = q.has('smokegrid');   // …and their smoke on the coarse grid (sense.ts SmokeGrid): OFF unless the URL says ?smokegrid (read only with ?cpusense)
@@ -753,6 +755,7 @@ export const FROZEN_HOLDS: Record<string, string> = {
   'SNATCHOUT.on': 'TPS_SNATCHOUT=1',
   'RESCUEFLUSH.on': 'TPS_RESCUEFLUSH=1',
   'EXACT.on': 'TPS_EXACT=1',
+  'POSEMATH.singles': 'TPS_POSESINGLES=1',
   'CMDCHECK.on': 'TPS_CMDCHECK=1',
   'DOZE.on': 'TPS_DOZE=1',
   'NETQUIET.on': 'TPS_NETQUIET=1',

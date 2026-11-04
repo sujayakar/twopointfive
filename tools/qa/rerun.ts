@@ -77,6 +77,7 @@ export async function rerun(F: ReplayFile, opts: { toN?: number; tol?: number; e
   const CL = await import(`${ROOT}/src/game/carlamps.ts`);   // (a tape from before a vehicle's lamps were light targets: the switch is read as the Game is built)
   const tables = () => { const src = { ...(rc.knobs?.tables ?? {}), ...(rc.tables ?? {}) } as Record<string, unknown>, into = rc.tables ? reg : J.knobTables() as Record<string, Record<string, unknown>>;
     for (const [name, Tb] of Object.entries(into)) { const t = src[name]; if (plain(t)) { if (rc.tables) put(Tb, t); else K.assignDeep(Tb, t); } }
+    if (!plain(src.POSEMATH)) (reg.POSEMATH as { singles: boolean }).singles = false;   // (a tape from before a pose's arithmetic had a rule: worked as it was — src/anim/skeleton.ts POSEMATH)
     if (!plain(src.EXACT)) (reg.EXACT as { on: boolean }).on = false;
     if (!plain(src.SENSE)) (reg.SENSE as { cpu: boolean }).cpu = false; if (!plain(src.CMDCHECK)) (reg.CMDCHECK as { on: boolean }).on = false; CL.carLampsTape(src); RD.roundTape(src); };   // (a tape from before the game's own maths: the engine's functions, said before the level and the game are built — as the page's player does, src/replay/engineplay.ts tables())
   const Kt = await import(`${ROOT}/src/game/kit.ts`);

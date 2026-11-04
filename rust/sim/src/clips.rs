@@ -275,7 +275,7 @@ pub fn nodes_of(c: usize) -> usize {
 
 /// skeleton.ts sampleClip: clip `c` at time `t` (seconds; wrapped where `looped`, else held inside the clip) into the pose `d` — only the nodes the clip
 /// has tracks for are written. The caller has made sure `d` holds `nodes_of(c)` nodes; a number the table does not hold writes nothing.
-pub fn sample(d: &mut [S], c: usize, mut t: f64, looped: bool) {
+pub fn sample(d: &mut [S], c: usize, mut t: f64, looped: bool, in_singles: bool) {
     let tb = table();
     if c >= tb.n_clips {
         return;
@@ -318,6 +318,16 @@ pub fn sample(d: &mut [S], c: usize, mut t: f64, looped: bool) {
             continue;
         }
         let f = p.f;
+        if in_singles {
+            // (POSEMATH.singles: the step between the two keys in singles — single.rs; where the time falls among the keys is found as ever)
+            let fs = crate::single::weight(f);
+            if comps == 3 {
+                crate::single::step3(d, o, rows, pool, a, b, fs);
+            } else {
+                crate::single::step4(d, o, rows, pool, a, b, fs);
+            }
+            continue;
+        }
         if comps == 3 {
             for c in 0..3 {
                 let (av, bv) = (get(pool, a + c), get(pool, b + c));

@@ -50,7 +50,7 @@ pub const SCRATCH_LEN: usize = 1024;
 static mut SCRATCH: [f64; SCRATCH_LEN] = [0.0; SCRATCH_LEN];
 
 /// The version of the exports: src/sim/sim.ts names the one it was written against, and a page that loaded another says so instead of calling into it.
-pub const ABI: u32 = 18;
+pub const ABI: u32 = 19;
 
 // ---- the C face (wasm32: these are the module's exports)
 #[no_mangle]
@@ -506,10 +506,11 @@ pub extern "C" fn pose_rig(nodes: u32, order: u32) -> u32 {
 }
 // A QUESTION OF A POSE says where the pose is (skeleton.rs): `g` = 0xffffffff → place `at` of the bench · else game `g`'s pool, the pose starting at single
 // `at` of the part. 1 = done · 0 = not a pose (or not a node), nothing written.
-/// skeleton.ts blendPose: poses `a`, `b` → `out`
+/// skeleton.ts blendPose: poses `a`, `b` → `out`. `how`: 1 = with the bench's mask · 2 = worked in singles (the rule POSEMATH.singles, said by whoever
+/// asks: the host reads its own switch as it asks, a layer of the module reads the tick's knob)
 #[no_mangle]
-pub extern "C" fn pose_blend(g: usize, a: usize, b: usize, w: f64, masked: u32, out: usize, n: usize) -> u32 {
-    skeleton::ask_blend(g, a, b, w, masked != 0, out, n) as u32
+pub extern "C" fn pose_blend(g: usize, a: usize, b: usize, w: f64, how: u32, out: usize, n: usize) -> u32 {
+    skeleton::ask_blend(g, a, b, w, how & 1 != 0, out, n, how & 2 != 0) as u32
 }
 /// PoseFK.run (root < 0) / runFrom
 #[no_mangle]
@@ -531,10 +532,11 @@ pub extern "C" fn pose_turn(g: usize, at: usize, nodes: usize, i: usize, how: u3
 pub extern "C" fn pose_ik(g: usize, at: usize, a: usize, b: usize, c: usize, flags: u32) -> u32 {
     skeleton::ask_ik(g, at, a, b, c, flags) as u32
 }
-/// skeleton.ts sampleClip: clip `clip` at time `t` into the pose (`nodes` = the pose's own count of nodes)
+/// skeleton.ts sampleClip: clip `clip` at time `t` into the pose (`nodes` = the pose's own count of nodes). `how`: 1 = the clip loops · 2 = the step
+/// between two keys worked in singles (POSEMATH.singles, as `pose_blend`)
 #[no_mangle]
-pub extern "C" fn pose_sample(g: usize, at: usize, nodes: usize, clip: usize, t: f64, looped: u32) -> u32 {
-    skeleton::ask_sample(g, at, nodes, clip, t, looped != 0) as u32
+pub extern "C" fn pose_sample(g: usize, at: usize, nodes: usize, clip: usize, t: f64, how: u32) -> u32 {
+    skeleton::ask_sample(g, at, nodes, clip, t, how & 1 != 0, how & 2 != 0) as u32
 }
 // ---- the clips a pose is sampled from (clips.rs: a character file's animations, copied in once by src/anim/skeleton.ts)
 /// a clip of `tracks` tracks is about to be written: 0 = no room, the host samples it itself

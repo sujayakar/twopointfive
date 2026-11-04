@@ -1,6 +1,7 @@
 // tools/qa/pose-ident.ts — THE POSING FUNCTIONS, the Rust module's against the TypeScript's (src/anim/skeleton.ts against rust/sim/src/skeleton.rs).
 //
 //   bun run tools/qa/pose-ident.ts [--n 20000] [--seed 1]
+//   TPS_POSESINGLES=1 bun run tools/qa/pose-ident.ts   every blend and sample in singles (anim/skeleton.ts POSEMATH; POSEMATH_BREAK=1 beside it = that rule's red path)
 //   RUST_BREAK=1 bun run tools/qa/pose-ident.ts     the red path, must FAIL, and for EVERY KIND of question by a break of its own: the module is handed a
 //                                                   rig with one node hung from the wrong parent (the run, the solve), a turn's first number, a
 //                                                   solve's target, a blend's weight and a sample's time a hair off, and the plain sampler kept here
@@ -17,13 +18,14 @@
 // Not game code: it reads. Nothing here needs a GPU, and nothing here has been seen on one.
 import { ROOT, loadCharacter } from './headless.ts';
 const args = process.argv.slice(2), flag = (k: string) => { const i = args.indexOf(k); return i >= 0 ? args[i + 1] : undefined; };
-const N = Number(flag('--n') ?? 20000), SEED = Number(flag('--seed') ?? 1), BREAK = process.env.RUST_BREAK === '1';
+const N = Number(flag('--n') ?? 20000), SEED = Number(flag('--seed') ?? 1), BREAK = process.env.RUST_BREAK === '1', RULE_BREAK = process.env.POSEMATH_BREAK === '1';
 const SK: any = await import(`${ROOT}/src/anim/skeleton.ts`), S: any = await import(`${ROOT}/src/sim/sim.ts`), X: any = await import(`${ROOT}/src/math/exact.ts`);
 const { Pose, PoseFK, PoseSet, poseSetIn, sampleClip, clipHeld, blendPose, restPose, rotateLocal, rotateModel, setModelRot, twoBoneIK } = SK;
 const ST: any = await import(`${ROOT}/src/sim/state.ts`);
 const V: any = await import(`${ROOT}/src/math/vec.ts`);
 const why = S.simWhyNot(); if (why) { console.log(`pose-ident: the module does not run here (${why})`); process.exit(1); }
 X.EXACT.on = true;
+SK.POSEMATH.singles = process.env.TPS_POSESINGLES === '1';   // (TPS_POSESINGLES=1: every blend and sample of this run in singles, the rule the page plays by — anim/skeleton.ts POSEMATH; without the word, in doubles)
 const ch = await loadCharacter(), n = ch.nodes.length, clips = [...ch.clips.values()];
 // (a die of the tool's own: xorshift32)
 let s = (SEED * 2654435761) >>> 0 || 1; const rnd = () => { s ^= s << 13; s >>>= 0; s ^= s >>> 17; s ^= s << 5; s >>>= 0; return s / 4294967296; };
@@ -60,6 +62,7 @@ const runs = (what: string, a: any, b: any) => { for (let i = 0; i < n; i++) { f
 // SAMPLING, AS IT IS DEFINED: every track searched for its own place among its own keys. Both languages find a place once for each set of key times a clip's
 // tracks share (anim/skeleton.ts sideOf, rust/sim/src/clips.rs `end`); this is what they must both still answer, kept here in the plainest words. (Under the
 // break word it is asked a hair off, so that the comparison itself is seen to fail.)
+const R1 = new Float32Array(1), r1 = (v: number): number => { R1[0] = v; return R1[0]; };
 const plain = (clip: any, t: number, loop: boolean, out: any) => {
   if (BREAK) t += 1e-4;
   const dur = clip.duration; if (loop) { t = t % dur; if (t < 0) t += dur; } else t = Math.min(Math.max(t, 0), dur);
@@ -72,6 +75,14 @@ const plain = (clip: any, t: number, loop: boolean, out: any) => {
     const a = lo * comps, b = hi * comps;
     if (tr.step) { for (let c = 0; c < comps; c++) d[o + c * N] = vals[a + c]; continue; }
     const f = (t - times[lo]) / Math.max(1e-6, times[hi] - times[lo]);
+    if (SK.POSEMATH.singles) {   // (the rule in singles, in the plainest words: every result put through a Float32Array of one, which is what a single is)
+      const fs = r1(f), lerp = (u: number, v: number) => r1(u + r1(r1(v - u) * fs));
+      if (comps === 3) { for (let c = 0; c < 3; c++) d[o + c * N] = lerp(vals[a + c], vals[b + c]); continue; }
+      const A = [vals[a], vals[a + 1], vals[a + 2], vals[a + 3]], B = [vals[b], vals[b + 1], vals[b + 2], vals[b + 3]];
+      const dot = r1(r1(r1(r1(A[0] * B[0]) + r1(A[1] * B[1])) + r1(A[2] * B[2])) + r1(A[3] * B[3])), sg = dot < 0 ? -1 : 1;
+      const q = A.map((u, c) => lerp(u, sg * B[c])), l = r1(Math.sqrt(r1(r1(r1(r1(q[0] * q[0]) + r1(q[1] * q[1])) + r1(q[2] * q[2])) + r1(q[3] * q[3])))) || 1;
+      for (let c = 0; c < 4; c++) d[o + c * N] = q[c] / l; continue;
+    }
     if (comps === 3) { for (let c = 0; c < 3; c++) d[o + c * N] = vals[a + c] + (vals[b + c] - vals[a + c]) * f; continue; }
     let bx = vals[b], by = vals[b + 1], bz = vals[b + 2], bw = vals[b + 3]; const ax = vals[a], ay = vals[a + 1], az = vals[a + 2], aw = vals[a + 3];
     if (ax * bx + ay * by + az * bz + aw * bw < 0) { bx = -bx; by = -by; bz = -bz; bw = -bw; }
@@ -124,6 +135,7 @@ for (let t = 0; t < N; t++) {
     const x = SK.POSE_BENCH.x, door: any = { ...x }, hair = () => { S.f64()[SK.POSE_BENCH.args] += 1e-6; };
     for (const k of CALLS) door[k] = (g: number, ...r: number[]) => { if (g >= 0) inX[k]++;
       if (BREAK) { if (k === 'pose_blend') r[2] += 1e-9; else if (k === 'pose_sample') r[3] += 1e-4; else if (k === 'pose_turn' || k === 'pose_ik') hair(); }
+      if (RULE_BREAK) { if (k === 'pose_blend') r[3] &= ~2; else if (k === 'pose_sample') r[4] &= ~2; }   // (POSEMATH_BREAK=1, tools/qa/posemath-check.ts: the module is asked WITHOUT the rule's bit while the twin here works in singles)
       return x[k](g, ...r); };
     SK.POSE_BENCH.x = door; }
 }
