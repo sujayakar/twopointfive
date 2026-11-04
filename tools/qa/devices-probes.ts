@@ -272,9 +272,13 @@ export async function devicesKeypad() {
     game.puppet = { goal: [19.6, 0, 8.6], aim: null }; steps(W, 5); game.puppet = null;
     const through = game.player.char.pos[0] < 21.2; steps(W, 8, () => sd.latched);
     if (!through) fails.push(`never got through (x ${f2(game.player.char.pos[0])})`);
-    if (!sd.latched || !game.doors.lockedOut(sd, [22.7, 0, 8.7])) fails.push(`behind him: latched ${sd.latched}, against the office side ${game.doors.lockedOut(sd, [22.7, 0, 8.7])} (want both)`);
+    // (where doors stay as they are left — doors.ts DOORSTAY — nothing springs it shut behind him: it stands open, its lock unbroken, and it is locked against
+    //  the office again when a hand shuts it, which is `probes.ts stay-open-lock`'s line)
+    const stays = !!game.doors.stay;
+    if (stays) { if (sd.latched || !sd.locked || sd.lockBroken) fails.push(`behind him, where doors stay as they are left: latched ${sd.latched}, locked ${sd.locked}, broken ${sd.lockBroken} (want it standing open with its lock as it was)`); }
+    else if (!sd.latched || !game.doors.lockedOut(sd, [22.7, 0, 8.7])) fails.push(`behind him: latched ${sd.latched}, against the office side ${game.doors.lockedOut(sd, [22.7, 0, 8.7])} (want both)`);
     if (!game.chronicle.events.some((e: any) => e.kind === 'codeEntered')) fails.push('no codeEntered row');
-    v(fails.length === 0, "(d) with the code: rows [code, kick]; a step breaks the keying off; keyed for real — four keys, the pad takes it at CODE_SECS, a key-level clack + the creak (nothing louder), it swings, he walks through, and it latches locked against the office again", `open +${f2(openAt)} s · beeps ${beeps} · through ${through} · relatched ${sd.latched}`, fails);
+    v(fails.length === 0, "(d) with the code: rows [code, kick]; a step breaks the keying off; keyed for real — four keys, the pad takes it at CODE_SECS, a key-level clack + the creak (nothing louder), it swings, he walks through, and it latches locked against the office again (where doors stay as they are left: it stands open, its lock as it was)", `open +${f2(openAt)} s · beeps ${beeps} · through ${through} · relatched ${sd.latched}${stays ? ' (doors stay)' : ''}`, fails);
   }
   console.log(`=== devices-keypad: ${done() ? 'ALL PASS' : 'FAILURES above'} ===`);
 }
