@@ -21,7 +21,7 @@
 // Off the row and the address nothing here runs: tick() returns on its first line, and no setting is read or written.
 import type { Engine } from '../engine';
 import { reportError, reportWarning } from '../cloud/report';
-import { AUTO_LADDER, type Quality, type QualityName } from './quality';
+import { AUTO_LADDER, visitTier, type Quality, type QualityName } from './quality';
 import type { PerfRecorder, PerfDump, PerfFrame } from './perfrec';
 import { SWEEP_ROWS, type SweepOpts } from './perfsweep';
 import type { BootSummary } from './boot';
@@ -53,12 +53,15 @@ export interface BenchOpts {
 export const BENCH_DEFAULTS: BenchOpts = { settleMs: 2000, measureMs: 4000, settleFrames: 3, measureFrames: 5, capMs: 20000, standInMs: 180000, waitMs: 45000, waitFrames: 30, slowMs: 125, awayMs: 3000, retries: 3, heavyHoldMs: 0, heavyCapMs: 300000, sceneCapMs: 600000, sweepSlowMs: 250 };
 /** the frames a benchmark's take may hold: its six minutes at 240 a second (the F9 recorder's own ten minutes at 60 are full inside the sweep at 120) */
 export const BENCH_FRAMES = 96000;
-/** WHAT A RUN'S CARD SAYS OF ITS PICTURE'S SIZE, where the row 'Hold frame rate' was off (`?adapt=0`, ui/quality.ts visitAdaptive: a run asked for at one size, so
- *  that it can be held against another). It is said from the run's own lines, not from the switches: the page's lines (as it opened, each scene, the held
- *  picture; a preset's line is another size by design) were all drawn at one size, or they were not and the card says why that can be. Nothing is said with the row on */
-export const SIZE_HELD = 'the picture\'s size was held still (Hold frame rate off, the tier pinned): the frames a second are this size\'s, not the game\'s as it plays';
+/** WHAT A RUN'S CARD SAYS OF ITS PICTURE'S SIZE, where the row 'Hold frame rate' was off (`?adapt=0`, ui/quality.ts visit: a run asked for with nothing adapting,
+ *  so that it can be held against another). It is said from the run's own lines, not from the switches: the page's lines (as it opened, each scene, the held
+ *  picture; a preset's line is another size by design) were all drawn at one size, or they were not and the card says why that can be. Nothing is said with the
+ *  row on. SIZE_AUTO is the row put off BY HAND under auto (the address's word holds the tier too). SIZE_UNNAMED follows SIZE_HELD where the address named no
+ *  tier: the run stood on whatever tier the browser had, which no calibration measured, so it is one machine's and one day's. */
+export const SIZE_HELD = 'the picture\'s size was held still (Hold frame rate off, the tier held): the frames a second are this size\'s, not the game\'s as it plays';
 export const SIZE_AUTO = 'Hold frame rate was off with the tier on auto, so the tier moves in the size\'s place: pin one (quality=high) for a run at one size';
 export const SIZE_MOVED = 'Hold frame rate was off and the tier pinned, yet these lines were drawn at more than one size (a window resized, or the resolution moved by hand): they are not one size\'s';
+export const SIZE_UNNAMED = 'the address named no tier, so this run stood on the one this browser had, unmeasured: name it (quality=high) to hold the card against another\'s';
 export function sizeNote(steps: readonly Pick<BenchStep, 'id' | 'res' | 'skipped'>[], quality: { adaptive?: boolean; auto?: boolean }): string | null {
   if (quality.adaptive !== false) return null;
   if (quality.auto !== false) return SIZE_AUTO;
@@ -83,6 +86,15 @@ export interface BenchStep {
   quality: string; scale: number; res: [number, number]; frames: number;
   /** frames a second over the window · a frame's time, ms: the median and the 95th percentile · the GPU's time for one (the passes' union; null = this browser gives no GPU timings) · the page's own work for one */
   fps: number; ms: number; p95: number; gpu: number | null; cpu: number;
+  /** THE G-BUFFER PASS'S OWN TIME, ms: its stamp over the line's frames, as the mean of the middle nine tenths (a browser rounds a stamp to a tenth of a
+   *  millisecond, and of a pass this small only a mean reads finer than that). Absent = no frame carried a stamp, or a result from before it was kept. It is
+   *  NOT in `gpu`: that is the compute passes' union, the number the quality ladder is fed, and it leaves every drawn pass out because a drawn pass's stamps are
+   *  not to be trusted on Metal (ui/perfrec.ts). So work that lands in the g-buffer (more boxes, a richer material) showed in no number of a line. It is LISTED
+   *  APART, and its own stamp is good on the one Metal chip it was checked on: in an M4 Max's takes it moved with g-buffer work and not with the frame's
+   *  length, where `post` and `fxaa` did the opposite (docs/agents/qa.md). `gpu + gbuf` is an estimate of the frame's GPU work: two separate statistics, counted twice wherever a driver
+   *  ran the g-buffer beside a compute pass. Under sharp direct the pass draws at the OUTPUT size (and its downsample is not stamped), so it follows the
+   *  line's quality row, not its 'drawn at': hold it only against a line with the same rows. */
+  gbuf?: number;
   /** the heaviest GPU passes, ms each (their sum overstates the frame: the GPU runs passes side by side) */
   top?: [string, number][];
   /** not measured, and why */
@@ -123,12 +135,20 @@ const same = (a: unknown, b: unknown) => a === b || JSON.stringify(a) === JSON.s
 const copy = <T>(v: T): T => (Array.isArray(v) ? [...v] : v) as T;
 const PRESET_LABEL: Record<string, string> = { verylow: 'very low', low: 'low', medium: 'medium', high: 'high', ultra: 'ultra' };
 
+/** the card's line under a table that has the g-buffer's column: what the two GPU columns are, and how far the new one is to be believed */
+export const GBUF_SAID = 'GPU ms counts the compute passes. g-buf ms is the g-buffer pass\'s own timing, and it isn\'t in GPU ms. On Apple GPUs it was checked on an M4 Max only.';
+/** the g-buffer pass's name on the engine's timer (engine.ts stamps it; BenchStep.gbuf; bench-check holds the two together) */
+export const GBUFFER_PASS = 'gbuffer';
+/** the mean of the middle nine tenths (of a short window, of all but its two ends): finer than a rounded clock's step, and deaf to the odd frame whose stamp spans a hitch */
+const midMean = (a: number[]) => { const s = [...a].sort((x, y) => x - y), cut = s.length > 4 ? Math.max(1, Math.floor(s.length * 0.05)) : 0, m = s.slice(cut, s.length - cut); return m.reduce((x, y) => x + y, 0) / m.length; };
+type BenchLine = Pick<BenchStep, 'frames' | 'fps' | 'ms' | 'p95' | 'gpu' | 'gbuf' | 'cpu' | 'top'>;
 /** one window's numbers off the frames the recorder kept for it */
-export function benchStats(frames: PerfFrame[], top = 0): Pick<BenchStep, 'frames' | 'fps' | 'ms' | 'p95' | 'gpu' | 'cpu' | 'top'> {
+export function benchStats(frames: PerfFrame[], top = 0): BenchLine {
   const dts = frames.map(f => f.dt).filter(d => d > 0), sum = dts.reduce((s, d) => s + d, 0);
   const unions = frames.map(f => f.gpuUnion).filter((u): u is number => typeof u === 'number' && u > 0);
-  const out: Pick<BenchStep, 'frames' | 'fps' | 'ms' | 'p95' | 'gpu' | 'cpu' | 'top'> = { frames: frames.length, fps: sum > 0 ? r1(1000 * dts.length / sum) : 0, ms: r1(median(dts)), p95: r1(pct(dts, 0.95)),
-    gpu: unions.length ? r1(median(unions)) : null, cpu: r1(median(frames.map(f => f.cpu.update + f.cpu.render + f.cpu.other))) };
+  const gbufs = frames.map(f => f.gpu[GBUFFER_PASS]).filter((u): u is number => typeof u === 'number');   // (a 0 among others is a stamp, a short pass on a rounded clock; nothing but 0 is the timer's word for a pair never written, gpu/timer.ts: no stamp)
+  const out: BenchLine = { frames: frames.length, fps: sum > 0 ? r1(1000 * dts.length / sum) : 0, ms: r1(median(dts)), p95: r1(pct(dts, 0.95)),
+    gpu: unions.length ? r1(median(unions)) : null, ...(gbufs.some(u => u > 0) ? { gbuf: +midMean(gbufs).toFixed(2) } : {}), cpu: r1(median(frames.map(f => f.cpu.update + f.cpu.render + f.cpu.other))) };
   if (top > 0) {
     const by = new Map<string, number[]>(); for (const f of frames) for (const k of Object.keys(f.gpu)) { let l = by.get(k); if (!l) by.set(k, l = []); l.push(f.gpu[k]); }
     const rows = [...by].map(([k, l]) => [k, +median(l).toFixed(2)] as [string, number]).filter(r => r[1] > 0).sort((a, b) => b[1] - a[1]).slice(0, top);
@@ -170,12 +190,13 @@ export function benchReport(r: BenchResult): string {
     // every scene is a load of the page: the first compiles cold, the later ones show what the browser kept
     { const later = (r.scenes ?? []).filter(s => s.boot); if (later.length > 1) row('loads', later.map(s => `${s.id} ${secs(s.boot!.toCard)} (shaders ${secs(s.boot!.shaders)})`).join(' · ')); } }
   L.push('');
-  const cols = (a: string, q: string, b: string, c: string, d: string, e: string, f: string) => `${a.padEnd(22)}${q.padEnd(22)}${b.padEnd(11)}${c.padStart(5)}  ${d.padEnd(18)}${e.padEnd(8)}${f}`.trimEnd();
-  L.push(cols('', 'quality', 'drawn at', 'fps', 'frame ms (95 %)', 'GPU ms', 'page ms'));
+  const cols = (a: string, q: string, b: string, c: string, d: string, e: string, g: string, f: string) => `${a.padEnd(22)}${q.padEnd(22)}${b.padEnd(11)}${c.padStart(5)}  ${d.padEnd(18)}${e.padEnd(8)}${g.padEnd(10)}${f}`.trimEnd();
+  L.push(cols('', 'quality', 'drawn at', 'fps', 'frame ms (95 %)', 'GPU ms', 'g-buf ms', 'page ms'));   // (GPU ms = the compute passes; the g-buffer's own time stands beside it, BenchStep.gbuf)
   for (const s of r.steps) {
     if (s.skipped) { L.push(`${s.label.padEnd(22)}not run: ${s.skipped}`); continue; }
-    L.push(cols(s.label, `${s.quality} ×${s.scale.toFixed(2)}`, `${s.res[0]}×${s.res[1]}`, s.fps.toFixed(s.fps < 20 ? 1 : 0), `${s.ms.toFixed(1)} (${s.p95.toFixed(1)})`, s.gpu === null ? 'n/a' : s.gpu.toFixed(1), s.cpu.toFixed(1)));
+    L.push(cols(s.label, `${s.quality} ×${s.scale.toFixed(2)}`, `${s.res[0]}×${s.res[1]}`, s.fps.toFixed(s.fps < 20 ? 1 : 0), `${s.ms.toFixed(1)} (${s.p95.toFixed(1)})`, s.gpu === null ? 'n/a' : s.gpu.toFixed(1), typeof s.gbuf === 'number' ? s.gbuf.toFixed(2) : 'n/a', s.cpu.toFixed(1)));
   }
+  if (r.steps.some(s => typeof s.gbuf === 'number')) L.push('', GBUF_SAID);
   { const ends = (r.scenes ?? []).filter(s => s.end).map(s => `${s.id} ${s.end}`); if (ends.length) { L.push(''); row('floors', ends.join(' · ')); } }   // (how each fight went: two machines' numbers are of the same fight only where these agree)
   const top = r.steps.find(s => s.id === 'held' && s.top?.length)?.top ?? r.steps.find(s => s.top?.length)?.top;
   if (top) L.push('', `heaviest GPU passes, ms: ${top.map(([k, v]) => `${k} ${v.toFixed(1)}`).join(' · ')}`);
@@ -589,7 +610,7 @@ export class Bench {
     if (!done) this.notes.push(`stopped early (${why})`);
     const timers = !!this.engine.timer?.enabled;
     if (!timers) this.notes.push('this browser gives no GPU timings: the frame time is the whole story here');
-    { const size = sizeNote(this.steps, this.quality); if (size) this.notes.push(size); }   // (a run asked for at one size, `?adapt=0`: said of every page's lines, here where the last of them is in)
+    { const size = sizeNote(this.steps, this.quality); if (size) this.notes.push(size); if (size === SIZE_HELD && !visitTier(this.query)) this.notes.push(SIZE_UNNAMED); }   // (a run asked for at one size, `?adapt=0`: said of every page's lines, here where the last of them is in)
     // (shaders still building behind the start: the timed windows wait for them, windowTick; a wait that ran out is noted there)
     const rows = this.deps.rows?.();
     const res: BenchResult = { version: 1, at: new Date().toISOString(), query: this.query, ...(rows ? { rows } : {}), machine: this.machine ?? { webgpu: this.engine.gpu?.adapterInfo ?? 'unknown', browser: '', os: '', userAgent: '', dpr: 1 },

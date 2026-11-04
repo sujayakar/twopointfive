@@ -245,13 +245,37 @@ function selftest(): boolean {
     check(!!cutAt && parseFloat(cutAt) < 24.5 && minOf(fightH) >= HOLD.cut * 60 - 0.5, `hold 60: cut within ${cutAt ? (parseFloat(cutAt) - 20).toFixed(1) : '?'} s of the fight starting, then ${minOf(fightH).toFixed(0)}‥${Math.max(...fightH).toFixed(0)} fps to its end at ×${h.E.settings.renderScale.toFixed(2)} — ${rh.moves.map(m => m.split(' (')[0]).join(' | ')}`);
     const n0 = rh.moves.length; const rh2 = run(h.q, h.E, 120, 120, load, { t0: 80 });
     check(h.E.settings.renderScale >= PRESETS.high.scale - 1e-6 && minOf(rh2.fps.slice(4)) >= HOLD.cut * 60 - 0.5, `the fight over: the pixels come back on measured headroom — ×${h.E.settings.renderScale.toFixed(2)} after two minutes, never under ${minOf(rh2.fps.slice(4)).toFixed(0)} fps on the way (${rh2.moves.length} moves: ${rh2.moves.map(m => m.split(' (')[0]).join(' | ')})`);
-    // THE SIZE HELD STILL (`?quality=high&adapt=0`, ui/quality.ts visitAdaptive: what two benchmark runs need to be held against each other): a tier pinned by hand
-    // with the row 'Hold frame rate' as that address has it, through a fight that takes high to 25 ms of union (36 fps): nothing moves the picture's size or its
-    // tier, under hold 60 and as now. ADAPT_BREAK=1: the word is left off the address (the row stays on) and both lines must FAIL
-    { const word = process.env.ADAPT_BREAK === '1' ? '?quality=high' : '?quality=high&adapt=0';
-      check(visitAdaptive('') && visitAdaptive('?quality=high') && visitAdaptive('?adapt=1') && visitAdaptive('?adapt') && !visitAdaptive('?adapt=0') && !visitAdaptive('?bench&quality=high&adapt=off') && !visitAdaptive('?adapt=false'), '?adapt= words: 0 (or off, false) is the row off; nothing, or anything else, leaves it on');
-      for (const aim of [60, 0]) { const z = mk(aim, 120); z.q.adaptive = visitAdaptive(word); const s0 = sc(z); const rz = run(z.q, z.E, 80, 120, t => at(t < 10 ? 11 : 25));
-        check(sc(z) === s0 && z.q.current === 'high' && !rz.moves.some(m => /↓|↑/.test(m)) && minOf(rz.fps.slice(16, 78)) < 40, `${word}, ${aim ? `hold ${aim}` : 'as now'}: through a fight at ${minOf(rz.fps.slice(16, 78)).toFixed(0)} fps the picture stays at ×${sc(z).toFixed(2)} of high (${words(rz.moves.filter(m => /↓|↑/.test(m)))})`); } }
+    // NOTHING ADAPTS (`?adapt=0`, ui/quality.ts visit: what two benchmark runs need to be held against each other), through a fight that takes high to 25 ms of
+    // union (36 fps), under hold 60 and as now. With a tier named (`?quality=high&adapt=0`) nothing moves the picture's size or its tier. With NONE named the
+    // word holds the tier the page stands on, at that tier's own start size: auto would otherwise shed sharp direct, give the tier up and open at the size the
+    // last visit ended on. Then THE PAGE'S OWN ORDER: a ladder made from what the browser remembers, the address read, and Options' Reset (the defaults, then
+    // the address again). ADAPT_BREAK=1: the word is left off every address and every line that plays it must FAIL
+    { const off = process.env.ADAPT_BREAK === '1', word = off ? '?quality=high' : '?quality=high&adapt=0', bare = off ? '?bench' : '?bench&adapt=0';
+      check(visitAdaptive('') && visitAdaptive('?quality=high') && visitAdaptive('?adapt=1') && visitAdaptive('?adapt') && !visitAdaptive('?adapt=0') && !visitAdaptive('?bench&quality=high&adapt=off') && !visitAdaptive('?adapt=false'), '?adapt= words: 0 (or off, false) is the ladder off; nothing, or anything else, leaves it on');
+      const fight = (t: number) => at(t < 10 ? 11 : 25), low = (fps: number[]) => minOf(fps.slice(16, 78));
+      for (const aim of [60, 0]) { const z = mk(aim, 120); z.q.visit(word); const s0 = sc(z); const rz = run(z.q, z.E, 80, 120, fight);
+        check(sc(z) === s0 && z.q.current === 'high' && !rz.moves.some(m => /↓|↑/.test(m)) && low(rz.fps) < 40, `${word}, ${aim ? `hold ${aim}` : 'as now'}: through a fight at ${low(rz.fps).toFixed(0)} fps the picture stays at ×${sc(z).toFixed(2)} of high (${words(rz.moves.filter(m => /↓|↑/.test(m)))})`); }
+      for (const aim of [60, 0]) {   // under auto, with sharp direct auto's to shed and a size the last visit left behind
+        const z = mkQuality(w, 'high', true, { ladderClimb: true, ladderShed: true, sharpDirect: true, renderScale: 0.6 }, aim, 120), sharp0 = !!z.E.settings.sharpDirect; z.q.visit(bare);
+        const s0 = sc(z), rz = run(z.q, z.E, 80, 120, fight);
+        check(sharp0 && !z.q.auto && !z.q.adaptive && !z.q.climbAllowed && s0 === PRESETS.high.scale && sc(z) === s0 && z.q.current === 'high' && !!z.E.settings.sharpDirect === sharp0 && !z.q.shed && rz.moves.length === 0 && low(rz.fps) < 40,
+          `${bare} under auto, ${aim ? `hold ${aim}` : 'as now'}: the tier auto stood on is held at its own start ×${s0.toFixed(2)} (not the ×0.60 it was left at), and through a fight at ${low(rz.fps).toFixed(0)} fps nothing moves, sharp direct included (${words(rz.moves)})`); }
+      { const z = mkQuality(w, 'medium', true, { ladderClimb: true }, 60, 120); z.q.visit('?quality=low&adapt=0'); const named = z.q.current; z.q.adaptive = true; z.q.auto = true; z.q.climbAllowed = true; z.q.visit('?adapt=1');
+        check(named === 'low' && z.q.auto && z.q.adaptive && z.q.climbAllowed && z.q.current === 'low', 'a tier named beside the word is the one held, and an address without either word leaves auto, the row and the climb as they stand'); }
+      // the page's own order
+      const MODE = 'twopointsix.quality', PICK = 'twopointsix.autoPreset', SIZE = 'twopointsix.autoScaleRel';
+      const boot = (mem: Record<string, string>, search: string) => { store.clear(); for (const k of Object.keys(mem)) store.set(k, mem[k]); const E = mkEngine(w, {}), q: any = new Quality(E as never, { params: { rbIters: 4 } } as never);
+        const made = JSON.stringify([...store]); q.visit(search); return { E, q, wrote: JSON.stringify([...store]) !== made }; };
+      const is = (z: { E: any; q: any }, tier: QualityName) => !z.q.auto && !z.q.adaptive && !z.q.calibrating && !z.q.climbAllowed && z.q.current === tier && sc(z) === PRESETS[tier].scale;
+      { const z = boot({ [PICK]: 'medium', [SIZE]: '0.6' }, bare), opened = is(z, 'medium') && !z.wrote; z.q.calibrateTick(1 / 60); const rz = run(z.q, z.E, 30, 120, () => at(40));
+        check(opened && is(z, 'medium') && rz.moves.length === 0, `a browser whose auto last stood on medium at ×0.60, opened with ${bare}: medium is held at its own start ×${sc(z).toFixed(2)}, no calibration runs, the visit writes nothing as the machine's choice, and half a minute at ${minOf(rz.fps).toFixed(0)} fps moves nothing`);
+        z.q.pin('verylow'); z.q.setAuto(); z.q.visit(bare);
+        check(is(z, 'medium') && store.get(MODE) === 'auto', `a tier picked by hand and then Reset (the defaults, then the address again): medium held again, and the hand's pin is no longer the remembered choice (${z.q.current} ×${sc(z).toFixed(2)}, remembered ${store.get(MODE)})`); }
+      { const fresh = boot({}, bare), named = boot({ [PICK]: 'medium', [SIZE]: '0.6' }, off ? '?quality=low' : '?quality=low&adapt=0'), pinned = boot({ [MODE]: 'low' }, bare), plain = boot({ [PICK]: 'medium', [SIZE]: '0.6' }, '?bench');
+        check(is(fresh, 'high') && !fresh.wrote && is(named, 'low') && !named.wrote && is(pinned, 'low') && !pinned.wrote,
+          `a browser that never ran auto is held on high (the tier nobody measured, which the benchmark's card says); a tier named on the address is the one held whatever is remembered; a tier pinned from the menu is held as it is`);
+        check(plain.q.auto && plain.q.adaptive && plain.q.calibrating && plain.q.climbAllowed && plain.q.current === 'medium' && Math.abs(sc(plain) - 0.6) < 1e-9 && !plain.wrote, 'and an address without the word opens as it always did: auto, calibrating, at the size it remembered'); }
+      store.clear(); }
     void n0;
     // (2) steady load: no oscillation
     const s = mk(60, 120); const rs = run(s.q, s.E, 300, 120, () => at(15.5)); const late = rs.moves.filter(m => parseFloat(m) > 30);
