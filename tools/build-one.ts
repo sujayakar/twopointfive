@@ -52,7 +52,7 @@ const html = await Bun.file("index.html").text();
 const MODULE = /<script type="module"[^>]*\ssrc="\.\/src\/main\.ts"[^>]*><\/script>/;
 if (!MODULE.test(html)) fail("index.html: no module tag for ./src/main.ts");
 const rest = html.replace(MODULE, "");
-if (/<(script|link|img|source|video|audio|iframe)\b[^>]*\s(src|href)=/i.test(rest) || /@import|url\(\s*['"]?(?!data:)/i.test(rest)) fail("index.html names a file beside the page: pack it here first");
+if (/<(script|link|img|source|video|audio|iframe)\b[^>]*\s(src|href)=(?!["']?data:)/i.test(rest) || /@import|url\(\s*(?!['"]?data:)/i.test(rest)) fail("index.html names a file beside the page: pack it here first");
 if (!/<meta name="viewport"[^>]*>/.test(html)) fail("index.html: no viewport meta to put the one-page mark after");
 const page = html
   .replace(/<meta name="viewport"[^>]*>/, m => `${m}\n  <meta name="tps-one-page" content="1">`)
