@@ -11,6 +11,7 @@ const { v3 } = await import(`${ROOT}/src/math/vec.ts`);
 const { fireWeapon, hitPlayer } = await import(`${ROOT}/src/game/combat.ts`);
 const { resetChase } = await import(`${ROOT}/src/game/guards.ts`);
 const { Overlay } = await import(`${ROOT}/src/ui/overlay.ts`);
+const { harnessProfile } = await import(`${ROOT}/src/host/profile.ts`);
 
 type Vec3 = [number, number, number];
 const DT = 1 / 60;
@@ -97,6 +98,10 @@ const WALL: Vec3 = [21.5, 1.2, 10.0];   // the corridor's north wall between the
 
 // ================================================================ the probe
 export async function weaponsIdentity() {
+  // (NOT ASKED ON THE SHIPPED STAND, as threshold-identity is not: the card at the bottom was written down on the frozen stand before the weapon table, and the
+  // page's stand raises rules it never knew — the issue pistol's own row and name, the kit's click before a round, a guard's start before his first — so four of
+  // its sections read otherwise there by those rules' own work, and the line would say nothing of the table. The question is the frozen stand's.)
+  if (harnessProfile() === 'shipped') { console.log('\n=== weapons-identity: NOT ASKED on the shipped stand — its card is the frozen stand\'s (run it with no TPS_PROFILE) ==='); return true; }
   console.log('\n=== weapons-identity: the pistols\' every number, driven and recorded — cadence, magazine, staged reload, report, flash, hearing event, prop kick, guard spread / reload beat, one-shot, drops, muzzle, the kit row (frozen before the WeaponDef refactor; nothing may move) ===');
   const card: Record<string, any> = {};
 
