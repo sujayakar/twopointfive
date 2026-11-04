@@ -4,11 +4,11 @@
 //   B (rgba8): rg = the tangent-space normal's xy (½ + ½·n), b = roughness, a = the hollows: ½ of how open the texel is (1 = not in a hollow) + what puts the tile's paint-weighed mean at ½ (lookLayer)
 // Everything is periodic over the tile, so a layer repeats without a seam; the shader breaks the repeat up. Pure arithmetic on typed arrays: runs the same in a browser and under bun.
 export const LOOK_N = 512, LOOK_TILE = 2.0, LOOK_LAYERS = 28;
-/** the layers. A STUFF is a layer a box's paint can be drawn as, and its number is its place here and one (0 = plain): surface.wgsl's eight in its class order
- *  (SURF_MUD 1 → layer 0 …), then the look's own (look.wgsl LOOK_CLOTH 9 … LOOK_CARPAINT 16). After the stuffs, the two layers of what a mud wall is made of under
- *  its paint, which no box is: NEW STUFFS GO IN FRONT OF THOSE TWO and nothing else moves (the shader is told where they are: gbuffer.ts lookWgsl). A box's
- *  word has room for 31 stuffs (gbuffer.ts lookWordOf). Ask lookStuffOf for a name's number; never count places. A new stuff says how it is laid and what
- *  the weather does to it in ITS ROW below (STUFFS): the shader reads the rows and names no stuff for either. */
+/** the layers. A STUFF is a layer a box's paint can be drawn as, and its number is its place here and one (0 = plain). After the stuffs, the two layers of
+ *  what a mud wall is made of under its coat, which no box is: NEW STUFFS GO IN FRONT OF THOSE TWO and nothing else moves. A box's word has room for 31
+ *  stuffs (gbuffer.ts lookWordOf). Ask lookStuffOf for a name's number; never count places. EVERYTHING THE SHADER DOES BY STUFF IS A WORD IN THAT STUFF'S ROW
+ *  below (STUFFS): how it is laid, what the weather and use do to it, which way its grain runs, what it is made of under its coat. look.wgsl names no
+ *  stuff: it reads the rows (through the prelude, gbuffer.ts lookWgsl), so a new stuff is a row and its map and no line of shader. */
 export const LOOK_NAMES = ['mud wall', 'plaster', 'block', 'earth', 'gravel', 'slab', 'wood', 'sheet', 'cloth', 'metal', 'paint', 'veneer', 'plastic', 'fabric', 'steel', 'carpaint', 'stucco', 'skim', 'gloss block', 'board concrete', 'cast panel', 'paver', 'brushed', 'louvre', 'enamel', 'carpet', 'field stone', 'mud brick'] as const;
 export type LookName = typeof LOOK_NAMES[number];
 /** WHAT A STUFF IS, one row a name (a name with no row does not compile). The maps below and the shader (look.wgsl lookSurface, through the prelude:
@@ -31,15 +31,25 @@ export type LookName = typeof LOOK_NAMES[number];
  *  worn    how hard USE shows on it in a place somebody keeps (0 or absent = not at all: steel, enamel, a carpet; only a stuff with no `fades` may say
  *          it). Not weather: what boots, a trolley and a mason called back leave. The shader gives it two things by where it is in the WORLD, never in
  *          the map: a piece in four is stained, chipped at a corner or was changed for a new one (look.wgsl lookPiece: a stuff made of pieces), and a
- *          wall's foot has its coat knocked off in stretches to a hand's height */
-interface Stuff { rough: number; relief: number; built?: true; fades?: number; soaks?: true; worn?: number; untiles?: true; unit?: readonly [u: number, v: number, bond: boolean, shade: number]; bay?: readonly [along: number, up: number] }
+ *          wall's foot has its coat knocked off in stretches to a hand's height
+ *  runs    which way its grain or its ribs run on a thing of its own (one not built in place, or one that moves): 'long' = along the long side of every
+ *          face (boards, a veneered top); 'flat' = along the long side of a face that LIES and up a face that stands (a sheet's ribs run up a wall of
+ *          it; and a built stuff, when a thing that moves is made of it). Absent = as the box's own frame has it (cloth, bare metal, old paint)
+ *  least   a face narrower than this, metres from its middle to its edge, is too small to show the stuff's map (a sheet's ribs are a roof's, not a bucket's)
+ *  under   what it is MADE of under its coat, on a wall of it at least `long` by `tall` metres: a `plinth` course from the ground up to a wandering line,
+ *          and a `core` where the coat has let go in patches (a mud wall: field stone, mud brick). The two are layers no box is
+ *  foot    what works its way up through it at a wall's foot on ground nobody keeps (stones through earth): another stuff's layer
+ *  ground  bare ground: within a stride of lying snow it freezes (ice in the low places, rime over the rest)
+ *  sheds   snow does not lie on it or cling to it (bare iron on a snow level is a stove, a flue, a brazier) */
+interface Stuff { rough: number; relief: number; built?: true; fades?: number; soaks?: true; worn?: number; untiles?: true; unit?: readonly [u: number, v: number, bond: boolean, shade: number]; bay?: readonly [along: number, up: number];
+  runs?: 'long' | 'flat'; least?: number; under?: { readonly plinth: LookName; readonly core: LookName; readonly long: number; readonly tall: number }; foot?: LookName; ground?: true; sheds?: true }
 const STUFFS: Readonly<Record<LookName, Stuff>> = {
-  'mud wall': { rough: 0.95, relief: 1.6, built: true, fades: 1, soaks: true, untiles: true }, plaster: { rough: 0.86, relief: 1.8, built: true, fades: 1, soaks: true, untiles: true },
-  block: { rough: 0.93, relief: 1.5, built: true, fades: 1, soaks: true }, earth: { rough: 0.94, relief: 1.6, built: true, fades: 1, soaks: true, untiles: true },
-  gravel: { rough: 0.88, relief: 1.3, built: true, fades: 1, soaks: true, untiles: true }, slab: { rough: 0.82, relief: 1.8, built: true, fades: 1, soaks: true },
-  wood: { rough: 0.84, relief: 1.6, fades: 1 }, sheet: { rough: 0.5, relief: 1.0, fades: 1, soaks: true }, cloth: { rough: 0.96, relief: 1.6, fades: 1, soaks: true },
-  metal: { rough: 0.75, relief: 1.6, fades: 1, soaks: true }, paint: { rough: 0.5, relief: 1.6, fades: 1, soaks: true },
-  veneer: { rough: 0.4, relief: 1.4, fades: 0.3 }, plastic: { rough: 0.5, relief: 1.4, fades: 0.3 }, fabric: { rough: 0.95, relief: 1.6, fades: 0.3 },
+  'mud wall': { rough: 0.95, relief: 1.6, built: true, fades: 1, soaks: true, untiles: true, runs: 'flat', under: { plinth: 'field stone', core: 'mud brick', long: 0.6, tall: 0.24 } }, plaster: { rough: 0.86, relief: 1.8, built: true, fades: 1, soaks: true, untiles: true, runs: 'flat' },
+  block: { rough: 0.93, relief: 1.5, built: true, fades: 1, soaks: true, runs: 'flat' }, earth: { rough: 0.94, relief: 1.6, built: true, fades: 1, soaks: true, untiles: true, runs: 'flat', foot: 'gravel', ground: true },
+  gravel: { rough: 0.88, relief: 1.3, built: true, fades: 1, soaks: true, untiles: true, runs: 'flat', ground: true }, slab: { rough: 0.82, relief: 1.8, built: true, fades: 1, soaks: true, runs: 'flat' },
+  wood: { rough: 0.84, relief: 1.6, fades: 1, runs: 'long' }, sheet: { rough: 0.5, relief: 1.0, fades: 1, soaks: true, runs: 'flat', least: 0.2 }, cloth: { rough: 0.96, relief: 1.6, fades: 1, soaks: true },
+  metal: { rough: 0.75, relief: 1.6, fades: 1, soaks: true, sheds: true }, paint: { rough: 0.5, relief: 1.6, fades: 1, soaks: true },
+  veneer: { rough: 0.4, relief: 1.4, fades: 0.3, runs: 'long' }, plastic: { rough: 0.5, relief: 1.4, fades: 0.3 }, fabric: { rough: 0.95, relief: 1.6, fades: 0.3 },
   steel: { rough: 0.42, relief: 1.4, fades: 0.3 }, carpaint: { rough: 0.26, relief: 1.2, fades: 0.3 },
   stucco: { rough: 0.42, relief: 1.5, built: true, worn: 1, untiles: true }, skim: { rough: 0.55, relief: 1.6, built: true, worn: 1, untiles: true },
   'gloss block': { rough: 0.4, relief: 1.4, built: true, worn: 0.6, unit: [0.4, 0.2, true, 0.02] }, 'board concrete': { rough: 0.42, relief: 1.6, built: true, worn: 0.8 },
@@ -53,12 +63,26 @@ export const LOOK_BUILT: readonly number[] = LOOK_NAMES.map(n => STUFFS[n].built
 export const LOOK_FADES: readonly number[] = LOOK_NAMES.map(n => STUFFS[n].fades ?? 0);
 export const LOOK_SOAKS: readonly number[] = LOOK_NAMES.map(n => STUFFS[n].soaks ? 1 : 0);
 export const LOOK_WORN: readonly number[] = LOOK_NAMES.map(n => STUFFS[n].worn ?? 0);
-/** how a stuff is laid over more than a piece: (it untiles, pieces a bay along, pieces a bay up, spare) */
-export const LOOK_LAY: readonly (readonly [number, number, number, number])[] = LOOK_NAMES.map(n => { const st = STUFFS[n]; return [st.untiles ? 1 : 0, st.bay?.[0] ?? 0, st.bay?.[1] ?? 0, 0]; });
+/** how a stuff is laid over more than a piece: (it untiles, pieces a bay along, pieces a bay up, which way it runs: 0 its box's own, 1 flat, 2 long) */
+export const LOOK_LAY: readonly (readonly [number, number, number, number])[] = LOOK_NAMES.map(n => { const st = STUFFS[n]; return [st.untiles ? 1 : 0, st.bay?.[0] ?? 0, st.bay?.[1] ?? 0, st.runs === 'long' ? 2 : st.runs === 'flat' ? 1 : 0]; });
+const layerOf = (n: LookName | undefined): number => n === undefined ? -1 : LOOK_NAMES.indexOf(n);
+/** what a thing of a stuff is, beyond its map: (least: half a face's width under which the map is not shown, 0 = any; the layer that comes up at a wall's
+ *  foot, −1 = none; bare ground that freezes by snow; snow does not lie on it) */
+export const LOOK_THING: readonly (readonly [number, number, number, number])[] = LOOK_NAMES.map(n => { const st = STUFFS[n]; return [st.least ?? 0, layerOf(st.foot), st.ground ? 1 : 0, st.sheds ? 1 : 0]; });
+/** what a stuff is made of under its coat: (the plinth's layer, the core's layer, −1 = none; and the least wall that shows them, as half its length and
+ *  half its height in metres, which is what a box's own record holds) */
+export const LOOK_UNDER: readonly (readonly [number, number, number, number])[] = LOOK_NAMES.map(n => { const u = STUFFS[n].under; return u ? [layerOf(u.plinth), layerOf(u.core), u.long / 2, u.tall / 2] : [-1, -1, 0, 0]; });
+/** WHAT A HAND MOVES has its arrises rounded and rubbed (a crate, a table, a sill), and a wall, whose boxes meet their neighbours edge to edge, has not: a
+ *  thing under `long` on its longer side and under `tall`, and no thinner than `thin` (metres). Not a stuff's: a plain box is rubbed too. */
+export const LOOK_HANDLED = { long: 1.3, tall: 1.6, thin: 0.04 } as const;
+/** WHERE THE GROUND IS, for what the weather does (metres above the level's floor, which every level lays at 0): a top lower than `top` is ground and not
+ *  a table; a face lower than `snow` is the snow field's own; a box whose foot is lower than `foot` stands on the ground and takes its damp. (Use and
+ *  dirt, the detail layer's and the look's one answer a mark, keep their own heights in look.wgsl.) */
+export const LOOK_GROUND = { top: 0.25, snow: 0.06, foot: 0.12 } as const;
 export const LOOK_UNIT: readonly (readonly [number, number, number, number])[] = LOOK_NAMES.map(n => { const u = STUFFS[n].unit; return u ? [u[0], u[1], u[2] ? 1 : 0, u[3]] : [0, 0, 0, 0]; });
-/** the layers a layer's own drawing reads beside its own (look.wgsl): a mud wall shows its stone and its brick, and stones come up through earth at a wall's foot.
- *  Whoever makes a layer makes these with it (gbuffer.ts needLook). */
-export const LOOK_WITH: Readonly<Partial<Record<LookName, readonly LookName[]>>> = { 'mud wall': ['field stone', 'mud brick'], earth: ['gravel'] };
+/** the layers a layer's own drawing reads beside its own, from its row (`under`, `foot`): a mud wall shows its stone and its brick, and stones come up
+ *  through earth at a wall's foot. Whoever makes a layer makes these with it (gbuffer.ts needLook). */
+export const LOOK_WITH: Readonly<Partial<Record<LookName, readonly LookName[]>>> = Object.fromEntries(LOOK_NAMES.map(n => { const st = STUFFS[n]; return [n, [...(st.under ? [st.under.plinth, st.under.core] : []), ...(st.foot ? [st.foot] : [])]] as const; }).filter(([, w]) => w.length > 0));
 
 const TAU = Math.PI * 2;
 function hash(ix: number, iy: number, seed: number): number {
