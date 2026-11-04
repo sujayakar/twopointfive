@@ -727,8 +727,8 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   LEFT: a LOOSE drum, bucket or stool is a prop, and a prop's part cannot say it is round (the rule looks in a level's boxes). Writing a prop's body as
   slabs was tried and dropped: a blast throws a prop part by part, so a drum went as four overlapping slabs against the blast's piece budget, and the
   two squares of a small one stand outside the footprint it collides with. The mend is a part that says it is round, in the simulation and the picture.
-  Other writers of the same numbers by hand: `lived-train.ts rd` (its own two squares at 0.9 r; not touched). `lived-quiet.ts` writes its rounds with
-  `roundSlabs` (its one `round` tool; see the library's bullet on one name, one piece).
+  The other two kits that wrote these numbers by hand (`lived-quiet.ts`, `lived-train.ts`) call `roundSlabs` now: see the library's bullet on one name,
+  one piece.
   CHECKED (both stands): typecheck; `export.ts --check` every level (tut-queue stale and train-ground throwing before and after); `lived-check` every
   level; `level-needs --run` depot and hall; `probes.ts round` (its line 7 was red before this step). NOT SEEN ON A GPU; nobody has played it.
 - **Six ground and yard pieces joined the 2010s kit** (dress every level, 11-03; no switch: the kit only, no level lays them in this step; `src/scene/gwotKit.ts`).
@@ -831,6 +831,9 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   office's taken into a room, and the look kit's `wallX` / `wallZ` are the host's wall in a palette paint). TO MAKE TWO KITS' PIECES ONE: have the second
   kit call the first kit's piece and add nothing, as `livedKit.chair` does; the catalogue then counts one. `tools/levels/lived-quiet.ts` had two tools
   that wrote a round by hand (`rnd` under 0.2 m, `oct` from it): they are one `round(x, z, y0, y1, r, m, solid)` on `gwotKit.ts roundSlabs`, the same boxes
-  to the last digit (`export.ts --check` up to date on crossing and quiet-relay). ONE CALL kept its old shape by hand: the cable reel's barrel in
-  `crossing.ts` is two squares at 0.26 m, which `round` would write as an octagon and move the level file; it becomes `L.round` in the step that moves
-  that file. STILL BY HAND: `lived-train.ts rd` (0.9 r, a 3 mm step), which moves the training levels' files when it is folded.
+  to the last digit (`export.ts --check` up to date on crossing and quiet-relay). THE LAST TWO BY HAND went the same way in the next
+  step (lane L, five level files): `lived-train.ts rd` is written on `roundSlabs` (it was two squares at 0.9 r with a 3 mm step) and throws on a round 8 mm
+  thick or less, as the lived kit's does (the ash in train-orders' fire ring is two `flat` squares); the crossing's cable reel drum is `L.round`. From
+  0.2 m those are octagons the round rule finds, so with lived rooms stood in the counts go crossing 30 to 31, the hall 5 to 11, train-move 13 to 17,
+  train-orders 2 to 3, train-silent 0 to 3 (each a file under `tools/qa/fixtures/round/`; the plain counts do not move). The three training levels are on
+  no mission row. STILL BY HAND: a loose thing's parts (the quiet pen's pail and tyre): a prop's part cannot say it is round yet.

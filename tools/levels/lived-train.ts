@@ -11,7 +11,7 @@
 // AFTER `T.finish()` — and NO LIGHT is added on any of the seven (lesson 3 is about the lights; the quiet lessons' dark ways are measured).
 // Boxes only, flat colours off the GWOT kit's palette, no dice: the same file every run.
 import { BoxFlag } from '../../src/scene/boxes';
-import { GW_SHELL, type GwotMat } from '../../src/scene/gwotKit';
+import { GW_SHELL, roundSlabs, type GwotMat } from '../../src/scene/gwotKit';
 import type { PropKind } from '../../src/scene/level';
 import { pieces } from '../../src/scene/library';
 import type { trainGround } from './train-ground';
@@ -33,9 +33,12 @@ export function livedTrain(T: Ground) {
   // ---- boxes, in world rectangles
   const bx = (x0: number, z0: number, x1: number, z1: number, y0: number, y1: number, m: GwotMat, flags = 0, yaw = 0) =>
     T.add({ c: [(x0 + x1) / 2, (y0 + y1) / 2, (z0 + z1) / 2], h: [Math.abs(x1 - x0) / 2, (y1 - y0) / 2, Math.abs(z1 - z0) / 2], ...M[m], ...(flags ? { flags } : {}), ...(yaw ? { yaw } : {}) });
-  /** a round thing: two squares an eighth of a turn apart */
+  /** a ROUND thing standing from y0 to y1, radius r: the kits' one way of writing a round (src/scene/gwotKit.ts roundSlabs). From 0.2 m an octagon of four
+   *  slabs, which the round rule (src/scene/round.ts) finds and makes one round box of; smaller, two squares an eighth of a turn apart. A round thinner than
+   *  its slabs' steps is no round: lay it `flat` */
   const rd = (x: number, z: number, r: number, y0: number, y1: number, m: GwotMat, flags = 0) => {
-    const k = r * 0.9; bx(x - k, z - k, x + k, z + k, y0, y1, m, flags); bx(x - k, z - k, x + k, z + k, y0, y1 - 0.003, m, flags, Math.PI / 4);
+    if (!(y1 - y0 > 0.008)) throw new Error(`lived-train: a round ${((y1 - y0) * 1000).toFixed(0)} mm thick at (${x}, ${z}): its slabs' tops step down 2 to 4 mm each, so lay a flat piece for a thing that thin`);
+    for (const o of roundSlabs(r)) bx(x - o.hx, z - o.hz, x + o.hx, z + o.hz, y0, y1 - o.drop, m, flags, o.yaw);
   };
   /** drawn on the ground (never solid) */
   const flat = (x0: number, z0: number, x1: number, z1: number, m: GwotMat, y = 0.03, yaw = 0) => bx(x0, z0, x1, z1, y - 0.003, y + 0.003, m, NS, yaw);
