@@ -315,30 +315,42 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   light it puts out, and a long one drifts (the plan lesson's check, played twice over: a third enemy alerted with it on, none with it off). KNOWN: in a dim place a man whose light is off takes his goggles down (nvg.ts, as with every other reason his light is
   off) and raises them 0.7 s after it burns again; a checkpoint does not keep the 0.3 s clock (as with the other light clocks). A man facing a mate's
   back at arm's length is not a wall and stays lit. NEVER SEEN ON A GPU; nobody has played it.
-  THE FLOOR IS NOT A WALL (11-04; `guards.ts beamWalled`, the one reading this rule and the hand torch's `torchLow` both ask). The rule counted the
-  ground as "something solid". A gun at the low ready ends its beam on the ground 1.50 to 1.55 m from the lens, between `wallM` and `wallBackM`, so a
-  man who brushed one wall stayed dark for the rest of his walk in the open: compound-four at night, the four told to stack on the front door, 1.1 of
-  4 weapon lights on (`probes.ts hours-team`), and `flashweight-lights` red on 19 of its 25 lines on the page's stand. Now a ray is followed as it
-  flies while it is above the ground's band (`scene/collision.ts BAKE_Y`, what the walk grid calls floor) and the rest of it, to the ground or to the
-  rule's distance, is asked along the band's top: a wall, a leaf or a crate is in the way down to its foot; the slab, a kerb and a blast's rubble are
-  not. A beam with a ray that comes down to the ground with nothing standing in its way is not into a wall and burns. NO NEW SWITCH: it is what
-  `LIGHTS.wallOff` (and `TORCH.wallLow`) mean wherever they are on, so the frozen stand, where both are off, does not reach it. `WALLFLOOR_BREAK=1`
-  (QA only) counts the ground again. CHECKS, both stands: `light-wall` 10 of 10 (its rays follow the rule's geometry; a new line lays 1776 beams by
-  hand and reads each by what the box world's own ray ends on: 547 with every ray on the ground, none a wall to the rule; 41 with every ray on
-  something that stands, all walls to it); `WALLFLOOR_BREAK=1` fails that line on both stands and `hours-team` and 'it burns again at once' on the
-  page's; `WALLLIGHT_BREAK=1` fails as before. `hours-team` on the page's stand 1.1 → 3.4 of 4 (the rest is men whose guns are into the real wall
-  they walk along: they aim at their mark through it). `flashweight-lights` on the page's stand: 24 of 25, and under `WALLFLOOR_BREAK=1` 6 of 25; its
-  reading of "a wall" is now `walllight-probes.ts rayWalled`, one for both checks, and a man the rule holds dark is still excused for up to three
-  frames after his whole beam last ended on a wall (a leaf he pushes moves after he is posed, so the rule relights a frame or two after the picture's
-  leaf has moved: 0 to 4 man-frames a scenario). The one red line left is the barracks ('lit through the search 119 of 126'), the lit-place rule's
-  and the same with `TPS_WALLLIGHT=0`: the row in `expected-red.ts` says so. `torch-wall` 7 of 7 on both stands, a torch hung for 420 man-frames
-  as before the mend. MEASURED: the 21 missions' play-throughs on seeds 1 and 2 (`PT_DIGEST=1 playthrough.ts`), before against after: the page's
-  stand, 30 of 42 runs differ by digest (a light is in the simulation), 4 of them in their end, men or seconds (room-clear-four seed 2 wiped → taken
-  with one man; the depot and the barracks on seed 2 the same end 19 s and 95 s later; Mousehole 1 s sooner), teammates standing 71 → 72 of 148; two
-  seeds are no tally. The frozen stand, seed 1: 21 of 21 the same. KNOWN: a gun pointed straight down beside nothing now lights a small patch at his
-  own feet where it was dark (a passing pose; with every light forced on, light-wall's two stagings have such a beam for a few dozen man-frames); a
-  recording made on the page before this replays with the mended rule and drifts from its first relit light. The real page on the software adapter
-  booted with the rule on and no page error. NEVER SEEN ON A GPU; nobody has played it.
+  THE FLOOR IS NOT A WALL (11-04; `guards.ts rayEnd` / `beamWalled`, the one reading this rule and the hand torch's `torchLow` both ask). The rule
+  counted the ground as "something solid" and wanted every ray to end inside its distance. A gun at the low ready ends its beam on the ground 1.50
+  to 1.55 m from the lens, between `wallM` and `wallBackM`, so a man who brushed one wall stayed dark for the rest of his walk in the open:
+  compound-four at night, the four told to stack on the front door, 1.1 of 4 weapon lights on (`probes.ts hours-team`), and `flashweight-lights`
+  red on 19 of its 25 lines on the page's stand. Now each ray ends on one of four things inside the distance: something that stands, met above the
+  ground's band (`scene/collision.ts BAKE_Y`, what the walk grid calls floor) · the foot of such a thing, met inside the band (the ray is followed
+  as it flies while it is above the band, and from there to the ground along the band's top: a wall, a leaf or a crate is in the way down to its
+  foot; the slab, a kerb and a blast's rubble are not) · the ground (it is down in the band with nothing standing in the rest of its way) ·
+  nothing. A BEAM IS INTO A WALL WHEN ITS MIDDLE ENDS ON SOMETHING THAT STANDS AND NO RAY OF IT RUNS CLEAR; a ray on the ground is neither. So a
+  lowered gun over open floor burns (its middle is on the floor), and the same gun a step from a wall is dark (its middle on the wall, its lower
+  edge on the floor at the wall's foot). To START, the middle must be on the thing above the band; a beam that read as a wall a moment ago is HELD
+  while its middle is still on the thing's foot: that is the give a lowered beam has, where a level one has the two distances, so a man who sways
+  at the edge does not blink. For a level beam nothing changed. NO NEW SWITCH: it is what `LIGHTS.wallOff` (and `TORCH.wallLow`) mean wherever
+  they are on, so the frozen stand, where both are off, does not reach it. `WALLFLOOR_BREAK=1` (QA only) is the rule as it was.
+  CHECKS: the lights' checks read a beam with `tools/qa/beam-reading.ts` (the game's own `beamFan` / `beamRayEnd` handed in, after the step, judged
+  only where the beam is plain at a 0.15 m margin either side of a rule's distance). `light-wall` 10 of 10 on both stands; its new line lays 1776
+  beams by hand at the rule's two distances and the torch's two: plainly into a wall 48 / 61 / 37 / 53, plainly open 1675 / 1669 / 1701 / 1675,
+  middle on a foot 23 / 30 / 5 / 23, none read otherwise by the rule; 310 / 599 of the open ones are beams the rule as it was called walls.
+  `WALLFLOOR_BREAK=1` fails that line on both stands, and `hours-team`, 'it burns again at once' and 19 lines of `flashweight-lights` on the page's.
+  `hours-team` on the page's stand: 1.1 → 2.2 of 4 burning, and the other 1.8 are put out for a REAL wall (every dark man's beam has its middle
+  on the compound's south wall: they walk along it with their guns on their mark, through it). The line now counts such a man — the wall rule is
+  what put his light out (`guards.ts wallPutOut`) and his beam is not plainly open — beside the lit ones, wants one burning at least, and wants
+  none so counted at midday. `flashweight-lights` on the page's stand: 24 of 25; it excuses the same man the same way, and for up to four frames
+  more with a door leaf in reach of his lens (a leaf he pushes moves after he is posed, so the rule relights a frame or two after the picture's
+  leaf has moved: 0 to 4 man-frames a scenario, every one a gun straight down beside a leaf). The one red line left is the barracks ('lit
+  through the search 119 of 126'), the lit-place rule's and the same with `TPS_WALLLIGHT=0`: the row in `expected-red.ts` says so. `torch-wall`
+  7 of 7 on both stands. MEASURED: the 21 missions' play-throughs on seeds 1 and 2 (`PT_DIGEST=1 playthrough.ts`), before against after. The page's stand: 30 of 42 runs
+  differ by digest (a light is in the simulation), 3 of them in their end, men or seconds (room-clear-four seed 2 wiped → taken with one man;
+  barracks-four seed 2 taken with three men at 165 s where one stood at 81 s; Mousehole seed 2 a second sooner), teammates standing 71 → 74 of
+  148; two seeds are no tally. The frozen stand, seed 1: 21 of 21 the same.
+  KNOWN: the squad is still dark for much of a walk ALONG a wall, rightly by this rule and wrongly to the eye: the men aim at their mark through
+  the wall beside them (warehouse, compound, kill house: a third of the walking man-frames). That is the aim's to mend, not the light's. A gun
+  pointed straight down in the open now lights a small patch at his own feet where it was dark. A recording made on the page before this replays
+  with the mended rule and drifts from its first relit light. The hand torch hangs more (`docs/agents/enemies.md`, its bullet: 420 → 636 man-frames of 27000 in `torch-wall`'s night). The real page boots on the software
+  adapter with the rule on, takes the stack order and steps three seconds with no page error; it could not be stepped further in reasonable time.
+  NEVER SEEN ON A GPU; nobody has played it.
 - **An IR light on the goggles** (`src/game/irlight.ts`, 10-15; the maintainer, of a depot whose rooms were flat black noise through the tube: "maybe we should
   model IR lights on the nvg so even totally dark rooms are visible. and we can assume enemies never have nvg"). SWITCH `IRLIGHT.on`: ON in the page
   (`?noirlight` puts it off), OFF in the module and on the frozen stand (`TPS_IRLIGHT=1` raises it; `FROZEN_HOLDS`, standup pin, standEnv); registered in

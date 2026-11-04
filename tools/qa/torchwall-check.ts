@@ -21,19 +21,22 @@ function fnv() { let h = 0x811c9dc5 >>> 0; return { eat: (s: string) => { for (l
 
 export async function torchwallCheck(): Promise<boolean> {
   const { standUp } = await import('./headless.ts');
+  const { plainWall, plainOpen, BEAM_MARGIN: MARGIN } = await import('./beam-reading.ts');
+  const GDM: any = await import(`${ROOT}/src/game/guards.ts`);
   const { TORCH } = await import(`${ROOT}/src/game/calmtorch.ts`);
   const { torchCarryWant } = await import(`${ROOT}/src/game/rigProps.ts`);
   const { HOUR } = await import(`${ROOT}/src/game/hours.ts`);
   const { digestGame } = await import(`${ROOT}/src/game/digest.ts`);
   const J: any = await import(`${ROOT}/src/game/journal.ts`);
-  const DT = 1 / 60, SECS = 150, MARGIN = 0.15, rnd0 = Math.random, was = { ...TORCH }, hour0 = { id: HOUR.id, sun: HOUR.sun }; let all = true;
-  const fanOf = (d: number[]): number[][] => { const out: number[][] = []; for (const a of [0, -0.17, 0.17, -0.33, 0.33]) { const c = Math.cos(a), k = Math.sin(a); out.push([d[0] * c + d[2] * k, d[1], d[2] * c - d[0] * k]); } for (const e of [-0.3, 0.3]) { const v = [d[0], d[1] + e, d[2]], l = Math.hypot(v[0], v[1], v[2]) || 1; out.push([v[0] / l, v[1] / l, v[2] / l]); } return out; };
+  const DT = 1 / 60, SECS = 150, rnd0 = Math.random, was = { ...TORCH }, hour0 = { id: HOUR.id, sun: HOUR.sun }; let all = true;
   const check = (ok: boolean, label: string, detail: string) => { all &&= ok; console.log(`- ${ok ? 'PASS' : 'FAIL'} — ${label}\n    ${detail}`); };
   console.log('\n=== torch-wall: a hand torch whose beam would end on the wall at his hand hangs, its beam on the floor at his feet ===');
   const staff = (g: any) => g.guards.filter((x: any) => !x.unit && x.team === 'guard' && x.state === 'patrol' && !x.drawn);
-  /** the check's own reading: does the whole carried beam end on something solid inside `m` of his hand */
-  const ends = (g: any, x: any, m: number): boolean => { const hand = x.char.bones.handR; if (!hand) return false; const d = torchCarryWant(x.char);
-    return fanOf(d).every(r => g.col.segmentBlocked(hand, [hand[0] + r[0] * m, hand[1] + r[1] * m, hand[2] + r[2] * m])); };
+  /** the check's own reading of the carried beam from his hand, as the step left it (beam-reading.ts, the reading the weapon lights' checks take too: the
+   *  ground is not a wall): plainly into something that stands inside the rule's near distance · plainly open at its far one */
+  const beamOf = (g: any) => ({ fan: GDM.beamFan, ray: (o: number[], r: number[], m: number) => GDM.beamRayEnd(g, o, r, m) });
+  const atWall = (g: any, x: any): boolean => { const hand = x.char.bones.handR; return !!hand && plainWall(beamOf(g), hand, torchCarryWant(x.char), TORCH.wallM); };
+  const inOpen = (g: any, x: any): boolean => { const hand = x.char.bones.handR; return !!hand && plainOpen(beamOf(g), hand, torchCarryWant(x.char), TORCH.wallBackM); };
   interface Tally { n: number; levelAtWall: number; litAtWall: number; atWall: number; hung: number; hungInOpen: number; hash: string; stoodOn: boolean }
   const walk = async (set: (first: boolean) => void): Promise<Tally> => {
     Math.random = seeded(11); HOUR.id = 'night'; HOUR.sun = 1; const W: any = await quiet(() => standUp()), g = W.game; const stoodOn = !!TORCH.wallLow; g.playerInvisible = true; g.godMode = true; TORCH.calmOff = false; set(true);
@@ -41,7 +44,7 @@ export async function torchwallCheck(): Promise<boolean> {
     for (let f = 0; f < SECS * 60; f++) { W.step(DT); H.eat(JSON.stringify(digestGame(g, true)));
       for (const x of g.guards) H.eat(`${x.flashlight?.enabled ? 1 : 0}${(x.flashlight?.dir?.[1] ?? 0).toFixed(3)}`);
       for (const x of staff(g)) { T.n++; const fl = x.flashlight, y = fl.dir[1];
-        const n = ends(g, x, TORCH.wallM - MARGIN) ? (near.get(x) ?? 0) + 1 : 0; near.set(x, n); const c = !ends(g, x, TORCH.wallBackM + MARGIN) ? (clear.get(x) ?? 0) + 1 : 0; clear.set(x, c);
+        const n = atWall(g, x) ? (near.get(x) ?? 0) + 1 : 0; near.set(x, n); const c = inOpen(g, x) ? (clear.get(x) ?? 0) + 1 : 0; clear.set(x, c);
         if (n > 0.7 * 60) { T.atWall++; if (fl.enabled) { T.litAtWall++; if (y > -0.75) T.levelAtWall++; } }
         if (y < -0.75) { T.hung++; if (c > 60) T.hungInOpen++; } } }
     T.hash = H.hex(); return T; };
