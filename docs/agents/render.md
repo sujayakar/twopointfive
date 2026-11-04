@@ -1777,6 +1777,54 @@ interleaved and filtered to their quiet minimum, and a row whose p75 sits far ab
   the tree one review before this one. NOBODY HAS SEEN: any of it on a GPU (the model's own lines are untouched, so the default page should not need
   it); a device that cannot build the field, which is drawn differently than before; the wall cell's side on a native driver's compile of the
   new kernel text.
+- **THE GROUND RUNS ON PAST THE LEVEL'S EDGE, WHEN THE ADDRESS ASKS; AND A LEVEL'S MAPS ARE LET GO OF PAST THE EDGE BY ONE RULE** (11-04; the look
+  page only, `&beyond=1`, OFF unless asked, no panel row; `scene/groundBeyond.ts groundSlab`, `groundBeyond`, `groundBeyondFollow`, `BEYOND`;
+  `scene/look.ts groundBeyondOn`; `main.ts`; `render/frame.ts MAP_EDGE` and the prelude's `pastMap`, `rimShare`). WHAT IS PAST THE RIM IS THE
+  MAINTAINER'S OWN WORD: black (10-15, "we should just have black outside the edges of the map, not extend"; `composite.wgsl`, the line for a ray
+  that meets nothing under the horizon, untouched here). At night it reads as the dark. Under a midday sun it was seen on a real GPU as a black wall
+  a few metres from where the team starts: a quarter to a half of the opening frame on five of eight yards. So the other answer is built for him to
+  look at and STAYS OFF UNTIL HE SAYS; it is his alone to turn. WITH THE WORD the level's own ground slab (the plain box, square to the world, drawn
+  and met by rays, whose top is within 5 cm of the floor and that covers the whole of the world's rectangle; of two, the one on top: all 60 levels
+  have one) is laid once more, 2 mm under itself and 160 m wider on every side (the camera's far plane is 120 m from the eye), as a box no ray ever
+  meets (`BoxFlag.NoShadow`), in the slab's own paint, gloss and stuff, named `ground_beyond`. The picture draws it as it draws the slab: the look's
+  ground runs on unbroken (its layers are placed by the world's metres, and 2 mm is the same centimetre to the look's deal of pieces), under the
+  hour's sun and the sky. No outcome of the simulation, the bounce or a shadow can depend on it: no ray, sweep or collision cell returns it, and
+  inside the world the slab covers it. It IS in the level's list, so it is in the level's fingerprint and a rollback snapshot (with the word a
+  checkpoint or a recording is that visit's own, as with the look's trials), and under a picked rain the weather's sweep of open slabs writes its
+  look and keeps a row for it. A level with no such slab is left as it is. The word is one of the look page's own (`LOOK_PAGE_WORDS`), so a
+  benchmark of a page opened with it measures that page. IT IS THE SLAB, DRAWN WIDER: the page holds the pair and at every pack of the world for a
+  picture (`scene/boxes.ts beforePack`, a hook only a page that asks sets: a frame, a still and a replay's picture alike) the box takes on what the
+  slab looks like now (`groundBeyondFollow`: paint by value, the render-only wet, gloss, roughness, the stretched lobe: all the rain writes). So the
+  wet lot and its drying reach it in the same frame with NO WORD IN `game/weather.ts`; its stuff and metal are the slab's as laid and are not
+  followed. An editor's level that will not stand falls back to the office, and the ground is laid again on that. THE MAP'S EDGE, ONE RULE FOR THREE
+  READERS (`MAP_EDGE` near 1 m, far 4 m, by the true distance to the map's rectangle): the walked ways, the wear at a wall's foot and the place
+  field are maps over the world's rectangle and a read past the edge is clamped to the rim's last cell. Within a metre that is right (a man leaning
+  out, a door leaf swung out, rubble at a rim wall's foot are of the place at the rim) and the read stands, times exactly 1; over the next three it
+  is let go of: no wear, and the two levels a place is shown by go to the open air's in stops (`lookShadeGain`, which has one way out to the model);
+  from four metres nothing is read at all, before the field is live too (the open air is then the frame's own word for it). Each reader asks it of
+  the point its read is made at (`look.wgsl lookWayAt`, its one read of the ways; `detail.wgsl`; `composite.wgsl` and its compact twin). NOT UNDER
+  THE RULE: the snow's field (below), the fog of war (no cells out there), the snow in the air past the rim (`particles.wgsl pastRimAir`: its own
+  measure, square at a corner, over 1.5 m). TWO EDITS RUN ON EVERY PAGE WITH NO SWITCH, and are meant to change nothing there: the edge rule is in
+  every page's shaders (times exactly 1 and a branch not taken, for anything within a metre of the map: a level file's furthest drawn box reaches
+  4.7 cm past it, and by a review's count the look's rubble on one tutorial 46 cm and a rifle held out over the edge about 60; debris in flight
+  further out fades to the open air's exposure), and `render/snowField.ts` passes a box no ray meets when it looks for the snow's ground (no level's
+  pick moves; the bake is the same with and without the box on the five snow levels). THE CHECK: `bun run tools/qa/groundbeyond-check.ts` (not in a
+  probe family; it reads no stand: one run is both; the word's seven addresses and that it is the look page's; every level, sorted: found, one box,
+  drawn and never traced, its reach, its top, its gloss and paint, the level's own boxes untouched, a level that will not load is red; six named
+  levels' collisions, their cells and a sweep under the floor; sixteen made-up lists for what counts as ground; a deck smaller than the world and a
+  world-wide roof are no ground; the follow through five states of a slab; the edge rule's two lines in the prelude, its arithmetic written again in
+  single floats, exactly 1 on the map and a metre past it, round at a corner, and the furthest any file's box reaches past the map; where the page
+  lays it and lays it again, and the one hook it follows by; the readers' lines word for word in all five places, and that the weather's text does
+  not name the box; `GROUNDBEYOND_BREAK=1` lays a box the rays meet and fails twice, by its flag and by the collision's cells). `lookexpo-check`'s
+  pins of `lookShadeGain` moved with it (the old body is `lookPlaceLevels`, word for word but for what it returns); the compact fixture is stamped;
+  `shaderinline` reads the composite's kernels 1066 KB (1070 before: the gain has one way out to the model where it had two; still red against
+  1030). MEASURED, on the software adapter, one seed: WITHOUT THE WORD the block at night and the white roof at midday draw the bytes they drew (two boots each, this tree against the one before it: 0 of 2,304,000). WITH IT, the depot's opening at midday: the black share of the frame goes from 0.37 to 0.09 (what is left is the inside of the building the frame looks into), with no page or GPU error and no line at the world's edge; where the walked ruts stop at the edge the ground past it is plainer. Drawn with the word but telling nothing, their frames not reaching the rim: the block at night, the road tutorial in snow. NOT DRAWN: the rain on it (the follow is held by the check's arithmetic alone). NOT DONE, AND NOT KNOWN: ON A SNOW LEVEL THE GROUND DOES NOT RUN ON UNBROKEN where snow stands at the rim: the snow's hills
+  end at the map and the laid ground is flat, so there is a step up to 0.7 m along most of the south rim of the pass and of two tutorials, the
+  field's last texel is smeared outward past it, and a boot print on a rim texel runs on as a furrow. A thing past the rim throws no shadow on this
+  ground and the ground bounces no light back into the level (the bounce's rays still take the sky's under-horizon there; what bounce the ground
+  shows is the cache's edge probes'); for the first metre past a rim that a wall or a rock stands on, the ground is shown by that wall's side of the
+  read; 26 levels' slabs have no stuff of their own and run on as flat paint; a level whose world should end at a wall, a drop or water wants a word
+  of its own in its file, and none has one; the fog of war has no cells out there. Never seen on a GPU.
 - **LIGHT KEEPS ITS ORDER WHERE TWO PLACES MEET** (11-04; the look panel's row `order` "Light in order", live, 1 on the look's page, 0 = as it was to
   the bit; `frame.placeCfg.x`, a new member, the last of the frame's head; `place_common.wgsl lookGainsOwn`, called by `composite.wgsl` and
   `compact/composite.wgsl lookExpoGain`; the place field's SECOND BLOCK, `render/placeField.ts PLACE_NEAR`, `place_field.wgsl hand`). The

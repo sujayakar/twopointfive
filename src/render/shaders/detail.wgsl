@@ -97,7 +97,7 @@ fn detailSurface(wp: vec3f, n: vec3f, bi: u32, albedoIn: vec3f, roughIn: f32, me
   // ---- floors: worn paths + the grime band (upward faces at floor level; the traffic map covers the world's grid footprint) ----
   if (floorPix) {
     let uv = (wp.xz - WORLD_MIN.xz) / (vec2f(f32(GRID_W), f32(GRID_H)) * GRID_CELL);
-    let w = detailFloorWear(o.albedo, o.rough, roughIn, textureSampleLevel(wearTex, linSamp, uv, 0.0).xy, k, uneven);
+    let w = detailFloorWear(o.albedo, o.rough, roughIn, textureSampleLevel(wearTex, linSamp, uv, 0.0).xy * rimShare(pastMap(wp.xz)), k, uneven);   // (the prelude's rimShare: exactly 1 on the map and a metre past it, as look.wgsl's own read)
     o.albedo = w.albedo; o.rough = w.rough;
   }
   // ---- skirting: the bottom hand-width of vertical faces that stand on the floor (walls, cabinets, counters, door leaves) — shoe / trolley / mop marks ----

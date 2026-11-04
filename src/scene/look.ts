@@ -89,6 +89,9 @@ export function suitOfQuery(q: URLSearchParams): boolean { const v = q.get('suit
 export function lookPageRows(q: URLSearchParams): string[] { return q.getAll('look').filter(v => !dressOff(v)); }
 /** the page is the look's: a row on the address, or the tag a one-file build of it carries (where the address takes no flags) */
 export function lookPageOn(q: URLSearchParams): boolean { return lookPageRows(q).length > 0 || (typeof document !== 'undefined' && !!document.querySelector?.('meta[name="tps-look"]')); }
+/** the ground runs on past the level's edge (scene/groundBeyond.ts): the look page only, and only when the address asks (`&beyond=1`). Off is the
+ *  maintainer's own word for what is past the rim (black), so no panel button keeps it on */
+export function groundBeyondOn(q: URLSearchParams): boolean { return lookPageOn(q) && q.get('beyond') === '1'; }
 /** ITS TRIALS: the address's word of each, and the key under which the look panel's button keeps it on this machine */
 export const LOOK_TRIALS = { geo: 'twopointsix.geotry', hills: 'twopointsix.hillrays', front: 'twopointsix.fronttry', lorry: 'twopointsix.lorrytry', dress: 'twopointsix.passtry', cars: 'twopointsix.cartry' } as const;
 export type LookTrial = keyof typeof LOOK_TRIALS;
@@ -99,6 +102,6 @@ export function lookTrialsKept(q: URLSearchParams): string[] { const off = (Obje
   let cut: string | null = null; try { cut = localStorage.getItem('twopointsix.cutboxes'); } catch { /* no store: on */ }   // (…and the cut boxes' own switch, which four of the five stand on: scene/cut.ts initCutSwitch)
   return cut === '0' && !q.has('cutboxes') && !q.has('nocutboxes') ? [...off, 'cutboxes=0'] : off; }
 /** the other words the page reads once, at boot, into its shader text and its level (main.ts, scene/cut.ts: the look's geometry is cut boxes) */
-const LOOK_PAGE_WORDS: ReadonlySet<string> = new Set([...Object.keys(LOOK_TRIALS), 'roll', 'lorrykit', 'seat', 'firefit', 'longfoot', 'walked', 'firesnow', 'firesoot', 'footing', 'emberfog', 'cutboxes', 'nocutboxes', 'smokelook', 'carfinish', 'nosunglint']);
+const LOOK_PAGE_WORDS: ReadonlySet<string> = new Set([...Object.keys(LOOK_TRIALS), 'roll', 'lorrykit', 'seat', 'firefit', 'longfoot', 'walked', 'firesnow', 'firesoot', 'footing', 'emberfog', 'cutboxes', 'nocutboxes', 'smokelook', 'carfinish', 'nosunglint', 'beyond']);
 /** a word of an address, decoded, is the look page's own */
 export function lookPageWord(k: string, v: string): boolean { return k === 'look' ? !dressOff(v) : k === 'round' ? v === '1' : LOOK_PAGE_WORDS.has(k); }   // (`round=1` is the page's: its round test compiled beside a trial's cut boxes; `round=0` is a rule's off switch, another fight)

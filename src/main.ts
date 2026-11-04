@@ -35,7 +35,8 @@ import { Input } from './game/input';
 import type { FollowCamera } from './game/camera';
 import { standGame, populateHost } from './host/standup';
 import { pageSwitches } from './host/profile';
-import { LOOK, LOOK_DOORS, lookLevelFile, lookPageOn, lookPageRows, lookTrialOn, LOOK_TRIALS, placeOfQuery, setLookPlace, setSuitAs } from './scene/look';
+import { LOOK, LOOK_DOORS, lookLevelFile, lookPageOn, lookPageRows, lookTrialOn, LOOK_TRIALS, placeOfQuery, setLookPlace, setSuitAs, groundBeyondOn } from './scene/look';
+import { groundBeyond, groundBeyondFollow, BEYOND, type GroundBeyond } from './scene/groundBeyond';
 import { lookTidy, lookDoors } from './scene/lookTidy';
 import { stepFrame, showCaption, FIXEDSTEP, type LoopCtx } from './host/loop';
 import { bindFindMe, watchCtrlTaps, FINDME, setFindMe } from './host/findme';
@@ -300,6 +301,7 @@ async function main() {
   void chP.then(setFigureCast, () => { /* the menus' figure of a man stays undrawn */ });
   urlFlagsOnEngine(engine);
   let level = await bootLevel(q, engine, tick);
+  if (groundBeyondOn(q)) engine.world.beforePack = () => { if (beyond) groundBeyondFollow(beyond); };   // (picture only: at every pack, whoever draws, the ground past the edge looks as the slab looks NOW — wet with it and dry with it in the same picture; scene/groundBeyond.ts)
 
   await tick();
   const ch = await chP;
@@ -319,6 +321,7 @@ async function main() {
     if (!bootedLocalLevel) throw e;
     console.error('?level=local: the game could not be built on the editor level — falling back to the bundled office —', e);
     level = buildBundledLevel(); engine.world.statics.length = 0; engine.lights.lights.length = 0;
+    beyond = groundBeyondOn(q) ? groundBeyond(level) : null;   // (the level bootLevel dressed is gone: the ground past the edge is laid on this one, or the pair would be two orphans)
     populateHost(engine, level); engine.settings.skyZenith = level.sky.zenith; engine.settings.skyHorizon = level.sky.horizon;
     ({ game, cam } = await standGame(engine, { level, ch, smoke, populate: false, seed }));
   }
@@ -1076,6 +1079,7 @@ function urlFlagsOnEngine(engine: Engine) {
 
 /** ?kitview only: the level that was built is a bespoke set's (bootLevel) */
 let kitSetUp = false;
+let beyond: GroundBeyond | null = null;   // the ground laid past the level's edge and the slab it follows (scene/groundBeyond.ts; bootLevel lays it, the frame keeps its look the slab's): null on every page whose address does not ask
 /** the boot's level: the bundled office or ?levelFile=, its boxes and lights into the host */
 async function bootLevel(q: URLSearchParams, engine: Engine, tick: () => Promise<void>) {
   // ?levelFile=office-t20.json: boot on a level file fetched from the dev server's /levels/ (tools/levels-api.ts) instead of the bundled office — the review page's world-resolution
@@ -1097,6 +1101,7 @@ async function bootLevel(q: URLSearchParams, engine: Engine, tick: () => Promise
     const f = dressCars(level), said = Object.entries(f).map(([k, n]) => `${n} ${k}${n === 1 ? '' : 's'}`).join(', '); if (said) console.info(`vehicles with curves: ${said} (?cars=0 = each as its file has it)`); }   // VEHICLES WITH CURVES, A TRIAL (scene/carTry.ts; the look page only, any level)
   if (passTryOn(q)) { const n = dressPass(level); console.info(n ? `pass: ${n} round pieces placed by hand (?dress=0 = the pass as its file has it)` : 'pass: not the pass scene/passTry.ts knows: nothing touched'); }   // THE PASS DRESSED WITH ROUND THINGS, A TRIAL (scene/passTry.ts; the look page only)
   if (lookConfig.on && new URLSearchParams(location.search).get('seat') !== '0') { const n = seatPosts(level); if (n) console.info(`look: ${n} post${n === 1 ? '' : 's'} seated a hair proud of the wall end they stand in (?seat=0 leaves them)`); }   // (scene/lookMend.ts — the look page only)
+  if (groundBeyondOn(q)) { beyond = groundBeyond(level); console.info(beyond ? `ground beyond: the level's ground slab is laid on ${BEYOND.reach} m past its edge, drawn and never traced (the address's &beyond=1)` : 'ground beyond: this level has no ground slab the size of the world: nothing laid'); }
   if (level.markTexel) engine.settings.markingTexel = level.markTexel;   // the base texel the level's marking bitmaps were generated for (absent = 2.5 cm)
   populateHost(engine, level);   // the level's boxes into the world, its lights into the set (src/host/standup.ts — the same two loops the harness runs)
   engine.settings.skyZenith = level.sky.zenith; engine.settings.skyHorizon = level.sky.horizon;

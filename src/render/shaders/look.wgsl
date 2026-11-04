@@ -46,7 +46,7 @@ fn lookDresses(n: vec3f, bi: u32, hf: vec4f) -> bool {
  *  layers: the detail layer then leaves those two terms (detail.wgsl `byLook`) and this one does them (lookSurface `wears`), so one layer answers for a
  *  surface's wear, whichever it is */
 fn lookWears(n: vec3f, bi: u32, hf: vec4f) -> bool { return lookCfg.a.w > 0.0 && lookDresses(n, bi, hf); }
-fn lookWayAt(xz: vec2f) -> vec2f { return textureSampleLevel(wearTex, linSamp, (xz - WORLD_MIN.xz) / (vec2f(f32(GRID_W), f32(GRID_H)) * GRID_CELL), 0.0).xy; }
+fn lookWayAt(xz: vec2f) -> vec2f { return textureSampleLevel(wearTex, linSamp, (xz - WORLD_MIN.xz) / (vec2f(f32(GRID_W), f32(GRID_H)) * GRID_CELL), 0.0).xy * rimShare(pastMap(xz)); }   // (× the map's edge, the prelude's rimShare, render/frame.ts MAP_EDGE: exactly 1 on the map and a metre past it; further out nobody has walked and no wall stands, and the sampler would hand over the rim's last texel)
 struct LookOut { albedo: vec3f, n: vec3f, rough: f32, tilted: bool };
 struct LookTap { a: vec4f, b: vec4f };
 /** a map coordinate or its slope as the sampler may be handed it: 0 where the number is no number (a face with no size, a normal with no length: the maths

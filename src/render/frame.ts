@@ -380,6 +380,22 @@ export const sunGlintConfig = { on: true };
 function weatherVolWgsl(): string {
   return `const WX_VOL: bool = ${weatherVolConfig.on ? 'true' : 'false'}; const WXD_BASE: u32 = MAX_BOXES * 4u + ${MARK_TABLE_ROWS + GB_ROWS}u; const WXD_W: i32 = ${AIR_W}; const WXD_H: i32 = ${AIR_H}; const WXD_CELL: f32 = ${AIR_CELL};   // the weather's air as a volume (render/frame.ts weatherVolConfig; scene/airGrid.ts)\n`;
 }
+/** WHERE THE LEVEL'S MAPS END (the prelude's `pastMap`, `rimShare`). The walked ways, the wear at a wall's foot and the place field are maps over the world's
+ *  rectangle, and a read past the edge is clamped to the rim's last cell however far out the point is. For most of what is drawn out there that is the right
+ *  answer: a man leaning out over the edge, a door leaf swung out, rubble at the foot of a rim wall are OF the place at the rim. For ground that runs on to
+ *  the horizon (scene/groundBeyond.ts) it is a wall's foot or a room's shade drawn as a stripe to the far plane. One rule for every reader, asked of the
+ *  point the read is made for: within `near` metres past the edge the rim's answer stands whole (times exactly 1: nothing drawn that close reads anything
+ *  new), and it is let go of by `far`, where there is no map and so no wear, and the place is the open air. THE READERS: look.wgsl (lookWayAt, its one
+ *  read of the ways), detail.wgsl (the floor's wear), composite.wgsl and its compact twin (lookShadeGain: the levels a place is shown by).
+ *  NOT UNDER IT: the snow's field (render/snowField.ts: its last texel carries on), the fog of war (no cells out there), and the snow in the air past
+ *  the rim, which has its own measure and width (particles.wgsl pastRimAir: the larger of the two overshoots, square at a corner, over 1.5 m). */
+export const MAP_EDGE = { near: 1, far: 4 };
+function mapEdgeWgsl(): string {
+  const f = (n: number) => (Number.isInteger(n) ? n.toFixed(1) : String(n));
+  return `fn pastMap(xz: vec2f) -> f32 { return length(max(max(WORLD_MIN.xz - xz, xz - WORLD_MAX.xz), vec2f(0.0))); }   // metres from a point to the map's rectangle (0 = on the map; round at a corner; render/frame.ts MAP_EDGE)
+fn rimShare(past: f32) -> f32 { return 1.0 - smoothstep(${f(MAP_EDGE.near)}, ${f(MAP_EDGE.far)}, past); }   // the share of the rim's answer a point that far out still takes: exactly 1 to the near distance, 0 from the far one
+`;
+}
 /** GROUND THAT RAYS CAN SEE, A TRIAL (scene/groundField.ts): the prelude's consts for it — the switch and where the hills' rows sit in boxMat's tail (after the
  *  cut table where there is one). Off, the line is the same text on every page and common.wgsl ghHit's reads are dead code. */
 function groundRayWgsl(): string {
@@ -404,7 +420,7 @@ export function scenePrelude(cut: boolean = cutConfig.on && !cutConfig.swap): st
   const mesh = meshBinding.enabled
     ? '@group(0) @binding(13) var<storage, read> meshData: array<vec4u>;   // mesh-shadow trees + skinned corners (render/meshShadows.ts layout; walked by meshShadowT under FLAG_MESH_SHADOWS)\nfn meshLoad(i: u32) -> vec4u { return meshData[i]; }\n'
     : 'fn meshLoad(i: u32) -> vec4u { return vec4u(0u); }   // no mesh-shadow binding on this adapter (frame.ts meshBinding): a zero header = an empty tree, and the engine never raises the flag\n';
-  return wgslWorldConsts() + weatherVolWgsl() + groundRayWgsl() + roundRayWgsl(cut) + `const REACH_VEC4S: u32 = ${REACH_VEC4S}u;   // lightReach uniform: MAX_LIGHTS × REACH_ROW_WORDS u32 as vec4u (render/lights.ts)\nconst MESH_MAX_CHARS: u32 = ${MESH_MAX_CHARS}u;   // characters with a mesh-shadow tree (render/meshbvh.ts)\n` + commonText + '\n' + decl + mesh
+  return wgslWorldConsts() + mapEdgeWgsl() + weatherVolWgsl() + groundRayWgsl() + roundRayWgsl(cut) + `const REACH_VEC4S: u32 = ${REACH_VEC4S}u;   // lightReach uniform: MAX_LIGHTS × REACH_ROW_WORDS u32 as vec4u (render/lights.ts)\nconst MESH_MAX_CHARS: u32 = ${MESH_MAX_CHARS}u;   // characters with a mesh-shadow tree (render/meshbvh.ts)\n` + commonText + '\n' + decl + mesh
     + sdfRigWgslConsts() + sdfRigSrc + '\n';   // the SDF character rig (render/sdfrig.ts's per-slot table as consts + the generated charSdf fold, then shaders/sdfrig.wgsl): the round-cone primitive common.wgsl's proxy loops call, plus the smooth-union / soft-query extras — compiled only into the modules that name them, and not taken while frame.rigCfg.x is 0
 }
 
