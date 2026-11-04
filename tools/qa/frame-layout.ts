@@ -66,7 +66,7 @@ const writers: [string, RegExp][] = [
   ['shadeCfg', /f\[(\d+)\] = sh\[0\];/],   // (written through `sh = p.shadeCfg ?? ZERO4`: the look prototype's shade row)
   ['veilA', /f\[(\d+)\] = va\[0\];/], ['veilB', /f\[(\d+)\] = vb\[0\];/],   // (written through `va = p.veilA ?? ZERO4`, `vb = p.veilB ?? ZERO4`: the look prototype's loose snow in the air)
   ['eyeCfg', /f\[(\d+)\] = ey\[0\];/],   // (written through `ey = p.eyeCfg ?? ZERO4`: the look prototype's Eyes follow Sam row)
-  ['gradeCfg', /f\[(\d+)\] = gr\[0\];/],   // (written through `gr = p.gradeCfg ?? ZERO4`: the look prototype's Contrast row, undone under a roof)
+  ['gradeCfg', /f\[(\d+)\] = gr\[0\];/],   // (written through `gr = p.gradeCfg ?? ZERO4`: the look prototype's Contrast row, which the one exposure model tones a place by)
   ['lampCfg', /f\[(\d+)\] = lc\[0\];/],   // (written through `lc = p.lampCfg ?? ZERO4`: the look prototype's Light stays in its room row by day)
   ['sideCfg', /u\[(\d+)\] = sd \? 1 : 0;/], ['sides', /u\.set\(sd, (\d+)\);/], ['sideCols', /u\.set\(sc, (\d+)\);/], ['placeCfg', /f\[(\d+)\] = pc\[0\];/],   // (the look prototype's Walls have two sides row: the flag, then render/wallSides.ts's words)
 ];

@@ -316,7 +316,7 @@ export class LightingPasses implements CutSwappable {
   /** THE LOOK PROTOTYPE's loose snow in the air (render/powderField.ts `view`; composite.wgsl powderTex @16, read only under LOOK): null = the 1×1 "none" */
   private powderView: GPUTextureView | null = null; private powderNone: GPUTextureView;
   setPowder(v: GPUTextureView | null) { if (v !== this.powderView) { this.powderView = v; this.bgCompFG = null; this.bgCompS = null; } }
-  /** THE LOOK PROTOTYPE's place field (render/placeField.ts `buffer`; composite.wgsl placeBuf @17, read only under LOOK with the One exposure row up): null = the zeros that say "none" */
+  /** THE LOOK PROTOTYPE's place field (render/placeField.ts `buffer`; composite.wgsl placeBuf @17, read only under LOOK while the one exposure model is on): null = the zeros that say "none" */
   private placeBuf: GPUBuffer | null = null; private placeNone: GPUBuffer;
   setPlace(b: GPUBuffer | null) { if (b !== this.placeBuf) { this.placeBuf = b; this.bgCompFG = null; this.bgCompS = null; this.bgVol = null; } }   // (the volumetric march binds it too, @5: the air's light is shown by its place's gain as a surface's is)
   /** HDR scene colour (composite output) + bloom pyramid: down[0..4] (W/2 … W/32), up[0..3] */

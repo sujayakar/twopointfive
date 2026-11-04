@@ -235,10 +235,10 @@ const before = (p: ReturnType<typeof page>) => JSON.stringify([p.S, p.Q.current,
   check(!!l0 && l0.scene.id === BENCH_SCENES[0].id && l0.secs === '2' && l0.cap === 30 && l0.leg.index === 0 && l0.leg.of === BENCH_SCENES.length && l0.leg.set === BENCH_SET && l0.leg.notes.some(n => /started from the title/.test(n)), 'the first scene\'s page finds its part: the seconds a window, the short cap, and the note that its load is a second one');
   check(benchLegOfPage(tab(searchOf(t0.went[0]))) === null && store.size === 0, 'the same page loaded again in the middle is a plain mission page, and the record is dropped');
   // a run asked for on the look prototype's page (11-02: it dropped the word, so every scene timed the plain build and the report said nothing)
-  { const tl = tab('?look&look=roomc:0.6&l%6Fok=expo:0&hills=0&nocutboxes&round=0&lookkit=1&fow&hour=noon&bench&quality=high'); benchBegin(false, tl);
+  { const tl = tab('?look&look=roomb:0.9&l%6Fok=eyes:0&hills=0&nocutboxes&round=0&lookkit=1&fow&hour=noon&bench&quality=high'); benchBegin(false, tl);
     let at = searchOf(tl.went[0] ?? ''), all = tl.went.length === 1; const seen: string[] = [];
     for (let i = 0; i < BENCH_SCENES.length && all; i++) { const pg = tab(at), l = benchLegOfPage(pg), u = new URLSearchParams(at); seen.push(at);
-      all = !!l && u.getAll('look').join() === ',roomc:0.6,expo:0' && u.get('hills') === '0' && u.has('nocutboxes') && u.get('quality') === 'high' && !u.has('lookkit') && !u.has('fow') && !u.has('hour') && !u.has('round') && u.get('benchrun') === String(i);
+      all = !!l && u.getAll('look').join() === ',roomb:0.9,eyes:0' && u.get('hills') === '0' && u.has('nocutboxes') && u.get('quality') === 'high' && !u.has('lookkit') && !u.has('fow') && !u.has('hour') && !u.has('round') && u.get('benchrun') === String(i);
       if (l && i < BENCH_SCENES.length - 1) { l.leg.onward({ steps: l.leg.steps, notes: l.leg.notes, scenes: l.leg.scenes, boot: null, away: 0 }); at = searchOf(pg.went[0] ?? ''); } else l?.leg.over(); }
     check(all && seen.length === BENCH_SCENES.length && store.size === 0, `a run asked for on the look prototype's page keeps the look's rows and its boot words on EVERY scene, written plain or percent-coded, and nothing of the visitor's kit, fog, hour or rule switches (${seen[seen.length - 1]})`);
     const tp = tab('?look=plain&hills=0&bench'), ok = benchBegin(false, tp) === null && tp.went.length === 1, up = new URLSearchParams(searchOf(tp.went[0] ?? ''));
