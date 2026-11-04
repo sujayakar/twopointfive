@@ -55,6 +55,12 @@ export interface RtLight {
   /** WHOSE DOING THIS LIGHT IS, FOR THE FOG'S CLASS ALONE (game/fogofwar.ts FOG.ours, lightBy): the character who set or threw what made it — a blast's
    *  flash, a round's ember. Not `owner`: the shadow rays still take every body, his too. Absent / 0 = the class goes by `owner` as ever */
   fogBy?: number;
+  /** AN OPENING TO THE SKY (LIGHT_PORTAL; engine.ts lookOpeningLights, the look page's "Daylight counted once" row): a kind 3 light that is no lamp but the
+   *  outside seen through a hole, an upright rectangle about `pos` facing `dir`. `halfWide` = half its width along the wall (`radius` = its half diagonal, so
+   *  the shader has its height too), `share` = how much of it is open now, 0‥1 (a leaf ajar): the light's colour × intensity is what the opening looks
+   *  out on (scene/openings.ts openingLooks) × the OPEN area, which is how bright the opening is to a pass whose ray stops short of it; the picture's direct light takes the whole rectangle and
+   *  traces through it (common.wgsl LIGHT_PORTAL). They ride in the record's two cone words, which an area light does not use. Absent = an ordinary light */
+  portal?: { halfWide: number; share: number };
 }
 
 /** the kind word's fog-of-war class bits (common.wgsl LIGHT_FOG_SEEN / LIGHT_FOG_UNSEEN; RtLight.fog) */
@@ -63,6 +69,10 @@ export const LIGHT_FOG_SEEN = 1 << 25, LIGHT_FOG_UNSEEN = 1 << 26;
  *  LightSet.ir and never in `lights`. The picture's passes take it like any light (it is uploaded only while the picture IS the tube's: LightSet.tube); the game's
  *  own readings — probe.wgsl's light meter through evalLightTrue, the cascades the meter reads its bounce from — never do. */
 export const LIGHT_IR = 1 << 27;
+/** the kind word's PORTAL bit (common.wgsl LIGHT_PORTAL; RtLight.portal): an area light that is an OPENING TO THE SKY and not a lamp. What it sends a point is
+ *  the sky that point sees through it (common.wgsl skyRadiance in the direction the point looks out by), its shadow rays run on through it to find that sky,
+ *  and a ray of the bounce that leaves through it takes no sky of its own: the sky's light through an opening is counted once, by the light. */
+export const LIGHT_PORTAL = 1 << 28;
 export const MAX_LIGHTS = 64;
 const NO_LIGHTS: readonly RtLight[] = [];
 if (MAX_LIGHTS > 64) throw new Error('lights: MAX_LIGHTS > 64 — volumetrics.wgsl keeps its per-ray beam selection in a 64-bit mask (selLo/selHi); widen it first');   // (a WGSL shift by k ≥ 32 wraps: light 70 would alias light 38)
@@ -98,8 +108,8 @@ export function lightFromDef(d: LightDef): RtLight {
 export function packLight(f: Float32Array, u: Uint32Array, o: number, l: RtLight, inten: number, kindWord: number, volumetric: number, ownerWord: number) {
   f[o] = l.pos[0]; f[o + 1] = l.pos[1]; f[o + 2] = l.pos[2]; u[o + 3] = kindWord;
   f[o + 4] = l.dir[0]; f[o + 5] = l.dir[1]; f[o + 6] = l.dir[2]; f[o + 7] = l.range;
-  f[o + 8] = l.color[0] * inten; f[o + 9] = l.color[1] * inten; f[o + 10] = l.color[2] * inten; f[o + 11] = Math.cos(l.outerDeg * DEG);
-  f[o + 12] = Math.cos(Math.min(l.innerDeg, l.outerDeg - 0.5) * DEG); f[o + 13] = volumetric; u[o + 14] = ownerWord; f[o + 15] = l.radius;
+  f[o + 8] = l.color[0] * inten; f[o + 9] = l.color[1] * inten; f[o + 10] = l.color[2] * inten; f[o + 11] = l.portal ? l.portal.halfWide : Math.cos(l.outerDeg * DEG);   // (a portal has no cone: the two cone words are its own)
+  f[o + 12] = l.portal ? l.portal.share : Math.cos(Math.min(l.innerDeg, l.outerDeg - 0.5) * DEG); f[o + 13] = volumetric; u[o + 14] = ownerWord; f[o + 15] = l.radius;
 }
 
 /** the first n words of two buffers, bit for bit. Read signed and kept out of upload()'s body: mask words run past 2^31, and a loop over them inside that long function ran in a slow tier (0.03 ms a frame in the depot) */
@@ -222,7 +232,7 @@ export class LightSet {
       const o = n * 16;
       // kind low byte + flags: 256 = transient (ttl light: excluded from accumulated signals), 512 = broad emitter class (wide penumbrae → its own denoise)
       const fc = ir ? 0 : ghost ? 2 : this.fogClass(l);
-      packLight(f, u, o, l, inten, l.kind | (ir ? LIGHT_IR : 0) | (l.ttl >= 0 || l.transient ? 256 : 0) | (l.broad ? 512 : 0) | (l.markRef !== undefined && l.markRef >= 0 && l.markRef < 16384 ? 1024 | (l.markRef << 11) : 0) | (fc === 1 ? LIGHT_FOG_SEEN : fc === 2 ? LIGHT_FOG_UNSEEN : 0),   // + bit 10 / bits 11‥24: the emissive marking this light stands for (RtLight.markRef)
+      packLight(f, u, o, l, inten, l.kind | (ir ? LIGHT_IR : 0) | (l.ttl >= 0 || l.transient ? 256 : 0) | (l.broad ? 512 : 0) | (l.portal ? LIGHT_PORTAL : 0) | (l.markRef !== undefined && l.markRef >= 0 && l.markRef < 16384 ? 1024 | (l.markRef << 11) : 0) | (fc === 1 ? LIGHT_FOG_SEEN : fc === 2 ? LIGHT_FOG_UNSEEN : 0),   // + bit 10 / bits 11‥24: the emissive marking this light stands for (RtLight.markRef)
         l.volumetric, ((l.owner & 0xff) | (((l.glassMask ?? 0) & 0xffffff) << 8)) >>> 0);   // owner byte + the glass pane mask above it (common.wgsl lightGlassMask)
       this.reachData.set((this.dirMasks && l.reachDir) ? l.reachDir : (l.reach ?? REACH_ALL), n * REACH_ROW_WORDS);   // the slot's reach row follows the light into whatever slot it lands in this frame (a directional light's own mask only under dirMasks)
       this.activeIdx.push(i); l.slot = n; if (firstT < 0 && !ir && (l.ttl >= 0 || l.transient)) firstT = n; if (ir) { this.irCount++; this.irSpell = true; } n++;   // (activeIdx: an index past `lights` is into `ir`, and past that into `own`)
