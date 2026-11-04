@@ -1697,8 +1697,14 @@ interleaved and filtered to their quiet minimum, and a row whose p75 sits far ab
   pair); a door whose travel stops short of about 1.4 rad rests a step or two under whole (the barracks' n3 at 30), which is what its leaf leaves of
   the doorway; the threshold's own cells still hold a level of their own the moment a door leaves its frame (as they do without the row); the wall
   sides, above; the eye's own easing is untouched.
-- **ONE EXPOSURE AT EVERY HOUR** (11-04; the look panel's rows `hours` "One exposure at every hour" and `dark` "Eyes open in the dark",
-  `&look=hours:1`, `hours` 0 in the page until it has been seen on a GPU; `render/lookexpo.ts lookExpoFrame` `everyHour`, `lookExpoBound`,
+- **ONE EXPOSURE AT EVERY HOUR** (THE ROW IS GONE SINCE 11-04 15:18Z AND THIS IS THE ONLY PATH: the maintainer played the block at dusk and the white
+  roof at midday with it up on his M4 ("overall 2 looks a lot better!") and chose to keep it on a card, so `hours`, `lookConfig.hours`, `everyHour`
+  in `engine.ts lookShade` and `lookExpoFrame`, the shade row's fade into a night, the day's share and the shader's two tests of `placeCfg.z`
+  with the older night bound behind them are deleted in one commit; `&look=hours:...` on an address is now ignored. The `dark` row stays. What
+  follows is the bullet as written with the row, for its reasons and its numbers; where it says "with the row up" read "always", and where it
+  says "with the row at 0" read "until 11-04". `HOURS_BREAK=1` still leaves the eyes' widest out of the check's model and fails 6 lines. The
+  fold was drawn on the software adapter: see the commit. 11-04; the look panel's rows `hours` "One exposure at every hour" and `dark` "Eyes
+  open in the dark", `&look=hours:1`, `hours` 0 in the page until it has been seen on a GPU; `render/lookexpo.ts lookExpoFrame` `everyHour`, `lookExpoBound`,
   `lookNightSkyE`, `LOOK_EXPO.dim` / `.dimSky` / `.dark` / `.read` / `.lamp`; `engine.ts lookShade` `everyHour`, `eyesWidest`;
   `shaders/place_common.wgsl lookExpoFor`'s last lines, `lookRoll`, `EXPO_READ`, `EXPO_LAMP`; frame.placeCfg z and w; the page's
   `lookConfig.nightSky`). The maintainer ruled every special case of the light fixed (11-04, "I think we should pretty much fix all 9 things you

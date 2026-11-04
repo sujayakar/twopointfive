@@ -616,12 +616,11 @@ export class Engine {
     }
     this.lookOpeningLights();   // (THE LOOK PROTOTYPE: by day each opening to the sky is a light of its own, scene/openings.ts)
     const hourExp = lookConfig.on ? lookExposure(lookConfig.exposure?.() ?? null, this.settings.skyZenith, this.settings.skyHorizon) : 1;   // (THE LOOK PROTOTYPE: the exposure of the hour that is up against the night's, render/photometry.ts)
-    const everyHour = lookConfig.on && lookConfig.hours > 0;   // (THE LOOK PROTOTYPE's One exposure at every hour row, render/lookexpo.ts: the model, its field and the shade row it rides on ask no hour)
-    const shadeCfg = lookConfig.on && lookConfig.shade > 0 ? lookShade(this.settings.skyZenith, this.settings.skyHorizon, lookConfig.sky, lookConfig.shade, everyHour) : undefined;   // (THE LOOK PROTOTYPE's shade row, below: the share of a darker place's dark the one exposure model brings up, render/lookexpo.ts; at 0 no place takes a gain)
-    const placeOn = !!shadeCfg && shadeCfg[0] > 0;   // (THE LOOK PROTOTYPE's place field, above: wherever the model runs, which is by day, and at every hour with that row up)
+    const shadeCfg = lookConfig.on && lookConfig.shade > 0 ? lookShade(this.settings.skyZenith, this.settings.skyHorizon, lookConfig.sky, lookConfig.shade) : undefined;   // (THE LOOK PROTOTYPE's shade row, below: the share of a darker place's dark the one exposure model brings up, render/lookexpo.ts; at 0 no place takes a gain)
+    const placeOn = !!shadeCfg && shadeCfg[0] > 0;   // (THE LOOK PROTOTYPE's place field, above: wherever the model runs, which is wherever the shade row is up, at every hour)
     if (placeOn && !this.place && !this.placeDead) { try { this.place = new PlaceField(this.device, this.rc.diceView); } catch (err) { console.warn('place field: not built on this device', err); this.placeDead = true; } }   // (a device that cannot build the field keeps the model on the cache's own read at the pixel, with the eyes taken to stand in the open: what every page shows for the frames before its field is live, composite.wgsl lookShadeGain)
     let eyesWidest: [number, number] | null = null;   // (frame.placeCfg's z and w, render/lookexpo.ts lookExpoBound)
-    if (everyHour && placeOn) { const own = hourExp < 1 ? lookConfig.nightSky?.() ?? null : null;   // (with an hour up, the level's own sky by the page's word: a night's unless the level is its own day, which lookExposure says of it as it does of any sky)
+    if (placeOn) { const own = hourExp < 1 ? lookConfig.nightSky?.() ?? null : null;   // (with an hour up, the level's own sky by the page's word: a night's unless the level is its own day, which lookExposure says of it as it does of any sky)
       eyesWidest = lookExpoBound(lookConfig.dark, lookNightSkyE(hourExp, shadeCfg?.[3], own && lookExposure(null, own.zenith, own.horizon) >= 1 ? Math.PI * lookConfig.sky * lookSkyLum(own.zenith, own.horizon, 0.947) : null), this.settings.nvAmount); }
     { const P = this.passes, on = lookConfig.on; P.gradeH = on ? lookConfig.gradeH : 0; P.gradeS = on ? lookConfig.gradeS : 0; P.gradeSat = on ? lookConfig.gradeSat : 1; P.gradeC = 1; this.lookGradeCfg = null;   // (THE LOOK PROTOTYPE's grading rows, post.wgsl agx)
       if (on && lookConfig.gradeC !== 1) { const zen = this.settings.skyZenith, hor = this.settings.skyHorizon, g = lookGrade(lookConfig.sky * lookSkyLum(zen, hor, 0.8), Math.PI * lookConfig.sky * lookSkyLum(zen, hor, 0.947), this.lights.lights, this.settings.exposure * lookConfig.gradeExp, lookConfig.gradeC); P.gradeC = g[0]; P.gradeP = g[1]; this.lookGradeCfg = lookGradeFrame(g, this.settings.exposure * lookConfig.gradeExp); } }
@@ -706,7 +705,7 @@ export class Engine {
         | (s.gridSkip ? FrameFlags.GridSkip : 0) | (s.gridYCull ? FrameFlags.GridYCull : 0) | (s.axisBoxFast ? FrameFlags.AxisBox : 0) | (s.gridSlabs ? FrameFlags.GridSlabs : 0) | (s.gloss && !rtOn ? FrameFlags.Gloss : 0) | (meshOn ? FrameFlags.MeshShadows : 0)
         | (decalsOn ? FrameFlags.Decals : 0) | (partOn ? FrameFlags.Particles : 0) | (s.glass ? FrameFlags.Glass : 0) | (cardSlots.length > 0 ? FrameFlags.BounceCards : 0) | (s.directSeedHold ? FrameFlags.DirectSeedHold : 0) | (s.giAdaptiveHistory ? FrameFlags.GiAdaptiveHist : 0)
         | (froxOn ? FrameFlags.FroxelVol : 0) | (restir ? FrameFlags.Restir : 0) | (lookRoom ? FrameFlags.RcRoom : 0),
-      shadeCfg: this.lookShadeCfg = shadeCfg, eyeCfg: this.lookEyeCfg = ((lookConfig.on ? lookExpoFrame(shadeCfg, lookConfig.shade, lookConfig.eyes, lookConfig.glare, hourExp, everyHour) : null) ?? undefined),   // (the one exposure model, render/lookexpo.ts: w under 0 is composite.wgsl lookShadeGain's word; null = no shade row, or a night without the every-hour row: no pixel takes a gain by its place)
+      shadeCfg: this.lookShadeCfg = shadeCfg, eyeCfg: this.lookEyeCfg = ((lookConfig.on ? lookExpoFrame(shadeCfg, lookConfig.shade, lookConfig.eyes, lookConfig.glare, hourExp) : null) ?? undefined),   // (the one exposure model, render/lookexpo.ts: w under 0 is composite.wgsl lookShadeGain's word; null = no shade row: no pixel takes a gain by its place)
       veilA: veil?.[0], veilB: veil?.[1], gradeCfg: lookConfig.on ? [this.lookGradeCfg?.[0] ?? 0, this.lookGradeCfg?.[1] ?? 0, lookConfig.footing, 0] : undefined,   // (z: the place's light is read on this side of the wall, composite.wgsl lookPlaceHere; w: spare since the Room contrast row went with the rows the model replaced)
       exposure: lookConfig.on ? s.exposure * lookConfig.gradeExp : s.exposure,   // (THE LOOK PROTOTYPE's Exposure row: × the hour's own)   // tileCull / softTileSkip / gridSkip / gridYCull / axisBoxFast / gridSlabs / gloss / meshShadows / decals / gpuParticles / glass / torchBounceCards / directSeedHold / giAdaptiveHistory: the boolean settings are the single source of truth for their bits (frame.ts FrameFlags is the one table; the cards bit only while a card light is actually up, the decals bit only while a mark exists)
       skyZenith: lookConfig.on && lookConfig.sky !== 1 ? [s.skyZenith[0] * lookConfig.sky, s.skyZenith[1] * lookConfig.sky, s.skyZenith[2] * lookConfig.sky] : s.skyZenith, skyHorizon: lookConfig.on && lookConfig.sky !== 1 ? [s.skyHorizon[0] * lookConfig.sky, s.skyHorizon[1] * lookConfig.sky, s.skyHorizon[2] * lookConfig.sky] : s.skyHorizon, hazeDensity: lookConfig.on ? s.hazeDensity * lookConfig.air : s.hazeDensity,
@@ -719,7 +718,7 @@ export class Engine {
       numTransient: numTransientNow,
       smokeDraw: this.smokeDrawWords(), powderDraw: lookConfig.on ? powderDrawWord() : 0,
       sides: lookSides && this.wallSides.fits ? this.wallSides.words : null, sideCols: lookSides && this.wallSides.fits ? this.wallSides.cols : null,   // (THE LOOK PROTOTYPE's Walls have two sides row: lighting_common.wgsl diceTaps, diceFacePointBy)
-      placeCfg: (placeOn && lookConfig.order > 0) || portal0 > 0 || eyesWidest ? [placeOn && lookConfig.order > 0 ? Math.min(lookConfig.order, 1) : 0, portal0, eyesWidest?.[0] ?? 0, eyesWidest?.[1] ?? 0] : undefined,   // (THE LOOK PROTOTYPE, light keeps its order across places: with the place field · z, w: the eyes' widest, the One exposure at every hour row)
+      placeCfg: (placeOn && lookConfig.order > 0) || portal0 > 0 || eyesWidest ? [placeOn && lookConfig.order > 0 ? Math.min(lookConfig.order, 1) : 0, portal0, eyesWidest?.[0] ?? 0, eyesWidest?.[1] ?? 0] : undefined,   // (THE LOOK PROTOTYPE, light keeps its order across places: with the place field · z, w: the eyes' widest, render/lookexpo.ts lookExpoBound)
       lampCfg: lampK < 1 ? [lampK, lampK / emissiveDayK(this.lights.dayExp, this.lights.dayAmount), lookConfig.steady > 0 ? 1 : 0, Math.max(lookConfig.roomBright, 0.001)] : undefined,   // (.z: the Steady bounce row is up, lighting_common.wgsl dayBoundK · .w: the Room brightness row, composite.wgsl lookExpoGain)   // (common.wgsl lampFloorK, boxEmissiveRay)
       secMinE: s.secMinE * lampK,   // (by day a fixture is drawn at the hour's exposure × its night strength, render/photometry.ts, so the night's threshold is held at the same share of it: every lamp the night's cache carries, the day's does too)
       //   // R2 sequence over the octahedral texel: cascade direction aliasing becomes noise for the indirect temporal filter
@@ -838,15 +837,14 @@ export class Engine {
 
 export { FrameFlags };
 
-/** THE LOOK PROTOTYPE, eyes adjust to shade (frame.shadeCfg; the one exposure model's, render/lookexpo.ts, place_common.wgsl lookExpoFor): the row's amount
- *  by DAY only (a night's dark is the game's, and is left as it falls: the amount fades out as the sky's own mean radiance falls from 0.35 to 0.08), and the
- *  two things a shaded place is measured against until the place field is live, both from the sky ALONE as common.wgsl skyRadiance paints it (horizon to
+/** THE LOOK PROTOTYPE, eyes adjust to shade (frame.shadeCfg; the one exposure model's, render/lookexpo.ts, place_common.wgsl lookExpoFor): the row's amount,
+ *  AT EVERY HOUR (it faded out into a night until 11-04; what holds a night now is the model's own bound, render/lookexpo.ts lookExpoBound), and the two
+ *  things a shaded place is measured against until the place field is live, both from the sky ALONE as common.wgsl skyRadiance paints it (horizon to
  *  zenith over the first 0.4 of height): the mean radiance open air holds (half the upper hemisphere's mean, 0.8 zenith + 0.2 horizon) and the irradiance
- *  open ground gets (π × (0.947 zenith + 0.053 horizon)). The third number is spare (it was the most the rows before the model brought a pixel up).
- *  With the One exposure at every hour row up (`everyHour`) the amount is the row's at every hour: what holds a night is the model's own bound. */
-function lookShade(zen: ArrayLike<number>, hor: ArrayLike<number>, skyK: number, amount: number, everyHour = false): [number, number, number, number] {
+ *  open ground gets (π × (0.947 zenith + 0.053 horizon)). The third number is spare (it was the most the rows before the model brought a pixel up). */
+function lookShade(zen: ArrayLike<number>, hor: ArrayLike<number>, skyK: number, amount: number): [number, number, number, number] {
   const up = skyK * lookSkyLum(zen, hor, 0.8);
-  return [Math.min(1, amount) * (everyHour ? 1 : smoothstep(0.08, 0.35, up)), 0.5 * up, 0, Math.PI * skyK * lookSkyLum(zen, hor, 0.947)];   // (everyHour: the One exposure at every hour row, render/lookexpo.ts: the amount has no fade into a night)
+  return [Math.min(1, amount), 0.5 * up, 0, Math.PI * skyK * lookSkyLum(zen, hor, 0.947)];
 }
 /** the sky's luminance, `a` of the zenith and the rest of the horizon (0.8 = the upper hemisphere's mean radiance, 0.947 = its cosine-weighted one, over common.wgsl skyRadiance's ramp) */
 function lookSkyLum(zen: ArrayLike<number>, hor: ArrayLike<number>, a: number): number { const b = 1 - a; return 0.2126 * (a * zen[0] + b * hor[0]) + 0.7152 * (a * zen[1] + b * hor[1]) + 0.0722 * (a * zen[2] + b * hor[2]); }

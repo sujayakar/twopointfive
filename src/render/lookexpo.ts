@@ -6,8 +6,8 @@
 // to shade row at 0 none is. The panel's rows
 // that are left say how much: Eyes adjust to shade = the share of a darker place's own dark that is brought up, Eyes follow Sam = how far the exposure goes
 // to where he stands, Glare outside = how far the open is overexposed from indoors, Contrast = the turn, about each place's own white.
-// BY DAY ONLY, as the shade row it rides on is, UNTIL THE ONE EXPOSURE AT EVERY HOUR ROW IS UP (lookConfig.hours, 11-04; the maintainer ruled every special
-// case of the light fixed, and this model's was that it asked the hour and stood down on a night). With that row the model asks no hour. The day's share is 1
+// AT EVERY HOUR (11-04; it was by day only, as the shade row it rides on was: the maintainer ruled every special case of the light fixed, and this model's was
+// that it asked the hour and stood down on a night; he saw the other answer on his GPU behind a row and kept it). The model asks no hour. The day's share is 1
 // at every hour, and what holds a night's picture is not a test but THE EYES' WIDEST: no place is shown by more than the night's exposure over the hour's
 // (lookExpoFrame's x, as before, now said at night too, where it is 1), except a place whose floor holds less than the DIM level (lookExpoBound: under a
 // night's open yard and under a lit room's bounce), which is brought up by the shade row's share of its dark under that level, LOOK_EXPO.dark stops × the
@@ -21,23 +21,22 @@ export const LOOK_EXPO = {
   key: 1.8,      // with Sam in a dark place the whole picture is exposed up from the open air's LOW level to its MIDDLE (the field's two words, render/placeField.ts); this many times where the field has no middle to say (composite.wgsl EXPO_KEY)
   most: 16384,   // the darkest place the exposure follows, × darker than the open air (composite.wgsl EXPO_MOST)
   top: 4,        // what a place's gain shows is rolled off above sunlit ground's brightness toward this many times it (place_common.wgsl EXPO_TOP)
-  dark: 2,       // THE EYES' WIDEST, under the One exposure at every hour row: a place under the dim level is shown by this many stops more than the night's exposure at the most, × the Eyes open in the dark row
+  dark: 2,       // THE EYES' WIDEST: a place under the dim level is shown by this many stops more than the night's exposure at the most, × the Eyes open in the dark row
   dim: 0.03,     // THE DIM LEVEL, in the place field's own measure (the cache's light on a face that looks up, render/placeField.ts: the sky's and the bounce's, not a lamp's or the moon's own beam) and the night's units: under a night's open yard and under a lit room's bounce, over an unlit room. Read off the field on the block's night: its yard holds 0.071, its lit rooms 0.14 to 0.38, the far end of its weakest lit hall 0.031, the unlit room its team starts in 0.004 to 0.009 …
   dimSky: 0.4,   // … and never over this share of what the level's own night sky puts on open ground (the block's 0.082; a level under a blacker sky has a darker yard, and its dim level goes down with it)
   read: 8e-6,    // a place's level under this is the field's read floor and no reading (three stops over place_field.wgsl's 1e-6; place_common.wgsl EXPO_READ, the same number): by day the dim level is under it and nothing is brought up past the night's exposure
-  lamp: 1.23,    // THE NIGHT'S WHITE (place_common.wgsl EXPO_LAMP, the same number): what a pale floor (0.85) sends back under a room's own bulb (15 lux, render/photometry.ts) as a night shows it. With the every-hour row the shoulder is never about less: a room brought to the night's own picture at dusk or on a grey day is rolled off where the night rolls it off
+  lamp: 1.23,    // THE NIGHT'S WHITE (place_common.wgsl EXPO_LAMP, the same number): what a pale floor (0.85) sends back under a room's own bulb (15 lux, render/photometry.ts) as a night shows it. The shoulder is never about less: a room brought to the night's own picture at dusk or on a grey day is rolled off where the night rolls it off
 };
 /** this frame's eyeCfg under the row: x = THE MOST a place is brought up, the night's exposure over the hour's (`hourExp`, render/photometry.ts hourExposure:
  *  with the Real light values row at 1 a room lit by its lamps alone is then shown as the night shows it, and a room with no light of its own is not shown by its noise; 1 = no bound said. The place Sam stands in is the place field's own
  *  eye, eased on the GPU, render/placeField.ts: there is no second eye by his meter), y = the day's share (the shade row's own fade into a night), z = the power of his darkness the open is overexposed by,
- *  w = −1 − the Eyes follow Sam row (under 0 = the shader's word for this model). Null = no shade row, a sky with no light in it, or (with the every-hour row at 0) a night: the frame's field stays zeros and no place
+ *  w = −1 − the Eyes follow Sam row (under 0 = the shader's word for this model). Null = no shade row or a sky with no light in it: the frame's field stays zeros and no place
  *  takes a gain. `shade` = this frame's shadeCfg (engine.ts lookShade: x = the shade row × the day's share); `shadeRow` = the shade row's amount;
- *  `amount` = the Eyes follow Sam row; `glare` = the Glare outside row. `everyHour` = the One exposure at every hour row is up: the day's share is 1 (the
- *  caller's shade row then carries no fade either, engine.ts lookShade). */
-export function lookExpoFrame(shade: readonly [number, number, number, number] | undefined, shadeRow: number, amount: number, glare = 0.1, hourExp = 1, everyHour = false): [number, number, number, number] | null {
+ *  `amount` = the Eyes follow Sam row; `glare` = the Glare outside row. The day's share is 1 at every hour (the caller's shade row carries no fade either,
+ *  engine.ts lookShade). */
+export function lookExpoFrame(shade: readonly [number, number, number, number] | undefined, shadeRow: number, amount: number, glare = 0.1, hourExp = 1): [number, number, number, number] | null {
   if (!shade || !(shade[0] > 0) || !(shade[3] > 0) || !(shadeRow > 0)) return null;
-  const day = everyHour ? 1 : Math.min(1, shade[0] / Math.min(1, shadeRow));
-  return [hourExp > 0 && hourExp < 1 ? 1 / hourExp : 1, day, day * LOOK_EXPO.out * Math.max(0, glare), -1 - Math.min(1, Math.max(0, amount))];
+  return [hourExp > 0 && hourExp < 1 ? 1 / hourExp : 1, 1, LOOK_EXPO.out * Math.max(0, glare), -1 - Math.min(1, Math.max(0, amount))];
 }
 /** THE EYES' WIDEST, for the frame (frame.placeCfg's z and w; place_common.wgsl lookExpoFor): [the dim level in the night's units (never 0: over 0 is the
  *  shader's word for the row), the most a place under it is shown by over the night's exposure]. `row` = the Eyes open in the dark row; `nightSkyE` = what
