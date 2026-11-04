@@ -55,7 +55,7 @@ const slimOf = (r: any): Slim | null => r && r.boxes && r.picture ? { boxes: r.b
 // ITS NEWEST among the files of one kind with the newest: the same adapter, quality, look and kind of run (with the page without the look, or without).
 // So a later run of three levels mends those three rows and leaves the rest of the full run standing, and a run of another kind takes none of its place
 const gpuFiles = (dir: string): { f: string; j: any }[] => existsSync(dir) ? readdirSync(dir).filter(f => f.endsWith('.json')).map(f => ({ f, j: json(`${dir}/${f}`) })).filter(x => x.j && Array.isArray(x.j.rows)).sort((a, b) => String(b.j.at ?? b.f).localeCompare(String(a.j.at ?? a.f))) : [];
-const kindOf = (j: any): string => [j.version, j.gpu, j.quality, asWords(j.look), (j.rows as any[]).some(r => r.page) ? 'two pages' : 'look page only'].join(' | ');
+const kindOf = (j: any): string => [j.version, j.commit ?? '', j.gpu, j.quality, asWords(j.look), (j.rows as any[]).some(r => r.page) ? 'two pages' : 'look page only'].join(' | ');
 const asWords = (a: unknown): string => Array.isArray(a) ? a.join('&') : String(a ?? '');
 /** the files of the newest one's kind, and each level's newest row among them */
 function newestRows(files: { f: string; j: any }[]): { files: { f: string; j: any }[]; rows: any[] } {

@@ -2,7 +2,7 @@
 // the stamps, a row that is not one picture or whose frames were queued ahead of the GPU left unjudged, the report's text, the addresses a run builds and the words it names
 // as left out, and the words a mission's link sheds. No browser, no GPU: tools/qa/pricerun-page.cjs proves the chain of pages, this proves what is said of
 // the numbers.   bun run tools/qa/pricerun-check.ts   (exit 0 = all pass; PRICERUN_BREAK=1 puts the bar out of reach and must fail)
-import { PRICE, priceOver, priceReport, priceLeft, priceLevels, priceLookWords, priceSearch, rungDiffers, spansWait, queuedWords, type PriceFile, type PriceRow, type PriceWin, type PriceRung } from '../../src/ui/pricerun';
+import { PRICE, priceOver, priceReport, priceLeft, priceOverruled, priceLevels, priceLookWords, priceSearch, rungDiffers, spansWait, queuedWords, type PriceFile, type PriceRow, type PriceWin, type PriceRung } from '../../src/ui/pricerun';
 import { quitSearch } from '../../src/scene/scenarioList';
 const BREAK = (globalThis as any).process?.env?.PRICERUN_BREAK === '1';
 if (BREAK) PRICE.gpuMore = 9;
@@ -58,8 +58,9 @@ check(apartRow.over.length === 0 && priceOver({ ...apartRow, apart: [] }, bar).l
 check(rungDiffers(rung(), rung({ scale: 0.75, gatherThird: true })).join(', ') === 'scale 0.77 / 0.75, gatherThird false / true' && rungDiffers(rung(), rung({ adaptive: null })).length === 0, 'two rungs are told apart lever by lever (the switch itself is not a lever of the picture)');
 
 // ---- the report
-const f: PriceFile = { version: 6, what: 'made up', at: '2026-11-04T06:00:00.000Z', startedAt: '2026-11-04T05:50:00.000Z', address: '/?look', look: ['look'], userAgent: 'unit', gpu: 'made up', machine: { webgpu: 'made up' } as never, screen: '1920×1080', dpr: 1, quality: 'high', secs: 3, bar, rows, notes: [] };
+const f: PriceFile = { version: 6, what: 'made up', at: '2026-11-04T06:00:00.000Z', commit: 'abcdef0123456789', startedAt: '2026-11-04T05:50:00.000Z', address: '/?look', look: ['look'], userAgent: 'unit', gpu: 'made up', machine: { webgpu: 'made up' } as never, screen: '1920×1080', dpr: 1, quality: 'high', secs: 3, bar, rows, notes: [] };
 const rep = priceReport(f);
+check(/UTC  ·  build abcdef01\n/.test(rep) && !/build/.test(priceReport({ ...f, commit: undefined }).split('\n')[0]), 'the report\'s first line names the build the pages were, where the page knew it');
 { const L = rep.split('\n'), h = L.findIndex(l => l.startsWith('level')), pipes = (l: string) => [...l].flatMap((c, i) => c === '|' ? [i] : []).join(',');
   check(h > 0 && rows.every((_, k) => pipes(L[h + 1 + k]) === pipes(L[h])), `the head and every line have their bars in the same places (${pipes(L[h])})`); }
 check(/EVERY PAGE stood on its preset's own rows with the quality ladder off: high ×0\.77, at most 1080 rows, gather at a half, volumetrics at a half, sharp on\./.test(rep), 'the report says the one rung every page stood on');
@@ -77,12 +78,18 @@ check(/THE PAGES STOOD ON 2 RUNGS though the ladder was off/.test(priceReport({ 
 const first = priceLevels()[0]?.level ?? '';
 check(priceLevels().length > 20 && new Set(priceLevels().map(l => l.level)).size === priceLevels().length, `the levels a run walks are the list's, none twice (${priceLevels().length})`);
 { const s = priceSearch(first, 3, 'high', ['look', 'geo=0'], ['mute', 'downloads=1', 'quality=low']), q = new URLSearchParams(s);
-  check(q.has('look') && q.get('geo') === '0' && q.get('downloads') === '1' && q.get('quality') === 'high' && q.getAll('mute').length === 1 && q.getAll('quality').length === 1 && q.get('pricerun') === '3' && q.get('seed') === '1' && q.has('noverdict') && q.has('nokeep'),
+  check(q.has('look') && q.get('geo') === '0' && q.get('downloads') === '1' && q.get('quality') === 'high' && q.get('adapt') === '0' && q.get('giveway') === '0' && q.getAll('mute').length === 1 && q.getAll('quality').length === 1 && q.get('pricerun') === '3' && q.get('seed') === '1' && q.has('noverdict') && q.has('nokeep'),
     `a page's address carries the look page's words and the visitor's flags once each, and its own preset wins (${s})`); }
+{ const a = new URLSearchParams(priceSearch(first, 0, 'auto', ['look'], ['adapt=0', 'giveway=1']));
+  check(!a.has('quality') && a.getAll('adapt').length === 1 && a.get('giveway') === '0' && a.getAll('giveway').length === 1, `asked at auto, a page pins no preset, and the window's word is the run's own whatever the visitor's (${a.toString()})`); }
 { const w = priceLookWords('?pricelevels&geo=0'), w2 = priceLookWords('?look=walls:0&pricelevels');
   check(w.includes('look') && w.includes('geo=0') && w2.includes('look=walls:0') && !w2.includes('look'), `the look page's words ride with or without a look word beside them (${w.join('&')} · ${w2.join('&')})`); }
 { const search = '?look&pricelevels=pass&pricesecs=2&nosharp&hour=dusk&mute&downloads=1', left = priceLeft(search, first, 'high', priceLookWords(search), ['mute', 'downloads=1']);
   check(left.join(',') === 'nosharp,hour', `the words of the asking address that no page carries are named, the run's own are not (${left.join(', ')})`); }
+{ const search = '?look&pricelevels&adapt=1&giveway=1&seed=7&mute', over = priceOverruled(search, first, 'high', priceLookWords(search), ['mute']);
+  check(over.length === 3 && /^adapt=1 \(the pages have adapt=0\)$/.test(over[0]) && /^giveway=1 \(the pages have giveway=0\)$/.test(over[1]) && /^seed=7 \(the pages have seed=1\)$/.test(over[2]) && priceOverruled('?look&pricelevels&quality=high&mute', first, 'high', ['look'], ['mute']).length === 0, `a word the asking address says and the run says otherwise is named with both values, one the run says the same is not (${over.join('; ')})`); }
+{ const from = priceSearch(first, 3, 'high', ['look'], ['mute']), left = quitSearch(from), q = new URLSearchParams(left);
+  check(!q.has('adapt') && !q.has('giveway') && !q.has('pricerun') && quitSearch('?adapt=0&giveway=0&mute') === '?adapt=0&giveway=0&mute', `a mission picked from a priced page sheds the held picture's words with the run's own; a visitor's own stay on a page that is no run's (${left})`); }
 check(quitSearch('?pricelevels=nosuch&pricesecs=2&pricepage=0&pricerun=4&mute') === '?mute', `a mission's link sheds every word of a pricing run (${quitSearch('?pricelevels=nosuch&pricesecs=2&pricepage=0&pricerun=4&mute')})`);
 
 console.log(red ? `\n=== pricerun-check: ${red} FAILED${BREAK ? ' (PRICERUN_BREAK=1: as it must)' : ''} ===` : '\n=== pricerun-check: ALL PASS ===');

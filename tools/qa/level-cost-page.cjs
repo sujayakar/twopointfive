@@ -11,6 +11,9 @@
 // EVERY NUMBER HERE IS A RELATIVE READ. A software adapter runs each pass on the CPU, one after another: a frame that takes seconds here takes milliseconds on a
 // GPU, and what is dear here (a wide filter, many texture taps) is not what is dear there. What carries over is the DIRECTION and roughly the SHARE: on over off
 // on this level against on over off on the pass, which is the one level the look was timed on a GPU. Nothing drawn here has been seen on a GPU.
+// AND WHAT IS IN THE AIR IS NOT IN IT: the mission is stood up with nothing drawn (a drawn frame is seconds here) and the timed frames are a six-hundredth
+// of a second apart, so the GPU's particles are never stepped: a snow or a rain level is read WITHOUT its flakes or drops and the fog they feed. The page's
+// own pricing run (src/ui/pricerun.ts) plays every step drawn, after the page's warm-up; that is the price. cost.json says this in `air`.
 //
 //   node tools/qa/level-cost-page.cjs pass                     one level; its files land in dist/level-cost/pass/ (cost.json, look.png)
 //   node tools/qa/level-cost-page.cjs pass block compound      several, one page after another (never two at once: the adapter loses its device)
@@ -139,19 +142,22 @@ async function boot(browser, level, query, look, dir) {
   return R;
 }
 
+// (the dev server this tool started is stopped however it ends: by its last line, by a throw, or by a signal from outside)
+let server = null; const stopServer = () => { try { server?.kill(); } catch { /* gone */ } server = null; };
+for (const sig of ['SIGINT', 'SIGTERM']) process.on(sig, () => { stopServer(); process.exit(130); });
 (async () => {
   const rows = JSON.parse(execFileSync('bun', ['run', path.join(__dirname, 'level-audit.ts'), '--rows'], { cwd: ROOT, encoding: 'utf8' }).trim().split('\n').pop());
   const want = argv.filter(a => !a.startsWith('--')), unknown = want.filter(n => !rows.some(r => r.level === n));
   if (!want.length || unknown.length) { console.error(unknown.length ? `level-cost-page: not on the mission list: ${unknown.join(', ')}` : 'level-cost-page: name a level', `\nthe list has: ${rows.map(r => r.level).join(' ')}`); process.exit(2); }
-  let server = null;
   if (!(await up())) { log(`no dev server on ${PORT}: starting one from this checkout`); server = spawn('bun', ['run', 'tools/serve.ts'], { cwd: ROOT, env: { ...process.env, PORT: String(PORT) }, stdio: 'ignore' });
-    for (let i = 0; i < 60 && !(await up()); i++) await new Promise(r => setTimeout(r, 500)); if (!(await up())) { console.error('level-cost-page: the dev server did not come up'); server.kill(); process.exit(1); } }
+    for (let i = 0; i < 60 && !(await up()); i++) await new Promise(r => setTimeout(r, 500)); if (!(await up())) { console.error('level-cost-page: the dev server did not come up'); stopServer(); process.exit(1); } }
+  else log(`A DEV SERVER WAS ALREADY ON ${PORT} and is used as it is: this tool cannot tell whose checkout it serves`);
   const browser = await chromium.launch({ headless: true, channel: 'chromium', args: FLAGS }); let red = 0;
   for (const level of want) {
     const row = rows.find(r => r.level === level), dir = path.join(OUT, level); fs.mkdirSync(dir, { recursive: true });
     const query = row.address.replace(/^\?/, '');
     const L = await boot(browser, level, query, true, dir), P = PLAIN_PAGE ? await boot(browser, level, query, false, dir) : null;
-    const out = { level, mission: row.missions[0], hour: row.hour, address: `?look&${query}${SCENE}`, adapter: 'software (SwiftShader)', read: RELATIVE, quality: QUALITY, window: [W, H], frames: FRAMES, rounds: ROUNDS, at: new Date().toISOString(), look: L, plainPage: P };
+    const out = { level, mission: row.missions[0], hour: row.hour, address: `?look&${query}${SCENE}`, adapter: 'software (SwiftShader)', read: RELATIVE, air: 'the GPU particles were never stepped in this read: a snow or rain level is timed without what is in its air', quality: QUALITY, window: [W, H], frames: FRAMES, rounds: ROUNDS, at: new Date().toISOString(), look: L, plainPage: P };
     if (P && L.pipelineLabels && P.pipelineLabels) { const had = new Set(P.textHashes); const count = a => a.reduce((m, l) => (m.set(l, (m.get(l) ?? 0) + 1), m), new Map()), a = count(L.pipelineLabels), b = count(P.pipelineLabels);
       out.againstPlainPage = { textsOnlyOnLook: L.textHashes.filter(h => !had.has(h)).length, textsShared: L.textHashes.filter(h => had.has(h)).length, textKB: [P.compiled?.textKB, L.compiled?.textKB], pipelines: [P.compiled?.pipelines, L.compiled?.pipelines],
         pipelinesOnlyOnLook: [...a].filter(([l, n]) => n > (b.get(l) ?? 0)).map(([l, n]) => n - (b.get(l) ?? 0) > 1 ? `${l} ×${n - (b.get(l) ?? 0)}` : l), readySecs: [P.readySecs, L.readySecs], frameMs: [P.frameMs?.onMedian, L.frameMs?.onMedian] }; }
@@ -167,6 +173,6 @@ async function boot(browser, level, query, look, dir) {
     for (const b of bad) console.log(`  ! ${b}`);
     console.log(`  written: ${dir}/cost.json${L.still ? ', look.png' : ''}${P?.still ? ', plain-page.png (the same mission without the look)' : ''}`);
   }
-  await browser.close(); if (server) server.kill();
+  await browser.close(); stopServer();
   process.exit(red ? 1 : 0);
-})().catch(e => { console.error(e); process.exit(1); });
+})().catch(e => { console.error(e); stopServer(); process.exit(1); });
