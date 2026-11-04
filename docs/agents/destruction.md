@@ -1038,12 +1038,16 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   the rule on, anywhere (the row's two dark flecks; the sparks and the dent stay). ALSO CHANGED IN THE PICTURE, since they say words already: the office's
   cubicle partitions say 'fabric' and throw cloth where they threw gypsum (the chaos lane has always read them as cloth), a sofa throws cloth where it threw
   concrete, a cabinet that says 'steel' sparks where a pale one threw gypsum.
+  A MARK ON A CUT FACE LIES WHERE THE ROUND MET IT (`render/decals.ts Decals.onCut`, raised by the page, `?markcut=0`; found by the first GPU still of a shot
+  car): a mark clamped to its box was pulled onto the face of the box's UNCUT shape, so on a leaning pane, a rounded nose or a crowned bonnet it stood
+  centimetres off the surface (87 mm on a pane leaning 12 degrees) and the shader's plane test dropped it: no round ever left a mark on a cut face. The
+  picture's alone (where a mark is drawn, never whether one is laid); check line 7.
   SWITCH: ON in the page (`?hitstuff=0` = by the colour, as it was), OFF in the module and on the frozen stand (`TPS_HITSTUFF=1`), a `FROZEN_HOLDS` row, in
   the registry and the journal (a recording from before the table plays with it off: `applyKnobs`; the rule is read at each hit). On or off, the same run.
   WHO SAYS A WORD TODAY: on the preview the trial cars (`scene/carTry.ts`: body 'carpaint', glass 'glass', tyres 'rubber', trim 'plastic', hubs 'steel'),
   the office's desks, partitions, sofas and cabinets, `levels/white-roof.json`. THE KITS' OWN VEHICLES SAY NOTHING YET (check line 1 holds that): they say
   theirs when `stuff` is in the build and the vehicles' lasting shapes are.
-  CHECK: `bun run tools/qa/hitstuff-check.ts` (`probes.ts hitstuff`, family `destruction`; `HITSTUFF_BREAK=1` fails lines 2, 3 and 4), seven lines on both
+  CHECK: `bun run tools/qa/hitstuff-check.ts` (`probes.ts hitstuff`, family `destruction`; `HITSTUFF_BREAK=1` fails lines 2, 3, 4 and 7), eight lines on both
   stands, real rounds on the office with a stand-in for the GPU particles that keeps what the game asks of them at the hit: the car's body by its paint,
   the same up as down; saying 'carpaint', sparks, no chips, no dust; a tyre saying 'rubber', plastic's chips and no dent; the glass saying 'glass', the
   crack in place of the hole on every round, with the chaos lane off too, six chips from two rounds and the box standing; a cabinet that is metal by its
