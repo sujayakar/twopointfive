@@ -16,11 +16,6 @@
       "source": "/firelab",
       "destination": "/?levelFile=pass.json&roomclear&squad4&nofow&firelab",
       "permanent": false
-    },
-    {
-      "source": "/gait",
-      "destination": "/workbench#mode=chars&scene=sam/walk",
-      "permanent": false
     }
   ],
   "headers": [

@@ -1,7 +1,6 @@
 # The level format (LevelData v1)
 
-The office is **data**: `levels/office.json`. This note is for whoever edits it — by hand, or through the in-browser
-editor (lane G1b) — and for the lanes that extend it (G2 floors + stairs, G4 cameras / keypads / lasers).
+The office is **data**: `levels/office.json`. This note is for whoever edits it by hand or from a generator, and for the lanes that extend it (G2 floors + stairs, G4 cameras / keypads / lasers).
 
 ```
 levels/office.json ──import──▶ src/scene/level.ts buildLevel() ──▶ levelLoad.ts loadLevel() ──▶ Level ──▶ Game / Engine
@@ -24,8 +23,7 @@ levels/office.json ──import──▶ src/scene/level.ts buildLevel() ──�
 
 * One entity per line; top-level keys in a fixed order; every record's keys in schema order. `git grep box_0412 levels/` finds a
   box, a diff is a list of changed entities. Keep it canonical: after hand edits, `bun -e` a `serializeLevelData(parseLevelData(text))`
-  pass (the editor lane will add a `tools/level-fmt.ts`; until then `level-identity` FAILs its "canonical form" line if you do not,
-  nothing else minds).
+  pass (`level-identity` FAILs its "canonical form" line if you do not, nothing else minds).
 * Numbers are full precision on purpose (`12.259999999999998` is a wall centre computed as `(x0 + x1) / 2`); write whatever you
   like for new things, the loader does not care.
 * **While the legacy generator still exists, `tools/level-export.ts` OVERWRITES the file from it** and `level-identity` fails on any
@@ -124,7 +122,7 @@ through any open exterior door (`windAt(g, p)`); the SAME source records go to t
 toward the moving air and to the smoke solver's forces step as a relaxation of the simulated air toward it inside each jet's support — so a
 plume under a vent bends on screen and in the guards' smoke sight lines alike, and no vent ever costs the solver a domain. The GRILLE is an
 ordinary box (group `ceiling.vents`, `NoPrimary` like every ceiling fixture, its louvre a coarse marking) the way a door's frame is ordinary
-boxes: move a vent in the editor and move its grille with it. The office authors six (officeGen.ts → office.json): `vent_cub_nw` /
+boxes: move a vent and move its grille with it. The office authors six (officeGen.ts → office.json): `vent_cub_nw` /
 `vent_cub_se` over papered cubicle desks, `vent_aisle` over the middle aisle's north end, `vent_corridor` outside the server door (cycles
 45 s / 0.75), `vent_break` inside the break room's corridor door (50 s / 0.6), `vent_server` over the server room's front aisle (the
 strongest, 2.8 m/s) — all mains, all ≥ 1.7 m off any panel or beacon and on their own ceiling square. Knobs: `tune.wind` (the master, 0‥1)
@@ -354,7 +352,7 @@ built for it; `bun run tools/qa/snatch-check.ts` holds the rules. `van? {name, p
 while `SNATCHOUT.on` (`src/game/snatchout.ts`) the man, once tied, is led there by the player and the mission is won when he is in it, the house taken or
 not (`bun run tools/qa/snatchout-check.ts`). Without the key the snatch ends as it did.
 
-## For the editor lane (G1b) — the API to build on
+## Working on a level from code
 
 ```ts
 import { OFFICE_DATA, buildLevel } from './scene/level';                       // the bundled data (read-only) / a fresh runtime Level
@@ -364,136 +362,21 @@ import { validateLevelData, serializeLevelData, parseLevelData, canonicalLevelDa
 ```
 
 * Edit a `LevelData` (deep-copy `OFFICE_DATA` first — it is the module's one bundled object), `validateLevelData` on every op,
-  `loadLevel(data)` to get a `Level` for "play from here" (hand it to `new Game(engine, level, …)` exactly as main.ts does),
-  `serializeLevelData` to save (download / localStorage / POST to the dev server), `levelDataDigest` for dirty-tracking.
+  `loadLevel(data)` to get a `Level` (hand it to the stand-up exactly as main.ts does), `serializeLevelData` to save.
 * `loadLevel` output carries no ids; keep the `LevelData` as the document and use `indexLevelData(d)` for id → index when talking
   to the running `Game` (its `world.statics[i]`, `targets`, `doors.byName(id)`).
 * Nothing in `Level` is derived from anything else EXCEPT at Game construction (area lights off emissive switchables, AreaLit flags,
   reach masks, nav / wall rasters) — so an edit means: mutate data → `loadLevel` → rebuild the Game (cheap: ~100 ms headless).
 
-## Editor (lane G1b) — the WORKBENCH's Level / Materials modes: `/workbench` in dev, `workbench.html` in the build (`/editor` forwards)
+## The level editor is gone
 
-The editor is an APP (`src/editor/app.ts createEditorApp`: document → scene → view → tools → overlay → chrome → `window.__ed`, the frame in pieces)
-that a page hosts on an Engine it made. One page does now (the thin standalone `src/editor/main.ts` is deleted — nothing served it): the
-**workbench** (`workbench.html` → `src/workbench.ts` → `src/workbench/main.ts`), which houses it beside the character / prop viewer as ONE shell:
-a left RAIL of modes — **Level** (this editor) · **Materials** (the same, its paint / marking tabs up) · **Characters** · **Effects** (the viewer,
-VIEWER.md) · **Motion** (a stub) — over one Engine, one Input, one orbit camera (this editor's `View`: RMB orbit · MMB / Space+LMB pan · wheel zoom to
-the cursor · T plan · F frame, in every mode), one inspector column, one capture story. Keys `Ctrl+1‥5` switch modes anywhere, plain `1‥5` in the
-level modes. Under the rail: the level OUTLINER, then a **scenes ▸ variants** tree — the viewer's studio scenes (picking one goes to Characters /
-Effects) and the STAGING scenes that stand a figure IN THE LEVEL in any mode (a guard walking the two vending fronts, one stood by them, Sam
-crouched under the manager's desk lamp, a guard on the lobby stone): the level keeps rendering round him and its lights light him, so a paint's
-roughness is tuned while a man walks through the reflection; the tree's top row stands the level alone again. Two WORLDS share the engine — the
-level (this editor's Scene owns statics + lights) and the viewer's studio — each with its own sky / exposure / haze slot; a switch clears the skin
-and the capsules, nothing leaks. URL: `/workbench#mode=level&file=<name>` · `#mode=materials&paint=lino` · `#mode=chars&scene=guard/carbine-shoulder&sel=rig:carbine`
-· `#mode=fx&scene=fx/muzzle` (deep links restore mode + document + scene + selection; the hash follows switches); `/editor#file=x` / `#autosave` /
-`#blank` and `/viewer#scene/variant`, `/gait` forward in with the old hash translated. Hooks: everything below plus the viewer's (`__viewer __char
-__step __gizmo __rig …`), `__shot(name)` = the composite frame for both, `__ui` = this editor's chrome, `__vui` = the viewer's, and `__wb` {mode,
-setMode(m), scene(id | null, variant), world, staged, actor, frameFigure(), hash()}. The idle throttle is the editor's (3 s → ~5 fps), 20 s while a
-figure is up. Boots on the bundled office; `file=<name>` loads `levels/<name>.json` from the dev server, `autosave` the localStorage slot, `blank`
-an empty level; `?quality=` as the game. Layout: top bar (file · undo/redo · tools · gizmo modes · floor · view
-toggles · quality · validate / lint / play · status), left PALETTE (box presets, light presets, volume kinds, the three devices, materials — click a
-swatch to paint the selection; stair greyed until G2), the view (WebGPU + a 2D overlay: grid, outlines, routes, icons, marks),
-right INSPECTOR (outliner over a property sheet for the selection — or the LEVEL: name, snap, sky, floors, materials).
+The level editor and the page it lived on (the workbench: Level, Materials, Characters, Effects) were removed on 2026-11-04. Nobody was
+using them: levels are made by the generators under `tools/levels/` and by hand in the JSON. The git history has all of it (`src/editor`,
+`src/viewer`, `src/workbench`, `VIEWER.md`, the `?level=local` boot off the editor's stash). What stayed:
 
-```
-src/editor/doc.ts      the undoable document: ops { set | ins | del } by path, begin/commit + transact(label, fn) (rollback on throw: THE form for multi-op verbs), coalescing per gesture, ≥ 100 deep (200)
-src/editor/editor.ts   the verbs (add/move/resize/rotate/duplicate/delete/rename … with reference clean-up), selection by REF strings
-src/editor/scene.ts    LevelData → engine: statics ≡ data.boxes (+ prop parts, volume outlines), door leaves, lights + the area lights game.ts derives, day/night
-src/editor/tools.ts    mouse/keys · view.ts orbit/plan camera · overlay.ts the 2D canvas · ui.ts + sheet.ts + paintui.ts the chrome · api.ts window.__ed · persist.ts saves
-src/editor/app.ts      the hostable app (createEditorApp) · src/workbench/main.ts the shell that houses it (the old standalone editor page is gone)
-src/editor/lint.ts     level lint (also `bun run tools/qa/level-lint.ts levels/office.json`, exit 1 on errors; `levels/<name>.lint.json` = allowances)
-src/editor/geom.ts     box maths, presets, doorFrameBoxes (the generator's frame verbatim), cutOpeningPlan (wallX/wallZ's opening split)
-tools/levels-api.ts    the dev server's GET /levels/ · GET /levels/<name>.json · POST /levels/<name>.json (validated, canonical; the server binds 127.0.0.1; loopback Host + same-origin + application/json + `X-Level-Editor: 1` only)
-```
-
-**Refs**: `box:<id>` `prop:<id>` `light:<id>` `sw:<id>` `door:<id>` `route:<id>` `route:<id>#<i>` (a waypoint) `volume:<id>` `chokepoint:<id>`
-`device:<id>` `floor:<id>` `mark:spawn` `mark:<objective id>` (bare ids are boxes). **Mouse**: click selects (shift toggles; double-click = the box's switchable /
-group) · press-drag ON THE SELECTION moves it on the floor (Alt = vertical), press-drag anywhere else = marquee (the floor is always under the cursor:
-click first, then drag) · RMB orbit · MMB or Space+LMB pan · wheel zooms about the cursor. **Keys**: `G` move · `S` resize (six face handles on the
-selected box) · `R` rotate (a yaw ring; Ctrl = 15° steps) · `B` box footprint (preset from the palette; walls run along the longer drag side at
-their fixed thickness; a click drops the default size) · `V` volume footprint · `L` light at the cursor (preset height) then drag its **aim** dot ·
-`D` door: press at the hinge, drag along the shut leaf (snaps to 90°, Alt free) — with *cut+frame* on, the wall it lands in is split into runs +
-lintel and the frame (jambs, head, stops) is built · `P` route: click waypoints, Enter / double-click finishes, Backspace drops the last · `T` plan ·
-`F` frame · `X` snap · `O` grid · `H` hidden (NoPrimary) boxes · `N` day/night (data.daylight) · arrows nudge by the snap (Shift fine, Alt / PgUp /
-PgDn vertical) · `Del` delete · `⌘/Ctrl Z` `⇧Z`/`Y` `D` (duplicate) `S` (save to server) `A` (all boxes on the floor) · `` ` `` hides / shows the right-hand panel (no key steps the debug views: they are the *view* list in the top bar's second row) · `[ ]`
-exposure · `M` the Materials tab · `K` (a box selected) its Markings tab · `Esc` cancels the tool / clears. Deleting refuses what is still referenced (a door an objective / plan uses, the breaker's boxes, a
-floor with things on it — boxes, props, doors, volumes, chokepoints, devices, civilians or a connector end, one `FLOOR_USERS` table in levelData.ts for delete / rename / lint —
-the mission marks); a box's switchable forgets it (and goes when emptied), a light's fixture pointing at it is cleared; renaming a keypad takes its door's `lock` with it.
-Every multi-op verb runs in `doc.transact`: an exception half-way rolls the whole verb back (nothing half-done in the document, nothing on the undo stack). Resizing a
-MARKED box (any write to its `h`: the S handles, the sheet's size row, `__ed.box.resize / size / update`) re-fits its markings into the smaller / larger faces in the same
-command (bitmaps cropped top-left when they must shrink) and drops — with a line in the problems panel — only a marking whose face no longer takes one cell.
-
-**Save / load**: *save ▾* download `<name>.json` · POST to the dev server (⌘/Ctrl S: the file the document was LOADED FROM — `Editor.file`, shown on the level sheet — or, for a document from nowhere, `levels/<data.name>.json`, asking before it replaces a file that exists; the repo file changes, and on a GENERATED level a re-export overwrites it) · autosave
-(localStorage `twopointsix.editor.autosave`, every 30 s while dirty + on unload); *load ▾* file picker · drop a `.json` on the view · the
-autosave slot · a blank level · the bundled office · the server's `levels/`. The RESTORE paths (`#autosave` at boot, *load ▾ autosave*,
-`__ed.save.restoreAutosave()`, `__ed.load(text, {lenient: true})`) open a document that PARSES but does not VALIDATE — its problems listed in the problems
-panel, `ed.loadErrors` — instead of refusing it; a `#autosave` boot whose slot is not a level at all keeps the office up as a stand-in and HOLDS the timer's
-and the unload's writes until the first edit (`persist.ts AutosaveSession`), so a session is never silently replaced and then overwritten. **Play from here**
-writes the document to localStorage `twopointsix.editorLevel` and opens the game with `?level=local` + the keys of the mission the document carries
-(`persist.ts playChoices / playDefault`: the list beside the button holds the plain night and each mission of the document's `scenarios` block — `&roomclear`
-(+ `&squad4`), `&rescue`, `&quiet` (+ `&squad=1`), `&nightbreach`; the default is the mission list's first row for the file, and for the office the plain
-night). `/?level=local…` from the dev server's `/workbench`, `index.html?level=local…` from a built page (the dev server forwards `/index.html` to `/`). The
-game's side of it is `buildLevel()` in `src/scene/level.ts` (read it there: the stash is parsed and validated, a document of the office family gets the
-office's script and scenarios, anything that fails falls back to the bundled office with a console error — and `main.ts` falls back again if the Game
-cannot be built on it, `bootedLocalLevel`).
-
-**`window.__ed`** (api.ts) — every mutator is one undoable command; getters return copies:
-
-| | |
-|---|---|
-| document | `digest()` `rev()` `dirty` `serialize()` `load(text\|data, {lenient?})` (→ `errors`) `blank(name?)` `snapshot()` `validate()` `lint()` (→ findings + `summary`) `roundTrip()` `undo()` `redo()` `history()` `check(d)` `digestOf(d)` |
-| selection / verbs | `select(refs\|null, mode?)` `selection()` `exists(ref)` `posOf(ref)` `move(refs, [dx,dy,dz])` `rotate(refs, dyaw, {snapDeg,pivot})` `duplicate(refs, off?)` `delete(refs)` `rename(ref, id)` `nudge(refs, dx, dz, dy?)` |
-| `box` | `presets()` `add({preset,c,h\|size,yaw,material\|albedo,emissive,flags,group,name,switchable})` `draw(preset,a,b)` `get` `update` `move` `resize(id, '+x'…, Δ)` `size(id,[x,y,z])` `rotate` `duplicate` `delete` `flags(ids, flag, on)` `paint(ids, material\|rgb)` `byGroup(g)` `count()` |
-| `light` / `switchable` | `light.presets()` `add({preset,pos,…})` `get` `update` `aim(id, target)` `move` `delete` `list()` · `switchable.make(boxIds,{group,on,baseEmissive})` `get` `update` `of(boxId)` `delete` `list()` |
-| `door` | `add({hinge,closedDir,width,locked,…}, {cut,frame})` `get` `update` `makeFrame(id)` `cutOpening(id)` (→ removed/added/obstructions) `obstructions(id)` `framePlan(id)` `frameBoxes(id)` `delete` `list()` |
-| `route` | `add({points,wait,name,weapon,keys})` `draw(points)` (the P tool) `get` `update` `movePoint(id,i,pos)` `insertPoint(id,i,pos,wait?)` `removePoint(id,i)` `setWait(id,i,s)` `reverse(id)` `delete` `list()` |
-| `device` | `add({kind:'camera', pos, yaw, pitch, fovDeg, range, sweep, sweepPeriod, mains, group})` (a floor point is hung 2.6 m up) · `add({kind:'keypad', door \| pos, code})` (LOCKS that door on the pad's own lock; re-linking `update(id,{door})` moves the lock, `delete` takes the door off it) · `add({kind:'laser', from, to, alarm, mains})` (floor points run at 0.35) · `get` `update` `move` `rotate` (a beam turns about its middle) `aim(camId, target)` `end(laserId, 0\|1, pos)` `duplicate` (never a keypad) `delete` `list(kind?)` `ofDoor(doorId)`. Tools: **C** camera (click under where it hangs; it looks the way the view looks; drag its aim dot), **K** keypad (click beside a door on the face that carries the pad — the default spot is 1.5 cm proud of the wall's face, pushed out of any solid), **J** laser (press at the emitter, drag to the receiver; end handles after). Lint: `camera-in-solid`, `laser-in-solid`, `laser-blocked`, `laser-height`, `keypad-in-solid`, `keypad-far`, `keypad-side`, `keypad-orphan` (no patrol point's nearest pad — nobody could give its code up), cones counted in `light-slots`; `switchable-dark` counts a box's EMISSIVE MARKINGS as light |
-| others | `volume.add({kind,c,h,yaw})/get/update/delete/list` · `prop.get/move(id,x,z,yaw?)/update/delete/list` · `chokepoint.add/update/delete/list` · `mark.spawn(pos?)/objective(id,patch?)/move(ref,d)/list()` · `floor(id?)` `floors.list/add/update/delete` · `material` / `marking` (below) · `level.name(n?)/meta(patch?)/sky(which,rgb)/counts()` · `connector` stub |
-| view / tools | `camera({look,yaw,pitch,dist}?)` `pin(state\|null)` (FollowCamera.pin, verbatim for captures) `plan(on?)` `frame()` `tool(name?)` `mode(name?)` `preset(kind,key)` `grid(on?,step?)` `snap(on?,step?)` `day(on?)` `hidden(on?)` `settings()` `quality(name?)` `step(n)` `shot(name)` (JPEG to the shot server, overlay off; `__edshot` with it) `scene()` `pick(mx,my)` |
-| persistence | `save.download()` `save.server(name?)` `save.serverList()` `save.serverLoad(name)` `save.autosave()` `save.readAutosave()` `save.restoreAutosave()` (lenient, → `errors`) `save.local()` (the play stash) `play()` `save.keys` `save.session` (page only: the AutosaveSession — `held`, `tick()`, `bootError`) |
-
-**Materials + Markings — the inspector's tabs** (`src/editor/paint.ts` = the document operations, `paintui.ts` = the chrome; the PROPERTIES header is
-now `properties | materials M | markings K`). Everything below is LIVE — the view is the game's renderer, and a paint / marking edit reaches it through the
-same document → `Scene.sync` → `loadLevel` → BoxWorld upload path as any other edit (~4–5 ms of CPU for the office per change; the marking table in the
-tail of boxMat is append-only, so the scene compacts it once a painting session has taken two-thirds of its 6144 rows) — and every control is ONE undo step
-(a slider drag or a brush stroke coalesces under its own key and is sealed at release):
-
-* **Materials** (`M`): the palette list (a swatch per paint — its sRGB albedo under a highlight streak that narrows / brightens with polish and takes the albedo's
-  hue for metal: a CSS approximation; usage counts; the finish) · per paint: albedo as a native colour picker + hex (sRGB) AND three linear fields, roughness 0.02‥1
-  with ticks at the finish presets + a *matte (no finish)* box (absent `rough` = `ROUGH_DEFAULT` 1: no ray on any tier) + the *traced on ultra · high · medium* hint
-  (`RtTier.maxRough` 0.55 / 0.45 / 0.35) and what THIS view does, metal (yes / no — the format has no fraction), notes, the FINISH PRESETS (stone 0.15 · lino 0.22 ·
-  brushed metal 0.28 + metal · dark screen 0.08 · laminate 0.5 · wood 0.55 · matte wall 0.85 · unset) · new / duplicate / rename (references rewritten) / delete
-  (refused while used) / *from selection* (a paint from the first selected box's resolved look, the selection painted with it) / *users → sel.* / *paint sel.* ·
-  **per-box overrides** for the selection: material dropdown (or *(inline albedo)* = detach keeping the look), inline albedo, *override roughness* / *override
-  metal* toggles + their controls, finish presets ON THE BOXES, *clear overrides*, the resolved look. `aniso` is runtime-only (the wet lot) — not in LevelData v1.
-  Every material write replaces the whole `materials` record, so a rename or a delete undoes back to the same palette ORDER.
-* **Markings** (`K` with a box selected — with nothing selected K is still the keypad tool): the box's faces (buttons, or click the face IN THE VIEW; the overlay
-  outlines it with its painter axes u → / v ↑ and the selected bitmap's rectangle) with each res's cell size and the largest bitmap the face takes · the marking list
-  (face, res, W×H, at, palette chips, lit cells, ⚠ on a validator error) · add on the face / duplicate / remove / copy / *paste → sel.* (same face, clamped onto each
-  target's face, too-small faces skipped and named) / *apply to pattern* (a regular expression over id / name / group, + *same size*: how a per-kind default is authored
-  by hand) / the KIND RECIPES of `scene/markingDefaults.ts` sized to the box (keyboard, carton, cabinet, cupboard, book run, papers, whiteboard, keypad, rack, door
-  leaf, clock, the vending fronts …; replaces the box's set) · frame: res / face / size / at (all clamped INTO the face) + anchors + nudges · the **PAINTER**: a canvas
-  of the cells (transparent = the box's own albedo), LMB paints the active entry, RMB erases, shift-drag fills a rectangle; with the painter focused `[` `]` cycle the
-  entry, `1 2 3 0` pick it, arrows move the bitmap on the face, ⇧arrows shift the cells (wrapping), `H` `V` mirror, `Del` is swallowed, `Esc` hands the keys back ·
-  **palette entries** as MATERIALS: mode *× box albedo (mul 0.4‥1.6)* | *absolute albedo* | *leave the albedo*, optional roughness, optional emission as a LEVEL under
-  ONE SHARED CHROMA for the whole marking (game.ts registers one light per marking; a marking loaded with two hues shows a warning + *unify*), ≤ 3 entries (the cells
-  are 2 bits), the 'no gradients / no baked lighting' rule holds by construction · **generators** run INTO the bitmap (fill · grid = key caps + space bar · seams + pulls
-  · lines = text bars · scribble · dots = LEDs · window = the vending cans · glyph = the 5 × 7 pictograms · tape = a band whose entry becomes the packing-tape material;
-  entries a recipe names beyond the palette are added) · **ASCII**: the '.abc' rows in a textarea, *apply text* (resizes to the art, refused if it will not fit the face
-  at that res), *copy as literal* (a `markingDefaults.ts`-style `const ART_… = [ … ];`), paste tolerates literals / bare rows / comments.
-
-| `material` | `list()` (name → record, palette order) `table()` (+ usage) `get(name)` (+ users + trace hint) `set(name, {albedo?, rough? (null = unset), metal?, notes?})` (or the old `set(name, rgb, notes?)`, which also creates) `create(name, init?, {after?})` `duplicate(name, newName?)` `rename(old, new)` `remove(name, {repaintTo?})` `users(name)` `preset(name, key)` `presets()` `fromSelection(ids?, name?)` `selectUsers(name)` `traceHint(rough)` |
-|---|---|
-| `box` (added) | `override(ids, {albedo?, rough?\|null, metal?\|null} \| null)` `finish(ids, presetKey)` `look(id)` (the resolved albedo / rough / metal) `matching(regex, {sameSizeAs?})` |
-| `marking` | `list(boxId)` (+ lit / emits / errors) `get(boxId,i)` `face(boxId, face, res?)` (the lattice) `add(boxId, {face,res,size,at\|anchor,pal,cells})` `update(boxId,i,patch)` `remove` `duplicate` `setAll(boxId, list)` `paintCell(boxId,i,x,y,e)` (x = column, y = row from the TOP) `paintCells` `fill(boxId,i,[x0,y0,x1,y1],e)` `clear` `mirror(…,'h'\|'v')` `shift(…,dx,dy)` `nudge(…,du,dv)` `generate(boxId,i,kind,params)` `generators()` `recipes()` `recipe(boxId,key,face?)` `ascii(boxId,i)` `literal(boxId,i,name?)` `fromAscii(boxId,i,rows\|text)` `parseAscii(text)` `pal(boxId,i,k,{mode,mul,albedo,rough,emitLevel,emitChroma})` `addPal` `removePal` `unifyChroma` `emitModel` `copy` `paste(ids)` `clipboard()` `applyToPattern(boxId,i,regex,{sameSize})` `summary(boxId,i)` (coverage, mean radiance, the light's intensity) `marked()` |
-| `ui` (page only) | `tab('props'\|'materials'\|'markings')` `paint(name?)` `marking(boxId?, i?, face?)` `entry(e?)` — plus `__uishot(name)` = the view + overlay with the inspector column rasterised beside it (`domshot.ts`: DOM → SVG foreignObject → canvas), and the page renders at ~5 fps once idle for 3 s (`__idle`) |
-
-QA: `bun run tools/qa/probes.ts editor` (editor-doc: every verb + undo/redo digests + scene sync + the tools through a synthetic pointer;
-editor-ui: the chrome on a fake DOM; editor-save: the /levels/ handler's contract + autosave; editor-materials: the paint / override / marking operations,
-a 30-step drag = 1 undo, serialize() ≡ levels/office.json after edit + undo, the two panes clicked through on the fake DOM; editor-restore: a resized marked box stays
-valid, the lenient restore + the autosave hold, transact rollback, keypad rename → lock, floor users, prop-part markings in the scene, lint's `mark-rows`) and `probes.ts level-lint`
-(clean office, planted faults incl. a switchable lit only through emissive markings and a keypad buried in its wall, the CLI). What the editor's lighting is NOT: the game's per-light reach masks (render/reach.ts) are not built, so a light walled off from a
-room may still rank there — lossless-by-design culling, invisible except in leader-slot starvation cases; and props are static stand-ins.
+* the level lint: `src/scene/lint.ts`, `bun run tools/qa/level-lint.ts levels/<name>.json` (exit 1 on errors; `levels/<name>.lint.json` =
+  allowances), and the check `bun run tools/qa/probes.ts level-lint` (the clean office, planted faults, the command line);
+* the dev server's `/levels/`, read-only: the index and each file, which the game's `?levelFile=<name>.json` fetches (`tools/levels-api.ts`).
 
 ## Merging a lane that edited the OLD `src/scene/level.ts`
 
@@ -523,5 +406,4 @@ Nothing in the office was random — every "jitter" (chair angles, which rack sl
 arithmetic on indices — so the export froze nothing and the level is exactly the one that shipped. What the generator COMPUTED
 and the file now simply CONTAINS: wall runs split around openings (with sills, lintels, mullions), door frames (jambs, head, the two
 stops per leaf), desk / monitor / cabinet / shelf / car assemblies, the rack LED grids and their invisible glow strips, prop
-footprints. The editor will want helpers for the first two (a "wall with openings" tool, "frame this door") — port `wallX` / `wallZ`
-and the frame loop from `officeGen.ts` when it does.
+footprints.

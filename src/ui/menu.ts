@@ -163,8 +163,6 @@ function titleHead(): HTMLElement { const head = el('div', 'head'); head.innerHT
  *  (The two showcases that were this list's first section — the night and the day — were removed.) What is listed and what is not, and why: rebuild/menus/tools.md. */
 export const EXTRAS: { head: string; rows: { id: string; label: string; line: string; href: string }[] }[] = [
   { head: 'Tools', rows: [
-    { id: 'editor', label: 'Level editor', line: 'Build and change levels, then play from where you stand.', href: 'workbench.html#mode=level' },
-    { id: 'chars', label: 'Characters and effects', line: 'See the cast, the kit in their hands, muzzle flash, smoke and tracers on a studio stage.', href: 'workbench.html#mode=chars' },
     { id: 'replay', label: 'Replays', line: 'Scrub through the last minutes of a run on a map. Press F7 to keep one while you play.', href: 'replay.html' },
     { id: 'sounds', label: 'Sounds', line: 'Hear every sound in the game on one page.', href: 'sounds.html' },
     { id: 'bench', label: 'Benchmark', line: 'It plays three floors by itself, then times each quality level on this machine. You get text to copy.', href: '?bench' } ] },

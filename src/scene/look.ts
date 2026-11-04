@@ -38,11 +38,9 @@ export function setLookPlace(gwot: boolean) { lookPlace = gwot; }
 export function lookDress(): boolean { return LOOK.on && lookPlace; }
 /** the look on, in a place that is not the look's (the office): the men of the first cast, dressed for a building */
 export function lookOffice(): boolean { return LOOK.on && !lookPlace; }
-/** is the level a page's query boots one of the look's places? No `levelFile` = the bundled office (or the editor's document under `?level=local`: asked by its
- *  name where the stash can be read); `office.json` / `office-*.json` = the office family */
+/** is the level a page's query boots one of the look's places? No `levelFile` = the bundled office; `office.json` / `office-*.json` = the office family */
 export function placeOfQuery(q: URLSearchParams): boolean {
   const lf = q.get('levelFile'); if (lf && /^[\w.-]+\.json$/.test(lf)) return !/^office(-[\w.-]+)?\.json$/.test(lf);   // (a name main.ts's boot will not fetch boots the bundled office)
-  if (q.get('level') === 'local') { try { const n = JSON.parse((globalThis as any).localStorage?.getItem('twopointsix.editorLevel') ?? 'null')?.name; return typeof n === 'string' && n !== 'office' && !n.startsWith('office-'); } catch { return false; } }
   return false;
 }
 

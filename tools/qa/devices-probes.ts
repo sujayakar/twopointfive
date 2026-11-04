@@ -1,5 +1,5 @@
 // The level-design devices (game/devices.ts, STATUS G4) headless: `bun run tools/qa/probes.ts devices` (family) or one of devices-camera / devices-keypad /
-// devices-laser / devices-editor. Staged like the other families: the whole Game over the fake GPU, real inputs, the light meter as the
+// devices-laser / devices-lint. Staged like the other families: the whole Game over the fake GPU, real inputs, the light meter as the
 // script's knob (player.visibility — the renderer never answers headless), the probe's smoke answer planted by hand (probe.results) where a plume is wanted.
 //   devices-camera   Sam lit in the corridor camera's picture: 'movement in …' at ~0.8 lit-s + a calm man sent (task 'device'), the floor up a step by ~2 lit-s
 //                    with the fix broadcast; Sam DARK in the same spot: nothing; a plume between (transmittance 0.15): nothing; the OCP: blind for its spell, then
@@ -11,10 +11,10 @@
 //   devices-laser    the corridor shin beam: walked through standing AND crouched = a trip each (radio + a man sent), guards never; the storage chest beam:
 //                    crouch-walked under = nothing, walked = a trip; a canister thrown through the corridor beam trips it; a hauled body trips it; OCP / a round /
 //                    the mains (battery survives) as the cameras; 'alarm' beams put the floor up
-//   devices-editor   __ed.device: add camera / keypad (locks its door) / laser, move / rotate / aim / end / duplicate / delete (the door comes off the pad's
-//                    lock), undo back to the original digest, validate + lint clean, planted lint faults reported
+//   devices-lint     the level lint (src/scene/lint.ts) on the office's devices: clean as authored, and each planted fault reported under its own code (a camera
+//                    or a beam end in a wall, a beam through a partition, a pad far from its door or on the open face, a pad no route can name, a waist beam)
 import { readFileSync } from 'node:fs';
-import { standUp, ROOT, fake } from './headless.ts';
+import { standUp, ROOT } from './headless.ts';
 const { v3 } = await import(`${ROOT}/src/math/vec.ts`);
 const DEV = await import(`${ROOT}/src/game/devices.ts`);
 const D = await import(`${ROOT}/src/game/dialogue.ts`);
@@ -388,62 +388,13 @@ export async function devicesLaser() {
   console.log(`=== devices-laser: ${done() ? 'ALL PASS' : 'FAILURES above'} ===`);
 }
 
-// ================================================================================================================================ editor
-export async function devicesEditor() {
-  console.log('\n=== devices-editor: __ed.device add / move / rotate / aim / end / duplicate / delete + undo to the digest, validate + lint, planted lint faults ===');
-  const { v, done } = verdictFn('editor');
+// ================================================================================================================================ lint
+export async function devicesLint() {
+  console.log('\n=== devices-lint: the level lint on the office\'s devices, and on planted faults ===');
+  const { v, done } = verdictFn('lint');
   const { OFFICE_DATA } = await import(`${ROOT}/src/scene/level.ts`);
-  const { Editor } = await import(`${ROOT}/src/editor/editor.ts`);
-  const { makeApi } = await import(`${ROOT}/src/editor/api.ts`);
-  const { Scene } = await import(`${ROOT}/src/editor/scene.ts`);
-  const { View } = await import(`${ROOT}/src/editor/view.ts`);
-  const { Tools } = await import(`${ROOT}/src/editor/tools.ts`);
-  const { BoxWorld } = await import(`${ROOT}/src/scene/boxes.ts`);
-  const { LightSet } = await import(`${ROOT}/src/render/lights.ts`);
-  const { defaultSettings } = await import(`${ROOT}/src/engine.ts`);
-  const { lintLevel } = await import(`${ROOT}/src/editor/lint.ts`);
-  const { clonePlain } = await import(`${ROOT}/src/editor/doc.ts`);
+  const { lintLevel } = await import(`${ROOT}/src/scene/lint.ts`);
   const officeAllow = JSON.parse(readFileSync(`${ROOT}/levels/office.lint.json`, 'utf8')).allow;
-  const device = fake('device'); const engine: any = { device, world: new BoxWorld(device), lights: new LightSet(device), settings: defaultSettings() };
-  const ed = new Editor(clonePlain(OFFICE_DATA), { lintAllow: officeAllow }); const scene = new Scene(engine, ed); const view = new View(); view.w = 1600; view.h = 1000; const tools = new Tools(ed, scene, view);
-  const api: any = makeApi({ ed, tools, view, scene, step: () => { scene.sync(); } });
-  const d0 = api.digest();
-  {
-    const fails: string[] = [];
-    // camera
-    const cid = api.device.add({ kind: 'camera', pos: [20, 0, 13.0], yaw: Math.PI, sweep: [Math.PI - 0.4, Math.PI + 0.4] });
-    let c = api.device.get(cid); if (!c || c.kind !== 'camera' || Math.abs(c.pos[1] - 2.6) > 1e-6 || api.selection()[0] !== `device:${cid}`) fails.push(`camera add: ${JSON.stringify(c)}`);
-    api.device.move(cid, [1, 0, 0.5]); c = api.device.get(cid); if (Math.abs(c.pos[0] - 21) > 1e-6 || Math.abs(c.pos[2] - 13.5) > 1e-6) fails.push(`move: ${c.pos}`);
-    api.device.rotate(cid, Math.PI / 2); c = api.device.get(cid); if (Math.abs(c.yaw - Math.PI * 1.5) > 1e-5 || Math.abs(c.sweep[0] - (Math.PI * 1.5 - 0.4)) > 1e-5) fails.push(`rotate: yaw ${c.yaw} sweep ${c.sweep}`);
-    api.device.aim(cid, [21, 0, 20]); c = api.device.get(cid); if (Math.abs(c.yaw - 0) > 1e-5 || !(c.pitch < 0) || Math.abs((c.sweep[0] + c.sweep[1]) / 2 - c.yaw) > 1e-5) fails.push(`aim south-and-down: yaw ${c.yaw} pitch ${c.pitch} sweep ${c.sweep}`);
-    // laser
-    const lid = api.device.add({ kind: 'laser', from: [18, 0, 13], to: [18, 0, 16], alarm: 'alarm', mains: false });
-    let l = api.device.get(lid); if (!l || Math.abs(l.from[1] - 0.35) > 1e-6 || l.alarm !== 'alarm' || l.mains !== false) fails.push(`laser add: ${JSON.stringify(l)}`);
-    api.device.end(lid, 1, [18, 0.35, 17]); l = api.device.get(lid); if (Math.abs(l.to[2] - 17) > 1e-6) fails.push('end move');
-    api.device.rotate(lid, Math.PI / 2); l = api.device.get(lid); if (Math.abs(l.from[2] - l.to[2]) > 1e-5 || Math.abs(Math.abs(l.from[0] - l.to[0]) - 4) > 1e-5) fails.push(`laser rotate about its middle: ${l.from} → ${l.to}`);
-    let threw = ''; try { api.device.add({ kind: 'laser', from: [1, 0, 1], to: [1, 0, 1] }); } catch (e: any) { threw = String(e.message); } if (!/coincide/.test(threw)) fails.push('a zero-length beam was accepted');
-    // keypad: on the storage door → the door goes on the pad's lock; re-link to the manager door; delete → the door comes off it
-    const kid = api.device.add({ kind: 'keypad', door: 'storage', code: '2468' });
-    let k = api.device.get(kid); let sd = api.door.get('storage');
-    if (!k || k.door !== 'storage' || sd.lock !== kid || !sd.locked || Math.abs(k.pos[1] - 1.4) > 1e-6) fails.push(`keypad add: ${JSON.stringify(k)} door ${JSON.stringify(sd)}`);
-    if (api.validate().length) fails.push(`validate after adds: ${api.validate().slice(0, 2).join(' | ')}`);
-    threw = ''; try { api.device.add({ kind: 'keypad', door: 'storage' }); } catch (e: any) { threw = String(e.message); } if (!/already has keypad/.test(threw)) fails.push('a second pad on one door was accepted');
-    threw = ''; try { api.device.update(kid, { code: '12' }); } catch (e: any) { threw = String(e.message); } if (api.validate().length === 0 && api.device.get(kid).code === '12') fails.push('a two-digit code passed validate');
-    if (api.device.get(kid).code === '12') api.undo();
-    api.device.update(kid, { door: 'manager' }); k = api.device.get(kid); sd = api.door.get('storage'); const md = api.door.get('manager');
-    if (k.door !== 'manager' || md.lock !== kid || sd.lock !== undefined) fails.push(`re-link: pad → ${k.door}, manager.lock ${md.lock}, storage.lock ${sd.lock}`);
-    if (api.validate().length) fails.push(`validate after re-link: ${api.validate().slice(0, 2).join(' | ')}`);
-    const dup = api.device.duplicate(cid); if (dup.length !== 1 || !api.device.get(dup[0])) fails.push('camera duplicate');
-    const dupK = api.device.duplicate(kid); if (dupK.length) fails.push('a keypad duplicated (one pad per door)');
-    api.device.delete(kid); if (api.device.get(kid) || api.door.get('manager').lock !== undefined) fails.push('keypad delete left the door on its lock');
-    if (api.validate().length) fails.push(`validate after delete: ${api.validate().join(' | ')}`);
-    const lint = api.lint(); if (lint.errors) fails.push(`lint errors after the edits: ${lint.lines.slice(1, 3).join(' | ')}`);
-    scene.sync(); const picked = scene.refOfIndex(scene.devRanges.find((r: any) => r.id === cid)?.start ?? -1); if (picked !== `device:${cid}`) fails.push(`scene pick of the camera's stand-in → ${picked}`);
-    // undo everything back to the original digest, redo to the end and undo again
-    let n = 0; while (api.undo() && n < 200) n++; const back = api.digest() === d0;
-    if (!back) fails.push(`after ${n} undos the digest is ${api.digest()} (want ${d0})`);
-    v(fails.length === 0, '(a) camera add (2.6 m up) / move / rotate (sweep follows) / aim (yaw + pitch, sweep re-centred); laser add (0.35) / end / rotate about its middle / zero length refused; keypad add locks its door on the pad, a second pad refused, re-link moves the lock, delete takes the door off it, duplicate refused; validate + lint clean throughout; the stand-in picks as device:<id>; undo × N back to the original digest', `undos ${n}, digest back ${back}`, fails);
-  }
   {
     const fails: string[] = []; const base = JSON.stringify(OFFICE_DATA);
     const plant = (name: string, mut: (d: any) => void, code: string) => { const d = JSON.parse(base); mut(d); const r = lintLevel(d, { allow: officeAllow }); const hit = r.findings.find((f: any) => f.code === code); if (!hit) fails.push(`${name}: no '${code}' finding (${r.findings.slice(0, 3).map((f: any) => f.code).join(',')})`); return hit?.message ?? ''; };
@@ -458,9 +409,9 @@ export async function devicesEditor() {
     ];
     const clean = lintLevel(JSON.parse(base), { allow: officeAllow });
     if (clean.errors || clean.warnings) fails.push(`the office itself: ${clean.errors} errors ${clean.warnings} warnings`);
-    v(fails.length === 0, '(b) lint: the office clean; planted — a camera in a wall, a beam end in a wall, a beam through a partition, a pad far from its door, a pad on the always-open face, a pad no route can name, a beam at an in-between height — each reported under its code', notes.map(x => x.slice(0, 70)).join('\n    '), fails);
+    v(fails.length === 0, 'lint: the office clean; planted — a camera in a wall, a beam end in a wall, a beam through a partition, a pad far from its door, a pad on the always-open face, a pad no route can name, a beam at an in-between height — each reported under its code', notes.map(x => x.slice(0, 70)).join('\n    '), fails);
   }
-  console.log(`=== devices-editor: ${done() ? 'ALL PASS' : 'FAILURES above'} ===`);
+  console.log(`=== devices-lint: ${done() ? 'ALL PASS' : 'FAILURES above'} ===`);
 }
 
 export function devicesAllPass() { return allPassGlobal; }

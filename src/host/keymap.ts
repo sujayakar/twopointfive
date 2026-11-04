@@ -1,7 +1,6 @@
 // THE PLAYER'S OWN KEYS: which key on the board gives each key the game asks for. Options ▸ Controls rebinds one (ui/keybinds.ts), this machine keeps it
 // (localStorage `twopointsix.keys`), and Reset there puts every one back. `?keybinds=0` = the build's own keys for the visit, the kept ones left as kept.
-// OFF IN THE MODULE: the game page turns it on as it boots (`keysBoot`, main.ts's first line). A headless tool, the level editor, the viewer and the workbench
-// never do, so their keys are the build's whatever this machine has kept.
+// OFF IN THE MODULE: the game page turns it on as it boots (`keysBoot`, main.ts's first line). A headless tool never does, so its keys are the build's whatever this machine has kept.
 // WHERE IT SITS: at the keyboard, and nowhere else. game/input.ts asks `gameCode()` what a key that went down IS before it files it, so the game goes on asking
 // for the codes it always did (`input.hit('KeyR')`), and everything downstream of the Input is as it was: the tick's PlayerCmd, the session journal, a run's
 // tape, a replay. A recording made with R on another key holds 'KeyR' and plays the same on any machine. Nothing here is read by src/game but that one call
@@ -255,7 +254,7 @@ export function actOfCap(cap: string): KeyAct | null { return byCap.get(cap.toLo
 export function keyCap(cap: string): string { fresh(); if (!map) return cap; const a = byCap.get(cap.toLowerCase()); if (!a || same(keysNow(a), a.codes)) return cap; const now = capNow(a.id); return cap === cap.toUpperCase() && cap !== cap.toLowerCase() ? now.toUpperCase() : now; }
 /** THE HIDDEN TEXT BOX IS NO FIELD. In somebody else's frame (the playable artifact) game/input.ts keeps the keys in a text box nobody sees, told by this
  *  label; a key aimed at it is a key of the game's. `typedInto` is the test a key's listener makes of its target: an input, a select, a text area or
- *  editable text he types in, and never that box (game/input.ts's own `typingTarget`, for a listener that cannot see its box). (host/findme.ts, editor/app.ts and replay/engineplay.ts spell the same test themselves.) */
+ *  editable text he types in, and never that box (game/input.ts's own `typingTarget`, for a listener that cannot see its box). (host/findme.ts and replay/engineplay.ts spell the same test themselves.) */
 export const SINK_LABEL = 'game input';
 export function typedInto(t: EventTarget | null): boolean { const el = t as { tagName?: string; isContentEditable?: boolean; getAttribute?(k: string): string | null } | null; return !!el && (/^(INPUT|TEXTAREA|SELECT)$/.test(el.tagName ?? '') && el.getAttribute?.('aria-label') !== SINK_LABEL || !!el.isContentEditable); }
 /** THE CAMERA'S KEY (game/input.ts: held, the mouse turns the view and the wheel zooms; host/findme.ts: tapped twice): the Space bar while the board leaves

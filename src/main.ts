@@ -28,7 +28,7 @@ import { Engine } from './engine';
 import type { HostApi } from './host/api';
 import { SAVED, SAVE_UP } from './host/savefile';
 import type { IrradianceProbe } from './render/probe';
-import { buildLevel, buildBundledLevel, bootedLocalLevel, withOfficeScript, isOfficeFamily, OFFICE_DATA, OFFICE_SCENARIOS } from './scene/level';
+import { buildLevel, withOfficeScript, isOfficeFamily, OFFICE_DATA, OFFICE_SCENARIOS } from './scene/level';
 import { loadLevel, levelFileOf, levelNameOf } from './scene/levelLoad';
 import { parseLevelData, type LevelData } from './scene/levelData';
 import { kitViewSetLevel, kitViewAddLevel, kitViewWayOfLink, kitViewSetQuery, kitViewSetDress } from './host/kitViewSet';   // (pure, no game module: ?kitview's bespoke set, laid over the level's file before it is built)
@@ -310,7 +310,7 @@ async function main() {
   chP.catch(() => { /* awaited below */ });
   void chP.then(setFigureCast, () => { /* the menus' figure of a man stays undrawn */ });
   urlFlagsOnEngine(engine);
-  let level = await bootLevel(q, engine, tick);
+  const level = await bootLevel(q, engine, tick);
 
   await tick();
   const ch = await chP;
@@ -324,14 +324,7 @@ async function main() {
   // as __game.dice.seed), ?seed=off = the game on Math.random as before. A script that puts its own die in Math.random's place still gets the game's dice, as ever.
   const seed = ((): number | null => { const v = q.get('seed'); if (v === 'off') return null; const n = v === null || v === '' ? NaN : Number(v); return Number.isFinite(n) ? n >>> 0 : (crypto.getRandomValues(new Uint32Array(1))[0] >>> 0); })();
   recipeTables(); recipe?.env(engine.settings as never);
-  try { ({ game, cam } = await standGame(engine, { level, ch, smoke, populate: false, seed })); }   // the ONE stand-up (src/host/standup.ts) — the world / lights were populated above; the harness and the native entry come through the same call
-  catch (e) {   // ?level=local: an editor stash the file validator passed but the game cannot stand on (level.ts bootedLocalLevel) — say so, and boot the bundled office instead of dying on every reload
-    if (!bootedLocalLevel) throw e;
-    console.error('?level=local: the game could not be built on the editor level — falling back to the bundled office —', e);
-    level = buildBundledLevel(); engine.world.statics.length = 0; engine.lights.lights.length = 0;
-    populateHost(engine, level); engine.settings.skyZenith = level.sky.zenith; engine.settings.skyHorizon = level.sky.horizon;
-    ({ game, cam } = await standGame(engine, { level, ch, smoke, populate: false, seed }));
-  }
+  ({ game, cam } = await standGame(engine, { level, ch, smoke, populate: false, seed }));   // the ONE stand-up (src/host/standup.ts) — the world / lights were populated above; the harness and the native entry come through the same call
   boot.span('gameCtor', tGame); boot.mark('game');
   if (LOOK.on) lookDoors(game.doors.list, engine.world.statics, LOOK_DOORS[(q.get('levelFile') ?? '').replace(/-gwot(?=\.json$)/, '')]);   // (picture only: under the default look a level that wears it has its door leaves in its own paint and weathered wood, not the office's veneer — scene/lookTidy.ts)
   if (q.has('noweather')) game.weather.setEnabled(false);   // ?noweather: the storm experiment off from boot (weather.ts) — the plain night, byte for byte
@@ -619,10 +612,10 @@ async function main() {
     const blob: Blob = await new Promise(res => out.toBlob(b => res(b!), 'image/jpeg', quality));
     return `${c2.width}x${c2.height} ${(blob.size / 1024).toFixed(0)} KB → ${await postShot(name, blob)}`;
   };
-  // __panelShot(name, { frame, quality }): the tweak PANEL is HTML, not part of the frame __shot reads back — rasterise #panel (editor/domshot.ts: computed styles inlined into an SVG
+  // __panelShot(name, { frame, quality }): the tweak PANEL is HTML, not part of the frame __shot reads back — rasterise #panel (ui/domshot.ts: computed styles inlined into an SVG
   // foreignObject) and, unless frame:false, lay it at its own place over the rendered frame + whatever the overlay's canvases hold (the wind field's arrows), then post the JPEG
   (window as any).__panelShot = async (name: string, opts: { frame?: boolean; quality?: number; scale?: number } = {}) => {
-    const { snapshotElement } = await import('./editor/domshot');
+    const { snapshotElement } = await import('./ui/domshot');
     const root = document.getElementById('panel')!; const scale = opts.scale ?? 2;
     root.classList.add('rastering'); let pc: HTMLCanvasElement; try { pc = await snapshotElement(root, scale); } finally { root.classList.remove('rastering'); }   // (index.html #panel.rastering: native sliders for the raster — their custom track / thumb are pseudo-elements it cannot carry)
     let out: HTMLCanvasElement = pc;

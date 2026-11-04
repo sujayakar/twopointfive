@@ -1,13 +1,10 @@
-// Minimal dev server: bundles index.html + workbench.html (+ viewer.html / editor.html, now forwards into it; TS, WGSL as text) via Bun's HTML imports, serves ./public statically,
-// and answers the level editor's file API under /levels/ (tools/levels-api.ts: index, read, validated write into levels/ — loopback + same-origin only).
-// Listens on LOOPBACK only (HOST=… overrides that on purpose): a dev server bound to 0.0.0.0 was reachable — its write API included — from the whole LAN.
+// Minimal dev server: bundles index.html and the tool pages (the replay viewer, sounds, music; TS, WGSL as text) via Bun's HTML imports, serves ./public statically,
+// and answers the game's fetches of level files under /levels/ (tools/levels-api.ts: index and read, loopback only).
+// Listens on LOOPBACK only (HOST=… overrides that on purpose).
 import index from "../index.html";
-import viewer from "../viewer.html";   // a FORWARD into /workbench#mode=chars (the character / prop viewer is its Characters mode) — see VIEWER.md
-import editor from "../editor.html";   // a FORWARD into /workbench#mode=level (the level editor is its Level mode) — see docs/level-format.md 'Editor'
 import replay from "../replay.html";   // the REPLAY VIEWER (src/replay/viewer.ts): a replay saved with F7 as a map with a scrubber and notes
 import sounds from "../sounds.html";   // the LISTENING PAGE (src/sounds/main.ts): every sound the game makes, one row each, through the game's own mixer graph
 import music from "../music.html";   // the SCORE'S LISTENING PAGE (src/music/main.ts): every piece of the score on one row, played by the game's own sequencer and voices
-import workbench from "../workbench.html";   // the WORKBENCH: editor + viewer in one shell (src/workbench.ts → src/workbench/, src/editor/, src/viewer/)
 import { handleLevels } from "./levels-api.ts";
 import { localCloud } from "./cloud/local.ts";
 import { devRunner, type DevRunner } from "./mp/runner.ts";
@@ -21,23 +18,18 @@ const server = Bun.serve({
   port, hostname,
   development: { hmr: false, console: true },
   routes: {
-    "/": index, "/viewer": viewer, "/editor": editor, "/workbench": workbench, "/replay": replay, "/sounds": sounds, "/music": music,
+    "/": index, "/replay": replay, "/sounds": sounds, "/music": music,
     "/sneaklab": req => { const q = new URL(req.url).search.slice(1); return Response.redirect("/?levelFile=sneak-lab.json&solo&sneaklab" + (q ? "&" + q : ""), 302); },   // the sneak lab: the close-in on a man, its numbers live (src/host/sneaklab.ts)
     "/firelab": req => { const q = new URL(req.url).search.slice(1); return Response.redirect("/?levelFile=pass.json&roomclear&squad4&nofow&firelab" + (q ? "&" + q : ""), 302); },   // the fire lab: beside the pass's brazier, the flame's numbers live (src/host/firelab.ts)
-    "/gait": req => Response.redirect("/workbench" + new URL(req.url).search + "#mode=chars&scene=sam/walk", 302),   // the gait lab is the workbench's Characters ▸ Sam ▸ walk / jog / … now; old links land there
   },
   async fetch(req) {
     const url = new URL(req.url);
     let path: string; try { path = decodeURIComponent(url.pathname); } catch { return new Response("bad path encoding", { status: 400 }); }
     if (path.includes("..")) return new Response("bad path", { status: 400 });
-    if (path === "/index.html") return Response.redirect("/" + url.search + url.hash, 302);   // the game is '/', but a built page's neighbour link (the editor's ▶ play: 'index.html?level=local') must open here too
-    if (path === "/viewer.html" || path === "/viewer/") return Response.redirect("/viewer" + url.search, 302);   // one canonical URL per route (keep ?quality=…); /viewer and /editor themselves forward into /workbench in the page
-    if (path === "/editor.html" || path === "/editor/") return Response.redirect("/editor" + url.search + url.hash, 302);
+    if (path === "/index.html") return Response.redirect("/" + url.search + url.hash, 302);   // the game is '/', and a built page's neighbour link ('index.html?…') must open here too
     if (path === "/replay.html" || path === "/replay/") return Response.redirect("/replay" + url.search, 302);
     if (path === "/sounds.html" || path === "/sounds/") return Response.redirect("/sounds" + url.search, 302);
     if (path === "/music.html" || path === "/music/") return Response.redirect("/music" + url.search, 302);
-    if (path === "/workbench.html" || path === "/workbench/") return Response.redirect("/workbench" + url.search + url.hash, 302);
-    if (path === "/gaitlab.html" || path === "/gait/") return Response.redirect("/workbench" + url.search + "#mode=chars&scene=sam/walk", 302);
     { const mp = await MP?.handle(req); if (mp) return mp; }   // /mp/runner/…: the backend's calls, by the runner's key
     const lv = await handleLevels(req); if (lv) return lv;
     if (path === "/qa/commit") return new Response(COMMIT, { headers: { "Cache-Control": "no-store", "Content-Type": "text/plain" } });   // the commit this server was started on (the session journal files it with a recording: src/ui/sessionrec.ts)
@@ -53,4 +45,4 @@ const server = Bun.serve({
 CLOUD = localCloud();
 if (CLOUD) MP = devRunner({ cloud: () => CLOUD?.url() ?? "", origin: `http://${hostname === "0.0.0.0" ? "127.0.0.1" : hostname}:${server.port}`, build: COMMIT });
 if (CLOUD) for (const sig of ["SIGINT", "SIGTERM", "SIGHUP"] as const) process.on(sig, () => { MP?.stop(); CLOUD?.stop(); process.exit(0); });
-console.log(`dev server: http://${hostname === "127.0.0.1" ? "localhost" : hostname}:${server.port}${hostname === "127.0.0.1" || hostname === "localhost" ? "" : "  (HOST override: NOT loopback-only)"}  ·  workbench: /workbench (level · materials · characters · effects; /viewer /editor /gait forward into it)  ·  level files: /levels/`);
+console.log(`dev server: http://${hostname === "127.0.0.1" ? "localhost" : hostname}:${server.port}${hostname === "127.0.0.1" || hostname === "localhost" ? "" : "  (HOST override: NOT loopback-only)"}  ·  level files: /levels/`);

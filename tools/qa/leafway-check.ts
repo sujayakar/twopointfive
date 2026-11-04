@@ -21,7 +21,7 @@ async function kit() {
   /** the compound stood up with its rooms furnished (whatever the stand says of lived-in rooms) and doors swinging one way; the rule as asked */
   const world = async (on: boolean, o: { lived?: boolean; edit?: (d: any) => void } = {}) => { const was = LIVED.on; LIVED.on = o.lived ?? true;
     try { const d = data('compound'); o.edit?.(d); const W: any = await quiet(() => standUp({ level: loadLevel(d, { lived: o.lived ?? true }) })); DOORWAY.oneWay = true; DOORWAY.leafWay = on && !BREAK; return W; } finally { LIVED.on = was; } };   // (AFTER standUp: the stand-up lines write the stand's own words)
-  /** a level's deal with no game stood up (the editor's road: src/editor/swing.ts) */
+  /** a level's deal with no game stood up (the road the level editor took, when there was one) */
   const deal = (name: string) => { const level = loadLevel(data(name), { validate: false, lived: true }), col = new StaticCollision(level.boxes), doors = new Doors(level.doors, () => {}); return { col, doors, deals: dealSwings(level, doors, col.nav, col) }; };
   const levels = () => readdirSync(`${ROOT}/levels`).filter((f: string) => f.endsWith('.json')).map((f: string) => f.slice(0, -5)).sort();
   return { ROOT, DOORWAY, leafCut, leafSwings, swingsNow, quiet, world, deal, levels };

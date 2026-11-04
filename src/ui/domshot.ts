@@ -1,4 +1,4 @@
-// DOM → canvas for captures of the editor's PANELS (the inspector tabs are HTML, not part of the WebGPU frame __edshot reads back): clone the subtree,
+// DOM → canvas for captures of the debugger PANEL (it is HTML, not part of the WebGPU frame __shot reads back; main.ts __panelShot): clone the subtree,
 // inline every element's COMPUTED style onto the clone (so the page's stylesheet is not needed inside the image), swap canvases for <img>s of their
 // pixels and form controls' live state into attributes, wrap it in an SVG <foreignObject>, load that as an image and draw it. The classic
 // 'dom-to-image' route — no dependency, same-origin only, nothing external referenced (the page has no web fonts or remote images), so the canvas

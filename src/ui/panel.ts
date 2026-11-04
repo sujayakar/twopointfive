@@ -1,9 +1,8 @@
 // Tweak panel = the debugger (backtick; Tab is the game's): sliders / toggles / buttons / read-outs bound to live settings. The game builds ONE of these on #panel (bindings.ts) as a TWO-LEVEL panel —
 // SYSTEMS down a left rail (Frame · Direct · Indirect · …), and inside the selected system collapsible SECTIONS with a live one-line summary and, where a
 // shipped-defaults table exists, a '↺' reset — with a status strip (preset · fps · gpu ∪) and a search box that searches EVERY system at once (hits listed under
-// their 'System ▸ Section' path; Enter jumps to the first). The viewer / editor build several flat ones (property sheets, the gear menu, the 'all knobs' list) on
-// their own containers — hence the root / header / persistence options, `clear()` for sheets rebuilt on a context change, and `number()`: a drag-to-scrub field.
-// A panel nobody called `system()` on stays FLAT (sections straight into the body, the DOM the workbench's stylesheet expects: .phead · .pbody › h3 + .sbody › .row).
+// their 'System ▸ Section' path; Enter jumps to the first).
+// A panel nobody called `system()` on stays FLAT (sections straight into the body: .phead · .pbody › h3 + .sbody › .row).
 // Rows built while `panel.advanced` is true (or inside an advanced section) are A/B knobs: hidden until 'all knobs' is ticked or a search finds them.
 // The game panel shows ONE hover tip of its own (#ptip) in place of the browser's: whatever a row / button / header carried as its `title`, and the full text of
 // anything the 372 px column cut short with an ellipsis (the status strip, a page's subtitle, a section's live summary, a long label) — at once, wrapped, readable.
@@ -32,18 +31,6 @@ export interface PanelOpts {
 /** a shipped default: the value, or a getter when the row follows a moving target (the long gun's carriage on show) */
 export type Def<T> = T | (() => T);
 const defOf = <T>(d: Def<T>): T => typeof d === 'function' ? (d as () => T)() : d;
-export interface NumOpts {
-  step?: number; min?: number; max?: number;
-  /** the shipped value: rows whose value differs get the 'changed' look and a revert dot */
-  def?: Def<number>;
-  title?: string;
-  /** decimals shown (default: from step) */
-  digits?: number;
-  /** field width in ch (default 7) */
-  width?: number;
-}
-/** what a section can carry beyond its rows: its first-run open state, whether the whole thing is A/B-only, a live one-liner for its header (shown while it is
- *  collapsed — open, its own read-out rows say more), a reset that puts a shipped-defaults table back, a tooltip on the header */
 export interface SectionOpts { open?: boolean; advanced?: boolean; summary?: () => string; reset?: () => void; resetTitle?: string; title?: string }
 export interface SystemOpts { /** one or two glyphs for the rail */ icon?: string; /** the rail's short label (default: the name's first word) */ short?: string; title?: string }
 
@@ -329,63 +316,6 @@ export class Panel {
     inp.onchange = () => { if (this.game) inp.blur(); };   // (a released slider hands the keyboard back to the game; the viewer's sheets keep their old manners)
     const rf = () => { if (document.activeElement !== inp) { const v = get(); inp.value = String(v); val.textContent = fmt(v); } mark(); };
     rf(); this.keep(rf, inp); return inp;
-  }
-  /** A numeric field for values with no natural bounds (offsets, sizes, rates): shows the number; DRAG sideways on it to scrub (one `step` per 2 px; Shift = fine ×0.1,
-   *  Alt / Ctrl = coarse ×10), CLICK to type a value (Enter / blur commits, Esc cancels), ↑ / ↓ step it while typing (same modifiers). min / max clamp if given.
-   *  With `def` the row shows when it is off the shipped value and grows a revert dot. */
-  number(sec: HTMLElement, label: string, get: Getter<number>, set: Setter<number>, o: NumOpts = {}) {
-    const r = this.row(sec, label, o.title); r.classList.add('numrow');
-    const f = this.numField(get, set, o, () => mark()); r.appendChild(f.el);
-    const def = o.def; const mark = def === undefined ? () => {} : this.revertDot(r, () => Math.abs(get() - defOf(def)) > Math.max(1e-7, (o.step ?? 0.01) * 0.5), () => set(defOf(def)));
-    const rf = () => { f.paint(); mark(); }; rf(); this.keep(rf, f.el); return f.el;
-  }
-  /** Several numeric fields on one row (a vector: off.xyz, rot.xyz, an rgb glow) — each scrubs / types like number(); `defs` per component for the revert dot (reverts all);
-   *  `steps` per component when they are not alike (a foot spot: metres, metres, degrees). */
-  numbers(sec: HTMLElement, label: string, n: number, get: (i: number) => number, set: (i: number, v: number) => void, o: NumOpts & { defs?: Def<number[]>; names?: string[]; steps?: number[] } = {}) {
-    const r = this.row(sec, label, o.title); r.classList.add('numrow', 'vecrow');
-    const stepOf = (i: number) => o.steps?.[i] ?? o.step ?? 0.01;
-    const fields = Array.from({ length: n }, (_, i) => { const f = this.numField(() => get(i), v => set(i, v), { ...o, step: stepOf(i), width: o.width ?? 5 }, () => mark()); if (o.names?.[i]) f.el.title = `${o.names[i]}${o.title ? ' · ' + o.title : ''}`; r.appendChild(f.el); return f; });
-    const defs = o.defs;
-    const mark = !defs ? () => {} : this.revertDot(r, () => defOf(defs).some((d, i) => Math.abs(get(i) - d) > Math.max(1e-7, stepOf(i) * 0.5)), () => defOf(defs).forEach((d, i) => set(i, d)));
-    const rf = () => { for (const f of fields) f.paint(); mark(); }; rf(); this.keep(rf, r); return r;
-  }
-  private numField(get: Getter<number>, set: Setter<number>, o: NumOpts, after: () => void): { el: HTMLInputElement; paint: () => void } {
-    const step = o.step ?? 0.01; const digits = o.digits ?? (step >= 1 ? 0 : step >= 0.1 ? 1 : step >= 0.01 ? 2 : step >= 0.001 ? 3 : 4);
-    const clampV = (v: number) => Math.min(o.max ?? Infinity, Math.max(o.min ?? -Infinity, v));
-    const inp = document.createElement('input'); inp.type = 'text'; inp.className = 'num'; inp.spellcheck = false; inp.inputMode = 'decimal'; inp.style.width = `${o.width ?? 7}ch`;
-    if (o.title) inp.title = o.title;
-    let dragging = false;
-    const fmt = (v: number) => Number.isFinite(v) ? v.toFixed(digits) : String(v);
-    const paint = () => { if (document.activeElement !== inp && !dragging) inp.value = fmt(get()); };
-    const commit = (v: number) => { if (!Number.isFinite(v)) return; set(clampV(+v.toFixed(6))); after(); };
-    const gain = (e: MouseEvent | KeyboardEvent) => e.shiftKey ? 0.1 : (e.altKey || e.ctrlKey) ? 10 : 1;
-    // drag-to-scrub: a press that travels > 3 px scrubs (and never focuses); a press that does not is a click → focus + select for typing
-    inp.addEventListener('mousedown', e => {
-      if (document.activeElement === inp || e.button !== 0) return;   // already typing: let the browser place the caret
-      e.preventDefault();
-      const x0 = e.clientX; let last = x0; let moved = false; let acc = 0; const v0 = get(); let v = v0;
-      const mm = (ev: MouseEvent) => {
-        if (!moved) { if (Math.abs(ev.clientX - x0) <= 3) return; moved = true; dragging = true; last = x0; document.body.classList.add('scrubbing'); }   // (past the click threshold: count the travel from where the press began)
-        const dx = ev.clientX - last; last = ev.clientX;
-        acc += dx / 2; const whole = Math.trunc(acc); if (!whole) return; acc -= whole;
-        v = clampV(v + whole * step * gain(ev)); set(+v.toFixed(6)); inp.value = fmt(v); after();
-      };
-      const mu = () => {
-        window.removeEventListener('mousemove', mm, true); window.removeEventListener('mouseup', mu, true); document.body.classList.remove('scrubbing');
-        if (moved) { dragging = false; paint(); after(); } else { inp.focus(); inp.select(); }
-      };
-      window.addEventListener('mousemove', mm, true); window.addEventListener('mouseup', mu, true);
-    });
-    let shown = inp.value; inp.addEventListener('focus', () => { shown = inp.value; });   // (the text as the field took the keys: left as it was, a click away or Esc writes nothing — parsed back, the ROUNDED text overwrote a finer value)
-    inp.addEventListener('keydown', e => {
-      e.stopPropagation();   // (Input ignores typing targets anyway; this also keeps host pages' shortcuts off the field)
-      if (e.key === 'Enter') { if (inp.value !== shown) commit(parseFloat(inp.value)); inp.blur(); }
-      else if (e.key === 'Escape') { inp.value = shown = fmt(get()); inp.blur(); }
-      else if (e.key === 'ArrowUp' || e.key === 'ArrowDown') { e.preventDefault(); const cur = parseFloat(inp.value); const base = Number.isFinite(cur) ? cur : get(); const v = clampV(base + (e.key === 'ArrowUp' ? 1 : -1) * step * gain(e)); set(+v.toFixed(6)); inp.value = shown = fmt(v); inp.select(); after(); }
-    });
-    inp.addEventListener('blur', () => { if (inp.value !== shown) { const v = parseFloat(inp.value); if (Number.isFinite(v) && Math.abs(v - get()) > 1e-9) commit(v); } inp.value = fmt(get()); });
-    inp.addEventListener('wheel', e => { if (document.activeElement !== inp) return; e.preventDefault(); const v = clampV(get() + (e.deltaY < 0 ? 1 : -1) * step * gain(e)); set(+v.toFixed(6)); inp.value = shown = fmt(v); after(); }, { passive: false });
-    return { el: inp, paint };
   }
   toggleBox(sec: HTMLElement, label: string, get: Getter<boolean>, set: Setter<boolean>, title?: string, def?: boolean) {
     const r = this.row(sec, label, title); r.classList.add('togglerow'); const inp = document.createElement('input'); inp.type = 'checkbox'; r.appendChild(inp);

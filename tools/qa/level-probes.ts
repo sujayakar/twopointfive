@@ -7,7 +7,13 @@
 //                    mismatch, missing objective); the surface map in the file agrees with game/floor.ts (which still owns the behaviour).
 //   level-roundtrip  LevelData → Level → LevelData is the identity on the office (ids, groups, materials, pinned footprints all survive), the serializer is
 //                    a fixed point (serialize ∘ parse ∘ serialize), and two loads share no mutable state.
+//   level-lint       the design lint (src/scene/lint.ts) clean on the office with its sidecar, each planted fault reported under its own code, the marking
+//                    table's rows tallied, the CLI's exit codes (tools/qa/level-lint.ts).
+//   level-serve      the dev server's /levels/ (tools/levels-api.ts): the index, a file, its sidecar, and what it refuses.
 //   bun run tools/qa/probes.ts level        (each prints PASS / FAIL lines; probes.ts sets exit code 1 if any level probe FAILed)
+import { mkdtempSync, mkdirSync, readFileSync, writeFileSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { ROOT, asExporter } from './headless.ts';
 
 const { buildLevel, OFFICE_DATA } = await import(`${ROOT}/src/scene/level.ts`);
@@ -17,6 +23,8 @@ const { validateLevelData, serializeLevelData, parseLevelData, levelDataDigest, 
 const { WORLD } = await import(`${ROOT}/src/scene/world.ts`);
 const { FINISHES, BUILDING, GRASS_EDGE, floorAt } = await import(`${ROOT}/src/game/floor.ts`);
 const { EXACT } = await import(`${ROOT}/src/math/exact.ts`);
+const { lintLevel, formatLint } = await import(`${ROOT}/src/scene/lint.ts`);
+const officeAllow = JSON.parse(readFileSync(`${ROOT}/levels/office.lint.json`, 'utf8')).allow;
 
 let failures = 0;
 function verdict(ok: boolean, what: string, detail = '') { if (!ok) failures++; console.log(`  ${ok ? 'PASS' : 'FAIL'} ${what}${detail ? ` — ${detail}` : ''}`); }
@@ -83,6 +91,8 @@ export async function levelValidate() {
   plant('a runtime-only flag (AreaLit) authored on a box', d => { d.boxes[10].flags = ['AreaLit']; }, /runtime-only flag 'AreaLit'/);
   plant('two boxes with one id', d => { d.boxes[5].id = d.boxes[4].id; }, /duplicate id/);
   plant('a route whose wait list is short a point', d => { d.routes[0].wait.pop(); }, /wait has \d+ entries for \d+ points/);
+  plant('a route named by a number (the game looks a route up by its name)', d => { d.routes[0].name = 7; }, /routes\[0\].*name string/);
+  plant('a chokepoint with an empty name', d => { d.chokepoints[0] = { ...d.chokepoints[0], name: '' }; }, /chokepoints\[0\].*name string/);
   plant("the mission without its 'exfil' objective", d => { d.mission.objectives = d.mission.objectives.filter((o: any) => o.kind !== 'exfil'); }, /exactly one 'exfil'/);
   plant('a light fixture naming a missing box', d => { d.lights[0].fixture = 'fix_gone'; }, /unknown box 'fix_gone'/);
   plant('a beacon dome no switchable owns', d => { d.beacons[0].box = d.boxes[0].id; }, /not owned by any switchable/);
@@ -212,4 +222,83 @@ export async function levelRoundtrip() {
   // sizes, for the record
   const text = serializeLevelData(D0);
   console.log(`  office.json: ${(text.length / 1024).toFixed(1)} KB, ${text.split('\n').length - 1} lines · ${D0.boxes.length} boxes (${D0.boxes.filter((b: any) => b.material).length} by material, ${D0.boxes.filter((b: any) => b.albedo).length} inline) · ${Object.keys(D0.materials).length} materials · ${new Set(D0.boxes.map((b: any) => b.group)).size} groups · ${D0.props.length} props (${D0.props.filter((p: any) => p.half || p.height).length} pinned footprints)`);
+}
+
+/** THE LEVEL LINT'S OWN CHECK (src/scene/lint.ts lintLevel: the design checks the schema validator does not make — reachability, sealing, budgets, overlaps,
+ *  things inside other things), no game stood up: the office with its sidecar (levels/office.lint.json) is clean; without the sidecar the only findings are the
+ *  two the sidecar allows; each planted fault is reported with its own code and severity; an allow entry silences exactly its finding; the marking table's rows
+ *  are tallied; and the CLI (tools/qa/level-lint.ts) exits 0 on the office and 1 on a file with an error. */
+export async function levelLint() {
+  console.log('\n=== level-lint: clean on the office, trips on planted faults, the marking table\'s rows, the CLI ===');
+  const r0 = lintLevel(OFFICE_DATA, { allow: officeAllow });
+  verdict(r0.errors === 0 && r0.warnings === 0, `office + sidecar: ${formatLint(r0)[0]}`);
+  const rNo = lintLevel(OFFICE_DATA); verdict(rNo.errors === 0 && rNo.findings.every((f: any) => f.code === 'door-seal' && f.ids[0] === 'door:conference'), 'without the sidecar the only findings are the conference door\'s two door-seal warnings (its glazing is unglazed — documented in levels/office.lint.json)', rNo.findings.map((f: any) => f.code).join(' '));
+  verdict(r0.ms < 250, `lint runs in ${r0.ms.toFixed(0)} ms (nav bake included)`);
+  const base = JSON.stringify(OFFICE_DATA);
+  const plant = (name: string, mut: (d: any) => void, code: string, sev = 'error') => { const d = JSON.parse(base); mut(d); const r = lintLevel(d, { allow: officeAllow }); const hit = r.findings.find((f: any) => f.code === code && f.severity === sev); verdict(!!hit, `planted: ${name} → ${sev} ${code}`, hit ? hit.message.slice(0, 110) : `NOT reported (${r.findings.slice(0, 3).map((f: any) => f.code).join(' ')})`); };
+  plant('a light moved inside the corridor wall', d => { d.lights[1].pos = [20, 1.5, 10.0]; }, 'light-in-solid');
+  plant('a light with range 0', d => { d.lights[0].range = 0; }, 'light-range');
+  plant('a 5000-candela desk lamp', d => { d.lights[0].intensity = 5000; }, 'light-intensity', 'warn');
+  plant('a spot with a 0° cone', d => { d.lights[0].outerDeg = 0; d.lights[0].innerDeg = 0; }, 'light-cone', 'warn');
+  plant('a box with zero height', d => { d.boxes[300].h = [0.5, 0, 0.5]; }, 'box-extent');
+  plant('an exact duplicate slab', d => { d.boxes.push({ ...d.boxes[400], id: 'box_dup' }); }, 'box-duplicate', 'warn');
+  plant('a box poking out of the world', d => { d.boxes.push({ id: 'far', c: [45, 1, 14], h: [1, 1, 1], albedo: [1, 1, 1] }); }, 'box-bounds', 'warn');
+  plant('the spawn inside the reception desk', d => { d.mission.playerSpawn = [8.2, 0, 15.2]; }, 'spawn-blocked');
+  plant('every doorway into the server room walled up', d => { d.boxes.push({ id: 'blk1', c: [17.6, 1.1, 10.0], h: [0.7, 1.1, 0.06], material: 'wall' }); d.boxes.push({ id: 'blk2', c: [22.0, 1.1, 8.55], h: [0.06, 1.1, 0.6], material: 'wall' }); }, 'nav-objective');
+  plant('… which also makes the server door itself unwalkable (its sides still meet through the manager\'s office: a warning)', d => { d.boxes.push({ id: 'blk1', c: [17.6, 1.1, 10.0], h: [0.7, 1.1, 0.06], material: 'wall' }); }, 'door-sides', 'warn');
+  plant('both of a room\'s doors walled → its doors\' sides are disconnected (an error)', d => { d.boxes.push({ id: 'blk1', c: [17.6, 1.1, 10.0], h: [0.7, 1.1, 0.06], material: 'wall' }); d.boxes.push({ id: 'blk2', c: [22.0, 1.1, 8.55], h: [0.06, 1.1, 0.6], material: 'wall' }); }, 'door-sides');
+  plant('a cabinet left standing in the storage doorway', d => { d.boxes.push({ id: 'cab', c: [32.6, 0.9, 10.0], h: [0.25, 0.9, 0.05], material: 'metal' }); }, 'door-gap', 'warn');
+  plant('a door moved into the open lobby (nothing to seal against)', d => { d.doors[4].hinge = [7, 18]; }, 'door-seal', 'warn');
+  plant('a patrol point inside a wall', d => { d.routes[0].points[1] = [20, 0, 10.0]; }, 'route-solid', 'warn');
+  plant('a patrol leg to a sealed-off spot', d => { d.routes[1].points[2] = [38.5, 0, 2]; d.boxes.push({ id: 'pen1', c: [38.6, 1, 3.2], h: [1.45, 1, 0.06], material: 'wall' }, { id: 'pen2', c: [37.2, 1, 1.6], h: [0.06, 1, 1.7], material: 'wall' }); }, 'route-unreachable');   // (a pen in the lot's north-east corner, walls to the world's edge)
+  plant('1700 boxes', d => { for (let i = 0; i < 760; i++) d.boxes.push({ id: 'bb' + i, c: [1 + (i % 30) * 0.05, 5, 1 + Math.floor(i / 30) * 0.05], h: [0.01, 0.01, 0.01], albedo: [1, 1, 1] }); }, 'box-budget', 'warn');
+  plant('30 analytic lights', d => { for (let i = 0; i < 26; i++) d.lights.push({ ...d.lights[0], id: 'll' + i, pos: [10 + i * 0.9, 2.5, 20.5], fixture: undefined }); }, 'light-budget', 'warn');
+  plant('a switchable that glows black', d => { d.switchables[3].baseEmissive = [0, 0, 0]; }, 'switchable-dark', 'warn');
+  { const d = JSON.parse(base); const r = lintLevel(d, { allow: officeAllow }); const vend = d.switchables.find((s: any) => s.id === 'vending'); verdict(vend && !(vend.baseEmissive[0] + vend.baseEmissive[1] + vend.baseEmissive[2] > 0) && !r.findings.some((f: any) => f.code === 'switchable-dark'), 'a switchable lit through its boxes\' EMISSIVE MARKINGS (the vending front: baseEmissive black by construction) is not switchable-dark'); }
+  plant('… but strip that marking\'s emission and it is dark again', d => { const b = d.boxes.find((x: any) => x.id === 'sw_vending'); for (const m of b.markings) for (const p of m.pal) delete p.emit; }, 'switchable-dark', 'warn');
+  plant('a keypad buried in the wall it hangs on', d => { d.devices.find((x: any) => x.id === 'pad_side').pos = [22.0, 1.4, 9.36]; }, 'keypad-in-solid', 'warn');
+  plant('a hole in the lobby floor (the stone finish and the base carpet moved away)', d => { for (const b of d.boxes) if (b.group === 'floors' || b.group === 'ground') { b.c = [b.c[0] + 100, b.c[1], b.c[2]]; } }, 'floor-hole', 'warn');
+  plant('a schema error (unknown box in a switchable) is reported by lint too, as schema', d => { d.switchables[0].boxes[0] = 'nope'; }, 'schema');
+  // allow-list mechanics
+  { const d = JSON.parse(base); d.lights[0].intensity = 5000; const r = lintLevel(d, { allow: { ...officeAllow, 'light-intensity': { ids: ['light:desk_lamp'], reason: 'probe' } } }); verdict(!r.findings.some((f: any) => f.code === 'light-intensity'), 'an allow entry for (code, id) silences exactly that finding'); const r2 = lintLevel(d, { allow: { 'light-intensity': { ids: ['light:storage_bulb'], reason: 'probe' } } }); verdict(r2.findings.some((f: any) => f.code === 'light-intensity'), '… and not the same code on another id'); }
+  // the marking table's rows (stats.markRows; a warning, then an error, as a level nears and passes the table's size)
+  { verdict(typeof r0.stats.markRows === 'number' && r0.stats.markRows > 100 && r0.stats.markRows < 6144 && !r0.findings.some((f: any) => f.code === 'mark-rows'), `office: ${r0.stats.markRows} marking-table rows, no mark-rows finding`);
+    const d = JSON.parse(base); const src = d.boxes.find((b: any) => b.markings?.length && b.markings[0].size[0] * b.markings[0].size[1] >= 40);
+    for (let i = 0; i < 400; i++) { const nb = { ...JSON.parse(JSON.stringify(src)), id: `mrow${i}`, c: [1 + (i % 20) * 0.6, 6.5, 1 + Math.floor(i / 20) * 0.4], albedo: [0.3 + i * 0.001, 0.3, 0.3] }; delete nb.material; delete nb.name; d.boxes.push(nb); }   // 400 DISTINCT lists (albedo differs) of a big bitmap
+    const r2 = lintLevel(d, { allow: officeAllow }); const f2 = r2.findings.find((f: any) => f.code === 'mark-rows');
+    verdict(!!f2 && (f2.severity === 'error' || f2.severity === 'warn') && (r2.stats.markRows as number) > 6144 * 0.75, `+400 distinct big lists: ${r2.stats.markRows} rows → mark-rows ${f2?.severity}`, f2?.message.slice(0, 100)); }
+  // the CLI: exit 0 on the office, 1 on a file with an error, honours the sidecar
+  { const dir = mkdtempSync(join(tmpdir(), 'tps-lint-')); try {
+      const good = join(dir, 'good.json'); writeFileSync(good, serializeLevelData(OFFICE_DATA)); writeFileSync(join(dir, 'good.lint.json'), JSON.stringify({ allow: officeAllow }));
+      const bad = join(dir, 'bad.json'); const bd = JSON.parse(base); bd.lights[0].range = 0; writeFileSync(bad, serializeLevelData(bd));
+      const run = (f: string) => Bun.spawnSync({ cmd: [process.execPath, 'run', join(ROOT, 'tools/qa/level-lint.ts'), f, '--quiet'], cwd: ROOT, stdout: 'pipe', stderr: 'pipe' });
+      const a = run(good), b2 = run(bad); const ao = new TextDecoder().decode(a.stdout), bo = new TextDecoder().decode(b2.stdout);
+      verdict(a.exitCode === 0 && /PASS \(0 warnings\)/.test(ao), 'CLI on the office (with sidecar) → exit 0, "PASS (0 warnings)"', ao.trim().split('\n').pop());
+      verdict(b2.exitCode === 1 && /light-range/.test(bo) && /FAIL \(1 error\)/.test(bo), 'CLI on a level with a range-0 light → exit 1, the finding printed', bo.trim().split('\n').slice(-2).join(' | ').slice(0, 160));
+    } finally { rmSync(dir, { recursive: true, force: true }); } }
+}
+
+/** THE DEV SERVER'S LEVEL FILES (tools/levels-api.ts, what `?levelFile=<name>.json` fetches on localhost), on a scratch folder: the index, a file, its lint
+ *  sidecar, and what it refuses (a name that is a path, anything but a read). */
+export async function levelServe() {
+  console.log('\n=== level-serve: the dev server\'s /levels/ (index, a file, its sidecar, the refusals) ===');
+  const { handleLevels, NAME_RE } = await import(`${ROOT}/tools/levels-api.ts`);
+  const dir = mkdtempSync(join(tmpdir(), 'tps-levels-')); const text = serializeLevelData(OFFICE_DATA);
+  const req = (path: string, init?: RequestInit) => new Request(`http://localhost:5999${path}`, init);
+  try {
+    let r = await handleLevels(req('/levels/'), dir); verdict(r.status === 200 && (await r.json()).levels.length === 0, 'GET /levels/ with no levels folder → 200, an empty list');
+    r = await handleLevels(req('/not-levels'), dir); verdict(r === null, 'a path that is not /levels → null (the server\'s other routes answer)');
+    mkdirSync(join(dir, 'levels')); writeFileSync(join(dir, 'levels', 'probe_office.json'), text); writeFileSync(join(dir, 'levels', 'probe_office.lint.json'), JSON.stringify({ allow: {} })); writeFileSync(join(dir, 'levels', 'notes.txt'), 'x');
+    r = await handleLevels(req('/levels/'), dir); const idx = await r.json(); verdict(idx.levels.length === 1 && idx.levels[0].name === 'probe_office' && idx.levels[0].bytes === Buffer.byteLength(text), 'GET /levels/ lists the level by name and size, and neither its sidecar nor a file that is not a level');
+    r = await handleLevels(req('/levels/probe_office.json'), dir); verdict(r.status === 200 && (await r.text()) === text, 'GET /levels/probe_office.json → the file, byte for byte');
+    r = await handleLevels(req('/levels/probe_office.json', { method: 'HEAD' }), dir); verdict(r.status === 200 && (await r.text()) === '', 'HEAD → 200 with no body');
+    r = await handleLevels(req('/levels/probe_office.lint.json'), dir); verdict(r.status === 200 && JSON.parse(await r.text()).allow !== undefined, 'GET its lint sidecar → the sidecar');
+    r = await handleLevels(req('/levels/nothing.json'), dir); const r2 = await handleLevels(req('/levels/nothing.lint.json'), dir); verdict(r.status === 404 && r2.status === 404, 'a level, or a sidecar, that is not there → 404');
+    const bad = ['../x.json', 'a/b.json', 'x.txt', '.json', 'x..json', 'x.lint.json/y', encodeURIComponent('../package') + '.json']; const got: number[] = [];
+    for (const b of bad) got.push((await handleLevels(req(`/levels/${b}`), dir))?.status ?? 0);
+    verdict(got[0] === 0 && got.slice(1).every(s => s === 400) && !NAME_RE.test('a.b') && !NAME_RE.test('../x') && NAME_RE.test('office-relief'), `a name that is a path, has a dot or is not .json is refused, and ../ is no longer a /levels path at all (${got.join(' ')})`);
+    r = await handleLevels(req('/levels/probe_office.json', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' }), dir); const d = await handleLevels(req('/levels/probe_office.json', { method: 'DELETE' }), dir);
+    verdict(r.status === 405 && d.status === 405 && readFileSync(join(dir, 'levels', 'probe_office.json'), 'utf8') === text, 'POST and DELETE → 405, and the file is as it was: nothing writes through the server');
+    r = await handleLevels(req('/levels/probe_office.json', { headers: { host: '192.168.1.20:5173' } }), dir); verdict(r.status === 200, 'a page opened by the machine\'s own address (HOST=0.0.0.0) is answered as localhost is: the files are the repo\'s own');
+  } finally { rmSync(dir, { recursive: true, force: true }); }
 }

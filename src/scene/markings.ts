@@ -207,7 +207,6 @@ export const GEN = {
     return c;
   },
 };
-export const GLYPH_NAMES = ['this side up', 'fragile', 'keep dry', 'cross', 'mark'];
 /** 5×7 pictograms, row 0 = TOP, bit 4 = leftmost column */
 export const GLYPHS: readonly (readonly number[])[] = [
   [0b00100, 0b01110, 0b10101, 0b00100, 0b00100, 0b00100, 0b11111],   // arrow up over a base line: this side up

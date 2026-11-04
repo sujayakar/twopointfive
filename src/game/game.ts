@@ -1000,7 +1000,7 @@ export class Game {
     const free = (p: Vec3): Vec3 | null => {
       const b = solidAt(p[0], p[1], p[2]); if (!b) return p;
       const x0 = Math.floor((p[0] - WORLD.min[0]) / cs) * cs + WORLD.min[0], z0 = Math.floor((p[2] - WORLD.min[2]) / cs) * cs + WORLD.min[2], E = 0.02;
-      const yw = b.yaw ?? 0, c = Math.cos(yw), s = Math.sin(yw), dx = p[0] - b.c[0], dz = p[2] - b.c[2], lx = c * dx - s * dz, lz = s * dx + c * dz;   // (the box's own frame, as editor/lint.ts insideBox turns it)
+      const yw = b.yaw ?? 0, c = Math.cos(yw), s = Math.sin(yw), dx = p[0] - b.c[0], dz = p[2] - b.c[2], lx = c * dx - s * dz, lz = s * dx + c * dz;   // (the box's own frame, as scene/lint.ts insideBox turns it)
       let best: Vec3 | null = null, bd = Infinity;
       for (const [q0, q1, n0, n1] of [[-(b.h[0] + E), lz, -1, 0], [b.h[0] + E, lz, 1, 0], [lx, -(b.h[2] + E), 0, -1], [lx, b.h[2] + E, 0, 1]]) {
         const wx = b.c[0] + c * q0 + s * q1, wz = b.c[2] - s * q0 + c * q1, d = Math.abs(q0 - lx) + Math.abs(q1 - lz);
