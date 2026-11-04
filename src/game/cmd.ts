@@ -6,14 +6,15 @@
 //   WHY THE SEAT'S VIEW RIDES THE RECORD: the reticle's snaps are measured in the seat's own pixels (aim.ts SNAP_PX, the light snap, the squad menu's cursor), the walk keys
 //   are relative to the way the seat looks, and a line is a bubble or a log row by whether the seat can see the man. So the record carries the view as data (two matrices,
 //   the pose, the view's size) and the GAME does the picking from it: a client says where it looks from, never what it hit.
-//   HOW THE GAME READS IT: Seat (one per Game today: `Game.seat`) keeps an Input and a FollowCamera of the game's OWN and loads each record into them, so the player's code
+//   HOW THE GAME READS IT: Seat (one per player: `Game.seats`) keeps an Input and a FollowCamera of the game's OWN and loads each record into them, so the player's code
 //   (player.ts, orders.ts, interact.ts, …) reads `input.hit(…)` / `cam.ray(…)` exactly as it always did — off the record. What the step hands back for the seat's camera
 //   (the wall peek's nudge, a blast's kick, a scenario's opening cut — takeCut) is left on the seat's lens and copied to the host's camera by Game.update.
 //   A RECORD FROM ANYONE (`CMDCHECK.on`, checkCmd below): before a tick reads its record the record is made one an honest seat could have sent — the right shape, finite
 //   numbers inside bounds, key codes that look like key codes, no more of anything than a tick can hold; and for a seat the game does not trust (`Seat.remote`:
 //   nobody today) the eye and the two matrices are WORKED OUT AGAIN from the look-at, the angles and the lens instead of believed, the look-at held near the seat's
 //   own man. An honest record comes through unchanged to the bit (cmdcheck-check.ts holds that); what was put right is counted on the seat.
-// Not here yet (the plan's later steps): a second seat (`Game.seats` is a list of one), picks resolved without the seat's view at all.
+// A SECOND SEAT: seats.ts (`Game.seats` is one or two, fixed when the game is stood up; `Game.stepSeats` steps each from its own record).
+// Not here yet (the plan's later steps): picks resolved without the seat's view at all.
 import type { Vec3 } from '../math/vec';
 import type { View } from '../host/hud';
 import { Input } from './input';
@@ -56,12 +57,11 @@ export function sampleCmd(g: Game, input: Input, cam: FollowCamera, canvas: View
 
 /** a record as text and back, to the bit. Plain JSON would do but for three values it cannot carry — a negative zero (a camera square to an axis has them in its matrices
  *  and its forward), NaN and the infinities — which ride as the strings '-0' / 'nan' / 'inf' / '-inf' (no key code is spelt like one). */
-export function cmdText(c: PlayerCmd): string {
-  return JSON.stringify(c, (_k, x) => typeof x !== 'number' || (Number.isFinite(x) && !Object.is(x, -0)) ? x : x !== x ? 'nan' : x === 0 ? '-0' : x > 0 ? 'inf' : '-inf');
-}
-export function cmdFromText(t: string): PlayerCmd {
-  return JSON.parse(t, (_k, x) => x === '-0' ? -0 : x === 'nan' ? NaN : x === 'inf' ? Infinity : x === '-inf' ? -Infinity : x) as PlayerCmd;
-}
+export function cmdText(c: PlayerCmd): string { return JSON.stringify(c, numWord); }
+export function cmdFromText(t: string): PlayerCmd { return JSON.parse(t, wordNum) as PlayerCmd; }
+/** the two halves of that, for anything else that carries a record's numbers as JSON to the bit (src/net/wire.ts): JSON.stringify's replacer and JSON.parse's reviver */
+export const numWord = (_k: string, x: unknown): unknown => typeof x !== 'number' || (Number.isFinite(x) && !Object.is(x, -0)) ? x : x !== x ? 'nan' : x === 0 ? '-0' : x > 0 ? 'inf' : '-inf';
+export const wordNum = (_k: string, x: unknown): unknown => x === '-0' ? -0 : x === 'nan' ? NaN : x === 'inf' ? Infinity : x === '-inf' ? -Infinity : x;
 
 /** A RECORD FROM ANYONE (see the head). ON in the page (`?nocmdcheck` = a record is believed as it comes, as before), OFF on the frozen stand (`TPS_CMDCHECK=1`).
  *  The bounds are wide on purpose: they keep a record sane, they do not referee it. What referees holds only for a seat marked `remote` (nobody today: a showcase
@@ -124,8 +124,36 @@ function checkCmdIn(raw: unknown, near: Vec3 | null): { cmd: PlayerCmd; fixed: n
   return { cmd: c as unknown as PlayerCmd, fixed };
 }
 
+/** `c` with nothing pressed: the same cursor and the same view, no key, no button, no wheel (a seat nobody has sent a record for) */
+export function stillCmd(c: PlayerCmd): PlayerCmd { return { ...c, keys: [], pressed: [], buttons: 0, clicked: 0, wheel: 0 }; }
+
+/** A RECORD AS A TICK WOULD TAKE IT, FOR CODE THAT MUST LEAVE IT AS IT CAME (a look ahead: walkahead.ts). checkCmd writes in place, and the tick that plays the
+ *  record later checks it against where the man then stands — so under CMDCHECK.on this checks a COPY, with the same `near`; a record that cannot be copied
+ *  is handed to checkCmd as it is not (it answers a neutral one, as it would in a tick). With the check off nothing writes a record: it is answered itself. */
+export function honestCopy(c: PlayerCmd, near: Vec3 | null): PlayerCmd {
+  if (!CMDCHECK.on) return c;
+  let w: unknown; try { w = structuredClone(c); } catch { w = null; }
+  return checkCmd(w, near).cmd;
+}
+/** a record's view put on a camera of the game's own: its matrices and pose are the record's, to the bit (a seat's tick: Seat.load; a look ahead: walkahead.ts) */
+export function loadLens(cam: FollowCamera, v: PlayerCmd['view']): void {
+  cam.viewProj.set(v.vp); cam.invViewProj.set(v.ivp);
+  for (let k = 0; k < 3; k++) { cam.pos[k] = v.pos[k]; cam.forward[k] = v.forward[k]; cam.target[k] = v.target[k]; }
+  cam.yaw = v.yaw; cam.pitch = v.pitch; cam.distance = v.distance; cam.fov = v.fov; cam.aspect = v.aspect; cam.aimLead = v.aimLead;
+}
+
 /** a player's seat inside the Game: the record of the tick, loaded into an Input and a camera of the game's own for the code that reads them */
 export class Seat {
+  /** which seat of its game (0 = the first; `Game.seats[index]` is this) */
+  readonly index: number;
+  /** THE GAME AS THIS SEAT'S PLAYER SEES IT (seats.ts): `view.player` is his man, `view.orders` his menu and his pair's orders, the reticle and the rows under it
+   *  his own. Everything a tick does FOR a player is handed this in place of the Game. In a game of one seat it is the Game itself. */
+  view!: Game;
+  /** what of the game is this seat's alone, by the Game's own field names (seats.ts SEAT_KEYS) — null in a game of one seat, whose are the Game's own fields */
+  own: Record<string, unknown> | null = null;
+  constructor(index = 0) { this.index = index; }
+  /** his man */
+  get man(): Game['player'] { return this.view.player; }
   /** the tick's keys / buttons / cursor (a detached Input: nothing but load() and the tick's own code writes it) */
   readonly input = Input.detached();
   /** the tick's view (a camera nobody eases or rebuilds: its matrices and pose are the record's, to the bit). `peekOffset` and `kick` are the step's OUTPUT for the seat's camera */
@@ -149,10 +177,13 @@ export class Seat {
     this.mask &= c.buttons & ~c.clicked;   // (let go, or pressed afresh since the last record: the swallow is over)
     i.buttons = c.buttons & ~this.mask; i.clicked = c.clicked; i.wheel = c.wheel; i.mouseX = c.mx; i.mouseY = c.my;
     cv.clientWidth = c.w; cv.clientHeight = c.h; cv.width = c.pw; cv.height = c.ph;
-    cam.viewProj.set(v.vp); cam.invViewProj.set(v.ivp);
-    for (let k = 0; k < 3; k++) { cam.pos[k] = v.pos[k]; cam.forward[k] = v.forward[k]; cam.target[k] = v.target[k]; }
-    cam.yaw = v.yaw; cam.pitch = v.pitch; cam.distance = v.distance; cam.fov = v.fov; cam.aspect = v.aspect; cam.aimLead = v.aimLead;
+    loadLens(cam, v);
   }
+  /** a record waiting for this seat's next tick, from whoever plays it (a second player's client; a check's script): `Game.update` steps a seat its host does not
+   *  play from what was handed, once — and from a still record (no key, no button, the view it last had; `like`'s before it has had one) when nothing was. */
+  hand(c: PlayerCmd): void { this.waiting = c; }
+  handed(like: PlayerCmd): PlayerCmd { const c = this.waiting ?? stillCmd(this.cmd ?? like); this.waiting = null; return c; }
+  private waiting: PlayerCmd | null = null;
   /** the game took these held buttons for something of its own (the order menu's click that gives a row): they read as up until the player lets go */
   swallow(bits: number): void { this.mask |= bits; this.input.buttons &= ~bits; }
   /** OUTPUT: a tick CUT the seat's camera (a scenario's opening: nightbreach.ts / rescue.ts write `target` and `desired` afresh on the lens they are handed) → the look-at to

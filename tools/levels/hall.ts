@@ -28,7 +28,7 @@ import { officeKit, normalize3 as norm, OFFICE_PALETTE, type GeneratorTrace } fr
 import { WORLD } from '../../src/scene/world';
 import { BoxFlag } from '../../src/scene/boxes';
 import { livedKit } from './livedKit';
-import { PANEL_GREY } from '../../src/scene/stuff';
+import { gwotKit, gwotOfOffice } from '../../src/scene/gwotKit';
 
 export const NAME = 'hall';
 export const NOTES = 'The long hall: four rooms off one bare hall that two men hold from its dim far end; a room clear for the four, every man in the plain issue (scenarios.issue). Regenerate: bun run tools/levels/export.ts hall';
@@ -112,7 +112,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
 
   // ---- the breaker (the guardroom's east wall) and one emergency beacon over the hall ----
   grp('breaker');
-  const brk = add({ c: [36.84, 1.35, 14], h: [0.04, 0.36, 0.28], albedo: PANEL_GREY, name: 'breaker_panel' });
+  const brk = add({ c: [36.84, 1.35, 14], h: [0.04, 0.36, 0.28], albedo: [0.42, 0.44, 0.45], name: 'breaker_panel' });
   const brkLed = add({ c: [36.79, 1.62, 13.82], h: [0.01, 0.015, 0.015], albedo: C.black, emissive: [0.3, 4, 0.6], flags: BoxFlag.NoShadow });
   grp('beacons');
   add({ c: [20.5, H - 0.06, 14], h: [0.07, 0.06, 0.07], albedo: [0.2, 0.2, 0.22], flags: BoxFlag.NoShadow | BoxFlag.NoPrimary });
@@ -195,6 +195,20 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
     L.thing(26.5, 0.8, 19.85, 0.8, 0.55, 0.02, C.woodDark);
     L.hung(26.5, 19.82, true, 1.3, 0.95, 1.8, [0.7, 0.66, 0.52], 0.01);
     L.hung(30.9, 15.28, true, 0.9, 1.0, 1.7, C.black, 0.02);
+    // ROUND THE WING, from the look's kit (src/scene/gwotKit.ts: a drum and a tyre are round). A company wing's outside: the PORCH is where a relief
+    // waits (ammunition crates by the bench, a drum, the sandbag line carried on past the lamp's side, the tyres off the truck that brought them); the
+    // YARD along the blank south wall keeps the firewood and two drums, with field stones lying where they were turned up; the BACK has the block left
+    // over from the wall. Nothing stands in the strip the hall's two guns see through the open front door, on a start mark, or before the bunks' window.
+    { const G = gwotKit(gwotOfOffice(K));
+      L.room('porch');
+      G.crates(4.4, 9.3, 0.1, 2); G.drum(3.5, 10.3, 'rust'); G.rubble(1.7, 11.6, 0.8, 6);
+      G.sandbags(2.7, 17.6, 1.6, 0, 3); G.tyres(5.6, 19.5, 3); G.tyres(6.34, 19.62, 2);
+      L.room('yard');
+      G.woodPile(14.0, 20.55, 0, 1.6); G.drums(22.0, 20.5, 2, 0);
+      G.rubble(29.5, 23.4, 0.9, 7); G.rubble(12.0, 24.2, 0.8, 6); G.rubble(38.6, 16.0, 0.6, 5);
+      L.room('back');
+      G.blocks(27.0, 5.5, 0, 2); G.rubble(20.0, 4.6, 1.0, 7); G.rubble(13.6, 3.2, 0.9, 6); G.rubble(26.5, 2.8, 1.0, 7); G.rubble(32.6, 4.2, 0.8, 5); G.rubble(7.6, 2.8, 0.9, 6);
+      L.room('porch'); G.rubble(2.6, 8.2, 0.9, 6); G.rubble(3.8, 5.0, 0.8, 5); }
   }
 
   const BUNKS: Rect = { x0: 9.12, x1: 19.94, z0: 8.12, z1: 12.74 }, KIT: Rect = { x0: 20.06, x1: 31.94, z0: 8.12, z1: 12.74 };

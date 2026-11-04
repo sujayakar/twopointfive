@@ -90,11 +90,10 @@ import type { DeviceDef, Level, LevelDoorDef, PatrolRoute } from '../../src/scen
 import type { SurfacesData } from '../../src/scene/levelData';
 import type { LevelScenarios, QuietData, Rect, ResponseData } from '../../src/scene/scenarios';
 import { officeKit, normalize3, type GeneratorTrace } from '../../src/scene/officeGen';
-import { gwotKit, gwotOfOffice, GWOT_PALETTE, GWOT_MATERIALS, GW_PART, type GwotMat } from '../../src/scene/gwotKit';
+import { gwotKit, gwotOfOffice, roundSlabs, GWOT_PALETTE, GWOT_MATERIALS, GW_PART, type GwotMat } from '../../src/scene/gwotKit';
 import type { MarkFace, MarkPal } from '../../src/scene/markings';
 import { WORLD } from '../../src/scene/world';
 import { BoxFlag } from '../../src/scene/boxes';
-import { drawnAs, PANEL_GREY } from '../../src/scene/stuff';
 
 export const NOTES = 'The district police post at night, for one man sneaking: every door that matters is locked on one key and the only ring is on the desk sergeant\'s belt; most men know the armoury pad\'s code, and the armoury has no other door; or a lock is picked in the corridor a man walks, or the breaker brings the ring out to the shed. A perimeter wall with a lit main gate, two side gates and the east gate into the impound (the way out), a main building of seven rooms off one corridor, a generator shed with the breaker, a guard hut, two pickups under a canopy, the radio mast on the back strip. Six beats authored, five manned a deal; two cameras, a keypad door. In the GWOT look kit. Regenerate: bun run tools/levels/export.ts police-post';
 export const MATERIALS = GWOT_MATERIALS;
@@ -262,8 +261,8 @@ export function build(): { level: Level; scenarios?: LevelScenarios; groups: str
   grp('ceiling');
   const roof = { flags: BoxFlag.NoPrimary };
   slab(12.9, H, 7.9, 31.1, H + 0.2, 18.6, [0.5, 0.47, 0.41], roof);    // the main building
-  slab(3.9, H, 19.4, 9.6, H + 0.2, 24.1, drawnAs('block', [0.36, 0.35, 0.33]), roof);    // the generator shed
-  slab(22.4, H, 20.9, 26.6, H + 0.2, 24.1, drawnAs('block', [0.36, 0.35, 0.33]), roof);  // the guard hut
+  slab(3.9, H, 19.4, 9.6, H + 0.2, 24.1, [0.36, 0.35, 0.33], roof);    // the generator shed
+  slab(22.4, H, 20.9, 26.6, H + 0.2, 24.1, [0.36, 0.35, 0.33], roof);  // the guard hut
   slab(3.9, H, 3.9, 8.9, H + 0.12, 9.2, [0.3, 0.31, 0.3], roof);       // the motor pool's tin canopy
 
   // ---------------- the perimeter wall (mud brick, 0.24, to the roofs' height and coped: nobody sees or shoots over it) ----------------
@@ -422,7 +421,7 @@ export function build(): { level: Level; scenarios?: LevelScenarios; groups: str
   grp('shed');
   G.generator(6.2, 23.2, 0);                                                            // against the south wall, its panel to the room
   G.drum(4.52, 20.6, 'drumRed'); G.drum(4.52, 21.25, 'rust'); G.jerryCan(5.3, 20.1, 0.4);
-  const brk = add({ c: [8.3, 1.35, 23.84], h: [0.28, 0.36, 0.04], albedo: PANEL_GREY, name: 'breaker_panel' });
+  const brk = add({ c: [8.3, 1.35, 23.84], h: [0.28, 0.36, 0.04], albedo: [0.42, 0.44, 0.45], name: 'breaker_panel' });
   const brkLed = add({ c: [8.12, 1.62, 23.79], h: [0.015, 0.015, 0.01], ...M.plasticBlack, emissive: [0.3, 4, 0.6], flags: BoxFlag.NoShadow });
   add({ c: [8.3, 2.35, 23.85], h: [0.03, 0.64, 0.03], ...M.galv });                     // its conduit to the roof
   ceilingPanel(6.8, 21.3, true, 'shed', true, 0.6, 0.6, [5, 4.6, 3.8]);
@@ -536,8 +535,8 @@ export function build(): { level: Level; scenarios?: LevelScenarios; groups: str
     /** a small thing standing on a surface whose top is y */
     const thing = (x: number, z: number, y: number, hx: number, hy: number, hz: number, m: GwotMat, yaw = 0) => add({ c: [x, y + hy, z], h: [hx, hy, hz], yaw, ...M[m] });
     const glass = (x: number, z: number, y: number) => thing(x, z, y, 0.022, 0.035, 0.022, 'tin');
-    /** a small round: two squares 45° apart */
-    const rnd = (x: number, z: number, y0: number, y1: number, r: number, m: GwotMat) => { W(x, z, y0, y1, r, r, M[m]); W(x, z, y0 + 0.002, y1 - 0.004, r * 0.96, r * 0.96, M[m], {}, QTR); };
+    /** a round thing standing: the kit's own slabs (gwotKit.ts roundSlabs: under 0.2 m two squares 45° apart, from 0.2 m the octagon the round rule finds) */
+    const rnd = (x: number, z: number, y0: number, y1: number, r: number, m: GwotMat) => roundSlabs(r).forEach(s => W(x, z, y0, y1 - s.drop, s.hx, s.hz, M[m], {}, s.yaw));
     const floor = (x: number, z: number, w: number, d: number, m: GwotMat, yaw = 0, y = 0.012) => G.patch(x, z, w, d, m, yaw, y);
     /** PROP (bin): a bucket */
     const bucket = (x: number, z: number, m: GwotMat = 'tin') => K.prop('bin', x, z, 0, 2, [{ off: [0, 0.14, 0], h: [0.11, 0.14, 0.11], yaw: 0, albedo: M[m].albedo }, { off: [0, 0.14, 0], h: [0.11, 0.138, 0.11], yaw: QTR, albedo: M[m].albedo }], [0.12, 0.12]);
@@ -675,10 +674,10 @@ export function build(): { level: Level; scenarios?: LevelScenarios; groups: str
     G.rug(24.6, 22.5, 1.2, 0.8, 'kilim');
     K.prop('cardboard', 23.85, 23.6, 0.3, 4, [{ off: [0, 0.07, -0.06], h: [0.26, 0.07, 0.06], yaw: 0, albedo: M.woodGrey.albedo }, { off: [0, 0.07, 0.07], h: [0.24, 0.07, 0.06], yaw: 0, albedo: M.poplar.albedo }, { off: [0.02, 0.2, 0], h: [0.25, 0.06, 0.06], yaw: 0, albedo: M.woodGrey.albedo }], [0.26, 0.13]);   // a bundle of stove wood
 
-    // THE MOTOR POOL — vehicle bay: the fuel point south of the canopy (two drums on a cradle, the hand pump), painted bays, a spare wheel, a bonnet off and leaning; the gap between the trucks stays empty
+    // THE MOTOR POOL — vehicle bay: the fuel point south of the canopy (two drums and the hand pump), painted bays, a spare wheel, a bonnet off and leaning; the gap between the trucks stays empty
     room('motorpool');
-    G.drumDown(4.62, 9.9, HALF, 'drumRed'); G.drumDown(4.62, 10.62, HALF, 'drumRed');
-    W(4.62, 9.9, 0.58, 1.2, 0.02, 0.02, M.iron); W(4.78, 9.9, 1.16, 1.2, 0.14, 0.015, M.iron);
+    G.drum(4.62, 9.9, 'drumRed'); G.drum(4.62, 10.62, 'drumRed');                                         // (standing: a drum on its side is a box to the picture until the kit has a lying round)
+    W(4.62, 9.9, 0.88, 1.36, 0.02, 0.02, M.iron); W(4.78, 9.9, 1.32, 1.36, 0.14, 0.015, M.iron);          // the hand pump, standing in the first
     rnd(8.55, 6.7, 0, 0.18, 0.19, 'rubber'); W(8.55, 6.7, 0.18, 0.19, 0.09, 0.09, M.galv);
     W(4.17, 6.65, 0, 1.0, 0.03, 0.45, M.truckWhite);
     W(5.3, 9.58, 0, 0.16, 0.2, 0.1, M.paintRust);           // the red toolbox
@@ -711,10 +710,12 @@ export function build(): { level: Level; scenarios?: LevelScenarios; groups: str
     // THE FORECOURT — parade front: whitewashed stones round the flag and up the lane, a bench against the blue wall, a bicycle, a rumble strip inside the gate
     room('forecourt');
     for (const a of [20, 65, 110, 155, 200, 245, 290, 335]) W(15.0 + 0.45 * Math.cos(a * Math.PI / 180), 19.15 + 0.45 * Math.sin(a * Math.PI / 180), 0, 0.1, 0.07, 0.07, M.whitewash, {}, a * 0.03);
-    for (const z of [20.9, 22.3, 23.7]) W(19.42, z, 0, 0.1, 0.07, 0.07, M.whitewash, {}, z);
+    G.kerbStones(19.42, 20.9, 19.42, 23.7, 'whitewash', 2.8);                                              // (two: a third between them stood on the picket's entry mark)
     W(28.1, 18.8, 0, 0.62, 0.31, 0.02, M.rubber); W(29.1, 18.8, 0, 0.62, 0.31, 0.02, M.rubber); W(28.6, 18.8, 0.4, 0.75, 0.4, 0.015, M.paintGreen); W(28.22, 18.8, 0.9, 0.94, 0.02, 0.2, M.iron); W(28.82, 18.8, 0.86, 0.9, 0.1, 0.05, M.rubber);   // a bicycle against the wall
     W(20.5, 23.2, 0, 0.07, 1.25, 0.13, M.rubber, art('+y', 'coarse', pal('stencil'), (i) => i % 6 < 3 ? 1 : 0));
     bucket(14.0, 19.35, 'drumRed');
+    G.hearth(28.9, 21.15, 0.4);                                                                            // the sentries' fire of last night, east of the hut and out of the gate's sight…
+    G.stain(27.3, 21.45, 1.1, 0.8, 'dirt', -0.2, 0.72); G.stain(27.35, 21.45, 0.7, 0.45, 'dirt', 0.5, 0.62); // …and where the hut's kettle and wash water are emptied
 
     // THE IMPOUND — seized vehicles: painted bays, a yellow and white taxi up on blocks in the south-east corner, a clamp on the wreck, a numbered stake at the wreck's bay, a loose tyre
     room('impound');
@@ -726,6 +727,24 @@ export function build(): { level: Level; scenarios?: LevelScenarios; groups: str
     floor(33.97, 8.45, 0.05, 1.0, 'iron', 0.05, 0.02); thing(33.96, 7.98, 0.3, 0.035, 0.045, 0.02, 'jerryYellow');   // a chain through the pickup's wheel and a brass padlock
     floor(34.72, 17.85, 0.05, 1.15, 'iron', 0.12, 0.02); thing(34.66, 17.85, 0.02, 0.035, 0.045, 0.02, 'jerryYellow');   // the two motorbikes chained together
     K.prop('bin', 34.4, 12.85, 0, 9, [{ off: [0, 0.1, 0], h: [0.3, 0.1, 0.3], yaw: 0, albedo: M.rubber.albedo }, { off: [0, 0.1, 0], h: [0.3, 0.098, 0.3], yaw: QTR, albedo: M.rubber.albedo }], [0.31, 0.31]);
+
+    // THE GROUND OUTSIDE THE WALL — the approach: the dust round the post was one sheet, and all three starts stand on it. A path is worn round the outside of
+    // the wall: out of the main gate between each leaf and its blast wall, along the south wall both ways, up the two sides and along the back, with a spur
+    // that ends square on each side gate's own threshold (whoever is sent round to try a gate walks it). The west wall is damp at its foot, and field stones
+    // lie two metres and more off the wall. Paint on the ground and stones low enough to walk over: no cover is added out here, no sight line or way round
+    // changes, and nothing lights it but the moon
+    room('approach');
+    /** a PATH worn through the points, `wid` wide (every other leg 0.86 of it): the kit's stain a leg (the dust's own paint, darker), lapped at the bends, square at its two ends */
+    const beat = (pts: [number, number][], wid: number, k = 0.78) => { for (let i = 0; i + 1 < pts.length; i++) {
+      const [x0, z0] = pts[i], [x1, z1] = pts[i + 1], L = Math.hypot(x1 - x0, z1 - z0), ux = (x1 - x0) / L, uz = (z1 - z0) / L, a = i ? wid * 0.35 : 0, e = i + 2 < pts.length ? wid * 0.35 : 0, mid = (L + e - a) / 2;
+      G.stain(x0 + ux * mid, z0 + uz * mid, L + a + e, wid * (i % 2 ? 0.86 : 1), 'dust', Math.atan2(-uz, ux), k); } };
+    beat([[19.6, 25.85], [18.7, 25.65], [18.55, 24.62], [16.6, 24.62], [12.6, 25.5], [7.6, 25.0], [3.6, 25.6], [2.35, 24.3], [2.6, 20.8], [2.25, 18.4], [2.5, 16.9],   // west from the gate, up the west side…
+      [2.75, 12.5], [2.3, 7.5], [2.6, 3.2], [3.8, 1.3], [7.0, 0.85], [9.3, 1.3], [14.0, 0.9], [19.5, 1.4], [25.0, 0.85], [30.0, 1.0], [35.4, 1.2],                    // …along the back…
+      [37.3, 2.6], [37.4, 7.0], [37.2, 10.5], [37.5, 13.6], [37.4, 16.5], [37.8, 20.5], [37.5, 24.2], [36.2, 25.6], [31.0, 25.1], [26.0, 25.6], [24.1, 24.62],        // …down the east side…
+      [22.5, 24.62], [22.4, 25.65], [21.4, 25.85]], 0.75);                                                                                                           // …and in at the gate again
+    beat([[3.85, 16.75], [2.5, 16.9]], 0.75); beat([[9.75, 3.85], [9.7, 2.6], [9.3, 1.3]], 0.75); beat([[36.16, 14.25], [37.4, 14.3]], 0.75);                         // the side yard gate's spur, the motor pool gate's, the impound gate's
+    G.skirt('z', 4, 4.3, 16.2, -1); G.skirt('z', 4, 17.3, 23.8, -1);
+    G.rubble(1.1, 21.5, 0.4, 5); G.rubble(1.1, 7.2, 0.4, 5); G.rubble(11.6, 27.0, 0.4, 5); G.rubble(31.8, 27.0, 0.4, 6); G.rubble(39.0, 11.2, 0.4, 5);
 
     // the lived props take their room's name (lived.<room>.<n>): the loader leaves them out with the switch off
     spans.push([K.props.length, '']);

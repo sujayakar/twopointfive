@@ -9,11 +9,15 @@
 // shooter whose round knocked it off / dropped the tile, the thrower of the charge that shoved it — so a guard's own burst is his side's clumsiness to the men
 // and no row on Sam's debrief, Sam's is heard and chronicled as his; NOBODY_ID when no one did: unexplained to the men, nobody's in the debrief). Deterministic: no Math.random — every wobble is hashed off the chunk's serial. Cleared by a restart / the tour's cuts with the rest of the aftermath.
 import { Vec3, v3, quat, Quat } from '../math/vec';
-import { Box, BoxFlag, makeBox, MKEY, wordOf } from '../scene/boxes';
+import { Box, BoxFlag, makeBox, MKEY } from '../scene/boxes';
 import type { Game } from './game';
 import type { Prop } from './props';
 import { impulseKick, type ImpulseLike, type ImpulseResponse } from './sheetModel';
 import { NOBODY_ID } from './consts';
+import { DEBRIS } from './destructionSwitch';
+import { DRESS } from './dress';
+import { flightOf } from './falling';
+import { FALL_PIECES, FALL_HEARD, FALL_MAXP } from '../sim/fallshome';
 import type { PlateMeta } from './shards';
 import type { BreakMeta } from './breakTable';
 
@@ -41,6 +45,10 @@ export interface Chunk {
    *  taken; `footAt` = its age at the last shove, `footN` = shoves in a row (a piece a man keeps pressing into a wall is let be for a while), `footSide` = the side
    *  of his line his last kick sent it to */
   foot?: boolean; footAt?: number; footN?: number; footSide?: number;
+  /** DRESSING: this chunk is picture only — it writes nothing of the game (no furniture feels it land, the floor is not told by it, no ray of the game's meets
+   *  its box; whoever made it has already told the simulation what falls where). Every chunk carries it under DEBRIS.dress (destructionSwitch.ts), a glass
+   *  plate under shards.ts SHARDS.byFall. Absent = a chunk as it always was. */
+  dress?: boolean;
   /** m: a loose piece's own height over the floor it is seated on (edgeLook.ts's fragments: no two overlapping flakes laid flat with their tops in one plane); a pool piece has none */
   lift?: number;
 }
@@ -74,7 +82,7 @@ export class Debris {
   list: Chunk[] = [];
   private serial = 1; private frame = 0;
   /** running totals for the panel / QA: spawned, refused at the cap (demoted by the caller), evicted at rest, landings heard */
-  stats = { spawned: 0, refused: 0, evicted: 0, landed: 0, peakLive: 0, peakMoving: 0, kicked: 0 };
+  stats = { spawned: 0, refused: 0, evicted: 0, landed: 0, peakLive: 0, peakMoving: 0, kicked: 0, told: 0 };
   constructor(private g: Game) {}
 
   /** the pool's size on this tier (ui/quality.ts Caps.debris → settings.debrisCap; 64 without one) */
@@ -83,35 +91,71 @@ export class Debris {
 
   /** A chunk of `kind` = the box `box` (taken over as is: centre, half extents, yaw / rot, albedo) thrown at `v` (m/s) turning at `w` (rad/s), its landing blamed on
    *  `who`. null when the pool is full of chunks still moving — the caller demotes it to particles. */
-  spawn(kind: ChunkKind, box: Box, v: Vec3, w: Vec3, who: number = NOBODY_ID): Chunk | null {
+  spawn(kind: ChunkKind, box: Box, v: Vec3, w: Vec3, who: number = NOBODY_ID, level = 0): Chunk | null {
     if (kind === 'shard' && this.glass) { const r = this.glass.take(box, v, w, who); if (r !== undefined) return r; }   // glass after it lets go is game/shards.ts's (undefined = not live: as it always was)
-    return this.spawnRaw(kind, box, v, w, who);
+    if (!DEBRIS.dress) return this.spawnRaw(kind, box, v, w, who);
+    if (this.fling) v = v3.add(v, this.fling);
+    this.thrown(kind, box, v, level, who);   // the game's half, decided before the pool is asked: whether it takes the piece changes nothing of it
+    return this.spawnRaw(kind, box, v, w, who, true);
   }
+  /** THE SIMULATION'S HALF OF A PIECE THAT IS THROWN (DEBRIS.dress — destructionSwitch.ts): its one landing, put in the game's falls. When and where =
+   *  falling.ts flightOf, the simulation's answer for a thing that is thrown (the arc of a body let go at the piece's middle with its speed, stopped short
+   *  of the first static or pushable thing it meets, down to what is under it there); nothing if it would land slower than DEBRIS.minSpeed. It lands at its row's
+   *  hearing level, and raises the dust its row says a piece that hard a landing breaks again with (`breaks.lands`: a ceiling tile's puff). Every number
+   *  here is the simulation's own (the box and the speed the caller's rule made, the statics): no chunk is read. */
+  private thrown(kind: ChunkKind, box: Box, v: Vec3, level: number, who: number) {
+    const g = this.g, c = box.c, f = flightOf(this.solids, c, v, G);
+    const down = Math.sqrt(v[1] * v[1] + 2 * G * Math.max(0, c[1] - f.pos[1]));
+    if (!(down > DEBRIS.minSpeed)) return;
+    const L = this.breaks?.lands?.(kind, box.albedo, down);
+    if (g.falls.schedule(g.time + f.t, f.pos[0], f.pos[1], f.pos[2], '', 0, 1, 0, who, FALL_HEARD, level || L?.level || LANDING[kind].level, FALL_MAXP, FALL_PIECES, L?.dust ?? 0)) this.stats.told++;   // (a list already full: the piece is not heard — FallStore.schedule — and not counted as told)
+  }
+  /** what a thrown piece can meet, for the simulation's answer: the statics and the pushable things, as a chunk's own flight asks them */
+  private solids = { raycast: (ro: Vec3, rd: Vec3, tmax: number): { t: number } | null => { const st = this.g.col.raycast(ro, rd, tmax), ph = this.g.props.raycast(ro, rd, st ? st.t : tmax); return ph ?? st; } };
+  /** the thrown pieces whose landing has come (destruction.ts update, every tick one waits): the floor is told of each, at its own level, on whoever threw it */
+  landings() {
+    const g = this.g;
+    for (const p of g.falls.due(g.time, 0, 0, FALL_PIECES)) {
+      if (p.heard) g.events.push({ kind: 'prop', pos: p.pos, time: g.time, loud: false, level: p.level, who: p.who });
+      if (p.dust > 0) g.destr.cellDust(p.pos, [0, 1, 0], p.dust, 'drywall');   // (the puff of a piece that breaks again where it lands: smoke the senses read, so the simulation's — breakTable.ts breakAgain leaves it out for a piece that is dressing)
+    }
+  }
+  /** (DEBRIS.dress) a speed added to every piece thrown through spawn() while it is set: a caller that used to throw a thing by another rule's road and then
+   *  shove the chunks that appeared (furnblast.ts: a blast on the lane's own destructible) says the shove BEFORE, so the simulation's landing has it too */
+  fling: Vec3 | null = null;
   /** GLASS HOOKS (game/shards.ts sets them; null = this pool exactly as it was): `take` is offered every 'shard' spawn first (a Chunk / null = it placed the fragment
    *  itself, undefined = not its business), `landed` a glass plate's first hard touch (true = it made the sound and filed the hearing event), `rested` a glass plate
    *  going to sleep, `gone` (optional) a glass plate the POOL has just dropped — evicted at rest to make room, or retired by age. Only chunks carrying `glass` reach the last three. */
-  glass: { take(box: Box, v: Vec3, w: Vec3, who: number): Chunk | null | undefined; landed(c: Chunk, speed: number): boolean; rested(c: Chunk): void; gone?(c: Chunk): void } | null = null;
+  glass: { take(box: Box, v: Vec3, w: Vec3, who: number): Chunk | null | undefined; landed(c: Chunk, speed: number): boolean; rested(c: Chunk): void; gone?(c: Chunk): void;
+    /** (optional) are the glass plates dressing now (shards.ts SHARDS.byFall)? */
+    dress?(): boolean } | null = null;
   /** THE BREAK TABLE'S HOOKS (game/breakTable.ts sets them; each is nothing while the cut switch is off — null or off = this pool exactly as it was): every chunk
    *  born, a piece's first hard touch, an impulse's kick on a piece, a resting piece evicted for its slot (the ONE crumble-on-evict rule: glass plates included). */
   breaks: { born(c: Chunk): void; landed(c: Chunk, speed: number): void; kicked(c: Chunk, kick: number): void; evicted(c: Chunk): void;
+    /** (optional) for the simulation's landing of a piece of this kind and paint coming down at `speed` m/s: the hearing level of its material's row (0 = its
+     *  kind's) and the dust it raises if that is hard enough to break it again (a puff's scale; 0 = none) */
+    lands?(kind: ChunkKind, paint: Vec3, speed: number): { level: number; dust: number };
     /** (optional) WHICH piece gives up its slot, among those `ok` allows: an index into the list, −1 = none. Absent = the oldest, as ever. */
     pick?(list: readonly Chunk[], ok: (c: Chunk) => boolean): number } | null = null;
   /** spawn() without the glass door (what spawn() always did; shards.ts places its plates through this) */
-  spawnRaw(kind: ChunkKind, box: Box, v: Vec3, w: Vec3, who: number = NOBODY_ID): Chunk | null {
+  spawnRaw(kind: ChunkKind, box: Box, v: Vec3, w: Vec3, who: number = NOBODY_ID, told = false): Chunk | null {
+    const dress = DEBRIS.dress && (told || kind !== 'shard' || !this.glass || !!this.glass.dress?.());   // (is this piece dressing? every piece under DEBRIS.dress whose landing the simulation has — `told`: spawn()'s — and the pool's own; but a glass plate that still lays its litter where it rests, SHARDS.byFall off, is the game's)
+    if (dress && !DRESS.debris) { this.stats.refused++; return null; }   // (dress.ts: a host that draws nothing holds no pool, where the pool is dressing)
     while (this.list.length >= this.cap()) {   // (while: the cap can drop mid-run — the auto ladder hopping a preset — and the pool must come back under it, not hover one over)
       const i = this.breaks?.pick ? this.breaks.pick(this.list, evictable) : this.list.findIndex(evictable);
       if (i < 0) { this.stats.refused++; return null; }
       const gone = this.list.splice(i, 1)[0]; this.stats.evicted++; this.breaks?.evicted(gone);
     }
     const serial = this.serial++;
-    const b = makeBox({ c: v3.copy(box.c), h: v3.copy(box.h), yaw: box.yaw, rot: box.rot ? [box.rot[0], box.rot[1], box.rot[2], box.rot[3]] : quat.yaw(box.yaw), albedo: v3.copy(box.albedo), ...wordOf(box), flags: BoxFlag.Dynamic, name: 'debris', mkey: MKEY.debris + (serial & 65535) });
+    const b = makeBox({ c: v3.copy(box.c), h: v3.copy(box.h), yaw: box.yaw, rot: box.rot ? [box.rot[0], box.rot[1], box.rot[2], box.rot[3]] : quat.yaw(box.yaw), albedo: v3.copy(box.albedo), flags: BoxFlag.Dynamic, name: 'debris', mkey: MKEY.debris + (serial & 65535) });
     const L = LANDING[kind];
     const c: Chunk = { kind, box: b, v: v3.copy(v), w: v3.copy(w), rest: false, stillT: 0, age: 0, sounded: false, level: L.level, sfx: L.sfx, serial, who, on: null, onPose: 0 };
+    if (dress) c.dress = true;   // (nothing of the game feels it: no push on what it lands on, no word to the floor, no ray of the game's meets it)
     this.list.push(c); this.stats.spawned++; this.breaks?.born(c);
     return c;
   }
-  clear() { this.list.length = 0; this.impulses = 0; this.serial0 = this.serial; this.shoves = 0; this.scuffAt = -1; this.feetStats = { kicked: 0, offMan: 0, walled: 0, gaveUp: 0 }; } serial0 = 1;   // (+ the impulses' hash stream and the feet's; `serial` runs on so motion keys stay unique across restarts — a restarted encounter's wobbles differ by it, two fresh games agree; `serial0` = the serial at the last clear, read by game/breakTable.ts alone)
-  boxes(out: Box[]) { for (const c of this.list) { out.push(c.box); const m = c.mate; if (m) { m.c = c.box.c; m.yaw = c.box.yaw; m.rot = c.box.rot; out.push(m); } } }
+  clear() { if (DEBRIS.dress || this.g.falls.waitingIn(FALL_PIECES)) this.g.falls.clear(false, FALL_PIECES); this.fling = null; this.list.length = 0; this.impulses = 0; this.serial0 = this.serial; this.shoves = 0; this.scuffAt = -1; this.feetStats = { kicked: 0, offMan: 0, walled: 0, gaveUp: 0 }; } serial0 = 1;   // (+ the impulses' hash stream and the feet's; `serial` runs on so motion keys stay unique across restarts — a restarted encounter's wobbles differ by it, two fresh games agree; `serial0` = the serial at the last clear, read by game/breakTable.ts alone)
+  boxes(out: Box[]) { for (const c of this.list) { if (c.dress) c.box.dress = true; out.push(c.box); const m = c.mate; if (m) { m.c = c.box.c; m.yaw = c.box.yaw; m.rot = c.box.rot; m.dress = c.box.dress; out.push(m); } } }
   /** An IMPULSE over the pool (the same record the GPU particles get, game/sheetModel.ts impulseKick: strength × DEBRIS_IMP.gain × (1 − d/r) along radial + up +
    *  bias): every chunk within reach kicked at least DEBRIS_IMP.wake is woken if it rests, shoved, capped at vMax and set turning by a hashed wobble ∝ the kick ÷ its
    *  size; `blocked(p)` (the caller's line-of-sight test, or none) leaves a chunk behind a partition alone; `who` (when given) takes the blame for its next landing.
@@ -338,7 +382,7 @@ export class Debris {
         const n = hit.n; const vn = v3.dot(c.v, n);
         if (vn < 0) {
           const speed = -vn;
-          if (hit.prop) g.props.applyImpulse(hit.prop, b.c, v3.scale(n, vn * 0.4 * massOf(b)), 0);   // what it lands on feels it (a housing tips a chair a little)
+          if (hit.prop && !c.dress) g.props.applyImpulse(hit.prop, b.c, v3.scale(n, vn * 0.4 * massOf(b)), 0);   // what it lands on feels it (a housing tips a chair a little) — never from a chunk that is dressing: nothing of the game feels one
           const vN = v3.scale(n, vn); const vT = v3.sub(c.v, vN);
           const ct = c.contact;
           c.v = v3.add(v3.scale(vT, n[1] > 0.6 ? (ct ? ct.keepFloor : 0.55) : (ct ? ct.keepWall : 0.8)), v3.scale(vN, ct ? -ct.rest : -0.22));   // dead bounces; rubs along a floor, slides down a wall (a glass plate brings its own numbers: it slides on and hops)
@@ -380,7 +424,7 @@ export class Debris {
     if (c.glass && this.glass?.landed(c, speed)) return;   // a glass plate: its own clink / shatter and hearing event (game/shards.ts)
     const g = this.g; const p = v3.copy(c.box.c);
     for (const s of c.sfx) g.audio.play(s.name as 'propThud', p, Math.min(1, s.gain * (0.6 + speed * 0.15)), { rate: s.rate * (0.94 + 0.12 * hash01(c.serial * 31)) });
-    g.events.push({ kind: 'prop', pos: p, time: g.time, loud: false, level: c.level, who: c.who });   // blamed on whoever set it going: Sam's is heard and chronicled as his, a guard's own is his side's clumsiness (hearingCheck: who ≥ 10), NOBODY_ID unexplained — a calm man goes to look
+    if (!c.dress) g.events.push({ kind: 'prop', pos: p, time: g.time, loud: false, level: c.level, who: c.who });   // (a chunk that is dressing: the floor was told by the simulation's own landing of this piece — thrown(); the knock above is the ear's. By what the CHUNK is, not by the switch as it stands now: one in the air when the switch turns lands as it was thrown)   blamed on whoever set it going: Sam's is heard and chronicled as his, a guard's own is his side's clumsiness (hearingCheck: who ≥ 10), NOBODY_ID unexplained — a calm man goes to look
   }
   /** panel / QA line */
   summary(): string { const s = this.stats; return `debris ${this.list.length}/${this.cap()} (${this.moving} moving) · spawned ${s.spawned} · refused ${s.refused} · evicted ${s.evicted} · landings ${s.landed} · peak ${s.peakLive}/${s.peakMoving} moving`; }

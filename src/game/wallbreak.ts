@@ -38,7 +38,7 @@
 // boxes back as they were, appended statics cut off, nav re-baked. CHECKPOINTS carry it: savestate.ts files `snapshot()` and re-applies it after the restart; the
 // level fingerprint is taken over the AUTHORED statics only.
 import { Vec3, v3 } from '../math/vec';
-import { Box, BoxFlag, makeBox, wordOf, shapeCut } from '../scene/boxes';
+import { Box, BoxFlag, makeBox, shapeCut } from '../scene/boxes';
 import { WORLD } from '../scene/world';
 import type { Game } from './game';
 import type { WeaponDef } from './weapons';
@@ -298,7 +298,7 @@ export class WallBreak {
   /** the cell as a world box (for the chunk it sheds) */
   private cellBox(B: Breakable, ix: number, iy: number, iz: number): Box {
     const hx = (this.xb(B, ix + 1) - this.xb(B, ix)) / 2, hy = (B.yb[iy + 1] - B.yb[iy]) / 2, hz = (this.zb(B, iz + 1) - this.zb(B, iz)) / 2;
-    return makeBox({ c: this.cellCentre(B, ix, iy, iz), h: [hx, hy, hz], yaw: B.box.yaw, albedo: v3.copy(B.box.albedo), ...wordOf(B.box) });
+    return makeBox({ c: this.cellCentre(B, ix, iy, iz), h: [hx, hy, hz], yaw: B.box.yaw, albedo: v3.copy(B.box.albedo) });
   }
   /** greedy boxes over the closed cells (y first: an untouched wall column stays ONE floor-to-top piece, which is what the reach masks' wall raster counts) */
   /** the world centre and half-extents of one rect of `pieces()`: what `rebuild` stands up and what `wouldOpen` forecasts, from one place so they cannot part */
@@ -330,9 +330,9 @@ export class WallBreak {
     for (let k = 0; k < rects.length; k++) {
       const { c, h } = this.rectBox(B, rects[k]);
       const cut = this.destr.breaks.ragged(B, rects[k], h);   // (the cut switch: a ragged end where the piece looks into the opening — undefined with it off)
-      if (k < B.slots.length) { const p = g.col.boxes[B.slots[k]]; p.c = c; p.h = h; p.flags = B.flags0; if (cut || p.cut) { p.cut = cut; p.cutCore = cut ? this.destr.breaks.endCore(B.surf, B.box.albedo) : undefined; } if (p.name === 'stud') { p.name = 'piece'; p.albedo = v3.copy(B.box.albedo); p.rough = B.box.rough; p.metal = B.box.metal; if (B.box.stuff !== undefined) p.stuff = B.box.stuff; } }
+      if (k < B.slots.length) { const p = g.col.boxes[B.slots[k]]; p.c = c; p.h = h; p.flags = B.flags0; if (cut || p.cut) { p.cut = cut; p.cutCore = cut ? this.destr.breaks.endCore(B.surf, B.box.albedo) : undefined; } if (p.name === 'stud') { p.name = 'piece'; p.albedo = v3.copy(B.box.albedo); p.rough = B.box.rough; p.metal = B.box.metal; } }
       else {
-        const p = makeBox({ c, h, yaw: B.box.yaw, albedo: v3.copy(B.box.albedo), flags: B.flags0, name: 'piece', rough: B.box.rough, metal: B.box.metal, aniso: B.box.aniso, ...(B.box.stuff !== undefined ? { stuff: B.box.stuff } : {}) }); if (cut) { p.cut = cut; p.cutCore = this.destr.breaks.endCore(B.surf, B.box.albedo); }
+        const p = makeBox({ c, h, yaw: B.box.yaw, albedo: v3.copy(B.box.albedo), flags: B.flags0, name: 'piece', rough: B.box.rough, metal: B.box.metal, aniso: B.box.aniso }); if (cut) { p.cut = cut; p.cutCore = this.destr.breaks.endCore(B.surf, B.box.albedo); }
         const i = g.col.addStatic(p, B.box); world.addStatic(p); B.slots.push(i); this.owner.set(i, B);
       }
     }
@@ -348,7 +348,7 @@ export class WallBreak {
     return true;
   }
   /** the picture's static tables are stale (BoxWorld re-packs by itself on the page; the native host's static serial reads this) */
-  private bump() { const w = this.g.engine.world as { geomSerial?: number }; w.geomSerial = (w.geomSerial ?? 0) + 1; }
+  private bump() { const w = this.g.engine.world as { geomSerial?: number }; w.geomSerial = (w.geomSerial ?? 0) + 1; this.g.col.wrote(); }
 
   // ---------------------------------------------------------------- opening cells
   /** Open `cells` of B (already-open ones ignored). Returns the change row, or null when nothing opened / the piece cap refused it. */
@@ -442,7 +442,7 @@ export class WallBreak {
       const c: Vec3 = [cell.c[0] + (this.hash() - 0.5) * cell.h[0], cell.c[1] + (this.hash() - 0.3) * cell.h[1], cell.c[2] + (this.hash() - 0.5) * cell.h[2]];
       const sp = 1.2 + 2.2 * this.hash(); const v: Vec3 = [out[0] * sp + (this.hash() - 0.5) * 0.8, 0.6 + 1.4 * this.hash(), out[2] * sp + (this.hash() - 0.5) * 0.8];
       const w: Vec3 = [(this.hash() - 0.5) * 9, (this.hash() - 0.5) * 5, (this.hash() - 0.5) * 9];
-      const got = this.destr.debris.spawn('chunk', makeBox({ c, h, yaw: cell.yaw, albedo: v3.copy(cell.albedo), ...wordOf(cell) }), v, w, who);
+      const got = this.destr.debris.spawn('chunk', makeBox({ c, h, yaw: cell.yaw, albedo: v3.copy(cell.albedo) }), v, w, who);
       budget.chunks--;
       if (got) WALL_STATS.chunks++; else { WALL_STATS.chunksDemoted++; if (P) P.emit('debris', c, v3.normalize(v), 6, { speed: 2.2, speedJit: 0.7, spread: 1.0, life: 16, lifeJit: 0.3, size: 0.012, sizeJit: 0.6, color: v3.copy(cell.albedo), owner: who }); }
     }
@@ -630,7 +630,8 @@ export class WallBreak {
     if (!hung.length) return this.planOf(at, opts, R);
     // (the boards the charge is set on stand in no line of the plan: hidden as the engine hides a static — the flags every ray reads when it is asked — and put back)
     const boxes = this.g.col.boxes, was = hung.map(j => boxes[j].flags); for (const j of hung) boxes[j].flags |= HIDE;
-    try { return this.planOf(at, opts, R); } finally { hung.forEach((j, k) => { boxes[j].flags = was[k]; }); }
+    this.g.col.wrote();
+    try { return this.planOf(at, opts, R); } finally { hung.forEach((j, k) => { boxes[j].flags = was[k]; }); this.g.col.wrote(); }
   }
   private planOf(at: Vec3, opts: BlastOpts, R: number): { B: Breakable; cells: number[]; d: number }[] {
     const g = this.g; const K = WALLS.blast;
@@ -704,7 +705,7 @@ export class WallBreak {
       const left: Box[] = [];
       if (B.nOpen + n < open.length) for (const rect of this.pieces(B, open)) {
         const { c, h } = this.rectBox(B, rect);
-        left.push(makeBox({ c, h, yaw: B.box.yaw, albedo: B.box.albedo, flags: B.flags0, name: 'piece', ...(B.box.stuff !== undefined ? { stuff: B.box.stuff } : {}) }));
+        left.push(makeBox({ c, h, yaw: B.box.yaw, albedo: B.box.albedo, flags: B.flags0, name: 'piece' }));
       }
       out.push({ id: B.id, kind: B.kind, standing, left, cells: n, hole });
     }

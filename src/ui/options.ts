@@ -32,7 +32,7 @@ import { AUTOCAM } from '../host/autocam';
 import { keyCapEl, keyCapture, keyStop, keyWaiting, type KeyHost } from './keybinds';
 import { VOLUME_DEFAULTS } from '../audio/audio';   // (the mixer's levels on a fresh page: what Reset puts back)
 import type { MenuDeps } from './menu';
-import type { QualityName } from './quality';
+import { visitTier, type QualityName } from './quality';
 
 export type OptionsTab = 'graphics' | 'audio' | 'game' | 'controls';
 export type OptionsDeps = Pick<MenuDeps, 'engine' | 'game' | 'quality' | 'audio' | 'overlay'>;
@@ -72,18 +72,22 @@ const whoRowGone = () => CMDRING.wholeSquad && !keysOf('KeyT').length;
  *  that press as a row of its own, both caps following their keys, and the who key, which then steps nobody anywhere, says so. The codes are written
  *  in the words (Shift, B): the list names the keys as they are bound. `?qonly=0` = the rows as they were; `?goals=0` = no row for the part of the
  *  squad, and the who row's words as they were */
-const CMD_WHAT = 'Order the squad', CMD_SMALL = 'tap it to give the usual order where your cursor is. hold it a moment to open the wheel with every order, then pick with 1 to 5 or a click';
+const CMD_WHAT = 'Order the squad', CMD_TAP = 'tap it to give the usual order where your cursor is', CMD_HOLD = 'hold it a moment to open the wheel with every order, then pick with 1 to 5 or a click', CMD_SMALL = `${CMD_TAP}. ${CMD_HOLD}`;
+/** … and with the key tapped twice being 'fall in' (game/cmdring.ts `twice`; `?qtwice=0` = the row's words as they were) the command key's row says so */
+const CMD_TWICE = `${CMD_TAP}. tap it twice to call everyone back to you. ${CMD_HOLD}`;
 const PART_WHAT = 'Send part of the squad to one more thing', PART_SMALL = 'hold Shift and tap B. keep B down a moment to pick their order on the wheel';
 const WORD_WHAT = "Send in everyone who's waiting", WORD_SMALL = 'it also blows a charge the squad set', MENU_SMALL = 'then press 1 to 5 to pick an order';
 type KeyRow = [string[], string, string?];
 /** the Squad group's rows as the board has them (the note above). Pure: the three facts are handed in */
-export function squadRows(rows: KeyRow[], only: boolean, goals: boolean, menuKey: boolean): KeyRow[] {
+export function squadRows(rows: KeyRow[], only: boolean, goals: boolean, menuKey: boolean, twice = false): KeyRow[] {
   if (!only) return rows;
   return rows.flatMap((r): KeyRow[] => { const k = r[0][0];
-    return k === 'X' ? (menuKey ? [[r[0], r[1], MENU_SMALL]] : []) : k === 'H' || k === 'G' ? (menuKey ? [r] : []) : k === 'B' ? [[r[0], CMD_WHAT, CMD_SMALL], ...(goals ? [[['Shift', 'B'], PART_WHAT, PART_SMALL] as KeyRow] : [])] : k === 'F' ? [[r[0], WORD_WHAT, WORD_SMALL]] : [r]; });
+    return k === 'X' ? (menuKey ? [[r[0], r[1], MENU_SMALL]] : []) : k === 'H' || k === 'G' ? (menuKey ? [r] : []) : k === 'B' ? [[r[0], CMD_WHAT, twice ? CMD_TWICE : CMD_SMALL], ...(goals ? [[['Shift', 'B'], PART_WHAT, PART_SMALL] as KeyRow] : [])] : k === 'F' ? [[r[0], WORD_WHAT, WORD_SMALL]] : [r]; });
 }
 /** what the Controls list is built from that can change under it (a key given or taken, a rule ticked in the debugger): the list is built once */
-const listNow = () => `${whoRowGone()} ${CMDRING.only} ${CMDRING.goals} ${keysOf('KeyX').length > 0}`;
+/** is the key tapped twice 'fall in' in the game that is up (off on a tutorial mission until a step lists it: game/rails.ts `twice`) */
+const twiceNow = () => CMDRING.twice && !deps?.game.rails?.locks('twice');
+const listNow = () => `${whoRowGone()} ${CMDRING.only} ${CMDRING.goals} ${twiceNow()} ${keysOf('KeyX').length > 0}`;
 const PACE_WHAT = 'Walking pace', SPRINT_WHAT = 'Sprint';
 /** the sprint's row while Shift in a crouch is a fast crouch walk (game/player.ts CROUCHRUN): what the same key does crouched, and that it is heard
  *  (each footfall louder than a walk's: it is no sneak) */
@@ -324,8 +328,8 @@ function render(S: Screen) {
     const ro = (globalThis as unknown as { __readout?: { on: boolean; set(v: boolean): void } }).__readout;
     if (ro) flip(body, 'Show frame rate', () => ro.on, v => ro.set(v), 'Show the readout in the top-left corner, with the frame rate, the GPU\'s milliseconds per pass, the counts, your light meter and each character\'s state.');
     const shaderReset = shaderRows({ sec, flip }, body);   // (ui/shaderrows.ts: the shader compiling rows on trial, each the next load's)
-    const pinned = (() => { try { const q = new URLSearchParams(globalThis.location?.search ?? '').get('quality'); return TIERS.find(t => t.v === q && t.v !== 'auto')?.v as QualityName | undefined; } catch { return undefined; } })();   // (`?quality=` pins this visit's tier: Reset puts THAT back)
-    reset = () => { shaderReset(); if (TEXTSIZE.on) setTextStep(null); quality.adaptive = true; if (wrote === G.exposure && turned > 0) G.exposure /= turned; turned = 1; wrote = null; ro?.set(false); if (pinned) { quality.auto = false; quality.apply(pinned); } else quality.setAuto(); };   // (apply, not pin: a URL's tier is this visit's, never written as this machine's choice)
+    const search = globalThis.location?.search ?? '';
+    reset = () => { shaderReset(); if (TEXTSIZE.on) setTextStep(null); if (wrote === G.exposure && turned > 0) G.exposure /= turned; turned = 1; wrote = null; ro?.set(false); if (!visitTier(search)) quality.setAuto(); quality.visit(search); };   // (the defaults, then the address's own words by their one reader, ui/quality.ts visit: Auto, unless the address names a tier (that tier is put on, with no setAuto under it: auto can start from the tier the page stands on, the address's, and would write it as this machine's pick); and with `?adapt=0` nothing adapting again)
   } else if (S.tab === 'audio') {
     const { audio } = deps, V = audio.volume, pct = (v: number) => `${Math.round(v * 100)} %`;
     const bus = (k: keyof typeof VOLUME_DEFAULTS, label: string, d: string) => range(body, label, 0, 1, 0.05, () => V[k], v => { V[k] = v; audio.setVolumes(); keep(); }, pct, d);
@@ -411,7 +415,7 @@ function controls(body: HTMLElement, host: KeyHost) {
     const geared = !TWOGEARS.on ? tabbed : tabbed.flatMap(r => r[1] === PACE_WHAT ? [] : r[1] === 'Crouch' ? [[r[0], r[1], 'slower and quiet'] as typeof r] : [r]);   // (game/player.ts TWOGEARS: the wheel is nobody's pace, the crouch is the sneak)
     const low = sprintSmall(), paced = !low ? geared : geared.map(r => r[1] === SPRINT_WHAT ? [r[0], r[1], low] as typeof r : r);   // (CROUCHRUN: Shift is not only the sprint)
     const rows = !slotNow() ? paced : g.group === 'Kit' ? [SLOT_ROW, ...paced] : paced.filter(r => r[1] !== E_WHAT || keysOf('KeyE').length > 0);   // (E's row put on a key by hand is still his to see and move)
-    for (const [caps, what, small0] of g.group === 'Squad' ? squadRows(rows, CMDRING.only, CMDRING.goals, keysOf('KeyX').length > 0) : rows) {
+    for (const [caps, what, small0] of g.group === 'Squad' ? squadRows(rows, CMDRING.only, CMDRING.goals, keysOf('KeyX').length > 0, twiceNow()) : rows) {
       const small1 = what === WHO_WHAT && CMDRING.wholeSquad ? (CMDRING.goals ? WHO_DEAD : WHO_ALL) : !HANDRING.on ? small0 : what === ACT_WHAT ? RING_SMALL : what === WHISTLE_WHAT ? WHISTLE_SMALL : small0;
       if (caps[0] === 'F5' && !SAVETIMELINE.on) continue;   // (the save by hand is the save timeline's key: game/savestate.ts)
       if (what === AUTO_WHAT && !AUTOCAM.on) continue;   // (the camera that runs itself: host/autocam.ts)

@@ -20,7 +20,7 @@ import { lookDecal } from './lookDecals';
 import { CHAOS, chaosOf } from './destruction';
 import { DESTRUCTION } from './destructionSwitch';
 
-/** the looks the 'damage' kind draws for these marks (render/shaders/decals.wgsl damageMark: floor(param); 0‥2 are the dent / shred / crack, 3‥5 the wall wear, 9 the crack in solid glass: particleFx.ts SOLID_GLASS_CRACK) */
+/** the looks the 'damage' kind draws for these marks (render/shaders/decals.wgsl damageMark: floor(param); 0‥2 are the dent / shred / crack, 3‥5 the wall wear) */
 export const MESS_LOOK = { film: 6, grit: 7, splinter: 8 };
 /** a tool's counters (nothing in the game reads them): films laid on a floor · on a top · rubble marks · left out as one with a mark already there · left out
  *  behind something standing or with no room · refused by a ring full of play's own marks */

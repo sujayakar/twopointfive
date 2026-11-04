@@ -76,7 +76,6 @@ import { gwotKit, gwotOfOffice, GWOT_PALETTE, GWOT_MATERIALS } from '../../src/s
 import { WORLD } from '../../src/scene/world';
 import { BoxFlag } from '../../src/scene/boxes';
 import { livedQuiet } from './lived-quiet';
-import { drawnAs, PANEL_GREY } from '../../src/scene/stuff';
 
 export const NAME = 'crossing';
 export const NOTES = 'The border crossing at night, for two men sneaking. Its one idea: two lane men who watch each other along a seized container on the kerb, each with his back to the dark lot — nobody crosses the lane until both drop on one word. Also: a boom man watching the lit west crossing from his hut, a locked fence door under a battery camera at the east end, a blast screen across the far mouth of the lane, a customs house of three rooms north of the road, a lot and the generator shed south of it. Seven beats authored, five or six manned a deal. Regenerate: bun run tools/levels/export.ts crossing';
@@ -206,8 +205,8 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
   // ---------------- roofs (light-only): the house, the boom hut, the shed ----------------
   grp('ceiling');
   slab(12.9, H, 3.9, 31.1, H + 0.2, 9.6, [0.5, 0.47, 0.41], roof);
-  slab(3.9, H, 16.5, 8.1, H + 0.2, 20.1, drawnAs('block', [0.36, 0.35, 0.33]), roof);
-  slab(29.9, H, 19.4, 36.1, H + 0.2, 24.1, drawnAs('block', [0.36, 0.35, 0.33]), roof);
+  slab(3.9, H, 16.5, 8.1, H + 0.2, 20.1, [0.36, 0.35, 0.33], roof);
+  slab(29.9, H, 19.4, 36.1, H + 0.2, 24.1, [0.36, 0.35, 0.33], roof);
 
   // ---------------- the perimeter wall (2.4 m, coped) with its five foot gates; the road's two vehicle gates stand shut ----------------
   grp('walls.perimeter');
@@ -314,7 +313,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
   // ---------------- the generator shed: the set, its fuel, THE BREAKER on the east wall ----------------
   grp('shed');
   G.generator(33.2, 23.2, 0); G.drums(31.0, 23.2, 2); G.jerryCan(34.8, 20.2, 0.3, 'jerryYellow');
-  const brk = add({ c: [35.84, 1.35, 21.6], h: [0.04, 0.36, 0.28], albedo: PANEL_GREY, name: 'breaker_panel' });
+  const brk = add({ c: [35.84, 1.35, 21.6], h: [0.04, 0.36, 0.28], albedo: [0.42, 0.44, 0.45], name: 'breaker_panel' });
   const brkLed = add({ c: [35.79, 1.62, 21.42], h: [0.01, 0.015, 0.015], albedo: P.plasticBlack, rough: 0.5, emissive: [0.3, 4, 0.6], flags: BoxFlag.NoShadow });
   G.tube(33.0, 21.4, true, 'shed', true);
 
@@ -498,7 +497,7 @@ function furnish(K: ReturnType<typeof officeKit>, G: ReturnType<typeof gwotKit>)
   // ---- THE BOOM HUT = the gate man's own: his STOP paddle and vest on the cot, the field phone and the gate log on a crate, tins on a shelf ----
   L.room('hut');
   L.s(7.45, 17.0, 0, 0.45, 0.3, 0.22, 'woodGrey'); L.s(7.45, 17.0, 0.45, 0.57, 0.12, 0.09, 'olive'); L.d(7.45, 17.0, 0.57, 0.6, 0.1, 0.025, 'plasticBlack'); L.paper(7.2, 17.05, 0.45, 0.2, 0.2, 0.28, 'paintCream');
-  L.rnd(4.72, 17.82, 0.47, 0.49, 0.17, 'paintRust', false); L.d(4.72, 17.82, 0.49, 0.495, 0.12, 0.03, 'whitewash'); L.d(4.72, 18.1, 0.47, 0.49, 0.02, 0.14, 'poplar');   // the paddle: on the blanket (top 0.47), south of the pillow
+  L.round(4.72, 17.82, 0.47, 0.49, 0.17, 'paintRust', false); L.d(4.72, 17.82, 0.49, 0.495, 0.12, 0.03, 'whitewash'); L.d(4.72, 18.1, 0.47, 0.49, 0.02, 0.14, 'poplar');   // the paddle: on the blanket (top 0.47), south of the pillow
   L.d(4.76, 18.55, 0.47, 0.5, 0.2, 0.25, 'prodOrange');                                                       // the vest
   L.d(6.2, 19.8, 1.2, 1.24, 0.5, 0.08, 'poplar'); for (let i = 0; i < 3; i++) L.d(5.9 + i * 0.3, 19.8, 1.24, 1.36, 0.06, 0.06, (['prodRed', 'prodGreen', 'prodYellow'] as const)[i]);
   L.d(7.845, 17.6, 0.9, 1.7, 0.03, 0.22, 'coyote');                                                                                                                 // his coat on the wall
@@ -508,9 +507,9 @@ function furnish(K: ReturnType<typeof officeKit>, G: ReturnType<typeof gwotKit>)
   // ---- THE GENERATOR SHED = the lamp store: a ladder, a reel of orange cable, a row of spare lamp heads on a shelf, a duckboard at the breaker ----
   L.room('shed');
   L.d(32.6, 19.82, 0, 0.06, 1.4, 0.02, 'poplar'); L.d(32.6, 20.12, 0, 0.06, 1.4, 0.02, 'poplar'); for (let i = 0; i < 4; i++) L.d(31.55 + i * 0.7, 19.97, 0.01, 0.05, 0.02, 0.15, 'poplar');
-  L.s(35.2, 23.2, 0, 0.06, 0.36, 0.36, 'ply'); L.rnd(35.2, 23.2, 0.06, 0.5, 0.26, 'prodOrange'); L.oct(35.2, 23.2, 0.5, 0.56, 0.5, 'ply');   // the reel: the top flange is what is seen (an octagon, clear of both walls); the foot and the drum are under it
+  L.s(35.2, 23.2, 0, 0.06, 0.36, 0.36, 'ply'); L.round(35.2, 23.2, 0.06, 0.5, 0.26, 'prodOrange'); L.round(35.2, 23.2, 0.5, 0.56, 0.5, 'ply');   // the reel: the top flange is what is seen (an octagon, clear of both walls); the foot and the drum are under it
   const sy = L.shelf(35.66, 20.45, 1.1, 0.4, 1.3, false, 3)[2];
-  L.s(35.66, 20.15, sy, sy + 0.12, 0.17, 0.13, 'iron'); L.d(35.66, 20.15, sy + 0.12, sy + 0.125, 0.13, 0.1, 'plasticWhite'); L.s(35.66, 20.5, sy, sy + 0.14, 0.14, 0.1, 'paintCream'); L.rnd(35.66, 20.8, sy, sy + 0.07, 0.13, 'prodOrange');
+  L.s(35.66, 20.15, sy, sy + 0.12, 0.17, 0.13, 'iron'); L.d(35.66, 20.15, sy + 0.12, sy + 0.125, 0.13, 0.1, 'plasticWhite'); L.s(35.66, 20.5, sy, sy + 0.14, 0.14, 0.1, 'paintCream'); L.round(35.66, 20.8, sy, sy + 0.07, 0.13, 'prodOrange');
   for (let i = 0; i < 3; i++) { L.s(35.66, 20.13 + i * 0.32, 0.8, 1.0, 0.13, 0.11, 'galv'); L.d(35.526, 20.13 + i * 0.32, 0.83, 0.97, 0.004, 0.085, 'glassDark'); }   // three lamp heads in a row, dark glass to the room
   L.mat(32.3, 22.4, 1.3, 0.9, 'oil', 0.3); L.d(32.2, 22.45, 0, 0.05, 0.28, 0.2, 'galv');                                                                             // what the set drips, and the tray that misses it
   L.mat(35.3, 21.6, 0.6, 0.9, 'poplar');
@@ -525,7 +524,7 @@ function furnish(K: ReturnType<typeof officeKit>, G: ReturnType<typeof gwotKit>)
   L.s(10.3, 12.12, 0.48, 0.54, 0.5, 0.02, 'paintBlue'); L.s(9.75, 12.12, 0, 0.64, 0.32, 0.02, 'rubber'); L.s(10.85, 12.12, 0, 0.64, 0.32, 0.02, 'rubber');         // a bicycle against the kerb wall
   L.s(10.8, 12.12, 0.9, 0.94, 0.03, 0.14, 'iron'); L.s(10.05, 12.12, 0.8, 0.86, 0.1, 0.05, 'plasticBlack');
   L.d(10.8, 12.12, 0.64, 0.9, 0.012, 0.012, 'iron'); L.d(10.05, 12.12, 0.54, 0.8, 0.012, 0.012, 'iron');                                                           // the stem and the seat post
-  L.d(6.0, 10.6, 0, 0.05, 0.5, 0.02, 'paintGreen', 0.5); L.oct(5.6, 10.82, 0, 0.04, 0.3, 'rubber', false); L.oct(6.42, 10.36, 0, 0.04, 0.3, 'rubber', false);     // another, flat on the ground
+  L.d(6.0, 10.6, 0, 0.05, 0.5, 0.02, 'paintGreen', 0.5); L.round(5.6, 10.82, 0, 0.04, 0.3, 'rubber', false); L.round(6.42, 10.36, 0, 0.04, 0.3, 'rubber', false);     // another, flat on the ground
   L.mat(10.0, 11.5, 1.3, 0.9, 'oil', 0.2);
   L.s(11.6, 9.0, 0, 1.3, 0.03, 0.03, 'woodGrey'); L.s(11.6, 9.0, 0.9, 1.3, 0.25, 0.015, 'whitewash'); L.d(11.6, 9.0, 1.14, 1.24, 0.25, 0.02, 'paintRust');           // the board
   L.carton('carton', 12.3, 8.6, 0.1, 0.5, 0.4, 0.34, 'coyote', 'sack');
@@ -534,9 +533,9 @@ function furnish(K: ReturnType<typeof officeKit>, G: ReturnType<typeof gwotKit>)
   // ---- THE EAST YARD = the dog run: a kennel on the north wall, the chain and its stake, the circle it has worn, the handler's bench ----
   L.room('yard_east');
   L.s(33.0, 4.6, 0, 0.7, 0.5, 0.42, 'ply'); L.s(33.0, 4.62, 0.7, 0.78, 0.58, 0.5, 'tin'); L.d(33.0, 5.024, 0.05, 0.5, 0.18, 0.004, 'plasticBlack');
-  L.oct(33.3, 6.9, 0.016, 0.03, 1.15, 'dust', false);
+  L.round(33.3, 6.9, 0.016, 0.03, 1.15, 'dust', false);
   L.line(33.0, 5.1, 33.3, 6.9, 0.035, 'iron', 0.034); L.s(33.3, 6.95, 0, 0.19, 0.03, 0.03, 'iron');
-  L.mat(33.0, 5.38, 0.9, 0.5, 'straw', 0, 0.034); L.rnd(32.55, 5.75, 0, 0.07, 0.13, 'galv', false);
+  L.mat(33.0, 5.38, 0.9, 0.5, 'straw', 0, 0.034); L.round(32.55, 5.75, 0, 0.07, 0.13, 'galv', false);
   L.s(34.0, 4.5, 0, 0.45, 0.22, 0.3, 'sack'); L.d(34.0, 4.5, 0.45, 0.456, 0.12, 0.16, 'prodRed');
   L.bench(31.34, 8.8, 1.1, false); L.d(31.34, 8.6, 0.44, 0.47, 0.1, 0.16, 'rubber'); L.d(33.95, 7.7, 0, 0.09, 0.045, 0.045, 'prodRed');                            // a muzzle on the bench, a ball
   L.pail('water', 32.65, 6.25, 'plasticBlue');
@@ -568,10 +567,10 @@ function furnish(K: ReturnType<typeof officeKit>, G: ReturnType<typeof gwotKit>)
   L.room('lot');
   L.s(7.3, 23.25, 0.3, 0.38, 0.95, 0.4, 'poplar'); L.d(7.3, 23.25, 0.38, 0.39, 0.88, 0.33, 'sack'); L.s(6.4, 23.25, 0, 0.42, 0.04, 0.38, 'poplar'); L.s(8.2, 23.25, 0, 0.42, 0.04, 0.38, 'poplar');
   L.s(6.68, 23.25, 0.38, 0.48, 0.18, 0.25, 'rugMadder'); L.d(7.75, 23.25, 0.39, 0.42, 0.38, 0.34, 'blanketBrown');
-  L.oct(7.0, 20.75, 0, 0.3, 0.22, 'iron'); L.d(7.0, 20.75, 0.3, 0.305, 0.15, 0.15, 'blanketGrey');
+  L.round(7.0, 20.75, 0, 0.3, 0.22, 'iron'); L.d(7.0, 20.75, 0.3, 0.305, 0.15, 0.15, 'blanketGrey');
   L.s(6.4, 20.6, 0, 0.19, 0.2, 0.1, 'block', 0.5); L.s(7.55, 20.9, 0, 0.19, 0.2, 0.1, 'block', -0.4);
   L.mat(7.3, 21.6, 1.4, 1.0, 'rugRed', 0.1); for (let i = 0; i < 2; i++) L.d(7.1 + i * 0.22, 21.55 + 0.06 * i, 0.03, 0.036, 0.04, 0.055, 'whitewash', 0.4 * i);
-  L.rnd(7.75, 21.8, 0.03, 0.04, 0.14, 'galv', false); L.d(7.7, 21.8, 0.04, 0.12, 0.03, 0.03, 'prodOrange'); L.d(7.82, 21.76, 0.04, 0.12, 0.03, 0.03, 'prodOrange');
+  L.round(7.75, 21.8, 0.03, 0.04, 0.14, 'galv', false); L.d(7.7, 21.8, 0.04, 0.12, 0.03, 0.03, 'prodOrange'); L.d(7.82, 21.76, 0.04, 0.12, 0.03, 0.03, 'prodOrange');
   L.s(8.05, 22.55, 0, 0.19, 0.12, 0.07, 'plasticBlack');
   L.pail('pail', 8.45, 23.0, 'galv');
   L.own(G.jerryCan(11.9, 20.7, 0.1, 'jerryYellow'), 'can'); L.chock('chock', 11.3, 20.44, 0.1);                                                                     // the white truck's: a can by its sill, a chock behind the front wheel
@@ -580,7 +579,38 @@ function furnish(K: ReturnType<typeof officeKit>, G: ReturnType<typeof gwotKit>)
   // ---- OUTSIDE THE WALL: the tea stall's bench and samovar, and the border's striped post ----
   L.room('outside');
   L.bench(3.7, 18.6, 1.6, false); L.d(3.7, 18.2, 0.44, 0.52, 0.03, 0.03, 'prodOrange'); L.d(3.7, 18.9, 0.44, 0.52, 0.03, 0.03, 'prodOrange');
-  L.s(2.95, 17.45, 0, 0.5, 0.2, 0.2, 'block'); L.rnd(2.95, 17.45, 0.5, 0.95, 0.13, 'galv'); L.s(2.95, 17.45, 0.95, 1.15, 0.04, 0.04, 'iron');
+  L.s(2.95, 17.45, 0, 0.5, 0.2, 0.2, 'block'); L.round(2.95, 17.45, 0.5, 0.95, 0.13, 'galv'); L.s(2.95, 17.45, 0.95, 1.15, 0.04, 0.04, 'iron');
   L.s(19.0, 26.9, 0, 0.4, 0.07, 0.07, 'whitewash'); L.s(19.0, 26.9, 0.4, 0.8, 0.07, 0.07, 'paintRust'); L.s(19.0, 26.9, 0.8, 1.2, 0.07, 0.07, 'whitewash');
   L.own(G.plasticChair(3.2, 19.75, 0.6, 'plasticGreen'), 'chair');
+
+  // ---- THE LORRY PARK = the queue outside the south gate, where the pair starts and the camera first rests: the track the lorries have worn along the wall
+  //      (from the west it ends at the border's striped post, where they are halted; the rust box came in from the east and stands on its own wheel lines,
+  //      the pallet was dumped between them), the ground dark where the box's tractor idled and where feet go to and from the gate, the drivers' cold fire
+  //      under the wall, a wheel changed and left behind the box's tail, stones the mud wall has shed at its foot. Paint and walk-over stones but for the
+  //      wheel, which stands between the wheel lines two metres and more off the wall: no cover, and no stone within two metres of where the Team & kit
+  //      picture stands its file (x 12.7 to 17.7 along the wall). A STAIN IS THE GROUND'S OWN DUST DARKER, a smaller and darker one turned inside it (a patch of
+  //      another paint on bare dust reads as a mat from above at night), and it lies UNDER the wheel ruts (tops under 8 mm), which are darker than it. ----
+  L.room('park');
+  G.ruts(0, 26.5, 18.3, 26.5); G.ruts(27.9, 26.5, 40, 26.5);
+  G.stain(19.8, 26.5, 1.6, 1.0, 'dust', 0.15, 0.78, 0.0035); G.stain(20.05, 26.4, 0.9, 0.6, 'dust', -0.5, 0.62, 0.0045);            // where the box's tractor stood
+  G.stain(7.4, 26.6, 1.3, 0.9, 'dust', -0.25, 0.78, 0.0035); G.stain(7.6, 26.7, 0.7, 0.5, 'dust', 0.4, 0.62, 0.0045);
+  G.stain(32.0, 26.4, 1.7, 1.1, 'dust', 0.2, 0.78, 0.0035); G.stain(31.8, 26.55, 0.9, 0.7, 'dust', -0.4, 0.62, 0.0045);
+  G.stain(15.9, 24.95, 2.2, 1.4, 'dust', 0.06, 0.78, 0.0035); G.stain(16.1, 25.2, 1.2, 0.9, 'dust', -0.35, 0.62, 0.0045);          // feet, to and from the gate
+  G.hearth(8.6, 25.0, 0.4, 'dust');                                                                                               // the drivers' cold fire, on the bare lot outside the yard (the kit laid no ground here, so the dust is named: its ash is that dust darker)
+  G.rubble(5.2, 24.8, 0.6, 6); G.rubble(20.0, 24.75, 0.5, 6); G.rubble(28.8, 24.75, 0.5, 6);                                       // (pale mud stones only where the mud wall sheds them and the camera sees its foot: out on the open dust a scatter read as a pile of cartons)
+  G.tyres(29.3, 26.5, 2); L.tyre('spare', 30.25, 26.42, 0.3); L.chock('chock', 29.9, 26.05, 1.4);                                  // the wheel that came off the box's lorry
+  G.stain(29.8, 26.5, 1.4, 0.9, 'dust', 0.3, 0.78, 0.0035);
+
+  // ---- THE VERGE = what lies outside the other four gates, each a start, a way out or the duty section's way in: the hollow the ditch wicket is named
+  //      for, the ground beaten dark before the tea stall and what its samovar spills, the dust dark where boots come and go at the customs yard gate and
+  //      at the impound yard gate. Paint and walk-over stones only, the stones the road's dark gravel (a quarter of each scatter is the kit's own darker
+  //      mud) and none where a wall hides the ground from the camera ----
+  L.room('verge');
+  G.stain(39.0, 21.8, 1.3, 3.8, 'dust', 0.08, 0.78, 0.0035); G.stain(39.05, 22.4, 0.8, 2.0, 'dust', -0.1, 0.62, 0.0045);
+  G.rubble(38.2, 23.4, 0.6, 7, 'gravel'); G.rubble(39.4, 20.4, 0.4, 5, 'gravel'); G.rubble(38.4, 24.6, 0.4, 5, 'gravel'); G.rubble(38.6, 9.6, 0.6, 6, 'gravel');
+  G.stain(37.5, 7.2, 2.4, 1.5, 'dust', 0.1, 0.78, 0.0035); G.stain(37.2, 7.1, 1.3, 0.9, 'dust', -0.3, 0.62, 0.0045);
+  G.stain(2.6, 18.7, 1.5, 2.6, 'dust', 0.05, 0.78, 0.0035); G.stain(2.8, 19.2, 0.9, 1.4, 'dust', -0.3, 0.62, 0.0045); G.stain(2.7, 17.5, 0.8, 0.6, 'dust', 0.4, 0.62, 0.0055);
+  G.rubble(0.8, 20.9, 0.5, 5, 'gravel'); G.rubble(1.3, 9.6, 0.6, 6, 'gravel');
+  G.stain(7.9, 2.5, 1.2, 2.9, 'dust', 0.04, 0.78, 0.0035); G.stain(8.05, 1.3, 0.8, 1.6, 'dust', -0.2, 0.62, 0.0045);
+  G.rubble(11.6, 1.5, 0.7, 6, 'gravel'); G.rubble(4.9, 1.7, 0.6, 6, 'gravel');
 }

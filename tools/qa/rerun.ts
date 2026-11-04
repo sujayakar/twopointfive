@@ -78,6 +78,7 @@ export async function rerun(F: ReplayFile, opts: { toN?: number; tol?: number; e
   const CL = await import(`${ROOT}/src/game/carlamps.ts`);   // (a tape from before a vehicle's lamps were light targets: the switch is read as the Game is built)
   const tables = () => { const src = { ...(rc.knobs?.tables ?? {}), ...(rc.tables ?? {}) } as Record<string, unknown>, into = rc.tables ? reg : J.knobTables() as Record<string, Record<string, unknown>>;
     for (const [name, Tb] of Object.entries(into)) { const t = src[name]; if (plain(t)) { if (rc.tables) put(Tb, t); else K.assignDeep(Tb, t); } }
+    if (!plain(src.POSEMATH)) (reg.POSEMATH as { singles: boolean }).singles = false;   // (a tape from before a pose's arithmetic had a rule: worked as it was — src/anim/skeleton.ts POSEMATH)
     if (!plain(src.EXACT)) (reg.EXACT as { on: boolean }).on = false;
     if (!plain(src.SENSE)) (reg.SENSE as { cpu: boolean }).cpu = false; if (!plain(src.CMDCHECK)) (reg.CMDCHECK as { on: boolean }).on = false; CL.carLampsTape(src); RD.roundTape(src); SH.shapesTape(src); };   // (a tape from before the game's own maths: the engine's functions, said before the level and the game are built — as the page's player does, src/replay/engineplay.ts tables())
   const Kt = await import(`${ROOT}/src/game/kit.ts`);
@@ -104,7 +105,7 @@ export async function rerun(F: ReplayFile, opts: { toN?: number; tol?: number; e
     if (loaded && stoodAs !== need && !rc.tables) warnings.push(`this process had already stood the harness as ${stoodAs} and the tape was made as ${want}, with no tables of its own on it: run it in a process of its own (replay-at.ts) to stand it right`);
     if (rc.levelFile) { try { level = await levelOf(rc.levelFile); } catch (e) { return out(`the replay's level file ${rc.levelFile} could not be loaded here: ${(e as Error).message}`); } }
     if (rc.seed === null) Math.random = mulberry32(0x7e9a);
-    W = await standUp({ seed: rc.seed, env: rc.env, ...(level ? { level } : {}) });
+    W = await standUp({ seed: rc.seed, env: rc.env, search: rc.search ?? '', ...(level ? { level } : {}) });   // (`search`: the run's own address says how many seats it has — src/game/seats.ts)
     g = W.game;
     { const fpo = levelFingerprint(g) as any, fp = typeof fpo === 'string' ? fpo : fpo?.fp; if (F.level.fp && fp !== F.level.fp && !opts.force) return out(`the replay was saved on another level than this checkout's (${F.level.file ?? 'the office'}: fingerprint ${F.level.fp} there, ${fp} here)${F.commit ? `. Check out ${F.commit} (git worktree add ../at-replay ${F.commit}) and run this there` : ''}; --force walks it anyway`); }
     knobsWere.push(knobShot()); J.applyKnobs(g, rc.knobs); knobsWere.push(knobShot()); tables(); J.applyEnvGame(g, rc.env);

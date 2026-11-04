@@ -3,7 +3,6 @@
 // die it displaced on `.sys`, and the systems that are NOT the simulation — the mixer's rate jitter and noise beds (audio/), the smoke solver's per-frame emitter
 // jitter (smoke/smoke.ts) — draw through sysRandom(): under a recording they leave the seeded stream to the game alone (a replay has no mixer or solver to draw),
 // while a plainly seeded Math.random (the capture recipes' determinism checklist, the harness) still reaches them exactly as it always did.
-
 /** mulberry32: a small, fast, seedable uniform [0, 1) generator */
 export function mulberry32(a: number): () => number { return () => { a |= 0; a = (a + 0x6D2B79F5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
 /** a die a rollback snapshot can hold (game/rollback.ts): its whole state is the word `dice`, on an object, and nothing is captured — `mulberry32(seed)` keeps the same
@@ -32,11 +31,25 @@ export function sysRandom(): number { const r = Math.random as SimDie; return (r
 // ONE RULE keeps every older tool and recipe working: a die of the game's own is used only while Math.random is still the function it was when that die was made. The
 // moment somebody puts a die of THEIR OWN in Math.random's place — a probe's seed, a capture recipe's, the session journal's recording die above, the civilians'
 // private construction die — the game draws theirs, as it always has, and goes back to its own when they put Math.random back.
-/** a game's own die: `s` = the mulberry32 word (the whole state), `n` = draws taken off it, `seed` = what it started from, `sys` = Math.random as it was when the die was made */
-export interface SimDice { s: number; n: number; seed: number; sys: () => number }
+/** a game's own die: `s` = the mulberry32 word (the whole state), `n` = draws taken off it, `seed` = what it started from, `sys` = Math.random as it was when the die was made.
+ *  WHERE THE WORD AND THE COUNT LIVE: in the two fields here — or in a `home` somebody gave the die (src/sim/dicehome.ts: while the row RUST.dice is on, the
+ *  game's block of the Rust module's memory, where a draw is rolled by rust/sim/src/dice.rs). `s` and `n` read and write whichever it is, so nobody who asks a
+ *  die where it stands has to know; and this file names no home, so the mixer and the menus that import it for sysRandom() bring none along. */
+export interface DiceHome { s: number; n: number; roll(): number }
+export class SimDice {
+  /** where the word and the count are while they are not `s0` and `n0` (null: they are) */
+  home: DiceHome | null = null;
+  s0: number; n0 = 0;
+  seed: number; sys: () => number;
+  constructor(seed: number) { this.s0 = seed | 0; this.seed = seed >>> 0; this.sys = Math.random; }
+  get s(): number { const h = this.home; return h ? h.s : this.s0; }
+  set s(v: number) { const h = this.home; if (h) h.s = v; else this.s0 = v | 0; }
+  get n(): number { const h = this.home; return h ? h.n : this.n0; }
+  set n(v: number) { const h = this.home; if (h) h.n = v; else this.n0 = v; }
+}
 let cur: SimDice | null = null;
 /** a die for a Game, at the start of `seed`'s stream (the same numbers mulberry32(seed) gives) */
-export function newDice(seed: number): SimDice { return { s: seed | 0, n: 0, seed: seed >>> 0, sys: Math.random }; }
+export function newDice(seed: number): SimDice { return new SimDice(seed); }
 /** make `d` the die simRandom() draws (null: none — Math.random); returns the one it replaced. Game.update's first statement, the stand-up and a load call it */
 export function useDice(d: SimDice | null): SimDice | null { const p = cur; cur = d; return p; }
 /** the die in use (null: the game draws Math.random) — false also while somebody else's die stands in Math.random's place */
@@ -44,5 +57,6 @@ export function diceInUse(): SimDice | null { return cur && Math.random === cur.
 /** a draw for the SIMULATION, uniform in [0, 1): the Game's own die when it has one, Math.random otherwise (see the rule above) */
 export function simRandom(): number {
   const d = cur; if (!d || Math.random !== d.sys) return Math.random();
-  d.n++; const a = d.s = (d.s + 0x6D2B79F5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  const h = d.home; if (h !== null) return h.roll();   // (the die is somewhere else — the game's block of the Rust module: rolled there, the same draw)
+  d.n0++; const a = d.s0 = (d.s0 + 0x6D2B79F5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
 }

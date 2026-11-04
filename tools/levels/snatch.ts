@@ -25,7 +25,7 @@ import { officeKit, type GeneratorTrace } from '../../src/scene/officeGen';
 import { gwotKit, gwotOfOffice, GWOT_PALETTE, GWOT_MATERIALS, GW_PART } from '../../src/scene/gwotKit';
 import { WORLD } from '../../src/scene/world';
 import { BoxFlag } from '../../src/scene/boxes';
-import { PANEL_GREY } from '../../src/scene/stuff';
+import { livedTail } from './livedKit';
 
 export const NAME = 'snatch';
 export const NOTES = 'The snatch: a house in a walled yard, eight men around one unarmed man to take alive; two doors of his wing lead to one back gate, and a dark hut with two men in it stands on that gate. Regenerate: bun run tools/levels/export.ts snatch';
@@ -149,7 +149,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
 
   // ---- the breaker (the main room's south wall, inside) and one emergency beacon: the game's blackout wants both ----
   grp('breaker');
-  const brk = add({ c: [13.4, 1.35, 17.84], h: [0.28, 0.36, 0.04], albedo: PANEL_GREY, name: 'breaker_panel' });
+  const brk = add({ c: [13.4, 1.35, 17.84], h: [0.28, 0.36, 0.04], albedo: [0.42, 0.44, 0.45], name: 'breaker_panel' });
   const brkLed = add({ c: [13.22, 1.62, 17.79], h: [0.015, 0.015, 0.01], albedo: P.plasticBlack, rough: 0.5, emissive: [0.3, 4, 0.6], flags: BoxFlag.NoShadow });
   grp('beacons');
   add({ c: [16, H - 0.06, 14.2], h: [0.07, 0.06, 0.07], albedo: [0.2, 0.2, 0.22], flags: BoxFlag.NoShadow | BoxFlag.NoPrimary });
@@ -167,6 +167,43 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
     { name: 'hut', hinge: [29.82, 6.6], closedDir: 0, width: 1.16, exterior: true, swing: -1 },
   ];
   for (const d of doors) doorFrame(d);
+
+  // ---- LIVED IN (src/scene/lived.ts: all of it goes with the switch off — group 'lived.<place>', props 'lived.<place>.<kind><n>'; LAST, after every kept thing) ----
+  // The rooms were furnished when the house was built. This is what the yards and the ground outside were short of: from above the ground is most of the
+  // picture, and the courtyard and the dust round the wall were each one sheet. What a household leaves on its ground: a water point with its mud, last
+  // night's fire by the bed the watch sleeps on, the generator's fuel and what it drips, a bike against the wall, the drip line under the washing, bricks
+  // fallen at a wall's foot, the stain where the yard's water runs out under the wall. Every piece is the kit's own, by name. Solids are few and stand
+  // against a wall or beside a kept thing, off every door's line and off his two ways to the back gate; everything in the back alley, on the track and
+  // outside the wall is paint on the ground or low enough to walk over, so the way he runs, the way he is led back to the van and the way the village
+  // guard comes in are as they were.
+  { const T = livedTail(K.props, grp), place = T.room;
+    place('courtyard');
+    G.hearth(27.9, 19.7, 0.3);                                                                // last night's fire, by the rope bed and the chair
+    G.patch(25.0, 21.3, 2.2, 1.5, 'damp', 0.25); G.patch(17.7, 18.75, 1.6, 0.9, 'damp', -0.15);   // what the fuel drums drip; slops thrown out beside the door
+    G.rubble(31.2, 19.7, 0.45, 6);                                                            // bricks fallen at the wall's foot (not under the south wall: the camera looks from the south, and a wall hides the two metres behind it)
+    place('washyard');
+    G.pump(10.0, 9.2, 0);                                                                     // the yard's water: a hand pump on its pad, its bucket, the mud round it
+    G.patch(8.7, 12.5, 1.0, 3.2, 'damp', 0.03);                                                // the drip line under the washing
+    G.motorbike(7.55, 16.9, HALF); G.rubble(7.95, 14.9, 0.45, 5);                                // a bike against the yard wall (no lamp stands behind that wall: bare metal by a lit room's wall shows the lamp through it)
+    G.rubble(10.4, 16.5, 0.5, 7, 'poplar');                                                   // chips where the wood is split
+    place('alley');
+    G.patch(23.3, 6.15, 1.7, 1.0, 'damp', 0.12);                                               // the tank's tap
+    G.rubble(17.9, 4.2, 0.6, 7); G.rubble(12.4, 5.9, 0.6, 5, 'block');
+    place('sideyard');
+    G.jerryCan(31.3, 14.9, 1.2); G.jerryCan(30.95, 14.55, 0.3, 'jerryYellow');                  // the generator's fuel
+    G.patch(30.45, 16.3, 1.7, 1.9, 'damp', 0.2);                                                // and what it drips
+    G.rubble(30.9, 11.6, 0.45, 6);
+    place('track');
+    G.ruts(14.7, 26.95, 12.9, 26.55);                                                          // where the van was backed off the track
+    G.rubble(19.6, 26.9, 0.5, 5, 'block'); G.rubble(19.5, 24.3, 0.45, 5); G.rubble(13.3, 23.75, 0.3, 4);   // stones turned out of the track's edge
+    G.seep(22.2, 23.74, 29.4, 23.72); G.seep(7.6, 23.72, 10.2, 23.74);                         // where the yard drains out under the wall
+    G.rubble(23.0, 27.0, 0.5, 5); G.rubble(28.8, 26.8, 0.6, 6, 'block');                         // (stones, not more scrub: alone on open ground the kit's bush reads as a green box)
+    place('outside');
+    G.seep(32.74, 10.0, 32.72, 18.6); G.seep(6.26, 8.2, 6.28, 15.8);
+    G.rubble(33.2, 19.8, 0.6, 6); G.rubble(5.5, 16.2, 0.6, 5, 'block');   // (nothing along the north wall's far side: the wall hides it)
+    G.rubble(36.4, 14.2, 0.6, 5); G.rubble(3.6, 12.4, 0.6, 5);
+    T.done();
+  }
 
   // the rooms' floors inside their walls
   const MAIN: Rect = { x0: 12.12, x1: 19.94, z0: 13.06, z1: 17.88 }, KITCHEN: Rect = { x0: 20.06, x1: 25.88, z0: 13.06, z1: 17.88 };

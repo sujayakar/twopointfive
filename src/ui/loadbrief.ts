@@ -11,7 +11,9 @@
 // the map vs. the (kinda low res) level art"), and ONE block, START, which fills as the boot goes and is live when the level can start. Nothing here is a new sentence: every word is the list's.
 //   · IT STAYS UNTIL IT IS STARTED: a click on the block, Enter or Space. The world is stood up and held still behind it (main.ts: one term of the loop's
 //     `frozen`, as under the pause card), so the run's first tick is the player's.
-//   · IT NEVER ADDS WAIT: a press made while the page still boots is kept (the block sits pressed in) and the level starts the moment it can.
+//   · A PRESS IS NEVER LOST: one made while the page still boots is kept (the block sits pressed in) and the level starts the moment the block is live.
+//     Live is when the level stands AND its picture is ready behind the brief (ui/settle.ts, 10-28: every shader in, the first frames drawn, auto quality's
+//     pick made; `hold` below is the stretch between the two, the world still and the block filling). `?settle=0` = live the moment the level stands.
 //   · THE CONTROLS are where they are from every other screen, Options ▸ Controls (ui/options.ts), one quiet word away; BACK (Esc) is the mission list.
 //   · NOT FOR A PAGE NOBODY SITS AT: main.ts makes none under ?paused, a replay's tape, ?kitview's window or a benchmark's scene, and drops it unstarted once
 //     any script drives the page; the headless harness never comes through main.ts at all.
@@ -53,11 +55,14 @@ export interface LoadBrief {
   /** the level can start: the block is live — and if it was pressed meanwhile (and the player is not reading Options over it), the run starts now.
    *  `onStart` runs once, as the brief goes; a throw from it is logged, never the caller's */
   live(onStart?: () => void): void;
+  /** the level stands and its picture is still being made ready behind the brief (main.ts, ui/settle.ts): the world is held still as under a live brief, the
+   *  block is NOT live and takes the boot's status line still; a press is kept, as while the page boots. `live` ends it */
+  hold(): void;
   /** gone, unstarted (a page a script drives; a mission whose start was refused): no `onStart` */
   off(): void;
   /** up on the page */
   readonly up: boolean;
-  /** live and not yet started: the world behind it is held still */
+  /** live or holding, and not yet started: the world behind it is held still */
   readonly held: boolean;
   readonly words: BriefWords;
 }
@@ -156,7 +161,7 @@ export function loadBrief(search: string = typeof location !== 'undefined' ? loc
   const pic = el('div', 'bpic'); root.appendChild(pic);
   host.appendChild(root); root.classList.add('on');
 
-  let up = true, live = false, armed = false, onStart: (() => void) | undefined;
+  let up = true, live = false, holding = false, armed = false, onStart: (() => void) | undefined;
   // THE MAP, drawn at the size the screen shows it (a canvas in a text size layer is drawn in the screen's own pixels, or it is stretched: ui/textsize.ts)
   // and again when the window or the text size changes; none where the level's file did not come (the words alone).
   const map = el('canvas') as HTMLCanvasElement; pic.appendChild(map);
@@ -172,7 +177,7 @@ export function loadBrief(search: string = typeof location !== 'undefined' ? loc
   window.addEventListener('resize', resized); window.addEventListener(TEXT_EVENT, resized);
   setTimeout(drawMap, 0);
 
-  const gone = () => { up = false; live = false; window.removeEventListener('keydown', onKey, true); window.removeEventListener('resize', resized); window.removeEventListener(TEXT_EVENT, resized); };
+  const gone = () => { up = false; live = false; holding = false; window.removeEventListener('keydown', onKey, true); window.removeEventListener('resize', resized); window.removeEventListener(TEXT_EVENT, resized); };
   const start = () => {
     if (!up) return;
     if (!live) { arm(!armed); return; }   // (pressed while the page still boots: kept — live() starts it; pressed again: taken back)
@@ -209,10 +214,11 @@ export function loadBrief(search: string = typeof location !== 'undefined' ? loc
 
   return {
     status(text: string) { if (!up || live) return; words.textContent = text; const n = /(\d+) \/ (\d+)/.exec(text); if (fill.style) fill.style.width = n && +n[2] > 0 ? `${Math.min(100, Math.round(100 * +n[1] / +n[2]))}%` : /ready|setting up/.test(text) ? '100%' : '0'; },
-    live(run?: () => void) { if (!up || live) return; live = true; onStart = run; root.classList.add('live'); go.removeAttribute('aria-busy'); words.textContent = ''; if (armed && !optionsOpen()) start(); else arm(false); },
+    hold() { if (up && !live) holding = true; },
+    live(run?: () => void) { if (!up || live) return; live = true; holding = false; onStart = run; root.classList.add('live'); go.removeAttribute('aria-busy'); words.textContent = ''; if (armed && !optionsOpen()) start(); else arm(false); },
     off() { if (!up) return; gone(); closeOptions(); root.remove(); map.width = map.height = 0; },
     get up() { return up; },
-    get held() { return up && live; },
+    get held() { return up && (live || holding); },
     words: W,
   };
 }

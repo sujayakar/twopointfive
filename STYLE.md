@@ -5,18 +5,16 @@ Where a rule has a number, the number is in the code and the file is named.
 
 ![The office at night: the squad of four, weapon lights on](public/assets/menu/room-clear-four.jpg)
 
-**Plain boxes under real light.** The world is plain shapes, each in one paint and made of one
-material. Everything that moves in the picture (soft shadow edges, colour bleeding off a wall, a beam
-hanging in dust, smoke rolling under a lamp) comes from something physical going on, never from a
-painted surface. A material gives a surface its grain and its relief, and the light on it is still
-the room's.
+**Flat-coloured boxes under real light.** The world is plain shapes in plain paint. Everything fine
+in the picture (soft shadow edges, colour bleeding off a wall, a beam hanging in dust, smoke rolling
+under a lamp) comes from something physical going on, never from a painted surface.
 
 The pictures in this file are mission-card key art: frames of the real game, taken closer and lower
 than the camera you play from.
 
 ## The rules in short
 
-1. **Boxes, one paint and one material each.** Levels are boxes. A box has one paint and one finish, and the paint says what it is made of. Its material adds grain and relief for the light to catch. No photographs, no gradients, no baked light or shadow.
+1. **Boxes and flat colour.** Levels are boxes, one colour and one finish per box. No image textures, no gradients, no baked light or shadow.
 2. **Light is the detail.** All light is computed live. If it glows it lights the room; if it lights the room you can point at where it comes from.
 3. **Dark is the default.** A quiet night is mostly near-black with a few pools of light, each with a shape its source explains. A fight brings its own light: weapon lights, flashes, lit smoke.
 4. **One model.** What the picture shows is what the men see and hear. Nothing is drawn that the simulation does not have, and the other way round.
@@ -78,21 +76,13 @@ Rules both palettes keep:
 
 ## Surfaces
 
-- **A paint, a finish and a material.** The paint is the colour, and it says what the thing is made of. The finish is how it takes a highlight: polished stone, lino and brushed metal are glossy; wood is satin; walls, carpet and earth are matte. The office's polished floors mirror the room where the quality tier traces reflections; the 2010s look keeps its ground matte.
-- **A material is a map the game makes itself.** Mud wall, plaster, block, earth, gravel, a concrete slab, wood, sheet metal, cloth, bare metal and painted metal each have a tiling map of grain, relief, finish and hollows, and a mud wall has field stone and mud brick under its render. The maps are written in code and built when the page boots. No image file ships and nothing is downloaded. This walks back the old rule of no textures at all; what a map may do is the rule now:
-  - **It varies the paint and never moves it.** Over a tile a map is exactly as bright as its paint, and the shade in its hollows is paid for by its high places. The level still chooses every value, and the light a wall bounces is still its paint's.
-  - **It carries no light.** Relief is lit live by the lamps in the room. A map has no shadow, no highlight and no gradient of its own.
-  - **It shows how the thing was made and used:** the daubs of a hand, courses, boards, a weave, rust where water sat. Big, specific features beat fine noise. If it reads as noise from the play camera, it is wrong.
-  - **It tiles without a seam,** and on a big face the repeat is broken up.
-  - **It never carries words, pictures or signs.** Markings do that.
-  - **It belongs to the box.** What a box is made of is told once, from its own paint, and a thing that moves carries its map with it.
-  - The maps are drawn on the look page (`/look`) today. The game page draws the same boxes in flat paint until they are landed there.
+- **A finish per paint, not a texture.** Polished stone, lino and brushed metal are glossy; wood is satin; walls, carpet and earth are matte. The office's polished floors mirror the room where the quality tier traces reflections; the 2010s look keeps its ground matte.
 - **Markings** are the one drawn thing: tiny palette bitmaps on a box face, on a 2.5 cm grid, at most three flat colours. They exist so an object reads as what it is: a vent's slats, a keypad, a crate's bands. Contrast reads at 21 m, hue does not, so they are bars and blocks. A door, a floor row or a range line may carry blocky digits or a letter; nothing spells a word.
 - **Wear you can explain.** A darker path where people walk, grime at the skirting, bare metal on edges, damp at the foot of an outside wall, oil under an engine. Wear is the surface's own colour darker, and it also leads the eye to the doors.
 - **Marks made in play** (bullet holes, scorch, scuffs, wet boot prints, cracked glass) change the surface the lights hit, so they catch light as the wall does.
 - **Small things that matter are geometry.** Sheets on a desk are thin boxes, not a picture of paper on the desk.
 
-Files: `src/scene/markings.ts`, `src/render/shaders/detail.wgsl`, `src/render/decals.ts`; the maps: `src/render/lookTex.ts`, `src/render/shaders/look.wgsl`, held by `tools/qa/lookmaps-check.ts`.
+Files: `src/scene/markings.ts`, `src/render/shaders/detail.wgsl`, `src/render/decals.ts`.
 
 ## Places
 
@@ -188,7 +178,7 @@ explain itself, the screen is wrong.
 
 Each of these was tried or asked about and turned down; do not bring one back without a new reason.
 
-- Photographs or downloaded textures on surfaces, fine noise standing in for a material, gradients, baked light or shadow.
+- Image textures on surfaces, painted noise, gradients, baked shadows.
 - Fake versions of physical things: dust motes that spawn in a torch cone, gun smoke as particles.
 - Enemy laser sights; goggles that glow; a dollhouse wall cut-away.
 - Player-facing switches for art constants. The look is decided here, not on a settings page.
@@ -196,7 +186,7 @@ Each of these was tried or asked about and turned down; do not bring one back wi
 ## Holding new work to it
 
 - Judge it from the play camera, in level lighting. Then crop small tiles around shadow edges and light pools and look again at 3–4×: "looks fine downscaled" has been wrong repeatedly.
-- Ask where the detail comes from. Grain and relief come from the material, and shape comes from the room's light on it. If the answer is "the light is painted on" or "it is a picture of somewhere else", it is not the look.
+- Ask where the detail comes from. If the answer is "it is painted on", it is not the look.
 - Ask where the light comes from. If nothing in the room explains it, it is not the look.
 - Ask what the men in the game make of it. If they cannot see what the player sees, fix the model, not the picture.
 - A new place needs a use, an accent or a floor of its own, and rooms that pass the six.

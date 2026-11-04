@@ -39,7 +39,7 @@ import { officeKit, normalize3 as norm, type GeneratorTrace } from '../../src/sc
 import { gwotKit, gwotOfOffice, GWOT_PALETTE, GWOT_MATERIALS, GW_SHELL } from '../../src/scene/gwotKit';
 import { WORLD } from '../../src/scene/world';
 import { BoxFlag } from '../../src/scene/boxes';
-import { PANEL_GREY } from '../../src/scene/stuff';
+import { livedTail } from './livedKit';
 
 export const NAME = 'tut-queue';
 export const NOTES = 'The tutorial\'s fourth mission: a walled post taken on the ground with the squad of four, by Shift with the command key (a part of the squad takes the new order) and the word. Two doors at once, a gun turned to the wrong door, two gates covered. Regenerate: bun run tools/levels/export.ts tut-queue';
@@ -89,7 +89,7 @@ export function build() {
 
   // the mains breaker (on the yard's south wall) and one emergency beacon: the game's blackout wants both
   grp('breaker');
-  const brk = add({ c: [16.0, 1.35, 22.84], h: [0.28, 0.36, 0.04], albedo: PANEL_GREY, name: 'breaker_panel' });
+  const brk = add({ c: [16.0, 1.35, 22.84], h: [0.28, 0.36, 0.04], albedo: [0.42, 0.44, 0.45], name: 'breaker_panel' });
   const led = add({ c: [15.82, 1.62, 22.79], h: [0.015, 0.015, 0.015], albedo: P.plasticBlack, rough: 0.5, emissive: [0.3, 4, 0.6], flags: BoxFlag.NoShadow });
   const breaker: Level['breaker'] = { pos: [16.0, 1.35, 22.7], boxes: [brk, led] };
   grp('beacons');
@@ -221,7 +221,9 @@ export function build() {
     title: 'The relay post, in pairs',
     // (the squad's wheel is one ring here, as on the missions before this one, and holds only the orders this mission gives: a tap's own — move, stack, go, fall in — and a spot to watch.
     //  The list is the tap's too: an order off it is not given by the key either)
-    rails: { allow: ['move', 'sprint', 'crouch', 'aim', 'fire', 'reload', 'order', 'camera', 'zoom'], respawn: 5, lasers: false, flatRing: true, orders: ['move', 'stack', 'go', 'cover', 'fallIn'] },
+    // (`rows`: the interaction key is never his in this mission, and with a list no row is drawn while that key is locked. Without one the corner of the
+    //  screen offered a door's row at every door and "throw it — kill the lights" at the breaker box, for a key that did nothing)
+    rails: { allow: ['move', 'sprint', 'crouch', 'aim', 'fire', 'reload', 'order', 'camera', 'zoom'], respawn: 5, lasers: false, flatRing: true, orders: ['move', 'stack', 'go', 'cover', 'fallIn'], rows: ['push', 'pull'] },
     steps: [
       // 1 · TWO DOORS, ONE WORD: the key on one door is everybody's, as he knows it; Shift with the key on the other door parts a pair off to it; the
       // word sends every stack that waits
@@ -241,12 +243,13 @@ export function build() {
         done: or(stacks(['hall', 'hall_back'], { set: true }), taken('hall')), at: D_BACK, eye: HALL_EYE },
       // (the cue says a stack stands on EACH door: from here whichever leaf moves first, the gun is on the wrong one — levels/tut-queue.script.ts)
       { id: 'word2', line: 'Press [F] to send them in through both doors', done: taken('hall'), at: [28.4, 1, 16.0], eye: HALL_EYE, cue: 'breach', allow: ['word'] },
-      // 3 · A SPOT TO WATCH: more come by two gates at once. He calls the four to him (men he has called are on nothing: the first spot is everybody's,
-      // the second parts a pair off it) and walks them out between the bags and the barrier; Shift with the key by a gate turns them to it
-      { id: 'call', line: 'Press [B] on yourself to call your squad back to you', explain: { quiet: true, title: 'Cover two gates', text: "More enemies are on the way, and they'll come through the road gate and the back gate at the same time.\nHold [Shift] and press [B] on a spot, and your squad will turn to watch it from where they stand." },
+      // 3 · A SPOT TO WATCH: more come by two gates at once. He calls the four to him (men he has called are on nothing: on the page, where the first goal
+      // is half the squad's, the first spot takes the nearer pair and the second the other; with that rule off the first spot is everybody's and the
+      // second parts a pair off it) and walks them out between the bags and the barrier; Shift with the key by a gate turns them to it
+      { id: 'call', line: 'Press [B] on yourself to call your squad back to you', explain: { quiet: true, title: 'Cover two gates', text: "More enemies are on the way, and they'll come through the road gate and the back gate at the same time.\nHold [Shift] and press [B] on a spot, and two of them will turn to watch it from where they stand." },
         done: or({ is: 'following' }, watch(WATCH_E, 1), taken('road'), taken('lane')), checkpoint: 'the gates' },
       { id: 'yard', line: "Walk out to the marked spot in the yard, and they'll follow you", done: or(near(SPOT_YARD), watch(WATCH_E, 1), taken('road'), taken('lane')), at: SPOT_YARD },
-      { id: 'gateA', line: 'Hold [Shift] and press [B] on the marked spot by the road gate to have your squad watch it', done: or(watch(WATCH_E, 2), taken('road')), at: WATCH_E },
+      { id: 'gateA', line: 'Hold [Shift] and press [B] on the marked spot by the road gate to have two of them watch it', done: or(watch(WATCH_E, 2), taken('road')), at: WATCH_E },
       // (the same goal by the wheel: Shift and the key KEPT DOWN open it for the part of the squad a tap would have sent, and the wedge picked is theirs alone.
       //  A tap on this step gives nothing and says to keep the keys down — rails.ts `noTap`, which the tap with Shift asks too: orders.ts tapGive.
       //  THE KEY KEPT DOWN WITH NO SHIFT is the wheel he learnt a mission ago, for everyone, and its second wedge turns all four to this gate with nobody
@@ -268,6 +271,38 @@ export function build() {
   for (const t of lesson.steps) if (AFTER[t.id]) t.after = AFTER[t.id];
 
   for (const d of doors) doorFrame(d);
+
+  // ---- LIVED IN (src/scene/lived.ts: all of it goes with the switch off — group 'lived.<place>', props 'lived.<place>.<kind><n>'; LAST, after every kept thing) ----
+  // THE GROUND OUTSIDE THE WALL. The yard was furnished as it was built; the plain round it was one sheet of dust but for the two checkpoints, and the mission
+  // opens beside the track gate with about a quarter of its picture on that sheet, in the last light. The track gate gets what the other two gates have, a
+  // checkpoint, here one the post has stopped manning: whitewashed stones down both sides of the way in, its two barriers dragged off the track to let
+  // trucks by, a drum each side where a truck stops, the cold fire the sentry sat at with his seat, his box and his water, a stack of tyres. Past the
+  // south wall, behind the hall, is where the post leaves what it has no room for: blocks, split wood, tyres. Field stones wherever nobody clears.
+  // Every piece is the kit's, by name; each stands in the low sun and throws its shadow toward the wall.
+  // WHERE: on the ground the view at rest shows from the lesson's own spots (the start for the track gate; the spot behind the hall for the south; the
+  // spot in the yard for the north). Past the west wall that is a wedge: the picture's left edge crosses the plain from about x 2.7 at z 7.5 to x 0.6
+  // at z 17, and its foot is near z 18.
+  // KEPT CLEAR: everything a man cannot step over is two metres and more from the wall's outer face (a wall charge's place is never taken, and nothing
+  // leans on a gate); what lies nearer is stones and a hearth, stepped over. Nothing on the track's gravel, nothing in the two rooms the men who come
+  // wait in (the lane, the road). Nobody of either side walks out here: no step, mark or aim line of the lesson is past the wall on these sides.
+  // No lamp is added: the light out here is the hour's.
+  { const L = livedTail(K.props, grp);
+    L.room('track');      // outside the track gate, west: the left of the opening picture
+    G.kerbStones(0.4, 12.45, 3.9, 12.45); G.kerbStones(0.4, 15.55, 3.9, 15.55);       // the way in, lined as a checkpoint lines it (the last stone a metre short of the wall: clear of the gate's leaf whichever way it swings)
+    G.jersey(1.5, 11.25, 1, 0.16); G.jersey(1.75, 17.0, 1, -0.3);                     // the chicane's two barriers, one dragged to each verge
+    G.drum(2.45, 12.0, 'drumRed'); G.drum(2.45, 16.0, 'drumRed');                     // a drum each side of the way, where a truck stops
+    G.hearth(3.3, 9.9, 0.3, 'dust'); G.plasticChair(2.55, 10.35, -1.03);                      // the sentry's fire, cold, and his seat turned to it
+    G.crates(2.2, 9.6, 0.4, 1); G.jerryCan(2.6, 8.85, 0.4, 'plasticBlue');            // his box, his water
+    G.tyres(1.0, 16.0, 3);
+    G.rubble(3.4, 7.4, 0.7, 6); G.rubble(3.3, 16.6, 0.5, 5);
+    L.room('south');      // past the south wall, behind the hall: what the post has no room for
+    G.woodPile(32.6, 25.65, 0.2, 1.6); G.tyres(34.2, 25.5, 2); G.blocks(35.6, 25.5, 0.3, 2);
+    G.rubble(30.9, 25.3, 0.5, 5); G.rubble(36.9, 26.2, 0.7, 6);
+    L.room('north');      // the plain east of the lane's checkpoint, which the yard's north-east corner looks out on
+    G.blocks(30.4, 2.1, -0.2, 2); G.rubble(32.8, 2.4, 0.8, 7); G.rubble(29.0, 1.2, 0.6, 5);
+    L.done();
+  }
+
   const level: Level = {
     boxes: K.boxes, props: K.props, lights, switchables, doors, devices: [],
     breaker, beacons: [{ pos: [10.3, 2.05, 5.3], box: dome }],

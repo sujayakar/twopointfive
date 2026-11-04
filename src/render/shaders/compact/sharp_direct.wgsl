@@ -102,27 +102,23 @@ fn main(@builtin(workgroup_id) wid: vec3u, @builtin(local_invocation_index) lidx
   var E0 = vec3f(0.0); var E1 = vec3f(0.0);
   var topW = array<f32, 2>(0.0, 0.0); var topI = array<i32, 2>(-1, -1); var topE = array<vec3f, 2>(vec3f(0.0), vec3f(0.0));   // the strongest reaching light per class at this pixel (the edge / sliver ray's candidate)
   var N = vec3f(0.0, 1.0, 0.0);
-  var Nl = N; var look = false; var Us0 = vec3f(0.0); var Us1 = vec3f(0.0);   // THE LOOK PROTOTYPE (below)
   var code = 0u;                                             // SLIVERS: the fallback code that rides out in outE0.a (header)
   var wantsRays = false;                                     // a sliver under rule 1 with a live light to decide (voted into the tile's ballot below)
   var edgeWant = 0u;                                         // edge rays: the hard-edge bits of the classes whose strongest emitter a centre ray decides (traced with the sliver rays below: ONE shadowSample call for both — DXC inlines each call it meets)
   var remR = vec2f(1.0);                                     // rule 1: the ratio the class's REMAINDER (everything but the rayed light) rides on, per class
   if (live) {
     N = normalize(textureLoad(oNormal, gxy, 0).xyz * 2.0 - 1.0);
-    Nl = N; look = LOOK && textureLoad(oNormal, gxy, 0).a < 0.17;            // THE LOOK PROTOTYPE (look.wgsl): a tilted normal. Everything below runs on the box's own FACE as it always did; the relief only re-weighs each class's light at the end (Us ∕ U)
-    if (look) { N = lookGeoN(Nl, textureLoad(oId, gxy, 0).x); }
     // ---- U per class at THIS output pixel: the estimators' scoring loop (same order, same early-outs; walled-off lights stay in U here as there) ----
     for (var s = 0u; s < nIter; s++) {
       var i = s; if (tileCull) { i = wgList[s]; }
       let li = wgLights[i];
-      let ev = evalLightDirect(li, P, N);
+      let ev = evalLight(li, P, N);
       if (!ev.ok) { continue; }
       let w = luminance(ev.E);
-      if (w < 1e-4 * lampFloorK()) { continue; }
+      if (w < 1e-4) { continue; }
       let c = select(0u, 1u, lightBroad(li));
       if (c == 1u) { U1 += ev.E; } else { U0 += ev.E; }
       if (lightReachLevel(i, P) == 0u) { if (c == 1u) { Uw1 += ev.E; } else { Uw0 += ev.E; } continue; }   // walled off from this cell: known dark — in U, never the ray's target
-      if (look) { let es = evalLightDirect(li, P, Nl); if (c == 1u) { Us1 += es.E; } else { Us0 += es.E; } }   // (THE LOOK PROTOTYPE: the lights that reach this cell, scored again on the tilted normal)
       if (w > topW[c]) { topW[c] = w; topI[c] = i32(i); topE[c] = ev.E; }
     }
     // ---- the visibility ratio from the internal estimate: joint-bilateral over the 2×2 internal texels round this pixel (a 4×4 search if none of them lies on this surface) ----
@@ -181,18 +177,10 @@ fn main(@builtin(workgroup_id) wid: vec3u, @builtin(local_invocation_index) lidx
     } else {
       let sr0 = sharpRatio(accS0 * iw, accU0 * iw, U0); let sr1 = sharpRatio(accS1 * iw, accU1 * iw, U1);
       E0 = U0 * sr0.xyz; E1 = U1 * sr1.xyz;
-      let hiR = select(1.0, 4.0, (frame.flags & (FLAG_RESTIR | FLAG_TAIL_CHROMA)) != 0u);
       if (occlFit) {   // HIDDEN LIGHT: where the taps' U differs and their S does not follow it, what differs is light the surface does not see — S is carried across, not the ratio
+        let hiR = select(1.0, 4.0, (frame.flags & (FLAG_RESTIR | FLAG_TAIL_CHROMA)) != 0u);
         E0 = mix(min(accS0 * iw, U0 * hiR), E0, fitSlope(fit0)); E1 = mix(min(accS1 * iw, U1 * hiR), E1, fitSlope(fit1));
       }
-      // NEVER MORE THAN THE LIGHTS THAT REACH THIS CELL SEND UNSHADOWED (the maintainer on his GPU, 11-02, midday, a bulb-lit room: white beads strung along the
-      // edges of the men's sleeves, pouches and straps and of chairs and drums, the size of a pixel at any zoom, gone in every debug view, which turn this pass
-      // off, and "it subsides a lot once i shoot out the one light in the room"). A walled-off light stays in U here as in the taps, so the ratio carries
-      // across wherever pixel and taps hold the same lights. They do not along a walled-off light's terminator on anything round or in relief: the pixel
-      // faces it and its taps face away, their ratio is the room's lamp's, and U × r̂ draws that light at the lamp's visibility. By night it is another lamp
-      // behind a wall and the error is a lamp's; by day it is the sun through the roof, thousands of times the lamp. A walled-off light is dark by proof,
-      // as the edge rays and the slivers already take it, so the class is bounded by its live lights' unshadowed sum (× the ratio's own most).
-      E0 = min(E0, max(U0 - Uw0, vec3f(0.0)) * hiR); E1 = min(E1, max(U1 - Uw1, vec3f(0.0)) * hiR);
       if (sr0.w > 0.0 || sr1.w > 0.0) { code |= 8u; }         // (a class read 'unshadowed' for want of any tap holding its light — counted, not changed)
       // ---- edge rays: a hard shadow edge of a class between the taps → its strongest emitter decided by ONE centre ray from this output pixel ----
       if (EDGE_RAYS && edgeBits != 0u) { edgeWant = edgeBits; }   // (its rays: below, after the tile's ballot — nothing between reads E0 / E1)
@@ -240,7 +228,6 @@ fn main(@builtin(workgroup_id) wid: vec3u, @builtin(local_invocation_index) lidx
     }
   }
   { let ou = 0.25 * max(luminance(U0 + U1 - Uw0 - Uw1), 1e-4); if (overturn < -ou) { code |= 16u; } else if (overturn > ou) { code |= 32u; } }   // census bits: 16 = the ray found DARK what the neighbours would have lent lit (a leak under rule 0), 32 = the reverse
-  if (look) { E0 *= clamp(Us0 / max(U0 - Uw0, vec3f(1e-5)), vec3f(0.0), vec3f(4.0)); E1 *= clamp(Us1 / max(U1 - Uw1, vec3f(1e-5)), vec3f(0.0), vec3f(4.0)); }   // THE LOOK PROTOTYPE: each class's light as the relief takes it, over as the face took it (the live lights' sums)
   if (sliverPaint == 1u && (code & 3u) != 0u) { E0 = select(vec3f(5.0, 5.0, 0.0), vec3f(6.0, 0.0, 6.0), (code & 3u) == 2u); E1 = vec3f(0.0); }   // paint 1: slivers magenta, ring-only pixels yellow
   if (sliverPaint == 2u && (code & 48u) != 0u) { E0 = select(vec3f(0.0, 5.0, 6.0), vec3f(7.0, 0.0, 0.0), (code & 16u) != 0u); E1 = vec3f(0.0); }   // paint 2: red = the ray found DARK what the neighbours lent lit (a leak the old rule drew), cyan = the reverse
   if (onScreen) {

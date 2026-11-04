@@ -22,7 +22,6 @@ import { officeKit, normalize3 as norm, type GeneratorTrace } from '../../src/sc
 import { gwotKit, gwotOfOffice, GWOT_PALETTE, GWOT_MATERIALS, GW_SHELL } from '../../src/scene/gwotKit';
 import { WORLD } from '../../src/scene/world';
 import { BoxFlag } from '../../src/scene/boxes';
-import { PANEL_GREY } from '../../src/scene/stuff';
 
 /** every lesson level exports this as its MATERIALS (tools/levels/export.ts writes the kit's palette into the file) */
 export const TRAIN_MATERIALS = GWOT_MATERIALS;
@@ -67,7 +66,7 @@ export function trainGround() {
   const breakerAt = (x: number, z: number, out: 'n' | 's' | 'e' | 'w', fumble?: number) => {
     grp('breaker');
     const alongX = out === 'n' || out === 's', s = out === 's' || out === 'e' ? 1 : -1;
-    const brk = add({ c: [x, 1.35, z], h: alongX ? [0.28, 0.36, 0.04] : [0.04, 0.36, 0.28], albedo: PANEL_GREY, name: 'breaker_panel' });
+    const brk = add({ c: [x, 1.35, z], h: alongX ? [0.28, 0.36, 0.04] : [0.04, 0.36, 0.28], albedo: [0.42, 0.44, 0.45], name: 'breaker_panel' });
     const led = add({ c: alongX ? [x - 0.18, 1.62, z + s * 0.05] : [x + s * 0.05, 1.62, z - 0.18], h: [0.015, 0.015, 0.015], albedo: P.plasticBlack, rough: 0.5, emissive: [0.3, 4, 0.6], flags: BoxFlag.NoShadow });
     breaker = { pos: alongX ? [x, 1.35, z + s * 0.14] : [x + s * 0.14, 1.35, z], boxes: [brk, led], ...(fumble !== undefined ? { fumble } : {}) };
   };

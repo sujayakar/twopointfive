@@ -4,7 +4,6 @@ import { Engine } from '../engine';
 import { defaultRcConfig, type RcConfig } from '../render/rc';
 import type { SmokeSystem } from '../smoke/smoke';
 import { laterProgress } from '../gpu/device';
-import { smokeLookStep } from '../render/smokeLook';
 
 export type QualityName = 'ultra' | 'high' | 'medium' | 'low' | 'verylow';
 export const QUALITY_NAMES: QualityName[] = ['ultra', 'high', 'medium', 'low', 'verylow'];
@@ -106,8 +105,9 @@ export const SHED = { holdSecs: 60, seenCap: 3, backSecs: 900 };
 /** STANDS IN (gpu/device.ts laterProgress: above 0 while a program asked for through the later lane is still compiling, its pass drawing the old way meanwhile). Such a
  *  frame's times are not the settings' own, and a step just taken whose program has not landed has changed nothing yet: a ladder that judged it would see no gain and step
  *  again. So while the count is up sample() drops its window and moves none of its clocks — the ladder neither judges its last step nor takes another. `maxSecs`: no longer
- *  than this in one wait (a compile that slow, or a set that long, must not leave a page with no ladder at all); `Quality.standsInFor` says how long it has waited. With no
- *  row that asks through that lane the count is never above 0 and none of this runs. */
+ *  than this in one wait (a compile that slow, or a set that long, must not leave a page with no ladder at all); `Quality.standsInFor` says how long it has waited. The boot
+ *  calibration waits the same way and no longer (calibrateTick: past `maxSecs` it measures the picture as it is, `early`, and measures once more when the set is in). With the
+ *  row 'Start on first frame shaders' off the count is never above 0 and none of this runs. */
 export const STANDS_IN = { maxSecs: 30 };
 /** THE SAME CHECK UNDER AN AIM (settings.ladderHeld, default on, `?ladderheld=0`; off = an aim as it was: `holdBound` alone decides, and every line below is skipped). An aim stepped a
  *  held page down on the union's SIZE alone (two windows over the back-off band; over its budget, by rate) and gave the pixels back only with the union priced under `restore` of that
@@ -427,8 +427,27 @@ const clamp01 = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(hi,
  *  even while it renders, which would keep calibration from ever running under test */
 const pageHidden = () => document.hidden && !window.__testVisible;
 
+/** `?adapt=0` (or off / false) ON THE ADDRESS: THE VISIT OPENS WITH NOTHING ADAPTING. The row 'Hold frame rate' is off, and where the address names no tier,
+ *  the tier the page stands on is held as `?quality=` would hold it (Quality.visit below): the ladder makes no move at all (sample() returns on its second
+ *  line, and no calibration runs). The row alone was not enough: under auto with the row off the size is left alone but sharp direct is still shed, the tier
+ *  is still given up, and auto resumes the size the last visit ended at, so two runs asked for 'with nothing adapting' could still draw different pictures.
+ *  WHAT IT IS FOR: two runs of a benchmark that draw the same pixels, so that their GPU milliseconds can be held against each other; with the ladder on, a
+ *  heavier picture is paid for in resolution and the two runs read alike. NAME THE TIER TOO (`?quality=high&adapt=0`) wherever two machines, or two days,
+ *  are to be compared: with none named it is the tier this browser's auto last stood on (High on a browser that never ran auto), at that tier's own start
+ *  size, NOT MEASURED for this machine since no calibration runs; a benchmark's card says so (ui/bench.ts SIZE_UNNAMED). LIKE EVERY WORD OF THE ADDRESS it is
+ *  how the visit opens, not a lock: a tier or 'Auto' picked in Options afterwards is the player's own, and Reset puts the defaults back under the address's
+ *  words (ui/options.ts). Nothing is written as the machine's choice. WITH THE LADDER OFF THE PAGE HAS NO FRAME RATE TO HOLD, so outside a benchmark the even
+ *  pace has no target either and the page draws every frame the display offers (main.ts hands the pacer the ladder's target only while the ladder is on): a
+ *  pinned tier with the row off always did. A benchmark carries the word from scene to scene (ui/benchrun.ts CARRIED) and its card says, from its own
+ *  lines, whether the size was held (ui/bench.ts sizeNote). THE KIT VIEW'S FRAME does not take the word (ui/kitView.ts leaves it off the frame's address):
+ *  that page is always pinned to a tier, its own pacer counts on the ladder cutting its size (host/kitView.ts), and it has no row to put it back. */
+/** the tier an address names for the visit (`?quality=<tier>`), or null: the one reading of that word, for the ladder (Quality.visit) and for Options' Reset */
+export const visitTier = (search: string): QualityName | null => { const q = new URLSearchParams(search).get('quality'); return q && (QUALITY_NAMES as string[]).includes(q) ? q as QualityName : null; };
+export const visitAdaptive = (search: string): boolean => { const v = new URLSearchParams(search).get('adapt'); return !(v === '0' || v === 'off' || v === 'false'); };
+
 export class Quality {
   current: QualityName = 'high';
+  /** the row 'Hold frame rate' (Options > Graphics; Tab > Quality 'adaptive resolution'): the render size steps down under the frame rate's band and comes back. The page's boot sets it from the address (visit below) */
   adaptive = true;
   /** 'auto': the preset itself moves with the measured frame rate (and the pick is remembered for the next visit) */
   auto = true;
@@ -463,7 +482,7 @@ export class Quality {
   }
   /** preset `cur` (the current one) as it is being rendered: the live lossy divisors, cap and scale over its rows (scale + iq.sharp as they are: presetCost prices sharp direct by `iq.sharp && scale < 1`) */
   private livePreset(cur: QualityName): Preset { const S = this.engine.settings; const pc = withSmoke(PRESETS[cur], this.smokeKeep()); return { ...pc, lossy: { ...pc.lossy, gatherThird: !!S.gatherThird, volQuarter: !!S.volQuarter, rcHalfRate: !!S.rcHalfRate }, maxH: S.maxInternalHeight || pc.maxH, scale: S.renderScale, iq: { ...pc.iq, sharp: !!S.sharpDirect && S.taau !== false } }; }
-  /** the climb is allowed at all this visit: false under a `?quality=` pin (main.ts) — 'pins a preset' means the rows the harnesses and A/B pages measure stay put; a preset pinned from a MENU
+  /** the climb is allowed at all this visit: false where the address holds a tier (`?quality=`, or `?adapt=0` alone: visit below) — 'pins a preset' means the rows the harnesses and A/B pages measure stay put; a preset pinned from a MENU
    *  keeps the climb (spending a roomy machine's headroom is what it is for), and settings.ladderClimb is the by-hand switch either way */
   climbAllowed = true;
   /** the motion-calm bundle (MOTION_CALM) is on for this visit: re-applied after every preset change */
@@ -503,6 +522,16 @@ export class Quality {
    *  there) → preset AND scale in one step, instead of crawling down 0.1 at a time while the player already suffers. `sample()` stays quiet until it has decided. */
   private calib: { frames: number; t: number; gpu: number[]; fixed: number[]; dts: number[]; done: boolean } = { frames: 0, t: 0, gpu: [], fixed: [], dts: [], done: false };
   get calibrating() { return this.auto && !this.calib.done; }
+  /** …and its frames are being read now: not while it waits for the later set (STANDS_IN), when a frame drawn behind a page that hides the view measures nothing */
+  get measuring() { return this.calibrating && !(laterProgress.pending > 0 && this.standsInFor < STANDS_IN.maxSecs); }
+  /** STANDS IN, the one clock of both waits (the ladder's in sample(), the boot measure's in calibrateTick): true while a later program is out and the wait
+   *  is under `maxSecs`; with none out the clock is back at 0 */
+  private standsIn(dt: number): boolean { if (laterProgress.pending === 0) { this.standsInFor = 0; return false; } return (this.standsInFor += dt) < STANDS_IN.maxSecs; }
+  /** THE BOOT'S MEASURE WAS TAKEN ON STAND-INS (the wait ran out with programs still compiling): the pick stands for now and the page measures once more when
+   *  they are in (main.ts asks every frame: `remeasure`). False on every load whose later set lands inside the wait. */
+  early = false;
+  /** the later set is in after an early measure: calibrate again, once, on the settings' own picture (auto only; a preset pinned meanwhile keeps its pin) */
+  remeasure() { if (!this.early || laterProgress.pending > 0) return; this.early = false; if (this.auto) this.calib = { frames: 0, t: 0, gpu: [], fixed: [], dts: [], done: false }; }
   /** fired when a calibration settles (decide) — main.ts refreshes the pause card's note, which otherwise goes stale while the card is up */
   onCalibrated: (() => void) | null = null;
   /** STANDS IN: seconds sample() has been waiting on a program that is still compiling (0 = it is not waiting) */
@@ -545,7 +574,7 @@ export class Quality {
    *  writer, for a preset put on (apply) and for SMOKE KEEP moved by hand (resmoke) */
   private putSmoke(p: Preset) {
     const S = this.engine.settings, K = p.caps;
-    S.volSteps = p.volSteps; S.volQuarter = p.lossy.volQuarter; S.volLightCap = K.volK; S.volShadowEvery = K.volEvery; S.volStepVoxels = smokeLookStep(K.volStep) /* the look page marches a shorter step in proportion: render/smokeLook.ts */; S.smokeMarchLights = K.marchLights;
+    S.volSteps = p.volSteps; S.volQuarter = p.lossy.volQuarter; S.volLightCap = K.volK; S.volShadowEvery = K.volEvery; S.volStepVoxels = K.volStep; S.smokeMarchLights = K.marchLights;
     S.froxelVol = froxelVeto.on ? false : froxelForce.on ? true : K.vol === 'froxel';   // the tier's volumetric path (Caps.vol above; ?nofroxel / ?froxel force it for the visit)
   }
   /** SMOKE KEEP moved by hand (the Tab row): the current preset's smoke rows put on again, nothing else of the preset touched. A 'volumetrics ¼ → ½' rung the climb had
@@ -565,6 +594,15 @@ export class Quality {
 
   /** Pin a preset by hand (turns auto off — and any calibration in flight with it — and remembers the pin). */
   pin(name: QualityName) { this.auto = false; this.calib.done = true; this.lastHop = null; this.hopSlowAt = -1; this.apply(name); try { localStorage.setItem(LS_MODE, name); } catch { /* */ } }
+  /** THE ADDRESS'S TWO LADDER WORDS, in one place: `quality=<tier>` holds that tier for the visit, and `adapt=0` opens it with nothing adapting (visitAdaptive
+   *  above), which with no tier named means holding the tier the page stands on. A held tier is auto off and the climb with it, the tier put on at its own
+   *  start size; it is apply, not pin: an address's tier is the visit's, never written as this machine's choice. The page calls this once at boot, before a
+   *  frame is sampled, and Options' Reset calls it again after putting the defaults back. So does the viewer. */
+  visit(search: string) {
+    this.adaptive = visitAdaptive(search);
+    const hold = visitTier(search) ?? (this.adaptive ? null : this.current);
+    if (hold) { this.auto = false; this.climbAllowed = false; this.apply(hold); }
+  }
   /** Back to auto (a menu's choice): remembered, then exactly the boot's auto path — this machine's last auto pick + scale if it has one, calibrate behind the card (startAuto). */
   setAuto() { try { localStorage.setItem(LS_MODE, 'auto'); } catch { /* */ } this.startAuto(); }
 
@@ -606,9 +644,13 @@ export class Quality {
   /** Boot calibration tick — call every presented frame (the start card renders the live scene behind it, which is the load that matters) until
    *  `calibrating` goes false. Uses GPU compute-pass timings when timestamp queries exist (vsync cannot hide headroom from those), else frame times. */
   calibrateTick(rawDt: number) {
-    if (!this.calibrating || pageHidden() || rawDt >= 0.5) return;
-    if (laterProgress.pending > 0) return;   // (the row 'Start on first frame shaders': a pass is still drawing with a fallback, so these are not the settings' own times; never above 0 with the row off)
-    const c = this.calib; c.frames++;
+    if (!this.calibrating || pageHidden()) return;
+    const waited = this.standsInFor, c = this.calib;
+    if (this.standsIn(rawDt)) return;   // (the row 'Start on first frame shaders': a pass is still drawing with a fallback, so these are not the settings' own times; never with the row off. A frame a compile stalled counts to the wait too: it is the wall clock's)
+    if (laterProgress.pending > 0) this.early = true;   // (the wait ran out: what is measured from here is the stand-ins' picture)
+    else if (waited > 0 && c.frames) { c.frames = 0; c.t = 0; c.gpu = []; c.fixed = []; c.dts = []; this.early = false; }   // (the set landed while that measure was under way: over again, on the settings' own picture alone)
+    if (rawDt >= 0.5) return;
+    c.frames++;
     if (c.frames <= 24) return;                                   // pipelines warm up, first smoke/rc allocations, shader compiles
     c.t += rawDt; c.dts.push(rawDt);
     const tm = this.engine.timer;
@@ -646,8 +688,7 @@ export class Quality {
     if (!this.adaptive && this.climbed.length) this.unclimbAll('adaptive off');   // (nothing below runs to undo them otherwise: the settings would keep the climbed values)
     if (!this.adaptive && !this.auto) return;
     if (this.calibrating) return;                                   // the boot calibration decides first
-    if (laterProgress.pending === 0) this.standsInFor = 0;
-    else if ((this.standsInFor += dt) < STANDS_IN.maxSecs) { this.acc = 0; this.frames = 0; this.maxDt = 0; this.unionAcc = 0; this.unionN = 0; this.unsureAcc = false; return; }   // STANDS IN (above): the window is dropped and no clock moves
+    if (this.standsIn(dt)) { this.acc = 0; this.frames = 0; this.maxDt = 0; this.unionAcc = 0; this.unionN = 0; this.unsureAcc = false; return; }   // STANDS IN (above): the window is dropped and no clock moves
     this.acc += dt; this.frames++; this.cooldown -= dt; this.clock += dt; this.sinceClimb += dt; if (dt > this.maxDt) this.maxDt = dt;
     if (Number.isNaN(gpuUnionMs)) this.unsureAcc = true; else if (gpuUnionMs > 0) { this.unionAcc += gpuUnionMs; this.unionN++; }   // (NaN = timings exist but no readback resolved lately: no verdict this window — neither 'roomy' nor 'cruising' advances on a frozen or absent number)
     if (this.acc < 1.0) return;

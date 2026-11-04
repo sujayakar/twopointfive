@@ -28,6 +28,7 @@
 // man who said it — or the alarm's own place, never where the player is. With nothing said, on a floor with no room plans, they walk the level's named
 // places. Whoever is against them on the level (a partner, a teammate) is their enemy by the shared sight test, not Sam alone.
 // QA: tools/qa/qrf-probes.ts (`probes.ts qrf`), soak.ts --loud-at; tools/qa/qrf-squad-check.ts (the squad's drill); tools/qa/response-check.ts (the level's own team).
+import { allDown } from './seats';
 import { SideSet } from '../math/side';
 import { QRF_TINT, QRF_TINT2 } from './consts';
 import { Vec3, v3, clamp, wrapAngle } from '../math/vec';
@@ -303,8 +304,8 @@ function staffVoice(g: Game): Guard | null {
 }
 function bodiesFound(g: Game): number { let n = 0; for (const x of g.guards) if (!x.unit && x.state === 'dead' && x.found) n++; return n; }
 /** the run is Sam's to answer for (not the tour, not the breach's daylight, somebody home in the guards' heads, Sam on his feet) */
-function live(g: Game): boolean { if (raid(g)) return g.aiEnabled && !g.quietUtility && !g.touring && !g.player.down && hasResponse(g);   // (a raid: day or night, the squad's run itself)
-  return g.aiEnabled && !g.quietUtility && !g.touring && !isDaylight(g) && !g.player.down && !g.nightBreach?.active && !g.rescue?.active && hasResponse(g); }
+function live(g: Game): boolean { if (raid(g)) return g.aiEnabled && !g.quietUtility && !g.touring && !allDown(g) && hasResponse(g);   // (a raid: day or night, the squad's run itself)
+  return g.aiEnabled && !g.quietUtility && !g.touring && !isDaylight(g) && !allDown(g) && !g.nightBreach?.active && !g.rescue?.active && hasResponse(g); }
 /** THIS LEVEL HAS A RESPONSE TEAM: the marks above are the office's stairwell. A level that carries its own places (a quiet mission: its file's scenarios.quiet
  *  — scene/scenarios.ts) has the team only if it has the team's door (a floor built round the office's west stair, landing and all); without it there is nobody
  *  to send — no request, no radio promise, no men stood on another building's coordinates. Every other level: as it always was. */

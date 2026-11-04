@@ -75,7 +75,7 @@ fn glossReflectionX(P: vec3f, owner: u32, gb: u32) -> GxSpec {
       if ((boxGeo[bi].flags & BOX_EMISSIVE) != 0u) { L += boxEmissive(bi); }
       albedo = boxAlbedoSec(bi);
     }
-    if ((frame.flags & FLAG_BOUNCE) != 0u) { L += albedo * diceIrradianceFace(Ph, hit.n) * (1.0 / 3.14159265); }
+    if ((frame.flags & FLAG_BOUNCE) != 0u) { L += albedo * diceIrradiance(Ph + hit.n * c0Spacing(), hit.n) * (1.0 / 3.14159265); }
     if ((frame.flags & FLAG_DIRECT) != 0u) { gxPut(gb, RAYS, Ph, hit.n, 0u, albedo, L); o.lit = true; }
   }
   if ((frame.flags & FLAG_DIRECT) != 0u) {
@@ -115,7 +115,7 @@ fn glassShadeX(Pg: vec3f, n: vec3f, V: vec3f, gb: u32) -> GxSpec {
         if ((boxGeo[bi].flags & BOX_EMISSIVE) != 0u) { L += boxEmissive(bi); }
         albedo = boxAlbedoSec(bi);
       }
-      if ((frame.flags & FLAG_BOUNCE) != 0u) { L += albedo * diceIrradianceFace(Ph, hit.n) * (1.0 / 3.14159265); }
+      if ((frame.flags & FLAG_BOUNCE) != 0u) { L += albedo * diceIrradiance(Ph + hit.n * c0Spacing(), hit.n) * (1.0 / 3.14159265); }
       if ((frame.flags & FLAG_DIRECT) != 0u) { gxPut(gb, RAYS + 1u, Ph, hit.n, 0u, albedo, L); o.lit = true; }
     }
     if ((frame.flags & FLAG_DIRECT) != 0u) {
@@ -141,7 +141,7 @@ fn glassShadeX(Pg: vec3f, n: vec3f, V: vec3f, gb: u32) -> GxSpec {
       if (!ev.ok) { continue; }
       let E = ev.E * abs(dot(n, ev.L));
       let w = luminance(E);
-      if (w < 1e-4 * lampFloorK()) { continue; }
+      if (w < 1e-4) { continue; }
       if (w > w0) { rest += e1; e1 = e0; w1 = w0; i1 = i0; L1 = L0; d1 = d0; e0 = E; w0 = w; i0 = i32(i); L0 = ev.L; d0 = ev.dist.x; }
       else if (w > w1) { rest += e1; e1 = E; w1 = w; i1 = i32(i); L1 = ev.L; d1 = ev.dist.x; }
       else { rest += E; }
@@ -195,7 +195,7 @@ fn trace(@builtin(global_invocation_id) gid: vec3u, @builtin(local_invocation_in
   let Po = P + N * 0.02;
   let Kff = frame.lossyCfg.w;
   var Lcap = 1e9;
-  if (Kff > 0.0) { let Eref = diceIrradianceFace(P, N); Lcap = max(Kff * luminance(Eref) * (1.0 / 3.14159265), 0.35 * lampFloorK()); }   // (the floor is a night's number: by day on the look page it is held at the day's lamp share, common.wgsl lampFloorK, or the few rays that come back with daylight in a shut room, from the strip of it at its door, are each let in whole and the filter spreads them over the room)
+  if (Kff > 0.0) { let Eref = diceIrradiance(P + N * c0Spacing(), N); Lcap = max(Kff * luminance(Eref) * (1.0 / 3.14159265), 0.35); }
   let cap = min(Lcap, 24.0);
   var E = vec3f(0.0);
   var mask = 0u;
@@ -204,7 +204,7 @@ fn trace(@builtin(global_invocation_id) gid: vec3u, @builtin(local_invocation_in
     let hit = traceClosest(Po, dir, TMAX, owner);
     var L = vec3f(0.0);
     var lit = false;
-    if (hit.idx < 0) { L = skyThrough(Po, dir); }
+    if (hit.idx < 0) { L = skyRadiance(dir); }
     else if (!hit.inside) {
       let Ph = Po + dir * hit.t;
       var albedo: vec3f;
@@ -212,7 +212,7 @@ fn trace(@builtin(global_invocation_id) gid: vec3u, @builtin(local_invocation_in
       if (hit.idx == CAPSULE_HIT) { albedo = hit.capAlbedo; }
       else {
         let bi = u32(hit.idx);
-        if ((boxGeo[bi].flags & (BOX_EMISSIVE | BOX_AREALIT)) == BOX_EMISSIVE) { L += boxEmissiveRay(bi); }
+        if ((boxGeo[bi].flags & (BOX_EMISSIVE | BOX_AREALIT)) == BOX_EMISSIVE) { L += boxEmissive(bi); }
         albedo = boxAlbedoSec(bi);
         for (var c = 0u; c < nC; c++) { if (onCard(Ph, hit.n, wgCards[c * 4u], wgCards[c * 4u + 1u])) { ex |= 1u << c; } }
       }
