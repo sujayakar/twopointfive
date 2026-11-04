@@ -33,7 +33,7 @@ import type { LevelScenarios, StructureData, ResponseData } from '../../src/scen
 import * as K from '../../src/scene/levelKit';
 import { gwotKit, gwotOfKit } from '../../src/scene/gwotKit';
 import { livedPieces, INK, h01 } from './livedPieces';
-import { drawnAs, KERB_GREY } from '../../src/scene/stuff';
+import { drawnAs, madeOf, KERB_GREY } from '../../src/scene/stuff';
 
 export const NAME = 'records';
 export const NOTES = 'The records office: the pair room clear\'s own level. Four held rooms; every room is a choice of door and door tool. Kit pieces only. Regenerate: bun run tools/levels/export.ts records';
@@ -48,7 +48,7 @@ export const RECORDS_ROOMS = {
   hall:    { name: 'hall',         bounds: { x0: 10.12, x1: 29.88, z0: 13.06, z1: 16.94 }, doors: ['office', 'records_hall', 'staff_hall', 'fire_exit'] },
 } as const;
 /** colours of this file's own that its look twin (records-gwot.ts SKIN.own) gives a paint of the palette: the two cars' bodies, the lot's kerbs, the ash under the burn drum, the readers' coir, the staff room's sofa */
-export const RECORDS_PAINT = { carYard: [0.32, 0.08, 0.07] as Vec3, carLot: [0.2, 0.22, 0.26] as Vec3, kerb: KERB_GREY, ash: [0.2, 0.2, 0.19] as Vec3, coir: [0.5, 0.42, 0.28] as Vec3, sofa: [0.22, 0.2, 0.19] as Vec3 };
+export const RECORDS_PAINT = { carYard: [0.32, 0.08, 0.07] as Vec3, carLot: [0.2, 0.22, 0.26] as Vec3, kerb: KERB_GREY, ash: [0.2, 0.2, 0.19] as Vec3, coir: [0.5, 0.42, 0.28] as Vec3, sofa: madeOf('fabric', [0.22, 0.2, 0.19]) };
 /** where the yard's car stands (x, z, yaw): its roof load is laid in the same frame */
 const TRUCK = [22.0, 20.4, 0.06] as const;
 /** where the team forms up: the dark lot south of the front door, behind the parked car */
