@@ -2079,6 +2079,13 @@ interleaved and filtered to their quiet minimum, and a row whose p75 sits far ab
   the tree one review before this one. NOBODY HAS SEEN: any of it on a GPU (the model's own lines are untouched, so the default page should not need
   it); a device that cannot build the field, which is drawn differently than before; the wall cell's side on a native driver's compile of the
   new kernel text.
+- **PAST THE LEVEL'S EDGE IS BLACK, RULED TWICE** (10-15, the maintainer: "we should just have black outside the edges of the map, not extend";
+  11-04: asked again with the other answer built for him to look at, he kept black). At midday the edge is a black wall near where a team
+  starts, a quarter to a half of some opening frames; that is known and is the ruling. WHAT WAS TRIED AND TAKEN OUT (11-04, in and out within
+  the hour, never in the build): the level's own ground slab laid once more, 160 m wider, as a box no ray meets, following the slab's look at every pack; and
+  with it a rule that let a level's maps (the walked ways, the floor's wear, the place field) go past the map's edge instead of clamping to
+  the rim's last cell. On the software adapter it took the depot's midday opening from 0.37 of the frame black to 0.09 with no line at the
+  rim. Do not propose it again; a level whose world should end at a wall, a drop or water is a matter for that level's own file.
 - **LIGHT KEEPS ITS ORDER WHERE TWO PLACES MEET** (11-04; the look panel's row `order` "Light in order", live, 1 on the look's page, 0 = as it was to
   the bit; `frame.placeCfg.x`, a new member, the last of the frame's head; `place_common.wgsl lookGainsOwn`, called by `composite.wgsl` and
   `compact/composite.wgsl lookExpoGain`; the place field's SECOND BLOCK, `render/placeField.ts PLACE_NEAR`, `place_field.wgsl hand`). The
