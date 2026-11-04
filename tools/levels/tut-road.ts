@@ -42,6 +42,7 @@ import { rockOf, SCREE_PAINT } from './snowRock';
 import { BoxFlag } from '../../src/scene/boxes';
 import { findCarLamps } from '../../src/game/carlamps';
 import { LAST_OUT, LAST_MEN, HUT_NOOK, HUT_MARK, TRUCK_FLANK, HUT_WALL, HUT_END, BAGS_TOP, WALL_FACE } from '../../levels/tut-road.script';
+import { PANEL_GREY } from '../../src/scene/stuff';
 
 export const NAME = 'tut-road';
 export const NOTES = 'The tutorial\'s first mission: one man and his rifle on a snowed-in mountain road at night, walked along one line (the stopped truck, the road post\'s wall and gateway, the hut, the sandbags under a machine gun, the roadblock\'s wall, the upper gate). Its fights are staged by levels/tut-road.script.ts. The snow is in the file. Regenerate: bun run tools/levels/export.ts tut-road';
@@ -408,7 +409,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
 
   // ---- the breaker and the beacon every level carries (the hut's back wall; nobody is sent to either) ----
   grp('breaker');
-  const brk = add({ c: [17.75, 1.35, HUT.z0 + t + 0.04], h: [0.28, 0.36, 0.04], albedo: [0.42, 0.44, 0.45], name: 'breaker_panel' });
+  const brk = add({ c: [17.75, 1.35, HUT.z0 + t + 0.04], h: [0.28, 0.36, 0.04], albedo: PANEL_GREY, name: 'breaker_panel' });
   const led = add({ c: [17.57, 1.62, HUT.z0 + t + 0.09], h: [0.015, 0.015, 0.015], albedo: P.plasticBlack, rough: 0.5, emissive: [0.3, 4, 0.6], flags: DECAL });
   grp('beacons');
   add({ c: [HUT.x0 - 0.2, 2.85, 13.0], h: [0.07, 0.06, 0.07], albedo: [0.2, 0.2, 0.22], flags: DECAL });
