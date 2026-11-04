@@ -1554,13 +1554,29 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   hut's other door (`hut_e` / `hut_w`) comes down the strip outside the west wall hugging the wall and round the corner, 45.16 m of the 46 a way round may
   be (`pressure.ts flankMaxM`); a block stack and a wood pile at the wall's foot behind the west start made it 46.06 m. `tools/qa/wayround-check.ts`,
   shipped and frozen alike on seeds 1 to 3: 9 ways lost and 23 squeezed before the dressing, 21 and 107 with it, 9 and 23 now, and the same ways as before
-  the dressing, length for length. Those 9 and 23 are the older lived rooms' (the shed by `shed_s`, the garage by `g_e`, the guard hut by `hut_e`), left as
-  they are and held in `tools/qa/fixtures/wayround/compound-four.txt`. THE RULE the generator now keeps: every piece outside the wall lies at the strip's
-  OUTER EDGE. (3) AND NOT BESIDE A START MARK: the same block stack and wood pile laid at the edge but 2 m behind the rear man's mark at the west start
-  changed how the four step off, and both scripted runs with them (seed 1 taken with 1 of 4 up where it had 3; seed 2 taken where it was wiped at 34 s); 5 m
-  behind him they change nothing, and stones there never did. Measured: the 21 missions' play-throughs on two seeds against the dressed level (step 1265
-  with the check), three reads (frozen, shipped with `TPS_LIVED=0`, shipped): 42 of 42 digests the same on each, compound-four's two included, so the mend
-  moves no run. The opening frame and the two starts were drawn again on the software adapter: never seen on a GPU, never played by a person.
+  the dressing, length for length. Those 9 and 23 were the older lived rooms' (the shed by `shed_s`, the garage by `g_e`, the guard hut by `hut_e`): the
+  next bullet gives them back. THE RULE the generator now keeps: every piece outside the wall lies at the strip's OUTER EDGE. (3) AND NOT BESIDE A START
+  MARK: the same block stack and wood pile laid at the edge but 2 m behind the rear man's mark at the west start changed how the four step off, and both
+  scripted runs with them (seed 1 taken with 1 of 4 up where it had 3; seed 2 taken where it was wiped at 34 s); 5 m behind him they change nothing, and
+  stones there never did. Measured: the 21 missions' play-throughs on two seeds against the dressed level (step 1265 with the check), three reads (frozen,
+  shipped with `TPS_LIVED=0`, shipped): 42 of 42 digests the same on each, compound-four's two included, so the mend moves no run. The opening frame and the
+  two starts were drawn again on the software adapter: never seen on a GPU, never played by a person.
+- **The compound's older rooms give the defenders every way round: the sala's tea table and the shed's chaff cutter moved** (11-04, on the maintainer's word
+  for the older furniture that blocks a way round: "sure go for it"; no switch: level data under `LIVED`, the rooms furnished before the levels were
+  dressed). `tools/qa/wayround-check.ts` counted 9 ways lost and 23 squeezed on the compound, all older than the dressing, and two pieces owned every one
+  (found by leaving each lived room, then each piece, out in turn). THE TEA TABLE stood in the middle of the sala (x 16.0 to 17.2, z 16.05 to 16.6), on two
+  lines a man of that room walks when a pair goes round: from the north door across to the east door (to the garage: 23.38 m bare, 25.89 with the table,
+  over its limit) and from his post out by the north door (to the guard hut: 45.18 m of 46, 45.85 with it). It stands 0.6 m east and 0.5 south now, the east
+  cushion row drawn up to it and a walk left between it and the west row; twenty-five places were tried and nothing nearer gives both ways back (south alone
+  frees the first and costs the second, east alone the reverse). THE CHAFF CUTTER stood where a man sent round to the shed's south door needed to stand (his
+  next way was 56 m) and cost the shed's own man 0.26 m of the 1.1 he has to spare to the guard hut; it stands 0.25 m north (0.2 is not enough) and 0.45
+  west, the west only to keep its flywheel clear of the level's own cardboard box, its chaff heap with it. COVER: the table is 0.35 m high and covers
+  nobody; the cutter is waist-high, was on neither shed man's line to the east door and is on neither now. All 2,496 ways stand with the lived rooms on,
+  shipped and frozen alike on seeds 1 to 3, so `tools/qa/fixtures/wayround/compound-four.txt` is gone: the compound owes nothing. Wall-charge places 891 to
+  895. Measured: the 21 missions' play-throughs on two seeds against the level before the two moves: frozen 42 of 42 digests the same, shipped with
+  `TPS_LIVED=0` 42 of 42; shipped, compound-four's two runs move and no other level's: seed 1 is taken with 3 of 4 up at 154.6 s where it was 198.8 s
+  (another man down, later), seed 2 wiped at 34.5 s where it was 33.6 s, the same four down. A play change that was asked for; two seeds is a look, not a
+  count. Drawn on the software adapter only: never seen on a GPU, never played by a person.
 - **Mousehole's defenders are placed by hand** (`tools/levels/mousehole.ts`, the `post` room's marks carry the comment; no switch: the level's data, and the
   page opens on it under `SAMESTART`). Placed: ward 1, exam 3, store 2, with the three marks by the blank north wall moved to 2.7 m off it (a wall charge knocks
   down inside 2 m: a north hole used to take the man with it); the duty room's three in file order = the HATCH GUN behind the desk, the DEEP MAN in the dark
