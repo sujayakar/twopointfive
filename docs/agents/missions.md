@@ -2144,6 +2144,25 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   HAS NEVER BEEN SEEN ON A GPU and not on the page at all (headless runs only): the third container, the camp's wall, how the alley reads, whether a
   floor of 0.2 is what his GPU shows past the gap, the red of the beacons over the whole yard and whether the lamps going out reads as the moment it is
   meant to be are his to judge.
+- **The truck park stands on a road** (2026-11-03; the tail of `tools/levels/tut-pair.ts` under LIVED IN, `levels/tut-pair.json`; level data only, under the
+  lived switch — `LIVED.on`: ON in the page, `?lived=0` = the level as it was; OFF on the frozen stand, `TPS_LIVED=1` raises it; no switch of its own). The
+  level had no lived tier. It has one, and ALL OF IT IS OUTSIDE THE YARD'S WALL: inside it every piece is the lesson's (a shadow the two work along, a
+  line a man has or has not, a pool to walk round: the generator's head says why each stands where it does) and the yard was full, so nothing is added
+  there and no lamp anywhere. `lived.road`: the ruts of the two's own pickup, up from the south edge to where it stands (the first picture: how they
+  came), the road's ruts down from the north to the gravel at the truck gate, two drums and two tyres that mark that gate from the road, field stones.
+  `lived.verge`: the track round the yard behind the north wall (the south verge had its half) and stones at the foot of the north and east walls, clear
+  of the far gate. 60 boxes, 13 of them solid (the drums and tyres; the stones are walk-over), no loose prop; the look's kit by name (`ruts`, `drum`,
+  `tyres`, `rubble`), laid through `livedKit.ts livedTail`. The drums and tyres stand against the OUTSIDE of the yard's wall, which no man sees through
+  and which lies between them and every way the two are sent; the low south-west moon lays their shadows on that wall's foot. A player can walk up the
+  road to them (no line of the lesson sends him, and the chained gate is no way in). Round things 35 to 39 with the lived things in
+  (`tools/qa/fixtures/round/tut-pair.txt`). MEASURED (headless, no GPU): `lesson-run tut-pair --digest`, seeds 1 and 2, is the SAME RUN AS THE STEP BEFORE
+  on all three stands (frozen with `TPS_RAILS=1`, shipped with `TPS_LIVED=0`, shipped): 18 of 18 steps, the same digest word each, at the script's own
+  light floor of 0.2. `lesson-gate tut-pair` (four dice on the shipped stand, two at a reader's pace), `lesson-check`, `rails-check`, `quiet-check`,
+  `level-needs tut-pair --run`, `lived-check`, `map-check`, `level-lint` green on both stands. OLD AND NOT THIS: `probes.ts pair-steady` is red on the
+  shipped stand on the step before too, with the same numbers (one about-turn at 39.2 s of a wait). NOT MEASURED: the partner reads the light on himself,
+  and on the page that light has the moon's bounce; a darker rut under the two at the start changes that bounce by an amount nobody has read. LEFT, the
+  level's own part (a change there moves the frozen stand): the eleven bushes and the drum on its side, which the look draws as boxes until the library
+  has shapes for them. Never seen on a GPU, never played by a person.
 - **The frame's eyes are the player's view, not the squad's knowledge** (2026-10-22; `RAILS.eyeView`, a knob of the frame's table: on with the frame, off for
   a recording from before the key, `journal.ts applyKnobs`; `?eyeview=0` puts it off in the page, as `?eyefirst=0` and `?lineclear=0` do the frame's two
   other late rules; on the frozen stand the frame itself is off and `TPS_RAILS=1` raises all of it; `RAILS_BREAK=1` is its break path). A MEND OF THE STEP BEFORE IT (`eyeFirst`):
