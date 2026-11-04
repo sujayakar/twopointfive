@@ -256,6 +256,8 @@ export const wordsFrag = guarded(async () => {
  *        they said with it down
  *    5 · the two stands' row and word, and a recording from before the key */
 const DOORS_OWED: Record<string, string> = {   // (10-19: NONE OWED. The 96 doors of 25 files that stood here are named in their levels' own generators — scenarios.doorNames; a door that
+  'sneak-lab.json': 'n_e n_w s_n s_w',   // (11-04: the sneak lab's own doors, in since 10-23 with this family red on both stands. Its generator hands on the yard's two names only
+                                           //  (tools/levels/sneak-lab.ts scenarios.doorNames); the row goes when it names these. A lab played alone: no order row reads them today)
 };                                              //  turns up called by a bearing goes red here until its level names it: `'<file>.json': 'id id'`, as the census prints it)
 /** THE SAME RULE FOR A PLACE A SCREEN PRINTS (line 7): a quiet mission's or a snatch's exit is on the objective's line and the debrief's map
  *  (quiet.ts brief `outs`, snatch.ts, ui/debrief.ts), an area's name is in the men's lines the strip prints and on the debrief's timeline (dialogue.ts roomName, chronicle.ts) — and the
@@ -266,6 +268,7 @@ const PLACES_OWED: Record<string, string> = {   // (10-19: NONE OWED. The 56 nam
 /** …AND FOR A DOOR STILL CALLED BY LETTERS (line 8): its id is its author's shorthand, no room names it and its level has written it no name, so the
  *  row reads the id's words ('p back door', 'n1 door'), or a name that says a word twice. A scenarios.doorNames row mends each. `'<file>.json': 'id id'`. */
 const LETTERS_OWED: Record<string, string> = {   // (10-19: NONE OWED. The 23 doors of 10 files that stood here have a written name in their levels' scenarios.doorNames)
+  'sneak-lab.json': 'n_e n_w nm s_n s_w',   // (11-04: the same five doors of the sneak lab, owed by the same generator)
 };
 export const wordsDoorNames = guarded(async () => {
   const F = family('words-doornames: a level names its own doors where the rooms cannot, and no door\'s name carries a bearing');

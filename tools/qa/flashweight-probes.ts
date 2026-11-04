@@ -42,6 +42,7 @@ import { stage, setKnobs } from './bang-tally.ts';
 const { SCENARIOS } = await import(`${ROOT}/src/scene/scenarioList.ts`);
 const GDM: any = await import(`${ROOT}/src/game/guards.ts`);
 const CBM: any = await import(`${ROOT}/src/game/combat.ts`);
+const LTM: any = await import(`${ROOT}/src/game/lighting.ts`);
 const ORM: any = await import(`${ROOT}/src/game/orders.ts`);
 const CHM: any = await import(`${ROOT}/src/game/character.ts`);
 const FXM: any = await import(`${ROOT}/src/game/effects.ts`);
@@ -294,9 +295,20 @@ async function emptyEntry(scn: string) {
   //  floor that is lit — a man who goes through a door behind another, not beside him, crosses nearer the middle of the frame, where that happened)
   const feetAt = (px: number, pz: number) => g.visibilityOf(GDM.lightEstimateAt(g, [px, 1.2, pz], () => true));
   const feet = (x: any) => { const [px, , pz] = x.char.pos; return Math.max(feetAt(px, pz), feetAt(px + 0.3, pz), feetAt(px - 0.3, pz), feetAt(px, pz + 0.3), feetAt(px, pz - 0.3)); };
-  // (lit, or dark by a rule that says this light would help nobody: the place is lit — LIGHTS.litOff — or the whole beam would end on the wall at his
-  //  muzzle — LIGHTS.wallOff, by the rule's own reading as probes.ts light-wall holds it: never dark with a ray clear, never dark on a man in the beam)
-  const litOk = (x: any) => burning(x) || (GDM.placeLitSeen(g, x) && feet(x) >= GDM.LIGHTS.litAt * 0.8) || GDM.wallDarkSeen(g, x); let spared = 0, litInLit = 0, burnDark = 0; const run = new Map<any, number>();
+  // (lit, or dark by a rule that says this light would help nobody: the place is lit — LIGHTS.litOff — or the whole beam would end on a WALL at his muzzle
+  //  — LIGHTS.wallOff. The wall rule's own reading is taken only where the PROBE finds a wall there too: every ray of his beam, cut off where it would reach
+  //  the floor, ends on something solid above the floor inside the rule's reach. A beam that ends on the GROUND — a gun at the low ready a pace and a half
+  //  out — is not a light with a wall in front of it, and a man the rule holds dark for that is counted dark here: probes.ts hours-team holds that fault)
+  const FLOOR = 0.05, fanOf = (d: number[]): number[][] => { const out: number[][] = []; for (const a of [0, -0.17, 0.17, -0.33, 0.33]) { const c = Math.cos(a), k = Math.sin(a); out.push([d[0] * c + d[2] * k, d[1], d[2] * c - d[0] * k]); } for (const e of [-0.3, 0.3]) { const v = [d[0], d[1] + e, d[2]], l = Math.hypot(v[0], v[1], v[2]) || 1; out.push([v[0] / l, v[1] / l, v[2] / l]); } return out; };
+  /** what ends his beam, by the probe's own rays: 'wall' = every ray meets something solid above the floor inside the rule's reach · 'axis' = the middle of
+   *  the beam does and some ray beside it reaches the floor first · 'ground' = the middle of the beam reaches the floor before anything solid */
+  const wallEnds = (x: any): 'wall' | 'axis' | 'ground' | 'none' => { const held = x.char.bones.upperArmR, p = x.flashlight?.pos, d = x.flashlight?.dir; if (!held || !p || !d) return 'none';
+    const o = g.col.segmentBlocked(held, p) ? LTM.lensClear(g, held, p, g.engine.settings.flashlightRadius) : p, m = GDM.LIGHTS.wallBackM;
+    const hit = fanOf(d).map(r => { const toFloor = r[1] < -1e-6 ? (o[1] - FLOOR) / -r[1] : Infinity, reach = Math.min(m, toFloor); return reach > 0 && g.col.segmentBlocked(o, [o[0] + r[0] * reach, o[1] + r[1] * reach, o[2] + r[2] * reach]); });
+    return hit.every(Boolean) ? 'wall' : hit[0] ? 'axis' : 'ground'; };
+  const beamEnds = { wall: 0, axis: 0, ground: 0, none: 0 };
+  const wallOk = (x: any): boolean => { if (!GDM.wallDarkSeen(g, x)) return false; const e = wallEnds(x); beamEnds[e]++; return e === 'wall'; };
+  const litOk = (x: any) => burning(x) || (GDM.placeLitSeen(g, x) && feet(x) >= GDM.LIGHTS.litAt * 0.8) || wallOk(x); let spared = 0, litInLit = 0, burnDark = 0; const run = new Map<any, number>();
   const watch = () => { for (const x of team) { const on = burning(x), pl = GDM.placeLitSeen(g, x); if (!on && pl) spared++; if (on && feet(x) < GDM.LIGHTS.litAt) burnDark++; const r = on && pl ? (run.get(x) ?? 0) + 1 : 0; run.set(x, r); if (r > 60 * GDM.LIGHTS.tail + 3) litInLit++; } };
   const sam = g.player.char.pos;
   step(60 * 6);   // (the hand-off's own noise is out of everybody's ears)
@@ -330,7 +342,7 @@ async function emptyEntry(scn: string) {
   const beat = (op?.beats ?? []).map((b: any) => b.what).find((w: string) => w.startsWith('searched')) ?? '';
   const m = beat.match(/searched · (\d+) of (\d+) cells unseen · (\d+) moved/);
   const withCorner = [...cross.entries()].filter(([gd]) => op?.corner.get(gd)?.pts.length);
-  return { door: E.ent.door.def.name, team: team.length, why, spared, litInLit, burnDark, follow, walk, walkDark, stacked, cross, withCorner, searching, searchLit, inT, darkAt, held, doorMen: doorMen.length, doorDark, doors, out, ended: op?.ended ?? '(running)', secs: op ? inT - op.t0 : NaN,
+  return { door: E.ent.door.def.name, team: team.length, why, beamEnds, spared, litInLit, burnDark, follow, walk, walkDark, stacked, cross, withCorner, searching, searchLit, inT, darkAt, held, doorMen: doorMen.length, doorDark, doors, out, ended: op?.ended ?? '(running)', secs: op ? inT - op.t0 : NaN,
     unseen: m ? +m[1] : NaN, cells: m ? +m[2] : NaN, moves: m ? +m[3] : NaN, beat };
 }
 export const flashweightLights = guarded(async () => {
@@ -344,7 +356,7 @@ export const flashweightLights = guarded(async () => {
     const r = await emptyEntry(E.id); if (!r) { F.verdict(false, `${E.title}`, 'no held room to enter'); continue; }
     const crossed = [...r.cross.values()], litIn = crossed.filter(c => c.lit).length; spared += r.spared; burned += r.litInLit; burnDark += r.burnDark;
     const ok = !r.why && r.follow === 0 && r.stacked === 0 && r.walkDark === 0 && r.litInLit === 0 && crossed.length > 0 && litIn === crossed.length && r.searching > 0 && r.searchLit >= r.searching * 0.95 && r.darkAt <= L.afterSecs + L.hotSecs + L.tail + 0.5 && r.held === 0 && r.doorDark === 0 && r.out === 0;
-    F.verdict(ok, `${E.title}: ${r.team} teammates, the ${r.door} door`, `${r.why ? `ORDER REFUSED: ${r.why} · ` : ''}lit in file behind Sam ${r.follow} · DARK while walking to the door on their own ${r.walkDark} of ${r.walk} man-frames · lit stacked on it ${r.stacked} · crossed the frame lit (or in a lit place, or dark into the wall at his muzzle) ${litIn} of ${crossed.length} · lights the lit place spared ${r.spared} man-frames, burning on in one ${r.litInLit} · lit through the search ${r.searchLit} of ${r.searching} frames · all dark ${f2(r.darkAt)} s after the room was called (bound ${f2(L.afterSecs + L.hotSecs + L.tail + 0.5)}) · lit holding the room ${r.held} · holding another door of it ${r.doorMen}${r.doorMen ? ` (${r.doors}), dark where the place is dark ${r.doorDark}` : ''} · following out ${r.out}`);
+    F.verdict(ok, `${E.title}: ${r.team} teammates, the ${r.door} door`, `${r.why ? `ORDER REFUSED: ${r.why} · ` : ''}lit in file behind Sam ${r.follow} · DARK while walking to the door on their own ${r.walkDark} of ${r.walk} man-frames · lit stacked on it ${r.stacked} · crossed the frame lit (or in a lit place, or dark into the wall at his muzzle) ${litIn} of ${crossed.length} · lights the lit place spared ${r.spared} man-frames · asked of a man the wall rule held dark, what ended his beam: a wall, every ray ${r.beamEnds.wall} (counted lit) · a wall in its middle, the floor at its edge ${r.beamEnds.axis} · the FLOOR in its middle ${r.beamEnds.ground + r.beamEnds.none} (counted dark), burning on in one ${r.litInLit} · lit through the search ${r.searchLit} of ${r.searching} frames · all dark ${f2(r.darkAt)} s after the room was called (bound ${f2(L.afterSecs + L.hotSecs + L.tail + 0.5)}) · lit holding the room ${r.held} · holding another door of it ${r.doorMen}${r.doorMen ? ` (${r.doors}), dark where the place is dark ${r.doorDark}` : ''} · following out ${r.out}`);
   }
   // the place rule at the bar it ships with: the start card's floors are night offices, mostly under it — so the lights BURN there (by the probe's own
   // reading of the floor, not the rule's) and none burns on in a place the rule calls lit
