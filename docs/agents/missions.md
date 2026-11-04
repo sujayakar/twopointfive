@@ -2829,6 +2829,32 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
     locked (`rails.offers`). Level data, no switch; the level's base in `lived-check` moved to the commit that carries it (the frame's `rows` is a held
     key there). The same stand on `tut-road`, `tut-team` and `tut-kit`: no row, each has its list. RUN: `tutqueue-check` on both stands, `lesson-gate
     tut-queue`, `lesson-check`, `lived-check`, the export's `--check`. Not run: its page run. Never seen on a GPU.
+  - **The ground outside the relay post's walls is dressed (2026-11-03).** At dusk the mission opens beside the track gate with about a quarter of its
+    picture on the plain past the west wall, which was one sheet of dust: the yard was furnished as it was built, the plain had only the two
+    checkpoints the men come by. The level has its first lived tier, all of it OUTSIDE the wall and every piece the look's kit's by name
+    (`tools/levels/tut-queue.ts`, the tail, through `livedTail`): `lived.track`, a checkpoint the post has stopped manning (`kerbStones` down both sides
+    of the way in, two `jersey` barriers dragged to the verges, a red `drum` each side, a cold `hearth` with a chair turned to it, a crate and a water
+    can, a stack of `tyres`); `lived.south`, past the south wall behind the hall (a `woodPile`, `tyres`, `blocks`); `lived.north`, east of the lane's
+    checkpoint (`blocks`); `rubble` on all three. No lamp, no paint, no box of the level's own part: the light out there is the hour's low sun, and
+    each piece throws its shadow at the wall. WHERE each stands is the ground the view at rest shows from the lesson's own spots (the start, the spot
+    behind the hall, the spot in the yard): the camera's own projection puts 53 of the track's 54 boxes, all 23 of the south's and all 13 of the
+    north's on the picture from its spot, at 16:10 and at 16:9.
+    THE SWITCH is the lived one (`LIVED`): on in the page (`?lived=0` puts it off), off on the frozen stand (`TPS_LIVED=1` raises it there), where
+    the level is as it was (`lived-check` holds that); `TPS_LIVED=0` puts it off on the shipped stand. WHAT PARTS FROM THIS STEP on the page: the
+    level's fingerprint (524 boxes where it had 434, 11 props where it had 9), so a session journal, an engine replay or a save of this mission made
+    on the page before it reads as another level's. None is kept in the repo.
+    KEPT CLEAR, by measure: everything a man cannot step over is 2 m and more from the wall's outer face (the nearest is 2.1 m), so no place for a
+    wall charge is taken (`wallfurn-check --levels tut-queue.json` on the shipped stand: 1,063 asks and 863 places before and after); what lies
+    nearer is stones and the hearth, stepped over; nothing on the track's gravel; nothing in the two rooms the men who come wait in (`lane`,
+    `road`); the kerb stones stop a metre short of the gate; `lived-check` has no walled-in cell. Round things 24 to 31 with the tier in
+    (`tools/qa/fixtures/round/tut-queue.txt`). The same step's first commit brings the generator's two lines of words up to the file (the half
+    squad rule had changed them in the json alone, and `export.ts tut-queue --check` was stale from then on).
+    MEASURED: the scripted player (`lesson-run.ts tut-queue --digest`, seeds 1 and 2) gives the same digest as the step before on the frozen stand, on
+    the shipped stand with lived rooms off and on the shipped stand with them in, 14 of 14 steps each: no run walks, looks or shoots past the wall on
+    these sides, so the new things are never met in a run and "nothing moved" says nothing about them as cover. RUN on both stands: `lived-check`,
+    `round-check` line 1, `level-needs tut-queue --run` (outside the place 456 square metres of bare ground became 356), `tutqueue-check`,
+    `lesson-check`, `map-check`, `level-lint`, the export's `--check`; and its page run with real keys (`tut-queue-page.cjs`, Chromium 141, the
+    software adapter). Pictures were drawn on the look's page on the software adapter. NOBODY HAS played it; never seen on a GPU.
 - **The tutorial's kit mission, `tut-kit` 'The fuel stop'** (2026-10-26; row `tut-kit` in `TUTORIAL_MISSIONS` directly after `tut-sky`, `kind: 'roomclear'`,
   `squad: 4`, night, clear, `defenders: 6`: the men on the floor as it opens, which is what `probes.ts missions-start` counts against the sheet; the
   script stands five more up later (the row said 11 at first and that probe was red from its join until 2026-10-27); `tools/levels/tut-kit.ts` → `levels/tut-kit.json`, the fights in `levels/tut-kit.script.ts` (program `tutorial`, a beat a

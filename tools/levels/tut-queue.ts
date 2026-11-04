@@ -39,6 +39,7 @@ import { officeKit, normalize3 as norm, type GeneratorTrace } from '../../src/sc
 import { gwotKit, gwotOfOffice, GWOT_PALETTE, GWOT_MATERIALS, GW_SHELL } from '../../src/scene/gwotKit';
 import { WORLD } from '../../src/scene/world';
 import { BoxFlag } from '../../src/scene/boxes';
+import { livedTail } from './livedKit';
 
 export const NAME = 'tut-queue';
 export const NOTES = 'The tutorial\'s fourth mission: a walled post taken on the ground with the squad of four, by Shift with the command key (a part of the squad takes the new order) and the word. Two doors at once, a gun turned to the wrong door, two gates covered. Regenerate: bun run tools/levels/export.ts tut-queue';
@@ -270,6 +271,38 @@ export function build() {
   for (const t of lesson.steps) if (AFTER[t.id]) t.after = AFTER[t.id];
 
   for (const d of doors) doorFrame(d);
+
+  // ---- LIVED IN (src/scene/lived.ts: all of it goes with the switch off — group 'lived.<place>', props 'lived.<place>.<kind><n>'; LAST, after every kept thing) ----
+  // THE GROUND OUTSIDE THE WALL. The yard was furnished as it was built; the plain round it was one sheet of dust but for the two checkpoints, and the mission
+  // opens beside the track gate with about a quarter of its picture on that sheet, in the last light. The track gate gets what the other two gates have, a
+  // checkpoint, here one the post has stopped manning: whitewashed stones down both sides of the way in, its two barriers dragged off the track to let
+  // trucks by, a drum each side where a truck stops, the cold fire the sentry sat at with his seat, his box and his water, a stack of tyres. Past the
+  // south wall, behind the hall, is where the post leaves what it has no room for: blocks, split wood, tyres. Field stones wherever nobody clears.
+  // Every piece is the kit's, by name; each stands in the low sun and throws its shadow toward the wall.
+  // WHERE: on the ground the view at rest shows from the lesson's own spots (the start for the track gate; the spot behind the hall for the south; the
+  // spot in the yard for the north). Past the west wall that is a wedge: the picture's left edge crosses the plain from about x 2.7 at z 7.5 to x 0.6
+  // at z 17, and its foot is near z 18.
+  // KEPT CLEAR: everything a man cannot step over is two metres and more from the wall's outer face (a wall charge's place is never taken, and nothing
+  // leans on a gate); what lies nearer is stones and a hearth, stepped over. Nothing on the track's gravel, nothing in the two rooms the men who come
+  // wait in (the lane, the road). Nobody of either side walks out here: no step, mark or aim line of the lesson is past the wall on these sides.
+  // No lamp is added: the light out here is the hour's.
+  { const L = livedTail(K.props, grp);
+    L.room('track');      // outside the track gate, west: the left of the opening picture
+    G.kerbStones(0.4, 12.45, 3.9, 12.45); G.kerbStones(0.4, 15.55, 3.9, 15.55);       // the way in, lined as a checkpoint lines it (the last stone a metre short of the wall: clear of the gate's leaf whichever way it swings)
+    G.jersey(1.5, 11.25, 1, 0.16); G.jersey(1.75, 17.0, 1, -0.3);                     // the chicane's two barriers, one dragged to each verge
+    G.drum(2.45, 12.0, 'drumRed'); G.drum(2.45, 16.0, 'drumRed');                     // a drum each side of the way, where a truck stops
+    G.hearth(3.3, 9.9, 0.3); G.plasticChair(2.55, 10.35, -1.03);                      // the sentry's fire, cold, and his seat turned to it
+    G.crates(2.2, 9.6, 0.4, 1); G.jerryCan(2.6, 8.85, 0.4, 'plasticBlue');            // his box, his water
+    G.tyres(1.0, 16.0, 3);
+    G.rubble(3.4, 7.4, 0.7, 6); G.rubble(3.3, 16.6, 0.5, 5);
+    L.room('south');      // past the south wall, behind the hall: what the post has no room for
+    G.woodPile(32.6, 25.65, 0.2, 1.6); G.tyres(34.2, 25.5, 2); G.blocks(35.6, 25.5, 0.3, 2);
+    G.rubble(30.9, 25.3, 0.5, 5); G.rubble(36.9, 26.2, 0.7, 6);
+    L.room('north');      // the plain east of the lane's checkpoint, which the yard's north-east corner looks out on
+    G.blocks(30.4, 2.1, -0.2, 2); G.rubble(32.8, 2.4, 0.8, 7); G.rubble(29.0, 1.2, 0.6, 5);
+    L.done();
+  }
+
   const level: Level = {
     boxes: K.boxes, props: K.props, lights, switchables, doors, devices: [],
     breaker, beacons: [{ pos: [10.3, 2.05, 5.3], box: dome }],
