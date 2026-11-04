@@ -7,7 +7,7 @@ import { readFileSync } from 'node:fs';
 import { standUp, ROOT } from './headless.ts';
 const { parseLevelData } = await import(`${ROOT}/src/scene/levelData.ts`);
 const { loadLevel } = await import(`${ROOT}/src/scene/levelLoad.ts`);
-const { placeMask, PLACE_W, PLACE_H, PLACE_RES } = await import(`${ROOT}/src/render/placeField.ts`);
+const { placeMask, PLACE_W, PLACE_H, PLACE_RES } = await import(`${ROOT}/src/scene/placePlan.ts`);
 const { placeSides, sideAt, sideClear, diceTapsOf, diceFacePointOf, WallSides, SIDE_UNKNOWN, SIDE_DOOR } = await import(`${ROOT}/src/render/wallSides.ts`);
 const { WORLD } = await import(`${ROOT}/src/scene/world.ts`);
 const BRK = process.env.WALLSIDES_BREAK === '1'; let red = false;

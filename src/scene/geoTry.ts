@@ -76,7 +76,7 @@ export interface Bite { x: number; z: number; alongX: boolean; s0: number; s1: n
 const snowOn = (o: Box, w: Box, X: number, T: number, H: number) => (o.flags & BoxFlag.NoShadow) !== 0 && !(o.flags & BoxFlag.NoPrimary) && o.yaw === 0 && Math.abs(o.c[X] - w.c[X]) <= T && o.c[1] - o.h[1] >= H - 0.01 && o.c[1] - o.h[1] <= H + 0.2;
 /** every yard wall gets ONE bite out of its top, no nearer than BITE_APART to another, where nothing tall stands against it and no lamp hangs. A YARD WALL IS A WALL WITH THE SKY ON BOTH HANDS: a plain
  *  upright box 3.4 m or longer and under 0.4 m thick, standing on the ground, with free floor under the open sky on both sides of it where the bite goes
- *  (`open`: the renderer's own floor plan, render/placeField.ts skyPlan, the one the light of a place is read on). So a house's wall is never one (a roof is on
+ *  (`open`: the renderer's own floor plan, scene/placePlan.ts skyPlan, the one the light of a place is read on). So a house's wall is never one (a roof is on
  *  one hand of it), and no kit's way of building a wall has to be known: until 11-02 the test was a coping slab on the wall's top, which only the one kit lays, and
  *  every level built before it had no wall this rule could find. A coping, where a wall has one, is broken with it. Pieces are appended to `boxes`; nothing is
  *  removed. Returns the bites made. */
