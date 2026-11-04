@@ -272,9 +272,13 @@ export async function devicesKeypad() {
     game.puppet = { goal: [19.6, 0, 8.6], aim: null }; steps(W, 5); game.puppet = null;
     const through = game.player.char.pos[0] < 21.2; steps(W, 8, () => sd.latched);
     if (!through) fails.push(`never got through (x ${f2(game.player.char.pos[0])})`);
-    if (!sd.latched || !game.doors.lockedOut(sd, [22.7, 0, 8.7])) fails.push(`behind him: latched ${sd.latched}, against the office side ${game.doors.lockedOut(sd, [22.7, 0, 8.7])} (want both)`);
+    // (where doors stay as they are left — doors.ts DOORSTAY — nothing springs it shut behind him: it stands open, its lock unbroken, and it is locked against
+    //  the office again when a hand shuts it, which is `probes.ts stay-open-lock`'s line)
+    const stays = !!game.doors.stay;
+    if (stays) { if (sd.latched || !sd.locked || sd.lockBroken) fails.push(`behind him, where doors stay as they are left: latched ${sd.latched}, locked ${sd.locked}, broken ${sd.lockBroken} (want it standing open with its lock as it was)`); }
+    else if (!sd.latched || !game.doors.lockedOut(sd, [22.7, 0, 8.7])) fails.push(`behind him: latched ${sd.latched}, against the office side ${game.doors.lockedOut(sd, [22.7, 0, 8.7])} (want both)`);
     if (!game.chronicle.events.some((e: any) => e.kind === 'codeEntered')) fails.push('no codeEntered row');
-    v(fails.length === 0, "(d) with the code: rows [code, kick]; a step breaks the keying off; keyed for real — four keys, the pad takes it at CODE_SECS, a key-level clack + the creak (nothing louder), it swings, he walks through, and it latches locked against the office again", `open +${f2(openAt)} s · beeps ${beeps} · through ${through} · relatched ${sd.latched}`, fails);
+    v(fails.length === 0, "(d) with the code: rows [code, kick]; a step breaks the keying off; keyed for real — four keys, the pad takes it at CODE_SECS, a key-level clack + the creak (nothing louder), it swings, he walks through, and it latches locked against the office again (where doors stay as they are left: it stands open, its lock as it was)", `open +${f2(openAt)} s · beeps ${beeps} · through ${through} · relatched ${sd.latched}${stays ? ' (doors stay)' : ''}`, fails);
   }
   console.log(`=== devices-keypad: ${done() ? 'ALL PASS' : 'FAILURES above'} ===`);
 }
@@ -345,10 +349,13 @@ export async function devicesLaser() {
     for (const o of game.guards) o.heardUpTo = 1e12;
     game.teleportPlayer([14.95, 0, 11.1]); game.player.crouch = true; steps(W, 0.5);   // Sam crouched EAST of it, clear of it himself
     if (L.trips) fails.push(`staging: something broke the beam before the haul (trips ${L.trips}, body hips x ${f2((A.char.bones.hips ?? A.char.pos)[0])})`);
+    // (the puppet first: a man walked by a script takes a body by the ankles along the floor, which is what this line is about. Taken hold of BEFORE the
+    //  script has him, where hands pick a body up he lifts it over his shoulder, and a carried body rides over a shin beam)
+    game.puppet = { goal: [17.0, 0, 11.1], aim: null, crouch: true };
     game.toggleDrag(A); const got = game.player.dragging === A;
     if (!got) fails.push('staging: never got hold of the body');
+    if (game.player.haul?.carry) fails.push('staging: he lifted it over his shoulder (this line is the floor haul)');
     const whoBroke: string[] = []; const origTrip = L.lastTripAt;
-    game.puppet = { goal: [17.0, 0, 11.1], aim: null, crouch: true };
     steps(W, 12, () => { if (L.lastTripAt !== origTrip && L.lastTripAt === game.time) { const hitBody = !!DEV.bodyBreaks(A.char, L.def.from, L.def.to), hitSam = !!DEV.bodyBreaks(game.player.char, L.def.from, L.def.to); whoBroke.push(hitSam ? 'player' : hitBody ? 'body' : '?'); } return whoBroke.includes('body') || game.player.char.pos[0] > 16.8; });
     // Sam backs through it first hauling the ankles (a trip of his own); the corpse follows a body-length behind — wait out the cooldown mid-beam if need be and it breaks it too
     if (!whoBroke.includes('body')) { steps(W, 5, () => { if (L.lastTripAt === game.time) whoBroke.push(DEV.bodyBreaks(A.char, L.def.from, L.def.to) ? 'body' : 'player'); return whoBroke.includes('body'); }); }

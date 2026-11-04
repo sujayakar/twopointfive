@@ -15,7 +15,15 @@ const { EASE_RATE, EASE_MAX, MAX_NEAR, PACE_STEP } = playerMod;
 const { TAP_SECS } = await import(`${ROOT}/src/game/interact.ts`);
 const { HANDRING } = await import(`${ROOT}/src/game/handring.ts`);
 const { HOLD } = await import(`${ROOT}/src/game/character.ts`);
-const { CLOSE } = await import(`${ROOT}/src/game/close.ts`);
+const { CLOSE, closeBare } = await import(`${ROOT}/src/game/close.ts`);
+const { HANDSLOT } = await import(`${ROOT}/src/game/handslot.ts`);
+const { STALK } = await import(`${ROOT}/src/game/stalk.ts`);
+/** QA: selector-rows' red path — SELECTORROWS_BREAK=1: each pin that asks the game which rule is on takes the OPPOSITE answer, so it wants the other rule's
+ *  words: the three lines that carry such a pin must fail, on both stands. */
+const ROWS_BREAK = process.env.SELECTORROWS_BREAK === '1';
+/** a rule's answer as a pin reads it */
+const rule = (on: boolean): boolean => on !== ROWS_BREAK;
+const { LIGHTSWITCH } = await import(`${ROOT}/src/game/lightswitch.ts`);
 const { DRIVE_SECS, PLAYER_ID } = await import(`${ROOT}/src/game/consts.ts`);
 const { isBreathing } = await import(`${ROOT}/src/game/game.ts`);
 const { HANDS } = await import(`${ROOT}/src/game/hands.ts`);
@@ -31,6 +39,8 @@ const f2 = (x: number) => x.toFixed(2), f3 = (x: number) => x.toFixed(3);
 const verbsOf = (game: any): string[] => game.nearby.map((r: any) => r.kind === 'cancel' ? 'cancel' : `${r.kind}:${r.verb ?? '—'}${r.running ? '*' : ''}`);
 /** a one-frame tap (the press edge with the key already up: performed inside that step) */
 function tap(W: any) { W.input.pressed.add(IK); W.step(DT); }
+/** step until `ok`, three seconds at most: a thing worked by hand takes his hands a beat (the breaker's lever, where hands work things) */
+function until(W: any, ok: () => boolean, secs = 3) { for (let i = 0; i < secs * 60 && !ok(); i++) W.step(DT); }
 /** put the highlight on the row of `kind` / `verb` and tap it; false if no such row */
 function tapVerb(W: any, kind: string, verb?: string): boolean { if (!W.game.selectVerb(kind, verb)) return false; tap(W); return true; }
 /** every GameEvent stamped in the frames stepped, as { t (from t0), kind, level, loud, who } */
@@ -131,7 +141,9 @@ export async function selectorRows() {
       game.player.holstered = true; game.teleportPlayer([30.6, 0, 10.95]); game.player.crouch = true; W.step(DT); W.step(DT);
       notes.push(`man + door: ${want(game, ['guard:grab', 'door:push', 'door:ease'], fails, 'guard behind + shut door').join('/')}`);
       if (game.nearby.length > MAX_NEAR) fails.push(`${game.nearby.length} rows (MAX_NEAR ${MAX_NEAR})`);
-      const gr = game.nearby[0]; if (!/^Space {2}grab him {2}· {2}LMB {2}takedown — silent$/.test(gr?.line2 ?? '')) fails.push(`holstered grab row "${gr?.line2}"`);
+      // (the hint beside the grab: with no knife the right button is the knockout, and kept down the choke — close.ts closeBare, CLOSE.rmbHold; else the old silent takedown on the left)
+      const gr = game.nearby[0], grWant = rule(closeBare(game)) ? `Space  grab him  ·  RMB  knock him out${CLOSE.rmbHold ? '  ·  RMB  hold to choke him' : ''}` : 'Space  grab him  ·  LMB  takedown — silent';
+      if (gr?.line2 !== grWant) fails.push(`holstered grab row "${gr?.line2}" (want "${grWant}")`);
       game.player.holstered = false; game.player.slot = 'pistol'; W.step(DT); const g2 = game.nearby[0]?.line2 ?? ''; if (!/pistol to his head/.test(g2) || !/E {2}holster/.test(g2)) fails.push(`drawn grab row "${g2}"`); notes.push(`drawn: "${g2}"`);
       game.player.slot = 'smoke'; W.step(DT); const g3 = game.nearby[0]?.line2 ?? ''; if (/pistol/.test(g3) || !/E {2}holster/.test(g3)) fails.push(`canister-up grab row "${g3}"`); }
     { // under the reception counter's north overhang, crouched, a man just north of it with his back to Sam: the grab is withheld (no room to stand into it) and startGrab refuses
@@ -144,7 +156,8 @@ export async function selectorRows() {
       const p = game.player.char.pos, q = v3.copy(p); game.col.collideCircle(q, 0.42, 0.2, 1.7, 3); const popped = v3.distXZ(q, p);
       notes.push(`under the counter: canStand ${canStand}, rows [${rows.join(',') || 'none'}], marker "${marker?.line2}", startGrab → holding ${grabbed}`);
       if (canStand) fails.push('staging: canStand() is true under the counter lip (moved?)');
-      else { if (rows.includes('guard:grab')) fails.push('the grab row is offered where he cannot stand up into it'); if (!/no room to stand/.test(marker?.line2 ?? '')) fails.push(`marker does not say why: "${marker?.line2}"`); if (grabbed) fails.push('startGrab took him from under the counter (the pair would stand into the slab)'); }
+      else { if (rows.includes('guard:grab')) fails.push('the grab row is offered where he cannot stand up into it'); // (the marker says why — or, where the held left button walks him in to the grab from here (stalk.ts), says that instead: the way to the grab, in place of the reason there is none here)
+        if (!(rule(STALK.on) ? /^LMB {2}(hold|press and drag) to sneak up/ : /no room to stand/).test(marker?.line2 ?? '')) fails.push(`marker says ${rule(STALK.on) ? 'not how' : 'not why'}: "${marker?.line2}"`); if (grabbed) fails.push('startGrab took him from under the counter (the pair would stand into the slab)'); }
       if (grabbed && popped > 0.05) fails.push(`and popped ${f2(popped)} m out of the slab`); }
     verdict(fails.length === 0, 'a man behind + a shut door: [grab, push, ease], the man on top, three rows in all; the grab row names the hand (LMB takedown / pistol to his head / holster first); no grab from under a counter top', notes.join(' · '), fails);
   }
@@ -155,7 +168,7 @@ export async function selectorRows() {
       for (let i = 0; i < 60; i++) W.step(DT);
       notes.push(`arm: ${want(game, ['held:question', 'held:choke'], fails, 'held (arm)').join('/')}`);
       const q = game.nearby[0], c = game.nearby[1];
-      if (!/^Space {2}“make him talk”$/.test(q?.line2 ?? '')) fails.push(`question row "${q?.line2}"`); if (!(CLOSE.heldClicks ? /^Space {2}choke him out — quiet {2}· {2}LMB {2}knife — lethal {2}· {2}RMB {2}choke him out {2}· {2}E {2}draw — gun to his head$/ : /^Space {2}choke him out — quiet {2}· {2}E {2}draw — gun to his head$/).test(c?.line2 ?? '')) fails.push(`choke row "${c?.line2}"`);   // (close.ts CLOSE.heldClicks on: the two buttons are worded on the choke row ahead of E)
+      if (!/^Space {2}“make him talk”$/.test(q?.line2 ?? '')) fails.push(`question row "${q?.line2}"`); { const chWant = `Space  choke him out — quiet  ·  ${CLOSE.heldClicks ? `${CLOSE.noKnife ? '' : 'LMB  knife — lethal  ·  '}RMB  choke him out  ·  ` : ''}${rule(HANDSLOT.on) ? '1' : 'E'}  draw — gun to his head`; if (c?.line2 !== chWant) fails.push(`choke row "${c?.line2}" (want "${chWant}")`); }   // (close.ts CLOSE.heldClicks on: the two buttons are worded on the choke row ahead of E)
       if (game.hover?.verb !== 'question') fails.push(`highlight on ${game.hover?.verb} (want the question: a tap talks)`);
       tapVerb(W, 'held', 'choke'); const chosen = verbsOf(game); W.step(DT); const chosen2 = verbsOf(game);
       if (chosen2.join() !== 'held:choke*') fails.push(`after choosing the choke: [${chosen2.join(', ')}] (want the running row alone)`); notes.push(`choke chosen → [${chosen.join(',')}] → [${chosen2.join(',')}] "${game.nearby[0]?.line2}"`); }
@@ -177,8 +190,9 @@ export async function selectorRows() {
       notes.push(`pulling: ${want(game, ['objective:drive*'], fails, 'pulling').join('/')} "${game.nearby[0]?.line2}"`); if (game.mission.driveT < 0) fails.push('the drive row did not start the pull'); }
     { const W = await world(133); const { game, level } = W; game.guards.forEach((o: any, i: number) => park(o, i)); const bp = level.breaker.pos;
       game.teleportPlayer([bp[0], 0, bp[2] - 0.7]); W.step(DT); W.step(DT);
-      notes.push(`breaker: ${want(game, ['breaker:breakerOff'], fails, 'breaker').join('/')}`); tap(W); W.step(DT); if (!game.blackout.active) fails.push('throwing it did nothing');
-      notes.push(`thrown: ${want(game, ['breaker:breakerOn'], fails, 'thrown').join('/')}`); tap(W); W.step(DT); if (game.blackout.active) fails.push('re-arming it did nothing');
+      // (where the room's lights have a switch on the wall — lightswitch.ts — the mains box's own plate is in reach beside the breaker: its row comes second, the breaker's is still Space)
+      notes.push(`breaker: ${want(game, rule(LIGHTSWITCH.on) ? ['breaker:breakerOff', 'switch:lightsOff'] : ['breaker:breakerOff'], fails, 'breaker').join('/')}`); tap(W); W.step(DT); until(W, () => game.blackout.active); if (!game.blackout.active) fails.push('throwing it did nothing'); until(W, () => game.nearby.some((r: any) => r.kind === 'breaker'));
+      notes.push(`thrown: ${want(game, rule(LIGHTSWITCH.on) ? ['breaker:breakerOn', 'switch:lightsOff'] : ['breaker:breakerOn'], fails, 'thrown').join('/')}`);   // (the plate keeps its own state with the mains cut: its row still reads as it did) tap(W); W.step(DT); until(W, () => !game.blackout.active); if (game.blackout.active) fails.push('re-arming it did nothing');
       game.teleportPlayer([bp[0], 0, bp[2] + 0.75]); W.step(DT); W.step(DT); if (game.nearby.some((r: any) => r.kind === 'breaker')) fails.push('a breaker row through the wall from the corridor side'); }
     verdict(fails.length === 0, 'body → [drag] → [let go]; the rack → [pull the drive] → the running row; the breaker → [throw it] → [re-arm] (none through the wall)', notes.join(' · '), fails);
   }

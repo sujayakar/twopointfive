@@ -33,7 +33,6 @@
 // door charge; the wall charge's own borrowed bang lands in the same frame at the same place and is merged).
 import { Vec3, v3, quat, lerp } from '../math/vec';
 import { Box, BoxFlag, makeBox } from '../scene/boxes';
-import { withPieces } from '../scene/shapes';   // (a leaf helper: the trim a box says goes where the box goes)
 import { WORLD } from '../scene/world';
 import type { Game } from './game';
 import type { Destruction } from './destruction';
@@ -185,7 +184,6 @@ export class Furniture {
     const others: AABB[] = [];   // every authored static that is NOT furniture: what may be resting on a piece of it (see the load rule below)
     for (let i = 0; i < n; i++) {
       const b = boxes[i];
-      if (b.piece === true) continue;   // TRIM a box says (scene/shapes.ts): drawn and nothing else. It stands on nothing, joins nothing and loads nothing, so the furniture of a level stood on its shapes is the furniture of the plain level; it goes where its box goes (hideTrim)
       // by the flags the level was AUTHORED with, not as it stands: the index is made at the first blast, and by then rounds or that very blast may have hidden
       // things — a part missed here would be lost to every later encounter, and the index would depend on when it was made
       const f0 = this.hidden.get(i) ?? this.destr.flags0(i) ?? b.flags;
@@ -388,9 +386,6 @@ export class Furniture {
     }
   }
 
-  /** the trim static `i` says (scene/shapes.ts withPieces) goes out of the picture with it: hidden the way the box is, back with it at reset, and never filed
-   *  (a checkpoint files the box; its trim follows it again in restore) */
-  private hideTrim(i: number) { const boxes = this.g.col.boxes; for (const j of withPieces(boxes, [i])) if (j !== i && !this.hidden.has(j)) { const t = boxes[j]; this.hidden.set(j, t.flags); t.flags |= HIDE; } }
   /** One static of a piece of furniture goes. true = this module hid a SOLID box itself (the caller re-bakes under it). */
   private breakStatic(m: Member, at: Vec3, mode: 'shatter' | 'apart', kk: number, who: number, budget: { chunks: number }): boolean {
     const g = this.g, b = g.col.boxes[m.i]; const dir = this.away(at, b.c);
@@ -407,7 +402,7 @@ export class Furniture {
     }
     const br = this.destr.walls.breakableAt(m.i);
     if (br) { if (this.destr.walls.raze(br.id, who, dir, budget)) FURN_STATS.razed++; return false; }   // a cover panel: the wall engine's road (its own pieces, re-bake and feed row)
-    this.hidden.set(m.i, b.flags); b.flags |= HIDE; this.hideTrim(m.i); this.g.col.wrote(); FURN_STATS.statics++;
+    this.hidden.set(m.i, b.flags); b.flags |= HIDE; this.g.col.wrote(); FURN_STATS.statics++;
     this.destr.breakFixtureBox(m.i);
     if (m.ghost) return false;   // (a drawn-only sheet / placard: it just goes)
     if (FURN.mouth.snow && snowPaintOf(b) !== null) {   // lying snow: a spray from where the blast met it, never rigid pieces (a bank 15 m long cut in a dozen would be slabs metres long, tumbling)
@@ -680,7 +675,7 @@ export class Furniture {
       const b = boxes[i]; if (!b) continue; (mouth.has(i) ? this.goneMouth : this.gone).add(i);
       if (this.destr.itemOf(i)) { this.destr.dropItem(i, [0, 0, 1], NOBODY_ID, true); any = true; continue; }   // (the lane's own thing: its quiet road — a lit screen's light goes with it)
       if (b.flags & BoxFlag.NoPrimary) continue;   // (already gone: it hung from a cover panel the walls' slice has just re-opened)
-      this.hidden.set(i, b.flags); b.flags |= HIDE; this.hideTrim(i); any = true;
+      this.hidden.set(i, b.flags); b.flags |= HIDE; any = true;
       const a = aabbOf(b); r.x0 = Math.min(r.x0, a.x0); r.x1 = Math.max(r.x1, a.x1); r.z0 = Math.min(r.z0, a.z0); r.z1 = Math.max(r.z1, a.z1);
     }
     for (const id of s.p) { const p = g.props.all[id]; if (p && g.props.props.includes(p)) { g.props.remove(p); this.goneProps++; any = true; } }

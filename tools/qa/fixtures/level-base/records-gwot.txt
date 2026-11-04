@@ -1,2 +1,2 @@
-# the kits' vehicles say their shapes: the boxes of each vehicle carry a shape, and a pickup's bonnet no longer carries its two panel lines
-5374ddfe729e9da06fd01e05c3d0ee5b895925fd
+# the look twin repainted and its ground laid (2026-11-03): the two cars in car paint and dark glass, the kerbs precast, the dado gloss tan, the sofa cloth; wear, ruts and stains under the surveyors' marks
+5774f9177e07472aa84efcaf9501ab7dfb81055d
