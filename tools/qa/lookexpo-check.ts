@@ -9,7 +9,7 @@ import { LOOK_DEFAULTS } from '../../src/render/gbuffer';
 import { lookConfig } from '../../src/render/frame';
 import { lookExpoFrame, LOOK_EXPO } from '../../src/render/lookexpo';
 import { PLACE, PLACE_W, PLACE_H, PLACE_BYTES, PLACE_WORDS, PLACE_NEAR } from '../../src/render/placeField';
-import { placeMask, placeWall, placeRoof } from '../../src/scene/placePlan';
+import { placeMask, placeWall, placeRoof, doorStep, DOOR_STEPS, DOOR_PER_STOP } from '../../src/scene/placePlan';
 import { makeBox, BoxFlag } from '../../src/scene/boxes';
 let red = 0; const check = (ok: boolean, w: string) => { console.log(`${ok ? '- PASS' : '- FAIL'} — ${w}`); if (!ok) red++; };
 const BREAK = process.env.LOOKEXPO_BREAK === '1', ROOT = resolve(import.meta.dir, '../..');
@@ -148,10 +148,28 @@ check(gain(SHADE[1], OUT, { u: lvl(1), ue: lvl(1) }) === 1 && gain(SHADE[1] * 0.
     const at = (i: number, j: number) => near[j * W + i];
     sweeps(80); const first = at(doorI, wallJ + 1), two = at(doorI, wallJ + 3), along = at(doorI + 2, wallJ + 1), far = at(0, wallJ + 1), deep = at(doorI, wallJ + 22), out = at(3, 0);
     yard = -8; sweeps(160); const dimFirst = at(doorI, wallJ + 1), dimOut = at(3, 0);   // the yard goes dim (dusk, a lamp put out): the block follows it down
-    const textN = pf.includes('const PLACE_NEAR: i32 = PLACE_W * PLACE_H + 4;') && pf.includes('let i = c.y * PLACE_W + c.x; let door = (m & 3u) == 1u || (mn & 3u) == 1u;') && pf.includes('if (nv > -500.0) { o.z = nv - select(U.near, U.nearDoor, door); }') && pf.includes('field[PLACE_NEAR + i] = max(lv, max(max(h0.z, h1.z), max(h2.z, h3.z)));') && pf.includes('if (m == 255u) { field[i] = PLACE_SOLID; field[PLACE_NEAR + i] = PLACE_SOLID; return; }')
+    const textN = pf.includes('const PLACE_NEAR: i32 = PLACE_W * PLACE_H + 4;') && pf.includes('let i = c.y * PLACE_W + c.x; let door = (m & 3u) == 1u || (mn & 3u) == 1u;') && pf.includes('if (nv > -500.0) { o.z = nv - select(U.near, U.nearDoor + max(0.0, sn - sm), door); }') && pf.includes('field[PLACE_NEAR + i] = max(lv, max(max(h0.z, h1.z), max(h2.z, h3.z)));') && pf.includes('if (m == 255u) { field[i] = PLACE_SOLID; field[PLACE_NEAR + i] = PLACE_SOLID; return; }')
       && COMMON.includes('let i = PLACE_W * PLACE_H + 4 + q.y * PLACE_W + q.x; return placeBuf.v[i >> 2u][i & 3]; }') && PLACE_NEAR === PLACE_W * PLACE_H + PLACE_WORDS && PLACE.near === 0.5 && PLACE.nearDoor > 0 && PLACE.nearDoor < PLACE.near;
     check(textN && first === -2 * PLACE.nearDoor && two === first - 2 * PLACE.near && along === first - 2 * PLACE.near && far === Math.max(-9, first - 6 * PLACE.near) && deep === -9 && out === 0 && dimOut === -8 && dimFirst === -8 - 2 * PLACE.nearDoor,
-      `the brightest place a stride away: the room's first cell inside its doorway holds the yard's level all but whole (${first}), each cell of floor further in ${PLACE.near} of a stop less (two cells in ${two}, two along the wall ${along}), never through the wall (six cells along it ${far}), and twenty-two cells in the room is its own again (${deep}); the yard is the yard's (${out}); and when the yard goes eight stops dim the block follows it down (${dimOut} outside, ${dimFirst} inside the door)`); } }
+      `the brightest place a stride away: the room's first cell inside its doorway holds the yard's level all but whole (${first}), each cell of floor further in ${PLACE.near} of a stop less (two cells in ${two}, two along the wall ${along}), never through the wall (six cells along it ${far}), and twenty-two cells in the room is its own again (${deep}); the yard is the yard's (${out}); and when the yard goes eight stops dim the block follows it down (${dimOut} outside, ${dimFirst} inside the door)`);
+    // A DOOR OPENS BY DEGREES (scene/placePlan.ts placeMask `steps`; place_field.wgsl doorShut and hand, held by their text and by the two constants):
+    // the same yard and room, the doorway's cells saying how open the door is, through a wall one cell deep and through one two cells deep
+    const shutOf = (m: number) => { const st = (m >> 3) & 31; return m !== 255 && (m & 3) === 1 && st ? (DOOR_STEPS - st) / DOOR_PER_STOP : 0; };
+    const inside = (deep: number, st: number): number => { const mk = (i: number, j: number) => (i < 0 || j < 0 || i >= W || j >= H ? 255 : j >= wallJ && j < wallJ + deep ? (i === doorI ? 1 | (st << 3) : 255) : 2), n = new Float32Array(W * H).fill(-1000);
+      for (let sweep = 0; sweep < 80; sweep++) for (const par of [0, 1]) for (let j = 0; j < H; j++) for (let i = 0; i < W; i++) { if (((i + j) & 1) !== par) continue; const m = mk(i, j); if (m === 255) continue;
+        let v = j < wallJ ? 0 : -9;   // (the yard at 0, the room and the doorway's own cells nine stops under)
+        for (const [di, dj] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) { const mn = mk(i + di, j + dj); if (mn === 255) continue; const nv = n[(j + dj) * W + i + di]; if (nv < -500) continue;
+          v = Math.max(v, nv - ((m & 3) === 1 || (mn & 3) === 1 ? PLACE.nearDoor + (BREAK ? 0 : Math.max(0, shutOf(mn) - shutOf(m))) : PLACE.near)); }
+        n[j * W + i] = v; }
+      return n[(wallJ + deep) * W + doorI]; };
+    const hops = (deep: number) => -(deep + 1) * PLACE.nearDoor, stops = (st: number) => (DOOR_STEPS - st) / DOOR_PER_STOP;
+    const ok = [1, 2].every(deep => inside(deep, 0) === hops(deep) && inside(deep, DOOR_STEPS) === hops(deep) && [25, 19, 13, 7, 1].every(st => Math.abs(inside(deep, st) - (hops(deep) - stops(st))) < 1e-5));
+    const numOf = (re: RegExp) => +(pf.match(re)?.[1] ?? NaN);
+    const textD = numOf(/\nconst DOOR_STEPS: f32 = ([\d.]+);/) === DOOR_STEPS && numOf(/\nconst DOOR_PER_STOP: f32 = ([\d.]+);/) === DOOR_PER_STOP && DOOR_STEPS === 31
+      && pf.includes('fn doorShut(m: u32) -> f32 { let s = (m >> 3u) & 31u; return select(0.0, (DOOR_STEPS - f32(s)) / DOOR_PER_STOP, m != 255u && (m & 3u) == 1u && s != 0u); }')
+      && pf.includes('let sm = doorShut(m); let sn = doorShut(mn); let shut = max(sm, sn);') && pf.includes('let k = U.kappa * select(1.0, select(U.link * exp2(-shut), U.link, shut == 0.0), door);')
+      && [1, 0.5, 0.25, 1 / 32, 0.02, 0].map(doorStep).join() === '31,25,19,1,0,0';
+    check(ok && textD, `a door open by degrees hands the yard on dimmer by the share that is open, ONCE, however deep the wall: with the door wide the room's first cell holds what a doorway that says nothing gives it (${inside(1, DOOR_STEPS)} through a wall one cell deep, ${inside(2, DOOR_STEPS)} through two), half open a stop under that (${inside(1, 25).toFixed(3)}, ${inside(2, 25).toFixed(3)}), a quarter open two (${inside(1, 19).toFixed(3)}, ${inside(2, 19).toFixed(3)}), a thirty-second five (${inside(1, 1).toFixed(3)}); the map's steps are ${DOOR_PER_STOP} a stop in the plan and in the shader, and a share under about a thirty-fourth is shut`); } }
 { // order is kept and nothing steps: over every pair of Sam's place and a place, a darker place is never shown brighter than a lighter one
   let order = true, cont = true, worst = 0;
   for (const amount of [0, 0.5, 1]) for (const glare of [0, 0.1, 1]) for (const day of [1, 0.4]) for (const grade of [GRADE, FLAT]) for (const field of [true, false]) for (const sky of [undefined, lvl(1.7)]) for (const sam of [1, 1.3, 2, 3, 16, 100, 700, 4000, 40000]) {

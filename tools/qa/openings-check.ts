@@ -13,6 +13,7 @@ const { parseLevelData } = await import(`${ROOT}/src/scene/levelData.ts`);
 const { loadLevel } = await import(`${ROOT}/src/scene/levelLoad.ts`);
 const { placeMask, PLACE_W, PLACE_RES } = await import(`${ROOT}/src/scene/placePlan.ts`);
 const { planOpenings, openAreas, openingRadiance, openingLooks, LOOK_OPENINGS } = await import(`${ROOT}/src/scene/openings.ts`);
+const { WAY } = await import(`${ROOT}/src/scene/wayThrough.ts`);
 const { lookConfig } = await import(`${ROOT}/src/render/frame.ts`);
 const { lightClass, lightDayK } = await import(`${ROOT}/src/render/photometry.ts`);
 const { reachMaskFor } = await import(`${ROOT}/src/render/reach.ts`);
@@ -227,7 +228,7 @@ else { const r = Bun.spawnSync(['bun', 'run', import.meta.path, '--hole'], { cwd
 // leaf must read shut whatever the wall's thickness and wherever its jambs stand on the samples (one that read open would light a room through a shut
 // door for every pass whose ray stops short of it), a leaf swung wide must leave most of its doorway, and every such opening must have found the box
 // that ends it on each hand.   AJAR_BREAK=1 bun run tools/qa/openings-check.ts = no play allowed a shut leaf: this line must FAIL
-{ const AJAR_BRK = process.env.AJAR_BREAK === '1', playWas = LOOK_OPENINGS.play; if (AJAR_BRK) LOOK_OPENINGS.play = 0;   // (AJAR_BREAK=1: a shut leaf is allowed no play in its frame: must FAIL)
+{ const AJAR_BRK = process.env.AJAR_BREAK === '1', playWas = WAY.play; if (AJAR_BRK) WAY.play = 0;   // (AJAR_BREAK=1: a shut leaf is allowed no play in its frame: must FAIL)
   const { readdirSync } = await import('node:fs'); const names = readdirSync(`${ROOT}/levels`).filter(f => f.endsWith('.json') && !f.includes('.lint')).map(f => f.replace('.json', ''));
   let doors = 0, openShut = 0, lowWide = 0, jambless = 0; const worst: string[] = [];
   for (const name of names) { const S = await stand(name), { g, world } = S, set = (a: number) => { for (const d of g.doors.list) S.hang(d.def.name, a); for (let i = 0; i < 2; i++) { S.W.step(1 / 60); for (const d of g.doors.list) { d.vel = 0; d.angle = a; d.latched = a === 0; } } };
@@ -241,6 +242,6 @@ else { const r = Bun.spawnSync(['bun', 'run', import.meta.path, '--hole'], { cwd
     } finally { console.log = l; console.warn = w; } }
   check(names.length >= 40 && doors >= 150 && openShut === 0 && lowWide === 0 && jambless === 0, 'to a portal every level\'s shut door is shut and its open door open: no leaf in its frame reads as a gap, a leaf swung wide leaves three fifths of its doorway or more, and every doorway found the boxes that end it',
     `${AJAR_BRK ? '(AJAR_BREAK) ' : ''}${names.length} levels, ${doors} openings a leaf hangs in · read open when shut: ${openShut} · under three fifths at 1.5 rad: ${lowWide} · with no box for a jamb: ${jambless}${worst.length ? ' · ' + worst.slice(0, 4).join('; ') : ''}`); 
-  LOOK_OPENINGS.play = playWas; }
+  WAY.play = playWas; }
 console.log(red ? '=== openings: FAILED ===' : '=== openings: ALL PASS ===');
 process.exit(red ? 1 : 0);
