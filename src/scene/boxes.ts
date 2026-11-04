@@ -72,9 +72,10 @@ export interface Box {
    *  material / per box in the level file (levelData.ts MaterialData.rough / metal, BoxData.rough / metal); the three below reach the GPU as ONE float in boxMat row 1's w
    *  (matWord, decoded by common.wgsl boxFinish) — the g-buffer writes roughness / metalness per pixel from it (+ the detail layer), reflect.wgsl reads the anisotropy. */
   rough?: number; metal?: boolean;
-  /** WHAT THIS BOX IS MADE OF, said by whoever made it (scene/stuff.ts): a material of the look, 'plain' or 'waits'. A paint's NAME says it for most boxes
+  /** WHAT THIS BOX IS MADE OF, said by whoever made it (scene/stuff.ts): a material of the look, 'plain', 'waits', 'glass' or 'rubber'. A paint's NAME says it for most boxes
    *  (the level's rows); a box says its own where it wears a paint for the colour alone (a car's body in the partition's blue) or a paint written as numbers.
-   *  The look reads it before any name or colour (render/gbuffer.ts lookWordOf); nothing in the simulation does. Authored (BoxData.stuff), or set by the code
+   *  The look reads it before any name or colour (render/gbuffer.ts lookWordOf), and so does the PICTURE of a round's hit (game/particleFx.ts HITSTUFF:
+   *  the sparks and chips it knocks out, the crack in solid glass); nothing in the simulation does. Authored (BoxData.stuff), or set by the code
    *  that makes the box (a prop's part). It is part of the box's PAINT: whoever repaints the box drops it (stuff.ts saidFor). Absent = the paint's name,
    *  then its colour. */
   stuff?: BoxStuff;

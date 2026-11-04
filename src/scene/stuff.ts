@@ -15,7 +15,7 @@
 import type { GwotMat } from './gwotPalette';
 import { LOOK_NAMES, lookStuffOf } from '../render/lookTex';   // (a module of arithmetic with no imports of its own: the look's list of materials is the one list)
 
-export type Stuff = typeof LOOK_NAMES[number] | 'plain' | 'waits' | 'mixed';
+export type Stuff = typeof LOOK_NAMES[number] | 'plain' | 'waits' | 'glass' | 'rubber' | 'mixed';
 
 /** the 2010s palette (scene/gwotPalette.ts GWOT_PALETTE), IN THE ORDER THE LOOK'S SHADER TEXT LISTS ITS ROWS (render/gbuffer.ts LOOK_OF is read off this: a
  *  darkened paint is the first row it fits) — keep that order, and add a new row at the end of its material's run */
@@ -52,9 +52,12 @@ export const PAINT_STUFF: Readonly<Record<string, Stuff>> = {
 export const BY_COLOUR: ReadonlySet<Stuff> = new Set<Stuff>(['mud wall', 'plaster', 'block', 'earth', 'gravel', 'slab', 'wood', 'sheet', 'cloth', 'metal', 'paint']);
 /** what the table says of a paint name: undefined for a name it has no row for (never a method of every object: a level may name a paint `constructor`) */
 export const stuffOfName = (name: string): Stuff | undefined => Object.hasOwn(PAINT_STUFF, name) ? PAINT_STUFF[name] : undefined;
-/** WHAT A BOX MAY SAY IT IS MADE OF (Box.stuff, a level file's `stuff` on a box or a prop's part): a material of the look, plain, or waits. A material is a
+/** WHAT A BOX MAY SAY IT IS MADE OF (Box.stuff, a level file's `stuff` on a box or a prop's part): a material of the look, plain, waits, or one of TWO THINGS THE LOOK HAS NO
+ *  MATERIAL FOR and draws plain, by the box's finish, but which the picture of a round's hit reads (game/particleFx.ts HITSTUFF): 'glass' — a solid thing of
+ *  glass with nothing modelled behind it (a car's window), which is NOT a pane (a sheet a round shatters says so with its flag, BoxFlag.Glass: the pane
+ *  engine's) — and 'rubber' (a tyre: dark, and by its colour alone it would be taken for metal). A material is a
  *  name the look has a NUMBER for (lookTex.ts lookStuffOf): the stone and the brick under a mud wall are layers the mud wall shows, and no box is made of them. */
-export const BOX_STUFFS: readonly string[] = [...LOOK_NAMES.filter(n => lookStuffOf(n) > 0), 'plain', 'waits'];
+export const BOX_STUFFS: readonly string[] = [...LOOK_NAMES.filter(n => lookStuffOf(n) > 0), 'plain', 'waits', 'glass', 'rubber'];
 /** what a box may say: any stuff the table of names may, but 'mixed' (a word about a NAME) and the two layers under a mud wall (no stuff: BOX_STUFFS) */
 export type BoxStuff = Exclude<Stuff, 'mixed' | 'field stone' | 'mud brick'>;
 export const boxStuffOk = (v: unknown): v is BoxStuff => typeof v === 'string' && BOX_STUFFS.includes(v);
