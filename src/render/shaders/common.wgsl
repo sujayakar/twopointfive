@@ -210,10 +210,10 @@ fn boxOwner(b: BoxGeo) -> u32 { return (b.flags >> 8u) & 0xffu; }
  *  the reflection pass reads the anisotropy. A box nobody gave a finish reads rough 1 (matte: no reflection ray, no analytic highlight). */
 struct Finish { rough: f32, metal: bool, aniso: bool };
 /** THE LOOK PROTOTYPE: the picture's word for box i, carried above the finish in the same float (8 × it; scene/boxes.ts packBox, render/gbuffer.ts lookWordOf):
- *  bits 0-4 what it is made of (look.wgsl's classes, 0 = plain; decided on the CPU from the box's own paint), bit 5 = it moves (a box past the level's statics),
- *  bits 6-11 a number of the box's own, 0‥44. 0 on every other page. */
+ *  bits 0-3 what it is made of (look.wgsl's classes, 0 = plain; decided on the CPU from the box's own paint), bit 4 = it moves (a box past the level's statics),
+ *  bits 5-11 a number of the box's own, 0‥90. 0 on every other page. */
 fn boxLook(i: u32) -> u32 { return u32(boxMat[i * 4u + 1u].w * 0.125); }
-fn boxStuff(i: u32) -> u32 { return boxLook(i) & 31u; }   // (five bits: render/gbuffer.ts LOOK_WORD)
+fn boxStuff(i: u32) -> u32 { return boxLook(i) & 15u; }
 fn boxFinish(i: u32) -> Finish {
   var w = boxMat[i * 4u + 1u].w; var f: Finish;
   if (LOOK) { w -= 8.0 * floor(w * 0.125); }   // (THE LOOK PROTOTYPE: boxLook's word, above)
