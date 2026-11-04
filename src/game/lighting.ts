@@ -1,7 +1,6 @@
 // Lights as game objects: switchable fixtures and their groups, the OCP, the mains breaker (blackout / restrike / beacons / a guard sent to reset it), light events into the hearing model.
 // (Split out of game.ts mechanically: plain functions taking the Game as their first argument; Game keeps one-line delegators for
 //  anything other files call.)
-import { men } from './seats';
 import { SideMap } from '../math/side';
 import { Vec3, v3 } from '../math/vec';
 import { leverHands } from './handwork';
@@ -13,7 +12,7 @@ import type { RtLight } from '../render/lights';
 import { hourOf, applyHour, sunStrength, sunGiven, setSunStrength, type HourId } from './hours';
 import { isHostile } from './teams';
 import { WORDS, wg } from './words';   // (a leaf: the dialogue pass's one switch)
-import { breakerErrand, samPanelPoint, workNotHis, workStaysPut } from './workthings';   // (a teammate neither takes the breaker errand nor re-arms it on his own, with that module's switch on)
+import { breakerErrand, workNotHis, workStaysPut } from './workthings';   // (a teammate neither takes the breaker errand nor re-arms it on his own, with that module's switch on)
 import { powerOut, powerOutMan } from './powerout';   // (the room fight's defenders answer a blackout by that module's rule: its switch off, both are a return on their first line)
 import { carLampPaint, deadLamp } from './carlamps';   // a broken vehicle lamp's paint; a dark lens breaking is no light going out (a leaf)
 import { simRandom } from '../math/dice';   // the simulation's die (math/dice.ts): the Game's own when it has one, Math.random otherwise
@@ -54,7 +53,7 @@ export function lensRecheck(g: Game): void {
   if (!LIGHTWALL.on) return;
   const one = (L: RtLight) => { const from = LENS_FROM.get(L); if (from && L.enabled) L.pos = lensClear(g, from, L.pos, L.radius); };
   for (const gd of g.guards) one(gd.flashlight);
-  for (const pl of men(g)) one(pl.light);
+  one(g.player.light);
 }
 
 /** words.ts: the mains are the business of the side whose building it is — one of Sam's own teammates neither walks off to the breaker Sam threw nor puts it back in and
@@ -174,8 +173,7 @@ export function ocp(g: Game, t: LightTarget | null) {
   }
   if (t.kind === 'breaker') {
     const eye = g.player.char.bones.head ?? v3.add(g.player.char.pos, [0, 1.6, 0]);
-    const own = samPanelPoint(g, g.player.char.pos);   // (workthings.ts WORK.samFace: a panel hung facing another way is seen at its own face)
-    if (g.col.segmentBlocked(eye, v3.add(t.pos, [0, 0, -0.18])) && !(own && !g.col.segmentBlocked(eye, own))) { g.msg("the OCP can't see the breaker from here"); g.audio.play('deny', null, 0.5); return; }
+    if (g.col.segmentBlocked(eye, v3.add(t.pos, [0, 0, -0.18]))) { g.msg("the OCP can't see the breaker from here"); g.audio.play('deny', null, 0.5); return; }
     if (g.blackout.active) { g.msg('power is already off'); g.audio.play('deny', null, 0.5); return; }
     o.use(); g.audio.play('ocp', g.player.char.muzzle, 1); g.setBlackout(g.tune.ocpDuration * 2.5, 'ocp'); return;
   }

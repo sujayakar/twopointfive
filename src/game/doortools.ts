@@ -58,7 +58,6 @@
 //
 // With no operative on the floor nothing here runs (tick: a pass over the guard list and a return; the rows are orders.ts's, inert with it).
 // (src/game is one import cycle: nothing below is built from another game module's exports at module load.)
-import { eachSeat, seatShare } from './seats';
 import { SideMap, SideSet } from '../math/side';
 import { HOLDFIRE, holdFireOrder, holdFireOnMan } from './holdfire';   // (called / read inside blow / goMen / testStacks only)
 import { FRAG, exposedTo, fragRunning } from './frag';
@@ -85,6 +84,7 @@ import { carriesHammer, gunUp, gunDown, hammerBlow, bigBroken, hammerOut, hammer
 import { SILENT, squadSilent, silentUrgent, silentNoBoot, silentPick, silentBoot, silentCompromised, silentEase, silentNoCans, silentTool, SILENT_STATS } from './silent';
 import { doorPlan } from './roomclear';
 import { NIGHTBREACH } from './nightbreach';
+import { PLAYER_ID } from './consts';
 import { chargeHands } from './handwork';
 import { samStowing, mateStow, mateStowLead, stowFight } from './workstow';   // (called inside samTick and the 'place' stage only)
 import { COVER } from './cover';
@@ -925,7 +925,7 @@ export class DoorTools {
   /** a fresh run: the counts back, nothing set, nothing under way (a can already in the air goes off on its own short fuse) */
   reset() {
     for (const op of this.ops) { this.defuse(op); this.offLock(op); }
-    this.ops = []; this.done = []; this.set = []; this.words = []; this.held.clear(); this.watches = []; this.tried.clear(); this.samSpent = 0; this.charges = seatShare(this.g, DOORTOOLS.charges); this.bangs = seatShare(this.g, DOORTOOLS.bangs); this.frags = seatShare(this.g, FRAG.squad); this.log = [];
+    this.ops = []; this.done = []; this.set = []; this.words = []; this.held.clear(); this.watches = []; this.tried.clear(); this.samSpent = 0; this.charges = DOORTOOLS.charges; this.bangs = DOORTOOLS.bangs; this.frags = FRAG.squad; this.log = [];
     for (const k of Object.keys(this.stats) as (keyof DoorTools['stats'])[]) this.stats[k] = 0;
     this.seen = null; this.led = { entries: 0, bySeen: 0 };
   }
@@ -3269,7 +3269,7 @@ export class DoorTools {
 
   // ------------------------------------------------------------ the charge
   /** Sam's trigger: the set charge nearest him (or the one given) goes. Returns what it did, null with none set. */
-  blow(c: SetCharge | null = this.nearest()): { knocked: number; stunned: number; backblast: number } | null { return this.g.fogOfWar.doing(this.g.player.char.id, () => this.blowRaw(c)); }   // (a door charge's blast is the team's doing: fogofwar.ts FOG.ours)
+  blow(c: SetCharge | null = this.nearest()): { knocked: number; stunned: number; backblast: number } | null { return this.g.fogOfWar.doing(PLAYER_ID, () => this.blowRaw(c)); }   // (a door charge's blast is the team's doing: fogofwar.ts FOG.ours)
   private blowRaw(c: SetCharge | null): { knocked: number; stunned: number; backblast: number } | null {
     if (!c) return null;
     const g = this.g, K = DOORTOOLS, d = c.door, side = c.side, W = d.def.width, into = -side as 1 | -1;
@@ -3278,15 +3278,15 @@ export class DoorTools {
     const out = doorPt(d, W / 2, 0.5, side, 1.1), inn = doorPt(d, W / 2, 0.45, into, 1.1);
     // the leaf: off its hinges and into the room, a loose slab (doorblast.ts tearOff — the crack of it is the same 'kick' the floor hears) — or, with that
     // switched off, as it was: the keep torn out, the leaf flung in on its hinge
-    if (tearOff(g, d, out, g.player.char.id, DOORBLAST.chargeK)) { /* gone */ }
-    else if (!d.def.steel) { g.doors.kickIn(d, out, g.player.char.id, true); if (Math.abs(d.angle) < 1.4) d.vel = -g.doors.side(d, doorPt(d, W / 2, 0.6, side)) * K.blowVel; d.quietT = -K.holdOpen; }
+    if (tearOff(g, d, out, PLAYER_ID, DOORBLAST.chargeK)) { /* gone */ }
+    else if (!d.def.steel) { g.doors.kickIn(d, out, PLAYER_ID, true); if (Math.abs(d.angle) < 1.4) d.vel = -g.doors.side(d, doorPt(d, W / 2, 0.6, side)) * K.blowVel; d.quietT = -K.holdOpen; }
     // …and it is a CALLER of the destruction goal's blast entry point where the build carries one (walls, cover and whoever listens to a blast hear of it from
     // there; this leaf is already off, so the doors' part of that call finds nothing left to take): at the charge's own small radius, and with that lane's chaos
     // left out — the stun charge below runs its bang
-    if (DOORBLAST.on && DOORBLAST.chargeR > 0) (g.destr as unknown as { blast?: (at: Vec3, o: { radius: number; who: number; chaos: boolean }) => unknown }).blast?.(doorPt(d, W / 2, 0.15, side, 1.1), { radius: DOORBLAST.chargeR, who: g.player.char.id, chaos: false });
+    if (DOORBLAST.on && DOORBLAST.chargeR > 0) (g.destr as unknown as { blast?: (at: Vec3, o: { radius: number; who: number; chaos: boolean }) => unknown }).blast?.(doorPt(d, W / 2, 0.15, side, 1.1), { radius: DOORBLAST.chargeR, who: PLAYER_ID, chaos: false });
     // the blast itself — flash, report, scorch, what it knocks about — is the stun charge's (combat.ts), at the foot of the leaf, with nobody on its list: who it
     // hurts is decided below, by which side of the door he is on
-    const it = g.items.spawn('flash', doorPt(d, W * 0.7, 0.2, into, 0.5), [0, 0, 0], { fuse: 99, who: g.player.char.id }); it.fired = true;
+    const it = g.items.spawn('flash', doorPt(d, W * 0.7, 0.2, into, 0.5), [0, 0, 0], { fuse: 99, who: PLAYER_ID }); it.fired = true;
     const all = g.guards, last = g.messages[g.messages.length - 1]; g.guards = []; try { detonateStun(g, it, true); } finally { g.guards = all; }
     const m = g.messages[g.messages.length - 1]; if (m && m !== last && /flashbang/.test(m.text)) g.messages.pop();   // ('flashbang went off': this was not one)
     const ii = g.items.items.indexOf(it); if (ii >= 0) g.items.items.splice(ii, 1);   // (nor is there a spent can to leave on the floor)
@@ -3303,10 +3303,10 @@ export class DoorTools {
         else { this.dazzle(gd, lerp(K.stunSecs[0], K.stunSecs[1], clamp(dist / K.stunM, 0, 1)), inn); gd.staggerUntil = Math.max(gd.staggerUntil, g.time + K.staggerSecs); gd.weapon.burst = null; stunned++; }
       }
       // …and Sam, as one of ours (samstun.ts): too near on the charge's own side, or beyond the door when it goes — dazzled as a teammate there is, never felled
-      eachSeat(g, g => { if (SAMSTUN.on && !g.player.down && !g.puppet && !g.touring) { const p = g.player.char.pos, far = offOf(d, p, side) < 0, dist = flat(p, d.frameCentre);   // (every player's man — seats.ts)
-        if (dist < (far ? K.stunM : K.backblastM) && !g.col.solidBlocked(far ? inn : out, [p[0], 1.1, p[2]])) { dazzlePlayer(g, K.backblastSecs, inn); samToo = true; } } });
+      if (SAMSTUN.on && !g.player.down && !g.puppet && !g.touring) { const p = g.player.char.pos, far = offOf(d, p, side) < 0, dist = flat(p, d.frameCentre);
+        if (dist < (far ? K.stunM : K.backblastM) && !g.col.solidBlocked(far ? inn : out, [p[0], 1.1, p[2]])) { dazzlePlayer(g, K.backblastSecs, inn); samToo = true; } }
     } finally { g.col.dynamicBoxes = leaves; }
-    moraleBlast(g, inn, g.player.char.id);   // (morale.ts: the men behind the door it did not put down are shaken by it — a return on its first line with the switch off)
+    moraleBlast(g, inn, PLAYER_ID);   // (morale.ts: the men behind the door it did not put down are shaken by it — a return on its first line with the switch off)
     this.stats.blown++; this.stats.knocked += knocked; this.stats.stunned += stunned; this.stats.backblast += backblast;
     g.msg(`charge blown — ${doorWords(d)}${knocked ? ` · ${knocked} down` : ''}${stunned ? ` · ${stunned} stunned` : ''}${backblast ? ` · ${backblast} of yours too close` : ''}${samToo ? ' · you were too close' : ''}`);
     this.note(`blow ${d.def.name}: knocked ${knocked} stunned ${stunned} backblast ${backblast}`);

@@ -408,7 +408,7 @@ fn main(@builtin(workgroup_id) wid: vec3u, @builtin(local_invocation_index) lidx
       let ev = evalLight(li, P, N);
       if (!ev.ok) { continue; }
       let w = luminance(ev.E);
-      if (w < 1e-4) { continue; }
+      if (w < 1e-4 * lampFloorK()) { continue; }
       let c = select(0u, 1u, lightBroad(li));
       if (c == 0u) { U0 += ev.E; } else { U1 += ev.E; }
       W[c] += w;

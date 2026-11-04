@@ -66,7 +66,7 @@ export function wire(url: string, opts: WireOpts = {}): Wire {
     stats.calls++; stats.bytesOut += body.length;
     // (the wait grows with the body: a call's worth of tape on a slow line — 25 KB a second is allowed for — must not be cut off and sent again for ever)
     const stop = typeof AbortController !== 'undefined' ? new AbortController() : null, t = stop ? setTimeout(() => stop.abort(), timeoutMs + Math.round(body.length / 25)) : null;
-    let res: Response, json: { status?: string; value?: unknown; errorMessage?: string; errorData?: unknown };
+    let res: Response, json: { status?: string; value?: unknown; errorMessage?: string };
     try {
       res = await f(`${base}/api/${kind}`, { method: 'POST', headers: { 'Content-Type': 'application/json', ...(opts.key ? { Authorization: `Convex ${opts.key}` } : {}) }, body, ...(keepalive ? { keepalive: true } : {}), ...(stop ? { signal: stop.signal } : {}) });
       json = await res.json();
@@ -74,10 +74,7 @@ export function wire(url: string, opts: WireOpts = {}): Wire {
     finally { if (t) clearTimeout(t); }
     if (json?.status === 'success') return decode(json.value) as T;
     // (a function the backend does not HAVE is not a refusal of these arguments: the backend is older or newer than the page, and the call is worth asking again)
-    // (a refusal's own words are its DATA: a deployed backend keeps them there and may say no more than 'Server Error' in the message, and a page that tells
-    // a full game from a wrong code reads those words — net/lobby.ts)
-    const said = String(json?.errorMessage ?? `HTTP ${res.status}`), data = typeof json?.errorData === 'string' ? json.errorData : '';
-    const why = (data && !said.includes(data) ? `${data} (${said})` : said).slice(0, 200);
+    const why = String(json?.errorMessage ?? `HTTP ${res.status}`).slice(0, 200);
     return fail(`${path}: ${why}`, json?.status === 'error' && !/Could not find (public )?function/i.test(why));
   };
   return { url: base, stats, query: (path, args) => call('query', path, args), mutation: (path, args, o) => call('mutation', path, args, !!o?.keepalive) };

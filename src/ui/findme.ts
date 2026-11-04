@@ -9,13 +9,12 @@
 // that is not his silhouette — from a squad level's distance an arm was two pixels wide and the 'outline' a stick figure's. The maintainer: "it should be a
 // proper silhouette". The outline is the renderer's now. His shape through a wall is SHELVED until that one has been seen on a GPU: it needs him drawn a
 // second time without the walls, which is a pass of its own.
-import type { Game } from '../game/game';
-import { men, teamMen, allDown, seatOfMan, seatTone } from '../game/seats';
+import type { Game, Guard } from '../game/game';
 import type { FollowCamera } from '../game/camera';
 import type { Vec3 } from '../math/vec';
 import { PLAN } from '../game/floorplan';
 import { camCap } from '../host/keymap';
-import { FINDME, FINDME_WIDTH, FINDME_MATES, AUTOVIEW, setAutoView, setFindMe, resetFindMe, outlineWant, outlineInk, OUTLINE_LOOK, type OutlineHue } from '../host/findme';
+import { FINDME, FINDME_WIDTH, FINDME_MATES, AUTOVIEW, setAutoView, setFindMe, resetFindMe, outlineWant, outlineInk, OUTLINE_LOOK } from '../host/findme';
 import { AUTOCAM, AUTOTUNE, AUTO_MODES, AUTO_RANGE, setAutoMode, setAutoTune, autoTuneOwn, resetAutoTune, type AutoKey, type AutoMode } from '../host/autocam';
 import { makeOutlineMan, type OutlineFrame, type OutlineMan } from '../render/outline';
 
@@ -27,37 +26,32 @@ export function findMeRing(game: Game): Vec3 | null {
 
 /** one man's part of the outline's frame: where he stands, how wide and in what ink, and how strong — his own light's word, eased over `dt` (a frame
  *  with no time in it, the world held under a card, takes the word whole: a row moved in Options shows at once) */
-function outlineMan(M: OutlineMan, pos: Vec3, light: number, nv: number, dt: number, times: number, hue: OutlineHue) {
+function outlineMan(M: OutlineMan, pos: Vec3, light: number, nv: number, dt: number, times: number, hue: 'you' | 'red' | 'blue') {
   const L = OUTLINE_LOOK, want = outlineWant(light, nv);
   M.on = true; M.strength = dt > 0 ? M.strength + (want - M.strength) * Math.min(1, dt * L.ease) : want;
   M.at[0] = pos[0]; M.at[1] = pos[1]; M.at[2] = pos[2]; M.reach = L.reachM; M.top = L.topM; M.wide = FINDME.width; M.times = times; M.alpha = FINDME.opacity; outlineInk(M.ink, hue);
 }
 /** the outline's frame for this frame (render/outline.ts), written in place: off unless the row is on, its width and strength rows are over none, he is
- *  up — or, in a game of several players, any of them is — and `shown` (the page says no where no mark of his is drawn: a stun's white-out, attract mode, the kit's picture); else his own man — whose pixels,
- *  where, how wide, in what ink, how strong — and with him EVERY OTHER LIVING MAN OF THE TEAM (seats.ts: the other players' own men who are up, then
- *  `teamMen`, the roster of every seat, whatever an orders menu is doing), each by his own light meter, his rim covering the teammates' row's share of
- *  what the player's does (none = nobody else). THE COLOURS SAY WHOSE MAN HE IS (game/seats.ts seatTone): a player's own man in his seat's (yellow,
- *  the second player's purple), a teammate in his pair's (red for the red pair; blue for the blue pair, a duo's partner and a squad not in pairs) —
- *  so the same man is the same colour on both players' screens. A man who has left the list gives his place up. */
+ *  up and `shown` (the page says no where no mark of his is drawn: a stun's white-out, attract mode, the kit's picture); else his own man — whose pixels,
+ *  where, how wide, in what ink, how strong — and with him the living men of his squad (SquadOrders.men: the roster, whatever the orders menu is doing),
+ *  each by his own light meter, in his pair's colour (red for the red pair; blue for the blue pair, a duo's partner and a squad not in pairs), his rim
+ *  covering the teammates' row's share of what the player's does (none = no teammates). A man who has left the list gives his place up. */
 export function findMeOutline(F: OutlineFrame, game: Game, dt: number, shown = true) {
   const pl = game.player, pool = F.mates;
-  if (!FINDME.outline || !(FINDME.width > 0) || !(FINDME.opacity > 0) || allDown(game) || !shown) { F.on = false; F.strength = 0; for (const m of pool) { m.on = false; m.strength = 0; m.owner = 0; } return; }
+  if (!FINDME.outline || !(FINDME.width > 0) || !(FINDME.opacity > 0) || pl.down || !shown) { F.on = false; F.strength = 0; for (const m of pool) { m.on = false; m.strength = 0; m.owner = 0; } return; }
   F.picture = FINDME.picture; F.lit = FINDME.picLit; F.dark = FINDME.picDark; F.whole = Math.max(0, Math.min(1, 1 - pl.nvAmount));   // (by the picture the meter is not asked: only the goggles take the rims out)
-  F.owner = pl.char.id; outlineMan(F, pl.char.pos, pl.visibility, pl.nvAmount, dt, 1, seatTone(seatOfMan(game, pl).index));
-  if (pl.down) F.strength = 0;   // (down in a game that goes on, another player still up: no rim of his own, and the team's as ever)
+  F.owner = pl.char.id; outlineMan(F, pl.char.pos, pl.visibility, pl.nvAmount, dt, 1, 'you');
+  const S = game.orders, men = FINDME.mates > 0 ? S.men() : NOBODY;
   for (const m of pool) m.on = false;
-  const mate = (id: number, pos: Vec3, light: number, hue: OutlineHue): void => {
+  for (const gd of men) {
     let m: OutlineMan | undefined, free: OutlineMan | undefined;
-    for (const x of pool) { if (x.owner === id) { m = x; break; } if (!x.owner) free ??= x; }
-    if (!m) { m = free; if (!m) pool.push(m = makeOutlineMan()); m.owner = id; m.strength = 0; }
-    outlineMan(m, pos, light, pl.nvAmount, dt, FINDME.mates, hue);
-  };
-  if (FINDME.mates > 0) {
-    for (const p of men(game)) if (p !== pl && !p.down) mate(p.char.id, p.char.pos, p.visibility, seatTone(seatOfMan(game, p).index));
-    for (const gd of teamMen(game)) mate(gd.char.id, gd.char.pos, gd.visibility, gd.unit?.pair === 'red' ? 'red' : 'blue');
+    for (const x of pool) { if (x.owner === gd.char.id) { m = x; break; } if (!x.owner) free ??= x; }
+    if (!m) { m = free; if (!m) pool.push(m = makeOutlineMan()); m.owner = gd.char.id; m.strength = 0; }
+    outlineMan(m, gd.char.pos, gd.visibility, pl.nvAmount, dt, FINDME.mates, S.pairOf(gd) === 'red' ? 'red' : 'blue');
   }
   for (const m of pool) if (!m.on) { m.strength = 0; m.owner = 0; }
 }
+const NOBODY: Guard[] = [];
 
 const NS = 'http://www.w3.org/2000/svg';
 const CSS = `
@@ -153,7 +147,7 @@ export function findMeRows(K: RowKit, body: HTMLElement): () => void {
   pct('Outline shows under light', () => FINDME.picture ? 'picLit' : 'lit', 100, 2, false, 'A rim starts to show under this much light.');   // (the pair of whichever the row above says: each keeps its own numbers)
   pct('Outline full under light', () => FINDME.picture ? 'picDark' : 'dark', 100, 2, false, 'A rim is at its full under this much light.');
   pct('Teammate outline width', 'mates', FINDME_MATES.max * 100, 10, true, 'How wide the rim around each teammate is compared with yours. At none, they have no rim.');
-  pct('Outline colour', 'colour', 100, 5, true, 'How much colour the rims have: each player\'s man has his own, and teammates are red or blue.');
+  pct('Outline colour', 'colour', 100, 5, true, 'How much colour the rims have: yellow for you, red and blue for your teammates.');
   K.sec(body, 'Camera · trying out');
   pct('Aim pan', 'pan', 100, 10, true, 'How far the view leans toward where you aim. At none you stay in the middle of the screen.');
   K.seg(body, 'Turn direction', TURNS, () => FINDME.turn < 0 ? 'rev' : 'as', v => setFindMe('turn', v === 'rev' ? -1 : 1), () => `Which way the view turns when you hold ${camCap()} and move the mouse.`);

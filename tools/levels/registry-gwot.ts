@@ -20,11 +20,6 @@ const SKIN: Skin = {
   wall: 'render', house: 'render', inner: 'whitewash', frameOut: 'woodGrey', frameIn: 'woodGrey', dado: 'blanketBrown',
   floor: { stone: 'slab', lino: 'slab', carpet: 'canvas' },
   metals: ['woodGrey', 'iron', 'galv'], patches: 4,
-  // THE LIVED ROOMS' OWN FLOORS (registry.ts lays one wall to wall in each room in a colour of its own, and a runner down the gallery): each as the stuff it
-  // is, in the palette's paint nearest the room's colour, so a room is still told by its floor from above. Floor paint in the public rooms and the copy room
-  // (the tiles lie on it), cloth where the room has a carpet, the bare slab between the stacks, hessian in the sorting room
-  own: [[[0.5, 0.15, 0.11], 'paintRust'], [[0.5, 0.36, 0.1], 'rugOchre'], [[0.5, 0.62, 0.5], 'rugCream'], [[0.15, 0.21, 0.34], 'paintBlue'], [[0.15, 0.3, 0.32], 'paintGreen'],
-    [[0.27, 0.09, 0.08], 'rugRed'], [[0.13, 0.13, 0.14], 'slab'], [[0.3, 0.25, 0.17], 'coyote'], [[0.3, 0.2, 0.18], 'blanketBrown']],   // (the last: the lobby's own mat)
   // (the rescue names no rooms: the registrar's office is the one room that is lived in — the level's only wainscot and its only patterned rug)
   rooms: [{ id: 'office', bounds: R.office }, { id: 'hall', bounds: R.hall }, { id: 'gallery_corridor', bounds: R.gallery }], noRug: /./, rugs: { office: 'afghan' },
   dress: (G, _level, T) => {

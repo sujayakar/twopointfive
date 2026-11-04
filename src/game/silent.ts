@@ -50,7 +50,6 @@
 // the floor). Probes: tools/qa/silent-probes.ts (`probes.ts silent`) — the QA harness stands the game up with SILENT.on false (src/host/standup.ts), so every
 // older menu probe sees the menu it was written against; that family turns it on.
 
-import { viewOf } from './seats';
 import { SideMap, SideSet } from '../math/side';
 import type { Game, Guard } from './game';
 import { fragRunning } from './frag';
@@ -124,7 +123,7 @@ export function setSilent(g: Game, on: boolean, by: By = 'api') {
   SILENT_LOG.push({ t: g.time, to: on ? 'silent' : 'loud', by }); if (SILENT_LOG.length > 100) SILENT_LOG.splice(0, 50);
 }
 /** this teammate is under the silent posture this frame */
-export function silentMan(g: Game, gd: Guard): boolean { return squadSilent(viewOf(g, gd)) && mate(gd); }   // (his seat's squad: seats.ts)
+export function silentMan(g: Game, gd: Guard): boolean { return squadSilent(g) && mate(gd); }
 
 // ------------------------------------------------------------ the rules (each a return on its first line while the squad is loud)
 /** the speed his legs may be asked for */

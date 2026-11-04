@@ -64,7 +64,6 @@ declare module 'node:os' {
   export function homedir(): string;
   export function cpus(): { model: string; speed: number }[];
   export function platform(): string;
-  export function networkInterfaces(): Record<string, { address: string; family: string; internal: boolean }[] | undefined>;
 }
 declare module 'node:url' {
   export function fileURLToPath(url: string | URL): string;

@@ -30,7 +30,6 @@
 // with the encounter. Deterministic: no dice of its own (a man's bark goes through g.say like any other).
 //
 // NOT here (other pieces'): who decides to shoot at cover or through a wall, who places a charge, doors off their hinges, glass.
-import { isManId, menUp, manById, teamActive, teamMen, orderOf, viewOf } from './seats';
 import { SideMap } from '../math/side';
 import { v3, type Vec3 } from '../math/vec';
 import type { Game, Guard } from './game';
@@ -43,6 +42,7 @@ import { isHostile } from './teams';
 import { coverFrom, SUPPRESSION } from './suppression';
 import { order } from './squad';
 import { doorCells } from './guards';
+import { PLAYER_ID } from './consts';
 import { lastStandMan } from './laststand';
 import { squadStaysIn } from './enemysquads';
 import { digInSet } from './digin';
@@ -204,7 +204,7 @@ export class WallReact {
     const ask = (gd: Guard) => { if (asked.has(gd)) return; asked.add(gd);
       const i = this.pend.findIndex(x => x.gd === gd), old = i >= 0 && WALLREACT.everyGone ? this.pend[i] : null;
       const P: Pend = { gd, rect: row.rect, b, who: row.who, until: g.time + WALLREACT.retrySecs, next: g.time };
-      if (old) { let ob = old.b; while (ob?.into) ob = ob.into; P.also = this.kept(orderOf(g, gd)?.post ?? gd.char.pos, [{ rect: old.rect, b: ob, who: old.who }, ...(old.also ?? [])]); }   // (everyGone: what went before this row is still his to be asked about, when the newest thing has nothing to say to him)
+      if (old) { let ob = old.b; while (ob?.into) ob = ob.into; P.also = this.kept(g.orders.of(gd)?.post ?? gd.char.pos, [{ rect: old.rect, b: ob, who: old.who }, ...(old.also ?? [])]); }   // (everyGone: what went before this row is still his to be asked about, when the newest thing has nothing to say to him)
       if (i >= 0) this.pend[i] = P; else this.pend.push(P); };   // (one question a man. With everyGone off it is about the newest thing to go and nothing else; on, the things that went before it while he was owed the answer wait behind it, no more than goneMax in all)
     const own = (gd: Guard) => row.cause === 'fire' && gd.char.id === row.who && coverfireOn(g, gd) !== null;   // (the man whose aimed fire opened it — coverfire.ts, he is chewing it for the line: it is not his cover that went)
     for (const gd of g.guards) if (gd.state !== 'dead' && !own(gd) && rectDist(gd.char.pos, row.rect) <= WALLREACT.nearM) ask(gd);
@@ -321,7 +321,7 @@ export class WallReact {
   private manKnows(b: Breach, gd: Guard, how: 'heard' | 'saw' | 'made' | 'told') {
     if (b.men.has(gd)) return; const g = this.g, K = WALLREACT; b.men.set(gd, g.time);
     let M = this.minds.get(gd); if (!M) this.minds.set(gd, M = new Map());
-    M.set(b, { ev: how === 'told' ? K.evOpen * 0.5 : how === 'made' ? 0 : K.evOpen, line: false, lineT: -1, t: how === 'made' ? -1e9 : b.cause === 'blast' && g.seats.some(s => (s.view.wallCharge?.stats.blown ?? 0) > 0) ? Math.max(g.time, gd.dazzledUntil) : g.time });   // (a man flash-blind as a blast opened it — the wall charge's stun — has it fresh from when his eyes are back: the room fight asks him nothing until then. Only once a wall charge has gone: before one, the stamp is the moment itself, as it always was)
+    M.set(b, { ev: how === 'told' ? K.evOpen * 0.5 : how === 'made' ? 0 : K.evOpen, line: false, lineT: -1, t: how === 'made' ? -1e9 : b.cause === 'blast' && (g.wallCharge?.stats.blown ?? 0) > 0 ? Math.max(g.time, gd.dazzledUntil) : g.time });   // (a man flash-blind as a blast opened it — the wall charge's stun — has it fresh from when his eyes are back: the room fight asks him nothing until then. Only once a wall charge has gone: before one, the stamp is the moment itself, as it always was)
     if (how === 'told') { WALLREACT_STATS.told++; return; }
     WALLREACT_STATS.learnedMen++; note(g, `${gd.callsign} ${how} ${b.key}`);
     if (how === 'made') return;
@@ -329,7 +329,7 @@ export class WallReact {
     if (K.say && !b.said.has(gd.team) && gd.state !== 'patrol') { b.said.add(gd.team);   // (a man the noise has not stirred does not call it)
       // (the dialogue pass, words.ts: 'they' did it only if they did — a hole his OWN side's rounds or grenade made is called as a hole, and a port nobody shot — a blast's, a collapse's — is not 'shooting')
       const by = b.cause === 'blast' ? b.blastBy ?? b.who : b.who;   // (a gap one side's rounds cut and the other side then blew is THEIR blown wall, not his own side's hole)
-      const own = WORDS.on && (by !== undefined && isManId(by) ? !isHostile(gd.team, 'player') : g.guards.some(x => x.char.id === by && x.team === gd.team));
+      const own = WORDS.on && (by === PLAYER_ID ? !isHostile(gd.team, 'player') : g.guards.some(x => x.char.id === by && x.team === gd.team));
       g.say(gd, own ? (b.walk ? "the wall's down — watch it!" : 'hole in the wall — watch it!')
         : b.walk ? (b.cause === 'blast' ? "they've blown the wall!" : "the wall's down — they can come through!") : WORDS.on && b.cause !== 'fire' ? 'hole in the wall — watch it!' : "they're shooting through the wall!"); }
   }
@@ -337,8 +337,7 @@ export class WallReact {
   private heard(b: Breach, row: LevelChange) {
     const g = this.g, K = WALLREACT, R = row.cause === 'blast' ? K.hearBlastM : row.cause === 'fire' ? K.hearFireM : K.hearFallM, src: Vec3 = [row.pos[0], 1.3, row.pos[2]];
     const hears = (head: Vec3) => flat(head, src) < R && g.col.sound.propagate(src, head).pathLen < R;
-    const ours = row.who !== undefined && isManId(row.who);
-    if (ours || menUp(g).some(pl => hears([pl.char.pos[0], EYE, pl.char.pos[2]]))) this.opsKnow(b, ours ? 'the player made it' : 'the player heard it');
+    if (row.who === PLAYER_ID || (!g.player.down && hears(this.head('sam')))) this.opsKnow(b, row.who === PLAYER_ID ? 'the player made it' : 'the player heard it');
     for (const gd of g.guards) {
       if (gd.state === 'dead') continue; const made = gd.char.id === row.who;
       if (!made && !hears(this.head(gd))) continue;
@@ -364,7 +363,7 @@ export class WallReact {
   private dropOpenings() { for (const b of this.breaches) if (b.opening) { this.dropOpening(b.opening); b.opening = null; } }
   /** a breach the team knows is one of its openings: dealt to a free gun like a doorway, counted by the entry points (kept in the list whoever rebuilds it) */
   private book() {
-    const g = this.g; if (!teamActive(g)) return;
+    const g = this.g; if (!g.orders?.active) return;
     let L: Opening[] | null = null;
     for (const b of this.breaches) {
       if (b.ops < 0) continue; L ??= g.cover.ready();
@@ -416,12 +415,12 @@ export class WallReact {
 
   // ================================================================ (a) cover gone
   private posts(): { gd: Guard; A: Assignment }[] {
-    const g = this.g, out: { gd: Guard; A: Assignment }[] = []; if (!teamActive(g)) return out;
-    for (const gd of teamMen(g)) { if (gd.state === 'dead') continue; const A = orderOf(g, gd); if (A && A.post) out.push({ gd, A }); }
+    const g = this.g, out: { gd: Guard; A: Assignment }[] = []; if (!g.orders?.active) return out;
+    for (const gd of g.orders.men()) { if (gd.state === 'dead') continue; const A = g.orders.of(gd); if (A && A.post) out.push({ gd, A }); }
     return out;
   }
   private charOf(id: number): { pos: Vec3; team: Team } | null {
-    const g = this.g, pl = manById(g, id); if (pl) return pl.down ? null : { pos: pl.char.pos, team: 'player' };
+    const g = this.g; if (id === PLAYER_ID) return g.player.down ? null : { pos: g.player.char.pos, team: 'player' };
     const m = g.guards.find(x => x.char.id === id); return m && m.state !== 'dead' ? { pos: m.char.pos, team: m.team } : null;
   }
   /** where the trouble is, for this man, about this change: the man he last saw · where the rounds came from · whoever made it (an enemy of his) · the far side
@@ -574,7 +573,7 @@ export class WallReact {
   }
   /** a teammate on a mark (or walking to one): the mark is moved out of the line */
   private opMove(P: Pend): 'moved' | 'fine' | 'later' {
-    const g = viewOf(this.g, P.gd), gd = P.gd, A = g.orders.of(gd); if (!A || !A.post) return 'fine';   // (falling in: his place is Sam's trail)
+    const g = this.g, gd = P.gd, A = g.orders.of(gd); if (!A || !A.post) return 'fine';   // (falling in: his place is Sam's trail)
     if (g.doorTools?.ops.some(op => op.men.includes(gd))) return 'fine';   // (a man of a door order stands where the door tools put him: they keep their own marks and end the order on a man off his — the stack's place is theirs to change)
     if (g.wallCharge?.ops.some(op => op.men.includes(gd))) return 'fine';   // (…and a man of a wall charge's order where that order puts him — its stand-off, the hole's mouth, his point inside: wallcharge.ts keeps those marks, and the hole it is about to make or has just made is theirs)
     if (A.order === WALL_ORDER && A.watch) return 'fine';   // (…and after it: the man that order left holding the hole or a door of the room from his point — his mark, his face and his watch point are one piece, the order's)

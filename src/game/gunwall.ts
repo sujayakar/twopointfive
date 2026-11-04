@@ -1,4 +1,4 @@
-import { SideMap, GameSideMap } from '../math/side';
+import { SideMap } from '../math/side';
 import type { Vec3 } from '../math/vec';
 import { v3, clamp, lerp, wrapAngle } from '../math/vec';
 import { BoxFlag } from '../scene/boxes';
@@ -69,7 +69,7 @@ const TELEPORT_M = 0.25;                    // further than this in a frame is n
 const BREACH_AIM_M = 1.4;                   // breachAim: how far along the raised gun's line, from the hand, the lock may stand (the gun's reach and a stride)
 const AT_IN = 0.03;                         // a muzzle laid ON the surface he aims at may stand this far into the test's line and stay up; deeper, the gun is in the wood whatever he aims at
 /** the floor's fight: when one was last seen, asked once a frame (GUNWALL.fightS) */
-const FIGHT = new GameSideMap<Game, { t: number; until: number }>('gunwall.FIGHT');
+const FIGHT = new SideMap<Game, { t: number; until: number }>('gunwall.FIGHT');
 function fightOn(g: Game): boolean {
   const K = GUNWALL; if (!(K.fightS > 0)) return false;
   let F = FIGHT.get(g); if (!F) FIGHT.set(g, F = { t: -1, until: -1 });

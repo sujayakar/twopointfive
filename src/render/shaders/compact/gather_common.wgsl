@@ -102,7 +102,7 @@ fn directAt(P: vec3f, N: vec3f, ex: u32, offOk: bool) -> vec4f {
     var ray = true;
     if (mode == 2u) {
       let w = luminance(ev.E);
-      if (w < 1e-4) { continue; }
+      if (w < 1e-4 * lampFloorK()) { continue; }
       U += ev.E; W += w;
       if (rnd() * W < w) { pick = i32(slot); pw = w; pL = ev.L; pDist = ev.dist.x; pRad = li.radius; }
       ray = false;

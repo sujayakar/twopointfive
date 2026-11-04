@@ -44,17 +44,6 @@ export function gwotOfOffice(K: { add: GwotHost['add']; prop: GwotHost['prop']; 
   return { add: K.add, prop: K.prop, wallX: K.wallX, wallZ: K.wallZ, lights: K.lights, switchables: K.switchables, marks: K.MARKS, texel: K.TX };
 }
 
-/** A ROUND THING AS BOXES, the one way every kit writes it (this kit's `round`, tools/levels/livedKit.ts and livedPieces.ts): the slabs that stand for a round of
- *  radius r through one centre — each its half extents, its turn about y and how far its top is let down so no two tops share a plane.
- *  From 0.2 m an OCTAGON: four slabs 45° apart, each as wide as the round and tan 22.5° as deep — their union is the regular octagon exactly (seen from above a
- *  drum is round; two squares read as a cog), tops stepped 2 mm. This is the shape scene/round.ts finds in a level's boxes and makes ONE round box of.
- *  Smaller: two squares 45° apart, the second 4 mm lower (nothing finds those: they only read rounder than one square). */
-export function roundSlabs(r: number): { hx: number; hz: number; yaw: number; drop: number }[] {
-  if (r < 0.2) { const s = r * 0.93; return [{ hx: s, hz: s, yaw: 0, drop: 0 }, { hx: s, hz: s, yaw: Math.PI / 4, drop: 0.004 }]; }
-  const a = r * 0.96, t = a * 0.4142;
-  return [0, 1, 2, 3].map(k => ({ hx: a, hz: t, yaw: k * Math.PI / 4, drop: 0.002 * k }));
-}
-
 type Mat = { albedo: Vec3; rough: number; metal?: boolean };
 const matOf = (n: GwotMat): Mat => ({ albedo: GWOT_PALETTE[n], rough: GWOT_FINISH[n]?.rough ?? ROUGH_CLOTH, ...(GWOT_FINISH[n]?.metal ? { metal: true } : {}) });
 const palOf = (n: GwotMat): MarkPal => ({ albedo: GWOT_PALETTE[n], rough: GWOT_FINISH[n]?.rough ?? ROUGH_CLOTH });
@@ -105,9 +94,6 @@ export type WallKind = 'mud' | 'mudLight' | 'render' | 'whitewash' | 'block';
 export type Paint = 'paintBlue' | 'paintGreen' | 'paintRust' | 'paintCream';
 /** shell and partition thickness — the two the kits' door frames know (levelKit WALL_EXT / WALL_INT) */
 export const GW_SHELL = 0.24, GW_PART = 0.12;
-/** how far a paint may be darkened in one piece and still be its row, and how near a colour is a row. The picture's classifier asks the same question with
- *  the same two numbers; once it and this kit are in one tree they are one table, read by both */
-const TONE = { lo: 0.55, hi: 0.99, near: 0.006 };
 
 /** THE KIT over a host. Every function appends to the host's lists. */
 export function gwotKit(host: GwotHost) {
@@ -115,15 +101,6 @@ export function gwotKit(host: GwotHost) {
   const M = Object.fromEntries((Object.keys(GWOT_PALETTE) as GwotMat[]).map(n => [n, matOf(n)])) as Record<GwotMat, Mat>;
   /** the paint `m` standing for something else to rounds and blasts (gwotPalette.ts gwotAs): `b(…, G.as('mud', 'wall'))` */
   const as = (m: GwotMat, sim: GwotSim): Mat => ({ ...M[m], albedo: gwotAs(m, sim) });
-  /** the paint `m` DARKER IN ONE PIECE, k of it (TONE: 0.55‥0.99): how wear, wet and shade are written — the ground's own paint, never a colour laid on it.
-   *  The look draws a row times k in that band as that row's stuff. For DRAWN-ONLY things: to a round a toned row is no palette colour (gwotPalette.ts
-   *  gwotSimOf knows a paint by its exact colour). Throws when the tone is ANOTHER row's colour (gravel × 0.7 is `oil`), which would be drawn as that row; a tone still near its own row is that row. */
-  const toned = (m: GwotMat, k: number): Vec3 => {
-    if (!(k > TONE.lo && k < TONE.hi)) throw new Error(`gwotKit: a tone of ${m} at ${k} is outside ${TONE.lo}‥${TONE.hi}`);
-    const p = GWOT_PALETTE[m], a: Vec3 = [Math.round(p[0] * k * 1e4) / 1e4, Math.round(p[1] * k * 1e4) / 1e4, Math.round(p[2] * k * 1e4) / 1e4];
-    for (const n of Object.keys(GWOT_PALETTE) as GwotMat[]) { const q = GWOT_PALETTE[n]; if (n !== m && Math.abs(a[0] - q[0]) < TONE.near && Math.abs(a[1] - q[1]) < TONE.near && Math.abs(a[2] - q[2]) < TONE.near) throw new Error(`gwotKit: ${m} × ${k} is the colour of ${n}: pick another k`); }
-    return a;
-  };
   type CellFn = (i: number, j: number, W: number, Hc: number) => number;
   /** one face's markings, not yet cut to a box: resolved against the box's own half extents when the box is added (so a bitmap can never leave its face) */
   type Art = { f: MarkFace; res: MarkRes; pal: MarkPal[]; fn: CellFn; inset: number; max: number };
@@ -144,9 +121,13 @@ export function gwotKit(host: GwotHost) {
     };
   };
   type Put = ReturnType<typeof piece>;
-  /** a round thing of radius r, as the slabs of `roundSlabs` (the first carries `extra`, the others `extra2`) */
+  /** a round thing as two squares 45° apart (the second a hair lower so the tops never fight): radius r */
   const round = (b: Put, lx: number, lz: number, y0: number, y1: number, r: number, m: Mat, extra: Extra = {}, extra2: Extra = extra) => {
-    roundSlabs(r).forEach((s, k) => b(lx, lz, y0, y1 - s.drop, s.hx, s.hz, m, k === 0 ? extra : extra2, s.yaw));
+    if (r < 0.2) { const s = r * 0.93; b(lx, lz, y0, y1, s, s, m, extra); b(lx, lz, y0, y1 - 0.004, s, s, m, extra2, Math.PI / 4); return; }   // (small: two squares, 45° apart)
+    // an OCTAGON: four slabs through the centre, 45° apart, each as wide as the round and tan 22.5° as deep — their union is the regular octagon exactly
+    // (seen from above a drum is round; two squares read as a cog). Tops stepped 2 mm so no two are coplanar.
+    const a = r * 0.96, t = a * 0.4142;
+    for (let k = 0; k < 4; k++) b(lx, lz, y0, y1 - 0.002 * k, a, t, m, k === 0 ? extra : extra2, k * Math.PI / 4);
   };
   const h01 = (s: number, a: number, b = 0) => mkHash(s, a, b) / 4294967296;
   const seedOf = (x: number, z: number) => (Math.round(x * 100) * 73856093 ^ Math.round(z * 100) * 19349663) >>> 0;
@@ -214,8 +195,7 @@ export function gwotKit(host: GwotHost) {
   /** a GROUND finish over a rectangle (a thin solid slab like the kits' floor finishes: feet, rounds and light land on it): dust | dirt | gravel | mudFloor | slab */
   const ground = (x0: number, z0: number, x1: number, z1: number, mat: GwotMat = 'dust', y = 0.004) =>
     host.add({ c: [(x0 + x1) / 2, y / 2, (z0 + z1) / 2], h: [Math.abs(x1 - x0) / 2, y / 2, Math.abs(z1 - z0) / 2], albedo: M[mat].albedo, rough: M[mat].rough });
-  /** DECAL: a patch on the ground — a damp spot, an oil stain, a drift of dust, a scatter of gravel (w × d, any yaw). ANOTHER row's stuff lying on the
-   *  ground; for the same ground darker (wet, worn) use `stain` */
+  /** DECAL: a patch on the ground — a damp spot, an oil stain, a drift of dust, a scatter of gravel (w × d, any yaw) */
   const patch = (x: number, z: number, w: number, d: number, mat: GwotMat = 'damp', yaw = 0, y = 0.012) =>
     host.add({ c: [x, y, z], h: [w / 2, 0.003, d / 2], yaw, albedo: M[mat].albedo, rough: M[mat].rough, flags: DECAL });
   /** DECAL: a vehicle's two wheel RUTS from (x0, z0) to (x1, z1), 1.5 m apart */
@@ -230,51 +210,6 @@ export function gwotKit(host: GwotHost) {
       const a = h01(s, k, 1) * Math.PI * 2, d = Math.sqrt(h01(s, k, 2)) * r, w = 0.07 + h01(s, k, 3) * 0.13, hgt = 0.05 + h01(s, k, 4) * 0.12, m = h01(s, k, 5) < 0.3 ? M.mudDark : M[mat];
       host.add({ c: [x + Math.cos(a) * d, hgt / 2, z + Math.sin(a) * d], h: [w, hgt / 2, w * (0.6 + h01(s, k, 6) * 0.6)], yaw: h01(s, k, 7) * Math.PI, albedo: m.albedo, rough: m.rough });
     }
-  };
-
-  /** DECAL: a STAIN that is its ground's own paint darker — wet concrete under a tap, a floor walked dark under a bench. `ground` = the finish it lies on,
-   *  `k` of it (STYLE.md: a patch is darker than its ground and never under a third of it; see `toned`). Wet reads smoother than dry */
-  const stain = (x: number, z: number, w: number, d: number, ground: GwotMat, yaw = 0, k = 0.66, y = 0.012) =>
-    host.add({ c: [x, y, z], h: [w / 2, 0.003, d / 2], yaw, albedo: toned(ground, k), rough: Math.max(0.3, M[ground].rough - 0.35), flags: DECAL });
-  /** DECAL: a SEEP — where water runs out under a wall and stands: darker earth from (x0, z0) to (x1, z1), in lengths that overlap and wander. The line is
-   *  the stain's MIDDLE and a length is up to 1.15 m across: lay it 0.6 m out from the wall's face, not on the wall's own line. `mat` is darker than the
-   *  ground it lies on (dirt on dust, damp on dirt) */
-  const seep = (x0: number, z0: number, x1: number, z1: number, mat: GwotMat = 'dirt') => {
-    const L = Math.hypot(x1 - x0, z1 - z0) || 1, n = Math.max(2, Math.round(L / 2.3)), yaw = Math.atan2(-(z1 - z0), x1 - x0), nx = -(z1 - z0) / L, nz = (x1 - x0) / L, s = seedOf(x0 + x1, z0 + z1);
-    for (let k = 0; k < n; k++) { const t = (k + 0.5) / n, off = (h01(s, k, 1) - 0.5) * 0.3;
-      patch(x0 + (x1 - x0) * t + nx * off, z0 + (z1 - z0) * t + nz * off, L / n * 1.2, 0.7 + h01(s, k, 2) * 0.45, mat, yaw + (h01(s, k, 3) - 0.5) * 0.18, 0.012 + 0.001 * (k % 2)); }
-  };
-  /** WALK-OVER: KERB STONES — painted stones from (x0, z0) to (x1, z1), `pitch` metres from one to the next (a stride by default; 0.3 = stone against
-   *  stone): the edge of a government yard, the side of a track (each 0.26 long, under 0.14 m high) */
-  const kerbStones = (x0: number, z0: number, x1: number, z1: number, paint: GwotMat = 'whitewash', pitch = 1.15) => {
-    const L = Math.hypot(x1 - x0, z1 - z0) || 1, n = Math.max(1, Math.round(L / Math.max(0.3, pitch))), yaw = Math.atan2(-(z1 - z0), x1 - x0), nx = -(z1 - z0) / L, nz = (x1 - x0) / L, s = seedOf(x0 + x1, z0 + z1), stone = as(paint, 'concrete');
-    for (let k = 0; k <= n; k++) { const t = k / n, off = (h01(s, k, 1) - 0.5) * 0.08, b = piece(x0 + (x1 - x0) * t + nx * off, z0 + (z1 - z0) * t + nz * off, yaw + (h01(s, k, 2) - 0.5) * 0.3);
-      b(0, 0, 0, 0.1 + h01(s, k, 3) * 0.035, 0.13, 0.085, stone); }
-  };
-  /** WALK-OVER: a PLANT BED, `len` along local x by `wid`: a kerb of blocks round turned earth, `rows` of seedlings with a gap in each where some failed
-   *  (all of it under 0.19 m) — a household's vegetables, a station's trial plot */
-  const plantBed = (x: number, z: number, len = 4.4, wid = 1.3, yaw = 0, rows = 3) => {
-    const b = piece(x, z, yaw), hl = len / 2, hw = wid / 2, s = seedOf(x, z);
-    b(0, 0, 0, 0.08, hl - 0.07, hw - 0.07, M.dirt);
-    for (const e of [-1, 1]) { b(0, e * (hw - 0.04), 0, 0.13, hl, 0.04, M.block); b(e * (hl - 0.04), 0, 0, 0.128, 0.04, hw - 0.08, M.block); }
-    for (let r = 0; r < rows; r++) { const lz = rows > 1 ? (r - (rows - 1) / 2) * (wid - 0.44) / (rows - 1) : 0, a = -hl + 0.22, e = hl - 0.22, gap = a + (e - a) * (0.25 + 0.5 * h01(s, r, 1)), top = 0.14 + h01(s, r, 2) * 0.03;
-      b((a + gap - 0.14) / 2, lz, 0.08, top, (gap - 0.14 - a) / 2, 0.035, M.prodGreen); b((gap + 0.14 + e) / 2, lz, 0.08, top - 0.01, (e - gap - 0.14) / 2, 0.035, M.prodGreen); }
-  };
-  /** WALK-OVER: a cold HEARTH — a ring of stones, two charred lengths, the ash trodden round it: where a watch sat last night. `ash` is the patch's paint:
-   *  damp reads on earth (dust, dirt, gravel); on a paler floor name one that is not under a third of it */
-  const hearth = (x: number, z: number, yaw = 0, ash: GwotMat = 'damp') => {
-    const b = piece(x, z, yaw); patch(x, z, 1.5, 1.3, ash, yaw + 0.3);
-    for (let k = 0; k < 7; k++) { const a = k * Math.PI * 2 / 7; b(Math.cos(a) * 0.4, Math.sin(a) * 0.4, 0, 0.09 + 0.03 * (k % 3), 0.09, 0.065, M.mudDark, {}, Math.PI / 2 - a); }
-    b(0.02, 0, 0, 0.05, 0.22, 0.035, M.woodGrey, {}, 0.5); b(-0.03, 0.02, 0, 0.06, 0.2, 0.03, M.woodGrey, {}, -0.7);
-  };
-  /** WALK-OVER: a KERB from (x0, z0) to (x1, z1) — precast stones about `len` long, 0.3 wide and 0.14 high, laid end to end a finger apart and none quite in
-   *  line (lit and shadowed; stepped over). The run is cut into round(length / len) stones, at least one; `gaps` = the stones left out, counted from the first
-   *  end (a broken one, a dropped kerb where wheels cross). A run under 0.3 m, or a `len` under 0.3, throws: that is no kerb */
-  const kerb = (x0: number, z0: number, x1: number, z1: number, mat: GwotMat = 'block', gaps: readonly number[] = [], len = 1.9) => {
-    const L = Math.hypot(x1 - x0, z1 - z0);
-    if (!(L >= 0.3) || !(len >= 0.3)) throw new Error(`gwotKit: a kerb ${L.toFixed(2)} m long in stones of ${len} m at (${x0}, ${z0}) — 0.3 m is the least of either`);
-    const n = Math.max(1, Math.round(L / len)), pitch = L / n, b = piece((x0 + x1) / 2, (z0 + z1) / 2, Math.atan2(-(z1 - z0), x1 - x0)), s = seedOf(x0, z0);
-    for (let k = 0; k < n; k++) if (!gaps.includes(k)) b(-L / 2 + (k + 0.5) * pitch, (h01(s, k, 1) - 0.5) * 0.05, 0, 0.14, pitch / 2 - 0.035, 0.15, M[mat], {}, (h01(s, k, 2) - 0.5) * 0.03);
   };
 
   // ---------------------------------------------------------------- cloth ----
@@ -326,11 +261,6 @@ export function gwotKit(host: GwotHost) {
   const table = (x: number, z: number, w = 1.6, d = 0.75, yaw = 0, top: GwotMat = 'ply') => {
     const b = piece(x, z, yaw);
     b(0, 0, 0.71, 0.75, w / 2, d / 2, M[top]); for (const sx of [-1, 1]) for (const sz of [-1, 1]) b(sx * (w / 2 - 0.06), sz * (d / 2 - 0.06), 0, 0.71, 0.03, 0.03, M.woodGrey);
-  };
-  /** COVER (none of its own: it stands on a bench and adds a hand to its height): a SEED TRAY w × d on something `baseY` high (a table, 0.75) — a black
-   *  plastic tray of seedlings */
-  const seedTray = (x: number, z: number, baseY = 0.75, w = 0.62, d = 0.3, yaw = 0) => {
-    const b = piece(x, z, yaw); b(0, 0, baseY, baseY + 0.05, w / 2, d / 2, M.plasticBlack); b(0, 0, baseY + 0.05, baseY + 0.11, w / 2 - 0.03, d / 2 - 0.03, M.prodGreen);
   };
   /** PROP (chair): a moulded PLASTIC CHAIR — seat, back, two arms, four splayed legs; the sitter faces local −Z */
   const plasticChair = (x: number, z: number, yaw = 0, colour: GwotMat = 'plasticWhite') => {
@@ -458,11 +388,10 @@ export function gwotKit(host: GwotHost) {
     const b = piece(x, z, yaw);
     for (let k = 0; k < n; k++) { const lx = (k - (n - 1) / 2) * 1.2; b(lx, 0, 0, 0.18, 0.59, 0.42, M.tWall); b(lx, 0, 0.18, height, 0.59, 0.13, M.tWall); }
   };
-  /** COVER (waist): a stack of TYRES, n high (0.2 m each). One lying alone is a fat one, 0.27 m (as the older kit's is): a solid that tops out between 0.20
-   *  and 0.25 m stops a body on a cell the nav grid calls free */
+  /** COVER (waist): a stack of TYRES, n high (0.2 m each) */
   const tyres = (x: number, z: number, n = 3) => {
-    const b = piece(x, z, 0), s = seedOf(x, z), hole = mk(face('+y', 'base', [palOf('plasticBlack')], (i, j, W, Hc) => Math.hypot(i - (W - 1) / 2, j - (Hc - 1) / 2) < 5 ? 1 : 0, 0, 1)), t = n === 1 ? 0.27 : 0.2;
-    for (let k = 0; k < n; k++) round(b, (h01(s, k, 1) - 0.5) * 0.06, (h01(s, k, 2) - 0.5) * 0.06, k * t, k * t + t, 0.33, M.rubber, k === n - 1 ? hole : {}, {});
+    const b = piece(x, z, 0), s = seedOf(x, z), hole = mk(face('+y', 'base', [palOf('plasticBlack')], (i, j, W, Hc) => Math.hypot(i - (W - 1) / 2, j - (Hc - 1) / 2) < 5 ? 1 : 0, 0, 1));
+    for (let k = 0; k < n; k++) round(b, (h01(s, k, 1) - 0.5) * 0.06, (h01(s, k, 2) - 0.5) * 0.06, k * 0.2, k * 0.2 + 0.2, 0.33, M.rubber, k === n - 1 ? hole : {}, {});
   };
   /** COVER (knee): a stack of concrete BLOCKS 0.8 × 0.4 × 0.4, cores up */
   const blocks = (x: number, z: number, yaw = 0, layers = 2) => {
@@ -615,11 +544,11 @@ export function gwotKit(host: GwotHost) {
     // walls
     as, wallX, wallZ, partX, partZ, yardWallX, yardWallZ, pier, skirt, dado, wallHanging, gate,
     // ground
-    ground, patch, ruts, rubble, stain, seep, kerbStones, kerb, plantBed, hearth,
+    ground, patch, ruts, rubble,
     // cloth & beds
     rug, toshak, cot, charpoy, washLine,
     // furniture
-    lowTable, table, seedTray, plasticChair, chairAs, trunk, stove, tandoor,
+    lowTable, table, plasticChair, chairAs, trunk, stove, tandoor,
     // stores & cover
     drum, drums, drumDown, jerryCan, gasBottle, crates, sacks, sandbags, hesco, jersey, tWall, tyres, blocks, woodPile,
     // machines & vehicles
