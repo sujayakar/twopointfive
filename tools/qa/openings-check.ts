@@ -12,7 +12,7 @@ import { standUp, ROOT } from './headless.ts';
 const { parseLevelData } = await import(`${ROOT}/src/scene/levelData.ts`);
 const { loadLevel } = await import(`${ROOT}/src/scene/levelLoad.ts`);
 const { placeMask, PLACE_W, PLACE_RES } = await import(`${ROOT}/src/scene/placePlan.ts`);
-const { planOpenings, openAreas, openingRadiance, LOOK_OPENINGS } = await import(`${ROOT}/src/scene/openings.ts`);
+const { planOpenings, openAreas, openingRadiance, openingLooks, LOOK_OPENINGS } = await import(`${ROOT}/src/scene/openings.ts`);
 const { lookConfig } = await import(`${ROOT}/src/render/frame.ts`);
 const { lightClass, lightDayK } = await import(`${ROOT}/src/render/photometry.ts`);
 const { reachMaskFor } = await import(`${ROOT}/src/render/reach.ts`);
@@ -126,11 +126,11 @@ if (process.argv.includes('--hole')) { await hole(); process.exit(red ? 1 : 0); 
   // (the harness's engine is a stand-in with the real light list and world: the real method is run on one that borrows both)
   { const { Engine } = await import(`${ROOT}/src/engine.ts`), { REACH_PACE, REACH_WORK } = await import(`${ROOT}/src/render/reach.ts`), { spawnUnit } = await import(`${ROOT}/src/game/guards.ts`), { stateHash } = await import(`${ROOT}/src/game/rollback.ts`);
     const LS = g.engine.lights;
-    const mk = () => Object.assign(Object.create(Engine.prototype), { lights: LS, world: g.engine.world, settings: { skyZenith: HOURS.overcast.sky.zenith, skyHorizon: HOURS.overcast.sky.horizon }, viewFocus: [20, 0, 10], openRecs: [], dayLights: [], openLevel: null, openSerial: -1, openTick: 0, openSeen: NaN, openPlanned: NaN, openWait: 0, openLeaves: NaN, openWalls: null }) as any;
+    const mk = () => Object.assign(Object.create(Engine.prototype), { lights: LS, world: g.engine.world, settings: { skyZenith: HOURS.overcast.sky.zenith, skyHorizon: HOURS.overcast.sky.horizon, exposure: HOURS.overcast.exposure }, viewFocus: [20, 0, 10], openRecs: [], dayLights: [], openLevel: null, openSerial: -1, openTick: 0, openSeen: NaN, openPlanned: NaN, openWait: 0, openLeaves: NaN, openWalls: null, openAsPortal: false }) as any;
     const E = mk();
-    const was = { on: lookConfig.on, windows: lookConfig.windows, rooms: lookConfig.rooms, eye: lookConfig.eyeAt, gaps: lookConfig.doorGaps, lit: LOOK_OPENINGS.lit };
+    const was = { on: lookConfig.on, windows: lookConfig.windows, rooms: lookConfig.rooms, portal: lookConfig.portal, eye: lookConfig.eyeAt, gaps: lookConfig.doorGaps, lit: LOOK_OPENINGS.lit };
     const quiet = <T>(f: () => T): T => { const l = console.log, w = console.warn; console.log = console.warn = () => { }; try { return f(); } finally { console.log = l; console.warn = w; } };
-    try { lookConfig.on = true; lookConfig.windows = 1; lookConfig.rooms = 1;
+    try { lookConfig.on = true; lookConfig.windows = 1; lookConfig.rooms = 1; lookConfig.portal = 0;   // (the disks first, as they were: the Daylight counted once row at 0. The portals have their own line below)
       let eye: [number, number] = [20, 10]; lookConfig.eyeAt = () => eye;
       lookConfig.doorGaps = () => g.doors.list.map((d: any) => { const [hx, hz] = d.def.hinge, a = d.def.closedDir, wd = d.def.width; return [hx, hz, hx + Math.cos(a) * wd, hz + Math.sin(a) * wd]; });
       // (a drawn frame: the engine's pass alone. The game is NOT stepped between them: behind the start card and on a paused page it is not either)
@@ -147,6 +147,25 @@ if (process.argv.includes('--hole')) { await hole(); process.exit(red ? 1 : 0); 
       check(used0.length === all.length && lit0.length === O.length && first === O.length && firstMasks === O.length && most <= REACH_PACE.steps * 1.6 && quietAfter && !!doorL && !lit0.includes(doorL) && open && I > 0.3 && !!mask && shutOut && top / least < LOOK_OPENINGS.most / 0.9,
         `the engine keeps one light an opening: those open are lit on a level\'s first frame with their reach masks whole, the rest get theirs a frame\'s share of the work at a time (the game\'s own pace for a lamp\'s), with the game standing still as it does behind the start card; a door\'s comes on as it opens and goes out as it shuts, and neither moves it, its range or its mask; no light counts more than ${LOOK_OPENINGS.most} m²`,
         `${used0.length} openings · ${first} lit on the first frame (${s1 - s0} sight-line steps) · all ${used0.length} masks whole ${n} frames on, ${most} steps in the longest of them (the pace is ${REACH_PACE.steps}) and none after · the tea door open: ${I.toFixed(2)} · strongest over weakest ${(top / least).toFixed(2)}`);
+      // DAYLIGHT COUNTED ONCE (the row `portal`, render/lights.ts LIGHT_PORTAL; tools/qa/portal-check.ts asks what the light then is): the same lights, each
+      // the whole rectangle its walls leave with the sky's reference divided back out, lit under a night's sky too; the row at 0 = the disks again
+      { const lumOf = (c: number[]) => 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2], daySky = E.settings, recs = E.openRecs as any[], sunL = (LS.lights as any[]).find(l => l.kind === 2 && l.enabled && !l.transient && l.intensity > 0), refLum = lumOf(openingLooks(daySky.skyZenith, daySky.skyHorizon, lookConfig.sky, sunL));
+        lookConfig.portal = 1; frames(1); const P = lit(), sAsked = REACH_WORK.steps; frames(60); const refound = REACH_WORK.steps > sAsked && day().every(l => !!l.reach);   // (the masks are found again from the rectangle's width, the old ones serving meanwhile)
+        // a door's leaf: lit from the first hand's width, as bright to a pass whose ray stops short as what is open, the whole rectangle written beside it
+        const shareOf = (l: any) => l.portal.share as number, leafAt = (a: number) => { S.hang('tea', a); quiet(() => S.W.step(1 / 60)); frames(1); return { on: !!doorL.enabled, I: doorL.intensity as number, E: doorL.intensity * lumOf(doorL.color), share: doorL.enabled && doorL.portal ? shareOf(doorL) : 0 }; };
+        const ajar = leafAt(0.3), half = leafAt(0.7), wide = leafAt(1.5), shut = leafAt(0), oT = recs.find(r => r.l === doorL).o, rectT = 4 * oT.half[0] * oT.half[1];
+        const leaf = ajar.on && half.on && wide.on && !shut.on && ajar.I > 0 && ajar.I < 0.2 * wide.I && half.I > ajar.I && half.I < wide.I && [ajar, half, wide].every(x => Math.abs(x.E - refLum * x.share * rectT) < 1e-6) && ajar.share < half.share && half.share < wide.share && wide.share <= 1;
+        const shaped = P.every(l => { const o = recs.find(r => r.l === l).o; return !!l.portal && Math.abs(l.portal.halfWide - o.half[0]) < 1e-9 && Math.abs(l.radius - Math.hypot(o.half[0], o.half[1])) < 1e-9 && o.half[0] > 0 && o.half[1] > 0 && Math.abs(l.pos[0] - o.mid[0]) + Math.abs(l.pos[1] - o.mid[1]) + Math.abs(l.pos[2] - o.mid[2]) < 1e-9
+          && Math.abs(l.intensity * lumOf(l.color) - refLum * l.portal.share * 4 * o.half[0] * o.half[1]) < 1e-6 && l.portal.share > 0 && l.portal.share <= 1 && 4 * o.half[0] * o.half[1] >= o.full - 1e-6; });
+        E.settings = { skyZenith: [0.012, 0.016, 0.03], skyHorizon: [0.02, 0.022, 0.03], exposure: 1.9 }; frames(1); const night = lit().length;
+        const sunWas = sunL ? sunL.intensity : 0; if (sunL) sunL.intensity = 0;   // (… and no sun or moon on the ground outside: an opening looks out on that too)
+        E.settings = { skyZenith: [0.0004, 0.0005, 0.001], skyHorizon: [0.0006, 0.0007, 0.001], exposure: 1.9 }; frames(1); const black = lit().length; if (sunL) sunL.intensity = sunWas;   // (a sky the picture would show nothing of)
+        E.settings = { skyZenith: [0.012, 0.016, 0.03], skyHorizon: [0.02, 0.022, 0.03], exposure: 1.9 };
+        lookConfig.portal = 0; frames(1); const nightDisks = lit().length;
+        E.settings = daySky; frames(1); const back = lit().length, plain = day().every(l => !l.portal);
+        check(P.length === O.length && shaped && refound && leaf && night === O.length && black === 0 && nightDisks === 0 && plain && back === O.length,
+          'with the Daylight counted once row up each opening is a portal: the rectangle that holds all its walls leave open, as bright as what is open of it with that share of the rectangle written beside it; a door\'s is lit from the first hand\'s width between its leaf and the jamb and grows with the gap, with no step a disk\'s quarter of a square metre makes; lit under a night\'s sky as by day and out only where the picture would show nothing of what it looks out on; with the row at 0 they are the disks again, out at night',
+          `${P.length} portals of ${O.length} open · every record a rectangle no smaller than its opening: ${shaped} · their reach masks found again from the rectangle: ${refound} · the tea door at 0.3, 0.7 and 1.5 rad: ${ajar.I.toFixed(3)}, ${half.I.toFixed(3)}, ${wide.I.toFixed(3)} (a fifth of wide open or less at 0.3, and beside each the share of its rectangle that is: ${leaf}), out when shut: ${!shut.on} · lit under a night's sky: ${night} as portals, ${nightDisks} as disks, ${black} under a black one · the row back at 0 by day: ${back} lit, none a portal: ${plain}`); }
       // the game cannot tell: its light list, its reach lists and its count of steady lights are what they were, and a man can still be spawned
       { let spawned = false, why = ''; try { quiet(() => { const u = spawnUnit(g, { team: 'hostile', pos: [30, 0, 20], yaw: 0 } as any); spawned = !!u; }); } catch (e) { why = String(e).slice(0, 120); }
         const steady = (LS.lights as any[]).filter(l => l.ttl < 0).length;
@@ -172,7 +191,7 @@ if (process.argv.includes('--hole')) { await hole(); process.exit(red ? 1 : 0); 
         lookConfig.rooms = 0; const E2 = mk(); quiet(() => { E2.lookOpeningLights(); E2.lookOpeningLights(); }); const a2 = (E2.dayLights as any[]).filter(l => l.enabled).length; lookConfig.rooms = 1; quiet(() => E2.lookOpeningLights()); const b2 = (E2.dayLights as any[]).filter(l => l.enabled && l.reach).length;
         check(n0 === O.length && off === n0 && bare && on === n0 && masked && a2 === n0 && b2 === n0, 'with "Light stays in its room" put off the lights are lit with no mask, and put on again, or on for the first time in the middle of a level, every one is lit on that same frame with its mask', `${n0} lit · the row off ${off} · on again ${on} · a level begun with the row off ${a2}, the row put on ${b2}`); }
       lookConfig.windows = 0; frames(1); check(day().length === 0, 'the row at 0 takes every one of them out');
-    } finally { lookConfig.on = was.on; lookConfig.windows = was.windows; lookConfig.rooms = was.rooms; lookConfig.eyeAt = was.eye; lookConfig.doorGaps = was.gaps; LOOK_OPENINGS.lit = was.lit; } }
+    } finally { lookConfig.on = was.on; lookConfig.portal = was.portal; lookConfig.windows = was.windows; lookConfig.rooms = was.rooms; lookConfig.eyeAt = was.eye; lookConfig.doorGaps = was.gaps; LOOK_OPENINGS.lit = was.lit; } }
 }
 
 // ---- the office: windows wider than a doorway and strips of glass over head height (the first cut of this rule lost both)
@@ -204,5 +223,24 @@ else { const r = Bun.spawnSync(['bun', 'run', import.meta.path, '--hole'], { cwd
   const l = { name: 'opening0', group: 'sky', kind: 3, ttl: -1, intensity: 0.6, peakIntensity: 0.6 };
   check(lightClass(l) === 'none' && lightDayK(l, 0.05, 1) === 1 && lightClass({ ...l, group: 'interior' }) === 'face' && lightDayK({ ...l, group: 'interior' }, 0.0002, 1) < 0.02, 'an opening\'s light is the hour\'s own: the day\'s rescale of lamps leaves it as it is (a lamp of the same strength is taken down)'); }
 
+// EVERY LEVEL'S DOORS, TO A PORTAL (scene/openings.ts ajarOf: what is open of an opening is the narrowest way through it past what hangs in it). A shut
+// leaf must read shut whatever the wall's thickness and wherever its jambs stand on the samples (one that read open would light a room through a shut
+// door for every pass whose ray stops short of it), a leaf swung wide must leave most of its doorway, and every such opening must have found the box
+// that ends it on each hand.   AJAR_BREAK=1 bun run tools/qa/openings-check.ts = no play allowed a shut leaf: this line must FAIL
+{ const AJAR_BRK = process.env.AJAR_BREAK === '1', playWas = LOOK_OPENINGS.play; if (AJAR_BRK) LOOK_OPENINGS.play = 0;   // (AJAR_BREAK=1: a shut leaf is allowed no play in its frame: must FAIL)
+  const { readdirSync } = await import('node:fs'); const names = readdirSync(`${ROOT}/levels`).filter(f => f.endsWith('.json') && !f.includes('.lint')).map(f => f.replace('.json', ''));
+  let doors = 0, openShut = 0, lowWide = 0, jambless = 0; const worst: string[] = [];
+  for (const name of names) { const S = await stand(name), { g, world } = S, set = (a: number) => { for (const d of g.doors.list) S.hang(d.def.name, a); for (let i = 0; i < 2; i++) { S.W.step(1 / 60); for (const d of g.doors.list) { d.vel = 0; d.angle = a; d.latched = a === 0; } } };
+    const l = console.log, w = console.warn; console.log = console.warn = () => { };
+    try { set(0); const plan = planOpenings(world.statics) as any[]; openAreas(plan, world.dynamics); const shut = plan.map(o => o.ajar as number);
+      set(1.5); openAreas(plan, world.dynamics);
+      plan.forEach((o, i) => { if (shut[i] >= o.full - 1e-6 && o.ajar >= o.full - 1e-6) return; doors++;   // (nothing hangs in it)
+        if (!o.cut.jambs[0] || !o.cut.jambs[1]) jambless++;
+        if (shut[i] > 0) { openShut++; worst.push(`${name} (${o.pos[0].toFixed(1)}, ${o.pos[2].toFixed(1)}) reads ${shut[i].toFixed(3)} m² open when shut`); }
+        if (o.ajar < 0.6 * o.full) { lowWide++; worst.push(`${name} (${o.pos[0].toFixed(1)}, ${o.pos[2].toFixed(1)}) reads ${o.ajar.toFixed(2)} of ${o.full.toFixed(2)} m² at 1.5 rad`); } });
+    } finally { console.log = l; console.warn = w; } }
+  check(names.length >= 40 && doors >= 150 && openShut === 0 && lowWide === 0 && jambless === 0, 'to a portal every level\'s shut door is shut and its open door open: no leaf in its frame reads as a gap, a leaf swung wide leaves three fifths of its doorway or more, and every doorway found the boxes that end it',
+    `${AJAR_BRK ? '(AJAR_BREAK) ' : ''}${names.length} levels, ${doors} openings a leaf hangs in · read open when shut: ${openShut} · under three fifths at 1.5 rad: ${lowWide} · with no box for a jamb: ${jambless}${worst.length ? ' · ' + worst.slice(0, 4).join('; ') : ''}`); 
+  LOOK_OPENINGS.play = playWas; }
 console.log(red ? '=== openings: FAILED ===' : '=== openings: ALL PASS ===');
 process.exit(red ? 1 : 0);

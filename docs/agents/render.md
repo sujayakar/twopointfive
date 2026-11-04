@@ -1864,6 +1864,104 @@ interleaved and filtered to their quiet minimum, and a row whose p75 sits far ab
   (a cost to measure before a car park of them is a default). Agreed words, proposed to the cars part: body `carpaint`, roughness about 0.2, not metal (a
   metallic paint: metal, 0.3); glass plain, 0.05 to 0.1; bumpers and arch trim `plastic`, 0.5; chrome and hubcaps `steel` with metal, 0.25; tyres plain, 0.9.
   It takes the `kept` rule (no damp foot, no bleached head). Drawn as a tile; never seen on a page or a GPU.
+- **DAYLIGHT COUNTED ONCE: AN OPENING IS A PORTAL** (11-04; the look panel's row `portal` "Daylight counted once", live, 0 ON THE LOOK'S PAGE UNTIL
+  IT HAS BEEN SEEN ON A GPU, `?look=portal:1` = on; `render/lights.ts LIGHT_PORTAL` (bit 28 of a kind 3 light's kind word, `RtLight.portal`),
+  `common.wgsl` `portalAt` / `portalRay` / `portalOutside` / `portalGround` / `portalPoint` / `portalFlux` / `portalFaces` / `evalLightDirect` /
+  `lightPower` / `skyKeep` / `skyThrough`, `direct_common.wgsl shadowSample`, `rc.wgsl rcDice`, `place_field.wgsl reading`, `scene/openings.ts
+  openingLooks`, `ajarOf` and `Opening.mid` / `half` / `ajar`, `engine.ts lookOpeningLights`, `frame.placeCfg.y`). The maintainer, of the nine special cases counted on 11-04: "I
+  think we should pretty much fix all 9 things you found"; of this one, "this feels like tweaking the importance sampling for restir, right?" and "my
+  preference would be that we use this sampling unconditionally and then have no asymmetry between night and day"; and of a door opened on a dark
+  room in his two videos of 11-04, "I was still seeing some artifacts with the door and there's some odd brightness swinging". WHAT IT WAS: by day
+  each opening was a Lambert DISK hung 5 cm inside the wall, as bright as a guess at what is outside (`LOOK_OPENINGS.up`, `.ground`), capped at
+  `most` 2.5 m² because the bounce brought the same daylight in a second time, off at night by a fade, lit in one frame once a quarter of a square
+  metre stood open by the straight way through, and hung in front of a leaf that then swung through it (read frame by frame on a GPU, a lounge door
+  seen from above: the picture's mean goes 0.020, 0.028, 0.068, 0.092, 0.063, 0.039 over the five frames after the disk comes on, as the leaf
+  uncovers and covers it; the pool on the floor comes and goes twice more; the leaf glows). WHAT A PORTAL IS: what is seen through the hole, at
+  every hour: the sky itself, and the ground outside at the engine's one guess.
+  ITS LIGHT at a point is WHAT THE POINT LOOKS OUT ON (`portalOutside`: above the horizon `skyRadiance`, the function a ray that misses asks, no
+  second writing of it; under the horizon the ground outside, `portalGround`; no ramp between the two) × both cosines ÷ the distance squared, added up over `PORTAL_POINTS` 8
+  points of the opening's rectangle (`portalFlux`: a lattice, one point to each eighth of the height; the distance squared is held off by a point's
+  own patch over 2π, `portalSoft`). So a floor takes the sky, a ceiling the ground, and a wall across the room that looks out level takes the
+  ground and next to no sky (with the sky alone, as this was first drawn, the lounge's far wall went from 0.30 to 0.03 on the software adapter and
+  showed the gather's blotches: by day most of a room's daylight is the sunlit ground's). ITS SHADOW RAYS run ON THROUGH the opening: `PORTAL_SKY`
+  40 m where they look up, to find that sky, so a wall across the yard, a shutter, the reveal of its own hole and A DOOR'S LEAF AT ANY ANGLE are in
+  the light; where they look down, until they are `PORTAL_OUT` 1 m out from the opening's plane or at the ground, whichever is first
+  (`portalPast`: clear of a leaf swung either way and of the reveal; the ground is what such a ray looks out on and not a thing in its way; what
+  the ground is lit by is the guess). EACH RAY IS AIMED AS THE LIGHT COMES: at one of the eight points (the lattice moved round by the sample's two numbers), picked in proportion
+  to what each sends the receiver. So a ray's answer is a plain yes or no like any light's (restir keeps a visibility in eighths; the denoiser reads
+  "clear" as lit in full; the sharp pass asks for the emitter's middle with no numbers and gets the point half the light is under), and the share of
+  a pixel's rays that get through is the share of the light that does. A blocker PAST the opening hands the denoiser the opening's own size for a
+  penumbra: it makes the hole smaller and casts no edge. Any other light's ray is written as it was, to the last rounding.
+  THE BOUNCE GIVES UP THE SAME SKY. A ray of the gather that leaves by a lit portal takes none of it (`skyThrough`, at the gather's three diffuse
+  misses, the split gather's and the compact gather's; a mirror ray keeps the sky, it is a picture of it). THE CACHE gives it up at the dice bake,
+  the probe the light is for: the cascades' record carries, in the fourth number nothing used, how much of a direction's light is the sky's (the top
+  cascade adds the sky from a probe metres away, and sixteen directions are too few for a probe to find a doorway by), and `rcDice` takes out of
+  each of a probe's faces what the portal would send it with nothing in the way (`portalFaces`, the same eight points) × the share of the opening that
+  is open, never more than the sky the probe's rays really brought that face, in the hue of the sky toward the opening, and nothing where the
+  portal's reach mask leaves the probe's cell out. THE PLACE FIELD reads the cache's +y face as the light that falls on a floor, and must read the
+  same light whoever carries it: what the bake took out of that face rides in that slab's fourth number, eased as the light is, and
+  `place_field.wgsl reading` adds it back, so the row moves no exposure (0 with no portal lit; `tools/qa/place-field-entry.ts` writes 0 there; the
+  steady bounce's ring, `dice_ring.wgsl`, wrote 1 in every fourth number and now carries all four: with a 1 there every place read a whole unit
+  brighter and a quarter of the lounge went black on the software adapter, which the row-off picture caught). THE GROUND OUTSIDE IS STILL COUNTED BY BOTH, as it was with the disk: the portal sends it at the guess,
+  smooth and with the leaf in its way, and the gather's rays that hit it bring it again at the bounce's third (below, not done). THE TWO SHARES OF
+  THE SKY ADD UP: a portal's light fades toward its range, and the ray keeps the rest of that window; an opening that is not in the list this
+  frame is no portal and takes nothing. `frame.placeCfg.y` = the slot of the list's first portal + 1 (the walk starts there).
+  WHO ASKS WHAT, because the final gather has no stack to spare (below): `evalLightRaw` is untouched and knows nothing of a portal. Only the picture's
+  direct light (restir, direct, sharp_direct: `evalLightDirect`, then `shadowSample`) takes the whole rectangle and traces through it. To every other
+  pass (the cache's `directIrradiance`, a bounce's hit off the screen, the light meter, the beams, a mote, a man's rim) a portal is an area light AS
+  BRIGHT AS WHAT IS OPEN OF IT NOW, with a ray that stops short of it. THE RECORD: colour = what an opening looks out on as one radiance
+  (`scene/openings.ts openingLooks`: half the low sky, half the ground, which is `LOOK_OPENINGS.ground` 0.5 of the sun's and the whole sky's light
+  on it; the disk's own radiance without its amount and its fade at dusk) × the open area; `cosInner` = the open share of the rectangle; `cosOuter`
+  its half width, `radius` its half diagonal. The picture's direct light reads the ground back out of it (twice the reference less the low sky) and
+  takes the sky from the sky, so the whole rectangle's light has neither the share nor the sky's half of the reference in it, and restir's
+  frame-to-frame ratio weighs a portal by the whole (`lightPower`: a leaf swinging is no change of the light a pixel's history was built for). So a leaf ajar dims the other
+  passes by the record, and a wall across the yard is not in their light (11 × too much at the check's points behind a 3 m yard wall: the coarse
+  end, as the disk was).
+  WHAT IS OPEN (`Opening.ajar`, `ajarOf`): the narrowest way through the opening in plan, a height at a time. The two jambs (the footprints of the
+  boxes that end the opening, `cut.jambs`: the tallest box the wall's own depth is crossed by there, so a crate against the wall is not one) and the
+  boxes that hang in it are a chain across the doorway, and what gets through is what the gaps of the SHORTEST chain from jamb to jamb leave, each
+  gap less the `play` 7 cm a shut leaf has in its frame (at one jamb or shared); what a leaf leaves over its head is a slit, as in a wall. A leaf is open by the gap at its
+  free edge whichever way it swings and however thick the wall, a pair of leaves by the gap between them, and nothing there knows what a door is.
+  The office's tea door: nothing to 0.2 rad (its edge is still in the wall's depth, then under the play), 0.02 m² at 0.25, 0.10 at 0.3, 0.61 at
+  0.6, 1.55 of 1.70 at 1.5; the disk's `area` there is 0 to 0.5 rad on the frozen stand and jumps to 0.5 m² at 0.3 on the shipped one. A portal's
+  rectangle is the bounding box of what the walls leave open, about its own middle (`Opening.mid`; the disk hangs at the open part's centre of
+  weight). LIT BY WHAT THE PICTURE WOULD SHOW: `LOOK_OPENINGS.seen` 0.008 against what it looks out on × the frame's exposure, no hour and no area
+  in it. The reach masks are found from the rectangle's middle and width (a disk's from its radius: the row flipped = found again, the old ones
+  serving meanwhile).
+  THE CHECKS. `bun run tools/qa/probes.ts portal` (`tools/qa/portal-check.ts`, family `render`, `PORTAL_BREAK=1` leaves the bounce and the dice
+  their sky and fails): in a room built by hand with a 3 m wall across the yard, under a sky eight times brighter low down than overhead, against
+  the same light added up over the doorway with a ray a point (48 by 48), the portal is 1.20 × a hand inside the sill and 0.95 to 1.04 × from 1 m
+  in to the side wall and a crate's top; with the yard open 0.71 × at the sill and 0.90 to 1.03 × elsewhere, a crate's top at 1.6 m (the middle of
+  the opening is below it) among them; nothing of that share is left to the gather's rays, 0.0 % and 6.1 % of it in the dice of three probes, the
+  yard keeps every ray's sky, and the yard wall takes the rays that reach sky from 83 % to 16 %. With the ground (0.465 against a horizon of 1, a
+  sun of 3 on ground that sends back half): the far wall at 1.5 m gets 0.029 where the sky alone gave 0.012 with the yard open, a ceiling 0.049
+  where it gave nothing, a floor nothing more, each 0.98 to 1.01 × the sum over the doorway. A shut leaf reads 0 with a crate or a cabinet by
+  the jamb listed before the walls, and 0.10, 0.59, 1.14, 1.53 of 1.80 m² at 0.3, 0.6, 1.0, 1.5 rad. (Two points up the opening, as it was first
+  written, were out by 0.6 to 2 × on a crate's top and at the sill; a ray aimed evenly over the rectangle with a yes or no was 1.9 × behind the
+  yard wall.) `openings-check` on both stands: the engine's line (a rectangle no smaller than its opening about its middle, the record's two
+  numbers, the door by angle, lit under a night's sky, out under a black one, the masks found again), and EVERY LEVEL'S DOORS: 60 levels, 202
+  openings a leaf hangs in, none reads open when shut, none under three fifths at 1.5 rad, every one found its jambs (`AJAR_BREAK=1` = no play
+  allowed: all 202 read open, the line fails).
+  THE STACK (`tools/qa/kernel-stack.cjs`): `fgatherS / main` 521,912 of 524,288 bytes (520,328 before: `skyKeep` at its misses is all the gather
+  carries of this), `fgather / main` 522,216, restir 241,912, direct 283,896, the sharp pass 175,688, the beams and the meter as they were. The first
+  writing, with the portal's line in `evalLightRaw`, was 536,648 and lost the device on the first frame: it is why the rule is opt-in a pass.
+  ON THE SOFTWARE ADAPTER (the white roof at midday, its service door and its lounge door open, 960 by 600): with the row at 0 both
+  pictures are the preview head's byte for byte (0 of 2,304,000). With it on, taken in turn with the disk in one boot, four frames each, while
+  the room's exposure was still settling after its door opened: the lounge's far wall 0.298 and 0.206 with the disk, 0.181 with the portal, 0.158
+  with the disk, 0.154 with the portal, on the one falling curve, and the place's level -4.98, -4.81, -4.69, -4.64 through the same turns (the row
+  does not move it); no blotches. The service door from outside: the open leaf 0.137 with the disk, the brightest orange in the frame, and 0.085
+  with the portal, darker than the sunlit dado; the room past it 0.163 and 0.107; the sun's pool on its floor 0.73 and 0.70. The lounge door at
+  0.45 rad with the portal: the far wall 0.026. 118 pipelines, 0 page or GPU errors. What a software draw of four frames cannot say is how the
+  light moves in time: that is the GPU's frame-by-frame recording to show.
+  NOT DONE, known: the disk's path and its numbers stay until the row has been seen on a GPU and the maintainer has said which stays (with the row
+  on, the `windows` row is a switch: any amount is all of it); THE GROUND OUTSIDE IS ONE GUESS A LEVEL (half of the sun's and the sky's light on
+  it comes back, whatever the ground is and whether a wall shades it) AND IS COUNTED BY BOTH (the gather's hits past a portal want dropping, which
+  is a line at each of the gather's hit sites and it has no stack for one; the mend for both is a pass of its own that asks the level's own boxes
+  what an opening looks out on); a bounce's hit lit through a portal has two values, the exact one on the screen and the record's off it; a sky
+  sample kept in the gather's reservoir keeps the share it was traced with (a hole blown, the 12 nearest changing: tens of frames); the penumbra
+  hint for a blocker past the opening is the largest of a pixel's rays' and may smear a contact shadow in the same light; the sharp pass's one ray
+  jumps between points along a line on the floor; the soft character path (off) stops a man's shadow at the opening's plane; the night's cost of a
+  dozen more lights is not measured; a pixel's place near a door is still the floor plan's guess. Never seen on a GPU.
 - **LIGHT KEEPS ITS ORDER WHERE TWO PLACES MEET** (11-04; the look panel's row `order` "Light in order", live, 1 on the look's page, 0 = as it was to
   the bit; `frame.placeCfg.x`, a new member, the last of the frame's head; `place_common.wgsl lookGainsOwn`, called by `composite.wgsl` and
   `compact/composite.wgsl lookExpoGain`; the place field's SECOND BLOCK, `render/placeField.ts PLACE_NEAR`, `place_field.wgsl hand`). The
