@@ -863,8 +863,10 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
     NOTE); the one locked door is meant to be shot down or kicked, the two door charges are spare; the hour and weather it wants (a low late sun with dust) are URL keys only, a row cannot
     carry them. Never seen on a GPU, never played by a hand. Nobody has seen the gunner go down behind his bags when he is shot at and come up again, a dazed man on his feet in the nest, or the last man throw his rifle down and run: all are read from the runs' logs. A call for the maintainer: whether the hall's last man may run and open the locked door (the door's lesson skipped), and whether a dazed man standing up to forty seconds reads right.
 - **The plan mode mission is out (2026-10-26)**: plan mode left the game (`docs/agents/squad.md`, 'PLAN MODE IS GONE'), and the row `tut-plan`, its
-  script, generator, scripted player, page run and check went with it. `levels/tut-plan.json` stays as a floor for the squad's checks, with no
-  lesson block and no mission. The bullet below, and every later one that speaks of plan mode in a lesson, is history.
+  script, generator, scripted player, page run and check went with it. `levels/tut-plan.json` stayed for a while as a floor for the squad's checks
+  and went on 2026-11-04 with its menu still: it had no generator and no mission, so it could not be exported again and `look` and `level-needs`
+  were red on it. goals-check, onesignal-check, coverkeep-probes and sameway-probes stand on `levels/tut-queue.json` now (the same floor, kept up by
+  its generator), all lines green on both stands. The bullet below, and every later one that speaks of plan mode in a lesson, is history.
 - **'A harder fight' does without plan mode, and its entries are on the go key (2026-10-26)** (`tools/levels/tut-squad.ts` → `levels/tut-squad.json`,
   `tools/qa/lessons/tut-squad.ts`, `tools/qa/tut-squad-page.cjs`). The row stays cut from the lists (`offList`) and opens by its address; it is kept
   whole because the kit plan walkthrough (`ui/kitPlan.ts`) and the packed-for rule (`kit.ts ISSUE.picked`, kitpack-check, kitguide-page) stand on
