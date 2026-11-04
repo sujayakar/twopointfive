@@ -33,6 +33,7 @@ import type { LevelScenarios, StructureData, ResponseData } from '../../src/scen
 import * as K from '../../src/scene/levelKit';
 import { gwotKit, gwotOfKit } from '../../src/scene/gwotKit';
 import { livedPieces, INK, h01 } from './livedPieces';
+import { drawnAs, madeOf, KERB_GREY } from '../../src/scene/stuff';
 
 export const NAME = 'records';
 export const NOTES = 'The records office: the pair room clear\'s own level. Four held rooms; every room is a choice of door and door tool. Kit pieces only. Regenerate: bun run tools/levels/export.ts records';
@@ -47,7 +48,7 @@ export const RECORDS_ROOMS = {
   hall:    { name: 'hall',         bounds: { x0: 10.12, x1: 29.88, z0: 13.06, z1: 16.94 }, doors: ['office', 'records_hall', 'staff_hall', 'fire_exit'] },
 } as const;
 /** colours of this file's own that its look twin (records-gwot.ts SKIN.own) gives a paint of the palette: the two cars' bodies, the lot's kerbs, the ash under the burn drum, the readers' coir, the staff room's sofa */
-export const RECORDS_PAINT = { carYard: [0.32, 0.08, 0.07] as Vec3, carLot: [0.2, 0.22, 0.26] as Vec3, kerb: [0.5, 0.5, 0.47] as Vec3, ash: [0.2, 0.2, 0.19] as Vec3, coir: [0.5, 0.42, 0.28] as Vec3, sofa: [0.22, 0.2, 0.19] as Vec3 };
+export const RECORDS_PAINT = { carYard: [0.32, 0.08, 0.07] as Vec3, carLot: [0.2, 0.22, 0.26] as Vec3, kerb: KERB_GREY, ash: [0.2, 0.2, 0.19] as Vec3, coir: [0.5, 0.42, 0.28] as Vec3, sofa: madeOf('fabric', [0.22, 0.2, 0.19]) };
 /** where the yard's car stands (x, z, yaw): its roof load is laid in the same frame */
 const TRUCK = [22.0, 20.4, 0.06] as const;
 /** where the team forms up: the dark lot south of the front door, behind the parked car */
@@ -230,7 +231,7 @@ export function build(opts: K.KitOpts = {}): { level: Level; scenarios: LevelSce
   K.grp(k, 'hall');
   K.ceilingPanel(k, 13.0, 15.0, false, 'hall'); K.ceilingPanel(k, 19.0, 15.0, false, 'hall'); K.ceilingPanel(k, 24.6, 14.6, true, 'hall');
   K.exitSign(k, 29.865, 15.0, false, 'exit_sign_e', 'hall');
-  K.wallArt(k, 20.5, 1.5, 16.865, 1.6, 0.9, [0.5, 0.42, 0.3], true);          // the noticeboard on the south wall
+  K.wallArt(k, 20.5, 1.5, 16.865, 1.6, 0.9, drawnAs('mud wall', [0.5, 0.42, 0.3]), true);          // the noticeboard on the south wall
   K.beacon(k, 16.5, 15.0); K.beacon(k, 26.5, 15.0); K.beacon(k, 12.0, 11.7);
 
   // ---------------- outside ----------------
@@ -269,7 +270,7 @@ export function build(opts: K.KitOpts = {}): { level: Level; scenarios: LevelSce
     P.trolley(13.1, 10.92, 0); P.stool(13.3, 8.2);   // (the trolley on the island's south side: the wider lane; the stool at the plan chest)
     // strong room — the DEED VAULT: the safe south of the UPS, deed tins on the racks' tops, on the safe and on the deed rack by the door
     P.room('strong');
-    P.floor(20.25, 8.42, 3.7, 0.5, [0.3, 0.31, 0.33], 0.006); P.floor(20.25, 8.74, 3.7, 0.09, INK.yellow, 0.014, 0.012);   // chequer plate along the racks' fronts, and the line nobody without a key stands past
+    P.floor(20.25, 8.42, 3.7, 0.5, C.metal, 0.006); P.floor(20.25, 8.74, 3.7, 0.09, INK.yellow, 0.014, 0.012);   // chequer plate along the racks' fronts, and the line nobody without a key stands past
     { const L = P.safe(22.08, 9.82, E, 0.7, 0.66, 1.2, [0.07, 0.34, 0.2]); L.box(0, 1.2, 0, 0.56, 0.01, 0.52, [0.03, 0.12, 0.07]); L.box(0, 1.21, 0.04, 0.28, 0.012, 0.28, INK.brass); L.box(0, 1.222, 0.04, 0.28, 0.004, 0.28, INK.brass, 0.785); L.box(0, 0.62, 0.375, 0.44, 0.05, 0.05, INK.brass); }   // bottle green, the panel and the maker's brass plate on its top, the brass bar handle standing proud of its door
     P.counter(18.23, 8.43, 0.7, 0.28, W, 0.9, C.metal, C.metal); P.tins(18.23, 0.9, 8.43, W, 2, 0.34, INK.manila, null);   // the deed rack (buff lids, a black band: no cross — from above a cross is a first-aid box)
     for (const i of [0, 1, 3]) P.tins(18.75 + i * 0.75, 2.1, 7.5 + (i % 2) * 0.12, 0, 1, 0.38, INK.manila, null);
@@ -308,7 +309,7 @@ export function build(opts: K.KitOpts = {}): { level: Level; scenarios: LevelSce
     P.tripod(35.4, 19.9, 1.1); P.rod(35.3, 20.6, 35.1, 22.4, 1.8);
     { const L = P.at(20.0, 3.5, 0); L.box(0, 0, 0, 1.0, 0.08, 1.0, C.concrete); L.box(0, 0.08, 0, 0.4, 1.0, 0.4, C.concrete); L.box(0, 1.08, 0, 0.12, 0.02, 0.12, INK.brass); for (let i = 0; i < 5; i++) P.peg(21.2 + i * 1.1, 3.5 + i * 0.12); }   // the trig pillar and its line
     { const L = P.at(9.62, 19.0, W); for (const sx of [-0.5, 0.5]) L.box(sx, 0, 0, 0.62, 0.62, 0.04, INK.rubber); L.box(0, 0.45, 0, 1.0, 0.05, 0.04, C.red); L.box(-0.22, 0.8, 0, 0.22, 0.05, 0.12, C.black); L.box(0.42, 0.86, 0, 0.04, 0.04, 0.46, C.metal); L.box(-0.05, 0, -0.12, 0.05, 0.8, 0.05, C.metal); }   // a bicycle
-    { const L = P.at(6.8, 18.5, 0.3); P.floor(6.8, 18.5, 1.6, 1.5, RECORDS_PAINT.ash, 0.5, 0.013); G.drum(6.8, 18.5, 'rust', 0.3); L.sheet(0.7, 0.014, 0.3, 0.2, 0.26, [0.12, 0.11, 0.1], 0.6); L.sheet(-0.5, 0.014, 0.6, 0.18, 0.22, INK.paper, 1.1); }   // the burn drum on its ash (the library's drum)
+    { const L = P.at(6.8, 18.5, 0.3); P.floor(6.8, 18.5, 1.6, 1.5, RECORDS_PAINT.ash, 0.5, 0.013); G.drum(6.8, 18.5, 'rust', 0.3); L.sheet(0.7, 0.014, 0.3, 0.2, 0.26, drawnAs('gravel', [0.12, 0.11, 0.1]), 0.6); L.sheet(-0.5, 0.014, 0.6, 0.18, 0.22, INK.paper, 1.1); }   // the burn drum on its ash (the library's drum)
     K.bench(k, 30.36, 12.2, W);
     P.loose('barrow', 'cardboard', 32.3, 11.9, 0.5, 14, [P.part(0, 0.28, 0, 0.9, 0.24, 0.6, INK.yellow), P.part(0.55, 0, 0, 0.36, 0.36, 0.08, C.black), P.part(-0.68, 0.42, -0.25, 0.5, 0.04, 0.04, C.wood), P.part(-0.68, 0.42, 0.25, 0.5, 0.04, 0.04, C.wood), P.part(-0.3, 0, -0.22, 0.04, 0.28, 0.04, C.metal), P.part(-0.3, 0, 0.22, 0.04, 0.28, 0.04, C.metal), P.part(0, 0.52, 0, 0.5, 0.12, 0.3, C.white)]);
     for (const [x, z] of [[30.42, 17.5], [30.46, 18.1]]) P.loose('dustbin', 'bin', x, z, 0.1, 6, [P.part(0, 0, 0, 0.45, 0.75, 0.45, C.metal), P.part(0, 0.75, 0, 0.5, 0.05, 0.5, P.tone(C.metal, 0.7))]);
