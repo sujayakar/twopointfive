@@ -414,10 +414,25 @@
     "roomClear": []
   },
   "scenarios": {
+    "places": {
+      "areas": [
+        { "name": "stair landing", "bounds": { "x0": 31, "x1": 34.5, "z0": 13.6, "z1": 15.6 } },
+        { "name": "plant pad", "bounds": { "x0": 8, "x1": 16, "z0": 17.5, "z1": 22 } },
+        { "name": "service room", "bounds": { "x0": 6.12, "x1": 11.44, "z0": 9.12, "z1": 14.88 } }
+      ]
+    },
     "doorNames": [
       { "door": "service", "name": "service door" },
       { "door": "lounge", "name": "lounge door" },
       { "door": "between", "name": "service to lounge door" }
+    ],
+    "walked": [
+      { "from": "stair landing", "to": "lounge", "weight": 3 },
+      { "from": "stair landing", "to": "service", "weight": 3 },
+      { "from": "stair landing", "to": "plant pad", "weight": 2 },
+      { "from": "service", "to": "plant pad", "weight": 2 },
+      { "from": "service room", "to": "between" },
+      { "from": "between", "to": "lounge" }
     ]
   }
 }
