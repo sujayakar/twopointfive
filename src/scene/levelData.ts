@@ -25,9 +25,11 @@ import type { RoomClearPlan, BreachPlan, CivilianTask } from './level';
 import type { LevelScenarios } from './scenarios';
 import { SQUAD_MAX_MEN, QUIET_MAX_ROUTES } from './scenarios';
 import { CIVILIAN_TASKS } from './level';
-import { BoxFlag } from './boxes';
+import { BoxFlag, type Box } from './boxes';
 import { MarkingDef, MAX_MARKS_PER_BOX, MARKING_TEXEL, markingErrors } from './markings';
 import { BOX_STUFFS, boxStuffOk } from './stuff';
+import { shapeErrors, formOf, type ShapeForm } from './shapes';
+import { findOctagons } from './round';
 export type { MarkingDef } from './markings';
 
 export const LEVEL_DATA_VERSION = 1 as const;
@@ -96,9 +98,20 @@ export interface BoxData {
   /** MARKINGS on the box's faces (scene/markings.ts MarkingDef: face, kind, rect from the face centre, res, palette a/b/c, emit, rough, p, id) — the pixel-art
    *  signifiers (key caps, tape, seams, the vending window, text bars, LEDs, glyphs); ≤ MAX_MARKS_PER_BOX; absent = none */
   markings?: MarkingDef[];
+  /** A SHAPE (scene/shapes.ts — read its head): how this box stands when shapes are on, said in the box's OWN frame so that it moves, turns and copies with
+   *  the box. `round` 1 | 3 = a twelve-sided prism about the box's own x or z; `arc` { axis, rise } = its top a round about its own x or z; `cut` = planes
+   *  [nx, ny, nz, d], each keeping n · p ≤ d (8 at most, 1 beside an arc); `old` = not a fresh break (the picture's word: the cut faces take the box's own
+   *  paint and lying snow); `with` = pieces of trim that are there only when shapes are on, drawn and nothing else. The box keeps its centre and half size: a shape is cut FROM the plain
+   *  box. With shapes off the box is the plain box above and nothing here is read. Not on a box with `rot`; no form on a box with `markings` or the Glass
+   *  flag (their readers — the mark painter, the pane engine — read the whole box). */
+  shape?: ShapeData;
 }
 
 export type PropKindName = 'chair' | 'cardboard' | 'bin' | 'plant';
+/** one piece of a shape (BoxData.shape.with): TRIM, drawn and nothing else — `off` (its centre from the box's, in the box's own frame), half size, yaw from
+ *  the box's own, paint (exactly one of material / albedo), finish — and a form. It says no flags: a piece always stands NoShadow */
+export interface ShapePieceData extends ShapeForm { off: Vec3; h: Vec3; yaw?: number; material?: string; albedo?: Vec3; rough?: number; metal?: boolean }
+export interface ShapeData extends ShapeForm { with?: ShapePieceData[] }
 export interface PropPartData { off: Vec3; h: Vec3; /** relative to the prop's heading; absent = 0 */ yaw?: number; material?: string; albedo?: Vec3; /** as BoxData.stuff */ stuff?: string; /** markings on the part's faces (as BoxData.markings) */ markings?: MarkingDef[]; }
 /** Loose furniture (game/props.ts): a rigid group of parts standing on the floor at (x, z). `half` / `height` are normally FITTED from the parts by the loader
  *  (levelLoad.ts fitPropFootprint — the generator's own rule); store them only to override the fit (a plant's footprint is its foliage's flat sides). */
@@ -232,7 +245,7 @@ export const KEYS = {
   meta: ['grid', 'bounds', 'generator', 'notes', 'markTexel'], bounds: ['min', 'max'], rect: ['x0', 'x1', 'z0', 'z1'],
   floor: ['id', 'name', 'y', 'ceiling'], material: ['albedo', 'rough', 'metal', 'stuff', 'notes'],
   surfaces: ['building', 'grassEdge', 'inside', 'outside', 'verge', 'zones'], zone: ['id', 'mat', 'x0', 'z0', 'x1', 'z1', 'notes'],
-  box: ['id', 'floor', 'group', 'name', 'c', 'h', 'yaw', 'rot', 'material', 'albedo', 'emissive', 'rough', 'metal', 'stuff', 'flags', 'cutHeight', 'markings'],
+  box: ['id', 'floor', 'group', 'name', 'c', 'h', 'yaw', 'rot', 'material', 'albedo', 'emissive', 'rough', 'metal', 'stuff', 'flags', 'cutHeight', 'markings', 'shape'],
   prop: ['id', 'kind', 'name', 'floor', 'x', 'z', 'yaw', 'mass', 'parts', 'half', 'height'], part: ['off', 'h', 'yaw', 'material', 'albedo', 'stuff', 'markings'],
   marking: ['face', 'res', 'at', 'size', 'pal', 'cells'], markpal: ['albedo', 'mul', 'rough', 'emit'],   // (scene/markings.ts marking() / palEntry() write exactly these, in this order)
   light: ['id', 'kind', 'pos', 'dir', 'color', 'intensity', 'range', 'innerDeg', 'outerDeg', 'group', 'enabled', 'volumetric', 'radius', 'mains', 'broad', 'fixture'],
@@ -247,6 +260,10 @@ export const KEYS = {
   plans: ['roomClear', 'breach'],   // (the container only — what is INSIDE a plan is generic, see canonBlob)
   scenarios: ['nightBreach', 'roomClear', 'rescue', 'places', 'quiet', 'lesson', 'par', 'snatch', 'defuse', 'issue', 'kitView', 'response', 'doorNames', 'walked'],   // (the container only, likewise: what is inside is scene/scenarios.ts's, carried as written)
 } as const;
+/** the keys a shape's piece (BoxData.shape.with) may carry beside its form, in the order they are written. ITS OWN LIST, read by hand in three places
+ *  (levelLoad.ts loadLevel and levelToData, canonShape below): a key a box gains for its paint is added here and there together, or a piece would be allowed
+ *  a word nobody reads */
+export const PIECE_KEYS: readonly string[] = ['off', 'h', 'yaw', 'material', 'albedo', 'rough', 'metal'];
 
 // ------------------------------------------------------------------------------------------------------------------------------------------------ validation
 const isNum = (v: unknown): v is number => typeof v === 'number' && Number.isFinite(v);
@@ -344,8 +361,25 @@ export function validateLevelData(d: LevelData): string[] {
     if (b.cutHeight !== undefined && !isNum(b.cutHeight)) err(w, 'cutHeight must be a number');
     if (b.name !== undefined && !isStr(b.name)) err(w, 'name must be a non-empty string'); if (b.group !== undefined && !isStr(b.group)) err(w, 'group must be a non-empty string');
     marksOk(w, b.markings, b.h, b.rot !== undefined);
+    if (b.shape !== undefined) {   // A SHAPE (scene/shapes.ts shapeErrors: keys, one form, the record's limit) and its pieces' paint, finish and flags as a box's
+      if (b.rot !== undefined) err(`${w}.shape`, 'a box with rot cannot say a shape');
+      if (isObj(b.shape) && ((b.shape as any).round !== undefined || (b.shape as any).arc !== undefined || (b.shape as any).cut !== undefined)) {   // (a FORM cuts the box: what reads the whole box must not be said beside it)
+        if (b.markings !== undefined) err(`${w}.shape`, 'a box with markings cannot say a form (a mark is laid out on the whole face): give the marks a box of their own, or say the form of a piece');
+        if (Array.isArray(b.flags) && (b.flags as unknown[]).includes('Glass')) err(`${w}.shape`, 'a Glass box cannot say a form (the pane engine breaks and draws the whole pane)');
+      }
+      if (isVec(b.h)) for (const e of shapeErrors(b.shape, b.h, PIECE_KEYS)) err(`${w}.shape`, e);
+      const ws: any[] = isObj(b.shape) && Array.isArray((b.shape as any).with) ? (b.shape as any).with : [];
+      ws.forEach((q, j) => { if (isObj(q)) { const wq = `${w}.shape.with[${j}]`; paintOk(wq, q); finishOk(wq, q); } });
+    }
   };
   boxes.forEach((b, i) => { if (isObj(b)) boxRule(`boxes[${i}] '${show(b.id)}'`, b); });
+  // A SLAB OF ONE OF THE KIT'S OCTAGONS SAYS NO SHAPE (scene/round.ts: the four slabs are one round box where round things are on, so a shape on one would
+  // stand by another switch's word). Found as round.ts finds them, on the boxes as the file has them (a box that carries flags is no slab of one).
+  if (boxes.some(b => isObj(b) && b.shape !== undefined) && boxes.every(b => isObj(b) && isVec(b.c) && isVec(b.h))) {
+    const mats: Record<string, any> = isObj(d.materials) ? d.materials as any : {}, none: Vec3 = [NaN, NaN, NaN];   // (NaN: a box with no paint is like no other)
+    const plain = boxes.map((b: any) => ({ c: b.c, h: b.h, yaw: typeof b.yaw === 'number' ? b.yaw : 0, rot: b.rot, flags: Array.isArray(b.flags) && b.flags.length ? 1 : 0, albedo: isVec(b.albedo) ? b.albedo : isVec(mats[b.material]?.albedo) ? mats[b.material].albedo : none }));
+    for (const i of findOctagons(plain as unknown as Box[])) for (let k = 0; k < 4; k++) if ((boxes[i + k] as any).shape !== undefined) err(`boxes[${i + k}] '${show((boxes[i + k] as any).id)}'.shape`, 'a slab of a kit octagon (a round thing) cannot say a shape');
+  }
   const boxOk = (where: string, id: unknown, more?: ReadonlySet<string>) => { if (!isStr(id) || !(boxIds.has(id) || more?.has(id))) err(where, `unknown box '${show(id)}'`); };
   // props
   const props = recs('props', d.props); uniq('props', props.map(p => (p as any)?.id));
@@ -732,7 +766,7 @@ export function validateLevelData(d: LevelData): string[] {
           // (A PICTURE'S BOX — a set's, a way's `add`: the level format's own record. LOOK TWINS: one block serves the plain file and its look file — the box's
           //  `material` may be alternatives 'a|b', the first the file's palette holds: src/host/kitViewSet.ts kitSetPaint)
           const kvPaint = (b: any) => { const alt = isStr(b.material) && b.material.includes('|') ? b.material.split('|').find((m: string) => Object.prototype.hasOwnProperty.call(mats, m)) : undefined; return alt !== undefined ? { ...b, material: alt } : b; };
-          const kvBox = (bw: string, b: any) => { if (!isObj(b) || !isStr(b.id) || !isVec(b.c) || !isVec(b.h)) { err(bw, 'a box: id, c, h'); return; } known(bw, b, KEYS.box); paintOk(bw, kvPaint(b)); stuffOk(bw, b); };
+          const kvBox = (bw: string, b: any) => { if (!isObj(b) || !isStr(b.id) || !isVec(b.c) || !isVec(b.h)) { err(bw, 'a box: id, c, h'); return; } known(bw, b, KEYS.box); paintOk(bw, kvPaint(b)); stuffOk(bw, b); if (b.shape !== undefined) err(bw, 'a kit view box says no shape'); };
           // (BESPOKE SETS — scenarios.ts KitViewSet: the shapes only; what stands where is src/host/kitViewPlan.ts's to measure, tools/qa/kitview-plan.ts)
           const sets: Record<string, any> = isObj(K.sets) ? K.sets : {}; if (K.sets !== undefined && !isObj(K.sets)) err(`${w}.sets`, 'must be an object of sets by name');
           for (const [name, T] of Object.entries(sets)) { const tw = `${w}.sets.${name}`; if (!isObj(T)) { err(tw, 'must be an object'); continue; }
@@ -978,6 +1012,8 @@ function copyPlain<T>(v: T): T { if (Array.isArray(v)) return v.map(copyPlain) a
 /** the record with only `keys`, in that order, values deep-copied */
 function pick<T extends object>(o: T, keys: readonly string[]): T { const out: any = {}; for (const k of keys) { const v = (o as any)[k]; if (v !== undefined) out[k] = copyPlain(v); } return out; }
 const canonLight = (l: LightData): LightData => pick(l, KEYS.light);
+/** a shape re-keyed as levelLoad.ts levelToData writes it: the form, then the pieces, each its own keys and then its form */
+const canonShape = (x: ShapeData): ShapeData => ({ ...formOf(x), ...(x.with ? { with: x.with.map(w => ({ ...pick(w, PIECE_KEYS), ...formOf(w) })) } : {}) });
 const canonMarking = (m: MarkingDef): MarkingDef => ({ ...pick(m, KEYS.marking), pal: (m.pal ?? []).map(p => pick(p, KEYS.markpal)) });
 /** Preferred key order inside the drill plans, at any depth: the fields RoomClearPlan / BreachPlan have had, in reading order. canonBlob puts keys it knows
  *  in this order and anything newer AFTER them alphabetically — so the plans stay readable, serialize identically whatever order they were assembled in, and a
@@ -1006,7 +1042,7 @@ export function canonicalLevelData(d: LevelData): LevelData {
     floors: d.floors.map(f => pick(f, KEYS.floor)),
     materials: mats,
     ...(d.surfaces ? { surfaces: { ...pick(d.surfaces, KEYS.surfaces), building: rect(d.surfaces.building), zones: d.surfaces.zones.map(z => pick(z, KEYS.zone)) } as SurfacesData } : {}),
-    boxes: d.boxes.map(b => ({ ...pick(b, KEYS.box), ...(b.markings ? { markings: b.markings.map(canonMarking) } : {}) })),
+    boxes: d.boxes.map(b => ({ ...pick(b, KEYS.box), ...(b.markings ? { markings: b.markings.map(canonMarking) } : {}), ...(b.shape ? { shape: canonShape(b.shape) } : {}) })),
     props: d.props.map(p => ({ ...pick(p, KEYS.prop), parts: p.parts.map(q => ({ ...pick(q, KEYS.part), ...(q.markings ? { markings: q.markings.map(canonMarking) } : {}) })) })),
     lights: d.lights.map(canonLight),
     switchables: d.switchables.map(s => pick(s, KEYS.switchable)),

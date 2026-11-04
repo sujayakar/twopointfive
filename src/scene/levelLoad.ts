@@ -11,8 +11,10 @@ import { Box, BoxFlag, makeBox, ROUGH_DEFAULT, type BoxStuff } from './boxes';
 import type { Level, LightDef, PropDef, PropPart, LevelDoorDef, PatrolRoute, Chokepoint, RoomClearPlan, BreachPlan, DaylightDef, DeviceDef, CivilianDef, VentDef, VolumeDef } from './level';
 import { withScript } from './level';
 import { LEVEL_SCRIPTS } from './levelScripts';
-import { LevelData, LEVEL_DATA_VERSION, BoxData, DoorData, LightData, PropData, MaterialData, FloorData, SurfacesData, RoomClearPlanData, BreachPlanData, ObjectiveData, DeviceData, CivilianData, VentData, validateLevelData, flagsToBits, bitsToFlags } from './levelData';
+import { LevelData, LEVEL_DATA_VERSION, BoxData, ShapeData, ShapePieceData, DoorData, LightData, PropData, MaterialData, FloorData, SurfacesData, RoomClearPlanData, BreachPlanData, ObjectiveData, DeviceData, CivilianData, VentData, validateLevelData, flagsToBits, bitsToFlags } from './levelData';
 import { copyMarkings } from './markings';
+import { authoredC, authoredH } from './round';   // (leaf helpers: a box's centre and half size as its level authored them)
+import { formOf, type BoxShape, type ShapePiece } from './shapes';
 import { LIVED, isLived } from './lived';   // (no imports of its own: the lived-in rooms' switch and what counts as lived)
 import { DESTRUCTION, DRESS_GROUP } from '../game/destructionSwitch';   // (no imports of its own: the one switch + the dressing group's name)
 
@@ -57,6 +59,11 @@ export function loadLevel(data: LevelData, opts: { validate?: boolean; dressing?
   };
   /** what a box or a part is made of: its own word, else its material row's; nothing for plain (a box that says nothing is plain) */
   const stuffOf = (o: { stuff?: string }, m: MaterialData | undefined): BoxStuff | undefined => { const w = o.stuff ?? m?.stuff; return w === undefined || w === 'plain' ? undefined : w as BoxStuff; };
+  /** the finish of a box, or of a shape's piece (ONE reader for both): its own, else its material's */
+  const finishOf = (o: { material?: string; rough?: number; metal?: boolean }): { rough?: number; metal?: true } => {
+    const m = o.material !== undefined ? mats.get(o.material) : undefined, rough = o.rough ?? m?.rough, metal = o.metal ?? m?.metal;
+    return { ...(rough !== undefined ? { rough } : {}), ...(metal ? { metal: true as const } : {}) };
+  };
   // boxes, in file order (index i of the file IS static box i)
   const boxIndex = new Map<string, number>();
   // (the DRESSING — things a level file carries only to be wrecked, appended last by tools/levels/dress.ts — is left out with the destruction switch off: every other
@@ -81,6 +88,11 @@ export function loadLevel(data: LevelData, opts: { validate?: boolean; dressing?
     if (metal) p.metal = true;
     // what it is made of (scene/stuff.ts): the box's own word, else its material's; 'plain' is no word (validate has refused every word a box cannot be)
     const stuff = stuffOf(b, m); if (stuff !== undefined) p.stuff = stuff;
+    if (b.shape) {   // A SHAPE (scene/shapes.ts): carried on the box as authored — its planes copied, a piece's paint and finish resolved as a box's are; given to the box when the level is stood up
+      const s = b.shape, sh: BoxShape = { ...formOf(s) };
+      if (s.with) sh.with = s.with.map((w): ShapePiece => ({ off: V(w.off), h: V(w.h), ...(w.yaw ? { yaw: w.yaw } : {}), albedo: albedoOf(w), ...finishOf(w), ...formOf(w) }));
+      p.shape = sh;
+    }
     return makeBox(p);
   });
   const bx = (id: string) => { const i = boxIndex.get(id); if (i === undefined) throw new Error(`level '${data.name}': unknown box '${id}'`); return i; };
@@ -212,7 +224,7 @@ export function levelToData(level: Level, opts: LevelToDataOpts): LevelData {
     return mine !== rows ? { stuff: mine } : {};
   };
   // box ids: supplied → the box's own name → what references it (breaker, a light's fixture, a switchable) → box_NNNN
-  const n = level.boxes.length; const ids: string[] = new Array(n);
+  const firstPiece = level.boxes.findIndex(b => b.piece === true), n = firstPiece < 0 ? level.boxes.length : firstPiece; const ids: string[] = new Array(n);   // (the level's own boxes: a stood level's pieces — scene/shapes.ts — follow them and are written inside the shape that says them)
   const semantic = new Map<number, string>();
   semantic.set(level.breaker.boxes[0], 'breaker_panel'); semantic.set(level.breaker.boxes[1], 'breaker_led');
   for (const l of level.lights) if (l.fixtureBox !== undefined && !semantic.has(l.fixtureBox)) semantic.set(l.fixtureBox, `fix_${l.name}`);
@@ -226,15 +238,20 @@ export function levelToData(level: Level, opts: LevelToDataOpts): LevelData {
   // bits the runtime derives and may have OR'd into a Level it was handed (game.ts sets AreaLit on lit fixtures; Emissive / Rot / Dynamic live in the GPU word
   // or on prop boxes) are not authored data: masked here so 'export the level the game is running' works off game.level too. Anything else unknown still throws.
   const DERIVED = BoxFlag.AreaLit | BoxFlag.Emissive | BoxFlag.Rot | BoxFlag.Dynamic | BoxFlag.Thin | BoxFlag.Bar;
-  const boxes: BoxData[] = level.boxes.map((b, i) => {
+  const boxes: BoxData[] = level.boxes.slice(0, n).map((b, i) => {
     if (b.owner) throw new Error(`box ${i}: owner ${b.owner} — level boxes belong to the world`);
-    const pt = paint(b.albedo);
-    const d: BoxData = { id: ids[i], floor: F0, ...(opts.boxGroups?.[i] ? { group: opts.boxGroups[i] } : {}), ...(b.name !== undefined ? { name: b.name } : {}), c: V(b.c), h: V(b.h), ...(b.yaw !== 0 ? { yaw: b.yaw } : {}), ...(b.rot ? { rot: [b.rot[0], b.rot[1], b.rot[2], b.rot[3]] } : {}), ...pt, ...finish(b, pt as { material?: string }) };
+    const pt = paint(b.albedo), yaw = b.was ? b.was.yaw : b.yaw, fl = b.was ? b.was.flags : b.flags, mk = b.was ? b.was.marks : b.marks;   // (AS AUTHORED: a round thing's slab — round.ts Box.was — is written as the level file has it, so a level that is standing goes back to data as its file; a shaped box keeps its centre, half size and marks)
+    const d: BoxData = { id: ids[i], floor: F0, ...(opts.boxGroups?.[i] ? { group: opts.boxGroups[i] } : {}), ...(b.name !== undefined ? { name: b.name } : {}), c: V(authoredC(b)), h: V(authoredH(b)), ...(yaw !== 0 ? { yaw } : {}), ...(b.rot ? { rot: [b.rot[0], b.rot[1], b.rot[2], b.rot[3]] } : {}), ...pt, ...finish(b, pt as { material?: string }) };
     if (b.emissive[0] !== 0 || b.emissive[1] !== 0 || b.emissive[2] !== 0) d.emissive = V(b.emissive);
-    const flags = bitsToFlags(b.flags & ~DERIVED); if (flags.length) d.flags = flags;
+    const flags = bitsToFlags(fl & ~DERIVED); if (flags.length) d.flags = flags;
     if (b.cutHeight !== 1e6) d.cutHeight = b.cutHeight;
     const word = says(b, pt as { material?: string }); if (word.stuff !== undefined) d.stuff = word.stuff;
-    const marks = copyMarkings(b.marks); if (marks) d.markings = marks;
+    const marks = copyMarkings(mk); if (marks) d.markings = marks;
+    if (b.shape) {   // A SHAPE (scene/shapes.ts), as it was read: a piece's paint by name where the level has one, its finish only where it is not the material's
+      const s = b.shape, sd: ShapeData = { ...formOf(s) };
+      if (s.with) sd.with = s.with.map((w): ShapePieceData => { const wp = paint(w.albedo); return { off: V(w.off), h: V(w.h), ...(w.yaw ? { yaw: w.yaw } : {}), ...wp, ...finish(w, wp as { material?: string }), ...formOf(w) }; });
+      d.shape = sd;
+    }
     return d;
   });
   const props: PropData[] = level.props.map(p => {

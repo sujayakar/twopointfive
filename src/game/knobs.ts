@@ -142,6 +142,8 @@ export const JOURNAL_KNOBS: readonly string[] = ['AIM', 'TAPSTEP', 'TRAINED', 'A
   'HITSTUFF',
   // round things are round (scene/round.ts ROUND): a recording made with it on has its drums and tyres round to every ray and foot, one from before has the kit's octagons
   'ROUND',
+  // a box says its shape (scene/shapes.ts SHAPES): a recording made with it on has its vehicles' corners, bonnets and glass cut to every ray, one from before has the plain boxes
+  'SHAPES',
   // a restart gives a clean level (cleanrestart.ts CLEANRESTART): a recording made with it on replays its restarts clean, one from before as they were
   'CLEANRESTART',
   // the saves roll and one is kept in memory with a team on the floor (savestate.ts SAVETIMELINE): a recording from before it has no such save to go back to
@@ -292,6 +294,7 @@ import { MUSIC } from '../audio/pieces';   // (the score's pieces switch: not a 
 import { LIVED } from '../scene/lived';
 import { UNDERFOOT } from '../scene/collision';   // (a scene table: no cycle)
 import { ROUND } from '../scene/round';   // (a scene table: no cycle)
+import { SHAPES } from '../scene/shapes';   // (a scene table: no cycle)
 import { CASTOR } from './props';
 
 /** A table's keys that are NOT knobs: data it was loaded with, or what it found at load. knobsCopy leaves them out, so putting a copy back never touches them.
@@ -484,6 +487,8 @@ export function knobRegistry(): Record<string, object> {
     UNDERFOOT,
     // round things are round (scene/round.ts): whether a level's octagons are stood up as round boxes; read when a level is stood up
     ROUND,
+    // a box says its shape (scene/shapes.ts): whether a level's boxes that say a shape are stood up as it, with their pieces; read when a level is stood up
+    SHAPES,
     // the squad's feel (teamfeel.ts keeps rows of these per machine; FOG, FRAG and DOORMANNERS are above)
     FLASH, PACE, LIGHTS, NVG, IR, IRLIGHT, WALLPEN, LASER, DOORTOOLS, ROOMFIGHT, ORDERS, COVER, ROOMFIT, ENTRY, REAR, SILENT, PAIR,
     // the scenario's and the defenders' tables (a play-through's --set reaches them)

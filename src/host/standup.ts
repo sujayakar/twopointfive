@@ -11,6 +11,7 @@ import type { GameAudioLike } from '../game/audio_iface';
 import { buildLevel } from '../scene/level';
 import { UNDERFOOT } from '../scene/collision';
 import { ROUND, roundLevel } from '../scene/round';
+import { SHAPES, shapeLevel, plainLevel } from '../scene/shapes';
 import { thinClear, thinLevel } from '../scene/thin';
 import { barClear, barLevel } from '../scene/bars';
 import { lightFromDef } from '../render/lights';
@@ -207,8 +208,10 @@ export function nullSmoke(): SmokeSystemLike & { params?: Record<string, unknown
 export function populateHost(host: HostApi, level: Level): void {
   thinClear(level.boxes); barClear(level.boxes);   // (a level stood up a second time: last time's thin marks off before the round things are looked for)
   roundLevel(level.boxes, ROUND.on, level.markTexel);   // ROUND THINGS (scene/round.ts): the kit's octagons as one round box each, or every box put back as its file has it — before a box goes to the world and before the Game's collision is built from the list
+  plainLevel(level.boxes);   // A BOX SAYS ITS SHAPE (scene/shapes.ts): what an earlier stand-up of this level gave is taken back first, so that the two rules below read the level's plain boxes whatever shapes say
   thinLevel(level.boxes, level.doors);   // THIN THINGS THAT STAND FREE (scene/thin.ts): marked for the fog of war's own eyes (FOG.thin) and a teammate's (FOG.mates), on the list as it now is
   barLevel(level.boxes);   // A WINDOW'S BARS (scene/bars.ts): marked for the one rule that reads them (game/winbars.ts WINBARS)
+  shapeLevel(level.boxes, SHAPES.on);   // …and given: each box that says a shape has its record and its pieces follow the level's last box — before a box goes to the world and before the Game's collision is built from the list
   for (const b of level.boxes) host.world.addStatic(b);
   for (const ld of level.lights) host.lights.add(lightFromDef(ld));
 }
@@ -229,6 +232,7 @@ export async function standGame(host: HostApi, opts: StandOpts = {}): Promise<St
   if (!ch) { if (!opts.gltfUrl) throw new Error('standGame: neither ch nor gltfUrl given'); ch = await loadGltfCharacter(opts.gltfUrl); }
   const smoke = opts.smoke ?? nullSmoke();
   if (opts.harness && pinned('TPS_ROUND')) ROUND.on = String((globalThis as any).process?.env?.TPS_ROUND ?? '') === '1';   // round things are round (src/scene/round.ts; read as the level's boxes go to the world, so written before that): off, so a drum is the kit's octagon of four slabs to every ray and every foot, as when every frozen digest and tally was recorded
+  if (opts.harness && pinned('TPS_SHAPES')) SHAPES.on = String((globalThis as any).process?.env?.TPS_SHAPES ?? '') === '1';   // a box says its shape (src/scene/shapes.ts; read as the level's boxes go to the world, so written before that): off, so every box of a level is the plain box its file has, as when every frozen digest was recorded
   if (opts.populate !== false) populateHost(host, level);
   if (opts.harness && pinned('TPS_OPENING')) OPENING.on = String((globalThis as any).process?.env?.TPS_OPENING ?? '') === '1';   // THE NIGHT'S OPENING (src/game/opening.ts): off, so every man of the shift starts on his route's first waypoint as when every frozen digest, tally and session fixture was recorded — set before the Game exists (its constructor places them); `TPS_OPENING=1` runs any harness tool with it on, tools/qa/solo-night.ts raises it for its as-shipped stand (the shipped default is ON)
   if (opts.harness && pinned('TPS_GEAR')) GEAR.on = String((globalThis as any).process?.env?.TPS_GEAR ?? '') === '1';   // the 2010s issue kit (src/game/gear.ts): off, so the kit's names in every frozen probe's HUD, message and debrief text are the ones they were written against, and Sam's pistol holds the ten it held; `TPS_GEAR=1` turns it on (the shipped default). Words, drawn boxes and the Glock's fifteen-round magazines — set before the Game exists (its constructor loads Sam's pistol)
