@@ -230,6 +230,26 @@ let stateFails = 0;
       slow(q, STANDS_IN.maxSecs - 1); const held = E.settings.renderScale === sc0; slow(q, 9);
       check(held && E.settings.renderScale < sc0 - 0.04, `one that never arrives: held a second short of ${STANDS_IN.maxSecs} s (${held}), and past it the ladder runs again (${sc0.toFixed(2)} → ${E.settings.renderScale.toFixed(2)})`);
       laterProgress.pending = 0; }
+    // … and the boot's own measure waits the same way and no longer (calibrateTick): a later set that takes a minute must not leave a slow machine a minute with no quality step
+    { store.clear(); const E = mkEngine(4.5); const q: any = new Q2(E as never, { params: { rbIters: 4 } } as never); E.q = q; if (!q.auto) q.setAuto();
+      if (!BREAK) laterProgress.pending = 3;
+      const d0 = pump(E, q, 10 * 60), waiting = q.calibrating && !q.measuring;
+      const d1 = pump(E, q, (STANDS_IN.maxSecs - 11) * 60), still = q.calibrating;
+      const d2 = pump(E, q, 4 * 60);
+      check(d0 === 0 && waiting && d1 === 0 && still && d2 === 1 && !q.calibrating && q.early === true, `the boot's measure with programs still compiling: ten seconds in it waits and reads no frame (${d0} decided, waiting ${waiting}), a second short of ${STANDS_IN.maxSecs} s still (${d1}, ${still}), and past it the picture as it is is measured once and marked early (${d2}, early ${q.early}; “${q.lastChange}”)`);
+      q.remeasure(); const heldOn = !q.calibrating && q.early === true;   // (still out: nothing to measure again yet)
+      laterProgress.pending = 0; q.remeasure(); const again = q.calibrating && q.early === false, d3 = pump(E, q, 3 * 60); q.remeasure();
+      check(heldOn && again && d3 === 1 && !q.calibrating, `…and when the programs are in the page measures once more, on the settings' own picture, and only once (asked while still out: nothing ${heldOn}; in: calibrating ${again}, decided ${d3}×)`); }
+    { store.clear(); const E = mkEngine(4.5); const q: any = new Q2(E as never, { params: { rbIters: 4 } } as never); E.q = q; if (!q.auto) q.setAuto();
+      if (!BREAK) laterProgress.pending = 3;
+      let stalled = 0; for (let i = 0; i < STANDS_IN.maxSecs + 2; i++) { E.tick(); q.calibrateTick(1.0); if (!q.calibrating) stalled++; }   // (a compile that stalls every frame a whole second: those frames measure nothing, and still count to the wait)
+      const out = q.measuring === true && q.early === true;
+      check(stalled === 0 && out, `frames a compile stalls for a second each still run the wait out (${STANDS_IN.maxSecs + 2} of them: measuring ${q.measuring}, early ${q.early}), and none of them is read (${stalled})`);
+      laterProgress.pending = 0; }
+    { store.clear(); const E = mkEngine(4.5); const q: any = new Q2(E as never, { params: { rbIters: 4 } } as never); E.q = q; if (!q.auto) q.setAuto();
+      if (!BREAK) laterProgress.pending = 3;
+      const d0 = pump(E, q, 5 * 60); laterProgress.pending = 0; const d1 = pump(E, q, 2 * 60);
+      check(d0 === 0 && d1 === 1 && q.standsInFor === 0 && q.measuring === false, `they land five seconds in: the measure is taken then, on the settings' own picture (${d0} then ${d1})`); }
   }
   aimPin = 0;   // (D), (E) — every stub engine from here to the end of the file: the as-now ladder (?aim=asnow)
   // (D) the runtime ladder must actually CUT when frames are slow — and every cut must be a real cut in pixels (08-10 field dumps: eff sat pinned at the cap for

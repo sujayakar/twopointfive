@@ -1070,6 +1070,18 @@ THE DEFAULT IS A CARRY (`HANDS.carry`, on; Tab row 'bodies ▸ over the shoulder
   the V key and the Space key file nothing. No picture was taken: a screenshot does not come back on that adapter.
   NOT DONE HERE: the shared latch helper (the camera moved to the spare Space bar in the next bullet).
   Nobody has played it; never seen on a GPU.
+- **The hidden text box of a framed page is no field** (`src/host/keymap.ts typedInto(target)`, `SINK_LABEL`; 2026-10-27; no switch, a mend). In
+  somebody else's frame (the playable artifact) `game/input.ts` keeps the keys in a text box nobody sees, labelled 'game input'. Three listeners
+  took any TEXTAREA for typing and dropped the key there: F7 (`ui/replaykey.ts`), F8 (`main.ts`, the performance sweep) and the kit's copy and
+  paste (`ui/loadout.ts`). They now ask `typedInto`, which is true of an input, a select, a text area or editable text and never of that box; on
+  a page with nothing above it there is no such box and nothing changes. `host/findme.ts`, `editor/app.ts` and `replay/engineplay.ts` spell the same test
+  themselves (findme imports nothing). A NEW KEY LISTENER THAT SKIPS FIELDS ASKS `typedInto`, never a bare tag test. CHECK: `keybinds`, its line
+  'the hidden text box…' (the test on stand-in targets, the label `input.ts` gives, that the three lines ask it the right way round, and that the
+  three files which spell it themselves name the same box); `SINKKEY_BREAK=1` fails it. DRIVEN 10-27 on the real page inside a frame of another
+  origin (headless Chromium, software adapter, `tut-quiet`): the keys were in the box, F8 toggled the sweep each press and F7 said "Replay saved";
+  and on Team & kit there (`?loadout=depot-four`) with the keys put in the box, nothing selected, Ctrl+C lit Copy and marked the man. The kit
+  screen itself leaves the keys on its own card, not in the box. NOT MENDED, its owner's: `replay/soundlanes.ts onFocusOut` still takes the box for a field (focus
+  leaving it can make the next Esc a field's). What a sandboxed frame then lets F7 do with its file is not this rule's. Never seen on a GPU.
 - **The camera's key is the Space bar** (`src/host/keymap.ts KEYMAP.camSpace`, `camKey()`, `camCap()`, 10-22; the maintainer: "move camera pan from
   ctrl to space", "zoom can still be just space + scroll"; a tester's Ctrl then W closed his tab). ON in the page (`?camspace=0` = Ctrl, as it
   was), off in the module, so both of the harness's stands have Ctrl: it is a HOST switch like the board's others (`qFree`, `setFree`), not a game
@@ -1553,28 +1565,3 @@ THE DEFAULT IS A CARRY (`HANDS.carry`, on; Tab row 'bodies ▸ over the shoulder
   before). NOT TOUCHED: gunhand.ts / inhand.ts (how a gun sits in a hand) and the creep's arms. NOT SEEN, NOT PLAYED: never on a GPU or in the
   page; the numbers are first numbers off the capsule strips and CPU-skinned stills; the way into the sprint and out of it was looked at as a capsule strip only
   (`pose-strip.ts sprint-pistol-turns`: the hands are together inside 0.3 s, a little apart on the way); a sprint into a door's shoulder and a throw out of a sprint were not looked at with it on.
-- **A run carries its arms close** (`RUNARMS`, src/game/character.ts `runArms`, called on the standing pose once idle and gait are blended; 11-01,
-  the maintainer, of Sam sprinting up the screen: "sprint looks dainty when viewed from the back, maybe should have arms closer in?"). WAS: the run
-  clips' arms read as a run from the side and not from behind, where the camera is whenever he runs up the screen. Read in the shoulder line's own
-  frame, the sprint's elbows stand 10 to 20 cm out from the shoulders, its hands swing up to 35 cm wide of them and travel only 24 cm fore and aft
-  (the shoulders' twist, 25° either way, does the rest); the jog's arms are as wide. NOW, with the key on, each hand is put back in that frame:
-  0.3 of its sideways travel about 5 cm out, the elbow swivelled behind and below him, by the RUN's share of the pose (`lg.run`, jog through
-  sprint); and by the SPRINT's share 1.8 × its fore-aft travel and up to 14 cm higher at the front of the swing. Two shares, because a heavy kit
-  slows Sam's sprint to 3.5 m/s, which is part jog: a rule on the sprint clip alone gave that man half the tuck (the first cut of this did).
-  It is the run's own arms, not a layer and not a view's rule: any figure that jogs or sprints has it, every layer that owns an arm writes over it
-  (a sprint with the pistol in both hands, RUNREADY, is as it was), and it is not solved at all under a long gun at full weight. A thing in ONE
-  pumping fist (a can, or the pistol with RUNREADY down) comes in with its arm; the hand keeps its own turn on the forearm. Sam himself never holds
-  a jog (he walks at 1.6 m/s or sprints): the jog's tuck is seen on him only on the way in and out and under a heavy kit, and on a guard or a
-  civilian who runs with nothing in both hands. Switch: ON in the page (`?runarms=0` puts it off; the debugger ▸ the move panel ▸ 'running ▸ arms
-  carried close'), OFF in the module and on the frozen stand (`FROZEN_HOLDS['RUNARMS.on']`: `TPS_RUNARMS=1`); the journal carries the table and a
-  recording from before it replays the clips' arms. CHECK: `probes.ts runarms` (family player; `tools/qa/runarms-check.ts`; `RUNARMS_BREAK=1`
-  fails `arms` and `slowed`), both stands, the lobby, one seed: over a second of the sprint a hand is at most 14 cm out from its shoulder and an
-  elbow 15 (35 and 20 with the key down), nothing comes in past the shoulder, each hand travels 43 cm fore and aft (24); at 3.5 m/s a hand 14 and
-  an elbow 14 (34 and 21), travel 31 (24); with the pistol in both hands and with the rifle elbows and hands are where they are with the key down,
-  to the millimetre. It moves the pose and not the play: a minute of Sam sprinting at three guards with the AI on (the frozen stand, one seed)
-  ends with all four at the same places with the key up and down. LOOK AT IT: `pose-strip.ts sprint-bare` (capsules from straight behind and from the game's pitch behind; `sprint-bare-was` =
-  the clip's; `sprint-bare-side`, `sprint-bare-slow`, `jog-bare`, `jog-bare-was`), `pose-mesh.ts operator_1 sprint --set '{"RUNARMS":{"on":true}}'`
-  + `pose-mesh-raster.py` (the worn mesh). NOT SEEN, NOT PLAYED: never on a GPU; in the page only as numbers and one software still. First numbers
-  off the capsule strips and CPU-skinned stills at three points of the cycle. In the jog's strip the front forearm crosses the chest a little at
-  two points of the cycle. Whether an elbow touches a vest's pouches, the way into the sprint and out of it, a throw out of a sprint, and a
-  guard's or a civilian's run were not looked at.

@@ -130,8 +130,8 @@ export function materialRemove(ed: Editor, name: string, opts: { repaintTo?: str
   const rec: Record<string, MaterialData> = {}; for (const [k, v] of Object.entries(ed.data.materials)) if (k !== name) rec[k] = v;
   ed.doc.transact(`remove material ${name}`, () => {
     if (opts.repaintTo) {
-      for (const id of users.boxes) ed.updateBox(id, b => { const o = { ...b, material: opts.repaintTo }; delete o.stuff; return o; });   // (the new paint's name speaks: the old paint's word goes with it)
-      for (const pid of users.props) ed.updateProp(pid, x => ({ ...x, parts: x.parts.map(q => { if (q.material !== name) return q; const o = { ...q, material: opts.repaintTo }; delete o.stuff; return o; }) }));
+      for (const id of users.boxes) ed.updateBox(id, { material: opts.repaintTo });
+      for (const pid of users.props) ed.updateProp(pid, x => ({ ...x, parts: x.parts.map(q => q.material === name ? { ...q, material: opts.repaintTo } : q) }));
     }
     writeMaterials(ed, rec, `remove material ${name}`);
   });
@@ -159,7 +159,7 @@ export function canonBox(b: BoxData): BoxData { const o: any = {}; for (const k 
 /** paint boxes with a palette entry (dropping an inline albedo) or an inline albedo (dropping the material) — per-box finish overrides are KEPT (clear them apart) */
 export function boxPaint(ed: Editor, ids: string[], material: string | readonly number[], opts: { coalesce?: string; label?: string } = {}) {
   if (typeof material === 'string') need(ed, material);
-  ed.doc.transact(opts.label ?? `paint ${ids.length} box(es) ${typeof material === 'string' ? material : 'inline'}`, () => { for (const id of ids) ed.updateBox(id, b => { const o = { ...b }; delete o.stuff; if (typeof material === 'string') { o.material = material; delete o.albedo; } else { o.albedo = roundVec((material as number[]).map(x => Math.max(0, x))); delete o.material; } return canonBox(o); }, { coalesce: opts.coalesce }); }, opts.coalesce);
+  ed.doc.transact(opts.label ?? `paint ${ids.length} box(es) ${typeof material === 'string' ? material : 'inline'}`, () => { for (const id of ids) ed.updateBox(id, b => { const o = { ...b }; if (typeof material === 'string') { o.material = material; delete o.albedo; } else { o.albedo = roundVec((material as number[]).map(x => Math.max(0, x))); delete o.material; } return canonBox(o); }, { coalesce: opts.coalesce }); }, opts.coalesce);
 }
 /** Per-box overrides on every box in `ids`: `albedo` = go INLINE with that colour (the material link dropped — the box keeps its resolved finish as explicit
  *  rough / metal so the look does not jump), `rough` (null = drop the override), `metal` (null = drop). `patch === null` clears rough + metal overrides
@@ -172,7 +172,7 @@ export function boxOverride(ed: Editor, ids: string[], patch: { albedo?: readonl
       if (patch === null) { delete o.rough; delete o.metal; return canonBox(o); }
       if (patch.albedo !== undefined) {
         if (b.material !== undefined) { if (o.rough === undefined && m?.rough !== undefined) o.rough = m.rough; if (o.metal === undefined && m?.metal) o.metal = true; }   // keep the look it had under the paint
-        o.albedo = roundVec(patch.albedo.map(x => Math.max(0, x))); delete o.material; delete o.stuff;   // (a word belongs to the paint it was said with: scene/stuff.ts)
+        o.albedo = roundVec(patch.albedo.map(x => Math.max(0, x))); delete o.material;
       }
       if (patch.rough !== undefined) { if (patch.rough === null) delete o.rough; else o.rough = round6(Math.min(1, Math.max(0, patch.rough))); }
       if (patch.metal !== undefined) {

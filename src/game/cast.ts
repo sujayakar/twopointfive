@@ -12,6 +12,7 @@
 // Looks only: nothing in the simulation reads a variant (the CPU's hit capsules, the wet model and the ragdoll are the skeleton's), no dice are drawn, and with no cast loaded
 // (the mannequin: `?mannequin`, the QA harness, the native host under `--mannequin` / `TPS_MANNEQUIN=1` or with a dylib that does not draw the cast) every man's mask is 0 and he is drawn exactly as he always was. The choice is taken once per Character, the
 // first time the game knows his side.
+import { manOf } from './seats';
 import { SideMap } from '../math/side';
 import type { Game } from './game';
 import type { Character } from './character';
@@ -47,7 +48,7 @@ export function castVariantOf(g: Game, c: Character): CastVariant | null {
   const cast = c.ch.cast; if (!cast) return null;
   const had = worn.get(c); if (had) return had;
   const ops = castSide(cast, 'operator');
-  if (c === g.player.char) { worn.set(c, ops[0]); return ops[0]; }
+  if (manOf(g, c)) { worn.set(c, ops[0]); return ops[0]; }
   const rec = g.guards.find(x => x.char === c) ?? g.civilians.find(x => x.char === c);
   const pick = (list: CastVariant[], skip = 0) => list.length > skip ? list[skip + c.id % (list.length - skip)] : list[c.id % list.length];
   const defenders = () => { const d = castSide(cast, 'defender'); return lookOffice() ? officeDress(cast.parts, d) : d; };
@@ -71,7 +72,7 @@ const hasNvg = new SideMap<CastVariant, boolean>('cast.hasNvg'); hasNvg.asMemo()
 export function sneakSuit(g: Game, c: Character): boolean {
   if (!LOOK.on || !LOOK.suit) return false;
   const asked = suitAs(), k = asked !== undefined ? asked : activeScenario(g); if (k && k !== 'quiet') return false;   // (a squad's loud mission — and any kind added later, until it says otherwise: the issue dress, helmet and plates)
-  return c === g.player.char || (k === 'quiet' && teamOf(g).some(gd => gd.char === c));
+  return !!manOf(g, c) || (k === 'quiet' && teamOf(g).some(gd => gd.char === c));
 }
 /** the part mask to DRAW this man with this frame (0 with no cast loaded): his variant's, with the goggles as the game has them (the head comment; anim/gltf.ts castGoggles)
  *  — and, in the sneaking suit, without the helmet, the back kit and the mesh goggles (anim/gltf.ts castSuit) */
@@ -83,7 +84,7 @@ export function castParts(g: Game, c: Character): number {
   let has = hasNvg.get(v);
   if (has === undefined) hasNvg.set(v, has = castGoggles(cast, v.mask, true) !== v.mask);
   if (!has) return worn0;                              // (a variant without goggles: a defender, a civilian)
-  let boxes = c === g.player.char;                      // combat.ts handProps: Sam always wears the box goggles; a teammate when nvg.ts says he wears a pair
+  let boxes = !!manOf(g, c);                      // combat.ts handProps: Sam always wears the box goggles; a teammate when nvg.ts says he wears a pair
   if (!boxes) { const gd = g.guards.find(x => x.char === c); boxes = !!gd && nvgWorn(g, gd); }
   return castGoggles(cast, worn0, boxes);
 }

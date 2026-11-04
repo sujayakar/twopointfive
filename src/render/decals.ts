@@ -14,7 +14,7 @@
 // past CAP, resetLevelState() clears the lot.
 //
 // One buffer, four regions (word offsets exported to the shader by decalWgslConsts, so both sides read one layout):
-//   [0]                       header vec4u: count, list length, serial, 1 while marks SIT IN THE SURFACE (`sit` below; 0 = every mark drawn as it was)
+//   [0]                       header vec4u: count, list length, serial, 0
 //   [CELL0, +CELLS_V4)        the cell table: one u32 per 1 m cell = start16 | count16 into the index list (4 cells a vec4)
 //   [LIST0, +LIST_V4)         the index list: decal indices per cell, oldest first (4 a vec4)
 //   [REC0, +3·CAP)            the records, 3 vec4 each: (pos.xyz, radius) (normal.xyz, param) (tangent.xyz, bits(kind3 | attached1 | seed12 | box16))
@@ -116,11 +116,6 @@ export class Decals {
   readonly list: Decal[] = [];
   /** off: add() records nothing, frame() uploads nothing, the engine keeps FrameFlags.Decals down — the buffer stays exactly as it was (settings.decals mirrors in here) */
   enabled = true;
-  /** MARKS THAT SIT IN THE SURFACE (decals.wgsl dkSit; the page raises it, `?marksit=0` leaves it down): a blast's scorch and its film of dust are drawn off
-   *  round, broken by one field that every mark on a surface shares, coloured by what they lie on, and wet where the ground is wet. The picture's alone: it is
-   *  one word of the uploaded header, nothing the game reads. Set it with setSit. */
-  sit = false;
-  setSit(on: boolean) { if (this.sit !== on) { this.sit = on; this.dirty = true; } }
   readonly buf: GPUBuffer;
   private data = new ArrayBuffer(DECAL_BYTES); private f32 = new Float32Array(this.data); private u32 = new Uint32Array(this.data);
   private dirty = true; private serial = 0;
@@ -227,7 +222,7 @@ export class Decals {
       u[o + 11] = (KIND_CODE[d.kind] | (d.box ? 8 : 0) | (d.seed << 4) | ((d.box ? d.boxIdx : d.pane >= 0 ? d.pane : DECAL_ANY_BOX) << 16)) >>> 0;   // box16: the ridden box, or the crack's own pane, or 'any'
       if (!d.hidden) drawn++;
     }
-    u[0] = list.length; u[1] = k; u[2] = this.serial >>> 0; u[3] = this.sit ? 1 : 0;
+    u[0] = list.length; u[1] = k; u[2] = this.serial >>> 0; u[3] = 0;
     this.stats.count = drawn; this.stats.listLen = k; this.stats.maxCell = maxCell; this.stats.dropped = dropped; this.stats.buildMs = performance.now() - t0;
   }
 

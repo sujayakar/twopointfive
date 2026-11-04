@@ -6,6 +6,7 @@ import type { LevelData } from '../scene/levelData';
 import { scenarioQuery, type ScenarioEntry } from '../scene/scenarios';
 import { ALL_MISSIONS } from '../scene/scenarioList';   // (pure tables: nothing of the game)
 import { LOOK_LEVELS } from '../scene/look';
+import { saveFile } from '../host/savefile';
 
 export const LS = {
   autosave: 'twopointsix.editor.autosave',   // { name, t (ms), digest, text, file? }
@@ -106,9 +107,7 @@ export function lookNote(name: string): string {
 }
 /** browser download of the level text as <name>.json */
 export function download(name: string, text: string): void {
-  const blob = new Blob([text], { type: 'application/json' }); const url = URL.createObjectURL(blob);
-  const a = document.createElement('a'); a.href = url; a.download = `${name.replace(/[^A-Za-z0-9_.-]/g, '_') || 'level'}.json`; document.body.appendChild(a); a.click(); a.remove();
-  setTimeout(() => URL.revokeObjectURL(url), 2000);
+  saveFile('level', `${name.replace(/[^A-Za-z0-9_.-]/g, '_') || 'level'}.json`, new Blob([text], { type: 'application/json' }));
 }
 // ---- the dev server's level files (same origin; the server refuses cross-origin writes)
 export async function serverList(base = ''): Promise<ServerEntry[] | null> {

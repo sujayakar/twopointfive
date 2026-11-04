@@ -862,8 +862,11 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   [ / ] walk the rail (keys reach the panel FIRST through `Input.keyVeto` = `panel.onKey` while the pointer hovers it or focus sits inside it: the nav keys step it. A PLAIN LETTER IS THE GAME'S
   (2026-11-01; it used to open the search whenever the pointer was over the panel, and the maintainer, playing with the panel open: "the search box in the debug view grabs input really
   aggressively ... make it so it only takes input when explicitly clicked on"): the search types from a click on it until Enter (which jumps to the first hit), Esc, a click elsewhere
-  or the pointer leaving the panel, which blurs the search box (no other field: a number being typed keeps the keyboard). Checked by `tools/qa/panel-keys.cjs` with real key events (`PANELKEYS_BREAK=1` must
-  fail one line); never tried on his machine. BACKTICK is the exception: it is main.ts's
+  or the pointer leaving the panel. Only the search is blurred by the pointer leaving: an open list keeps the keyboard until it is done. While the search types the panel keeps its
+  height, so a query with few rows does not pull it from under a pointer resting low on it (a tall window, a long page). (A scrubbed number row takes no focus at its press and would
+  leave the keyboard with the search; the game's panel has no number row today, they are the editor's and the viewer's.) No switch (the panel is
+  a debug tool, and the headless harness never comes through `onKey`). Checked by `tools/qa/panel-keys.cjs` with real key events on the software adapter (`PANELKEYS_BREAK=1` must
+  fail one line); never tried on his machine. BACKTICK stays the panel's own: it is main.ts's
   hotkey (`panel.toggle()`, not while a card has the game frozen), `onKey` hands it back and it is never typed into the search, and a FIELD inside the panel that holds the keyboard — the
   search box, a slider just dragged, a list, a number — shuts the panel on backtick through the panel's own capture listener, since Input never sees a key a field keeps. Tab is only
   `preventDefault`ed by game/input.ts and handed to the game like any key — nothing in src/game reads it yet; the mission list and the `?kit` preview cards walk their own focus with
@@ -939,6 +942,14 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   `tools/qa/unplayed-page.cjs` (no card for a cut row; cards again under `?offlist=0`). To cut another row: `offList: true` on it and its id in BOTH `CUT` lists
   (`tools/qa/offlist-check.ts`, `tools/qa/unplayed-page.cjs`) — only on the maintainer's yes. Of the block pair, `block-squads` was cut later the same day (the bullet at the
   foot of this file); `block-four` stays. Never seen on a GPU.
+- **The cap of eight rows a group is asked of what the page draws (2026-10-27).** The list's rule ("no group holds more than eight") was counted over the
+  whole table in three probes (`missions-list`, `unplayed`, `picks-list`). The tutorial's table holds nine rows since "The tunnel" (`tut-team`) joined, six
+  of them drawn (`tut-sky`, `tut-solo` and `tut-squad` are `offList`), and all three probes went red on both stands. No rule of the page changed and there is
+  no switch: the bar is one helper now, `tools/qa/listed.ts` (`groupsFit`: `listedMissions` with `OFFLIST_UI` on, put back after; every group draws at least
+  one row and no more than eight). A cut row stays a row of the table and is not counted. NOT HELD by the cap, and nine cards can stand there: `?offlist=0`
+  (every row of the table drawn: the Tutorial group draws nine today) and a visit that names a cut row (`?loadout=<id>` draws that one row that once; a group
+  with eight drawn rows and a cut one would draw nine). `startpage-look.cjs` asks its own count of eight on the real page with the cut rows off. RUN: the three
+  probes ALL PASS on both stands; `UNPLAYED_BREAK=1` still fails `unplayed`. Nothing here was seen on a GPU.
 - **A Training lesson ends on the verdict card too, graded as a lesson** (same switch as the verdict: `VERDICT`, `?noverdict`): lessons 5 and 6 are room clears, so their end is the
   room clear's `'taken'` / `'wiped'` and the card comes up a beat later like any squad mission's (before the verdict a room clear had no card at all: only the row 'structure taken
   — shift+enter stages it again'); lessons 1 to 4 and 7 end at the exfil on the stealth mission's own card. On a lesson's card NOTHING IS GRADED OR KEPT: no ways pips, no tries
@@ -1483,7 +1494,8 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   multiplier relative to the player? make the outline for the player yellow and for teammates red/blue and have a slider for saturation".
   `Teammate outline width` (`FINDME.mates`, none to 200 %, starts at 100 %; none = no teammate has a rim) and `Outline colour`
   (`FINDME.colour`, none = the pale ink the rim was first drawn in, 100 % = `OUTLINE_INK`: yellow for him, red for the red pair, blue for the
-  blue pair, a duo's partner and a squad not in pairs; starts at 60 %, a guess). THE TEAMMATES' ROW IS A SHARE OF WHAT HIS RIM COVERS on the
+  blue pair, a duo's partner and a squad not in pairs; starts at 60 %, a guess; IN A GAME OF TWO PLAYERS the whole team is rimmed and the second
+  player's own man is purple on both screens: `docs/agents/net.md`, 'Two players, two teams to the eye'). THE TEAMMATES' ROW IS A SHARE OF WHAT HIS RIM COVERS on the
   same picture, whatever his own width row made that (`OutlineMan.times`, `outlineRadius(h, wide, times)`: 50 % is half his, at any width; it
   first multiplied his row, which the curve under 100 % squared), never over `OUTLINE.capPx` 4, so his row at its most with theirs at its most
   stops there. WHO: the living men of his squad (`SquadOrders.men()`, the roster, whatever the orders menu is doing: a show's men too), each
@@ -1840,6 +1852,36 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   size in device pixels (or its 480 floor) each time, inked, inside the window, nothing scrolls; `loadbrief-page.cjs` holds the same on the booted
   page (software adapter, 1024 x 576: night breach, the depot room clear, the counting house and Training 1 PASS with the map of their own level
   drawn at the shown size; the registry rescue, started early, PASS). The map on the brief has not been seen on a GPU page or by the maintainer yet.
+- **The brief's Start waits for the picture** (2026-10-28; the maintainer, after an evening on the hosted build with the first-frame start on: "i also
+  quite dislike the 'popin' that happens from starting the game too early when some shaders haven't finished"). `src/ui/settle.ts`, `main.ts
+  briefSettle`, `LoadBrief.hold` in `ui/loadbrief.ts`. BEFORE: the block was live the moment the level stood (`__boot.marks.interactive`), before one
+  frame of the level had been drawn, and a press kept from the boot started the run there. The run's first seconds were then the renderer's: a pass on
+  its stand-in while its program compiled (the row 'Start on first frame shaders'), the second (cut) set of the tracing programs compiling in the
+  background (it always did, on every load), every history empty, and auto quality measuring in view and changing preset and render scale in one step
+  about a second in. NOW the brief HOLDS from the level standing until (1) every program is in (no pipeline asked for and not made, none of the later set
+  out, the cut set built or failed: on such a page the cut set's build is one of the later set's holds, so `__ready`, `laterReady` and auto quality's
+  wait include it), then (2) auto quality has made its pick and 45 frames have been drawn AFTER it (a pinned preset: the 45 alone). The frames are
+  drawn behind the brief only in turn (2); before it the still under the brief stops after `behind.warm` as under any cover. The world is still, the block is not live, the status line
+  goes on ('compiling shaders N / M …', then 'getting the picture ready …'), a press is kept and starts the run when the block goes live. Ways out: 120 s
+  on programs (a compile that never returns; `?settlewait=N` for a page tool on the software adapter), 12 s on the picture (a page too slow to
+  measure), both by the wall clock; the time a tab spent in the background is not counted (the clock starts again on `visibilitychange`). While it holds, a Windows browser's compile queue runs at the boot's number, background set included (`pipeQueue.rush`):
+  nobody sees the frames the two smaller numbers spare, but the brief's own page is as busy as the boot was (unmeasured on Windows). `__boot.marks.settled` = when the block went live. A VISIT'S RECORDS: `cloud.frame` and the visit's `live` fact no
+  longer count the frames behind a held brief as play (they did, before this too: a perf record's first minute held the brief's seconds).
+  SWITCH: `SETTLE.on`, ON in the page where a person sits
+  (`?settle=0` = live the moment the level stands, as it was), OFF in the module and on a page a script drives (`navigator.webdriver`: the page
+  tools press START the moment the level stands; `?settle=1` raises it there, a number over 1 is the frames); a page switch like the brief
+  (no knob, no FROZEN_HOLDS row, no stand's word: the harness has no page). ONLY the brief: the title's start
+  card, `?loadbrief=0` and an address that names no mission of the list start as they did. CHECKS: `bun run tools/qa/settle-check.ts` (the rule on a
+  clock moved by hand and main.ts's places, 11 lines; `SETTLE_BREAK=1` fails 9), `loadbrief` (two lines for `hold`), `pipequeue-check` (three for the
+  rush), all on both stands; `PORT=… node tools/qa/settle-page.cjs` (the real page in a browser that does not say it is driven, `?settle=2&settlewait=3600`:
+  not live at the level standing, a press kept, live only with the cut set ready and the later set in, whose own mark `laterReady` is a timer's turn behind the count the hold goes by and so may land just after `settled`; `SETTLE_BREAK=1` must fail). WHAT IT COSTS:
+  a mission's Start is live later by the cut set's build on a visit's first load (on the kept page a later mission has it already) plus about a second of
+  frames on every load. UNMEASURED: both numbers on any GPU (the software adapter takes minutes over a frame); how long a Windows machine holds the
+  first brief with the queue rushed. WHY IT WAS BUILT ON INFERENCE: his three loads that evening (an M4 Max) had every later program in at the moment the
+  block went live, so the pop-in he saw was not a stand-in; what the records do show is the first seconds of each mission slow (32 frames over 100 ms in
+  the first minute of one, 16 fps for the 6 s he stayed in another) with the GPU's own time a frame at 7 to 10 ms; and those counts held the frames
+  behind the brief, so how much of it was play is not known. Nobody has seen this on a GPU or
+  played it.
 - **The game has its own text size, and the page no longer zooms** (`src/ui/textsize.ts`, `TEXTSIZE.on`, 10-19; a play test on a 3840 × 2160 screen:
   the words were too small to read, the browser's zoom keys grew the page until the layout broke, and the mission select's names were cut). ONE FACTOR,
   `--tz` on the root (which wears the class `tsz` while the switch is on), drawn as CSS `zoom` on every layer of the page that carries words (`LAYERS`:
@@ -2088,3 +2130,6 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   old flaw, on that key, on that visit: the list is `ui/options.ts squadRows`); a row a letter took a key from stays without one when the
   letter goes to sleep (its dashed cap is on the list, and Reset is offered). NOT SEEN ON A GPU, not played: nothing here draws, and the
   game's part of the page driver was not rerun.
+- **The title's CO-OP row and the starting page's co-op dress** (`ui/coop.ts`, `StartPageOpts.coop`, `LoadoutOpts.deployWords`): `docs/agents/net.md`,
+  "The lobby". In `ui/menu.ts` the title keeps which of its pages is up (`titleCoop` beside `titleExtras`), its key walk stops at a text field with
+  the arrows, and a letter typed into a field is the field's (`keymap.ts typedInto`).

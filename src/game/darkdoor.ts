@@ -34,7 +34,7 @@
 // It only ever acts with MORALE.on as well. The switch is off in the module and on the frozen stand: every seam returns on its first line, no man is met.
 // Nothing here touches health, aim, skill or a reaction beat.
 // Type-only game imports but for the functions below, used inside calls only (src/game is one import cycle).
-import { SideMap } from '../math/side';
+import { SideMap, GameSideMap } from '../math/side';
 import type { Game, Guard } from './game';
 import type { Door } from './doors';
 import type { Character } from './character';
@@ -76,7 +76,7 @@ interface Fear { act: DarkDoorAct; t: number; door: number; side: 1 | -1; spot: 
 const stateOf = new SideMap<Guard, Fear>('darkdoor.stateOf');
 interface Read { t: number; dark: boolean; share: number; mean: number }
 /** a room's reading, kept `askSecs`: by game and room number */
-const readsOf = new SideMap<Game, Map<number, Read>>('darkdoor.readsOf');
+const readsOf = new GameSideMap<Game, Map<number, Read>>('darkdoor.readsOf');
 /** a level's rooms as floor cells to read, dealt once a nav grid: room number → cell centres (x, z pairs) */
 const cellsOf = new SideMap<object, Map<number, number[]>>('darkdoor.cellsOf');
 

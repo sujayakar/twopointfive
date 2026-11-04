@@ -4,9 +4,9 @@
 // line's true half-width, pixels it must cover, its light before any widening) and whoever draws from another view asks `thinFit` for a list with those boxes re-made for it.
 // A weapon laser's line also carries an AIR mark (`thinAir`: its bead, or null): the renderer may then draw it as light in the air instead of as a box (settings.beamAir,
 // render/passes.ts setBeams → composite.wgsl beamAir) — the box itself is never written.
-// PICTURE ONLY: the note is a WeakMap beside the box, `thinFit` never writes a noted box nor the list it is handed, and nothing in a step reads either. A leaf: types only.
+// PICTURE ONLY: the note is a WeakMap beside the box, `thinFit` never writes a noted box nor the list it is handed, and nothing in a step reads either. A leaf: types, and the box world's copy.
 import { SideMap } from '../math/side';
-import type { Box } from '../scene/boxes';
+import { type Box, copyBox } from '../scene/boxes';
 
 interface Thin { hw0: number; k: number; e: [number, number, number] }
 const THIN = new SideMap<Box, Thin>('thinline.THIN');
@@ -30,7 +30,7 @@ export function thinFit(list: Box[], px: number): Box[] | null {
     const b = list[i], T = THIN.get(b); if (!T) continue;
     const hw = thinHalf(T.hw0, T.k, px); if (Math.abs(hw - b.h[0]) <= 0.02 * hw) continue;
     const gain = T.hw0 / hw;
-    const c: Box = { ...b, h: [hw, hw, b.h[2]], dh: b.dh ? [hw, hw, b.dh[2]] : b.dh, emissive: [T.e[0] * gain, T.e[1] * gain, T.e[2] * gain] };
+    const c = copyBox(b); c.h = [hw, hw, b.h[2]]; c.dh = b.dh ? [hw, hw, b.dh[2]] : b.dh; c.emissive = [T.e[0] * gain, T.e[1] * gain, T.e[2] * gain];
     THIN.set(c, T); if (AIR.has(b)) AIR.set(c, AIR.get(b)!);   // (the copy is the same line to whoever asks `thinIs` / `thinAirOf`: its mirror image and its look in the air follow it)
     (out ??= list.slice())[i] = c;
   }

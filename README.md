@@ -48,7 +48,7 @@ Pick a mission, pick who comes and what they carry, deploy. Every key is also li
 - **A squad.** Stack on a door, bang and clear, breach with a charge, hold, cover, go silent. Teammates fight on their own judgement.
 - **Doors, glass and walls.** Doors swing one way, lock, get picked, kicked or blown. Glass cracks and falls. Walls and furniture come apart.
 - **Levels are data.** JSON files under `levels/`, with an editor to make more.
-- **A look.** Plain boxes under real light: [STYLE.md](STYLE.md).
+- **A look.** Flat-coloured boxes under real light: [STYLE.md](STYLE.md).
 
 ## Tools
 
@@ -56,7 +56,7 @@ Pick a mission, pick who comes and what they carry, deploy. Every key is also li
 |---|---|
 | `/workbench` | level editor and character viewer in one page: [docs/level-format.md](docs/level-format.md), [VIEWER.md](VIEWER.md) |
 | `/replay` | scrub a saved replay on a map and leave notes on it |
-| `/?bench`, or Extras ▸ Benchmark on the title | hands off, about seven minutes: three floors played by the game itself (night snow, a block with the lights out, a storm), then every quality level and heavy feature timed on your machine. It ends on a short text to copy (your GPU, load times, frames a second) and saves the numbers as a file. Nothing is sent anywhere |
+| `/?bench`, or Extras ▸ Benchmark on the title | hands off, about seven minutes: three floors played by the game itself (night snow, a block with the lights out, a storm), then every quality level and heavy feature timed on your machine. It ends on a short text to copy (your GPU, load times, frames a second) with no file saved. A build with a backend also sends the numbers to the developer, which you can turn off in Options; a build with none sends nothing |
 | `bun run tools/qa/probes.ts list` | the headless checks: the whole game runs without a GPU, about a second per simulated minute |
 | `sh tools/qa/gate.sh all-quick` | the wide set, slow |
 | `bun run qa` | typecheck, every mission played to its end, a tour and a soak |

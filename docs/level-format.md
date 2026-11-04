@@ -45,8 +45,8 @@ levels/office.json ──import──▶ src/scene/level.ts buildLevel() ──�
 | `floors[]` | `{ id, name?, y, ceiling }` | v1: one (`f0`, y 0, ceiling 3). G2 adds the mezzanine; boxes / doors / props / volumes name their floor (absent = `floors[0]`) |
 | `materials{}` | name → `{ albedo, rough?, metal?, notes? }` | the paint palette (linear rgb) + each paint's FINISH for the one BRDF (renderer v3 phase 4, docs/internal/p4-materials.md): `rough` = GGX roughness 0‥1 (absent = matte: no reflection ray is spent), `metal` = bare conductor (F0 = albedo). Order is the palette's authored order |
 | `surfaces?` | `{ building, grassEdge, inside, outside, verge, zones[] }` | footstep materials (carpet / lino / stone / tile / asphalt / grass). **`game/floor.ts` reads it** (`Level.surfaces`, attached non-enumerably by `loadLevel`): outside `building` the ground (`verge` where x or z < `grassEdge`, else `outside`), inside it the first zone holding the point, else `inside`. A file with none gets the office's map, which floor.ts still carries (`level-validate` asserts it equals the office file's block). A generator returns `surfaces` from `build()` (tools/levels/kit-yard.ts) |
-| `boxes[]` | `{ id, floor?, group?, name?, c, h, yaw?, rot?, material \| albedo, emissive?, rough?, metal?, stuff?, flags?, cutHeight? }` | static geometry, **in order** (`boxes[i]` is `world.statics[i]`). `stuff` = what the box is made of where its paint's name does not say it (a material of the look, `plain`, `waits`, or `glass` / `rubber`, which the look draws plain: `src/scene/stuff.ts BOX_STUFFS`; a prop's part may say one too): picture only, read by the look's word and by the picture of a round's hit (`game/particleFx.ts HITSTUFF`: `glass` on a box that is not a pane cracks and stays) and by no rule of the game, written only where it was said. `flags` by name: `NoPrimary NoShadow Cutaway Gloss` (runtime bits `Emissive AreaLit Rot Dynamic` are never authored — the validator rejects them). `group` is editor grouping only (`lobby`, `walls.interior`, `doorframe.server` …). `name` is a tag the game may look up (`breaker_panel`) |
-| `props[]` | `{ id, kind, name?, floor?, x, z, yaw?, mass, parts[{off,h,yaw?,material\|albedo,stuff?}], half?, height? }` | loose furniture (chairs, cartons, bins, plants). `half`/`height` are FITTED from the parts unless given (10 of 61 pin them: plants author their footprint, a few fits differ in the last bit) |
+| `boxes[]` | `{ id, floor?, group?, name?, c, h, yaw?, rot?, material \| albedo, emissive?, rough?, metal?, flags?, cutHeight?, markings?, shape? }` | static geometry, **in order** (`boxes[i]` is `world.statics[i]`). `flags` by name: `NoPrimary NoShadow Cutaway Gloss` (runtime bits `Emissive AreaLit Rot Dynamic` are never authored — the validator rejects them). `group` is editor grouping only (`lobby`, `walls.interior`, `doorframe.server` …). `name` is a tag the game may look up (`breaker_panel`) |
+| `props[]` | `{ id, kind, name?, floor?, x, z, yaw?, mass, parts[{off,h,yaw?,material\|albedo}], half?, height? }` | loose furniture (chairs, cartons, bins, plants). `half`/`height` are FITTED from the parts unless given (10 of 61 pin them: plants author their footprint, a few fits differ in the last bit) |
 | `lights[]` | `{ id, kind point\|spot\|dir, pos, dir, color, intensity, range, innerDeg, outerDeg, group, enabled, volumetric, radius?, mains?, broad?, fixture? }` | analytic lights; `id` is the name targets / panels key on; `fixture` = the glow-card box id. A light whose `id` starts with `brazier` is an OPEN FIRE (`game/fire.ts FIRE.names`): it flickers, and a flame, embers and smoke stand on its glow-card box (the box's top is the coals, its half-width the mouth), so hang that box where the wood is; while it burns its `radius` is the flame's (1.1 of the mouth's, `FIRE.size`) when that is the bigger, so the thing it stands in casts a soft shadow |
 | `switchables[]` | `{ id, boxes[], group, on, baseEmissive, flicker?, mains? }` | emissive fixtures the OCP / panel / blackout switch (panels, screens, signs, rack LEDs, beacon domes). A box belongs to at most one |
 | `doors[]` | `{ id, floor?, hinge[x,z], closedDir, width, angle?, exterior?, closer?, minAngle?, maxAngle?, locked?, lock?, keySide?, swing? }` | the LEAF (`swing` ±1 = the side it opens into, +1 the CCW side of the closed leaf; absent = dealt at load: into the room it serves, an `exterior` door with a roof over one face only OUTWARD, toward the open air — game/doorswing.ts; a `swing` here overrules both — and it is how a room keeps a door no wedge holds: the men at home in a room wedge the doors that open INTO it, so every room a mission posts men in needs a way in that no wedge shuts — a door authored to open OUT of it onto floor the squad reaches (a wedge shuts a door one way: the neighbours' wedge on that door stops only the walk into THEIR room), or a window a man steps through; `bun run tools/qa/second-way-check.ts` is red on a level where some choice of wedges leaves such a room with no walk in from the team's start); the frame is ordinary boxes in group `doorframe.<id>` |
@@ -67,6 +67,38 @@ levels/office.json ──import──▶ src/scene/level.ts buildLevel() ──�
 Ids: `box_NNNN` for anonymous boxes, semantic ones where something points at the box (`fix_desk_lamp`, `sw_vending`,
 `sw_rack5_leds_3`, `breaker_panel`, `breaker_led`, `sw_beacon0`); props `chair12`; everything else its old name. New entities:
 `freshId('box', data.boxes)` → `box_0889`.
+
+## A box says its shape (`scene/shapes.ts`, switch `SHAPES`)
+
+A box may carry `shape`: how it stands when shapes are on (the page, unless `?shapes=0`; off on the frozen stand, `TPS_SHAPES=1`). With shapes off the
+box is the plain box above it in the same record and nothing of `shape` is read. Everything in a shape is said in the box's OWN frame (metres from its
+centre along its own axes), so a box that is moved, turned or copied in the editor takes its shape with it. A shape is cut FROM the plain box: the box keeps
+its centre and half size, so to the simulation a shaped level is the plain level with some of its boxes cut.
+
+| key | what it says |
+|---|---|
+| `round` | `1` or `3`: the box is a twelve-sided prism about its own x or z (a wheel on its axle, a tank lying down). The box is square across that axis, or within 15 hundredths of it. A cylinder standing on its end is not said here: that is the kit's round thing (`scene/round.ts`). |
+| `arc` | `{ axis: 1 \| 3, rise }`: the box's top is a round about its own x or z that rises `rise` metres from its sides to its middle (a bowed roof, a bonnet, an arch). `rise` is at most the box's height and at most half its width across the axis. |
+| `cut` | planes `[nx, ny, nz, d]` in the box's own frame, each keeping `n · p ≤ d` (a corner rounded in plan, a pane that leans). 8 at most; 5 beside an `arc` (whose own facets give way to them: six with one plane, four with up to three, two with up to five); none beside a `round`. A plane that cuts nothing, or planes that leave nothing, are refused. |
+| `old` | `true`: not a fresh break. The picture's word (the cut faces take the box's own paint and lying snow: a pressed panel, not a snapped end); nothing reads it until the look's cut pass is in the build. |
+| `with` | pieces of TRIM that are there only when shapes are on: each `{ off, h, yaw?, material \| albedo, rough?, metal?, round? \| arc?, cut?, old? }` (`off` from the box's centre, `yaw` from the box's own), painted and finished by the reader a box is. A piece is drawn and nothing else: it says no flags and stands `NoShadow`, so no ray, eye, round or body meets it and it casts no shadow. What must stop a round or a man is a box of the level. Pieces follow the level's last box when it is stood up, so no box changes its number. |
+
+Refused: a shape on a box with `rot`; a form (`round`, `arc`, `cut`) on a box with `markings` or the `Glass` flag (the mark painter and the pane engine
+read the whole box: give the marks a box of their own, or say the form of a piece); a shape on a kit view's box; a shape on a slab of one of the kit's
+octagons (a round thing). A window's bar that says a form is left plain as the level is stood up, and `shapes-check` is red on a level file with a
+shape that does not stand.
+
+- **The data names the shape**; the engine's cut record is built from it by `cut.ts cutRecord` as the level is stood up, and every ray meets the shaped
+  solid whatever the picture's cut-pieces switch says (`boxes.ts cutMet`).
+- **What walks meets the plain level**, by construction: a shaped box is pushed against as its uncut box, which is the plain box, and a piece is met by
+  nobody. The marks a stand-up gives boxes by their size (thin things, a window's bars) are read off the plain boxes too.
+- **A blast**: a box whose shape has a form is one cell to the wall engine, never a wall cut into cells; a piece is one of the things that hang on what
+  breaks and goes with it. A piece is never a thing of its own to a round, and where its box is taken out of the picture by its number it goes too.
+- **A level stood on its shapes is another level**: the level's fingerprint takes in the geometry of the shapes that stand, so a checkpoint or a
+  recording made with shapes up is refused with them down, and the other way about, and after a shape is changed (a repaint changes nothing). With no
+  shape standing the fingerprint is the one the level always had.
+
+`tools/qa/shapes-check.ts` holds all of this, and line 4 holds every level file to the same walk grid and the same pushes with shapes up as down.
 
 ## Devices (lane G4 — `game/devices.ts`)
 

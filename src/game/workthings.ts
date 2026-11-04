@@ -35,6 +35,7 @@
 // HABITS (coop-door-open-habits): no dice; nothing read off the camera or the canvas (the target is orders.ts', from input); no graphics setting; no GPU
 // read; nothing asks for "the" player but orders.ts' own recipients; the state is one short record per man at work, dropped with his order — a checkpoint
 // is refused while a unit is on the floor (savestate.ts canSave), so there is nothing to snapshot.
+import { firstOf } from './seats';
 import { SideMap } from '../math/side';
 import { Vec3, wrapAngle } from '../math/vec';
 import type { Game, Guard } from './game';
@@ -74,6 +75,10 @@ export const WORK = {
    *  of what is left of that man's walk and Sam is going on: he goes on after Sam (false: he waits where he is, as for any man who is looking, and is
    *  walked into) */
   offWalk: true, walkM: 2.5,
+  /** Sam's own row at the breaker (player.ts), and his OCP at it (lighting.ts), also take a clear line to the panel's OWN face from in front of it (false:
+   *  only the line to a point a hand's width toward -z of its mark, right only where it hangs facing the way the office's does — on a panel hung facing any
+   *  other way that point is inside the wall, and he was never offered the row) */
+  samFace: true,
 };
 export const WORK_STATS = { given: 0, done: 0, moot: 0 };
 export const WORK_ORDER = 'work';
@@ -113,6 +118,16 @@ function panelFace(g: Game): { face: Vec3; n: Vec3 } {
     if (Math.abs(dx) > Math.abs(dz)) { n = [Math.sign(dx) || 1, 0, 0]; face = [box.c[0] + n[0] * Math.min(box.h[0], box.h[2]), bp[1], bp[2]]; }
     else { n = [0, 0, Math.sign(dz) || -1]; face = [bp[0], bp[1], box.c[2] + n[2] * Math.min(box.h[0], box.h[2])]; } }
   return { face, n };
+}
+
+/** SAM'S OWN LINE TO THE PANEL (WORK.samFace): the point just off its real face that his eye needs a clear line to, asked from where he stands. Null: the
+ *  switch is off, or he is not in front of that face (the far side of the wall it hangs on is not the breaker). Asked only where the fixed point's line is
+ *  blocked, so every level it was right on reads as before. */
+export function samPanelPoint(g: Game, from: Vec3): Vec3 | null {
+  if (!WORK.on || !WORK.samFace || !g.level.breaker) return null;
+  const { face, n } = panelFace(g);
+  if ((from[0] - face[0]) * n[0] + (from[2] - face[2]) * n[2] <= 0) return null;
+  return [face[0] + n[0] * 0.05, face[1], face[2] + n[2] * 0.05];
 }
 
 /** lighting.ts's 'check the breaker' errand, read off the panel itself: `goal` where the man sent walks to, `mid` the middle of the reach he re-arms it
@@ -345,7 +360,7 @@ export function workOn(g: Game, box: Box | undefined): OrderTarget | null { retu
 /** orders.ts rowsFor */
 export function workRows(g: Game, t: OrderTarget, page: string | null, rows: OrderDef[]): OrderDef[] { return WORK.on && g.work ? g.work.rows(t, page, rows) : rows; }
 /** game.ts handsOnDoors */
-export function workHand(g: Game, c: Character): DoorPush | null { return g.work ? g.work.hand(c) : null; }
+export function workHand(g: Game, c: Character): DoorPush | null { return firstOf(g, v => v.work ? v.work.hand(c) : null); }
 /** roomfight.ts's eyes and what turns a man with nobody in his sight (a mate's call, footfalls), beside the pair's pairPasses: A MAN STOOD AT THE THING HE
  *  WAS SENT TO WORK DOES NOT TAKE AS A TARGET, OR TURN TO LOOK FOR, A MAN HIS ROUND IS HELD FOR — the squad's fire is held and that man has noticed nobody
  *  (silent.ts silentHolds: the silent order, the sneak, the hold nobody has lifted; each wants him neither alert nor searching and under its `noticed` bar).
