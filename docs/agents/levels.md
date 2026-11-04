@@ -735,7 +735,8 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   The maintainer: "as we dress the levels, I'd love for us to have a library of objects, materials, etc. that we reuse across them". Each was first written
   by hand in one generator; a thing a second level could use is a kit piece. `kerbStones(x0, z0, x1, z1, paint, pitch)` painted stones a stride apart (or
   at any pitch), the edge of a government yard or a track; `plantBed(x, z, len, wid, yaw, rows)` a kerb of blocks round turned earth with rows of
-  seedlings; `hearth(x, z, yaw, ash)` a cold fire, a ring of stones on its ash; `seedTray(x, z, baseY, w, d, yaw)` a tray of seedlings on a bench;
+  seedlings; `hearth(x, z, yaw, ground)` a cold fire, a ring of stones on its ash (the ash is the ground's own paint darker since the bullet below: the
+  fourth word is the GROUND it was lit on, not a paint to lay); `seedTray(x, z, baseY, w, d, yaw)` a tray of seedlings on a bench;
   `seep(x0, z0, x1, z1, mat)` the stain where water runs out under a wall, in lengths that overlap and wander (the line is the stain's middle: lay it
   0.6 m out from the wall's face); `stain(x, z, w, d, ground, yaw, k)` the ground's OWN paint darker (wet concrete, a floor walked dark). Beds, stones
   and hearth are walked over (under 0.19 m); seep and stain are decals. `patch` is another row's stuff lying on the ground, `stain` the same ground
@@ -749,6 +750,42 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   piece laid once by hand headless (the walked-over ones top out at 0.17 m, a lone tyre at 0.27, two at 0.40; `stain` throws on gravel × 0.7 and on
   a k outside the band; the tail's names run on across two `done()`s). NOT SEEN ON A GPU, and no picture of the pieces has been drawn at all yet:
   the two levels that asked for them (the snatch, the glasshouse) lay them in their own step.
+- **What lies on the ground is the ground's own, and lies where one table says** (the library, 11-04; no switch: the kit, and the level files that
+  follow from it; `src/scene/gwotKit.ts`, `src/scene/gwotPalette.ts`, `tools/levels/livedKit.ts`). Found on the quiet levels' night stills and mended
+  in no level: three kit pieces read wrong from the play camera.
+  · A SCATTER IS ONE PAINT. `rubble(x, z, r, n, mat)` made three stones in ten the mud wall's dark row whatever `mat` was: pale clods among dark gravel,
+  mud among offcuts of poplar. Its darker stones are now the row's DARKER ROW where the palette holds one (`gwotPalette.ts GWOT_DARKER`: mudLight → mud →
+  mudDark; a family joins by a row of that table, never by a case in a piece), standing for what `mat` is to a round (`gwotAs`), and a stone has the
+  row's whole finish (bits of tin sheet are metal: the piece dropped that word). A scatter of the default mud is byte for byte what it was.
+  · A HEARTH'S ASH IS ITS GROUND, DARKER: a `stain`, where it was a patch of `damp` whatever it lay on (a black square on moonlit dust). THE KIT KNOWS
+  THE GROUND IT LAID: `groundAt(x, z)` answers the finish `ground()` laid there (the higher of two, then the later), and nothing where it laid none;
+  a hearth asks it, and on ground the kit did not lay (a level's own slab, bare lot) the caller names the finish or the hearth THROWS. It does not guess.
+  · ONE TABLE OF WHAT LIES ON WHAT: `lie = { finish: 4, stain: 12, ruts: 14, patch: 15 }` (tops, mm; handed out with `flatAt(top)`, a decal's centre).
+  A stain is the ground in a darker tone, so what was driven over it and what lies on it show over it: its top came down from 15 mm, where it painted
+  ruts out where they crossed. Ruts, patches and seeps read the same table and did not move. A stain meant to lie ON a patch says so
+  (`G.stain(…, G.flatAt(G.lie.patch))`: the vault's soot and doorstep, lights-out's raked ash, which keep their bytes). Heights are from the lot's
+  top: a finish laid thicker than 12 mm (the relay's slab) wants a stain's `y` said. A generator's OWN flat helpers (train-move's damp over its ruts,
+  the tutorials' `worn`) still hold their own numbers: theirs to bring to the table.
+  · A LIVED TAIL, DONE, CLOSES ITS LAST ROOM (`livedKit.ts livedTail().done()`): the generator's group goes back to the kits' first group, so a box laid
+  after the tail is no lived thing by accident (it went with the switch off) and the exporter refuses it by name. No file moves from it.
+  LEVEL FILES THAT MOVE, sixteen: 80 stains lower by 3 mm (bazaar, glasshouse, the hall, lights-out, the police post, the vault); 58 stones change
+  paint (the crossing 15 and the relay 12 to gravel, the snatch 9, the glasshouse 4, the vault 4, lights-out 3, the depot, the kill house and the pass 2
+  each and in the first two's look files, the look's yard 1) and the pass's other five bits of tin gain the row's metal; six hearths' ash (the crossing,
+  the hall, the police post, the snatch, the queue lesson, the vault). A LEVEL'S OWN PART moves in four, each with its base file and its why
+  (`tools/qa/fixtures/level-base/`): the glasshouse and the pass (two stones each of a scatter in the level's own part), the look's yard, the hall.
+  `hearth`'s fourth word CHANGED MEANING (a paint to lay, now the ground it stands on): the crossing's said 'dirt' for its ash on bare dust and says
+  'dust' now, the same shade.
+  THE CHECK: `bun run tools/qa/ground-pieces-check.ts` (five lines, over every row of the palette; `GROUNDPIECES_BREAK=1` asks the kit for each thing as
+  it was laid before and all five fail). Run it after touching a ground piece; `tools/qa/lived-check.ts <level>` ONE LEVEL AT A TIME says whether a
+  level's own part moved (the run with no name passes over a level that has no lived things and no base row). MEASURED, before and after on one tree: the 42 play-throughs
+  (21 missions, seeds 1 and 2) on the frozen stand, the shipped stand with lived rooms off and the shipped stand, 42 of 42 digests the same on each
+  and every run ended; the quiet missions, which the 42 do not play (`quiet-pair`, seeds 1 to 12, three arms, both stands: the vault, lights-out, the
+  bazaar, the police post, the crossing, the relay), 36 of 36 the same run on each; the queue lesson's digests, seeds 1 to 3, three stands, the same.
+  So nothing a run does moved. That a round ever met a repainted stone in those runs is not shown: to a round the snatch's offcuts are now wood and
+  the pass's tin metal where three in ten were concrete.
+  NOT SEEN ON A GPU, and not at night: the crossing booted on the page under the software renderer at midday (118 of 118 programs, no page or console
+  error) and two stills were drawn, its hearth (the ash a darker patch of the lot's dust round the ring of stones) and a scatter of gravel by its east
+  wall (every stone gravel). The night stills that found the three faults have not been drawn again.
 - **The 2010s kit lays a kerb** (dress every level, 11-03; no switch: the kit only, no level lays it in this step; `src/scene/gwotKit.ts`).
   `kerb(x0, z0, x1, z1, mat = 'block', gaps = [], len = 1.9)` is a run of precast stones 0.3 m wide and 0.14 m high laid end to end, a finger apart
   and none quite in line: the edge of a lot, a road or a loading apron. The run is cut into round(length / len) stones; `gaps` names the stones left
