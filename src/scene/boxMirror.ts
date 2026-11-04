@@ -107,6 +107,8 @@ export class BoxMirror extends HostOwned {
   live = false;
   /** …and the line tests are to be asked there (the copy stands, RUST.lines was on as the tick opened, and no static has been written since it was compared) */
   lines = false;
+  /** …and a ray into the boxes (the same, by RUST.rays: a row of its own, so that the lines' row can be on without it) */
+  rays = false;
   /** …and a circle against the boxes (the same, by RUST.circles) */
   circles = false;
   /** …and the fog of war's sight pass (the same, by RUST.fog) */
@@ -115,7 +117,7 @@ export class BoxMirror extends HostOwned {
   senses = 0;
   /** a static was written since the statics were compared: the next question owes the compare (`again`) */
   owes = false;
-  private rowLines = false; private rowCircles = false; private rowSight = false; private rowSenses = 0; private walk: Walk = null;
+  private rowLines = false; private rowRays = false; private rowCircles = false; private rowSight = false; private rowSenses = 0; private walk: Walk = null;
   /** where this game's eyes of a sight pass are written (an index into the doubles) */
   eyes = 0;
   /** where a pushed circle ends (an index into the doubles), and the statics a gather listed (into the words) with how many it can list */
@@ -172,7 +174,7 @@ export class BoxMirror extends HostOwned {
   }
 
   /** A TICK OPENS: the copy is made the boxes as they stand (see the head). → `live`. */
-  open(boxes: Box[], cells: number[][], tiltedAt: number[], W: number, H: number, cs: number, leaves: Box[], walk: Walk, lines: boolean, circles: boolean, sight: boolean, senses = 0): void {
+  open(boxes: Box[], cells: number[][], tiltedAt: number[], W: number, H: number, cs: number, leaves: Box[], walk: Walk, lines: boolean, circles: boolean, sight: boolean, senses = 0, rays = false): void {
     this.walk = walk;
     const fresh = this.take(), all = fresh || this.epoch !== mathsEpoch || this.putBacks !== PUT_BACKS.n;   // (another maths in Math's place: every cos and sin kept here was the other's)
     this.epoch = mathsEpoch; this.putBacks = PUT_BACKS.n;
@@ -181,11 +183,11 @@ export class BoxMirror extends HostOwned {
       this.fits = this.grid(cells, tiltedAt, W, H) && boxes.length <= this.caps.boxes; }
     if (this.fits) this.statics(boxes, all);
     if (this.fits) this.x.world_shape(this.slot, W, H, cs, boxes.length, this.nTilted);
-    this.ownAt = -1; this.thingsAt = -1; this.own = leaves; this.owes = false; this.rowLines = lines; this.rowCircles = circles; this.rowSight = sight; this.rowSenses = senses;
-    this.live = this.fits; this.lines = this.live && lines; this.circles = this.live && circles; this.sight = this.live && sight; this.senses = this.live ? senses : 0;
+    this.ownAt = -1; this.thingsAt = -1; this.own = leaves; this.owes = false; this.rowLines = lines; this.rowRays = rays; this.rowCircles = circles; this.rowSight = sight; this.rowSenses = senses;
+    this.live = this.fits; this.lines = this.live && lines; this.rays = this.live && rays; this.circles = this.live && circles; this.sight = this.live && sight; this.senses = this.live ? senses : 0;
   }
   /** the tick is over: from here the TypeScript answers */
-  shut(): void { this.live = this.lines = this.circles = this.sight = this.owes = false; this.senses = 0; this.own = null; this.walk = null; }   // (and nothing of the game is held from here: a world outlives its game)
+  shut(): void { this.live = this.lines = this.rays = this.circles = this.sight = this.owes = false; this.senses = 0; this.own = null; this.walk = null; }   // (and nothing of the game is held from here: a world outlives its game)
 
   /** the grid: cell c's statics in the order they were filed, one run after another; and the tilted statics' own list. False = it does not fit. */
   private grid(cells: number[][], tiltedAt: number[], W: number, H: number): boolean {
@@ -226,13 +228,13 @@ export class BoxMirror extends HostOwned {
   /** A STATIC WAS WRITTEN INSIDE THE TICK (its shape, its flags, its cut; a pane a walker now goes through): the module is asked nothing more until the statics
    *  have been compared again — which the next question does (`again`), so a blast that writes forty boxes pays for one compare, and one nobody asks after
    *  pays for none. The grid is not compared: only addStatic and truncateStatics change it, and they say so themselves. */
-  wrote(): void { if (this.live && !this.owes) { this.owes = true; this.lines = this.circles = this.sight = false; this.senses = 0; } }
+  wrote(): void { if (this.live && !this.owes) { this.owes = true; this.lines = this.rays = this.circles = this.sight = false; this.senses = 0; } }
   /** …the compare a question owes after `wrote`: the copy stands again, and the rows are back as the tick opened with them */
   again(boxes: Box[], walk: Walk): void {
     this.owes = false; if (!this.live) return;
     this.walk = walk;
     this.statics(boxes, false); if (!this.fits) { this.shut(); return; }
-    this.lines = this.rowLines; this.circles = this.rowCircles; this.sight = this.rowSight; this.senses = this.rowSenses;
+    this.lines = this.rowLines; this.rays = this.rowRays; this.circles = this.rowCircles; this.sight = this.rowSight; this.senses = this.rowSenses;
   }
   /** …or the GRID was (a static added, the list cut back): the TypeScript answers for what is left of this tick, and the cells are copied as the next opens */
   wroteGrid(): void { this.cellsWrote = true; this.shut(); }

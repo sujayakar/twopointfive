@@ -52,6 +52,7 @@ export const ROLLBACK_EXEMPT: Record<string, string> = {
   'src/sim/sim.ts rustMaths': 'CACHE · the module\'s maths exports as one set, made on first use',
   'src/sim/sim.ts mathsOn': 'CONFIG · the RUST.maths row: which arithmetic works the game\'s own maths out, the same bits either way',
   'src/sim/sim.ts linesOn': 'CONFIG · the RUST.lines row: whether a tick asks the box world\'s line tests of the module or of collision.ts, the same answer either way',
+  'src/sim/sim.ts raysOn': 'CONFIG · the RUST.rays row: whether a tick asks the box world\'s ray of the module or of collision.ts, the same answer either way',
   'src/sim/sim.ts circlesOn': 'CONFIG · the RUST.circles row: whether a tick asks a circle against the box world of the module or of collision.ts, the same answer either way',
   'src/sim/sim.ts fogOn': 'CONFIG · the RUST.fog row: whether the fog of war asks the module which eyes have a line to a man or walks its own lines, the same answer either way',
   'src/sim/sim.ts posesOn': 'CONFIG · the RUST.poses row: whether src/anim/skeleton.ts asks the module to blend, run and solve a pose or does it itself, the same pose either way',

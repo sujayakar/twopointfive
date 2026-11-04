@@ -13,7 +13,7 @@
 // With --rust the CIRCLES are held too (RUST.circles; rust/sim/src/collide.rs): a quarter as many circles as segments — a body's footprint anywhere, on a box's
 // face, dead on a box's centre, of every size a man or a prop has — pushed out, asked what they touch and gathered, by the module and by this file's own code:
 // where the circle ends (both coordinates' bits), whether it touched, and every list the same.
-// With --rust the RAYS are held too (RUST.lines; lines.rs ray against collision.ts raycastHere): along every segment, and short of and past its end, the
+// With --rust the RAYS are held too (RUST.rays; lines.rs ray against collision.ts raycastHere): along every segment, and short of and past its end, the
 // nearest thing met, how far (its bits) and the face's normal (its bits) — over leaves, tilted statics, and pieces this tool makes ROUND and CUT (a cut
 // record of one or two planes), with a leaf taken out of the list for some (the list a rule swaps in for itself). A ray that would stop in glass the host
 // has a rule for is the host's, by the rule. A run is fair only if rays hit each kind of box and most were the module's.
@@ -71,7 +71,7 @@ const RUSTED = argv.includes('--rust'), UNSAID = RUSTED && process.env.RUST_BREA
 const SIM: any = RUSTED ? await import(`${ROOT}/src/sim/sim.ts`) : null;
 if (RUSTED) { const no = SIM.simWhyNot(); if (no) { console.log(`=== segment-ident --rust: the module does not run here (${no}) — FAIL ===`); process.exit(1); } }
 const RAYED = { n: 0, there: 0, hit: 0, leaf: 0, tilted: 0, round: 0, cut: 0, roundT: 0, cutT: 0, swapped: 0, turned: 0 };   // (the rays over every level: asked, the module's, and what they hit)
-let bad = 0; const ever = { lines: 0, circles: 0 };   // (answers that differed over every level, by the row that gave them: the red path must turn BOTH red)
+let bad = 0; const ever = { lines: 0, rays: 0, circles: 0 };   // (answers that differed over every level, by the row that gave them: the red path must turn BOTH red)
 const log = console.log, err = console.error; const hush = (on: boolean) => { console.log = on ? () => {} : log; console.error = on ? () => {} : err; };
 for (const file of files) {
   let W: any; hush(true);
@@ -115,8 +115,8 @@ for (const file of files) {
   const pick = (): Vec3 => { const r = rnd(); return tilt.length && r > 0.88 ? onTilt() : r < 0.45 ? anywhere() : r < 0.8 ? onBox() : onLeaf(); };
   const asked: string[] = [], askedRef: string[] = []; let sink = asked;
   const realOpen = col.glassOpen; const holes = (bi: number, p: Vec3) => ((bi * 7919 + Math.floor(p[0] * 3) * 31 + Math.floor(p[1] * 3) * 17 + Math.floor(p[2] * 3)) & 3) === 0;   // (a made-up set of fallen cells, the same for both)
-  let diff = 0, diffL = 0, diffC = 0, blockedN = 0, paneN = 0, first = '', inRust = 0;   // (of `diff`: diffL the module's line answers, diffC its circles'; the rest is the walk as it was, or a copy that fell)
-  if (RUSTED) { CUT.cutConfig.on = true; SIM.RUST.lines = SIM.RUST.circles = true; col.tickOpen(); }   // (the row raised here: standing a level up puts every row down, as the stand has them — and the copy made the boxes as they stand, the questions below sent to the module)
+  let diff = 0, diffL = 0, diffC = 0, diffR = 0, blockedN = 0, paneN = 0, first = '', inRust = 0;   // (of `diff`: diffL the module's line answers, diffC its circles'; the rest is the walk as it was, or a copy that fell)
+  if (RUSTED) { CUT.cutConfig.on = true; SIM.RUST.lines = SIM.RUST.rays = SIM.RUST.circles = true; col.tickOpen(); }   // (the row raised here: standing a level up puts every row down, as the stand has them — and the copy made the boxes as they stand, the questions below sent to the module)
   for (let i = 0; i < N; i++) {
     if (i === (N >> 1)) { for (const B of broken) reshape(B); if (RUSTED && !UNSAID) col.wrote(); }
     const a = pick(); let b = pick(); const r = rnd();
@@ -140,7 +140,7 @@ for (const file of files) {
         RAYED.n++; if (RAYS.n > n0) RAYED.there++;
         if (nowR) { RAYED.hit++; if (nowR.index >= 1e6) RAYED.leaf++; else { const hb = boxes[nowR.index]; if (hb.round === true) { RAYED.round++; if (hb.rot) RAYED.roundT++; } else if (hb.cut && hb.cut.length) { RAYED.cut++; if (hb.rot) RAYED.cutT++; } else if (hb.rot) RAYED.tilted++; } }
         if ((hereR === null) !== (nowR === null) || (hereR && nowR && (hereR.index !== nowR.index || !Object.is(hereR.t, nowR.t) || !Object.is(hereR.n[0], nowR.n[0]) || !Object.is(hereR.n[1], nowR.n[1]) || !Object.is(hereR.n[2], nowR.n[2])))) {
-          diff++; diffL++; first ||= `a ray from ${a.map(n => n.toFixed(4))} along ${rd.map((n: number) => n.toFixed(5))} for ${tm.toFixed(4)}${out >= 0 ? ` (leaf ${out} out of the list)` : ''}: this file's walk ${hereR ? `box ${hereR.index} at ${hereR.t} by ${hereR.n}` : 'nothing'}, the module ${nowR ? `box ${nowR.index} at ${nowR.t} by ${nowR.n}` : 'nothing'}`; } } }
+          diff++; diffR++; first ||= `a ray from ${a.map(n => n.toFixed(4))} along ${rd.map((n: number) => n.toFixed(5))} for ${tm.toFixed(4)}${out >= 0 ? ` (leaf ${out} out of the list)` : ''}: this file's walk ${hereR ? `box ${hereR.index} at ${hereR.t} by ${hereR.n}` : 'nothing'}, the module ${nowR ? `box ${nowR.index} at ${nowR.t} by ${nowR.n}` : 'nothing'}`; } } }
     if (now !== was || nowD !== wasD || nowS !== wasS || pn.length !== pr.length || pn.some((p, k) => p.bi !== pr[k].bi || !Object.is(p.t, pr[k].t)) || (wantPanes && (asked.length !== askedRef.length || asked.some((q, k) => q !== askedRef[k])))) {
       diff++; first ||= `a ${a.map(n => n.toFixed(4))} b ${b.map(n => n.toFixed(4))} shrink ${shrink} through ${through}: blocked ${was}→${now}, leaves ${wasD}→${nowD}, sealed ${wasS}→${nowS}, panes ${pr.length}→${pn.length}, glassOpen asked ${askedRef.length}→${asked.length}`; }
   }
@@ -171,13 +171,13 @@ for (const file of files) {
     log(`${''.padEnd(20)} bench: ${(tOld / 200).toFixed(2)} µs a segment as it was → ${(tNew / 200).toFixed(2)} µs now (×${(tOld / tNew).toFixed(1)}; answers ${n === 0 ? 'equal' : 'DIFFER'})`);
   }
   if (RUSTED) col.tickShut();
-  log(`${file.padEnd(20)} ${N} segments${RUSTED ? ` (${inRust} to the Rust module)` : ''} · ${boxes.length} statics · ${col.dynamicBoxes.length} leaves · ${broken.length ? `${broken.length} broken into ${broken.reduce((n, B) => n + B.pieces.length, 0)} pieces · ` : ''}${blockedN} blocked · ${paneN} panes noted · ${RUSTED ? `${circN} circles, ${circHit} pushed out · ` : ''}${diff ? `FAIL — ${diff} differ${RUSTED ? ` (the module's: ${diffL} lines, ${diffC} circles)` : ''}, first: ${first}` : 'PASS — every answer and every pane the same'}`);
-  if (diff) bad++; ever.lines += diffL; ever.circles += diffC;
+  log(`${file.padEnd(20)} ${N} segments${RUSTED ? ` (${inRust} to the Rust module)` : ''} · ${boxes.length} statics · ${col.dynamicBoxes.length} leaves · ${broken.length ? `${broken.length} broken into ${broken.reduce((n, B) => n + B.pieces.length, 0)} pieces · ` : ''}${blockedN} blocked · ${paneN} panes noted · ${RUSTED ? `${circN} circles, ${circHit} pushed out · ` : ''}${diff ? `FAIL — ${diff} differ${RUSTED ? ` (the module's: ${diffL} lines, ${diffR} rays, ${diffC} circles)` : ''}, first: ${first}` : 'PASS — every answer and every pane the same'}`);
+  if (diff) bad++; ever.lines += diffL; ever.rays += diffR; ever.circles += diffC;
 }
-const blind = UNSAID ? (['lines', 'circles'] as const).filter(k => !ever[k]) : [];   // (the red path must turn each row's answers red on some level, as sense-ident's must each sense)
+const blind = UNSAID ? (['lines', 'rays', 'circles'] as const).filter(k => !ever[k]) : [];   // (the red path must turn each row's answers red on some level, as sense-ident's must each sense)
 if (RUSTED) log('SEGMENT-IDENT ' + JSON.stringify(ever));
 if (RUSTED) { const R = RAYED, thin = (['leaf', 'tilted', 'round', 'cut', 'roundT', 'cutT', 'swapped'] as const).filter(k => R[k] === 0);
   log(`rays: ${R.n} asked, ${R.there} the module's (the rest the host's: the pane they ended on was open) · ${R.hit} hit: ${R.leaf} a leaf, ${R.tilted} a tilted static, ${R.round} a round piece (${R.roundT} of them on a tumbled one), ${R.cut} a cut one (${R.cutT}) · ${R.swapped} with a leaf out of the list`);
   if (!UNSAID && files.length >= 4 && (thin.length || R.there < R.n * 0.5)) { log(`    NOT A FAIR RUN OF RAYS: ${thin.length ? `never met ${thin.join(', ')}` : 'under half were the module\'s'}`); bad++; } }
-log(bad ? `=== segment-ident${RUSTED ? ' --rust' : ''}: ${bad} level(s) FAIL${UNSAID ? blind.length ? ` — AND THE RED PATH IS NOT RED FOR ${blind.join(', ')}` : ' — lines and circles both differed somewhere, as the red path must' : ''} ===` : UNSAID ? `=== segment-ident --rust: ALL PASS — AND THE RED PATH IS NOT RED FOR ${blind.join(', ')} ===` : `=== segment-ident${RUSTED ? ' --rust' : ''}: ALL PASS ===`);
+log(bad ? `=== segment-ident${RUSTED ? ' --rust' : ''}: ${bad} level(s) FAIL${UNSAID ? blind.length ? ` — AND THE RED PATH IS NOT RED FOR ${blind.join(', ')}` : ' — lines, rays and circles each differed somewhere, as the red path must' : ''} ===` : UNSAID ? `=== segment-ident --rust: ALL PASS — AND THE RED PATH IS NOT RED FOR ${blind.join(', ')} ===` : `=== segment-ident${RUSTED ? ' --rust' : ''}: ALL PASS ===`);
 process.exit(blind.length ? 3 : bad ? 1 : 0);
