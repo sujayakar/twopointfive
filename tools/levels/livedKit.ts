@@ -9,6 +9,7 @@
 import type { Vec3 } from '../../src/math/vec';
 import { BoxFlag } from '../../src/scene/boxes';
 import { OFFICE_PALETTE, type officeKit } from '../../src/scene/officeGen';
+import { madeOf, toned } from '../../src/scene/stuff';
 
 type Kit = ReturnType<typeof officeKit>;
 const C = OFFICE_PALETTE as Record<string, Vec3>;
@@ -24,6 +25,7 @@ export const LIVED_PAINT = {
   hiVis: [0.85, 0.36, 0.05] as Vec3,
   paper: [0.86, 0.86, 0.82] as Vec3,
 };
+madeOf('cloth', LIVED_PAINT.canvas);   // (canvas is cloth. The rest say nothing yet: by their colours the look drew them plain, and nobody has chosen. scene/stuff.ts)
 const NS = BoxFlag.NoShadow;
 
 export function livedKit(K: Kit) {
@@ -82,7 +84,7 @@ export function livedKit(K: Kit) {
   /** a drum standing where it is (static; `drum` is the one a man can shove) */
   const drumFixed = (x: number, z: number, albedo: Vec3 = LIVED_PAINT.oxide, y = 0) => {
     add({ c: [x, y + 0.44, z], h: [0.28, 0.44, 0.28], yaw: 0.3, albedo });
-    add({ c: [x, y + 0.886, z], h: [0.23, 0.006, 0.23], yaw: 0.3, albedo: [albedo[0] * 0.6, albedo[1] * 0.6, albedo[2] * 0.6], flags: NS });
+    add({ c: [x, y + 0.886, z], h: [0.23, 0.006, 0.23], yaw: 0.3, albedo: toned(albedo, 0.6), flags: NS });
   };
   /** a thing hung on a wall (drawn only: a coat, a board, a hose): `alongX` = on a wall that runs along X, at the wall's face `x, z` */
   const hung = (x: number, z: number, alongX: boolean, w: number, y0: number, y1: number, albedo: Vec3, t = 0.04) =>
@@ -100,7 +102,7 @@ export function livedKit(K: Kit) {
   // start clear of every solid (the props' settle pass shoves an overlapping one out)
   const stool = (x: number, z: number, albedo: Vec3 = C.woodDark) => { prop('chair', x, z, 0, 5, [{ off: [0, 0.44, 0], h: [0.17, 0.025, 0.17], yaw: 0, albedo }, { off: [0, 0.21, 0], h: [0.12, 0.21, 0.12], yaw: 0.785, albedo: C.metal }]); return own('stool'); };
   const chair = (x: number, z: number, yaw: number, albedo: Vec3 = C.chair) => { K.chair(x, z, yaw, albedo); return own('chair'); };
-  const drum = (x: number, z: number, albedo: Vec3 = LIVED_PAINT.oxide, mass = 22) => { prop('bin', x, z, 0.3, mass, [{ off: [0, 0.44, 0], h: [0.28, 0.44, 0.28], yaw: 0, albedo }, { off: [0, 0.886, 0], h: [0.23, 0.006, 0.23], yaw: 0, albedo: [albedo[0] * 0.6, albedo[1] * 0.6, albedo[2] * 0.6] }]); return own('drum'); };
+  const drum = (x: number, z: number, albedo: Vec3 = LIVED_PAINT.oxide, mass = 22) => { prop('bin', x, z, 0.3, mass, [{ off: [0, 0.44, 0], h: [0.28, 0.44, 0.28], yaw: 0, albedo }, { off: [0, 0.886, 0], h: [0.23, 0.006, 0.23], yaw: 0, albedo: toned(albedo, 0.6) }]); return own('drum'); };
   const bucket = (x: number, z: number, albedo: Vec3 = C.metal) => { prop('bin', x, z, 0.2, 2, [{ off: [0, 0.15, 0], h: [0.14, 0.15, 0.14], yaw: 0, albedo }]); return own('bucket'); };
   const cone = (x: number, z: number) => { prop('cardboard', x, z, 0, 1.5, [{ off: [0, 0.02, 0], h: [0.17, 0.02, 0.17], yaw: 0, albedo: C.black }, { off: [0, 0.24, 0], h: [0.09, 0.2, 0.09], yaw: 0, albedo: LIVED_PAINT.hiVis }, { off: [0, 0.5, 0], h: [0.045, 0.06, 0.045], yaw: 0, albedo: C.white }]); return own('cone'); };
   const carton = (x: number, z: number, s: number, yaw: number) => { K.cardboardBox(x, z, s, yaw); return own('carton'); };
