@@ -291,7 +291,7 @@ export function build() {
     G.kerbStones(0.4, 12.45, 3.9, 12.45); G.kerbStones(0.4, 15.55, 3.9, 15.55);       // the way in, lined as a checkpoint lines it (the last stone a metre short of the wall: clear of the gate's leaf whichever way it swings)
     G.jersey(1.5, 11.25, 1, 0.16); G.jersey(1.75, 17.0, 1, -0.3);                     // the chicane's two barriers, one dragged to each verge
     G.drum(2.45, 12.0, 'drumRed'); G.drum(2.45, 16.0, 'drumRed');                     // a drum each side of the way, where a truck stops
-    G.hearth(3.3, 9.9, 0.3, 'dust'); G.plasticChair(2.55, 10.35, -1.03);                      // the sentry's fire, cold, and his seat turned to it
+    G.hearth(3.3, 9.9, 0.3); G.plasticChair(2.55, 10.35, -1.03);                      // the sentry's fire, cold, and his seat turned to it
     G.crates(2.2, 9.6, 0.4, 1); G.jerryCan(2.6, 8.85, 0.4, 'plasticBlue');            // his box, his water
     G.tyres(1.0, 16.0, 3);
     G.rubble(3.4, 7.4, 0.7, 6); G.rubble(3.3, 16.6, 0.5, 5);

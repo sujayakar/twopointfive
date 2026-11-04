@@ -401,7 +401,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
       add({ c: [lx, 0.7, 5.2], h: [0.19, 0.012, 0.04], albedo: C.metal }); }                                     // (one rung drawn)
     onCot(12.8, 6.9, false, 0.16, 1, 0.03, BLANKET, 0.55, NS);                                                   // the west cot's blanket,
     laid(12.8, 0.58, 6.75, 0.1, 0.03, 0.1, P.oliveDrab);                                                         // his shirt on it
-    for (const x of [13.25, 13.95, 14.65, 15.35]) add({ c: [x, 0.19, 6.3], h: [0.33, 0.19, 0.19], albedo: C.woodDark });   // four foot lockers in a row a stride off the bunks: the aisle between is entered from the east (the row 0.4 m west, 11-04: its east end clipped the line from the east door to the gallery door)
+    for (const x of [13.65, 14.35, 15.05, 15.75]) add({ c: [x, 0.19, 6.3], h: [0.33, 0.19, 0.19], albedo: C.woodDark });   // four foot lockers in a row a stride off the bunks: the aisle between is entered from the east
     add({ c: [13.6, 0.19, 7.0], h: [0.19, 0.19, 0.33], albedo: C.woodDark });                                    // the fifth beside the single cot
     L.mat(13.9, 7.2, 16.3, 7.27, C.white);                                                                     // the inspection line
     for (let k = 0; k < 5; k++) add({ c: [14.1 + k * 0.5, 0.06, 7.07], h: [0.11, 0.06, 0.12], albedo: C.black, flags: NS });   // five pairs of boots, toes to it
@@ -441,10 +441,10 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
     L.room('day');
     add({ c: [34.95, 1.3, 4.165], h: [0.03, 0.03, 0.045], albedo: IRON, flags: NS });                            // the television's bracket,
     add({ c: [34.95, 1.35, 4.25], h: [0.24, 0.18, 0.04], albedo: C.black, flags: NS }); add({ c: [34.95, 1.35, 4.293], h: [0.21, 0.15, 0.003], albedo: C.screenOff, flags: NS });   // the set, its screen to the south
-    add({ c: [29.3, 0.22, 5.55], h: [0.22, 0.22, 0.22], albedo: C.woodDark }); add({ c: [29.3, 0.46, 5.55], h: [0.4, 0.02, 0.4], albedo: C.woodDark }); add({ c: [29.3, 0.487, 5.55], h: [0.35, 0.008, 0.35], albedo: C.wood });   // the carrom board on its stand, pulled up to the settee (0.45 m north, 11-04: it stood on the west man's line to the east door)
+    add({ c: [29.3, 0.22, 6.0], h: [0.22, 0.22, 0.22], albedo: C.woodDark }); add({ c: [29.3, 0.46, 6.0], h: [0.4, 0.02, 0.4], albedo: C.woodDark }); add({ c: [29.3, 0.487, 6.0], h: [0.35, 0.008, 0.35], albedo: C.wood });   // the carrom board on its stand
     add({ c: [33.72, 0.4, 4.34], h: [0.38, 0.4, 0.2], albedo: C.woodDark });                                      // a low cabinet on the north wall,
     for (const [x, hy] of [[33.47, 0.09], [33.72, 0.14], [33.97, 0.09]] as const) L.thing(x, 0.8, 4.34, 0.07, hy, 0.07, P.brass, 0.3);   // the trophies on it
-    L.stool(28.62, 5.55, C.partRed); L.stool(29.98, 5.55);                                                       // two stools at the board
+    L.stool(28.62, 6.0, C.partRed); L.stool(29.98, 6.0);                                                         // two stools at the board
     L.stool(34.0, 5.85); L.stool(35.08, 5.62, C.partRed);                                                        // two before the television
 
     // ---- BUNKS 3 (held) — the standby section, ready to turn out: two riot shields stood in a floor rack between the south beds with three batons, the third
@@ -494,7 +494,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
     L.thing(27.79, 0.5, 23.5, 0.09, 0.03, 0.09, P.enamelBlue); L.thing(27.95, 0.5, 23.53, 0.035, 0.015, 0.06, TIN, 0.5);   // basin and kidney dish on it
     add({ c: [26.25, 1.6, 19.93], h: [0.3, 0.3, 0.08], albedo: C.white, flags: NS });                            // the medicine cabinet on the north wall, west of the door
     add({ c: [26.25, 1.6, 20.013], h: [0.16, 0.045, 0.003], albedo: C.red, flags: NS }); add({ c: [26.25, 1.6, 20.014], h: [0.045, 0.16, 0.004], albedo: C.red, flags: NS });   // the cross on its door
-    add({ c: [26.73, 0.8, 22.78], h: [0.33, 0.8, 0.012], yaw: 0.08, albedo: C.chair }); add({ c: [27.39, 0.8, 22.78], h: [0.33, 0.8, 0.012], yaw: -0.08, albedo: C.chair });   // the screen, two leaves (cloth), a hand off the bed's side (0.45 m nearer it, 11-04: it stood across the line from the room's west end to its east door)
+    add({ c: [26.73, 0.8, 22.33], h: [0.33, 0.8, 0.012], yaw: 0.08, albedo: C.chair }); add({ c: [27.39, 0.8, 22.33], h: [0.33, 0.8, 0.012], yaw: -0.08, albedo: C.chair });   // the screen, two leaves (cloth), 0.6 m off the bed's side
     for (const z of [21.58, 22.02]) add({ c: [26.85, 0.05, z], h: [0.95, 0.02, 0.02], albedo: C.wood, flags: NS });   // the stretcher laid on the floor north of the screen: poles,
     add({ c: [26.85, 0.055, 21.8], h: [0.75, 0.006, 0.21], albedo: GP.canvas, flags: NS });                       // canvas,
     add({ c: [26.6, 0.111, 21.8], h: [0.2, 0.05, 0.15], albedo: C.white, flags: NS });                           // the first aid box on it,
@@ -592,7 +592,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
     // the east wall has a lifting barrier, RAISED (all of it drawn only: nobody walks into a pole or a post) — a pivot post at the gap's north cheek, the pole
     // standing up from it in red and white, a white stop line on the ground across the gap
     L.room('lot');
-    G.motorbike(38.0, 4.3, Math.PI / 2);                                                                         // the kit's, parked 1.2 m out from the wall's foot (11-04): at the wall it stood on the line a defender's way round runs along up the lot (wayround-check)
+    G.motorbike(36.8, 5.65, Math.PI / 2);                                                                        // the kit's
     L.mat(37.46, 9.0, 37.54, 13.4, C.white); L.mat(39.82, 9.0, 39.9, 13.4, C.white);
     add({ c: [36.3, 0.5, 12.3], h: [0.07, 0.5, 0.07], albedo: C.white, flags: NS });                             // the barrier's pivot post,
     add({ c: [36.3, 2.35, 12.3], h: [0.035, 1.5, 0.035], albedo: C.white, flags: NS });                          // the pole, raised (0.85‥3.85 m),

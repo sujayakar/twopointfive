@@ -301,12 +301,9 @@ export async function kickPool(): Promise<boolean> {
   // a blast's impulse on a piece really sliding off his boot: it is the blast's now — it flies, lands, knocks and is heard
   const B = await stage(true); const LB = litter(B); B.gd.hold = false; order(B.gd, { goal: at(B, Math.min(B.free - 0.6, 5.5), 0, 0) as any }); let c: any = null;
   for (let k = 0; k < 400 && !c; k++) { run(B, 1); c = LB.path.find((x: any) => x.foot && !x.rest) ?? null; }
-  const D2 = B.D; const l2 = D2.stats.landed, s2 = D2.stats.spawned, k2 = B.kicked; B.events.length = 0; const slid = !!c;
+  const D2 = B.D; const l2 = D2.stats.landed; B.events.length = 0; const slid = !!c;
   if (c) D2.impulse({ pos: [c.box.c[0] - 0.3, 0, c.box.c[2]], radius: 2, strength: 10, up: 1.2, bias: [0, 0, 0] }); const took = !!c && c.foot === false; run(B, 240);
-  // (cut boxes: a kick over its material's break kick breaks the piece once more — breakTable.ts kicked() — and its halves are born already sounded: then the
-  //  blast having it reads as the piece gone from the pool with two born in its place, not as a knock)
-  const broke = !!c && !D2.list.includes(c), heard = B.events.filter((e: any) => e.kind === 'prop').length;
-  Fm.verdict(slid && took && B.kicked > k2 && (broke ? D2.stats.spawned >= s2 + 2 : D2.stats.landed > l2 && heard > 0), 'an impulse on a sliding piece clears the mark and the blast has it: it lands with its knock and its hearing event, or the kick breaks it', `a piece sliding off his boot ${slid} · foot cleared ${took} · the break table told ${B.kicked - k2} · ${broke ? `broken by the kick: pieces born +${D2.stats.spawned - s2}` : `landings +${D2.stats.landed - l2} · 'prop' events ${heard}`}`);
+  Fm.verdict(slid && took && D2.stats.landed > l2 && B.events.some((e: any) => e.kind === 'prop'), 'an impulse on a sliding piece clears the mark: it lands with its knock and its hearing event', `a piece sliding off his boot ${slid} · foot cleared ${took} · landings +${D2.stats.landed - l2} · 'prop' events ${B.events.filter((e: any) => e.kind === 'prop').length}`);
   void g; void L;
   return Fm.done();
 }

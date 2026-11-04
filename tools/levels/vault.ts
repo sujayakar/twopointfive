@@ -202,7 +202,7 @@ function furnish(T: ReturnType<typeof trainGround>) {
   G.rubble(14.2, 25.6, 0.9, 8); G.rubble(35.9, 21.2, 0.8, 7); G.rubble(3.4, 8.2, 0.8, 7); G.rubble(31.0, 2.6, 0.9, 8); G.rubble(9.5, 2.2, 0.8, 6, 'mudLight');   // field stones
 
   L.room('frontyard');
-  G.stain(12.45, 13.0, 0.95, 1.5, 'dirt', 0, 0.72, G.flatAt(G.lie.patch));                                           // the doorstep, walked dark
+  G.stain(12.45, 13.0, 0.95, 1.5, 'dirt', 0, 0.72);                                           // the doorstep, walked dark
   G.rubble(8.65, 11.6, 0.4, 5);                                                               // bricks at the wall's foot, in the porch lamp
   G.stain(11.3, 20.3, 1.5, 1.7, 'dirt', 0.1, 0.7);                                            // under the tank's tap
 
@@ -211,7 +211,7 @@ function furnish(T: ReturnType<typeof trainGround>) {
   G.patch(26.5, 20.15, 1.9, 1.0, 'oil', 0.05);                                                // what the generator drips
 
   L.room('court');
-  G.stain(26.75, 15.7, 1.5, 1.2, 'slab', 0.3, 0.62, G.flatAt(G.lie.patch));                                          // soot round the oven
+  G.stain(26.75, 15.7, 1.5, 1.2, 'slab', 0.3, 0.62);                                          // soot round the oven
   G.rubble(25.75, 15.95, 0.3, 5, 'poplar');                                                   // chips where the wood is split
 
   L.room('backyard');

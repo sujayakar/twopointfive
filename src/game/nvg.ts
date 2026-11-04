@@ -35,7 +35,7 @@ import type { Game, Guard } from './game';
 import { lightEstimateAt, escalationOf, lightRuled, LIGHTS } from './guards';
 import { fightLive } from './roomfight';
 import { kitGoggles } from './kit';
-import { inEstimate } from './hours';
+import { isHourSun } from './hours';
 import { irOnMan, irCarried } from './irlight';
 
 export const NVG = {
@@ -123,7 +123,7 @@ function loudT(g: Game, T: Team): number {
 export function nvgPlaceLight(g: Game, P: Vec3): number {
   let E = lightEstimateAt(g, P, () => true);
   for (const l of g.engine.lights.lights) {
-    if (l.kind !== 2 || !l.enabled || l.intensity <= 0 || l.transient || l.ttl >= 0 || inEstimate(g, l)) continue;   // (in the estimate above already: an hour's sun, and under sense.ts SENSE.moon the night's moon — hours.ts inEstimate)
+    if (l.kind !== 2 || !l.enabled || l.intensity <= 0 || l.transient || l.ttl >= 0 || isHourSun(g, l)) continue;   // (an hour's sun is in the estimate above already: hours.ts hourLight)
     if (!g.col.segmentBlocked(P, [P[0] - l.dir[0] * 60, P[1] - l.dir[1] * 60, P[2] - l.dir[2] * 60])) E += (0.2126 * l.color[0] + 0.7152 * l.color[1] + 0.0722 * l.color[2]) * l.intensity;
   }
   return E;

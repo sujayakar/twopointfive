@@ -3,7 +3,7 @@
 // and F tells all of them to go in. shift Q on a spot to watch automatically has them split up angles".
 //   bun run tools/qa/goals-check.ts            (also `probes.ts goals`, in family squadorders)
 //   TPS_PROFILE=shipped bun run tools/qa/goals-check.ts      — the same lines on the page's stand
-// PASS / FAIL each, headless: the relay post (levels/tut-queue.json, the queueing tutorial's floor), the room clear with the squad of four under
+// PASS / FAIL each, headless: the relay post (levels/tut-plan.json, a floor kept for the checks: no mission plays it), the room clear with the squad of four under
 // god mode, ONE deal (seed 1: the rule has no die in it). The check raises the ring and the rule itself, so both stands ask the
 // same lines. The keys are pressed as a hand presses them: Shift down, the squad's key, the cursor on the thing.
 //   1. Shift + the key on a door, nobody on anything: all four stack on that door (the first goal is everyone's).
@@ -40,7 +40,7 @@ const { DOORTOOLS, offOf } = await import(`${ROOT}/src/game/doortools.ts`);
 const { knobsCopy, knobsBack } = await import(`${ROOT}/src/game/knobs.ts`);
 const { applyKnobs, knobsSnapshot } = await import(`${ROOT}/src/game/journal.ts`);
 const { FROZEN_HOLDS } = await import(`${ROOT}/src/host/profile.ts`);
-const VERBOSE = process.argv.includes('--verbose'), BREAK = process.env.GOALS_BREAK === '1', RBREAK = process.env.GOALRING_BREAK === '1', LEVEL = 'tut-queue', DT = 1 / 60, SEED = 1;
+const VERBOSE = process.argv.includes('--verbose'), BREAK = process.env.GOALS_BREAK === '1', RBREAK = process.env.GOALRING_BREAK === '1', LEVEL = 'tut-plan', DT = 1 / 60, SEED = 1;
 type V = number[];
 /** the switch as the stand first stood it up, before the check raises it */
 let stood: boolean | null = null, stoodRing: boolean | null = null;
@@ -108,7 +108,7 @@ export async function goalsCheck(): Promise<boolean> {
   try {
     const R = await rig(!BREAK), g = R.g, O = R.O, D = R.D, N = O.men('all').length;
     const A = R.door('guard'), B = R.door('guard_side'), names = (l: any[]) => l.map((m: any) => m.callsign).sort().join(', ') || 'nobody';
-    if (R.why || !A || !B || N !== 4) { line(false, 'the room clear on the queueing tutorial\'s level, four men and the guardroom\'s two doors', R.why ?? `${N} men · doors ${A ? 'guard' : '-'} ${B ? 'guard_side' : '-'}`); return false; }
+    if (R.why || !A || !B || N !== 4) { line(false, 'the room clear on the plan mission\'s level, four men and the guardroom\'s two doors', R.why ?? `${N} men · doors ${A ? 'guard' : '-'} ${B ? 'guard_side' : '-'}`); return false; }
 
     // 1
     R.home();

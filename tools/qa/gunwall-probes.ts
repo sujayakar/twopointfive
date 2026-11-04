@@ -19,7 +19,6 @@ const { v3 } = await import(`${ROOT}/src/math/vec.ts`);
 const { mulberry32 } = await import(`${ROOT}/src/math/dice.ts`);
 const { AIM } = await import(`${ROOT}/src/game/aim.ts`);
 const { GUNWALL, GUNWALL_STATS, gunWallModel } = await import(`${ROOT}/src/game/gunwall.ts`);
-const BOOTED = GUNWALL.on;   // (as this file found it: on the shipped stand that is what the stand's one boot wrote, before any card here touches it)
 const { spawnUnit, despawnUnit } = await import(`${ROOT}/src/game/guards.ts`);
 const { order } = await import(`${ROOT}/src/game/squad.ts`);
 type Vec3 = [number, number, number];
@@ -169,9 +168,9 @@ async function gunOff() {
   const asked = GUNWALL_STATS.asked - s0.asked, low = GUNWALL_STATS.lowered - s0.lowered;
   verdict(asked === 0 && low === 0 && gd.char.anim.gunWall === 0 && W.game.player.char.anim.gunWall === 0 && !gd.muzzleDown, 'off: no line asked, no gun lowered, no carriage pulled in — with a man and Sam both pressed to the wall', `asked ${asked} · lowered ${low} · gunWall ${gd.char.anim.gunWall} / ${W.game.player.char.anim.gunWall}`);
   const frozen = !process.env.TPS_PROFILE || process.env.TPS_PROFILE === 'frozen', word = process.env.TPS_GUNWALL;
-  GUNWALL.on = frozen; await standUp();   // (stood up from the opposite of what the frozen stand should leave. The shipped stand's rows are written once, when headless.ts loads, and standUp() leaves them be: there the line reads what this file found and that a stand-up does not move it)
+  GUNWALL.on = frozen; await standUp();   // (stood up from the opposite of what the stand should leave)
   const want = frozen || word !== undefined ? word === '1' : true;
-  verdict(frozen || word !== undefined ? GUNWALL.on === want : BOOTED === want && GUNWALL.on === false, frozen ? 'standUp() on the frozen stand puts GUNWALL.on to what TPS_GUNWALL says (unset: off — every stored digest had the guns up)' : 'the shipped stand turns it on, as the page does: its boot wrote it, and standUp() writes nothing over what a card has set', `as found: ${BOOTED} · after standUp: ${GUNWALL.on} · TPS_GUNWALL ${word ?? 'unset'} · TPS_PROFILE ${process.env.TPS_PROFILE ?? 'unset'}`);
+  verdict(GUNWALL.on === want, frozen ? 'standUp() on the frozen stand puts GUNWALL.on to what TPS_GUNWALL says (unset: off — every stored digest had the guns up)' : 'standUp() on the shipped stand turns it on, as the page does', `after standUp: ${GUNWALL.on} · TPS_GUNWALL ${word ?? 'unset'} · TPS_PROFILE ${process.env.TPS_PROFILE ?? 'unset'}`);
 }
 
 /** the whole card (probes.ts 'gunwall'): true = every check passed. The switches are put back as found. */

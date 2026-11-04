@@ -456,9 +456,9 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   its line 2). THE FRAME (`rails.ts`, `lesson.ts`): the action `plan`, the flag `plan`, the step key `planLine`, the tests `picked` and
   `planView`, `rails.sky.plan` and the knobs `skyPlan`, `skyUp`, `planDigits`, `planWalk`, `planDown` are out; the sky seat itself, and
   `RAILS.shiftTap`, stay. Shift + the key pressed at a sprint on a step that gives the sprint is a goal's where goals are on, and is dropped where
-  they are off (the frozen stand, `?goals=0`), as it was with `planRun` off. THE MISSION 'On the radio' (`tut-plan`) is out with its script, generator, scripted player and checks; `levels/tut-plan.json` stayed,
-  its lesson block stripped, as the floor that goals-check, onesignal-check, coverkeep-probes, sameway-probes and the level tables stood on, until
-  2026-11-04: those four stand on `levels/tut-queue.json` now and the file is gone (`docs/agents/missions.md`, 'The plan mode mission is out'). Checks deleted with the mode: planmode, planplus, plannear, plannearflat, plandigits, planclear, planlook (and its page),
+  they are off (the frozen stand, `?goals=0`), as it was with `planRun` off. THE MISSION 'On the radio' (`tut-plan`) is out with its script, generator, scripted player and checks; `levels/tut-plan.json` stays,
+  its lesson block stripped, as the floor that goals-check, onesignal-check, coverkeep-probes, sameway-probes and the level tables stand on (no
+  mission plays it). Checks deleted with the mode: planmode, planplus, plannear, plannearflat, plandigits, planclear, planlook (and its page),
   tutplan (and its page). Checked headless on both stands: see the list in the commit; NEVER SEEN ON A GPU, never played.
 - **The key on a door they are stacked on is 'stack up' again, and the go key is the way in** (2026-10-26; `AUTOPILOT.restack`,
   `autopilot.ts autoPick` why `'set'`, `orders.ts again`, `RESTACK_LINES`). The maintainer: "let's actually remove that second tap of Q thing.

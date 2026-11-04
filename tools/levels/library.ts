@@ -10,8 +10,7 @@
 //      level lays, how often, and with what arguments;
 //   2. takes for each piece the call a SHOWROOM makes (levels/gwot-yard.json stands the look's kit, levels/library-hall.json the older kits'), else the first
 //      call any level makes, and lays that one call alone in a fresh kit: the boxes, loose parts and lamps it adds are the piece — its size, what it costs,
-//      what it is to a man, its paints; and, from the door again, WHOSE piece it is: a piece that lays nothing of its own, only one piece of another kit
-//      (the lived kit's chair is the office's, named as a room's lived thing), is that piece, and is not a second way of building the name;
+//      what it is to a man, its paints;
 //   3. reads what the piece is FOR, and its arguments, from the comment and the line that define it in the kit's own file.
 // Nothing about a piece is typed here: the one table below says where each kit lives and how to stand it up empty.
 // THE LIBRARY'S RULES (--check): every piece stands in a showroom; every piece says what it is; no piece tops out where a body is stopped on floor the nav
@@ -169,8 +168,6 @@ export interface Piece {
   kit: string; name: string; id: string; section: string; doc: string; params: string; line: number;
   /** the level whose call was laid: a showroom, another level, or none (no level lays it) */
   sample: string | null; error?: string;
-  /** the piece this one IS (`officeKit.chair`): it lays nothing of its own, only that one piece of another kit, taken into this kit */
-  is?: string;
   /** WHAT IT IS TO A MAN, read off its boxes as laid: 'solid' (feet, sight, rounds and sound meet it, up to `reach` m) · 'raised' (solid, but nothing of it
    *  comes down to the floor: it was laid on furniture or on a wall) · 'glass' (sight passes, feet and sound do not) · 'walk-over' (solid, under 0.2 m) ·
    *  'loose' (a body he can shove) · 'drawn' (no ray and no foot meets it) · 'overhead' (solid, all of it over 1.5 m) */
@@ -204,14 +201,8 @@ function measure(kitName: string, name: string, said: Said | undefined, stand: (
   const piece: Piece = { kit: kitName, name, id, section: said?.section ?? '', doc: said?.doc ?? '', params: said?.params ?? '', line: said?.line ?? 0, sample: sample?.level ?? null,
     kind: '', reach: 0, lit: false, size: [0, 0, 0], count: { solid: 0, drawn: 0, loose: 0, parts: 0, marks: 0, round: 0, lights: 0, fixtures: 0 }, paints: [], unnamed: [], inBand: false, uses, rows: [], boxes: [] };
   if (!sample) return piece;
-  // (stood up and laid with the door watched: `inside` is each piece laid straight from inside this one, with the lists' lengths as it opened and closed)
-  let S!: Stood, depth = 0; const inside: { id: string; from: number[]; to: number[] }[] = [];
-  const lengths = () => [S.boxes.length, S.props.length, S.lights.length, S.switchables.length], same = (a: number[], b: number[]) => a.every((v, i) => v === b[i]);
-  watchPieces({ kit() {}, open(kit, laid) { if (depth++ === 1) inside.push({ id: `${kit}.${laid}`, from: lengths(), to: [] }); }, close() { if (--depth === 1) inside[inside.length - 1].to = lengths(); } });
-  let before: number[], after: number[];
-  try { S = stand(); before = lengths(); (S.fns[name] as (...a: unknown[]) => unknown)(...sample.args); after = lengths(); S.seal?.(); } catch (e) { piece.error = firstLine(e); return piece; } finally { watchPieces(null); }
-  const n = { b: before[0], p: before[1], l: before[2], s: before[3] };
-  if (inside.length === 1 && inside[0].id !== id && same(inside[0].from, before) && same(inside[0].to, after)) piece.is = inside[0].id;
+  const S = stand(), n = { b: S.boxes.length, p: S.props.length, l: S.lights.length, s: S.switchables.length };
+  try { (S.fns[name] as (...a: unknown[]) => unknown)(...sample.args); S.seal?.(); } catch (e) { piece.error = firstLine(e); return piece; }
   const statics = S.boxes.slice(n.b), props = S.props.slice(n.p), lights = S.lights.slice(n.l), fixtures = S.switchables.slice(n.s);
   const parts = props.flatMap(partBoxes), all: DrawBox[] = [...statics.map(b => ({ c: b.c, h: b.h, yaw: b.yaw, albedo: b.albedo, flags: b.flags, emissive: b.emissive, marks: b.marks })), ...parts];
   if (!all.length) return piece;
@@ -291,17 +282,10 @@ function page(): string {
   L.push('');
   // the same word in more than one kit: the library's own to-do list
   const byName = new Map<string, Piece[]>(); for (const p of catalogue) (byName.get(p.name) ?? byName.set(p.name, []).get(p.name)!).push(p);
-  // (a kit's piece that IS another kit's piece is no second way of building it: a name counts once for each piece that is its own)
-  const ways = (ps: Piece[]) => [...new Map(ps.map(p => [p.is ?? p.id, p])).values()];
-  const twice = [...byName].map(([n, ps]) => [n, ways(ps)] as const).filter(([, ps]) => ps.length > 1).sort((a, b) => a[0].localeCompare(b[0]));
+  const twice = [...byName].filter(([, ps]) => ps.length > 1).sort((a, b) => a[0].localeCompare(b[0]));
   L.push('## One name, more than one piece', '', 'The same word in more than one kit: each is built its own way, in its own paint. This is the list the library has to bring down to one piece a name.', '',
     '| Name | Kits | Sizes |', '|---|---|---|');
-  for (const [n, ps] of twice) L.push(`| ${n} | ${ps.map(p => p.is ? `${p.kit} (${p.is})` : p.kit).join(', ')} | ${ps.map(p => p.sample ? p.size.join(' × ') : 'not laid').join(' · ')} |`);
-  L.push('');
-  const taken = catalogue.filter(p => p.is);
-  L.push('## One piece, handed out by more than one kit', '', 'A piece that lays nothing of its own, only one piece of another kit: the same piece, taken into that kit (a lived kit names it as one of a room\'s lived things).',
-    'It is no second way of building the name.', '', '| Piece | Is |', '|---|---|');
-  for (const p of taken) L.push(`| ${p.id} | ${p.is} |`);
+  for (const [n, ps] of twice) L.push(`| ${n} | ${ps.map(p => p.kit).join(', ')} | ${ps.map(p => p.sample ? p.size.join(' × ') : 'not laid').join(' · ')} |`);
   L.push('');
   for (const k of KITS) {
     L.push(`## ${k.name}`, '', `\`${k.file}\``, '');
@@ -309,7 +293,7 @@ function page(): string {
       if (s) L.push(`### ${k.name}: ${s}`, '');
       L.push('| Piece | What it is | To a man | Size | Boxes | Paints | Stands in |', '|---|---|---|---|---|---|---|');
       for (const p of catalogue.filter(q => q.kit === k.name && q.section === s))
-        L.push(`| **${p.name}**(${cell(p.params)}) | ${cell(p.doc) || '(not said)'}${p.is ? ` *(is \`${p.is}\`)*` : ''} | ${toAMan(p)} | ${p.sample ? p.size.join(' × ') : ''} | ${p.error ? `could not be laid alone: ${cell(p.error)}` : costOf(p)} | ${cell([...p.paints, ...p.unnamed].join(', '))} | ${SHOWROOMS.filter(r => r in p.uses).join(', ') || 'no showroom'} |`);
+        L.push(`| **${p.name}**(${cell(p.params)}) | ${cell(p.doc) || '(not said)'} | ${toAMan(p)} | ${p.sample ? p.size.join(' × ') : ''} | ${p.error ? `could not be laid alone: ${cell(p.error)}` : costOf(p)} | ${cell([...p.paints, ...p.unnamed].join(', '))} | ${SHOWROOMS.filter(r => r in p.uses).join(', ') || 'no showroom'} |`);
       L.push('');
     }
   }

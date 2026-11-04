@@ -70,7 +70,7 @@ import { shotEnergy } from './glasspen';
 import { kitPistol } from './kit';
 import { feedBegin, feedDeal, feedDrop, feedStarts, feedTick } from './gunreload';   // (called inside the reload beat only)
 import { sideOutAlert, sideLocked, quietHeard } from './gunslots';   // (called inside startReloadBeat only)
-import { hourLight, moonLight } from './hours';
+import { hourLight } from './hours';
 import { handleGate } from './handleside';
 import { gunHoldSee, gunHoldFeet, gunHoldFree, gunHoldKeeps, gunHoldRuns, gunHoldPhase } from './gunhold';
 import { teamCap, teamRunLegs, teamAccel, teamTread, teamAtWalk } from './teampace';   // (teampace.ts: a teammate's walk is a share of the player's, and he runs only for a reason — all read inside functions)
@@ -1526,7 +1526,7 @@ export const LIGHTS = { on: true, afterSecs: 2.5, hotSecs: 5, stepSecs: 4, tail:
    *  first wall, under lookDark with the team's own lights left out) burns his light: the dark hides only the other side. Off = dark on every hold, as it was —
    *  four men holding a lit room were shot from a dark doorway eight metres off by a man none of them could see. SHIPS OFF, a row to try: it keeps a man
    *  holding a taken room lit for as long as he holds (the hold is meant to be dark, and a lit man is seen), it reads the floor by the CPU's direct-light
-   *  estimate (no bounce, no moon unless sense.ts SENSE.moon) where everything else a man does by light goes by the meter, and two lit mates can keep each other's lights on */
+   *  estimate (no bounce, no moon) where everything else a man does by light goes by the meter, and two lit mates can keep each other's lights on */
   lookDark: false, lookLit: 0.25, lookBelow: 0.12, lookM: 10,
   /** THE PLACE DECIDES (the footage: lights off in lit halls and rooms whatever the men are doing, on in the dark): a man who stands on lit floor with lit
    *  floor all along his gun — every metre out to `litM` (his light's reach) or the first wall, and every third metre down both edges of its cone — whose man,
@@ -1545,7 +1545,7 @@ export const LIGHTS = { on: true, afterSecs: 2.5, hotSecs: 5, stepSecs: 4, tail:
    *  an order that takes him away from him is walked) instead of carrying him, gun lowered, up into the man's light. The rule above (`litOff`) wants his own floor lit too; this is the other side of it: a man in a dark room with an enemy under a
    *  lamp outside the door shoots from the dark. Asked four times a second per man with a man in his eyes (or, for the light alone, out of them for under a
    *  second and a half: the blink roomfight.ts keeps his aim through — the walk is held only with the man in his eyes); the light is the other
-   *  rules' again the frame he has no such man, the walk within a quarter of a second. The estimate is the CPU's direct light with no bounce and no moon (unless sense.ts SENSE.moon): it errs toward calling HIM dark. No range limit, by measurement: held to the nine metres `litAt` is a sighting at, his light came up from the dark on the far man and the lens gave him away (624 against 653 of 864 teammates up over 432 night breaches). false = as it was: sent on
+   *  rules' again the frame he has no such man, the walk within a quarter of a second. The estimate is the CPU's direct light with no bounce and no moon: it errs toward calling HIM dark. No range limit, by measurement: held to the nine metres `litAt` is a sighting at, his light came up from the dark on the far man and the lens gave him away (624 against 653 of 864 teammates up over 432 night breaches). false = as it was: sent on
    *  past Sam at a man under a lamp, his light came up with the word and he walked at him with his gun down (the night breach's last hunt) */
   litMan: true,
   /** NOT INTO THE WALL AT HIS MUZZLE (wallDark, below, has the rule): `wallOff` the switch — off here, on in the page (host/profile.ts; ?walllight=0 puts it
@@ -2577,20 +2577,18 @@ function lightWindow(d: number, range: number): number { const x = d / range; co
  *  irradiance) — every enabled analytic light the engine holds this frame (fixtures' area lights, lamps, torches and weapon lights, the beacons, muzzle flashes)
  *  through the shader's own terms (evalLight: 1/max(d², r²), the range window, the spot cone's smoothstep, the panel's emitter cosine, the receiving cosine),
  *  shadowed by one segment test against the statics and the door leaves (collision.ts — the CPU's stand-in for occluded()). What it has not got, named: no
- *  bounce (the probe adds the radiance cache's; a room lit only round a corner reads darker here than on screen), no moon unless sense.ts SENSE.moon says
- *  (kind 2: unshadowed it would light everybody — hours.ts moonLight gives it the sun's one shadow test), no bodies' shadows (capsules are GPU-side), no smoke, no fixture flicker. Used for one thing: how lit
+ *  bounce (the probe adds the radiance cache's; a room lit only round a corner reads darker here than on screen), no moon (kind 2: indoors it only comes through
+ *  the glazing, and unshadowed it would light everybody), no bodies' shadows (capsules are GPU-side), no smoke, no fixture flicker. Used for one thing: how lit
  *  an AI TARGET is to an AI eye (unitLightMeter) when the renderer has not answered — headless always, the browser's first frame or two. Sam's meter reads it
  *  only with the senses on the CPU (sense.ts SENSE.cpu, game.ts lightMeter). ~one segment test per light in range: a few dozen per target per frame.
  *  `field` = the light model (sense.ts SENSE.bounce), where one stands: each lamp is then dimmed by the grid's smoke on its way, and the bounce of the
- *  square metre the point stands in is added. null = the estimate as above, whatever the switch says (the error tool asks both). `moon` = the level's
- *  moon is in it too (the switch's word unless the asker says). */
-export function lightEstimateAt(g: Game, P: Vec3, skipOwner?: (owner: number) => boolean, steadyOnly = false, field: LightField | null = lightField(g), moon: boolean = SENSE.moon): number {
+ *  square metre the point stands in is added. null = the estimate as above, whatever the switch says (the error tool asks both). */
+export function lightEstimateAt(g: Game, P: Vec3, skipOwner?: (owner: number) => boolean, steadyOnly = false, field: LightField | null = lightField(g)): number {
   const acc = [0, 0, 0, 0, 0, 0];
   // RUST.light (rust/sim/src/light.rs: lampsHere's statements from the distance on, as one question a point)
   if (!lampsThere(g, P, skipOwner, steadyOnly, acc, field)) lampsHere(g, P, skipOwner, steadyOnly, acc, field);
   else if (BOTH.on) { const t = [0, 0, 0, 0, 0, 0]; lampsHere(g, P, skipOwner, steadyOnly, t, field); let ok = true; for (let k = 0; k < 6; k++) { ok = ok && Object.is(t[k], acc[k]); acc[k] = t[k]; } g.col.senseCompared(g.col.senseSet(SENSES.light), ok, 'light', P, P); }
   hourLight(g, P, acc);   // the level started at another hour (hours.ts): its sun and its sky on the same six faces — nothing at night
-  if (moon) moonLight(g, P, acc);   // …and at night the moon where it has a line to P (sense.ts SENSE.moon; the error tool asks both ways)
   if (!steadyOnly) strokeLight(g, P, acc);   // a stroke of lightning under a picked weather (weather.ts): the renderer's meter reads it, so its stand-in does — nothing with no weather picked
   const direct = Math.max(acc[0], acc[1], acc[2], acc[3], acc[4], acc[5]);
   return field ? direct + field.grid.glowAt(g.col, P) : direct;   // (the light that comes round reaches every face alike: it is added to the brightest)
@@ -3449,10 +3447,10 @@ export interface UnitOpts { team: Team; pos: Vec3; yaw?: number; weapon?: Weapon
   /** the pair a teammate is dealt into (UnitInfo.pair) */
   pair?: PairId;
   /** a caller that has decided to stand more men than cast shadows (the four-man squad, nightbreach.ts): the character count this spawn may reach, up to the
-   *  skinning's MAX_SKINNED — the men past the eighth DRAWN are skinned, lit and shot at like anybody but have no shadow / reflection / bounce proxies
-   *  (BoxWorld.addCharacterCapsules stops at eight; game.ts draws the living first once there are more). Absent = the eight, as ever. */
+   *  skinning's MAX_SKINNED — every man drawn has his shadow / reflection / bounce proxies (BoxWorld.MAX_CAST); the men past the eighth DRAWN have no mesh tree,
+   *  so to a ray they are their round cones (game.ts draws the living first once there are more). Absent = the eight, as ever. */
   budget?: number; }
-/** the character budget: BoxWorld uploads shadow capsules for at most 8 characters (scene/boxes.ts addCharacterCapsules), Sam included */
+/** the character budget a caller gets without asking for more, Sam included (the mesh trees' count; the shadow proxies hold every drawn man: scene/boxes.ts MAX_CAST) */
 const MAX_CHARACTERS = 8;
 /** … and the skinning holds this many (anim/characters.ts MAX_CHARS): the most a caller's own `budget` can ask for */
 export const MAX_SKINNED = 16;

@@ -15,9 +15,8 @@ const { v3 } = await import(`${ROOT}/src/math/vec.ts`);
 const { mulberry32 } = await import(`${ROOT}/src/math/dice.ts`);
 const { AIM } = await import(`${ROOT}/src/game/aim.ts`);
 const { LIGHTWALL, lensClear } = await import(`${ROOT}/src/game/lighting.ts`);
-const BOOTED = LIGHTWALL.on;   // (as this file found it: on the shipped stand that is what the stand's one boot wrote, before any card here touches it)
 const { GUNWALL } = await import(`${ROOT}/src/game/gunwall.ts`);   // (held OFF here: these cards stage a gun IN a wall, which gunwall.ts no longer lets a man do — the light's own rule is what they measure)
-const { spawnUnit, lightEstimateAt, LIGHTS } = await import(`${ROOT}/src/game/guards.ts`);   // (LIGHTS.wallOff is held OFF here like the gun's rule: it puts a teammate's beam out at the wall these cards press him to — its own lines are `probes.ts light-wall` — and a light that is out has no place to measure)
+const { spawnUnit, lightEstimateAt } = await import(`${ROOT}/src/game/guards.ts`);
 const { order } = await import(`${ROOT}/src/game/squad.ts`);
 const { rigLightPose, sc20kLightPose } = await import(`${ROOT}/src/game/rigProps.ts`);
 type Vec3 = [number, number, number];
@@ -31,7 +30,7 @@ let NEAR = 3.88, FAR = 4.12;
 function park(gd: any, i: number) { gd.hold = true; gd.pinned = true; gd.char.pos = [37.5, 0, 6 + i * 1.5]; gd.char.vel = [0, 0, 0]; gd.speed = 0; gd.path = []; gd.pathGoal = null; gd.heardUpTo = 1e12; gd.flashlight.enabled = false; }
 async function stage(seed: number, on: boolean) {
   Math.random = mulberry32(seed);
-  const W: any = await standUp(); const g = W.game; LIGHTWALL.on = on; GUNWALL.on = false; LIGHTS.wallOff = false; AIM.player.level = 1;   // (the shipped aim: the gun level along the cursor's heading — at 0 it is on the floor at the wall's foot and no lens reaches the wall)
+  const W: any = await standUp(); const g = W.game; LIGHTWALL.on = on; GUNWALL.on = false; AIM.player.level = 1;   // (the shipped aim: the gun level along the cursor's heading — at 0 it is on the floor at the wall's foot and no lens reaches the wall)
   g.godMode = true; g.infiniteAmmo = true; g.player.visibility = 0.02;
   for (let i = 0; i < 5; i++) W.step(DT);
   g.guards.forEach((gd: any, i: number) => park(gd, i));
@@ -147,16 +146,16 @@ async function wallSlant() {
 async function wallHarness() {
   console.log('\n=== wall-harness: the frozen stand holds the rule off, the page and the shipped stand turn it on ===');
   const frozen = !process.env.TPS_PROFILE || process.env.TPS_PROFILE === 'frozen', word = process.env.TPS_LIGHTWALL;
-  LIGHTWALL.on = frozen; await standUp();   // (stood up from the opposite of what the frozen stand should leave. The shipped stand's rows are written once, when headless.ts loads, and standUp() leaves them be: there the line reads what this file found and that a stand-up does not move it)
+  LIGHTWALL.on = frozen; await standUp();   // (stood up from the opposite of what the stand should leave)
   const want = frozen || word !== undefined ? word === '1' : true;
-  verdict(frozen || word !== undefined ? LIGHTWALL.on === want : BOOTED === want && LIGHTWALL.on === false, frozen ? 'standUp() on the frozen stand puts LIGHTWALL.on to what TPS_LIGHTWALL says (unset: off — every stored digest had the light at its lens)' : 'the shipped stand turns it on, as the page does: its boot wrote it, and standUp() writes nothing over what a card has set', `as found: ${BOOTED} · after standUp: ${LIGHTWALL.on} · TPS_LIGHTWALL ${word ?? 'unset'} · TPS_PROFILE ${process.env.TPS_PROFILE ?? 'unset'}`);
+  verdict(LIGHTWALL.on === want, frozen ? 'standUp() on the frozen stand puts LIGHTWALL.on to what TPS_LIGHTWALL says (unset: off — every stored digest had the light at its lens)' : 'standUp() on the shipped stand turns it on, as the page does', `after standUp: ${LIGHTWALL.on} · TPS_LIGHTWALL ${word ?? 'unset'} · TPS_PROFILE ${process.env.TPS_PROFILE ?? 'unset'}`);
 }
 
 /** the whole card (probes.ts 'lightwall'): true = every check passed. The switches are put back as found. */
 export async function lightWall(): Promise<boolean> {
-  const was = LIGHTWALL.on, gun = GUNWALL.on, wallOff = LIGHTS.wallOff, lvl = AIM.player.level; allPass = true;
+  const was = LIGHTWALL.on, gun = GUNWALL.on, lvl = AIM.player.level; allPass = true;
   try { await wallSam(); await wallMen(); await wallEstimate(); await wallLeaf(); await wallSlant(); await wallHarness(); }
-  finally { LIGHTWALL.on = was; GUNWALL.on = gun; LIGHTS.wallOff = wallOff; AIM.player.level = lvl; }
+  finally { LIGHTWALL.on = was; GUNWALL.on = gun; AIM.player.level = lvl; }
   console.log(`\n=== lightwall: ${allPass ? 'ALL PASS' : 'FAILURES above'} ===`); return allPass;
 }
 if (import.meta.main) process.exit((await lightWall()) ? 0 : 1);

@@ -434,26 +434,7 @@ but synthetic writes still work.
   record (`benchLegOfPage`), plays its part (`BenchLeg`) and hands its lines on with the next page's load; the last page shows the card, and Close (or an Esc
   with nothing to show) loads the address the run was asked on. Of the visitor's flags only `mute`, `nomusic`, `quality`, `pipequeue`, `shadertrim`, `shaderfold`, `savepic` (2026-11-02: until then
   `?bench&savepic=0` against `?bench`, the pair the save picture's bullet names, was one run twice), `pace` (11-03: a benchmark draws every display frame whatever the word says, as it
-  always did, so the word only rides along rather than be named as left behind: `docs/agents/render.md`), `adapt` (11-04: `?bench&quality=high&adapt=0`
-  is a run at ONE SIZE: `?adapt=0` opens the visit with nothing adapting, `ui/quality.ts visit`. With the ladder on, a heavier picture is paid for in
-  resolution, so two runs show the same frame rate and the same GPU milliseconds at different sizes; with the word nothing moves, and the lines of two runs
-  are the same pixels. With no tier named the word holds the tier the page stands on (the one this browser's auto last had, High where it never ran), at
-  that tier's start size and unmeasured, since no calibration runs: the row 'Hold frame rate' alone left auto free to shed sharp direct, give the tier up
-  and resume the last visit's size. NAME THE TIER where two machines or two days are to be compared. THE CARD SAYS WHAT ITS OWN LINES SHOW (`ui/bench.ts
-  sizeNote`), not what the switches were: 'held still' where the page's lines (as it opened, each scene, the held picture) were all drawn at one size, and
-  after it 'the address named no tier' where it did not; 'more than one size' where they were not (a window resized, the resolution moved by hand); and
-  where the row was put off BY HAND under auto (Options, not the address) it asks for a pinned tier. With the row on it says nothing. Like every word of the
-  address it is how the visit OPENS: a tier or Auto picked in Options afterwards is the player's, and Reset puts the defaults back under the address's
-  words. With the ladder off the page has no frame rate to hold, so outside a benchmark the even pace has no target and the page draws every display frame
-  (a pinned tier with the row off always did; a benchmark draws every frame anyway). The kit view's frame is opened without the word (it is pinned to a
-  tier and its pacer counts on its ladder), the viewer reads the address by the same reader, and `ladder-replay.ts` replays a take with the row as the take
-  had it. Asked for by the look's join to read 'within a tenth of the GPU time with the look off'; whether a machine HOLDS 60 is still read on a run
-  without the word. `bench-check` has the word on both addresses, the page's wiring (one reader of the two words, before a frame is drawn; Reset and the
-  viewer by the same reader) and the card's lines (a whole run each, the unnamed tier among them); `ladder-replay.ts --selftest` plays a 36 fps fight with
-  the word under hold 60 and as now, through a pinned High and through auto with sharp direct its own to shed and a size left behind, and then the page's
-  own order (a ladder made from what a browser remembers, the address read, a hand's pick, Reset): nothing moves and nothing is written as the machine's
-  choice; `ADAPT_BREAK=1` leaves the word off and the seven lines that play it fail. Run on a cloud NVIDIA card (two benchmark runs, every
-  High line of the three scenes at one size, the notes as said); never on a Mac or a Windows card), the backend's own words and the
+  always did, so the word only rides along rather than be named as left behind: `docs/agents/render.md`), the backend's own words and the
   shader rows' words (`ui/shaderrows.ts SHADER_ROW_WORDS`, e.g. `compactshaders`) ride along: anything else would make it another fight than the set's, and
   the report has a note naming the words that were not kept. THE ROWS WERE DROPPED UNTIL 2026-10-27, so `?bench&compactshaders=1` measured the plain build
   on every scene (found by the maintainer, who saw no difference on a second run); a row set in Options always applied. Since then the report has a
@@ -463,7 +444,30 @@ but synthetic writes still work.
   (`Bench.standing`, as for a tab that was away; every page of a set comes through that wait, and main.ts holds auto quality's measure back with it), `standInMs` (180 s) in all on a page, counted from the first look that found one and never started
   again; past it the lines are timed as they are and the report says so once, however many pages the set has ("some shaders were still building 180 s in …"). bench-check has both cases on its fake page. Not covered: a wall cut before the cut set is in still draws
   its whole box under a timed line, as it always did (that set is not in `standsIn`). NOT DONE either: the engine replay's address (`ui/replaykey.ts
-  VISIT_FLAGS`) drops the same words. Checked by `bench-check` (the fake page and tab) and once on a page on the software adapter: never run on a GPU. A reload in the middle is a plain mission page (the page marks the record before it plays); `?bench` on the address
+  VISIT_FLAGS`) drops the same words. Checked by `bench-check` (the fake page and tab) and once on a page on the software adapter: never run on a GPU. THE LOOK PROTOTYPE (11-02) rides along too: a run asked for on the look's page keeps the look (`?bench&look`): every
+  `look=key:value` row and the page's other boot words (`scene/look.ts lookPageWord`: hills, geo, front, lorry, dress, seat, the cut boxes' switch and the
+  rest; never the dress's `look=plain|0|off`) ride along, since the page reads them at boot into its shader text and its level. Before, such a run timed
+  the plain build on every scene and said nothing. A TRIAL THE LOOK PANEL'S BUTTON KEEPS OFF on the machine goes on the address as its own word
+  (`lookTrialsKept`, `hills=0`; the kept cut boxes' switch with them), so the run times the look the page it was asked on shows and the report's address says which. A SCENE'S ADDRESS IS
+  NOBODY'S TO TUNE (`main.ts`, on the word `benchrun`, as the load brief and the GPU retry are; so also a scene's address opened with no run under way): the
+  look page's kit and its fog put down stand off (the set's own), and the look panel is not built (no panel over the picture, none of its timers, the take
+  leaves by the recorder's own way). So off against on is two runs, `?bench` and `?bench&look`. WHAT THE PAIR DOES NOT HOLD ALIKE: the look's own geometry
+  (broken wall tops, round stacks, the pass's dressing) is part of the level a look run plays, so its fight is not the plain run's frame for frame and its
+  heavy moment may be another; the first scene's page writes that into the report's notes. The report is still headed with the set's name, `floors-1`: the
+  note and the address row are what tell a look run apart. The look's amounts are the defaults unless a `look=key:value` row is on the address (a slider
+  moved on the panel is kept nowhere). `bench-check` has the three lines and reads the page's gates in `main.ts` by text; the page's half (kit, fog, no panel,
+  the note, a kept-off trial off) was read off the first scene's page on the software adapter, where very low to high also each drew frames under the
+  look with no GPU error (the four presets the last page holds: `AUTO_LADDER`). ULTRA IS NOT ON THAT LADDER, and on the software adapter the look page
+  LOSES THE DEVICE within ten seconds of ultra being applied (the GPU process exits on signal 11 while it draws the first frame; no program is compiled
+  then). NARROWED, a boot a row: of ultra's rows it is the gather's reservoir resampling alone (`giResample 'temporal'`, `fgather.wgsl mainGi`), and it
+  needs the cut rule compiled into the ray programs from boot, which any geometry trial of the look asks for (`cutConfig.swap = false`). With the look's
+  trials off the look page draws ultra clean; hill rays are not it; and THE PLAIN PAGE WITH `?cutprograms=boot` DIES THE SAME WAY, so it is not the
+  look's. IT IS THIS BRANCH'S OLD BASE, NOT THE BROWSER (11-02 late): the build's head, unpacked beside this tree and put through the same script on the
+  same box and the same browser (Chromium 141), draws ultra on the plain page with `?cutprograms=boot` with no device loss and no GPU error, where this
+  tree's plain page loses the device every time; `&round=0` on this tree changes nothing, so the round test in the cut set's walks is not the whole of
+  it. Which of the build's steps since the base mends it was not found (the build's change to how round things are traced in the cut set does not apply
+  to this tree, which has its own), so nothing was ported: it is expected to go at the join, and that is one run to make then. Never tried on a GPU. `window.__look.parts()` says which trials a look page asked for at boot. NOT CARRIED: the dress's off words beside a look row
+  (`?look=plain&look=…`: the scenes are the set's dressed levels). NEVER PLAYED TO ITS CARD, and never on a GPU. A reload in the middle is a plain mission page (the page marks the record before it plays); `?bench` on the address
   goes to the first scene BEFORE the game boots (`main()`'s first lines, a `replace`: that load is the machine's first and the one the report's `load` line
   times, and Back does not ask again), the row is a second load and the report says so. EACH SCENE IS PLAYED BY THE HANDS-OFF PLAYER (`HandsOff`, the page
   twin of `command-tally.ts`'s hand `b`): W A S D along the nav path, the cursor on a door, the quick key B (stack, then B again when the men have arrived),
@@ -519,30 +523,39 @@ but synthetic writes still work.
   a frame there taking seconds and the wall's cut put out of reach, so a scene ends by the player's own cut after `CAP` game seconds and the last page's
   tail is the fake page's to prove; `STEP=script` has the check step the scenes with `__runFrames` instead; about 80 minutes at 320x180). NEVER RUN ON A GPU: no number of its report has been read on a real machine, the seven
   minutes are an estimate, and nobody has watched a scene played or looked at the card.
-- **What a line of the benchmark's card prices** (2026-11-04, `ui/bench.ts benchStats`). `frame ms` is the gap between frames: wherever the
-  display's pace is held it reads 16.7 whatever the picture cost, so it answers 'is 60 held' and prices nothing. `GPU ms` is the COMPUTE passes'
-  union, the number the quality ladder is fed (`ui/perfrec.ts`); every drawn pass is left out of it, because a drawn pass's stamps are not to be
-  trusted on Metal. So work that lands in the g-buffer (more boxes, a richer material, a layer of the look) was in no number of a line: the first
-  run on a real GPU that priced it (a cloud NVIDIA card, Vulkan) had the look's layers at 3 % by `GPU ms` and 5 to 6 % with the g-buffer counted.
-  `g-buf ms` (`BenchStep.gbuf`) is the g-buffer pass's OWN stamp over the line's frames, in its own column and never folded into `GPU ms`; n/a
-  where no frame carried one, and on a result saved before it was kept. It is the mean of the middle nine tenths, not a median: a browser rounds a
-  stamp to a tenth of a millisecond, and of a pass this small only a mean reads finer than that. HOW FAR TO BELIEVE IT ON METAL: far
-  enough, on one chip. Seven takes of an M4 Max (2026-10-14 and 10-25, about 50,000 frames): in an F8 sweep of the look's prototype, 'every layer off' took the pass's stamp from
-  1.85 to 1.15 ms and 'sharp direct off' to 0.81, the same in each of three rounds, while 'fog of war off' (no g-buffer work in it, the frame
-  2.9 ms shorter) left it at 1.80; on a page held at 30 frames a second, with 21 ms of waiting in every frame, it read 0.33 ms. `post` and
-  `fxaa` followed the frame's length in the same takes: THEY span the wait for the display (`docs/agents/render.md`, timing traps), the
-  g-buffer does not. Not shown: any other Apple chip, or a build newer than those takes. In that sweep the look gave back 0.69 ms in the
-  g-buffer and 0.85 in the compute union, so `GPU ms` alone saw about half of it. HOLDING TWO RUNS AGAINST EACH OTHER: add the two columns, as an ESTIMATE (two separate statistics, and any time a driver ran the g-buffer beside a
-  compute pass is counted twice), and only between lines with the same quality rows: under sharp direct the pass draws at the OUTPUT size and its
-  downsample is not stamped, so it does not follow a line's 'drawn at'. Not changed: the card's 'heaviest GPU passes' still lists every stamped
-  pass, drawn ones too (on Metal `post` and `fxaa` can lead it and mean nothing; on other machines it is the only place `composite` shows), and
-  the sweep's 'GPU ms given back' and the ladder's own number are the compute passes alone, so a feature that moves g-buffer work is under-priced
-  there. `bench-check` has the mean on a rounded clock, a hitch in a long and in a short window, the missing stamp (none, or nothing but the 0
-  the timer gives a pair never written), the column and its line on a whole run's card, a browser with no timings, an old result, and the pass's
-  name against the engine's. Run on a cloud NVIDIA card (the column on every line of four cards, 0.39 to 0.79 ms on the High lines, rising
-  with the size over the presets); never on a Mac or a Windows card with this build. A BENCHMARK WAITS FOR THE GPU as a player's page does
-  (`docs/agents/render.md`, the page waits for the GPU; a result's `wait`): a card from before that, made on a machine with no display, has
-  frame rates and 'one feature changed' rows that are not to be believed on any line over the display's frame.
+- **THE PRICING RUN (`src/ui/pricerun.ts`, `src/host/runpage.ts`, 2026-11-04; `localhost:5173/?look&pricelevels&downloads=1`, hands off)** walks every level of the mission list
+  (`=a,b` for some), a page load a state: the look page (played four seconds of the game's clock, the picture held on one step, timed with the look's
+  switchable layers off and on in turn) and then the same mission WITHOUT the look, held on the same step. One file, `price-levels-<date>.json` (version 6),
+  a row a level, each with the run's own verdict against the bar (`priceOver`, the one place a GPU number of it is judged; the file's `bar.ruled` says
+  which rows of the bar the maintainer has ruled on). A ROW THAT IS NOT ONE PICTURE IS NOT JUDGED (`apart`: the picture moved between its turns, its two
+  pages stood at another size, rung or step, or frames were queued ahead of the GPU in a state, `queuedWords`): its numbers stand and no verdict is read off
+  them. The GPU's lag is no line of the verdict (it reads 2 to 3 wherever the page waits for the GPU, more on a 120 Hz display). TWO NUMBERS a state: the
+  compute passes' busy span (the game's own "GPU ms") and that span with the g-buffer's pass in it (`all`: every stamped pass but the ones that draw to the
+  display, whose stamps span the display's wait; the g-buffer's was read against recorded frames on an M4 Max and follows its own work — one chip, so each
+  state is still checked, `spansWait`, which wants half a frame of g-buffer before it calls it a wait). EVERY PAGE STANDS ON ITS PRESET'S OWN ROWS with the
+  quality ladder's switch off from before its first frame (`heldPage`), paced to no target of the ladder's, and never gives way to a window in focus
+  elsewhere; it still waits for the GPU as a player's page does, and a frame's time is the time between two frames it DREW (`window.__pace`; the frames a
+  turn waits for are counted the same way), so a level the GPU cannot hold sixty on reads as that and queues nothing ahead; a row says its rung, its size
+  and the step it was held at. ONE WAY TO PLAY, on every page: the loop is held from before the boot, the run asks for the page's warm-up (`__prewarm`) and
+  lets the page draw sixteen frames of its own with the clock held, and then the mission is played by the page's scripted step, a step a display frame,
+  every step drawn, the GPU waited for every second frame. So a level's two pages have run the same steps, drawn the same frames and stand on the same
+  render clock at any display rate. (Stepped with no warm-up first, a snow level had no snow in its air: the page's warm-up clears the particles' ring
+  twelve frames after its first frame of its own, which then came after the play. Played by the page's own loop instead, two pages stood on render clocks
+  a few milliseconds apart and a 120 Hz display ran other frames than a 60 Hz one.) IT IS A RUN'S PAGE
+  (`host/runpage.ts`: `runPage` stands the load brief, the lost-device reload, the sandbox row and the look page's kit down, as on a benchmark's scene;
+  `ownPage` keeps its own page under the kept-page rule, since a run walks by loading its next address). ITS FILE GOES OUT BY THE SAVE DOOR (kind `price`):
+  to whoever listens, and to the browser as a download only with `downloads=1`, a flag the run carries with the benchmark's other carried words
+  (`ui/benchrun.ts carriedWords`); where nobody took it the card holds the file's text under the table for Copy. A word of the asking address that no
+  page carries is named in the file's notes. Words: `quality=` (default high), `pricesecs=`, `pricepage=0` (look pages only); a mission's link sheds them
+  all (`PRICE_ASK_WORDS`). Checked by `bun run tools/qa/pricerun-check.ts` (no page: the verdicts, the wait's rule, frames queued ahead, the report, the
+  addresses, on made-up rows; `PRICERUN_BREAK=1` must fail) and by
+  `node tools/qa/pricerun-page.cjs [level …]` (the real page on the software adapter, as a person's page runs it: the chain, one rung, one step, the file
+  down; no number there is a price, and its frames are seconds long, so it proves nothing of the pacing) and with `--real` on a machine with a GPU (`--look "<words>" --look-only` prices a look page under other words). Run on
+  a rented NVIDIA card through Vulkan only (11-04); NEVER RUN ON METAL OR ON A DISPLAY (a headless card has none, so nothing of a 120 Hz display's frames has been seen), and nobody has read a row of it against the bar. Beside it, files only:
+  `tools/qa/level-audit.ts` (every level counted as the look page draws it; `--check <level>` holds the bars of `level-count.ts`) and
+  `tools/qa/level-table.ts --dir <folder>` (one page of every level from those files, a GPU's file and each dressing row).
+- **A picture fault is debugged from a frame capture** (F6 on the page: every render target over 8 frames and the trace of what the renderer changed;
+  `tools/qa/capture-read.ts` reads it; `docs/agents/render.md`, "A CAPTURE IS EVERY TARGET OF A FEW FRAMES").
 - **Stalls: the recorder watches the page's own thread** (`ui/perfrec.ts`, from 10-25). A frame's marks see only inside the frame, and a stall is nearly
   always between two frames. While a take runs ON THE PAGE (never headless: a headless take is the file it was; `perfrec.watch = false` leaves it off on
   a page too) a 4 ms timer answers, and each frame's `beat` is the longest it went silent in the GAP before the frame: from the end of the step before to
@@ -731,3 +744,15 @@ but synthetic writes still work.
   here: the 2.6 cm itself (the squad's finding), any other mission, the frozen stand. Tallies that want a player who really stands put the word in front.
   THE SMELL IT ENDS, by the squad's own tally of the same eight seeds on a later join: 'in the doorway for N s · fallIn (on his mark)' 3 lines without the
   word, 0 with it. Making it the default is open: 84 files of `tools/qa` lean on this commander, and every table before it was made with the walker.
+- **Every shader text compiled in twenty seconds: `node tools/qa/wgsl-compile.cjs`** (11-01; `tools/qa/wgsl-dump.ts` writes the texts). The Engine and the smoke
+  solver are built on a stand-in device that records every module's text, as a plain boot makes them and again as the look page builds them (its prelude consts
+  up), in TWO runs: bare, and with every shader row's word in the environment (`TPS_COMPACTSHADERS=1` and the rest: the rows are read once at import, and a first
+  writing that flipped the row after the import compiled none of the compact writings and said nothing). Each distinct text (68 today) goes to headless
+  Chromium's `createShaderModule` and its errors are printed with the line. Parse and type errors only: it makes no pipeline and draws nothing, so it does not replace a page boot (see the first-frame bullet in `render.md`).
+  `WGSL_BREAK=1` adds a function that names nothing declared and must fail.
+- **One kernel alone on the software adapter, with its stack frame against the adapter's limit: `node tools/qa/kernel-stack.cjs`** (11-01; 40 s a kernel;
+  default `fgatherS/main` on the look page, `--kernel a,b`, `--list`, `--plain` = the game page, `--query '&look=walls:0'`, `--text file.wgsl`). A page that boots
+  clean and loses its device on the first frame after a shader change is this: `docs/agents/render.md`, the software adapter's limit. Exit 0 built and ran, 1 not
+  built (it prints the compiler's own words), 2 no browser or no such kernel. The numbers need gdb and the symbols Playwright's Chromium ships in
+  `libvk_swiftshader.so`; without them it still says built or not. It attaches to its own browser's GPU process (found by a word it puts on that browser's
+  command line), so another page check may run beside it.

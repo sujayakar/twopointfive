@@ -35,7 +35,7 @@
 //                  a plain posted walk is upright at the brisk pace with the gun up, across whatever is lit on the way. Posture and pace only: he does not wait.
 // What it does NOT do (other parts' seams): nothing once a defender is alert or searching or the squad is compromised (every rule returns null and he is the
 // build's own follower — the compromise part's); no new order, no menu row (the orders part's); nothing for a man on a stack or a door tool's marks.
-// HONEST LIMITS: the light AHEAD of him is the CPU's direct-light estimate (no bounce, and no moon unless sense.ts SENSE.moon: guards.ts lightEstimateAt) plus what Sam's meter — the
+// HONEST LIMITS: the light AHEAD of him is the CPU's direct-light estimate (no bounce, no moon: guards.ts lightEstimateAt) plus what Sam's meter — the
 // renderer's, in the page — read over it where Sam walked (`ambient`); his own meter where he STANDS is the renderer's too, and 'caught in the open' reads
 // that. Headless both meters ARE the estimate, so the ambient term is untested there. He knows a defender only by the line from
 // that man to the step he is about to take (he looks before he steps — he is not told who is behind a wall, and a wall is why he is safe from him);

@@ -410,7 +410,7 @@ function gameBits(c: any, RP: any): string {
   for (const b of out) { for (const x of b.c) add(x); for (const x of b.h) add(x); if (b.rot) for (const x of b.rot) add(x); }
   const lp = RP.rigLightPose(c); for (const x of [...lp.pos, ...lp.dir]) add(x);
   const dig = new Set<number>(); for (const s of ['L', 'R'] as const) for (const names of DIGITS(s)) for (const nm of names) dig.add(c.ch.nodeByName.get(nm));
-  const d = c.anim.pose.cols, N = c.anim.pose.rows; for (let i = 0; i < c.ch.nodes.length; i++) if (!dig.has(i)) for (let k = 0; k < 10; k++) add(d[k * N + i]);   // (a node's ten numbers in the order they were always folded)
+  const d = c.anim.pose.data; for (let i = 0; i < c.ch.nodes.length; i++) if (!dig.has(i)) for (let k = 0; k < 10; k++) add(d[i * 10 + k]);
   for (const t of c.anim.twists) { add(t.node); add(t.yaw); add(t.pitch); }
   return (h >>> 0).toString(16);
 }

@@ -48,7 +48,7 @@ function rec(g: any): Rec {
   return { pos: [...c.pos], head: B('head'), chest: B('chest'), hL: B('handL'), hR: B('handR'), kL: D('shinL'), kR: D('shinR'), fL: D('footL'), fR: D('footR'), wHead: [...c.bones.head], wChest: [...c.bones.chest],
     dHead: D('head'), dShoL: D('upperArmL'), dShoR: D('upperArmR'), dHR: D('handR'), fed: c.anim.stealth != null, made: (c.anim as any).sp != null, wA: (c.anim as any).sp?.wA ?? 0, lockpick: !!c.anim.lockpick, wanding: !!g.player.wanding, creep: !!c.anim.creep, ready: c.anim.ready ?? null };
 }
-function hashPose(h: number, g: any): number { const d: Float32Array = g.player.char.anim.pose.cols, u = new Uint32Array(d.buffer, d.byteOffset, d.length); for (let i = 0; i < u.length; i++) h = Math.imul(h ^ u[i], 16777619) >>> 0; return h; }
+function hashPose(h: number, g: any): number { const d: Float32Array = g.player.char.anim.pose.data, u = new Uint32Array(d.buffer, d.byteOffset, d.length); for (let i = 0; i < u.length; i++) h = Math.imul(h ^ u[i], 16777619) >>> 0; return h; }
 type Part = 'idle' | 'walk' | 'rise' | 'creep' | 'cable' | 'draw';
 /** a part played from a fresh stand-up on its own seed, the switch written before the first step */
 async function play(part: Part, first: () => void): Promise<Run> {
