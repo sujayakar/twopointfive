@@ -168,6 +168,7 @@ import { MUSIC } from '../audio/pieces';
 import { LIVED, livedOfQuery } from '../scene/lived';
 import { UNDERFOOT } from '../scene/collision';
 import { ROUND } from '../scene/round';
+import { SHAPES } from '../scene/shapes';
 import { ROOMCLEAR } from '../game/roomclear';
 import { FIXEDSTEP } from './loop';
 import { AUTOCAM, autoTuneApply } from './autocam';
@@ -248,6 +249,7 @@ export function pageSwitches(q: URLSearchParams): void {
   COVER.rearRead = q.get('rearread') !== '0';   // a rear man on a mark with no door (a wall charge's stand-off, the mate covering a man at work) watches what the ground round him offers — a way in, a long run of floor — not the spot he stood on when the order came (game/cover.ts readRear over roomfit.ts watchablesAt): ON in the page; ?rearread=0 = 'the way he came', as it was
   COVER.backTurn = q.get('backturn') !== '0';   // a man walking backwards whose opening the deal lets go of comes out of it on his feet: the path kept, his body turning to the way he goes (game/cover.ts turnOut): ?backturn=0 = he walks forward along a body still turned to the rear, a quarter of a metre the wrong way, as he did
   ROUND.on = q.get('round') !== '0';   // round things are round (scene/round.ts): a level's drums, tyres, stoves and ovens are stood up as one round shape each — to the picture, every ray, sight and what walks against them — in place of the kit's octagon of four slabs: ON in the page; ?round=0 = the octagons, as they were (main.ts puts it down too when the cut switch, whose pipeline draws a round, is off)
+  SHAPES.on = q.get('shapes') !== '0';   // a box says its shape (scene/shapes.ts): a level's boxes that say one — a vehicle's rounded corners, crowned bonnet, bowed roof, leaning glass and round wheels — stand as it to the picture and to every ray, and their pieces of trim (hubs, arches, window posts: drawn only) are added; what walks meets the plain level: ON in the page; ?shapes=0 = the plain boxes, as they were (the game's own rays meet a shape whatever the cut-pieces switch says: boxes.ts cutMet)
   UNDERFOOT.on = q.get('underfoot') !== '0';   // what the walk grid calls floor, feet cross (scene/collision.ts): a walker is stopped by what the grid's bake calls blocked and by nothing lower — the bottom layer of a pile of sacks a wall charge left in its own hole no longer holds the men ordered through it: ?underfoot=0 = a thing 0.2 m high stops feet the grid routes across
   SNEAK.byEye = q.get('byeye') !== '0'; { const n = Number(q.get('seenrate')); if (q.has('seenrate') && Number.isFinite(n) && n > 0) SNEAK.seenRate = Math.min(1, n); }   // a lit step with a line is SEEN only where that defender's eye would gain on a man there (src/game/sneak.ts; `?seenrate=<n>`: the rate that counts, the guards' own floor 0.05 by default)
   SNEAK.stalkAmbient = q.get('stalkambient') !== '0';   // the partner's way to a man's back is read by the light his OWN meter shows on him over the CPU's estimate (the moon, the bounce), as Sam's crumbs carry Sam's (game/sneak.ts sneakWalk): ON in the page; ?stalkambient=0 = the estimate alone, as it was — a moonlit yard read as dark
@@ -302,6 +304,7 @@ export function pageSwitches(q: URLSearchParams): void {
   DOORPATH.on = !q.has('nodoorpath') && q.get('doorpath') !== '0'; if (q.get('doorpath') === 'gun') DOORPATH.gun = true;
   WALLSNAP.on = !q.has('nowallsnap');   // back to the wall, the feel pass (game/wallsnap.ts): the take on one eased clock with stepping feet and a settle, the way off keeping his momentum, and Q with the rifle in hand STACKS on the wall (low ready; the cursor round an open end steps him out): ON in the page; ?nowallsnap = the hold as it was
   WALLSNAP.press = q.get('wallpress') !== '0';   // …taken without the key (game/wallsnap.ts `press`, player.ts wallPress): a move key held into a wall takes it as its key does (while this is on the hold has no key on the page's board: host/keymap.ts qFree) — ON in the page (Options ▸ Game has its row, kept per machine); ?wallpress=0 = Q alone, as it was
+  WALLSNAP.pressRun = q.get('wallrun') !== '0';   // …and at a run (wallsnap.ts `pressRun`, player.ts wallPress / wallRanOn; acts only with `press`): a sprint held straight into a wall takes it as a walk does, and that run, its keys still held, does not then take him off it — ON in the page; ?wallrun=0 = never at a run, as it was
   WALLSNAP.voice = q.get('wallvoice') !== '0';   // …heard (wallsnap.ts `voice`): his back landing on a wall and his stepping off it each have a sound, the player's ears only; ?wallvoice=0 = the faint scuff alone, as it was
   WALLSNAP.leanGun = q.has('noleangun') ? 0 : LEAN_GUN_M;   // …and the step-out round an end goes as far as the RIFLE needs (wallsnap.ts `leanGun`): round an end on his gun side the eyes' 0.6 m left the rifle in the jamb and its rounds in the wood; ?noleangun = 0.6 m whichever side, as it was
   WALLSNAP.slow = q.get('wallslow') !== '0';   // …and unhurried (wallsnap.ts `slow`): the take runs twice its seconds and the pose comes on and lets go at half its rate; ?wallslow=0 = the take as it was
@@ -425,6 +428,7 @@ export function pageSwitches(q: URLSearchParams): void {
   SENSE.cpu = q.has('cpusense');   // the senses on the CPU (game/sense.ts): OFF unless the URL says ?cpusense — the men see by the renderer's own light and smoke, as ever; on, by the game's own stand-ins, and a fight is then its seed and its inputs and nothing else (the same on a machine with no GPU). Whether the page plays on them is the maintainer's call.
   SENSE.grid = q.has('smokegrid');   // …and their smoke on the coarse grid (sense.ts SmokeGrid): OFF unless the URL says ?smokegrid (read only with ?cpusense)
   SENSE.bounce = q.has('cpulight');   // …and the light model on that grid (the smoke's shadow, the light that comes round): OFF unless the URL says ?cpulight (read only where a grid stands)
+  SENSE.moon = q.has('moonlight');   // …and the night's light from the sky in the estimate of the light on a man (game/hours.ts moonLight: the moon shadowed, the level's sky, one bounce, as an hour is read by day): OFF unless the URL says ?moonlight (read wherever the estimate is, on every host: the senses on the CPU, the first frames, every rule that asks what a place lights)
   CMDCHECK.on = !q.has('nocmdcheck');   // a record from anyone (game/cmd.ts checkCmd): the tick's input record is made one an honest seat could have sent before the tick reads it (finite, bounded, the two matrices worked out again) — an honest record comes through unchanged to the bit; ?nocmdcheck = believed as it comes, as before
   netQuietFromQuery(q);   // the net goes quiet (game/netquiet.ts; it needs the row above): a radio check nobody answers and a body found shake the men, the asker's calls get worse, a jumpy man's beam whips to a noise, and the last man backs to the spot his doors sit in one arc from and goes low: ON in the page; ?nonetquiet = the men as they were
   ATTENTION.on = !q.has('noattention');   // a guard has one attention, and where it is can be seen (game/attention.ts): ON in the page — a small thing that makes a calm man look takes his attention there for a time the floor shows, and his eye for the rest is narrower while it does; ?noattention = every wary man sweeps the room with his whole eye, as it was
@@ -634,6 +638,7 @@ export const FROZEN_HOLDS: Record<string, string> = {
   'AIRDUST.on': 'TPS_AIRDUST=1',
   'WALLSNAP.on': 'TPS_WALLSNAP=1',
   'WALLSNAP.press': 'TPS_WALLPRESS=1',
+  'WALLSNAP.pressRun': 'TPS_WALLRUN=1',
   'WALLSNAP.voice': 'TPS_WALLVOICE=1',
   'WALLSNAP.slow': 'TPS_WALLSLOW=1',
   'WALLSNAP.leanGun': 'TPS_LEANGUN=1',
@@ -835,6 +840,7 @@ export const FROZEN_HOLDS: Record<string, string> = {
   'COVER.backTurn': 'TPS_BACKTURN=1',
   'UNDERFOOT.on': 'TPS_UNDERFOOT=1',
   'ROUND.on': 'TPS_ROUND=1',
+  'SHAPES.on': 'TPS_SHAPES=1',
   'SNEAK.stalkAmbient': 'TPS_STALKAMBIENT=1',
   'SNEAK.byEye': 'TPS_BYEYE=1',
   'SNEAK.noiseWalk': 'TPS_NOISEWALK=1',

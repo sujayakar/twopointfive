@@ -1022,6 +1022,61 @@ first system across (the game's own maths). No rule of play has changed and noth
     NOT SAY: anything of a person commanding, of the page (its senses are the renderer's), or of the watcher's smells, which were counted (340 / 352 /
     341 standard, 368 / 382 / 393 hard) and not read. Both switches stay down: the light has no TypeScript twin, and what it should weigh against
     the picture waits for a report from a real GPU.
+- **The night's light from the sky in the estimate** (`src/game/sense.ts SENSE.moon`; `src/game/hours.ts moonLight`, `skyLight`, `skyLampOf`,
+  `inEstimate`; `guards.ts lightEstimateAt`). THE SWITCH: OFF everywhere today (the page's `?moonlight`, the harness's `TPS_MOONLIGHT=1`; carried
+  by the knob registry in `SENSE`, a recording from before the key replays with it off). Off = the estimate as it was, to the bit. AN EXCEPTION TO
+  "A NEW RULE IS ON IN THE PAGE", SAID: it has no row of `FROZEN_HOLDS` because both stands have it off, as `SENSE.cpu`, `grid` and `bounce` are,
+  and it is to come on with them. On by itself it would move every tally of the shipped stand at night and change what men do on the page (below).
+  - WHAT IT IS. The estimate of the light on a man had no moon ("unshadowed it would light everybody"). The first run of the error tool on a GPU
+    (the next bullet) read what that costs: under the open sky the picture's meter had a man lit and the estimate had nothing, the other side of the
+    lit bar on 42 % of the points. ONE READING FOR THE LIGHT FROM THE SKY, AN HOUR OR NONE: `hours.ts skyLight` is what `hourLight` did for an hour —
+    its one directional light where a point has a line to it past the statics and the door leaves, on the meter's cosine; the sky through whatever
+    is open above the point's half-metre cell; one bounce off ground they light — and `moonLight` hands it the level with no hour laid over it: the
+    level's own light from the sky (`skyLampOf`: its brightest steady directional light that is up — the moon as authored, or the sun a show put in
+    its place, `lighting.ts setDaylight`) and THE LEVEL'S OWN SKY (`level.sky`, a show's `level.daylight.sky`), never the engine's settings: the
+    page writes the level's sky there and a headless stand does not, and a rule may not differ by host. With the moon turned out, the sky alone.
+    Nothing at another hour: the moon is out and the hour's sun has the same reading. Nothing of the level is touched. What it keeps a game
+    (`nights`: the box and the rays of the cells asked) is made again when the lamp, its direction, the sky or the casters change (counted once a
+    tick) and dropped by `hourWorldChanged` / `hourAfterReset` as an hour's cells are. It is state a snapshot carries, as an hour's is.
+  - NOT IN IT: the edge of a shadow is hard here and soft in the picture (the points left over are in the building's moon shadow, where the picture
+    reads 0.2 to 0.4 W/m² and this 0.08); a second bounce; glass is whatever `segmentBlocked` makes of a pane. The light that comes round
+    (`SENSE.bounce`) does not carry the moon.
+  - IT ACTS WHEREVER THE ESTIMATE IS READ, ON EVERY HOST, the page with the picture's senses too: the meter's stand-in (the senses on the CPU, the
+    headless stand, the page's first frames) and every rule that asks what a PLACE lights — the team's weapon lights (`guards.ts LIGHTS`), the
+    goggles and the IR illuminator (`nvg.ts`, `irlight.ts`), the calm torch, a search in the dark (`darkfoe.ts`), `pressure.ts`, the pair's
+    orders, the lights-out mission. NOBODY ADDS THE MOON TWICE: `hours.ts inEstimate(g, lamp)` says whether a directional light is already in the
+    estimate (an hour's sun; the night's under the switch), and whoever adds one on top asks it (`nvg.ts nvgPlaceLight`, `tools/qa/lesson-run.ts`
+    `--moon`). OTHER STAND-INS OF THE MOON IN THE TOOLS ARE NOT GATED: `PT_METER=sky` (`hour-lib.ts meterAt`, its own sum from the lamps up),
+    `pair-sneak.ts PS_MOON`, `vault-run.ts` and `lights-out-run.ts --moon` add theirs whatever the switch says, so a run with `TPS_MOONLIGHT=1`
+    takes none of them. They were written because the estimate had no moon; when the switch comes on they go.
+  - AGAINST THE GPU'S PICTURE (`tools/qa/modelerr.ts` row `moonlit` = the estimate with the light that comes round and the night's sky, asked on
+    the SHIPPED stand of the kept report's questions; the frozen stand asks other questions and judges no `moonlit` row): under the open sky off by
+    0.010 of the meter at the middle (0.355 without), 0.214 at the 95th, the other side of the lit bar on 1.1 % (42.0 %); under a roof 0.027, 0.113
+    and 1.1 % (the worst roofed point was moonlight through an opening: 0.565 without, 0.175 with); 1.49 stops at the 95th over all 176 points
+    where it was 15.70. `BUDGET` rows `moonlit:roof`, `moonlit:sky` and plain `moonlit` hold it there. The picture is one run on one adapter (Apple
+    Metal), one level whose sky is the engine's default, one night.
+  - THE CHECK: `bun run tools/qa/moonlight-check.ts` on both stands (the office, 81 points round the error tool's stations): `switch` (down = the
+    estimate asked with no moon, to the bit; up = asked with it), `sky` (a point with a line to the moon is never under the moon's luminance ×
+    intensity × the best face's cosine, 0.459), `shadow` (ON THE OFFICE: behind a wall or under a roof the switch adds under a quarter of that, at
+    most 0.084 and 0.017 — a level with a dim moon under a bright sky would want another bar), `twice` (up, the goggles' light of a place is the
+    estimate's own at every point and the moon is said to be in the estimate; down, the goggles add their own as ever), `hour` (at dusk the switch
+    adds nothing; the night put back, what it added), `put back` (a snapshot put back reads every point as it did, the state's word the same).
+    `MOONLIGHT_BREAK=1` (nothing stands in anything's way while the moon is asked) fails `shadow`. THAT DOWN IS THE BUILD AS IT WAS is held by
+    the missions: the five of `rust-check --missions` with the switch down against the tree before it, 36,859 ticks, every run to the bit
+    (`tickcost --each --list --compare`).
+  - MEASURED (2026-11-04, a cloud box, bun, no GPU; the server's stand with the smoke grid and the light model up, `TPS_PROFILE=shipped TPS_CPUSENSE=1
+    TPS_SMOKEGRID=1 TPS_CPULIGHT=1`, the five squad missions, seeds 1 to 16, `tools/qa/playthrough.ts`, with and without `TPS_MOONLIGHT=1`): won
+    57 of 80 either way; men lost 154 of 288 without and 166 with; theirs left 125 and 116 of 704; a mean 96 s and 100 s. By mission (won · men
+    lost, without → with): compound 12 → 12 · 34 → 37, warehouse 11 → 11 · 41 → 41, pass 16 → 16 · 15 → 21 (72 s → 83 s), rescue 16 → 16 ·
+    3 → 6, block 2 → 2 · 61 → 61. Seed by seed 26 of 80 are the same game by digest (warehouse 10 of 16 and block 13 of 16; compound none), 76
+    end the same way, 2 better, 2 worse. So where a fight crosses open ground at night the men in the moon are seen, on both sides, and it costs
+    the squad a man more here and there; no mission is won or lost by it. `rollback-check` whole with the switch up on both stands (with the
+    senses on the CPU, the grid and the light model on the shipped one): all pass. `probes.ts hours`, `nvg`, `hourwx` and `breach-daylight` with
+    the switch down: as on the tree before (two of them red there already on the shipped stand: `breach-daylight`'s round trip and
+    `hourwx-sheet`). WITH THE SWITCH UP `probes.ts hours` is red on `hours-light` and `hours-team`, which say what a night reads with no moon in
+    it: they are to be told the night's sky when the switch comes on. The quiet missions, the lessons and the solo night have NOT been tallied
+    with it, and they are where it matters most (Sam in a moonlit yard): that is the tally the switch owes before it comes on. Nobody has
+    played it. Never seen on a GPU: the only picture it has been held against is the one kept report.
 - **The model against the picture** (`src/host/modelerr.ts`; the page's `?modelerr`, `tools/qa/modelerr.ts`, `tools/qa/modelerr-page.cjs`; the
   maintainer, 2026-11-02: "we'd want some way during development of bounding the error between the two but then just let them proceed independently
   when actually running the game"). A DEVELOPMENT TOOL: nothing of it is made without the word and the game never reads it. The senses' CPU models
@@ -1038,26 +1093,67 @@ first system across (the game's own maths). No rule of play has changed and noth
     the share of light a line lets through): the middle, the 95th percentile, the worst, the lean; for light also stops at the 95th; and HOW OFTEN THE
     TWO DECIDE DIFFERENTLY (lit or dark at `LIGHTS.litAt`; hidden by the plume or not at 0.3). `BUDGET` holds a 95th percentile and a share of
     opposite decisions a model; a model past either is red. It bounds getting WORSE on the recorded scenes; it does not say the numbers are good.
-  - THE PAGE: `localhost:5173/?modelerr&seed=1` (`=quick` two stations, `=tiny` one; any level or mission words beside it), press Start, hands off
+    EVERY SAMPLE SAYS WHERE IT STANDS (`Sample.o`: under the open sky or a roof, by `weather.ts underRoof`, the footprints the rain and the wind go
+    by — the light point; a line is under a roof only when its canister and both its ends are), and a report that says so is judged A PART AT A TIME
+    by the rows of that part (`estimate:roof`, `grid:sky`; `partsOf`), its whole said and not judged: the first GPU run was the two parts apart, and
+    a whole would hide either in the other. A report that does not say is judged whole by the plain rows, and one where some samples say and some do
+    not is a fault.
+  - THE WALK CHANGES THE PICTURE ONLY WHEN THE PICTURE HAS ANSWERED (`ModelErr.changes`, `frame`): before the tick that lets the canister out, and
+    before the one that clears the smoke and moves on, the plan's clock stands (the models are not stepped either) until everything asked has come
+    back. An answer comes frames after its question. THE FIRST WALKS DID NOT WAIT: a station's last age was asked in the tick that cleared the room
+    and moved on, so at every station but the last (nothing is cleared after it) its lines read 'no smoke' (the first GPU run: 1.00 on every 25 s
+    line of the two stations under a roof, where the same lines had read 0.07 and 0.11 ten seconds before). Such a report is version 1 (`Report.v`)
+    and those lines are in the file and not counted (`counted`); a walk that waits writes 2. Held headless by a stand-in picture (`waits`, below)
+    and on the page by `PLAN=quick tools/qa/modelerr-page.cjs` (two stations: 14 of the first station's 16 last-age lines came back with smoke on
+    them, on the software adapter). No walk that waits has been run on a GPU.
+  - THE PAGE: `localhost:5173/?modelerr&seed=1&solo` (`=quick` two stations, `=tiny` one; `solo` is the solo night straight in — any mission's own
+    words do as well). The walk does not begin under a menu (`ModelErrPage.held`: the start page, with the title's reel playing behind it, is one),
+    and on an address that opens the start page the tool says so on a note at the foot of the page that takes no click (seen in a headless
+    Chromium on the software adapter: the note up, and after ten seconds of the page's clock, the reel running, no walk begun; not seen by a person).
+    Hands off
     for about three minutes: a card shows the table, `window.__modelerr` is the report, and it goes out by the page's door as kind `modelerr`
     (`host/savefile.ts`: to the backend where the page has one, no download).
   - HEADLESS: `bun run tools/qa/modelerr.ts` on both stands walks the plan with the models alone (`walks`: every model answers and a second walk is the
     first to the bit; the grid against the blobs is said), plants pictures and reads them back exactly (`planted`), judges a second walk against the
-    first under a tight budget (`budget`; `MODELERR_BREAK=1` makes that walk's smoke three times as thick and it must fail), and judges every report
+    first under a tight budget (`budget`; `MODELERR_BREAK=1` makes that walk's smoke three times as thick and it must fail), walks once with a
+    stand-in picture that answers 45 frames late and knows only whether the walk's smoke is in the room (`waits`: no light point read with smoke out,
+    no line read from a cleared room, the models' answers those of a walk with no picture to the bit; `MODELERR_BREAK=move` = the walk does not wait
+    and it must fail), and judges every report
     under `tools/qa/fixtures/modelerr/` (and `--report f`): as recorded, and, where the stand here asks the very questions the report did (its `world`
     word), WITH THE MODELS AS THEY ARE NOW against the recorded picture. So a picture recorded once on a GPU holds the models to their budget from
-    then on with no GPU.
+    then on with no GPU. `--report f --keep g` writes the report again with where each sample stands added from this stand's walk of the same
+    questions: how a page's report from before the walk said becomes a fixture.
+  - MEASURED ON A GPU, 2026-11-04 (the maintainer's run: Apple Metal, the office at night, `?modelerr&seed=1&solo`, plan full, build aa4360cd; kept
+    as `tools/qa/fixtures/modelerr/office-full-metal.json`, a version 1 report with where its samples stand added by `--keep`; its world is the
+    SHIPPED stand's, where the models answer as the page's did — smoke to the bit, light within 0.004 — and the frozen stand asks other questions
+    and reads it as recorded). All 944 answered. UNDER A ROOF the models are close: `estimate` off by 0.076 of the meter at the middle, 0.145 at
+    the 95th, the other side of the lit bar on 4.5 %; `lit` (the light that comes round) 0.029, 0.136 and 2.3 %; smoke at 3, 8 and 15 s over 165
+    lines of the two roofed stations, `blobs` 0.009 of the light at the middle, 0.903 at the 95th, the other side of the hiding bar on 13.9 %;
+    `grid` 0.019, 0.526 and 10.3 % (their 25 s lines are not counted, so no picture of a room's smoke at 25 s has been measured and the two smoke
+    rows under a roof are provisional until a walk that waits is run; the mean light let through at the first station, picture / blobs / grid: 0.33 / 0.19 / 0.52 at 3 s, 0.16 / 0.10 / 0.19 at 8 s,
+    0.07 / 0.10 / 0.12 at 15 s). UNDER THE OPEN SKY they are far off. LIGHT: the estimate has no moon, so 88 points read nothing where the picture
+    reads 0.07 to 0.6 W/m² — off by 0.355 at the middle, the other side of the lit bar on 42.0 %; a man outside at night is lit to the picture and
+    dark to the model. SMOKE: the picture showed NO smoke at any of the four stations under the sky at 3 and 8 s (1.00 on every line, those through
+    the canister too) and a trace at 15 s (and at the last station at 25 s, 0.95 of the light on average), where the models keep a thick cloud
+    (`grid` off by 0.883 at the middle and the other side on 64.8 %, `blobs` 0.958 and 77.7 %, over 443 lines). WHY THE PICTURE
+    HAS NONE THERE IS NOT KNOWN (the outdoor wind, or the solver): nobody has looked at it, and the smoke under the sky has no budget row until
+    somebody has. THE SOFTWARE ADAPTER SAYS THE SAME OF THE SKY (the page check's two stations at Very low, default settings, a walk that waits, same
+    day: at the station under the sky 1.00 on all 32 lines at 3 and 6 s, and 21 light points off by 0.431 at the middle), so it is the picture and
+    not the maintainer's machine or settings; under its one roofed station the smoke reads further from the models than on Metal (`grid` 0.098 at
+    the middle and 20 % over 30 lines, past the rows below: another adapter at Very low, as its kept report). `BUDGET`'s rows by part are this run
+    with room over them; under the sky the rows of `estimate` and `lit` are wide because neither has the moon, and `moonlit` (the bullet above) is
+    the row that has. The page does not move onto these senses until the smoke under the sky is settled and a second run says so.
   - Measured 2026-11-03 ON THE SOFTWARE ADAPTER ONLY (a headless browser on a cloud box; never seen on a GPU): the office, plan `tiny` (one station),
     Very low, seed 1, kept as `tools/qa/fixtures/modelerr/office-tiny-software.json`. The picture answered all 24 light points and all 32 sight lines
     (26 with smoke on them). `estimate`: off by 0.055 of the meter at the middle, 0.105 at the 95th, 0.559 at worst, 1.23 stops at the 95th, leaning
     0.075 darker than the picture, the other side of the lit bar on 4.2 %. `blobs`: off by 0.181 of the light let through at the middle, 0.988 at the
     95th, leaning 0.331 thicker, the other side of the hiding bar on 37.5 %. `grid`: 0.038 at the middle, 0.947 at the 95th, leaning 0.206 thicker,
     25.0 %. So in that one room the grid is much nearer the picture than the blobs on most lines, and both are far off on the worst ones (a line
-    through the edge of the cloud, where the solver's smoke has climbed and spread and the model's has not). Headless, the full plan on both stands,
-    the grid against the blobs over 768 lines: 0.038 apart at the middle, 0.681 at the 95th, deciding differently on 13.0 %. `BUDGET` IS PROVISIONAL:
-    its rows are that one report with room to spare, so a model that gets worse is red today; it is to be set again from the first report a GPU makes
-    (the plain page with `?modelerr&seed=1`, about three minutes, hands off; the file it saves goes under the fixtures folder). Nobody has run it on a
-    GPU.
+    through the edge of the cloud, where the solver's smoke has climbed and spread and the model's has not). (Its one station is the last, so its
+    last age was read with the smoke still there: every line counts. Against the GPU's two rooms it is the thicker disagreement — 25.0 % against
+    10.3 % for the grid — on another adapter, at Very low, at 3 and 6 s: nobody has said why.) Headless, the full plan on both stands,
+    the grid against the blobs over 768 lines: 0.038 apart at the middle, 0.681 at the 95th, deciding differently on 13.0 %. The plain rows of
+    `BUDGET` are that one report with room to spare, and judge a report that does not say where its samples stand.
 - **Gameplay and dressing** (the maintainer, 2026-11-02: "let's make sure we're very explicit about what's gameplay affecting (and also run on the server) and
   what's just client side only dressing (debris, smoke details) and uses relaxed simd and/or gpu"). THE RULE: a step of the tick is DRESSING only if the game
   is the same game to the bit without it. Everything else is GAMEPLAY: it runs on the server and on every client, in one arithmetic. Dressing only makes the

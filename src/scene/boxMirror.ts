@@ -23,7 +23,7 @@ import { HostOwned, PUT_BACKS } from '../math/side';
 import { mathsEpoch } from '../math/exact';
 import { sim, f64, u32, i32, RUST, type SimExports } from '../sim/sim';
 import { cutConfig, MAX_CUT_PLANES } from './cut';
-import type { Box } from './boxes';
+import { shapeCut, type Box } from './boxes';
 
 // rust/sim/src/world.rs: a row's doubles, the kinds, the tables by number
 const REC = 16, R_COS = 6, R_SIN = 7, R_YAW = 8, R_ROT = 9, R_CUT = 13, R_CUTN = 14, R_KIND = 15, K_ROT = 1, K_ROUND = 2, K_CUT = 4, K_WALK = 8, F_GLASS = 1 << 17;
@@ -65,7 +65,7 @@ export const SENSES = { sight: 1, light: 2, smoke: 4, sound: 8, paths: 16 } as c
 export const FACE = { LAMP: 15, BLOB: 6, GRAZE_A: 1, GRAZE_B: 2, OVER: 4, FAR: 8, WALLED: 16, SEALED: 0, ROUTED: 1, ROUTED_DOOR: 3, Q_LENS: 1, Q_UNSEEN: 2, Q_SMOKED: 4, A_VISIBLE: 1, A_IN_CONE: 2 } as const;
 /** …and which of them are on now */
 export function senseRows(): number { return (RUST.sight ? SENSES.sight : 0) | (RUST.light ? SENSES.light : 0) | (RUST.smoke ? SENSES.smoke : 0) | (RUST.sound ? SENSES.sound : 0) | (RUST.paths ? SENSES.paths : 0); }
-const kindOf = (b: Box, cutOn: boolean): number => (b.rot ? K_ROT : 0) | (b.round === true ? K_ROUND : 0) | (b.cut !== undefined && cutOn && b.cut.length > 0 ? K_CUT : 0);
+const kindOf = (b: Box, cutOn: boolean): number => (b.rot ? K_ROT : 0) | (b.round === true ? K_ROUND : 0) | (b.cut !== undefined && (cutOn || shapeCut(b)) && b.cut.length > 0 ? K_CUT : 0);   // (boxes.ts cutMet: a shape's record whatever the cut-pieces switch says; a piece of trim's only with that switch, as the picture)
 /** a walker's rule for a pane (collision.ts glassWalkable), or none */
 type Walk = ((bi: number) => boolean) | null;
 /** …a static's kind: with the pane rule's answer for it as it stands (the leaves are nobody's panes) */

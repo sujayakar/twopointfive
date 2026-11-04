@@ -139,7 +139,8 @@ like that."
   (`src/scene/gwotKit.ts`): FINISHES laid as the place is used (`ground`: dust, dirt, gravel, a slab), so a road, a
   court and a lot meet in lines the eye can follow; WEAR where feet and wheels go (`ruts`, a path trodden between the
   doors, the floor darker either side of a door as the look's skin lays it); STAINS where the use leaves them (`patch`:
-  damp at a wall's foot or a tap, oil under an engine, ash round a fire); and things LOW enough to walk over, which take
+  damp at a wall's foot or a tap, oil under an engine; `stain`: the ground's own paint darker, under ruts; a `hearth`
+  lays its own ash); and things LOW enough to walk over, which take
   light and throw a shadow (`rubble`, a kerb, a step). Put them where the player walks and the camera rests (the start,
   the mission's line, every court), not evenly. `STYLE.md` holds the rules: a patch is darker than its ground, never
   paler and never under a third of it; earth stays darker than the walls on it; a floor carries colour only as marks; a
