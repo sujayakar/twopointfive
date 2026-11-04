@@ -61,8 +61,13 @@ check(pm.length === 1 && kb < 40 && kb < realKb / 3, `and is a small text: ${kb.
   const body = (t: string, fn: string) => new RegExp(`fn ${fn}\\(\\) -> u32 \\{([^}]*)\\}`).exec(t)?.[1]?.trim() ?? null;
   const num = (t: string, c: string) => new RegExp(`const ${c}: f32 = ([0-9.]+);`).exec(t)?.[1] ?? null;
   check(R.every(t => num(t, 'WX_STEP') !== null && num(t, 'WX_STEP') === num(P, 'PLAIN_WX_STEP')) && R.every(t => body(t, 'wxMaxSteps') !== null && body(t, 'wxMaxSteps') === body(P, 'plainWxSteps')), `the weather's air is stepped as the real march steps it (WX_STEP ${num(P, 'PLAIN_WX_STEP')}, the tier's step budget)`);
-  const SAME = ['clamp(u32(span / (vox * 1.5)) + 1u, 4u, 112u)', 'let sigT = dens * 6.0;', 'if (T < 0.01) { break; }', 'let top = CEIL_Y + WX_TOP;'];
+  const SAME = ['clamp(u32(span / (vox * 1.5)) + 1u, 4u, 112u)', 'let sigT = dens * 6.0;', 'let top = CEIL_Y + WX_TOP;'];
   const lost = SAME.filter(s => !P.includes(s) || R.some(t => !t.includes(s)));
+  // THE CUT. The real march stops through the one rule that also marches on to a lamp's glow behind the smoke (vol_common.wgsl smokeMarchDone: with the
+  // glow's row at 0 it is `T < cut`); the plain march lights smoke by no lamp, so it has no glow to march on to and its cut is that rule's first half.
+  const C = src('vol_common.wgsl'), CUT = 'if (T < 0.01) { break; }';
+  if (!P.includes(CUT) || R.some(t => !t.includes('if (smokeMarchDone(T, 0.01)) { break; }')) || !C.includes('fn smokeMarchDone(T: f32, cut: f32) -> bool { return T < cut && smokeAheadW() * smokeAheadT(T) < cut; }')
+    || !C.includes('fn smokeAheadT(t: f32) -> f32 { if (smokeAheadW() <= 0.0) { return 0.0; }') || /smokeAhead|smokeGlow/.test(P)) lost.push(CUT);
   check(lost.length === 0 && R.every(t => t.includes('let sigS = sigT * 0.92;')) && P.includes('* 0.92 *'), `the smoke is marched over the same stretch, at the same steps, with the same extinction, albedo and cut as the real K = 0 march (${lost.join(' · ') || 'every shared statement found in all three texts'})`);
   check(PLAIN_AIR.labels.join() === ['vol', ...TWINS].join(), `the labels a lost device is read against are the pass's four (${PLAIN_AIR.labels.join(', ')})`); }
 console.log(red ? `${red} FAILED` : 'all passed');

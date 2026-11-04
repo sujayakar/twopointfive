@@ -2,6 +2,7 @@
 // The systems live beside it as plain-function modules taking the Game first: player.ts (controller, takedown / drag, throws, the cursor's
 // interactables), guards.ts (perception, state machine, barks, escalation), combat.ts (shots, kills, hand props, live throwables), lighting.ts
 // (fixtures, OCP, blackout), mission.ts (the mission thread), squad.ts (scripted guards).
+import { lookConfig } from '../render/frame';
 import { wallClock, HostOwned } from '../math/side';
 import { Vec3, v3, clamp, damp, lerp, DEG, smoothstep } from '../math/vec';
 import type { HostApi } from '../host/api';
@@ -26,6 +27,7 @@ import { statureTick, statureOf, drawnJoints, drawnCapsules, drawnFit, drawnBoxe
 import { Decals } from '../render/decals';
 import { buildWearMap } from '../render/wear';
 import { buildSnowField, snowCfgRows, type SnowField } from '../render/snowField';
+import { groundRayConfig, packGroundField } from '../scene/groundField';
 import { makeSnowTracks, updateSnowTracks, clearSnowTracks, formSnowTracks, TRACK_RES, type SnowTracks } from './snowTracks';
 import { updateSnowMarks, clearSnowMarks } from './snowMarks';
 import { snowBogAt, snowBogMay } from './snowBog';
@@ -771,6 +773,10 @@ export class Guard {
 /** the rolling chair's voice (audio.ts `follow`, rollTick below): its level at full speed, the speed (m/s) that counts as full — slower, it is quieter and lower —,
  *  the speed under which a chair is not rolling for anybody's ears, and the seconds without movement after which its voice is let go */
 const ROLL_VOICE = { gain: 0.5, fullV: 2.5, minV: 0.12, grace: 0.5 };
+/** STIRRED SMOKE CURLS (smokeWake below; the look page's Stirred smoke row): a moving man as the smoke solver is told of him. body = his capsule's radius (m), from
+ *  `foot` above the floor to `above` over his hips; a kick behind him at every step of his walk cycle, `back` behind and `low` under his hips, of
+ *  radius kickR, at `kick` × his speed and never over `most` m/s, left out while the sine that picks its side is under `gap`. */
+const SMOKE_STIR = { body: 0.24, foot: 0.12, above: 0.5, back: 0.3, low: 0.2, kickR: 0.17, kick: 0.9, most: 2.2, gap: 0.35 };
 /** A castor chair that has started to roll (rollTick): where it was last step, how hard it goes (0‥1), when it last really moved, and its voice's serial (0 = none). */
 interface Roll { p: Prop; x: number; z: number; k: number; moveT: number; voice: number }
 export class Game {
@@ -791,14 +797,15 @@ export class Game {
     if (on) attachSnowBlast(this);   // (a blast over lying snow marks it: snowBlast.ts hears the destruction engine's feed — once an engine, asked each frame)
     const key = (on ? 1 : 0) | (tracks ? 2 : 0); if (key === this.snowLookWas) return;
     this.snowLookWas = key;
-    this.snowField = on ? (this.snowField ?? buildSnowField(this.level, { wind: WEATHER_PRESETS.snow.wind })) : null;
+    this.snowField = on ? (this.snowField ?? buildSnowField(this.level, { wind: WEATHER_PRESETS.snow.wind, roll: groundRayConfig.on ? groundRayConfig.roll : 0 })) : null;
     this.snowTracks = tracks && this.snowField ? (this.snowTracks ?? makeSnowTracks()) : null;
     this.engine.gbuffer?.setSnowField?.(this.snowField, snowCfgRows(this.snowField, this.snowTracks ? TRACK_RES : 0));
+    if (groundRayConfig.on) this.engine.world.setGroundField(packGroundField(this.snowField));   // (ground that rays can see, a trial: scene/groundField.ts — the look's page only)
     this.engine.gbuffer?.setSnowTracks?.(this.snowTracks);
   }
   /** once a frame, after everybody is posed: this frame's footfalls pressed into the snow, and what changed handed to the g-buffer */
   private stepSnowTracks(dt: number) {
-    const dug = this.snowField ? stepSnowDigs(this, dt) : null; if (dug) this.engine.gbuffer?.setSnowFieldRect?.(this.snowField!, dug);   // (a blast dug a hill out: snowBlast.ts)
+    const dug = this.snowField ? stepSnowDigs(this, dt) : null; if (dug) { this.engine.gbuffer?.setSnowFieldRect?.(this.snowField!, dug); if (groundRayConfig.on) this.engine.world.setGroundField(packGroundField(this.snowField)); }   // (a blast dug a hill out: snowBlast.ts)
     const T = this.snowTracks; if (!T || !this.snowField) return;
     updateSnowTracks(this, T, this.snowField, dt);
     if (SNOW_LOOK.marks) updateSnowMarks(this, T, this.snowField, dt);   // … and every thing that moved over the snow marks it (snowMarks.ts)
@@ -1943,9 +1950,24 @@ export class Game {
   /** men moving through smoke push it */
   private smokeWake(all: Character[]) {
     // characters wading through smoke push it around
+    const stir = lookConfig.on ? Math.max(0, lookConfig.stir) : 0;   // (THE LOOK PROTOTYPE's Stirred smoke row; 0 = the two soft shoves below, as the build has them)
+    this.smoke.setStir?.(stir);
     for (const c of all) {
       const sp = Math.hypot(c.vel[0], c.vel[2]); if (sp < 0.25 || !c.bones.hips) continue;
       const dirv: Vec3 = [c.vel[0] / sp, 0.05, c.vel[2] / sp];
+      if (stir > 0) {
+        // STIRRED SMOKE CURLS (the maintainer, 10-31, of smoke in the yard: "more turbulence or vorticity near the edges, especially when it's driven by player
+        // movement", with the smooth flow the wind makes along a wall kept). HIS BODY is a standing capsule from his shins to his shoulders: the air inside it
+        // goes with him and the solver sends what he displaces round his sides (smoke.wgsl emBody). HIS STRIDE throws the air just behind him out to one side
+        // and then the other, a side a step: the shedding a walking man's legs and arms do, which a lattice this coarse would smooth into two still eddies.
+        // The side is his own walk cycle's (one cycle is two steps), so it changes when his foot does, whichever way he turns.
+        const S = SMOKE_STIR, h = c.bones.hips, hx = dirv[0], hz = dirv[2], top = h[1] + S.above, mid = (top + S.foot) / 2;
+        this.smoke.push({ pos: [h[0], mid, h[2]], dir: [hx, 0, hz], speed: sp, radius: S.body, body: Math.max(0, (top - S.foot) / 2 - S.body) });
+        const side = Math.sin(2 * Math.PI * c.anim.phase);
+        if (Math.abs(side) > S.gap) { const k = Math.sign(side);
+          this.smoke.push({ pos: [h[0] - hx * S.back, h[1] - S.low, h[2] - hz * S.back], dir: [-hz * k, 0, hx * k], speed: Math.min(S.most, sp * S.kick * Math.min(2, stir)), radius: S.kickR }); }
+        continue;
+      }
       this.smoke.push({ pos: c.bones.hips, dir: dirv, speed: sp * 1.15, radius: 0.3 });
       if (c.bones.chest) this.smoke.push({ pos: c.bones.chest, dir: dirv, speed: sp * 1.1, radius: 0.26 });
     }
