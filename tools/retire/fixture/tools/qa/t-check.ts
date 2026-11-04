@@ -11,5 +11,7 @@ export async function check(): Promise<void> {
   line(offArm() === 2, 'the rule off: the old answer');
   for (const key of ['on', 'extra'] as const) K[key] = keep[key];
   K.stay = keep.stay;
+  line(K.stay === keep.stay, 'a row that stays is as the check found it');
 }
 function offArm(): number { return K.on ? 1 : 2; }
+if ((import.meta as { main?: boolean }).main) await check();

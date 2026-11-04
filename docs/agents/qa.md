@@ -419,7 +419,11 @@ but synthetic writes still work.
   declaration out with the statements that call it; `--drop-at file.ts:line[:words]` one statement of a check. THE PROOF OF A RUN is not the tool's: both
   typechecks; the page's stand run for run the same before and after (`TPS_PROFILE=shipped PT_DIGEST=1 bun run tools/qa/playthrough.ts --seeds 1-2 --json f`:
   42 digests); the frozen stand after = the frozen stand before with the retired rows' words raised; and the family's checks run before and after on the
-  page's stand, line by line, where a line that went from PASS to FAIL is an arm of the retired path and is taken out by name. THE TOOL'S OWN CHECK:
+  page's stand, line by line, where a line that went from PASS to FAIL is an arm of the retired path and is taken out by the place it was printed from:
+  `bun run tools/retire/lines.ts run <dir> [--tree <the tree before>] <the check files the fold's report names>` before and after, `lines.ts diff <before>
+  <after> --drop places.json`, `retire.ts --drop-lines places.json --write`, and `run` once more. WHAT GOES THAT WAY, by kind: the stand's and the journal's
+  lines, the off arm, the on arm measured against the off arm ("a quarter of those metres"), and the lines of a check that held a newer rule off for its
+  length; in the first fifteen checks of the squad's family that was 65 of 147 lines. A check left saying nothing goes whole (`--drop`). THE TOOL'S OWN CHECK:
   `bun run tools/retire/retire-check.ts` runs it on a small tree of its own (`tools/retire/fixture`) and holds that each of 46 cases there answers the same,
   draws the same dice and makes the same calls after the fold as before it, that the folded tree compiles, and that what names a retired row is gone while
   what only looks like it is not; `RETIRE_BREAK=1` folds one row at the wrong value and must fail. A shape the tool folds wrongly goes into the fixture as a

@@ -7,6 +7,7 @@
 //     only looks like one is not (the same word in another list),
 //   - each row that is not a switch is refused, for its own reason, and the run says so by its exit code,
 //   - `--drop` takes a declaration out with the statements that call it, in whatever file they are, and `--drop-at` one line of a check,
+//   - tools/retire/lines.ts finds the line of a check that broke with the fold by where it was printed, and the tool takes it out by that place,
 //   - a value that is not true, false, a number or a quoted word stops the tool.
 //   bun run tools/retire/retire-check.ts            (TypeScript from vendor/typescript, or TS_LIB=<path to typescript.js>)
 //   RETIRE_BREAK=1 bun run tools/retire/retire-check.ts    the red path: one row is folded at the WRONG value, and the cases must say so (the check must fail)
@@ -86,6 +87,15 @@ try {
   const rb = retire(e, ['--drop', 'src/game/zcheck.ts:zCheck', '--write']); const caller = readFileSync(join(e, 'src/game/caller.ts'), 'utf8'), eb = errors(e);
   line(rb.code === 0 && eb.length === 0 && !/zCheck/.test(caller) && !/function zCheck/.test(readFileSync(join(e, 'src/game/zcheck.ts'), 'utf8')) && /default: return 3;/.test(caller) && /LIST = \[zKeep\]/.test(caller) && /case 1: return zKeep\(\)/.test(caller),
     '--drop takes a function out with the statements that call it in another file (at the same offsets, and under a `default:`), and out of a list', `exit ${rb.code} · ${eb.length} errors${eb.length ? ': ' + eb.slice(0, 3).join(' | ') : ''} · ${caller.split('\n').filter(l => /switch|run2|LIST/.test(l)).map(l => l.trim()).join(' · ').slice(0, 200)}`);
+
+  // ---- the check's lines, end to end (tools/retire/lines.ts): the fixture's own check run before the fold and after it, the line that broke found by where it
+  //      was printed, taken out by that place, and the check run once more
+  { const t = fresh(); made.push(t); const L = (args: string[]) => run(['bun', 'run', join(HERE, 'lines.ts'), ...args, '--tree', t]), was = join(t, 'lines-before'), now = join(t, 'lines-after'), then = join(t, 'lines-then'), drop = join(t, 'drop.json');
+    L(['run', was, 'tools/qa/t-check.ts']); const rr = join(t, 'rows.json'); writeFileSync(rr, JSON.stringify(ROWS.filter(x => !(x.row in REFUSED))));
+    retire(t, ['--rows', rr, '--write']); L(['run', now, 'tools/qa/t-check.ts']); const dd = L(['diff', was, now, '--drop', drop]); const places: string[] = existsSync(drop) ? JSON.parse(readFileSync(drop, 'utf8')) : [];
+    const rdrop = retire(t, ['--drop-lines', drop, '--write']); L(['run', then, 'tools/qa/t-check.ts']); const d2 = L(['diff', was, then]);
+    line(dd.code === 1 && places.length === 1 && /^tools\/qa\/t-check\.ts:\d+:\d+$/.test(places[0] ?? '') && rdrop.code === 0 && d2.code === 0 && !/the rule off/.test(readFileSync(join(t, 'tools/qa/t-check.ts'), 'utf8')),
+      'a check\'s line that asked for the retired path: found by running the check before and after (it went PASS to FAIL), placed by where it was printed, taken out, and the check is green again', `${(dd.out.split('\n')[0] ?? '').slice(0, 110)} · placed ${places.join(' ')} · the drop: exit ${rdrop.code} · after it: exit ${d2.code}, ${(d2.out.split('\n')[0] ?? '').slice(0, 60)}`); }
 
   // ---- --drop-at: one line of a check out, by the place a stack frame gives for the call that printed it
   const f = fresh(); made.push(f); const rd = retire(f, ['--drop-at', 'tools/qa/t-check.ts:11:3', '--write']); const tc = readFileSync(join(f, 'tools/qa/t-check.ts'), 'utf8');
