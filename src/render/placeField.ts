@@ -24,6 +24,10 @@ export const PLACE_WORDS = 4;
 export const PLACE_NEAR = PLACE_W * PLACE_H + PLACE_WORDS;
 /** the buffer's size in bytes: the cells, the words after them and the second block, rounded up to whole vec4f (place_common.wgsl PlaceBuf) */
 export const PLACE_BYTES = Math.ceil((PLACE_NEAR + PLACE_W * PLACE_H) / 4) * 16;
+const NONE = new WeakMap<GPUDevice, GPUBuffer>();
+/** the zeros that say "no field" to a program that binds one (never written), one a device: what the composite, the smoke march and the particles' splat
+ *  are handed off the look page and until the field is live */
+export function placeNone(device: GPUDevice): GPUBuffer { let b = NONE.get(device); if (!b) { b = device.createBuffer({ label: 'placeNone', size: PLACE_BYTES, usage: GPUBufferUsage.UNIFORM }); NONE.set(device, b); } return b; }
 const U_BYTES = 64;
 export class PlaceField {
   /** what the composite binds as a uniform: PLACE_W × PLACE_H levels (log2; −1000 = a wall's cell or a doorway's: no level), then PLACE_WORDS words: the eye's level, 1 once the field is live,
