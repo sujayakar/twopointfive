@@ -985,3 +985,14 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   is one paint over 231 m²). `level-lint` passes; `round-check` knows its ten round things. Nothing here is a mission: no
   scenarios but door names, the stealth mission's three places only because the format wants them. Drawn on the software adapter only; never seen on
   a GPU, never played.
+  SECOND PASS, the same day, after he looked ("directionally nice but still doesn't have enough "personality / cm^2""): what his pictures carry on
+  every patch beside the stuff. PAINT A PAINTER LEFT, as markings on the box that carries it (`scene/markings.ts`: a stencil face `STENCIL` with
+  `GEN.text`, `GEN.stripes`, `GEN.frame`; recipes `stencilMarks`, `hazardMarks`, `outlineMarks`, `boltMarks`, `ratingPlateMarks` in
+  `markingDefaults.ts`, any level's to call): the hall's bays and the way out, a number on every pier and on every plant volume's top, warning
+  stripes on the piers' plinths, on the low volume's foot and on the deck before each outer door, a hatch's yellow outline, bolt heads on the steel
+  band (now five butted plates) and on the kick plate, a maker's plate. No digit over 5 and no compass word. SMALL FITTINGS: conduit with clips and
+  boxes, vents in the hall's wall, clamps and flanges on the pipes, a hose cabinet, door numbers on plates, a grated drain, an orange railing by
+  the pad, and by the stair a pallet of spare pavers, two tins, a bucket and a plank. 267 boxes, 47 markings (632 of the table's 6144 rows),
+  seventeen round things. A BAND OF COLOUR IS THE WALL'S OWN STUFF in another colour on a skin a finger proud (the hall's plinth in cast panel, a
+  metre of orange on the room block's two outer faces in gloss block), so the joints run on under the colour's hard edge, as on every second wall of
+  his pictures. And use shows on its stuffs (`worn`, `docs/agents/render.md`). Second pass drawn on the software adapter only; never seen on a GPU.
