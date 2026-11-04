@@ -79,6 +79,7 @@ export const MODELS: { name: string; kind: 'light' | 'smoke'; light?: LightOf; s
   { name: 'moonlit', kind: 'light', light: (r, p, skip) => r.lit && r.lit.grid.stands ? lightEstimateAt(r.g, p, skip, false, r.lit, true) : null },   // (the whole light model: the light that comes round and the moon — sense.ts SENSE.bounce and SENSE.moon)
   { name: 'blobs', kind: 'smoke', smoke: (r, a, b) => r.blobs.trans(a, b, (p, q) => r.g.col.segmentBlocked(p, q)) },
   { name: 'grid', kind: 'smoke', smoke: (r, a, b) => { const G = r.grid.grid; if (!G) return null; const t = G.along(a, b); return t === -1 ? null : t; } },
+  { name: 'adrift', kind: 'smoke', smoke: (r, a, b) => { const G = r.adrift.grid ?? r.grid.grid; if (!G) return null; const t = G.along(a, b); return t === -1 ? null : t; } },   // (the grid with the weather's wind in it — sense.ts SENSE.drift: the same smoke as `grid` wherever no wind blows, and where none blows on the level at all it is `grid`'s own: a walk then holds one block of the module's four the fewer)
 ];
 /** THE BUDGET a model: the most its error may be at the middle and at the 95th percentile (light: on the meter's 0‥1 scale; smoke: as a share of light)
  *  and the largest share of samples on which it may decide the other way from the picture. A model with no row is reported and not judged. The numbers
@@ -88,8 +89,9 @@ export interface Budget { p50: number; p95: number; flips: number }
 /** A ROW IS A MODEL, OR A MODEL IN A PART (`estimate:roof`, `grid:sky` — `partsOf`): a report whose samples say where they stand is judged a part at a
  *  time by the rows of that part, and its whole is said and not judged; a report that does not say is judged whole by the plain rows.
  *  THE PARTS' ROWS ARE FROM THE FIRST RUN ON A GPU (tools/qa/fixtures/modelerr/office-full-metal.json: the office at night, Apple Metal, 2026-11-04), with
- *  room over them. Under the sky the rows of `estimate` and `lit` are wide because neither has the moon (`moonlit` has: sense.ts SENSE.moon), and the smoke has NO row: the picture showed no smoke
- *  there at all and nobody knows yet which side is right. THE SMOKE ROWS UNDER A ROOF ARE PROVISIONAL: that run's 25 s lines are not counted (it is a
+ *  room over them. Under the sky the rows of `estimate` and `lit` are wide because neither has the moon (`moonlit` has: sense.ts SENSE.moon), and of the smoke only `adrift` has a row: the picture
+ *  showed no smoke there at eye height, the grid in still air stands tall over the canister, and the maintainer's call is that the picture stays (the
+ *  row's own note says how little it bounds). THE SMOKE ROWS UNDER A ROOF ARE PROVISIONAL: that run's 25 s lines are not counted (it is a
  *  version 1 report), so no picture of a room's smoke at 25 s has been measured, and a walk that waits counts that age against these rows: they are
  *  to be set again from the first report such a walk makes on a GPU. The plain rows are the software adapter's (one station, Very low), for its
  *  report alone, which does not say where its samples stand. */
@@ -103,6 +105,8 @@ export const BUDGET: Record<string, Budget> = {
   'lit:roof': { p50: 0.05, p95: 0.2, flips: 0.06 },         // (0.029, 0.136 and 2.3 %)
   'blobs:roof': { p50: 0.05, p95: 1, flips: 0.17 },         // (0.009, 0.903 and 13.9 %: ages 3, 8 and 15 s)
   'grid:roof': { p50: 0.05, p95: 0.75, flips: 0.15 },       // (0.019, 0.526 and 10.3 %)
+  'adrift:roof': { p50: 0.05, p95: 0.75, flips: 0.15 },     // (the grid's own row: under a roof no wind blows and the two are one smoke, so it goes red the day the drift leaks indoors)
+  'adrift:sky': { p50: 0.05, p95: 0.4, flips: 0.06 },       // (0.000, 0.250 and 2.7 % on 443 lines, where the grid in still air has 0.883, 1.000 and 64.8 %. WHAT IT BOUNDS IS LITTLE: every line of the plan is at eye height, and out of doors the picture's smoke stays under it, so the row says only that the grid's does too. Smoke gone altogether, or blown the wrong way, would pass it: that is tools/qa/smokedrift-check.ts's to catch, until the plan has lines at more than one height)
   'estimate:sky': { p50: 0.4, p95: 0.65, flips: 0.48 },     // (0.355, 0.594 and 42.0 %: no moon in the estimate)
   'lit:sky': { p50: 0.4, p95: 0.65, flips: 0.48 },          // (the same: the light that comes round does not reach under the sky either)
   'moonlit:roof': { p50: 0.05, p95: 0.17, flips: 0.04 },    // (THE WHOLE LIGHT MODEL, against that run's picture with the models as they are: 0.027, 0.113 and 1.1 %)
@@ -241,7 +245,7 @@ interface Ask { key: string; sample: Sample; line: boolean; frames: number; aske
 /** ONE WALK OF A PLAN. `frame()` once after each update of the game; `done` when the report is whole. */
 export class ModelErr {
   /** the smoke as each model has it, fed the plan's own canisters (the game's own stays as it is, whatever SENSE says) */
-  blobs = new CpuSmoke(); grid = new CpuSmoke();
+  blobs = new CpuSmoke(); grid = new CpuSmoke(); adrift = new CpuSmoke();
   /** the light model's own field (sense.ts SENSE.bounce), stepped from the first tick of the walk and never fed smoke: the light is read before the canister */
   lit: LightField | null = null;
   report: Report; done = false;
@@ -257,7 +261,7 @@ export class ModelErr {
   /** under the open sky there (the weather's own footprints; a game with no weather: under a roof, as far as anyone can say) */
   private open(x: number, z: number): 0 | 1 { const w = this.g.weather; return w && !w.underRoof(x, z) ? 1 : 0; }
   constructor(readonly g: Game, readonly plan: Plan, planName: string, scene: string, readonly picture: boolean) {
-    this.grid.grid = SmokeGrid.make(); this.was = { unseen: g.playerInvisible, god: g.godMode, ai: g.aiEnabled };
+    this.grid.grid = SmokeGrid.make(); if (g.wind.stormDrift()) this.adrift.grid = SmokeGrid.make(); this.was = { unseen: g.playerInvisible, god: g.godMode, ai: g.aiEnabled };
     // (the light model's field as it stands once it has swept the plan and come to rest: two sweeps' worth of steps at once, so that the walk reads its
     // light when it always did; a game's own field has been stepping since the level loaded)
     { const own = new CpuSmoke(); own.grid = SmokeGrid.make(); if (own.grid) this.lit = own as LightField; }
@@ -267,13 +271,13 @@ export class ModelErr {
     if (!this.stations.length) { this.done = true; this.release(); this.report.world = worldOf(this.report, g.col.boxes.length); } else this.next();
   }
   get station(): number { return this.at; }
-  /** the walk is over: its two grids give back the blocks they stood in (sense.ts SmokeGrid.free: each held one of the module's slots) */
-  private release(): void { this.grid.grid?.free(); this.grid.grid = null; if (this.lit) { this.lit.grid.free(); this.lit = null; } if (!SENSE.moon) moonForget(this.g); }   // (…and what the row `moonlit` had the game keep of its night, where the game itself reads no moon: the game is left as it was found)
+  /** the walk is over: its grids give back the blocks they stood in (sense.ts SmokeGrid.free: each held one of the module's slots) */
+  private release(): void { this.grid.grid?.free(); this.grid.grid = null; this.adrift.grid?.free(); this.adrift.grid = null; if (this.lit) { this.lit.grid.free(); this.lit = null; } if (!SENSE.moon) moonForget(this.g); }   // (…and what the row `moonlit` had the game keep of its night, where the game itself reads no moon: the game is left as it was found)
   private hold(): void { const g = this.g; g.playerInvisible = true; g.godMode = true; g.aiEnabled = false; }
   private next(): void {
     this.at++; if (this.at >= this.stations.length) { this.phase = 'end'; return; }
     const g = this.g, s = this.stations[this.at];
-    g.smoke.clearAll?.(); this.blobs.clear(); this.grid.clear();
+    g.smoke.clearAll?.(); this.blobs.clear(); this.grid.clear(); this.adrift.clear();
     g.teleportPlayer([s[0], 0, s[2]]);
     this.pts = pointsOf(g, s, this.plan.light); this.lines = linesOf(g, s, this.pts, this.plan.lines);
     this.phase = 'settle'; this.left = Math.round(this.plan.settle / TICK);
@@ -293,11 +297,11 @@ export class ModelErr {
       if (this.left-- > 0) return;
       const s = this.stations[this.at], P = smokeParams(g) ?? { canisterDuration: 32, canisterDensity: 95, canisterRadius: 0.2, canisterTemp: 1.6, canisterSpeed: 1.9 };
       const e: SmokeEmitter = { pos: [s[0], 0.1, s[2]], dir: [0, 1, 0], speed: P.canisterSpeed, radius: P.canisterRadius, density: P.canisterDensity, temperature: P.canisterTemp, ttl: P.canisterDuration, age: 0, kind: 'canister' };
-      g.smoke.emit(e); this.blobs.emit(e); this.grid.emit(e);
+      g.smoke.emit(e); this.blobs.emit(e); this.grid.emit(e); this.adrift.emit(e);
       this.phase = 'smoke'; this.age = 0; this.ageAt = 0; return;
     }
     if (this.phase !== 'smoke') return;
-    this.blobs.step(TICK); this.grid.step(TICK); this.grid.grid?.step(g.col, TICK); this.age++;
+    this.blobs.step(TICK); this.grid.step(TICK); this.grid.grid?.step(g.col, TICK); this.adrift.step(TICK); this.adrift.grid?.step(g.col, TICK, null, () => g.wind.stormDrift()); this.age++;
     const t = this.plan.ages[this.ageAt];
     if (this.age < Math.round(t / TICK)) return;
     const st = this.stations[this.at], can = this.open(st[0], st[2]);

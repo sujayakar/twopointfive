@@ -69,6 +69,7 @@ export async function snowGlowCheck(o: { verbose?: boolean } = {}): Promise<bool
   const text: Record<string, string> = {};
   for (const f of files) {
     let t = readFileSync(resolve(SH, f), 'utf8');
+    t = t.split('\n').map(l => /\/\/.*THE LOOK PROTOTYPE/.test(l) && /\bLOOK\b/.test(l.replace(/\/\/.*$/, '')) ? '' : l).join('\n');   // (the look prototype's own lines, each tagged in its comment and behind LOOK in its code: live only on its page — shaders/look.wgsl. It reads and writes the mark's fourth level, alpha 0, and is not this check's)
     if (BREAK) {
       t = t.replace(/if \(SNOW_GLOW(?: \|\| SNOW_SPARKLE)?\) \{/g, '{').replace(/select\(1\.0, ([^,()]+(?:\([^()]*\))?[^,()]*), SNOW_GLOW(?: \|\| SNOW_SPARKLE)?\)/g, '$1');
       if (f === 'common.wgsl') t = t.replace('  r.E = li.color * (att * c); r.ok = true;\n', '  r.E = li.color * (att * c) + snowGlow(vec2i(0), P, N, 1.0, vec3f(0.0), vec3f(0.0)); r.ok = true;\n');
@@ -110,7 +111,7 @@ export async function snowGlowCheck(o: { verbose?: boolean } = {}): Promise<bool
             if (!whole && !mine) badR.push(`${f}:${i + 1}${sz}`);
           } }); }
       const clear = (readFileSync(resolve(ROOT, 'src/render/gbuffer.ts'), 'utf8').match(/normal\w*View, loadOp: 'clear', storeOp: 'store', clearValue: \{ r: 0\.5, g: 1, b: 0\.5, a: 0 \}/g) ?? []).length;
-      const amt = /fn snowGlowAmt\(a: f32\) -> f32 \{ return clamp\(\(1\.0 - a\) \* 1\.5, 0\.0, 1\.0\); \}/.test(text['composite.wgsl']);
+      const amt = /fn snowGlowAmt\(a: f32\) -> f32 \{\s*return clamp\(\(1\.0 - a\) \* 1\.5, 0\.0, 1\.0\); \}/.test(text['composite.wgsl']);
       const men = /if \(sa > 0\.0 && \(\(id >> 28u\) & 3u\) == 0u\) \{/.test(text['composite.wgsl']);
       verdict(writers.length >= 4 && badW.length === 0 && readers.length === 2 && badR.length === 0 && amt && men && clear >= 1,
         'mark — a snow pixel is told by the normal target\'s alpha, written under 1 only behind the switch and read by the term alone', `${writers.length} writers of the target in the shaders (${writers.join(', ')})${badW.length ? ` · NOT 1 and not behind SNOW_GLOW: ${badW.join(', ')}` : ': fsBox and fsSnow under 1 only behind SNOW_GLOW || SNOW_SPARKLE, the rest store 1'} · reads of more than its xyz: ${readers.join(', ') || 'none'}${badR.length ? ` · NOT the term's: ${badR.join(', ')}` : ' (the term\'s own, and gdown.wgsl\'s whole-texel copy)'} · the reader's decode: ${amt} · never on a man's pixel or a cap's: ${men} · nothing drawn = alpha 0 with depth 1, never shaded (${clear} clear values)`); }
@@ -147,7 +148,7 @@ export async function snowGlowCheck(o: { verbose?: boolean } = {}): Promise<bool
       const rd = (re: RegExp, raw = false) => srcTs.filter(p => { const t = readFileSync(p, 'utf8'); return re.test(raw ? t : t.split('\n').map(code).join('\n')); }).map(p => p.slice(ROOT.length + 5)).sort();
       const swReaders = rd(/SNOW_LOOK\.glow\b/), cfgReaders = rd(/snowLookConfig\.glow\b/, true), wordTs = rd(/\bSNOW_GLOW\b/, true);   // (the last two as written, comments and all: the prelude's line is a template with `//` inside it)
       const game = swReaders.filter(p => p.startsWith('game/') && p !== 'game/journal.ts');
-      const want = ['composite.wgsl', 'gbuffer.wgsl', 'snow.wgsl'];
+      const want = ['composite.wgsl', 'gbuffer.wgsl', 'gbuffer_cut.wgsl', 'snow.wgsl'];   // (gbuffer_cut.wgsl since the look prototype's snow on a cut box: it marks the pixel as gbuffer.wgsl does, under LOOK)
       verdict(named.join() === want.join() && inProbe.length === 0 && decl === 1 && built && dirty.length === 0 && game.length === 0 && cfgReaders.join() === ['main.ts', 'render/frame.ts'].join() && wordTs.join() === 'render/frame.ts',
         'meter — the meter\'s, the probes\' and the bounce\'s programs do not hold the term', `shaders that name the switch or the term: ${named.join(', ')} (want ${want.join(', ')}: the two g-buffer files only mark the pixel) · the probe's program is the prelude + lighting_common.wgsl + probe.wgsl and nothing of composite.wgsl: ${built}; in it the term is named ${inProbe.length} times and the switch ${decl} (its declaration) · evalLight, directIrradiance, hitRadiance, diceIrradiance ${dirty.length ? `NAME SNOW: ${dirty.join(', ')}` : 'do not name snow'} · SNOW_LOOK.glow is read in ${swReaders.join(', ')}${game.length ? ` — A GAME MODULE: ${game.join(', ')}` : ' (in src/game the journal\'s rule alone)'} · snowLookConfig.glow in ${cfgReaders.join(', ')}`); }
 

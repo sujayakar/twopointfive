@@ -3449,10 +3449,10 @@ export interface UnitOpts { team: Team; pos: Vec3; yaw?: number; weapon?: Weapon
   /** the pair a teammate is dealt into (UnitInfo.pair) */
   pair?: PairId;
   /** a caller that has decided to stand more men than cast shadows (the four-man squad, nightbreach.ts): the character count this spawn may reach, up to the
-   *  skinning's MAX_SKINNED — the men past the eighth DRAWN are skinned, lit and shot at like anybody but have no shadow / reflection / bounce proxies
-   *  (BoxWorld.addCharacterCapsules stops at eight; game.ts draws the living first once there are more). Absent = the eight, as ever. */
+   *  skinning's MAX_SKINNED — every man drawn has his shadow / reflection / bounce proxies (BoxWorld.MAX_CAST); the men past the eighth DRAWN have no mesh tree,
+   *  so to a ray they are their round cones (game.ts draws the living first once there are more). Absent = the eight, as ever. */
   budget?: number; }
-/** the character budget: BoxWorld uploads shadow capsules for at most 8 characters (scene/boxes.ts addCharacterCapsules), Sam included */
+/** the character budget a caller gets without asking for more, Sam included (the mesh trees' count; the shadow proxies hold every drawn man: scene/boxes.ts MAX_CAST) */
 const MAX_CHARACTERS = 8;
 /** … and the skinning holds this many (anim/characters.ts MAX_CHARS): the most a caller's own `budget` can ask for */
 export const MAX_SKINNED = 16;
