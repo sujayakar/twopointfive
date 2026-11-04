@@ -17,14 +17,14 @@
 // ONE switch, PICTURE.on: ON in the page (?nopicture = the build as it was), OFF here and on the frozen harness stand (TPS_PICTURE=1; a FROZEN_HOLDS row). The
 // memory alone moves nothing: each rule that asks it has its own key below (off = that rule as it was). No dice, no camera, no graphics setting, nothing off
 // the GPU; state per Game in a WeakMap with a reset and a snapshot / restore pair. Type-only game imports but for functions called inside functions.
-import { SideMap, SideSet } from '../math/side';
+import { isManId, viewOfBody, eachSeat } from './seats';
+import { SideMap, SideSet, GameSideMap } from '../math/side';
 import { Vec3, v3 } from '../math/vec';
 import type { Game, Guard } from './game';
 import { isHostile } from './teams';
 import { canSee, canSeeChar, sightGain, sightGainOn, pointInView, bodyPos, lightEstimateAt, teamThrough } from './guards';
 import { runnerFled, runnerOwns } from './runner';
 import { squadOf } from './enemysquads';
-import { PLAYER_ID } from './consts';
 
 /** the switch and every number of it (UNTUNED by play) */
 export const PICTURE = {
@@ -115,7 +115,7 @@ interface Pic { owner: Guard | null; ideas: Map<Who, Idea>; downs: Map<Who, numb
 /** the step a man has taken off his place (PICTURE.step): whose asking it is (`key`: the order that has him — null: a loaded game's, the first asker's), the place he left, the cover, on a knee there, his next look at both */
 interface Step { key: object | null; mark: Vec3; at: Vec3; low: boolean; lookT: number; /** when it was dealt */ t0: number; }
 interface State { men: Map<Guard, Pic>; sam: Pic; tellT: number; done: WeakSet<object>; view: PictureView | null; viewT: number; }
-const STATES = new SideMap<Game, State>('picture.STATES');
+const STATES = new GameSideMap<Game, State>('picture.STATES');
 function stateOf(g: Game): State { let S = STATES.get(g); if (!S) { S = { men: new Map(), sam: { owner: null, ideas: new Map(), downs: new Map(), heard: new Map(), lookT: -1e9 }, tellT: -1e9, done: new SideSet(), view: null, viewT: -1e9 }; STATES.set(g, S); } return S; }
 function picOf(S: State, gd: Guard, now: number): Pic { let P = S.men.get(gd); if (!P) { P = { owner: gd, ideas: new Map(), downs: new Map(), heard: new Map(), lookT: now + (S.men.size % 8) * PICTURE.lookSecs / 8 }; S.men.set(gd, P); } return P; }
 export const PICTURE_STATS = { looks: 0, seen: 0, heard: 0, told: 0, fixes: 0, lost: 0, downs: 0, forgot: 0, asks: 0, lines: 0, /** a rule's pick the picture changed */ moved: 0, /** a colleague's shots heard with the shooter's own idea of his man to go by (PICTURE.shot; one a hearer), those a metre or more from the true place, and those the hearer kept his own newer word over */ shotPlaced: 0, shotOff: 0, shotKept: 0, /** ways a running man planned from his own picture (PICTURE.run), and those planned on a picture that was not the truth (an enemy he did not know of, or one a metre or more from where he believed him) */ ran: 0, ranOff: 0, /** steps taken off a place in a believed line (PICTURE.step: the file's men, a wall charge's stand-off marks dealt again) */ stepped: 0, /** stack asks answered with a one-hand file (menu re-reads included), and those on the hinge hand */ filed: 0, filedHinge: 0 };
@@ -202,7 +202,7 @@ function hear(g: Game, S: State) {
   const K = PICTURE, now = g.time;
   for (const e of g.events) {
     if ((e.kind !== 'shot' && e.kind !== 'guardShot') || e.who === undefined || S.done.has(e)) continue; S.done.add(e);
-    const who: Who | null = e.who === PLAYER_ID ? 'player' : g.guards.find(x => x.char.id === e.who) ?? null; if (!who) continue;
+    const who: Who | null = isManId(e.who ?? -1) ? 'player' : g.guards.find(x => x.char.id === e.who) ?? null; if (!who) continue;
     const team = who === 'player' ? 'player' : who.team, loud = (e.level ?? 0) >= 1;
     for (const gd of g.guards) {
       if (gd === who || !fighter(gd) || gd.held || !isHostile(gd.team, team)) continue;
@@ -261,10 +261,10 @@ export function pictureTick(g: Game, _dt: number) {
   let ops = false;
   for (const gd of g.guards) {
     if (!fighter(gd)) continue; if (gd.team === 'operative') ops = true;
-    const P = picOf(S, gd, now); if (now >= P.lookT) { P.lookT = Math.max(P.lookT + K.lookSecs, now - K.lookSecs); look(g, P, gd); }
+    const P = picOf(S, gd, now); if (now >= P.lookT) { P.lookT = Math.max(P.lookT + K.lookSecs, now - K.lookSecs); look(viewOfBody(g, gd.char), P, gd); }   // ('the player' to him is the one he has in mind: seats.ts)
     if ((P.step || P.stepBad) && now - (P.stepAsk ?? -1e9) > 0.25) { P.step = null; P.stepBad = null; P.stepIn = -1; }   // (PICTURE.step: nobody has asked for a while — another order has him, the fight has, Sam walked on: the step is over, and no other man's search steers round it)
   }
-  if (ops && now >= S.sam.lookT) { S.sam.lookT = now + K.lookSecs; lookSam(g, S.sam); }
+  if (ops && now >= S.sam.lookT) { S.sam.lookT = now + K.lookSecs; eachSeat(g, v => lookSam(v, S.sam)); }   // (every player's eyes are the squad's net's)
   if (g.events.length) hear(g, S);
   if (now - S.tellT >= 0.5) { S.tellT = now; tell(g, S); }
 }

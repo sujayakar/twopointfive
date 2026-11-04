@@ -340,7 +340,7 @@ stays dark. These are guidelines, not misses like the rest of this page: each sa
 - **Show, not tell.** No "play this first", no wordy options. No digit above 5 on a menu.
 - **Every word on the row is true to the file**, from every way in: title, `place` (6..64), `blurb` (the premise, never
   the answer; 20..140 on a squad row, 160 elsewhere), `lean`, `defenders`, `ways` (one name per start), `squads` when the
-  file names squads, a group of eight rows at most, `untuned: true` until somebody has played it. **check** `row`;
+  file names squads, a group of eight drawn rows at most (a row cut from the list, `offList`, is not counted), `untuned: true` until somebody has played it. **check** `row`;
   `probes.ts missions-list missions-screen levers-rules picker-list`.
 - **Its music**: two pieces in `src/audio/setlist.ts`. The maintainer: "we should curate the music for each level, not do
   it randomly". **check** `music`; `probes.ts music`.

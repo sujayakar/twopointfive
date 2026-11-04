@@ -95,7 +95,7 @@ fn shadeReflHit(hit: Hit, Po: vec3f, dir: vec3f, kEmit: f32, walls: u32) -> vec3
     }
     var Eh = vec3f(0.0);
     if ((frame.flags & FLAG_DIRECT) != 0u) { Eh += directAtPoint(Ph, hit.n, 0u); }
-    if ((frame.flags & FLAG_BOUNCE) != 0u) { if ((BOUNCE_WALLS && bounceHitMan(hit)) || walls != 0u) { Eh += diceIrradianceWalled(Ph, hit.n, bounceHitOwner(hit) | ((walls & 0xffu) << 8u)); } else { Eh += diceIrradianceFace(Ph, hit.n); } }
+    if ((frame.flags & FLAG_BOUNCE) != 0u) { if ((BOUNCE_WALLS && bounceHitMan(hit)) || walls != 0u) { Eh += diceIrradianceWalled(Ph, hit.n, bounceHitOwner(hit) | ((walls & 0xffu) << 8u)); } else { Eh += diceIrradiance(Ph + hit.n * c0Spacing(), hit.n); } }
     L += albedo * Eh * (1.0 / PI);
   } else { segT = 0.0; }
   if (glassCount() > 0u) {                                                // panes on the reflected segment: tint what lies beyond, add what the nearest mirrors
@@ -110,41 +110,20 @@ fn shadeReflHit(hit: Hit, Po: vec3f, dir: vec3f, kEmit: f32, walls: u32) -> vec3
       L = L * gh.trans * (1.0 - Fg) + env * Fg;
     }
   }
-  let lum = luminance(L); let cap = frame.matCfg.z * dayBound;
+  let lum = luminance(L); let cap = frame.matCfg.z;
   return select(L, L * (cap / lum), cap > 0.0 && lum > cap);
 }
 
-// THE SUN'S GLINT (the scene prelude's SUN_GLINT, render/frame.ts sunGlintConfig: the look's page; ?nosunglint = as it was). The maintainer, 11-04, of gloss
-// paint beside two pictures of the real thing: "we don't need to go full hyperrealistic but we should sell it more". The loop below added every lamp's
-// highlight and left the brightest light of all out, and the sky a reflection ray comes back with has no sun in it: by day nothing smooth showed the sun.
-// With the word, a directional light (the sun, a moon) goes through the same loop: from its own direction, as wide as its disc (its radius is the disc's
-// angle), with no distance to fall off over. What is its own:
-//   IT DOES NOT CONTEND with the lamps for their four shadow rays (on every sunlit pixel it would take one from a lamp): it is a fifth candidate with a fifth
-//     turn of the same shadow loop, so no kernel gains a call site of the walk, the smoke march or the fog's light classes, and a page without the word
-//     pays one empty turn. It is NEVER credited unshadowed (a sun let in at half through a rough lobe's skirt would light a shut room).
-//   ITS RAY ENDS AT THE WORLD'S TOP, where nothing stands (a rock and a tall house are over the rooms' ceiling), and the smoke march with it.
-//   IT FADES IN over RT_SUN_CUT to three times that of the light's own irradiance (about a twelfth to a quarter of what a white wall beside it gives back,
-//     whatever the hour's exposure) and under the cut neither draws nor throws a ray: a soft rim, and rays only inside the highlight.
-//   IT IS BOUNDED BY ITS OWN LIGHT: never over RT_SUN_PEAK × that irradiance (about ten white walls). The lobe's own arithmetic is 80 at a grazing eye and 130
-//     on a metal, a pixel-wide line at the day's bound on every round thing's rim; and its width is never under RT_SUN_ALPHA, against sparks off a
-//     relief's normals under the jitter.
-// Known, left: one ray at the disc's middle shadows it, so under cloud (a wide disc) its edge in a shadow is harder than the shade's own; through a pane it
-// is untinted, as a lamp's is; with rays traced the denoiser places it at the first ray's hit, as it does a lamp's.
-const RT_SUN_FAR: f32 = 80.0;      // m: the direction's stand-in for a place (its ray is cut at the world's top, short of this but at a low sun)
-const RT_SUN_CUT: f32 = 0.02;
-const RT_SUN_PEAK: f32 = 2.0;
-const RT_SUN_ALPHA: f32 = 0.07;
 // The analytic image of the emitters = the finish's specular response to the level's lights at the primary hit (see the header): GGX specular from each
 // steady light that reaches this cell — point / spot lenses always (no ray can find them), the area-lit fixtures' kind-3 lights × kAna = 1 − emitTraceK (the
 // share the traced ray does not take) — widened by the emitter's angular size (alpha' = alpha + half its angular radius per axis — the widened D is still
 // normalised, no extra factor), Schlick F, height-correlated Smith; the RT_GLINT_RAYS strongest by luminance get a shadow ray (their carrier never hides
 // them: the light's owner byte in the skip word) and the smoke on the segment, the rest — off the lobe, where D has already made them small, and reach-masked
-// — are credited at half, unshadowed (the dust glow's rule). The sun and the moon: the head above (without its word they stay the sky's). Returns radiance in .xyz and the strongest highlight's distance in .w
+// — are credited at half, unshadowed (the dust glow's rule). The moon stays the sky's. Returns radiance in .xyz and the strongest highlight's distance in .w
 // (0 = none) — the virtual depth the denoiser reprojects a highlight by when no ray was traced.
 struct Glint { L: vec3f, spec: vec3f, dist: f32, w: f32, i: i32 };
 fn rtGlints(P: vec3f, Po: vec3f, N: vec3f, V: vec3f, T: vec3f, B: vec3f, ax: f32, ay: f32, F0: vec3f, owner: u32, kAna: f32) -> vec4f {
   var g0: Glint; var g1: Glint; var g2: Glint; var g3: Glint; g0.w = 0.0; g1.w = 0.0; g2.w = 0.0; g3.w = 0.0; g0.i = -1; g1.i = -1; g2.i = -1; g3.i = -1;
-  var gs: Glint; gs.w = 0.0; gs.i = -1;                                    // the sun's (or a moon's): the fifth candidate, outside the lamps' contest
   var rest = vec3f(0.0);
   let Ve = vec3f(dot(V, T), dot(V, B), dot(V, N));
   let NdotV = max(Ve.z, 0.05);
@@ -152,17 +131,16 @@ fn rtGlints(P: vec3f, Po: vec3f, N: vec3f, V: vec3f, T: vec3f, B: vec3f, ax: f32
   for (var i = 0u; i < nL; i++) {
     let li = wgLights[i];
     let kind = lightKind(li);
-    let far = SUN_GLINT && kind == 2u;                                    // a direction and a disc, no place. (Without the word this is a constant false, and every line below is the line it was)
-    if ((kind == 2u && !far) || (!far && li.radius <= 0.0) || lightTransient(li)) { continue; }
+    if (kind == 2u || li.radius <= 0.0 || lightTransient(li)) { continue; }
     if (kind == 3u && kAna <= 0.0) { continue; }                          // area-lit fixtures: only the share the traced ray leaves (none on a polish)
     if (!lightReaches(i, P)) { continue; }
-    let d = select(li.pos - P, -normalize(li.dir) * RT_SUN_FAR, far); let dist2 = dot(d, d); let dist = sqrt(dist2);
-    if (!far && (dist > li.range || dist < 0.05)) { continue; }
+    let d = li.pos - P; let dist2 = dot(d, d); let dist = sqrt(dist2);
+    if (dist > li.range || dist < 0.05) { continue; }
     let Ld = d / dist;
     let NdotL = dot(N, Ld);
     if (NdotL <= 0.0) { continue; }
-    var att = select(lightWindow(dist, li.range) / max(dist2, li.radius * li.radius), 1.0, far);   // (a directional light's colour IS its irradiance: common.wgsl evalLight)
-    var wid = select(li.radius / (2.0 * max(dist, 0.05)), max(0.5 * li.radius, RT_SUN_ALPHA - min(ax, ay)), far);   // the emitter's angular half-size (a lens: Karis' sphere term; a directional light's radius is its disc's angle, and its lobe has a floor)
+    var att = lightWindow(dist, li.range) / max(dist2, li.radius * li.radius);
+    var wid = li.radius / (2.0 * max(dist, 0.05));                        // the emitter's angular half-size (a lens: Karis' sphere term)
     var pat = vec3f(1.0);                                                  // × the emitter's own texture (kind-3 marking lights only)
     if (kind == 1u) {
       let cd = dot(-Ld, normalize(li.dir));
@@ -191,28 +169,20 @@ fn rtGlints(P: vec3f, Po: vec3f, N: vec3f, V: vec3f, T: vec3f, B: vec3f, ax: f32
     let w = luminance(spec);
     if (w < 1e-5) { continue; }
     var g: Glint; g.L = Ld; g.spec = spec; g.dist = dist - li.radius - 0.02; g.w = w; g.i = i32(i);
-    if (far) {                                                            // the sun's own rules (the head above): faded in, bounded by its own light, a short ray, never in the contest
-      let e = max(luminance(li.color), 1e-6); let k = smoothstep(RT_SUN_CUT, 3.0 * RT_SUN_CUT, w / e) * min(1.0, RT_SUN_PEAK * e / w);
-      g.spec = spec * k; g.w = w * k; g.dist = clamp((WORLD_MAX.y - Po.y) / max(Ld.y, 0.02), 0.5, RT_SUN_FAR);
-      if (g.w > gs.w) { gs = g; }
-      continue;
-    }
     if (w > g0.w) { rest += g3.spec; g3 = g2; g2 = g1; g1 = g0; g0 = g; } else if (w > g1.w) { rest += g3.spec; g3 = g2; g2 = g1; g1 = g; } else if (w > g2.w) { rest += g3.spec; g3 = g2; g2 = g; } else if (w > g3.w) { rest += g3.spec; g3 = g; } else { rest += spec; }
   }
   var G = rest * 0.5;
-  var sunW = 0.0; var lampW = 0.0;                                         // the sun's glint and the strongest lamp's AS DRAWN (0 in shadow): whose distance the denoiser is handed
-  for (var k = 0u; k < RT_GLINT_RAYS + 1u; k++) {                           // (the last turn is the sun's: gs, empty without the word)
-    var g = g0; if (k == RT_GLINT_RAYS) { g = gs; } else if (k == 1u) { g = g1; } else if (k == 2u) { g = g2; } else if (k == 3u) { g = g3; }
-    if (g.i < 0 || g.w <= 0.0) { continue; }
+  for (var k = 0u; k < RT_GLINT_RAYS; k++) {
+    var g = g0; if (k == 1u) { g = g1; } else if (k == 2u) { g = g2; } else if (k == 3u) { g = g3; }
+    if (g.i < 0) { continue; }
     let li = wgLights[u32(g.i)];
     if (g.dist > 0.0 && occluded(Po, g.L, g.dist, owner | ((li.owner & 0xffu) << 8u))) { continue; }
     var tr = 1.0;
     if (frame.numSmoke > 0u) { tr = smokeTransmittance(Po, g.L, min(max(g.dist, 0.0), 30.0)); }
     G += g.spec * tr;
-    if (k == RT_GLINT_RAYS) { sunW = g.w * tr; } else { lampW = max(lampW, g.w * tr); }
   }
   let lg = luminance(G);
-  return vec4f(select(G, G * (RT_GLINT_MAX * dayBound / lg), lg > RT_GLINT_MAX * dayBound), select(select(0.0, max(g0.dist, 0.05), g0.i >= 0), RT_SUN_FAR, sunW > lampW));
+  return vec4f(select(G, G * (RT_GLINT_MAX / lg), lg > RT_GLINT_MAX), select(0.0, max(g0.dist, 0.05), g0.i >= 0));
 }
 
 // ---- LASERS / TRACERS IN THE REFLECTION (render/passes.ts setBeams; settings.beamReflect). A weapon laser's beam and a tracer's streak are NoShadow boxes: no
@@ -285,7 +255,6 @@ fn main(@builtin(global_invocation_id) gid: vec3u, @builtin(local_invocation_ind
   if (bidx != 0xFFFFFu) { aniso = boxFinish(bidx).aniso; }
   let P = worldFromDepth(vec2f(full) + 0.5, depth);
   let N = normalize(textureLoad(gNormal, full, 0).xyz * 2.0 - 1.0);
-  dayBound = dayBoundK(P, N);   // (lighting_common.wgsl: the ray's and the highlights' bounds by day)
   let toEye = frame.camPos - P; let z = length(toEye);
   let V = toEye / max(z, 1e-4);
   if (dot(N, V) <= 0.01) { textureStore(outRefl, gid.xy, none); return; }

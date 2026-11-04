@@ -94,13 +94,14 @@ export const onewayDeal = guarded(async () => {
           const P2 = plans.find((p: any) => p.door === d.def.name && p.fling); if (P2 && Math.sign(P2.fling) !== d.swing) planned.push(`${nameOf(file)} ${d.def.name}`);
         }
       } else { if (deal.why === 'outside' || base.out) bad.push(`${d.def.name}: not an exterior door, dealt 'outside'`); if (outSide) unmarked.push(`${nameOf(file)} ${d.def.name} (${d.swing === outSide ? 'opens out already' : 'opens in'}, ${deal.why})`); }
-      if (base.out ? base.out !== deal || base.why === 'outside' : base !== deal && JSON.stringify(base) !== JSON.stringify(deal)) bad.push(`${d.def.name}: the deal's two rows`);
+      const room = base.clear && DOORWAY.leafWay ? base.clear : base;   // (a door the 'leaf room' rule hangs the other way reads as that row while DOORWAY.leafWay is on: leafway-check's)
+      if (base.out ? base.out !== deal || base.why === 'outside' : room !== deal && JSON.stringify(room) !== JSON.stringify(deal)) bad.push(`${d.def.name}: the deal's two rows`);
       const stood = d.angle; d.reset(); if (Math.abs(d.angle - stood) > 1e-9 || Math.abs(Math.abs(d.angle) - Math.min(Math.abs(d.def.angle ?? 0), Math.abs(d.swing > 0 ? d.maxA : d.minA))) > 1e-9) bad.push(`${d.def.name}: authored standing at ${d.def.angle ?? 0}, dealt ${stood.toFixed(2)}, reset to ${d.angle.toFixed(2)}`);
       if (d.angle * d.swing < 0 || d.minA > 0 || d.maxA < 0 || (d.swing > 0 ? d.minA !== 0 : d.maxA !== 0)) bad.push(`${d.def.name}: stops [${d.minA}, ${d.maxA}] at ${d.angle} for swing ${d.swing}`);
     }
     const again = (await boot(file, true, true)).game.doorSwings; const same = JSON.stringify(again) === JSON.stringify(deals);
     // the switch off, live on the same game: every door back on the side the room rules deal it, not one 'outside' — and on again, as it was
-    DOORWAY.exitsOut = false; for (const d of g.doors.list) { const b0 = g.doorDeals.find((x: any) => x.door === d.def.name), now = g.doorSwings.find((x: any) => x.door === d.def.name); if (d.swing !== b0.swing || now !== b0 || now.why === 'outside') offBad.push(`${nameOf(file)} ${d.def.name}`); }
+    DOORWAY.exitsOut = false; for (const d of g.doors.list) { const b = g.doorDeals.find((x: any) => x.door === d.def.name), b0 = b.clear && DOORWAY.leafWay ? b.clear : b, now = g.doorSwings.find((x: any) => x.door === d.def.name); if (d.swing !== b0.swing || now !== b0 || now.why === 'outside') offBad.push(`${nameOf(file)} ${d.def.name}`); }
     DOORWAY.exitsOut = true; for (const d of g.doors.list) if (d.swing !== deals.find(x => x.door === d.def.name).swing) offBad.push(`${nameOf(file)} ${d.def.name} (back on)`);
     // …and a leaf standing OPEN when the switch is flipped stands as wide on its other side at its next placing (Door.keep), never past the stop there — and back again
     for (const d of g.doors.list) { const b0 = g.doorDeals.find((x: any) => x.door === d.def.name); if (!b0.out || b0.out.swing === b0.swing) continue;

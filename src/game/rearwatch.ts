@@ -45,6 +45,7 @@
 // stack while the squad is in the room (Book.shut, read by rearWays), so a rear man of the stack gets it by the rules above. Sam standing in the room keeps
 // him on it. Nothing here deals a door: who has one is the entry's own rule, read a frame late. Not saved (a load: the entry's own hold is gone too).
 // (src/game is one import cycle: nothing below is built from another game module's exports at module load.)
+import { viewOf } from './seats';
 import { SideMap, SideSet } from '../math/side';
 import { Vec3, v3 } from '../math/vec';
 import type { Game, Guard } from './game';
@@ -308,7 +309,7 @@ function walkTo(g: Game, a: Vec3, b: Vec3): number {
   let l = 0, q = a; for (const r of path) { l += flat(q, r); q = r; } return l + flat(q, b);
 }
 /** orders.ts, the fall-in leg: this man's feet stay where they are — he keeps a taken room's other door while the squad leaves it (REARWATCH.room) */
-export function roomKept(g: Game, gd: Guard): boolean { return REARWATCH.room && !!books.get(g)?.keeps.has(gd); }
+export function roomKept(g: Game, gd: Guard): boolean { return REARWATCH.room && !!books.get(viewOf(g, gd))?.keeps.has(gd); }   // (his seat's book: seats.ts)
 
 
 /** somebody not of this stack already has that way: a posted man of another order on that door or with his watch on it, another man's unasked cover — or

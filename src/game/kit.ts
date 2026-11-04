@@ -50,6 +50,7 @@
 // Off = the cards, the rows, the prices and the run of the build before: `big` is kept on a card, inert (no row, no price, nothing on the man).
 //
 // (src/game is one import cycle: the tables below are plain literals; nothing here is built from another game module's exports at module load.)
+import { eachSeat, seatShare, seatHas, dealSeats } from './seats';
 import { SideMap, SideSet } from '../math/side';
 import type { Vec3 } from '../math/vec';
 import type { Game, Guard } from './game';
@@ -1308,7 +1309,7 @@ function kitAlone(g: Game) {
  *  stay the card's. A SHOWCASE's player is the show's: kitShow takes the card off as one starts, and nothing puts it on while one runs. Off = the plain
  *  night is nobody's business here: Start on the card is as it ever was. */
 export const KIT_SOLO = { on: false, stand: false };
-export function kitSolo(g: Game) { KIT_SOLO.on = true; kitPlayer(g); }
+export function kitSolo(g: Game) { KIT_SOLO.on = true; eachSeat(g, kitPlayer); }   // (every player's man — seats.ts)
 /** THE PAGE'S OWN QUESTION, in one place (main.ts asks it at boot with `solo` = its URL has ?solo): the plain night off the loadout screen, or a quiet mission
  *  alone, and no squad scenario up → your card goes on the player and on every fresh one after (kitSolo). */
 export function kitSoloIf(g: Game, solo: boolean) { if ((solo || (g.quiet?.active && !g.quiet.squad)) && !g.nightBreach?.active && !g.rescue?.active) kitSolo(g); }
@@ -1335,10 +1336,11 @@ export function kitStage(g: Game, ops: Guard[]) {
   if (pageIssued() && !issuing) return asIssued(() => kitStage(g, ops));   // (a lesson's page: every man staged with the issue cards — kitIssuedPage)
   if (stealthOn() && !issuing && !staged) return forRun(g, () => kitStage(g, ops));   // (KITDEAL.stealth: the whole staging reads the card this run wears)
   KIT_STAGED.n++; KIT_STAGED.ops = ops.slice(0, KIT_MEMBERS - 1);
-  if (!KIT.on) { squadSmokeStage(g, 0); squad40Stage(g, []); return; }   // (squadsmoke.ts: the squad's smoke is set on EVERY staging — none with the table off; squad40.ts: the teammates' 40 mm rounds likewise)
+  if (!KIT.on) { eachSeat(g, v => { squadSmokeStage(v, 0); squad40Stage(v, []); }); return; }   // (squadsmoke.ts: the squad's smoke is set on EVERY staging — none with the table off; squad40.ts: the teammates' 40 mm rounds likewise)
   if (SLOTS.on) kitTeam(Math.min(ops.length, KIT_MEMBERS - 1));   // (the rule is held for the men who CAME: cards made legal for a smaller team on the loadout screen and then staged on a bigger one give up what does not fit — nothing while they are legal, as the issued kit always is)
-  squadSmokeStage(g, kitSmokes(ops.length));   // (squadsmoke.ts: what the men who came carry, after the pouches rule has had its say, is the squad's smoke for this run)
-  kitPlayer(g);
+  if (g.seats.length > 1) dealSeats(g);   // (whose pair each man is, before anything below is shared out)
+  { const cans = kitSmokes(ops.length); eachSeat(g, v => squadSmokeStage(v, seatShare(v, cans))); }   // (with two players each pair carries its share: seats.ts seatShare)   // (squadsmoke.ts: what the men who came carry, after the pouches rule has had its say, is the squad's smoke for this run)
+  eachSeat(g, kitPlayer);   // (YOUR card, on every player's man — seats.ts)
   const worn = kitWorn(Math.min(ops.length, KIT_MEMBERS - 1));   // (KITDEAL: the cards as this team carries them — the counts below are sums, the same either way)
   ops.slice(0, KIT_MEMBERS - 1).forEach((gd, k) => {
     const i = k + 1, m = bigOn ? bigHome(worn[i], i) : worn[i], d = ISSUED[i]; manOf.set(gd, { i, kit: { ...m } }); loadMan(gd, i, issuing ? null : m, Math.min(ops.length, KIT_MEMBERS - 1));   // (kitload.ts: what his card weighs beside his issue as this team is dealt it, as yours in kitPlayer)   // (BIGSLOT: the shotgun is never his gun — a card set by hand with the pouches rule off, a mission's issue)
@@ -1354,17 +1356,17 @@ export function kitStage(g: Game, ops: Guard[]) {
     if (m.suit !== 'issued') gd.char.tint = [...SUITS[m.suit].tint] as Vec3;
     if (m.trim !== 'issued') gd.char.tint2 = [...TRIMS[m.trim].tint] as Vec3;
   });
-  squad40Stage(g, ops.slice(0, KIT_MEMBERS - 1).map(gd => [gd, manOf.get(gd)?.kit.shells ?? 0] as const));   // (squad40.ts: the 40 mm rounds each teammate's card carries are his to fire on order — none on a card as issued, so nothing is kept)
+  { const rows = ops.slice(0, KIT_MEMBERS - 1).map(gd => [gd, manOf.get(gd)?.kit.shells ?? 0] as const); eachSeat(g, v => squad40Stage(v, g.seats.length === 1 ? rows : rows.filter(r => seatHas(v.seat, r[0])))); }   // (squad40.ts: the 40 mm rounds each teammate's card carries are his to fire on order — none on a card as issued, so nothing is kept)
   // the squad's counted stun canisters and charges: what the men who came carry (kitPool — the number the loadout screen showed before Deploy)
   const n = Math.min(ops.length, KIT_MEMBERS - 1), pool = kitPool(n);
-  if (n && (pool.bangs !== DOORTOOLS.bangs || pool.charges !== DOORTOOLS.charges || pool.frags !== FRAG.squad)) {
-    g.doorTools.sync();   // (the door tools count a new cast in lazily, and that puts the counts back: have it done now, then set them)
-    g.doorTools.bangs = pool.bangs; g.doorTools.charges = pool.charges; g.doorTools.frags = pool.frags;
-  }
+  if (n && (pool.bangs !== DOORTOOLS.bangs || pool.charges !== DOORTOOLS.charges || pool.frags !== FRAG.squad)) eachSeat(g, v => {
+    v.doorTools.sync();   // (the door tools count a new cast in lazily, and that puts the counts back: have it done now, then set them)
+    v.doorTools.bangs = seatShare(v, pool.bangs); v.doorTools.charges = seatShare(v, pool.charges); v.doorTools.frags = seatShare(v, pool.frags);
+  });
   // the wall charge (wallcharge.ts, the destruction goal's): under the rule the cards say how many the men who came carry — none as issued — and it is TOLD
   // at every staging with teammates (a restart puts its own count back); with the rule off, or in a build whose wall charge takes no count, it is never told
   // (no teammate came — the solo size of a squad mission: no card is on the floor and the wall charge keeps its own rule, like the bag above)
-  if (n && SLOTS.on && wallHere()) (g.wallCharge as unknown as { setCarried(n: number | null): void }).setCarried(kitWalls(n));
+  if (n && SLOTS.on && wallHere()) { const walls = kitWalls(n); eachSeat(g, v => (v.wallCharge as unknown as { setCarried(n: number | null): void }).setCarried(seatShare(v, walls))); }
 }
 /** the wall charges you and the `n` teammates who come carry between you (0 with the rule off, the table off, or in a build with no such row; your card
  *  has the row only with owncharge.ts's switch on, so off it is the teammates' alone) */

@@ -20,7 +20,7 @@ const { ORDERS } = await import(`${ROOT}/src/game/orders.ts`);
 const { DOORMANNERS, doorwayInWay } = await import(`${ROOT}/src/game/doorway.ts`);
 const { DESTRUCTION } = await import(`${ROOT}/src/game/destructionSwitch.ts`);
 const { WALLCHARGE } = await import(`${ROOT}/src/game/wallcharge.ts`);
-const { DOORSTAY } = await import(`${ROOT}/src/game/doors.ts`);
+const { DOORSTAY, DOORWAY } = await import(`${ROOT}/src/game/doors.ts`);
 const VERBOSE = process.argv.includes('--verbose');
 const flat = (a: number[], b: number[]) => Math.hypot(a[0] - b[0], a[2] - b[2]);
 const fmt = (p: number[]) => `(${p[0].toFixed(2)}, ${p[2].toFixed(2)})`;
@@ -60,6 +60,7 @@ interface Case { ok: boolean; inDoor: number; stood: number; aside: number; say:
  *  `stood`: frames he stands still in a doorway's way, whatever he is walking to */
 async function found(on: boolean, leaf: number): Promise<Case> {
   const R = await rig('compound-four', 5), g = R.game, O = R.O as any; DOORMANNERS.on = true; DOORSTAY.on = true; ORDERS.asideClear = on;
+  DOORWAY.leafWay = false;   // (the case as it was found: c_n's leaf standing open in the office. With DOORWAY.leafWay that door opens to the corridor and no leaf stands here)
   for (const h of R.hostiles) if (h.state !== 'dead') R.put(h, [h.char.pos[0] + 400, 0, h.char.pos[2]]);
   const d = (g.doors.list as any[]).find(x => x.def.name === 'c_n'); if (!d) return { ok: false, inDoor: 0, stood: 0, aside: 0, say: 'no door c_n' };
   const open = () => { d.latched = false; d.angle = leaf; };
@@ -83,7 +84,7 @@ async function found(on: boolean, leaf: number): Promise<Case> {
 
 export const asideclearCheck = guarded(async () => {
   const F = family('asideclear: fall in — a step aside is never into a doorway');
-  const keep = { m: DOORMANNERS.on, s: ORDERS.asideClear, st: DOORSTAY.on, rnd: Math.random, d: DESTRUCTION.on, w: WALLCHARGE.on, o: WALLCHARGE.outer };
+  const keep = { m: DOORMANNERS.on, s: ORDERS.asideClear, st: DOORSTAY.on, rnd: Math.random, d: DESTRUCTION.on, w: WALLCHARGE.on, o: WALLCHARGE.outer, lw: DOORWAY.leafWay };
   try {
     // ---- 1. the spots
     let offWay = 0, onWay = 0, moved = 0, asked = 0, onGot = 0, offGot = 0, first = '';
@@ -107,7 +108,7 @@ export const asideclearCheck = guarded(async () => {
       ORDERS.asideClear = true; const yes = snap(); ORDERS.asideClear = false; J.applyKnobs(R.game, yes); const b = ORDERS.asideClear;
       ORDERS.asideClear = false; const no = snap(); ORDERS.asideClear = true; J.applyKnobs(R.game, no); const c = ORDERS.asideClear;
       F.verdict(a === false && b === true && c === false, 'the journal: a recording from before the key replays with it off, one made with it on replays on, one made with it off replays off', `old → ${a} · recorded on → ${b} · recorded off → ${c}`); }
-  } finally { DOORMANNERS.on = keep.m; ORDERS.asideClear = keep.s; DOORSTAY.on = keep.st; Math.random = keep.rnd; DESTRUCTION.on = keep.d; WALLCHARGE.on = keep.w; WALLCHARGE.outer = keep.o; }
+  } finally { DOORMANNERS.on = keep.m; ORDERS.asideClear = keep.s; DOORSTAY.on = keep.st; Math.random = keep.rnd; DESTRUCTION.on = keep.d; WALLCHARGE.on = keep.w; WALLCHARGE.outer = keep.o; DOORWAY.leafWay = keep.lw; }
   return F.done();
 });
 

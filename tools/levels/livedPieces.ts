@@ -12,6 +12,7 @@
 import type { Vec3 } from '../../src/math/vec';
 import { BoxFlag, type Box } from '../../src/scene/boxes';
 import type { PropDef, PropKind, PropPart } from '../../src/scene/level';
+import { roundSlabs } from '../../src/scene/gwotKit';
 
 export interface LivedHost {
   add: (b: Partial<Box> & { c: Vec3; h: Vec3 }) => number;
@@ -38,6 +39,12 @@ export function livedPieces(H: LivedHost, C: LivedPalette) {
     return { p,
       /** a solid box w × h × d standing on height y0, centred at local (lx, lz) */
       box: (lx: number, y0: number, lz: number, w: number, h: number, d: number, albedo: Vec3, dyaw = 0, extra: Partial<Box> = {}) => H.add({ c: p(lx, y0 + h / 2, lz), h: [w / 2, h / 2, d / 2], yaw: yaw + dyaw, albedo, ...extra }),
+      /** a ROUND thing of radius r, h tall, standing on height y0 at local (lx, lz): the kits' one way of writing a round (src/scene/gwotKit.ts roundSlabs) —
+       *  from 0.2 m an octagon the round rule (src/scene/round.ts) makes one round box of, which lies inside the square of half r; smaller, two squares, the
+       *  second reaching 1.32 r at its corners. `extra` may not turn or move a slab (its place, size and turn are written last) */
+      round: (lx: number, y0: number, lz: number, r: number, h: number, albedo: Vec3, extra: Partial<Box> = {}) => {
+        if (!(h > 0.008)) throw new Error(`livedPieces: a round ${(h * 1000).toFixed(0)} mm thick — its slabs' tops step down 2 to 4 mm each: lay a sheet for a thing that thin`);
+        for (const s of roundSlabs(r)) H.add({ albedo, ...extra, c: p(lx, y0 + (h - s.drop) / 2, lz), h: [s.hx, (h - s.drop) / 2, s.hz], yaw: yaw + s.yaw }); },
       /** a drawn-only sheet lying on a surface at height y (PAPER to the destruction when pale and its longer side is 0.16‥0.4) */
       sheet: (lx: number, y: number, lz: number, w: number, d: number, albedo: Vec3 = INK.paper, dyaw = 0) => H.add({ c: p(lx, y + 0.005, lz), h: [w / 2, 0.005, d / 2], yaw: yaw + dyaw, albedo, flags: BoxFlag.NoShadow }),
       /** a drawn-only panel standing against the piece's back or front (w wide, h tall, at local lz) */

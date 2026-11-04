@@ -1,16 +1,21 @@
 // WHAT THE BACKEND HOLDS, READ BACK OUT (cloud/convex/ — a hosted build's kept tapes, records and browsers):
-//   bun run tools/cloud/pull.ts [--url https://<name>.convex.cloud] [--key <deploy key>] [--since 2026-10-26T00:00:00Z] [--pid <id>] [--out DIR] [--limit N] [--quiet]
+//   bun run tools/cloud/pull.ts [--url https://<name>.convex.cloud] [--key <deploy key>] [--since 2026-10-26T00:00:00Z] [--pid <id>] [--out DIR] [--limit N] [--quiet] [--no-files]
 // The address and the key are read from the environment where the words are absent (TPS_CLOUD_URL or CONVEX_URL · CONVEX_DEPLOY_KEY): the key is the
-// deployment's own deploy key, which the internal functions answer to — it is never written anywhere by this tool, and never belongs in the repo.
+// deployment's own deploy key, which the internal functions answer to — it is never written anywhere by this tool, and never belongs in the repo. A hosted
+// deployment's key with no address given is enough: the key names its deployment (tools/cloud/local.ts keyUrl).
 // Into --out (default ./cloud-pull):
 //   twopointsix-cloud-<stamp>-<n>-visits.ndjson.gz   every visit's tape, in the browser's own hand-over format (src/replay/kept.ts: gzip members end to end) —
-//                                                    `bun run tools/qa/replay-dump.ts <that file>` unpacks it, the /replay page opens it
+//                                                    `bun run tools/qa/replay-dump.ts <that file>` unpacks it, the /replay page opens it; what the players
+//                                                    wrote on their replays (notes, the F7 shelf's saved windows) rides in it as the browser's file had it
 //   telemetry.ndjson                                 the records, one a line, oldest first
 //   players.json                                     the browsers seen
+//   files/<when>-<visit>-<name>                      the files the page saved for its players (benchmark reports, replays, recordings), and files.json, their rows
 // A tape is DATA: nothing in one is run. EXIT 0 read · 1 the backend could not be read · 2 usage.
+import { keyUrl, localKey } from './local.ts';
 import { mkdirSync, writeFileSync } from 'node:fs';
-import { gzipSync } from 'node:zlib';
+import { gunzipSync, gzipSync } from 'node:zlib';
 import { join } from 'node:path';
+import { FILESYNC } from '../../src/cloud/files.ts';
 import { wire, type Wire } from '../../src/cloud/wire.ts';
 import { KEPT_VERSION } from '../../src/replay/kept.ts';
 
@@ -39,9 +44,8 @@ export async function pullVisit(w: Wire, sid: string): Promise<{ members: Uint8A
 }
 
 /** every visit the backend lists, as one hand-over file's bytes (null: none) */
-export async function pullDump(w: Wire, opts: { since?: string; pid?: string; limit?: number; now?: string; say?: (s: string) => void } = {}): Promise<{ bytes: Uint8Array; name: string; visits: VisitRow[]; pieces: number } | null> {
+export async function pullDump(w: Wire, opts: { since?: string; pid?: string; limit?: number; now?: string; notes?: boolean; say?: (s: string) => void } = {}): Promise<{ bytes: Uint8Array; name: string; visits: VisitRow[]; pieces: number; notes: number } | null> {
   const rows: VisitRow[] = await w.query('tapes:list', { ...(opts.since ? { since: opts.since } : {}), ...(opts.pid ? { pid: opts.pid } : {}), ...(opts.limit ? { limit: opts.limit } : {}) });
-  if (!rows.length) return null;
   const now = opts.now ?? new Date().toISOString(), body: Uint8Array[] = [], carried: { row: VisitRow; pieces: number }[] = []; let pieces = 0;
   for (const row of rows.sort((a, b) => a.startedAt < b.startedAt ? -1 : 1)) {
     // (a visit that does not read — somebody's oversized or broken tape — is said and left out: it does not cost the others)
@@ -51,25 +55,59 @@ export async function pullDump(w: Wire, opts: { since?: string; pid?: string; li
     if (!v.pieces) continue;
     for (const m of v.members) body.push(m); pieces += v.pieces; carried.push({ row, pieces: v.pieces });
   }
-  if (!carried.length) return null;
-  const top = gzipSync(JSON.stringify({ k: 'dump', v: KEPT_VERSION, at: now, shelf: 0, visits: carried.map(c => ({ sid: c.row.sid, pieces: c.pieces, bytes: c.row.bytes, startedAt: c.row.startedAt, lastAt: c.row.lastAt })) }) + '\n');
-  return { bytes: join1([new Uint8Array(top), ...body]), name: `twopointsix-cloud-${now.replace(/[:.]/g, '-').replace('Z', '')}-${carried.length}-visit${carried.length === 1 ? '' : 's'}.ndjson.gz`, visits: carried.map(c => c.row), pieces };
+  // what the players wrote (cloud/convex/notes.ts): the lines as the browser made them, after the visits — where the browser's own hand-over file had them
+  let notes: { pid: string; key: string; at: number; text: string }[] = [];
+  if (opts.notes !== false) try { notes = await w.query('notes:list', { ...(opts.pid ? { pid: opts.pid } : {}), ...(opts.since ? { since: Date.parse(opts.since) } : {}), limit: 2000 }); } catch { /* a backend from before the notes: none */ }
+  notes = notes.filter(n => { try { const L = JSON.parse(n.text); return (L.k === 'notes' || L.k === 'f7') && Array.isArray(L.notes) && (L.k === 'f7' || L.notes.length > 0); } catch { return false; } }).sort((a, b) => a.at - b.at);
+  const shelf = notes.filter(n => n.key.startsWith('f7:')).length;
+  if (!carried.length && !notes.length) return null;
+  // (a line break in front: a visit's last member may be bytes that do not end a line — a tape that was cut — and the note after it would be lost with it)
+  for (const n of notes) body.push(new Uint8Array(gzipSync('\n' + n.text + '\n')));
+  const top = gzipSync(JSON.stringify({ k: 'dump', v: KEPT_VERSION, at: now, shelf, visits: carried.map(c => ({ sid: c.row.sid, pieces: c.pieces, bytes: c.row.bytes, startedAt: c.row.startedAt, lastAt: c.row.lastAt })) }) + '\n');
+  return { bytes: join1([new Uint8Array(top), ...body]), name: `twopointsix-cloud-${now.replace(/[:.]/g, '-').replace('Z', '')}-${carried.length}-visit${carried.length === 1 ? '' : 's'}.ndjson.gz`, visits: carried.map(c => c.row), pieces, notes: notes.length };
+}
+
+export interface FileRow { _id: string; sid: string; pid: string; at: number; name: string; kind: string; type: string; size: number; build?: string; meta?: string; url: string | null }
+/** the saved files' rows, oldest first, each with its bytes where they could be fetched (`bytes` null: the row is there and its file did not come) */
+export async function pullFiles(w: Wire, opts: { since?: string; pid?: string; kind?: string; limit?: number; fetch?: typeof fetch } = {}): Promise<{ row: FileRow; bytes: Uint8Array | null; saveAs: string }[]> {
+  const rows: FileRow[] = await w.query('files:list', { ...(opts.since ? { since: Date.parse(opts.since) } : {}), ...(opts.pid ? { pid: opts.pid } : {}), ...(opts.kind ? { kind: opts.kind } : {}), ...(opts.limit ? { limit: opts.limit } : {}) });
+  const out: { row: FileRow; bytes: Uint8Array | null; saveAs: string }[] = [];
+  for (const row of rows.sort((a, b) => a.at - b.at)) {
+    let bytes: Uint8Array | null = null;
+    try { if (row.url) { const r = await (opts.fetch ?? fetch)(row.url); if (r.ok) bytes = new Uint8Array(await r.arrayBuffer()); } } catch { /* said by the null */ }
+    // (a name from a browser is a name on this disk: plain characters only, no folders, and never a leading dot)
+    const safe = (s: string) => s.replace(/[^A-Za-z0-9._-]/g, '_').replace(/^\.+/, '_');
+    // (a text file the page packed on its way up — src/cloud/files.ts, `packed: 'gzip'` beside it — is written out as it was saved, under its own name)
+    let name = row.name; try { if (bytes && row.meta && (JSON.parse(row.meta) as { packed?: string }).packed === 'gzip') { bytes = new Uint8Array(gunzipSync(bytes, { maxOutputLength: FILESYNC.rawMax })); name = name.replace(/\.gz$/, ''); } } catch { /* as it came: a row's facts come from a browser, and bytes that unpack past what a page may send stay packed */ }
+    out.push({ row, bytes, saveAs: `${new Date(row.at).toISOString().replace(/[:.]/g, '-').replace('Z', '')}-${safe(row.sid).slice(0, 40)}-${safe(name)}` });
+  }
+  return out;
 }
 
 if (import.meta.main) {
   const A = process.argv.slice(2), word = (k: string): string | undefined => { const i = A.indexOf(k); return i >= 0 ? A[i + 1] : undefined; };
-  const url = word('--url') ?? process.env.TPS_CLOUD_URL ?? process.env.CONVEX_URL, key = word('--key') ?? process.env.CONVEX_DEPLOY_KEY;
-  if (!url || !key || A.includes('--help')) { console.error('usage: bun run tools/cloud/pull.ts [--url <address>] [--key <deploy key>] [--since <ISO>] [--pid <id>] [--out DIR] [--limit N] [--quiet]\n(the address and the key may be in TPS_CLOUD_URL / CONVEX_URL and CONVEX_DEPLOY_KEY instead)'); process.exit(2); }
+  // (--local: the deployment `bun run dev` runs on this machine — tools/cloud/local.ts; its address and key are where `convex dev` keeps them)
+  const here = A.includes('--local') ? localKey() : null; if (A.includes('--local') && !here) { console.error('no local deployment was ever started here (cloud/.convex/local/default/config.json is missing). Run `bun run dev` once.'); process.exit(2); }
+  const key = here?.key ?? word('--key') ?? process.env.CONVEX_DEPLOY_KEY, url = here?.url ?? word('--url') ?? process.env.TPS_CLOUD_URL ?? process.env.CONVEX_URL ?? (keyUrl(key) || undefined);
+  if (!url || !key || A.includes('--help')) { console.error('usage: bun run tools/cloud/pull.ts [--local | --url <address> --key <deploy key>] [--since <ISO>] [--pid <id>] [--out DIR] [--limit N] [--quiet] [--no-files]\n(the address and the key may be in TPS_CLOUD_URL / CONVEX_URL and CONVEX_DEPLOY_KEY instead; the key of a hosted deployment alone names its address)'); process.exit(2); }
   const out = word('--out') ?? 'cloud-pull', quiet = A.includes('--quiet'), since = word('--since'), limit = word('--limit') ? Number(word('--limit')) : undefined;
   const w = wire(url, { key, timeoutMs: 60000 });
   try {
     mkdirSync(out, { recursive: true });
     const d = await pullDump(w, { since, pid: word('--pid'), limit, say: quiet ? undefined : s => console.log(`  ${s}`) });
-    if (d) { writeFileSync(join(out, d.name), d.bytes); console.log(`${d.visits.length} visit${d.visits.length === 1 ? '' : 's'}, ${d.pieces} pieces → ${join(out, d.name)} (${(d.bytes.length / 1024).toFixed(0)} KB)`); } else console.log('no visits kept on the backend');
+    if (d) { writeFileSync(join(out, d.name), d.bytes); console.log(`${d.visits.length} visit${d.visits.length === 1 ? '' : 's'}, ${d.pieces} pieces, ${d.notes} line${d.notes === 1 ? '' : 's'} of notes → ${join(out, d.name)} (${(d.bytes.length / 1024).toFixed(0)} KB)`); } else console.log('no visits kept on the backend');
     const T: { at: number }[] = await w.query('telemetry:list', { ...(since ? { since: Date.parse(since) } : {}), limit: 2000 });
     writeFileSync(join(out, 'telemetry.ndjson'), T.sort((a, b) => a.at - b.at).map(r => JSON.stringify(r)).join('\n') + (T.length ? '\n' : ''));
     const P = await w.query('prefs:players', { limit: 2000 });
     writeFileSync(join(out, 'players.json'), JSON.stringify(P, null, 1));
+    if (!A.includes('--no-files')) {
+      // (a backend from before the files table has no such function: the rest of the pull stands)
+      const F = await pullFiles(w, { since, pid: word('--pid'), limit }).catch(e => { console.log(`saved files not read: ${String((e as Error)?.message ?? e).slice(0, 160)}`); return []; });
+      if (F.length) mkdirSync(join(out, 'files'), { recursive: true });
+      for (const f of F) { if (f.bytes) writeFileSync(join(out, 'files', f.saveAs), f.bytes); if (!quiet) console.log(`  ${f.saveAs}  ${f.row.kind}  ${(f.row.size / 1024).toFixed(0)} KB${f.bytes ? '' : '  NOT FETCHED'}`); }
+      writeFileSync(join(out, 'files.json'), JSON.stringify(F.map(f => { let meta: unknown = f.row.meta; try { if (f.row.meta) meta = JSON.parse(f.row.meta); } catch { /* as it came */ } return { ...f.row, meta, url: undefined, saveAs: f.saveAs, fetched: !!f.bytes }; }), null, 1));
+      console.log(`${F.length} saved file${F.length === 1 ? '' : 's'} → ${join(out, 'files')}`);
+    }
     console.log(`${T.length} telemetry record${T.length === 1 ? '' : 's'} → ${join(out, 'telemetry.ndjson')} · ${(P as unknown[]).length} browser${(P as unknown[]).length === 1 ? '' : 's'} → ${join(out, 'players.json')}`);
   } catch (e) { console.error(`pull — the backend could not be read: ${String((e as Error)?.message ?? e)}`); process.exit(1); }
 }

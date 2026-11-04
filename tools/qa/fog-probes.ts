@@ -1564,7 +1564,8 @@ export async function fogOurs(): Promise<boolean> {
       const all = game.guards; game.guards = []; try { detonateStun(game, it, true); } finally { game.guards = all; }
       const fl = L.lights.slice(n0).filter((l: any) => l.name === 'flash'); FOG.ours = !brk; { const all: any[] = game.items.items, ix = all.indexOf(it); if (ix >= 0) all.splice(ix, 1); } return fl.length ? fl.map((l: any) => L.fogClass(l)).join('') : 'none'; };
     const stun = { sam: can(PID, !brk), tango: can(HID, !brk), off: can(PID, false) };
-    const sites = /lightBy\(g\.engine\.lights\.flash\([^;]*\), spec\.who\)/.test(src('game/frag.ts')) && /lightBy\(g\.engine\.lights\.flash\([^;]*\), PLAYER_ID\)/.test(src('game/blastLook.ts'))
+    const sites = /lightBy\(g\.engine\.lights\.flash\([^;]*\), spec\.who\)/.test(src('game/frag.ts')) && /lightBy\(g\.engine\.lights\.flash\([^;]*\), g\.player\.char\.id\)/.test(src('game/blastLook.ts'))   /* (the man of the seat whose wall charge it is: game/seats.ts, since the game has two) */
+     
       && /if \(!blind\) g\.fogOfWar\.lightBy\(fl, shooter\.id\);/.test(src('game/combat.ts')) && /this\.fog\?\.lightBy\(l, t\.owner\);/.test(src('game/tracers.ts')) && /this\.tracers\.fog = \{ begin:/.test(src('game/game.ts'));
     verdict(teamOn && c.sam === 0 && c.mate === 0 && c.tango === 1 && c.nobody === 1 && offSam === 1 && stun.sam === '0' && stun.tango === '1' && stun.off === '1' && sites,
       'a flash somebody made without carrying it takes his class: the team\'s own lights the fog\'s picture too, a defender\'s and an ownerless one only what the team sees — and with the row off every one of them does, as it was; the real stun charge set off where nobody sees says the same; the frag, the wall charge\'s afterglow, a round\'s strike and a tracer\'s ember say whose they are',

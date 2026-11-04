@@ -45,6 +45,7 @@
 // NEVER SEEN ON A GPU: the slump (character.ts `slump`), the chair under him, the 'z' and the '♪', the screen's light on a seated man's face and in the room,
 // the chair pulled up are numbers nobody has looked at. He makes NO SOUND yet: a breath or a
 // snore is the sound table's to add (dozeBreath below is its phase).
+import { manById } from './seats';
 import { SideMap } from '../math/side';
 import type { Game, Guard, LightTarget } from './game';
 import type { Prop } from './props';
@@ -55,7 +56,6 @@ import { workLit } from './calmtorch';
 import { darkFoeBlind } from './darkfoe';
 import { CLOSE, closeSeat, closeUnseat, closeSeated, closeHasSeat } from './close';
 import { attentionLend } from './attention';
-import { PLAYER_ID } from './consts';
 import { simRandom } from '../math/dice';
 import { mathsEpoch } from '../math/exact';
 
@@ -261,7 +261,7 @@ export function dozeTick(g: Game, dt: number) {
     const ch = D.chair!;
     if (gd.held) { leftLit(g, D); D.why = 'taken'; D.wokeAt = g.time; D.phase = 'spent'; D.chair = null; c.anim.slump = 0; DOZE_STATS.woke.taken++; continue; }   // (hauled out of the chair: player.ts has unseated him)
     if (Number.isNaN(D.push)) D.push = ch.pushT;   // (the first frame after a load: the furniture is put back after the men)
-    if (ch.pushT > D.push + 1e-6) { const who = ch.lastWho === PLAYER_ID ? g.player.char.pos : g.guards.find(x => x.char.id === ch.lastWho)?.char.pos ?? c.pos; wake(g, gd, D, 'bump', who as Vec3); continue; }
+    if (ch.pushT > D.push + 1e-6) { const who = manById(g, ch.lastWho)?.char.pos ?? g.guards.find(x => x.char.id === ch.lastWho)?.char.pos ?? c.pos; wake(g, gd, D, 'bump', who as Vec3); continue; }
     if (gd.state !== 'patrol' || gd.awareness >= 0.3) { wake(g, gd, D, 'net', null); continue; }
     if (!live(g) || gd.script || gd.task || gd.bodyDuty || !closeHasSeat(g, gd)) { wake(g, gd, D, 'alarm', null); continue; }   // (… or somebody else has had him up out of it: the panel, a reset of the seats)
     if (D.mon) { const k = 1 - Math.exp(-4 * dt); D.cx += (D.at[0] - D.cx) * k; D.cz += (D.at[2] - D.cz) * k; }   // (pulled up to his screen: the chair comes under him as he sits)
