@@ -2,6 +2,10 @@
 // two bytes per texel over the world's grid footprint at WEAR_RES texels a metre —
 //   r = TRAFFIC 0‥255: where the shift walks. Every patrol route's legs traced over the nav grid (the paths the men actually take, waypoint to waypoint and
 //       back round), stamped with a walking lane's width, plus every door's threshold (everybody funnels through a doorway) — the polish there wears matte;
+//       ON THE LOOK'S PAGE (`walked`) it is EVERY WAY THE LEVEL IS WALKED (scene/ways.ts levelWays: its routes, each team's start to each room and thing it
+//       goes for, and what its author added by name), each kind by a weight of this file's. A level with no routes had no lane at all; a yard now has the
+//       trodden line from where a team comes in to the doors it goes for (the maintainer, 11-04: "wear, paths in the ground, different materials can all
+//       tell a story for how people walk through the level, its logic, leading the player for game play");
 //   g = WALL PROXIMITY 0‥255: how close the texel is to something standing on the floor (walls, cabinets, counters, plinths — the statics whose foot is at
 //       floor level), 255 at contact → 0 at GRIME_REACH: the band a mop does not reach.
 //       ON THE LOOK'S PAGE (`longFoot`) it is the band where stones gather, and that is along a WALL: each face of a standing box lays its band × how long the
@@ -15,6 +19,7 @@ import type { Level } from '../scene/level';
 import type { NavGrid } from '../scene/collision';
 import { WORLD } from '../scene/world';
 import { BoxFlag, type Box } from '../scene/boxes';
+import { levelWays, doorMid } from '../scene/ways';
 
 export const WEAR_RES = 8;          // texels per metre (12.5 cm: a lane's edge is soft over twice that anyway)
 const LANE_SIGMA = 0.34;            // a walking lane's Gaussian half-width (m): two feet and some wander
@@ -22,6 +27,8 @@ const DOOR_SIGMA = 0.55;            // a threshold's blob (m)
 const DOOR_AMP = 1.4;               // … and its weight against one route pass
 const TRAFFIC_K = 1.1;              // saturation: traffic = 1 − exp(−K × passes) — two overlapping routes read as well worn, not twice as worn
 const GRIME_REACH = 0.16;           // wall proximity falls to 0 this far from the foot of the wall (m)
+/** `walked`: what one way counts as, by its kind: a route is walked every hour of every night, a team's way now and then, the way between two outer doors by whoever lives there, an author's by his own weight */
+const WAY = { patrol: 1, team: 0.45, doors: 0.3, hint: 1 };
 const RUN_LO = 1.25, RUN_HI = 2.5;  // m of straight face (`longFoot`): under LO no band (a crate, a pallet, two crates side by side), from HI all of it (a hut's wall, a container)
 const RUN_MEET = 0.03;              // m: two faces meet end to end within this
 const RUN_STEP = 0.12;              // m: a face this far proud of another, or back from it, is still on its line (a wall's pillar, a plinth course, a board leant flat on it)
@@ -29,8 +36,9 @@ const RUN_TURN = 0.9986;            // … and faces the same way within 3° (th
 
 export interface WearMap { data: Uint8Array; w: number; h: number }
 
-/** `longFoot`: the wall band × how long the face is (the head of this file; the look's page asks for it, every other page has the band as it always was) */
-export function buildWearMap(level: Level, nav: NavGrid | null, longFoot = false): WearMap {
+/** `longFoot`: the wall band × how long the face is; `walked`: the traffic is every way the level is walked (the head of this file; the look's page asks
+ *  for both, every other page has the map as it always was) */
+export function buildWearMap(level: Level, nav: NavGrid | null, longFoot = false, walked = false): WearMap {
   const w = Math.round(WORLD.gridW * WORLD.gridCell * WEAR_RES), h = Math.round(WORLD.gridH * WORLD.gridCell * WEAR_RES);
   const ox = WORLD.min[0], oz = WORLD.min[2];
   const T = new Float32Array(w * h);
@@ -49,21 +57,22 @@ export function buildWearMap(level: Level, nav: NavGrid | null, longFoot = false
     const len = Math.hypot(bx - ax, bz - az); const n = Math.max(1, Math.ceil(len / 0.1)); const per = amp * (len / n) / (LANE_SIGMA * 2.5);
     for (let i = 0; i <= n; i++) { const t = i / n; stamp(ax + (bx - ax) * t, az + (bz - az) * t, LANE_SIGMA, per); }
   };
-  for (const route of level.routes) {
+  /** a man stands and turns at a waypoint for his wait: a worn patch there */
+  const stand = (route: Level['routes'][number], i: number) => stamp(route.points[i][0], route.points[i][2], LANE_SIGMA * 1.3, 0.35 + Math.min(1, (route.wait[i] ?? 0) / 20));
+  if (walked) {   // every way the level is walked, each traced along its own line as a route's legs always were, by its kind's weight
+    for (const p of levelWays(level, level.scenarios, nav).paths) for (let k = 0; k + 1 < p.points.length; k++) walk(p.points[k][0], p.points[k][2], p.points[k + 1][0], p.points[k + 1][2], WAY[p.kind] * p.weight);
+    for (const route of level.routes) if (route.points.length >= 2) for (let i = 0; i < route.points.length; i++) stand(route, i);
+  } else for (const route of level.routes) {
     const pts = route.points; if (pts.length < 2) continue;
     for (let i = 0; i < pts.length; i++) {
       const a = pts[i], b = pts[(i + 1) % pts.length];   // the loop closes: the last waypoint walks back to the first
       const path = nav?.findPath(a, b, 6000) ?? null;
       const poly = path && path.length >= 2 ? path : [a, b];
       for (let k = 0; k + 1 < poly.length; k++) walk(poly[k][0], poly[k][2], poly[k + 1][0], poly[k + 1][2], 1);
-      // a man stands and turns at each waypoint for his wait: a worn patch there
-      stamp(a[0], a[2], LANE_SIGMA * 1.3, 0.35 + Math.min(1, (route.wait[i] ?? 0) / 20));
+      stand(route, i);
     }
   }
-  for (const d of level.doors) {   // thresholds: the frame centre (doors.ts frameCentre), both faces
-    const cx = d.hinge[0] + Math.cos(d.closedDir) * d.width * 0.5, cz = d.hinge[1] + Math.sin(d.closedDir) * d.width * 0.5;
-    stamp(cx, cz, DOOR_SIGMA, DOOR_AMP);
-  }
+  for (const d of level.doors) { const c = doorMid(d); stamp(c[0], c[2], DOOR_SIGMA, DOOR_AMP); }   // thresholds: the frame centre (doors.ts frameCentre), both faces
   const prox = longFoot ? bandByFaces(level.boxes, w, h, ox, oz) : bandByOccupancy(level.boxes, w, h, ox, oz);
   const data = new Uint8Array(w * h * 2);
   for (let i = 0; i < w * h; i++) {

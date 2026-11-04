@@ -175,15 +175,16 @@ fn cutEdgeTake(s0: f32, g: vec2f, best: ptr<function, f32>, d: ptr<function, vec
     }
   }
   if (edge && (cw & 1u) != 0u) { albedo = core.rgb; rough = 1.0; metal = 0.0; }
+  let lookW = LOOK && !cap && own < 0 && !side && lookWears(n, bi, hfS);   // (as fsBox: one layer wears the pixel. Only the box's own faces: a cut face and a round's side have no wear from either)
   if (frame.matCfg.w > 0.0 && !cap && own < 0 && !side) {   // (the detail layer reads the box's own faces — edge wear, the skirting band: a cut face shows the bare material, and so does a round's side)
-    let dt = detailSurface(v.wp, n, bi, albedo, rough, metal, frame.matCfg.w);
+    let dt = detailSurface(v.wp, n, bi, albedo, rough, metal, frame.matCfg.w, lookW);
     albedo = dt.albedo; rough = dt.rough; metal = dt.metal;
   }
   var lookTilt = false; let gn = n;
   if (LOOK && !cap && (own < 0 || side || oldCut)) {        // THE LOOK PROTOTYPE (look.wgsl; as fsBox, the class found here a pixel): a cut face shows the bare material; a round's side is painted as the face it leans to, an old break as its core's stuff
     let bent = side || oldCut;                              // (…whose relief is added to the face's own normal and never marked as a tilt: common.wgsl lookGeoN would snap such a pixel to a box axis, which this face is not)
     var lcls = boxStuff(bi); if (oldCut) { lcls = lookClass(albedo); }   // (the box's own word; an old break's core is a COLOUR in the cut's record and not a box, so it alone is still told by its colour)
-    let lk = lookSurface(lcls, v.wp, select(n, flatN, bent), bi, lcS, hfS, albedo, rough, dwx, dwy, distance(v.wp, frame.camPos) * 2.0 * frame.post.w * frame.invScreen.y);
+    let lk = lookSurface(lcls, v.wp, select(n, flatN, bent), bi, lcS, hfS, albedo, rough, dwx, dwy, distance(v.wp, frame.camPos) * 2.0 * frame.post.w * frame.invScreen.y, lookW);
     albedo = lk.albedo; rough = lk.rough;
     if (bent) { n = normalize(n + lk.n - flatN); } else { n = lk.n; lookTilt = lk.tilted; }
   }
@@ -192,7 +193,7 @@ fn cutEdgeTake(s0: f32, g: vec2f, best: ptr<function, f32>, d: ptr<function, vec
     albedo = sf.albedo; n = sf.n; rough = sf.rough;
   }
   if (v.mark != 0u && !cap && (own < 0 || side)) {
-    let mk = markSurfaceGB(v.mark, bi, v.wp, n, dwx, dwy, albedo, rough, lookMarkSoft());
+    let mk = markSurfaceGB(v.mark, bi, v.wp, n, dwx, dwy, albedo, rough, lookMarkSoft(), lookTrod());
     albedo = mk.albedo; rough = mk.rough;
   }
   var snowA = 0.0;
