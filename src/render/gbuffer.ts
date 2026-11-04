@@ -39,14 +39,12 @@ function classWgsl(name: string, of: Readonly<Partial<Record<GwotMat, number>>>)
   return `fn ${name}(a: vec3f) -> u32 {\n${exact.join('\n')}\n${dark.join('\n')}\n  return 0u;\n}\n`;
 }
 function surfaceWgsl(): string { return classWgsl('surfClass', SURF_OF) + surfaceSrc; }
-/** the look's class number of a stuff: lookTex.ts lookStuffOf, the one table (0 = drawn plain, which 'plain' and 'waits' both are) */
-export const lookClassOf = lookStuffOf;
 /** WHAT A PAINT NAME IS DRAWN AS: scene/stuff.ts PAINT_STUFF as the look's class numbers, less the names that are mixed (those have no class of their own:
  *  the colour decides). The audit of a level reads this to tell a paint that is meant from one that got a material by the chance of its colour. */
-export const LOOK_BY_NAME: Readonly<Record<string, number>> = Object.fromEntries(Object.entries(PAINT_STUFF).filter(([, stuff]) => stuff !== 'mixed').map(([name, stuff]) => [name, lookClassOf(stuff)]));
+export const LOOK_BY_NAME: Readonly<Record<string, number>> = Object.fromEntries(Object.entries(PAINT_STUFF).filter(([, stuff]) => stuff !== 'mixed').map(([name, stuff]) => [name, lookStuffOf(stuff)]));
 /** THE LOOK PROTOTYPE's classes of the palette's rows: surface.wgsl's eight and three of its own (look.wgsl LOOK_CLOTH 9, LOOK_METAL 10, LOOK_PAINT 11), read
  *  off the table of names in its order (the shader's text below is written in this order, and a darkened paint is the first row it fits) */
-export const LOOK_OF: Readonly<Partial<Record<GwotMat, number>>> = Object.fromEntries(Object.entries(PAINT_STUFF).filter(([name, stuff]) => BY_COLOUR.has(stuff) && name in GWOT_PALETTE).map(([name, stuff]) => [name, lookClassOf(stuff)]));   // (a palette row of a stuff added since the eleven is found by its name only: scene/stuff.ts BY_COLOUR)
+export const LOOK_OF: Readonly<Partial<Record<GwotMat, number>>> = Object.fromEntries(Object.entries(PAINT_STUFF).filter(([name, stuff]) => BY_COLOUR.has(stuff) && name in GWOT_PALETTE).map(([name, stuff]) => [name, lookStuffOf(stuff)]));   // (a palette row of a stuff added since the eleven is found by its name only: scene/stuff.ts BY_COLOUR)
 
 /** WHAT A PAINT IS DRAWN AS (look.wgsl's classes; 0 = plain), by the rule lookClass writes out for the shader and with its numbers: the palette's own row first (a
  *  stand-in is that row), then a classed paint darkened in one piece (a worn patch is its ground × 0.7). The engine asks it of each box's AUTHORED paint and the
@@ -79,7 +77,7 @@ export function lookNamed(rows: PaintRows | null | undefined): Map<number, numbe
   const named = new Map<number, number>(), seen = new Set<number>();
   for (const [name, row] of Object.entries(rows ?? {})) {
     const key = paintKey(row.albedo); if (key < 0 || seen.has(key)) continue; seen.add(key);
-    const stuff = stuffOfName(name); if (stuff !== undefined && stuff !== 'mixed') named.set(key, lookClassOf(stuff));
+    const stuff = stuffOfName(name); if (stuff !== undefined && stuff !== 'mixed') named.set(key, lookStuffOf(stuff));
   }
   return named;
 }
@@ -111,7 +109,7 @@ export function lookWordOf(dry?: (b: Box) => Readonly<ArrayLike<number>> | undef
     if (moves) h = b.mkey !== undefined ? Math.imul(b.mkey | 0, 0x9e3779b1) : Math.imul(Math.round(b.h[0] * 1000) + 131 * Math.round(b.h[1] * 1000) + 17161 * Math.round(b.h[2] * 1000), 0x9e3779b1);
     else h = Math.imul(Math.round(b.c[0] * 100) + 7919 * Math.round(b.c[1] * 100) + 104729 * Math.round(b.c[2] * 100), 0x9e3779b1);
     h ^= h >>> 15; h = Math.imul(h, 0x85ebca6b); h ^= h >>> 13;
-    const stuff = own && b.stuff !== undefined ? lookClassOf(b.stuff) : named.size ? named.get(paintKey(paint)) ?? lookStuff(paint) : lookStuff(paint);   // (the box's own word, then its paint's name, then its colour)
+    const stuff = own && b.stuff !== undefined ? lookStuffOf(b.stuff) : named.size ? named.get(paintKey(paint)) ?? lookStuff(paint) : lookStuff(paint);   // (the box's own word, then its paint's name, then its colour)
     lookSeen(stuff); if (b.cutOld && b.cutCore) lookSeen(lookStuff(b.cutCore));   // (an OLD break's core is drawn as its own colour's stuff, gbuffer_cut.wgsl; a fresh break's core is a colour and no stuff)
     return stuff + (moves ? LOOK_WORD.moves : 0) + LOOK_WORD.own * ((h >>> 0) % LOOK_WORD.owns);
   };
