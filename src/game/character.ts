@@ -507,15 +507,15 @@ function curve3(t: number, K: Keys3): Vec3 {
 /** sampleClip(clip, 0, false, out) for the clips the aim layer samples there every frame: that call writes fixed numbers (each track's first key, read off the clip alone —
  *  a sample never reads the pose it writes) into fixed slots, so they are found once per clip — sampled into a pose of NaNs: a slot still NaN afterwards is one the clip
  *  does not key — and replayed: the same floats into the same slots, the rest of `out` left as it stands, exactly as the sample leaves it. */
-const AT0 = new SideMap<Clip, { at: Int32Array; v: Float32Array }>('character.AT0'); AT0.asMemo();   // (read off the clip alone, a thing of the character file every game shares)
+const AT0 = new SideMap<Clip, { rows: number; at: Int32Array; v: Float32Array }>('character.AT0'); AT0.asMemo();   // (read off the clip alone, a thing of the character file every game shares)
 function sampleAt0(clip: Clip, out: Pose) {
   let e = AT0.get(clip);
-  if (!e) {
-    const p = new Pose(out.numNodes); p.data.fill(NaN); sampleClip(clip, 0, false, p);
-    const at: number[] = []; for (let i = 0; i < p.data.length; i++) if (p.data[i] === p.data[i]) at.push(i);
-    e = { at: Int32Array.from(at), v: Float32Array.from(at, i => p.data[i]) }; AT0.set(clip, e);
+  if (!e || e.rows !== out.rows) {   // (the slots are places in a pose's columns, which stand a row count apart: found again for a pose of another)
+    const p = new Pose(out.numNodes); p.cols.fill(NaN); sampleClip(clip, 0, false, p);
+    const at: number[] = []; for (let i = 0; i < p.cols.length; i++) if (p.cols[i] === p.cols[i]) at.push(i);
+    e = { rows: p.rows, at: Int32Array.from(at), v: Float32Array.from(at, i => p.cols[i]) }; AT0.set(clip, e);
   }
-  const d = out.data, at = e.at, v = e.v; for (let k = 0; k < at.length; k++) d[at[k]] = v[k];
+  const d = out.cols, at = e.at, v = e.v; for (let k = 0; k < at.length; k++) d[at[k]] = v[k];
 }
 /** `p` with the difference between two poses laid on it by w: each joint turned on, in its own frame, by what takes `from` to `to` (from⁻¹ · to, the shortest
  *  way, eased from none by w), its origin moved by their difference; scales left as p's. `only`: the joints it is done for (any share at all — the caller's own
@@ -523,17 +523,17 @@ function sampleAt0(clip: Clip, out: Pose) {
  *  rounding. (MOVES.snap: a clip's recoil onto a pose the clip was not keyed from.) */
 function addPoseDelta(p: Pose, from: Pose, to: Pose, w: number, only: Float32Array) {
   if (w <= 0) return;
-  const P = p.data, A = from.data, B = to.data;
+  const P = p.cols, A = from.cols, B = to.cols, N = p.rows;
   for (let i = 0, n = p.numNodes; i < n; i++) {
     if (only[i] <= 0) continue;
-    const o = i * 10; for (let c = 0; c < 3; c++) P[o + c] += (B[o + c] - A[o + c]) * w;
-    const ax = -A[o + 3], ay = -A[o + 4], az = -A[o + 5], aw = A[o + 6], bx = B[o + 3], by = B[o + 4], bz = B[o + 5], bw = B[o + 6];
+    for (let c = 0, o = i; c < 3; c++, o += N) P[o] += (B[o] - A[o]) * w;
+    const ax = -A[3 * N + i], ay = -A[4 * N + i], az = -A[5 * N + i], aw = A[6 * N + i], bx = B[3 * N + i], by = B[4 * N + i], bz = B[5 * N + i], bw = B[6 * N + i];
     let dx = aw * bx + ax * bw + ay * bz - az * by, dy = aw * by - ax * bz + ay * bw + az * bx, dz = aw * bz + ax * by - ay * bx + az * bw, dw = aw * bw - ax * bx - ay * by - az * bz;
     if (dw < 0) { dx = -dx; dy = -dy; dz = -dz; dw = -dw; }
     dx *= w; dy *= w; dz *= w; dw = 1 + (dw - 1) * w;
-    const px = P[o + 3], py = P[o + 4], pz = P[o + 5], pw = P[o + 6];
+    const px = P[3 * N + i], py = P[4 * N + i], pz = P[5 * N + i], pw = P[6 * N + i];
     const x = pw * dx + px * dw + py * dz - pz * dy, y = pw * dy - px * dz + py * dw + pz * dx, z = pw * dz + px * dy - py * dx + pz * dw, ww = pw * dw - px * dx - py * dy - pz * dz;
-    const l = hyp4(x, y, z, ww) || 1; P[o + 3] = x / l; P[o + 4] = y / l; P[o + 5] = z / l; P[o + 6] = ww / l;
+    const l = hyp4(x, y, z, ww) || 1; P[3 * N + i] = x / l; P[4 * N + i] = y / l; P[5 * N + i] = z / l; P[6 * N + i] = ww / l;
   }
 }
 /** IK pole for an arm from a swivel angle: the direction square to the shoulder→hand offset `h` at angle `psi` in the basis (b1 = `ref` made ⊥ h, b2 = ĥ × b1).
@@ -845,18 +845,19 @@ const mvOn = (k: keyof typeof MOVES) => MOVES.on > 0.5 && MOVES[k] > 0.5;
 export const HAND = { can: { curl: [0.56, 0.58, 0.62, 0.68], thumb: 0.3 }, curl: [0.3, 0.35, 0.41, 0.48], thumb: 0.38, thumbIn: 34, thumbBend: 15, thumbClose: 10, thumbOwn: 1, spread: -0.15, vary: 0.05, sideVary: 0.035, fingerVary: 0.025, far: 45,
   trig: [6, 10, 6], trigSpread: 6, trigTrained: 0.6, trigHold: 0.7 };
 /** the angle (rad) between the unit quaternions at a[i‥i+3] and b[k‥k+3] */
-const qAng = (a: ArrayLike<number>, i: number, b: ArrayLike<number>, k: number) => { const d = Math.abs(a[i] * b[k] + a[i + 1] * b[k + 1] + a[i + 2] * b[k + 2] + a[i + 3] * b[k + 3]); return d >= 1 ? 0 : 2 * Math.acos(d); };
-/** d[o‥o+3] ← d[o‥o+3] · (x, y, z, w)^f — a joint's local rotation turned on by the share f of a further local rotation, in place */
-function qTurnBy(d: Float32Array, o: number, x: number, y: number, z: number, w: number, f: number) {
+/** the angle between the rotation at a[i] (its four numbers `s` apart: a pose's rows, or 1 in a plain list of rotations) and the one at b[k‥k+3] */
+const qAng = (a: ArrayLike<number>, i: number, s: number, b: ArrayLike<number>, k: number) => { const d = Math.abs(a[i] * b[k] + a[i + s] * b[k + 1] + a[i + 2 * s] * b[k + 2] + a[i + 3 * s] * b[k + 3]); return d >= 1 ? 0 : 2 * Math.acos(d); };
+/** q ← q · (x, y, z, w)^f, q the rotation at d[o], d[o + s], d[o + 2s], d[o + 3s] (a pose's columns: s = its rows) — a joint's local rotation turned on by the share f of a further local rotation, in place */
+function qTurnBy(d: Float32Array, o: number, s: number, x: number, y: number, z: number, w: number, f: number) {
   if (w < 0) { x = -x; y = -y; z = -z; w = -w; }
   const th = Math.acos(Math.min(1, w)); let sc = f, cw = 1; if (th > 1e-4) { sc = Math.sin(f * th) / Math.sin(th); cw = Math.cos(f * th); }
-  x *= sc; y *= sc; z *= sc; const qx = d[o], qy = d[o + 1], qz = d[o + 2], qw = d[o + 3];
-  d[o] = qw * x + qx * cw + qy * z - qz * y; d[o + 1] = qw * y - qx * z + qy * cw + qz * x; d[o + 2] = qw * z + qx * y - qy * x + qz * cw; d[o + 3] = qw * cw - qx * x - qy * y - qz * z;
+  x *= sc; y *= sc; z *= sc; const qx = d[o], qy = d[o + s], qz = d[o + 2 * s], qw = d[o + 3 * s];
+  d[o] = qw * x + qx * cw + qy * z - qz * y; d[o + s] = qw * y - qx * z + qy * cw + qz * x; d[o + 2 * s] = qw * z + qx * y - qy * x + qz * cw; d[o + 3 * s] = qw * cw - qx * x - qy * y - qz * z;
 }
-/** d[o‥o+3] turned the share f of the way to the local rotation at t[k‥k+3], in place */
-function qTurnTo(d: Float32Array, o: number, t: ArrayLike<number>, k: number, f: number) {
-  const cx = -d[o], cy = -d[o + 1], cz = -d[o + 2], cw = d[o + 3];   // conj(q) · target
-  qTurnBy(d, o, cw * t[k] + cx * t[k + 3] + cy * t[k + 2] - cz * t[k + 1], cw * t[k + 1] - cx * t[k + 2] + cy * t[k + 3] + cz * t[k], cw * t[k + 2] + cx * t[k + 1] - cy * t[k] + cz * t[k + 3], cw * t[k + 3] - cx * t[k] - cy * t[k + 1] - cz * t[k + 2], f);
+/** the rotation at d[o] (its numbers s apart) turned the share f of the way to the local rotation at t[k‥k+3], in place */
+function qTurnTo(d: Float32Array, o: number, s: number, t: ArrayLike<number>, k: number, f: number) {
+  const cx = -d[o], cy = -d[o + s], cz = -d[o + 2 * s], cw = d[o + 3 * s];   // conj(q) · target
+  qTurnBy(d, o, s, cw * t[k] + cx * t[k + 3] + cy * t[k + 2] - cz * t[k + 1], cw * t[k + 1] - cx * t[k + 2] + cy * t[k + 3] + cz * t[k], cw * t[k + 2] + cx * t[k + 1] - cy * t[k] + cz * t[k + 3], cw * t[k + 3] - cx * t[k] - cy * t[k + 1] - cz * t[k + 2], f);
 }
 /** MOVES.entry's lane (THE rule, for the game and the strips alike): something (dx, dz) from a man stands before his muzzle — within arm's length-and-a-half
  *  down the line his GUN points (gunYaw) and inside a body's half-width of it */
@@ -1796,9 +1797,9 @@ export class CharacterAnimator {
   private jogHipsY = new Float32Array(64); private jogHipsMean = 0.9; private jogMid = -0.1;   // (constructor: the run clip's pelvis height by phase, and where its ankles' fore-aft travel is centred — the stride warp scales about it)
   private runK = 1;                                                       // this frame's run stride warp (1 = none)
   private sprintMid = -0.1; private sprintFloorY = 0.09;                  // (constructor, off Sprint_Loop: the fore-aft middle of its ankles' travel, and their lowest height — sprintShape warps about the one and eases heights about the other)
-  /** Jog_Fwd_Loop's loop seam: the keyed channels whose last key does not meet their first (the pelvis 23 mm apart, the legs 1–3°), as (Pose.data offset,
+  /** Jog_Fwd_Loop's loop seam: the keyed channels whose last key does not meet their first (the pelvis 23 mm apart, the legs 1–3°), as (node,
    *  first − last: a translation, or the axis / angle of last⁻¹·first) — sampleJog spreads each linearly round the cycle so phase 1 runs straight into phase 0 */
-  private jogSeam: { node: number; o: number; d?: Vec3; axis?: Vec3; ang?: number }[] = [];
+  private jogSeam: { node: number; d?: Vec3; axis?: Vec3; ang?: number }[] = [];
   /** the runs' stances, measured off the raw jog and sprint clips at construction (stanceOf): mid-stance phase per foot — the toe on the floor and sweeping
    *  back — and the two folded onto the half-cycle. Blended by the sprint's share each frame: RUN_LINGER dwells about `c`, runPlant pins each foot about its own */
   private runGait = { jog: { c: 0.117, cL: 0.117, cR: 0.617 }, sprint: { c: 0.153, cL: 0.133, cR: 0.672 } };
@@ -1891,7 +1892,7 @@ export class CharacterAnimator {
       // the hand pass: the fist the standing clips key on every digit, and how far the crouch clip's own (open) hand stands from it, digit by digit
       const H = this.hn, grab = (q: Pose) => H.nodes.map(ns => { const a = new Float32Array(60); ns.forEach((i, k) => a.set(q.rot(i), k * 4)); return a; });
       H.fist = grab(p); const pc = new Pose(n).copy(this.rest); sampleClip(this.clips.Crouch_Idle_Loop, 0, false, pc); const cr = grab(pc);
-      H.own = [0, 1].map(sd => Float32Array.from([0, 1, 2, 3, 4], g => Math.max(10 * DEGR, (qAng(cr[sd], g * 12, H.fist[sd], g * 12) + qAng(cr[sd], g * 12 + 4, H.fist[sd], g * 12 + 4) + qAng(cr[sd], g * 12 + 8, H.fist[sd], g * 12 + 8)) / 3)));
+      H.own = [0, 1].map(sd => Float32Array.from([0, 1, 2, 3, 4], g => Math.max(10 * DEGR, (qAng(cr[sd], g * 12, 1, H.fist[sd], g * 12) + qAng(cr[sd], g * 12 + 4, 1, H.fist[sd], g * 12 + 4) + qAng(cr[sd], g * 12 + 8, 1, H.fist[sd], g * 12 + 8)) / 3)));
       this.idleFeet = { L: v3.copy(fk.pos[nd.footL]), R: v3.copy(fk.pos[nd.footR]), rL: [...fk.rot[nd.footL]] as Quat, rR: [...fk.rot[nd.footR]] as Quat }; }
     { // the crouch walk's gait for the deliberate retime (sneakLayer): where the ankles' fore-aft travel is centred, and where in the cycle each toe comes down
       // flat (its height back within a centimetre of the floor after the swing) — the linger sits a little after that, the two plants folded onto one half-cycle
@@ -1912,11 +1913,11 @@ export class CharacterAnimator {
       const cj = this.clips.Jog_Fwd_Loop, a = new Pose(n).copy(this.rest), b = new Pose(n).copy(this.rest);
       sampleClip(cj, 0, false, a); sampleClip(cj, cj.duration, false, b);
       for (const tr of cj.tracks) {
-        if (tr.path === 0) { const d = v3.sub(a.pos(tr.node), b.pos(tr.node)); if (v3.len(d) > 5e-4) this.jogSeam.push({ node: tr.node, o: tr.node * 10, d }); }
+        if (tr.path === 0) { const d = v3.sub(a.pos(tr.node), b.pos(tr.node)); if (v3.len(d) > 5e-4) this.jogSeam.push({ node: tr.node, d }); }
         else if (tr.path === 1) {
           let q = quat.mul(quat.conj(b.rot(tr.node)), a.rot(tr.node)); if (q[3] < 0) q = [-q[0], -q[1], -q[2], -q[3]];
           const s = hyp3(q[0], q[1], q[2]), ang = 2 * Math.atan2(s, q[3]);
-          if (ang > 0.3 * DEGR) this.jogSeam.push({ node: tr.node, o: tr.node * 10 + 3, axis: [q[0] / s, q[1] / s, q[2] / s], ang });
+          if (ang > 0.3 * DEGR) this.jogSeam.push({ node: tr.node, axis: [q[0] / s, q[1] / s, q[2] / s], ang });
         }
       } }
     // (what a layer of the Rust module is handed with the rig — skeleton.ts layerSlot: the named nodes, the lists of nodes, and the tables of numbers worked out above)
@@ -2374,8 +2375,8 @@ export class CharacterAnimator {
         const sunk = smoothstep(MV.steady.deep[0], MV.steady.deep[1], SNEAK.drop * Dl + SNEAK.paceDrop * pace + lerp(CREEP.drop[0], CREEP.drop[1], crouchPose) * clamp(this.crW, 0, 1));   // (by how far the layers after this one will sink the pelvis)
         this.steadyLayer(sw > 0.003 ? sw : 0, (1 - smoothstep(0, 0.01, (Math.max(0, st.squat.x) + Math.abs(st.blade.x) * 0.003) * sq)) * (1 - sunk), sunk); } }
     if (MOVES.on > 0.5) {   // the hand pass: where the locomotion has left every digit, before any layer shapes a hand (handsPass measures what they did against it)
-      const H = this.hn, d = this.pA.data;
-      for (let sd = 0; sd < 2; sd++) { const ns = H.nodes[sd], b = H.base[sd]; for (let k = 0; k < 15; k++) { const o = ns[k] * 10 + 3; b[k * 4] = d[o]; b[k * 4 + 1] = d[o + 1]; b[k * 4 + 2] = d[o + 2]; b[k * 4 + 3] = d[o + 3]; } H.note[sd].fill(Infinity); }
+      const H = this.hn, d = this.pA.cols, N = this.pA.rows;
+      for (let sd = 0; sd < 2; sd++) { const ns = H.nodes[sd], b = H.base[sd]; for (let k = 0; k < 15; k++) { const o = 3 * N + ns[k]; b[k * 4] = d[o]; b[k * 4 + 1] = d[o + N]; b[k * 4 + 2] = d[o + 2 * N]; b[k * 4 + 3] = d[o + 3 * N]; } H.note[sd].fill(Infinity); }
     }
     // ---- life: breathing, the body's mass on starts / stops, the weight shifting foot to foot at rest (under every stance / hold / one-shot: they weigh it out) —
     //      and the standing foot lock, which the stances / holds / lockpick weigh out the same way (they have the whole body) but of the one-shots only the KICK
@@ -3329,13 +3330,13 @@ export class CharacterAnimator {
    *  for operand, so those nodes hold exactly the numbers a full run would give them; the rest of fk is left as the last run had it. For a layer that reads only those joints
    *  before its next full run — twoBoneIK counts: on entry it reads its three joints and the upper one's rotation, then runs the whole skeleton itself. */
   private fkPart(pose: Pose, list: Int32Array) {
-    const d = pose.data, nodes = this.ch.nodes, rot = this.fk.rot, pos = this.fk.pos;
+    const d = pose.cols, N = pose.rows, nodes = this.ch.nodes, rot = this.fk.rot, pos = this.fk.pos;
     for (let k = 0; k < list.length; k++) {
-      const i = list[k]; const par = nodes[i].parent; const o = i * 10; const q = rot[i], p = pos[i];
-      const rx = d[o + 3], ry = d[o + 4], rz = d[o + 5], rw = d[o + 6];
-      if (par < 0) { q[0] = rx; q[1] = ry; q[2] = rz; q[3] = rw; p[0] = d[o]; p[1] = d[o + 1]; p[2] = d[o + 2]; continue; }
+      const i = list[k]; const par = nodes[i].parent; const q = rot[i], p = pos[i];
+      const rx = d[3 * N + i], ry = d[4 * N + i], rz = d[5 * N + i], rw = d[6 * N + i];
+      if (par < 0) { q[0] = rx; q[1] = ry; q[2] = rz; q[3] = rw; p[0] = d[i]; p[1] = d[N + i]; p[2] = d[2 * N + i]; continue; }
       const pr = rot[par], pp = pos[par];
-      const qx = pr[0], qy = pr[1], qz = pr[2], qw = pr[3]; const v0 = d[o], v1 = d[o + 1], v2 = d[o + 2];
+      const qx = pr[0], qy = pr[1], qz = pr[2], qw = pr[3]; const v0 = d[i], v1 = d[N + i], v2 = d[2 * N + i];
       const tx = 2 * (qy * v2 - qz * v1), ty = 2 * (qz * v0 - qx * v2), tz = 2 * (qx * v1 - qy * v0);
       const t0 = v0 + qw * tx + (qy * tz - qz * ty), t1 = v1 + qw * ty + (qz * tx - qx * tz), t2 = v2 + qw * tz + (qx * ty - qy * tx);
       q[0] = qw * rx + qx * rw + qy * rz - qz * ry; q[1] = qw * ry - qx * rz + qy * rw + qz * rx; q[2] = qw * rz + qx * ry - qy * rx + qz * rw; q[3] = qw * rw - qx * rx - qy * ry - qz * rz;
@@ -3368,8 +3369,8 @@ export class CharacterAnimator {
     const th = this.thumbs[side], TJ = [30, 25, 45];   // thumb: swings across under the fingers joint by joint
     th.forEach((node, j) => pose.setRot(node, quat.normalize(quat.mul(this.rest.rot(node), quat.axisAngle(AX, thumb * TJ[j] * DEGR)))));
     if (MOVES.on > 0.5 && !this.hn.quiet) {   // the hand pass's note: a layer has set this hand — how far its shape stands from where the locomotion left each digit (the nearest of the frame's)
-      const H = this.hn, ns = H.nodes[side], b = H.base[side], nt = H.note[side], d = pose.data;
-      for (let g = 0; g < 5; g++) { const k = g * 3; nt[g] = Math.min(nt[g], (qAng(d, ns[k] * 10 + 3, b, k * 4) + qAng(d, ns[k + 1] * 10 + 3, b, k * 4 + 4) + qAng(d, ns[k + 2] * 10 + 3, b, k * 4 + 8)) / 3); }
+      const H = this.hn, ns = H.nodes[side], b = H.base[side], nt = H.note[side], d = pose.cols, N = pose.rows;
+      for (let g = 0; g < 5; g++) { const k = g * 3; nt[g] = Math.min(nt[g], (qAng(d, 3 * N + ns[k], N, b, k * 4) + qAng(d, 3 * N + ns[k + 1], N, b, k * 4 + 4) + qAng(d, 3 * N + ns[k + 2], N, b, k * 4 + 8)) / 3); }
     }
   }
   /** MOVES, crouched (weight `w` = the crouch shown): the crouch clip kneels on the ball of the rear foot — heel up, the foot bone straight down — while that
@@ -3448,28 +3449,28 @@ export class CharacterAnimator {
     layerRan(POSE_BENCH.x!.layer_hands_pass(g, this.pA.at), this.fk); colsFromBench(CharacterAnimator.handsPassCols, this);
   }
   private handsPassOwn(dt: number, fullL: number, fullR: number, gunR: number) {
-    const H = this.hn, d = this.pA.data, far = HAND.far * DEGR;
+    const H = this.hn, d = this.pA.cols, N = this.pA.rows, far = HAND.far * DEGR;
     for (let sd = 0; sd < 2; sd++) {
       H.grip[sd] = damp(H.grip[sd], this.grip[sd] ? 1 : 0, 14, dt);
       const free = (1 - clamp(sd ? fullR : fullL, 0, 1)) * (1 - H.grip[sd]); if (free <= 0.003) continue;
       const ns = H.nodes[sd], fist = H.fist[sd], open = H.open[sd], b = H.base[sd], nt = H.note[sd], own = H.own[sd];
       for (let g = 0; g < 5; g++) {
-        const k = g * 12, o0 = ns[g * 3] * 10 + 3, o1 = ns[g * 3 + 1] * 10 + 3, o2 = ns[g * 3 + 2] * 10 + 3;
-        const fistK = 1 - clamp((qAng(b, k, fist, k) + qAng(b, k + 4, fist, k + 4) + qAng(b, k + 8, fist, k + 8)) / 3 / (own[g] * 0.85), 0, 1); if (fistK <= 0.003 && g > 0) continue;   // how much of the hand under the layers is the library's fist (none of it, crouched: that clip's hand is its own)
-        const moved = (qAng(d, o0, b, k) + qAng(d, o1, b, k + 4) + qAng(d, o2, b, k + 8)) / 3, D = nt[g] < Infinity ? nt[g] : far;
+        const k = g * 12, o0 = 3 * N + ns[g * 3], o1 = 3 * N + ns[g * 3 + 1], o2 = 3 * N + ns[g * 3 + 2];
+        const fistK = 1 - clamp((qAng(b, k, 1, fist, k) + qAng(b, k + 4, 1, fist, k + 4) + qAng(b, k + 8, 1, fist, k + 8)) / 3 / (own[g] * 0.85), 0, 1); if (fistK <= 0.003 && g > 0) continue;   // how much of the hand under the layers is the library's fist (none of it, crouched: that clip's hand is its own)
+        const moved = (qAng(d, o0, N, b, k) + qAng(d, o1, N, b, k + 4) + qAng(d, o2, N, b, k + 8)) / 3, D = nt[g] < Infinity ? nt[g] : far;
         const lay = 1 - (D < 0.03 ? (nt[g] < Infinity ? 1 : 0) : clamp(moved / D, 0, 1)), f = fistK * free * lay;   // …less what a layer has made of it
-        if (f > 0.003) { qTurnBy(d, o0, open[k], open[k + 1], open[k + 2], open[k + 3], f); qTurnBy(d, o1, open[k + 4], open[k + 5], open[k + 6], open[k + 7], f); qTurnBy(d, o2, open[k + 8], open[k + 9], open[k + 10], open[k + 11], f); }
+        if (f > 0.003) { qTurnBy(d, o0, N, open[k], open[k + 1], open[k + 2], open[k + 3], f); qTurnBy(d, o1, N, open[k + 4], open[k + 5], open[k + 6], open[k + 7], f); qTurnBy(d, o2, N, open[k + 8], open[k + 9], open[k + 10], open[k + 11], f); }
         if (g === 0) { const t = (1 - fistK) * free * lay * HAND.thumbOwn, T = H.thumb[sd];   // the THUMB of a hand that is not the fist (the crouch clips' open hand holds it out straight): to the relaxed hand's thumb
-          if (t > 0.003) { qTurnTo(d, o0, T, 0, t); qTurnTo(d, o1, T, 4, t); qTurnTo(d, o2, T, 8, t); } }
+          if (t > 0.003) { qTurnTo(d, o0, N, T, 0, t); qTurnTo(d, o1, N, T, 4, t); qTurnTo(d, o2, N, T, 8, t); } }
       }
     }
     // the trigger hand's index, a drilled man's: straight along the frame until he fires, on the trigger while he does and for a moment after
     H.fired += dt; const offT = H.fired < HAND.trigHold ? 0 : 1; H.off = damp(H.off, offT, offT < H.off ? 40 : 9, dt);
     H.gun = damp(H.gun, clamp(gunR, 0, 1), 18, dt);   // eased: the caller's gate for a throw / reload / strike is a step, and the finger snapped between straight and the clip's curl in a frame
     const tr = H.gun * smoothstep(HAND.trigTrained, HAND.trigTrained + 0.1, this.trained) * H.off;
-    if (tr > 0.003) this.fingers[1][0].forEach((node, j) => { const o = node * 10 + 3, t = H.trig, k = j * 4;
-      const cx = -d[o], cy = -d[o + 1], cz = -d[o + 2], cw = d[o + 3];   // conj(q) · target: the turn from where the joint is to the straight finger
-      qTurnBy(d, o, cw * t[k] + cx * t[k + 3] + cy * t[k + 2] - cz * t[k + 1], cw * t[k + 1] - cx * t[k + 2] + cy * t[k + 3] + cz * t[k], cw * t[k + 2] + cx * t[k + 1] - cy * t[k] + cz * t[k + 3], cw * t[k + 3] - cx * t[k] - cy * t[k + 1] - cz * t[k + 2], tr); });
+    if (tr > 0.003) this.fingers[1][0].forEach((node, j) => { const o = 3 * N + node, t = H.trig, k = j * 4;
+      const cx = -d[o], cy = -d[o + N], cz = -d[o + 2 * N], cw = d[o + 3 * N];   // conj(q) · target: the turn from where the joint is to the straight finger
+      qTurnBy(d, o, N, cw * t[k] + cx * t[k + 3] + cy * t[k + 2] - cz * t[k + 1], cw * t[k + 1] - cx * t[k + 2] + cy * t[k + 3] + cz * t[k], cw * t[k + 2] + cx * t[k + 1] - cy * t[k] + cz * t[k + 3], cw * t[k + 3] - cx * t[k] - cy * t[k + 1] - cz * t[k + 2], tr); });
   }
   /** Model rotation for a hand given where its fingers point (`f`) and which way the back of the hand faces (`b`, made ⊥ f) — calibrated per side from the rest
    *  pose (T-pose, palms down), so one description fits either hand. */
@@ -3657,10 +3658,10 @@ export class CharacterAnimator {
    *  slow to see, instead of a hitch at phase 0 (gait.ts seam: a 28 mm pelvis pop once a cycle). Every game sample of the run goes through here. */
   private sampleJog(ph: number, out: Pose) {
     const cj = this.clips.Jog_Fwd_Loop; sampleClip(cj, ph * cj.duration, true, out);
-    const k = ph - Math.floor(ph) - 0.5, d = out.data;
+    const k = ph - Math.floor(ph) - 0.5, d = out.cols, N = out.rows;
     for (const s of this.jogSeam) {
-      if (s.d) { d[s.o] += s.d[0] * k; d[s.o + 1] += s.d[1] * k; d[s.o + 2] += s.d[2] * k; }
-      else { const q = quat.mul([d[s.o], d[s.o + 1], d[s.o + 2], d[s.o + 3]], quat.axisAngle(s.axis!, s.ang! * k)); d[s.o] = q[0]; d[s.o + 1] = q[1]; d[s.o + 2] = q[2]; d[s.o + 3] = q[3]; }
+      if (s.d) { const o = s.node; d[o] += s.d[0] * k; d[o + N] += s.d[1] * k; d[o + 2 * N] += s.d[2] * k; }
+      else { const o = 3 * N + s.node; const q = quat.mul([d[o], d[o + N], d[o + 2 * N], d[o + 3 * N]], quat.axisAngle(s.axis!, s.ang! * k)); d[o] = q[0]; d[o + N] = q[1]; d[o + 2 * N] = q[2]; d[o + 3 * N] = q[3]; }
     }
   }
   /** SOFT_KNEE: re-solve each leg toward its own ankle with the hip→ankle reach eased below full extension (weight w). */

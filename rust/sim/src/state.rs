@@ -66,7 +66,7 @@ pub const PARTS: [Part; 6] = [
     Part { off: offset_of!(State, doors), len: size_of::<Doors>(), ver: 1, pool: false },
     Part { off: offset_of!(State, falls), len: size_of::<Falls>(), ver: 1, pool: false },
     Part { off: offset_of!(State, smoke), len: size_of::<Smoke>(), ver: 1, pool: true },
-    Part { off: offset_of!(State, poses), len: size_of::<Poses>(), ver: 1, pool: true },
+    Part { off: offset_of!(State, poses), len: size_of::<Poses>(), ver: 2, pool: true },   // (2: a pose is ten columns of whole vectors, where it was ten singles a node)
 ];
 /// a block's length in bytes
 pub const LEN: usize = size_of::<State>();
@@ -81,6 +81,8 @@ const _: () = {
         i += 1;
     }
     assert!(at == LEN);
+    // (a pose starts on a 16-byte boundary: the block does, the pool's head is 16 bytes, and a pose is whole vectors — skeleton.rs `rows`)
+    assert!(offset_of!(State, poses) % 16 == 0);
 };
 
 /// The layout's word: the parts (where, how long, which version) folded. Two builds with the same word lay a block out alike.

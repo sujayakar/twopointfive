@@ -166,7 +166,7 @@ const firstOff = (a: number[], b: number[]): number => { for (let i = 0; i < a.l
 
 // ---- two pools at home: a take since a take shares every piece that has not changed, part by part, though a part before has grown by a piece
 { const SK: any = await import(`${ROOT}/src/anim/skeleton.ts`), st = new ST.SimState(); st.bind();
-  const set = new SK.PoseSet(); SK.poseSetIn(set, st); for (let i = 0; i < 20; i++) { const p = set.make(55); for (let j = 0; j < 550; j++) p.data[j] = i + j * 0.5; }   // (44 KB of poses: eleven pieces)
+  const set = new SK.PoseSet(); SK.poseSetIn(set, st); for (let i = 0; i < 20; i++) { const p = set.make(55); for (let j = 0; j < 550; j++) p.cols[j] = i + j * 0.5; }   // (44 KB of poses: eleven pieces)
   S.sim().grid_reset(st.bind(), 1);                                                                   // (…and an empty smoke grid, the part BEFORE the poses: 72 KB of it in use)
   const sm = ST.simPart(ST.P_SMOKE) >>> 2, ps = ST.simPart(ST.P_POSES) >>> 2, pieces = (bytes: number) => Math.ceil(((bytes + 3) >>> 2) / 1024);
   const t1 = st.take(), nPose = pieces(st.w[ps]), nSmoke = pieces(st.w[sm]), part = (((st.w[sm] + 3) >>> 2) % 1024) !== 0 ? 1 : 0;   // (`part`: the smoke's last piece was not a whole one, so it is another piece once the part has grown)
@@ -184,14 +184,14 @@ const FIXED: number = ST.simLayout().parts.reduce((n: number, q: any) => n + (q.
 { const SK: any = await import(`${ROOT}/src/anim/skeleton.ts`), st = new ST.SimState(); st.bind();
   const set = new SK.PoseSet(); SK.poseSetIn(set, st); const a = set.make(55), b = set.make(55);
   const AT = ST.simPart(ST.P_POSES), BEFORE = AT - FIXED;   // (the pose pool is the block's LAST part, so a parked block is the parts before it, whole, and what is in use of the pool: under 16 KB here. Of the parts before it the fixed ones follow the layout (FIXED); a POOL standing before the last is carried whole by a parked block, in use or not, and is a budget of its own, a quarter megabyte: the smoke grid's 236 KB is nearly all of it, and the next pool to stand there is red)
-  for (let i = 0; i < 550; i++) { a.data[i] = i + 0.5; b.data[i] = -i; }
+  for (let i = 0; i < 550; i++) { a.cols[i] = i + 0.5; b.cols[i] = -i; }
   const small = st.take(), crowd = () => Array.from({ length: L.games }, () => { const o = new ST.SimState(); o.bind(); return o; }), gone = (os: any[]) => { for (const o of os) o.put([]); };
-  const s0 = st.stamp; a.data[0] = 0.5; const quiet = st.stamp === s0;
-  let os = crowd(); const moved = st.stamp !== s0, s1 = st.stamp, parked = st.where < 0, short = st.w.byteLength < AT + 16384 && BEFORE <= 256 * 1024, kept = a.data[7] === 7.5 && b.data[9] === -9; a.data[7] = 70; const still = st.where < 0 && a.data[7] === 70;
+  const s0 = st.stamp; a.cols[0] = 0.5; const quiet = st.stamp === s0;
+  let os = crowd(); const moved = st.stamp !== s0, s1 = st.stamp, parked = st.where < 0, short = st.w.byteLength < AT + 16384 && BEFORE <= 256 * 1024, kept = a.cols[7] === 7.5 && b.cols[9] === -9; a.cols[7] = 70; const still = st.where < 0 && a.cols[7] === 70;
   const c = set.make(55), stray = c.home === null && set.stray === 1;                                  // (made while the block stands parked: its own array, for now)
-  gone(os); st.bind(); const d = set.make(55); for (let i = 0; i < 550; i++) d.data[i] = i * 3; const big = st.take();
-  st.put(small); os = crowd(); const before = st.w.byteLength; st.put(big); const s2 = st.stamp; const grew = st.where < 0 && st.w.byteLength > before, there = d.data[100] === 300 && a.data[7] === 70 && b.data[9] === -9;
-  gone(os); st.bind(); const back = st.where >= 0 && d.data[549] === 1647 && a.data[0] === 0.5; st.put([]);
+  gone(os); st.bind(); const d = set.make(55); for (let i = 0; i < 550; i++) d.cols[i] = i * 3; const big = st.take();
+  st.put(small); os = crowd(); const before = st.w.byteLength; st.put(big); const s2 = st.stamp; const grew = st.where < 0 && st.w.byteLength > before, there = d.cols[100] === 300 && a.cols[7] === 70 && b.cols[9] === -9;
+  gone(os); st.bind(); const back = st.where >= 0 && d.cols[549] === 1647 && a.cols[0] === 0.5; st.put([]);
   verdict(parked && short && kept && still && stray && grew && there && back && quiet && moved && s2 !== s1 && st.stamp !== s2, 'parked poses: a block with poses in it, parked, is read and written where it stands and is not moved by it; it is as long as what is in use; a longer take put into it fits; its stamp is a new one each time it changes place or is put back, and not for a write',
     `parked by ${L.games} other games: ${parked}, ${before} bytes of a block of ${L.bytes} · read: ${kept}, written and still parked: ${still} · a pose made meanwhile is its own array, to go in later: ${stray} · a longer take put back: it grew ${grew}, the poses right ${there} · bound again, the same: ${back} · the stamp: a write leaves it ${quiet}, parked a new one ${moved}, put back a new one ${s2 !== s1}`); }
 
