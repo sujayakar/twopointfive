@@ -25,6 +25,8 @@ export const LOOK_OPENINGS = {
   ground: 0.5,    // what the ground outside sends back of the light on it (snow more, a shaded yard less)
   up: 0.3,        // the sky an opening looks at: this much of the zenith's and the rest of the horizon's
   least: 0.004,   // an opening whose light is under this is not lit at all (a night's sky: it would only take a lamp's place in the list)
+  seen: 0.008,    // … and a PORTAL (render/lights.ts LIGHT_PORTAL) is lit while what it looks out on × the frame's exposure is over this: by what the picture
+                  // would show of a surface under that sky, whatever the hour and however big the opening
   proud: 0.05,    // m from the wall's inside face into the room (a disk inside the reveal has the wall in front of its rim)
   deep: 2,        // cells of floor a man could stand on, under the roof, found within `look` cells in and `side` to either hand of an opening, for it to lead
                   // into a place (the strip under an eave does not, nor the bed of a lorry under its canvas)
@@ -37,6 +39,8 @@ export const LOOK_OPENINGS = {
   dy: 0.1,        // … and up it
   small: 0.25,    // m²: less open than this is not worth a light (a vent's slot, a hatch)
   crack: 0.12,    // m: a slit narrower than this along the wall is shut
+  play: 0.07,     // m: the play a shut leaf has in its frame, and a finger over (a 0.84 m leaf in a 0.9 m doorway has 6 cm, at one jamb or shared
+                  // between the two): a gap of the narrowest way through is open by what it has over this (ajarOf)
   slit: 0.25,     // m: … and one lower than this up the wall (the gap between a shed's wall and its roof, a vent's slot: with it open no wall would be shut
                   // from the floor to the roof, and nothing would have a wall on either hand)
   jamb: 0.2,      // m of wall, shut from the floor to the roof, an opening ends at on each hand. Less than this between two open stretches is a mullion or a
@@ -53,15 +57,25 @@ export const LOOK_OPENINGS = {
 export interface Opening {
   /** where the light hangs */ pos: Vec3; /** into the room */ dir: Vec3; /** the disk's radius, m */ radius: number;
   /** what the walls leave open, m² */ full: number; /** what is open now, a door's leaf taken out, m² */ area: number;
-  /** the samples the walls leave open (openAreas' own): across `axis` at L, the straight way through from `a` (outside) to `b` (the light's plane), from s0
-   *  along the wall, `nY` heights a place, a place's heights as bits */
-  cut: { axis: 0 | 1; L: number; a: number; b: number; s0: number; nY: number; cols: Int32Array };
+  /** … and what is open now TO A PORTAL, m²: the narrowest way through it past whatever hangs in it (ajarOf: a leaf a hand's width off its frame is open by
+   *  that hand's width, where `area` has nothing yet and then pops on) */
+  ajar: number;
+  /** the upright rectangle that holds everything the walls leave open, and no more: its middle (`mid`, in the light's plane; `pos` is where the open part's
+   *  weight lies, which is off the middle of an opening that is no plain rectangle), half its width along the wall and half its height, m (a portal's
+   *  shape: what of it is wall, a ray toward it finds out) */
+  mid: Vec3;
+  half: [number, number];
+  /** the samples the walls leave open (openAreas' own): across `axis` at L, the straight way through from `a` (outside) to `b` (the light's plane), the
+   *  wall's own inside and outside faces at `in` and `out`, the footprints of the boxes that end the opening on each hand (`jambs`: across the wall and
+   *  along it; null where it ends at another light's part of the same glass), from s0 along the wall, `nY` heights a place, a place's heights as bits */
+  cut: { axis: 0 | 1; L: number; a: number; b: number; in: number; out: number; jambs: [readonly Pt[] | null, readonly Pt[] | null]; s0: number; nY: number; cols: Int32Array };
 }
 
 /** does a box stop light going straight through a wall: solid, drawn, and not glass (a decal, a glow card and a pane do not; a roof the camera cuts away is
  *  above every sample). Of the things that move, a door's leaf alone (placeWall's own test: a man is no part of a wall). */
 const blocks = (b: Box, dynamic: boolean): boolean => (b.flags & (BoxFlag.Glass | BoxFlag.NoShadow)) === 0 && (!dynamic || placeWall(b) === 255);
 
+type Pt = readonly [number, number];
 interface Near { b: Box; c: number; sn: number; rn: number; cn: number }
 /** the boxes of `from` within reach of the line at L across `axis`, between s0 and s1 along it */
 function nearLine(from: readonly Box[], axis: 0 | 1, L: number, s0: number, s1: number, out: Near[]): void {
@@ -73,19 +87,25 @@ function nearLine(from: readonly Box[], axis: 0 | 1, L: number, s0: number, s1: 
     out.push({ b, c: Math.cos(b.yaw), sn: Math.sin(b.yaw), rn, cn });
   }
 }
+/** does the straight way through at place s, from `a` to `e` across the wall, cross this box's footprint */
+function crosses({ b, c, sn }: Near, axis: 0 | 1, a: number, e: number, s: number): boolean {
+  // the way through in the box's own frame (stampCells' turn), clipped to its footprint
+  let t0 = 0, t1 = 1;
+  const ax = (axis === 0 ? a : s) - b.c[0], az = (axis === 0 ? s : a) - b.c[2], bx = (axis === 0 ? e : s) - b.c[0], bz = (axis === 0 ? s : e) - b.c[2];
+  for (let d = 0; d < 2; d++) { const p = d === 0 ? c * ax - sn * az : sn * ax + c * az, w = (d === 0 ? c * bx - sn * bz : sn * bx + c * bz) - p, h = d === 0 ? b.h[0] : b.h[2];
+    if (Math.abs(w) < 1e-9) { if (Math.abs(p) > h) return false; continue; }
+    const u = (-h - p) / w, v = (h - p) / w; t0 = Math.max(t0, Math.min(u, v)); t1 = Math.min(t1, Math.max(u, v)); if (t0 > t1) return false; }
+  return true;
+}
+/** a box's footprint as corners in order, across the wall and along it */
+const outline = ({ b, c, sn }: Near, axis: 0 | 1): Pt[] => [[-1, -1], [1, -1], [1, 1], [-1, 1]].map(([i, j]): Pt => { const lx = i * b.h[0], lz = j * b.h[2], x = b.c[0] + c * lx + sn * lz, z = b.c[2] - sn * lx + c * lz; return axis === 0 ? [x, z] : [z, x]; });
 /** `bits` (the heights open at place s along the line, one bit a sample of `dy`) less what the boxes of `near` cover there: a box covers a height when it
  *  stands in the straight way through, from `a` to `b` across the wall, at that place */
 function openAt(near: readonly Near[], axis: 0 | 1, a: number, e: number, s: number, nY: number, bits: number): number {
   const K = LOOK_OPENINGS;
-  for (const { b, c, sn } of near) {
-    // the way through in the box's own frame (stampCells' turn), clipped to its footprint
-    let t0 = 0, t1 = 1, hit = true;
-    const ax = (axis === 0 ? a : s) - b.c[0], az = (axis === 0 ? s : a) - b.c[2], bx = (axis === 0 ? e : s) - b.c[0], bz = (axis === 0 ? s : e) - b.c[2];
-    for (let d = 0; d < 2 && hit; d++) { const p = d === 0 ? c * ax - sn * az : sn * ax + c * az, w = (d === 0 ? c * bx - sn * bz : sn * bx + c * bz) - p, h = d === 0 ? b.h[0] : b.h[2];
-      if (Math.abs(w) < 1e-9) { if (Math.abs(p) > h) hit = false; continue; }
-      const u = (-h - p) / w, v = (h - p) / w; t0 = Math.max(t0, Math.min(u, v)); t1 = Math.min(t1, Math.max(u, v)); if (t0 > t1) hit = false; }
-    if (!hit) continue;
-    const v0 = Math.max(0, Math.ceil((b.c[1] - b.h[1]) / K.dy - 0.5 - 1e-6)), v1 = Math.min(nY - 1, Math.floor((b.c[1] + b.h[1]) / K.dy - 0.5 + 1e-6));
+  for (const nr of near) {
+    if (!crosses(nr, axis, a, e, s)) continue;
+    const b = nr.b, v0 = Math.max(0, Math.ceil((b.c[1] - b.h[1]) / K.dy - 0.5 - 1e-6)), v1 = Math.min(nY - 1, Math.floor((b.c[1] + b.h[1]) / K.dy - 0.5 + 1e-6));
     for (let v = v0; v <= v1; v++) bits &= ~(1 << v);
   }
   return bits;
@@ -179,11 +199,18 @@ export function planOpenings(statics: readonly Box[]): Opening[] {
     const c0 = oS + r.a * cell, c1 = oS + r.b * cell, s0 = c0 - pad, s1 = c1 + pad;
     nearLine(blockers, r.axis, L, s0, s1, near);
     // the wall's own boxes say where its inside face is (thin across the wall, on the line)
-    let face = 0; for (const { b, rn, cn } of near) if (rn <= K.thin && Math.abs(cn - L) <= 0.31 && b.h[1] >= 0.2) face = Math.max(face, r.sign * (cn - L) + rn);
+    let face = 0, back = Infinity; for (const { b, rn, cn } of near) if (rn <= K.thin && Math.abs(cn - L) <= 0.31 && b.h[1] >= 0.2) { face = Math.max(face, r.sign * (cn - L) + rn); back = Math.min(back, r.sign * (cn - L) - rn); }
+    if (back > face) back = face;   // (… and where its outside face is: no such box, no depth)
     // each place along the wall: the heights that are open there, from the floor to the roof, as bits (one a sample)
     const nS = Math.round((s1 - s0) / K.ds), nY = Math.max(1, Math.min(30, Math.floor(r.top / K.dy + 1e-6))), all = (1 << nY) - 1, cols = new Int32Array(nS);
     const hang = Math.min(face, 0.45) + K.proud, wa = L - r.sign * K.reach, wb = L + r.sign * (hang - 0.01);   // (from outside to just short of where the light hangs)
     for (let q = 0; q < nS; q++) cols[q] = openAt(near, r.axis, wa, wb, s0 + (q + 0.5) * K.ds, nY, all);
+    // the box that ends an opening on one hand, at the opening's mid height: its footprint is that jamb (ajarOf). THE WALL'S, not a crate's that stands
+    // against it: the tallest of the boxes the wall's own depth is crossed by there (where no box is thin enough to say the wall's depth, of all the way)
+    const dIn = L + r.sign * Math.min(face, 0.45), dOut = L + r.sign * Math.max(back, -0.45), deep = Math.abs(dIn - dOut) > 0.02;
+    const jamb = (s: number, y: number): Pt[] | null => { let best: Near | null = null;
+      for (const nr of near) if (Math.abs(y - nr.b.c[1]) <= nr.b.h[1] && crosses(nr, r.axis, deep ? dOut : wa, deep ? dIn : wb, s) && (!best || nr.b.c[1] + nr.b.h[1] > best.b.c[1] + best.b.h[1] + 1e-6)) best = nr;
+      return best ? outline(best, r.axis) : null; };
     shutSlits(cols, nY); shutCracks(cols);
     // the open stretches: one ends where the wall is shut from the floor to the roof for `jamb` or more (less is a mullion or a post, and the stretch goes on)
     for (let q = 0; q < nS;) {
@@ -201,8 +228,8 @@ export function planOpenings(statics: readonly Box[]): Opening[] {
           for (let v = 0; v < nY; v++) if (cols[w] & (1 << v)) { const y = (v + 0.5) * K.dy; cells++; sumS += s; sumY += y; loS = Math.min(loS, s); hiS = Math.max(hiS, s); lo = Math.min(lo, y); hi = Math.max(hi, y); } }
         const full = cells * K.ds * K.dy; if (full < K.small) continue;
         const s = sumS / cells, y = sumY / cells, n = L + r.sign * hang, hw = (hiS - loS + K.ds) * 0.5, hh = (hi - lo + K.dy) * 0.5;
-        out.push({ pos: r.axis === 0 ? [n, y, s] : [s, y, n], dir: r.axis === 0 ? [r.sign, 0, 0] : [0, 0, r.sign], radius: Math.max(0.1, Math.min(Math.sqrt(full / Math.PI), Math.min(hw, hh) + 0.02)), full, area: full,
-          cut: { axis: r.axis, L, a: wa, b: wb, s0: s0 + qa * K.ds, nY, cols: cols.slice(qa, qb + 1) } });
+        out.push({ pos: r.axis === 0 ? [n, y, s] : [s, y, n], dir: r.axis === 0 ? [r.sign, 0, 0] : [0, 0, r.sign], radius: Math.max(0.1, Math.min(Math.sqrt(full / Math.PI), Math.min(hw, hh) + 0.02)), full, area: full, ajar: full, mid: r.axis === 0 ? [n, (lo + hi) / 2, (loS + hiS) / 2] : [(loS + hiS) / 2, (lo + hi) / 2, n], half: [hw, hh],
+          cut: { axis: r.axis, L, a: wa, b: wb, in: dIn, out: dOut, jambs: [jamb(s0 + (qa - 0.5) * K.ds, (lo + hi) / 2), jamb(s0 + (qb + 1.5) * K.ds, (lo + hi) / 2)], s0: s0 + qa * K.ds, nY, cols: cols.slice(qa, qb + 1) } });
       }
     }
   }
@@ -217,29 +244,85 @@ export function planOpenings(statics: readonly Box[]): Opening[] {
   return kept.slice(0, K.keep);
 }
 
+/** how far apart two outlines are in plan (each a segment or a convex outline, as corners in order): 0 where they touch, cross or one holds the other */
+function apart(A: readonly Pt[], B: readonly Pt[]): number {
+  const edges = (P: readonly Pt[]) => P.length === 2 ? 1 : P.length, side = (a: Pt, b: Pt, p: Pt) => (b[0] - a[0]) * (p[1] - a[1]) - (b[1] - a[1]) * (p[0] - a[0]);
+  const toSeg = (p: Pt, a: Pt, b: Pt) => { const ex = b[0] - a[0], ey = b[1] - a[1], l2 = ex * ex + ey * ey, t = l2 > 0 ? Math.max(0, Math.min(1, ((p[0] - a[0]) * ex + (p[1] - a[1]) * ey) / l2)) : 0; return Math.hypot(p[0] - a[0] - ex * t, p[1] - a[1] - ey * t); };
+  const holds = (P: readonly Pt[], p: Pt) => { if (P.length < 3) return false; let pos = 0, neg = 0; for (let i = 0; i < P.length; i++) { const k = side(P[i], P[(i + 1) % P.length], p); if (k > 0) pos++; else if (k < 0) neg++; } return (pos === 0) !== (neg === 0); };   // (all on one side; an outline with no area holds nothing)
+  if (holds(B, A[0]) || holds(A, B[0])) return 0;
+  let d = Infinity;
+  for (let i = 0; i < edges(A); i++) { const a0 = A[i], a1 = A[(i + 1) % A.length];
+    for (let j = 0; j < edges(B); j++) { const b0 = B[j], b1 = B[(j + 1) % B.length];
+      if (side(a0, a1, b0) * side(a0, a1, b1) < 0 && side(b0, b1, a0) * side(b0, b1, a1) < 0) return 0;   // (they cross)
+      d = Math.min(d, toSeg(a0, b0, b1), toSeg(a1, b0, b1), toSeg(b0, a0, a1), toSeg(b1, a0, a1)); } }
+  return d;
+}
+/** WHAT IS OPEN OF AN OPENING THAT THINGS HANG IN, TO A PORTAL (`ajar`): the narrowest way through it in plan, a height at a time. Its two jambs (the
+ *  footprints of the boxes that end it, `cut.jambs`) and the boxes near it (a leaf, a pair of leaves, whatever `blocks` says stops light) are a chain
+ *  across the doorway, and the light that gets through is what the gaps of the SHORTEST chain from jamb to jamb leave: the cut that lets least through.
+ *  Each gap less the `play` a shut leaf has at a jamb. So a leaf a hand's width off its frame is open by that hand's width, whichever way it swings and
+ *  however thick the wall, a pair of leaves by the gap between them, and nothing here knows what a door is. What a leaf leaves over its head is a slit,
+ *  as in a wall: a height nothing hangs at, lower than `slit`, is as open as the height under it. (`area`, the disk's, counts only what the straight way
+ *  through finds open: nothing until a leaf has swung clear of the wall's depth, a quarter of the way round.) */
+function ajarOf(o: Opening, near: readonly Near[]): number {
+  const K = LOOK_OPENINGS, c = o.cut, at = (n: number, s: number): Pt => [n, s], outlines = near.map(nr => outline(nr, c.axis)), last = c.cols.length - 1;
+  const wide = new Float64Array(c.nY), hung = new Uint8Array(c.nY);   // a height's open width, m; and whether anything hangs at it
+  for (let v = 0; v < c.nY; v++) {
+    let q0 = -1, q1 = -1, n = 0; for (let q = 0; q <= last; q++) if (c.cols[q] & (1 << v)) { if (q0 < 0) q0 = q; q1 = q; n++; }
+    if (q0 < 0) { hung[v] = 2; continue; }   // (wall at this height)
+    const y = (v + 0.5) * K.dy, here: (readonly Pt[])[] = []; for (let i = 0; i < near.length; i++) if (Math.abs(y - near[i].b.c[1]) <= near[i].b.h[1]) here.push(outlines[i]);
+    if (!here.length) { wide[v] = n * K.ds; continue; }
+    // the chain: node 0 and 1 the jambs (the boxes that end the opening; where it ends at no box, the wall's own depth at the last sample), then
+    // the boxes that hang in it; the shortest way from 0 to 1 over the gaps between them
+    const sLo = c.s0 + q0 * K.ds, sHi = c.s0 + (q1 + 1) * K.ds;
+    const nodes: (readonly Pt[])[] = [(q0 === 0 && c.jambs[0]) || [at(c.out, sLo), at(c.in, sLo)], (q1 === last && c.jambs[1]) || [at(c.out, sHi), at(c.in, sHi)], ...here], N = nodes.length;
+    // (jamb to jamb with nothing between is the doorway itself, and no chain. Each gap gives up the `play`: a gap narrower than that is no gap)
+    const dist = new Array<number>(N).fill(Infinity), done = new Array<boolean>(N).fill(false); dist[0] = 0;
+    for (let k = 0; k < N; k++) { let u = -1; for (let i = 0; i < N; i++) if (!done[i] && (u < 0 || dist[i] < dist[u])) u = i; done[u] = true;
+      for (let w = 0; w < N; w++) if (!done[w] && u + w !== 1) dist[w] = Math.min(dist[w], dist[u] + Math.max(0, apart(nodes[u], nodes[w]) - K.play)); }
+    wide[v] = Math.min(n * K.ds, dist[1]); hung[v] = 1;
+  }
+  // a slit over a leaf's head or under its foot
+  const most = Math.ceil(K.slit / K.dy - 1e-6) - 1;
+  for (let v = 0; v < c.nY;) { if (hung[v]) { v++; continue; } let e = v; while (e < c.nY && !hung[e]) e++;
+    if (e - v <= most) { const to = v > 0 && hung[v - 1] === 1 ? wide[v - 1] : e < c.nY && hung[e] === 1 ? wide[e] : -1; if (to >= 0) for (let w = v; w < e; w++) wide[w] = Math.min(wide[w], to); }
+    v = e; }
+  let sum = 0; for (let v = 0; v < c.nY; v++) sum += wide[v];
+  return sum * K.dy;
+}
+
 /** what is open of each opening NOW: its `full` less what a door's leaf covers where it hangs (the leaf with its true shape: a shut one covers all of its
  *  doorway, one swung out a part; one swung into the room covers only what of it is still in the wall's depth, and shadows the rest itself). Writes `area`. The light half: made again when a leaf swings. */
 export function openAreas(list: readonly Opening[], dynamics: readonly Box[]): void {
   const K = LOOK_OPENINGS, leaves: Box[] = [], near: Near[] = []; for (const b of dynamics) if (blocks(b, true)) leaves.push(b);
   for (const o of list) {
     const c = o.cut; nearLine(leaves, c.axis, c.L, c.s0, c.s0 + c.cols.length * K.ds, near);
-    if (!near.length) { o.area = o.full; continue; }
+    if (!near.length) { o.area = o.ajar = o.full; continue; }
     const cols = c.cols.slice(); for (let q = 0; q < cols.length; q++) if (cols[q]) cols[q] = openAt(near, c.axis, c.a, c.b, c.s0 + (q + 0.5) * K.ds, c.nY, cols[q]);
     shutSlits(cols, c.nY); shutCracks(cols); o.area = count(cols) * K.ds * K.dy;   // (what a leaf leaves over its head or under its foot is a slit, as in a wall)
     if (o.area < K.small) o.area = 0;
+    o.ajar = ajarOf(o, near);
   }
 }
 
-/** the radiance an opening looks out on (linear RGB, the picture's units): half of what it sees is the sky, low down (common.wgsl skyRadiance's ramp), and half
- *  the ground, lit by the whole sky (π × (0.947 zenith + 0.053 horizon), as engine.ts lookShade has it) and by the sun that is up. × `amount`. BY DAY ONLY: it
- *  fades out as the sky's own mean radiance falls from 0.12 to 0.04 (every hour of the day is over that, a night's sky is under it: a night's rooms are the
- *  game's, as dark as they were, and an opening that would give next to nothing takes no place in the light list). */
-export function openingRadiance(zen: ArrayLike<number>, hor: ArrayLike<number>, skyK: number, sun: { intensity: number; dir: ArrayLike<number>; color: ArrayLike<number> } | undefined, amount: number): Vec3 {
+/** WHAT AN OPENING LOOKS OUT ON, as one radiance (linear RGB, the picture's units): half of what it sees is the sky, low down (common.wgsl skyRadiance's
+ *  ramp at the `up` mix), and half the ground, lit by the whole sky (π × (0.947 zenith + 0.053 horizon), as engine.ts lookShade has it) and by the sun that
+ *  is up, and sending back `ground` of it. At every hour: a night's sky is a sky. A PORTAL's record is this × what is open of it (render/lights.ts
+ *  LIGHT_PORTAL): how bright the opening is to a pass whose ray stops short of it, and what the picture's direct light reads the ground back out of
+ *  (common.wgsl portalGround: twice this less the low sky), putting the sky a point really looks out on in the sky half's place. */
+export function openingLooks(zen: ArrayLike<number>, hor: ArrayLike<number>, skyK: number, sun: { intensity: number; dir: ArrayLike<number>; color: ArrayLike<number> } | undefined): Vec3 {
   const K = LOOK_OPENINGS, r: Vec3 = [0, 0, 0], sunE = sun && sun.dir[1] < 0 ? sun.intensity * -sun.dir[1] : 0;
-  const up = skyK * (0.2126 * (0.8 * zen[0] + 0.2 * hor[0]) + 0.7152 * (0.8 * zen[1] + 0.2 * hor[1]) + 0.0722 * (0.8 * zen[2] + 0.2 * hor[2])), t = Math.min(1, Math.max(0, (up - 0.04) / 0.08)), day = t * t * (3 - 2 * t);
   for (let i = 0; i < 3; i++) {
     const sky = skyK * (K.up * zen[i] + (1 - K.up) * hor[i]), groundE = Math.PI * skyK * (0.947 * zen[i] + 0.053 * hor[i]) + sunE * (sun ? sun.color[i] : 0);
-    r[i] = Math.max(0, amount) * day * 0.5 * (sky + K.ground * groundE / Math.PI);
+    r[i] = 0.5 * (sky + K.ground * groundE / Math.PI);
   }
+  return r;
+}
+/** … and A DISK's: the same × `amount`, BY DAY ONLY. It fades out as the sky's own mean radiance falls from 0.12 to 0.04 (every hour of the day is over
+ *  that, a night's sky is under it: a night's rooms are the game's, as dark as they were, and an opening that would give next to nothing takes no place
+ *  in the light list). */
+export function openingRadiance(zen: ArrayLike<number>, hor: ArrayLike<number>, skyK: number, sun: { intensity: number; dir: ArrayLike<number>; color: ArrayLike<number> } | undefined, amount: number): Vec3 {
+  const up = skyK * (0.2126 * (0.8 * zen[0] + 0.2 * hor[0]) + 0.7152 * (0.8 * zen[1] + 0.2 * hor[1]) + 0.0722 * (0.8 * zen[2] + 0.2 * hor[2])), t = Math.min(1, Math.max(0, (up - 0.04) / 0.08)), day = t * t * (3 - 2 * t);
+  const r = openingLooks(zen, hor, skyK, sun), k = Math.max(0, amount) * day; r[0] *= k; r[1] *= k; r[2] *= k;
   return r;
 }

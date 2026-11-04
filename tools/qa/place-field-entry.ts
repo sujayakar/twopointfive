@@ -58,7 +58,7 @@ async function run(o: RunOpts) {
   const fill = (dim: number): void => { const px = new Uint16Array(nx * ny * 7 * nz * 4);
     for (let k = 0; k < nz; k++) for (let i = 0; i < nx; i++) { const x = WORLD.rcMin[0] + i + 0.5, z = WORLD.rcMin[2] + k + 0.5;
       const inWall = x === 13.5 && z === 10.5, v = half(inWall ? 0 : lightAt(x, z) * (z > 8 && z < 14 && x > 10 && x < 16 ? dim : 1));
-      for (let j = ny * 2; j < ny * 3; j++) { const q = ((k * ny * 7 + j) * nx + i) * 4; px[q] = px[q + 1] = px[q + 2] = v; px[q + 3] = half(1); } }
+      for (let j = ny * 2; j < ny * 3; j++) { const q = ((k * ny * 7 + j) * nx + i) * 4; px[q] = px[q + 1] = px[q + 2] = v; px[q + 3] = 0; } }   // (this slab's fourth number is what a portal took out of the face to send itself, which the field adds back: rc.wgsl rcDice. None here)
     dev.queue.writeTexture({ texture: tex }, px, { bytesPerRow: nx * 8, rowsPerImage: ny * 7 }, [nx, ny * 7, nz]); };
   fill(1);
   const view = tex.createView(), place = new PlaceField(dev, view); await place.whenReady;

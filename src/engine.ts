@@ -19,7 +19,7 @@ import { WallSides } from './render/wallSides';
 import { lookEyeFrame, type LookEye } from './render/lookeye';
 import { lookGrade, lookGradeFrame } from './render/lookgrade';
 import { lookExpoFrame } from './render/lookexpo';
-import { planOpenings, openAreas, openingRadiance, openingsKey, leavesKey, LOOK_OPENINGS, type Opening } from './scene/openings';
+import { planOpenings, openAreas, openingRadiance, openingLooks, openingsKey, leavesKey, LOOK_OPENINGS, type Opening } from './scene/openings';
 import { buildWallRaster, wallRasterDiff, reachMaskSome, REACH_WORK, REACH_PACE, type ReachJob } from './render/reach';
 import { MeshShadows, MESH_MAX_CHARS } from './render/meshShadows';
 import { RigFit, RIG_KPAD } from './render/sdfrig';
@@ -149,6 +149,8 @@ export class Engine {
   private openWalls: { solid: Uint8Array; jumps?: Uint8Array } | null = null;
   /** this frame's opening lights, for the upload (lights.ts upload `own`) and the glass masks */
   private dayLights: RtLight[] = [];
+  /** the openings were last planned as portals (their reach masks are found from the rectangle's width, a disk's from its radius: the row flipped = found again) */
+  private openAsPortal = false;
   private lookOpeningLights() {
     const L = this.lights, W = this.world, K = LOOK_OPENINGS, recs = this.openRecs, day = this.dayLights;
     const none = () => { for (const r of recs) r.l.slot = -1; recs.length = 0; day.length = 0; this.openLevel = null; this.openWalls = null; };
@@ -156,8 +158,14 @@ export class Engine {
     const level = W.statics[0] ?? null;
     if (level !== this.openLevel) { none(); this.openLevel = level; this.openSerial = -1; this.openSeen = this.openPlanned = this.openLeaves = NaN; this.openWait = 0; }   // (a new level: its statics are new boxes)
     const sun = L.lights.find(l => l.kind === 2 && l.enabled && !l.transient && l.intensity > 0);
-    const rad = openingRadiance(this.settings.skyZenith, this.settings.skyHorizon, lookConfig.sky, sun, lookConfig.windows), m = Math.max(rad[0], rad[1], rad[2]);
-    if (!(m > 1e-6)) { for (const r of recs) r.l.enabled = false; return; }   // (a night's sky)
+    // DAYLIGHT COUNTED ONCE (the "Daylight counted once" row, lookConfig.portal; render/lights.ts LIGHT_PORTAL): each opening is a PORTAL, what is seen
+    // through it at every hour (the sky itself, and the ground outside at the engine's guess); the bounce's rays that leave by it take no sky (common.wgsl
+    // skyThrough). With the row at 0 each is the disk it was: as bright as one guess at all it looks out on, by day only, beside the bounce's own share
+    // of the same sky.
+    const portal = lookConfig.portal > 0, isOpen = (o: Opening) => (portal ? o.ajar : o.area) > 0;
+    if (portal !== this.openAsPortal) { this.openAsPortal = portal; for (const r of recs) { r.old = !!r.mask; r.job = null; } }
+    const rad = portal ? openingLooks(this.settings.skyZenith, this.settings.skyHorizon, lookConfig.sky, sun) : openingRadiance(this.settings.skyZenith, this.settings.skyHorizon, lookConfig.sky, sun, lookConfig.windows), m = Math.max(rad[0], rad[1], rad[2]);
+    if (!(m > 1e-6)) { for (const r of recs) r.l.enabled = false; return; }   // (a sky that gives nothing)
     // the walls: looked at when the world says a box has changed, and every eighth frame besides (not every change moves the world's serial); found again
     // once they have changed and then stood still (at once on a level's first frame)
     const serial = W.geomSerial;
@@ -181,26 +189,32 @@ export class Engine {
     // more open than can be lit at once: the nearest to Sam are (as the pane list is the nearest glass)
     const e = lookConfig.eyeAt?.() ?? null, fx = e ? e[0] : this.viewFocus[0], fz = e ? e[1] : this.viewFocus[2], masks = lookConfig.rooms > 0;
     let cut = Infinity;
-    if (recs.length > K.lit) { const far: number[] = []; for (const r of recs) if (r.o.area > 0) far.push(Math.hypot(r.o.pos[0] - fx, r.o.pos[2] - fz)); if (far.length > K.lit) cut = far.sort((a, b) => a - b)[K.lit - 1]; }
+    if (recs.length > K.lit) { const far: number[] = []; for (const r of recs) if (isOpen(r.o)) far.push(Math.hypot(r.o.pos[0] - fx, r.o.pos[2] - fz)); if (far.length > K.lit) cut = far.sort((a, b) => a - b)[K.lit - 1]; }
     // the reach masks: a frame's share of sight-line steps (render/reach.ts REACH_PACE, the game's own pace for a lamp's) for a mask being decided AGAIN;
     // a light that would be lit now and has none at all gets its first whole, at once (a level's first frame, a new hole, the rooms row put on)
     if (masks && this.openWalls) { const c0 = REACH_WORK.steps, walls = this.openWalls;
       for (;;) {
         let best: (typeof recs)[number] | null = null, score = Infinity, now = false;
-        for (const r of recs) { if (r.mask && !r.old) continue; const d = Math.hypot(r.o.pos[0] - fx, r.o.pos[2] - fz), urgent = !r.mask && r.o.area > 0 && d <= cut;
-          const s = d + (urgent ? -5000 : 0) + (r.o.area > 0 ? 0 : 1000) + (r.mask ? 500 : 0) - (r.job ? 2000 : 0); if (s < score) { score = s; best = r; now = urgent; } }   // (one begun is finished first)
+        for (const r of recs) { if (r.mask && !r.old) continue; const d = Math.hypot(r.o.pos[0] - fx, r.o.pos[2] - fz), urgent = !r.mask && isOpen(r.o) && d <= cut;
+          const s = d + (urgent ? -5000 : 0) + (isOpen(r.o) ? 0 : 1000) + (r.mask ? 500 : 0) - (r.job ? 2000 : 0); if (s < score) { score = s; best = r; now = urgent; } }   // (one begun is finished first)
         if (!best) break;
         const left = now ? Infinity : REACH_PACE.steps - (REACH_WORK.steps - c0); if (left <= 0) break;
         const job = best.job ??= { budget: left, own: walls }; job.budget = left;
-        const got = reachMaskSome(walls.solid, best.o.pos, best.o.dir, best.o.radius, null, undefined, job);
+        const got = reachMaskSome(walls.solid, portal ? best.o.mid : best.o.pos, best.o.dir, portal ? best.o.half[0] : best.o.radius, null, undefined, job);   // (the spread of the light's own points along the wall)
         if (!got) break; best.mask = got; best.old = false; best.job = null; } }
     day.length = 0;
     for (const r of recs) {
-      const o = r.o, l = r.l, I = m * Math.min(o.area, K.most);   // (radiance × area = the disk's strength straight out)
-      l.pos[0] = o.pos[0]; l.pos[1] = o.pos[1]; l.pos[2] = o.pos[2]; l.dir[0] = o.dir[0]; l.dir[1] = o.dir[1]; l.dir[2] = o.dir[2]; l.radius = o.radius;
-      l.range = Math.min(26, Math.max(3, Math.sqrt(m * Math.min(o.full, K.most) / 0.0015)));   // (as far as it lights anything, wide open: a swinging leaf does not move it)
+      // a disk counts what is open of it now, up to `most`. A portal's record is as bright as what is open of its rectangle now, which is all that a pass
+      // whose ray stops short of it can know; beside it the record says what share of the rectangle that is, and the picture's direct light takes the
+      // whole and lets its own rays find what of it is wall or leaf (common.wgsl LIGHT_PORTAL, "its record")
+      const o = r.o, l = r.l, whole = 4 * o.half[0] * o.half[1], open = Math.min(Math.max(o.ajar, 1e-6 * whole), whole), I = m * (portal ? open : Math.min(o.area, K.most));   // (radiance × area = its strength straight out)
+      const at = portal ? o.mid : o.pos;   // (a portal is its rectangle, about the rectangle's middle; a disk hangs where the open part's weight lies)
+      l.pos[0] = at[0]; l.pos[1] = at[1]; l.pos[2] = at[2]; l.dir[0] = o.dir[0]; l.dir[1] = o.dir[1]; l.dir[2] = o.dir[2]; l.radius = portal ? Math.hypot(o.half[0], o.half[1]) : o.radius;
+      l.range = Math.min(26, Math.max(3, Math.sqrt(m * (portal ? whole : Math.min(o.full, K.most)) / 0.0015)));   // (as far as it lights anything, wide open: a swinging leaf does not move it)
       l.color[0] = rad[0] / m; l.color[1] = rad[1] / m; l.color[2] = rad[2] / m; l.intensity = I; l.peakIntensity = I; l.reach = masks ? r.mask ?? undefined : undefined;
-      l.enabled = o.area > 0 && I > K.least && Math.hypot(o.pos[0] - fx, o.pos[2] - fz) <= cut && (!masks || !!r.mask);
+      if (portal) { const pt = l.portal ??= { halfWide: 0, share: 1 }; pt.halfWide = o.half[0]; pt.share = open / whole; } else l.portal = undefined;
+      // (a disk is lit once a quarter of a square metre is open, and pops on; a portal from the first hand's width, where its own rays let next to nothing through)
+      l.enabled = (portal ? o.ajar > 0 && m * this.settings.exposure > K.seen : o.area > 0 && I > K.least) && Math.hypot(o.pos[0] - fx, o.pos[2] - fz) <= cut && (!masks || !!r.mask);
       day.push(l);
     }
   }
@@ -607,6 +621,7 @@ export class Engine {
     this.lights.dirMasks = restir;   // the moon's / sun's directional reach masks ride only with the ReSTIR estimator (render/reach.ts reachMaskForDirectional; the OFF path's rows stay as they were)
     this.lights.dayExp = lookConfig.on && lookConfig.lamps > 0 ? lookExposure(lookConfig.exposure?.() ?? null, this.settings.skyZenith, this.settings.skyHorizon) : 1; this.lights.dayAmount = lookConfig.lamps;   // (THE LOOK PROTOTYPE's real light values: render/photometry.ts)
     const numLights = this.lights.upload(time, this.dayLights);
+    let portal0 = 0; for (const l of this.dayLights) if (l.portal && (l.slot ?? -1) >= 0 && (!portal0 || l.slot! + 1 < portal0)) portal0 = l.slot! + 1;   // (the list's first portal, + 1: frame.placeCfg.y, common.wgsl skyKeep)
     const shadeCfg = lookConfig.on && lookConfig.shade > 0 ? lookShade(this.settings.skyZenith, this.settings.skyHorizon, lookConfig.sky, lookConfig.shade) : undefined;   // (THE LOOK PROTOTYPE's shade row, below, and the eye that follows Sam on top of it: render/lookeye.ts)
     const placeOn = lookConfig.on && lookConfig.expo > 0 && !!shadeCfg && shadeCfg[0] > 0;   // (THE LOOK PROTOTYPE's place field, above: by day with the One exposure row up)
     if (placeOn && !this.place) { try { this.place = new PlaceField(this.device, this.rc.diceView); } catch (err) { console.warn('place field: not built on this device', err); lookConfig.expo = 0; lookAmounts.expo = 0; } }   // (both, so the panel's row and the next lookSync say what is drawn)
@@ -695,7 +710,7 @@ export class Engine {
       numTransient: numTransientNow,
       smokeDraw: this.smokeDrawWords(), powderDraw: lookConfig.on ? powderDrawWord() : 0,
       sides: lookSides && this.wallSides.fits ? this.wallSides.words : null, sideCols: lookSides && this.wallSides.fits ? this.wallSides.cols : null,   // (THE LOOK PROTOTYPE's Walls have two sides row: lighting_common.wgsl diceTaps, diceFacePointBy)
-      placeCfg: placeOn && lookConfig.order > 0 ? [Math.min(lookConfig.order, 1), 0, 0, 0] : undefined,   // (THE LOOK PROTOTYPE, light keeps its order across places: with the place field, by day)
+      placeCfg: (placeOn && lookConfig.order > 0) || portal0 > 0 ? [placeOn && lookConfig.order > 0 ? Math.min(lookConfig.order, 1) : 0, portal0, 0, 0] : undefined,   // (THE LOOK PROTOTYPE, light keeps its order across places: with the place field, by day)
       lampCfg: lampK < 1 ? [lampK, lampK / emissiveDayK(this.lights.dayExp, this.lights.dayAmount), lookConfig.steady > 0 ? 1 : 0, Math.max(lookConfig.roomBright, 0.001)] : undefined,   // (.z: the Steady bounce row is up, lighting_common.wgsl dayBoundK · .w: the Room brightness row, composite.wgsl lookExpoGain)   // (common.wgsl lampFloorK, boxEmissiveRay)
       secMinE: s.secMinE * lampK,   // (by day a fixture is drawn at the hour's exposure × its night strength, render/photometry.ts, so the night's threshold is held at the same share of it: every lamp the night's cache carries, the day's does too)
       //   // R2 sequence over the octahedral texel: cascade direction aliasing becomes noise for the indirect temporal filter
