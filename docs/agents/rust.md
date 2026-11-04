@@ -815,26 +815,67 @@ first system across (the game's own maths). No rule of play has changed and noth
     the share of light a line lets through): the middle, the 95th percentile, the worst, the lean; for light also stops at the 95th; and HOW OFTEN THE
     TWO DECIDE DIFFERENTLY (lit or dark at `LIGHTS.litAt`; hidden by the plume or not at 0.3). `BUDGET` holds a 95th percentile and a share of
     opposite decisions a model; a model past either is red. It bounds getting WORSE on the recorded scenes; it does not say the numbers are good.
-  - THE PAGE: `localhost:5173/?modelerr&seed=1` (`=quick` two stations, `=tiny` one; any level or mission words beside it), press Start, hands off
+    EVERY SAMPLE SAYS WHERE IT STANDS (`Sample.o`: under the open sky or a roof, by `weather.ts underRoof`, the footprints the rain and the wind go
+    by — the light point; a line is under a roof only when its canister and both its ends are), and a report that says so is judged A PART AT A TIME
+    by the rows of that part (`estimate:roof`, `grid:sky`; `partsOf`), its whole said and not judged: the first GPU run was the two parts apart, and
+    a whole would hide either in the other. A report that does not say is judged whole by the plain rows, and one where some samples say and some do
+    not is a fault.
+  - THE WALK CHANGES THE PICTURE ONLY WHEN THE PICTURE HAS ANSWERED (`ModelErr.changes`, `frame`): before the tick that lets the canister out, and
+    before the one that clears the smoke and moves on, the plan's clock stands (the models are not stepped either) until everything asked has come
+    back. An answer comes frames after its question. THE FIRST WALKS DID NOT WAIT: a station's last age was asked in the tick that cleared the room
+    and moved on, so at every station but the last (nothing is cleared after it) its lines read 'no smoke' (the first GPU run: 1.00 on every 25 s
+    line of the two stations under a roof, where the same lines had read 0.07 and 0.11 ten seconds before). Such a report is version 1 (`Report.v`)
+    and those lines are in the file and not counted (`counted`); a walk that waits writes 2. Held headless by a stand-in picture (`waits`, below)
+    and on the page by `PLAN=quick tools/qa/modelerr-page.cjs` (two stations: 14 of the first station's 16 last-age lines came back with smoke on
+    them, on the software adapter). No walk that waits has been run on a GPU.
+  - THE PAGE: `localhost:5173/?modelerr&seed=1&solo` (`=quick` two stations, `=tiny` one; `solo` is the solo night straight in — any mission's own
+    words do as well). The walk does not begin under a menu (`ModelErrPage.held`: the start page, with the title's reel playing behind it, is one),
+    and on an address that opens the start page the tool says so on a note at the foot of the page that takes no click (seen in a headless
+    Chromium on the software adapter: the note up, and after ten seconds of the page's clock, the reel running, no walk begun; not seen by a person).
+    Hands off
     for about three minutes: a card shows the table, `window.__modelerr` is the report, and it goes out by the page's door as kind `modelerr`
     (`host/savefile.ts`: to the backend where the page has one, no download).
   - HEADLESS: `bun run tools/qa/modelerr.ts` on both stands walks the plan with the models alone (`walks`: every model answers and a second walk is the
     first to the bit; the grid against the blobs is said), plants pictures and reads them back exactly (`planted`), judges a second walk against the
-    first under a tight budget (`budget`; `MODELERR_BREAK=1` makes that walk's smoke three times as thick and it must fail), and judges every report
+    first under a tight budget (`budget`; `MODELERR_BREAK=1` makes that walk's smoke three times as thick and it must fail), walks once with a
+    stand-in picture that answers 45 frames late and knows only whether the walk's smoke is in the room (`waits`: no light point read with smoke out,
+    no line read from a cleared room, the models' answers those of a walk with no picture to the bit; `MODELERR_BREAK=move` = the walk does not wait
+    and it must fail), and judges every report
     under `tools/qa/fixtures/modelerr/` (and `--report f`): as recorded, and, where the stand here asks the very questions the report did (its `world`
     word), WITH THE MODELS AS THEY ARE NOW against the recorded picture. So a picture recorded once on a GPU holds the models to their budget from
-    then on with no GPU.
+    then on with no GPU. `--report f --keep g` writes the report again with where each sample stands added from this stand's walk of the same
+    questions: how a page's report from before the walk said becomes a fixture.
+  - MEASURED ON A GPU, 2026-11-04 (the maintainer's run: Apple Metal, the office at night, `?modelerr&seed=1&solo`, plan full, build aa4360cd; kept
+    as `tools/qa/fixtures/modelerr/office-full-metal.json`, a version 1 report with where its samples stand added by `--keep`; its world is the
+    SHIPPED stand's, where the models answer as the page's did — smoke to the bit, light within 0.004 — and the frozen stand asks other questions
+    and reads it as recorded). All 944 answered. UNDER A ROOF the models are close: `estimate` off by 0.076 of the meter at the middle, 0.145 at
+    the 95th, the other side of the lit bar on 4.5 %; `lit` (the light that comes round) 0.029, 0.136 and 2.3 %; smoke at 3, 8 and 15 s over 165
+    lines of the two roofed stations, `blobs` 0.009 of the light at the middle, 0.903 at the 95th, the other side of the hiding bar on 13.9 %;
+    `grid` 0.019, 0.526 and 10.3 % (their 25 s lines are not counted, so no picture of a room's smoke at 25 s has been measured and the two smoke
+    rows under a roof are provisional until a walk that waits is run; the mean light let through at the first station, picture / blobs / grid: 0.33 / 0.19 / 0.52 at 3 s, 0.16 / 0.10 / 0.19 at 8 s,
+    0.07 / 0.10 / 0.12 at 15 s). UNDER THE OPEN SKY they are far off. LIGHT: the estimate has no moon, so 88 points read nothing where the picture
+    reads 0.07 to 0.6 W/m² — off by 0.355 at the middle, the other side of the lit bar on 42.0 %; a man outside at night is lit to the picture and
+    dark to the model. SMOKE: the picture showed NO smoke at any of the four stations under the sky at 3 and 8 s (1.00 on every line, those through
+    the canister too) and a trace at 15 s (and at the last station at 25 s, 0.95 of the light on average), where the models keep a thick cloud
+    (`grid` off by 0.883 at the middle and the other side on 64.8 %, `blobs` 0.958 and 77.7 %, over 443 lines). WHY THE PICTURE
+    HAS NONE THERE IS NOT KNOWN (the outdoor wind, or the solver): nobody has looked at it, and the smoke under the sky has no budget row until
+    somebody has. THE SOFTWARE ADAPTER SAYS THE SAME OF THE SKY (the page check's two stations at Very low, default settings, a walk that waits, same
+    day: at the station under the sky 1.00 on all 32 lines at 3 and 6 s, and 21 light points off by 0.431 at the middle), so it is the picture and
+    not the maintainer's machine or settings; under its one roofed station the smoke reads further from the models than on Metal (`grid` 0.098 at
+    the middle and 20 % over 30 lines, past the rows below: another adapter at Very low, as its kept report). `BUDGET`'s rows by part are this run
+    with room over them; the light rows under the sky are to come down when the estimate has a
+    moon. The page does not move onto these senses until both are mended and a second run says so.
   - Measured 2026-11-03 ON THE SOFTWARE ADAPTER ONLY (a headless browser on a cloud box; never seen on a GPU): the office, plan `tiny` (one station),
     Very low, seed 1, kept as `tools/qa/fixtures/modelerr/office-tiny-software.json`. The picture answered all 24 light points and all 32 sight lines
     (26 with smoke on them). `estimate`: off by 0.055 of the meter at the middle, 0.105 at the 95th, 0.559 at worst, 1.23 stops at the 95th, leaning
     0.075 darker than the picture, the other side of the lit bar on 4.2 %. `blobs`: off by 0.181 of the light let through at the middle, 0.988 at the
     95th, leaning 0.331 thicker, the other side of the hiding bar on 37.5 %. `grid`: 0.038 at the middle, 0.947 at the 95th, leaning 0.206 thicker,
     25.0 %. So in that one room the grid is much nearer the picture than the blobs on most lines, and both are far off on the worst ones (a line
-    through the edge of the cloud, where the solver's smoke has climbed and spread and the model's has not). Headless, the full plan on both stands,
-    the grid against the blobs over 768 lines: 0.038 apart at the middle, 0.681 at the 95th, deciding differently on 13.0 %. `BUDGET` IS PROVISIONAL:
-    its rows are that one report with room to spare, so a model that gets worse is red today; it is to be set again from the first report a GPU makes
-    (the plain page with `?modelerr&seed=1`, about three minutes, hands off; the file it saves goes under the fixtures folder). Nobody has run it on a
-    GPU.
+    through the edge of the cloud, where the solver's smoke has climbed and spread and the model's has not). (Its one station is the last, so its
+    last age was read with the smoke still there: every line counts. Against the GPU's two rooms it is the thicker disagreement — 25.0 % against
+    10.3 % for the grid — on another adapter, at Very low, at 3 and 6 s: nobody has said why.) Headless, the full plan on both stands,
+    the grid against the blobs over 768 lines: 0.038 apart at the middle, 0.681 at the 95th, deciding differently on 13.0 %. The plain rows of
+    `BUDGET` are that one report with room to spare, and judge a report that does not say where its samples stand.
 - **Gameplay and dressing** (the maintainer, 2026-11-02: "let's make sure we're very explicit about what's gameplay affecting (and also run on the server) and
   what's just client side only dressing (debris, smoke details) and uses relaxed simd and/or gpu"). THE RULE: a step of the tick is DRESSING only if the game
   is the same game to the bit without it. Everything else is GAMEPLAY: it runs on the server and on every client, in one arithmetic. Dressing only makes the
