@@ -55,7 +55,7 @@ export interface RtLight {
   /** WHOSE DOING THIS LIGHT IS, FOR THE FOG'S CLASS ALONE (game/fogofwar.ts FOG.ours, lightBy): the character who set or threw what made it — a blast's
    *  flash, a round's ember. Not `owner`: the shadow rays still take every body, his too. Absent / 0 = the class goes by `owner` as ever */
   fogBy?: number;
-  /** AN OPENING TO THE SKY (LIGHT_PORTAL; engine.ts lookOpeningLights, the look page's "Daylight counted once" row): a kind 3 light that is no lamp but the
+  /** AN OPENING TO THE SKY (LIGHT_PORTAL; engine.ts lookOpeningLights, the look page's "Daylight at openings" row): a kind 3 light that is no lamp but the
    *  outside seen through a hole, an upright rectangle about `pos` facing `dir`. `halfWide` = half its width along the wall (`radius` = its half diagonal, so
    *  the shader has its height too), `share` = how much of it is open now, 0‥1 (a leaf ajar): the light's colour × intensity is what the opening looks
    *  out on (scene/openings.ts openingLooks) × the OPEN area, which is how bright the opening is to a pass whose ray stops short of it; the picture's direct light takes the whole rectangle and

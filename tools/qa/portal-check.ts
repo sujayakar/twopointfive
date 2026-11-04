@@ -1,5 +1,5 @@
 // DAYLIGHT COUNTED ONCE: the check behind a PORTAL (render/lights.ts LIGHT_PORTAL; common.wgsl evalLightDirect, portalFlux, skyKeep; direct_common.wgsl
-// shadowSample; rc.wgsl rcDice; scene/openings.ts ajarOf; engine.ts lookOpeningLights; the look panel's "Daylight counted once" row, lookConfig.portal). The look's page only: no game
+// shadowSample; rc.wgsl rcDice; scene/openings.ts ajarOf; engine.ts lookOpeningLights; the only way an opening is lit since 11-04, when the "Daylight counted once" row was folded in). The look's page only: no game
 // table, nothing for a recording.
 //   bun run tools/qa/probes.ts portal      (family `render`)        PORTAL_BREAK=1 = the bounce's rays and the dice keep the sky a portal sends: must FAIL
 // The maintainer, 11-04, of the disk light at each opening beside the bounce's own share of the same daylight: "this feels like tweaking the importance
