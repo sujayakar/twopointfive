@@ -74,21 +74,23 @@ function fit(b: Box): Box {
 /** A GREENHOUSE: the glass of a cab, its middle at local x = lx, from y0 to y1, its panes leaning in by `tilt` degrees (front, rear, sides) from the waist; a
  *  POST in the body's paint down each corner where two panes meet (and none where a pane is upright: `tilt` 0 there means the glass runs into what stands
  *  behind it), one across each side at every `posts` (local x from the glass's middle), all a centimetre proud of the glass; and, with `rise`, a roof bowed
- *  from side to side that oversails the glass's top edge by `over`. Seen from above the cab is then windows between posts under a roof, not one dark block. */
-function greenhouse(put: Put, lx: number, y0: number, y1: number, hx: number, hz: number, tilt: { f: number; r: number; s: number }, glass: CarMat, body: CarMat, posts: number[] = [], rise = 0, over = 0.015): void {
-  const g = put(lx, 0, y0, y1, hx, hz, glass), h = g.h, e = 0.012, w = 0.07;
+ *  from side to side that oversails the glass's top edge by `over` — more than a post is proud, so the roof covers every post. NO TWO FACES IN ONE PLANE, and
+ *  none through another: under a roof the glass and the posts stop 4 mm short of it (a bowed roof is thin at its edge, and what reached up into it showed
+ *  through it there). Seen from above the cab is then windows between posts under a roof, not one dark block. */
+function greenhouse(put: Put, lx: number, y0: number, y1: number, hx: number, hz: number, tilt: { f: number; r: number; s: number }, glass: CarMat, body: CarMat, posts: number[] = [], rise = 0, over = 0.03): void {
+  const top = rise > 0 ? y1 - 0.004 : y1, g = put(lx, 0, y0, top, hx, hz, glass), h = g.h, e = 0.012, w = 0.07;
   const F = lean(h, 1, 0, tilt.f), R = lean(h, -1, 0, tilt.r), S = (s: number) => lean(h, 0, s, tilt.s);
   cutTo(g, [F, R, S(1), S(-1)], false);
   const out = (p: CutPlane, by = e): CutPlane => ({ n: p.n, d: p.d + by }), inside = (p: CutPlane, by: number): CutPlane => ({ n: [-p.n[0], -p.n[1], -p.n[2]], d: by - p.d });
-  const post = (planes: CutPlane[]) => fit(cutTo(put(lx, 0, y0, y1, hx + e, hz + e, body), planes));
+  const post = (planes: CutPlane[]) => fit(cutTo(put(lx, 0, y0, top, hx + e, hz + e, body), planes));
   for (const s of [-1, 1]) {
     if (tilt.f > 0) post([out(F), out(S(s)), inside(F, w), inside(S(s), w)]);
     if (tilt.r > 0) post([out(R), out(S(s)), inside(R, w), inside(S(s), w)]);
     for (const x of posts) post([out(S(s)), inside(S(s), 0.03), cutPlane([1, 0, 0], x + 0.045), cutPlane([-1, 0, 0], 0.045 - x)]);
   }
   if (rise > 0) {
-    const H = y1 - y0, x1 = hx - H * Math.tan(tilt.f * D) + over, x0 = -hx + H * Math.tan(tilt.r * D) - over, z = hz - H * Math.tan(tilt.s * D) + over;
-    arcTo(put(lx + (x0 + x1) / 2, 0, y1 - 0.02, y1 - 0.02 + rise, (x1 - x0) / 2, z, body), rise, 1);
+    const H = top - y0, x1 = hx - H * Math.tan(tilt.f * D) + over, x0 = -hx + H * Math.tan(tilt.r * D) - over, z = hz - H * Math.tan(tilt.s * D) + over;
+    arcTo(put(lx + (x0 + x1) / 2, 0, y1, y1 + rise, (x1 - x0) / 2, z, body), rise, 1);
   }
 }
 
