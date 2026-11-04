@@ -11,7 +11,8 @@
 // reads this frame's 'bang' events once each; a kicked door does nothing to glass). Cracks accumulate — several hits on one pane overlap — and go with the
 // encounter: they are decals, and resetLevelState clears the decal list. Tab ▸ Renderer — glass has the knobs and a 'crack test' button; window.__glass the
 // console handles; tools/qa/glass-probes.ts the numbers.
-import { SideMap, SideSet } from '../math/side';
+import { manById } from './seats';
+import { SideMap, SideSet, GameSideMap } from '../math/side';
 import { Vec3, v3, clamp } from '../math/vec';
 import { Box, BoxFlag } from '../scene/boxes';
 import { PLAYER_ID } from './consts';
@@ -53,7 +54,7 @@ export function glassFxBoot(): boolean { loadGlassFx(); return GLASSFX.on; }
 
 /** per-Game glass bookkeeping (a WeakMap, like the whistle's: nothing on Game itself but the hooks) */
 interface GlassState { panes: number[]; seen: WeakSet<object>; hits: number; lastHitT: number; log: string[]; eventAt: Map<number, number>; crackAt: number; }
-const states = new SideMap<Game, GlassState>('glass.states');
+const states = new GameSideMap<Game, GlassState>('glass.states');
 export function glassState(g: Game): GlassState {
   let s = states.get(g);
   if (!s) { const panes: number[] = []; g.level.boxes.forEach((b, i) => { if (b.flags & BoxFlag.Glass) panes.push(i); }); s = { panes, seen: new SideSet(), hits: 0, lastHitT: -100, log: [], eventAt: new Map(), crackAt: -1e9 }; states.set(g, s); }
@@ -146,13 +147,13 @@ export function glassImpact(g: Game, pane: number, point: Vec3, dir: Vec3 | null
     const key = pane * 1024 + (who & 1023); const last = S.eventAt.get(key); const since = last === undefined ? 1e9 : g.time - last;
     if (GLASS.liveGap > 0 && since >= 0 && since < GLASS.liveGap) {
       if (sound) g.audio.play('glassCrack', point, 0.5, { rate: 0.94 + 0.08 * u + 0.3 * w });
-      if (who === PLAYER_ID) g.player.noise = Math.max(g.player.noise, GLASS.hearLevel);
+      { const pl = manById(g, who); if (pl) pl.noise = Math.max(pl.noise, GLASS.hearLevel); }
       return res;
     }
     if (GLASS.liveGap > 0) S.eventAt.set(key, g.time);
     if (!sound) {   // the event is the floor's, the voice is skipped
       glassEvent(g, b, point, GLASS.hearLevel, who);
-      if (who === PLAYER_ID) g.player.noise = Math.max(g.player.noise, GLASS.hearLevel);
+      { const pl = manById(g, who); if (pl) pl.noise = Math.max(pl.noise, GLASS.hearLevel); }
       return res;
     }
   }
@@ -160,7 +161,7 @@ export function glassImpact(g: Game, pane: number, point: Vec3, dir: Vec3 | null
   const area = 4 * b.h[1] * Math.max(b.h[0], b.h[2]);
   g.audio.play('glassCrack', point, 0.9, { rate: 0.94 + Math.min(0.22, 0.4 / Math.max(0.5, area)) + 0.08 * u });   // small panes ring higher; no two hits quite alike
   glassEvent(g, b, point, GLASS.hearLevel, who);
-  if (who === PLAYER_ID) g.player.noise = Math.max(g.player.noise, GLASS.hearLevel);
+  { const pl = manById(g, who); if (pl) pl.noise = Math.max(pl.noise, GLASS.hearLevel); }
   return res;
 }
 /** A round (or anything else that stars glass) met pane `bi` at `hitP` flying `dir` = glassImpact at energy 1. Returns false if `bi` is not a pane. */

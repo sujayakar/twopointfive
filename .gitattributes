@@ -1,0 +1,5 @@
+# The Rust module as text, written by tools/sim/build.ts: never read as a diff.
+src/sim/built.ts linguist-generated=true -diff text eol=lf
+src/dress/built.ts linguist-generated=true -diff text eol=lf
+# Its sources are hashed byte for byte (tools/sim/build.ts): the same bytes on every checkout.
+rust/** text eol=lf

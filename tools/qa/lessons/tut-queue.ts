@@ -6,7 +6,7 @@ import type { Bot } from '../lesson-run';
 
 export const query = `?roomclear=1&squad4${process.env.TUTQUEUE_HOUR ? `&hour=${process.env.TUTQUEUE_HOUR}` : ''}`;   // (TUTQUEUE_HOUR=dusk: the level at another hour — the page's row gives the mission its own)
 /** the frozen stand's arm of the gate: the ring's key, the machinery the goal rule rides on, and the rule itself, which that stand holds off */
-export const raises = { TPS_QRING: '1', TPS_QPLAN: '1', TPS_GOALS: '1', TPS_GOALRING: '1', TPS_QONLY: '1', TPS_RINGFLAT: '1', TPS_RAILFLAT: '1' };
+export const raises = { TPS_QRING: '1', TPS_QPLAN: '1', TPS_GOALS: '1', TPS_GOALRING: '1', TPS_GOALHALF: '1', TPS_QONLY: '1', TPS_RINGFLAT: '1', TPS_RAILFLAT: '1' };
 export const ended = (g: any) => g.lesson.finished;
 /** `TUTQUEUE_LOOSE=1`: two stacks more than a second apart, or a teammate dazzled by the team's own can, is only said (else it fails the run) */
 const LOOSE = process.env.TUTQUEUE_LOOSE === '1';

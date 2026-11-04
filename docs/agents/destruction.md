@@ -482,44 +482,9 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   cut pieces whole for picture and rays until a reload — dev pages only); `?cutprograms=boot` = one set with the rule in from boot (the build before the swap, and what
   tools/qa/cut-cost.js's 'gate' text needs). `__cut.programs` {swap, state, live, ready (a Promise: await it before staging a cut piece in a capture), force 'cut' | 'base' | null,
   info}; `__cut.stats.traced / .drawnWhole`. A new pass that traces boxes joins by implementing the two methods and calling `cutSwap.add(this)`.
-  **WHEN NEEDED (2026-10-26; Options > Graphics > Shaders "Wall cut shaders when needed", `?cutwhenneeded=1`, kept in `twopointsix.shaderrows`, OFF by default on both
-  stands, the next load's; `ui/shaderrows.ts` row `cutWhenNeeded`, read at `render/cutSwap.ts`'s import; a switch of the page, no knob and no FROZEN_HOLDS row):** on
-  Windows the second set is 10–25 s of compiling behind EVERY start (`render.md`, the compile queue), paid by a visit that breaks nothing. With the row on `main.ts`'s
-  `cutSwap.start()` builds nothing and only arms `cutSwap.need(why)`, which builds the set the first time one of three things asks. **'piece'**: `frame()` is handed a
-  cut box a ray can meet (the first break; and the first frame after a load that put such a piece back: `BoxWorld.upload` recounts over the whole CPU world, so no load
-  path has a hook of its own. A save in memory or a rollback puts every box back, rubble too; a file keeps a wall's hole and its ragged standing ends but no loose
-  piece — measured headless, the office: 39 traced at the save, 0 after the file's load, which then asks for nothing and needs nothing. The count can be one upload
-  stale-high after a file's load, when a frame is drawn before a step: the set is then asked for a load early, never late. The asking is by level, not by edge: a page
-  that boots onto pieces asks on its first frame after `start()`). **'sign'**: `cutComing(game)`, asked by `main.ts` once a frame while the
-  set is unasked, read only: a round fired by anyone (every round's `GameEvent` names its gun), a bang, a stun grenade or a frag in `game.items`, a launcher's round in
-  the air (`game.shells`), a wall charge being set or standing (`wallCharge.ops / .set`), a charge standing on a door (`doorTools.set`) — each ahead of its first piece
-  by a frame, a fuse, or the hand work. The list is kept by hand: a scripted blast, or the next thing that learns to break a wall, is asked for by its first piece. Not
-  asked on the Team & kit picture's page (its staged man fires for show; a piece there still asks). **'ready'**: reading `__cut.programs.ready` — the seven page tools
-  that await it (cut-cost-page, cut-stills, cutglass-stills, fog-pass-check, menu-idle-page, tween-page, lightwork/cutview) get the set as before and cannot hang on it,
-  so menu-idle-page and tween-page with the row on still measure a page whose set is in; `.state` and `.info` (now with `whenNeeded` and `asked`) only look, and
-  `force = 'cut'` asks too. A page whose g-buffer cut pipeline failed, or whose boot programs a hot swap pinned, is not made to compile a set its frame would never
-  take. `restirTradePipe`'s own cut twin is held while the set is (`cutSwap.held`), so with a lighting trade row on, the first frames on the cut set take the plain
-  estimator until that twin is in too. Off = `build()` at the start, every owner at once, as it was; no other page ever started the set and none does now.
-  **What it trades:** (1) the wait in which a traceable piece is drawn AND traced whole (picture, shadows, the guards' GPU light meter, the fog pass; the CPU's
-  rounds, sight and sound meet the cut shape from the first frame) moves from the seconds after a boot, when nothing is broken, to the first break, and lasts as long
-  as the compile — two in flight, the queue's background lane, so possibly minutes on a cold Windows cache, in the middle of the first fight. So the row can change a
-  run, not only a load. (2) Asking makes the set's shader modules on the page's thread (tens of ms in all on the stand-in device, behind the start card today): under
-  the row the owners make theirs 16 ms apart from the frame of the first shot, a short hitch there. (3) `build()` still calls the set failed if ANY pipeline of the page
-  fails while it compiles (its count is the page's): that window is longer and later now. **Checked:** `bun run tools/qa/cutneed-check.ts` (probes.ts `cutneed`,
-  family `cutboxes`; fourteen lines over a stand-in owner and the real game headless — calm frames ask nothing; a round of anyone's, a blown wall, a loaded save, a
-  late owner, the `ready` reader each ask once; both stands; `CUTNEED_BREAK=1` leaves the row off and fails ten). On the page, software adapter:
-  `node tools/qa/cutneed-page.cjs [--frames n] [--after n] [--compare | --only-off] [--reader | --only-reader] [query]`, run 10-26 on the title at 320×180 with
-  `pipequeue=0` (with the queue on the set, two at a time, is longer than the tool waits): row ON, 121 pipelines when ready and after frames, no cut twin, the set
-  unasked (the same with the queue on); `__cut.test` stands a piece, the next frame asks ('piece', the piece drawn whole), and the set is in 386–428 s later, 25
-  twins; row OFF, 146 pipelines, the same 25 twins built by the start in 376–399 s; row ON and `await __cut.programs.ready` as the tools do: asked 'ready', true
-  after 382 s, 25 twins, no GPU error. **What did NOT pass there, with the row off as much as on:** the first frames DRAWN on the cut set lose the GPU device
-  ("A valid external Instance reference no longer exists") at medium (row on, row off) and at verylow (row on) — as in `render.md`'s THE SOFTWARE ADAPTER'S ROOM, and not this row: the tool's third line (the frame takes
-  the set and draws the piece cut) is red on that browser's adapter, and has not been run on one that draws the cut twin.
-  That bullet's own blown-wall still (`cut-stills.cjs … --cut --scene wall --cam near --quality verylow --w 320 --h 180 --settle 3 --physics 30`) dies the same way
-  on the first frame after the blast, on this change with the row off and on the build before it and before the compile queue. It is the BROWSER, not a step: every
-  page run above was Chrome for Testing 153.0.8010.12 (playwright 1.63.0), whose software adapter loses the device on the cut twin; the same still draws clean on
-  Chromium 141.0.7390.37 (playwright 1.56.1) on the same builds. A page result that draws a cut piece says its browser's version (the tool prints it). **Never seen on a GPU, never run on Windows:** what the row saves at a start, the
-  hitch at the first shot and how long pieces then stay whole are all unmeasured.
+  (A row that held this set back until the first cut, Options > Graphics > Shaders "Wall cut shaders when needed", was on trial 2026-10-26 and taken out the next
+  day: `render.md`, the bullet on the two rows that built on demand. The set is built in the background after every boot, as above. Kept from that bullet because it is true of the build that stays: `cutSwap.build()` calls the
+  set failed if ANY pipeline of the page fails while it compiles, since the count it reads is the page's and not its own.)
 - **Glass that comes apart** (`src/game/glassbreak.ts`, merged 1d6d99e from the physics showcase; `tune.glassBreak` DEFAULT ON since the rebuild (game.ts `tune`; `glassBreakPersisted()` is on unless this machine said off; the harness stands it off — standup.ts; under the master switch `GLASSFX`, the *three parts as one* bullet), persisted `twopointsix.glassbreak`, `?glassbreak` (`?glassbreak=0` off);
   OFF = main hash for hash: the GPU side is behind the scene prelude's `GLASS_BREAK` const — `frame.ts glassBreakConfig`, raised at BOOT from the persisted switch or the flag, so
   flipping the Tab row wants a reload (the row says so); const off = the shader text main compiled before). **THE FRACTURE MODEL (rebuild, 10-08; pure geometry in
@@ -615,7 +580,12 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   caught standing crazed, not mid-wave; `glassbreak-caps`: at most `blocks` fragments a frame from a dropping pane). The determinism volleys of `glassbreak` and
   `shards` strike one sheet made toughened, so a sheet dicing (the wave, or the drop) is inside what is compared run to run on either stand; `cutglass`'s volley
   does not. A stand-up added to those six files without `floatPartition` passes on the frozen stand and fails on the page's. Red on the page's stand since
-  before this rule and not from it, same lines on the build before: `glassbreak-off`, `shards-off`, `cutglass-shape`, `cutglass-gone`, `cutglass-off`. A new line about float glass in the office stages it the same way; `glass-tune.ts` sets its scene's pane to the kind the scene
+  before this rule and not from it, same lines on the build before: `cutglass-shape`, `cutglass-gone`, `cutglass-off`. (`glassbreak-off` and `shards-off` were red there too, for their
+  checks and not for the game: each compares the switch off with a STUB in the model's place, and both stubs were older than rounds going on through a sheet. One had
+  no `crossed`, so the first round through threw; the other called every pane laminated, which is a different building to a round. A stand-in answers EVERY public member
+  of the model it stands for, held by the type check (`{ … } satisfies SeamsOut<TheClass>`, `tools/qa/office-pane.ts`: a member added to the class and not to the
+  stand-in is a `typecheck:qa` error), and WHAT KIND A PANE IS stays the model's own answer, being the level's and behind no switch. Mended: both families are
+  green on both stands, and each of the two still goes red when its model is made to act with its switch off.) A new line about float glass in the office stages it the same way; `glass-tune.ts` sets its scene's pane to the kind the scene
   names. The page:
   `node tools/qa/glassreal-page.cjs <outDir>` (a server of the checkout on PORT) boots it on the software adapter plain and with both flags at 0, reads the two
   switches and two panes' kinds, breaks one toughened sheet and reads it standing at step 3 and gone by step 11 (off: the wave), no console error. HEARD: `hang`
@@ -1008,53 +978,79 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   a defender's grenade; the pair's card both ways; a watcher's memory and his own throw; a teammate passed over; off = as it was; the journal;
   the stand), 14 lines green on both stands; `DOWNKILL_BREAK=1` fails (a), (a2), (d), (e), (f), (f2), (f3), (g2) on both. Never seen on a GPU,
   nobody has played it.
-- **What a hit looks like goes by what the thing says it is made of** (`src/game/particleFx.ts HITSTUFF`, 2026-11-04; the maintainer, shooting the trial
-  cars on the look's preview: "shooting metal shouldn't have particle debris, maybe just sparks? shooting glass should make cracks (but maybe not
-  fracture?)", then "for most glass we do want to simulate the fractures -- I think props like cars should be an exception", "since we don't want to model
-  the inside"). THE CAUSE WAS NOT THE CARS: what a round has hit is read from the COLOUR of its paint (`surfOf`: a palette name where the numbers have one,
-  else how bright it is), so a white car was plasterboard (pale chips and a puff of gypsum), a blue one concrete, and its dark glass and tyres metal. A box
-  can say what it is made of (`Box.stuff`, `scene/stuff.ts`), and with the rule on THE PICTURE OF A HIT reads that word first (`saidSurf`, the table
-  `STUFF_SURF`: car paint, steel and sheet are metal; veneer is wood; plaster and skim plasterboard; block, slab and pavers concrete; fabric, the fine weave of a
-  seat or a screen, cloth on a frame; cloth, the coarse weave of a carpet, a rug, a sandbag or a tarpaulin, the soft thing that never sparks); the colour is asked only of a box that says nothing, or whose word is not one thing to a round ('paint' and 'enamel' are a coat on a door, a drum,
-  a pipe or a line on a floor; the ground is what its paint says).
-  **A RULE OF THE PICTURE ONLY, AND WHY.** The word is the look's: a level's plain file and its look twin say different words of the same box (whoever
-  repaints a box drops its word), and the two are one simulation. A first cut let the chaos lane read the word and a review measured the two files part
-  (four rounds into a cabinet that says 'steel' in registry.json: 4 dents on the plain file, 4 gypsum puffs on the twin). So the word is read only where no
-  number of the game moves: `hitLook` (the ONE place a hit's picture is worked out: `impactFx`'s sparks, chips and dust, a prop's very part and a door's
-  leaf included); the mark where the round stopped (`marks.ts bulletMark`); the burst a hot zone adds (`destruction.ts burst`, particles only); and WHICH
-  mark the chaos lane draws where it lays one on a box that says its stuff (`damageDecal`: the dent for metal, the shred for cloth, the crack for solid
-  glass, each at its own size, else a chip; ONE mark either way, because the run's digest counts decals, and its dice and bucket move as they did; never a
-  second 'bullet', which a wall's wear would take for the round's own hole: `wallwear.ts own`).
-  NOT read by anything the simulation makes of a hit: the chaos lane's surf, its puffs into the smoke, what a round goes through, what a blast breaks, where
-  a charge may be set (`wallpen.ts`, `wallbreak.ts`, `wallcharge.ts`, `furnblast.ts`). SO A WHITE CAR THAT SAYS 'carpaint' CAN STILL COUGH THE LANE'S PALE
-  PUFF INTO THE SMOKE under sustained fire. The simulation hearing a box's word is another change, and it needs a level and its look twin to say the same
-  words first (the library's rule that a repaint drops the word would have to become "what a thing IS" beside "how it is drawn").
-  TWO NEW WORDS A BOX MAY SAY (`stuff.ts BOX_STUFFS`; the look has no material for either and draws them plain by the box's finish): `'glass'`, a SOLID
-  thing of glass with nothing modelled behind it — not a pane: a sheet a round shatters says so with `BoxFlag.Glass` and is the pane engine's, as it was —
-  and `'rubber'` (a tyre is dark, and by its colour was metal). A round into solid glass (`solidGlass`) leaves a CRACK in place of the
-  hole (`decals.wgsl damageMark` look 9: a dead screen's star drawn PALE and millimetres wide; the screens' own black hairlines showed nothing on dark
-  glass when a cloud NVIDIA card first drew them, 11-04), every round and whatever the chaos dial says, a pinch of glass (`SOLID_GLASS_CHIPS` 3) and no burst, and the box stands; a shell lays a small crack a pellet (`SOLID_GLASS_CRACK`). A THING THE WALL ENGINE BREAKS SHOULD NOT SAY 'glass'
-  (its wear rides a round's hole, and solid glass is given a crack in the hole's place; no level has one). METAL THROWS NO CHIPS with
-  the rule on, anywhere (the row's two dark flecks; the sparks and the dent stay). ALSO CHANGED IN THE PICTURE, since they say words already: the office's
-  cubicle partitions say 'fabric' and throw cloth where they threw gypsum (the chaos lane has always read them as cloth), a sofa throws cloth where it threw
-  concrete, a cabinet that says 'steel' sparks where a pale one threw gypsum.
-  A MARK ON A CUT FACE LIES WHERE THE ROUND MET IT (`render/decals.ts Decals.onCut`, raised by the page, `?markcut=0`; found by the first GPU still of a shot
-  car): a mark clamped to its box was pulled onto the face of the box's UNCUT shape, so on a leaning pane, a rounded nose or a crowned bonnet it stood
-  centimetres off the surface (87 mm on a pane leaning 12 degrees) and the shader's plane test dropped it: no round ever left a mark on a cut face. The
-  picture's alone (where a mark is drawn, never whether one is laid); check line 7.
-  SWITCH: ON in the page (`?hitstuff=0` = by the colour, as it was), OFF in the module and on the frozen stand (`TPS_HITSTUFF=1`), a `FROZEN_HOLDS` row, in
-  the registry and the journal (a recording from before the table plays with it off: `applyKnobs`; the rule is read at each hit). On or off, the same run.
-  WHO SAYS A WORD TODAY: on the preview the trial cars (`scene/carTry.ts`: body 'carpaint', glass 'glass', tyres 'rubber', trim 'plastic', hubs 'steel'),
-  the office's desks, partitions, sofas and cabinets, `levels/white-roof.json`. THE KITS' OWN VEHICLES SAY NOTHING YET (check line 1 holds that): they say
-  theirs when `stuff` is in the build and the vehicles' lasting shapes are.
-  CHECK: `bun run tools/qa/hitstuff-check.ts` (`probes.ts hitstuff`, family `destruction`; `HITSTUFF_BREAK=1` fails lines 2, 3, 4 and 7), eight lines on both
-  stands, real rounds on the office with a stand-in for the GPU particles that keeps what the game asks of them at the hit: the car's body by its paint,
-  the same up as down; saying 'carpaint', sparks, no chips, no dust; a tyre saying 'rubber', plastic's chips and no dent; the glass saying 'glass', the
-  crack in place of the hole on every round, with the chaos lane off too, six chips from two rounds and the box standing; a cabinet that is metal by its
-  paint, the same sparks and no chips; AND THE SAME RUN up as down — by digest, by the chaos lane's own die and counters and by the count of marks — over four rounds a spot at the top of
-  the chaos dial (the harness holds the dial at 0: the check raises it): the car's body, glass and a tyre saying their words, a box of each word the
-  level itself says (steel, veneer, fabric), a wall, a thing of metal and a window pane that says 'glass' too; the words, the lint and the stands.
-  MEASURED ON: one seed (1) of `levels/office.json`, both stands, by this check; a reviewer's stress run (72 to 84 rounds at the dial's top, words put on
-  breakable partitions and a wall, wall wear live) had the same digest, lane die, counters, cells opened and props up as down. No play-through tally
-  was taken: nothing the tally reads can move. NOT DONE: nothing here has been
-  seen on a GPU; SEEN on a cloud NVIDIA card (Vulkan), the preview's library hall, 11-04: sparks off the body and its holes, no chips off the body, the window standing.
+- **Broken glass: litter and hearing BY THE FALL (`shards.ts SHARDS.byFall`, 2026-11-03; the maintainer, 11-02: "let's make sure we're very explicit about
+  what's gameplay affecting (and also run on the server) and what's just client side only dressing (debris, smoke details)").** What broken glass does to the
+  GAME is the glass it leaves on the floor (a footfall there is louder: `floor.ts tread`) and the landings the floor hears. Both used to be decided by the
+  debris pool: a plate laid its glass where it came to REST and was heard where it LANDED, a fragment whose plates the pool refused was scheduled another
+  way, a plate landing on a chair pushed it, and the jet of a round through a sheet left the glass of as many fines as the particle budget let through. The
+  pool's size follows the graphics tier (64 or 32) and the budget is a look knob kept per machine, so two machines did not play one game. WITH THE RULE a
+  fragment has ONE landing, worked out as it lets go (`fallOf`: where and when it reaches what is under it): all its glass is laid there (a diced clump four
+  fifths, a laminated sheet three tenths, as before), the floor is told once at the landings' level, and a plate is DRESSING (`Chunk.dress`: no hearing
+  event, no glass at rest, no furniture feels it). The gameplay half is the game's `FallStore` (`src/sim/fallshome.ts`, with a Rust twin: the row
+  `RUST.falls`, `docs/agents/rust.md`). SWITCH: off in the module and on the frozen stand (`TPS_GLASSFALL=1`), ON in the page (`?glassfall=0`); a
+  `FROZEN_HOLDS` row; a key of the registered table `SHARDS`, and a recording from before the key replays with it off (`journal.ts applyKnobs`). Off = litter
+  where each plate rests, as it was, by run digest (the shards probes' 36 lines, unchanged; the five comparison missions break no glass and are the
+  bits they were on both settings). Not in the frozen-digest pin lists: off in the module. THE CHECK: `tools/qa/glassfall-check.ts` (`probes.ts
+  glassfall`, also under `glass` and `all`), 6 lines, both stands: `pool` plays the shards probes' volley (thirty rounds through the conference glazing, a
+  toughened sheet poured as dice, a walker over what came down) with the pool at 64, 32 and 4, with an eighth of the particle budget and with every plate
+  refused, and demands ONE game (hearing events, footfall levels, litter, landings waiting, digest, the raw bits of everything but the pool after every
+  tick); `sees` shows the same plays are other games with the rule off; `GLASSFALL_BREAK=1` asks `pool` with the rule off and must fail (it does, on both
+  stands). MEASURED (the volley, seed 1 and three to five volleys shot about it; rule off → on): frozen stand, 4 seeds: the floor told 12‥14 → 11‥13
+  times, glass in 48‥54 → 33‥37 cells and 5.3‥5.8 → 5.0‥5.6 m², the walker's ten footfalls 8‥10 → 8‥10 on glass; shipped stand, 6 seeds: told 15‥21 → 11‥15
+  times, glass in 55‥69 → 27‥40 cells and 4.6‥6.2 → 3.2‥4.6 m², ten of ten footfalls on glass both ways. So the glass lies in about two fifths fewer cells
+  (a fragment's glass falls in one place where its plates used to slide apart) and the floor hears a few landings fewer. WHAT IT COSTS, as said in the
+  switch's own comment: a plate that slid on lies a little off the glass that crunches; a plate shattering on landing is heard at 0.3, not 0.35; where the
+  pool refuses a plate that landing has no sound for the ear. NOT DONE: a plate still breaks again by the pool's own contact (picture only now). NEVER SEEN
+  ON A GPU, never played: whether the crunch still reads as "where the glass is" is the maintainer's to judge.
+- **The debris pool is DRESSING (`destructionSwitch.ts DEBRIS.dress`, 2026-11-03; the maintainer, 11-02: "let's make sure we're very explicit about what's
+  gameplay affecting (and also run on the server) and what's just client side only dressing (debris, smoke details)", and his yes on 11-03 to debris as
+  dressing with the landing's noise the simulation's).** What a broken thing's pieces did to the GAME was the pool's to decide: each chunk the pool HELD told
+  the floor when it landed (a `prop` hearing event), pushed the chair it fell on, was something the cursor's ray, an order's point, a laser and a tripwire
+  could land on, and three rules read the pool back (a ceiling tile the pool refused was counted as still up, a blast's piece budget was spent by the chunks
+  that appeared, and the break table dealt a smaller share and drew its die differently on a small pool). The pool's size follows the graphics tier (64 or
+  32), so two machines did not play one game: the check's scene tells the floor 66‥71 times at 64 and 50‥52 at 32. WITH THE RULE the game's half of a thrown
+  piece is ONE LANDING, worked out by the simulation when the piece is thrown and before the pool is asked (`debris.ts thrown`): when and where =
+  `falling.ts flightOf`, the arc of a body let go there at that speed, walked in six chords each asked of the statics and the pushable things, stopped a
+  hand short of the first it meets and dropped onto what is under it there (`falling.ts` also holds `fallOf`, a fragment of glass's answer, as it was);
+  nothing if it would land under 1 m/s (`DEBRIS.minSpeed`), as a chunk's own touch under it made no knock. A landing also carries the DUST it raises (a
+  ceiling tile lands hard enough to break again, with a puff the senses read: the simulation lets that puff out, and a dressing chunk's own re-break
+  leaves it out), and a blast that knocks one of the lane's own things off says its shove BEFORE the thing is thrown (`Debris.fling`), so the landing has
+  the shove too. The landings
+  wait in the game's `FallStore` (`src/sim/fallshome.ts`, the list `FALL_PIECES` beside the glass's; `docs/agents/rust.md`, the row `RUST.falls`) and
+  `destruction.ts update` tells the floor as each comes due, at the piece's level and on whoever threw it. Every chunk is then `Chunk.dress`: its knock is
+  for the ear, it pushes nothing, its box is `Box.dress` (PICTURE ONLY to the world's ray, as a look piece is: `scene/boxes.ts`), the mark a re-broken piece
+  leaves is a look decal, a piece a later blast kicks is not heard again, and the three read-backs ask the simulation (the tile is down; the budget is
+  spent by the lane's own count of knocks; the break table deals the full share on every tier and keeps a second die, `phash`, for what it draws only
+  because the pool took or refused a piece). A small pool turns what it cannot hold into chips, as it always did. `dress.ts DRESS.debris` is the pool's
+  row: down, with the rule on, no pool is kept at all. SWITCH: off in the module and on the frozen stand (`TPS_DEBRISFALL=1`), ON in the page
+  (`?debrisfall=0`); a `FROZEN_HOLDS` row; its own registered table `DEBRIS`, and a recording from before the table replays with it off
+  (`journal.ts applyKnobs`). Off = each chunk the pool holds tells the floor itself, as it was. Not in the frozen-digest pin lists: off in the module.
+  THE CHECK: `tools/qa/debrisfall-check.ts` (`probes.ts debrisfall`, under `destruction` and `all`), 7 lines, both stands. Its scene is the furniture
+  probes' office in the warehouse: a wall charge, forty rounds through the hole, four ceiling tiles let go, a second charge. `pool` plays it with the pool
+  at 64, 32 and 4 and with the dressing row down and demands ONE game (the hearing events, the dust let into the smoke, the landings waiting, the digest
+  less the pool, the raw bits after every tick); `sees` shows the same plays are other games with the rule off; `tells` holds each landing against its own
+  chunk's first hard touch; `again` loads a checkpoint from before the charge and wants the floor told as the first time (the clock goes back: the
+  pieces' list is cleared with the pool); `module` and `snapshot` hold the pieces' list in the Rust module and through a put back; `--far` lists the
+  pieces whose chunk knocks far from its landing;
+  `DEBRISFALL_BREAK=1` asks `pool` with the rule off and must fail (it does, on both stands). MEASURED (that scene, 6 seeds a stand; the rule off at 64 → on): frozen stand, the floor told of a thing landing 52‥55 → 52‥54 times (44‥47 with the
+  rule off at 32); shipped stand 71‥76 → 71‥74 (50‥52 at 32), 63‥64 pieces asked for → 63‥68 (55 at 32). So on the bigger pool the count hardly moves, and
+  the smaller pool now hears what the bigger one does. A landing against its own chunk's first hard touch (pool at 64): 0.11 m apart at the median on both
+  stands, the chunk's knock 0.13 s before the landing; the worst 3.5 m (frozen) and 1.2 m (shipped), 0.5 and 0.65 s. IN PLAY (`playthrough.ts` with
+  `PT_DESTR=1 PT_WALL=1`, the shipped stand, room-clear-four, room-clear-pair and hostage-rescue, seeds 1 to 8, the rule off and on: 24 runs each): the
+  same 21 won and 3 lost, every run the same length to the second, 15 teammates lost → 16 (one more in one room-clear-pair run).
+  WHAT IT COSTS: the men hear a piece where and when the simulation's body lands, the player hears the chunk's own knock, and the two are held together
+  only by `tells` (half within a metre and 0.35 s; the worst are fast pieces that clip something the six chords pass); a piece the pool turned into
+  chips is heard by the men and has no knock for the ear; a list of 96 landings already waiting drops the next (not met in the scene: at most 45 wait). NOT DONE: the
+  pool is still in the rollback snapshot (harmless on one machine; the raw bits two machines compare never held it: `digest.ts rawBits` reads
+  `debris.chunks`, a field the pool does not have). NEVER SEEN OR HEARD ON A GPU, never played.
+  MENDED BEHIND THE STEP THAT NAMED IT (2026-11-03, from a review's reading and one red check): a restarted level kept the count of things knocked
+  off (`Destruction.knocks`: `reset()` zeroes it now; `cleanrestart-check` on the shipped stand was red for it and for the doors' drive columns,
+  `docs/agents/rust.md`); a dressing piece's re-break mark is laid as a look mark from the start (`decals.add(…, { look: true })`: tagged only
+  afterwards it could push a mark play laid out of a full ring, by what a pool held); a chunk tells the floor or not by what IT is (`land()` reads
+  `c.dress`, not the switch as it stands when it lands); `stats.told` counts a landing only when the falls took it. Checked: `debrisfall-check` on
+  both stands with a new line `turned` (the switch turned with the first charge's pieces in the air, each way: the floor is told what it would have
+  been; red on the code before), `glassfall-check` and `cleanrestart-check` on both. NOT MENDED, the same kind and for the round that moves the
+  breaks: WHETHER A PIECE IS DRESSING is still read off the live switches where it is spawned (`spawnRaw`), so the halves of a piece that breaks
+  again, and a plate of a plate (`shards.ts`, by `SHARDS.byFall` when it lands or rests), are what the switch says THEN, not what their piece was;
+  the mend is one fact stated by every caller and no switch read in `spawnRaw`. NOT HELD BY A CHECK: the look mark in a full ring, `told` against
+  a full list. Not run: any play tally (none of these moves a landing under the page's rules).

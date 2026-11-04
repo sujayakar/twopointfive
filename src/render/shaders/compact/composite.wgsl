@@ -1185,7 +1185,7 @@ fn compositePixel(pix0: vec2f) -> vec3f {
         let sunPix = frame.veilA.w * facing / toSun.y; let sunsOwn = clamp(sunPix / max(luminance(Ed), 1e-4), 0.0, 1.0);
         let graze = min(1.0 / max(facing, 0.5), 2.0);
         dif = mix(ground, max(POWDER_ALBEDO * (Ed * mix(1.0, vv.z * graze, sunsOwn) + Ei) * (1.0 / PI), ground), vv.x);
-        sparkle *= 1.0 - vv.x;   // (the facets under the powder do not flash through it)
+        if (SNOW_SPARKLE) { sparkle *= 1.0 - vv.x; }   // (the facets under the powder do not flash through it)
         // (and the powder has grains of its own that catch the sun for a moment: a few in a thousand of 3 cm spots, new ten times a second)
         dif += POWDER_ALBEDO * Ed * (sunsOwn * vv.x * step(0.994, hash13(vec3f(floor(P.xz / 0.03), floor(frame.time * 10.0)))) * (2.0 / PI));
       }

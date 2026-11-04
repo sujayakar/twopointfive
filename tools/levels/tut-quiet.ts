@@ -88,6 +88,7 @@ import { officeKit, normalize3 as norm, type GeneratorTrace } from '../../src/sc
 import { gwotKit, gwotOfOffice, GWOT_MATERIALS, GW_SHELL, type GwotMat, type WallKind } from '../../src/scene/gwotKit';
 import { SNOW_PALETTE, SNOW_FINISH, SNOW_MATERIALS, type SnowMat } from '../../src/scene/gwotPalette';
 import { WORLD } from '../../src/scene/world';
+import { livedTail } from './livedKit';
 import { toned, PANEL_GREY } from '../../src/scene/stuff';
 
 export const NAME = 'tut-quiet';
@@ -599,6 +600,32 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
     ],
   };
   for (const d of doors) doorFrame(d);
+
+  // ---- LIVED IN (src/scene/lived.ts: all of it goes with the switch off — group 'lived.<place>'; LAST, after every kept thing) ----
+  // THE TOWN'S EAST SIDE, which was one bare sheet of snow from the neighbour's wash line to the map's corner (level-needs `ground`: 126 m²). Both places are
+  // PAST THE YARD'S WALL, which stands 2.47 m and has no gate on that side: no man of the shop has a line to them and no way leads from them into the yard.
+  // (A player can walk there, out by the street gate and round the back of the town; no line of the lesson sends him.) No lamp is added. What a guard sees,
+  // what the meter reads and where the dark lies inside the wall are as they were: the scripted player's run is the same run, digest for digest.
+  // Standing things and snow only, each piece the look's kit's by name with the snow that fell on it. NO TRODDEN PATH: the paint of one is play (a thrown
+  // thing bogs less on it) and its footsteps are the footstep map's, which is the level's own part and has no lived half, so one laid here would look hard
+  // and sound soft.
+  { const lived = livedTail(K.props, grp);
+    // the neighbour's yard: a rope bed left out under the snow, the water butt at the house's corner, the dish on its pole; snow blown against the
+    // walls nobody walks by and shovelled off the way to the wood
+    lived.room('neighbour');
+    G.charpoy(34.3, 19.1, 0.2, null); cap(34.3, 19.1, 1.72, 0.74, 0.44, 0.2, 0.045);
+    G.drum(34.3, 13.98, 'drumBlue', 0.3); cap(34.3, 13.98, 0.4, 0.4, 0.88, 0.3, 0.04);
+    G.satDish(38.6, 14.1, Math.PI);
+    drift(32.46, 19.6, 2.8, 0.58, HALF, 0.15); drift(37.3, 21.52, 2.6, 0.62, Math.PI);
+    // the lot behind the neighbour's house: his water on its plinth against the back wall, split wood, the builder's left-over block, the deep snow
+    // of a corner the wind fills
+    lived.room('lot');
+    G.waterTank(35.6, 6.2); cap(35.6, 6.2, 0.84, 0.84, 2.2, 0.3, 0.045);
+    G.woodPile(34.2, 3.5, HALF, 1.8); cap(34.2, 3.5, 0.28, 1.5, 0.42);
+    G.blocks(38.9, 5.5, 0.15, 2); cap(38.9, 5.5, 0.68, 0.3, 0.4, 0.15, 0.04);
+    bank(37.7, 6.62, 2.0, 0.76, Math.PI);
+    lived.done(); }
+
   const level: Level = {
     boxes: K.boxes, props: K.props, lights, switchables, doors, devices,
     breaker: breaker!, beacons: [{ pos: [20.3, 2.05, 6.3], box: dome }],

@@ -25,6 +25,7 @@ import { BoxFlag } from '../../src/scene/boxes';
 import { GWOT_MATERIALS } from '../../src/scene/gwotKit';
 import { trainGround, TRAIN_MATERIALS, EXIT_W, EXIT_E, HALF } from './train-ground';
 import { yardGateShell } from './train-ground-kitview';
+import { livedTail } from './livedKit';
 
 export const NAME = 'lights-out';
 export const NOTES = 'Lights out: a quiet mission as two. A relay post in a walled yard at night: the strongbox is behind a hall with a grille of four beams, a lens and a lamp, all on the mains; the breaker is in a generator shed on the far side of an inner wall, and the man sent to it has the mains back before one man can walk from it to the door. One waits by the door, the other throws the breaker on the word and hides.';
@@ -199,10 +200,59 @@ export function build() {
     exits: [{ ...EXIT_E, name: 'the back gate' }, { ...EXIT_W, name: 'the generator shed gate' }],   // (the ground's two gates, by this level's own names for them)
     patrols: [['north', 'east', 'cook'], ['north_b', 'east_b', 'cook_b']],
   };
-  return T.finish({
+  const out = T.finish({
     spawn: [5.2, 0, 14.0], routes,
     mission: { serverRoom: { ...BACK }, entryDoor: 'inner', rack: { index: 0, front, halfW: 0.35 }, exfilDoor: 'gate_e', exfilX: EXIT_E.x, exfilZ: EXIT_E.z, exfilOut: EXIT_E.out },
     scenarios: { quiet, places: PLACES, kitView: LIGHTS_OUT_KITVIEW, doorNames: [{ door: 'gate_w', name: 'generator shed gate' }, { door: 'gate_e', name: 'back gate' }] },
     level: { devices },
   });
+  furnish(T);                                                                              // LAST: the lived tail (after the doors are framed, so no kept id moves)
+  return out;
+}
+
+// ---- LIVED IN (src/scene/lived.ts: all of it goes with the switch off — group 'lived.<place>'; the tail of every list, laid after T.finish()) ----
+// The post's rooms and its yard's cover were laid when the level was built. What it was short of is its GROUND, and anything that says RELAY POST from
+// above. So, every piece the kit's own by name: the track kept as soldiers keep one (whitewashed stones down both edges, the lorry's ruts between
+// them), the post's dish on its pole in the north-east corner, the fuel's ground at the shed door and in the cage, the tank's overflow, the cook's ash and
+// the wash water that runs out under the south wall, the spot under the hall's window where a man has stood every night, bricks at a wall's foot.
+// NO LAMP, and the dark is as it was: everything is paint on the ground or low enough to walk over, but the dish, which is a pole a hand thick in the
+// north-east corner, two metres clear of the wall and of every walk. Nothing is laid in the lane (its west edge and the wood store's shadow are where
+// the pair waits: measured), in the gap, or on the way from the gate to the shed.
+function furnish(T: ReturnType<typeof trainGround>) {
+  const { G, K, grp } = T, L = livedTail(K.props, grp);
+
+  L.room('track');
+  G.kerbStones(0.5, 12.42, 7.3, 12.42); G.kerbStones(0.5, 15.58, 7.3, 15.58);                 // a post keeps its track: whitewashed stones down both edges
+  G.kerbStones(32.7, 12.42, 39.5, 12.42); G.kerbStones(32.7, 15.58, 39.5, 15.58);
+  G.ruts(0, 14.0, 6.9, 14.0); G.ruts(33.1, 14.0, 40, 14.0);                                  // the ration lorry's ruts (long and straight, off the map's edge)
+  G.stain(7.0, 14.0, 1.7, 1.9, 'gravel', 0, 0.8); G.stain(33.0, 14.0, 1.7, 1.9, 'gravel', 0, 0.8);   // the ground before a gate
+
+  L.room('outside');
+  // wet and ash are the dust's own paint, a paler stain with a darker one inside it at another turn: one dark rectangle on the dust reads as a mat
+  G.stain(25.6, 23.05, 5.2, 1.5, 'dust', -0.05, 0.78); G.stain(26.1, 22.9, 3.0, 1.0, 'dust', 0.1, 0.62);   // the cook's water, out under the south wall
+  G.stain(18.4, 24.7, 2.8, 2.0, 'dust', -0.3, 0.78); G.stain(18.3, 24.75, 1.6, 1.2, 'dust', 0.35, 0.62);   // the ash tip
+  G.rubble(18.4, 24.7, 0.55, 7, 'mudDark');
+  G.rubble(13.1, 22.65, 0.45, 6); G.rubble(32.85, 18.6, 0.45, 5);                              // bricks off the wall's top, where they fell
+  G.rubble(8.6, 25.4, 0.9, 8); G.rubble(29.6, 25.8, 0.8, 7, 'mudLight'); G.rubble(36.4, 9.2, 0.8, 7); G.rubble(3.2, 20.4, 0.8, 7); G.rubble(24.0, 2.4, 0.9, 8);   // field stones
+
+  L.room('outeryard');
+  G.patch(9.25, 16.2, 1.2, 1.7, 'oil', 0.04);                                                 // the shed's door: where the fuel is carried in
+  G.stain(10.9, 9.4, 3.0, 1.5, 'dirt', -0.55, 0.78); G.stain(10.6, 9.2, 1.7, 0.9, 'dirt', -0.4, 0.62);   // the tank's overflow
+  G.rubble(8.65, 11.7, 0.4, 5);                                                                // bricks at the wall's foot
+
+  L.room('cage');
+  G.stain(11.9, 19.75, 1.9, 0.9, 'slab', 0, 0.62);                                            // the cage's slab, black where the drums stand
+
+  L.room('windowside');
+  G.satDish(26.4, 8.4, 0.5, 2.1);                                                             // the post's dish, on its pole
+  G.stain(22.75, 11.85, 1.1, 1.5, 'dirt', 0, 0.72);                                           // under the hall's window: where a man stands every night
+  G.rubble(29.95, 6.75, 0.4, 5);
+
+  L.room('cookfire');
+  G.stain(24.9, 20.35, 1.7, 1.0, 'dirt', 0.15, 0.7, G.flatAt(G.lie.patch));                                          // ash raked out of the oven
+  G.rubble(22.5, 20.55, 0.35, 5, 'poplar');                                                   // chips where the wood is split
+
+  L.room('backstrip');
+  G.rubble(31.35, 18.2, 0.4, 5);                                                              // bricks at the wall's foot
+  L.done();
 }

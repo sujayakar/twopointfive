@@ -83,6 +83,7 @@ import * as MD from '../../src/scene/markingDefaults';
 import { WORLD } from '../../src/scene/world';
 import { BoxFlag, type Box } from '../../src/scene/boxes';
 import { livedKit } from './livedKit';
+import { gwotKit, gwotOfOffice } from '../../src/scene/gwotKit';
 import { drawnAs, madeOf, saidAs, PANEL_GREY, CHAIR_GREY } from '../../src/scene/stuff';
 
 export const NAME = 'compound';
@@ -459,11 +460,10 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
     const bx = (x0: number, x1: number, z0: number, z1: number, y0: number, y1: number, a: Vec3, ns = false) => slab(x0, y0, z0, x1, y1, z1, a, ns ? { flags: NS } : {});
     /** a turned box by its centre and half sizes */
     const yb = (x: number, z: number, hx: number, hz: number, y0: number, y1: number, a: Vec3, yaw = 0, ns = false) => add({ c: [x, (y0 + y1) / 2, z], h: [hx, (y1 - y0) / 2, hz], yaw, albedo: a, ...(ns ? { flags: NS } : {}) });
-    /** a round thing of radius 0.2 and over (a jar, an oven, a barrel, a wheel lying flat): an OCTAGON — four slabs through the centre 45° apart, each as wide as
-     *  the round and tan 22.5° as deep, tops stepped 2 mm so none are coplanar (gwotKit's `round`; two squares 45° apart read as a cog from above) */
-    const oct = (x: number, z: number, r: number, y0: number, y1: number, a: Vec3, ns = false) => { for (let k = 0; k < 4; k++) yb(x, z, r * 0.96, r * 0.96 * 0.4142, y0, y1 - 0.002 * k, a, k * Math.PI / 4, ns); };
-    /** a small round thing (under 0.2): one square turned a little, as livedKit's drums. Reaches 1.25 r from its centre */
-    const pot = (x: number, z: number, r: number, y0: number, y1: number, a: Vec3, ns = false) => yb(x, z, r * 0.9, r * 0.9, y0, y1, a, 0.3, ns);
+    /** a round thing (a jar, an oven, a barrel, a wheel lying flat): the kit's (livedKit.ts round — from 0.2 m the octagon the round rule makes one round box of) */
+    const oct = (x: number, z: number, r: number, y0: number, y1: number, a: Vec3, ns = false) => L.round(x, z, y0, y1, r, a, 0, { drawn: ns });
+    /** a pot, a pan, a basket: the kit's round from 0.2 m; a smaller one is one square turned a little (it reaches 1.25 r from its centre) */
+    const pot = (x: number, z: number, r: number, y0: number, y1: number, a: Vec3, ns = false) => r >= 0.2 ? oct(x, z, r, y0, y1, a, ns) : yb(x, z, r * 0.9, r * 0.9, y0, y1, a, 0.3, ns);
     /** a pair of shoes left on the floor (drawn only) */
     const pair = (x: number, z: number, yaw: number, a: Vec3 = C.black, long = 0.13) => { const at = K.frameAt(x, z, yaw); for (const s of [-0.06, 0.06]) { const c = at(s, 0, s * 0.3); yb(c[0], c[2], 0.04, long, 0, 0.05, a, yaw, true); } };
     /** a floor cushion (drawn only: it may lie on a mark or in a lane) */
@@ -517,13 +517,17 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
     // the room's north half (drawn only but the table: they lie in the lane and cost no cover), in colours that stand off the rug's maroon; six glasses. One
     // of theirs: an ammunition tin pulled up at the table's head as a seventh seat. Colour: mustard and teal on maroon
     L.room('sala');
-    bx(16.0, 17.2, 16.05, 16.6, 0.31, 0.35, C.woodDark); bx(16.04, 16.1, 16.09, 16.56, 0, 0.31, C.woodDark); bx(17.1, 17.16, 16.09, 16.56, 0, 0.31, C.woodDark);   // the low tea table, between the rows
-    bx(16.22, 16.9, 16.15, 16.51, 0.35, 0.364, P.brass); L.thing(16.36, 0.364, 16.33, 0.06, 0.07, 0.06, C.black);   // tray and pot
-    for (let k = 0; k < 6; k++) L.mug(16.54 + (k % 3) * 0.11, 0.364, 16.26 + (k > 2 ? 0.14 : 0), CREAM);           // six glasses: there are guests
+    // THE TEA TABLE STANDS SOUTH-EAST OF THE ROOM'S MIDDLE, the east row drawn up to it, and a walk is left between it and the west row. It stood in the
+    // middle (x 16.0 to 17.2, z 16.05 to 16.6), on two lines a man of this room walks when a pair goes round: from the north door across to the east door
+    // (to the garage: 23.4 m bare, 25.9 with the table, over its limit) and from his post out by the north door (to the guard hut: 45.2 m of 46, 45.9
+    // with it). 0.6 m east and 0.5 south is the least move that gives both back (tools/qa/wayround-check.ts; twenty-five places were tried)
+    bx(16.6, 17.8, 16.55, 17.1, 0.31, 0.35, C.woodDark); bx(16.64, 16.7, 16.59, 17.06, 0, 0.31, C.woodDark); bx(17.7, 17.76, 16.59, 17.06, 0, 0.31, C.woodDark);   // the low tea table
+    bx(16.82, 17.5, 16.65, 17.01, 0.35, 0.364, P.brass); L.thing(16.96, 0.364, 16.83, 0.06, 0.07, 0.06, C.black);   // tray and pot
+    for (let k = 0; k < 6; k++) L.mug(17.14 + (k % 3) * 0.11, 0.364, 16.76 + (k > 2 ? 0.14 : 0), CREAM);           // six glasses: there are guests
     for (let k = 0; k < 3; k++) cushion(15.15, 15.75, 15.62 + k * 0.47, 16.07 + k * 0.47, [P.brass, TEAL, CREAM][k]);   // the west row
-    for (let k = 0; k < 3; k++) cushion(17.45, 18.05, 15.62 + k * 0.47, 16.07 + k * 0.47, [ORANGE, P.brass, TEAL][k]);  // the east row
-    bx(15.15, 15.3, 15.7, 16.8, 0.075, 0.2, C.chair, true); bx(17.9, 18.05, 15.7, 16.8, 0.075, 0.2, C.chair, true);   // blue bolsters along their backs
-    yb(16.6, 15.8, 0.17, 0.1, 0, 0.2, P.oliveDrab, 0.1, true);                                                    // the ammunition tin, at the table's head
+    for (let k = 0; k < 3; k++) cushion(18.05, 18.65, 16.12 + k * 0.47, 16.57 + k * 0.47, [ORANGE, P.brass, TEAL][k]);  // the east row
+    bx(15.15, 15.3, 15.7, 16.8, 0.075, 0.2, C.chair, true); bx(18.5, 18.65, 16.2, 17.3, 0.075, 0.2, C.chair, true);   // blue bolsters along their backs
+    yb(17.2, 16.3, 0.17, 0.1, 0, 0.2, P.oliveDrab, 0.1, true);                                                    // the ammunition tin, at the table's head
     { K.prop('chair', 19.0, 16.4, 0, 3, [{ off: [0, 0.1, 0], h: [0.22, 0.1, 0.11], yaw: 0, albedo: C.chair }]); L.own('bolster'); }
     { K.prop('chair', 14.75, 16.4, 0.3, 2.5, [{ off: [0, 0.07, 0], h: [0.24, 0.07, 0.24], yaw: 0, albedo: ORANGE }]); L.own('cushion'); }
 
@@ -613,10 +617,14 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
     // north end and its feed trough open to the south where a man stands to feed it; the manger in the corner with a tether ring and rope, the empty water
     // trough, a dung patch. Colour: straw yellow
     L.room('shed');
-    yb(6.82, 5.42, 0.42, 0.3, 0, 0.022, STRAW, 0.5, true); yb(6.5, 5.82, 0.3, 0.22, 0, 0.026, STRAW, -0.4, true); yb(6.95, 5.3, 0.2, 0.15, 0.026, 0.15, STRAW, 0.3, true);   // chaff: a ragged heap thrown down beside the cutter (not a square: the forecourt's grain sheet is the level's yellow rectangle)
-    bx(7.3, 7.58, 5.08, 5.66, 0.55, 0.72, C.wood); bx(7.32, 7.56, 5.56, 5.62, 0, 0.55, C.woodDark); bx(7.32, 7.56, 5.16, 5.22, 0, 0.55, C.woodDark); bx(7.34, 7.54, 5.28, 5.68, 0.72, 0.8, STRAW, true);   // the chaff cutter: its feed trough on two frames, straw in it
-    add({ c: [7.44, 0.66, 5.02], h: [0.17, 0.4, 0.02], albedo: C.black }); add({ c: [7.44, 0.66, 5.02], h: [0.4, 0.17, 0.016], albedo: C.black, flags: NS }); add({ c: [7.44, 0.66, 5.02], h: [0.3, 0.3, 0.012], albedo: C.black, flags: NS });   // … its flywheel at the trough's north end (three nested slabs: a stepped disc; one solid, two drawn)
-    add({ c: [7.44, 0.66, 5.05], h: [0.05, 0.05, 0.012], albedo: P.brass }); add({ c: [7.44, 0.83, 5.052], h: [0.27, 0.035, 0.008], albedo: C.metal, flags: NS }); add({ c: [7.72, 0.66, 4.97], h: [0.03, 0.03, 0.04], albedo: C.wood });   // the hub, the blade, the handle
+    yb(6.37, 5.42, 0.42, 0.3, 0, 0.022, STRAW, 0.5, true); yb(6.05, 5.82, 0.3, 0.22, 0, 0.026, STRAW, -0.4, true); yb(6.5, 5.3, 0.2, 0.15, 0.026, 0.15, STRAW, 0.3, true);   // chaff: a ragged heap thrown down beside the cutter (not a square: the forecourt's grain sheet is the level's yellow rectangle)
+    // (THE CUTTER STANDS 0.45 m WEST AND 0.25 m NORTH of where it did, its heap with it. Where it stood, a man sent round to this room's south door had nowhere
+    // to stand by it and his next way was 56 m, and the shed's own man lost 0.26 m of the 1.1 he has to spare on his way round to the guard hut
+    // (tools/qa/wayround-check.ts). North alone is enough for the ways, 0.25 m and no less; the step west keeps its flywheel out of the level's own
+    // cardboard box by the north wall)
+    bx(6.85, 7.13, 4.83, 5.41, 0.55, 0.72, C.wood); bx(6.87, 7.11, 5.31, 5.37, 0, 0.55, C.woodDark); bx(6.87, 7.11, 4.91, 4.97, 0, 0.55, C.woodDark); bx(6.89, 7.09, 5.03, 5.43, 0.72, 0.8, STRAW, true);   // the chaff cutter: its feed trough on two frames, straw in it
+    add({ c: [6.99, 0.66, 4.77], h: [0.17, 0.4, 0.02], albedo: C.black }); add({ c: [6.99, 0.66, 4.77], h: [0.4, 0.17, 0.016], albedo: C.black, flags: NS }); add({ c: [6.99, 0.66, 4.77], h: [0.3, 0.3, 0.012], albedo: C.black, flags: NS });   // … its flywheel at the trough's north end (three nested slabs: a stepped disc; one solid, two drawn)
+    add({ c: [6.99, 0.66, 4.80], h: [0.05, 0.05, 0.012], albedo: P.brass }); add({ c: [6.99, 0.83, 4.802], h: [0.27, 0.035, 0.008], albedo: C.metal, flags: NS }); add({ c: [7.27, 0.66, 4.72], h: [0.03, 0.03, 0.04], albedo: C.wood });   // the hub, the blade, the handle
     bx(4.15, 4.6, 4.76, 5.34, 0, 0.62, C.wood); bx(4.19, 4.56, 4.8, 5.3, 0.62, 0.7, HAY, true);                     // the manger, hay in it
     L.hung(4.135, 5.72, false, 0.1, 0.76, 0.86, C.metal, 0.03); yb(4.5, 5.95, 0.02, 0.33, 0, 0.03, P.canvas, 0.5, true);   // the tether ring, the rope let fall
     bx(4.15, 4.5, 6.0, 6.55, 0, 0.26, C.metal, true); bx(4.19, 4.46, 6.04, 6.51, 0.26, 0.266, C.black, true);       // the water trough, empty (drawn only: a mark stands beside)
@@ -733,6 +741,28 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
     oct(13.4, 21.05, 0.25, 0.03, 0.07, STRAW, true);                                                              // … and the winnowing tray
     L.chair(17.7, 19.6, -Math.PI / 2, C.white);                                                                  // the second seat, drawn up to the pipe
     { K.prop('cardboard', 19.4, 21.6, 0, 0.4, [{ off: [0, 0.1, 0], h: [0.1, 0.1, 0.1], yaw: 0.6, albedo: C.red }]); L.own('ball'); }
+    // ---- OUTSIDE THE WALLS — the field's edge, where the squad comes from: both ways in start out here, and the ground was bare from the wall's foot to the
+    // map's edge. What a farm leaves outside its own wall, every piece of it the look's kit (src/scene/gwotKit.ts through the office kit's own add; the twin
+    // keeps a palette paint as it is) and EVERY PIECE OUT AT THE STRIP'S OUTER EDGE, none at the wall's foot. Two things live at that foot and a pile there
+    // takes them away: a place to set a wall charge (the squad breaches this wall from its starts: two piles on the north wall took 17 of its 891 places,
+    // tools/qa/wallfurn-check.ts) and the defenders' way round, which hugs the wall (below). The middle of each strip is the walk to a gate and stays bare,
+    // and so does the ground the four stand on. Only things that stand square or round: a drum on its side and a bush were tried and read, from
+    // the opening frame, as an orange crate and a dark box (the kit's lying and leafy pieces are boxes still). Colour: none of its own — wood, stone, rubber
+    L.room('outside');
+    { const G = gwotKit(gwotOfOffice(K));
+      // north, east of the back way's start: the winter's wood, the stones thrown out of the plot, two worn tyres off the taxi
+      G.woodPile(33.4, 0.55, 0, 1.6); G.rubble(36.6, 0.9, 0.7, 6); G.tyres(38.7, 0.8, 2);
+      // north, west of the back gate: blocks left over from the wall, field stones
+      G.blocks(20.4, 0.5, 0, 2); G.rubble(11.6, 0.9, 0.8, 7);
+      // west, the walk to the side gate: more wood north of it, field stones
+      G.woodPile(0.55, 8.6, Math.PI / 2, 1.4); G.rubble(0.9, 11.4, 0.7, 6);
+      // west, the south end of the strip: stones behind where the four stand, and blocks and the rest of the wood well south of them. TWO THINGS decide this
+      // corner. THE DEFENDERS' WAY ROUND to the guard hut comes down this strip hugging the wall and round the corner, 45.2 m of the 46 a way round may be: a
+      // block stack and a wood pile at the wall's foot here made it 46.1 (tools/qa/wayround-check.ts: 21 ways lost and 107 squeezed, where the level had 9 and
+      // 23). And the same two pieces out at the edge but 2 m behind the rear man's start mark changed how the four step off (the scripted runs' endings moved);
+      // from 5 m behind him they do not
+      G.rubble(0.9, 22.8, 0.7, 5); G.blocks(0.6, 24.4, Math.PI / 2, 2); G.woodPile(0.55, 26.4, Math.PI / 2, 1.6); }
+
   }
 
   const TEAM = { sam: [2.0, 0, 17.0] as Vec3, samYaw: Math.PI, ops: [[1.4, 0, 18.4], [2.6, 0, 18.4], [1.4, 0, 19.6], [2.6, 0, 19.6]] as Vec3[], opsYaw: Math.PI };

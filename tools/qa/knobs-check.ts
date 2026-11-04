@@ -42,6 +42,7 @@ export async function knobsCheck(): Promise<boolean> {
     RECAP: 'reads only (the end card)', PLAN: 'picture only (marks on the floor)',
     FIXEDSTEP: "the page's frame loop, not a game rule: a recording replays the updates it holds whatever stepped them (knobs.ts VISIT_OWN)", TWEEN: 'picture only (what a frame between two ticks draws; knobs.ts VISIT_OWN)',
     SAVEPIC: "how this page takes a save's picture, set once at boot for the canvas: no run reads it (knobs.ts VISIT_OWN)",
+    EVENPACE: "which of a fast display's frames this page draws: its frame loop's, not a game rule, and no run reads it (knobs.ts VISIT_OWN)",
     FINDTUNED: "which starts this machine's outline rows and its camera's aim pan and turn direction have: the viewer's own settings, and a tape carries the view it was made with as data (knobs.ts VISIT_OWN)",
   };
   const prof = readFileSync(`${ROOT}/src/host/profile.ts`, 'utf8'), body = prof.slice(prof.indexOf('export function pageSwitches'));

@@ -1,7 +1,7 @@
 // Screen-space lighting passes: direct (full res), indirect gather (half — a third with the lossy option), volumetrics (half — a quarter likewise), composite, then EITHER the TAAU resolve
 // (internal → output resolution, taau.wgsl) + bloom + post + sharpen/grain at output resolution, OR (TAAU off) bloom + post + FXAA/grain at internal resolution as it always was.
 import { PLACE_BYTES } from './placeField';
-import { makeBuffer, makeShader, computePipelineAsync, laterPipelineAsync, laterRenderPipelineAsync, renderPipelineAsync, writeWordsIfChanged, PIPE_QUEUE, pipelineProgress, laterProgress } from '../gpu/device';
+import { makeBuffer, makeShader, computePipelineAsync, laterPipelineAsync, laterHold, laterRenderPipelineAsync, renderPipelineAsync, writeWordsIfChanged, PIPE_QUEUE, plainAir } from '../gpu/device';
 import { shaderText } from '../gpu/wgslTrim';
 import { KERNELS, COMPACT } from './kernels';   // (the ten kernels that exist in two writings come from there: today's, or the compact set with its row on)
 import { FrameFlags, scenePrelude, MAX_CARDS } from './frame';
@@ -21,13 +21,15 @@ import dustLookSrc from './shaders/dust_look.wgsl' with { type: 'text' };
 import { dustLookVol } from './dustLookVol';
 import { DUST_DRAW } from '../smoke/dustTint';
 import volCommon from './shaders/vol_common.wgsl' with { type: 'text' };
+import volPlainSrc from './shaders/vol_plain.wgsl' with { type: 'text' };
 import placeCommonSrc from './shaders/place_common.wgsl' with { type: 'text' };   // THE LOOK PROTOTYPE: a place and what it is shown by, pasted in front of the composite and of every volumetric march (the kernels that bind the place field)
 const compositeSrc = KERNELS.composite;
 import fireSrc from './shaders/fire.wgsl' with { type: 'text' };   // the open fires' flame, coals and drawn smoke (game/fire.ts): compiled into the composite, ahead of its own text
 import fxaaSrc from './shaders/fxaa.wgsl' with { type: 'text' };
 import softblurSrc from './shaders/softblur.wgsl' with { type: 'text' };
 import temporalSrc from './shaders/temporal.wgsl' with { type: 'text' };
-import { SPLIT_RAYS, SPLIT_TEXEL_BYTES, splitGatherSrc } from './gatherSplit';   // SEPARATE SHADOW RAYS (a Shaders row, off by default): the gather as two programs, made from its own texts
+import { SPLIT_RAYS, SPLIT_TEXEL_BYTES, splitGatherSrc, splitRefused } from './gatherSplit';   // SEPARATE SHADOW RAYS (a Shaders row, on in a browser and off in the harness): the gather as two programs, made from its own texts
+import { reportErrorLine, reportWarningLine } from '../cloud/report';   // (the reporter, a leaf that imports nothing: a line it is given prints as it did and is one of the visit's records)
 const fgatherSrc = KERNELS.fgather;
 const gatherCommonSrc = KERNELS.gatherCommon;   // light / card staging, RNG, directAtPoint — shared by fgather and reflect
 import reflectSrc from './shaders/reflect.wgsl' with { type: 'text' };
@@ -45,6 +47,7 @@ import gbaaSrc from './shaders/gbaa.wgsl' with { type: 'text' };   // GBAA: sing
 import refractCommonSrc from './shaders/refract_common.wgsl' with { type: 'text' };   // the pure refraction helpers composite's glass shares with the particle rain (prepended to composite; no bindings)
 import { decalWgslConsts } from './decals';
 import { TexturePool, TargetOps, texBytes } from './texpool';
+import { capUsage } from './framecap';
 import { Froxels } from './froxels';
 import { Denoiser, dnTravel } from './denoise';
 import type { Box } from '../scene/boxes';
@@ -92,7 +95,7 @@ const ALL_SKIP_T = [...new Set([false, true].flatMap(h => [0, 1, 2, 3, 4, 5, 6].
 /** One re-allocation of a set of targets (a resize, or a divisor flip): what to zero, what to resample from what, what to park afterwards — settled in finishRealloc */
 interface Realloc { toClear: GPUTexture[]; toRelease: GPUTexture[]; blits: { src: GPUTexture; dst: GPUTexture }[]; nearest: { src: GPUTexture; dst: GPUTexture }[]; nearestU: { src: GPUTexture; dst: GPUTexture }[]; created: number; reused: number; what: string[] }
 const SU = () => GPUTextureUsage.STORAGE_BINDING | GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_SRC;   // (COPY_SRC: scripted measurement reads the linear intermediates back — tools/qa/perf-harness.js readTexture) — a function: the usage enums do not exist at module load under plain Bun (tools/qa)
-const RT = () => GPUTextureUsage.RENDER_ATTACHMENT | GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_SRC;   // (COPY_SRC: a frame capture reads every target back, render/framecap.ts)
+const RT = () => GPUTextureUsage.RENDER_ATTACHMENT | GPUTextureUsage.TEXTURE_BINDING | capUsage();   // (a frame capture reads every target back: render/framecap.ts capUsage, nothing under ?framecap=0)
 
 /** What the engine hands the TAAU resolve each frame (engine.render → setTaauFrame): last frame's unjittered view-projection, this frame's jitter (internal px), the knobs, and the two facts only
  *  the engine knows — a debug view is up (bypass: plain upscale) and the particles' splat runs this frame (their reactive mask is fresh). */
@@ -206,13 +209,13 @@ export class LightingPasses implements CutSwappable {
   private restirTradePipe(motion: boolean): GPUComputePipeline | null {
     if (this.restirTradeHot) return null;
     const cut = this.cutLive;
-    for (const c of cutSwap.enabled && !cutSwap.held ? [cut, !cut] : [cut]) for (const m of [motion, !motion]) {   // (both motion twins — and, under the cut switch, both preludes — asked for together: the first camera move, or the first cut piece, after a row goes on does not start a compile of its own; while ?cutwhenneeded=1 holds the cut set back the cut twin is held with it, and is asked for by the first call here after the set is)
+    for (const c of cutSwap.enabled ? [cut, !cut] : [cut]) for (const m of [motion, !motion]) {   // (both motion twins — and, under the cut switch, both preludes — asked for together: the first camera move, or the first cut piece, after a row goes on does not start a compile of its own)
       const key = (c ? 'c' : 'b') + (m ? 'm' : '');
       if (this.restirTrade.has(key)) continue;
       this.restirTrade.set(key, null);
       const code = (c ? scenePrelude(true) : scenePrelude()) + directCommonSrc + `const RESTIR_MOTION: bool = ${m};\nconst RESTIR_TRADE: bool = true;\n` + restirSrc;
       this.device.createComputePipelineAsync({ label: 'restirT' + (m ? 'M' : ''), layout: this.device.createPipelineLayout({ bindGroupLayouts: [this.sceneLayout, this.lDirect, this.lRestir] }), compute: { module: makeShader(this.device, code, 'restirT' + (m ? 'M' : '')), entryPoint: 'main' } })
-        .then(p => { if (!this.restirTradeHot) this.restirTrade.set(key, p); }, e => console.error('[restir] the trade twin did not compile — the rows stay without effect', e));
+        .then(p => { if (!this.restirTradeHot) this.restirTrade.set(key, p); }, e => reportErrorLine('render.restir.twin', '[restir] the trade twin did not compile — the rows stay without effect', e));
     }
     return this.restirTrade.get((cut ? 'c' : 'b') + (motion ? 'm' : '')) ?? null;
   }
@@ -452,10 +455,11 @@ export class LightingPasses implements CutSwappable {
   volK0 = false; private pVolK0: GPUComputePipeline | null = null; private volK0Asked = false;
   /** the volumetric pass's froxel-tier twin (volumetrics.wgsl VOL_FROXEL_MARCH true; a LATER pipeline — traceJobs) */
   private pVolF: GPUComputePipeline | null = null;
-  get volFReady(): boolean { return !COMPACT.on || !!this.pVolF; }   // (today's volumetrics.wgsl is one program for every tier: nothing to wait for)
+  get volFReady(): boolean { return plainAir() || !COMPACT.on || !!this.pVolF; }   // (PLAIN AIR, gpu/device.ts: one plain program for every tier, and no twin is coming)   // (today's volumetrics.wgsl is one program for every tier: nothing to wait for)
   private volK0Pipe(): GPUComputePipeline | null {
     if (!this.volK0Asked) {
       this.volK0Asked = true;
+      if (plainAir()) return null;   // (PLAIN AIR, gpu/device.ts: no text of the real march reaches this driver — the boot's plain program draws)
       const src = volSrc.replace('const VOL_K0: bool = false;', 'const VOL_K0: bool = true;');   // (VOL_FROXEL_MARCH stays true: the twin draws every tier)
       void computePipelineAsync(this.device, { label: 'volK0', layout: this.device.createPipelineLayout({ bindGroupLayouts: [this.sceneLayout, this.lVol] }), compute: { module: makeShader(this.device, scenePrelude() + lightingCommon + volCommon + placeCommonSrc + src, 'volumetricsK0'), entryPoint: 'main' } }).then(p => { this.pVolK0 = p; });
     }
@@ -663,7 +667,7 @@ export class LightingPasses implements CutSwappable {
         this.pCompS = device.createComputePipeline(D.compS); this.pCompSR = device.createComputePipeline(D.compSR); this.pSharpU = device.createComputePipeline(D.sharpU); this.pTaauS = device.createComputePipeline(D.taauS);
       }
       if (edge && !this.pSharpUE) this.pSharpUE = device.createComputePipeline(this.sharpTracedDesc());
-      if (cutSwap.enabled && cutSwap.ready && (hadS !== !!this.pSharpU || hadUE !== !!this.pSharpUE)) void cutSwap.ready.then(ok => ok ? this.buildCut() : undefined).catch(e => console.error('[cut programs] the sharp path\'s cut twins did not compile', e));   // (CUT BOXES: a TRACING kernel just made is the boot's — the second set gets its twin, once the set itself is in: a build still under way may have looked before this one existed)
+      if (cutSwap.enabled && cutSwap.ready && (hadS !== !!this.pSharpU || hadUE !== !!this.pSharpUE)) void cutSwap.ready.then(ok => ok ? this.buildCut() : undefined).catch(e => reportErrorLine('render.cut.twins', '[cut programs] the sharp path\'s cut twins did not compile', e));   // (CUT BOXES: a TRACING kernel just made is the boot's — the second set gets its twin, once the set itself is in: a build still under way may have looked before this one existed)
       if (mask && !this.pEdge) this.pEdge = device.createComputePipeline({ label: 'sharpEdge', layout: device.createPipelineLayout({ bindGroupLayouts: [sceneLayout, this.lEdge] }), compute: { module: makeShader(device, pre + sharpEdgeSrc, 'sharpEdge'), entryPoint: 'main' } });
     };
     this.postParams = makeBuffer(device, 64, GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST, 'postParams');   // (+ the OUTPUT size's reciprocal: post runs at the output resolution under TAAU, where frame.invScreen is the internal one)
@@ -717,14 +721,11 @@ export class LightingPasses implements CutSwappable {
     { const mod = makeShader(device, pre + giblurSrc, 'giblur'); const l = lay(sceneLayout, this.lGiBlur);
       set(Promise.all([1, 2, 4].map(stride => cp({ label: `giblur${stride}`, layout: l, compute: { module: mod, entryPoint: 'main', constants: { STRIDE: stride } } }))), ps => { this.pGiBlur = ps; }); }
     if (opts.gbaa) set(cp(this.gbaaDesc()), p => { this.pGbaa ??= p; });
-    // (the sharp path is BUILT once pSharpU is set — its compute composite without refraction, compS, is a LATER twin while PIPE_QUEUE.later (the row 'Start on first frame shaders', off by default): the frame takes compSR until it is in,
+    // (the sharp path is BUILT once pSharpU is set — its compute composite without refraction, compS, is a LATER twin while PIPE_QUEUE.later (the row 'Start on first frame shaders'): the frame takes compSR until it is in,
     // which with no pane on the level, or none crossed, computes the same picture — the bend and the pane's terms need a glass hit; `?norefract` on a glass level draws the bend until then)
-    // HELD (PIPE_QUEUE.held, the row 'Other shaders when needed'): the pair the other way round — the boot waits for compS and the refraction twin is held until a sharp frame
-    // has a pane to bend through (need('pCompSR') in the encode; compS draws until it is in: no bend for that long). A level with no glass never compiles it.
-    if (opts.sharp) { const D = this.sharpDescs(); const laterS = PIPE_QUEUE.later, heldS = PIPE_QUEUE.held, lateKey = heldS ? 'pCompSR' : 'pCompS';
-      if (laterS) { const go = () => void laterPipelineAsync(device, heldS ? D.compSR : D.compS, heldS).then(c => { if (c && !this.cutSet.baseOf(this, lateKey)) this.cutSet.patch(this, { [lateKey]: c }, null); });
-        if (heldS) this.held.set(lateKey, go); else go(); }
-      set(Promise.all([laterS && !heldS ? Promise.resolve(null) : cp(D.compS), cp(D.sharpU), cp(D.taauS), cp(this.sharpTracedDesc()), heldS ? Promise.resolve(null) : cp(D.compSR)]), ([c, u, t, ue, cr]) => { if (!this.pSharpU) { if (c) this.pCompS = c; this.pSharpU = u; this.pTaauS = t; } this.pSharpUE ??= ue; if (cr) this.pCompSR ??= cr; }); }   // (+ the traced variant: the sliver rule defaults on, so it is a boot pipeline, not a first-use one)
+    if (opts.sharp) { const D = this.sharpDescs(); const laterS = PIPE_QUEUE.later;
+      if (laterS) void laterPipelineAsync(device, D.compS).then(c => { if (c && !this.cutSet.baseOf(this, 'pCompS')) this.cutSet.patch(this, { pCompS: c }, null); });
+      set(Promise.all([laterS ? Promise.resolve(null) : cp(D.compS), cp(D.sharpU), cp(D.taauS), cp(this.sharpTracedDesc()), cp(D.compSR)]), ([c, u, t, ue, cr]) => { if (!this.pSharpU) { if (c) this.pCompS = c; this.pSharpU = u; this.pTaauS = t; } this.pSharpUE ??= ue; this.pCompSR ??= cr; }); }   // (+ the traced variant: the sliver rule defaults on, so it is a boot pipeline, not a first-use one)
     { const mod = makeShader(device, pre + bloomSrc, 'bloom'); const l = lay(sceneLayout, this.lBloom);
       set(cp({ label: 'bloomDown0', layout: l, compute: { module: mod, entryPoint: 'down', constants: { FIRST: 1 } } }), p => { this.pBloomDown0 = p; });
       set(cp({ label: 'bloomDown', layout: l, compute: { module: mod, entryPoint: 'down', constants: { FIRST: 0 } } }), p => { this.pBloomDown = p; });
@@ -758,16 +759,11 @@ export class LightingPasses implements CutSwappable {
     // `?nogatherstrata` visit draws stratified ones until they are in), the dust twin (volDust: dust drawn as plain smoke, as when it does not compile), the resampling
     // gathers (fgatherGiS / fgatherGi: ultra's alone — the plain gather until they are in, the reservoirs then starting clean as when the row is switched on), phase 5's
     // reflection twin (reflectP5: ultra's alone — main's reflection pass until it is in) and the old direct estimator (direct: every preset runs restir — a `?norestir`
-    // visit takes restir until it is in). The cut set's own build (T is not this) waits for everything as before; PIPE_QUEUE.later false (the default: the row 'Start on first frame shaders' is off) = the boot waits for these too, as it always did.
-    // HELD (PIPE_QUEUE.held: the row 'Other shaders when needed', off by default): the LATER twins are not asked of the browser here at all — what would make each is kept
-    // under its field's name (this.held) and run by need(), the first time a frame wants that program; the pass takes the same stand-in until then, for as long as that is.
-    // The cut set's build leaves out the twin of one still held, and keeps what would make it beside the boot's (this.heldCut): both are compiled by the same need().
-    const late = T === this && PIPE_QUEUE.later, hold = PIPE_QUEUE.held;
-    const cpL = (desc: GPUComputePipelineDescriptor) => late ? laterPipelineAsync(device, desc, hold) : cp(desc);
-    const setL = <V,>(make: () => Promise<V>, key: string) => {   // (`make` is run where the pipeline was always made, with the rows off: its module is created inside it, in the order it always was)
-      if (late) { const go = () => void make().then(v => { if (!v) this.lost.add(key); else if (!this.cutSet.baseOf(this, key)) this.cutSet.patch(this, { [key]: v }, null); });   // (a place filled meanwhile — a retune, a hot swap — keeps what it was given: the text that arrives here is the boot's)
-        if (hold) this.held.set(key, go); else go(); return; }
-      if (T !== this && this.held.has(key)) { this.holdCut(key, make, T); return; }
+    // visit takes restir until it is in). The cut set's own build (T is not this) waits for everything as before; PIPE_QUEUE.later false (the row 'Start on first frame shaders' off) = the boot waits for these too, as it always did.
+    const late = T === this && PIPE_QUEUE.later;
+    const cpL = (desc: GPUComputePipelineDescriptor) => late ? laterPipelineAsync(device, desc) : cp(desc);
+    const setL = <V,>(make: () => Promise<V>, key: string) => {   // (`make` is run here, where the pipeline was always made: its module is created inside it, in the order it always was)
+      if (late) { void make().then(v => { if (v && !this.cutSet.baseOf(this, key)) this.cutSet.patch(this, { [key]: v }, null); }); return; }   // (a place filled meanwhile — a retune, a hot swap — keeps what it was given: the text that arrives here is the boot's)
       set(make(), v => { T[key] = v; });
     };
     setL(() => cpL({ label: 'direct', layout: lay(sceneLayout, this.lDirect), compute: { module: makeShader(device, pre + directCommonSrc + directSrc, 'direct'), entryPoint: 'main' } }), 'pDirect');
@@ -788,14 +784,19 @@ export class LightingPasses implements CutSwappable {
     set(cp({ label: 'reflect', layout: lay(sceneLayout, this.lRefl), compute: { module: mk(gatherCommonSrc + markingsSrc + reflectSrc, 'reflect'), entryPoint: 'main' } }), p => { T.pRefl = p; });   // (lighting_common + gather_common + markings ahead of it, as the gather)
     setL(() => cpL({ label: 'reflectP5', layout: lay(sceneLayout, this.lReflP5), compute: { module: mk(gatherCommonSrc + markingsSrc + reflectP5Src, 'reflectP5'), entryPoint: 'main' } }), 'pReflP5');   // (phase 5's variant, its own module)
     set(cp({ label: 'cards', layout: lay(sceneLayout, this.lCards), compute: { module: makeShader(device, pre + cardsSrc, 'cards'), entryPoint: 'main' } }), p => { T.pCards = p; });
+    // (PLAIN AIR, gpu/device.ts: a driver that stops on the march is handed shaders/vol_plain.wgsl under the pass's own label and none of the march's twins — one program
+    // for every tier (the froxel tiers keep their beams, which are the froxel kernels'; their smoke is lit by the cache, not by J), dust drawn as plain smoke. The cut
+    // set's build comes through here too.)
+    if (plainAir())
+      set(cp({ label: 'vol', layout: lay(sceneLayout, this.lVol), compute: { module: mk(volCommon + volPlainSrc, 'volumetricsPlain'), entryPoint: 'main' } }), p => { T.pVol = p; });
     // (COMPACT SHADERS, render/kernels.ts: only the compact volumetrics.wgsl has the two marches behind `const VOL_FROXEL_MARCH`; with the row off the pass is one program, as it was)
-    if (!COMPACT.on)
+    else if (!COMPACT.on)
       set(cp({ label: 'vol', layout: lay(sceneLayout, this.lVol), compute: { module: mk(volCommon + placeCommonSrc + volSrc, 'volumetrics'), entryPoint: 'main' } }), p => { T.pVol = p; });   // (+ vol_common: the haze / masked-smoke helpers it shares with the froxel kernels)
     else {
       set(cp({ label: 'vol', layout: lay(sceneLayout, this.lVol), compute: { module: mk(volCommon + placeCommonSrc + volSrc.replace('const VOL_FROXEL_MARCH: bool = true;', 'const VOL_FROXEL_MARCH: bool = false;'), 'volumetrics'), entryPoint: 'main' } }), p => { T.pVol = p; });   // (the classic tiers' program: the froxel-lit smoke march is its twin's — volumetrics.wgsl VOL_FROXEL_MARCH)
       setL(() => cpL({ label: 'volFroxel', layout: lay(sceneLayout, this.lVol), compute: { module: mk(volCommon + placeCommonSrc + volSrc, 'volumetricsF'), entryPoint: 'main' } }), 'pVolF');   // (the froxel tiers' twin: LATER — engine.render keeps FrameFlags.FroxelVol down until it is in)   // (+ vol_common: the haze / masked-smoke helpers it shares with the froxel kernels)
     }
-    setL(() => this.dustTwin(volSrc, pre, late), 'pVolDust');   // (look only: the march's twin for frames with destruction dust alive — render/dustLookVol.ts)
+    if (!plainAir()) setL(() => this.dustTwin(volSrc, pre, late), 'pVolDust');   // (look only: the march's twin for frames with destruction dust alive — render/dustLookVol.ts)
     // the fragment composite as it was, and its glass-refraction twin (GLASS_REFRACT — the encode takes pCompR while glassRefract). LATER too when the boot has the sharp path's
     // compute twins (init({ sharp }), the default): the frame composites through those while sharp direct is live, and engine.render keeps it live until one of these is in.
     const lateC = late && this.sharpAtBoot;
@@ -804,44 +805,8 @@ export class LightingPasses implements CutSwappable {
       const desc = (): GPURenderPipelineDescriptor => { const compMod = makeShader(device, this.compText(false, refr, pre), refr ? 'compositeR' : 'composite');
         return { label: refr ? 'compositeR' : 'composite', layout: lay(sceneLayout, this.lComp),
           vertex: { module: compMod, entryPoint: 'vs' }, fragment: { module: compMod, entryPoint: 'fs', targets: [{ format: 'rgba16float' }] }, primitive: { topology: 'triangle-list' } }; };
-      if (lateC) setL(() => laterRenderPipelineAsync(device, desc(), hold), key);
-      else if (T !== this && this.held.has(key)) this.holdCut(key, () => renderPipelineAsync(device, desc()), T);
+      if (lateC) setL(() => laterRenderPipelineAsync(device, desc()), key);
       else set(renderPipelineAsync(device, desc()), p => { T[key] = p; }); }
-  }
-  // ---- OTHER SHADERS WHEN NEEDED (gpu/device.ts PIPE_QUEUE.held; the row of that name in Options > Graphics > Shaders, off by default): the LATER twins wait here for a
-  // frame that wants one. Nothing is ever put in these maps with the row off, so every need() below is then one lookup that finds nothing.
-  /** field name → what asks the browser for the boot's pipeline of that field (traceJobs, init); taken out when it is asked for */
-  private held = new Map<string, () => void>();
-  /** …and for its twin in the cut set, where a second set was built while the boot's was still held (holdCut) */
-  private heldCut = new Map<string, () => void>();
-  /** the held pipelines a frame has asked for, in the order they were asked (the checks read it; `__engine.passes.asked` on the page) */
-  readonly asked: string[] = [];
-  /** the fields whose asked-for pipeline did not compile (handed back as nothing): their pass keeps its stand-in for good */
-  private lost = new Set<string>();
-  /** the held pipelines no frame has asked for yet */
-  get heldKeys(): string[] { return [...this.held.keys()]; }
-  /** A frame wants the program under this field (the engine and the encode call it every frame the settings ask for that program, in or not). The first call for a held one
-   *  asks the browser for it, and for its cut twin where the second set left it out; the pass goes on with its stand-in until it lands (setL's patch), or for good where it
-   *  does not compile (logged once by the device module). A place something else filled meanwhile (a composite retune, a hot swap) is left alone, in each set by itself. */
-  need(key: string): void {
-    const go = this.held.get(key); if (!go) return;
-    this.held.delete(key); const cut = this.heldCut.get(key); this.heldCut.delete(key);
-    if (this.cutSet.baseOf(this, key)) { cut?.(); return; }   // (the boot's place was filled meanwhile: only the twin a second set left out is still owed, or that set's place stays empty for good — holdCut leaves a filled one alone)
-    this.asked.push(key); go(); cut?.();
-  }
-  /** the cut set `T` is being built while the boot's pipeline of this field is still held: its twin is left out of the build and compiled with the boot's (need). The set
-   *  carries NOTHING under the field until then, so while it is live the field is empty and the pass stands in with the stand-in's own cut twin — the boot's program, which
-   *  has no cut rule, landing first is never drawn beside programs that have it. The twin is written into the set that left it out — installed, or still building; a set
-   *  rebuilt since then made its own. Counted as out while it compiles (Engine.standsIn): a live cut set stands in for exactly that long. */
-  private holdCut(key: string, make: () => Promise<unknown>, T: Record<string, unknown>): void {
-    T[key] = null;
-    this.heldCut.set(key, () => { if (cutSwap.state === 'failed' || T[key]) return;   // (the second set is gone for good: every owner draws the boot's programs · or its place was filled meanwhile, by a retune of both sets)
-      const failed0 = pipelineProgress.failed; laterProgress.pending++;   // (gpu/device.ts never rejects: a failure is a count and an invalid pipeline, as in cutSwap.build)
-      void make().then(v => {
-        if (pipelineProgress.failed > failed0) { cutSwap.fail(new Error(`the cut twin of ${key} failed to compile`)); return; }
-        if (!v) return;   // (the dust twin where dust is not drawn)
-        if (T[key]) return;   // (filled while this compiled: what was put there is newer than the boot's text)
-        if (this.cutSet.cut === T) this.cutSet.patch(this, {}, { [key]: v }); else T[key] = v; }).catch(e => cutSwap.fail(e)).finally(() => { laterProgress.pending--; }); });
   }
   // ---- CUT BOXES — a calm room pays nothing (render/cutSwap.ts): the second set of the tracing pipelines, behind the cut prelude
   private cutSet = new ProgramSet();
@@ -856,7 +821,7 @@ export class LightingPasses implements CutSwappable {
     const cp = (desc: GPUComputePipelineDescriptor) => computePipelineAsync(this.device, desc);
     const wantS = !!this.pSharpU || (this.cutSet.live && !!this.cutSet.cut?.pCompS), wantUE = !!this.pSharpUE || (this.cutSet.live && !!this.cutSet.cut?.pSharpUE);   // (the sharp path's tracing members, where this page has built them: the composite's compute twins and the traced sharp kernel)
     if (wantS) { const D = this.sharpDescs(pre); jobs.push(cp(D.compS).then(p => { T.pCompS = p; }));
-      if (this.held.has('pCompSR')) this.holdCut('pCompSR', () => cp(D.compSR), T); else jobs.push(cp(D.compSR).then(p => { T.pCompSR = p; })); }   // (HELD: the twin of a refraction composite nobody has asked for waits with it)
+      jobs.push(cp(D.compSR).then(p => { T.pCompSR = p; })); }
     if (wantUE) jobs.push(cp(this.sharpTracedDesc(pre)).then(p => { T.pSharpUE = p; }));
     await Promise.all(jobs);
     this.cutSet.set(this, T);
@@ -901,10 +866,14 @@ export class LightingPasses implements CutSwappable {
   private async dustTwin(vol: string, pre: string = scenePrelude(), later = false): Promise<GPUComputePipeline | null> {
     const twin = DUST_DRAW.on ? dustLookVol(vol) : null; if (!twin) return null;
     const mod = this.device.createShaderModule({ code: shaderText(pre + lightingCommon + volCommon + placeCommonSrc + dustLookSrc + twin), label: 'volumetricsDust' });
+    const letGo = later ? laterHold() : null;   // (out from here, not from when its pipeline is asked for below: gpu/device.ts laterHold)
+    try { return await this.dustTwinOf(mod, later); } finally { letGo?.(); }
+  }
+  private async dustTwinOf(mod: GPUShaderModule, later: boolean): Promise<GPUComputePipeline | null> {
     const info = await mod.getCompilationInfo();
-    if (info.messages.some(m => m.type === 'error')) { console.error('dust look: the volumetric dust twin does not compile — dust is drawn as plain smoke', info.messages.filter(m => m.type === 'error').slice(0, 3).map(m => `${m.lineNum}:${m.linePos} ${m.message}`)); return null; }
-    try { const desc: GPUComputePipelineDescriptor = { label: 'volDust', layout: this.device.createPipelineLayout({ bindGroupLayouts: [this.sceneLayout, this.lVol] }), compute: { module: mod, entryPoint: 'main' } }; return await (later ? laterPipelineAsync(this.device, desc, PIPE_QUEUE.held) : this.device.createComputePipelineAsync(desc)); }
-    catch (e) { console.error('dust look: the volumetric dust twin pipeline failed — dust is drawn as plain smoke', e); return null; }
+    if (info.messages.some(m => m.type === 'error')) { reportErrorLine('render.dust.twin', 'dust look: the volumetric dust twin does not compile — dust is drawn as plain smoke', info.messages.filter(m => m.type === 'error').slice(0, 3).map(m => `${m.lineNum}:${m.linePos} ${m.message}`)); return null; }
+    try { const desc: GPUComputePipelineDescriptor = { label: 'volDust', layout: this.device.createPipelineLayout({ bindGroupLayouts: [this.sceneLayout, this.lVol] }), compute: { module: mod, entryPoint: 'main' } }; return await (later ? laterPipelineAsync(this.device, desc) : this.device.createComputePipelineAsync(desc)); }
+    catch (e) { reportErrorLine('render.dust.twin', 'dust look: the volumetric dust twin pipeline failed — dust is drawn as plain smoke', e); return null; }
   }
   /** Dev / measurement hook (main.ts __hotVol): rebuild the volumetric pipeline from `src` (a volumetrics.wgsl variant; the same prelude is prepended) so an
    *  edited march can be A/B'd against a staged scene without a reboot. Resolves to the compiler's messages; the old pipeline stays if there is an error. */
@@ -1201,9 +1170,6 @@ export class LightingPasses implements CutSwappable {
   private sharpAtBoot = false;
   /** a fragment composite is in (one of the LATER pair, or the boot's when sharp direct was not built at boot) */
   get fragCompReady(): boolean { return !!(this.pComp || this.pCompR); }
-  /** this frame's settings composite through the fragment pair (engine.resize sets it beside setSharp; sharp direct may still be live, standing in until one of the pair is
-   *  in). HELD: the encode asks the browser for the twin they want, and not for the compute twin sharp direct happens to be running */
-  fragAsked = false;
   /** the estimator that draws direct light this frame is ReSTIR although the setting has it off: the old estimator is a LATER twin and is not in yet (traceJobs). The engine asks BEFORE
    *  it writes the frame's flags and the restir uniform, so that what it writes is for the program the encode takes. Never true with the row off: the boot waits for `direct` */
   get restirStandsIn(): boolean { return !this.pDirect; }
@@ -1569,13 +1535,14 @@ export class LightingPasses implements CutSwappable {
     return this.bgFG[p]!;
   }
   /** SEPARATE SHADOW RAYS: the one group `trace` and `light` share — fgather's nine + the points' buffer, grown here to the gather grid (never shrunk). null = the grid wants a buffer larger
-   *  than this adapter binds: said once on the console, and the bounce light is not drawn (the indirect texture keeps what it held) rather than a pipeline run on a short buffer. */
+   *  than this adapter binds: said once on the console and to the build's backend (gatherSplit.ts splitRefused, the reporter), and the bounce light is not drawn (the indirect texture keeps what it held) rather than a pipeline run on a short buffer. */
   private ensureSplitBG(g: GBuffer, rc: RadianceCascades): GPUBindGroup | null {
     const texels = this.gw * this.gh, bytes = texels * SPLIT_TEXEL_BYTES;
     if (texels >= this.gxRefusedAt) return null;
     if (texels > this.gxTexels || texels * 2 < this.gxTexels) {
       const MB = (bytes / 1048576).toFixed(0), refuse = (why: string) => { this.gxRefusedAt = Math.min(this.gxRefusedAt, texels); this.gxBuf?.destroy(); this.gxBuf = null; this.gxTexels = 0; this.bgFGX = null;
-        console.error(`Separate shadow rays: the gather grid ${this.gw}×${this.gh} needs a ${MB} MB buffer and ${why} — the bounce light is not drawn. Turn the row off (Options > Graphics) or lower the resolution.`); };
+        splitRefused(`Separate shadow rays: the gather grid ${this.gw}×${this.gh} needs a ${MB} MB buffer and ${why} — the bounce light is not drawn. Turn the row off (Options > Graphics) or lower the resolution.`,
+          { grid: `${this.gw}×${this.gh}`, MB: Number(MB), why }); };
       if (bytes > Math.min(this.device.limits.maxStorageBufferBindingSize, this.device.limits.maxBufferSize)) { refuse(`this adapter binds ${(this.device.limits.maxStorageBufferBindingSize / 1048576).toFixed(0)} MB`); return null; }
       this.gxBuf?.destroy(); this.device.pushErrorScope('out-of-memory');
       const buf = this.gxBuf = makeBuffer(this.device, bytes, GPUBufferUsage.STORAGE, 'gatherPoints'); this.gxTexels = texels; this.bgFGX = null;
@@ -1693,8 +1660,6 @@ export class LightingPasses implements CutSwappable {
       p.end();
     }
     const hx = Math.ceil(this.gw / 8), hy = Math.ceil(this.gh / 8);   // gather-resolution dispatch (1/2, or 1/3 with gatherThird)
-    if (SPLIT_RAYS.on) { if (!this.gatherStrata) this.need('pFGX'); }   // (HELD, SEPARATE SHADOW RAYS: the plain pattern's rays, where the settings ask for them)
-    else if (this.giOn) this.need(this.gatherStrata ? 'pFGRs' : 'pFGR'); else if (!this.gatherStrata) this.need('pFG');   // (HELD: the gather this frame's settings ask for, where it is not the boot's stratified one)
     const giNow = this.giOn && this.giRes[0].length === 2 && !SPLIT_RAYS.on && !!(this.pFGRs ?? this.pFGR);   // (SEPARATE SHADOW RAYS has no resampling gather yet: the plain one draws) · (… and a resampling pipeline is in: both are LATER twins — traceJobs)   // phase 5: the resampling gather this frame (its reservoir sets exist from the first frame it is asked for)
     if (giNow && !this.giRanLast) { const p = enc.beginComputePass({ label: 'giRestart' }); for (const t of this.giRes.flat()) this.ops.clear(p, t); p.end(); }   // switched (back) on: whatever the reservoirs hold is radiance of some other minute — start clean
     this.giRanLast = giNow;
@@ -1775,7 +1740,6 @@ export class LightingPasses implements CutSwappable {
       const rx = Math.ceil(this.rw / 8), ry = Math.ceil(this.rh / 8);
       { const p = enc.beginComputePass({ label: 'reflect', timestampWrites: ts('reflect') });
         p.setBindGroup(0, sceneBG);
-        if (this.rtP5) this.need('pReflP5');
         if (this.rtP5 && this.pReflP5) { this.hitParity ^= 1; p.setPipeline(this.pReflP5); p.setBindGroup(1, this.bgReflP5[this.hitParity]!); }   // phase 5's variant (mesh hits / hit reuse wanted): its hit records read [1−p], write [p] (1×1 stand-ins while reuse itself is off)
         else { p.setPipeline(this.pRefl); p.setBindGroup(1, this.bgRefl!); }                                                    // main's pass, the same program every tier ran before the phase
         p.dispatchWorkgroups(rx, ry); p.end(); }
@@ -1792,7 +1756,6 @@ export class LightingPasses implements CutSwappable {
     { // volumetrics: under FrameFlags.FroxelVol the froxel kernels (cull → inject → temporal → integrate, render/froxels.ts) and then the 2D pass (the smoke march lit from their J volume +
       // the rain); flag down = the per-pixel march as it always was. One timed pass either way ('volumetrics' = everything volumetric), or split per stage for measurement.
       const froxOn = (frameFlags & FrameFlags.FroxelVol) !== 0 && this.froxels.allocated;
-      if (this.dustLook) this.need('pVolDust');
       const vol2D = (p: GPUComputePassEncoder) => { p.setPipeline((this.volK0 ? this.volK0Pipe() : null) ?? (this.dustLook && this.pVolDust ? this.pVolDust : froxOn && this.pVolF ? this.pVolF : this.pVol)); p.setBindGroup(0, sceneBG); p.setBindGroup(1, this.bgVol!); p.dispatchWorkgroups(Math.ceil(this.vw / 8), Math.ceil(this.vh / 8)); };
       if (froxOn && this.froxelSplitTiming) {
         let p = enc.beginComputePass({ label: 'volInject', timestampWrites: ts('volInject') });
@@ -1806,8 +1769,7 @@ export class LightingPasses implements CutSwappable {
         p.end();
       }
     }
-    if (this.fragAsked || !this.sharpOn) this.need(this.glassRefract ? 'pCompR' : 'pComp');   // (HELD: the fragment twin this frame's settings ask for — glassRefract is this frame's by now — whether the frame draws with it or sharp direct stands in)
-    if (this.sharpOn && !(this.sceneBGOut && this.bgSharpU && this.bgCompS && this.bgEdge) && !this.sharpWarned) { this.sharpWarned = true; console.warn('sharp direct: live but its groups are missing this frame (sceneBGOut / bgSharpU / bgCompS / bgEdge) — the fragment composite runs against an output-size hdr; the engine must set sceneBGOut and resize() must have run'); }
+    if (this.sharpOn && !(this.sceneBGOut && this.bgSharpU && this.bgCompS && this.bgEdge) && !this.sharpWarned) { this.sharpWarned = true; reportWarningLine('render.sharp.groups', 'sharp direct: live but its groups are missing this frame (sceneBGOut / bgSharpU / bgCompS / bgEdge) — the fragment composite runs against an output-size hdr; the engine must set sceneBGOut and resize() must have run'); }
     if (this.sharpOn && this.sceneBGOut && this.bgSharpU && this.bgCompS && this.bgEdge) {
       // SHARP DIRECT: the hard-edge mask over the denoised direct pair (internal size, sharp_edge.wgsl — edge rays only, its own timing), then U re-scored per OUTPUT pixel × the internal visibility ratio →
       // sharpE (sharp_direct.wgsl), then the composite's compute twin per output pixel → hdr. The two output-size kernels bind the OUTPUT frame block.
@@ -1816,7 +1778,6 @@ export class LightingPasses implements CutSwappable {
       const wx = Math.ceil(this.cw / 8), wy = Math.ceil(this.ch / 8);
       if (this.edgeRays) { const p = enc.beginComputePass({ label: 'sharpEdge', timestampWrites: ts('sharpEdge') }); p.setPipeline(this.pEdge!); p.setBindGroup(0, sceneBG); p.setBindGroup(1, this.bgEdge); p.dispatchWorkgroups(Math.ceil(this.width / 8), Math.ceil(this.height / 8)); p.end(); }   // (internal size, its own timing; skipped with the edge rays off — the default pipeline never reads the mask)
       { const p = enc.beginComputePass({ label: 'sharpU', timestampWrites: ts('sharpU') }); p.setPipeline(traced ? this.pSharpUE! : this.pSharpU!); p.setBindGroup(0, this.sceneBGOut); p.setBindGroup(1, this.bgSharpU); p.dispatchWorkgroups(wx, wy); p.end(); }
-      if (this.glassRefract && (!this.fragAsked || this.lost.has('pCompR'))) this.need('pCompSR');   // (HELD: asked for by a frame whose settings composite this way with a pane to bend through; not by one where sharp direct only stands in for a fragment composite — unless that one did not compile and sharp direct is the picture for good)
       { const p = enc.beginComputePass({ label: 'compS', timestampWrites: ts('compS') }); p.setPipeline((this.glassRefract && this.pCompSR ? this.pCompSR : this.pCompS ?? this.pCompSR)!); p.setBindGroup(0, this.sceneBGOut); p.setBindGroup(1, this.bgCompS); p.dispatchWorkgroups(wx, wy); p.end(); }   // (glassRefract: the refraction twin of the same kernel — the same layout and groups)
     } else {
       const p = enc.beginRenderPass({ label: 'composite', colorAttachments: [{ view: this.hdrView, loadOp: 'clear', storeOp: 'store', clearValue: { r: 0, g: 0, b: 0, a: 1 } }], timestampWrites: ts('composite') as GPURenderPassTimestampWrites | undefined });

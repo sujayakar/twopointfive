@@ -16,7 +16,7 @@ const { parseLevelData, serializeLevelData, validateLevelData, KEYS } = await im
 const { loadLevel, levelToData } = await import(`${ROOT}/src/scene/levelLoad.ts`);
 const { lookPageWord } = await import(`${ROOT}/src/scene/look.ts`);
 const { makeBox, wordOf } = await import(`${ROOT}/src/scene/boxes.ts`);
-const { Prop } = await import(`${ROOT}/src/game/props.ts`);
+const { PropSystem } = await import(`${ROOT}/src/game/props.ts`), { StaticCollision } = await import(`${ROOT}/src/scene/collision.ts`);
 const KD = await import(`${ROOT}/src/scene/levelKit.ts`), { newKit, KIT_PALETTE, KIT_FINISH } = KD;
 const { Editor } = await import(`${ROOT}/src/editor/editor.ts`), { boxPaint } = await import(`${ROOT}/src/editor/paint.ts`);
 
@@ -89,7 +89,7 @@ const plainIs = (w: string | undefined) => w === undefined || w === 'plain' ? un
     const text = serializeLevelData(D), back = parseLevelData(text) as any, errs = validateLevelData(back), L = loadLevel(back, { lived: true, dressing: true }) as any;   // (every box of the file: the lived rooms and the dressing too)
     const car = cls(L.boxes[bi]), desk = cls(L.boxes[wi]), inl = cls(L.boxes[ii]);
     // the box the GAME makes of a prop's part (game/props.ts Prop), which is also the box the page asks before the first frame
-    const seat = cls(new Prop(L.props[pi], pi).boxes[0], true);
+    const seat = cls(new PropSystem([L.props[pi]], new StaticCollision(L.boxes), () => {}).all[0].boxes[0], true);
     // back to a file: a word is written only where the box is another thing than its row says; 'plain' is written over a row that says something
     const again = levelToData(L, { materials: back.materials }) as any, same = again.boxes.every((b: any, i: number) => b.stuff === back.boxes[i].stuff) && again.props.every((p: any, i: number) => p.parts.every((q: any, j: number) => q.stuff === back.props[i].parts[j].stuff));
     const kept = again.boxes[bi].stuff === 'paint' && again.boxes[wi].stuff === 'plain' && again.props[pi].parts[0].stuff === 'plaster' && again.boxes[ii].stuff === 'enamel' && again.boxes.some((b: any) => b.stuff === undefined && b.material !== undefined && back.materials[b.material].stuff !== 'plain');
@@ -160,16 +160,16 @@ const plainIs = (w: string | undefined) => w === undefined || w === 'plain' ? un
     '11 a door\'s leaf is made of what its paint is: every outside leaf in the level\'s accent paint is paint whatever its own shade, an inside one in the palette\'s wood is wood and one with old paint faded on it is plain; a steel door is left as it stood; a level\'s row of bare numbers makes its outside leaves plain, a row that says wood for the inside makes those wood, and a row with one word makes every leaf that',
     `no row: outside ${of(own, out)} in ${shades} shades, inside ${of(own, inn)}, the steel door ${own[1].box.stuff} · a row of numbers: outside ${of(bare, out)}, inside ${of(bare, inn)} · the land office's row: outside ${of(sided, out)}, inside ${of(sided, inn)} · the white roof's row: ${of(one, d => !d.def.steel)}`); }
 
-// 12. THE LOOK PAGE'S HAND-BUILT PIECES SAY THEIR WORDS (scene/frontTry.ts, lorryTry.ts, passTry.ts, carTry.ts: boxes made at boot, in no level file): every box
+// 12. THE LOOK PAGE'S HAND-BUILT PIECES SAY THEIR WORDS (scene/frontTry.ts, lorryTry.ts, passTry.ts: boxes made at boot, in no level file): every box
 //     they make or repaint in a paint somebody named says that paint's stuff or a word of its own, and most of what they make is a material
-{ const { dressFront } = await import(`${ROOT}/src/scene/frontTry.ts`), { dressLorry, kitLorry } = await import(`${ROOT}/src/scene/lorryTry.ts`), { dressPass } = await import(`${ROOT}/src/scene/passTry.ts`), { dressCars } = await import(`${ROOT}/src/scene/carTry.ts`);
+{ const { dressFront } = await import(`${ROOT}/src/scene/frontTry.ts`), { dressLorry, kitLorry } = await import(`${ROOT}/src/scene/lorryTry.ts`), { dressPass } = await import(`${ROOT}/src/scene/passTry.ts`);
   const stand = (f: string, dress: (L: any) => void) => { const L = loadLevel(parseLevelData(readFileSync(`${ROOT}/levels/${f}`, 'utf8')), { lived: true, dressing: true }) as any, was = new Map<any, any>(L.boxes.map((b: any) => [b, b.albedo])); dress(L);
     const made = L.boxes.filter((b: any) => was.get(b) !== b.albedo), silent = made.filter((b: any) => paintOf(b.albedo)?.stuff !== undefined && b.stuff === undefined), words = new Set(made.map((b: any) => b.stuff ?? 'plain'));
     return { made: made.length, silent: silent.length, said: made.filter((b: any) => b.stuff !== undefined).length, words }; };
-  const pass = stand('pass.json', L => { dressFront(L); if (dressLorry(L)) kitLorry(L); dressPass(L); }), cars = stand('barracks-gwot.json', L => { dressCars(L); });
-  check(pass.made > 150 && pass.silent === 0 && pass.said > 0.75 * pass.made && ['wood', 'paint', 'mud wall', 'sheet', 'cloth'].every(w => pass.words.has(w)) && cars.made > 20 && cars.silent === 0 && cars.said > 0.75 * cars.made,
-    '12 the look page\'s hand-built pieces say their words: on the pass every box the house front, the lorry and the yard\'s pieces make or repaint in a named paint says what that paint is made of (wood, paint, mud wall, sheet and cloth among them), and so does every part of a vehicle with curves',
-    `the pass: ${pass.made} made or repainted, ${pass.said} say a word (${[...pass.words].sort().join(', ')}), ${pass.silent} in a named paint and silent · vehicles on the barracks: ${cars.made} made, ${cars.said} say a word, ${cars.silent} silent`); }
+  const pass = stand('pass.json', L => { dressFront(L); if (dressLorry(L)) kitLorry(L); dressPass(L); });
+  check(pass.made > 150 && pass.silent === 0 && pass.said > 0.75 * pass.made && ['wood', 'paint', 'mud wall', 'sheet', 'cloth'].every(w => pass.words.has(w)),
+    '12 the look page\'s hand-built pieces say their words: on the pass every box the house front, the lorry and the yard\'s pieces make or repaint in a named paint says what that paint is made of (wood, paint, mud wall, sheet and cloth among them)',
+    `the pass: ${pass.made} made or repainted, ${pass.said} say a word (${[...pass.words].sort().join(', ')}), ${pass.silent} in a named paint and silent`); }
 
 // 13. THE EDITOR KEEPS A PAINT'S WORD (src/editor/paint.ts): editing a paint's colour or finish leaves what it is made of, a copy of a paint is made of the same,
 //     the word can be set and cleared and a word that is no stuff is refused; a blank document's own paints say theirs

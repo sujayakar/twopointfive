@@ -72,5 +72,14 @@ check(/targets: 1: a → 2: histories restarted/.test(rep) && /NOT TAKEN\n {2}fr
   { fc.start({ frames: 4 }); step(); const st = fc.stop(); step(); step(); step(); await done(); check(st === 'capture stopped' && saved === 3 && !fc.active, 'a capture stopped part way saves nothing and is over'); }
   fc.arm({ frames: 1 }, ['long']); state = { ...state, scale: 1 }; step(); const held = fc.waiting; step(200); await done();
   check(held && saved === 4, 'armed for a long frame only, a change of state does not start it and the long frame does'); void copies; }
+// ---- the page's switch: ?framecap=0 = the render targets as they were made before a capture could read them, no texture watched, the key dead
+const ROOT = join(import.meta.dir, "../..");
+{ const { FRAMECAP, capUsage } = await import(`${ROOT}/src/render/framecap.ts`) as typeof import("../../src/render/framecap"), G = globalThis as unknown as { GPUTextureUsage?: Record<string, number> }; G.GPUTextureUsage ??= { COPY_SRC: 1, COPY_DST: 2, TEXTURE_BINDING: 4, STORAGE_BINDING: 8, RENDER_ATTACHMENT: 16 };
+  const up = capUsage(); if (process.env.FRAMECAP_BREAK !== '1') FRAMECAP.on = false; const down = capUsage(); FRAMECAP.on = true;
+  const main = readFileSync(`${ROOT}/src/main.ts`, 'utf8'), passes = readFileSync(`${ROOT}/src/render/passes.ts`, 'utf8'), gb = readFileSync(`${ROOT}/src/render/gbuffer.ts`, 'utf8'), words = readFileSync(`${ROOT}/src/ui/replaykey.ts`, 'utf8') + readFileSync(`${ROOT}/src/ui/benchrun.ts`, 'utf8');
+  check(up === G.GPUTextureUsage.COPY_SRC && down === 0, `a render target asks for COPY_SRC with the switch up and for nothing more with it down (${up}, ${down})`);
+  check(/const RT = \(\) => GPUTextureUsage\.RENDER_ATTACHMENT \| GPUTextureUsage\.TEXTURE_BINDING \| capUsage\(\);/.test(passes) && /const usage = GPUTextureUsage\.RENDER_ATTACHMENT \| GPUTextureUsage\.TEXTURE_BINDING \| capUsage\(\);/.test(gb), 'the passes\' render targets and the g-buffer\'s take that bit from the switch and from nowhere else');
+  const lower = main.indexOf("if (q.get('framecap') === '0') FRAMECAP.on = false;"), built = main.indexOf('new Engine(');
+  check(lower > 0 && built > lower && /if \(FRAMECAP\.on\) watchTextures\(gpu\.device\)/.test(main) && /if \(FRAMECAP\.on && input\.hit\('F6'\)\)/.test(main) && /'framecap'/.test(words) && /\|framecap\|/.test(words), 'the page lowers it for ?framecap=0 before the Engine is built, watches no texture and reads no key with it down, and a replay and a benchmark carry the word'); }
 console.log(red ? `=== framecap: FAILED (${red}) ===` : '=== framecap: ALL PASS ===');
 process.exit(red ? 1 : 0);

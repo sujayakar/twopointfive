@@ -80,6 +80,8 @@ export function lookLevelFile(file: string): string { return LOOK.on ? LOOK_LEVE
 /** what a page's query says: on unless `?look=plain` (or `?look=0` / `?look=off` / `?nolook`) */
 export function lookOfQuery(q: URLSearchParams): boolean { const v = q.get('look'); return !(q.has('nolook') || dressOff(v)); }
 function dressOff(v: string | null): boolean { return v === 'plain' || v === '0' || v === 'off'; }
+/** a value of `look` on an address is the DRESS's off word (the level a run plays), not a row of the look prototype's page: the two share the word */
+export const lookDressWord = (v: string | null): boolean => dressOff(v);
 /** …and of the sneaking suit: on unless `?suit=0` (or `?suit=off` / `?nosuit`) */
 export function suitOfQuery(q: URLSearchParams): boolean { const v = q.get('suit'); return !(q.has('nosuit') || v === '0' || v === 'off'); }
 
@@ -90,7 +92,7 @@ export function lookPageRows(q: URLSearchParams): string[] { return q.getAll('lo
 /** the page is the look's: a row on the address, or the tag a one-file build of it carries (where the address takes no flags) */
 export function lookPageOn(q: URLSearchParams): boolean { return lookPageRows(q).length > 0 || (typeof document !== 'undefined' && !!document.querySelector?.('meta[name="tps-look"]')); }
 /** ITS TRIALS: the address's word of each, and the key under which the look panel's button keeps it on this machine */
-export const LOOK_TRIALS = { geo: 'twopointsix.geotry', hills: 'twopointsix.hillrays', front: 'twopointsix.fronttry', lorry: 'twopointsix.lorrytry', dress: 'twopointsix.passtry', cars: 'twopointsix.cartry' } as const;
+export const LOOK_TRIALS = { geo: 'twopointsix.geotry', hills: 'twopointsix.hillrays', front: 'twopointsix.fronttry', lorry: 'twopointsix.lorrytry', dress: 'twopointsix.passtry' } as const;
 export type LookTrial = keyof typeof LOOK_TRIALS;
 /** a trial's switch: the address's own word wins; else what the panel's button last kept on this machine (on, where it kept nothing) */
 export function lookTrialOn(q: URLSearchParams, word: LookTrial): boolean { if (q.has(word)) return q.get(word) !== '0'; try { return localStorage.getItem(LOOK_TRIALS[word]) !== '0'; } catch { return true; } }
@@ -99,6 +101,6 @@ export function lookTrialsKept(q: URLSearchParams): string[] { const off = (Obje
   let cut: string | null = null; try { cut = localStorage.getItem('twopointsix.cutboxes'); } catch { /* no store: on */ }   // (…and the cut boxes' own switch, which four of the five stand on: scene/cut.ts initCutSwitch)
   return cut === '0' && !q.has('cutboxes') && !q.has('nocutboxes') ? [...off, 'cutboxes=0'] : off; }
 /** the other words the page reads once, at boot, into its shader text and its level (main.ts, scene/cut.ts: the look's geometry is cut boxes) */
-const LOOK_PAGE_WORDS: ReadonlySet<string> = new Set([...Object.keys(LOOK_TRIALS), 'roll', 'lorrykit', 'seat', 'firefit', 'longfoot', 'walked', 'firesnow', 'firesoot', 'footing', 'emberfog', 'cutboxes', 'nocutboxes', 'smokelook', 'carfinish', 'nosunglint']);
+const LOOK_PAGE_WORDS: ReadonlySet<string> = new Set([...Object.keys(LOOK_TRIALS), 'roll', 'lorrykit', 'seat', 'firefit', 'longfoot', 'walked', 'firesnow', 'firesoot', 'footing', 'emberfog', 'cutboxes', 'nocutboxes', 'smokelook', 'nosunglint']);
 /** a word of an address, decoded, is the look page's own */
 export function lookPageWord(k: string, v: string): boolean { return k === 'look' ? !dressOff(v) : k === 'round' ? v === '1' : LOOK_PAGE_WORDS.has(k); }   // (`round=1` is the page's: its round test compiled beside a trial's cut boxes; `round=0` is a rule's off switch, another fight)

@@ -9,6 +9,9 @@
 import type { Vec3 } from '../../src/math/vec';
 import { BoxFlag } from '../../src/scene/boxes';
 import { OFFICE_PALETTE, type officeKit } from '../../src/scene/officeGen';
+import { roundSlabs, tileMarks } from '../../src/scene/gwotKit';
+import { pieces } from '../../src/scene/library';
+import { MAX_MARKS_PER_BOX, faceHalf, faceIndex, type MarkFace, type MarkingDef } from '../../src/scene/markings';
 import { madeOf, toned } from '../../src/scene/stuff';
 
 type Kit = ReturnType<typeof officeKit>;
@@ -45,11 +48,31 @@ export function livedKit(K: Kit) {
   // ---- the floor: drawn-only slabs from the floor up (no ray, no foot and no round meets one). `top` over the look's own ground marks (15 mm), so neither flickers;
   // the look's RUGS lie at 24 mm and are dealt as if no lived thing were there: a lived floor piece stays off a look rug's rectangle (read them off <name>-gwot.json)
   const placed = () => { if (!room) throw new Error('livedKit: a lived piece before the first room()'); };
+  /** a floor MAT over a rectangle in the colour given (drawn only) */
   const mat = (x0: number, z0: number, x1: number, z1: number, albedo: Vec3, top = 0.022) => { placed(); return K.slab(x0, 0, z0, x1, top, z1, albedo, { flags: NS }); };
   /** a duckboard: a dark base and pale slats across its short side */
   const duckboard = (x0: number, z0: number, x1: number, z1: number, n = 4) => {
     mat(x0, z0, x1, z1, C.woodDark, 0.03); const alongX = x1 - x0 >= z1 - z0, L = alongX ? x1 - x0 : z1 - z0;
     for (let k = 0; k < n; k++) { const u = (k + 0.5) / n * L; if (alongX) K.slab(x0 + u - L / n * 0.3, 0, z0 + 0.03, x0 + u + L / n * 0.3, 0.04, z1 - 0.03, C.wood, { flags: NS }); else K.slab(x0 + 0.03, 0, z0 + u - L / n * 0.3, x1 - 0.03, 0.04, z0 + u + L / n * 0.3, C.wood, { flags: NS }); }
+  };
+
+  // ---- round things (static)
+  /** a ROUND thing standing from y0 to y1, radius r (a drum, a tyre, a pot, a tank): the kits' one way of writing a round (src/scene/gwotKit.ts roundSlabs) —
+   *  from 0.2 m an octagon of four slabs, which the round rule (src/scene/round.ts) finds as the level is stood up and makes ONE round box of; smaller, two
+   *  squares. From 0.2 m the whole of it lies inside the square of half r turned by `yaw`, which is what the older pieces stood here: nothing new is in
+   *  anybody's way. A smaller one's second square reaches 1.32 r from the centre at its corners.
+   *  `lid` = a colour drawn in the middle of its top (a tyre's well, the dark of an open pot): a disc once the thing is round. `ribs` = two darker hoops round
+   *  it (a steel drum's): on every slab's two ends, which are the octagon's sides, and once on a long face, where the round rule reads the band it carries all
+   *  the way round. `drawn` = drawn only (no ray, foot or round meets it, and the round rule leaves it an octagon: a tray, a thing that may lie on a mark) */
+  const round = (x: number, z: number, y0: number, y1: number, r: number, albedo: Vec3, yaw = 0, o: { lid?: Vec3; ribs?: boolean; drawn?: boolean } = {}) => {
+    if (!(y1 - y0 > 0.008)) throw new Error(`livedKit: a round ${((y1 - y0) * 1000).toFixed(0)} mm thick at (${x}, ${z}) — its slabs' tops step down 2 to 4 mm each: lay a flat piece (mat, sheet) for a thing that thin`);
+    roundSlabs(r).forEach((s, k) => {
+      const h: Vec3 = [s.hx, (y1 - s.drop - y0) / 2, s.hz], marks: MarkingDef[] = [];
+      const on = (f: MarkFace, res: 'base' | 'coarse', pal: Parameters<typeof tileMarks>[4], fn: Parameters<typeof tileMarks>[5]) => { const { hu, hv } = faceHalf(h, faceIndex(f)); if (marks.length < MAX_MARKS_PER_BOX) marks.push(...tileMarks(f, res, hu, hv, pal, fn, K.TX, 0, 1)); };
+      if (K.MARKS && k === 0 && o.lid) on('+y', 'base', [{ albedo: o.lid }], (i, j, W, Hc) => Math.hypot(i - (W - 1) / 2, j - (Hc - 1) / 2) < Math.min(W, Hc) / 2 ? 1 : 0);
+      if (K.MARKS && o.ribs) for (const f of (k === 0 ? ['+x', '-x', '+z'] : ['+x', '-x']) as MarkFace[]) on(f, 'coarse', [{ mul: 0.62 }], (_i, j, _W, Hc) => j === Math.floor(Hc / 3) || j === Math.floor(2 * Hc / 3) ? 1 : 0);
+      add({ c: [x, (y0 + y1 - s.drop) / 2, z], h, yaw: yaw + s.yaw, albedo, ...(marks.length ? { marks } : {}), ...(o.drawn ? { flags: NS } : {}) });
+    });
   };
 
   // ---- furniture (static)
@@ -67,14 +90,13 @@ export function livedKit(K: Kit) {
     add({ c: at(0, y + h / 2, 0), h: [w / 2, h / 2, d / 2], yaw, albedo });
     for (const s of [-1, 1]) add({ c: at(s * w * 0.3, y + h + 0.012, 0), h: [0.04, 0.012, d / 2], yaw, albedo: C.woodDark });
   };
-  /** a stack of n tyres (0.2 m each), each turned 0.1 rad on the one below, the top one's well a drawn dark square. A layer turned θ reaches r·(cos θ + sin θ)
-   *  along a wall: a four-high stack (0.3 rad at the top) 8.5 cm past r, so keep the centre r + 0.1 off a wall. Stacks side by side: give them the SAME yaw and
+  /** a stack of n tyres (0.2 m each), each a `round` turned 0.1 rad on the one below, the top one's well drawn on it. A layer turned θ reaches at most
+   *  r·(cos θ + sin θ) along a wall: a four-high stack (0.3 rad at the top) 8.5 cm past r, so keep the centre r + 0.1 off a wall. Stacks side by side: give them the SAME yaw and
    *  0.72 m between centres at r 0.34 (turned differently they bite into each other until 0.77 m).
    *  One lying alone is a fat one, 0.27 m: a solid topping out between 0.20 and 0.25 m stops a body on a cell the nav grid calls free */
   const tyres = (x: number, z: number, n: number, yaw = 0, r = 0.34) => {
     const t = n === 1 ? 0.27 : 0.2;
-    for (let k = 0; k < n; k++) add({ c: [x, t / 2 + t * k, z], h: [r, t / 2, r], yaw: yaw + k * 0.1, albedo: C.black });
-    add({ c: [x, t * n + 0.004, z], h: [r * 0.5, 0.004, r * 0.5], yaw: yaw + (n - 1) * 0.1, albedo: [0.2, 0.2, 0.19], flags: NS });
+    for (let k = 0; k < n; k++) round(x, z, t * k, t * k + t, r, C.black, yaw + k * 0.1, k === n - 1 ? { lid: [0.2, 0.2, 0.19] } : {});
   };
   /** a row of n jerry cans along local X, standing */
   const jerryCans = (x: number, z: number, n: number, yaw = 0, albedo: Vec3 = LIVED_PAINT.oliveDrab, y = 0) => {
@@ -82,17 +104,16 @@ export function livedKit(K: Kit) {
     for (let k = 0; k < n; k++) add({ c: at((k - (n - 1) / 2) * 0.2, y + 0.235, 0), h: q ? [0.17, 0.235, 0.08] : [0.08, 0.235, 0.17], yaw: q ? 0 : yaw, albedo });
   };
   /** a drum standing where it is (static; `drum` is the one a man can shove) */
-  const drumFixed = (x: number, z: number, albedo: Vec3 = LIVED_PAINT.oxide, y = 0) => {
-    add({ c: [x, y + 0.44, z], h: [0.28, 0.44, 0.28], yaw: 0.3, albedo });
-    add({ c: [x, y + 0.886, z], h: [0.23, 0.006, 0.23], yaw: 0.3, albedo: toned(albedo, 0.6), flags: NS });
-  };
+  const drumFixed = (x: number, z: number, albedo: Vec3 = LIVED_PAINT.oxide, y = 0) => round(x, z, y, y + 0.88, 0.28, albedo, 0.3, { ribs: true });
   /** a thing hung on a wall (drawn only: a coat, a board, a hose): `alongX` = on a wall that runs along X, at the wall's face `x, z` */
   const hung = (x: number, z: number, alongX: boolean, w: number, y0: number, y1: number, albedo: Vec3, t = 0.04) =>
     add({ c: [x, (y0 + y1) / 2, z], h: alongX ? [w / 2, (y1 - y0) / 2, t / 2] : [t / 2, (y1 - y0) / 2, w / 2], albedo, flags: NS });
 
   // ---- clutter (on a surface at height y): small boxes a firefight knocks off, paper it scatters
   const thing = (x: number, y: number, z: number, hx: number, hy: number, hz: number, albedo: Vec3, yaw = 0) => add({ c: [x, y + hy, z], h: [hx, hy, hz], yaw, albedo });
+  /** a MUG on a surface at y (clutter: a firefight knocks it off) */
   const mug = (x: number, y: number, z: number, albedo: Vec3 = C.white) => thing(x, y, z, 0.035, 0.045, 0.035, albedo);
+  /** the office kit's pile of PAPERS on a surface at y */
   const papers = (x: number, y: number, z: number, yaw = 0) => { placed(); return K.papers(x, y, z, yaw); };
   /** one loose sheet (a card, a form, a map corner) */
   const sheet = (x: number, y: number, z: number, w = 0.21, d = 0.3, yaw = 0, albedo: Vec3 = LIVED_PAINT.paper) => add({ c: [x, y + 0.004, z], h: [w / 2, 0.004, d / 2], yaw, albedo, flags: NS });
@@ -100,14 +121,40 @@ export function livedKit(K: Kit) {
   // ---- loose things (the physics layer's: a man shoves them, a blast throws them). Kinds are the game's four: chair (cloth), cardboard, bin (metal), plant.
   // The kind is the thing's sound, slide and debris; the look paints every part of a chair one cloth colour and of a bin one drum colour. A loose thing must
   // start clear of every solid (the props' settle pass shoves an overlapping one out)
+  /** PROP (chair): a STOOL, a seat on a post */
   const stool = (x: number, z: number, albedo: Vec3 = C.woodDark) => { prop('chair', x, z, 0, 5, [{ off: [0, 0.44, 0], h: [0.17, 0.025, 0.17], yaw: 0, albedo }, { off: [0, 0.21, 0], h: [0.12, 0.21, 0.12], yaw: 0.785, albedo: C.metal }]); return own('stool'); };
+  /** PROP (chair): the office CHAIR, as one of this room's lived things */
   const chair = (x: number, z: number, yaw: number, albedo: Vec3 = C.chair) => { K.chair(x, z, yaw, albedo); return own('chair'); };
+  /** PROP (bin): an oil DRUM a man can shove, 0.56 across and 0.88 high (`drumFixed` is the one that stands where it is) */
   const drum = (x: number, z: number, albedo: Vec3 = LIVED_PAINT.oxide, mass = 22) => { prop('bin', x, z, 0.3, mass, [{ off: [0, 0.44, 0], h: [0.28, 0.44, 0.28], yaw: 0, albedo }, { off: [0, 0.886, 0], h: [0.23, 0.006, 0.23], yaw: 0, albedo: toned(albedo, 0.6) }]); return own('drum'); };
+  /** PROP (bin): a BUCKET */
   const bucket = (x: number, z: number, albedo: Vec3 = C.metal) => { prop('bin', x, z, 0.2, 2, [{ off: [0, 0.15, 0], h: [0.14, 0.15, 0.14], yaw: 0, albedo }]); return own('bucket'); };
+  /** PROP (cardboard): a traffic CONE */
   const cone = (x: number, z: number) => { prop('cardboard', x, z, 0, 1.5, [{ off: [0, 0.02, 0], h: [0.17, 0.02, 0.17], yaw: 0, albedo: C.black }, { off: [0, 0.24, 0], h: [0.09, 0.2, 0.09], yaw: 0, albedo: LIVED_PAINT.hiVis }, { off: [0, 0.5, 0], h: [0.045, 0.06, 0.045], yaw: 0, albedo: C.white }]); return own('cone'); };
+  /** PROP (cardboard): the office kit's CARTON of side s, as one of this room's lived things */
   const carton = (x: number, z: number, s: number, yaw: number) => { K.cardboardBox(x, z, s, yaw); return own('carton'); };
   /** a small wooden box a man can shove (ammunition, spares, fruit) */
   const looseCrate = (x: number, z: number, w: number, d: number, h: number, yaw = 0, albedo: Vec3 = C.wood) => { prop('cardboard', x, z, yaw, 6 + 40 * w * d * h, [{ off: [0, h / 2, 0], h: [w / 2, h / 2, d / 2], yaw: 0, albedo }, { off: [0, h + 0.01, 0], h: [0.035, 0.01, d / 2], yaw: 0, albedo: C.woodDark }]); return own('crate'); };
 
-  return { C, P: LIVED_PAINT, room: roomOf, own, mat, duckboard, table, crate, tyres, jerryCans, drumFixed, hung, thing, mug, papers, sheet, stool, chair, drum, bucket, cone, carton, looseCrate };
+  // the kit's TOOLS (a room, a raw round, a raw box), then its PIECES by name (src/scene/library.ts)
+  return { C, P: LIVED_PAINT, room: roomOf, own, round, thing,
+    ...pieces('livedKit', { mat, duckboard, table, crate, tyres, jerryCans, drumFixed, hung, mug, papers, sheet, stool, chair, drum, bucket, cone, carton, looseCrate }) };
+}
+
+/** the group a generator is left in when its lived tail is done: the kits' own first group (officeGen.ts officeKit, levelKit.ts), and no lived one */
+const AFTER_LIVED = 'level';
+/** THE LIVED TAIL of a generator that lays its lived things itself (scene/lived.ts: what goes with the switch off rides LAST in a level's lists — boxes in
+ *  group 'lived.<room>', props named 'lived.<room>.<kind><n>'). `room(id)` opens a room or a yard: every box laid from here takes its group and every prop
+ *  its name; `done()`, after the last piece, writes the names of the props laid since the last `done()` (numbered on from it, so a name is never given
+ *  twice) and CLOSES THE LAST ROOM: the generator's group goes back to a plain one, so a box laid after the tail is no lived thing by accident (it was
+ *  left in the last room's group, and went with the switch off) and the exporter refuses it by name ("lived things must come last"). It adds no box and
+ *  takes no kit: `props` and `grp` are the generator's own (officeGen.ts officeKit: K.props, K.grp). */
+export function livedTail(props: { kind: string; name: string }[], grp: (group: string) => void) {
+  const spans: [number, string][] = [], serial = new Map<string, number>();
+  return {
+    room(id: string) { spans.push([props.length, id]); grp(`lived.${id}`); },
+    done() { spans.push([props.length, '']);
+      for (let s = 0; s + 1 < spans.length; s++) for (let i = spans[s][0]; i < spans[s + 1][0]; i++) { const key = `lived.${spans[s][1]}.${props[i].kind}`, n = serial.get(key) ?? 0; serial.set(key, n + 1); props[i].name = `${key}${n}`; }
+      spans.length = 0; grp(AFTER_LIVED); },
+  };
 }

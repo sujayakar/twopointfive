@@ -121,11 +121,6 @@ export class Decals {
    *  one word of the uploaded header, nothing the game reads. Set it with setSit. */
   sit = false;
   setSit(on: boolean) { if (this.sit !== on) { this.sit = on; this.dirty = true; } }
-  /** A MARK ON A CUT FACE LIES WHERE THE ROUND MET IT (the page raises it, `?markcut=0` leaves it down). A mark clamped to its box was pulled onto the
-   *  face of the box's UNCUT shape. On a face a cut gave the box — a leaning pane, a rounded nose, a crowned bonnet (scene/cut.ts, scene/shapes.ts) — that
-   *  stood it centimetres off the surface, and the shader's plane test dropped it: no round ever left a mark there (seen on a GPU 2026-11-04, a trial car's
-   *  glass). The picture's alone: where a mark is drawn, never whether one is laid. */
-  onCut = false;
   readonly buf: GPUBuffer;
   private data = new ArrayBuffer(DECAL_BYTES); private f32 = new Float32Array(this.data); private u32 = new Uint32Array(this.data);
   private dirty = true; private serial = 0;
@@ -152,7 +147,7 @@ export class Decals {
     let radius = size ?? def.radius;
     if (kind === 'scuff') radius = 0.5 * param + SCUFF_HALF_W + 0.06;   // the streak + its echo mark (decals.wgsl scuffMark) inside one bounding circle
     let p = v3.copy(pos);
-    if (opts.clampTo) p = clampToFace(opts.clampTo, p, n, kind === 'scuff' ? 0.5 * param : radius, this.onCut);
+    if (opts.clampTo) p = clampToFace(opts.clampTo, p, n, kind === 'scuff' ? 0.5 * param : radius);
     const full = this.list.length >= DECAL_CAP, lookAt = full ? this.list.findIndex(x => x.look) : -1;
     if (full && opts.look && lookAt < 0) return null;   // (a full ring of play's marks takes no mark laid only for the picture)
     const serial = ++this.serial;
@@ -261,12 +256,10 @@ function toWorld(b: Box, l: Vec3, point: boolean): Vec3 {
   else { const cs = Math.cos(b.yaw), sn = Math.sin(b.yaw); w = [cs * l[0] + sn * l[2], l[1], -sn * l[0] + cs * l[2]]; }
   return point ? v3.add(w, b.c) : w;
 }
-/** Pull `p` (on the face of `b` whose outward normal is `n`) in from that face's edges by `r` and onto the face plane exactly. `onCut`: a point on a face
- *  the box's CUT gave it (inside the uncut box, more than a millimetre under the face its normal leans to) is left where it is (Decals.onCut). */
-function clampToFace(b: Box, p: Vec3, n: Vec3, r: number, onCut = false): Vec3 {
+/** Pull `p` (on the face of `b` whose outward normal is `n`) in from that face's edges by `r` and onto the face plane exactly. */
+function clampToFace(b: Box, p: Vec3, n: Vec3, r: number): Vec3 {
   const lp = toLocal(b, p, true), ln = toLocal(b, n, false);
   const a = Math.abs(ln[0]) >= Math.abs(ln[1]) && Math.abs(ln[0]) >= Math.abs(ln[2]) ? 0 : Math.abs(ln[1]) >= Math.abs(ln[2]) ? 1 : 2;
-  if (onCut && b.cut !== undefined && Math.abs(lp[a]) < b.h[a] - 1e-3) return v3.copy(p);
   for (let i = 0; i < 3; i++) {
     if (i === a) { lp[i] = (ln[a] >= 0 ? 1 : -1) * b.h[i]; continue; }
     const lim = b.h[i] - r; lp[i] = lim <= 0 ? 0 : Math.max(-lim, Math.min(lim, lp[i]));

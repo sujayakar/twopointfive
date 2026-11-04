@@ -33,6 +33,7 @@
 //
 // With the flag off none of this runs: Game.update's one call into tick() returns on its first line, and BreachDrill without `live` is the show's drill as it was.
 // (src/game is one import cycle: nothing below is built from another game module's exports at module load — the knobs are a plain literal.)
+import { stageMen, cutToMen, allDown, ordersOf, eachSeat, firstOf } from './seats';
 import { rollbackVar } from '../math/side';
 import { Vec3, v3 } from '../math/vec';
 import type { Game, Guard, PairId } from './game';
@@ -161,7 +162,7 @@ export class NightBreach {
   /** staged on a level with no breach plan: there is no drill and F orders nothing (a layout brought the team's marks) */
   noDrill = false;
   /** 'go' took the drill's stun canister from the squad's count (doortools.ts) and it has not been called off */
-  private bangTaken = false;
+  private bangTaken = false; private bangBy: Game['doorTools'] | null = null;
   /** blind fire, as staged (the knob) and each defender's burst: the dazzle it answers (his dazzledUntil when it began), turns gone (fired or lost), next turn due */
   private blind = false; private bursts: BlindBurst[] = [];
   /** blind rounds fired since the staging (the probes' count; the panel's line) */
@@ -257,7 +258,7 @@ export class NightBreach {
     const posted = this.layout ? picketMarks(g, this.marks, K.samAt) : this.marks;   // (hard, a structure of rooms: the first room's two do not share one flash — pressure.ts PRESSURE.picket; the same array when off)
     this.marks = posted;
     posted.forEach((h, i) => { const gd = spawnUnit(g, { team: 'hostile', pos: h.pos, yaw: v3.yawTo(h.pos, h.aimAt), name: h.name ?? `Tango ${i + 1}`, light: K.defLights, budget }); this.hostiles.push(gd); gd.hold = true; gd.pinned = true; if (h.picket) postPicket(gd, h.picket); });
-    this.live = { orders: 0, lights: K.opLights, loudBoot: K.loudBoot, stun: K.stun }; this.bangTaken = false;
+    this.live = { orders: 0, lights: K.opLights, loudBoot: K.loudBoot, stun: K.stun }; this.bangTaken = false; this.bangBy = null;
     this.blind = K.blindFire; this.bursts = this.hostiles.map(() => ({ until: -1, n: 0, next: 0 })); this.blindRounds = 0;
     g.fight.reset(); g.fight.blindFire = K.blindFire;   // the room fight (roomfight.ts) starts this staging with nothing remembered; the blind-fire knob is its to read now
     const drilled = !!P && this.ops.length >= 2;   // (the drill is two men's: one teammate, or none, and there is none — the plan's doors are shut here instead)
@@ -271,9 +272,7 @@ export class NightBreach {
       gd.state = 'patrol'; gd.awareness = 0; gd.hold = false; gd.pinned = false;
       order(gd, { goal: null, face: gd.char.bodyYaw, stance: 'lowReady', upper: 'none', aimAt: null, light: false, crouch: false });
     }
-    const pl = g.player;
-    g.teleportPlayer(v3.copy(K.samAt)); pl.char.bodyYaw = pl.char.aimYaw = K.samYaw;
-    if (pl.hasRifle) pl.slot = 'rifle'; pl.holstered = false;
+    stageMen(g, K.samAt, K.samYaw, (_v, pl) => { if (pl.hasRifle) pl.slot = 'rifle'; pl.holstered = false; });   // (seats.ts: the player on his mark as ever — and a second player's man behind his own pair)
     this.staged++; this.beatsSeen = 0; this.said.clear(); this.cut = true;
     this.layout?.staged?.();
     gunDeal(g, this.hostiles.map((gd, i) => ({ gd, watch: posted[i].aimAt })));   // (gunroles.ts: the cast's guns off the table, once the floor's doors stand as the mission opens with them — nobody is touched and no die is drawn with its switch off)
@@ -300,11 +299,11 @@ export class NightBreach {
   /** Sam's word (F): the first sends the pair to the stack, the second sends them in. Returns what the press did. */
   order(): 'stack' | 'go' | null {
     const D = this.drill; if (!this.active || !D) return null;
-    if (this.g.player.down || D.phase === 'done') return null;
+    if (allDown(this.g) || D.phase === 'done') return null;
     if (this.live.orders === 0) { this.live.orders = 1; this.note('order:stack'); this.g.msg('you: stack up — side door'); return 'stack'; }
-    if (this.live.orders === 1) { this.live.orders = 2; this.note('order:go'); holdFireDrill(this.g);   // (holdfire.ts: his word sends them in — the fight has started for everybody)
+    if (this.live.orders === 1) { this.live.orders = 2; this.note('order:go'); eachSeat(this.g, v => holdFireDrill(v));   // (holdfire.ts: his word sends them in — the fight has started for everybody)
 
-      if (this.live.stun) { if (this.g.doorTools.take('bang')) this.bangTaken = true; else { this.live.stun = false; this.g.msg("no flashbangs left, so they'll go in without one"); } }   // (the drill's stun canister is one of the squad's counted ones: doortools.ts)
+      if (this.live.stun) { if ((this.bangBy = firstOf(this.g, v => v.doorTools.take('bang') ? v.doorTools : null))) this.bangTaken = true; else { this.live.stun = false; this.g.msg("no flashbangs left, so they'll go in without one"); } }   // (the drill's stun canister is one of the squad's counted ones: doortools.ts)   // (the first seat's count that has one: seats.ts)
       this.g.msg(isNaN(D.tSet) ? 'you: go on set' : 'you: go'); return 'go'; }
     return null;
   }
@@ -318,7 +317,7 @@ export class NightBreach {
     const D = this.drill; if (!this.active || !D) return null;
     switch (this.state) {
       case 'stacking': case 'set': D.phase = 'wait'; D.tStack = D.tSet = NaN; this.live.orders = 0; this.said.delete('set'); this.note('order:off');
-        if (this.bangTaken) { this.bangTaken = false; this.g.doorTools.refund('bang'); }   // ('go on set' took the can from the count; called off before the throw, it goes back)
+        if (this.bangTaken) { this.bangTaken = false; this.bangBy?.refund('bang'); this.bangBy = null; }   // ('go on set' took the can from the count; called off before the throw, it goes back)
         for (const o of this.drillOps) if (o.state !== 'dead' && o.script) order(o, { goal: null });   // both stop where they are: the man the order was not for does not walk on to the stack alone
         return null;
       case 'going': return 'committed — the breach is going in';
@@ -334,9 +333,9 @@ export class NightBreach {
     if ((!this.drill && !this.noDrill) || [...this.ops, ...this.hostiles].some(x => !g.guards.includes(x) && !runnerFled(x))) {   // the cast was despawned under it by something short of a restart (a bare resetGuards — the panel's reset, a console): a full restart, which stages
       g.restartEncounter(); if (!this.active || (!this.drill && !this.noDrill)) return;
     }
-    if (this.cut && cam) { this.cut = false; cam.target = v3.copy(g.followPos()); cam.desired = v3.copy(cam.target); }
+    if (this.cut && cam) { this.cut = false; cutToMen(g); }
     const D = this.drill;
-    if (D && input.hit('KeyF')) this.order();
+    if (D && g.seats.some(s => !s.view.player.down && s.input.hit('KeyF'))) this.order();   // (the word is any player's who is up: seats.ts)
     // the defenders: the fight AI's men, kept on their marks (held: no walking off to look at a noise; pinned: they fire from where they stand), and while they are
     // calm their chests — the gun follows — on the door they were told to watch
     // — with the room fight on (roomfight.ts, the default) none of that is done here: where each man looks, what his burst goes down and whether he stays are his
@@ -357,7 +356,7 @@ export class NightBreach {
       case 'clear': if (!this.layout) this.once('clear', 'room clear. press Shift+Enter to restart'); break;
       case 'recalled':   // (one of Sam's menu orders took a man out of the room mid-clear — orders.ts: the drill is over; a man it did not order is left as below)
       case 'failed':
-        for (const o of this.drillOps) if (o.state !== 'dead' && o.script && !g.orders.has(o)) { endGuardScript(o, 'search'); o.hold = true; o.pinned = true; }   // (the drill is over with a man still up — the point man fell before the door went in: he is the fight AI's now, holding where he stands with his own eyes and ears, not a statue on a script)
+        for (const o of this.drillOps) if (o.state !== 'dead' && o.script && !ordersOf(g, o).has(o)) { endGuardScript(o, 'search'); o.hold = true; o.pinned = true; }   // (the drill is over with a man still up — the point man fell before the door went in: he is the fight AI's now, holding where he stands with his own eyes and ears, not a statue on a script)
         if (this.state === 'recalled') this.once('recalled', `breach called off, and the ${this.ops.length > 2 ? 'squad' : 'pair'} takes your orders now (X). press Shift+Enter to restart`);
         else if (!this.layout) this.once('failed', `${this.drillOps.every(o => o.state === 'dead') ? (this.ops.length > 2 ? 'the red pair is down' : 'both teammates are down') : 'your point man is down at the door'}, so you'll have to take the room yourself${this.ops.length > 2 && this.ops.some(o => o.state !== 'dead') ? ' (the rest take your orders with X)' : ''}, or press Shift+Enter to restart`);
         break;
