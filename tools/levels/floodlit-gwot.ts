@@ -12,6 +12,7 @@ import { skinLevel, LOOK_NOTE, type Skin } from './gwotSkin';
 import { lookMarks } from './lookMarks';
 import type { Level } from '../../src/scene/level';
 import type { Vec3 } from '../../src/math/vec';
+import { madeOf } from '../../src/scene/stuff';
 
 export const NAME = 'floodlit-gwot';
 export const DRESS_AS = 'floodlit';
@@ -26,7 +27,7 @@ const SKIN: Skin = {
   wall: 'block', house: 'render', inner: 'whitewash', frameOut: 'iron', frameIn: 'woodGrey', dado: null,
   floor: { lino: 'slab' }, noRug: /./, metals: ['olive', 'galv', 'iron', 'rust'], patches: 0,   // (no patches: one would lie over the pad)
   dress: (_G, _level, T) => {
-    const M = lookMarks(T), white = T.tone(P.plasticWhite, 0.9), [cx, cz] = PAD;
+    const M = lookMarks(T), white = madeOf('paint', T.tone(P.plasticWhite, 0.9)), [cx, cz] = PAD;   // (road paint in the plastic's white: a colour borrowed, not the stuff)
     // THE RING: an octagon, the way a pad is painted with a roller and a string
     { const pts: [number, number][] = []; for (let i = 0; i <= 8; i++) { const a = Math.PI / 8 + i * Math.PI / 4; pts.push([cx + Math.cos(a) * PAD_R, cz + Math.sin(a) * PAD_R]); } M.path(pts, 0.16, ORANGE); }
     // THE H, read from the gate

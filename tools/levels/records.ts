@@ -31,6 +31,7 @@ import type { Level } from '../../src/scene/level';
 import type { LevelScenarios, StructureData, ResponseData } from '../../src/scene/scenarios';
 import * as K from '../../src/scene/levelKit';
 import { livedPieces, INK, h01 } from './livedPieces';
+import { drawnAs } from '../../src/scene/stuff';
 
 export const NAME = 'records';
 export const NOTES = 'The records office: the pair room clear\'s own level. Four held rooms; every room is a choice of door and door tool. Kit pieces only. Regenerate: bun run tools/levels/export.ts records';
@@ -137,7 +138,7 @@ export function build(opts: K.KitOpts = {}): { level: Level; scenarios: LevelSce
 
   // ---------------- ground ----------------
   K.grp(k, 'ground');
-  K.slab(k, 0, -0.25, 0, 40, 0, 28, C.asphalt);
+  K.slab(k, 0, -0.25, 0, 40, 0, 28, K.LOT);
   K.slab(k, 0, 0, 0, 40, 0.01, 6.88, C.grass, { flags: BoxFlag.NoShadow });        // north yard
   K.slab(k, 0, 0, 6.88, 9.88, 0.01, 23.1, C.grass, { flags: BoxFlag.NoShadow });   // west yard, down to the lot
   K.grp(k, 'floors');
@@ -195,7 +196,7 @@ export function build(opts: K.KitOpts = {}): { level: Level; scenarios: LevelSce
   for (const x of [11.4, 11.9]) K.cabinet(k, x, 7.45, Math.PI);                // cabinets on the north wall west of the window (clear of the back door's stack)
   for (const x of [16.0, 16.5]) K.cabinet(k, x, 7.45, Math.PI);                // …and east of it
   K.cardboardBox(k, 13.4, 12.55, 0.5, 0.2); K.cardboardBox(k, 12.75, 8.95, 0.45, -0.3);
-  K.wallArt(k, 17.925, 1.6, 8.6, 1.2, 0.8, [0.6, 0.55, 0.4], false);
+  K.wallArt(k, 17.925, 1.6, 8.6, 1.2, 0.8, drawnAs('plaster', [0.6, 0.55, 0.4]), false);
   K.ceilingPanel(k, 12.4, 8.3, true, 'records'); K.ceilingPanel(k, 15.6, 8.3, true, 'records');     // the north lane
   K.ceilingPanel(k, 12.4, 11.7, true, 'records'); K.ceilingPanel(k, 15.6, 11.7, true, 'records');   // the south lane
 
@@ -224,14 +225,14 @@ export function build(opts: K.KitOpts = {}): { level: Level; scenarios: LevelSce
   K.grp(k, 'hall');
   K.ceilingPanel(k, 13.0, 15.0, false, 'hall'); K.ceilingPanel(k, 19.0, 15.0, false, 'hall'); K.ceilingPanel(k, 24.6, 14.6, true, 'hall');
   K.exitSign(k, 29.865, 15.0, false, 'exit_sign_e', 'hall');
-  K.wallArt(k, 20.5, 1.5, 16.865, 1.6, 0.9, [0.5, 0.42, 0.3], true);          // the noticeboard on the south wall
+  K.wallArt(k, 20.5, 1.5, 16.865, 1.6, 0.9, drawnAs('mud wall', [0.5, 0.42, 0.3]), true);          // the noticeboard on the south wall
   K.beacon(k, 16.5, 15.0); K.beacon(k, 26.5, 15.0); K.beacon(k, 12.0, 11.7);
 
   // ---------------- outside ----------------
   K.grp(k, 'exterior');
   K.car(k, 22.0, 20.4, 0.06, [0.32, 0.08, 0.07]);                   // the yard in the crook of the L: a parked car, dark
   K.car(k, 14.6, 25.4, Math.PI, [0.2, 0.22, 0.26]);                 // the lot: the car the team forms up behind
-  K.slab(k, 0, 0, 27.94, 40, 0.32, 28, [0.5, 0.5, 0.47]); K.slab(k, 39.94, 0, 0, 40, 0.32, 27.94, [0.5, 0.5, 0.47]);   // kerbs on the lot's south and east edges
+  K.slab(k, 0, 0, 27.94, 40, 0.32, 28, drawnAs('sheet', [0.5, 0.5, 0.47])); K.slab(k, 39.94, 0, 0, 40, 0.32, 27.94, drawnAs('sheet', [0.5, 0.5, 0.47]));   // kerbs on the lot's south and east edges
   K.grp(k, 'exterior.lamps');
   K.streetLamp(k, 33.5, 10.0, 'street_lamp_east', [-1, 0, 0]);     // off the east wall: it lights the stack on the staff room's east door, in front of that door's sidelight
   K.moon(k);
@@ -262,7 +263,7 @@ export function build(opts: K.KitOpts = {}): { level: Level; scenarios: LevelSce
     P.trolley(13.1, 10.92, 0); P.stool(13.3, 8.2);   // (the trolley on the island's south side: the wider lane; the stool at the plan chest)
     // strong room — the DEED VAULT: the safe south of the UPS, deed tins on the racks' tops, on the safe and on the deed rack by the door
     P.room('strong');
-    P.floor(20.25, 8.42, 3.7, 0.5, [0.3, 0.31, 0.33], 0.006); P.floor(20.25, 8.74, 3.7, 0.09, INK.yellow, 0.014, 0.012);   // chequer plate along the racks' fronts, and the line nobody without a key stands past
+    P.floor(20.25, 8.42, 3.7, 0.5, C.metal, 0.006); P.floor(20.25, 8.74, 3.7, 0.09, INK.yellow, 0.014, 0.012);   // chequer plate along the racks' fronts, and the line nobody without a key stands past
     { const L = P.safe(22.08, 9.82, E, 0.7, 0.66, 1.2, [0.07, 0.34, 0.2]); L.box(0, 1.2, 0, 0.56, 0.01, 0.52, [0.03, 0.12, 0.07]); L.box(0, 1.21, 0.04, 0.28, 0.012, 0.28, INK.brass); L.box(0, 1.222, 0.04, 0.28, 0.004, 0.28, INK.brass, 0.785); L.box(0, 0.62, 0.375, 0.44, 0.05, 0.05, INK.brass); }   // bottle green, the panel and the maker's brass plate on its top, the brass bar handle standing proud of its door
     P.counter(18.23, 8.43, 0.7, 0.28, W, 0.9, C.metal, C.metal); P.tins(18.23, 0.9, 8.43, W, 2, 0.34, INK.manila, null);   // the deed rack (buff lids, a black band: no cross — from above a cross is a first-aid box)
     for (const i of [0, 1, 3]) P.tins(18.75 + i * 0.75, 2.1, 7.5 + (i % 2) * 0.12, 0, 1, 0.38, INK.manila, null);
@@ -301,7 +302,7 @@ export function build(opts: K.KitOpts = {}): { level: Level; scenarios: LevelSce
     P.tripod(35.4, 19.9, 1.1); P.rod(35.3, 20.6, 35.1, 22.4, 1.8);
     { const L = P.at(20.0, 3.5, 0); L.box(0, 0, 0, 1.0, 0.08, 1.0, C.concrete); L.box(0, 0.08, 0, 0.4, 1.0, 0.4, C.concrete); L.box(0, 1.08, 0, 0.12, 0.02, 0.12, INK.brass); for (let i = 0; i < 5; i++) P.peg(21.2 + i * 1.1, 3.5 + i * 0.12); }   // the trig pillar and its line
     { const L = P.at(9.62, 19.0, W); for (const sx of [-0.5, 0.5]) L.box(sx, 0, 0, 0.62, 0.62, 0.04, INK.rubber); L.box(0, 0.45, 0, 1.0, 0.05, 0.04, C.red); L.box(-0.22, 0.8, 0, 0.22, 0.05, 0.12, C.black); L.box(0.42, 0.86, 0, 0.04, 0.04, 0.46, C.metal); L.box(-0.05, 0, -0.12, 0.05, 0.8, 0.05, C.metal); }   // a bicycle
-    { const L = P.at(6.8, 18.5, 0.3); P.floor(6.8, 18.5, 1.6, 1.5, [0.2, 0.2, 0.19], 0.5, 0.013); for (let i = 0; i < 4; i++) L.box(0, 0, 0, 0.56, 0.8 - i * 0.003, 0.56 * Math.tan(Math.PI / 8), [0.3, 0.16, 0.1], i * Math.PI / 4); L.sheet(0.7, 0.014, 0.3, 0.2, 0.26, [0.12, 0.11, 0.1], 0.6); L.sheet(-0.5, 0.014, 0.6, 0.18, 0.22, INK.paper, 1.1); }   // the burn drum on its ash
+    { const L = P.at(6.8, 18.5, 0.3); P.floor(6.8, 18.5, 1.6, 1.5, [0.2, 0.2, 0.19], 0.5, 0.013); for (let i = 0; i < 4; i++) L.box(0, 0, 0, 0.56, 0.8 - i * 0.003, 0.56 * Math.tan(Math.PI / 8), [0.3, 0.16, 0.1], i * Math.PI / 4); L.sheet(0.7, 0.014, 0.3, 0.2, 0.26, drawnAs('gravel', [0.12, 0.11, 0.1]), 0.6); L.sheet(-0.5, 0.014, 0.6, 0.18, 0.22, INK.paper, 1.1); }   // the burn drum on its ash
     K.bench(k, 30.36, 12.2, W);
     P.loose('barrow', 'cardboard', 32.3, 11.9, 0.5, 14, [P.part(0, 0.28, 0, 0.9, 0.24, 0.6, INK.yellow), P.part(0.55, 0, 0, 0.36, 0.36, 0.08, C.black), P.part(-0.68, 0.42, -0.25, 0.5, 0.04, 0.04, C.wood), P.part(-0.68, 0.42, 0.25, 0.5, 0.04, 0.04, C.wood), P.part(-0.3, 0, -0.22, 0.04, 0.28, 0.04, C.metal), P.part(-0.3, 0, 0.22, 0.04, 0.28, 0.04, C.metal), P.part(0, 0.52, 0, 0.5, 0.12, 0.3, C.white)]);
     for (const [x, z] of [[30.42, 17.5], [30.46, 18.1]]) P.loose('dustbin', 'bin', x, z, 0.1, 6, [P.part(0, 0, 0, 0.45, 0.75, 0.45, C.metal), P.part(0, 0.75, 0, 0.5, 0.05, 0.5, P.tone(C.metal, 0.7))]);

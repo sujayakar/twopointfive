@@ -17,9 +17,10 @@
 import type { Vec3 } from '../../src/math/vec';
 import type { Level, LevelDoorDef } from '../../src/scene/level';
 import type { LevelScenarios, Rect } from '../../src/scene/scenarios';
-import { officeKit, normalize3 as norm, OFFICE_PALETTE, type GeneratorTrace } from '../../src/scene/officeGen';
+import { officeKit, normalize3 as norm, OFFICE_PALETTE, LOT, type GeneratorTrace } from '../../src/scene/officeGen';
 import { WORLD } from '../../src/scene/world';
 import { BoxFlag } from '../../src/scene/boxes';
+import { PANEL_GREY } from '../../src/scene/stuff';
 
 export const NAME = 'test-rooms';
 export const NOTES = 'A tiny test level for the scenario probes: three rooms off one hall and a lobby, built from the office kit. Regenerate: bun run tools/levels/export.ts test-rooms';
@@ -31,7 +32,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
 
   // ---- ground, floor finishes, ceiling ----
   grp('ground');
-  slab(0, -0.25, 0, 40, 0, 28, C.asphalt);                        // the whole world's ground: every ray and every foot lands on something
+  slab(0, -0.25, 0, 40, 0, 28, LOT);                        // the whole world's ground: every ray and every foot lands on something
   grp('floors');
   slab(10, -0.1, 8, 30, 0.001, 22, C.carpet);                     // the building's base finish
   slab(10, 0, 13, 30, 0.004, 15.4, C.lino, { flags: BoxFlag.Gloss });   // the hall
@@ -74,7 +75,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
 
   // ---- the breaker (the hall's east end) and one emergency beacon: the game's blackout wants both ----
   grp('breaker');
-  const brk = add({ c: [29.84, 1.35, 14.2], h: [0.04, 0.36, 0.28], albedo: [0.42, 0.44, 0.45], name: 'breaker_panel' });
+  const brk = add({ c: [29.84, 1.35, 14.2], h: [0.04, 0.36, 0.28], albedo: PANEL_GREY, name: 'breaker_panel' });
   const brkLed = add({ c: [29.79, 1.62, 14.02], h: [0.01, 0.015, 0.015], albedo: C.black, emissive: [0.3, 4, 0.6], flags: BoxFlag.NoShadow });
   grp('beacons');
   add({ c: [20, H - 0.06, 14.2], h: [0.07, 0.06, 0.07], albedo: [0.2, 0.2, 0.22], flags: BoxFlag.NoShadow | BoxFlag.NoPrimary });

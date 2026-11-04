@@ -52,11 +52,12 @@ import type { Vec3 } from '../../src/math/vec';
 import type { Level, LevelDoorDef } from '../../src/scene/level';
 import type { LevelScenarios, Rect, ResponseData } from '../../src/scene/scenarios';
 import type { SurfacesData } from '../../src/scene/levelData';
-import { officeKit, normalize3, OFFICE_PALETTE, type GeneratorTrace } from '../../src/scene/officeGen';
+import { officeKit, normalize3, OFFICE_PALETTE, LOT, type GeneratorTrace } from '../../src/scene/officeGen';
 import * as MD from '../../src/scene/markingDefaults';
 import { WORLD } from '../../src/scene/world';
 import { BoxFlag, type Box } from '../../src/scene/boxes';
 import { livedKit } from './livedKit';
+import { drawnAs, PANEL_GREY } from '../../src/scene/stuff';
 
 export const NAME = 'depot';
 export const NOTES = 'The depot: a motor pool at night. Three huts round a floodlit yard inside a wall; the dark signals hut and the store\'s hatch hold the lit yard between them, and the hut\'s own door and the mains are at its back. One floor, box geometry only, the office\'s kit. Regenerate: bun run tools/levels/export.ts depot';
@@ -114,11 +115,11 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
 
   // ---------------- ground & structure ----------------
   grp('ground');
-  slab(0, -0.25, 0, 40, 0, 28, C.asphalt);
+  slab(0, -0.25, 0, 40, 0, 28, LOT);
   grp('floors');
   const floor = (x0: number, z0: number, x1: number, z1: number, alb: Vec3, extra: Partial<Box> = {}) => slab(x0, 0, z0, x1, 0.004, z1, alb, extra);
   const polished = { flags: BoxFlag.Gloss };
-  const HARD: Vec3 = [0.23, 0.23, 0.22];
+  const HARD: Vec3 = drawnAs('block', [0.23, 0.23, 0.22]);
   slab(4, -0.1, 4, 36, 0.001, 24, HARD);                        // the hardstanding: the whole of the yard inside the wall (thin top at y=0)
   floor(4, 4, 19, 9.5, C.lino, polished);                      // duty office, crew room, wash room: lino
   floor(19, 4, 29.5, 9.5, C.stone);                            // battery room, generator room: sealed concrete
@@ -205,12 +206,12 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
   grp('generator');
   add({ c: [27.0, 0.55, 4.85], h: [1.0, 0.55, 0.5], albedo: [0.28, 0.3, 0.2], rough: 0.6, metal: true });     // the set, on the north wall
   add({ c: [26.3, 1.25, 4.6], h: [0.18, 0.15, 0.18], albedo: C.metal });                                   // its air filter
-  add({ c: [27.8, 2.05, 4.3], h: [0.05, 0.95, 0.05], albedo: [0.2, 0.2, 0.2], flags: NS });                // the exhaust, up through the roof
+  add({ c: [27.8, 2.05, 4.3], h: [0.05, 0.95, 0.05], albedo: drawnAs('cloth', [0.2, 0.2, 0.2]), flags: NS });                // the exhaust, up through the roof
   add({ c: [28.9, 0.45, 8.9], h: [0.29, 0.45, 0.29], albedo: [0.42, 0.15, 0.1] }); add({ c: [28.3, 0.45, 9.0], h: [0.29, 0.45, 0.29], albedo: [0.42, 0.15, 0.1] });   // fuel drums in the south-east corner
   ceilingPanel(26.8, 7.0, false, 'generator');
   // THE MAINS: the breaker panel on the generator room's west wall, beside the set it switches (OCP it for a temporary blackout, shoot it for a permanent
   // one). It is behind the signals hut, on the back way in: whoever goes round the back owns the light before a door is opened.
-  const brk = add({ c: [24.1, 1.35, 8.4], h: [0.04, 0.36, 0.28], albedo: [0.42, 0.44, 0.45], name: 'breaker_panel' });
+  const brk = add({ c: [24.1, 1.35, 8.4], h: [0.04, 0.36, 0.28], albedo: PANEL_GREY, name: 'breaker_panel' });
   const brkLed = add({ c: [24.15, 1.62, 8.22], h: [0.01, 0.015, 0.015], albedo: C.black, emissive: [0.3, 4, 0.6], flags: NS });
   add({ c: [24.1, 2.3, 8.4], h: [0.03, 0.6, 0.03], albedo: [0.3, 0.3, 0.32], flags: NS });
 
@@ -224,7 +225,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
     const x = 28.2 + i * 0.75, z = 10.15;
     const slots: { u: number; y: number; amber: boolean }[] = [];
     for (let u = 0; u < 10; u++) { if (((u * 7 + i * 3) % 5) > 1) continue; slots.push({ u, y: 0.32 + u * 0.178, amber: (u + i) % 7 === 3 }); }
-    const rackBody = add({ c: [x, 1.05, z], h: [0.33, 1.05, 0.5], albedo: [0.06, 0.06, 0.07], rough: 0.3, ...mk(MD.rackMarks([0.33, 1.05, 0.5], slots.map(sl => ({ v: sl.y - 1.05, amber: sl.amber })), TX)) });
+    const rackBody = add({ c: [x, 1.05, z], h: [0.33, 1.05, 0.5], albedo: drawnAs('metal', [0.06, 0.06, 0.07]), rough: 0.3, ...mk(MD.rackMarks([0.33, 1.05, 0.5], slots.map(sl => ({ v: sl.y - 1.05, amber: sl.amber })), TX)) });
     if (i === DRIVE_RACK) rackFront = [x, 1.1, z + 0.53];
     if (slots.length) switchables.push({ name: `rack${i}_leds`, boxes: [rackBody], group: 'server_leds', on: true, baseEmissive: [0, 0, 0], flicker: i === 0, mains: false });
   }
@@ -263,7 +264,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
   // wall is out of the hut's east slit, and what the slit still sees is a metre of the walk past the shelter's nose; the door itself is hidden by the slit's own jamb.
   add({ c: [33.4, 1.3, 12.55], h: [0.7, 1.0, 2.25], albedo: [0.2, 0.23, 0.17], name: 'signals_shelter' });           // the cabin
   add({ c: [33.4, 0.24, 12.55], h: [0.62, 0.06, 2.3], albedo: [0.1, 0.1, 0.1] });                                   // its chassis
-  for (const [wx, wz] of [[32.8, 13.6], [34.0, 13.6], [32.8, 11.5], [34.0, 11.5]]) add({ c: [wx, 0.3, wz], h: [0.08, 0.3, 0.3], albedo: [0.04, 0.04, 0.045] });   // wheels
+  for (const [wx, wz] of [[32.8, 13.6], [34.0, 13.6], [32.8, 11.5], [34.0, 11.5]]) add({ c: [wx, 0.3, wz], h: [0.08, 0.3, 0.3], albedo: C.black });   // wheels
   add({ c: [33.4, 0.28, 9.85], h: [0.04, 0.04, 0.45], albedo: [0.1, 0.1, 0.1] });                                   // the drawbar, nose north
   for (const [x, z] of [[27.2, 22.9], [27.95, 23.15], [27.3, 23.55]]) add({ c: [x, 0.45, z], h: [0.29, 0.45, 0.29], albedo: [0.42, 0.15, 0.1] });   // the fuel point's drums, far side of the east yard
 
@@ -396,7 +397,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
     L.mat(11.6, 22.2, 15.2, 23.2, P.oilDark, 0.012);                                                              // the pit (its boards down), under the truck
     L.mat(11.4, 21.72, 15.4, 21.8, HAZ, 0.02);
     L.hung(13.0, 18.66, true, 4.0, 0.06, 2.7, [0.36, 0.37, 0.36], 0.05);                                          // the roller door, down
-    for (const y of [0.7, 1.35, 2.0]) L.hung(13.0, 18.7, true, 4.0, y, y + 0.05, [0.2, 0.2, 0.21], 0.02);
+    for (const y of [0.7, 1.35, 2.0]) L.hung(13.0, 18.7, true, 4.0, y, y + 0.05, drawnAs('cloth', [0.2, 0.2, 0.21]), 0.02);
     L.looseCrate(10.2, 22.2, 0.7, 0.45, 0.8, 0, P.oxide);                                                          // the tool trolley
     L.tyres(10.0, 23.3, 1); L.drum(10.9, 23.4); L.cone(10.6, 19.2);
     L.mat(15.9, 22.4, 16.9, 23.4, P.oilDark, 0.015);

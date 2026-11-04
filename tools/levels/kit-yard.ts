@@ -18,9 +18,10 @@ import type { Vec3 } from '../../src/math/vec';
 import type { Level, LevelDoorDef } from '../../src/scene/level';
 import type { LevelScenarios, Rect, StructureData } from '../../src/scene/scenarios';
 import type { SurfacesData } from '../../src/scene/levelData';
-import { officeKit, normalize3 as norm, OFFICE_PALETTE, type GeneratorTrace } from '../../src/scene/officeGen';
+import { officeKit, normalize3 as norm, OFFICE_PALETTE, LOT, type GeneratorTrace } from '../../src/scene/officeGen';
 import { WORLD } from '../../src/scene/world';
 import { BoxFlag } from '../../src/scene/boxes';
+import { PANEL_GREY } from '../../src/scene/stuff';
 
 export const NAME = 'kit-yard';
 export const NOTES = 'The map kit\'s throwaway test map: a walled yard, two buildings, three rooms, three squads. Regenerate: bun run tools/levels/export.ts kit-yard';
@@ -33,7 +34,7 @@ export function build(more?: (K: ReturnType<typeof officeKit>) => void): { level
 
   // ---- ground, floors, roofs (the yard has none: open sky) ----
   grp('ground');
-  slab(0, -0.25, 0, 40, 0, 28, C.asphalt);
+  slab(0, -0.25, 0, 40, 0, 28, LOT);
   grp('floors');
   slab(10, 0, 6, 24, 0.004, 12, C.lino, { flags: BoxFlag.Gloss });      // the bunkhouse
   slab(22, 0, 16, 32, 0.004, 22, C.carpet);                              // the store
@@ -81,7 +82,7 @@ export function build(more?: (K: ReturnType<typeof officeKit>) => void): { level
 
   // ---- the breaker (the store's north wall, inside) and one emergency beacon: the game's blackout wants both ----
   grp('breaker');
-  const brk = add({ c: [30.0, 1.35, 16.16], h: [0.28, 0.36, 0.04], albedo: [0.42, 0.44, 0.45], name: 'breaker_panel' });
+  const brk = add({ c: [30.0, 1.35, 16.16], h: [0.28, 0.36, 0.04], albedo: PANEL_GREY, name: 'breaker_panel' });
   const brkLed = add({ c: [29.82, 1.62, 16.21], h: [0.015, 0.015, 0.01], albedo: C.black, emissive: [0.3, 4, 0.6], flags: BoxFlag.NoShadow });
   grp('beacons');
   add({ c: [20.5, H - 0.06, 10.6], h: [0.07, 0.06, 0.07], albedo: [0.2, 0.2, 0.22], flags: BoxFlag.NoShadow | BoxFlag.NoPrimary });

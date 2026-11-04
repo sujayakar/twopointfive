@@ -20,6 +20,7 @@ import { lookMarks } from './lookMarks';
 import type { Level } from '../../src/scene/level';
 import type { LevelScenarios, TeamStart } from '../../src/scene/scenarios';
 import type { Vec3 } from '../../src/math/vec';
+import { drawnAs } from '../../src/scene/stuff';
 
 export const NAME = 'killhouse-gwot';
 export const DRESS_AS = 'killhouse';
@@ -40,7 +41,7 @@ const SKIN: Skin = {
   // plywood for everything the plain file has in wood (the barricade, the crates, the targets, the table tops), sandbags and a HESCO berm on the range
   pick: c => c.name === 'wood' ? 'ply' : c.group === 'range' && c.name === 'partTan' ? 'sandbag' : c.group === 'range' && c.name === 'concrete' ? 'hesco' : undefined,
   dress: (_G, level, T) => {
-    const M = lookMarks(T), tape = T.tone(P.plasticWhite, 0.9), worn = T.tone(VIOLET, 0.8);
+    const M = lookMarks(T), tape = drawnAs('paint', T.tone(P.plasticWhite, 0.9)), worn = T.tone(VIOLET, 0.8);
     const rc = (level.scenarios as LevelScenarios | undefined)?.roomClear; if (!rc) throw new Error('killhouse-gwot: the level carries no room clear to read its marks off');
     /** where a man stands: a tape line half a metre long, a short stride ahead of his feet, square to the way he faces (yaw: he faces (sin, cos)) */
     const toe = (p: Vec3 | [number, number], yaw: number) => { const x = p[0], z = p[p.length - 1], fx = Math.sin(yaw), fz = Math.cos(yaw), cx = x + fx * 0.3, cz = z + fz * 0.3;

@@ -7,13 +7,14 @@
 // Deterministic: every choice is a hash of the surface's own centre (never Math.random); a generator that moves a desk moves its dressing with it.
 import type { Vec3 } from '../../src/math/vec';
 import { Box, BoxFlag, makeBox } from '../../src/scene/boxes';
+import { drawnAs, worded } from '../../src/scene/stuff';
 import type { Level } from '../../src/scene/level';
 import * as MD from '../../src/scene/markingDefaults';
 import { DRESS_GROUP } from '../../src/game/destructionSwitch';
 
 const SCREEN_OFF: Vec3 = [0.02, 0.02, 0.025], BLACK: Vec3 = [0.04, 0.04, 0.045];   // (the kit's screenOff / black paints: the export names them by colour, finish and all)
-const MUGS: Vec3[] = [[0.82, 0.82, 0.8], [0.15, 0.2, 0.35], [0.55, 0.12, 0.1], [0.2, 0.2, 0.21]];
-const FILES: Vec3[] = [[0.2, 0.25, 0.4], [0.45, 0.12, 0.1], [0.12, 0.3, 0.2], [0.1, 0.1, 0.11], [0.62, 0.5, 0.2]];
+const MUGS: Vec3[] = [[0.82, 0.82, 0.8], [0.15, 0.2, 0.35], [0.55, 0.12, 0.1], drawnAs('cloth', [0.2, 0.2, 0.21])];
+const FILES: Vec3[] = [[0.2, 0.25, 0.4], [0.45, 0.12, 0.1], [0.12, 0.3, 0.2], drawnAs('metal', [0.1, 0.1, 0.11]), [0.62, 0.5, 0.2]];
 const lum = (a: Vec3) => 0.2126 * a[0] + 0.7152 * a[1] + 0.0722 * a[2];
 const r3 = (v: number) => Math.round(v * 1000) / 1000;
 function mulberry(a: number) { return () => { a |= 0; a = (a + 0x6d2b79f5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
@@ -43,7 +44,7 @@ export function dressLevel(level: Level, groups: string[]): DressStats {
     for (let i = 0; i < boxes.length; i++) { if (i === on) continue; const b = boxes[i]; if (b.c[1] + b.h[1] <= y0 || b.c[1] - b.h[1] >= y1) continue; const [bx, bz] = ext(b); if (Math.abs(b.c[0] - nb.c[0]) < ex + bx + 0.015 && Math.abs(b.c[2] - nb.c[2]) < ez + bz + 0.015) return false; }
     return true; };
   const put = (kind: string, parts: Box[], on: number): boolean => { if (!parts.every(p => free(p, on))) return false; for (const p of parts) { boxes.push(p); groups.push(DRESS_GROUP); } st.added += parts.length; st.by[kind] = (st.by[kind] ?? 0) + 1; return true; };
-  const mk = (c: Vec3, h: Vec3, yaw: number, albedo: Vec3, extra: Partial<Box> = {}) => makeBox({ c: [r3(c[0]), r3(c[1]), r3(c[2])], h, yaw: r3(yaw), albedo, ...extra });
+  const mk = (c: Vec3, h: Vec3, yaw: number, albedo: Vec3, extra: Partial<Box> = {}) => worded(makeBox({ c: [r3(c[0]), r3(c[1]), r3(c[2])], h, yaw: r3(yaw), albedo, ...extra }));   // (a thing is made of what it says, else what its paint is: scene/stuff.ts)
 
   for (let si = 0; si < n0; si++) {
     const s = boxes[si];
@@ -81,7 +82,7 @@ export function dressLevel(level: Level, groups: string[]): DressStats {
       if (!monitorDone && short >= 0.34 && d < 0.3) { monitorDone = true; if (put('monitor', darkMonitor(at(u, top, -side * 0.08), yawL + (side > 0 ? 0 : Math.PI), mk), si)) continue; }
       if (d < 0.5) put('paper', paperPair(at(u, top, v), yaw, mk, R), si);
       else if (d < 0.68) put('mug', [mk(at(u, top + 0.05, v), [0.04, 0.05, 0.04], yaw, MUGS[Math.floor(R() * MUGS.length)])], si);
-      else if (d < 0.8) { const c = at(u, top + 0.025, v); put('phone', [mk(c, [0.09, 0.025, 0.07], yaw, [0.07, 0.07, 0.08]), mk([c[0], top + 0.065, c[2]], [0.085, 0.015, 0.022], yaw + 0.15, [0.05, 0.05, 0.06])], si); }
+      else if (d < 0.8) { const c = at(u, top + 0.025, v); put('phone', [mk(c, [0.09, 0.025, 0.07], yaw, drawnAs('metal', [0.07, 0.07, 0.08])), mk([c[0], top + 0.065, c[2]], [0.085, 0.015, 0.022], yaw + 0.15, [0.05, 0.05, 0.06])], si); }
       else if (d < 0.93) put('file', [mk(at(u, top + 0.045, v * 0.6), [0.16, 0.045, 0.125], yaw, FILES[Math.floor(R() * FILES.length)])], si);
     }
   }

@@ -24,10 +24,11 @@ import type { Vec3 } from '../../src/math/vec';
 import type { Level, LevelDoorDef } from '../../src/scene/level';
 import type { IssueData, KitViewData, LevelScenarios, Rect, StructureData } from '../../src/scene/scenarios';
 import type { SurfacesData } from '../../src/scene/levelData';
-import { officeKit, normalize3 as norm, OFFICE_PALETTE, type GeneratorTrace } from '../../src/scene/officeGen';
+import { officeKit, normalize3 as norm, OFFICE_PALETTE, LOT, type GeneratorTrace } from '../../src/scene/officeGen';
 import { WORLD } from '../../src/scene/world';
 import { BoxFlag } from '../../src/scene/boxes';
 import { livedKit } from './livedKit';
+import { PANEL_GREY } from '../../src/scene/stuff';
 
 export const NAME = 'hall';
 export const NOTES = 'The long hall: four rooms off one bare hall that two men hold from its dim far end; a room clear for the four, every man in the plain issue (scenarios.issue). Regenerate: bun run tools/levels/export.ts hall';
@@ -47,7 +48,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
 
   // ---- ground, floors, roof ----
   grp('ground');
-  slab(0, -0.25, 0, 40, 0, 28, C.asphalt);
+  slab(0, -0.25, 0, 40, 0, 28, LOT);
   grp('floors');
   slab(9, 0, 8, 37, 0.004, 20, C.lino);
   grp('ceiling');
@@ -111,7 +112,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
 
   // ---- the breaker (the guardroom's east wall) and one emergency beacon over the hall ----
   grp('breaker');
-  const brk = add({ c: [36.84, 1.35, 14], h: [0.04, 0.36, 0.28], albedo: [0.42, 0.44, 0.45], name: 'breaker_panel' });
+  const brk = add({ c: [36.84, 1.35, 14], h: [0.04, 0.36, 0.28], albedo: PANEL_GREY, name: 'breaker_panel' });
   const brkLed = add({ c: [36.79, 1.62, 13.82], h: [0.01, 0.015, 0.015], albedo: C.black, emissive: [0.3, 4, 0.6], flags: BoxFlag.NoShadow });
   grp('beacons');
   add({ c: [20.5, H - 0.06, 14], h: [0.07, 0.06, 0.07], albedo: [0.2, 0.2, 0.22], flags: BoxFlag.NoShadow | BoxFlag.NoPrimary });

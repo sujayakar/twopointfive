@@ -79,7 +79,7 @@ const LIGHTS_OUT_KITVIEW: KitViewData = {
       { id: 'lo_005', group: 'lo.generator', c: [9.3, 0.55, 12.3], h: [0.75, 0.45, 0.375], yaw: 1.5708, material: 'genYellow' },
       { id: 'lo_006', group: 'lo.generator', c: [9.45, 1.16, 11.8], h: [0.045, 0.16, 0.045], yaw: 1.5708, material: 'rust' },
       { id: 'lo_007', group: 'lo.generator', c: [9.3, 1.02, 12.65], h: [0.12, 0.02, 0.12], yaw: 1.5708, material: 'iron' },
-      { id: 'lo_008', group: 'lo.breaker', c: [10.6, 1.35, 11.16], h: [0.28, 0.36, 0.04], albedo: [0.42, 0.44, 0.45] },
+      { id: 'lo_008', group: 'lo.breaker', c: [10.6, 1.35, 11.16], h: [0.28, 0.36, 0.04], albedo: [0.42, 0.44, 0.45], stuff: 'sheet' },   // (drawn as sheet by its colour until 11-04, as the level's own breaker box is: scene/stuff.ts drawnAs)
       { id: 'lo_009', group: 'lo.breaker', c: [10.42, 1.62, 11.21], h: [0.015, 0.015, 0.015], material: 'plasticBlack', emissive: [0.3, 4, 0.6], flags: ['NoShadow'] },
       { id: 'lo_010', group: 'lo.fuel', c: [10.2, 0.44, 12.7], h: [0.2784, 0.44, 0.1153], yaw: 0.0846, material: 'drumBlue' },
       { id: 'lo_011', group: 'lo.fuel', c: [10.2, 0.439, 12.7], h: [0.2784, 0.439, 0.1153], yaw: 0.87, material: 'drumBlue' },
