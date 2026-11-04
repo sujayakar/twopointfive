@@ -255,7 +255,7 @@ export const KEYS = {
   mission: ['playerSpawn', 'objectives'], reach: ['id', 'kind', 'area', 'door'], drive: ['id', 'kind', 'rackIndex', 'front', 'halfW'], exfil: ['id', 'kind', 'door', 'x', 'z', 'out'],
   breaker: ['pos', 'panel', 'led', 'fumble'], beacon: ['id', 'pos', 'box'], sky: ['zenith', 'horizon'], daylight: ['sun', 'sky', 'groupsOn', 'groupsOff', 'lightsOff', 'haze', 'exposure'],
   plans: ['roomClear', 'breach'],   // (the container only — what is INSIDE a plan is generic, see canonBlob)
-  scenarios: ['nightBreach', 'roomClear', 'rescue', 'places', 'quiet', 'lesson', 'par', 'snatch', 'defuse', 'issue', 'kitView', 'response', 'doorNames'],   // (the container only, likewise: what is inside is scene/scenarios.ts's, carried as written)
+  scenarios: ['nightBreach', 'roomClear', 'rescue', 'places', 'quiet', 'lesson', 'par', 'snatch', 'defuse', 'issue', 'kitView', 'response', 'doorNames', 'walked'],   // (the container only, likewise: what is inside is scene/scenarios.ts's, carried as written)
 } as const;
 /** the keys a shape's piece (BoxData.shape.with) may carry beside its form, in the order they are written. ITS OWN LIST, read by hand in three places
  *  (levelLoad.ts loadLevel and levelToData, canonShape below): a key a box gains for its paint is added here and there together, or a piece would be allowed
@@ -863,6 +863,15 @@ export function validateLevelData(d: LevelData): string[] {
           known(rw, r, ['door', 'name']); doorOk(`${rw}.door`, r.door);
           if (isStr(r.door)) { if (seen.has(r.door)) err(`${rw}.door`, `door '${r.door}' is named twice`); seen.add(r.door); }
           if (!isStr(r.name) || !r.name.trim() || r.name.length > 40) err(`${rw}.name`, 'must be a name of 1 to 40 characters'); });
+      }
+      if (S.walked !== undefined) {   // (scene/scenarios.ts: ways the level is walked that nothing else in it says — scene/ways.ts; a name the level does not have walks nothing and is the level's lint's to say)
+        const w = 'scenarios.walked';
+        if (!Array.isArray(S.walked)) err(w, 'must be an array of { from, to, weight? }');
+        else S.walked.forEach((r: any, i: number) => { const rw = `${w}[${i}]`;
+          if (!isObj(r)) { err(rw, 'must be an object: { from, to, weight? }'); return; }
+          known(rw, r, ['from', 'to', 'weight']);
+          for (const k of ['from', 'to'] as const) if (!isStr(r[k]) || !r[k].trim() || r[k].length > 64) err(`${rw}.${k}`, 'must be a name of 1 to 64 characters');   // (as long as an id may be: the editor's rename writes a door's or a route's new id here)
+          if (r.weight !== undefined && !(isNum(r.weight) && r.weight > 0 && r.weight <= 8)) err(`${rw}.weight`, 'must be a number over 0, at most 8'); });
       }
       if (S.response !== undefined) {   // (scene/scenarios.ts ResponseData: what the file alone can say — free floor and the walks in are game/qrf.ts checkResponse's)
         const R = S.response, w = 'scenarios.response';

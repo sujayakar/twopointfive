@@ -23,23 +23,28 @@ export type LookName = typeof LOOK_NAMES[number];
  *  unit    a stuff MADE OF PIECES: one piece's size, metres along and up (each divides LOOK_TILE), whether every other course is laid half a piece along,
  *          and how far one piece's shade may sit from the next's (± × the paint). The map draws the pieces' joints at these sizes (`piece`) and gives them no
  *          shade of their own; the shader gives each piece of the WORLD its shade by where it is, so a wall of eighty panels is not a tile's eight repeated
+ *  untiles it has no courses and no pieces, so its map is read twice, the second read turned and shifted, and the two cross-faded by a slow noise: a
+ *          two-metre map does not print its repeat on a forty-metre yard (the four the shader used to name, and the kept ones that are a plain coat)
+ *  bay     a stuff made of pieces is LAID IN BAYS: so many pieces along and up to a movement joint, wider and darker than a piece's own, and each bay a
+ *          shade its own (pavers laid a day's work at a time, a wall cast in lifts). 0 = none that way. A bonded stuff has none along: its courses
+ *          are half a piece out of step and the joint would zigzag. The shader draws both by where the piece is in the WORLD
  *  worn    how hard USE shows on it in a place somebody keeps (0 or absent = not at all: steel, enamel, a carpet; only a stuff with no `fades` may say
  *          it). Not weather: what boots, a trolley and a mason called back leave. The shader gives it two things by where it is in the WORLD, never in
  *          the map: a piece in four is stained, chipped at a corner or was changed for a new one (look.wgsl lookPiece: a stuff made of pieces), and a
  *          wall's foot has its coat knocked off in stretches to a hand's height */
-interface Stuff { rough: number; relief: number; built?: true; fades?: number; soaks?: true; worn?: number; unit?: readonly [u: number, v: number, bond: boolean, shade: number] }
+interface Stuff { rough: number; relief: number; built?: true; fades?: number; soaks?: true; worn?: number; untiles?: true; unit?: readonly [u: number, v: number, bond: boolean, shade: number]; bay?: readonly [along: number, up: number] }
 const STUFFS: Readonly<Record<LookName, Stuff>> = {
-  'mud wall': { rough: 0.95, relief: 1.6, built: true, fades: 1, soaks: true }, plaster: { rough: 0.86, relief: 1.8, built: true, fades: 1, soaks: true },
-  block: { rough: 0.93, relief: 1.5, built: true, fades: 1, soaks: true }, earth: { rough: 0.94, relief: 1.6, built: true, fades: 1, soaks: true },
-  gravel: { rough: 0.88, relief: 1.3, built: true, fades: 1, soaks: true }, slab: { rough: 0.82, relief: 1.8, built: true, fades: 1, soaks: true },
+  'mud wall': { rough: 0.95, relief: 1.6, built: true, fades: 1, soaks: true, untiles: true }, plaster: { rough: 0.86, relief: 1.8, built: true, fades: 1, soaks: true, untiles: true },
+  block: { rough: 0.93, relief: 1.5, built: true, fades: 1, soaks: true }, earth: { rough: 0.94, relief: 1.6, built: true, fades: 1, soaks: true, untiles: true },
+  gravel: { rough: 0.88, relief: 1.3, built: true, fades: 1, soaks: true, untiles: true }, slab: { rough: 0.82, relief: 1.8, built: true, fades: 1, soaks: true },
   wood: { rough: 0.84, relief: 1.6, fades: 1 }, sheet: { rough: 0.5, relief: 1.0, fades: 1, soaks: true }, cloth: { rough: 0.96, relief: 1.6, fades: 1, soaks: true },
   metal: { rough: 0.75, relief: 1.6, fades: 1, soaks: true }, paint: { rough: 0.5, relief: 1.6, fades: 1, soaks: true },
   veneer: { rough: 0.4, relief: 1.4, fades: 0.3 }, plastic: { rough: 0.5, relief: 1.4, fades: 0.3 }, fabric: { rough: 0.95, relief: 1.6, fades: 0.3 },
   steel: { rough: 0.42, relief: 1.4, fades: 0.3 }, carpaint: { rough: 0.26, relief: 1.2, fades: 0.3 },
-  stucco: { rough: 0.42, relief: 1.5, built: true, worn: 1 }, skim: { rough: 0.55, relief: 1.6, built: true, worn: 1 },
+  stucco: { rough: 0.42, relief: 1.5, built: true, worn: 1, untiles: true }, skim: { rough: 0.55, relief: 1.6, built: true, worn: 1, untiles: true },
   'gloss block': { rough: 0.4, relief: 1.4, built: true, worn: 0.6, unit: [0.4, 0.2, true, 0.02] }, 'board concrete': { rough: 0.42, relief: 1.6, built: true, worn: 0.8 },
-  'cast panel': { rough: 0.68, relief: 1.4, built: true, worn: 0.8, unit: [1.0, 0.5, true, 0.07] }, paver: { rough: 0.5, relief: 1.4, built: true, worn: 1, unit: [0.5, 0.5, false, 0.018] },
-  brushed: { rough: 0.32, relief: 1.2 }, louvre: { rough: 0.45, relief: 1.0 }, enamel: { rough: 0.3, relief: 1.2 }, carpet: { rough: 0.95, relief: 1.4 },
+  'cast panel': { rough: 0.68, relief: 1.4, built: true, worn: 0.8, unit: [1.0, 0.5, true, 0.07], bay: [0, 3] }, paver: { rough: 0.5, relief: 1.4, built: true, worn: 1, unit: [0.5, 0.5, false, 0.018], bay: [6, 6] },
+  brushed: { rough: 0.32, relief: 1.2 }, louvre: { rough: 0.45, relief: 1.0 }, enamel: { rough: 0.3, relief: 1.2 }, carpet: { rough: 0.95, relief: 1.4, untiles: true },
   'field stone': { rough: 0.8, relief: 1.0, fades: 1, soaks: true }, 'mud brick': { rough: 0.95, relief: 1.2, fades: 1, soaks: true },
 };
 /** the rows as the prelude and the checks read them, in LOOK_NAMES' order */
@@ -48,6 +53,8 @@ export const LOOK_BUILT: readonly number[] = LOOK_NAMES.map(n => STUFFS[n].built
 export const LOOK_FADES: readonly number[] = LOOK_NAMES.map(n => STUFFS[n].fades ?? 0);
 export const LOOK_SOAKS: readonly number[] = LOOK_NAMES.map(n => STUFFS[n].soaks ? 1 : 0);
 export const LOOK_WORN: readonly number[] = LOOK_NAMES.map(n => STUFFS[n].worn ?? 0);
+/** how a stuff is laid over more than a piece: (it untiles, pieces a bay along, pieces a bay up, spare) */
+export const LOOK_LAY: readonly (readonly [number, number, number, number])[] = LOOK_NAMES.map(n => { const st = STUFFS[n]; return [st.untiles ? 1 : 0, st.bay?.[0] ?? 0, st.bay?.[1] ?? 0, 0]; });
 export const LOOK_UNIT: readonly (readonly [number, number, number, number])[] = LOOK_NAMES.map(n => { const u = STUFFS[n].unit; return u ? [u[0], u[1], u[2] ? 1 : 0, u[3]] : [0, 0, 0, 0]; });
 /** the layers a layer's own drawing reads beside its own (look.wgsl): a mud wall shows its stone and its brick, and stones come up through earth at a wall's foot.
  *  Whoever makes a layer makes these with it (gbuffer.ts needLook). */
