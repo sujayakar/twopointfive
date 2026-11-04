@@ -32,7 +32,7 @@
 // Callers: Destruction.blast (the wall charge and the frag — after the walls, so the hole is already open), combat.ts detonateStun for a BORROWED charge (the
 // door charge; the wall charge's own borrowed bang lands in the same frame at the same place and is merged).
 import { Vec3, v3, quat, lerp } from '../math/vec';
-import { Box, BoxFlag, makeBox } from '../scene/boxes';
+import { Box, BoxFlag, makeBox, wordOf } from '../scene/boxes';
 import { WORLD } from '../scene/world';
 import type { Game } from './game';
 import type { Destruction } from './destruction';
@@ -465,7 +465,7 @@ export class Furniture {
     const cs = Math.cos(b.yaw), sn = Math.sin(b.yaw); const t = BREAKS.steel.sheet;
     const deep: 0 | 2 = b.h[0] <= b.h[2] ? 0 : 2, wide: 0 | 2 = deep === 0 ? 2 : 0;   // the door is on a broad upright face
     const ax: Vec3 = deep === 0 ? [cs, 0, -sn] : [sn, 0, cs]; const sign: 1 | -1 = ax[0] * dir[0] + ax[2] * dir[2] > 0 ? -1 : 1;   // (the broad face that LOOKS AT the blast is the sheet torn off: the carcass goes over away from it, so its open side ends up or sideways — seen — never under it)
-    const part = (l: Vec3, h: Vec3): Box => makeBox({ c: [b.c[0] + cs * l[0] + sn * l[2], b.c[1] + l[1], b.c[2] - sn * l[0] + cs * l[2]], h, yaw: b.yaw, albedo: v3.copy(b.albedo) });
+    const part = (l: Vec3, h: Vec3): Box => makeBox({ c: [b.c[0] + cs * l[0] + sn * l[2], b.c[1] + l[1], b.c[2] - sn * l[0] + cs * l[2]], h, yaw: b.yaw, albedo: v3.copy(b.albedo), ...wordOf(b) });
     const on = (a: 0 | 1 | 2, s: number, shy: number): SteelPart => { const l: Vec3 = [0, 0, 0], h: Vec3 = [b.h[0] - shy, b.h[1] - shy, b.h[2] - shy]; l[a] = s * (b.h[a] - t); h[a] = t; return { box: part(l, h) }; };
     if (mode === 'apart') { const door = on(deep, sign, 0.012); door.box.c[0] += ax[0] * sign * 0.03; door.box.c[2] += ax[2] * sign * 0.03; return [{ box: part([0, 0, 0], [b.h[0], b.h[1], b.h[2]]), open: { axis: deep, sign }, seed }, door]; }
     return [on(deep, sign, 0.012), on(deep, -sign, 0), on(wide, 1, 2 * t), on(wide, -1, 2 * t), on(1, 1, 2 * t)];
@@ -480,7 +480,7 @@ export class Furniture {
       const l: Vec3 = [0, 0, 0], h: Vec3 = [b.h[0], b.h[1], b.h[2]];
       l[ax[0]] = b.h[ax[0]] * (c1[p] + c1[p + 1]) / 2; h[ax[0]] = b.h[ax[0]] * (c1[p + 1] - c1[p]) / 2;
       l[ax[1]] = b.h[ax[1]] * (c2[q] + c2[q + 1]) / 2; h[ax[1]] = b.h[ax[1]] * (c2[q + 1] - c2[q]) / 2;
-      out.push(makeBox({ c: [b.c[0] + cs * l[0] + sn * l[2], b.c[1] + l[1], b.c[2] - sn * l[0] + cs * l[2]], h, yaw: b.yaw, albedo: v3.copy(b.albedo) }));
+      out.push(makeBox({ c: [b.c[0] + cs * l[0] + sn * l[2], b.c[1] + l[1], b.c[2] - sn * l[0] + cs * l[2]], h, yaw: b.yaw, albedo: v3.copy(b.albedo), ...wordOf(b) }));
     }
     return out;
   }
@@ -502,7 +502,7 @@ export class Furniture {
   }
   private breakProp(p: Prop, at: Vec3, fall: number, who: number, budget: { chunks: number }) {
     const g = this.g;
-    for (const b of p.boxes) this.throwPiece(makeBox({ c: v3.copy(b.c), h: v3.copy(b.h), yaw: b.yaw, albedo: v3.copy(b.albedo) }), at, 'shatter', fall, FURN_BREAK[breakClassOf(b.albedo)], who, budget, b);   // (its parts are already its pieces: each thrown whole)
+    for (const b of p.boxes) this.throwPiece(makeBox({ c: v3.copy(b.c), h: v3.copy(b.h), yaw: b.yaw, albedo: v3.copy(b.albedo), ...wordOf(b) }), at, 'shatter', fall, FURN_BREAK[breakClassOf(b.albedo)], who, budget, b);   // (its parts are already its pieces: each thrown whole)
     for (const c of this.destr.debris.list) if (c.on === p) { c.on = null; c.rest = false; c.stillT = 0; }   // what lay on it falls
     for (const it of g.items.items) if (it.on === p) { it.on = null; it.settled = false; it.vel = [0, 0, 0]; }   // (a can, a dropped magazine: its own rule only looks again when the prop MOVES)
     g.props.remove(p); this.goneProps++; FURN_STATS.propsBroken++;
