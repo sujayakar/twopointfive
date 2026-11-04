@@ -27,15 +27,18 @@ const KIND_COLL: Partial<Record<RefKind, Collection>> = { box: 'boxes', prop: 'p
 
 /** WHERE THE `scenarios` BLOCK NAMES A DOOR OR A ROUTE (scene/scenarios.ts is its shape; levelData.ts validateLevelData checks the same slots): a door by its id —
  *  a room's doors and the door each mark watches, a squad's barricade doors and the door a late squad comes by, the rescue's room / side / from doors and its
- *  flow's regions and openings, a quiet spot's and exit's door, a lesson test's `door` (and `on`, beside an 'order:' deed) — and a route by the name the game
- *  knows it by (its `name`, else its id): the quiet mission's patrol sets. ONLY these slots: a string elsewhere that happens to equal an id (a room's own id, a
+ *  flow's regions and openings, a quiet spot's and exit's door, a lesson test's `door` (and `on`, beside an 'order:' deed), either end of a walked way
+ *  (scene/ways.ts looks for a door's id before any other kind of name) — and a route by the name the game
+ *  knows it by (its `name`, else its id): the quiet mission's patrol sets, and either end of a walked way again. ONLY these slots: a string elsewhere that happens to equal an id (a room's own id, a
  *  place as a line says it) is the player's words and is never touched. Each row is the holder + key (rename writes through it on a CLONE of the block) and a
  *  few words naming the user (delete's refusal). No editor tool edits the block; rename and delete keep it true to the document. */
 export function scenarioRefs(S: unknown, kind: 'door' | 'route'): { o: any; k: string | number; where: string }[] {
   const out: { o: any; k: string | number; where: string }[] = []; const B = S as any; if (!B || typeof B !== 'object') return out;
   const arr = (x: unknown): any[] => Array.isArray(x) ? x : [];
   const at = (o: any, k: string | number, where: string) => { if (o && typeof o === 'object' && typeof o[k] === 'string') out.push({ o, k, where }); };
-  if (kind === 'route') { arr(B.quiet?.patrols).forEach((set, i) => arr(set).forEach((_n, j) => at(set, j, `scenarios.quiet patrol set ${i}`))); return out; }
+  // (either end of a walked way, scene/ways.ts: a name is looked for as `spawn`, then a door's id, a mark's, a route's …, so the word `spawn` is never a door's or a route's here)
+  const walked = () => { for (const w of arr(B.walked)) for (const k of ['from', 'to']) if (w && w[k] !== 'spawn') at(w, k, `scenarios.walked (a way ${k} it)`); };
+  if (kind === 'route') { arr(B.quiet?.patrols).forEach((set, i) => arr(set).forEach((_n, j) => at(set, j, `scenarios.quiet patrol set ${i}`))); walked(); return out; }
   for (const r of arr(B.roomClear?.rooms)) { for (const x of arr(r?.doors)) at(x, 'id', `scenarios.roomClear room '${r?.id}'`); for (const m of arr(r?.marks)) at(m, 'watch', `scenarios.roomClear room '${r?.id}' (a defender's mark watches it)`); }
   for (const q of arr(B.roomClear?.squads)) { arr(q?.barricade).forEach((_n, j) => at(q.barricade, j, `scenarios.roomClear squad '${q?.id}' (barricade)`)); at(q?.arrive, 'door', `scenarios.roomClear squad '${q?.id}' (comes in by it)`); }
   const R = B.rescue; at(R?.room, 'door', 'scenarios.rescue (the hostage room\'s door)'); at(R?.side, 'door', 'scenarios.rescue (the side door)'); at(R?.side?.from, 'door', 'scenarios.rescue (the room the side door is taken from)');
@@ -48,6 +51,7 @@ export function scenarioRefs(S: unknown, kind: 'door' | 'route'): { o: any; k: s
   };
   for (const t of arr(B.lesson?.steps)) test(t?.done, `scenarios.lesson step '${t?.id}'`);
   for (const r of arr(B.doorNames)) at(r, 'door', `scenarios.doorNames (it is called '${r?.name}')`);
+  walked();
   return out;
 }
 /** one line per part of a `scenarios` block (the level sheet's read-only section and its count line: no editor tool edits the block) */

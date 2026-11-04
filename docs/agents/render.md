@@ -1564,7 +1564,7 @@ interleaved and filtered to their quiet minimum, and a row whose p75 sits far ab
   It takes the `kept` rule (no damp foot, no bleached head). Drawn as a tile; never seen on a page or a GPU.
 - **LIGHT KEEPS ITS ORDER WHERE TWO PLACES MEET** (11-04; the look panel's row `order` "Light in order", live, 1 on the look's page, 0 = as it was to
   the bit; `frame.placeCfg.x`, a new member, the last of the frame's head; `place_common.wgsl lookGainsOwn`, called by `composite.wgsl` and
-  `compact/composite.wgsl lookExpoGain`; the place field's SECOND BLOCK, `render/placeField.ts PLACE_NEAR`, `place_field.wgsl nearFrom`). The
+  `compact/composite.wgsl lookExpoGain`; the place field's SECOND BLOCK, `render/placeField.ts PLACE_NEAR`, `place_field.wgsl hand`). The
   maintainer, of the white roof at midday on his GPU: "is there some nonphysical stuff going on here with doors? door looks like it's lit even though
   the ground immediately in front of it is in shadow", then "is there a way we can make the exposure stuff more general and not special case doors?
   this should hold for holes from wall charges too right?", "or even areas with very different brightnesses outdoors". CAUSE, read from the code:
@@ -1580,8 +1580,8 @@ interleaved and filtered to their quiet minimum, and a row whose p75 sits far ab
   five stops under its yard is its own again four metres in, and DEEP IN A ROOM EVERY PIXEL IS TO THE BIT AS IT WAS. EVERY STEP LOSES SOMETHING, a
   doorway's too: with none there, a doorway's two cells kept the brightest answer either ever held (a yard gone dim), a review's find. THE FALL-OFF IS
   SLOWER THAN A DOORWAY'S LIGHT FALLS INTO A ROOM: at a stop a cell the gain rose inward faster than the light fell, and a software draw had a strip of
-  floor a stride inside the door brighter than the threshold. In a wall's own cell with no side known there is no bound (the cells round it are on
-  both sides of the wall). Where the field is smooth (the open air) the two
+  floor a stride inside the door brighter than the threshold. In a wall's own cell with no side known the bound is of the cell the pixel's level was taken from, never
+  of the other side's (a review asked for no bound there at all, and a draw showed that undid the leaf: a leaf hanging open IS such a cell). Where the field is smooth (the open air) the two
   numbers hardly differ and nothing moves: the rule acts where the gain steps, which is where order was lost. THE MEASURE: the pixel's own light is
   what is drawn whole (the sun's, a lamp's, an opening's) plus the bounce over the scale it is drawn by (`indirectScale`, 0.35): the field's.
   By the model's arithmetic (`lookexpo-check`): a room 30 times under the open air, a leaf a cell and a half in holding 0.4 of the open air's
@@ -1638,6 +1638,53 @@ interleaved and filtered to their quiet minimum, and a row whose p75 sits far ab
   were specks at a pixel of a centimetre and a half). Enamel stays a clean coat: a chip in its map would come round every two metres along a
   painted line. `lookmaps-check` line 11 holds the row (use on kept stuffs only, none on the sixteen older ones, so every
   other level's picture is as it was). Shader texts compile (`wgsl-compile`); NEVER SEEN ON A GPU, and the amounts are a first guess.
+- **HOW A LEVEL IS WALKED SHOWS IN ITS SURFACES, AND ONE LAYER WEARS A PIXEL** (11-04; `src/scene/ways.ts levelWays`; `render/wear.ts buildWearMap`'s
+  `walked`; `shaders/look.wgsl` USE AND DIRT, `lookWears`, `lookWay`; `detail.wgsl detailSurface`'s `byLook`; the look's page only, `?walked=0` at
+  boot = the traffic map as every other page has it). The maintainer: "i think there's a lot of room to add personality to textures. wear, paths in
+  the ground, different materials can all tell a story for how people walk through the level, its logic, leading the player for game play". THE MAP
+  OF WAYS is one function of what a level already says: four counts on the walk grid's own cells (patrol = its routes; team = every start of every
+  scenario to each room and thing it goes for; doors = both faces of every frame and every pair of outer doors, door to door; hint = the author's own by name, the level file's
+  `scenarios.walked`, `docs/level-format.md`), each the number of ways over the cell, not summed and not saturated; beside them `paths`, the same
+  ways as the lines they were traced along, and `lost`, the ways the search found no path for (a straight line then; no level has one). A name is
+  looked for as a door's id first. Pure, no module state; its
+  path searches are on tables of its own (`findPathAside`); nothing in `src/game` imports it. Cost: 2 to 7 ms on `block`, 3 on `compound`, under 1
+  on the office. THE READER: on the look's page the traffic map's lanes are those paths, traced as a route's legs always were, by `wear.ts WAY` (a route
+  1, a team's way 0.45, door to door 0.3, a hint its own weight); a level with no routes had no lane at all, and a raid's yard now has the trodden line from where the team comes in to the doors it
+  goes for. Every other page's map is to the byte what it was. WHAT A SURFACE SHOWS OF IT: wild ground is beaten flat and pale along a lane (as it
+  was, now with lanes to show); on a floor somebody keeps a lane is a shade darker (a fifth at the busiest before the tone curve, about a tenth on a pale deck in the sun; by the stuff's `worn`) and a piece's history (changed, stained, chipped) is likelier where feet go, asked at the
+  piece's own middle so a lane's edge never cuts a history in two; a kept wall's foot is knocked in more stretches beside a lane; paint on the floor
+  (a hatched bay, a stencil) goes first where feet go. ONE ANSWER A MARK: the detail layer (`detail.wgsl`, every page) and the look layer both read the
+  traffic map and both ran, so a wild floor's band at a wall was double and so was a wild wall's foot. Three marks come of the map and each now has
+  one answer on the look's page, by what the surface is. A LANE: on a floor with a finish to wear the detail layer's scuff; on wild ground with none
+  the weather's (beaten pale); on a kept floor the dirt feet bring in on top, by the stuff's `worn`. THE BAND AT A WALL'S FOOT: on wild ground the
+  weather's; on any other floor the detail layer's dust. THE SKIRTING: on a wild wall the weather's damp foot; on any other the detail layer's
+  shoe marks. HOW: the g-buffer asks `lookWears` once a pixel and tells both layers (a cut face and a round's side have the detail layer's wear from
+  neither, as before); the detail layer then leaves its two terms, and the look layer CALLS them, `detail.wgsl detailFloorWear` and
+  `detailSkirtWear`, one copy of the numbers, on the sample it read itself with what the weather answers for left out. The look layer reads the map
+  ONCE a pixel (a floor where it is, a kept wall a stride out from its foot; a pieced floor asks once more at its piece's middle), whoever dresses
+  the pixel. So a kept floor and a finished floor are what they were; wild ground and wild walls lose the second copy of their band. The white roof's six ways (the
+  stair's landing to the lounge's door, to the service door and to the plant; the service door to the plant; through the service room and the
+  lounge) are in its generator, with three named places for their ends (`docs/agents/levels.md`). CHECK
+  `bun run tools/qa/probes.ts ways` (family `render`; `WAYS_BREAK=1` fails the reader's line): the map on `block`, the white roof's names, the
+  office's patrol, the lane in the traffic map, the wiring by its text. NEVER SEEN ON A GPU, and what a surface shows of a lane is a first guess.
+- **NO SURFACE REPEATS AT ANY SIZE: THE DEAL, BAYS, AND A STUFF'S OWN `untiles`** (11-04; `shaders/look.wgsl lookDeal`, `lookPiece`; `render/lookTex.ts
+  STUFFS` words `untiles` and `bay`, the prelude's `LOOK_LAY`; the look's page only, under its No repeat row, 0 = the page as it was). The maintainer,
+  of the white roof on his GPU: "this is starting to look very good btw! I think the main thing to iterate on is making it look less repetitive at the
+  different scales". A map is two metres and a deck is forty, and three sizes repeated: the map itself (every piece of a paver deck came round every
+  two metres, grain and all), the field of pieces (one even grid to the walls), and the whole face (forty metres of one shade). ONE ANSWER A SIZE,
+  each by where the surface is in the WORLD and none in a map. (1) A STUFF MADE OF PIECES DEALS ITS MAP'S PIECES: the piece of the world at a place is
+  drawn from another piece of the map, picked by a die of the world piece's own and of the face it is on (the face's plane FROM THE BOX, one number
+  a face: taken from the pixel it could flip a centimetre and speckle the wall); a bond keeps a course's parity. Exact: one
+  read, no cross-fade, the caller's own slopes; a piece's edge is a joint in every piece, so nothing shows where two dealt pieces meet. A map may now
+  hold pieces that differ. (2) PIECES ARE LAID IN BAYS (`bay`: pieces along and up to a movement joint; pavers six by six, a cast wall in lifts of
+  three panels): a bay has a shade its own on top of its pieces', and the joint between two bays is wider and darker than a piece's (under the row,
+  as the deal is). A bonded stuff
+  has no bay along (its courses are half a piece out of step). (3) A KEPT PLACE DRIFTS: three in a hundred of shade over ten metres. (Bays and the drift go on to twice their strength with the row past 1, for
+  the page to try; the deal is on or off.) AND THE SHADER
+  NAMES NO STUFF: which stuffs are read twice and cross-faded (the older rule for what has no courses) was four class names in `look.wgsl`; it is the
+  row's `untiles` now, and stucco, skim and carpet have it. CHECK `lookmaps-check` line 11: the four older stuffs still untile and no other of the
+  sixteen; nothing made of pieces untiles; a bay is of whole pieces; a bonded map has an even count of courses. Shader texts compile. NEVER SEEN ON A
+  GPU; a software draw of the white roof's deck with the row off and on is what was looked at.
 - **TEN KEPT STUFFS, AND A STUFF SAYS ITS OWN ROW** (11-04; `render/lookTex.ts` stucco, skim, gloss block, board concrete, cast panel, paver, brushed,
   louvre, enamel, carpet; the level `white-roof`, `docs/agents/levels.md`). The maintainer, of a game whose pictures he sent: "it has some very
   tastefully done high frequency detail but overall quite flat", "an antidote to our repeating textures that look generated", and, after trying the

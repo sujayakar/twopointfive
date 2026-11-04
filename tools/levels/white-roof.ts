@@ -270,5 +270,10 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
     building: { x0: 5, x1: 35, z0: 5, z1: 23.5 }, grassEdge: 0, inside: 'stone', outside: 'stone', verge: 'stone',
     zones: [{ id: 'lounge', mat: 'carpet', x0: 11.5, z0: 9, x1: 17, z1: 15 }],
   };
-  return { level, scenarios: { doorNames: [{ door: 'service', name: 'service door' }, { door: 'lounge', name: 'lounge door' }, { door: 'between', name: 'service to lounge door' }] }, groups: trace.groups, surfaces };
+  // ---- how the roof is walked (scene/ways.ts: the look's page wears its floors by it). Nobody patrols a roof and no team is staged on this one, so its ways
+  // are all its author's: whoever comes up comes by the stair, a fitter goes to the plant and to the service room, the others to the lounge's door and
+  // through the lounge. A way's ends are names, so the roof names three of its places (these are words the game may say of this level: game/dialogue.ts)
+  const places = { areas: [{ name: 'stair landing', bounds: { x0: 31, x1: 34.5, z0: 13.6, z1: 15.6 } }, { name: 'plant pad', bounds: { x0: 8, x1: 16, z0: 17.5, z1: 22 } }, { name: 'service room', bounds: { ...SERVICE } }] };
+  const walked = [{ from: 'stair landing', to: 'lounge', weight: 3 }, { from: 'stair landing', to: 'service', weight: 3 }, { from: 'stair landing', to: 'plant pad', weight: 2 }, { from: 'service', to: 'plant pad', weight: 2 }, { from: 'service room', to: 'between' }, { from: 'between', to: 'lounge' }];
+  return { level, scenarios: { places, walked, doorNames: [{ door: 'service', name: 'service door' }, { door: 'lounge', name: 'lounge door' }, { door: 'between', name: 'service to lounge door' }] }, groups: trace.groups, surfaces };
 }
