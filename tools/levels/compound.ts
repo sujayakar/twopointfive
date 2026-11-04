@@ -83,6 +83,8 @@ import * as MD from '../../src/scene/markingDefaults';
 import { WORLD } from '../../src/scene/world';
 import { BoxFlag, type Box } from '../../src/scene/boxes';
 import { livedKit } from './livedKit';
+import { gwotKit, gwotOfOffice } from '../../src/scene/gwotKit';
+import { feetOn } from '../../src/scene/carShapes';
 
 export const NAME = 'compound';
 export const NOTES = 'The compound: a perimeter wall with a lit main gate and two dark side gates, yard all round a main house of eight rooms off one corridor (three outside doors, two open windows, four loops inside), and a garage, a shed and a guard hut across the yard. Eight held rooms, four squads. For the four man squad, who start outside the wall. One floor, box geometry only, the office\'s kit. Regenerate: bun run map:export compound';
@@ -281,7 +283,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
   bin(17.7, 6.05); bin(12.3, 8.2); cardboardBox(31.2, 20.2, 0.55, 0.3);                 // loose things under the kitchen's window, by the shed's side, at the alley's end
   // (LOOSE THINGS — bins, cartons, chairs a man can shove — stand a leaf's length clear of every door on this level and out of the corridor: walking men
   //  bulldoze them along a wall, and one that ends up in a doorway jams the leaf)
-  add({ c: [23.5, 0.018, 26.0], h: [1.3, 0.006, 1.8], yaw: 0, albedo: DIRT, flags: BoxFlag.NoShadow });   // the track through the main gate (a rug's flat box, but earth and no rug: it says no cloth)
+  rug(23.5, 26.0, 2.6, 3.6, DIRT);                                                      // the track through the main gate
 
   // ---------------- the kitchen (x 13..18.5, z 6.5..11.5): k_s on the corridor, k_p into the pantry; a window north onto the back strip ----------------
   grp('kitchen');
@@ -349,7 +351,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
 
   // ---------------- the garage (x 4..10.5, z 18..24): g_n from the west yard, g_e from the forecourt ----------------
   grp('garage');
-  car(7.2, 22.5, 0, [0.42, 0.4, 0.36]);                                                 // a car against the south wall: the floor north of it is the room
+  const TAXI = car(7.2, 22.5, 0, [0.42, 0.4, 0.36]);                                                 // a car against the south wall: the floor north of it is the room
   desk(5.2, 18.6, 1.8, 0.75, 0); papers(5.5, 0.76, 18.6, 0.2);                          // a workbench on the north wall
   pallet(9.5, 18.8, 1.2, 1.0);
   cardboardBox(4.6, 23.3, 0.5, 0.2); bin(9.9, 23.4); chair(5.3, 19.45, 0);
@@ -458,11 +460,10 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
     const bx = (x0: number, x1: number, z0: number, z1: number, y0: number, y1: number, a: Vec3, ns = false) => slab(x0, y0, z0, x1, y1, z1, a, ns ? { flags: NS } : {});
     /** a turned box by its centre and half sizes */
     const yb = (x: number, z: number, hx: number, hz: number, y0: number, y1: number, a: Vec3, yaw = 0, ns = false) => add({ c: [x, (y0 + y1) / 2, z], h: [hx, (y1 - y0) / 2, hz], yaw, albedo: a, ...(ns ? { flags: NS } : {}) });
-    /** a round thing of radius 0.2 and over (a jar, an oven, a barrel, a wheel lying flat): an OCTAGON — four slabs through the centre 45° apart, each as wide as
-     *  the round and tan 22.5° as deep, tops stepped 2 mm so none are coplanar (gwotKit's `round`; two squares 45° apart read as a cog from above) */
-    const oct = (x: number, z: number, r: number, y0: number, y1: number, a: Vec3, ns = false) => { for (let k = 0; k < 4; k++) yb(x, z, r * 0.96, r * 0.96 * 0.4142, y0, y1 - 0.002 * k, a, k * Math.PI / 4, ns); };
-    /** a small round thing (under 0.2): one square turned a little, as livedKit's drums. Reaches 1.25 r from its centre */
-    const pot = (x: number, z: number, r: number, y0: number, y1: number, a: Vec3, ns = false) => yb(x, z, r * 0.9, r * 0.9, y0, y1, a, 0.3, ns);
+    /** a round thing (a jar, an oven, a barrel, a wheel lying flat): the kit's (livedKit.ts round — from 0.2 m the octagon the round rule makes one round box of) */
+    const oct = (x: number, z: number, r: number, y0: number, y1: number, a: Vec3, ns = false) => L.round(x, z, y0, y1, r, a, 0, { drawn: ns });
+    /** a pot, a pan, a basket: the kit's round from 0.2 m; a smaller one is one square turned a little (it reaches 1.25 r from its centre) */
+    const pot = (x: number, z: number, r: number, y0: number, y1: number, a: Vec3, ns = false) => r >= 0.2 ? oct(x, z, r, y0, y1, a, ns) : yb(x, z, r * 0.9, r * 0.9, y0, y1, a, 0.3, ns);
     /** a pair of shoes left on the floor (drawn only) */
     const pair = (x: number, z: number, yaw: number, a: Vec3 = C.black, long = 0.13) => { const at = K.frameAt(x, z, yaw); for (const s of [-0.06, 0.06]) { const c = at(s, 0, s * 0.3); yb(c[0], c[2], 0.04, long, 0, 0.05, a, yaw, true); } };
     /** a floor cushion (drawn only: it may lie on a mark or in a lane) */
@@ -627,7 +628,11 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
     // load), a child's bicycle stood against the pallet stack by the north wall (drawn only: the east door's line is near), a rope bed stood on its side, flattened
     // cardboard under the engine. Colour: the taxi's yellow, echoed on its roof
     L.room('garage');
-    bx(6.0, 7.9, 21.85, 21.9, 1.52, 1.57, C.black); bx(6.0, 7.9, 23.1, 23.15, 1.52, 1.57, C.black);                // the roof rack's rails
+    // the roof rack's rails. With shapes on the roof is bowed and cut back to the glass: each rail stands on two feet on the bow, and the first carries the
+    // rack's two cross bars, the roof sign on the front one — trim, said in the rail's own frame (the taxi stands at (7.2, 22.5), unturned)
+    { const rail = (z0: number, z1: number, bars: boolean) => { const c: Vec3 = [6.95 - 7.2, 1.545, (z0 + z1) / 2 - 22.5], h: Vec3 = [0.95, 0.025, 0.025];
+        slab(6.0, 1.52, z0, 7.9, 1.57, z1, C.black, { shape: { with: [...feetOn(TAXI.tops.roof, c, h, [-0.6, 0.55]), ...(bars ? [-0.93, 0.93].map(u => ({ off: [u, 0, 0.625] as Vec3, h: [0.02, 0.02, 0.65] as Vec3 })) : [])] } }); };
+      rail(21.85, 21.9, true); rail(23.1, 23.15, false); }
     bx(6.3, 7.5, 21.98, 23.02, 1.52, 1.8, P.canvas, true); for (const x of [6.6, 7.2]) bx(x, x + 0.04, 21.97, 23.03, 1.52, 1.81, BROWN, true);   // the bundle on the roof between them, roped (drawn only)
     bx(7.55, 7.86, 22.2, 22.8, 1.52, 1.7, TEAL, true); bx(7.92, 8.06, 22.3, 22.7, 1.52, 1.64, P.brass);             // a suitcase (drawn only), the roof sign
     for (const x of [9.17, 9.83]) { bx(x - 0.22, x + 0.22, 19.3, 19.33, 0, 0.44, C.black, true); bx(x - 0.11, x + 0.11, 19.33, 19.336, 0.11, 0.33, C.concrete, true); }   // the child's bicycle, upright against the pallet stack: two wheels (their middles the wall's grey) …
@@ -732,6 +737,23 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
     oct(13.4, 21.05, 0.25, 0.03, 0.07, STRAW, true);                                                              // … and the winnowing tray
     L.chair(17.7, 19.6, -Math.PI / 2, C.white);                                                                  // the second seat, drawn up to the pipe
     { K.prop('cardboard', 19.4, 21.6, 0, 0.4, [{ off: [0, 0.1, 0], h: [0.1, 0.1, 0.1], yaw: 0.6, albedo: C.red }]); L.own('ball'); }
+    // ---- OUTSIDE THE WALLS — the field's edge, where the squad comes from: both ways in start out here, and the ground was bare from the wall's foot to the
+    // map's edge. What a farm leaves against the outside of its own wall, every piece of it the look's kit (src/scene/gwotKit.ts through the office kit's own
+    // add; the twin keeps a palette paint as it is) and every piece against the wall's foot or out at the edge: the middle of each strip is the walk to a gate
+    // and stays bare, and so does the ground the four stand on. Only things that stand square or round: a drum on its side and a bush were tried and read, from
+    // the opening frame, as an orange crate and a dark box (the kit's lying and leafy pieces are boxes still). Colour: none of its own — wood, stone, rubber
+    L.room('outside');
+    { const G = gwotKit(gwotOfOffice(K));
+      // north, east of the back way's start: the winter's wood stacked against the wall, the stones thrown out of the plot, two worn tyres off the taxi
+      G.woodPile(33.4, 3.5, 0, 1.6); G.rubble(36.6, 2.9, 0.7, 6); G.tyres(38.4, 3.2, 2);
+      // north, west of the back gate: blocks left over from the wall, field stones at the edge
+      G.blocks(20.4, 3.45, 0, 2); G.rubble(11.6, 0.9, 0.8, 7);
+      // west, the walk to the side gate: more wood against the wall north of it, field stones at the edge
+      G.woodPile(3.5, 8.6, Math.PI / 2, 1.4); G.rubble(0.9, 11.4, 0.7, 6);
+      // west, behind where the four stand (the south end of the strip, the lower half of the opening frame): blocks and the rest of the wood against the wall,
+      // stones at the edge
+      G.blocks(3.6, 21.6, Math.PI / 2, 2); G.woodPile(3.5, 23.8, Math.PI / 2, 1.6); G.rubble(0.9, 22.8, 0.7, 5); }
+
   }
 
   const TEAM = { sam: [2.0, 0, 17.0] as Vec3, samYaw: Math.PI, ops: [[1.4, 0, 18.4], [2.6, 0, 18.4], [1.4, 0, 19.6], [2.6, 0, 19.6]] as Vec3[], opsYaw: Math.PI };

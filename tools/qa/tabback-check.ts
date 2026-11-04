@@ -68,7 +68,7 @@ export async function tabBackCheck(): Promise<boolean> {
     { const { stepFrame } = await import(`${ROOT}/src/host/loop.ts`);
       const under = (W: any, st: { frozen: boolean; seen: number; esc: number }) => { const g = W.game, up = g.update;
         g.update = function (this: any, dt: number, input: any, ...a: unknown[]) { if (input.pressed.has('Paused')) st.seen++; if (input.pressed.has('Escape')) st.esc++; return up.call(this, dt, input, ...a); };
-        return { game: g, input: W.input, cam: W.cam, view: W.canvas, host: W.engine, render: () => { W.engine.world.upload(); }, betweenTicks: () => { W.engine.world.upload(true); },
+        return { game: g, input: W.input, cam: W.cam, view: W.canvas, host: W.engine, render: () => { W.engine.world.upload(); }, betweenTicks: () => { W.engine.world.relist(); },
           smoke: null, audio: null, demo: null, attract: null, hud: null, bubbles: null, time: 0, updateMs: 0, frozen: () => st.frozen, present: () => false, fixedStep: () => false }; };
       const A = await squad(true), up0 = !!A.O.menu, stA = { frozen: false, seen: 0, esc: 0 };
       await quiet(() => { const ctx = under(A.W, stA); A.W.cursorAt(A.at); stepFrame(ctx, DT); stA.frozen = true; for (let i = 0; i < 3; i++) stepFrame(ctx, DT); stA.frozen = false; for (let i = 0; i < 3; i++) { A.W.cursorAt(A.at); stepFrame(ctx, DT); } }); const up1 = !!A.O.menu;

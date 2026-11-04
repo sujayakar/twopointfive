@@ -6105,7 +6105,7 @@
   "path": "Checkpoints ▸ Checkpoints",
   "kind": "select",
   "label": "slot",
-  "title": "which stored checkpoint \"chosen\" loads / \"export\" writes: newest first — the line below lists them in that order",
+  "title": "which stored checkpoint \"chosen\" loads / \"export\" sends: newest first — the line below lists them in that order",
   "def": false,
   "extra": "(newest) / 2nd / 3rd / 4th (oldest)"
  },
@@ -6123,7 +6123,7 @@
   "label": "file",
   "title": "",
   "def": false,
-  "extra": "[export chosen — download the chosen slot as a .json file (the same text localStorage holds)] [import… — read a .json checkpoint into the manual slot (validated: version, level); it is not loaded until you say] [clear all — remove the three autosaves, the manual slot and the index from localStorage]"
+  "extra": "[export chosen — send the chosen slot to the developer as a .json file (the same text localStorage holds); nothing is downloaded] [import… — read a .json checkpoint into the manual slot (validated: version, level); it is not loaded until you say] [clear all — remove the three autosaves, the manual slot and the index from localStorage]"
  },
  {
   "path": "Checkpoints ▸ Checkpoints",

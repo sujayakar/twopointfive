@@ -27,7 +27,7 @@
 //
 // DETERMINISM: no dice, no wall clock. Everything here runs off Sam's own position and the men's, inside the frame's usual order (rows → act → update).
 // (src/game is one import cycle: nothing below uses another game module's export at module load.)
-import { SideMap } from '../math/side';
+import { SideMap, GameSideMap } from '../math/side';
 import { Vec3, v3, wrapAngle, approachAngle, clamp, smoothstep } from '../math/vec';
 import type { Game, Guard, Interactable, Verb } from './game';
 import { canStand, grabVariant } from './player';
@@ -142,16 +142,19 @@ function note(g: Game, gd: Guard, what: 'take' | 'grab' | 'seat' | 'unseat', kin
 
 // ------------------------------------------------------------ per-game state: this frame's best offer (the ready pose reads it), the men sat down
 interface Seat { at: Vec3; face: number; hold: boolean; down: boolean }
-interface State { t: number; best: CloseOffer | null; seats: Map<Guard, Seat>; mode: Guard | null; modeD: number; /** CLOSE.rmbHold: seconds the right button has been down since its press (−1 = no press waits) */ rmbT: number }
+interface State { t: number; best: CloseOffer | null; mode: Guard | null; modeD: number; /** CLOSE.rmbHold: seconds the right button has been down since its press (−1 = no press waits) */ rmbT: number }
 const STATE = new SideMap<Game, State>('close.STATE');
-function stateOf(g: Game): State { let s = STATE.get(g); if (!s) { s = { t: -1, best: null, seats: new Map(), mode: null, modeD: Infinity, rmbT: -1 }; STATE.set(g, s); } return s; }
+/** the men sat down are the WORLD's, whoever asks (a player's own close-in state above is his seat's: seats.ts) */
+const SEATED = new GameSideMap<Game, Map<Guard, Seat>>('close.SEATED');
+function seatedOf(g: Game): Map<Guard, Seat> { let m = SEATED.get(g); if (!m) SEATED.set(g, m = new Map()); return m; }
+function stateOf(g: Game): State { let s = STATE.get(g); if (!s) { s = { t: -1, best: null, mode: null, modeD: Infinity, rmbT: -1 }; STATE.set(g, s); } return s; }
 
 // ------------------------------------------------------------ the windows
 const arc = (id: CloseId, kind: CloseKind, mid: number, half: number, reach: number, grab: boolean, strike: boolean): CloseWindow => ({ id, kind, mid, half, cosHalf: Math.cos(half), reach, grab, strike });
 /** has he a seat at all — down in it or on his way down (doze.ts: a seat somebody else took away is a man awake) */
-export function closeHasSeat(g: Game, gd: Guard): boolean { return !!STATE.get(g)?.seats.has(gd); }
+export function closeHasSeat(g: Game, gd: Guard): boolean { return !!SEATED.get(g)?.has(gd); }
 /** Is this man sitting (the late worker at his desk — civilians.ts — or a staff man sat down by closeSeat)? */
-export function closeSeated(g: Game, gd: Guard): boolean { return gd.civ ? civilianSeated(gd) : !!stateOf(g).seats.get(gd)?.down; }
+export function closeSeated(g: Game, gd: Guard): boolean { return gd.civ ? civilianSeated(gd) : !!SEATED.get(g)?.get(gd)?.down; }
 /** THE TABLE: the windows round one man as he is now (standing / seated, staff / civilian). The rear arc of a standing man is the build's own gate. */
 export function closeWindows(g: Game, gd: Guard): CloseWindow[] {
   const K = CLOSE, R = K.reach, out: CloseWindow[] = [];
@@ -446,22 +449,22 @@ const calm = (gd: Guard) => gd.state === 'patrol' && gd.awareness < 0.3 && !gd.h
  *  up and the AI has him as it would have. False if he cannot be sat (not calm, dead, a civilian, a unit of the response). */
 export function closeSeat(g: Game, gd: Guard, at?: ArrayLike<number>, face?: number): boolean {
   if (gd.civ || gd.unit || gd.state === 'dead' || !calm(gd)) return false;
-  const S = stateOf(g); const prev = S.seats.get(gd); if (prev && !at) return true;   // (already in a chair, or on his way down into it: he stays in that one)
-  S.seats.set(gd, { at: at ? [at[0], 0, at[2]] : [gd.char.pos[0], 0, gd.char.pos[2]], face: face ?? gd.char.bodyYaw, hold: prev ? prev.hold : gd.hold, down: false });
+  const M = seatedOf(g); const prev = M.get(gd); if (prev && !at) return true;   // (already in a chair, or on his way down into it: he stays in that one)
+  M.set(gd, { at: at ? [at[0], 0, at[2]] : [gd.char.pos[0], 0, gd.char.pos[2]], face: face ?? gd.char.bodyYaw, hold: prev ? prev.hold : gd.hold, down: false });
   gd.hold = true; CLOSE_STATS.seats++; note(g, gd, 'seat', null);
   return true;
 }
 /** up out of the chair (the clip fades on its own `out`; his hold flag as it was) */
 export function closeUnseat(g: Game, gd: Guard, back = false) {
-  const S = stateOf(g), st = S.seats.get(gd); if (!st) return;
-  S.seats.delete(gd); gd.hold = st.hold; if (gd.char.anim.act?.clip === SIT_CLIP.clip) gd.char.anim.act = null;
+  const M = seatedOf(g), st = M.get(gd); if (!st) return;
+  M.delete(gd); gd.hold = st.hold; if (gd.char.anim.act?.clip === SIT_CLIP.clip) gd.char.anim.act = null;
   if (back && st.down && gd.state !== 'dead') { gd.char.pos[0] = st.at[0]; gd.char.pos[2] = st.at[2]; }   // (stood up by hand — the panel: up where he sat down from. The seat walked his root SIT_ADVANCE on, and sitting him again must not walk him on again)
   CLOSE_STATS.unseats++; note(g, gd, 'unseat', null);
 }
 /** once a frame BEFORE the guards (game.ts): the seated men kept on their marks while calm, stood up when not. Nothing with nobody seated. */
 export function closeSeatTick(g: Game, dt: number) {
-  const S = STATE.get(g); if (!S || !S.seats.size) return;
-  for (const [gd, st] of S.seats) {
+  const M = SEATED.get(g); if (!M || !M.size) return;
+  for (const [gd, st] of M) {
     if (!g.guards.includes(gd) || !calm(gd) || !CLOSE.on) { closeUnseat(g, gd); continue; }
     const c = gd.char; c.bodyYaw = approachAngle(c.bodyYaw, st.face, 3 * dt);
     const settled = Math.abs(wrapAngle(c.bodyYaw - st.face)) < 0.35;
@@ -476,8 +479,8 @@ export function closeSeatTick(g: Game, dt: number) {
  *  hold (modeOutM over modeM), so between the two a load that forgot him stood Sam out of the mode he was saved in */
 export function closeModeSnapshot(g: Game): number | undefined { return STATE.get(g)?.mode?.char.id; }
 export function closeModeRestore(g: Game, id: unknown): void { if (typeof id !== 'number') return; const gd = g.guards.find(x => x.char.id === id && x.state !== 'dead'); if (gd) stateOf(g).mode = gd; }
-export function closeReset(g: Game) { const S = STATE.get(g); if (!S) return; for (const gd of [...S.seats.keys()]) closeUnseat(g, gd); S.best = null; S.t = -1; S.mode = null; S.modeD = Infinity; S.rmbT = -1; }
+export function closeReset(g: Game) { for (const gd of [...(SEATED.get(g)?.keys() ?? [])]) closeUnseat(g, gd); const S = STATE.get(g); if (!S) return; S.best = null; S.t = -1; S.mode = null; S.modeD = Infinity; S.rmbT = -1; }
 export function closeSummary(g: Game): string {
   const S = stateOf(g), T = CLOSE_STATS.takes, G = CLOSE_STATS.grabs; const o = S.t === g.time ? S.best : null;
-  return `${CLOSE.on ? 'on' : 'off'} · ${S.mode ? `in the mode on ${S.mode.callsign} ${S.modeD.toFixed(2)} m` : 'not in the mode'} · now ${o ? `${o.guard.callsign} ${closeKindOf(o)} ${o.dist.toFixed(2)} m` : '—'} · takes b${T.behind} s${T.side} f${T.front} c${T.seat} · grabs b${G.behind} c${G.seat} · seated ${S.seats.size}`;
+  return `${CLOSE.on ? 'on' : 'off'} · ${S.mode ? `in the mode on ${S.mode.callsign} ${S.modeD.toFixed(2)} m` : 'not in the mode'} · now ${o ? `${o.guard.callsign} ${closeKindOf(o)} ${o.dist.toFixed(2)} m` : '—'} · takes b${T.behind} s${T.side} f${T.front} c${T.seat} · grabs b${G.behind} c${G.seat} · seated ${SEATED.get(g)?.size ?? 0}`;
 }

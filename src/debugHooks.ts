@@ -66,14 +66,20 @@ declare global {
     __timeScale?: number;
     /** set by automation: treat the (headless, nominally hidden) pane as visible so quality calibration / sampling run */
     __testVisible?: boolean;
+    /** a page check's word for whether somebody is at this window (main.ts `attended`): unset = the browser's own answer */
+    __testFocus?: boolean;
     /** the Audio panel's 'force tension' slider is pinning the score intensity (main.ts then leaves it alone) */
     __forcedTension?: boolean;
     /** decals (experiment E1): the panel's buttons by hand — the test pattern in front of Sam, n random interior marks, clear; each returns the count placed */
     __marks?: { test: () => number; random: (n?: number, seed?: number) => number; clear: () => void; bang: (p: [number, number, number]) => void; scuff: (door: string, from?: [number, number, number]) => boolean };
     /** replay tools/qa/mesh-shadow-fixture.json through the production mesh-shadow walk on the GPU and compare with the CPU reference (main.ts; ?paused page) */
     __meshTrace?: (fixture: { digest: string; joints: number[]; rays: number[][]; expect: number[]; nodes: number }) => Promise<unknown>;
-    /** resolves once every hook is assigned and the start card is live (rejects if the boot dies) — `await window.__ready` is the one line a script needs */
+    /** resolves once every hook is assigned, the start card is live and every kernel is in, the ones the card does not wait for too (rejects if the boot dies) —
+     *  `await window.__ready` is the one line a script needs */
     __ready?: Promise<void>;
+    /** the start card is live and every hook is assigned: what a player has, with the later set of shaders perhaps still compiling behind it (gpu/device.ts
+     *  PIPE_QUEUE.later). Only a tool that looks at those first frames waits on this and not on `__ready` */
+    __started?: boolean;
     /** the boot timeline (ui/boot.ts): marks, pipeline counts, long tasks, frame gaps, first-frame GPU + the one console line */
     __boot?: BootSummary & { line: string };
     /** the numbers behind the HUD's read-outs (main.ts `readout`) */
@@ -87,7 +93,7 @@ declare global {
     __perfsweep?: import('./ui/perfsweep').PerfSweep;
     /** THE list of knob tables (game/knobs.ts): `registry()` every switch table by name (the live objects), `copy()` a deep copy, `back(copy)` puts one back */
     __knobs?: { registry(): Record<string, object>; copy(names?: readonly string[]): Record<string, Record<string, unknown>>; back(copy: Record<string, Record<string, unknown>>): void };
-    /** the session journal (game/journal.ts, F10): start / stop / re-download the last file, its state and counters */
+    /** the session journal (game/journal.ts, F10): start / stop / hand the last file to the door again (host/savefile.ts), its state and counters */
     __journal?: { start(opts?: { seed?: number; note?: string }): string; stop(immediate?: boolean): unknown; toggle(): string; save(): string; readonly state: string; readonly file: unknown; readonly stats: Record<string, unknown>; check(f?: unknown): string; summary(): string; [k: string]: unknown };
     /** staging: drop guard i as if shot / struck (killGuard through the real path); false if he is already down */
     __killGuard?: (i: number, how?: 'shot' | 'struck' | 'wounded', zone?: 'side' | 'leg', dir?: [number, number, number]) => boolean;

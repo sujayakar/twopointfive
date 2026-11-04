@@ -398,13 +398,13 @@ export const foursquadDrill = guarded(async () => {
 
 // ---------------------------------------------------------------- budget
 export const foursquadBudget = guarded(async () => {
-  const { verdict, done } = family('foursquad-budget: ten men, a proxy place for each, eight mesh trees, sixteen skinned, sixty-four lights');
+  const { verdict, done } = family('foursquad-budget: ten men against eight proxy places, sixteen skinned, sixty-four lights');
   const R = await rig(3); const { game: g, NB } = R; const world = g.engine.world, L = g.engine.lights.lights;
   const steady = L.filter((l: any) => l.ttl < 0).length, lit = L.filter((l: any) => l.ttl < 0 && l.enabled && l.intensity > 0).length;
   const capOwners = () => { const out: number[] = []; for (let k = 0; k < world.charCount; k++) out.push(world.capsuleU32[k * BoxWorld.CAPS_PER_CHAR * 8 + 7] & 0xff); return out; };
   R.step(2); const before = capOwners(), order0 = [g.player.char.id, ...g.guards.map((x: any) => x.char.id)];
-  verdict(1 + g.guards.length === 10 && SQUAD4_BUDGET === 10 && 10 <= MAX_CHARS && world.charCount === 10 && BoxWorld.MAX_CAST === MAX_CHARS && before.join() === order0.join(),
-    `characters: 10 on the floor (Sam + 4 + 5) of ${MAX_CHARS} skinned; every one has his shadow / reflection proxies, in the floor's order (the first eight have a mesh tree: Sam, the four and the first three defenders)`, `proxy places: ${before.join(' ')} · on the floor: ${order0.join(' ')}`);
+  verdict(1 + g.guards.length === 10 && SQUAD4_BUDGET === 10 && 10 <= MAX_CHARS && world.charCount === 8 && before.join() === order0.slice(0, 8).join(),
+    `characters: 10 on the floor (Sam + 4 + 5) of ${MAX_CHARS} skinned; 8 have shadow / reflection proxies — with everybody up, Sam, the four and the first three defenders`, `proxy places: ${before.join(' ')} · on the floor: ${order0.join(' ')} · without: ${order0.slice(8).join(' ')}`);
   verdict(steady < MAX_LIGHTS && lit < MAX_LIGHTS, `lights: ${steady} steady lights of ${MAX_LIGHTS} by spawnUnit's own count (${MAX_LIGHTS - steady} spare), ${lit} of them lit and uploaded (${MAX_LIGHTS - lit} spare for flashes and tracers)`, `every man is booked a torch whether it burns or not`);
   // the probe's table (render/probe.ts MAX_QUERIES a frame, the rest dropped): what the game asks of it in a frame with everybody up
   { const P = g.probe as any, real = P.query, realS = P.querySegment; let n = 0; const keys: string[] = [];
@@ -415,10 +415,10 @@ export const foursquadBudget = guarded(async () => {
   // a teammate down: his place goes to a man standing
   killGuard(g, NB.ops[1], [1, 0, 0], false, 'shot', 'player'); R.step(3); const after = capOwners(), dead = NB.ops[1].char.id;
   const up1 = [g.player.char.id, ...g.guards.filter((x: any) => x.state !== 'dead').map((x: any) => x.char.id)];
-  verdict(world.charCount === 10 && after[9] === dead && after.slice(0, 9).join() === up1.join() && up1.length === 9,
-    'a man down goes to the end of the list: the mesh trees\' eight places go to the living first, and he keeps his round cones', `proxy places now: ${after.join(' ')} · Red Two (${dead}) is down and last`);
+  verdict(world.charCount === 8 && !after.includes(dead) && after.join() === up1.slice(0, 8).join() && up1.length === 9,
+    'a man down gives up his proxy place: the eight go to the living first (the ninth living man still goes without)', `proxy places now: ${after.join(' ')} · Red Two (${dead}) is down and not among them`);
   killGuard(g, NB.hostiles[0], [1, 0, 0], false, 'shot', 'player'); R.step(3); const after2 = capOwners(), living = [g.player.char.id, ...g.guards.filter((x: any) => x.state !== 'dead').map((x: any) => x.char.id)];
-  verdict(living.length === 8 && after2.length === 10 && after2.slice(0, 8).join() === living.join(), 'two down: every man standing is among the first eight (a mesh tree each); the bodies follow as their round cones', `living ${living.join(' ')} · proxy places ${after2.join(' ')}`);
+  verdict(living.length === 8 && living.every(id => after2.includes(id)), 'two down: every man standing has his proxies; only the bodies go without', `living ${living.join(' ')} · proxy places ${after2.join(' ')}`);
   // an eleventh man is refused, by the caller's own budget; a caller with none still gets the eight
   let e1 = '', e2 = '';
   try { spawnUnit(g, { team: 'hostile', pos: [15, 0, 17.6], budget: SQUAD4_BUDGET }); } catch (e) { e1 = (e as Error).message; }

@@ -54,7 +54,7 @@ export interface LoopHost { readonly settings: Pick<RenderSettings, 'nvAmount' |
 
 export interface LoopCtx {
   game: Game; input: Input; cam: FollowCamera; view: View;
-  /** stepFrame's own: a frozen frame has gone by since the last tick (the next tick gets 'Paused' — game/backkey.ts) */
+  /** stepFrame's own: a frozen frame has gone by since the last tick (the next tick gets 'Paused' — game/backkey.ts — and, whatever that rule, 'Thawed': game time stood still, so what is timed in it across the card starts again — orders.ts tapWas) */
   thaw?: boolean;
   /** this frame may be fixed-stepped (main.ts: a live frame, not a scripted __runFrames one — a script names its own dt). Absent = never: the loop as it was */
   fixedStep?(): boolean;
@@ -71,9 +71,16 @@ export interface LoopCtx {
   /** stepFrame's own: his aim carried round with that view until the hand takes the mouse up again (host/findme.ts AimCarry), null or absent = none */
   carry?: AimCarry | null;
   /** between two ticks of ONE drawn frame (the fixed step, a display under the tick rate or a hitch): what the host's draw does that the next tick reads — main.ts: the world's
-   *  boxes packed into the grid its rays walk (engine.render does it once a frame; a second tick would otherwise trace the boxes of two ticks ago), and the HUD's one write
+   *  boxes listed and the grid its rays walk kept (BoxWorld.relist; engine.render packs and lists once a frame, and a second tick would otherwise trace the boxes of two ticks ago), and the HUD's one write
    *  to the game (an expired speech bubble nulled: a replay makes it after EVERY update) */
   betweenTicks?(): void;
+  /** SOMEBODY ELSE STEPS THE GAME ON A TICK (absent = the game's own update on this page's input, then the lights aged: the loop as it was). A networked game's
+   *  page hands this in (src/net/page.ts): the tick's input is sampled and SENT, and the game is stepped through the ticks its server has confirmed — the
+   *  lights aged with each, as on the server. Everything else of the frame is the page's own */
+  tick?(dt: number, input: LoopCtx['input'], cam: LoopCtx['cam'], view: View): void;
+  /** THE PLAYER'S OWN MAN IS DRAWN AHEAD OF THE TICK (a networked game's page: src/net/page.ts, host/ahead.ts) — how far ahead of where the game has him (`by`,
+   *  metres) and the point his newest record aims at; null = he is drawn where the game has him. The camera that follows him follows where he is drawn */
+  lead?(): { by: ArrayLike<number>; aim: Vec3 | null } | null;
   /** drawing between ticks (host/tween.ts; main.ts makes one over its engine): with TWEEN.on and the fixed step running this frame, the picture is the blend of the last two
    *  ticks. Absent = never: the fixed step draws the last tick */
   tween?: Tween;
@@ -151,8 +158,8 @@ export function stepFrame(ctx: LoopCtx, dt: number): void {
   ctx.time += dt;
   const frozen = ctx.frozen();   // paused / start card: the world holds still, the picture stays live behind the card, hotkeys are off — unless attract mode has let the world go behind the start card
   const frozenKeys = frozen && input.pressed.size ? [...input.pressed] : null;   // (the hotkeys' look below: the recorder keys are read on a frozen frame too)
-  if (frozen) { dt = 0; input.endFrame(); game.player.launchHeld = null; }   // (…and the launcher's button, if it was down as the card came up, is let go of unsent: the tick that follows the card would read 'the button came up' and send the round — player.ts)
-  if (frozen) ctx.thaw = true; else if (ctx.thaw) { ctx.thaw = false; if (BACKKEY.tab) input.pressed.add('Paused'); }   // (game/backkey.ts: the first tick after the card is told the card was up — a held list or arc is let go unsent IN the tick, where a recording has it)
+  if (frozen) { dt = 0; input.endFrame(); if (!ctx.tick) game.player.launchHeld = null; }   // (…and the launcher's button, if it was down as the card came up, is let go of unsent: the tick that follows the card would read 'the button came up' and send the round — player.ts)
+  if (frozen) ctx.thaw = true; else if (ctx.thaw) { ctx.thaw = false; if (BACKKEY.tab) input.pressed.add('Paused'); input.pressed.add('Thawed'); }   // (game/backkey.ts: the first tick after the card is told the card was up — a held list or arc is let go unsent IN the tick, where a recording has it)
   ctx.afterFreeze?.(frozen);
   const auto = AUTOCAM.on ? (ctx.auto ??= autoCam()) : null;   // (the camera running itself, host/autocam.ts: nothing below asks it while the mode is off — host/findme.ts AUTOVIEW)
   if (!frozen && input.wheelCtrl && !game.rails.locks('zoom')) { cam.zoom(input.wheelCtrl); if (auto && AUTOVIEW.on) autoZoom(auto, cam, input.wheelCtrl); }                 // the camera's key + wheel (or a pinch) zooms; the plain wheel is Sam's walking pace (player.ts)
@@ -214,7 +221,9 @@ export function stepFrame(ctx: LoopCtx, dt: number): void {
       const shot: Vec3 | null = dp ?? (ds ? ds.look : null) ?? ap, follow = game.followPos();   // a scripted look-at: the tour's / the level script's pinned shot / attract mode's
       const spect = !shot && game.spectate >= 0; if (spect) cam.autoYaw(cdt, follow, (a, b) => game.col.segmentBlocked(a, b)); cam.easeYaw(cdt, spect);   // spectating a guard: come round to the side he can be seen from,
       const want = spect && cam.desiredDistance < 12 ? LOW_PITCH : HIGH_PITCH; if (!ds || ds.handedOver) cam.pitch += (want - cam.pitch) * Math.min(1, cdt * 3);   // and drop to a low three-quarter angle up close (from the usual height the ceiling panels sit between the eye and a man six metres off) — a showcase's shots key the pitch themselves (until it hands over: then the follow camera is the player's again)
-      const aim = shot || game.spectate >= 0 ? null : game.aimPoint;
+      const ld = shot || game.spectate >= 0 ? null : ctx.lead?.() ?? null;   // (his own man drawn ahead of the tick: the look-at goes with him)
+      const led = (p: Vec3): Vec3 => ld ? [p[0] + ld.by[0], p[1] + ld.by[1], p[2] + ld.by[2]] : p;
+      const aim = shot || game.spectate >= 0 ? null : ld?.aim ?? game.aimPoint;
       // THE CAMERA RUNNING ITSELF (host/autocam.ts): with the mode on and the view Sam's own — no show, no pin, no spectated man, not the sky
       // seat's — the look-at is the frame's (his feet, shifted toward what the game knows he is about), nothing leans on the cursor, and a turn of its own may begin
       const hs = cam.hostShift;   // (a page with a panel over one side of the view — host/sneaklab.ts: the look-at moves over, whoever chose it)
@@ -228,13 +237,13 @@ export function stepFrame(ctx: LoopCtx, dt: number): void {
         else if (yaw != null && ctx.behind == null && !auto!.sway && !auto!.swayV) { ctx.behind = yaw; ctx.behindAuto = true; auto!.turnT = 0; AUTOCAM_STATS.turns++; if (!eased) carryOn(); }   // (his aim goes round with the view, as the double tap's does — in a quick turn; an eased one is slow enough for the hand to follow, as the sway is. Never begun across a lean of the sway's: that comes home first)
         // …and the sway (AUTOCAM.sway): a slow lean of the yaw round the hand's own, toward the fight and the way he moves — not while a turn of another kind is under way
         if (ctx.behind != null) swayDrop(auto!); else { const t = autoSway(auto!, S, cam, cdt, (a, b) => game.col.segmentBlocked(a, b)); if (t) { cam.rotate(t); AUTOCAM_STATS.swayed += Math.abs(t); } }
-        const at: Vec3 = hs ? [look[0] + hs[0], look[1], look[2] + hs[2]] : look;
+        const at: Vec3 = led(hs ? [look[0] + hs[0], look[1], look[2] + hs[2]] : look);
         if (tick) cam.step(cdt, at, null); else cam.update(cdt, at, null);
         return shot;
       }
       if (auto && !frozen && auto.turnV) { auto.turnV = 0; ctx.behind = null; }   // (an eased turn under way as the view goes to somebody else — the sky seat, a show: it ends there)
       if (auto && !frozen) { autoRest(auto, cam); if (auto.swayV) { const t = AUTOVIEW.on ? swayCoast(auto, cdt) : 0; if (t) cam.rotate(t); } }   // (a card up is not somebody else's view: the frame is where it was when the card lifts; a lean under way as the view goes to somebody else dies away, and is where it was when the view is his again)
-      const at: Vec3 = shot ?? (hs ? [follow[0] + hs[0], follow[1], follow[2] + hs[2]] : follow);
+      const at: Vec3 = shot ?? led(hs ? [follow[0] + hs[0], follow[1], follow[2] + hs[2]] : follow);
       if (tick) cam.step(cdt, at, aim); else cam.update(cdt, at, aim);
       return shot;
     };
@@ -246,7 +255,7 @@ export function stepFrame(ctx: LoopCtx, dt: number): void {
       attractPos = demoPos || showingBefore || frozen || !attract ? null : attract.update(dt);   // attract mode's look-at when no scripted programme has the frame (it keys yaw / distance itself, as the tour does)
       if (!frozen) ctx.beforeTick?.(dt);   // (outside the update's own timing: a hands-off player's thinking is not the game's)
       if (!frozen) carryAim();
-      { const tU = performance.now(); if (!frozen) game.update(dt, input, cam, view); ctx.updateMs = performance.now() - tU; }
+      { const tU = performance.now(); if (!frozen) { if (ctx.tick) ctx.tick(dt, input, cam, view); else game.update(dt, input, cam, view); } ctx.updateMs = performance.now() - tU; }
     } else {   // THE FIXED STEP: whole ticks of 1 / hz, each the old order's demo → attract → game with the same dt, the lights aged with the game (its men read them)
       const fx = ctx.fixed ??= { acc: 0, drift: 0, demoPos: null, attractPos: null, owed: null, orbit: 0 };
       fx.orbit += orbit;
@@ -265,8 +274,8 @@ export function stepFrame(ctx: LoopCtx, dt: number): void {
         fx.attractPos = fx.demoPos || D.showing || !attract ? null : attract.update(tdt);
         if (ctx.beforeTick) { const b0 = performance.now(); ctx.beforeTick(tdt); bt += performance.now() - b0; }
         carryAim();
-        game.update(tdt, input, cam, view);
-        ctx.host.lights.update(tdt, ctx.time);
+        if (ctx.tick) ctx.tick(tdt, input, cam, view);
+        else { game.update(tdt, input, cam, view); ctx.host.lights.update(tdt, ctx.time); }
         camStep(tdt, demo?.active ? fx.demoPos : null, attract?.active && !(demo?.active && fx.demoPos) && !D.showing ? fx.attractPos : null, true);   // (after the tick, as a frame's follow comes after its update: the next tick's record reads it)
         if (ctx.host.viewFocus) ctx.host.viewFocus = cam.focus;   // (what the wind is gathered round, read by the next tick: the engine sets it once a render — a second tick of one frame would read a focus a 60 Hz display never gave it)
         tw?.capture(cam);
@@ -290,7 +299,7 @@ export function stepFrame(ctx: LoopCtx, dt: number): void {
       const sh = showCaption(ctx); ctx.hud.setCaption(sh ? sh.caption : '', sh ? sh.sub : '');
       ctx.hud.setTimeline(demo?.active ? demo.chapters() : dshow ? D.chapters() : null, k => { if (demo?.active) demo.goto(k); });   // (the tour's stops are clickable; a level-script showcase's chapters are shown, not sought)
     }
-    if (!fixed) ctx.host.lights.update(dt, ctx.time);
+    if (!fixed && !ctx.tick) ctx.host.lights.update(dt, ctx.time);
     { const pose = tw ? tw.camAt(blend, cam) : null; if (pose) cam.drawIn(pose); }   // (between two ticks the camera is drawn between where they left it, as the men are: out again with the kick)
     cam.kickIn();   // a blast's camera kick (game/blastFeel.ts → FollowCamera.kick): in for the render and the HUD laid over it, out again before anything else reads the camera — a return with none
     try {

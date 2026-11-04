@@ -24,6 +24,8 @@ bun run tools/qa/probes.ts <name|family|all-quick|list>   # exit 0 pass · 1 a p
 sh tools/qa/gate.sh <family …>                            # the families a change touched; red on any FAIL or silent probe
 bun run tools/qa/knobs-check.ts                           # after adding a knob table
 bun run tools/qa/rollback-check.ts --static               # after adding module state (a side table, a module `let`, a written container)
+bun run tools/sim/build.ts                                # after any change under rust/ → src/sim/built.ts, src/dress/built.ts; tools/qa/rust-check.ts is red on a stale one
+bun run tools/qa/dress-check.ts                           # after touching a picture-only step of the tick (src/game/dress.ts; docs/agents/rust.md)
 bun run tools/qa/tour.ts --runs 3 --quiet                 # + soak.ts --seeds 1,2,3 --minutes 12 --quiet after gameplay changes
 ```
 Detail, exit codes, the page's `window` hooks and URL flags: `docs/agents/qa.md`.
@@ -50,7 +52,7 @@ Detail, exit codes, the page's `window` hooks and URL flags: `docs/agents/qa.md`
 - **One model for presentation and AI.** What the AI senses is what the picture shows (light, smoke, sound paths). A GPU value reaches
   game code only through a named `Game.sensors` query with a headless stand-in.
 - **Player-facing rules.** Show, not tell. No digit above 5 on a menu. No compass words on the HUD or in a door's name. Never harder
-  by hit points. Teammates walk slower than the player and run only for a reason (`teampace.ts`). Level and effects numbers tuned in the viewer are authored data.
+  by hit points. Teammates walk at the player's pace, slow down to let him catch up, and run only for a reason (`teampace.ts`). Level and effects numbers tuned in the viewer are authored data.
 - **Git.** Work on your own branch; never push to `main` (it moves only by a PR the maintainer merges); no force-push; never
   `git stash`; never `cd` into `.worktrees/*` (`git -C`). Unsigned commits are fine (`git -c commit.gpgsign=false commit`). Human-style
   messages only: no attribution lines, no tool trailers, no model names anywhere in the repo. This repo is PUBLIC: nothing from
@@ -126,6 +128,10 @@ happened when; the live queue is outside the repo.
   `docs/internal/claude-md-renderer-systems.md`).
 - `replays.md` — the F10 session journal and the `Sensors` seam, the game's own die, the fixed step, the input record, F7 replays, the
   engine replay player, kept runs and the dump.
+- `net.md` — networked play: the wire (inputs, never state), the server's input rule, the server and client cores, the game server
+  process and its environment, the page as a client (`?net=`), the lobby (host or join a co-op game, `?join=`), their checks.
+- `rust.md` — the simulation in Rust: the crate and its build, `src/sim/built.ts`, the one way in, the `RUST` rows, what Rust code owes
+  the game, what holds a moved system to the TypeScript it replaces, gameplay against dressing (`src/game/dress.ts`, the two modules).
 - `sounds.md` — the game's sound table, sound lanes on the engine replay, takes, tuning, the score and its pieces.
 - `writing.md` — how player text is written: the rules above at length, by kind of text (prompt, card, list row, menu, radio line),
   with before and after pairs from the game.
