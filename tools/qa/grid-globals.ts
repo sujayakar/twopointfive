@@ -31,7 +31,7 @@ const { MAT_STRIDE } = await import(`${ROOT}/src/scene/boxes.ts`);
 const geoF: Float32Array = world.geoF32, geoU: Uint32Array = world.geoU32, mat: Float32Array = world.matData, infoF: Float32Array = world.infoF32, infoU: Uint32Array = world.infoData;
 const globals: number[] = world.globals;
 const f = Math.fround;
-const SHRINK = f(Number(arg('--shrink', String(infoF[BoxWorld.INFO_GRID + 1] || 0.035))));   // SceneInfo.grid.y as uploaded (WORLD.gridYPad − BoxWorld.ITEM_PAD_KEEP), else the intended 3.5 cm
+const SHRINK = f(Number(arg('--shrink', String(infoF[89] || 0.035))));   // SceneInfo.grid.y as uploaded (WORLD.gridYPad − BoxWorld.ITEM_PAD_KEEP), else the intended 3.5 cm
 type V3 = [number, number, number];
 
 // ================================================================ static picture ================================================================
@@ -78,10 +78,10 @@ const skips = (own: number, skip: number) => own !== 0 && (own === (skip & 0xff)
 const gridYq = (y: number) => Math.floor(Math.min(Math.max(f(f(y - YQ0) * YQS), 0), YQMAX));
 const sliceMask = (qlo: number, qhi: number) => { const slo = Math.floor(qlo / 10), shi = Math.floor(qhi / 10); return ((0xffffff >>> (23 - (shi - slo))) << slo) >>> 0; };
 
-// Per-global bounds for the reject: what boxes.ts uploads in SceneInfo.globalsB (2 vec4f per global from word BoxWorld.INFO_GLOBALS_B: min.xyz, max.xyz) when this tree has it,
+// Per-global bounds for the reject: what boxes.ts uploads in SceneInfo.globalsB (2 vec4f per global from word 92: min.xyz, max.xyz) when this tree has it,
 // else built here the same way (world AABB of the box widened by GLOBAL_PAD + the grid's registration slack).
-const gB = new Float32Array(16 * 8); const GPAD = arg('--gpad', ''); const GB0: number = BoxWorld.INFO_GLOBALS_B;
-if (!GPAD && infoU.length >= GB0 + 16 * 8 && globals.length && infoF[GB0 + 4] > infoF[GB0]) { gB.set(infoF.subarray(GB0, GB0 + 16 * 8)); console.log('(global bounds: SceneInfo.globalsB as uploaded)'); }
+const gB = new Float32Array(16 * 8); const GPAD = arg('--gpad', '');
+if (!GPAD && infoU.length >= 92 + 16 * 8 && globals.length && infoF[92 + 4] > infoF[92]) { gB.set(infoF.subarray(92, 92 + 16 * 8)); console.log('(global bounds: SceneInfo.globalsB as uploaded)'); }
 else {
   const p = Number(GPAD || 5e-3) + world.gridStats.slack;
   for (let g = 0; g < globals.length; g++) { const b = world.all[globals[g]]; const [ex, ez] = BoxWorld.footprint(b); const ey = BoxWorld.heightExtent(b); gB.set([b.c[0] - ex - p, b.c[1] - ey - p, b.c[2] - ez - p, 0, b.c[0] + ex + p, b.c[1] + ey + p, b.c[2] + ez + p, 0].map(f), g * 8); }
@@ -93,7 +93,7 @@ else {
 interface Mode { name: string; g: 'all' | 'y' | 'box'; shrink: number; ycull: boolean }
 const MODES: Mode[] = [{ name: 'today', g: 'y', shrink: 0, ycull: true }, { name: 'globals', g: 'box', shrink: 0, ycull: true }, { name: 'shrink', g: 'y', shrink: SHRINK, ycull: true }, { name: 'slabs', g: 'box', shrink: SHRINK, ycull: true }, { name: 'nocull', g: 'all', shrink: 0, ycull: false }];
 let M: Mode = MODES[0];
-const globalMissesY = (g: number, ylo: number, yhi: number) => infoF[BoxWorld.INFO_GLOBALS_Y + 1 + 2 * g] < ylo || infoF[BoxWorld.INFO_GLOBALS_Y + 2 * g] > yhi;
+const globalMissesY = (g: number, ylo: number, yhi: number) => infoF[57 + 2 * g] < ylo || infoF[56 + 2 * g] > yhi;
 const globalOutside = (g: number, lo: V3, hi: V3) => { const o = g * 8; return gB[o + 4] < lo[0] || gB[o + 5] < lo[1] || gB[o + 6] < lo[2] || gB[o] > hi[0] || gB[o + 1] > hi[1] || gB[o + 2] > hi[2]; };
 /** the globals loop shared by all three functions: which globals get slab-tested for a ray over [0, tmax] under the current mode */
 function liveGlobals(ro: V3, rd: V3, tmax: number): number[] {
@@ -132,7 +132,7 @@ function ddaSetup(ro: V3, rd: V3, invRd: number[], tbx: number) {
   const tNext = [Math.abs(rd[0]) < 1e-20 ? 1e30 : f(t0 + f(f(nb[0] - p[0]) * invRd[0])), Math.abs(rd[2]) < 1e-20 ? 1e30 : f(t0 + f(f(nb[1] - p[2]) * invRd[2]))];
   return { t0, cell, stp, tDelta, tNext };
 }
-const SLACK = infoF[BoxWorld.INFO_GRID] / WORLD.gridCell;
+const SLACK = infoF[88] / WORLD.gridCell;
 function traceClosest(ro: V3, rd: V3, tmaxIn: number, skipOwner: number): string {
   const invRd = [safeInv(rd[0]), safeInv(rd[1]), safeInv(rd[2])];
   const [tbx, tby] = bounds(ro, invRd); if (tbx > tby || tby < 0) return `${tmaxIn},-1,0`;

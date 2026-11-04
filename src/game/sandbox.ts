@@ -1,6 +1,6 @@
 // The start card's SANDBOX row (the maintainer's ask, 08-12): god mode · no AI · unlimited ammo — three Game flags kept PER MACHINE.
 // One store (`SANDBOX_LS`), written one key at a time by whichever UI flipped it (start card, pause card ▸ Settings ▸ Game, Tab ▸ Sandbox), read at
-// boot (main.ts; not on a benchmark's scene address, whose fight is the set's) and re-applied after a checkpoint load (savestate.ts: the file's flags round-trip, then this machine's preference wins — a load from an
+// boot (main.ts) and re-applied after a checkpoint load (savestate.ts: the file's flags round-trip, then this machine's preference wins — a load from an
 // earlier run must not silently switch the guards back on under a 'no AI' session). Headless (no localStorage) every function here is a no-op.
 type SandboxFlags = { godMode: boolean; aiEnabled: boolean; infiniteAmmo: boolean };
 export const SANDBOX_LS = 'twopointsix.sandbox';

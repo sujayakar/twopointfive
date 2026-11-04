@@ -86,7 +86,7 @@ fn directAtPoint(P: vec3f, N: vec3f, ex: u32) -> vec3f {
     let ev = evalLight(li, P, N);
     if (!ev.ok) { continue; }
     let w = luminance(ev.E);
-    if (w < 1e-4 * lampFloorK()) { continue; }
+    if (w < 1e-4) { continue; }
     U += ev.E; W += w;
     if (rnd() * W < w) { pick = i32(i); pw = w; pL = ev.L; pDist = ev.dist.x; pRad = li.radius; }
   }

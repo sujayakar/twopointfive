@@ -5,8 +5,7 @@
 //   HOW A RUN GOES: the row (or ?bench on any address) → begin(): the record is written and the first scene's address loads. Each scene's page finds the record
 //   at boot (legOfPage), plays its part and hands on (the record grows, the next address loads); the last page shows the card, and closing it loads the address
 //   the run was started from.
-//   THE SCENES ARE THE SET'S, NOT THE VISITOR'S: of the flags on the address the run was asked on, only the ones that change no fight ride along (CARRIED), and the
-//   look prototype's own where the run is asked for on its page (it says so in its notes); a
+//   THE SCENES ARE THE SET'S, NOT THE VISITOR'S: of the flags on the address the run was asked on, only the ones that change no fight ride along (CARRIED); a
 //   scene's address says its own level, deal, die and difficulty, keeps no verdict of the try and files no replay of it (the fight was not the visitor's).
 //   BACK DOES NOT START ANOTHER: a run asked for on the address REPLACES that address with the first scene's, and each scene's with the next.
 //   A RELOAD IN THE MIDDLE DOES NOT START IT AGAIN: a page marks the record as begun on its scene before it plays, and a page that finds its own mark drops the
@@ -14,7 +13,6 @@
 import { BENCH_SCENES, BENCH_SET, type BenchSceneDef } from '../host/benchScenes';
 import { SCENARIOS, quitSearch } from '../scene/scenarioList';
 import { scenarioQuery } from '../scene/scenarios';
-import { lookPageOn, lookPageWord, lookTrialsKept } from '../scene/look';
 import type { BenchLeg, BenchStep, BenchSceneRun, BenchBoot, BenchOpts } from './bench';
 import { SHADER_ROW_WORDS } from './shaderrows';
 
@@ -25,7 +23,7 @@ interface Carry {
   v: 1; set: string;
   /** the address the run was started from (the card's Close goes back to it), and whether that page had already booted the game (the first scene's load is then a second load) */
   from: string; warm: boolean;
-  /** the visitor's own flags that ride along on every scene's address (CARRIED, and the look prototype's words) */
+  /** the visitor's own flags that ride along on every scene's address (CARRIED) */
   keep: string[];
   /** the scene to play next · the scene a page has begun (−1: none) */
   i: number; live: number;
@@ -55,24 +53,12 @@ const plain = (search: string): string => { const keep = search.replace(/^\?/, '
  *  until 2026-10-27 it was dropped at the first scene, so the numbers were the plain build's. (One of them is not wholly outside the fight: while the wall-cut
  *  row's set is building, broken pieces are traced whole and the light the guards are seen by can differ, render/cutSwap.ts; a page's fight was never
  *  promised to be the set's to the frame, and the report's `floors` line says which fight it saw.) A word that is NOT kept is named in the report (`left`) */
-const CARRIED = new RegExp(`^(mute|nomusic|quality|pipequeue|shadertrim|shaderfold|framecap|gentle|plainair|savepic|pace|giveway|flight|downloads|cloud|cloudfiles|cloudstats|cloudtapes|cloudprefs|${SHADER_ROW_WORDS.join('|')})(=|$)`);
-/** …AND THE LOOK PROTOTYPE'S WORDS, where the run is asked for on its page (scene/look.ts: its rows, its boot words). That page reads them once, at boot, into
- *  its shader text and its level, so a run is with the look or without it from its first scene to its last: a run that dropped them timed the plain build on
- *  every scene and said nothing. A trial this machine's look panel keeps off goes on the address as its own word, so the run times the look the page it was
- *  asked on shows and the report's address says which. These words DO change the fight (the look's geometry is part of the level it plays): the first scene's
- *  page says so in the report's notes (main.ts), and what that page gives a visitor (its kit, its fog put down, its panel) stands down on a scene's address.
- *  A word is judged decoded, as the page reads it, and carried as it was written */
-const lookWord = (p: string): boolean => { const kv = [...new URLSearchParams(p)][0]; return !!kv && lookPageWord(kv[0], kv[1]); };
-/** the visitor's flags of an address that ride along a run's pages, as they were written: the benchmark's scenes carry them, and so does a run of any other
- *  kind (ui/pricerun.ts) — ONE list, so a flag that changes how the page is built or where its file goes is the same on both */
-export const carriedWords = (search: string): string[] => search.replace(/^\?/, '').split('&').filter(p => CARRIED.test(p));
-const flags = (search: string): string[] => { const q = new URLSearchParams(search), look = lookPageOn(q);
-  const keep = search.replace(/^\?/, '').split('&').filter(p => CARRIED.test(p) || (look && lookWord(p)));
-  return look ? [...keep, ...lookTrialsKept(q)] : keep; };
+const CARRIED = new RegExp(`^(mute|nomusic|quality|adapt|pipequeue|shadertrim|shaderfold|gentle|plainair|savepic|pace|giveway|flight|downloads|cloud|cloudfiles|cloudstats|cloudtapes|cloudprefs|${SHADER_ROW_WORDS.join('|')})(=|$)`);
+const flags = (search: string): string[] => search.replace(/^\?/, '').split('&').filter(p => CARRIED.test(p));
 /** the report's line for the words of the asked address that no scene was played with (none: no line): the visitor's own flags, so not a mission's words
  *  (quitSearch takes those and the benchmark's off) nor the ones every scene's address says for itself. The names only, once each, as many as a line holds */
 const left = (search: string): string[] => {
-  const own = new URLSearchParams(benchSceneSearch(BENCH_SCENES[0], 0)), kept = new Set(flags(search).map(p => [...new URLSearchParams(p)][0]?.[0])), w = [...new Set([...new URLSearchParams(quitSearch(search)).keys()])].filter(k => k && !own.has(k) && !CARRIED.test(k) && !kept.has(k));   // (kept: the look page's own words, which ride along from that page alone)
+  const own = new URLSearchParams(benchSceneSearch(BENCH_SCENES[0], 0)), w = [...new Set([...new URLSearchParams(quitSearch(search)).keys()])].filter(k => k && !own.has(k) && !CARRIED.test(k));
   let n = w.length; const line = () => `the scenes were played without ${w.slice(0, n).join(', ')}${n < w.length ? ` and ${w.length - n} more` : ''} from the address the run was asked on`;
   while (n > 1 && line().length > 150) n--;
   return w.length ? [line()] : []; };

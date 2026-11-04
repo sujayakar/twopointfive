@@ -33,11 +33,11 @@ export async function wallPressCheck(): Promise<boolean> {
   console.log(`\n=== wallpress: a move key held into a wall takes it, no Q${BRK ? ' (the rule off: must fail)' : ''} ===`);
   const { WALLSNAP } = await import(`${ROOT}/src/game/wallsnap.ts`);
   const { knobsSnapshot, applyKnobs } = await import(`${ROOT}/src/game/journal.ts`); const { FROZEN_HOLDS } = await import(`${ROOT}/src/host/profile.ts`);
-  const was = { on: WALLSNAP.on, press: WALLSNAP.press }, log = console.log, err = console.error, warn = console.warn;
+  const was = { on: WALLSNAP.on, press: WALLSNAP.press, run: WALLSNAP.pressRun }, log = console.log, err = console.error, warn = console.warn;
   const quiet = async <T>(f: () => T | Promise<T>): Promise<T> => { console.log = console.error = console.warn = () => { }; try { return await f(); } finally { console.log = log; console.error = err; console.warn = warn; } };
   const f2 = (x: number) => x.toFixed(2), f3 = (x: number) => x.toFixed(3);
   try {
-    const S = await quiet(() => world(true)); const { pl, c, g, W } = S as any; const set = (rule: boolean) => { WALLSNAP.on = true; WALLSNAP.press = rule && !BRK; }; set(true);
+    const S = await quiet(() => world(true)); const { pl, c, g, W } = S as any; const set = (rule: boolean) => { WALLSNAP.on = true; WALLSNAP.press = rule && !BRK; WALLSNAP.pressRun = false; /* (these lines are the walk's: 'a run at it is never a hold' is asked as it was before a sprint could take a wall — that rule's own lines are wallrun-check.ts. Here, after the stand has had its say) */ }; set(true);
     const gap = () => c.pos[2] - WZ - R;   // what is left between his body and the north wall
     /** hold `ks` from (x 21, z, yaw) for `frames`: the frame a hold began, the gap then, the frame his back was on it, the longest stride of the take, what was said */
     const run = (z: number, yaw: number, ks: string[], kit: 'empty' | 'pistol' | 'rifle' = 'empty', frames = 120, each?: (f: number) => void) => {
@@ -136,7 +136,7 @@ export async function wallPressCheck(): Promise<boolean> {
       verdict(on && inFile && back && worst < 1e-9 && gunA && gunB && offQ && !retaken && (BRK || cutRetaken) && refused && offLoad && plain.wallHold === undefined,
         'a checkpoint made on a wall loads on the wall and plays on as the save did, the pistol back in his hand off it; the take\'s latch rides the file; a hold he could not be in is none; with the saves\' switch off a file says nothing',
         `Q, pistol out: on the wall at the save ${on} · the hold in the file ${inFile} · on it after the load ${back} · 2.5 s of sliding and stepping off: the worst difference ${worst < 1e-9 ? 'none' : worst.toExponential(1)} · the pistol in hand after, carried on ${gunA}, loaded ${gunB} · Q off with the key held, saved: off ${offQ}, pulled back on in the next second, carried on or loaded ${retaken}; the file with the slice cut out pulls him back ${cutRetaken} · the plane moved 3 m in the file: no hold ${refused} · SAVETIMELINE.holds off: the load leaves him free ${offLoad}, the file's key ${plain.wallHold === undefined ? 'absent' : 'THERE'}`); }
-  } finally { WALLSNAP.on = was.on; WALLSNAP.press = was.press; console.log = log; console.error = err; console.warn = warn; }
+  } finally { WALLSNAP.on = was.on; WALLSNAP.press = was.press; WALLSNAP.pressRun = was.run; console.log = log; console.error = err; console.warn = warn; }
   console.log(`=== wallpress: ${all ? 'ALL PASS' : 'FAILURES above'} ===`);
   return all;
 }

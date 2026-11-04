@@ -90,7 +90,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
     [x, z] = bayGwot(4.2); G.kerbStones(x - 1.7, z, x + 1.7, z);
     [x, z] = bayGwot(4.4); G.kerb(x - 1.9, z, x + 1.9, z, 'block', [1]);                        // a run of precast stones, one left out
     [x, z] = bayGwot(5.4); G.plantBed(x, z);
-    [x, z] = bayGwot(2.6); G.hearth(x, z, 0.3);
+    [x, z] = bayGwot(2.6); G.hearth(x, z, 0.3, 'dust');
     [x, z] = bayGwot(2.8); G.table(x, z, 1.6, 0.75); G.seedTray(x, z);                          // a seed tray stands on a bench
   }
   // the hall's own light: the moon, and four floodlights that all throw the same way (one key: no lamp fills another's shadows), so the pieces stand lit at night too

@@ -24,7 +24,7 @@ function family(title: string): { verdict: Verdict; done: () => boolean } {
 /** the light set as a comparable list (order matters: the GPU slots follow it) — everything but the momentary intensity, which fixtures on the blink and restriking
  *  tubes legitimately change from one frame to the next (the switches behind it are compared separately) */
 function lightList(engine: any): string {
-  return engine.lights.lights.map((l: any) => `${l.name}:${l.kind}:${l.enabled ? 1 : 0}:${l.peakIntensity.toFixed(3)}:${l.color.map((c: number) => c.toFixed(3)).join(',')}:${/^beacon|^flashlight|pistol_light|_cone$/.test(l.name) ? '-' : l.dir.map((c: number) => c.toFixed(3)).join(',')}:${l.radius.toFixed(3)}`).join('|');   // (the beacons turn, the torches swing and the cameras' haze cones pan whatever the hour: their direction is nobody's switch)
+  return engine.lights.lights.map((l: any) => `${l.name}:${l.kind}:${/^flashlight|pistol_light/.test(l.name) ? '-' : l.enabled ? 1 : 0}:${l.peakIntensity.toFixed(3)}:${l.color.map((c: number) => c.toFixed(3)).join(',')}:${/^beacon|^flashlight|pistol_light|_cone$/.test(l.name) ? '-' : l.dir.map((c: number) => c.toFixed(3)).join(',')}:${l.radius.toFixed(3)}`).join('|');   // (the beacons turn, the torches swing and the cameras' haze cones pan whatever the hour: their direction is nobody's switch — and whether a carried torch burns is its man's: a calm patrol puts his out in a lit place, calmtorch.ts, so a torch is not what day and night hand back)
 }
 /** main.ts uploads the light set inside engine.render, which the harness has none of: do it by hand after a step so activeCount / activeIdx mean this frame */
 function upload(W: any) { W.engine.lights.upload(W.game.time); }

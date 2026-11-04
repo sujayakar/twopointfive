@@ -194,7 +194,7 @@ fn glassDust(Pg: vec3f, n: vec3f) -> vec3f {
       if (!ev.ok) { continue; }
       let E = ev.E * abs(dot(n, ev.L));
       let w = luminance(E);
-      if (w < 1e-4 * lampFloorK()) { continue; }
+      if (w < 1e-4) { continue; }
       if (w > w0) { rest += e1; e1 = e0; w1 = w0; i1 = i0; L1 = L0; d1 = d0; e0 = E; w0 = w; i0 = i32(i); L0 = ev.L; d0 = ev.dist.x; }
       else if (w > w1) { rest += e1; e1 = E; w1 = w; i1 = i32(i); L1 = ev.L; d1 = ev.dist.x; }
       else { rest += E; }
@@ -266,7 +266,7 @@ fn traceShade(ro: vec3f, dir: vec3f, trOwner: u32, gatherRay: bool, N: vec3f, ow
     if (hit.idx == CAPSULE_HIT) { albedo = hit.capAlbedo; r.cap = true; }
     else {
       let bi = u32(hit.idx); r.bi = bi;
-      if (gatherRay) { if ((boxGeo[bi].flags & (BOX_EMISSIVE | BOX_AREALIT)) == BOX_EMISSIVE) { L += boxEmissiveRay(bi); } }
+      if (gatherRay) { if ((boxGeo[bi].flags & (BOX_EMISSIVE | BOX_AREALIT)) == BOX_EMISSIVE) { L += boxEmissive(bi); } }
       else if ((boxGeo[bi].flags & BOX_EMISSIVE) != 0u) { L += boxEmissive(bi); }
       albedo = boxAlbedoSec(bi); r.alb = albedo;
       if (gatherRay) { for (var k = 0u; k < nC; k++) { if (onCard(Ph, hit.n, wgCards[k * 4u], wgCards[k * 4u + 1u])) { ex |= 1u << k; } } }
@@ -278,7 +278,7 @@ fn traceShade(ro: vec3f, dir: vec3f, trOwner: u32, gatherRay: bool, N: vec3f, ow
         var Eb: vec3f;
         if (BOUNCE_WALLS && (bounceHitMan(hit) || bounceLeftNoWall(N, owner, hit.t))) { Eb = diceIrradianceWalled(Ph, hit.n, bounceHitOwner(hit) | (owner << 8u)); } else { Eb = diceIrradianceFrom(Ph, hit.n, Po, N); }
         Eh += Eb; if (!r.cap) { r.Lb = albedo * Eb * (1.0 / 3.14159265); }
-      } else { Eh += diceIrradianceFace(Ph, hit.n); }
+      } else { Eh += diceIrradiance(Ph + hit.n * c0Spacing(), hit.n); }
     }
     L += albedo * Eh * (1.0 / 3.14159265);
   }
@@ -384,7 +384,7 @@ fn main(@builtin(global_invocation_id) gid: vec3u, @builtin(local_invocation_ind
   // legitimately dark corners keep their small bounces; the absolute 24 below stays as the last resort. K = lossyCfg.w (settings.giFireflyK, 0 = off).
   let Kff = frame.lossyCfg.w;
   var Lcap = 1e9;
-  if (Kff > 0.0) { let Eref = diceIrradianceFace(P, N); Lcap = max(Kff * luminance(Eref) * (1.0 / 3.14159265), 0.35 * lampFloorK()); }   // (the floor is a night's number: by day on the look page it is held at the day's lamp share, common.wgsl lampFloorK, or the few rays that come back with daylight in a shut room, from the strip of it at its door, are each let in whole and the filter spreads them over the room)
+  if (Kff > 0.0) { let Eref = diceIrradiance(P + N * c0Spacing(), N); Lcap = max(Kff * luminance(Eref) * (1.0 / 3.14159265), 0.35); }
   // ONE LOOP, ONE RAY A TURN (the compile, 2026-10-26: Chrome on Windows compiles through DXC, which inlines every call — this kernel traced and shaded a ray in four
   // places (the gather's loop, the young tile's extras, the gloss floor's mirror, the pane's mirror), so the tracer and directAtPoint were inlined four times and the
   // compile took ~8 s). Every ray this texel traces is now a turn of the loop below and is traced and shaded by the ONE call of traceShade: turns [0, RAYS) are the
@@ -483,12 +483,11 @@ fn giUnpackAlb(v: u32) -> vec3f { return vec3f(f32((v >> 11u) & 31u) / 31.0, f32
 /** the cache's bounce leaving a stored sample point now: alb × dice(x_s) / π (0 for a sky / capsule sample, whose alb is 0) */
 fn giBounceAt(xs: vec3f, ns: vec3f, alb: vec3f) -> vec3f {
   if ((frame.flags & FLAG_BOUNCE) == 0u || all(alb <= vec3f(0.0))) { return vec3f(0.0); }
-  return alb * diceIrradianceFace(xs, ns) * (1.0 / 3.14159265);
+  return alb * diceIrradiance(xs + ns * c0Spacing(), ns) * (1.0 / 3.14159265);
 }
 /** is world point p on / inside box bi (5 cm proud)? — a stored sample's box index still names the box it was found on (dynamic boxes are re-listed every frame) */
 fn giPointOnBox(bi: u32, p: vec3f) -> bool {
   if (bi >= scene.numBoxes) { return false; }
-  if (GROUND_RAYS && bi == u32(boxMat[GH_BASE].z) && p.y > 0.0 && p.y <= boxMat[GH_BASE].x) { return true; }   // (ground that rays can see, a trial: a hit on a snow hill is the ground slab's, and stands over it)
   let b = boxGeo[bi]; let d = p - b.c;
   var lo: vec3f;
   if ((b.flags & BOX_ROT) != 0u) { let q = boxRot(bi); lo = quatRotate(vec4f(-q.xyz, q.w), d); }
@@ -501,7 +500,7 @@ fn giPointOnBox(bi: u32, p: vec3f) -> bool {
  *  level — a torch's wall, a lit floor — are on screen from up here; the ceiling is not, and gets the loop on the frames `full` says. Uncapped: the caller applies the bound. */
 fn giReshadeDirect(xs: vec3f, ns: vec3f, bi: u32, full: bool) -> vec4f {
   var L = vec3f(0.0);
-  if ((boxGeo[bi].flags & (BOX_EMISSIVE | BOX_AREALIT)) == BOX_EMISSIVE) { L += boxEmissiveRay(bi); }
+  if ((boxGeo[bi].flags & (BOX_EMISSIVE | BOX_AREALIT)) == BOX_EMISSIVE) { L += boxEmissive(bi); }
   let albedo = boxAlbedoSec(bi);
   var ex = 0u;
   for (var k = 0u; k < nC; k++) { if (onCard(xs, ns, wgCards[k * 4u], wgCards[k * 4u + 1u])) { ex |= 1u << k; } }
@@ -582,7 +581,7 @@ fn mainGi(@builtin(global_invocation_id) gid: vec3u, @builtin(local_invocation_i
   let zNow = (frame.viewProj * vec4f(P, 1.0)).w;                            // the receiver key next frame validates against
   let Kff = frame.lossyCfg.w;
   var Lcap = 1e9;
-  if (live && Kff > 0.0) { let Eref = diceIrradianceFace(P, N); Lcap = max(Kff * luminance(Eref) * (1.0 / 3.14159265), 0.35 * lampFloorK()); }   // (the floor is a night's number: by day on the look page it is held at the day's lamp share, common.wgsl lampFloorK, or the few rays that come back with daylight in a shut room, from the strip of it at its door, are each let in whole and the filter spreads them over the room)
+  if (live && Kff > 0.0) { let Eref = diceIrradiance(P + N * c0Spacing(), N); Lcap = max(Kff * luminance(Eref) * (1.0 / 3.14159265), 0.35); }
   // the numbers (frame.p5Cfg): mode 1 temporal / 2 + spatial, revalidate bit; fresh rays K, confidence cap, spatial taps k, radius (gather texels)
   let mode = frame.p5Cfg.x & 15u; let revalidate = (frame.p5Cfg.x & 16u) != 0u;
   let K = clamp(frame.p5Cfg.y & 15u, 1u, 4u); let mCap = f32(max((frame.p5Cfg.y >> 8u) & 255u, 2u)); let kSp = (frame.p5Cfg.y >> 16u) & 15u; let radius = f32((frame.p5Cfg.y >> 24u) & 255u);

@@ -20,7 +20,7 @@ import { MeshShadows } from '../render/meshShadows';
 import { fitRig } from '../render/sdfrig';
 import { Character, SignalKind, Stance, UpperMode, THROW_RELEASE, THROW_BY, HOLD, LONG_STANCES, LongStance, defaultAnimParams } from '../game/character';
 import { SmokeSystem } from '../smoke/smoke';
-import { Quality, QUALITY_NAMES, QualityName, smokeKeepOf } from '../ui/quality';
+import { Quality, smokeKeepOf } from '../ui/quality';
 import { Box, BoxFlag, makeBox } from '../scene/boxes';
 import { INHAND, IN_PISTOL } from '../game/inhand';
 import { RIG, longHold, torchHold, rigBoxes, holsterBoxes, rigLightPose, rigTorchPos, torchCarryDir, railLightDef, torchLightDef, RigNodeMeta, carbineGrip, carbineMuzzleAhead, carbineLightPose, sc20kGrip, sc20kMuzzleAhead, sc20kLightPose } from '../game/rigProps';
@@ -130,7 +130,7 @@ export class Runtime {
     { const os = new URLSearchParams(location.search).get('onesolve'); if (os !== null) engine.settings.oneSmokeSolve = !(os === '0' || os === 'off' || os === 'false'); }   // ?onesolve=0, as on the game page (main.ts)
     { const fs = new URLSearchParams(location.search).get('fireshed'); if (fs !== null) engine.settings.fireSmokeShed = !(fs === '0' || fs === 'off' || fs === 'false'); }   // ?fireshed=0, as on the game page (main.ts)
     this.quality = new Quality(engine, this.smoke);
-    { const qp = new URLSearchParams(location.search).get('quality'); if (qp && (QUALITY_NAMES as string[]).includes(qp)) { this.quality.auto = false; this.quality.apply(qp as QualityName); } }
+    this.quality.visit(location.search);   // the address's ladder words, as on the game page (ui/quality.ts visit: ?quality=<tier> holds a tier, ?adapt=0 opens with nothing adapting)
     { const q = new URLSearchParams(location.search); if ((meshAuthored(ch.mesh) || q.has('charmats')) && !q.has('nocharmats')) engine.settings.charMats = true; }   // character materials: as on the game page (main.ts) — on for a mesh with slot-named materials, ?charmats dresses the mannequin, ?nocharmats holds the two tints
     if (new URLSearchParams(location.search).has('meshShadows')) engine.settings.meshShadows = true;   // (AFTER the Quality construction and the ?quality pin: every preset writes settings.meshShadows — ultra on, the rest off — so set earlier it was dead; review 08-10 #23)
     // compat: __viewer.drive = i (a DRIVES index) writes speed / crouch / reverse off the natural clip speeds × speedMul

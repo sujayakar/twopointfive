@@ -37,36 +37,35 @@ const { COMPACT } = await import(`${ROOT}/src/render/kernels.ts`) as typeof impo
 
 /** KB of pasted WGSL a kernel may not pass, by `module / entry` (a cut-set module's `Cut` off its label), the first row that matches; the last is everyone else's */
 const BUDGET_TODAY: [RegExp, number][] = [
-  [/^composite(R|S|SR)? \/ (fs|cs)$/, 662],
-  [/^fgatherS? \/ mainGi$/, 820],
-  [/^fgatherS? \/ main$/, 759],
-  [/^volumetricsDust \/ main$/, 718],
-  [/^volumetrics \/ main$/, 667],
-  [/^reflectP5 \/ main$/, 640],
-  [/^particles \/ update$/, 577],
+  [/^composite(R|S|SR)? \/ (fs|cs)$/, 649],
+  [/^fgatherS? \/ mainGi$/, 803],
+  [/^fgatherS? \/ main$/, 742],
+  [/^volumetricsDust \/ main$/, 683],
+  [/^volumetrics \/ main$/, 633],
+  [/^reflectP5 \/ main$/, 619],
+  [/^particles \/ update$/, 564],
   [/^direct \/ main$/, 399],
-  [/^restirM? \/ main$/, 343],
-  [/^reflect \/ main$/, 274],
-  [/^froxel \/ injectJ$/, 216],
-  [/^sharpUE? \/ main$/, 237],
-  [/^gbuffer \/ fsBox$/, 302],
+  [/^restirM? \/ main$/, 342],
+  [/^reflect \/ main$/, 264],
+  [/^gbuffer \/ fsBox$/, 269],
+  [/^froxel \/ injectJ$/, 211],
+  [/^sharpUE? \/ main$/, 220],
   [/./, 200],
 ];
 /** the same for THE COMPACT SET (the row 'Compact shaders' on: render/kernels.ts, the ten kernels written with one call site per heavy function), its own rows within a
  *  twentieth of what that set is. A second table, never today's rows lowered: both writings are in the tree while the row is on trial, and each is held to its own size */
 const BUDGET_COMPACT: [RegExp, number][] = [
-  [/^composite(R|S|SR)? \/ (fs|cs)$/, 403],
-  [/^volumetricsDust \/ main$/, 433],
-  [/^volumetricsF? \/ main$/, 382],
-  [/^particles \/ update$/, 365],
+  [/^composite(R|S|SR)? \/ (fs|cs)$/, 391],
+  [/^volumetricsDust \/ main$/, 406],
+  [/^volumetricsF? \/ main$/, 356],
+  [/^particles \/ update$/, 352],
   [/^restirM? \/ main$/, 304],
-  [/^fgatherS? \/ mainGi$/, 299],
+  [/^fgatherS? \/ mainGi$/, 285],
+  [/^gbuffer \/ fsBox$/, 269],
   [/^direct \/ main$/, 256],
-  [/^reflectP5 \/ main$/, 253],
-  [/^fgatherS? \/ main$/, 230],
-  [/^froxel \/ injectJ$/, 216],
-  [/^reflect \/ main$/, 204],
-  [/^gbuffer \/ fsBox$/, 302],
+  [/^reflectP5 \/ main$/, 239],
+  [/^fgatherS? \/ main$/, 220],
+  [/^froxel \/ injectJ$/, 211],
   [/./, 200],
 ];
 const BUDGET = COMPACT.on ? BUDGET_COMPACT : BUDGET_TODAY;
@@ -79,7 +78,7 @@ const say = console.log.bind(console);   // (the boot below is run with the cons
 // SEPARATE SHADOW RAYS (TPS_SPLITRAYS=1 in front: the row 'Separate shadow rays' on, src/render/gatherSplit.ts). The final gather is then two programs with rows of their own,
 // each within a twentieth of what it is, and the four megakernel gathers are not made: their rows go out with them for that run. With the row off this is the table above, untouched.
 { const { SPLIT_RAYS } = await import(`${ROOT}/src/render/gatherSplit.ts`) as typeof import('../../src/render/gatherSplit');
-  if (SPLIT_RAYS.on) BUDGET.splice(0, BUDGET.length, [/^gatherSplitS? \/ trace$/, 252], [/^gatherSplit \/ light$/, 119], ...BUDGET.filter(([re]) => !re.source.startsWith('^fgatherS?'))); }
+  if (SPLIT_RAYS.on) BUDGET.splice(0, BUDGET.length, [/^gatherSplitS? \/ trace$/, 241], [/^gatherSplit \/ light$/, 119], ...BUDGET.filter(([re]) => !re.source.startsWith('^fgatherS?'))); }
 let red = 0; const check = (ok: boolean, what: string) => { say(`${ok ? '- PASS' : '- FAIL'} — ${what}`); if (!ok) red++; };
 
 // ---- the page's boot over a recording stand-in (tools/qa/pageboot.ts), under one setting of the switches
