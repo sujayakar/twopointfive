@@ -549,8 +549,8 @@ but synthetic writes still work.
   The visitor's sending words (`cloud`, `cloudfiles`, `cloudstats`, `cloudtapes`, `cloudprefs`) and `downloads` ride along the scenes' addresses: before,
   a run opened under `?cloud=0` lost the word at the first scene. `tools/qa/savedoor-page.cjs` (a stand-in backend, `npm ci` in `cloud/` first) holds on
   a real page: a take with no download that the backend has, the notes, the card's lines, Close's wait, `?downloads=1`, and a page with nobody
-  listening. `tools/qa/bench-page.cjs` expects no download and reads the take off `__lastPerfDump` (NOT RUN since the change: a whole `?bench` run on
-  the software adapter was not driven). A DEVELOPER'S WAY TO A FILE: `?downloads=1`, or after the fact `__saveUp.on = false` in the console, then
+  listening. `tools/qa/bench-page.cjs` expects no download and reads the take off `__lastPerfDump` (run whole on the software adapter 2026-11-04 with the
+  benchmark's wait in: 28 lines, all pass). A DEVELOPER'S WAY TO A FILE: `?downloads=1`, or after the fact `__saveUp.on = false` in the console, then
   `__journal.save()` or `__perfrec.deliver(__lastPerfDump)`. Never seen on a GPU. Esc stops a run and puts everything back. HANDS OFF: the page's Esc and hotkeys stand down while a run is on, no attract
   reel starts. `?bench=N` = N seconds a window; `?benchcap=N` = N seconds a scene (the page check's). A tab hidden during a run starts that window over, or
   leaves that frame out of the scene's line. While a window is timed on a held picture the page's quality model does not run. A scene that will not start is
@@ -571,7 +571,7 @@ but synthetic writes still work.
   back, then the row's run start to finish over three pages with the hands-off player seen giving its orders on each and walking on the first, keys
   pressed into a scene, the game's clock read every frame, the card and its line, no download, Close (opened under `cloud=0`, which rides along the scenes: nobody listens at the door); the page's own frames play each scene under the fixed step,
   a frame there taking seconds and the wall's cut put out of reach, so a scene ends by the player's own cut after `CAP` game seconds and the last page's
-  tail is the fake page's to prove; `STEP=script` has the check step the scenes with `__runFrames` instead; about 80 minutes at 320x180). NEVER RUN ON A GPU: no number of its report has been read on a real machine, the seven
+  tail is the fake page's to prove; `STEP=script` has the check step the scenes with `__runFrames` instead; 154 minutes at 320x180 on a four-core box on 2026-11-04, so its `DEADLINE` allows 240 by default). NEVER RUN ON A GPU: no number of its report has been read on a real machine, the seven
   minutes are an estimate, and nobody has watched a scene played or looked at the card.
 - **What a line of the benchmark's card prices** (2026-11-04, `ui/bench.ts benchStats`). `frame ms` is the gap between frames: wherever the
   display's pace is held it reads 16.7 whatever the picture cost, so it answers 'is 60 held' and prices nothing. `GPU ms` is the COMPUTE passes'
