@@ -887,3 +887,68 @@ pub fn ray_but(w: usize, a0: f64, a1: f64, a2: f64, r0: f64, r1: f64, r2: f64, t
     out[3] = bn.2;
     bi
 }
+
+/// A RAY ASKED BY A RULE OF THE MODULE'S (a slab off its hinges, a thrown thing): collision.ts raycast as a rule over there gets it, with what only the
+/// host can answer said as RAY_HOST — a ray of no length or of no number (collision.ts walks those itself), and, where the host has a rule for panes
+/// (`ask`), a ray that ends on a pane of glass: shut, the pane is the answer; open, the ray flies on to what stands beyond; which, the host alone can
+/// say. `set` and `but` as ray_but takes them. → RAY_NONE · RAY_HOST · the static's index, or RAY_LEAF + the leaf's; `out` as ray writes it.
+#[allow(clippy::too_many_arguments)]
+pub fn ray_rule(w: usize, a0: f64, a1: f64, a2: f64, r0: f64, r1: f64, r2: f64, tmax: f64, set: i32, but: i32, ask: bool, out: &mut [f64]) -> i32 {
+    if !(tmax > 0.0 && tmax < 1e6) {
+        return RAY_HOST;
+    }
+    let k = ray_but(w, a0, a1, a2, r0, r1, r2, tmax, set, but, out);
+    if ask && k >= 0 && k < RAY_LEAF && world(w).flags[k as usize] & F_GLASS != 0 {
+        return RAY_HOST;
+    }
+    k
+}
+
+/// where ray_things says which part it met, after how far along and the normal
+pub const RAY_PART: usize = 4;
+/// game/props.ts PropSystem.raycast: the nearest PART of any thing of furniture the ray from a along the unit r meets within tmax — the things in the
+/// furniture's own order (the world's `thing_live`), each passed by if the upright cylinder that holds it is clear of the ray in plan or lies behind it
+/// or beyond the best so far, its parts (list THING_SET of the leaves) in their order. → −1, or which thing of the level's list; and into `out` how far
+/// along, the face's normal, and which part of the list.
+#[allow(clippy::too_many_arguments)]
+pub fn ray_things(w: usize, a0: f64, a1: f64, a2: f64, r0: f64, r1: f64, r2: f64, tmax: f64, out: &mut [f64]) -> i32 {
+    let o = world(w);
+    let (mut best, mut bp, mut bn, mut bb) = (tmax, -1i32, (0.0, 1.0, 0.0), 0usize);
+    let fl = crate::maths::hypot2(r0, r2);
+    for r in 0..o.things as usize {
+        let (id, start, count) = (o.thing_live[r * TL] as usize, o.thing_live[r * TL + 1] as usize, o.thing_live[r * TL + 2] as usize);
+        if id >= MAX_THINGS || start + count > MAX_LEAVES {
+            continue;
+        }
+        let radius = o.thing[id * TH + TH_RADIUS];
+        let (ox, oz) = (o.thing[id * TH + TH_X] - a0, o.thing[id * TH + TH_Z] - a2);
+        let along = if fl > 1e-6 { (ox * r0 + oz * r2) / fl } else { 0.0 };
+        if fl > 1e-6 && (along < -radius || along > best * fl + radius) {
+            continue;
+        }
+        let perp2 = ox * ox + oz * oz - along * along;
+        if perp2 > (radius + 0.05) * (radius + 0.05) {
+            continue;
+        }
+        for i in start..start + count {
+            let at = (THING_SET * MAX_LEAVES + i) * REC;
+            if let Some((t, n0, n1, n2)) = ray_box_n(o, a0, a1, a2, r0, r1, r2, &o.leaf[at..at + REC], best) {
+                if t < best {
+                    best = t;
+                    bp = r as i32;
+                    bn = (n0, n1, n2);
+                    bb = i;
+                }
+            }
+        }
+    }
+    if bp < 0 {
+        return -1;
+    }
+    out[0] = best;
+    out[1] = bn.0;
+    out[2] = bn.1;
+    out[3] = bn.2;
+    out[RAY_PART] = bb as f64;
+    bp
+}

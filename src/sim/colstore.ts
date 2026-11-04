@@ -38,18 +38,20 @@ export function colsOf<F extends string, U extends string>(head: number, f64: re
 
 /** THE COLUMNS OF ONE FAMILY OF ONE GAME: doubles named `F`, words named `U`. */
 export class ColStore<F extends string, U extends string> {
-  /** where each column starts (`O.x + row` into the doubles from `b8`, `O.flags + row` into the words from `b4`) */
-  readonly O: ColsOf<F, U>;
+  /** where each column starts (`O.x + row` into the doubles from `b8`, `O.flags + row` into the words from `b4`): asked at every use, as the arrays are
+   *  (`widen` lays the columns out anew) */
+  O: ColsOf<F, U>;
   /** the game's own array of them while they are not at home in the module */
-  private readonly own: Float64Array;
+  private own: Float64Array;
   /** the game's block of the module's memory while the columns are at home there, else null */
   home: SimState | null = null;
   /** where the part starts where the columns stand now: an index into the doubles, and into the words (0 in `own`) */
   b8 = 0; b4 = 0;
   /** `cap`: rows a column (the module's own number where the bytes are to be the module's part as they stand; a level of more rows than that keeps
    *  wider columns and stays in TypeScript) */
-  constructor(head: number, f64: readonly F[], u32: readonly U[], readonly cap: number) {
-    this.O = colsOf(head, f64, u32, cap); this.own = new Float64Array(this.O.bytes >>> 3);
+  cap: number;
+  constructor(head: number, f64: readonly F[], u32: readonly U[], cap: number) {
+    this.cap = cap; this.O = colsOf(head, f64, u32, cap); this.own = new Float64Array(this.O.bytes >>> 3);
   }
   /** the doubles and the words the columns are in now (asked at every use: a block's views die when the block moves) */
   get d(): Float64Array { const h = this.home; return h !== null ? h.d : this.own; }
@@ -59,6 +61,19 @@ export class ColStore<F extends string, U extends string> {
     const d = this.d, u = this.u, O = this.O, B = this.b8, W = this.b4;
     for (const k of f64) { const o = B + O[k]; const t = d[o + a]; d[o + a] = d[o + b]; d[o + b] = t; }
     for (const k of u32) { const o = W + O[k]; const t = u[o + a]; u[o + a] = u[o + b]; u[o + b] = t; }
+  }
+  /** MORE ROWS THAN THE COLUMNS HOLD (a family whose things come and go: the thrown things' pool): columns `cap` rows long in their place, the head and
+   *  every column's rows carried over. The module's part is the module's own length, so wider columns are no part of its block: the bytes come out of
+   *  it first (the family's tenant then no longer `wants` it home) and are the game's own array from here on. */
+  protected widen(head: number, f64: readonly F[], u32: readonly U[], cap: number): void {
+    if (cap <= this.cap) return;
+    if (this.home !== null) this.moveOut(this.home, this.b8 << 3);
+    const was = this.own, O0 = this.O, n0 = this.cap, O1 = colsOf(head, f64, u32, cap), now = new Float64Array(O1.bytes >>> 3);
+    const u0 = new Uint32Array(was.buffer, was.byteOffset, was.byteLength >>> 2), u1 = new Uint32Array(now.buffer);   // (views of this one move: not the kept ones)
+    u1.set(u0.subarray(0, head >>> 2));
+    for (const k of f64) now.set(was.subarray(O0[k], O0[k] + n0), O1[k]);
+    for (const k of u32) u1.set(u0.subarray(O0[k], O0[k] + n0), O1[k]);
+    this.own = now; this.O = O1; this.cap = cap;
   }
   /** the bytes of the part as they stand (every column, the head and the tables) */
   bytes(): Uint8Array { const u = this.u; return new Uint8Array(u.buffer, u.byteOffset + this.b4 * 4, this.O.bytes).slice(); }

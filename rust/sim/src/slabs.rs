@@ -21,10 +21,10 @@
 //! A RAY THAT ENDS ON A PANE IS THE HOST'S: a pane may be open where the ray meets it, and only the host can say (collision.ts glassOpen). The step
 //! then writes nothing and says so (HOST), and the TypeScript takes this slab's step for this tick. The step works on a copy of its row for that.
 use crate::collide;
-use crate::lines::{ray_but, RAY_HOST, RAY_LEAF};
+use crate::lines::{ray_rule, RAY_HOST};
 use crate::maths::{cos, exp, hypot2, sin};
 use crate::state::state;
-use crate::world::{clamp, js_abs, js_ceil, js_max, js_min, or_one, world, F_GLASS, REC, R_C, R_COS, R_H, R_SIN};
+use crate::world::{clamp, js_abs, js_ceil, js_max, js_min, or_one, world, REC, R_C, R_COS, R_H, R_SIN};
 use core::mem::{offset_of, size_of};
 
 /// slabs a game can have: one a door (doors.rs CAP). A multiple of 4.
@@ -224,16 +224,12 @@ fn reach_along(d: &Leaf, s: &Now, ex: f64, ez: f64) -> f64 {
 fn hit_at(d: &mut Leaf, x: f64, y: f64, z: f64, ex: f64, ez: f64, tmax: f64) -> Option<(f64, f64, f64)> {
     let mut out = [0.0f64; 4];
     d.rays += 1.0;
-    let k = ray_but(d.w, x, y, z, ex, 0.0, ez, tmax, 0, d.but, &mut out);
+    let k = ray_rule(d.w, x, y, z, ex, 0.0, ez, tmax, 0, d.but, d.ask, &mut out);
     if k == RAY_HOST {
-        d.host = true;
+        d.host = true; // (a pane, or a ray collision.ts walks itself: the host's question — lines.rs ray_rule)
         return None;
     }
     if k < 0 {
-        return None;
-    }
-    if d.ask && k < RAY_LEAF && world(d.w).flags[k as usize] & F_GLASS != 0 {
-        d.host = true; // (a pane: shut, and it is the answer; open, and the ray flies on — the host's question)
         return None;
     }
     Some((out[0], out[1], out[3]))

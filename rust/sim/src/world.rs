@@ -15,9 +15,20 @@ pub const WORLDS: usize = 4;
 pub const ASK_HOST: u32 = 0xffff_ffff;
 /// statics a world can hold
 pub const MAX_BOXES: usize = 8192;
-/// leaves in one list of them, and how many lists are kept (the game's own, and the one a question swaps in for itself)
+/// loose boxes in one list of them, and how many lists are kept: the game's own leaves, the leaves a question swaps in for itself, and THE FURNITURE'S
+/// PARTS (list THING_SET: every part box of every thing in the level, the things in the order of the furniture's own list, a thing's parts together)
 pub const MAX_LEAVES: usize = 256;
-pub const LEAF_SETS: usize = 2;
+pub const LEAF_SETS: usize = 3;
+pub const THING_SET: usize = 2;
+/// things of furniture a world can hold (props.rs CAP), the doubles kept of each BY ITS ID (where it stands, x and z; its yaw; the radius of the upright
+/// cylinder that holds it), and the words of each IN THE LEVEL NOW, in the furniture's order (its id, where its parts start in list THING_SET, how many)
+pub const MAX_THINGS: usize = 128;
+pub const TH: usize = 4;
+pub const TH_X: usize = 0;
+pub const TH_Z: usize = 1;
+pub const TH_YAW: usize = 2;
+pub const TH_RADIUS: usize = 3;
+pub const TL: usize = 3;
 /// grid cells (W × H), and box entries over all of them
 pub const MAX_CELLS: usize = 16384;
 pub const MAX_ITEMS: usize = 131072;
@@ -64,6 +75,8 @@ pub struct World {
     /// CUT_PLANES × (n.x n.y n.z d) a record: the statics' records, then one a leaf
     pub cut: [f64; (MAX_CUTS + LEAF_SETS * MAX_LEAVES) * CUT_PLANES * 4],
     pub pane_t: [f64; MAX_PANES],
+    /// the furniture, a thing an id (TH doubles each)
+    pub thing: [f64; MAX_THINGS * TH],
     /// where the last circle pushed out ended (x, z)
     pub pt: [f64; 2],
     pub cs: f64,
@@ -81,6 +94,10 @@ pub struct World {
     pub pane_bi: [u32; MAX_PANES],
     /// the statics the last gather listed
     pub list: [u32; MAX_LIST],
+    /// the furniture in the level now, in its own order (TL words each)
+    pub thing_live: [u32; MAX_THINGS * TL],
+    /// …and how many
+    pub things: u32,
     pub w: u32,
     pub h: u32,
     pub boxes: u32,
@@ -95,6 +112,7 @@ const BLANK: World = World {
     leaf: [0.0; LEAF_SETS * MAX_LEAVES * REC],
     cut: [0.0; (MAX_CUTS + LEAF_SETS * MAX_LEAVES) * CUT_PLANES * 4],
     pane_t: [0.0; MAX_PANES],
+    thing: [0.0; MAX_THINGS * TH],
     pt: [0.0; 2],
     cs: 0.0,
     flags: [0; MAX_BOXES],
@@ -107,6 +125,8 @@ const BLANK: World = World {
     tilted: [0; MAX_TILTED * 5],
     pane_bi: [0; MAX_PANES],
     list: [0; MAX_LIST],
+    thing_live: [0; MAX_THINGS * TL],
+    things: 0,
     w: 0,
     h: 0,
     boxes: 0,
@@ -165,6 +185,8 @@ pub fn addr(w: usize, table: u32) -> usize {
         9 => o.pane_bi.as_ptr() as usize,
         12 => o.pt.as_ptr() as usize,
         13 => o.list.as_ptr() as usize,
+        14 => o.thing.as_ptr() as usize,
+        15 => o.thing_live.as_ptr() as usize,
         _ => 0,
     }
 }
@@ -181,6 +203,7 @@ pub fn cap(table: u32) -> usize {
         10 => WORLDS,
         11 => LEAF_SETS,
         13 => MAX_LIST,
+        14 => MAX_THINGS,
         _ => 0,
     }
 }

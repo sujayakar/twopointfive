@@ -12,7 +12,7 @@ import { wallClock } from '../math/side';
 import { Vec3 } from '../math/vec';
 import { Box, BoxFlag, makeBox, rayBox, MKEY } from '../scene/boxes';
 import { BOTH, StaticCollision } from '../scene/collision';
-import type { BoxMirror } from '../scene/boxMirror';
+import { thingWrote, type BoxMirror } from '../scene/boxMirror';
 import { PropDef, PropKind } from '../scene/level';
 import { EXACT, mathsEpoch } from '../math/exact';   // (the kept cos / sin of a yaw is remade when the game's own maths goes on or off)
 import { RUST } from '../sim/sim';
@@ -119,7 +119,7 @@ export class Prop {
       const p = parts[i], b = this.boxes[i];
       b.c[0] = x + cs * p.off[0] + sn * p.off[2]; b.c[1] = p.off[1]; b.c[2] = z - sn * p.off[0] + cs * p.off[2]; b.yaw = yaw + p.yaw;
     }
-    this.dirty = false;
+    this.dirty = false; thingWrote();   // (the box world's copy of the furniture's parts in the Rust module is owed these: scene/boxMirror.ts things)
   }
   wake() { this.asleep = false; this.idle = 0; }
   get speed() { return Math.hypot(this.vx, this.vz); }
@@ -199,10 +199,10 @@ export class PropSystem {
   boxes(out: Box[]) { for (const p of this.props) for (const b of p.boxes) out.push(b); }
 
   /** A prop leaves the level (game/furnblast.ts: it came apart beside a charge — its parts fly on as debris): no longer drawn, solid, pushed or stepped until reset(). */
-  remove(p: Prop) { const i = this.props.indexOf(p); if (i >= 0) { this.props.splice(i, 1); this.store.leave(p.id); } }
+  remove(p: Prop) { const i = this.props.indexOf(p); if (i >= 0) { this.props.splice(i, 1); this.store.leave(p.id); thingWrote(); } }
   /** Everything back to its rest pose, asleep. */
   reset() {
-    if (this.props.length !== this.all.length) { this.props.length = 0; for (const p of this.all) this.props.push(p); this.store.homeRows(); }
+    if (this.props.length !== this.all.length) { this.props.length = 0; for (const p of this.all) this.props.push(p); this.store.homeRows(); thingWrote(); }
     for (const p of this.props) { p.x = p.home[0]; p.z = p.home[1]; p.yaw = p.home[2]; p.vx = p.vz = p.w = 0; p.asleep = true; p.idle = 0; p.noiseT = p.pushT = -10; p.lastWho = 0; p.rolling = false; p.dirty = true; p.place(); }
   }
   /** Debug: give every prop a random shove (panel button — lets you watch the solver without walking into things). */
@@ -228,7 +228,9 @@ export class PropSystem {
       const perp2 = ox * ox + oz * oz - along * along; if (perp2 > (p.radius + 0.05) * (p.radius + 0.05)) continue;
       for (const b of p.boxes) { const h = rayBox(ro, rd, b, best); if (h && h.t < best) { best = h.t; bp = p; bn = h.n; bb = b; } }
     }
-    return bp && bb ? { t: best, n: bn, prop: bp, box: bb } : null;
+    const hit = bp && bb ? { t: best, n: bn, prop: bp, box: bb } : null;
+    if (BOTH.on) this.col.thingsBoth(this, ro, rd, tmax, hit);   // (the check's: the Rust module's ray over its copy of these parts, asked the same and compared)
+    return hit;
   }
 
   /** Planar impulse J (N·s, y ignored) applied at world point `point`; `who` is blamed for the noise. thud=true reports it as an impact (bullet strike). */

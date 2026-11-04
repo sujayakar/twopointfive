@@ -202,7 +202,7 @@ const FIXED: number = ST.simLayout().parts.reduce((n: number, q: any) => n + (q.
 // ---- the things of a level: tenants whose STEP runs in the module (the doors, the furniture), each held the same three ways
 /** a family of things at home in the block: its row, what it is called and what it keeps there, where its columns are, how a game works it, whether it is
  *  moving, and the counts of its steps taken in the module and here */
-interface Family { row: 'doors' | 'props' | 'slabs'; name: string; cols: string; turn: string; store: (g: any) => any; work: (g: any, k: number) => void; moving: (g: any) => boolean; counts: () => { there: number; here: number }; /** the family's own numbers folded into a tick's word, where the game's raw bits (digest.ts rawBits) do not carry them */ fold?: (g: any, word: number) => number }
+interface Family { row: 'doors' | 'props' | 'slabs' | 'items'; name: string; cols: string; turn: string; store: (g: any) => any; work: (g: any, k: number) => void; moving: (g: any) => boolean; counts: () => { there: number; here: number }; /** the family's own numbers folded into a tick's word, where the game's raw bits (digest.ts rawBits) do not carry them */ fold?: (g: any, word: number) => number }
 const FOLDF = new Float64Array(1), FOLDU = new Uint32Array(FOLDF.buffer);
 async function tenantLines(F: Family) { const R = S.RUST, at = (g: any) => F.store(g).home;
   /** frame `f` of a game whose things are worked: the fight above, and every 25 frames the family's own writes on the next thing round */
@@ -253,7 +253,16 @@ async function tenantLines(F: Family) { const R = S.RUST, at = (g: any) => F.sto
     work: (g, k) => { const L = g.doors.list.filter((d: any) => !d.def.steel), hung = L.filter((d: any) => !d.off); if (!L.length) return;
       if (hung.length * 3 < L.length) { for (const d of g.doors.list) if (d.off) { d.reset(); d.place(); } return; }
       const d = hung[(k * 7) % hung.length], [hx, hz] = d.def.hinge, a = d.def.closedDir + d.angle, s = k % 2 ? 1 : -1, from = [hx + Math.cos(a) * d.def.width * 0.5 - Math.sin(a) * 0.6 * s, 0.8, hz + Math.sin(a) * d.def.width * 0.5 + Math.cos(a) * 0.6 * s];
-      const on = DB.DOORBLAST.on; DB.DOORBLAST.on = true; try { DB.tearOff(g, d, from, 10, k % 3 ? 1 : 0.2); } finally { DB.DOORBLAST.on = on; } } }); }
+      const on = DB.DOORBLAST.on; DB.DOORBLAST.on = true; try { DB.tearOff(g, d, from, 10, k % 3 ? 1 : 0.2); } finally { DB.DOORBLAST.on = on; } } });
+  // the thrown things: every 25 frames a can, a magazine and a gun go from beside Sam — lobbed, dropped, thrown flat at the next thing of furniture round
+  const IH: any = await import(`${ROOT}/src/sim/itemshome.ts`);
+  await tenantLines({ row: 'items', name: 'thrown things', cols: 'the things\' rows', turn: 'a thing in the air', store: g => g.items.store, moving: g => g.items.items.some((it: any) => !it.settled), counts: () => ({ there: IH.ITEMS_STEPPED.stepsThere, here: IH.ITEMS_STEPPED.stepsHere }),
+    fold: (g, word) => { const T = g.items.store, d = T.d, u = T.u, O = T.O; let h = word;   // (every row of the pool: the raw bits fold where a thing is and nothing else of it)
+      for (let q = 0, n = T.n; q < n; q++) { for (const k of IH.ITEM_F64) { FOLDF[0] = d[T.b8 + O[k] + q]; h = Math.imul(h ^ FOLDU[0], 0x01000193) >>> 0; h = Math.imul(h ^ FOLDU[1], 0x01000193) >>> 0; } for (const k of IH.ITEM_U32) h = Math.imul(h ^ u[T.b4 + O[k] + q], 0x01000193) >>> 0; } return h; },
+    work: (g, k) => { const c = g.player.char.pos, L = g.props.props, p = L.length ? L[(k * 7) % L.length] : null, a = k * 1.7;
+      g.items.spawn(k % 2 ? 'smoke' : 'frag', [c[0], 1.4, c[2]], [Math.cos(a) * 4, 3 + (k % 3), Math.sin(a) * 4], { who: 10, fuse: 60 });
+      g.items.spawn('mag', [c[0] + 0.2, 1.1, c[2]], [Math.cos(a) * 0.4, -0.2, Math.sin(a) * 0.4], { who: 10 });
+      if (p) { const dx = p.x - c[0], dz = p.z - c[2], l = Math.hypot(dx, dz) || 1, T = Math.max(0.3, l / 9); g.items.spawn('rifle', [c[0], 1.2, c[2]], [dx / T, 0.5 * 9.81 * T, dz / T], { who: 10 }); } } }); }
 
 console.log(fails ? `\n${fails} FAILED` : '\nall pass');
 process.exit(fails ? 1 : 0);

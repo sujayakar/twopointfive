@@ -132,6 +132,8 @@ const STATICS: Readonly<Record<string, string>> = {
   'sim/src/doors.rs IO': 'SCRATCH · one door step\'s hand-over: the level\'s doors, the contacts and the rules\' numbers written by the host before it asks, the answers read back after (the leaves\' own numbers are in the block)',
   'sim/src/props.rs IO': 'SCRATCH · one step of the furniture\'s hand-over: the level\'s facts of each thing by row, the men, the leaves and door frames and the rules\' numbers written by the host before it asks, the noises read back after (the things\' own numbers are in the block)',
   'sim/src/slabs.rs PAR': 'SCRATCH · one slab\'s step\'s hand-over: its door\'s facts and the rules\' numbers written by the host before it asks, what the step met read back after (the slab\'s own numbers are in the block)',
+  'sim/src/items.rs PAR': 'SCRATCH · one walk of the thrown things\' hand-over: the tick, the row to start at and what the host says of panes and of lying snow written before it asks, the row handed back and the counts read after (each thing\'s own numbers are in the block)',
+  'sim/src/items.rs EVS': 'SCRATCH · what one walk of the thrown things listed for the host to do after it (a bounce to say, a share of momentum for a thing of furniture, a thing whose time is up), read back before the next walk',
   'sim/src/skeleton.rs BENCH': 'SCRATCH · the pose a question is asked of, written, asked and read back',
   'sim/src/light.rs LAMPS': 'SCRATCH · the lamps of one question about the light on a point, written by the host before it asks',
   'sim/src/smoke.rs BLOBS': 'SCRATCH · the smoke blobs of one question about a line, written by the host before it asks',
