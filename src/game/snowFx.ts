@@ -35,7 +35,7 @@ import { Vec3, clamp } from '../math/vec';
 import type { Game } from './game';
 import type { FollowCamera } from './camera';
 import type { WeatherFrame } from '../render/frame';
-import { snowConfig, snowLookConfig } from '../render/frame';
+import { snowConfig, snowLookConfig, lookConfig } from '../render/frame';
 import type { Particles } from '../render/particles';
 import { RAIN_MAX_BIRTHS, RAIN_CAP } from '../render/particles';
 import { gpuFx } from './particleFx';
@@ -335,6 +335,7 @@ export function updateSnowFx(g: Game, dt: number, cam: FollowCamera) {
 function markKicks(g: Game, st: SnowState, Pp: Particles, room: number, size: number, sizeJit: number, cx: number, cz: number, R: number): number {
   const T = g.snowTracks; if (!T) return 0;
   if (!T.kicks.length) { st.kickQ.length = 0; st.kickSeen = T.kicked; return 0; }   // (nearly every frame)
+  if (lookConfig.on && lookConfig.puffs > 0 && T.kicked >= st.kickSeen) bootKicks((g.engine as unknown as { powder?: Parameters<typeof bootKicks>[0] }).powder, T.kicks, st.kickSeen, lookConfig.puffs);   // (THE LOOK PROTOTYPE: each NEW kick's puff of powder, below — before the book takes the kicks as seen)
   const Q = kicksDue(T, st); st.kickQ = Q; st.kickSeen = T.kicked;
   if (!Q.length) return 0;
   const K = SNOWTRACKS, near = R * 0.7; let filed = 0, recs = 0;
@@ -353,6 +354,29 @@ function markKicks(g: Game, st: SnowState, Pp: Particles, room: number, size: nu
   return filed;
 }
 let markKicked = 0;
+/** THE LOOK PROTOTYPE's SNOW PUFFS (the panel's Snow puffs row, render/frame.ts lookConfig.puffs; the maintainer, 10-28, of the retired fluid lab: "I really liked
+ *  the sand puffs on footsteps, and if we can get the snow puffs on footsteps to look something like that … those should all be reactive to the wind, and … the
+ *  footsteps should be proportional to the amount of force the step is putting down"). THE FIRST TRY filed a handful of the particles' dust sprites per kick; his
+ *  verdict on a GPU the same day: "the puffs don't look like they're shadowed per pixel, right? and they look like particle effects". So a puff is NO SPRITE
+ *  now: each kick the game lists (snowTracks.ts: a boot, a thing dragged, a body down, each with its `force`: a walker's boot about 0.45, a sprinter's 1.2, a
+ *  blast 2) puts powder into the look page's powder field (render/powderField.ts `kick`, the engine's `powder`), by that force, where it landed. From there it is
+ *  the same stuff as the powder the wind picks up: carried by the game's own air, falling out as it thins, and drawn on the pixel under it with that pixel's own
+ *  light and shadow (composite.wgsl lookPowder). BESIDE the flakes markKicks throws, which are the build's own. Picture only; nothing reads a puff. The book's
+ *  `kickSeen` says which kicks are new, as it does for the flakes, so a put-back that drops the book files the listed kicks once more, as their flakes are. */
+export const SNOWPUFF = {
+  least: 0.2,   // a kick under this force raises no puff (a thing set down)
+  most: 2,      // × a kick's force the row can ask for at most
+};
+let bootPuffed = 0;
+/** THE LOOK PROTOTYPE's snow puffs: every kick the game lists past `seen` goes into `field` (the engine's powder field, or anything with its `kick`) with its
+ *  own force × `amount`, where it landed and the way the boot was going. The game's list is only read. Returns how many kicks it filed. */
+export function bootKicks(field: { kick(x: number, z: number, force: number, dx?: number, dz?: number): void } | null | undefined, kicks: readonly SnowKick[], seen: number, amount: number): number {
+  if (!field || !(amount > 0)) return 0;
+  let filed = 0; const K = SNOWPUFF, a = Math.min(amount, K.most);
+  for (const k of kicks) { if (k.n <= seen || k.force < K.least) continue; field.kick(k.x, k.z, k.force * a, k.dx, k.dz); filed++; }
+  bootPuffed += filed; return filed;
+}
+export const bootPuffsFiled = () => bootPuffed;
 /** the kicks of the game's list this book has still to deal with, the waiting ones first: those it has seen and kept waiting that the game still lists, then
  *  those numbered past the last it saw. Where the game's count stands BEHIND the book's (a snapshot put back by a road that does not tell the host — the
  *  harness's; the page's put-back drops the book), none: the book cannot tell which of the listed kicks it filed in the moment abandoned, and that road left
