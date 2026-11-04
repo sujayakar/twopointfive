@@ -1926,6 +1926,29 @@ interleaved and filtered to their quiet minimum, and a row whose p75 sits far ab
   smooth wedge with a soft edge where the fan ends. Between two frames a patch of the fan's side changes by 0.44 of 255 in the mean with the old
   light and by 0.26 with the new. Both pages booted (120 pipelines) and drew with no page or GPU error. NEVER SEEN ON A GPU, and not timed there (a few dozen
   arithmetic operations a portal sample; `kernel-stack.cjs` not run again: the page booted and drew on the software adapter with no error).
+- **A REFLECTION TEXEL OF ANOTHER SURFACE HAS NO SAY** (11-04; every page that traces reflections, no switch: it is the upsampler's own rule.
+  `composite.wgsl` and `compact/composite.wgsl upsampleRefl(pixf, z, N)`). The maintainer on his M4, the white roof's service door at midday:
+  "weird artifacts in the specular ... around the edges, looks like it's blocky/rendered at a lower resolution". The reflections are traced at a
+  half or a third of the internal raster and the composite took ONE bilinear fetch of them (chosen when a joint-bilateral made the same picture
+  under TAAU, `docs/internal/p4-materials.md` §2: true while a pixel was shown at the frame's exposure). At a jamb, a pixel of the dark room took a
+  share of the texel traced on the sunlit ground seen past it, and the one exposure model shows that room hundreds of times brighter than the
+  ground: the share was a white bar a texel wide down the jamb's edge (the specular view, drawn on the software adapter). THE RULE: the four
+  texels round the pixel, each by its bilinear weight × how near its own surface is to the pixel's (a bell over the depth's difference in
+  `upsampleSpecular`'s tolerance: a share of a thousandth is still a bar under a gain of a thousand) × how like its STORED normal is, to the eighth
+  (the look's tilt and all: the tilt is what the texel's ray was thrown by); a sky texel is no surface's; and the plain fetch stays in the blend at
+  a hundred-thousandth, so a pixel none of the four is like (a thing thinner than a texel) gets it, with no line where one answer hands over to the
+  other. Asked with the READ pixel's distance and normal (the refracted read behind glass), in the
+  picture and in debug view 17. COST, not timed on a GPU: four texel loads with a depth and a normal load each where one filtered sample stood, on
+  pixels that mirror at all; the composite's inlined size 1052 to 1055 KB (its row is red at the base). WHAT IT DOES NOT REACH: two places in ONE
+  plane (a room's floor running out over the threshold into the sun) are one surface to depth and normal, and a pixel beside that line still takes
+  a share of the brighter place's texel: that wants the texel's own place in the weight, or the gain applied before the blend. NOR IS IT THE BRICKS'
+  SHEEN he may have meant: beside the door on his recording the bricks nearest the frame are bright one brick at a time. That is the wall mirroring
+  the sun's patch on the floor at its foot, a brick's own gloss at a time, under the room's gain: the material and the light, not the upsampler.
+  Check: `bun run tools/qa/probes.ts reflup` (family `render`; the rule held by its text in both writings, and the weights' arithmetic:
+  a dark face between its own texels at 1 and another surface's at 1000 reads 1.00 past a jamb, past a sill half a metre behind it, at 14 m and at
+  a foot at a right angle, where the plain blend read 330; a brick's face beside a bevel 25° off takes 3.8 of 10 where it took 5.5;
+  `REFLUP_BREAK=1` = the plain blend, fails), `shaderrows-check` (the compact composite re-stamped), all 69 shader texts compile. DRAWN, software adapter, the service door's jamb from
+  inside at midday, the specular view: the white bar up the jamb (a neighbour's sunlit texel under the room's gain) went from 88 bright pixels to 2; a shorter bar lower on the same jamb is unchanged at 75, so it is the jamb's own highlight and not a neighbour's texel, and the bricks' hooks beside the door stay as said above. The page booted and drew with no page or GPU error (120 programs; that boot also carried the daylight pieces of the bullet below). NEVER SEEN ON A GPU, and not timed there.
 - **THE ROWS THE ONE EXPOSURE MODEL REPLACED ARE DELETED, AND ITS OWN ROW WITH THEM** (11-04; `composite.wgsl` and `compact/composite.wgsl
   lookShadeGain`, their caller, `engine.ts`, `ui/lookpanel.ts`; no switch: nothing a page draws with its rows as it opens was touched). The
   maintainer chose the model over mending the rows it replaced (10-31), and ruled every special case of the light fixed (11-04): the first of the
