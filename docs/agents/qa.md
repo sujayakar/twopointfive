@@ -391,6 +391,17 @@ but synthetic writes still work.
   put back off, silently. A check's own pin goes AFTER each stand-up (each one: a second stand-up in the same process undoes it again), or the run uses the word (`TPS_X=1`),
   which every stand-up then honours. By design: one stand-up = one known stand. On the shipped stand a table is written only where its word is given (`pinned(env)`), so nothing
   is claimed here about a pin made before a stand-up there. Read in `standup.ts` on the rows around the opening, the kit and the dust; not every row was read, nothing run.
+- **Which rule turns a line red: `bun run tools/qa/stand-bisect.ts [--line REGEX] [--green] -- <command …>`** (2026-11-04). A check that is green on the frozen
+  stand and red on the page's is red because of a row the frozen stand holds off, usually one or two. The tool raises subsets of `FROZEN_HOLDS`' words on
+  the frozen stand until the fewest that flip the line are left (delta debugging: about a dozen runs of the check for one word, some eighty for three) and
+  prints them with the rows each raises. `--line` makes the verdict one line's (a check with several red lines has a rule for each); `--green` asks the other
+  way round, of a line that is red on the plain frozen stand: which rule of the page's mends it. READ THE ANSWER THIS WAY: the row's own check says what the
+  rule does, and the line is then a promise the rule ended (mend the line to read the rule, as `selector-sustained` and `devices` (d) now ask "stays" where
+  doors stay as they are left) or a fault the rule brought (its owner's). Found with it on 11-04: `kickrubble-pool` (`CUTBOXES=1`: a blast breaks the piece),
+  `orders-cover` and `orders-stack` (`TPS_WORDS=1 TPS_DOORNAMES=1`: the HUD's name of a door), `teams-dark` (`TPS_IRLIGHT=1` flips both its lines: a teammate's
+  tube sees a dark man), `devices` (e) (`TPS_HANDS=1`), `controls-behind` (d) and (f) (`TPS_KITANIM=1`), `selector-rows` (`TPS_CLOSE=1`, `TPS_HANDSLOT=1`,
+  `TPS_LIGHTSWITCH=1`, a line each), `workstow-mate` (`TPS_SQUADDEAL=1 TPS_TEAMPACE=1 TPS_PACING=1`, all three: a round leaves a teammate's hung gun as he is
+  taken off a charge). A line no set of words flips is not a held row's doing: the tool says so, and what the shipped stand itself makes of it.
 - **Not every `FROZEN_HOLDS` word is a `TPS_` word** (10-13, read off `src/host/profile.ts`; the knob registry's owner's note). Raised by a word of their own: the door rules
   (`ONEWAY=1`, `QA_FRAMEHOLDS=1`, `QA_DOORMANNERS=1`, `QA_DOORBLAST=1`, `QA_DOORSTAY=1`), `SLOTS=on`, `CUTBOXES=1`, `GLASSFX=on` (three rows), `SQUADS=radiocheck-call` (three
   rows). No word under probes.ts at all: `DESTRUCTION.on`, `RUBBLE.on`, `EVICT.on` (`PT_DESTR` / `PT_KICK` / `PT_POP`, playthrough.ts alone), `FRAG.defenders` (`--set`),
