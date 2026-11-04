@@ -24,37 +24,38 @@ const T0 = Date.now(), log = (...a) => console.log(`[${((Date.now() - T0) / 1000
 const up = () => new Promise(res => { const r = http.get({ host: 'localhost', port: PORT, path: '/', timeout: 2000 }, x => { x.resume(); res(x.statusCode === 200); }); r.on('error', () => res(false)); r.on('timeout', () => { r.destroy(); res(false); }); });
 let red = false; const check = (ok, what, detail = '') => { red = red || !ok; console.log(`- ${ok ? 'PASS' : 'FAIL'} — ${what}${detail ? `\n    ${detail}` : ''}`); };
 
+let server = null, browser = null;   // (let go however the run ends: a throw below must not leave a dev server on the port for the next run to find)
 (async () => {
   fs.mkdirSync(OUT, { recursive: true });
-  let server = null;
   if (!(await up())) { log(`no dev server on ${PORT}: starting one from this checkout`); server = spawn('bun', ['run', 'tools/serve.ts'], { cwd: ROOT, env: { ...process.env, PORT: String(PORT) }, stdio: 'ignore' });
     for (let i = 0; i < 60 && !(await up()); i++) await new Promise(r => setTimeout(r, 500)); }
-  const browser = await chromium.launch({ headless: true, channel: 'chromium', args: FLAGS });
+  browser = await chromium.launch({ headless: true, channel: 'chromium', args: FLAGS });
   const ctx = await browser.newContext({ viewport: { width: VW, height: VH }, deviceScaleFactor: 1, acceptDownloads: true });
   // a frame is seconds long here: a turn is a frame dropped and two kept, and a long frame is not the tab having been away
   await ctx.addInitScript(real => { window.__testVisible = true; if (!real) window.__priceOpts = { playS: 0.5, catchS: 0, settleS: 0, settleFrames: 1, measureFrames: 2, capS: 240, awayS: 600 }; }, REAL);   // (half a second of the game's clock: thirty steps of the page's own scripted step, two a frame; no wait for the GPU to catch up, whose frame is seconds long here)
-  const page = await ctx.newPage(), errors = [], pages = []; let saved = null;
+  const page = await ctx.newPage(), errors = [], pages = []; let saved = null, gaveUp = '';
   page.on('pageerror', x => errors.push('pageerror: ' + String(x && x.stack || x).slice(0, 400)));
-  page.on('console', m => { const x = m.text(); if (m.type() === 'error' && !/Failed to load resource/.test(x)) errors.push(x.slice(0, 300)); else if (/price every level/.test(x)) log('page:', x.slice(0, 300)); });
+  page.on('console', m => { const x = m.text(); if (/price every level/.test(x)) { log('page:', x.slice(0, 300)); gaveUp = gaveUp || x.slice(0, 300); } if (m.type() === 'error' && !/Failed to load resource/.test(x)) errors.push(x.slice(0, 300)); });   // (the run's own word on the console is always its end without a file: stopped, refused, or no session store — not waited on for the cap)
   page.on('framenavigated', f => { if (f === page.mainFrame()) { pages.push(f.url()); log('page', pages.length, f.url().replace(`http://localhost:${PORT}`, '')); } });
   page.on('download', async d => { saved = path.join(OUT, d.suggestedFilename()); await d.saveAs(saved).catch(e => { errors.push('the download was not kept: ' + e.message); saved = null; }); });
   const asked = `/?${LOOK}&${'pricelevels'}${LEVELS.length ? '=' + LEVELS.join(',') : ''}${QUALITY ? '&quality=' + QUALITY : ''}${REAL ? '' : '&pricesecs=1'}${ONLY ? '&pricepage=0' : ''}&downloads=1`;   // (downloads=1: the page's save door as it was, host/savefile.ts, so the one file comes down here to be read; the run carries the flag to its last page)
   log('goto', asked);
   await page.goto(`http://localhost:${PORT}${asked}`, { waitUntil: 'commit' });
   let file = null, said = '';
-  for (const t = Date.now(); Date.now() - t < 2 * 3600 * 1000 && !file;) {   // (the page changes under the question: an evaluate that lands on a navigation throws and is asked again)
+  for (const t = Date.now(); Date.now() - t < 2 * 3600 * 1000 && !file && !gaveUp;) {   // (the page changes under the question: an evaluate that lands on a navigation throws and is asked again)
     await new Promise(r => setTimeout(r, 5000));
     try { const got = await page.evaluate(() => ({ file: window.__priceLevels ?? null, veil: document.getElementById('bench-veil')?.textContent ?? '', fatal: document.getElementById('fatal')?.textContent ?? '' })); file = got.file;
       if (got.veil && got.veil !== said) { said = got.veil; log('says:', said.slice(0, 140)); } if (got.fatal) { errors.push('fatal: ' + got.fatal.slice(0, 300)); break; } } catch { /* between pages */ }
   }
+  if (gaveUp && !file) errors.push('the run ended itself: ' + gaveUp);
   const driven = await page.evaluate(() => navigator.webdriver).catch(() => null);
   const report = file ? await page.evaluate(() => document.getElementById('bench-report')?.value ?? '').catch(() => '') : '';
   if (file) await new Promise(r => setTimeout(r, 1500));   // (the download lands a moment after the card)
   await page.screenshot({ path: path.join(OUT, 'last-page.png') }).catch(() => { });
-  await browser.close(); if (server) server.kill();
+  await browser.close(); browser = null; if (server) { server.kill(); server = null; }
   console.log(REAL ? `\n=== pricerun-page --real: ${LEVELS.join(', ') || 'every level on the list'} at ${QUALITY || 'the run\'s own quality'}, ${VW}x${VH}: the run as the page runs it; what it times is this machine's (${file?.gpu ?? 'no file'}) ===`
     : `\n=== pricerun-page: ${LEVELS.join(', ')} at ${QUALITY}, software adapter: the chain is what is checked, no number here is a price ===`);
-  const rows = file?.rows ?? [], PER = ONLY ? 1 : 2, want = (LEVELS.length || rows.length) * PER + 1;
+  const rows = file?.rows ?? [], STEP = REAL ? 4 : 0.5, PER = ONLY ? 1 : 2, want = (LEVELS.length || rows.length) * PER + 1;
   check(!!file, 'the run reached its last page and left its file on the page', file ? `${rows.length} rows; asked for quality ${file.quality}; ${file.gpu}` : `it stopped at page ${pages.length}: ${pages[pages.length - 1] ?? '?'}`);
   check(pages.length === want && pages.slice(1).every((u, i) => new RegExp(`[?&]pricerun=${i}(&|$)`).test(u) && /[?&]downloads=1(&|$)/.test(u) && /[?&]look(=|&|$)/.test(u) === (ONLY || i % 2 === 0)), `the chain is the address that asked, then for each level its look page and its page without the look, in order, each carrying the visitor's flag (${want} loads)`, pages.map(u => u.replace(`http://localhost:${PORT}`, '')).join('\n    '));
   check(LEVELS.length ? rows.length === LEVELS.length && rows.every((r, i) => r.level === LEVELS[i]) : rows.length > 1 && new Set(rows.map(r => r.level)).size === rows.length, LEVELS.length ? 'a row for every level asked for, in the order asked' : 'a row for each level of the list, none twice', rows.map(r => r.level).join(', '));
@@ -67,9 +68,9 @@ let red = false; const check = (ok, what, detail = '') => { red = red || !ok; co
     check(rows.length > 0 && rows.every(r => r.rung && r.rung.adaptive === false && (ONLY || (r.page && r.page.rung && r.page.rung.adaptive === false && same(r.rung, r.page.rung) && r.internal.join('x') === r.page.internal.join('x')))), ONLY ? 'every look page stood on its preset\'s own rows with the quality ladder off' : 'a level\'s two pages stood on ONE rung of the quality ladder, at one size, with the ladder off',
       rows.map(r => `${r.level}: look page ${r.internal.join('×')}, ${R(r.rung)}${ONLY ? '' : `\n      ${' '.repeat(r.level.length)}without it ${r.page?.internal.join('×') ?? '—'}, ${R(r.page?.rung)}`}`).join('\n    ')); }
   check(rows.length > 0 && rows.every(r => r.programs.bySwitch === 0 && r.programs.boot > 0), 'the look page counted its shader programs, and switching the layers made none', rows.map(r => `${r.level}: ${r.programs.boot} before ready + ${r.programs.after} after + ${r.programs.bySwitch} by the switch; without the look ${r.page?.programs.boot ?? '—'} + ${r.page?.programs.after ?? '—'}`).join('\n    '));
-  check(rows.length > 0 && rows.every(r => r.heldAt !== null && (ONLY || (r.page && r.page.heldAt === r.heldAt))), ONLY ? 'every page was held at a step of the game\'s clock' : 'a level\'s two pages were held at the same step of the game\'s clock', rows.map(r => `${r.level}: look page ${r.heldAt} s, without the look ${r.page?.heldAt ?? '—'} s`).join('\n    '));
-  check(rows.length > 0 && rows.every(r => Array.isArray(r.over)) && file?.version === 4 && Array.isArray(file.look) && file.look.some(w => /^look(=|$)/.test(w)) && LOOK.split('&').filter(Boolean).every(w => file.look.includes(w)) && !!file.machine, 'every row carries the run\'s own verdict, and the file says which look was priced (every word asked for is among the words the run carried) and on what', file ? `the look page's words: ${file.look.join('&')}; ${file.gpu}${file.machine?.hz ? `, ${file.machine.hz} Hz` : ''}; verdicts: ${rows.map(r => `${r.level} ${r.over.length ? r.over.join('; ') : 'under'}`).join(' | ')}` : '');
-  check(!!file && file.notes.length === 0 && rows.every(r => !r.notes.some(n => /moved during the turns|not the same/.test(n))), 'no page was left unpriced, and nothing moved under the turns', [...(file?.notes ?? []), ...rows.flatMap(r => r.notes.map(n => `${r.level}: ${n}`))].join('\n    ') || 'no notes');
+  check(rows.length > 0 && rows.every(r => r.heldAt !== null && Math.abs(r.heldAt - STEP) < 1e-6 && (ONLY || (r.page && r.page.heldAt === r.heldAt))), ONLY ? `every page was held at the step asked for (${STEP} s of the game's clock)` : `a level's two pages were held at the same step of the game's clock, the one asked for (${STEP} s)`, rows.map(r => `${r.level}: look page ${r.heldAt} s, without the look ${r.page?.heldAt ?? '—'} s`).join('\n    '));
+  check(rows.length > 0 && rows.every(r => Array.isArray(r.over)) && file?.version === 5 && Array.isArray(file.look) && file.look.some(w => /^look(=|$)/.test(w)) && LOOK.split('&').filter(Boolean).every(w => file.look.includes(w)) && !!file.machine, 'every row carries the run\'s own verdict, and the file says which look was priced (every word asked for is among the words the run carried) and on what', file ? `the look page's words: ${file.look.join('&')}; ${file.gpu}${file.machine?.hz ? `, ${file.machine.hz} Hz` : ''}; verdicts: ${rows.map(r => `${r.level} ${r.over.length ? r.over.join('; ') : 'under'}`).join(' | ')}` : '');
+  check(!!file && file.notes.length === 0 && rows.every(r => Array.isArray(r.apart) && r.apart.length === 0), 'no page was left unpriced, and every row is one picture (nothing moved under the turns, its two pages at one size, rung and step), so every row was judged', [...(file?.notes ?? []), ...rows.flatMap(r => [...(r.apart ?? ['no `apart` on the row']), ...r.notes].map(n => `${r.level}: ${n}`))].join('\n    ') || 'no notes');
   check(!!saved && fs.existsSync(saved) && JSON.parse(fs.readFileSync(saved, 'utf8')).rows.length === rows.length, 'the one file was handed over as a download, with the same rows', saved ?? 'no download');
   check(/WHAT THE LOOK COSTS/.test(report) && rows.every(r => report.includes(r.level)), 'the last page shows the table as text, a line a level');
   check(driven === false, 'the page was not told a script drives it (navigator.webdriver false): what ran is what a person\'s page runs', `navigator.webdriver ${driven}`);
@@ -77,4 +78,4 @@ let red = false; const check = (ok, what, detail = '') => { red = red || !ok; co
   if (report) { fs.writeFileSync(path.join(OUT, 'report.txt'), report + '\n'); console.log('\n' + report); }
   console.log(red ? '\n=== pricerun-page: FAILED ===' : '\n=== pricerun-page: ALL PASS ===');
   process.exit(red ? 1 : 0);
-})().catch(e => { console.error(e); process.exit(1); });
+})().catch(async e => { console.error(e); try { await browser?.close(); } catch { /* gone */ } try { server?.kill(); } catch { /* gone */ } process.exit(1); });

@@ -7,6 +7,8 @@
 export const BENCH_RUN_WORD = 'benchrun', PRICE_RUN_WORD = 'pricerun';
 /** the words that ASK for a run: the benchmark's, the pricing run's */
 export const BENCH_WORD = 'bench', PRICE_LEVELS_WORD = 'pricelevels';
+/** … and the words that shape a pricing run on the address that asks (ui/pricerun.ts): a run's own, never a mission's */
+export const PRICE_ASK_WORDS: readonly string[] = [PRICE_LEVELS_WORD, 'pricesecs', 'pricepage'];
 export const RUN_PAGE_WORDS: readonly string[] = [BENCH_RUN_WORD, PRICE_RUN_WORD];
 export const runPage = (q: URLSearchParams): boolean => RUN_PAGE_WORDS.some(w => q.has(w));
 /** A RUN KEEPS ITS OWN PAGE (host/keeppage.ts `own`): the address that asks for one and every page of it load whole, each a boot of its own — that boot is what a

@@ -523,18 +523,25 @@ but synthetic writes still work.
   a frame there taking seconds and the wall's cut put out of reach, so a scene ends by the player's own cut after `CAP` game seconds and the last page's
   tail is the fake page's to prove; `STEP=script` has the check step the scenes with `__runFrames` instead; about 80 minutes at 320x180). NEVER RUN ON A GPU: no number of its report has been read on a real machine, the seven
   minutes are an estimate, and nobody has watched a scene played or looked at the card.
-- **THE PRICING RUN (`src/ui/pricerun.ts`, `src/host/runpage.ts`, 2026-11-04; `localhost:5173/?look&pricelevels`, hands off)** walks every level of the mission list
+- **THE PRICING RUN (`src/ui/pricerun.ts`, `src/host/runpage.ts`, 2026-11-04; `localhost:5173/?look&pricelevels&downloads=1`, hands off)** walks every level of the mission list
   (`=a,b` for some), a page load a state: the look page (played four seconds of the game's clock, the picture held on one step, timed with the look's
-  switchable layers off and on in turn) and then the same mission WITHOUT the look, held on the same step. One file, `price-levels-<date>.json` (version 4),
-  a row a level, each with the run's own verdict against the PROPOSED bar (`priceOver`, the one place a GPU number of it is judged). TWO NUMBERS a state: the
+  switchable layers off and on in turn) and then the same mission WITHOUT the look, held on the same step. One file, `price-levels-<date>.json` (version 5),
+  a row a level, each with the run's own verdict against the bar (`priceOver`, the one place a GPU number of it is judged; the file's `bar.ruled` says
+  which rows of the bar the maintainer has ruled on). A ROW THAT IS NOT ONE PICTURE IS NOT JUDGED (`apart`: the picture moved between its turns, or its two
+  pages stood at another size, rung or step): its numbers stand and no verdict is read off them. TWO NUMBERS a state: the
   compute passes' busy span (the game's own "GPU ms") and that span with the g-buffer's pass in it (`all`: every stamped pass but the ones that draw to the
   display, whose stamps span the display's wait; the g-buffer's was read against recorded frames on an M4 Max and follows its own work — one chip, so each
-  state is still checked, `spansWait`). EVERY PAGE STANDS ON ITS PRESET'S OWN ROWS with the quality ladder's switch off from before its first frame
-  (`heldPage`), and a row says its rung, its size and the step it was held at: two pages that differ in any are named in the row's notes. IT IS A RUN'S PAGE
+  state is still checked, `spansWait`, which wants half a frame of g-buffer before it calls it a wait). EVERY PAGE STANDS ON ITS PRESET'S OWN ROWS with the
+  quality ladder's switch off from before its first frame (`heldPage`), ITS LOOP HELD FROM BEFORE ITS BOOT (the mission is played by the page's own scripted
+  step to one step on both pages), and counted as a page that measures (no pacer holds a frame back, no window out of focus halves its rate); a row says
+  its rung, its size and the step it was held at. IT IS A RUN'S PAGE
   (`host/runpage.ts`: `runPage` stands the load brief, the lost-device reload, the sandbox row and the look page's kit down, as on a benchmark's scene;
   `ownPage` keeps its own page under the kept-page rule, since a run walks by loading its next address). ITS FILE GOES OUT BY THE SAVE DOOR (kind `price`):
   to whoever listens, and to the browser as a download only with `downloads=1`, a flag the run carries with the benchmark's other carried words
-  (`ui/benchrun.ts carriedWords`). Words: `quality=` (default high), `pricesecs=`, `pricepage=0` (look pages only). Checked by
+  (`ui/benchrun.ts carriedWords`); where nobody took it the card holds the file's text under the table for Copy. A word of the asking address that no
+  page carries is named in the file's notes. Words: `quality=` (default high), `pricesecs=`, `pricepage=0` (look pages only); a mission's link sheds them
+  all (`PRICE_ASK_WORDS`). Checked by `bun run tools/qa/pricerun-check.ts` (no page: the verdicts, the wait's and the lag's rules, the report, the
+  addresses, on made-up rows; `PRICERUN_BREAK=1` must fail) and by
   `node tools/qa/pricerun-page.cjs [level …]` (the real page on the software adapter, as a person's page runs it: the chain, one rung, one step, the file
   down; no number there is a price) and with `--real` on a machine with a GPU (`--look "<words>" --look-only` prices a look page under other words). Run on
   a rented NVIDIA card through Vulkan only (11-04); NEVER RUN ON METAL, and nobody has read a row of it against the bar. Beside it, files only:

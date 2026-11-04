@@ -49,11 +49,8 @@ if (valueOf('--one') !== undefined) await one(valueOf('--one')!); else await all
 // ---------------------------------------------------------------------------------------------------------------------------------------------------------------
 /** the rows the list draws, a level each: the level's stem → its rows (the office has two) */
 async function listed(): Promise<{ level: string; file: string | null; rows: any[] }[]> {
-  const { ALL_MISSIONS } = await import(`${ROOT_DIR}/src/scene/scenarioList.ts`);
-  const by = new Map<string, { level: string; file: string | null; rows: any[] }>();
-  for (const e of ALL_MISSIONS as any[]) { if (e.offList) continue; const level = e.level ? e.level.replace(/\.json$/, '') : 'office';
-    if (!by.has(level)) by.set(level, { level, file: e.level ?? null, rows: [] }); by.get(level)!.rows.push(e); }
-  return [...by.values()];
+  const { listedLevels } = await import(`${ROOT_DIR}/src/scene/scenarioList.ts`);   // (the one answer to which levels the list draws)
+  return (listedLevels() as { level: string; rows: any[] }[]).map(({ level, rows }) => ({ level, file: rows[0].level ?? null, rows }));
 }
 
 // ---------------------------------------------------------------------------------------------------------------------------------------------------------------
