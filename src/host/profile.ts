@@ -354,6 +354,7 @@ export function pageSwitches(q: URLSearchParams): void {
   SAVETIMELINE.holds = q.get('saveholds') !== '0';   // a save carries his wall hold and the close-in mode's held gait (savestate.ts SAVETIMELINE.holds): a load plays on as its save did; ?saveholds=0 = no file says either
   SAVETIMELINE.turn = q.get('saveturn') !== '0';   // a save carries the turn a man is in the middle of (savestate.ts SAVETIMELINE.turn): caught mid-turn he goes on round after a load; ?saveturn=0 = no file says it and he starts from rest
   SAVETIMELINE.since = q.get('savesince') !== '0';   // a save in memory copies only what changed since the save before it (savestate.ts SAVETIMELINE.since, rollback.ts takeSnapshot's `since`): less of a stall in the save's frame (measured headless only); ?savesince=0 = every one a whole take
+  SAVETIMELINE.base = q.get('savebase') !== '0';   // a run's saves in memory stand on a base taken in the run's first tick, and the page runs the take's code once behind the mission's start card (savestate.ts SAVETIMELINE.base, Checkpoints.prime / warm): the first autosave of play is a take since the base by code that has run before (measured headless and on the software adapter's page only); ?savebase=0 = no base and nothing warmed, the first save of a run the whole take
   SAVEPIC.on = q.get('savepic') !== '0';   // a save's picture is boxed down on the GPU and read back late, with no wait in the save's own frame (host/savepic.ts, render/savepic.ts); ?savepic=0 = the canvas drawn into a 2D one in that frame, as it was
   EVENPACE.on = q.get('pace') !== '0';   // the page draws at the rate the quality ladder holds, so a fast display's frames between are passed over and the pace is even (host/pace.ts): ON in the page; ?pace=0 = every display frame worked, as it was
   EVENPACE.giveway = q.get('giveway') !== '0';   // a window without the system's focus keeps one frame with the GPU at a time and leaves it as long again, so a second window of the browser can start and play beside it (host/pace.ts): ON in the page; ?giveway=0 = an unfocused window draws as a focused one, as it was
@@ -781,6 +782,7 @@ export const FROZEN_HOLDS: Record<string, string> = {
   'SAVETIMELINE.holds': 'TPS_SAVEHOLDS=1',
   'SAVETIMELINE.turn': 'TPS_SAVETURN=1',
   'SAVETIMELINE.since': 'TPS_SAVESINCE=1',
+  'SAVETIMELINE.base': 'TPS_SAVEBASE=1',
   'SAVEPIC.on': 'TPS_SAVEPIC=1 (the page\'s alone: no picture is taken headless)',
   'EVENPACE.on': 'TPS_EVENPACE=1 (the page\'s alone: no display asks a harness for a frame)',
   'EVENPACE.giveway': 'TPS_GIVEWAY=1 (the page\'s alone: a harness has no window and nothing to give way to)',

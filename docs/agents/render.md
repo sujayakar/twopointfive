@@ -113,7 +113,7 @@ interleaved and filtered to their quiet minimum, and a row whose p75 sits far ab
   row for the aim); telemetry's per-minute rows from a 120 Hz machine now read 16.7 ms a frame at aim 60 while `hz` says 120. `window.__pace()` = `{on,
   hz, every, skipped, worked, target, fps}` and the give-way fields of the next bullet. Check: `tools/qa/pace-check.ts` (stamps played through the pacer at 60, 100, 120, 144 and 240 Hz with a
   wobble, with frames held back, in pairs from the first frame, across a change of display both ways; the readout on the recording's own gaps, on a hitch
-  and at two frames a second; the wiring read off the source; the switch on the stand; 47 lines on each stand with the next two bullets'; `EVENPACE_BREAK=1` fails 9 on each, two of them lines of the wait for
+  and at two frames a second; the wiring read off the source; the switch on the stand; 51 lines on each stand with the next two bullets'; `EVENPACE_BREAK=1` fails 9 on each, two of them lines of the wait for
   the GPU that stand on the even pace). On
   the real page (headless Chromium, software adapter): boots with no error; on the browser's own 60 Hz frames nothing is passed over; handed callbacks
   stamped as a 120 Hz display stamps them it reads 120 and passes over every second one. MEASURED: nothing on a display. The cause is read off two
@@ -188,14 +188,29 @@ interleaved and filtered to their quiet minimum, and a row whose p75 sits far ab
   that found no room; 'not waiting for the gpu' where the rule is not acting); `__pace()` adds `{flight, flying, held, lost}`. Checks:
   `tools/qa/pace-check.ts` (120 Hz with no rate held and the GPU at 17 ms: two with the GPU at the most and the GPU's own 58.8 frames a second; the
   ladder's 60 with the work at 15 and at 20 ms; a 60 Hz display at 5 and 25 ms; at one; the page measuring; each answer its own frame's; two frames
-  never answered for; the wiring; `FLIGHT_BREAK=1` fails 6 on each stand: frames pile up without end). ON THE REAL PAGE (headless Chromium 153,
+  never answered for; A TAB THAT SLEEPS with two frames in flight, four ways: asleep 3 s with the answers come meanwhile it draws every frame at once;
+  asleep 30 s and never answered both are given up on the first frame back; asleep 3 s with the GPU still at the two it holds six display frames and
+  draws on; asleep 3 s and never answered it waits, ten seconds from the hand-over at the most; the wiring; 51 lines on each stand; `FLIGHT_BREAK=1`
+  fails 9 on each stand: frames pile up without end). ON THE REAL PAGE (headless Chromium 153,
   software adapter, not driven):
   the title at 640 x 360, very low, watched for seven minutes after it came ready. It came ready as ever, drew 20 frames in
   those minutes, never had more than two with the GPU, and printed no error. A frame takes about 11 s on this adapter, so every one of them outlasted
   `lost` and was given up (20 of 20): here the rule comes down to the page as it was, which is what a page check on this adapter should see. On the
   code before the review's mends (no `lost`): the title drew 19 frames, never more than two with the GPU, 9 display frames held, no error; under
   `?flight=0` nothing was held; the compound's own address came ready with two frames in flight and no error. That is a boot and a count, not a pace:
-  at 0.09 frames a second nothing here says how it feels. AT THE LOOK'S JOIN the trial goes: `src/host/gpuPace.ts`, its three lines in `main.ts frame()` and its
+  at 0.09 frames a second nothing here says how it feels. THE PAGE CHECK, `PORT=<port> node tools/qa/pace-page.cjs` (2026-11-03; nine minutes to half an hour:
+  frames come very unevenly on the software adapter, and the first ones after ready take minutes with the rule on or off): the one page tool whose frame
+  loop is LIVE. Every other page tool opens the page `?paused` and steps it with `__runFrames`, which calls the step and never meets the pacer, so a red
+  line in one of them cannot be a pacing rule's. It opens the title undriven, reads that the three rules are on at the page's numbers, watches four
+  minutes after ready (frames keep being worked, some are seen with the GPU, never more than two), then PUTS THE TAB TO SLEEP for fifteen seconds with
+  frames in flight and wakes it: the page's own `freeze` and `resume` events say that it slept and worked no frame asleep, and awake it draws on.
+  `PACE_PAGE_BREAK=1` opens with `?flight=0` and its lines 2 and 3 fail (nothing is ever with the GPU). IT SPEAKS TO THE BROWSER OVER ITS DEBUGGING
+  PORT, with no driver library, because UNDER THE DRIVER THE OTHER PAGE TOOLS USE A PAGE NEVER SLEEPS: its focus emulation holds the page focused and
+  visible, and hiding the tab, minimising the window and the protocol's freeze all left a plain page's frame callbacks running with no `freeze` event
+  (so a first draft of this line passed twice without a sleep in it). The sleep here is that emulation off, then `Page.setWebLifecycleState` frozen
+  (the page reads hidden and its callbacks stop), and back. One run on this box: 4 frames in the four minutes, 2 with the GPU at the most, 4 given up
+  unanswered; asleep with 1 in flight, 6 frames worked at the freeze and 6 at the resume, 2 given up over the sleep, 3 worked after it; no error. Not
+  in any gate (it wants a browser and a server). It says that a page waiting on the GPU's word boots, draws, sleeps and wakes, never a pace. AT THE LOOK'S JOIN the trial goes: `src/host/gpuPace.ts`, its three lines in `main.ts frame()` and its
   HUD row are replaced by this (its `&pace` = the default here, `&pace=1` = `?flight=1`, no word = `?flight=0`). KNOWN LIMITS: how late a real browser's
   queue answers is not known here. An answer that comes later than a paced frame after the work is done costs frames (the pacer counts a frame as with
   the GPU until it is told otherwise), and the ladder then reads slow frames with the GPU inside its budget, which its paced check is there to tell
@@ -407,6 +422,46 @@ interleaved and filtered to their quiet minimum, and a row whose p75 sits far ab
   are equal); `&nofow` on both sides takes the race out, and is equal at both checkpoints.
   **Never seen on a GPU.** That a driver's compile gets shorter, that the browser's shader cache now answers a second level's modules, and that the hitches go with the text are INFERENCES — the next
   benchmark text from the Windows machine is the measure (`load`, `loads`, `longest freeze`).
+- **A MODULE'S TEXT IS ALSO CUT TO WHAT ITS CONSTANT SWITCHES LEAVE ON** (11-03, the maintainer's pick on the join of the look: "Fold first, then join").
+  `src/gpu/wgslTrim.ts SHADER_FOLD`, `foldWgsl` (ON; `?shaderfold=0` = no branch is cut, the trim's own rule alone, as it was; nothing is cut with the
+  trim off; a switch of the page, not a rule of the game: no knob, no `FROZEN_HOLDS` row, both stands boot the same Engine). The scene prelude's switches
+  are constants of the text (`const WX_KINDS: bool = false;`) and the kernels branch on them. The trim keeps a declaration that anything kept MENTIONS, so
+  the dead side of such a branch kept everything it calls, and Chrome on Windows pastes every call into its caller before it drops the branch. WHAT
+  BROUGHT IT UP: the look's prototype is switched at run time and two of its trials (hills that rays see, the surface try) stand behind such constants;
+  joined with the look off, the page's programs came to 16 % more pasted text than the build's (29.9 MB against 25.8 in today's writing) and about thirty
+  size rows went red. THE RULE: in a function's body an `if` statement is read whole, with its `else if`s and its `else`, and each test is read left to
+  right with the module's bool constants in hand (`!`, `&&`, `||`, parentheses; a constant written as a test of other constants counts, `ROUND_RAY`): an
+  arm whose test is false goes, an arm whose test is true becomes the statement's `else` and what stood after it goes, and where every arm before it went
+  the statement is that block alone (a test may stand with or without its outer parentheses). What follows a statement that cannot be passed (a return,
+  break or continue; a block or an `if` with an `else` whose every arm ends in one) goes too, up to a loop's `continuing` block, which runs after a
+  `continue`: it never runs, and the browser's compiler warns of every such line (the first writing left them in: thirty warnings a boot, each one filed
+  as a report). A `discard` IS passed: the function runs on after it and still owes its return. THE CONSTANTS STAY: a constant that decided a branch of
+  a kept function is kept with it, as its mention kept it before the fold, so the text still says which switches it was cut under and the compile queue
+  still finds the cut set by its line (`gpu/device.ts installPipeQueue` gives a module that holds `const CUT_BOXES: bool = true;` the background lane; the
+  second writing dropped that line from all twenty and a review caught it). A function is folded when the trim first keeps it, not before (most of the
+  prelude is kept by no one module: the cut of a boot's 64 modules took 67 ms with the trim alone and takes 87 with the fold, on a busy machine).
+  LEFT AS WRITTEN: a test the constants do not decide BEFORE anything else is asked (`x && OFF` runs x
+  first), a name inside a comparison or a call, a `select`, an `if` with an attribute in front of it, and a function that has a parameter or a local of the
+  constant's name. MEASURED ON THE BUILD ALONE (`shaderinline-check --json`, the shipped page, no browser; text handed to the browser, then the same with
+  every call pasted into its caller): the title, the page's own start (the compact set with separate shadow rays) 3.62 to 3.24 MB and 15.0 to 11.1 MB
+  pasted, today's writing 3.56 to 3.23 MB and 25.8 to 20.2 MB; a snow level in its weather, the page's start 3.62 to 3.39 MB and 15.1 to 12.0 MB,
+  today's writing 25.8 to 21.4 MB (the composite 977 to 620 KB). SINCE THE FOLD A KERNEL'S SIZE FOLLOWS THE SWITCHES, so `tools/qa/shaderinline-check.ts`
+  holds its rows to two pages, the title and a snow level in its weather (every switch a level raises; the listing is the snow level's, the heavier; a
+  second run of the file sizes the title's, where the arms a level's switch turns OFF stand), and its rows were brought level with that in the same
+  change; what a word on the address adds (a trial, `?look`) is in neither, and `--setting look` lists that page. ONE BOOT FOR THE TOOLS
+  (`tools/qa/pageboot.ts`): the page's boot over a recording stand-in, the Engine, the smoke solver, the Game's own modules and the cut-box set, with the
+  switches `main.ts` raises, under one setting (`title`, `snow`, `look`) a process; the size check, the fold's check and the dump all read it (the
+  second writing's checks booted a bare Engine with the page's switches down, so the page's own folded texts were neither compiled nor read).
+  CHECKS: `tools/qa/shaderfold-check.ts` (hand-written texts of every form, cut as written by hand or left alone; the page's own modules under each
+  setting: no test left that the constants decide, the dead side of every plain branch of the unfolded text gone and its constant still there, both read
+  off the unfolded text and not by the fold, the queue's line still in every module that had it, nothing left standing after a jump, a second fold cuts
+  nothing but the constants' lines, every root kept, nothing left that mentions a dropped name, no module bigger; `SHADERFOLD_BREAK=1` turns every
+  constant over before the fold reads it and must fail; a fold that keeps the wrong side of a plain branch fails the dead-side line; run it on both
+  stands). `shadertrim-check` and `shaderrows-check` read unfolded texts (their rules are of declarations as written). `bench-check` and `cardreplay`
+  hold that a benchmark and a replay carry the word. `tools/qa/wgsl-compile.cjs` compiles every distinct folded text of the page's boot in the browser's
+  own compiler, under each setting and with the shader rows as written and as the page opens (211 texts with the look in), and is red on a warning too. THE SAME FRAME: `tools/qa/draw-equal.cjs capture … --with shaderfold=0`
+  against a capture without, then `compare` (the software adapter). NEVER SEEN ON A GPU, and no driver's compiler has read a folded text: what the
+  software adapter draws is the same WGSL through another back end.
 - **How big each kernel is once every call is pasted into its caller: `bun run tools/qa/shaderinline-check.ts [--top N] [--kernel <module>/<entry>] [--json f]` (2026-10-26).**
   Chrome on Windows compiles a pipeline's WGSL through DXC, which pastes every call into its caller before it optimizes, so a kernel pays for each CALL SITE of a heavy
   function, not for the text its module was handed. The tool makes that a number with no browser and no Windows machine: the page's boot run over a recording stand-in
