@@ -2511,27 +2511,31 @@ interleaved and filtered to their quiet minimum, and a row whose p75 sits far ab
   file, which is the root of what is left (the stuff is re-read from the colour at every pack through a cache, the weather is asked through a hook, any other
   writer of a box's paint still changes its stuff, and `lookStuff` and the generated `lookClass` are two writings of one rule that no check holds together);
   the cut core's class on the CPU; the maps made off the main thread or kept between visits; the far copies' cost (31 MB became 36 with thirteen layers); relief past the tilt cap.
-- **A PAINT'S NAME SAYS WHAT IT IS MADE OF, FIRST SLICE** (`src/scene/stuff.ts PAINT_STUFF`, `render/gbuffer.ts lookNames`; the maintainer on the
-  showroom, 11-04: "nicer materials on the chair and table"). The look decided what a box is made of from its COLOUR, so the office's paints, which
-  are the simulation's own names and no palette row, were nobody's (a desk, a chair and a carpet flat) or somebody's by chance (the car park iron).
-  Now ONE TABLE says what each paint NAME the kits write is made of: a material of the look (`lookTex.ts LOOK_NAMES`), `plain` (meant flat: plastic,
-  laminate, rubber, a screen) or `waits` (no material yet: card, foliage, a lawn; drawn plain, counted apart). The palette's rows moved into it and
-  `LOOK_OF` is read off it, same classes in the same order, so the shader's text is unchanged. THE LEVEL'S OWN ROWS carry the names: the loader keeps
-  a file's `materials` beside the level (`levelLoad.ts levelFileOf`), the page hands them to `lookNames` before the look's word for a box is set, and
-  `lookStuff` asks a row's colour of them first. A box, a loose prop's part and a door's leaf are written with a row's colour exactly, so the row is
-  found by the colour and no box carries a word; a row may say its own (`stuff` on the row object: a level's accent is then a material; the level
-  format does not write it yet). A paint with no name keeps the colour rule. A NAME NEVER CHANGES A COLOUR: the simulation reads colours (a round's
-  dust, a sheet of paper by how pale it is). `?names=0` on the look page = by colour alone, as it was. No shader change, no level file moved, nothing
-  in the simulation reads it. CHECK: `bun run tools/qa/stuff-check.ts` (`STUFF_BREAK=1` must fail): every paint name in every level file has a row
-  (90 names, 59 files); the palette's classes as they were; on every file a box wearing a row's paint is drawn as its name says, standing or moving
-  (3948 rows, 1003 of them something else by colour alone); the office's paints; a row's own word, two rows of one colour, an unnamed paint; the
-  page's wiring. NOT YET (the rest of the design, `stuff-by-name` in the dressing notes): a word on a box for a paint written as numbers (the lived
-  kit's toned paints, door frames and leaves, cars), the level format's `stuff`, the cut core's class in `gbuffer_cut.wgsl` (still `lookClass` of the
-  colour: an old break in an office partition draws plain), the audit's reading, `?surf` retired, a row on the look panel. KNOWN: the look's wood is
-  planks and its cloth one weave, so a desk is a plank top and a swivel chair is cloth until the look has a veneer and a plastic; the office's `metal`
-  and `glassFrame` WAIT (drawn plain): the look's `metal` is bare iron gone to rust, under which an office shelf drew as a wreck, and its `paint` is
-  chipped in dark splotches the maintainer flagged on the showroom's door and boxes the same night, so clean steel waits for a layer of its own; the name `asphalt` is TWO paints of one colour (the office's car park and the lived kit's iron fittings, 20 slabs to 277 boxes) and says metal, as the
-  colour alone did, until a box can say its own word. Seen only on the software adapter.
+- **A PAINT'S NAME SAYS WHAT IT IS MADE OF, FIRST SLICE** (`src/scene/stuff.ts PAINT_STUFF`, `render/gbuffer.ts lookNamed` and `lookWordOf`; the
+  maintainer on the showroom, 11-04: "nicer materials on the chair and table"). The look decided what a box is made of from its COLOUR, so the
+  office's paints, which are the simulation's own names and no palette row, were nobody's: a desk, a chair and a carpet drew flat. Now ONE TABLE
+  says what each paint NAME the kits write is made of: a material of the look (`lookTex.ts LOOK_NAMES`), `plain` (meant flat: plastic, laminate,
+  rubber, a screen), `waits` (no material yet: card, foliage, a lawn, a clean steel; drawn plain) or `mixed`. The palette's rows moved into it
+  (checked against `GwotMat` by the compiler) and `LOOK_OF` is read off it, the same classes in the same order, so the shader's text is unchanged.
+  THE LEVEL'S OWN ROWS carry the names: the loader keeps a file's `materials` beside the level (`levelLoad.ts levelFileOf`) and the page makes the
+  look's word for a box with them (`lookWordOf(dry, rows)`): a paint a row names is its name's stuff, asked before any colour is weighed. A box
+  and a loose prop's part are written under the FIRST row that has their colour exactly, so the row is found by the colour and no box carries a
+  word. THAT IS ALSO ITS LIMIT, and what `mixed` is for: a file's writer names a box by its colour, and the kits have used one colour for two
+  things. The showroom's car body is written as the blue partition, a hut's stucco as the tan one, the lived kit's iron fittings as the car park
+  (277 boxes to 20 slabs), an outside door's leaf has the window frame's numbers. Those six names (`partRed`, `partBlue`, `partTan`, `red`,
+  `asphalt`, `glassFrame`) are left to the colour rule, as before there was a table, and so is every paint written as numbers (door leaves and
+  frames, the lived kit's toned paints, cars). A NAME NEVER CHANGES A COLOUR: the simulation reads colours and reads nothing here. `?names=0` on
+  the look page = by colour alone, as it was (a word of the look page: a benchmark carries it). BOTH STANDS: nothing, it is no rule of play and
+  the harness cannot see it; no knob, no journal key. No shader text, no level file moved. CHECK: `bun run tools/qa/stuff-check.ts` (`STUFF_BREAK=1`
+  must fail): every paint name in every level file has a row (90 names in 59 files: 57 a material, 21 plain, 6 waiting, 6 mixed); the palette's
+  classes as they were; on every file a box wearing a row's paint is drawn as the first row of its colour says, standing or moving (3948 rows,
+  649 of them something else by colour alone); the office's paints; the car body, the leaf, the iron and the stucco are the colour's; the page's
+  wiring. `lookmaps-check`'s text test of main.ts takes the second argument. NOT YET (the second slice, `stuff-by-name` in the dressing notes): a
+  word on a box, which is what parts the mixed names and names a paint written as numbers; the level format's `stuff` on a box, a part and a row
+  (a level's accent as a material); the cut core's class in `gbuffer_cut.wgsl` (still `lookClass` of the colour: an old break in an office
+  partition draws plain); `?surf` retired; a row on the look panel. KNOWN: the look's wood is planks and its cloth one coarse weave, so a desk is a
+  plank top and a swivel chair sackcloth until the look's veneer, fabric, plastic and clean steel land (asked 11-04, being drawn; a row each
+  then). Seen on the software adapter, and the first three commits of it by the maintainer on his GPU through the preview.
 - **MARKS AS PAINT, A FIRST TRY** (`shaders/markings.wgsl markSoft`, behind `lookMarkSoft()` = `lookCfg.g.x`, 0 off the look page by gbuffer.ts's
   stub; the maintainer, 10-23: "we also need to get away from the pixel art textures"). A marking is still the level's 2-bit cell bitmap (2.5 cm
   cells), but on the look page it is not drawn as squares: the coverage is read over a one-cell footprint, cut back at half cover along a ragged line
