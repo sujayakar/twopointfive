@@ -31,6 +31,7 @@
 //   bun run tools/qa/tut-road-check.ts                     the lesson played as said, and failed the two ways its lines warn of
 //   page: ?levelFile=tut-road.json&quiet
 import type { Vec3 } from '../../src/math/vec';
+import { glowShape, pickupLens } from '../../src/scene/carShapes';
 import type { Level, LevelDoorDef, PatrolRoute } from '../../src/scene/level';
 import type { LevelScenarios, LessonData, LessonStep, QuietData, Rect, IssueData } from '../../src/scene/scenarios';
 import type { SurfacesData } from '../../src/scene/levelData';
@@ -262,23 +263,23 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
   // its last truck, across the road with its nose to the rock: his first cover, and what the sentry's rounds chew. Everything on it is on, as its driver
   // left it: two head lamps (on the rock), the tail lamps, the lamp in the load bay over its open back doors, which is the light he starts in. Each lens is
   // a glowing sliver a hair off the truck's own, so a round at a lamp meets the sliver first and puts it out (carlamps.ts finds the lenses here)
-  const van0 = K.boxes.length; G.van(VAN_AT.x, VAN_AT.z, VAN_AT.yaw);
+  const van0 = K.boxes.length, VS = G.van(VAN_AT.x, VAN_AT.z, VAN_AT.yaw);
   { const lenses = findCarLamps(K.boxes.slice(van0)).map(l => ({ what: l.what, b: K.boxes[van0 + l.box] })), heads = lenses.filter(l => l.what === 'head lamp').map(l => l.b), tails = lenses.filter(l => l.what === 'tail lamp').map(l => l.b);
     if (heads.length !== 2 || tails.length !== 2) throw new Error(`tut-road: the truck's lamps were not found (${heads.length} head, ${tails.length} tail): the kit's lenses have moved`);
     const mid = [(heads[0].c[0] + heads[1].c[0]) / 2, (heads[0].c[2] + heads[1].c[2]) / 2], l = Math.hypot(mid[0] - VAN_AT.x, mid[1] - VAN_AT.z), nx = (mid[0] - VAN_AT.x) / l, nz = (mid[1] - VAN_AT.z) / l;
     heads.forEach((b, k) => {
-      const fb = add({ c: [b.c[0] + nx * 0.04, b.c[1], b.c[2] + nz * 0.04], h: [0.008, b.h[1] + 0.006, b.h[2] + 0.006], yaw: b.yaw, ...M.plasticWhite, emissive: [34, 31, 24], flags: DECAL });
+      const fb = add({ c: [b.c[0] + nx * 0.04, b.c[1], b.c[2] + nz * 0.04], h: [0.008, b.h[1] + 0.006, b.h[2] + 0.006], yaw: b.yaw, ...M.plasticWhite, emissive: [34, 31, 24], shape: glowShape(b.shape, b.h, [0.008, b.h[1] + 0.006, b.h[2] + 0.006], [0.04, 0, 0], 0.006), flags: DECAL });
       lights.push({ kind: 'spot', pos: [b.c[0] + nx * 0.08, b.c[1], b.c[2] + nz * 0.08], dir: norm([nx, -0.1, nz]), color: [1.0, 0.93, 0.78], intensity: 110, range: 12, innerDeg: 12, outerDeg: 30, name: `truck_lamp_${k}`, group: 'exterior', enabled: true, volumetric: 0.35, fixtureBox: fb, radius: 0.06, mains: false });
     });
     tails.forEach((b, k) => {
-      const fb = add({ c: [b.c[0] - nx * 0.03, b.c[1], b.c[2] - nz * 0.03], h: [0.006, b.h[1] + 0.006, b.h[2] + 0.006], yaw: b.yaw, albedo: [0.5, 0.05, 0.04], rough: 0.4, emissive: [7, 0.4, 0.25], flags: DECAL });
+      const fb = add({ c: [b.c[0] - nx * 0.03, b.c[1], b.c[2] - nz * 0.03], h: [0.006, b.h[1] + 0.006, b.h[2] + 0.006], yaw: b.yaw, albedo: [0.5, 0.05, 0.04], rough: 0.4, emissive: [7, 0.4, 0.25], shape: glowShape(b.shape, b.h, [0.006, b.h[1] + 0.006, b.h[2] + 0.006], [-0.03, 0, 0], 0.006), flags: DECAL });
       lights.push({ kind: 'point', pos: [b.c[0] - nx * 0.1, b.c[1], b.c[2] - nz * 0.1], dir: [0, -1, 0], color: [1.0, 0.12, 0.08], intensity: 1.6, range: 3, innerDeg: 0, outerDeg: 180, name: `truck_tail_${k}`, group: 'exterior', enabled: true, volumetric: 0, fixtureBox: fb, radius: 0.04, mains: false });
     });
     const bay: Vec3 = [VAN_AT.x - nx * 2.3, 1.84, VAN_AT.z - nz * 2.3];
     const bayLens = add({ c: bay, h: [0.07, 0.012, 0.07], ...M.plasticWhite, emissive: [22, 19, 13], flags: DECAL });
     lights.push({ kind: 'point', pos: [bay[0], bay[1] - 0.05, bay[2]], dir: [0, -1, 0], color: [1.0, 0.86, 0.62], intensity: 16, range: 6, innerDeg: 0, outerDeg: 180, name: 'truck_bay', group: 'exterior', enabled: true, volumetric: 0.2, fixtureBox: bayLens, radius: 0.05, mains: false });
   }
-  { const c = at(VAN_AT, -0.5, 0, 0); cap(c[0], c[2], 2.2, 1.5, 1.95, VAN_AT.yaw, 0.03); }      // a dusting on its box: it has not stood long
+  G.lay(VAN_AT.x, VAN_AT.z, VAN_AT.yaw, VS.tops.load, -0.5, 0, 1.95, 1.95 + 0.03, 1.1, 0.75, S.snow);   // a dusting on its box: it has not stood long
   G.crates(6.4, 17.9, 0.5, 2); G.jerryCan(3.4, 17.4, 0.7, 'jerryYellow'); G.jerryCan(5.9, 18.6, -0.4); add({ c: [3.0, 0.07, 16.2], h: [0.3, 0.07, 0.22], yaw: 0.6, ...M.olive });   // what came off it when it stopped
   grp('convoy.escort');
   // its escort, off the road's line and burning: the fire lights the wall he runs to. (A light named 'brazier…' is an open fire: game/fire.ts gives it a
@@ -333,9 +334,9 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
   add({ c: [31.2, 0.1, 10.4], h: [0.2, 0.1, 0.13], yaw: 0.3, ...M.olive }); G.crates(35.9, 10.3, 0.1, 2, 'coyote');   // the gun's ammunition, the roadblock's stores
   G.jersey(30.3, 19.15, 1, 0.12); G.drums(25.2, 18.9, 2); G.tyres(23.4, 18.8, 2); G.drumDown(27.9, 18.2, 0.4);   // the lane's far side, along the rail
   const TRUCK = { x: 34.4, z: 17.75, yaw: Math.PI };                                           // the roadblock's own truck, nose down the road, its lamps on
-  G.pickup(TRUCK.x, TRUCK.z, TRUCK.yaw, 'truckRed', { load: 'crates' });
+  const TS = G.pickup(TRUCK.x, TRUCK.z, TRUCK.yaw, 'truckRed', { load: 'crates' });
   for (const [k, lz] of [[0, -0.66], [1, 0.66]] as const) {
-    const lens = add({ c: at(TRUCK, 2.49, 0.69, lz), h: [0.02, 0.06, 0.13], yaw: TRUCK.yaw, ...M.plasticWhite, emissive: [26, 24, 20], flags: DECAL });
+    const lens = add({ c: at(TRUCK, 2.49, 0.69, lz), h: [0.02, 0.06, 0.13], yaw: TRUCK.yaw, ...M.plasticWhite, emissive: [26, 24, 20], shape: pickupLens([0.02, 0.06, 0.13], [2.49, 0, lz]), flags: DECAL });
     const d = at({ x: 0, z: 0, yaw: TRUCK.yaw }, 1, 0, 0);
     lights.push({ kind: 'spot', pos: at(TRUCK, 2.6, 0.69, lz), dir: norm([d[0], -0.035, d[2]]), color: [1.0, 0.93, 0.8], intensity: 110, range: 22, innerDeg: 9, outerDeg: 24,
       name: `block_lamp_${k}`, group: 'exterior', enabled: true, volumetric: 0.35, fixtureBox: lens, radius: 0.07, mains: false });
@@ -364,7 +365,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
   cap(30.4, 11.0, 0.34, 2.3, 0.8, 0, 0.04); cap(31.8, 12.5, 2.7, 0.34, 0.8, 0, 0.04);           // the nest's
   cap(12.4, 10.4, 0.9, 0.4, 0.88, 0, 0.05); cap(14.2, 10.15, 1.2, 0.3, 0.42, 0, 0.06); cap(15.9, 18.7, 0.44, 0.44, 0.6, 0.3, 0.05); cap(12.0, 18.9, 0.7, 0.4, 0.9, 0, 0.05);
   cap(30.9, 18.6, 1.86, 0.2, 0.81, 0.12, 0.05); cap(25.2, 18.9, 0.8, 0.36, 0.88, 0, 0.05);
-  { const c = at(TRUCK, 0.36, 0, 0); cap(c[0], c[2], 1.0, 1.3, 1.58, TRUCK.yaw, 0.03); }
+  G.lay(TRUCK.x, TRUCK.z, TRUCK.yaw, TS.tops.roof, 0.36, 0, 1.58, 1.58 + 0.03, 0.5, 0.65, S.snow);
   grp('snow.banks');
   // (they stop feet: against the rock and the rail, out of every route, none within 1.4 m of a door or on a mark)
   bank(5.2, ROAD.z1 - 0.36, 9.6, 0.62, Math.PI, 0.5); bank(14.2, ROAD.z1 - 0.36, 5.4, 0.62, Math.PI, 0.46); bank(26.0, ROAD.z1 - 0.36, 6.4, 0.62, Math.PI, 0.5); bank(33.0, ROAD.z1 - 0.3, 3.6, 0.5, Math.PI, 0.4);   // the plough's bank along the rail

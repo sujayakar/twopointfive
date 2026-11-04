@@ -1,2 +1,2 @@
-# the cut rock is the palette's slab darkened (tools/levels/snowRock.ts)
-50847990e62ab6f342167ce37bdf6210fa126695
+# the kits' vehicles say their shapes: the boxes of each vehicle carry a shape, and a pickup's bonnet no longer carries its two panel lines
+039e156dd3178a9dd25cd821232f186d79f0508e

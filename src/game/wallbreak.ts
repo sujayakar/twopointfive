@@ -194,7 +194,7 @@ export class WallBreak {
     const roofed = (x: number, z: number) => { if (!interior) return true; const cx = Math.floor(x - WORLD.min[0]), cz = Math.floor(z - WORLD.min[2]); return cx >= 0 && cz >= 0 && cx < W && cz < H && interior[cz * W + cx] === 1; };
     for (let i = 0; i < boxes.length; i++) {
       const b = boxes[i];
-      if ((b.flags & (BoxFlag.NoShadow | BoxFlag.NoPrimary | BoxFlag.Glass | BoxFlag.Dynamic)) === BoxFlag.NoShadow && b.c[1] - b.h[1] > 0.06 && b.c[0] > WORLD.min[0] && b.c[0] < WORLD.max[0] && b.c[2] > WORLD.min[2] && b.c[2] < WORLD.max[2]) this.ghosts.push(i);
+      if ((b.flags & (BoxFlag.NoShadow | BoxFlag.NoPrimary | BoxFlag.Glass | BoxFlag.Dynamic)) === BoxFlag.NoShadow && b.piece !== true && b.c[1] - b.h[1] > 0.06 && b.c[0] > WORLD.min[0] && b.c[0] < WORLD.max[0] && b.c[2] > WORLD.min[2] && b.c[2] < WORLD.max[2]) this.ghosts.push(i);
       if (b.flags & (BoxFlag.Glass | BoxFlag.NoPrimary | BoxFlag.NoShadow | BoxFlag.Dynamic)) continue;
       if (b.rot || b.emissive[0] + b.emissive[1] + b.emissive[2] > 0 || this.fixtureBoxes.has(i) || this.destr.itemOf(i)) continue;
       if (b.c[0] < WORLD.min[0] || b.c[0] > WORLD.max[0] || b.c[2] < WORLD.min[2] || b.c[2] > WORLD.max[2]) continue;

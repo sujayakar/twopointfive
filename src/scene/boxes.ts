@@ -155,6 +155,12 @@ export function boxOf(c: Vec3, h: Vec3, yaw: number, albedo: Vec3, emissive: Vec
     marks: undefined, markGain: undefined, fogEmit: undefined, fogMark: undefined, wetK: undefined, cut: undefined, cutCore: undefined, cutGlass: undefined, cutRound: undefined, cutArc: undefined, cutOld: undefined, round: undefined, was: undefined, shape: undefined, shaped: undefined, piece: undefined, of: undefined, dress: undefined,
   } satisfies { [K in keyof Required<Box>]: Box[K] };   // (a field added to Box and not here does not typecheck)
 }
+/** IS THIS PIECE OF TRIM DRAWN (scene/shapes.ts: `piece`, said by the static `of`)? While the box that says it is: trim has no life of its own, so nothing
+ *  that hides a box (a round, a blast, a wall coming down, a checkpoint putting any of them back) hides, files or restores its trim — the picture asks the
+ *  box, here, where the world lists what it draws. A piece's own flags never change. */
+export const trimDrawn = (all: readonly Box[], t: Box): boolean => t.of === undefined || !(all[t.of].flags & BoxFlag.NoPrimary);
+/** is a static drawn: not hidden, not a pane, and trim only while its box is (the test the world's list makes; for a check that asks what the picture shows) */
+export const boxDrawn = (all: readonly Box[], b: Box): boolean => !(b.flags & (BoxFlag.NoPrimary | BoxFlag.Glass)) && (b.piece !== true || trimDrawn(all, b));
 export function makeBox(p: Partial<Box> & { c: Vec3; h: Vec3 }): Box {
   const b = boxOf(p.c, p.h, 0, [0.5, 0.5, 0.5], [0, 0, 0], 0, 0);
   for (const k in p) (b as unknown as Record<string, unknown>)[k] = (p as unknown as Record<string, unknown>)[k];   // (the spread's own rule: every key the caller gave, as given)
@@ -603,7 +609,7 @@ export class BoxWorld {
         S[so + 23] = ml; SM[i] = marks; if (cutOn) SC[i] = b.cut;
       }
       if (cutOn && b.cut !== undefined && b.cut.length > 0 && !(b.flags & BoxFlag.NoShadow)) nct++;
-      if (!(b.flags & (BoxFlag.NoPrimary | BoxFlag.Glass))) {   // (a static's word is its bare index: pslot 0 = the index rule; a pane is never rasterised)
+      if (!(b.flags & (BoxFlag.NoPrimary | BoxFlag.Glass)) && (b.piece !== true || trimDrawn(all, b))) {   // (a static's word is its bare index: pslot 0 = the index rule; a pane is never rasterised; TRIM is drawn while the box that says it is — trimDrawn)
         if (roundOn && b.round === true) cv[--np] = i;   // (ROUND THINGS: drawn by the cut pipeline, cut always — the rays' round rule is in every program)
         else if (cutOn && b.cut !== undefined && b.cut.length > 0) { if (b.flags & BoxFlag.NoShadow) cv[--np] = i; else cv[nc++] = i; } else this.visible[nv++] = i;   // (CUT BOXES: a cut static goes to the cut list, drawn by the cut pipeline)
       }
