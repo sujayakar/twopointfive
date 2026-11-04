@@ -523,6 +523,23 @@ but synthetic writes still work.
   a frame there taking seconds and the wall's cut put out of reach, so a scene ends by the player's own cut after `CAP` game seconds and the last page's
   tail is the fake page's to prove; `STEP=script` has the check step the scenes with `__runFrames` instead; about 80 minutes at 320x180). NEVER RUN ON A GPU: no number of its report has been read on a real machine, the seven
   minutes are an estimate, and nobody has watched a scene played or looked at the card.
+- **THE PRICING RUN (`src/ui/pricerun.ts`, `src/host/runpage.ts`, 2026-11-04; `localhost:5173/?look&pricelevels`, hands off)** walks every level of the mission list
+  (`=a,b` for some), a page load a state: the look page (played four seconds of the game's clock, the picture held on one step, timed with the look's
+  switchable layers off and on in turn) and then the same mission WITHOUT the look, held on the same step. One file, `price-levels-<date>.json` (version 4),
+  a row a level, each with the run's own verdict against the PROPOSED bar (`priceOver`, the one place a GPU number of it is judged). TWO NUMBERS a state: the
+  compute passes' busy span (the game's own "GPU ms") and that span with the g-buffer's pass in it (`all`: every stamped pass but the ones that draw to the
+  display, whose stamps span the display's wait; the g-buffer's was read against recorded frames on an M4 Max and follows its own work — one chip, so each
+  state is still checked, `spansWait`). EVERY PAGE STANDS ON ITS PRESET'S OWN ROWS with the quality ladder's switch off from before its first frame
+  (`heldPage`), and a row says its rung, its size and the step it was held at: two pages that differ in any are named in the row's notes. IT IS A RUN'S PAGE
+  (`host/runpage.ts`: `runPage` stands the load brief, the lost-device reload, the sandbox row and the look page's kit down, as on a benchmark's scene;
+  `ownPage` keeps its own page under the kept-page rule, since a run walks by loading its next address). ITS FILE GOES OUT BY THE SAVE DOOR (kind `price`):
+  to whoever listens, and to the browser as a download only with `downloads=1`, a flag the run carries with the benchmark's other carried words
+  (`ui/benchrun.ts carriedWords`). Words: `quality=` (default high), `pricesecs=`, `pricepage=0` (look pages only). Checked by
+  `node tools/qa/pricerun-page.cjs [level …]` (the real page on the software adapter, as a person's page runs it: the chain, one rung, one step, the file
+  down; no number there is a price) and with `--real` on a machine with a GPU (`--look "<words>" --look-only` prices a look page under other words). Run on
+  a rented NVIDIA card through Vulkan only (11-04); NEVER RUN ON METAL, and nobody has read a row of it against the bar. Beside it, files only:
+  `tools/qa/level-audit.ts` (every level counted as the look page draws it; `--check <level>` holds the bars of `level-count.ts`) and
+  `tools/qa/level-table.ts --dir <folder>` (one page of every level from those files, a GPU's file and each dressing row).
 - **A picture fault is debugged from a frame capture** (F6 on the page: every render target over 8 frames and the trace of what the renderer changed;
   `tools/qa/capture-read.ts` reads it; `docs/agents/render.md`, "A CAPTURE IS EVERY TARGET OF A FEW FRAMES").
 - **Stalls: the recorder watches the page's own thread** (`ui/perfrec.ts`, from 10-25). A frame's marks see only inside the frame, and a stall is nearly
