@@ -36,6 +36,8 @@
 import { standUp, ROOT } from './headless.ts';
 /** QA: the lights family's red path (see the head) */
 const LIGHTS_BREAK = process.env.FLASHLIGHTS_BREAK === '1';
+/** is his weapon light burning? The ONE place the lights family reads a light, so its red path reads every light as off for every line */
+const burning = (x: any): boolean => !LIGHTS_BREAK && !!x.flashlight?.enabled;
 import { stage, setKnobs } from './bang-tally.ts';
 const { SCENARIOS } = await import(`${ROOT}/src/scene/scenarioList.ts`);
 const GDM: any = await import(`${ROOT}/src/game/guards.ts`);
@@ -283,7 +285,7 @@ async function emptyEntry(scn: string) {
   const cands: { ent: any; dist: number }[] = []; for (const d of S.defs) for (const e of d.room.entries) if (!cands.some(c => c.ent === e)) cands.push({ ent: e, dist: flat(g.player.char.pos, e.at) });
   cands.sort((a, b) => a.dist - b.dist);
   for (const x of g.guards) if (x.team === 'hostile' && x.state !== 'dead') await quiet(() => CBM.killGuard(g, x, [0, 0, 1], true));
-  const team: any[] = O.squad().filter((x: any) => x.state !== 'dead'); const lit = () => team.filter(x => x.flashlight?.enabled).length;
+  const team: any[] = O.squad().filter((x: any) => x.state !== 'dead'); const lit = () => team.filter(burning).length;
   // (LIGHTS.litOff: a light the rule owes is not owed where the place itself is lit. The rule's own last reading says so (placeLitSeen) AND the probe's own
   //  reading of the floor under him agrees (`feet`: the place's lights alone, to within the half second the rule's reading may be old) — a rule that called
   //  a dark place lit is a dark light here. `spared` counts the man-frames that spared a light, `litInLit` the ones a light burned on in a lit place past the
@@ -294,8 +296,8 @@ async function emptyEntry(scn: string) {
   const feet = (x: any) => { const [px, , pz] = x.char.pos; return Math.max(feetAt(px, pz), feetAt(px + 0.3, pz), feetAt(px - 0.3, pz), feetAt(px, pz + 0.3), feetAt(px, pz - 0.3)); };
   // (lit, or dark by a rule that says this light would help nobody: the place is lit — LIGHTS.litOff — or the whole beam would end on the wall at his
   //  muzzle — LIGHTS.wallOff, by the rule's own reading as probes.ts light-wall holds it: never dark with a ray clear, never dark on a man in the beam)
-  const litOk = (x: any) => (!LIGHTS_BREAK && !!x.flashlight?.enabled) || (GDM.placeLitSeen(g, x) && feet(x) >= GDM.LIGHTS.litAt * 0.8) || GDM.wallDarkSeen(g, x); let spared = 0, litInLit = 0, burnDark = 0; const run = new Map<any, number>();
-  const watch = () => { for (const x of team) { const on = !!x.flashlight?.enabled, pl = GDM.placeLitSeen(g, x); if (!on && pl) spared++; if (on && feet(x) < GDM.LIGHTS.litAt) burnDark++; const r = on && pl ? (run.get(x) ?? 0) + 1 : 0; run.set(x, r); if (r > 60 * GDM.LIGHTS.tail + 3) litInLit++; } };
+  const litOk = (x: any) => burning(x) || (GDM.placeLitSeen(g, x) && feet(x) >= GDM.LIGHTS.litAt * 0.8) || GDM.wallDarkSeen(g, x); let spared = 0, litInLit = 0, burnDark = 0; const run = new Map<any, number>();
+  const watch = () => { for (const x of team) { const on = burning(x), pl = GDM.placeLitSeen(g, x); if (!on && pl) spared++; if (on && feet(x) < GDM.LIGHTS.litAt) burnDark++; const r = on && pl ? (run.get(x) ?? 0) + 1 : 0; run.set(x, r); if (r > 60 * GDM.LIGHTS.tail + 3) litInLit++; } };
   const sam = g.player.char.pos;
   step(60 * 6);   // (the hand-off's own noise is out of everybody's ears)
   await quiet(() => O.give('fallIn', O.targetAt([sam[0], 0, sam[2]]), 'all'));
@@ -314,7 +316,7 @@ async function emptyEntry(scn: string) {
   // (DOORTOOLS.otherDoorM: a man of the entry with a line to another door of the room holds THAT door from where he stands, and a door is held lit by a man
   //  with no goggles (thrDoorsLit) for as long as he holds it — he is judged as a door holder: lit, or in a lit place. 'All dark' and 'lit holding the
   //  room' are everybody else's)
-  const onDoor = (x: any) => (D as any).held?.get(x)?.door ?? null, litFree = () => team.filter(x => !onDoor(x) && x.flashlight?.enabled).length;
+  const onDoor = (x: any) => (D as any).held?.get(x)?.door ?? null, litFree = () => team.filter(x => !onDoor(x) && burning(x)).length;
   const cross = new Map<any, { t: number; lit: boolean; corner: number }>(); let op: any = null, inT = NaN, darkAt = NaN, searching = 0, searchLit = 0;
   for (let f = 0; f < 60 * 60; f++) { step(); op ??= D.ops[0] ?? null;
     if (op) for (const [gd, t] of op.crossed) { if (!cross.has(gd)) cross.set(gd, { t, lit: litOk(gd), corner: NaN });
@@ -322,7 +324,7 @@ async function emptyEntry(scn: string) {
     if (op && D.ops.includes(op) && op.phase === 'enter' && cross.size) { searching++; watch(); if ([...cross.keys()].every(gd => litOk(gd))) searchLit++; }
     if (op && !D.ops.includes(op) && isNaN(inT)) inT = g.time;
     if (!isNaN(inT)) { if (!litFree() && isNaN(darkAt)) darkAt = g.time - inT; if (g.time - inT > 10) break; } }
-  const held = litFree(), doorMen = team.filter(x => onDoor(x)), doorDark = doorMen.filter(x => !litOk(x)).length, doors = doorMen.map(x => `${x.callsign} on ${onDoor(x).def.name}${x.flashlight?.enabled ? '' : ' (dark)'}`).join(', ');
+  const held = litFree(), doorMen = team.filter(x => onDoor(x)), doorDark = doorMen.filter(x => !litOk(x)).length, doors = doorMen.map(x => `${x.callsign} on ${onDoor(x).def.name}${burning(x) ? '' : ' (dark)'}`).join(', ');
   await quiet(() => O.give('fallIn', O.targetAt([sam[0], 0, sam[2]]), 'all'));
   const out = inFile(40);
   const beat = (op?.beats ?? []).map((b: any) => b.what).find((w: string) => w.startsWith('searched')) ?? '';
