@@ -988,7 +988,28 @@ export class Game {
       }
       return false;
     };
-    l.reachDir = reachMaskForDirectional(toLight, this.reachInterior, blocked, only);
+    // a look that fell inside a solid (reach.ts, the header of reachMaskForDirectional): out through the nearest side face of that box that is still in the look's own
+    // cell and in no other box. Upright boxes, turned or not (the walls): a tilted, round or cut box is read as open air, as it was.
+    const solidAt = (x: number, y: number, z: number): Box | null => {
+      const cx = Math.floor((x - WORLD.min[0]) / cs), cz = Math.floor((z - WORLD.min[2]) / cs); if (cx < 0 || cz < 0 || cx >= W || cz >= H) return null;
+      for (const i of buckets[cz * W + cx]) { const b = statics[i]; if (b.rot || b.round === true || (b.cut !== undefined && b.cut.length > 0) || Math.abs(y - b.c[1]) >= b.h[1]) continue;
+        const yw = b.yaw ?? 0, c = Math.cos(yw), s = Math.sin(yw), dx = x - b.c[0], dz = z - b.c[2];
+        if (Math.abs(c * dx - s * dz) < b.h[0] && Math.abs(s * dx + c * dz) < b.h[2]) return b; }
+      return null;
+    };
+    const free = (p: Vec3): Vec3 | null => {
+      const b = solidAt(p[0], p[1], p[2]); if (!b) return p;
+      const x0 = Math.floor((p[0] - WORLD.min[0]) / cs) * cs + WORLD.min[0], z0 = Math.floor((p[2] - WORLD.min[2]) / cs) * cs + WORLD.min[2], E = 0.02;
+      const yw = b.yaw ?? 0, c = Math.cos(yw), s = Math.sin(yw), dx = p[0] - b.c[0], dz = p[2] - b.c[2], lx = c * dx - s * dz, lz = s * dx + c * dz;   // (the box's own frame, as editor/lint.ts insideBox turns it)
+      let best: Vec3 | null = null, bd = Infinity;
+      for (const [q0, q1, n0, n1] of [[-(b.h[0] + E), lz, -1, 0], [b.h[0] + E, lz, 1, 0], [lx, -(b.h[2] + E), 0, -1], [lx, b.h[2] + E, 0, 1]]) {
+        const wx = b.c[0] + c * q0 + s * q1, wz = b.c[2] - s * q0 + c * q1, d = Math.abs(q0 - lx) + Math.abs(q1 - lz);
+        // (… with air beyond it: a cabinet 2 cm off a wall put the look ON the wall's face, and a ray that starts on a face does not hit it)
+        if (d < bd && wx > x0 && wx < x0 + cs && wz > z0 && wz < z0 + cs && !solidAt(wx, p[1], wz) && !solidAt(wx + (c * n0 + s * n1) * E, p[1], wz + (-s * n0 + c * n1) * E)) { bd = d; best = [wx, p[1], wz]; }
+      }
+      return best;
+    };
+    l.reachDir = reachMaskForDirectional(toLight, this.reachInterior, blocked, only, free);
   }
   touring = false;   // the showcase tour is running (demo.ts start/stop) — a plain signal for the HUD / mission getters; quietUtility is NOT it (a stop can run 'live' with the flag down)
   hover: Interactable | null = null; interactables: Interactable[] = []; nearby: Interactable[] = []; aimSnap: Vec3 | null = null;   // aimSnap: where the auto-aim put the reticle this frame (a light or a man's chest), null = raw cursor aim   // hover = the highlighted ROW (what a Space tap / release performs), nearby = the panel's rows (player.ts buildInteractables), interactables = the per-thing markers

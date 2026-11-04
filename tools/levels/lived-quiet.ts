@@ -11,6 +11,7 @@ import type { Box } from '../../src/scene/boxes';
 import { BoxFlag } from '../../src/scene/boxes';
 import type { PropDef, PropKind, PropPart } from '../../src/scene/level';
 import type { GwotMat } from '../../src/scene/gwotKit';
+import { pieces } from '../../src/scene/library';
 
 type Mat = { albedo: Vec3; rough: number; metal?: boolean };
 export interface LivedHost {
@@ -78,10 +79,12 @@ export function livedQuiet(K: LivedHost, M: Record<GwotMat, Mat>) {
   ]);
   /** a kit PROP (a chair, a jerry can) taken into this room: renamed `lived.<room>.<what>` */
   const own = (p: PropDef, what: string) => { if (!room) throw new Error(`lived-quiet: the prop '${what}' before room()`); const name = `lived.${room}.${what}`; if (names.has(name)) throw new Error(`two lived props named ${name}`); names.add(name); p.name = name; return p; };
+  // the pen's TOOLS (the room, raw boxes and rounds, a raw prop), then its PIECES by name (src/scene/library.ts)
   return {
     /** everything that follows belongs to this place */
     room(id: string) { room = id; K.grp(`lived.${id}`); },
-    s, on, d, mat, line, rnd, oct, paper, prop, part, pail, carton, stool, chock, tyre, own,
+    s, on, d, rnd, oct, prop, part, own, ...pieces('livedQuiet', {
+    mat, line, paper, pail, carton, stool, chock, tyre,
     /** a mug / glass / tin standing on a surface at y */
     mug: (x: number, z: number, y: number, m: GwotMat = 'whitewash', r = 0.04, h = 0.1) => s(x, z, y, y + h, r, r, m),
     /** a BENCH: a plank `len` long on two block feet (seat at 0.44) */
@@ -97,6 +100,6 @@ export function livedQuiet(K: LivedHost, M: Record<GwotMat, Mat>) {
       for (let k = 0; k < boards; k++) { const y = boards === 1 ? h : 0.3 + (h - 0.3) * k / (boards - 1); s(x, z, y - 0.03, y, hx - (alongX ? 0.04 : 0), hz - (alongX ? 0 : 0.04), board); ys.push(y); }
       return ys;
     },
-  };
+  }) };
 }
 export type LivedQuiet = ReturnType<typeof livedQuiet>;

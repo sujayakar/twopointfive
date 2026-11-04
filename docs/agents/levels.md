@@ -755,3 +755,36 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   are the seen ones, "one key light a court" is judgement, and a rule is added in front of them: judge a level's light at the hour its row plays at,
   and read which lights are lit. The `key` need's line now says that a link opens at the row's hour too. Its measure is as it was.
 
+- **The library: every object and every paint, once (`docs/library.md`, dress every level, 11-03; tools and level data, no switch).** The maintainer: "as we
+  dress the levels, I'd love for us to have a library of objects, materials, etc. that we reuse across them". What exists is SIX KITS with their own pieces and
+  paints: `src/scene/gwotKit.ts` (the look's), `src/scene/officeGen.ts officeKit`, `tools/levels/livedKit.ts`, `livedPieces.ts`, `lived-quiet.ts`,
+  `lived-train.ts`. ONE DOOR: a kit returns its pieces through `src/scene/library.ts pieces(kit, { … })`, beside its tools (a raw box, a frame, a paint
+  table), so the kit's own return says which of its functions are pieces. With nobody watching `pieces` returns the object it was given: no level file, digest
+  or frame differs (every `export.ts --check` is as it was). With a watcher (`watchPieces`, tools only) each piece laid is told with its arguments.
+  THE CATALOGUE: `bun run tools/levels/library.ts --write` builds every generator under `tools/levels` watched (a look file's `finish` too), lays each piece
+  ALONE in a fresh kit with the arguments a showroom gives it, and writes `docs/library.md`: per piece its arguments and what it is for (the comment and the
+  line that define it in the kit, under the kit's own `// ---- heading ----`), what it is to a man read off its boxes (solid and to what height, off the
+  floor, glass, walked over, loose, drawn only; lit), its size, its cost in boxes (solid, drawn, loose parts, round things, markings, lamps) and its paints by
+  row; per paint table every row with what the simulation reads it as; the names two kits share; the paint names two tables give to different colours; the
+  colours a kit writes as numbers. That page holds nothing of a level but the two showrooms, so a dressing change to a generator never makes it stale.
+  `--uses FILE` writes which level lays which piece (true of the generators that minute: no file of the repo); `--pictures DIR` draws each piece from its
+  boxes (`tools/levels/libraryDraw.ts`: the boxes and their markings under one fixed light, NOT the game's picture; `tools/qa/png.ts encodePng` writes the
+  file); `--json FILE` is all of it as data.
+  THE RULES (`--check`, exit 1): every piece stands in a showroom, says what it is (a `/** comment */` over its definition), does not top out between 0.20 and
+  0.25 m where that is the piece's top (lived-check's band and probes, asked of the piece), every kit that hands pieces out has its row in the script, and
+  `docs/library.md` is what the kits give now. TWO SHOWROOMS: `levels/gwot-yard.json` (the look's kit in a lived compound, untouched: `lived-check` holds its
+  kept part, so a piece the look's kit gains is stood in the hall, or in the yard as a lived thing) and `levels/library-hall.json`
+  (`tools/levels/library-hall.ts`, new: a hut furnished with the office's kit, the pieces of the look's kit the yard does not stand (one drum, the van, a
+  partition; and a stain, a seep, kerb stones, a kerb, a plant bed, a hearth and a seed tray, which no level laid and no check held before), and one bay a piece for
+  the four lived kits, each on its own ground; those are lived things, so on the frozen stand the hall is the hut, the car, the van, the look's pieces and
+  the bare grounds; its own ground is the palette's slab, so the look page draws it as what it is). A NEW PIECE: write it in a kit with a comment that says what it is, add it to the kit's `pieces({ … })`, stand it once
+  in a showroom, export that showroom, `library.ts --write`. A piece is asked for by name; a thing another level could use is never a stack of boxes in one
+  generator. Checks that keep a row a level file gained one for the hall: `round-check` (1 round thing, 5 with its lived things), `carlamps-check` (4 head,
+  4 tail, 2 glowing: the office kit's car and the van), `glassreal-check` (the hut's two panes); `rollback-exempt.ts` lists the door's one module variable.
+  The hall is a new file that carries lived things, so `lived-check` holds its own part to its base file (`tools/qa/fixtures/level-base/library-hall.txt`,
+  the blob id of the file as its generator gives it: write it again in the commit that changes the hall's own part on purpose). `lived-train.ts` now asks its
+  ground for the four things it uses (the two kits, `add`, `grp`), so a level off the shared yard can lay its furniture. WHAT IT FOUND and does not mend: 18
+  names that two or more kits each build their own way (drum, table, stool, bucket, crate, cone, chair, bench, shelf, mat, papers …); 6 paint names two
+  tables give to different colours (canvas three times); four pieces no level lays (`officeKit.paneZ`, `livedTrain.helmet`, `toolRoll`, `spools`);
+  `levelKit.ts`'s copies of the office's pieces are plain functions that take the kit first, so they go through no door and the four levels built on them
+  (defuse, floodlit, mousehole, records) show no office pieces. Never seen on a GPU: the catalogue's pictures are drawn by the script.

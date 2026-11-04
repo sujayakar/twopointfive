@@ -51,7 +51,7 @@ async function stand(file: string, on: boolean, level?: any): Promise<any> {
 const KNOWN: Record<string, [number, number]> = {
   'bazaar.json': [6, 6], 'block-gwot.json': [0, 4], 'block-squads-gwot.json': [0, 4], 'block-squads.json': [0, 4], 'block.json': [0, 4], 'compound-gwot.json': [0, 3],
   'compound.json': [0, 3], 'consulate-gwot.json': [0, 1], 'consulate.json': [0, 1], 'crossing.json': [26, 28], 'depot-gwot.json': [0, 10], 'depot.json': [0, 10], 'glasshouse.json': [3, 5], 'gwot-yard.json': [18, 18],
-  'hall-gwot.json': [0, 2], 'hall.json': [0, 2], 'lights-out.json': [9, 9], 'pass.json': [8, 19], 'police-post.json': [15, 19], 'quiet-relay.json': [18, 21], 'records-gwot.json': [0, 1], 'records.json': [0, 1],
+  'hall-gwot.json': [0, 2], 'hall.json': [0, 2], 'library-hall.json': [1, 5], 'lights-out.json': [9, 9], 'pass.json': [8, 19], 'police-post.json': [15, 19], 'quiet-relay.json': [18, 21], 'records-gwot.json': [0, 1], 'records.json': [0, 1],
   'snatch.json': [12, 12], 'train-move.json': [13, 13], 'train-orders.json': [2, 2], 'tut-pair.json': [35, 35], 'tut-plan.json': [24, 24], 'tut-queue.json': [24, 24], 'tut-quiet.json': [14, 14],
   'tut-road.json': [12, 12], 'tut-sky.json': [15, 22], 'tut-kit.json': [31, 31], 'tut-solo.json': [29, 29], 'tut-squad.json': [25, 31], 'tut-team.json': [15, 22], 'vault.json': [10, 10],
 };
