@@ -21,7 +21,7 @@ export const PAINT_STUFF: Readonly<Record<string, Stuff>> = {
   prodOrange: 'plain', prodGreen: 'plain', prodRed: 'plain', prodYellow: 'plain', straw: 'waits', scrub: 'waits',
   // ---- the office's paints (scene/officeGen.ts OFFICE_PALETTE: the names the simulation knows a paint by, game/particleFx.ts MAT_SURF)
   wood: 'wood', woodDark: 'wood', red: 'paint',
-  metal: 'paint', glassFrame: 'paint',   // (an office's steel is PAINTED steel: shelving, desk legs, lamp posts, mullions. The look's 'metal' is bare iron gone to rust)
+  metal: 'waits', glassFrame: 'waits',   // (an office's steel is CLEAN steel: shelving, desk legs, lamp posts, mullions. The look's 'metal' is bare iron gone to rust and its 'paint' is chipped: a shelf drew as a wreck under the one and splotched under the other, so it stays plain until the look has a clean steel)
   carpet: 'cloth', carpetBlue: 'cloth', carpetRed: 'cloth', chair: 'cloth', partRed: 'cloth', partBlue: 'cloth', partTan: 'cloth',
   wall: 'plaster', ceiling: 'plaster', wallDark: 'block', concrete: 'block', stone: 'slab', lino: 'slab',
   asphalt: 'gravel',   // (a bend, said as one: the look has no tarmac, and gravel is the nearest ground)
