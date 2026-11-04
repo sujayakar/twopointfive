@@ -63,6 +63,15 @@ export interface Opening {
    *  shape: what of it is wall, a ray toward it finds out) */
   mid: Vec3;
   half: [number, number];
+  /** how deep the hole is behind the light's plane, m: from that plane back to where the boxes that end the opening reach out to (the wall's own, as
+   *  `cut.jambs` finds them: the shallower of its two ends; `proud` alone where neither end has one, and a ray finds the rest). Not the wall's depth as
+   *  `cut.out` has it, which any thin box near the line outside moves (a fence, a shutter). What a point off to one side sees of the outside is cut by the
+   *  hole's far rim, this far out (common.wgsl portalSeen) */
+  deep: number;
+  /** which ends of the rectangle the hole has a far rim at, as bits: 1 = the end along the wall toward −(dir.z, 0, −dir.x), 2 = the other end. An end has
+   *  one where the opening itself ends (a wall shut from the floor to the roof), not where a long opening goes on as its next part, whatever post or bar
+   *  stands between them. (Its head and its foot always have one: a lintel or the roof's edge, a sill or the threshold in the wall's depth) */
+  rims: number;
   /** the samples the walls leave open (openAreas' own): across `axis` at L, the straight way through from `a` (outside) to `b` (the light's plane), the
    *  wall's own inside and outside faces at `in` and `out`, the footprints of the boxes that end the opening on each hand (`jambs`: across the wall and
    *  along it; null where it ends at another light's part of the same glass), from s0 along the wall, `nY` heights a place, a place's heights as bits */
@@ -217,14 +226,18 @@ export function planOpenings(statics: readonly Box[]): Opening[] {
       if (s0 + (b + 1) * K.ds < c0 - 0.5 * cell || s0 + a * K.ds > c1 + 0.5 * cell) continue;   // (not this stretch's own: its neighbour's)
       let loY = Infinity, hiY = -Infinity; for (let w = a; w <= b; w++) for (let v = 0; v < nY; v++) if (cols[w] & (1 << v)) { loY = Math.min(loY, v); hiY = Math.max(hiY, v); }
       const wide = (b - a + 1) * K.ds, tall = (hiY - loY + 1) * K.dy, parts = Math.max(1, Math.round(wide / Math.max(2 * tall, K.span)));
+      // how deep the hole is: how far the boxes that end this stretch reach out from where its light hangs, the shallower of the two (Opening.deep)
+      const n = L + r.sign * hang, midY = (loY + hiY + 1) * 0.5 * K.dy, out2 = (e: Pt[] | null) => e ? Math.max(...e.map(([d]) => r.sign * (n - d))) : Infinity;
+      const reach = Math.min(out2(jamb(s0 + (a - 0.5) * K.ds, midY)), out2(jamb(s0 + (b + 1.5) * K.ds, midY))), holeDeep = Number.isFinite(reach) ? Math.max(reach, K.proud) : K.proud;
+      const lowS0 = r.axis === 1 ? r.sign > 0 : r.sign < 0;   // (is the end at the low place along the wall the one toward −(dir.z, 0, −dir.x), the shader's first axis)
       for (let p = 0; p < parts; p++) {
         const qa = a + Math.round((b - a + 1) * p / parts), qb = a + Math.round((b - a + 1) * (p + 1) / parts) - 1; if (qb < qa) continue;
         let cells = 0, sumS = 0, sumY = 0, loS = Infinity, hiS = -Infinity, lo = Infinity, hi = -Infinity;
         for (let w = qa; w <= qb; w++) { const s = s0 + (w + 0.5) * K.ds;
           for (let v = 0; v < nY; v++) if (cols[w] & (1 << v)) { const y = (v + 0.5) * K.dy; cells++; sumS += s; sumY += y; loS = Math.min(loS, s); hiS = Math.max(hiS, s); lo = Math.min(lo, y); hi = Math.max(hi, y); } }
         const full = cells * K.ds * K.dy; if (full < K.small) continue;
-        const s = sumS / cells, y = sumY / cells, n = L + r.sign * hang, hw = (hiS - loS + K.ds) * 0.5, hh = (hi - lo + K.dy) * 0.5;
-        out.push({ pos: r.axis === 0 ? [n, y, s] : [s, y, n], dir: r.axis === 0 ? [r.sign, 0, 0] : [0, 0, r.sign], radius: Math.max(0.1, Math.min(Math.sqrt(full / Math.PI), Math.min(hw, hh) + 0.02)), full, ajar: full, mid: r.axis === 0 ? [n, (lo + hi) / 2, (loS + hiS) / 2] : [(loS + hiS) / 2, (lo + hi) / 2, n], half: [hw, hh],
+        const s = sumS / cells, y = sumY / cells, hw = (hiS - loS + K.ds) * 0.5, hh = (hi - lo + K.dy) * 0.5, first = p === 0, last = p === parts - 1;
+        out.push({ pos: r.axis === 0 ? [n, y, s] : [s, y, n], dir: r.axis === 0 ? [r.sign, 0, 0] : [0, 0, r.sign], radius: Math.max(0.1, Math.min(Math.sqrt(full / Math.PI), Math.min(hw, hh) + 0.02)), full, ajar: full, mid: r.axis === 0 ? [n, (lo + hi) / 2, (loS + hiS) / 2] : [(loS + hiS) / 2, (lo + hi) / 2, n], half: [hw, hh], deep: holeDeep, rims: ((lowS0 ? first : last) ? 1 : 0) | ((lowS0 ? last : first) ? 2 : 0),
           cut: { axis: r.axis, L, a: wa, b: wb, in: dIn, out: dOut, jambs: [jamb(s0 + (qa - 0.5) * K.ds, (lo + hi) / 2), jamb(s0 + (qb + 1.5) * K.ds, (lo + hi) / 2)], s0: s0 + qa * K.ds, nY, cols: cols.slice(qa, qb + 1) } });
       }
     }
