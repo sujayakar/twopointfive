@@ -15,7 +15,7 @@ use crate::knobs::*;
 use crate::maths::{acos, asin, atan2, cos, exp, hypot2, hypot3, hypot4, pow, sin};
 use prim::{floor, sqrt};
 use crate::single::{get, put, S};
-use crate::skeleton::{NODE, ask_blend, ask_mask, ask_sample, bench, fk_run, parent_rot, rotate_local, rotate_model, set_model_rot, set_unit, two_bone_ik, with_pose, Fk, Rig};
+use crate::skeleton::{NODE, ask_blend as ask_blend_how, ask_mask, ask_sample as ask_sample_how, bench, fk_run, parent_rot, rotate_local, rotate_model, set_model_rot, set_unit, two_bone_ik, with_pose, Fk, Rig};
 
 /// a layer ran
 pub const RAN: u32 = 1;
@@ -148,6 +148,16 @@ fn knee_pole(foot_rot: &[f64; 4]) -> [f64; 3] {
     let f = q_rotate(foot_rot, &AY);
     let h = normalize([f[0], 0.0, f[2] + 1e-6]);
     normalize([h[0] * 0.25, 0.5, h[2] * 0.25 + 0.75])
+}
+/// A LAYER'S BLEND AND ITS SAMPLE (skeleton.rs ask_blend, ask_sample) are worked as the tick's knob says: in singles under POSEMATH.singles, as the host's
+/// own are (anim/skeleton.ts blendPose, sampleClip read the same switch as they ask)
+#[inline(always)]
+fn ask_blend(g: usize, a: usize, b: usize, w: f64, masked: bool, out: usize, n: usize) -> bool {
+    ask_blend_how(g, a, b, w, masked, out, n, truthy(POSE_SINGLES))
+}
+#[inline(always)]
+fn ask_sample(g: usize, at: usize, nodes: usize, c: usize, t: f64, looped: bool) -> bool {
+    ask_sample_how(g, at, nodes, c, t, looped, truthy(POSE_SINGLES))
 }
 /// A POSE'S SINGLES, and the one place in this file that says where one lies: node i's channel c (0‥2 its origin, 3‥6 its rotation, 7‥9 its
 /// scale). Every layer below reads and writes a pose through these two, so a pose laid out another way is these two lines. A POSE IS TEN COLUMNS, A NODE A

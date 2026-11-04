@@ -125,6 +125,7 @@ import { RESCUEEND } from '../game/rescueend';
 import { SNATCHOUT } from '../game/snatchout';
 import { RESCUEFLUSH } from '../game/rescueflush';
 import { EXACT } from '../math/exact';
+import { POSEMATH } from '../anim/skeleton';
 import { rustRows, rustRow } from '../sim/sim';
 import { SENSE } from '../game/sense';
 import { CMDCHECK } from '../game/cmd';
@@ -229,6 +230,9 @@ export function populateHost(host: HostApi, level: Level): void {
  *  on (TPS_EXACT=1 raises it); the shipped stand keeps the page's (on), and TPS_EXACT=0 there is the page's ?noexact. Written BEFORE anything is built — a level's
  *  boxes and a Game's constructor keep what they work out — so a tool that builds a level itself calls this first. */
 export function pinMaths(): void { if (pinned('TPS_EXACT')) EXACT.on = String((globalThis as any).process?.env?.TPS_EXACT ?? '') === '1'; }
+/** A POSE'S BULK ARITHMETIC IN SINGLES (src/anim/skeleton.ts POSEMATH) on the harness: off on the frozen stand (TPS_POSESINGLES=1 raises it); the shipped stand
+ *  keeps the page's (on), and TPS_POSESINGLES=0 there is the page's ?posesingles=0. Written BEFORE the game is built: an animator measures its clips as it is made. */
+export function pinPoseMath(): void { if (pinned('TPS_POSESINGLES')) POSEMATH.singles = String((globalThis as any).process?.env?.TPS_POSESINGLES ?? '') === '1'; }
 /** THE RUST MODULE'S ROWS (src/sim/sim.ts RUST) on the harness: every row off on the frozen stand (TPS_RUST<ROW>=1 raises one — TPS_RUSTMATHS, TPS_RUSTLINES — the
  *  page's ?rust<row>); the shipped stand keeps the page's (RUST_ON: lines, circles and fog on), and TPS_RUST<ROW>=0 there is the page's ?rust<row>=0. A row is never
  *  a rule of play: the same game to the bit on or off. */
@@ -242,7 +246,7 @@ export function pinSenses(): void { if (pinned('TPS_CPUSENSE')) SENSE.cpu = Stri
 export function pinCmdCheck(): void { if (pinned('TPS_CMDCHECK')) CMDCHECK.on = String((globalThis as any).process?.env?.TPS_CMDCHECK ?? '') === '1'; }
 
 export async function standGame(host: HostApi, opts: StandOpts = {}): Promise<Stood> {
-  if (opts.harness) { pinMaths(); pinRust(); pinSenses(); pinCmdCheck(); }   // (first: the level and the Game's constructor work out sines and cosines)
+  if (opts.harness) { pinMaths(); pinPoseMath(); pinRust(); pinSenses(); pinCmdCheck(); }   // (first: the level and the Game's constructor work out sines and cosines)
   const level = opts.level ?? buildLevel();
   let ch = opts.ch;
   if (!ch) { if (!opts.gltfUrl) throw new Error('standGame: neither ch nor gltfUrl given'); ch = await loadGltfCharacter(opts.gltfUrl); }

@@ -233,6 +233,22 @@ export function clipNo(clip: Clip, nodes: number): number { const x = POSE_BENCH
 /** where the module keeps `clip` (−1 = it does not), for the check that reads the copy back; a clip never sampled with the row up is not asked for here */
 export function clipHeld(clip: Clip): number { return Math.max(-1, CLIP_SIDE.get(clip)?.at ?? -1); }
 
+/** A POSE'S BULK ARITHMETIC IN SINGLES (the maintainer, 2026-11-03, of the kernels a pose is blended and sampled by: "Singles, plain root for lengths"):
+ *  with `singles` on, blendPose and the step sampleClip takes between two keys are worked in singles, every operation rounded once (`Math.fround` here; the
+ *  Rust module's are singles to begin with — rust/sim/src/single.rs — and four nodes a step there), and a rotation is made a unit again by the plain root of
+ *  its squares where the doubles used the game's compensated length. A pose's numbers are stored as singles either way; what moves is their LAST PLACE, so it
+ *  is a rule of play: off = the build as it was, to the bit. Why: four singles fit a lane where two doubles do, and the compensated length is eight
+ *  divides and a root a node — in the module a blend is a third to a quarter of the time (docs/agents/rust.md has both languages' numbers). OFF here and on
+ *  the frozen stand; the page raises it (host/profile.ts). */
+export const POSEMATH = { singles: false };
+const fr = Math.fround;
+// WHAT IS MEASURED OFF A CLIP ONCE AND KEPT (an animator's tables of its run's pelvis height, its stances, the middle of its stride: character.ts, as an
+// animator is made) is measured IN DOUBLES whatever the rule — the constructor there puts the rule off while it measures: such a table is authored data
+// read off the file, the same under both rules, so nothing kept from the build stands on the other arithmetic.
+// THE RULE'S ORDER OF OPERATIONS IS WRITTEN OUT TWICE BELOW, in sampleClip and in blendPose, and not asked of one helper: a helper of twelve numbers was
+// tried and a blend in singles went from 871 to 1695 ns under bun (1686 to 2029 under V8). The two must read alike, and as rust/sim/src/single.rs
+// unit_step: the shorter way round, each number a + (b − a)·t, the plain root of ((x² + y²) + z²) + w². pose-ident holds each against the module and
+// against its own plain words.
 /** one sample's place on each line: 0 not found yet · 1 before the first key · 2 at or past the last · 3 between key `lo` and the next, `f` of the way */
 const ON_HOW = new Uint8Array(LINES), ON_LO = new Int32Array(LINES), ON_F = new Float64Array(LINES);
 
@@ -240,7 +256,7 @@ const ON_HOW = new Uint8Array(LINES), ON_LO = new Int32Array(LINES), ON_F = new 
 export function sampleClip(clip: Clip, t: number, loop: boolean, out: Pose) {
   // (RUST.poses: one question to the module, its answer written into the pose where it lives — rust/sim/src/clips.rs `sample`, this function statement for statement)
   { const n = out.numNodes, x = benchFor(n); if (x) { const c = clipIn(x, clip);
-      if (c.at >= 0 && c.need <= n) { const g = lend(out, 0); known(x.pose_sample(g, g < 0 ? 0 : out.at, n, c.at, t, loop ? 1 : 0)); if (g < 0) benchGet(out, 0); return; }
+      if (c.at >= 0 && c.need <= n) { const g = lend(out, 0); known(x.pose_sample(g, g < 0 ? 0 : out.at, n, c.at, t, (loop ? 1 : 0) | (POSEMATH.singles ? 2 : 0))); if (g < 0) benchGet(out, 0); return; }
       POSE_BENCH.asked--; } }
   const dur = clip.duration;
   if (loop) { t = t % dur; if (t < 0) t += dur; } else t = Math.min(Math.max(t, 0), dur);
@@ -267,6 +283,16 @@ export function sampleClip(clip: Clip, t: number, loop: boolean, out: Pose) {
     const a = lo * comps, b = a + comps;
     // a key's own values: the first, the last, or (a step track) the one before
     if (how !== 3 || tr.step) { for (let c = 0; c < comps; c++) d[o + c * N] = vals[a + c]; continue; }
+    if (POSEMATH.singles) {   // (the step between the two keys in singles: rust/sim/src/single.rs step3 / step4, operation for operation)
+      const fs = fr(f);
+      if (comps === 3) { for (let c = 0; c < 3; c++) d[o + c * N] = vals[a + c] + fr(fr(vals[b + c] - vals[a + c]) * fs); continue; }
+      let bx = vals[b], by = vals[b + 1], bz = vals[b + 2], bw = vals[b + 3];
+      const ax = vals[a], ay = vals[a + 1], az = vals[a + 2], aw = vals[a + 3];
+      if (fr(fr(fr(fr(ax * bx) + fr(ay * by)) + fr(az * bz)) + fr(aw * bw)) < 0) { bx = -bx; by = -by; bz = -bz; bw = -bw; }
+      const x = fr(ax + fr(fr(bx - ax) * fs)), y = fr(ay + fr(fr(by - ay) * fs)), z = fr(az + fr(fr(bz - az) * fs)), w = fr(aw + fr(fr(bw - aw) * fs));
+      const l = fr(Math.sqrt(fr(fr(fr(fr(x * x) + fr(y * y)) + fr(z * z)) + fr(w * w)))) || 1; d[o] = x / l; d[o + N] = y / l; d[o + 2 * N] = z / l; d[o + 3 * N] = w / l;
+      continue;
+    }
     if (comps === 3) { for (let c = 0; c < 3; c++) d[o + c * N] = vals[a + c] + (vals[b + c] - vals[a + c]) * f; }
     else {
       // nlerp shortest arc
@@ -284,10 +310,26 @@ export function blendPose(a: Pose, b: Pose, w: number, mask: Float32Array | null
   { const x = b.numNodes === a.numNodes && out.numNodes === a.numNodes && (!mask || mask.length === a.numNodes) ? benchFor(a.numNodes) : null; if (x) { const sb = b === a ? 0 : 1, so = out === a ? 0 : out === b ? sb : 2;
       if (mask) f32().set(mask, POSE_BENCH.mask);
       const g = a.home !== null && b.home === a.home && out.home === a.home ? slotOf(a) : -1;
-      if (g >= 0) { POSE_BENCH.inPlace++; known(x.pose_blend(g, a.at, b.at, w, mask ? 1 : 0, out.at, a.numNodes)); return; }
+      if (g >= 0) { POSE_BENCH.inPlace++; known(x.pose_blend(g, a.at, b.at, w, (mask ? 1 : 0) | (POSEMATH.singles ? 2 : 0), out.at, a.numNodes)); return; }
       benchPut(a, 0); if (sb) benchPut(b, 1);
-      known(x.pose_blend(-1, 0, sb, w, mask ? 1 : 0, so, a.numNodes)); benchGet(out, so); return; } }
+      known(x.pose_blend(-1, 0, sb, w, (mask ? 1 : 0) | (POSEMATH.singles ? 2 : 0), so, a.numNodes)); benchGet(out, so); return; } }
   const n = a.numNodes, N = a.rows; const A = a.cols, B = b.cols, O = out.cols;
+  if (POSEMATH.singles) {   // (rust/sim/src/single.rs blend4, operation for operation: every step one operation on singles, rounded once)
+    const tw = fr(w);
+    for (let i = 0; i < n; i++) {
+      const t = mask ? fr(tw * mask[i]) : tw;
+      if (t <= 0) { if (O !== A) for (let c = 0, o = i; c < 10; c++, o += N) O[o] = A[o]; continue; }
+      if (t >= 1) { for (let c = 0, o = i; c < 10; c++, o += N) O[o] = B[o]; continue; }
+      for (let c = 0, o = i; c < 3; c++, o += N) O[o] = A[o] + fr(fr(B[o] - A[o]) * t);
+      for (let c = 7, o = 7 * N + i; c < 10; c++, o += N) O[o] = A[o] + fr(fr(B[o] - A[o]) * t);
+      let bx = B[3 * N + i], by = B[4 * N + i], bz = B[5 * N + i], bw = B[6 * N + i];
+      const ax = A[3 * N + i], ay = A[4 * N + i], az = A[5 * N + i], aw = A[6 * N + i];
+      if (fr(fr(fr(fr(ax * bx) + fr(ay * by)) + fr(az * bz)) + fr(aw * bw)) < 0) { bx = -bx; by = -by; bz = -bz; bw = -bw; }
+      const x = fr(ax + fr(fr(bx - ax) * t)), y = fr(ay + fr(fr(by - ay) * t)), z = fr(az + fr(fr(bz - az) * t)), ww = fr(aw + fr(fr(bw - aw) * t));
+      const l = fr(Math.sqrt(fr(fr(fr(fr(x * x) + fr(y * y)) + fr(z * z)) + fr(ww * ww)))) || 1; O[3 * N + i] = x / l; O[4 * N + i] = y / l; O[5 * N + i] = z / l; O[6 * N + i] = ww / l;
+    }
+    return;
+  }
   for (let i = 0; i < n; i++) {
     const t = mask ? w * mask[i] : w;
     if (t <= 0) { if (O !== A) for (let c = 0, o = i; c < 10; c++, o += N) O[o] = A[o]; continue; }

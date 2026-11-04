@@ -307,10 +307,15 @@ let wordOwn = '', wordRust = '';
 
 // ---- poses
 {
-  const r = child(['bun', 'run', 'tools/qa/pose-ident.ts', '--n', flag('--poses') ?? '4000']);
-  const row = r.out.split('\n').find(l => /^pose-ident: \d+ rounds/.test(l)), ok = r.status === 0 && !!row && /=== pose-ident: PASS/.test(r.out);
-  red.poses = (marked(r.out, 'POSE-IDENT ')?.differ ?? 0) > 0 && r.status !== 3;   // (its exit 3 = a KIND of posing question the red path left green: not red, however many of the others differed)
-  verdict(ok, 'poses: every pose the Rust module samples, blends, runs forward, turns and solves is the TypeScript\'s, single for single', row ? row.replace(/^pose-ident: /, '') + (r.status === 3 ? `\n    ${r.out.trim().split('\n').pop()}` : '') : `the differential left nothing (exit ${r.status}): ${(r.err || r.out).trim().split('\n').slice(-2).join(' / ').slice(0, 300)}`);
+  // (asked under BOTH pose rules, anim/skeleton.ts POSEMATH: in doubles, and in singles — the host says the rule in each call's `how`, and only a run with
+  //  the rule on asks the module's lanes and the twin's rounding)
+  const one = (singles: boolean) => child(['bun', 'run', 'tools/qa/pose-ident.ts', '--n', flag('--poses') ?? '4000'], { TPS_POSESINGLES: singles ? '1' : '0', POSEMATH_BREAK: undefined });
+  const r = one(false), r1 = one(true);
+  const rowOf = (x: { out: string }) => x.out.split('\n').find(l => /^pose-ident: \d+ rounds/.test(l)), row = rowOf(r), row1 = rowOf(r1);
+  const ok = r.status === 0 && !!row && /=== pose-ident: PASS/.test(r.out) && r1.status === 0 && !!row1 && /=== pose-ident: PASS/.test(r1.out);
+  red.poses = (marked(r.out, 'POSE-IDENT ')?.differ ?? 0) > 0 && r.status !== 3 && (marked(r1.out, 'POSE-IDENT ')?.differ ?? 0) > 0 && r1.status !== 3;   // (its exit 3 = a KIND of posing question the red path left green: not red, however many of the others differed)
+  const say = (x: { out: string; err: string; status: number | null }, rw: string | undefined) => rw ? rw.replace(/^pose-ident: /, '') + (x.status === 3 ? `\n    ${x.out.trim().split('\n').pop()}` : '') : `the differential left nothing (exit ${x.status}): ${(x.err || x.out).trim().split('\n').slice(-2).join(' / ').slice(0, 300)}`;
+  verdict(ok, 'poses: every pose the Rust module samples, blends, runs forward, turns and solves is the TypeScript\'s, single for single, in doubles and under the rule in singles', `in doubles: ${say(r, row)}\n    in singles: ${say(r1, row1)}`);
 }
 
 // ---- layers

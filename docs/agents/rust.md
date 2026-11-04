@@ -1334,6 +1334,57 @@ first system across (the game's own maths). No rule of play has changed and noth
     page (`rust-page.cjs`, Chromium on the software adapter, the frames not drawn: seven jobs, 240 frames the same by digest and bits with every
     row up, as a player opens it, with the maths alone, and with no WebAssembly). NEVER SEEN ON A GPU: `SkeletonInstance.update` (the skinning
     matrices the picture draws from) was re-indexed, and what holds it is the fold above, not an eye. One seed a run.
+- **A pose's bulk arithmetic in singles** (2026-11-04; the maintainer on 2026-11-03, asked which arithmetic the kernels a pose is blended and sampled by
+  should use: "Singles, plain root for lengths"). THE SWITCH: `src/anim/skeleton.ts POSEMATH.singles`. On, `blendPose` and the step `sampleClip` takes
+  between two keys are worked in SINGLES, every operation rounded once, and a rotation is made a unit again by the plain root of its squares; off, in
+  doubles with the game's compensated length, the build as it was to the bit. A pose's numbers are stored as singles either way, so what moves is their
+  LAST PLACE: it is a rule of play, not a row. ON in the page (`?posesingles=0` = doubles), OFF in the module and on the frozen stand
+  (`TPS_POSESINGLES=1`; `FROZEN_HOLDS` `POSEMATH.singles`); registered in `knobs.ts` and carried by a recording, and one from before the table replays
+  in doubles (`journal.ts applyKnobs`, `recipestand.ts`, `rerun.ts`; `replay.ts` says no word for it, the line below is why). Not in the
+  frozen-digest pin lists: off in the module. WHAT AN ANIMATOR MEASURES OFF ITS CLIPS AS IT IS MADE (the run clip's pelvis table, the stances, the
+  stride's middle) IS MEASURED IN DOUBLES UNDER EITHER RULE (the animator's constructor puts the rule off while it measures): those tables are authored data read off the file, so nothing
+  kept from the build stands on the other arithmetic, and the rule written on a standing game before its first tick is the game stood with it so,
+  both ways (`posemath-check late`). So a recording's rule is written by `applyKnobs` after the game is stood, like any knob; the stands pin it
+  before the game all the same (`standup.ts pinPoseMath`), which is what a stand's own word means.
+  - WHY: four singles fit a lane of a vector where two doubles do, and the compensated length is eight divides and a root a node. Measured before it
+    was built (the layout bullet above): one blend of two 55-node poses 1334 ns in the module as it stood, 157 ns in singles over columns, four nodes a
+    step. Singles change the last place, which is why it needed his word.
+  - BOTH LANGUAGES, ONE RULE. The TypeScript twin rounds each step with `Math.fround` (an add, a subtract, a multiply, a divide and a root of singles
+    worked in doubles and rounded once are the single's own answer: the standard's, and 20,000 blends said so before the build). The module's are
+    singles to begin with: `rust/sim/src/single.rs`, the one file that may name a single, now also the one place anything is WORKED in singles
+    (`unit_step`, the rule one rotation at a time; `step3`, `step4` for a sample's step; `blend4`, the blend: four rows a step in fixed-width SIMD,
+    `core::arch::wasm32`, the module's first vector instructions, with a one-at-a-time body where the crate is compiled for anything else). A blend by
+    nought or by one with no mask is a copy (a layer's "blend by one" is how it copies a pose); only the nodes' rows are ever written. The ORDER of the
+    operations is the rule (in TypeScript written out at its two sites, `sampleClip` and `blendPose`: one helper for both doubled a blend's cost): a dot product is ((ax·bx + ay·by) + az·bz) + aw·bw,
+    a length the root of ((x² + y²) + z²) + w². Where a time falls among a clip's keys is found in doubles as ever; the fraction is rounded to a
+    single once.
+  - WHO SAYS THE RULE TO THE MODULE: whoever asks. The host's own blend and sample read the switch as they ask and hand it in the call
+    (`pose_blend`, `pose_sample`: bit 2 of `how`), so a question asked outside a tick, by a tool or by a page with only the poses' row up, is never
+    answered by a stale copy. A LAYER of the module (`layers.rs`) blends and samples from inside the module and reads the tick's knob
+    (`knobs.rs POSE_SINGLES`, handed over as the tick opens with every other knob). Both read the one table as the tick stands.
+  - WHAT IT IS NOT: `character.ts addPoseDelta`, the turns, the solve and the run forward stay in doubles. The run forward is a chain (a child after
+    its parent), so lanes do not fall out of it; it would move every bone the game reads, and is its own question.
+  - THE CHECK: `tools/qa/posemath-check.ts`, on BOTH stands (`stand`, `old`, `twin`, `rule`, `late` on both; `layers` and `game` on the shipped stand,
+    where the module answers); `POSEMATH_BREAK=1` must exit 1 (the module is asked without the rule's bit while the twin works in singles). It is in no
+    runner: run it by name, as `rust-check` is. `rust-check`'s `poses` section asks `pose-ident` under both rules, and `pose-ident` holds the sample
+    three ways under each (its plain definition has the rule in its own words: every result put through a Float32Array of one).
+  WHAT WAS RUN (2026-11-04, headless, a 4-core cloud box, bun 1.4 and node 24; one seed a run):
+  - The two languages: `pose-ident` with `TPS_POSESINGLES=1`, 204,131 questions, 0 differ (the TypeScript twin, the module with its lanes, and the
+    plain definition), and red under either break word; without the word, 0 differ as ever. `layer-ident` under both rules: every layer the same pose.
+  - Whole games: `rust-check --missions` with the rule on, six runs (one on Hard), 35,957 ticks, the poses' and the walk's rows up against every row
+    off: to the bit under bun and under node, and the six end words are the same on the two engines. `posemath-check` on both stands: ALL PASS, and
+    exit 1 under `POSEMATH_BREAK=1` on both.
+  - OFF IS THE BUILD AS IT WAS: with `TPS_POSESINGLES=0` the five missions of `tickcost` are the build before to the bit (38,634 ticks).
+  - ON IS ANOTHER GAME, as a last place moved must be: the five missions end differently (block-squads is over at tick 3,145 where it ran 8,581), so
+    a tick's cost before and after cannot be read off them, and was not. What a call costs, ns (bun | node): the TypeScript blend 1322 to 871 | 1451
+    to 1686, masked 957 to 661 | 1429 to 1414, a sample 1592 to 1394 | 2613 to 2679; the module with the pose at home, blend 1460 to 456 | 1418 to
+    362, masked 1112 to 469 | 1064 to 379, a sample 1221 to 952 | 1189 to 951. So in TypeScript the rule is a gain under bun (the plain root) and
+    about nothing under V8; in the module a blend is a third to a quarter of what it was, most of what is left being the call itself (157 ns
+    inside the module). A mission asks about 73 pose questions a tick, so today this is about 1 % of a tick where the poses' row is up and
+    nothing where it is not. It pays as the animator's own blends move into the module.
+  NOT DONE: a clip's keys are still a track after a track, so a sample's step is one track at a time (in singles, but not in lanes); laying keys
+  out as columns moves no bit and is the next step. Never seen on a GPU: the picture's skinning reads these poses, a last place apart. Nobody has
+  played it. The rule written on a game in the middle of a fight is not held by a check: only before its first tick.
 - **Found, not changed.** `tools/qa/exact-check.ts` is red on the build this was cut from, on three sites that are nobody's Rust: a `Math.tan` worked out as
   `scene/round.ts` loads, and a cube and a power of two written with `**` in `game/stalk.ts` and `game/showwhy.ts`. Each is the engine's arithmetic inside
   the game, the thing this work exists to end; they are their owners' to mend and a port of those files must not copy them.
