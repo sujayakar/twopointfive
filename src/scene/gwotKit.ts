@@ -18,7 +18,7 @@
 // piece with a front faces local −Z unless its line says otherwise; vehicles point +X.
 import type { Vec3 } from '../math/vec';
 import { Box, BoxFlag } from './boxes';
-import { pickupShapes, vanShapes, bikeShapes, lorryShapes, hubPaint } from './carShapes';
+import { pickupShapes, vanShapes, bikeShapes, lorryShapes, hubPaint, layOn, type BowedTop } from './carShapes';
 import { WORLD } from './world';
 import type { Level, LightDef, PropKind, PropPart, PropDef } from './level';
 import { MarkingDef, MarkFace, MarkRes, MarkPal, MARKING_TEXEL, RES_K, CellCanvas, marking, mkHash, faceHalf, faceIndex } from './markings';
@@ -145,6 +145,11 @@ export function gwotKit(host: GwotHost) {
     };
   };
   type Put = ReturnType<typeof piece>;
+  /** DECAL: SNOW OR DUST LAID ON A VEHICLE'S BOWED TOP — `top`: one of the `tops` the vehicle standing at (x, z, yaw) handed back; the slab is said in the
+   *  vehicle's frame as a piece's box is. A flat slab kept to the crown, and a sheet that follows the bow (scene/carShapes.ts layOn: the one rule for it).
+   *  `nth`: it lies on that many earlier falls */
+  const lay = (x: number, z: number, yaw: number, top: BowedTop, lx: number, lz: number, y0: number, y1: number, hx: number, hz: number, m: Mat, nth = 0) =>
+    piece(x, z, yaw)(lx, lz, y0, y1, hx, hz, m, { flags: BoxFlag.NoShadow, shape: layOn(top, [lx, (y0 + y1) / 2, lz], [hx, (y1 - y0) / 2, hz], m, { nth }) });
   /** a round thing of radius r, as the slabs of `roundSlabs` (the first carries `extra`, the others `extra2`) */
   const round = (b: Put, lx: number, lz: number, y0: number, y1: number, r: number, m: Mat, extra: Extra = {}, extra2: Extra = extra) => {
     roundSlabs(r).forEach((s, k) => b(lx, lz, y0, y1 - s.drop, s.hx, s.hz, m, k === 0 ? extra : extra2, s.yaw));
@@ -525,6 +530,7 @@ export function gwotKit(host: GwotHost) {
     else if (opts.load === 'drums') { for (const [lx, lz] of [[-0.85, -0.36], [-0.85, 0.36], [-1.5, 0]] as const) { const p = at(lx, 0, lz); const d = piece(p[0], p[2], yaw); round(d, 0, 0, 0.83, 1.71, 0.29, lx < -1 ? M.rust : M.drumBlue); } }
     else if (opts.load === 'sacks') { for (const [lx, lz, y] of [[-0.9, -0.3, 0], [-0.9, 0.32, 0], [-1.7, 0, 0], [-1.2, 0.02, 0.2]] as const) b(lx, lz, 0.83 + y, 1.03 + y, 0.38, 0.25, M.sack); }
     else if (opts.load === 'crates') { b(-1.0, -0.3, 0.83, 1.13, 0.45, 0.2, M.olive); b(-1.0, 0.3, 0.83, 1.13, 0.45, 0.2, M.olive); b(-1.9, 0, 0.83, 1.13, 0.2, 0.45, M.coyote); }
+    return S;
   };
   /** COVER (head high): a PANEL VAN 4.9 × 1.8 × 1.95, nose toward local +X, its two back doors standing open on the load bay (the spot a stride behind them is
    *  local (−3.2, 0): where a man is put in) */
@@ -540,9 +546,10 @@ export function gwotKit(host: GwotHost) {
     b(-2.15, 0, 1.89, 1.95, 0.25, 0.9, P, { shape: S.bayRoof }); b(-1.89, 0, 0.86, 1.89, 0.02, 0.84, M.plasticBlack); b(-2.15, 0, 0.86, 0.88, 0.25, 0.84, M.plasticBlack);
     for (const sz of [-1, 1]) b(-2.77, sz * 1.1, 0.5, 1.9, 0.42, 0.025, P, {}, sz * 0.5);   // the two back doors, swung out
     for (const sz of [-1, 1]) { b(2.43, sz * 0.66, 0.62, 0.76, 0.03, 0.16, M.plasticWhite, { shape: S.head(sz) }); b(-2.41, sz * 0.86, 0.9, 1.2, 0.02, 0.04, M.truckRed, { shape: S.tail(sz) }); }
+    return S;
   };
-  /** COVER (full height): a TWO-AXLE LORRY with a canvas tilt, 7 m, nose toward local +X (the pass's, where it stopped when the road shut). Returns the
-   *  shapes its boxes say (scene/carShapes.ts lorryShapes): a level that snows it in says `snow*` of its own caps */
+  /** COVER (full height): a TWO-AXLE LORRY with a canvas tilt, 7 m, nose toward local +X (the pass's, where it stopped when the road shut). Like every
+   *  vehicle here it hands back the shapes its boxes say (scene/carShapes.ts), `tops` among them: what a level lays on its roof goes by `lay` */
   const lorry = (x: number, z: number, yaw = 0) => {
     const L = piece(x, z, yaw), S = lorryShapes({ red: M.truckRed, canvas: M.canvas, iron: M.iron, galv: M.galv, rust: M.rust, rubber: M.rubber, poplar: M.poplar, white: M.plasticWhite, glass: M.glassDark, jerry: M.jerryYellow, olive: M.olive, orange: M.prodOrange });
     for (const lx of [2.2, -1.2, -2.25]) for (const s of [-1, 1]) L(lx, s * 0.98, 0, 0.96, 0.48, 0.15, M.rubber, { shape: S.wheel(s) });
@@ -566,6 +573,7 @@ export function gwotKit(host: GwotHost) {
     b(0.02, 0, 0.26, 0.56, 0.2, 0.12, M.iron); b(0.18, 0, 0.56, 0.84, 0.24, 0.12, M[tank], { shape: S.tank }); b(-0.36, 0, 0.62, 0.8, 0.34, 0.11, M.plasticBlack, { shape: S.seat });
     b(0.6, 0, 0.6, 1.02, 0.03, 0.03, M.galv); b(0.56, 0, 1.0, 1.04, 0.02, 0.32, M.iron, { shape: S.bars }); b(0.74, 0, 0.78, 0.94, 0.05, 0.07, M.iron, { shape: S.lamp });
     b(-0.84, 0, 0.66, 0.7, 0.16, 0.13, M.iron); b(-0.4, 0.16, 0.28, 0.36, 0.42, 0.035, M.iron, { shape: S.exhaust });   // (nothing pale on it: from above a bike is two black wheels in line and one tank of colour)
+    return S;
   };
   /** COVER (waist): a flat HANDCART (karachi) 1.7 × 0.95 on two wheels, shafts toward local +X; `load`: sacks, produce crates or nothing */
   const handcart = (x: number, z: number, yaw = 0, load: 'none' | 'sacks' | 'produce' = 'none') => {
@@ -642,7 +650,7 @@ export function gwotKit(host: GwotHost) {
     // stores & cover
     drum, drums, drumDown, jerryCan, gasBottle, crates, sacks, sandbags, hesco, jersey, tWall, tyres, blocks, woodPile,
     // machines & vehicles
-    generator, waterTank, pump, pickup, van, lorry, motorbike, handcart, stall, container, satDish, bush,
+    generator, waterTank, pump, pickup, van, lorry, motorbike, lay, handcart, stall, container, satDish, bush,
     // lights
     wire, bulb, lantern, tube, floodLight,
   };

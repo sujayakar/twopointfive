@@ -354,9 +354,9 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
 
   // ---- THE ROAD'S TWO PARTIES (kept) ----
   grp('road.squad');
-  G.pickup(TRUCK_A.x, TRUCK_A.z, TRUCK_A.yaw, 'truckWhite', { load: 'crates' });
-  G.pickup(TRUCK_B.x, TRUCK_B.z, TRUCK_B.yaw, 'truckTan', { load: 'sacks' });
-  for (const v of [TRUCK_A, TRUCK_B]) { const c = at(v, 0.36, 0, 0); cap(c[0], c[2], 1.0, 1.3, 1.58, v.yaw, 0.03); }   // a dusting on each cab's roof: they have not stood long
+  const PA = G.pickup(TRUCK_A.x, TRUCK_A.z, TRUCK_A.yaw, 'truckWhite', { load: 'crates' });
+  const PB = G.pickup(TRUCK_B.x, TRUCK_B.z, TRUCK_B.yaw, 'truckTan', { load: 'sacks' });
+  for (const [v, P] of [[TRUCK_A, PA], [TRUCK_B, PB]] as const) G.lay(v.x, v.z, v.yaw, P.tops.roof, 0.36, 0, 1.58, 1.58 + 0.03, 0.5, 0.65, S.snow);   // a dusting on each cab's roof: they have not stood long
   grp('road.block');
   G.sandbags(33.2, 21.5, 1.5, HALF, 4); G.sandbags(33.6, 24.5, 1.5, HALF, 4);                 // the roadblock: a low wall across each lane, and a gap between them a man walks through (1.5 m: the walk grid wants a clear cell and a half)
   cap(33.2, 21.5, 0.3, 1.3, 0.8, 0, 0.04); cap(33.6, 24.5, 0.3, 1.3, 0.8, 0, 0.04);
