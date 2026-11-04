@@ -8,7 +8,6 @@ import type { Game } from './game';
 import type { Door } from './doors';
 import type { WeaponDef } from './weapons';
 import * as fx from './effects';
-import { solidGlass, SOLID_GLASS_CRACK } from './particleFx';   // (read inside bulletMark only)
 
 /** What a CPU ray reported hitting, in the terms the three ray casters use: a static by index (col.raycast < 1e6), a door leaf (col.raycast ≥ 1e6), a prop part box. */
 export type Surface = { box: Box; dynamic: boolean } | null;
@@ -34,15 +33,12 @@ function faceHalfExtents(b: Box, n: Vec3): [number, number] {
   return a === 0 ? [b.h[1], b.h[2]] : a === 1 ? [b.h[0], b.h[2]] : [b.h[0], b.h[1]];
 }
 
-/** A round stopped in `s` at `hitP` (its face normal `n`): a bullet hole sized by the row's calibre — a pistol's chip smaller than a rifle's — or, in solid
- *  glass that says so, a crack. Flesh, the sky and the surfaces markable() refuses leave nothing. */
+/** A round stopped in `s` at `hitP` (its face normal `n`): a bullet hole sized by the row's calibre — a pistol's chip smaller than a rifle's. Flesh, the sky and
+ *  the surfaces markable() refuses leave nothing. */
 export function bulletMark(g: Game, hitP: Vec3, n: Vec3, s: Surface, def: WeaponDef) {
   if (!s || !markable(s.box, n)) return;
   const mm = parseFloat(def.calibre) || 6;                       // '5.7×28 mm' → 5.7
   const rifle = def.cls !== 'pistol';
-  // GLASS THAT IS NOT A PANE, by the box's own word (particleFx.ts HITSTUFF: a car's window, with nothing modelled behind it): the crack a dead screen has,
-  // in place of the hole — every round, and the box stands. Picture only, as the hole is.
-  if (solidGlass(s.box)) { const K = SOLID_GLASS_CRACK; g.decals.add('damage', hitP, n, def.pellets ? K.pellet : rifle ? K.rifle : K.pistol, { param: 2 + K.strength, clampTo: s.box, attach: s.dynamic ? s.box : undefined }); return; }
   g.decals.add('bullet', hitP, n, rifle ? 0.031 : 0.025, { param: Math.max(0.75, Math.min(1.6, mm / 6)) * (rifle ? 1.1 : 1), clampTo: s.box, attach: s.dynamic ? s.box : undefined });
 }
 

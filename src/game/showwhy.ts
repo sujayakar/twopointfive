@@ -213,7 +213,7 @@ function stacks(g: Game, st: State): void {
       const T = R.turns.shift()!; if (standsFree(g, op, T.gd) && manAhead(op, T.gd)) { sign(g, st, T.gd, 'stack', 'squeeze'); st.stats.squeezes++; }
     }
     if (!R.turns.length && R.fists < K.holdMax && t >= R.fistT) {
-      if (standsFree(g, op, op.lead)) { sign(g, st, op.lead, 'stack', 'hold'); st.stats.fists++; R.fists++; R.fistT = t + K.holdEvery * 2 ** (R.fists - 1); }
+      if (standsFree(g, op, op.lead)) { sign(g, st, op.lead, 'stack', 'hold'); st.stats.fists++; R.fists++; R.fistT = t + K.holdEvery * (1 << Math.min(R.fists - 1, 30)); }
       else R.fistT = t + 0.5;   // (his hands are busy, or the fight has him: looked at again shortly)
     }
   }

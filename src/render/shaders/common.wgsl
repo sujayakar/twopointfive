@@ -44,16 +44,6 @@ struct Frame {
   giCfg: vec4f,                             // GI-in-motion (docs/internal/gi-motion.md, fgather.wgsl `main`): x = ray multiplier for YOUNG-history gather texels (≤ 1 = off: the gather as it was), y = how many texels a frame may take it (the rest first-come), z = the diffuse history length (frames) under which a texel is young, w spare
   weatherE: vec4f,                          // PARTICLE RAIN (experiment, game/rainFx.ts + shaders/particles*.wgsl): xy = centre xz of the near-field particle layer's disc, z = its radius (m), w = the share 0‥1 of the LATTICE rain volumetrics.wgsl drops inside it (rainNearKeep) — 0 = no particle layer: the lattice exactly as it was (NEGATIVE on a snow level: the metres past the level's rim the snow goes on falling, particles_common.wgsl snowPast — every lattice reader asks `> 0.0`)
   weatherF: vec4f,                          // PARTICLE RAIN v2: the drop's PHASE the lattice's streaks share with the particles' (volumetrics.wgsl rainLight): x = isotropic floor, y = forward-lobe weight, z = its Henyey-Greenstein g, w = × gain — w 0 = the lattice's isotropic sum exactly as it was
-  shadeCfg: vec4f,                          // THE LOOK PROTOTYPE, eyes adjust to shade (composite.wgsl lookShadeGain; engine.ts lookShade writes it on the look page, zeros anywhere else = the picture as it was): x = the exponent a place darker than the open air is brought up by (0 = off), y = the mean radiance open air holds from the sky alone (luminance), z = the most a pixel is ever brought up (×), w = the irradiance open ground gets from the sky alone (luminance): no pixel is brought up past it
-  veilA: vec4f,                             // THE LOOK PROTOTYPE, loose snow in the air (composite.wgsl lookPowder; render/lookveil.ts lookVeilFrame, zeros anywhere else = none): xy = 1 ∕ the floor plan the powder's field covers (width, depth), z = how much of it is drawn 0‥1, w = what the sun (or the moon) puts on level ground, as luminance
-  veilB: vec4f,                             // xy = that plan's corner (m, x z), zw = the way to the sun along the ground per metre of height
-  eyeCfg: vec4f,                            // THE LOOK PROTOTYPE, the exposure follows Sam (composite.wgsl lookShadeGain; render/lookeye.ts, zeros anywhere else = off): x = how many times darker than the open air Sam's place is taken to be, y = the share of a still darker place's own extra that is dropped, z = × a pixel as bright as open ground
-  gradeCfg: vec4f,                          // THE LOOK PROTOTYPE, the day's contrast is the open air's (composite.wgsl; render/lookgrade.ts, zeros anywhere else = nothing undone): x = 1 / the contrast the tone map turns the day's stops by, y = the radiance the turn is about
-  lampCfg: vec4f,                           // THE LOOK PROTOTYPE, light keeps to its room by day (the look panel's row `rooms`; zeros anywhere else = off): x = × the night's lamp strength a fixture is drawn at this hour, y = × a glowing face's drawn strength as a ray takes it (lampFloorK, boxEmissiveRay below), z = 1 while the Steady bounce row is up (lighting_common.wgsl dayBoundK) · w = the Room brightness row (composite.wgsl lookExpoGain; 0 = not set)
-  sideCfg: vec4u,                           // THE LOOK PROTOTYPE, which side of a wall (the look panel's row `walls`; render/wallSides.ts; zeros anywhere else = every cache read as it was): x = 1 `sides` is this frame's level · y, z = THE SMOKE LAB's drawing rows (vol_common.wgsl HOW SMOKE IS DRAWN, AS ROWS; zeros = the picture as it was)
-  placeCfg: vec4f,                          // THE LOOK PROTOTYPE, light keeps its order across places (the look panel's row `order`; composite.wgsl lookExpoGain; zeros anywhere else = off): x = how far a pixel's own light caps its place's gain
-  sides: array<vec4u, 1750>,                // … its words, a u32 a cell of the floor plan (sideAt below)
-  sideCols: array<vec4u, 140>,              // … and the place of each probe column of the cache's first cascade, a nibble a column (index z × dims.x + x; lighting_common.wgsl diceTapsBy)
 };
 
 const FLAG_DIRECT: u32 = 1u;
@@ -71,7 +61,6 @@ const FLAG_TEMPORAL: u32 = 2048u;
 const FLAG_TILECULL: u32 = 4096u;    // direct pass: per-8x8-tile light list (lights provably zero across the tile's bounds are not scored per pixel) — lossless; off = walk every light, for A/B
 const FLAG_SOFT_TILESKIP: u32 = 8192u; // penumbra filter: whole 8x8 tiles provably out of reach of every blur hint skip the pass (softtile.wgsl builds the mask) — lossless; off = every pixel decides for itself, for A/B
 const FLAG_TAIL_CHROMA: u32 = 16384u; // experiment: per-channel-unbiased tail (E_pick·V/p) instead of the bounded luminance-unbiased form
-const FLAG_RC_ROOM: u32 = 32768u;   // THE LOOK PROTOTYPE, light keeps to its room: lighting_common.wgsl hitRadiance reads the cache where the ray came from (off = a spacing along the hit face's normal, as ever)
 const FLAG_CHECKER_DIRECT: u32 = 65536u; // lossy option: shadow rays on a checkerboard half of the pixels per frame, the other half borrows its neighbours' visibility (direct.wgsl)
 const FLAG_GRID_SKIP: u32 = 131072u;  // trace grid: run past provably empty cells without touching memory (per-cell Chebyshev distance to the nearest occupied cell) — lossless; off = a load pair per cell as before, for A/B
 const FLAG_GRID_YCULL: u32 = 262144u; // trace grid: skip cells / boxes (and globals) whose height band the rest of the ray cannot reach (per-cell 24-slice occupancy, per-item quantised y extent, per-global extent) — lossless; off = every registered box is slab-tested, for A/B
@@ -101,7 +90,7 @@ const GEO_CUT: u32 = 65536u;      // CUT BOXES (scene/cut.ts; only ever raised i
 const BOX_GLASS: u32 = 131072u;   // a glass pane (boxes.ts BoxFlag.Glass, bit 17 — the flag word widened past its byte): never in the trace grid nor the raster; here only so a debug view can tell one
 const MAX_GLASS: u32 = 32u;       // panes SceneInfo.glass can hold (boxes.ts MAX_GLASS)
 
-struct SceneInfo { numBoxes: u32, numGlobals: u32, gridW: u32, gridH: u32, globals: array<vec4u, 4>, numCapsules: u32, numChars: u32, capsPerChar: u32, itemsB: u32, charBounds: array<vec4f, 16>, globalsY: array<vec4f, 8>, grid: vec4f, globalsB: array<vec4f, 32>, glassInfo: vec4u, glass: array<vec4f, 96> };   // glassInfo.x: pane count (0 = glass off); glass[3k..3k+2]: pane k = (centre.xyz, cos yaw), (half.xyz, sin yaw), (tint rgb, box index) — boxes.ts packGlass · itemsB: offset of the packed item copies in gridItems (= item count); globalsY: padded (ymin, ymax) of global 2i in .xy, of global 2i+1 in .zw; grid.x: registration slack in metres (how far a traced box can reach outside the cells it is registered in — boxes.ts buildGrid), grid.y: FLAG_GRID_SLABS' height-span shrink per end (m); globalsB[2g] / [2g+1]: min / max corner of global g's world bounds, 5 mm + slack proud of the traced box (FLAG_GRID_SLABS)
+struct SceneInfo { numBoxes: u32, numGlobals: u32, gridW: u32, gridH: u32, globals: array<vec4u, 4>, numCapsules: u32, numChars: u32, capsPerChar: u32, itemsB: u32, charBounds: array<vec4f, 8>, globalsY: array<vec4f, 8>, grid: vec4f, globalsB: array<vec4f, 32>, glassInfo: vec4u, glass: array<vec4f, 96> };   // glassInfo.x: pane count (0 = glass off); glass[3k..3k+2]: pane k = (centre.xyz, cos yaw), (half.xyz, sin yaw), (tint rgb, box index) — boxes.ts packGlass · itemsB: offset of the packed item copies in gridItems (= item count); globalsY: padded (ymin, ymax) of global 2i in .xy, of global 2i+1 in .zw; grid.x: registration slack in metres (how far a traced box can reach outside the cells it is registered in — boxes.ts buildGrid), grid.y: FLAG_GRID_SLABS' height-span shrink per end (m); globalsB[2g] / [2g+1]: min / max corner of global g's world bounds, 5 mm + slack proud of the traced box (FLAG_GRID_SLABS)
 // Character shadow / reflection proxies: ROUND CONES (segment a→b, radius r at a; the radius at b rides in misc's top byte — sdfrig.wgsl coneRb; 0 there = r again, an
 // untapered cone). `misc` packs owner (low 8 bits), rgb565 albedo (bits 8..23), r_b in millimetres (bits 24..31). The record keeps its old name: boxes.ts writes it.
 struct Capsule { a: vec3f, r: f32, b: vec3f, misc: u32 };
@@ -117,7 +106,7 @@ struct SmokeBound {                // a loose box round some of the smoke (smoke
   origin: vec3f, voxel: f32,       // world min corner, voxel size (m) of the lattice it bounds
   pad0: vec3u, live: u32,
   dims: vec3u, pad1: u32,          // its size in voxels
-  show: f32, readSkip: f32, pad3: f32, pad4: f32,   // (record 0's readSkip: the solver's knob of that name, smoke_read.wgsl spgSkip · record 0's show: the smoke lab's pictures, 0 anywhere else: composite.wgsl smokeLabOver)
+  pad2: f32, readSkip: f32, pad3: f32, pad4: f32,   // (record 0's readSkip: the solver's knob of that name, smoke_read.wgsl spgSkip)
 };
 
 @group(0) @binding(0) var<uniform> frame: Frame;
@@ -147,44 +136,6 @@ struct FogSightT {            // THE FOG OF WAR'S SIGHT TABLE (render/fogofwar.t
 fn boxAlbedo(i: u32) -> vec3f { return boxMat[i * 4u].xyz; }
 fn boxCutHeight(i: u32) -> f32 { return boxMat[i * 4u].w; }
 fn boxEmissive(i: u32) -> vec3f { return boxMat[i * 4u + 1u].xyz * frame.emissiveScale; }
-/// A GLOWING FACE AS A RAY TAKES IT (the gather, the cache; frame.lampCfg, the look page's row `rooms`). By day a fixture's light is drawn at its night strength × the hour's
-/// exposure and a glowing face at its real strength capped at white (render/photometry.ts): right for the eye, but a ray that took the face at that strength would make a
-/// bulb's own 8 cm of glass a lamp a thousand times the bulb. A ray takes the face at what it gave the night's rays × the day's lamp strength. (A mirror keeps boxEmissive: the eye.)
-fn boxEmissiveRay(i: u32) -> vec3f { return boxEmissive(i) * select(1.0, frame.lampCfg.y, frame.lampCfg.x > 0.0); }
-/// × a fixed night floor on a lamp's light (W/m²) by day: the same share of the day's lamp strength (1 at night and off the look page)
-fn lampFloorK() -> f32 { return select(1.0, frame.lampCfg.x, frame.lampCfg.x > 0.0); }
-
-/// WHICH SIDE OF A WALL (frame.sides; render/wallSides.ts, where the why is; the look page's row `walls`). The level's floor plan in 0.4 m cells (the exposure's own
-/// map, render/placeField.ts), a word a cell: a free cell's place (0‥13; two places a read could blend never share a number), 15 in a doorway (every place's), and
-/// for a wall cell the place in each quarter round the wall's centre lines (one line, or two at a corner), which are kept to 2.5 cm, so a point a finger off a face
-/// is on its own side. Returned: the place, + 16 when nothing but that place is within a probe's reach of the cell (the cache read there is the plain one); 14 where
-/// nothing is known (a wall that is turned, two walls side by side in a cell, off the map).
-const SIDE_W: i32 = 100;
-const SIDE_H: i32 = 70;
-const SIDE_RES: f32 = 2.5;
-const SIDE_UNKNOWN: u32 = 14u;
-const SIDE_DOOR: u32 = 15u;
-fn sideAt(x: f32, z: f32) -> u32 {
-  let q = (vec2f(x, z) - RC_MIN.xz) * SIDE_RES; let c = vec2i(floor(q));
-  if (c.x < 0 || c.y < 0 || c.x >= SIDE_W || c.y >= SIDE_H) { return SIDE_UNKNOWN; }
-  let k = u32(c.y * SIDE_W + c.x); let w = frame.sides[k >> 2u][k & 3u]; let kind = w & 3u;
-  if (kind == 0u) { return (w >> 2u) & 31u; }
-  if (kind != 1u) { return SIDE_UNKNOWN; }
-  let m = q / SIDE_RES;   // (metres from the map's corner)
-  let line = (vec2f(c) + 0.5) / SIDE_RES + (vec2f(f32((w >> 3u) & 31u), f32((w >> 9u) & 31u)) - 15.5) * 0.025;
-  let hx = select(0u, 1u, ((w >> 2u) & 1u) == 1u && m.x >= line.x); let hz = select(0u, 2u, ((w >> 8u) & 1u) == 1u && m.y >= line.y);
-  return (w >> (14u + 4u * (hx + hz))) & 15u;
-}
-/// … and for a point in a wall's cell that knows its lines: the step, in cells, away from those lines toward the point's own side (0 on an axis the cell has no
-/// line across); (0, 0) anywhere else. The first cell that is no wall along it is the place the point is in (composite.wgsl lookPlaceField).
-fn sideOut(x: f32, z: f32) -> vec2i {
-  let q = (vec2f(x, z) - RC_MIN.xz) * SIDE_RES; let c = vec2i(floor(q));
-  if (c.x < 0 || c.y < 0 || c.x >= SIDE_W || c.y >= SIDE_H) { return vec2i(0); }
-  let k = u32(c.y * SIDE_W + c.x); let w = frame.sides[k >> 2u][k & 3u];
-  if ((w & 3u) != 1u) { return vec2i(0); }
-  let m = q / SIDE_RES; let line = (vec2f(c) + 0.5) / SIDE_RES + (vec2f(f32((w >> 3u) & 31u), f32((w >> 9u) & 31u)) - 15.5) * 0.025;
-  return vec2i(select(0, select(-1, 1, m.x >= line.x), ((w >> 2u) & 1u) == 1u), select(0, select(-1, 1, m.y >= line.y), ((w >> 8u) & 1u) == 1u));
-}
 /** the albedo SECONDARY rays see (gather / cascade / probe / card hits): the box's albedo with its markings' area average folded in on the CPU (boxes.ts upload) — the very same three floats as boxAlbedo for a box without markings, or with markings off */
 fn boxAlbedoSec(i: u32) -> vec3f { return boxMat[i * 4u + 3u].xyz; }
 /** × the emission of the box's emissive markings (a switchable's supply factor: game/lighting.ts) */
@@ -194,30 +145,13 @@ const MARK_BASE: u32 = MAX_BOXES * 4u;
 /** raster orientation of box i as a unit quaternion (equals its yaw for ordinary boxes; raster-only props may tilt) */
 fn boxRot(i: u32) -> vec4f { return boxMat[i * 4u + 2u]; }
 fn quatRotate(q: vec4f, v: vec3f) -> vec3f { let t = 2.0 * cross(q.xyz, v); return v + q.w * t + cross(q.xyz, t); }
-/// THE LOOK PROTOTYPE (look.wgsl; the prelude's LOOK): the FACE under a g-buffer normal the look tilted (the normal target's alpha 0 marks one). `n` = that unit
-/// normal, `id` = the pixel's id. The tilt is held under 38° from the face (LOOK_MAX_TILT), so the box axis the normal leans on most is the face it lies on: exact.
-/// A pixel that is no box's (the sky's clear also reads alpha 0) is handed back as it came.
-fn lookGeoN(n: vec3f, id: u32) -> vec3f {
-  let bi = id & 0xFFFFFu;
-  if (bi >= scene.numBoxes || ((id >> 28u) & 1u) != 0u) { return n; }
-  let q = boxRot(bi); let l = quatRotate(vec4f(-q.xyz, q.w), n); let a = abs(l);
-  var g = vec3f(0.0, 0.0, sign(l.z));
-  if (a.x >= a.y && a.x >= a.z) { g = vec3f(sign(l.x), 0.0, 0.0); } else if (a.y >= a.z) { g = vec3f(0.0, sign(l.y), 0.0); }
-  return quatRotate(q, g);
-}
 fn boxOwner(b: BoxGeo) -> u32 { return (b.flags >> 8u) & 0xffu; }
 /** The surface finish of box i (boxes.ts matWord in boxMat row 1's w: roughness 0‥1 + 2 if bare metal + 4 if anisotropic — three disjoint ranges of one
  *  float): the material half of the one BRDF (base colour = boxAlbedo). The g-buffer writes roughness / metalness per pixel from it (+ its detail layer);
  *  the reflection pass reads the anisotropy. A box nobody gave a finish reads rough 1 (matte: no reflection ray, no analytic highlight). */
 struct Finish { rough: f32, metal: bool, aniso: bool };
-/** THE LOOK PROTOTYPE: the picture's word for box i, carried above the finish in the same float (8 × it; scene/boxes.ts packBox, render/gbuffer.ts lookWordOf):
- *  bits 0-4 what it is made of (look.wgsl's classes, 0 = plain; decided on the CPU from the box's own paint), bit 5 = it moves (a box past the level's statics),
- *  bits 6-11 a number of the box's own, 0‥44. 0 on every other page. */
-fn boxLook(i: u32) -> u32 { return u32(boxMat[i * 4u + 1u].w * 0.125); }
-fn boxStuff(i: u32) -> u32 { return boxLook(i) & 31u; }   // (five bits: render/gbuffer.ts LOOK_WORD)
 fn boxFinish(i: u32) -> Finish {
   var w = boxMat[i * 4u + 1u].w; var f: Finish;
-  if (LOOK) { w -= 8.0 * floor(w * 0.125); }   // (THE LOOK PROTOTYPE: boxLook's word, above)
   f.aniso = w >= 4.0; w -= select(0.0, 4.0, f.aniso);
   f.metal = w >= 2.0; w -= select(0.0, 2.0, f.metal);
   f.rough = clamp(w, 0.0, 1.0);
@@ -517,11 +451,9 @@ fn raySphere(ro: vec3f, rd: vec3f, ce: vec3f, ra: f32, tmax: f32) -> bool {
 // isectRoundCone / roundConeNormal / sdRoundCone, render/sdfrig.ts the radius fit the CPU packs into the records). Per character a bounding-sphere cull
 // (scene.charBounds), then his capsPerChar records; the whole character shares one owner byte, so the first skipped record skips him.
 /** Closest proxy hit within tmax (skipping `skipOwner`'s two owners). Returns (t, record index) with index < 0 on a miss. */
-fn traceCapsules(ro: vec3f, rd: vec3f, tmax: f32, skipOwner: u32) -> vec2f { return traceCapsulesFrom(ro, rd, tmax, skipOwner, 0u); }
-/** … of the characters from index `ch0` on in the list (the men past the mesh trees: meshClosest's callers) */
-fn traceCapsulesFrom(ro: vec3f, rd: vec3f, tmax: f32, skipOwner: u32, ch0: u32) -> vec2f {
+fn traceCapsules(ro: vec3f, rd: vec3f, tmax: f32, skipOwner: u32) -> vec2f {
   var best = tmax; var bi = -1.0;
-  for (var ch = ch0; ch < scene.numChars; ch++) {
+  for (var ch = 0u; ch < scene.numChars; ch++) {
     let bs = scene.charBounds[ch];
     if (!raySphere(ro, rd, bs.xyz, bs.w, best)) { continue; }
     let first = ch * scene.capsPerChar; let last = min(first + scene.capsPerChar, scene.numCapsules);
@@ -606,8 +538,6 @@ fn meshAnyHitChar(k: u32, ro: vec3f, rd: vec3f, invRd: vec3f, tmax: f32) -> f32 
 // his id — the first one is enough), then his tree, whose root box is the exact broad phase. NOT the proxies: tools/qa/mesh-shadow-ref.ts found 6–12 %
 // of the rays the mesh blocks (shins, feet, hands) touched no capsule at all (the proxies of the time; the fitted cones are slimmer still), so gating on
 // them would clip the very silhouette this is for. First blocker found (its t), or −1.
-// THE LIST HOLDS MORE MEN THAN THERE ARE TREES (boxes.ts MAX_CAST against MESH_MAX_CHARS): a man past the trees' places is his round cones to every ray, here and in meshClosest's
-// caller. This loop stopped at the trees' count, so with mesh shadows on such a man threw no traced shadow at all.
 // NEAR-ONLY mode (frame.rigCfg bit 128 = settings.meshShadowsNear, the HIGH tier's form of mesh shadows — docs/internal/render-defects-0812.md §1): only a receiver within MESH_NEAR_M of a
 // man's cull sphere tests his MESH; anything farther keeps his round cones (statement for statement the loop occludedCapsules runs). The mesh is what closes the lit seam
 // between a rasterised limb and the shadow its slimmer proxy casts beside it — a CONTACT defect: the floor at his boots, the desk under his hand, the man beside him — while a
@@ -616,13 +546,14 @@ fn meshAnyHitChar(k: u32, ro: vec3f, rd: vec3f, invRd: vec3f, tmax: f32) -> f32 
 const MESH_NEAR_M: f32 = 0.6;
 fn meshShadowT(ro: vec3f, rd: vec3f, tmax: f32, skipOwner: u32) -> f32 {
   let invRd = safeInv(rd);
+  let nc = min(scene.numChars, MESH_MAX_CHARS);
   let nearOnly = (u32(frame.rigCfg.x) & 128u) != 0u;
-  for (var ch = 0u; ch < scene.numChars; ch++) {
+  for (var ch = 0u; ch < nc; ch++) {
     let bs = scene.charBounds[ch];
     if (!raySphere(ro, rd, bs.xyz, bs.w, tmax)) { continue; }
     let first = ch * scene.capsPerChar;
     if (skipsOwner(capsuleOwner(capsules[first]), skipOwner)) { continue; }
-    if (ch >= MESH_MAX_CHARS || (nearOnly && distance(ro, bs.xyz) > bs.w + MESH_NEAR_M)) {   // a man past the trees' places (the list holds more men than there are trees), or a far receiver: his round cones (occludedCapsules' inner loop; the nearest of them, as traceCapsules hands the penumbra hint)
+    if (nearOnly && distance(ro, bs.xyz) > bs.w + MESH_NEAR_M) {   // a far receiver: his round cones (occludedCapsules' inner loop; the nearest of them, as traceCapsules hands the penumbra hint)
       let last = min(first + scene.capsPerChar, scene.numCapsules);
       var best = -1.0;
       for (var i = first; i < last; i++) { let cp = capsules[i]; let t = isectRoundCone(ro, rd, cp.a, cp.b, cp.r, coneRb(cp)); if (t >= 0.0 && t < tmax && (best < 0.0 || t < best)) { best = t; } }
@@ -883,7 +814,6 @@ fn traceClosest(ro: vec3f, rd: vec3f, tmaxIn: f32, skipOwner: u32) -> Hit {
       if (ROUND_BOXES) { if (roundSideHit(boxGeo[u32(hit.idx)].flags, code)) { hit.n = roundNormalAt(boxGeo[u32(hit.idx)], u32(hit.idx), ro + rd * hit.t); } }   // ROUND THINGS: a round's side
     }
   } else { hit.idx = -1; hit.t = tmaxIn; }
-  if (GROUND_RAYS) { let tg = ghHit(ro, rd, hit.t); if (tg >= 0.0) { hit.t = tg; hit.idx = i32(boxMat[GH_BASE].z); hit.inside = false; hit.n = ghNormal((ro + rd * tg).xz); } }   // (the trial: a snow hill nearer than the box — the ground slab's hit, the hill's slope)
   // the character proxies (few, sphere-culled per character): the round cones' closest hit and normal
   if (scene.numCapsules > 0u) {
     let ch = traceCapsules(ro, rd, hit.t, skipOwner);
@@ -959,15 +889,10 @@ fn traceClosestMesh(ro: vec3f, rd: vec3f, tmaxIn: f32, skipOwner: u32) -> Hit {
       if (ROUND_BOXES) { if (roundSideHit(boxGeo[u32(hit.idx)].flags, code)) { hit.n = roundNormalAt(boxGeo[u32(hit.idx)], u32(hit.idx), ro + rd * hit.t); } }   // ROUND THINGS: a round's side
     }
   } else { hit.idx = -1; hit.t = tmaxIn; }
-  if (GROUND_RAYS) { let tg = ghHit(ro, rd, hit.t); if (tg >= 0.0) { hit.t = tg; hit.idx = i32(boxMat[GH_BASE].z); hit.inside = false; hit.n = ghNormal((ro + rd * tg).xz); } }   // (the trial, as traceClosest)
   if (scene.numCapsules > 0u) {
     if ((frame.p5Cfg.z & 1u) != 0u && (frame.flags & FLAG_MESH_SHADOWS) != 0u) {   // the men as their MESH: nearest triangle over every character nearer than the box hit
       let mh = meshClosest(ro, rd, hit.t, skipOwner);
       if (mh.k >= 0) { hit.t = mh.t; hit.idx = CAPSULE_HIT; hit.inside = false; hit.capAlbedo = capsuleAlbedo(capsules[u32(mh.k) * scene.capsPerChar]); hit.n = mh.n; }
-      if (scene.numChars > MESH_MAX_CHARS) {   // the men past the trees' places: their round cones, as the last branch below
-        let ch = traceCapsulesFrom(ro, rd, hit.t, skipOwner, MESH_MAX_CHARS);
-        if (ch.y >= 0.0) { let cp = capsules[u32(ch.y)]; hit.t = ch.x; hit.idx = CAPSULE_HIT; hit.inside = false; hit.capAlbedo = capsuleAlbedo(cp); hit.n = proxyNormal(ro + rd * ch.x, cp); }
-      }
     } else if (rigSmoothOn()) {   // the men as the SMOOTH UNION of their round cones (SDF rig, use ii — shaders/sdfrig.wgsl rigClosest): a mannequin, not sausage links, in the mirror
       let rh = rigClosest(ro, rd, hit.t, skipOwner);
       if (rh.ch >= 0) { let base = u32(rh.ch) * scene.capsPerChar; hit.t = rh.t; hit.idx = CAPSULE_HIT; hit.inside = false; hit.capAlbedo = capsuleAlbedo(capsules[base]); hit.n = rigNormal(base, ro + rd * rh.t, frame.rigCfgB.x); if (dot(hit.n, rd) > 0.0) { hit.n = -hit.n; } }
@@ -981,50 +906,6 @@ fn traceClosestMesh(ro: vec3f, rd: vec3f, tmaxIn: f32, skipOwner: u32) -> Hit {
     }
   }
   return hit;
-}
-
-// ---- GROUND THAT RAYS CAN SEE, A TRIAL (scene/groundField.ts; the prelude's GROUND_RAYS, false on every page but the look's) ----
-// The snow hills' height as their mesh draws it, in boxMat's last rows: ghHit marches the stretch of a ray that runs between the ground and the highest hill
-// and answers the last place it stood ABOVE the surface before it ran under (−1 = it never does). A plan cell with no hill in it costs a step one row. A ray
-// that starts under the surface meets nothing (the hills are a skin, seen from above: a probe or a hit left inside one is not walled in).
-const GH_STEP: f32 = 0.1;      // m a step, while GH_STEPS of them cover the stretch (a longer stretch is walked in longer steps)
-const GH_STEPS: i32 = 40;
-const GH_BIAS: f32 = 0.008;    // m a ray may run under the surface: the mesh's triangles and this read's blend of four texels differ by less
-const GH_FLOOR: f32 = -0.015;  // m: under this nothing is the hills' (a texel with nothing on it stands at −0.012, as the mesh's corners do; bare ground at this depth is not 'under' by the bias)
-fn ghAt(c: vec2i) -> f32 { let k = u32(clamp(c.y, 0, GH_H - 1) * GH_W + clamp(c.x, 0, GH_W - 1)); return boxMat[GH_BASE + GH_HEAD + (k >> 2u)][k & 3u]; }
-fn ghHeight(xz: vec2f) -> f32 {
-  let u = (xz - WORLD_MIN.xz) * GH_RES - 0.5; let i = vec2i(floor(u)); let f = u - floor(u);
-  return mix(mix(ghAt(i), ghAt(i + vec2i(1, 0)), f.x), mix(ghAt(i + vec2i(0, 1)), ghAt(i + vec2i(1, 1)), f.x), f.y);
-}
-fn ghCellTop(xz: vec2f) -> f32 {
-  let c = clamp(vec2i(floor((xz - WORLD_MIN.xz) / GRID_CELL)), vec2i(0), vec2i(GRID_W - 1, GRID_H - 1)); let k = u32(c.y * GRID_W + c.x);
-  return boxMat[GH_BASE + 1u + (k >> 2u)][k & 3u];
-}
-fn ghUnder(p: vec3f) -> bool { return p.y < ghCellTop(p.xz) && p.y < ghHeight(p.xz) - GH_BIAS; }
-fn ghNormal(xz: vec2f) -> vec3f { let e = 0.5 / GH_RES; return normalize(vec3f(ghHeight(xz - vec2f(e, 0.0)) - ghHeight(xz + vec2f(e, 0.0)), 2.0 * e, ghHeight(xz - vec2f(0.0, e)) - ghHeight(xz + vec2f(0.0, e)))); }
-fn ghHit(ro: vec3f, rd: vec3f, tmax: f32) -> f32 {
-  let top = boxMat[GH_BASE].x;
-  if (top <= 0.0) { return -1.0; }
-  let tw = isectBounds(ro, safeInv(rd), WORLD_MIN, WORLD_MAX);
-  var t0 = max(tw.x, 0.0); var t1 = min(tmax, tw.y);
-  if (rd.y > 1e-5) { t0 = max(t0, (GH_FLOOR - ro.y) / rd.y); t1 = min(t1, (top - ro.y) / rd.y); }
-  else if (rd.y < -1e-5) { t0 = max(t0, (top - ro.y) / rd.y); t1 = min(t1, (GH_FLOOR - ro.y) / rd.y); }
-  else if (ro.y > top || ro.y < GH_FLOOR) { return -1.0; }
-  if (t1 <= t0) { return -1.0; }
-  if (ghUnder(ro + rd * t0)) { return -1.0; }
-  let n = clamp(i32(ceil(max(length(rd.xz), abs(rd.y)) * (t1 - t0) / GH_STEP)), 1, GH_STEPS);
-  let dt = (t1 - t0) / f32(n);
-  var ta = t0;
-  for (var i = 1; i <= n; i++) {
-    let t = t0 + f32(i) * dt;
-    if (ghUnder(ro + rd * t)) {
-      var tb = t;
-      for (var k = 0; k < 4; k++) { let tm = 0.5 * (ta + tb); if (ghUnder(ro + rd * tm)) { tb = tm; } else { ta = tm; } }
-      return ta;
-    }
-    ta = t;
-  }
-  return -1.0;
 }
 
 // Any-hit visibility query. Returns true if something blocks [0, tmax].
@@ -1073,7 +954,6 @@ fn occluded(ro: vec3f, rd: vec3f, tmaxIn: f32, skipOwner: u32) -> bool {
     else { tCell = tNext.y; tNext.y += tDelta.y; cell.y += stp.y; tBack = tDelta.y * slack; }
     if (tCell > tmax || cell.x < 0 || cell.y < 0 || cell.x >= GRID_W || cell.y >= GRID_H) { break; }
   }
-  if (GROUND_RAYS && ghHit(ro, rd, tmax) >= 0.0) { return true; }   // (the trial: a snow hill stands in the way — asked only of a ray the boxes leave clear)
   if (scene.numCapsules > 0u) {
     if ((frame.flags & FLAG_MESH_SHADOWS) != 0u) { return meshShadowT(ro, rd, tmax, skipOwner) >= 0.0; }   // characters as their skinned mesh (ultra); else their round-cone proxies
     return occludedCapsules(ro, rd, tmax, skipOwner);
@@ -1089,7 +969,6 @@ fn occludedT(ro: vec3f, rd: vec3f, tmaxIn: f32, skipOwner: u32) -> f32 {
     if ((frame.flags & FLAG_MESH_SHADOWS) != 0u) { tCap = meshShadowT(ro, rd, tmaxIn, skipOwner); }   // ultra: the skinned mesh — the FIRST blocking triangle found, so the penumbra hint's blocker distance can be off by up to a body's thickness (boxes below are near-first, not nearest, likewise)
     else { let c = traceCapsules(ro, rd, tmaxIn, skipOwner); if (c.y >= 0.0) { tCap = c.x; } }
   }
-  if (GROUND_RAYS) { let tg = ghHit(ro, rd, select(tmaxIn, tCap, tCap >= 0.0)); if (tg >= 0.0) { tCap = tg; } }   // (the trial: a snow hill nearer than the cap is the cap — a nearer box still wins in the walk)
   return occludedTBoxes(ro, rd, tmaxIn, skipOwner, tCap);
 }
 // occludedT's box walk on its own (its statements, unchanged): the nearest of a box blocker nearer than tCap and tCap itself (−1 = clear). The SDF rig's soft-shadow

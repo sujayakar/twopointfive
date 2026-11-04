@@ -220,7 +220,9 @@ export function build() {
     title: 'The relay post, in pairs',
     // (the squad's wheel is one ring here, as on the missions before this one, and holds only the orders this mission gives: a tap's own — move, stack, go, fall in — and a spot to watch.
     //  The list is the tap's too: an order off it is not given by the key either)
-    rails: { allow: ['move', 'sprint', 'crouch', 'aim', 'fire', 'reload', 'order', 'camera', 'zoom'], respawn: 5, lasers: false, flatRing: true, orders: ['move', 'stack', 'go', 'cover', 'fallIn'] },
+    // (`rows`: the interaction key is never his in this mission, and with a list no row is drawn while that key is locked. Without one the corner of the
+    //  screen offered a door's row at every door and "throw it — kill the lights" at the breaker box, for a key that did nothing)
+    rails: { allow: ['move', 'sprint', 'crouch', 'aim', 'fire', 'reload', 'order', 'camera', 'zoom'], respawn: 5, lasers: false, flatRing: true, orders: ['move', 'stack', 'go', 'cover', 'fallIn'], rows: ['push', 'pull'] },
     steps: [
       // 1 · TWO DOORS, ONE WORD: the key on one door is everybody's, as he knows it; Shift with the key on the other door parts a pair off to it; the
       // word sends every stack that waits

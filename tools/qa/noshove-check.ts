@@ -1,5 +1,7 @@
 // TEAMMATES FALLING IN NEVER SHOVE YOU — the check behind src/game/noshove.ts (NOSHOVE.on: on in the page, ?noshove=0; off on the frozen stand, TPS_NOSHOVE=1).
 //   bun run tools/qa/noshove-check.ts [--verbose]      (also `probes.ts noshove`, family squadorders; run it on BOTH stands: plain, and TPS_PROFILE=shipped in front)
+// (probes.ts holds ORDERS.propRound off for this check, WAYS_AS_THEY_WERE: line 9's staging is by the ways the men walked before it. Run alone on the
+// shipped stand: TPS_PROPROUND=0 in front.)
 // Headless; nothing here looks at a picture. room-clear-four with the other side put far off the floor, the switch thrown by hand after the stand-up; the
 // player stands with no key down unless a line says he walks. Each line is played with the switch off (the flaw must SHOW) and on (it must be gone):
 //   1. THE CASE IT WAS FOUND IN, staged small: 'fall in' with one man a pace from the player and his place on the player's far side — off, the player is

@@ -28,7 +28,8 @@
 // NVG.on false = no goggles on anybody, no dark, no tube: every function below answers as if this file did not exist (the build before it, to the frame).
 // State is per Game and derived every frame (nothing saved: a load re-derives it inside a frame).
 // (src/game is one import cycle: nothing here is built from another game module's exports at module load.)
-import { SideMap } from '../math/side';
+import { men, orderOf } from './seats';
+import { SideMap, GameSideMap } from '../math/side';
 import { Vec3, v3, clamp } from '../math/vec';
 import type { Game, Guard } from './game';
 import { lightEstimateAt, escalationOf, lightRuled, LIGHTS } from './guards';
@@ -89,7 +90,7 @@ interface Team {
 export interface NvgNote { t: number; who: string; what: string }
 /** QA / the panel: what changed and when (the last 200) */
 export const NVG_LOG: NvgNote[] = [];
-const teams = new SideMap<Game, Team>('nvg.teams');
+const teams = new GameSideMap<Game, Team>('nvg.teams');
 const fresh = (): Team => ({ t: -100, mode: 'off', why: 'no rule', men: new Map(), leadLitT: -Infinity, huntT: -Infinity, alarmT: -Infinity, calledT: -Infinity, callDue: false });
 const note = (g: Game, gd: Guard | null, what: string) => { NVG_LOG.push({ t: g.time, who: gd ? gd.callsign : '-', what }); if (NVG_LOG.length > 200) NVG_LOG.splice(0, 50); };
 /** the team's state while it is this frame's (or the last few: the rig is drawn after the tick, a paused frame draws again) */
@@ -142,7 +143,7 @@ function readPlace(g: Game, gd: Guard, M: Man) {
   const at = (x: number, z: number, tube = true) => { const E = nvgPlaceLight(g, [x, 1.2, z]); if (g.visibilityOf(E) < NVG.darkAt) dim = true; if (tube && !lamp && tubeVis(g, E) < NVG.blackAt) black = true; };
   at(c.pos[0], c.pos[2], false);
   for (const r of LOOK_M) { const P: Vec3 = [eye[0] + fx * r, 1.2, eye[2] + fz * r]; if (g.col.segmentBlocked(eye, P)) break; at(P[0], P[2], r <= TUBE_M); }
-  const A = g.orders.of(gd); if (A?.post && !A.arrived && v3.distXZ(c.pos, A.post) < LIGHTS.litMarkM) at(A.post[0], A.post[2]);
+  const A = orderOf(g, gd); if (A?.post && !A.arrived && v3.distXZ(c.pos, A.post) < LIGHTS.litMarkM) at(A.post[0], A.post[2]);
   const O = g.fight.opOf(gd);
   if (O?.tgt && O.tgt.state !== 'dead') at(O.tgt.char.pos[0], O.tgt.char.pos[2], false);
   if (O?.stepBy && g.time - O.stepBy.t < LIGHTS.stepSecs) at(O.stepBy.at[0], O.stepBy.at[2]);
@@ -161,11 +162,11 @@ export function nvgTick(g: Game) {
   const squad = g.guards.filter(isMate); for (const gd of T.men.keys()) if (!squad.includes(gd)) T.men.delete(gd);
   if (!squad.length) { T.mode = 'off'; return; }
   // ---- what the team knows of its own secret
-  const pl = g.player;
-  if (!pl.down && ((pl.pistolUp && pl.pistol.lightOn) || (pl.rifleUp && pl.rifle.lightOn))) T.leadLitT = g.time;   // (the SWITCH, the gun in his hands: a sprint or a busy hand lowers the beam a moment — player.ts poseGunLight — and is no change of mind)
+  const up = men(g).filter(pl => !pl.down);   // (the players still up: the team's lead is any of them)
+  if (up.some(pl => (pl.pistolUp && pl.pistol.lightOn) || (pl.rifleUp && pl.rifle.lightOn))) T.leadLitT = g.time;   // (the SWITCH, the gun in his hands: a sprint or a busy hand lowers the beam a moment — player.ts poseGunLight — and is no change of mind)
   if (escalationOf(g) >= 1) T.alarmT = g.time;
   if (NVG.huntFrees) for (const h of g.guards) if (h.unit && h.team === 'hostile' && (h.state === 'alert' || h.state === 'search') && g.fight.teamSees(h)) { T.huntT = g.time; break; }
-  const lead: Mode | null = !NVG.lead || pl.down ? null : g.time - T.leadLitT < NVG.leadTail ? 'free' : pl.nv ? 'dark' : null;
+  const lead: Mode | null = !NVG.lead || !up.length ? null : g.time - T.leadLitT < NVG.leadTail ? 'free' : up.some(pl => pl.nv) ? 'dark' : null;
   const quiet = g.time - loudT(g, T) >= NVG.quietSecs;
   const mode: Mode = lead ?? (NVG.own && quiet ? 'dark' : 'free');
   const why: Why = lead === 'free' ? 'your light' : lead === 'dark' ? 'your goggles' : !NVG.own ? 'no rule' : quiet ? 'not compromised' : 'compromised';
