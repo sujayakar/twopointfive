@@ -59,7 +59,7 @@ import { skyPlan } from './render/placeField';
 import { dressFront } from './scene/frontTry';
 import { seatPosts } from './scene/lookMend';
 import { dressLorry, kitLorry } from './scene/lorryTry';
-import { dressCars } from './scene/carTry';
+import { dressCars, CAR_FINISH, CAR_FINISHES } from './scene/carTry';
 import { dressPass } from './scene/passTry';
 import { charLookSides } from './render/charMaterials';
 import { groundRayConfig } from './scene/groundField';
@@ -1094,7 +1094,8 @@ async function bootLevel(q: URLSearchParams, engine: Engine, tick: () => Promise
   if (frontTryOn(q)) { const n = dressFront(level); if (n) console.info(`house front: ${n} pieces placed by hand (?front=0 = the wall as its file has it)`); }   // A HOUSE FRONT DRESSED BY HAND, A TRIAL (scene/frontTry.ts; the look page only, and only the pass's tea house)
   if (lorryTryOn(q)) { const n = dressLorry(level); console.info(n ? `lorry: ${n} pieces placed by hand (?lorry=0 = the lorry as its file has it)` : 'lorry: not the lorry scene/lorryTry.ts knows (the generator moved a box?): nothing touched');
     if (n && q.get('lorrykit') !== '0') { const kit = kitLorry(level); console.info(`lorry: ${kit} fittings (?lorrykit=0 = the curved lorry without them)`); } }   // A LORRY WITH CURVES, A TRIAL (scene/lorryTry.ts; the look page only, and only the pass's lorry)
-  if (carTryOn(q)) { const f = dressCars(level), said = Object.entries(f).map(([k, n]) => `${n} ${k}${n === 1 ? '' : 's'}`).join(', '); if (said) console.info(`vehicles with curves: ${said} (?cars=0 = each as its file has it)`); }   // VEHICLES WITH CURVES, A TRIAL (scene/carTry.ts; the look page only, any level)
+  if (carTryOn(q)) { const fin = q.get('carfinish'); if (fin && CAR_FINISHES.includes(fin)) CAR_FINISH.word = fin as typeof CAR_FINISH.word;   // (?carfinish=sell|metal|gloss|was: a body's paint, to be judged — scene/carTry.ts MADE)
+    const f = dressCars(level), said = Object.entries(f).map(([k, n]) => `${n} ${k}${n === 1 ? '' : 's'}`).join(', '); if (said) console.info(`vehicles with curves: ${said} (?cars=0 = each as its file has it)`); }   // VEHICLES WITH CURVES, A TRIAL (scene/carTry.ts; the look page only, any level)
   if (passTryOn(q)) { const n = dressPass(level); console.info(n ? `pass: ${n} round pieces placed by hand (?dress=0 = the pass as its file has it)` : 'pass: not the pass scene/passTry.ts knows: nothing touched'); }   // THE PASS DRESSED WITH ROUND THINGS, A TRIAL (scene/passTry.ts; the look page only)
   if (lookConfig.on && new URLSearchParams(location.search).get('seat') !== '0') { const n = seatPosts(level); if (n) console.info(`look: ${n} post${n === 1 ? '' : 's'} seated a hair proud of the wall end they stand in (?seat=0 leaves them)`); }   // (scene/lookMend.ts — the look page only)
   if (level.markTexel) engine.settings.markingTexel = level.markTexel;   // the base texel the level's marking bitmaps were generated for (absent = 2.5 cm)

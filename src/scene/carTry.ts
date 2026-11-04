@@ -25,11 +25,30 @@ import { ring, radiusOf } from './lorryTry';
 const D = Math.PI / 180;
 export type CarMat = { albedo: Vec3; rough?: number; metal?: boolean; stuff?: BoxStuff };
 /** WHAT A VEHICLE'S PARTS ARE MADE OF (asked 11-04 of the showroom's cars: "i think the materials could use some work though ... maybe we want a car paint
- *  material too?"). Each part keeps the colour its kit box had and says its stuff and its own finish — the shine is the box's roughness, the stuff's map only
- *  varies it: a body panel is car paint and smooth, glass near a mirror, bumpers and liners plastic, a hub bright steel, a tyre matt rubber. */
+ *  material too?", and of the first answer, a plain enamel at 0.2: "mm doesn't look good. we don't need to go full hyperrealistic but we should sell it
+ *  more", with a wall of clear-coated paint and a grey metallic car in daylight). Each part says its stuff and its own finish — the shine is the box's
+ *  roughness and its metal flag, the stuff's map only varies it.
+ *  WHY THE FIRST READ AS CARD: the one lobe of the picture's light mirrors 4 % off a paint that is no metal, and the game's eye looks DOWN on a bonnet and a
+ *  roof, where that is all it will ever be; and the kit's colours are a partition's. So a body that has a colour is a METALLIC paint: its colour deepened
+ *  (deepOf) and said as the metal's own, at a quarter roughness — what it shows is the sky and the yard in that colour, and a bowed roof carries a gradient
+ *  of them. A body that is white or grey is a hard ENAMEL, smooth, white kept white. Glass is dark and mirrors the sky. Bumpers and liners are plastic, a hub
+ *  bright steel, a tyre matt rubber.
+ *  CAR_FINISH.word, `?carfinish=` on the look page, is there to be judged on a GPU, which the writer has not: `sell` (the above), `metal` (every body
+ *  metallic), `gloss` (every body the hard enamel in its deepened colour), `was` (the kit's own colour at 0.2: the first answer). */
+export const CAR_FINISH = { word: 'sell' as 'sell' | 'metal' | 'gloss' | 'was' };
+export const CAR_FINISHES: readonly string[] = ['sell', 'metal', 'gloss', 'was'];
+/** a paint's colour as a car wears it: each channel's share of the strongest raised to 1.8, so a colour grows deeper and a white or a grey stays what it is */
+export const deepOf = (c: Vec3): Vec3 => { const m = Math.max(c[0], c[1], c[2], 1e-6); return [m * Math.pow(c[0] / m, 1.8), m * Math.pow(c[1] / m, 1.8), m * Math.pow(c[2] / m, 1.8)]; };
+/** has this paint a colour (not a white, a grey or a black)? */
+const coloured = (c: Vec3): boolean => { const m = Math.max(c[0], c[1], c[2]); return m > 0.02 && (m - Math.min(c[0], c[1], c[2])) / m > 0.25; };
 const MADE = {
-  body: (m: CarMat): CarMat => ({ albedo: m.albedo, rough: 0.2, stuff: 'carpaint' }),
-  glass: (m: CarMat): CarMat => ({ albedo: m.albedo, rough: 0.07, stuff: 'plain' }),
+  body: (m: CarMat): CarMat => {
+    const w = CAR_FINISH.word; if (w === 'was') return { albedo: m.albedo, rough: 0.2, stuff: 'carpaint' };
+    const d = deepOf(m.albedo), metal = w === 'metal' || (w === 'sell' && coloured(m.albedo));
+    // (a metal's colour IS what it mirrors: lifted, or a deep blue would mirror a tenth of the sky and stand black)
+    return metal ? { albedo: [Math.min(0.9, d[0] * 1.6 + 0.02), Math.min(0.9, d[1] * 1.6 + 0.02), Math.min(0.9, d[2] * 1.6 + 0.02)], rough: 0.26, metal: true, stuff: 'carpaint' } : { albedo: d, rough: 0.07, stuff: 'carpaint' };
+  },
+  glass: (m: CarMat): CarMat => CAR_FINISH.word === 'was' ? { albedo: m.albedo, rough: 0.07, stuff: 'plain' } : { albedo: [0.07, 0.085, 0.1], rough: 0.05, metal: true, stuff: 'plain' },   // (tinted glass from above is a dark mirror of the sky: a tenth of it)
   trim: (m: CarMat): CarMat => ({ albedo: m.albedo, rough: 0.5, stuff: 'plastic' }),
   hub: (m: CarMat): CarMat => ({ albedo: m.albedo, rough: 0.25, metal: true, stuff: 'steel' }),
   tyre: (m: CarMat): CarMat => ({ albedo: m.albedo, rough: 0.9, stuff: 'plain' }),
