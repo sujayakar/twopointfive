@@ -3,6 +3,9 @@
 // the turns with the layers off and on, the card, the one file. IT PROVES THE CHAIN, NOT A NUMBER: on this adapter a frame takes seconds, so the run is handed
 // short turns of a frame or two (window.__priceOpts) and what it times says nothing of a GPU.
 //   node tools/qa/pricerun-page.cjs [--port 5199] [--out dist/pricerun] [--quality verylow] [level …]      (default: vault)
+//   node tools/qa/pricerun-page.cjs --real [--size 1920x1080] [--quality high] [level …]
+//       THE RUN AS THE PAGE RUNS IT, for a machine with a GPU: no short turns, the run's own quality unless one is named, every level on the
+//       mission list unless some are named. The same checks; what it times is that machine's, named in the file. Files go to --out, or $OUT.
 // No dev server on the port: one is started from this checkout and stopped again by its pid. One software page at a time on a machine.
 // Exit 0 = the last page came up with a row for every level, each with its three states, no program made by the switch, the file handed over, no page error.
 const { chromium } = require('/opt/node-tools/node_modules/playwright');
@@ -10,7 +13,9 @@ const fs = require('fs'), path = require('path'), http = require('http');
 const { spawn } = require('child_process');
 const ROOT = path.resolve(__dirname, '../..');
 const argv = process.argv.slice(2); const opt = (k, d) => { const i = argv.indexOf('--' + k); if (i < 0) return d; const v = argv[i + 1]; argv.splice(i, 2); return v; };
-const PORT = Number(opt('port', process.env.PORT || 5199)), OUT = path.resolve(opt('out', path.join(ROOT, 'dist/pricerun'))), QUALITY = opt('quality', 'verylow'), LEVELS = argv.length ? argv : ['vault'];
+const REAL = argv.includes('--real'); if (REAL) argv.splice(argv.indexOf('--real'), 1);
+const PORT = Number(opt('port', process.env.PORT || 5199)), OUT = path.resolve(opt('out', process.env.OUT || path.join(ROOT, 'dist/pricerun'))), QUALITY = opt('quality', REAL ? '' : 'verylow');
+const [VW, VH] = opt('size', REAL ? '1920x1080' : '320x180').split('x').map(Number), LEVELS = argv.length ? argv : REAL ? [] : ['vault'];   // (none named on a real run = every level on the list)
 // (…and the page is not told a script drives it: navigator.webdriver false, so it boots as it does for a person — the load brief, the attract reel, the device's retry)
 const FLAGS = ['--disable-blink-features=AutomationControlled', '--enable-unsafe-webgpu', '--use-gl=angle', '--use-angle=swiftshader', '--enable-features=Vulkan', '--use-vulkan=swiftshader', '--ignore-gpu-blocklist', '--disable-gpu-watchdog'];
 const T0 = Date.now(), log = (...a) => console.log(`[${((Date.now() - T0) / 1000).toFixed(0)}s]`, ...a);
@@ -23,15 +28,15 @@ let red = false; const check = (ok, what, detail = '') => { red = red || !ok; co
   if (!(await up())) { log(`no dev server on ${PORT}: starting one from this checkout`); server = spawn('bun', ['run', 'tools/serve.ts'], { cwd: ROOT, env: { ...process.env, PORT: String(PORT) }, stdio: 'ignore' });
     for (let i = 0; i < 60 && !(await up()); i++) await new Promise(r => setTimeout(r, 500)); }
   const browser = await chromium.launch({ headless: true, channel: 'chromium', args: FLAGS });
-  const ctx = await browser.newContext({ viewport: { width: 320, height: 180 }, deviceScaleFactor: 1, acceptDownloads: true });
+  const ctx = await browser.newContext({ viewport: { width: VW, height: VH }, deviceScaleFactor: 1, acceptDownloads: true });
   // a frame is seconds long here: a turn is a frame dropped and two kept, and a long frame is not the tab having been away
-  await ctx.addInitScript(() => { window.__testVisible = true; window.__priceOpts = { playS: 0.5, slowS: 0, holdCapS: 1800, settleS: 0, settleFrames: 1, measureFrames: 2, capS: 240, awayS: 600 }; });   // (half a second of the game's clock: ten frames here, each clamped to a twentieth)
+  await ctx.addInitScript(real => { window.__testVisible = true; if (!real) window.__priceOpts = { playS: 0.5, slowS: 0, holdCapS: 1800, settleS: 0, settleFrames: 1, measureFrames: 2, capS: 240, awayS: 600 }; }, REAL);   // (half a second of the game's clock: ten frames here, each clamped to a twentieth)
   const page = await ctx.newPage(), errors = [], pages = []; let saved = null;
   page.on('pageerror', x => errors.push('pageerror: ' + String(x && x.stack || x).slice(0, 400)));
   page.on('console', m => { const x = m.text(); if (m.type() === 'error' && !/Failed to load resource/.test(x)) errors.push(x.slice(0, 300)); else if (/price every level/.test(x)) log('page:', x.slice(0, 300)); });
   page.on('framenavigated', f => { if (f === page.mainFrame()) { pages.push(f.url()); log('page', pages.length, f.url().replace(`http://localhost:${PORT}`, '')); } });
   page.on('download', async d => { saved = path.join(OUT, d.suggestedFilename()); await d.saveAs(saved).catch(e => { errors.push('the download was not kept: ' + e.message); saved = null; }); });
-  const asked = `/?look&${'pricelevels'}=${LEVELS.join(',')}&quality=${QUALITY}&pricesecs=1`;
+  const asked = `/?look&${'pricelevels'}${LEVELS.length ? '=' + LEVELS.join(',') : ''}${QUALITY ? '&quality=' + QUALITY : ''}${REAL ? '' : '&pricesecs=1'}`;
   log('goto', asked);
   await page.goto(`http://localhost:${PORT}${asked}`, { waitUntil: 'commit' });
   let file = null, said = '';
@@ -45,11 +50,12 @@ let red = false; const check = (ok, what, detail = '') => { red = red || !ok; co
   if (file) await new Promise(r => setTimeout(r, 1500));   // (the download lands a moment after the card)
   await page.screenshot({ path: path.join(OUT, 'last-page.png') }).catch(() => { });
   await browser.close(); if (server) server.kill();
-  console.log(`\n=== pricerun-page: ${LEVELS.join(', ')} at ${QUALITY}, software adapter: the chain is what is checked, no number here is a price ===`);
-  const rows = file?.rows ?? [], want = LEVELS.length * 2 + 1;
+  console.log(REAL ? `\n=== pricerun-page --real: ${LEVELS.join(', ') || 'every level on the list'} at ${QUALITY || 'the run\'s own quality'}, ${VW}x${VH}: the run as the page runs it; what it times is this machine's (${file?.gpu ?? 'no file'}) ===`
+    : `\n=== pricerun-page: ${LEVELS.join(', ')} at ${QUALITY}, software adapter: the chain is what is checked, no number here is a price ===`);
+  const rows = file?.rows ?? [], want = (LEVELS.length || rows.length) * 2 + 1;
   check(!!file, 'the run reached its last page and left its file on the page', file ? `${rows.length} rows; asked for quality ${file.quality}; ${file.gpu}` : `it stopped at page ${pages.length}: ${pages[pages.length - 1] ?? '?'}`);
   check(pages.length === want && pages.slice(1).every((u, i) => new RegExp(`[?&]pricerun=${i}(&|$)`).test(u) && /[?&]look(=|&|$)/.test(u) === (i % 2 === 0)), `the chain is the address that asked, then for each level its look page and its page without the look, in order (${want} loads)`, pages.map(u => u.replace(`http://localhost:${PORT}`, '')).join('\n    '));
-  check(rows.length === LEVELS.length && rows.every((r, i) => r.level === LEVELS[i]), 'a row for every level asked for, in the order asked', rows.map(r => r.level).join(', '));
+  check(LEVELS.length ? rows.length === LEVELS.length && rows.every((r, i) => r.level === LEVELS[i]) : rows.length > 1 && new Set(rows.map(r => r.level)).size === rows.length, LEVELS.length ? 'a row for every level asked for, in the order asked' : 'a row for each level of the list, none twice', rows.map(r => r.level).join(', '));
   check(rows.length > 0 && rows.every(r => r.off.frames > 0 && r.on.frames > 0 && r.page && r.page.win.frames > 0), 'every row has its three states timed: the page without the look, the layers off, the layers on',
     rows.map(r => `${r.level}: no look ${r.page?.win.ms ?? '—'} ms (GPU ${r.page?.win.gpu ?? '—'}), layers off ${r.off.ms} (${r.off.gpu ?? '—'}), on ${r.on.ms} (${r.on.gpu ?? '—'}); ${r.offBy}`).join('\n    '));
   { const wins = rows.flatMap(r => [['no look', r.page?.win], ['layers off', r.off], ['layers on', r.on]].map(([k, x]) => ({ level: r.level, k, x })));   // (this adapter is always behind: frames queue, so start-to-done counts the ones ahead and a frame's cost is the time between two)
