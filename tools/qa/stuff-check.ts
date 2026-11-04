@@ -52,9 +52,9 @@ const wanted = (name: string, albedo: readonly number[]) => { const s = stuffOfN
 
 // 4. the office's own paints, by name; and what the colour alone made of them
 { const M = dataOf('office.json').materials as Record<string, { albedo: number[] }>, word = wordWith(M), plainWord = lookWordOf();
-  const want: Record<string, string> = { wood: 'wood', woodDark: 'wood', chair: 'cloth', carpet: 'cloth', carpetBlue: 'cloth', wall: 'plaster', concrete: 'block', lino: 'slab', stone: 'slab', black: 'plain', metal: 'plain', cardboard: 'plain' };
+  const want: Record<string, string> = { wood: 'wood', woodDark: 'wood', chair: 'fabric', carpet: 'cloth', carpetBlue: 'cloth', wall: 'plaster', concrete: 'block', lino: 'slab', stone: 'slab', metal: 'steel', black: 'plain', cardboard: 'plain' };
   const got = Object.keys(want).map(n => word(boxIn(M[n].albedo), false) & 15), was = Object.keys(want).map(n => plainWord(boxIn(M[n].albedo), false) & 15);
-  check(Object.keys(want).every((n, i) => said(got[i]) === want[n]) && was[0] === 0 && was[2] === 0 && was[3] === 0, '4 the office\'s paints: a desk is wood, a chair and a carpet cloth, a partition wall plaster, the corridor slab; a bezel is plain because its name says so, and steel and card plain because they wait for a material; by the colour alone the desk, the chair and the carpet were nobody\'s',
+  check(Object.keys(want).every((n, i) => said(got[i]) === want[n]) && was[0] === 0 && was[2] === 0 && was[3] === 0, '4 the office\'s paints: a desk is wood, a chair fabric, a carpet cloth, steel shelving steel, a partition wall plaster, the corridor slab; a bezel is plain because its name says so, and card plain because it waits for a material; by the colour alone the desk, the chair and the carpet were nobody\'s',
     Object.keys(want).map((n, i) => `${n} ${said(got[i])}${got[i] !== was[i] ? ` (was ${said(was[i])})` : ''}`).join(' · ')); }
 
 // 5. one name, more than one thing: the things that wear another thing's numbers are not drawn as it

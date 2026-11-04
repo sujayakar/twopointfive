@@ -2557,9 +2557,10 @@ interleaved and filtered to their quiet minimum, and a row whose p75 sits far ab
   wiring. `lookmaps-check`'s text test of main.ts takes the second argument. NOT YET (the second slice, `stuff-by-name` in the dressing notes): a
   word on a box, which is what parts the mixed names and names a paint written as numbers; the level format's `stuff` on a box, a part and a row
   (a level's accent as a material); the cut core's class in `gbuffer_cut.wgsl` (still `lookClass` of the colour: an old break in an office
-  partition draws plain); `?surf` retired; a row on the look panel. KNOWN: the look's wood is planks and its cloth one coarse weave, so a desk is a
-  plank top and a swivel chair sackcloth until the look's veneer, fabric, plastic and clean steel land (asked 11-04, being drawn; a row each
-  then). Seen on the software adapter, and the first three commits of it by the maintainer on his GPU through the preview.
+  partition draws plain); `?surf` retired; a row on the look panel. THE LOOK'S FOUR OFFICE MATERIALS (veneer, plastic, fabric, steel; asked for this, 11-04) have their rows where a
+  name is one thing: `chair` is fabric, the four `plastic*` plastic, the office's `metal` steel. KNOWN: `wood` stays planks, because the name is a
+  bench, a crate and a pallet as well as a desk: a desk says veneer itself, with the second slice's word on a box. The class of a stuff is asked of
+  `lookTex.ts lookStuffOf`, the one table. Seen on the software adapter, and the first three commits of it by the maintainer on his GPU through the preview.
 - **MARKS AS PAINT, A FIRST TRY** (`shaders/markings.wgsl markSoft`, behind `lookMarkSoft()` = `lookCfg.g.x`, 0 off the look page by gbuffer.ts's
   stub; the maintainer, 10-23: "we also need to get away from the pixel art textures"). A marking is still the level's 2-bit cell bitmap (2.5 cm
   cells), but on the look page it is not drawn as squares: the coverage is read over a one-cell footprint, cut back at half cover along a ragged line
