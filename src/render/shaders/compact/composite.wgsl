@@ -158,18 +158,36 @@ fn upsampleSpecAny(pix: vec2i, pin: vec2f, z: f32, N: vec3f) -> vec3f {
   return acc / wsum;
 }
 
-// The ray-traced reflections at this pixel (frame.rtCfg.w = the reflection target's divisor): ONE bilinear fetch of the reflection texture at the pixel's own position on its
-// grid (texel g was traced at full-res pixel g·div + goff — the mapping denoise.wgsl gatherTexel uses). No dark fringe at a seam: the denoiser gives every texel that holds no
-// term (a matte box, a man, the sky) its tile's representative reflection instead of black (denoise.wgsl radTemporalCore), and THIS pixel is masked by its own full-res
-// roughness (reflK) — so the polish beside a chair leg reads polish, and the leg reads nothing. (A 3×3 joint-bilateral over the taps' depth / normal / material cost 36 loads a
-// pixel for the same picture under TAAU: docs/internal/p4-materials.md §2.)
-fn upsampleRefl(pixf: vec2f) -> vec3f {
+// The ray-traced reflections at this pixel (frame.rtCfg.w = the reflection target's divisor): THE FOUR TEXELS ROUND the pixel's own position on the reflection's grid (texel g was
+// traced at internal pixel g·div + goff — the mapping denoise.wgsl gatherTexel uses), each weighed as a bilinear fetch weighs it × HOW NEAR ITS OWN SURFACE IS TO THIS PIXEL'S (`z`
+// = this pixel's distance, `N` its stored normal: a bell over the depth's difference in upsampleSpecular's tolerance, since a share of a thousandth is a bar under a gain of a
+// thousand, and the normals' likeness to the eighth). Until 11-04 it was the one bilinear fetch: at a jamb, a pixel of the dark room took a share of the texel traced on
+// the sunlit ground seen past it, and the room's gain showed that share as blocks the size of a texel along every edge (the maintainer on his GPU: "blocky/rendered at a lower
+// resolution"). A texel whose surface is another's has no say now, and one that faces another way (a brick's bevelled edge beside its face) less. No dark fringe at a seam: the denoiser gives every texel that holds no term (a matte box, a man, the sky) its
+// tile's representative reflection instead of black (denoise.wgsl radTemporalCore), and THIS pixel is masked by its own full-res roughness (reflK) — so the polish beside a chair
+// leg reads polish, and the leg reads nothing. The plain bilinear fetch stays in the blend at a hundred-thousandth: where none of the four is this pixel's surface (a thing thinner
+// than a texel) it is the answer, and there is no line where one answer hands over to the other. (The one fetch was
+// chosen when a joint-bilateral made the same picture under TAAU, docs/internal/p4-materials.md §2: true while a pixel was shown at the frame's exposure, not under a place's gain.)
+// WHAT THIS DOES NOT REACH: two places in ONE plane (a room's floor running out over the threshold into the sun) are one surface to depth and normal.
+fn upsampleRefl(pixf: vec2f, z: f32, N: vec3f) -> vec3f {
   let rdiv = max(frame.rtCfg.w, 1.0);
   let goff = floor((rdiv - 1.0) * 0.5);
-  let dims = vec2f(textureDimensions(reflTex));
+  let dims = vec2i(textureDimensions(reflTex));
   var pf = pixf; if (SHARP) { pf = pixf * inOverOut() + frame.sharpCfgC.xy; }   // (+ the decoupled jitter the internal raster carries, like every other internal ↔ output map; 0 without it)         // (the reflection grid is a fraction of the INTERNAL raster)
-  let t = (pf - 0.5 - goff) / rdiv + 0.5;                         // continuous texel coordinate (pixf = the pixel centre, .5-based)
-  return textureSampleLevel(reflTex, linSamp, t / dims, 0.0).xyz;
+  let t = (pf - 0.5 - goff) / rdiv;                               // continuous texel coordinate, a texel's centre on the whole numbers (pixf = the pixel centre, .5-based)
+  let b = floor(t); let f = t - b; let di = i32(rdiv); let gi = i32(goff);
+  var acc = vec3f(0.0); var wsum = 0.0;
+  for (var k = 0; k < 4; k++) {
+    let o = vec2i(k & 1, k >> 1); let h = clamp(vec2i(b) + o, vec2i(0), dims - 1);
+    let src = min(h * di + gi, inHi());                           // guides from exactly the pixel the texel was traced at
+    let ds = textureLoad(gDepth, gpx(src), 0);
+    if (ds >= 1.0) { continue; }                                   // (the sky's texel is no surface's)
+    let zs = linearDepth(ds, ipos(vec2f(src) + 0.5));
+    let dz = (zs - z) / max(z * 0.02, 0.02);
+    let w = (select(1.0 - f.x, f.x, o.x == 1) * select(1.0 - f.y, f.y, o.y == 1) + 1e-4) * exp(-dz * dz) * pow(max(dot(textureLoad(gNormal, gpx(src), 0).xyz * 2.0 - 1.0, N), 0.0), 8.0);   // (the STORED normals, the look's tilt and all: the tilt is what the texel's ray was thrown by)
+    acc += textureLoad(reflTex, h, 0).xyz * w; wsum += w;
+  }
+  return (acc + textureSampleLevel(reflTex, linSamp, (t + 0.5) / vec2f(dims), 0.0).xyz * 1e-5) / (wsum + 1e-5);
 }
 
 /** the weather's air as the volumetric target's alpha carries it (volumetrics.wgsl wxAirMarch), ESTIMATED for the pixel's ray to its surface from the open air's own
@@ -1081,7 +1099,7 @@ fn compositePixel(pix0: vec2f) -> vec3f {
     color = (dif + emissive) * glassT + crackL;
     var spec = vec3f(0.0);                      // glossy floors (FLAG_GLOSS) / glass (FLAG_GLASS): the reflection radiance, added as it is — specular is not tinted by the diffuse albedo; both flags off = never read, colour untouched
     var refl = vec3f(0.0);                      // the ray-traced reflections (frame.rtCfg.w > 0; the host never raises FLAG_GLOSS with them): outgoing radiance, BRDF already applied by the pass — added as it is × the cutoff fade × the decals' gloss-keep (soot does not mirror), through the pane's transmission if one stands in front
-    if (reflK > 0.0) { refl = lookShow(upsampleRefl(sPixf) * (reflK * albedo4.a), shadeG); color += refl * glassT; }
+    if (reflK > 0.0) { refl = lookShow(upsampleRefl(sPixf, z, Nl) * (reflK * albedo4.a), shadeG); color += refl * glassT; }
     if ((frame.flags & FLAG_GLOSS) != 0u && glossPix) { spec = lookShow(upsampleSpecular(pix, pin, zg, Ng) * select(albedo4.a, specK, glassPix), shadeG); color += spec; }   // × the decals' gloss-keep: soot on the lino does not mirror the ceiling panel (1.0 wherever no mark lies) — except through a pane, whose texels carry the floor's AND the pane's reflection in one read: the pane's must not vanish over a scorch behind it, so the keep is waived there (and the cracks' boost applies)
     else if (glassPix) { spec = lookShow(upsampleSpecAny(pix, pin, zg, Ng) * specK, shadeG); color += spec; }
     if ((id & 0x50000000u) == 0x50000000u) { let ws = lookShow(wetCoatSpec(id, P, N, z, EdS, EdB, Ei), shadeG); spec += ws; color += ws * glassT; }   // a WET character pixel (bits 30 + 28: gbuffer.wgsl fsSkin — never a dry man's, never with the setting off): the clear coat's light, through the pane like the rest of him if he stands behind one
@@ -1101,7 +1119,7 @@ fn compositePixel(pix0: vec2f) -> vec3f {
     else if (dbg == 15u) { let mt = textureLoad(gMat, pix, 0); color = vec3f(mt.x, mt.y, 0.0); }   // the material the g-buffer wrote: r = roughness (bright = matte), g = metalness — the finish table + the detail layer's wear, as the reflections read them
     else if (dbg == 13u) { color = textureLoad(directTex, pix, 0).rgb; }   // the v3 denoiser's shadow-client state, written raw into the sharp class's texture by its last iteration (denoise.wgsl DN_DEBUG_VIEW): r/g = σ per class, b = history length
     else if (dbg == 16u) { color = Ei; }                            // phase 5: the resampling gather's reservoir state (fgather.wgsl mainGi writes it into the indirect, through the diffuse denoiser): r = confidence M ÷ cap, g = temporal history taken, b = spatial taps accepted ÷ k — the plain indirect with resampling off
-    else if (dbg == 17u) { color = select(vec3f(0.0), upsampleRefl(pixf), frame.rtCfg.w >= 1.0); }   // phase 5: the reflection pass's raw output as the composite fetches it (no cutoff fade / gloss-keep) — the mesh hits and the hit-lighting reuse are judged here
+    else if (dbg == 17u) { color = select(vec3f(0.0), upsampleRefl(sPixf, z, Nl), frame.rtCfg.w >= 1.0); }   // phase 5: the reflection pass's raw output as the composite fetches it (no cutoff fade / gloss-keep) — the mesh hits and the hit-lighting reuse are judged here
     rdT = normalize(worldFromDepth(pixf, 0.5) - frame.camPos); tT = zg; dirS = normalize(worldFromDepth(pixf, depth) - frame.camPos);
 
   }
