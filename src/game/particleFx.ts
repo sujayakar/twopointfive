@@ -138,9 +138,10 @@ export function saidSurf(b: Box | null | undefined): Surf | undefined { return H
 export function solidGlass(b: Box | null | undefined): boolean { return saidSurf(b) === 'glass'; }
 /** the chips a round knocks out of solid glass that only cracks: a pinch (a pane that breaks throws the row's nine, and the pane engine its shards) */
 export const SOLID_GLASS_CHIPS = 3;
-/** the crack a round leaves in it: the radius a dead screen's has (destruction.ts damageDecal), a pistol's and a rifle's, and a pellet's of a shell (a
- *  shell lays one a pellet, as it lays a hole a pellet: nine small stars, not nine large ones) */
-export const SOLID_GLASS_CRACK = { pistol: 0.085, rifle: 0.11, pellet: 0.035, strength: 0.9 };
+/** the crack a round leaves in it: the 'damage' mark's own look for it (decals.wgsl damageMark 9: a dead screen's star drawn pale, because black hairlines
+ *  on dark glass show nothing), at the radius a dead screen's has, a pistol's and a rifle's, and a pellet's of a shell (a shell lays one a pellet, as it
+ *  lays a hole a pellet: nine small stars, not nine large ones) */
+export const SOLID_GLASS_CRACK = { look: 9, pistol: 0.085, rifle: 0.11, pellet: 0.035, strength: 0.9 };
 /** WHAT A HIT LOOKS LIKE: the surface a round's sparks, chips and dust are chosen by, the colour they are tinted from, and whether it is solid glass —
  *  for a prop's part (`box`: the very part, where the caller knows it), a door's leaf, a static, or nothing but a normal. The box's own word first (the
  *  rule on: `said`), then what the hit has always been read by: a prop's kind, a leaf as wood, a pane as glass, a static's paint. */
