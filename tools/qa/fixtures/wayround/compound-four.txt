@@ -1,0 +1,4 @@
+# the compound's OLDER lived rooms, from before the dressing of 11-03: 9 ways lost (the shed by shed_s with the team at shed_e; the garage by g_e with the
+# team in it by g_n) and 23 squeezed (the guard hut by hut_e; the garage by g_e). What the dressing added (12 lost and 84 squeezed: a block stack and a wood
+# pile at the wall's foot on the way to the guard hut) is mended: this is the count of the level as it was before the dressing, way for way
+9 23
