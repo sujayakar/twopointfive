@@ -15,7 +15,7 @@
 //       control says so
 //   (7) with no word on the net the team walks the level's named places; where Sam really stands (unseen) changes nothing of it
 //   (8) a man on the net sees him: that place is the net's word, control briefs the team on it, the team goes THERE — not to where he has since gone; the
-//       man who said it dead and unfound, the word stands
+//       man who said it dead, the word stands where he put it (found or not)
 //   (9) a man in an arm says nothing: what he saw reaches the net only when he is back on it
 //   (10) the word is in a save: out and back, the same places at the same ages
 //   (11) whoever is against them is their enemy: the partner in view of the element is contact, and he is the one they turn on
@@ -172,10 +172,13 @@ export async function responseCheck(): Promise<boolean> {
     away(); RESPONSE.deal = false; requestQrf(g, 'gunfire'); RESPONSE.deal = true;
     steps(W, 120, () => notes(g).some(n => n.startsWith('target:')), away);
     const T = Q.target, brief = rx.find(l => /rolling/.test(l.text))?.text ?? '', samNow = g.player.char.pos;
-    killGuard(g, seer, [1, 0, 0], true); steps(W, 3, undefined, away); const kept = Q.word.has('player') && !seer.found;   // (he is down and nobody has found him: what he said is still what control has)
+    killGuard(g, seer, [1, 0, 0], true); steps(W, 3, undefined, away);
+    // (he is down: what he said is still what control has, at the place he said — whether or not a mate has come on his body in those three seconds, which
+    //  turns on where the men stand: with enemies startled at first sight the picket's first man is beside him by then)
+    const wordNow = Q.word.get('player'), kept = !!wordNow && flat(wordNow.at, seenAt) < 0.5;
     const there = !!T && had && flat(T.pos, seenAt) < 6 && flat(T.pos, samNow) > 10 && !notes(g).some(n => n.endsWith(':sweep'));
-    line(had && kept && /last word: one man, /.test(brief) && there, '(8) a man on the net sees him: that place is the net\'s word, control briefs the team on it and the team goes there, not to where he has since gone; the man who said it dead and unfound, the word stands',
-      `seen at ${at(seenAt)} by ${seer.callsign} · word kept past him ${kept} · “${brief.slice(0, 130)}” · first target ${T ? `${T.room} ${at(T.pos)}` : 'none'} · ${T ? f1(flat(T.pos, seenAt)) : '?'} m from the word, ${T ? f1(flat(T.pos, samNow)) : '?'} m from Sam`);
+    line(had && kept && /last word: one man, /.test(brief) && there, '(8) a man on the net sees him: that place is the net\'s word, control briefs the team on it and the team goes there, not to where he has since gone; the man who said it dead, the word stands where he put it',
+      `seen at ${at(seenAt)} by ${seer.callsign} · word kept past him ${kept} (his body ${seer.found ? 'found' : 'not found'} by then) · “${brief.slice(0, 130)}” · first target ${T ? `${T.room} ${at(T.pos)}` : 'none'} · ${T ? f1(flat(T.pos, seenAt)) : '?'} m from the word, ${T ? f1(flat(T.pos, samNow)) : '?'} m from Sam`);
     line(back, '(10) the net\'s word goes into a save\'s rows and comes back the same: who, where, how old', `${rows.length} row(s) · ${before.slice(0, 120)}`); }
 
   // ---- (9) a man in an arm says nothing
