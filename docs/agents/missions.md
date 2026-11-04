@@ -1589,16 +1589,30 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   props are as they were): an old checkpoint loads, an old tape's re-run will not match (the marks moved). Page: rebuild/authored-levels/loud-levels.md.
 - **The ground outside the compound's wall is no longer bare** (dress every level, 11-03; no switch: level data under `LIVED`, room `lived.outside`). Both
   ways in start on the strip between the perimeter wall and the map's edge, which had nothing on it. `tools/levels/compound.ts` lays the look's kit there
-  (`gwotKit(gwotOfOffice(K))`: three wood piles, field stones in four places, two stacks of block, two tyres), every piece at the wall's foot or out at the
-  edge so that the walk to each gate and the ground the four stand on stay clear; the twin treads the two walks darker (`M.path`). A lying drum and bushes
-  were tried and taken out: from the play camera at night they read as an orange crate and dark boxes. The generator's own octagon is the lived kit's
-  `round` (a pot of 0.2 m and over too): 8 rounds where 3 were. The taxi wears `genYellow` (a paint; it wore a jerry can's plastic yellow, drawn flat). A
-  TALLY MOVES: the pieces at the wall's foot take 23 of the wall's 891 places for a wall charge (`TPS_PROFILE=shipped bun run tools/qa/wallfurn-check.ts
-  --levels compound.json`: 868 places, all pass, the rule's 45 added places unchanged). Base: `tools/qa/fixtures/level-base/compound-gwot.txt`; round counts
-  0 and 8, both files. Measured: the 21 missions' play-throughs on two seeds against step 1239: frozen 42 of 42 digests the same, shipped with `TPS_LIVED=0`
-  42 of 42; shipped, compound-four's two runs move and no other level's. Their endings do not: seed 1 is taken with 3 of 4 up at 198.8 s (198.9 before, the
-  same man down at 39.7 s, 18 orders, 6 entries), seed 2 is wiped at 33.6 s as before, the same four down at the same seconds. Two seeds is a look, not a
-  count. Drawn on the software adapter only: never seen on a GPU, never played by a person.
+  (`gwotKit(gwotOfOffice(K))`: three wood piles, field stones in four places, two stacks of block, two tyres), every piece out at the strip's outer edge
+  (the next bullet says why none is at the wall's foot), so that the walk to each gate and the ground the four stand on stay clear; the twin treads the two
+  walks darker (`M.path`). A lying drum and bushes were tried and taken out: from the play camera at night they read as an orange crate and dark boxes. The
+  generator's own octagon is the lived kit's `round` (a pot of 0.2 m and over too): 8 rounds where 3 were. The taxi wears `genYellow` (a paint; it wore a
+  jerry can's plastic yellow, drawn flat). Base: `tools/qa/fixtures/level-base/compound-gwot.txt`; round counts 0 and 8, both files. Measured: the 21
+  missions' play-throughs on two seeds against step 1239: frozen 42 of 42 digests the same, shipped with `TPS_LIVED=0` 42 of 42; shipped, compound-four's
+  two runs move and no other level's. Their endings do not: seed 1 is taken with 3 of 4 up at 198.8 s (198.9 before, the same man down at 39.7 s, 18 orders,
+  6 entries), seed 2 is wiped at 33.6 s as before, the same four down at the same seconds. Two seeds is a look, not a count. Drawn on the software adapter
+  only: never seen on a GPU, never played by a person.
+- **Nothing solid stands at the outside foot of the compound's wall: a wall charge's place and the defenders' way round live there** (11-04, the mend of the
+  bullet above; no switch: level data under `LIVED`). The dressing of 11-03 had stood wood piles and block stacks against the outside of the perimeter wall
+  and counted neither thing. (1) WALL CHARGES: a charge needs a place to stand at the wall, and the squad breaches this wall from its starts. The piles took
+  23 of the wall's 891 places (6 on the west wall opposite the garage, 17 on the north wall either side of the back gate); `TPS_PROFILE=shipped bun run
+  tools/qa/wallfurn-check.ts --levels compound.json` reads 891 before the dressing, 868 with it, 891 now. (2) THE WAY ROUND: the defenders' way to the guard
+  hut's other door (`hut_e` / `hut_w`) comes down the strip outside the west wall hugging the wall and round the corner, 45.16 m of the 46 a way round may
+  be (`pressure.ts flankMaxM`); a block stack and a wood pile at the wall's foot behind the west start made it 46.06 m. `tools/qa/wayround-check.ts`,
+  shipped and frozen alike on seeds 1 to 3: 9 ways lost and 23 squeezed before the dressing, 21 and 107 with it, 9 and 23 now, and the same ways as before
+  the dressing, length for length. Those 9 and 23 are the older lived rooms' (the shed by `shed_s`, the garage by `g_e`, the guard hut by `hut_e`), left as
+  they are and held in `tools/qa/fixtures/wayround/compound-four.txt`. THE RULE the generator now keeps: every piece outside the wall lies at the strip's
+  OUTER EDGE. (3) AND NOT BESIDE A START MARK: the same block stack and wood pile laid at the edge but 2 m behind the rear man's mark at the west start
+  changed how the four step off, and both scripted runs with them (seed 1 taken with 1 of 4 up where it had 3; seed 2 taken where it was wiped at 34 s); 5 m
+  behind him they change nothing, and stones there never did. Measured: the 21 missions' play-throughs on two seeds against the dressed level (step 1265
+  with the check), three reads (frozen, shipped with `TPS_LIVED=0`, shipped): 42 of 42 digests the same on each, compound-four's two included, so the mend
+  moves no run. The opening frame and the two starts were drawn again on the software adapter: never seen on a GPU, never played by a person.
 - **Mousehole's defenders are placed by hand** (`tools/levels/mousehole.ts`, the `post` room's marks carry the comment; no switch: the level's data, and the
   page opens on it under `SAMESTART`). Placed: ward 1, exam 3, store 2, with the three marks by the blank north wall moved to 2.7 m off it (a wall charge knocks
   down inside 2 m: a north hole used to take the man with it); the duty room's three in file order = the HATCH GUN behind the desk, the DEEP MAN in the dark
