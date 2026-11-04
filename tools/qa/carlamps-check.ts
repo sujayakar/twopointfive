@@ -49,9 +49,6 @@ export async function carlampsCheck(): Promise<boolean> {
   let all = true;
   const line = (ok: boolean, s: string, detail = '') => { all &&= ok; console.log(`- ${ok ? 'PASS' : 'FAIL'} — ${s}${detail ? `\n    ${detail}` : ''}`); };
   console.log(`\n=== carlamps: a parked vehicle's lamps can be shot out${BREAK ? ' (CARLAMPS_BREAK: the switch left off)' : ''} ===`);
-  { const own = ownLamps();   // (a level's count in a file of its own, below: it takes its row's place in the table before line 1 reads the table)
-    for (const [level, rows] of Object.entries(own.rows)) KNOWN[level] = rows;
-    line(own.bad.length === 0, '1a a level\'s lamps may be held in a file of its own (tools/qa/fixtures/carlamps/<name>.txt), which wins over its row in the table: every such file is a row for a level under levels/', `${Object.keys(own.rows).length} counted by a file of their own${own.bad.length ? ` · ${own.bad.join(' · ')}` : ''}`); }
   const was = { ...CARLAMPS, dark: [...CARLAMPS.dark] }, stats0 = { ...CARLAMPS_STATS }, rnd = Math.random;
   try {
     // (1) every level file
@@ -155,27 +152,3 @@ export async function carlampsCheck(): Promise<boolean> {
   return all;
 }
 if (import.meta.main) process.exit((await carlampsCheck()) ? 0 : 1);
-
-/** A LEVEL'S LAMPS IN A FILE OF ITS OWN: `tools/qa/fixtures/carlamps/<name>.txt` holds the row of `levels/<name>.json`, one count the file may give a line, as
- *  `head tail glowing` (three whole numbers, a space between). A level whose vehicle stands in a lived-in room has two lines, as its row would have two counts:
- *  with its lived-in rooms left out, then with them stood in. A line that starts with `#` says what changed. WHERE A LEVEL HAS BOTH, THE FILE WINS over its
- *  row in KNOWN (the check lays it over the table before line 1 reads it), and a look twin has its own file or none. Why: every level that gains a parked
- *  vehicle gained a row at one place in one table, so two branches that each dress a level did not pick side by side (the same mend as
- *  tools/qa/fixtures/level-base/ and tools/qa/fixtures/round/). Every row of the table still stands and means what it meant, and with no such file in the tree
- *  nothing is read differently. RED on the check's line 1a, never 'nothing to compare': a file with no count or with a line that is not three counts, and a
- *  file for a level that is not under levels/. Wrong counts are red on line 1 as a wrong row is.
- *  (A function at the file's end and two statements in the check, so that this adds lines and changes none: a row added to the table on another branch
- *  picks beside it.) */
-function ownLamps(): { rows: Record<string, [number, number, number][]>; bad: string[] } {
-  const DIR = 'tools/qa/fixtures/carlamps', rows: Record<string, [number, number, number][]> = {}, bad: string[] = [];
-  let names: string[] = []; try { names = readdirSync(`${ROOT}/${DIR}`).filter(t => t.endsWith('.txt')).sort(); } catch { /* no such folder: no level has a file */ }
-  const levels = new Set(readdirSync(`${ROOT}/levels`));
-  for (const t of names) {
-    const level = t.replace(/\.txt$/, '.json');
-    if (!levels.has(level)) { bad.push(`${DIR}/${t} is the count of no file under levels/`); continue; }
-    const body = readFileSync(`${ROOT}/${DIR}/${t}`, 'utf8').split('\n').map(l => l.trim()).filter(l => l && !l.startsWith('#')), counts = body.map(r => /^(\d+) (\d+) (\d+)$/.exec(r));
-    if (!body.length || counts.some(m => !m)) { bad.push(`${DIR}/${t} is not a level's lamps (a line a count the file may give: head lamps, tail lamps and how many of them glow, three whole numbers with a space between; a line that starts with # is a note)`); continue; }
-    rows[level] = counts.map(m => [Number(m![1]), Number(m![2]), Number(m![3])]);
-  }
-  return { rows, bad };
-}
