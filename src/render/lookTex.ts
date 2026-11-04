@@ -3,16 +3,16 @@
 //   A (rgba8): rgb = what the box's paint is multiplied by, ÷ 2 (128 = the paint as it is; so a map can also turn a hue), a = the height, 0‥1 of the layer's range
 //   B (rgba8): rg = the tangent-space normal's xy (½ + ½·n), b = roughness, a = the hollows: ½ of how open the texel is (1 = not in a hollow) + what puts the tile's paint-weighed mean at ½ (lookLayer)
 // Everything is periodic over the tile, so a layer repeats without a seam; the shader breaks the repeat up. Pure arithmetic on typed arrays: runs the same in a browser and under bun.
-export const LOOK_N = 512, LOOK_TILE = 2.0, LOOK_LAYERS = 17;
+export const LOOK_N = 512, LOOK_TILE = 2.0, LOOK_LAYERS = 18;
 /** the layers. A STUFF is a layer a box's paint can be drawn as, and its number is its place here and one (0 = plain): surface.wgsl's eight in its class order
- *  (SURF_MUD 1 → layer 0 …), then the look's own (look.wgsl LOOK_CLOTH 9 … LOOK_STEEL 15). After the stuffs, the two layers of what a mud wall is made of under
+ *  (SURF_MUD 1 → layer 0 …), then the look's own (look.wgsl LOOK_CLOTH 9 … LOOK_CARPAINT 16). After the stuffs, the two layers of what a mud wall is made of under
  *  its paint, which no box is: NEW STUFFS GO IN FRONT OF THOSE TWO and nothing else moves (the shader is told where they are: gbuffer.ts lookWgsl). A box's
  *  word has room for 31 stuffs (gbuffer.ts lookWordOf). Ask lookStuffOf for a name's number; never count places. A new stuff says in look.wgsl, by name, how
  *  it is laid (a box's own frame or the world's) and whether the weather touches it: nothing there is "every stuff from here up". */
-export const LOOK_NAMES = ['mud wall', 'plaster', 'block', 'earth', 'gravel', 'slab', 'wood', 'sheet', 'cloth', 'metal', 'paint', 'veneer', 'plastic', 'fabric', 'steel', 'field stone', 'mud brick'] as const;
+export const LOOK_NAMES = ['mud wall', 'plaster', 'block', 'earth', 'gravel', 'slab', 'wood', 'sheet', 'cloth', 'metal', 'paint', 'veneer', 'plastic', 'fabric', 'steel', 'carpaint', 'field stone', 'mud brick'] as const;
 export type LookName = typeof LOOK_NAMES[number];
 /** the roughness each layer is written around (the shader adds a texel's difference from it to the box's own finish) */
-export const LOOK_ROUGH = [0.95, 0.86, 0.93, 0.94, 0.88, 0.82, 0.84, 0.5, 0.96, 0.75, 0.5, 0.4, 0.5, 0.95, 0.42, 0.8, 0.95];
+export const LOOK_ROUGH = [0.95, 0.86, 0.93, 0.94, 0.88, 0.82, 0.84, 0.5, 0.96, 0.75, 0.5, 0.4, 0.5, 0.95, 0.42, 0.26, 0.8, 0.95];
 /** the layers a layer's own drawing reads beside its own (look.wgsl): a mud wall shows its stone and its brick, and stones come up through earth at a wall's foot.
  *  Whoever makes a layer makes these with it (gbuffer.ts needLook). */
 export const LOOK_WITH: Readonly<Partial<Record<LookName, readonly LookName[]>>> = { 'mud wall': ['field stone', 'mud brick'], earth: ['gravel'] };
@@ -384,9 +384,22 @@ const steel: Mat = (u, v, t) => {
   tint(t, 0.985 + 0.04 * (slow - 0.5) + 0.015 * (peel - 0.5) + 0.12 * scr + 0.06 * scuff);
   t.rough = 0.4 + 0.05 * (peel - 0.5) + 0.1 * dull + 0.2 * scr + 0.12 * scuff;
 };
-const MATS: Mat[] = [mud, plaster, block, earth, gravel, slab, wood, sheet, cloth, metal, paint, veneer, plastic, fabric, steel, stone, brick];
+// ---- car paint: a body panel of a car that is driven and washed now and then (11-04; the maintainer, of the rounded cars: "maybe we want a car paint
+// material too?" — a truck drew as old paint, chipped and rust-specked all over, a saloon as nothing). An enamel under a clear coat: one colour, the spray's
+// orange peel only as a wobble of the shine, and what the road leaves on it: a film of dust in soft patches that dulls the coat where it lies, the faint
+// runs a rain leaves down through that dust, hairline marks of the cloth, and a stone chip here and there no bigger than a lentil. THE SHINE IS THE BOX'S
+// (its own finish: a roughness of about 0.2, not metal, said by whoever makes the car); this map only says where the coat is clean and where it is dulled.
+const carpaint: Mat = (u, v, t) => {
+  const peel = fbm(u, v, 64, 2, 251), dust = smooth(0.42, 0.78, fbm(u, v, 3, 4, 252)), run = smooth(0.7, 0.92, vn(u, v, 46, 3, 253)) * dust;   // (runs go up the map: a side panel's map lies along the car and up it)
+  const scr = Math.max(scratches(u, v, 6, 254, 0.4, 1), scratches(u, v, 11, 256, 0.25, 1)) * 0.6;
+  const ch = cells(u, v, 40, 258, 1.0), chip = ch.id < 0.025 ? smooth(0.16, 0.08, ch.f1) : 0;
+  t.h = 0.00008 * (peel - 0.5) - 0.00015 * chip;
+  tint(t, (0.99 + 0.012 * (peel - 0.5) + 0.05 * dust * (1 - 0.7 * run) + 0.04 * scr) * (1 - 0.45 * chip));
+  t.rough = 0.17 + 0.04 * (peel - 0.5) + 0.26 * dust * (1 - 0.8 * run) + 0.12 * scr + 0.5 * chip;
+};
+const MATS: Mat[] = [mud, plaster, block, earth, gravel, slab, wood, sheet, cloth, metal, paint, veneer, plastic, fabric, steel, carpaint, stone, brick];
 /** how much the relief is stood up when the normal is taken off the height (1 = true to the metres above; a map read from twenty metres wants more) */
-const RELIEF = [1.6, 1.8, 1.5, 1.6, 1.3, 1.8, 1.6, 1.0, 1.6, 1.6, 1.6, 1.4, 1.4, 1.6, 1.4, 1.0, 1.2];
+const RELIEF = [1.6, 1.8, 1.5, 1.6, 1.3, 1.8, 1.6, 1.0, 1.6, 1.6, 1.6, 1.4, 1.4, 1.6, 1.4, 1.2, 1.0, 1.2];
 
 /** the layers a box's own paint is drawn as (a class of look.wgsl); the rest are what a wall is made of UNDER its paint (the plinth's stone, the brick behind fallen render) */
 export const LOOK_PAINTED = LOOK_NAMES.indexOf('field stone');
