@@ -10,6 +10,12 @@
 //   the service rooms  a block of painted concrete block with stucco piers, a skimmed floor, steel cabinets; a lounge with a carpet and one orange wall
 //   the stair head     one solid orange mass with a louvre and a steel door skin
 //   the pad            a painted rectangle of deck with white lines
+// He looked at it, 11-04: "directionally nice but still doesn't have enough "personality / cm^2"". His pictures carry three things on every patch and the first
+// pass had one of them, the stuff. The other two are placed here by hand, each where somebody would have put it:
+//   PAINT a painter left   stencilled bays, numbers and a way out, warning stripes at a plinth and before a door, a hatch's outline, a plate with its bolts:
+//                          markings (scene/markings.ts: cells on a face, which the look draws as old paint), on the wall or top that carries them
+//   SMALL FITTINGS         conduit with its clips and boxes along the walls, vents in the hall's wall, clamps and flanges on the pipes, a hose cabinet, a
+//                          railing whose shadow lies on the deck, and what the last job left behind: a pallet of spare pavers, paint cans, a bucket, a plank
 // Walls stand on a half-metre grid: a paver is half a metre and a panel a metre by a half, and their maps lie by the world, so those joints land on walls'
 // ends without anybody fitting them. (A 40 cm block does not divide half a metre: a course ends on a cut block at some corners, as a real one does.)
 //
@@ -30,6 +36,8 @@ import { officeKit, normalize3 as norm, type GeneratorTrace } from '../../src/sc
 import { gwotKit, gwotOfOffice, GWOT_MATERIALS } from '../../src/scene/gwotKit';
 import { WORLD } from '../../src/scene/world';
 import { BoxFlag, type Box } from '../../src/scene/boxes';
+import { MAX_MARKS_PER_BOX, markFromRect, type MarkingDef, type MarkPal } from '../../src/scene/markings';
+import * as MD from '../../src/scene/markingDefaults';
 import type { Vec3 } from '../../src/math/vec';
 
 export const NAME = 'white-roof';
@@ -46,6 +54,11 @@ const STUCCO = paint(ORANGE, 0.42, 'stucco'), BOARD = paint(YELLOW, 0.42, 'board
 const STEEL = paint([0.56, 0.57, 0.58], 0.32, 'brushed');   // (not `metal`: a mirror of the bounce's metre-wide probes on a hand-sized plate is blotches, on the software adapter at least)
 const COAT = paint([0.7, 0.71, 0.72], 0.35, 'enamel'), CARPET = paint(BLUE, 0.95, 'carpet'), SEAT = paint([0.03, 0.14, 0.55], 0.95, 'carpet');
 const GLOSS_Y = paint(YELLOW, 0.26, 'enamel'), GLOSS_W = paint([0.8, 0.8, 0.8], 0.3, 'enamel'), GLOSS_O = paint(ORANGE, 0.3, 'enamel');
+// ---- the painter's tins (markings' palette entries: a material each, never a shaded colour)
+const INK: MarkPal = { albedo: [0.1, 0.1, 0.11], rough: 0.55 }, CHALK: MarkPal = { albedo: [0.84, 0.84, 0.82], rough: 0.5 }, SIGNAL: MarkPal = { albedo: YELLOW, rough: 0.4 }, RED: MarkPal = { albedo: [0.62, 0.05, 0.04], rough: 0.4 };
+// (a band of colour is PAINT ON THE SAME WALL: the wall's own stuff in another colour, a finger proud, so its joints and holes run on under the colour's edge)
+const PLINTH = paint(ORANGE, 0.5, 'cast panel'), DADO = paint(ORANGE, 0.36, 'gloss block');
+const WOOD = paint([0.4, 0.3, 0.19], 0.84, 'wood'), CARD = paint([0.45, 0.33, 0.2], 0.9, 'plain'), DARK = paint([0.1, 0.1, 0.11], 0.5, 'enamel');
 const LINE_Y = paint(YELLOW, 0.4, 'enamel'), LINE_W = paint([0.82, 0.82, 0.82], 0.4, 'enamel'), PAD = paint(ORANGE, 0.55, 'skim'), VOID = paint([0.035, 0.04, 0.05], 0.9, 'plain');
 
 export function build(): { level: Level; scenarios: LevelScenarios; groups: string[]; surfaces: SurfacesData } {
@@ -61,7 +74,21 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
     slab(x0, y, z0 + w, x0 + w, y + 0.005, z1 - w, LINE_Y.albedo, { rough: LINE_Y.rough, stuff: LINE_Y.stuff, flags: FLAT }); slab(x1 - w, y, z0 + w, x1, y + 0.005, z1 - w, LINE_Y.albedo, { rough: LINE_Y.rough, stuff: LINE_Y.stuff, flags: FLAT });
   };
   /** a cast block standing on the deck, its top edged */
-  const mass = (x0: number, z0: number, x1: number, z1: number, h: number, p: Paint = PANEL) => { slab(x0, 0, z0, x1, h, z1, p.albedo, { rough: p.rough, stuff: p.stuff }); edged(x0, z0, x1, z1, h); };
+  const mass = (x0: number, z0: number, x1: number, z1: number, h: number, p: Paint = PANEL) => { const i = slab(x0, 0, z0, x1, h, z1, p.albedo, { rough: p.rough, stuff: p.stuff }); edged(x0, z0, x1, z1, h); return i; };
+  /** PAINT ON A BOX: markings added to what it carries (four a box, scene/markings.ts) */
+  const mark = (i: number, ...ms: MarkingDef[][]) => { const b = K.boxes[i]; b.marks = [...(b.marks ?? []), ...ms.flat()]; if (b.marks.length > MAX_MARKS_PER_BOX) throw new Error(`white-roof: box ${i} carries ${b.marks.length} markings, and a box holds ${MAX_MARKS_PER_BOX}`); return i; };
+  /** a world place on a box's south face (x, y) or on its top (x, z: z is the SOUTH end of what is painted, since the camera reads a top from the south), in
+   *  that face's own metres from its centre */
+  const onS = (i: number, x: number, y: number): [number, number] => [x - K.boxes[i].c[0], y - K.boxes[i].c[1]];
+  const onTop = (i: number, x: number, z: number): [number, number] => [x - K.boxes[i].c[0], K.boxes[i].c[2] - z];
+  /** a world rect on a box's top as that face's rect */
+  const rectTop = (i: number, x0: number, z0: number, x1: number, z1: number): [number, number, number, number] => [x0 - K.boxes[i].c[0], K.boxes[i].c[2] - z1, x1 - K.boxes[i].c[0], K.boxes[i].c[2] - z0];
+  /** a run of conduit on a wall's south face from x0 to x1 at height y, a clip every metre and a half; `drop` = a branch down to that height at x1 */
+  const conduitS = (x0: number, x1: number, y: number, zFace: number, drop?: number) => {
+    slab(x0, y, zFace, x1, y + 0.03, zFace + 0.03, COAT.albedo, { rough: COAT.rough, stuff: COAT.stuff, flags: FLAT });
+    for (let x = x0 + 0.4; x < x1 - 0.2; x += 1.5) slab(x - 0.03, y - 0.02, zFace, x + 0.03, y + 0.05, zFace + 0.04, STEEL.albedo, { rough: STEEL.rough, stuff: STEEL.stuff, flags: FLAT });
+    if (drop !== undefined) { slab(x1 - 0.03, drop, zFace, x1, y, zFace + 0.03, COAT.albedo, { rough: COAT.rough, stuff: COAT.stuff, flags: FLAT }); slab(x1 - 0.14, drop - 0.3, zFace, x1 + 0.11, drop, zFace + 0.09, COAT.albedo, { rough: COAT.rough, stuff: COAT.stuff }); }
+  };
   /** a round thing standing up: the kit's octagon of four slabs, which the game stands up as one round (scene/round.ts) */
   const round = (x: number, z: number, y0: number, y1: number, r: number, p: Paint) => {
     const a = r * 0.96, t = a * 0.4142;
@@ -74,13 +101,23 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
   grp('ground');
   slab(0, -0.25, 0, 40, 0, 28, VOID.albedo, { rough: VOID.rough, stuff: VOID.stuff });
   grp('floors');
-  slab(4.88, 0, 4.88, 35.12, 0.006, 23.62, PAVER.albedo, { rough: PAVER.rough, stuff: PAVER.stuff, flags: FLAT });
+  const deck = slab(4.88, 0, 4.88, 35.12, 0.006, 23.62, PAVER.albedo, { rough: PAVER.rough, stuff: PAVER.stuff, flags: FLAT });
 
   // ---- the hall's wall: the north side, cast in panels, on an orange plinth
   grp('walls.hall');
+  const hall = K.boxes.length;
   K.wallX(5, 4.88, 35.12, SHELL, PANEL.albedo, [], { rough: PANEL.rough, stuff: PANEL.stuff }, H);
-  skinS(5.12, 34.88, 0, 0.75, 5.12, STUCCO, 0.02);
-  for (const x of [10, 20, 30]) { slab(x - 0.25, 0, 5.12, x + 0.25, H, 5.42, PANEL.albedo, { rough: PANEL.rough, stuff: PANEL.stuff }); skinS(x - 0.25, x + 0.25, 0, 0.75, 5.42, STUCCO, 0.02); }   // three piers: the wall is not one sheet
+  if (K.boxes.length !== hall + 1) throw new Error('white-roof: the hall wall is one box, and its paint says so');
+  skinS(5.12, 34.88, 0, 0.75, 5.12, PLINTH, 0.012);
+  [10, 20, 30].forEach((x, k) => {                                                                                                                 // three piers: the wall is not one sheet
+    const pier = slab(x - 0.25, 0, 5.12, x + 0.25, H, 5.42, PANEL.albedo, { rough: PANEL.rough, stuff: PANEL.stuff });
+    mark(pier, MD.stencilMarks('+z', String(k + 1), -0.125, 0.25, INK, 2, 'base'));                                                               // its number at a man's head
+    mark(skinS(x - 0.25, x + 0.25, 0, 0.75, 5.42, PLINTH, 0.012), MD.hazardMarks('+z', [-0.25, -0.375, 0.25, 0.375], CHALK, undefined, 3, 'base'));   // its plinth striped: mind the corner
+  });
+  // the painter's stencil, a bay at a time, and the way out; two vents over the plinth in each of the two middle bays; conduit under the wall's head, a box where a run drops
+  mark(hall, MD.stencilMarks('+z', 'BAY 1', ...onS(hall, 6.7, 1.55), INK), MD.stencilMarks('+z', 'BAY 2', ...onS(hall, 14.3, 1.55), INK), MD.stencilMarks('+z', 'BAY 3', ...onS(hall, 24.3, 1.55), INK), MD.stencilMarks('+z', 'EXIT→', ...onS(hall, 31.8, 1.55), INK));
+  for (const x of [12.3, 17.4, 22.3, 27.4]) skinS(x - 0.3, x + 0.3, 0.9, 1.3, 5.12, LOUVRE, 0.02);
+  conduitS(5.3, 9.4, 2.6, 5.12, 2.2); conduitS(10.6, 19.4, 2.6, 5.12); conduitS(20.6, 29.4, 2.6, 5.12, 2.2); conduitS(30.6, 34.7, 2.6, 5.12);
 
   // ---- the parapet: a low cast wall on the other three sides, its top edged
   grp('walls.parapet');
@@ -103,6 +140,16 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
   slab(11.56, 0.006, 9.12, 16.88, 0.012, 14.88, CARPET.albedo, { rough: CARPET.rough, stuff: CARPET.stuff, flags: FLAT });
   grp('ceiling');
   slab(5.88, H, 8.88, 17.12, H + 0.2, 15.12, SKIM.albedo, { flags: BoxFlag.NoPrimary, rough: SKIM.rough, stuff: SKIM.stuff });
+  grp('walls.rooms.dado');       // the block's two outer faces are orange to a metre: the same blocks under the colour, its edge a hard line across them
+  skinS(5.88, 7.9, 0, 1.0, 15.12, DADO, 0.01); skinS(9.3, 17.13, 0, 1.0, 15.12, DADO, 0.01);
+  for (const [z0, z1] of [[8.88, 11.3], [12.7, 15.12]] as const) slab(17.12, 0, z0, 17.13, 1.0, z1, DADO.albedo, { rough: DADO.rough, stuff: DADO.stuff });
+  grp('walls.rooms.fittings');   // what hangs on those two faces: conduit along the head, a lamp case over the service door, a hose cabinet, each door's number on a plate, a vent
+  conduitS(6.1, 9.9, 2.75, 15.12); conduitS(10.2, 16.9, 2.75, 15.12, 2.45);
+  slab(8.2, 2.3, 15.12, 9.0, 2.4, 15.24, COAT.albedo, { rough: COAT.rough, stuff: COAT.stuff });
+  mark(add({ c: [10.7, 1.4, 15.19], h: [0.36, 0.3, 0.06], albedo: GLOSS_W.albedo, rough: GLOSS_W.rough, stuff: GLOSS_W.stuff }), MD.stencilMarks('+z', 'FIRE', -0.2875, 0.02, RED, 1, 'base'), MD.plateMark('+z', [-0.3, -0.2, 0.3, -0.125], RED));
+  mark(add({ c: [9.75, 1.6, 15.138], h: [0.16, 0.21, 0.008], albedo: GLOSS_O.albedo, rough: GLOSS_O.rough, stuff: GLOSS_O.stuff, flags: FLAT }), MD.stencilMarks('+z', '1', -0.125, -0.175, CHALK, 2, 'base'));
+  mark(add({ c: [17.138, 1.6, 13.15], h: [0.008, 0.21, 0.16], albedo: GLOSS_O.albedo, rough: GLOSS_O.rough, stuff: GLOSS_O.stuff, flags: FLAT }), MD.stencilMarks('+x', '2', -0.125, -0.175, CHALK, 2, 'base'));
+  skinS(13.4, 14.4, 2.15, 2.55, 15.12, LOUVRE, 0.02);
   grp('room.service');
   for (const [x, z] of [[6.32, 9.32], [11.24, 9.32], [6.32, 14.68]] as const) slab(x - 0.2, 0, z - 0.2, x + 0.2, H, z + 0.2, STUCCO.albedo, { rough: STUCCO.rough, stuff: STUCCO.stuff });   // orange piers in three corners (the fourth is the door's)
   for (const x of [7.4, 8.0]) { slab(x - 0.22, 0.08, 9.12, x + 0.22, 1.0, 9.36, STEEL.albedo, { rough: STEEL.rough, stuff: STEEL.stuff }); skinS(x - 0.12, x + 0.12, 0.45, 0.85, 9.36, LINE_Y, 0.004); }   // two steel cabinets, a yellow label each
@@ -114,32 +161,71 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
 
   // ---- the yellow wall: cast against boards, a steel band along it, two pipes up it
   grp('walls.yellow');
+  const yel = K.boxes.length;
   K.wallX(9, 19.5, 29.5, SHELL, BOARD.albedo, [], { rough: BOARD.rough, stuff: BOARD.stuff });
+  if (K.boxes.length !== yel + 1) throw new Error('white-roof: the yellow wall is one box, and its paint says so');
+  mark(yel, MD.stencilMarks('+z', 'AC-02', ...onS(yel, 27.5, 1.95), INK));
   skinS(19.5, 29.5, 0, 0.12, 9.12, PANEL, 0.02);                                                                                                  // a grey skirting
-  skinS(19.5, 29.5, 1.1, 1.32, 9.12, STEEL, 0.015);
+  for (let x = 19.5; x < 29.4; x += 2) mark(skinS(x + 0.004, x + 1.996, 1.1, 1.32, 9.12, STEEL, 0.015), MD.boltMarks('+z', -0.8, 0.8, -0.06, 10, 'coarse'));   // the steel band: five plates butted, four bolt heads a plate
+  conduitS(20.7, 29.3, 2.62, 9.12, 2.3);
   round(20.1, 9.32, 0, H, 0.11, GLOSS_Y); round(20.45, 9.32, 0, H, 0.11, GLOSS_Y);
+  round(20.1, 9.32, 0, 0.05, 0.17, GLOSS_Y); round(20.45, 9.32, 0, 0.05, 0.17, GLOSS_Y);                                                           // a flange at each foot, and two clamps that hold the pair to the wall
+  for (const y of [1.55, 2.4]) slab(19.94, y, 9.12, 20.61, y + 0.06, 9.46, STEEL.albedo, { rough: STEEL.rough, stuff: STEEL.stuff });
 
   // ---- the plant: four cast volumes of four heights, a louvre and a hatch in their faces, round stacks beside them
   grp('plant');
-  mass(21.5, 10.0, 24.5, 13.0, 2.4); skinS(22.0, 24.0, 0.3, 1.5, 13.0, LOUVRE, 0.03);
-  mass(24.5, 10.0, 27.0, 12.0, 1.5); skinS(25.2, 26.3, 0.1, 1.2, 12.0, STEEL, 0.015);
-  mass(25.0, 13.5, 28.0, 15.5, 1.0);
-  mass(27.0, 10.5, 28.5, 12.0, 0.5);
+  // every volume says its number on its top, where the camera reads it; a hatch is a yellow outline; the low one that faces the deck has a striped foot
+  const m1 = mass(21.5, 10.0, 24.5, 13.0, 2.4); skinS(22.0, 24.0, 0.3, 1.5, 13.0, LOUVRE, 0.03);
+  mark(m1, MD.stencilMarks('+y', '1', ...onTop(m1, 22.0, 12.5), INK, 4), MD.outlineMarks('+y', rectTop(m1, 23.3, 10.4, 24.1, 11.2), SIGNAL), MD.ratingPlateMarks('+z', [1.1, 0.0, 1.4, 0.2], 3));
+  const m2 = mass(24.5, 10.0, 27.0, 12.0, 1.5); mark(skinS(25.2, 26.3, 0.1, 1.2, 12.0, STEEL, 0.015), MD.boltMarks('+z', -0.5, 0.5, 0.44, 4, 'coarse'), MD.boltMarks('+z', -0.5, 0.5, -0.44, 4, 'coarse'), MD.ratingPlateMarks('+z', [0.15, 0.15, 0.45, 0.35], 5));
+  mark(m2, MD.stencilMarks('+y', '2', ...onTop(m2, 25.0, 11.7), INK, 3));
+  const m3 = mass(25.0, 13.5, 28.0, 15.5, 1.0);
+  mark(m3, MD.stencilMarks('+y', '3', ...onTop(m3, 25.4, 15.1), INK, 3), MD.outlineMarks('+y', rectTop(m3, 26.9, 13.8, 27.7, 14.6), SIGNAL), MD.hazardMarks('+z', [-1.5, -0.5, 1.5, -0.25], SIGNAL, INK));
+  const m4 = mass(27.0, 10.5, 28.5, 12.0, 0.5); mark(m4, MD.stencilMarks('+y', '4', ...onTop(m4, 27.5, 11.65), INK, 2));
   slab(21.6, 0.06, 14.4, 23.4, 1.0, 15.6, COAT.albedo, { rough: COAT.rough, stuff: COAT.stuff }); skinS(21.7, 23.3, 0.16, 0.9, 15.6, LOUVRE, 0.025);   // a condenser: a painted case, a louvre, a fan on top
   round(22.5, 15.0, 1.0, 1.06, 0.42, paint([0.1, 0.1, 0.11], 0.5, 'enamel'));
   for (const [x, z, h] of [[24.2, 14.6, 1.3], [24.2, 15.4, 0.9], [29.2, 12.0, 1.6]] as const) { round(x, z, 0, h, 0.2, GLOSS_W); round(x, z, h, h + 0.07, 0.29, GLOSS_W); }   // vent stacks with caps
 
   // ---- the stair head: one orange mass
   grp('stair');
-  slab(31.0, 0, 9.0, 34.5, H, 13.5, STUCCO.albedo, { rough: STUCCO.rough, stuff: STUCCO.stuff });
-  skinS(32.2, 33.2, 0, 2.05, 13.5, COAT, 0.03); skinS(32.25, 33.15, 0.02, 0.32, 13.53, STEEL, 0.006); skinS(31.3, 31.9, 1.9, 2.5, 13.5, LOUVRE, 0.025);   // a door's face with its kick plate, a vent beside its head
-  round(34.2, 13.75, 0, H, 0.09, GLOSS_O);
+  const stair = slab(31.0, 0, 9.0, 34.5, H, 13.5, STUCCO.albedo, { rough: STUCCO.rough, stuff: STUCCO.stuff });
+  mark(stair, MD.stencilMarks('+z', 'STAIR', ...onS(stair, 31.98, 2.3), CHALK), MD.stencilMarks('+z', '2', ...onS(stair, 31.35, 0.95), CHALK, 2));   // its name over the door, its number at the door's side
+  mark(skinS(32.2, 33.2, 0, 2.05, 13.5, COAT, 0.03), MD.ratingPlateMarks('+z', [-0.15, 0.45, 0.15, 0.65], 9));                                    // a door's face with a notice on it, its kick plate, a vent beside its head
+  mark(skinS(32.25, 33.15, 0.02, 0.32, 13.53, STEEL, 0.006), MD.boltMarks('+z', -0.4, 0.4, 0.1, 6, 'base'));
+  skinS(31.3, 31.9, 1.9, 2.5, 13.5, LOUVRE, 0.025);
+  // the board beside the door that says what is on which floor: four bars of colour with a line of print each
+  mark(add({ c: [33.75, 1.55, 13.508], h: [0.3, 0.25, 0.008], albedo: GLOSS_W.albedo, rough: GLOSS_W.rough, stuff: GLOSS_W.stuff, flags: FLAT }),
+    [markFromRect('+z', 'base', [-0.25, -0.2, 0.25, 0.2], [{ albedo: ORANGE, rough: 0.4 }, { albedo: BLUE, rough: 0.4 }, { albedo: [0.42, 0.42, 0.41] }], c => { for (let r = 0; r < 4; r++) { const j = c.H - 3 - 4 * r; c.fill(1 + (r % 2), 0, j, 5 + 2 * ((r * 3) % 4), j + 2); c.fill(3, 13, j, c.W - 2 - (r * 5) % 4, j + 1); } })!]);
+  round(34.2, 13.75, 0, H, 0.09, GLOSS_O); round(34.2, 13.75, 0, 0.05, 0.14, GLOSS_O); round(34.2, 13.75, 1.5, 1.56, 0.125, GLOSS_O);                // a pipe up the corner, a flange at its foot and a collar half way
 
   // ---- the pad: a painted rectangle of deck with white lines
   grp('pad');
-  film(8, 17.5, 16, 22, PAD);
+  const pad = film(8, 17.5, 16, 22, PAD);
   film(8, 17.5, 16, 17.6, LINE_W, 0.011); film(8, 21.9, 16, 22, LINE_W, 0.011); film(8, 17.6, 8.1, 21.9, LINE_W, 0.011); film(15.9, 17.6, 16, 21.9, LINE_W, 0.011);
   film(11.5, 18.5, 12.5, 21, LINE_W, 0.011); film(10.5, 19.4, 13.5, 20.1, LINE_W, 0.011);
+  mark(pad, MD.stencilMarks('+y', '01', ...onTop(pad, 8.4, 21.6), CHALK, 2));
+
+  // ---- paint on the deck itself: a hatched bay to keep clear before each of the three outer doors, and the way out for whoever comes up
+  mark(deck, MD.hazardMarks('+y', rectTop(deck, 7.8, 15.2, 9.4, 16.4), SIGNAL, undefined, 2, 'coarse', 1), MD.hazardMarks('+y', rectTop(deck, 31.9, 13.7, 33.5, 14.9), SIGNAL, undefined, 2, 'coarse', 1),
+    MD.hazardMarks('+y', rectTop(deck, 17.3, 11.2, 18.5, 12.8), SIGNAL, undefined, 2, 'coarse', 1), MD.stencilMarks('+y', 'EXIT→', ...onTop(deck, 26.2, 17.5), SIGNAL));
+  grp('drain');   // a grated channel across the plant's front, a yellow line either side
+  slab(24.6, 0.006, 16.5, 28.4, 0.012, 16.74, DARK.albedo, { rough: 0.5, stuff: 'louvre', flags: FLAT });
+  film(24.6, 16.42, 28.4, 16.5, LINE_Y, 0.011); film(24.6, 16.74, 28.4, 16.82, LINE_Y, 0.011);
+
+  // ---- a railing between the pad and the walk to the service door: orange tube, two rails, a post every stride and a half. In the sun its shadow is a ladder on the deck
+  grp('rail');
+  const tube = (x0: number, y0: number, z0: number, x1: number, y1: number, z1: number) => slab(x0, y0, z0, x1, y1, z1, GLOSS_O.albedo, { rough: GLOSS_O.rough, stuff: GLOSS_O.stuff });
+  for (let x = 10.6; x < 16.4; x += 1.425) tube(x - 0.02, 0, 17.18, x + 0.02, 1.05, 17.22);
+  for (const z of [18.4, 19.6]) tube(16.28, 0, z - 0.02, 16.32, 1.05, z + 0.02);
+  for (const y of [0.52, 1.03]) { tube(10.58, y, 17.18, 16.32, y + 0.04, 17.22); tube(16.28, y, 17.22, 16.32, y + 0.04, 19.62); }
+
+  // ---- what the last job left by the stair: a pallet of spare pavers, two tins and a bucket, a plank; and a carton by the service wall
+  grp('clutter');
+  mark(add({ c: [30.0, 0.07, 16.0], h: [0.58, 0.07, 0.5], albedo: WOOD.albedo, rough: WOOD.rough, stuff: WOOD.stuff }), MD.palletDeckMarks([0.58, 0.07, 0.5]));
+  for (let k = 0; k < 4; k++) add({ c: [29.8 + 0.012 * (k % 2), 0.16 + 0.04 * k, 15.9 + 0.01 * k], h: [0.25, 0.02, 0.25], yaw: [0, 0.05, -0.03, 0.08][k], albedo: PAVER.albedo, rough: PAVER.rough, stuff: COAT.stuff });   // (a loose paver is the box's own: enamel's map, not the deck's joints through it)
+  round(30.9, 16.75, 0, 0.19, 0.085, GLOSS_W); round(31.12, 16.6, 0, 0.19, 0.085, GLOSS_W); round(30.6, 17.05, 0, 0.28, 0.14, GLOSS_O);
+  slab(28.9, 0.006, 17.3, 31.4, 0.046, 17.5, WOOD.albedo, { rough: WOOD.rough, stuff: WOOD.stuff });
+  mark(add({ c: [12.4, 0.2, 15.42], h: [0.25, 0.2, 0.2], albedo: CARD.albedo, rough: CARD.rough, stuff: CARD.stuff }), MD.cartonMarks([0.25, 0.2, 0.2]));
 
   // ---- lights: tubes in the rooms, a floodlight for a night, the moon (the hour's sun goes in at its place)
   grp('lights');
