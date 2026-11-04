@@ -18,7 +18,7 @@ import gdownSrc from './shaders/gdown.wgsl' with { type: 'text' };     // SHARP 
 import { LOOK_WITH, LOOK_PAINTED, lookLayerSliced, lookStuffOf, type LookName } from './lookTex';
 import surfaceSrc from './shaders/surface.wgsl' with { type: 'text' };   // SURFACES, A TRY (render/frame.ts surfTryConfig): fsBox's materials — dead code unless the prelude's SURF_TRY is up
 import lookSrc from './shaders/look.wgsl' with { type: 'text' };         // THE LOOK PROTOTYPE (render/frame.ts lookConfig): fsBox's materials off real maps — in the module only on that page
-import { LOOK_NAMES, LOOK_N, LOOK_LAYERS, LOOK_ROUGH, lookLayer, lookMip } from './lookTex';
+import { LOOK_NAMES, LOOK_N, LOOK_LAYERS, LOOK_ROUGH, LOOK_BUILT, LOOK_FADES, LOOK_SOAKS, LOOK_UNIT, lookLayer, lookMip } from './lookTex';
 import { GWOT_PALETTE, type GwotMat } from '../scene/gwotPalette';
 import { PAINT_STUFF, BY_COLOUR, stuffOfName, type PaintRows } from '../scene/stuff';
 
@@ -121,7 +121,7 @@ function nextTask(): Promise<void> {
 }
 /** look.wgsl on the look page; on every other, the few names fsBox's dead calls need and nothing else (no binding: the bind group is the page's as it was) */
 function lookWgsl(): string {
-  return lookConfig.on ? classWgsl('lookClass', LOOK_OF) + `const LOOK_L_STONE: i32 = ${LOOK_NAMES.indexOf('field stone')}; const LOOK_L_BRICK: i32 = ${LOOK_NAMES.indexOf('mud brick')}; const LOOK_L_GRAVEL: i32 = ${LOOK_NAMES.indexOf('gravel')}; const LOOK_L_CLOTH: i32 = ${LOOK_NAMES.indexOf('cloth')};\nconst LOOK_LAYERS: i32 = ${LOOK_LAYERS};\nconst LOOK_BASE = array<f32, ${LOOK_LAYERS}>(${LOOK_ROUGH.map(v => v.toFixed(3)).join(', ')});   // lookTex.ts LOOK_ROUGH: the roughness each layer is written around\n` + lookSrc : `struct LookOut { albedo: vec3f, n: vec3f, rough: f32, tilted: bool };
+  return lookConfig.on ? classWgsl('lookClass', LOOK_OF) + `const LOOK_L_STONE: i32 = ${LOOK_NAMES.indexOf('field stone')}; const LOOK_L_BRICK: i32 = ${LOOK_NAMES.indexOf('mud brick')}; const LOOK_L_GRAVEL: i32 = ${LOOK_NAMES.indexOf('gravel')}; const LOOK_L_CLOTH: i32 = ${LOOK_NAMES.indexOf('cloth')};\nconst LOOK_LAYERS: i32 = ${LOOK_LAYERS};\nconst LOOK_BASE = array<f32, ${LOOK_LAYERS}>(${LOOK_ROUGH.map(v => v.toFixed(3)).join(', ')});   // lookTex.ts LOOK_ROUGH: the roughness each layer is written around\nconst LOOK_KEEP = array<vec3f, ${LOOK_LAYERS}>(${LOOK_NAMES.map((_, l) => `vec3f(${wgslNum(LOOK_BUILT[l])}, ${wgslNum(LOOK_FADES[l])}, ${wgslNum(LOOK_SOAKS[l])})`).join(', ')});   // lookTex.ts STUFFS: a stuff laid in place, how far it blotches (0 = a place somebody keeps), whether it takes damp\nconst LOOK_UNIT = array<vec4f, ${LOOK_LAYERS}>(${LOOK_UNIT.map(r => `vec4f(${r.map(wgslNum).join(', ')})`).join(', ')});   // lookTex.ts STUFFS' unit: a stuff made of pieces: one piece's size in the map (m), its bond, how far a piece's shade may sit from the next's\n` + lookSrc : `struct LookOut { albedo: vec3f, n: vec3f, rough: f32, tilted: bool };
 fn lookSurface(cls: u32, wp: vec3f, n: vec3f, bi: u32, lc: vec3f, hf: vec4f, albedoIn: vec3f, roughIn: f32, dwx: vec3f, dwy: vec3f, fp: f32) -> LookOut { return LookOut(albedoIn, n, roughIn, false); }
 fn lookClass(a: vec3f) -> u32 { return 0u; }
 struct LookSnow { albedo: vec3f, n: vec3f, rough: f32, amt: f32, bank: bool };
@@ -133,6 +133,8 @@ fn lookMan(code: u32, mp: vec3f, dmx: vec3f, dmy: vec3f, dwx: vec3f, dwy: vec3f,
 fn lookSnow(cls: u32, wp: vec3f, gn: vec3f, bi: u32, lc: vec3f, hf: vec4f, paint: vec3f, albedoIn: vec3f, roughIn: f32, fp: f32) -> LookSnow { return LookSnow(albedoIn, gn, roughIn, 0.0, false); }
 `;
 }
+/** a number as WGSL takes an f32 literal, every digit of it (a row of lookTex.ts STUFFS is not rounded on its way to the shader) */
+const wgslNum = (v: number): string => Number.isInteger(v) ? v.toFixed(1) : String(v);
 /** the look page's panel numbers, as look.wgsl's LookCfg takes them (a, b: the eight amounts; the layers' base roughness follows, and `snow` after it) */
 export const LOOK_DEFAULTS = { even: 1, paint: 1, relief: 1, shine: 1, weather: 1, untile: 1, edges: 1, cavity: 1, size: 1, snow: 1, air: 1, ground: 1.5, crust: 1, men: 1, stone: 1, marks: 1, tailor: 1, print: 1, sky: 1, clarity: 0.7, shade: 0.7, lamps: 1, veil: 1, puffs: 1, eyes: 1, firesmoke: 1, windows: 1, glare: 0.1, stir: 1, roomc: 0.6, expo: 1, rooms: 1, steady: 1, walls: 1, roomb: 1, gexp: 1, contrast: 1.35, highs: 1, lows: 1, colour: 1 };   // (`clarity` is × relief, edges, cavity and ground as they go up, setLook below; `air` and `sky` are not the shader's: × settings.hazeDensity and × the frame's sky, ui/lookpanel.ts)
 export const lookAmounts = { ...LOOK_DEFAULTS };

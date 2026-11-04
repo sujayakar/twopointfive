@@ -973,3 +973,15 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   seen on a GPU or played; on the plain page a level with shapes keeps the cut ray programs live from boot, and what that costs (and whether a shaped
   box shows plain for a moment before they compile) wants a number from a GPU before a level file says a shape; with `?nocutboxes` the page draws a
   shaped box plain while the game's rays meet its shape (the round things' split).
+- **THE WHITE ROOF, A LOOK STUDY** (11-04; `levels/white-roof.json` from `tools/levels/white-roof.ts`; open it as
+  `?look&solo&levelFile=white-roof.json&hour=midday`; no mission names it). The maintainer: "maybe as a prototype, could you try making a small level
+  that recreates the ... look based on all the screenshots i've sent you?", of the texture work in particular. One sentence: a kept roof in full sun
+  where every surface is one colour and shows what it is made of by its relief, its finish and its pieces. Hand placement: the hall's wall the whole
+  north side (cast panels over an orange stucco plinth, the biggest face that looks at the camera); the plant, four cast volumes of four heights with
+  a yellow line round every top, in the middle where the sun throws shadows off them; the yellow wall cast against boards behind it; a block of two
+  rooms in painted block (a skimmed floor and stucco piers; a carpet and one orange wall); one solid orange stair head; a painted pad. Every box says
+  its `stuff` (the ten kept stuffs, `docs/agents/render.md`), and walls stand on a half-metre grid so a paver's and a panel's joints land on walls'
+  ends. Its doors are orange gloss outside and white inside (`LOOK_DOORS`). `level-needs white-roof`: no FAIL, two NOTEs (no mission row; the open deck
+  is one paint over 231 m²). `level-lint` passes; `round-check` knows its ten round things. Nothing here is a mission: no
+  scenarios but door names, the stealth mission's three places only because the format wants them. Drawn on the software adapter only; never seen on
+  a GPU, never played.
