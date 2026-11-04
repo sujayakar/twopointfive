@@ -481,7 +481,26 @@ but synthetic writes still work.
   record (`benchLegOfPage`), plays its part (`BenchLeg`) and hands its lines on with the next page's load; the last page shows the card, and Close (or an Esc
   with nothing to show) loads the address the run was asked on. Of the visitor's flags only `mute`, `nomusic`, `quality`, `pipequeue`, `shadertrim`, `shaderfold`, `savepic` (2026-11-02: until then
   `?bench&savepic=0` against `?bench`, the pair the save picture's bullet names, was one run twice), `pace` (11-03: a benchmark draws every display frame whatever the word says, as it
-  always did, so the word only rides along rather than be named as left behind: `docs/agents/render.md`), the backend's own words and the
+  always did, so the word only rides along rather than be named as left behind: `docs/agents/render.md`), `adapt` (11-04: `?bench&quality=high&adapt=0`
+  is a run at ONE SIZE: `?adapt=0` opens the visit with nothing adapting, `ui/quality.ts visit`. With the ladder on, a heavier picture is paid for in
+  resolution, so two runs show the same frame rate and the same GPU milliseconds at different sizes; with the word nothing moves, and the lines of two runs
+  are the same pixels. With no tier named the word holds the tier the page stands on (the one this browser's auto last had, High where it never ran), at
+  that tier's start size and unmeasured, since no calibration runs: the row 'Hold frame rate' alone left auto free to shed sharp direct, give the tier up
+  and resume the last visit's size. NAME THE TIER where two machines or two days are to be compared. THE CARD SAYS WHAT ITS OWN LINES SHOW (`ui/bench.ts
+  sizeNote`), not what the switches were: 'held still' where the page's lines (as it opened, each scene, the held picture) were all drawn at one size, and
+  after it 'the address named no tier' where it did not; 'more than one size' where they were not (a window resized, the resolution moved by hand); and
+  where the row was put off BY HAND under auto (Options, not the address) it asks for a pinned tier. With the row on it says nothing. Like every word of the
+  address it is how the visit OPENS: a tier or Auto picked in Options afterwards is the player's, and Reset puts the defaults back under the address's
+  words. With the ladder off the page has no frame rate to hold, so outside a benchmark the even pace has no target and the page draws every display frame
+  (a pinned tier with the row off always did; a benchmark draws every frame anyway). The kit view's frame is opened without the word (it is pinned to a
+  tier and its pacer counts on its ladder), the viewer reads the address by the same reader, and `ladder-replay.ts` replays a take with the row as the take
+  had it. Asked for by the look's join to read 'within a tenth of the GPU time with the look off'; whether a machine HOLDS 60 is still read on a run
+  without the word. `bench-check` has the word on both addresses, the page's wiring (one reader of the two words, before a frame is drawn; Reset and the
+  viewer by the same reader) and the card's lines (a whole run each, the unnamed tier among them); `ladder-replay.ts --selftest` plays a 36 fps fight with
+  the word under hold 60 and as now, through a pinned High and through auto with sharp direct its own to shed and a size left behind, and then the page's
+  own order (a ladder made from what a browser remembers, the address read, a hand's pick, Reset): nothing moves and nothing is written as the machine's
+  choice; `ADAPT_BREAK=1` leaves the word off and the seven lines that play it fail. Run on a cloud NVIDIA card (two benchmark runs, every
+  High line of the three scenes at one size, the notes as said); never on a Mac or a Windows card), the backend's own words and the
   shader rows' words (`ui/shaderrows.ts SHADER_ROW_WORDS`, e.g. `compactshaders`) ride along: anything else would make it another fight than the set's, and
   the report has a note naming the words that were not kept. THE ROWS WERE DROPPED UNTIL 2026-10-27, so `?bench&compactshaders=1` measured the plain build
   on every scene (found by the maintainer, who saw no difference on a second run); a row set in Options always applied. Since then the report has a
@@ -547,6 +566,30 @@ but synthetic writes still work.
   a frame there taking seconds and the wall's cut put out of reach, so a scene ends by the player's own cut after `CAP` game seconds and the last page's
   tail is the fake page's to prove; `STEP=script` has the check step the scenes with `__runFrames` instead; about 80 minutes at 320x180). NEVER RUN ON A GPU: no number of its report has been read on a real machine, the seven
   minutes are an estimate, and nobody has watched a scene played or looked at the card.
+- **What a line of the benchmark's card prices** (2026-11-04, `ui/bench.ts benchStats`). `frame ms` is the gap between frames: wherever the
+  display's pace is held it reads 16.7 whatever the picture cost, so it answers 'is 60 held' and prices nothing. `GPU ms` is the COMPUTE passes'
+  union, the number the quality ladder is fed (`ui/perfrec.ts`); every drawn pass is left out of it, because a drawn pass's stamps are not to be
+  trusted on Metal. So work that lands in the g-buffer (more boxes, a richer material, a layer of the look) was in no number of a line: the first
+  run on a real GPU that priced it (a cloud NVIDIA card, Vulkan) had the look's layers at 3 % by `GPU ms` and 5 to 6 % with the g-buffer counted.
+  `g-buf ms` (`BenchStep.gbuf`) is the g-buffer pass's OWN stamp over the line's frames, in its own column and never folded into `GPU ms`; n/a
+  where no frame carried one, and on a result saved before it was kept. It is the mean of the middle nine tenths, not a median: a browser rounds a
+  stamp to a tenth of a millisecond, and of a pass this small only a mean reads finer than that. HOW FAR TO BELIEVE IT ON METAL: far
+  enough, on one chip. Seven takes of an M4 Max (2026-10-14 and 10-25, about 50,000 frames): in an F8 sweep of the look's prototype, 'every layer off' took the pass's stamp from
+  1.85 to 1.15 ms and 'sharp direct off' to 0.81, the same in each of three rounds, while 'fog of war off' (no g-buffer work in it, the frame
+  2.9 ms shorter) left it at 1.80; on a page held at 30 frames a second, with 21 ms of waiting in every frame, it read 0.33 ms. `post` and
+  `fxaa` followed the frame's length in the same takes: THEY span the wait for the display (`docs/agents/render.md`, timing traps), the
+  g-buffer does not. Not shown: any other Apple chip, or a build newer than those takes. In that sweep the look gave back 0.69 ms in the
+  g-buffer and 0.85 in the compute union, so `GPU ms` alone saw about half of it. HOLDING TWO RUNS AGAINST EACH OTHER: add the two columns, as an ESTIMATE (two separate statistics, and any time a driver ran the g-buffer beside a
+  compute pass is counted twice), and only between lines with the same quality rows: under sharp direct the pass draws at the OUTPUT size and its
+  downsample is not stamped, so it does not follow a line's 'drawn at'. Not changed: the card's 'heaviest GPU passes' still lists every stamped
+  pass, drawn ones too (on Metal `post` and `fxaa` can lead it and mean nothing; on other machines it is the only place `composite` shows), and
+  the sweep's 'GPU ms given back' and the ladder's own number are the compute passes alone, so a feature that moves g-buffer work is under-priced
+  there. `bench-check` has the mean on a rounded clock, a hitch in a long and in a short window, the missing stamp (none, or nothing but the 0
+  the timer gives a pair never written), the column and its line on a whole run's card, a browser with no timings, an old result, and the pass's
+  name against the engine's. Run on a cloud NVIDIA card (the column on every line of four cards, 0.39 to 0.79 ms on the High lines, rising
+  with the size over the presets); never on a Mac or a Windows card with this build. A BENCHMARK WAITS FOR THE GPU as a player's page does
+  (`docs/agents/render.md`, the page waits for the GPU; a result's `wait`): a card from before that, made on a machine with no display, has
+  frame rates and 'one feature changed' rows that are not to be believed on any line over the display's frame.
 - **Stalls: the recorder watches the page's own thread** (`ui/perfrec.ts`, from 10-25). A frame's marks see only inside the frame, and a stall is nearly
   always between two frames. While a take runs ON THE PAGE (never headless: a headless take is the file it was; `perfrec.watch = false` leaves it off on
   a page too) a 4 ms timer answers, and each frame's `beat` is the longest it went silent in the GAP before the frame: from the end of the step before to

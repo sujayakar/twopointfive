@@ -509,9 +509,14 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
     // ---- hall = the bonded floor: the examining table (one opened carton: the only bright things on this floor), the yellow rolling stair on the north wall,
     // the forklift's charger on the wall behind where it is parked, its lead coiled; a pallet of sealed cases held back in a yellow bay on the south wall
     L.room('hall');
-    L.table(27.4, 12.9, 1.6, 0.9, 0, C.metal, 0.9);                               // the examining table: a crate opened on it, its lid, straw, what was in it
-    B(26.85, 12.5, 27.75, 13.3, 0.9, 0.905, [0.7, 0.6, 0.3], NS); B(27.0, 12.6, 27.6, 13.1, 0.905, 1.22, C.wood); B(27.78, 12.55, 28.14, 13.0, 0.9, 0.93, C.woodDark);
-    soft(27.3, 0.905, 13.22, 0.3, 0.05, 0.06, MAG); soft(26.72, 0.9, 12.9, 0.06, 0.05, 0.2, TURQ); soft(27.3, 1.22, 12.85, 0.2, 0.03, 0.15, SAFF);
+    // THE EXAMINING TABLE stands against the north wall, west of the corner man's mark (moved 11-04, the maintainer's word). Out in the lane (27.4, 12.9,
+    // where it first stood) it lay on the one cheap line from the hall's north door to the standing places outside the dock's north door, the line that
+    // skirts that door's own lane: a man of the floor squad sent round to the dock was priced 38 m round the racks where the bare hall gives him 7, and was
+    // refused, so the squad never went round to the dock (tools/qa/wayround-check.ts: 54 ways of 4463)
+    { const X = 26.9, Z = 11.65;
+      L.table(X, Z, 1.6, 0.9, 0, C.metal, 0.9);                                   // a crate opened on it, its lid, straw, what was in it
+      B(X - 0.55, Z - 0.4, X + 0.35, Z + 0.4, 0.9, 0.905, [0.7, 0.6, 0.3], NS); B(X - 0.4, Z - 0.3, X + 0.2, Z + 0.2, 0.905, 1.22, C.wood); B(X + 0.38, Z - 0.35, X + 0.74, Z + 0.1, 0.9, 0.93, C.woodDark);
+      soft(X - 0.1, 0.905, Z + 0.32, 0.3, 0.05, 0.06, MAG); soft(X - 0.68, 0.9, Z, 0.06, 0.05, 0.2, TURQ); soft(X - 0.1, 1.22, Z - 0.05, 0.2, 0.03, 0.15, SAFF); }
     B(17.0, 11.12, 17.35, 11.8, 0, 0.5, YEL); B(17.35, 11.12, 17.7, 11.8, 0, 1.0, YEL); B(17.7, 11.12, 18.05, 11.8, 0, 1.5, YEL); B(18.05, 11.12, 18.4, 11.8, 0, 2.0, YEL);   // the rolling stair
     B(18.05, 11.12, 18.4, 11.16, 2.0, 2.5, C.black, NS);
     B(29.64, 18.8, 29.94, 19.6, 0, 1.3, C.metal); B(29.63, 18.95, 29.64, 19.45, 0.8, 1.2, C.black, NS);   // the charger on the dock wall, behind the level's own forklift,

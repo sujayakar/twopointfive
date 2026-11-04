@@ -596,7 +596,7 @@ function furnish(K: ReturnType<typeof officeKit>, G: ReturnType<typeof gwotKit>)
   G.stain(7.4, 26.6, 1.3, 0.9, 'dust', -0.25, 0.78, 0.0035); G.stain(7.6, 26.7, 0.7, 0.5, 'dust', 0.4, 0.62, 0.0045);
   G.stain(32.0, 26.4, 1.7, 1.1, 'dust', 0.2, 0.78, 0.0035); G.stain(31.8, 26.55, 0.9, 0.7, 'dust', -0.4, 0.62, 0.0045);
   G.stain(15.9, 24.95, 2.2, 1.4, 'dust', 0.06, 0.78, 0.0035); G.stain(16.1, 25.2, 1.2, 0.9, 'dust', -0.35, 0.62, 0.0045);          // feet, to and from the gate
-  G.hearth(8.6, 25.0, 0.4, 'dirt');                                                                                               // the drivers' cold fire (its ash the next earth down from the dust: the kit's damp ash read as a black mat here)
+  G.hearth(8.6, 25.0, 0.4, 'dust');                                                                                               // the drivers' cold fire, on the bare lot outside the yard (the kit laid no ground here, so the dust is named: its ash is that dust darker)
   G.rubble(5.2, 24.8, 0.6, 6); G.rubble(20.0, 24.75, 0.5, 6); G.rubble(28.8, 24.75, 0.5, 6);                                       // (pale mud stones only where the mud wall sheds them and the camera sees its foot: out on the open dust a scatter read as a pile of cartons)
   G.tyres(29.3, 26.5, 2); L.tyre('spare', 30.25, 26.42, 0.3); L.chock('chock', 29.9, 26.05, 1.4);                                  // the wheel that came off the box's lorry
   G.stain(29.8, 26.5, 1.4, 0.9, 'dust', 0.3, 0.78, 0.0035);

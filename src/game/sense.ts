@@ -42,6 +42,14 @@ export const SENSE = {
    *  no wall hides is dimmed by the grid's smoke between it and him. THE LIGHT THAT COMES ROUND: the lamps' light off the walls, one number a
    *  square metre of the plan, stepped with the grid (rust/sim/src/glow.rs) and added to the brightest face. Off = the estimate as it was. */
   bounce: false,
+  /** THE NIGHT'S LIGHT FROM THE SKY IN THE ESTIMATE (DEFAULT OFF — the page's `?moonlight`, the harness's `TPS_MOONLIGHT=1`): the estimate of the light
+   *  on a man (guards.ts lightEstimateAt) reads the level's night as it reads an hour (game/hours.ts moonLight): the moon where the point has a line
+   *  to it, the level's own sky through what is open above it, one bounce off ground they light. Off = none of it, as it was: a man under the open
+   *  sky at night read as standing in the dark where the picture's meter had him lit. IT ACTS WHEREVER THE ESTIMATE IS READ, ON EVERY HOST: the
+   *  senses on the CPU, the headless stand, the page's first frames, and every rule that asks what a PLACE lights (the team's weapon lights and
+   *  goggles, the calm torch, a search in the dark, the pair's orders, the lights-out mission). So it comes on with the senses on the CPU and is
+   *  tallied and played with them, not before. */
+  moon: false,
   /** the light that comes round, its numbers (glow.rs): how much of the light in a square leaves its surfaces again · how much of that a square hands
    *  across each open side · how many times a step relaxes it · the steps a sweep of the whole plan takes (a step is a tenth of a second) */
   glow: { albedo: 0.3, share: 0.1, passes: 2, sweep: 32 },
