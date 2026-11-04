@@ -2,8 +2,9 @@
 // the lights). By day the open air is thousands of times a lamp, and it comes into a room wherever the room is open to it: a window, a door that stands open,
 // a hole a charge blew in the wall. The radiance cache brings that light in too, but as a grid of probes a metre apart that hold a few
 // broad directions each: it arrives spread over the room with no way it came from. So each opening is ALSO a light of its own, as a film crew would hang one:
-// a one-sided disk just inside the wall, as big as the opening, as bright as what the opening looks out on, shaded per pixel like any lamp. A man by an open
-// door throws a shadow into the room and the light falls off from the doorway.
+// the upright rectangle its walls leave open, just inside the wall, as bright as what a point of the room sees through it (a PORTAL, render/lights.ts
+// LIGHT_PORTAL: the sky itself and the ground outside, at every hour), shaded per pixel like any lamp. A man by an open door throws a shadow into the
+// room and the light falls off from the doorway. (Until 11-04 it was a one-sided disk as bright as one guess at all the opening looks out on, by day only.)
 // ONE RULE FINDS THEM ALL, from the level's boxes as they stand (the maintainer, 11-01, of windows and open doors as real openings: "yep let's do it. blowing
 // holes in walls should work too!"). Before it a window was an upright Glass box of the level, found once, so a door and a hole were nothing and a broken wall
 // changed nothing. The rule, on the renderer's floor plan (scene/placePlan.ts's cells and its test of what is a roof):
@@ -25,10 +26,9 @@ import { type Pt, narrowest, footprint, WAY } from './wayThrough';
 export const LOOK_OPENINGS = {
   ground: 0.5,    // what the ground outside sends back of the light on it (snow more, a shaded yard less)
   up: 0.3,        // the sky an opening looks at: this much of the zenith's and the rest of the horizon's
-  least: 0.004,   // an opening whose light is under this is not lit at all (a night's sky: it would only take a lamp's place in the list)
-  seen: 0.008,    // … and a PORTAL (render/lights.ts LIGHT_PORTAL) is lit while what it looks out on × the frame's exposure is over this: by what the picture
+  seen: 0.008,    // an opening (a PORTAL: render/lights.ts LIGHT_PORTAL) is lit while what it looks out on × the frame's exposure is over this: by what the picture
                   // would show of a surface under that sky, whatever the hour and however big the opening
-  proud: 0.05,    // m from the wall's inside face into the room (a disk inside the reveal has the wall in front of its rim)
+  proud: 0.05,    // m from the wall's inside face into the room (a light inside the reveal has the wall in front of its rim)
   deep: 2,        // cells of floor a man could stand on, under the roof, found within `look` cells in and `side` to either hand of an opening, for it to lead
                   // into a place (the strip under an eave does not, nor the bed of a lorry under its canvas)
   look: 6, side: 3,
@@ -47,18 +47,16 @@ export const LOOK_OPENINGS = {
                   // post: they are one opening. Open air past its end, with no such wall, makes it an open side: no light
   span: 2,        // m: an opening longer than this, and than twice its height, is lit as several lights side by side (a strip of high glass, a glazed wall)
   same: 0.6,      // m: two openings found this near each other, facing the same way, are one (a wall a little off the grid's square gives its doorway on two lines)
-  most: 2.5,      // m²: what one light counts of its opening at most. THE CACHE BRINGS THE SAME DAYLIGHT IN A SECOND TIME, and the bigger the opening the more of
-                  // it the probes resolve: past a big window's size the light would only double the room. It is there to give the daylight a direction
   settle: 4,      // drawn frames the walls must have stood still for before the openings are found again (a blast's own frame is the long one: not on it)
   keep: 32,       // openings a level keeps (the biggest, if it has more) …
   lit: 12,        // … and how many are lit at once: the nearest to Sam (engine.ts)
 };
 
 export interface Opening {
-  /** where the light hangs */ pos: Vec3; /** into the room */ dir: Vec3; /** the disk's radius, m */ radius: number;
-  /** what the walls leave open, m² */ full: number; /** what is open now, a door's leaf taken out, m² */ area: number;
-  /** … and what is open now TO A PORTAL, m²: the narrowest way through it past whatever hangs in it (ajarOf: a leaf a hand's width off its frame is open by
-   *  that hand's width, where `area` has nothing yet and then pops on) */
+  /** where the open part's weight lies */ pos: Vec3; /** into the room */ dir: Vec3; /** half the lesser of its width and height, m: how near two finds of one opening lie (planOpenings) */ radius: number;
+  /** what the walls leave open, m² */ full: number;
+  /** what is open NOW, m²: the narrowest way through it past whatever hangs in it (ajarOf: a leaf a hand's width off its frame is open by that hand's
+   *  width) */
   ajar: number;
   /** the upright rectangle that holds everything the walls leave open, and no more: its middle (`mid`, in the light's plane; `pos` is where the open part's
    *  weight lies, which is off the middle of an opening that is no plain rectangle), half its width along the wall and half its height, m (a portal's
@@ -135,7 +133,6 @@ export function leavesKey(dynamics: readonly Box[]): number {
   let key = 7; for (const b of dynamics) if (blocks(b, true)) key = (Math.imul(key, 33) + Math.round(b.yaw * 50) * 7 + Math.round((b.c[0] * 3 + b.c[2] * 7) * 20)) | 0;
   return key;
 }
-const count = (cols: Int32Array): number => { let n = 0; for (let q = 0; q < cols.length; q++) { let v = cols[q]; while (v) { v &= v - 1; n++; } } return n; };
 
 /** every opening the WALLS of a level leave, as it stands: a door's leaf is no part of this, shut or swinging (`area` = `full` here; openAreas takes the
  *  leaves out). Pure, and the heavy half: made again only when a wall changes. */
@@ -227,7 +224,7 @@ export function planOpenings(statics: readonly Box[]): Opening[] {
           for (let v = 0; v < nY; v++) if (cols[w] & (1 << v)) { const y = (v + 0.5) * K.dy; cells++; sumS += s; sumY += y; loS = Math.min(loS, s); hiS = Math.max(hiS, s); lo = Math.min(lo, y); hi = Math.max(hi, y); } }
         const full = cells * K.ds * K.dy; if (full < K.small) continue;
         const s = sumS / cells, y = sumY / cells, n = L + r.sign * hang, hw = (hiS - loS + K.ds) * 0.5, hh = (hi - lo + K.dy) * 0.5;
-        out.push({ pos: r.axis === 0 ? [n, y, s] : [s, y, n], dir: r.axis === 0 ? [r.sign, 0, 0] : [0, 0, r.sign], radius: Math.max(0.1, Math.min(Math.sqrt(full / Math.PI), Math.min(hw, hh) + 0.02)), full, area: full, ajar: full, mid: r.axis === 0 ? [n, (lo + hi) / 2, (loS + hiS) / 2] : [(loS + hiS) / 2, (lo + hi) / 2, n], half: [hw, hh],
+        out.push({ pos: r.axis === 0 ? [n, y, s] : [s, y, n], dir: r.axis === 0 ? [r.sign, 0, 0] : [0, 0, r.sign], radius: Math.max(0.1, Math.min(Math.sqrt(full / Math.PI), Math.min(hw, hh) + 0.02)), full, ajar: full, mid: r.axis === 0 ? [n, (lo + hi) / 2, (loS + hiS) / 2] : [(loS + hiS) / 2, (lo + hi) / 2, n], half: [hw, hh],
           cut: { axis: r.axis, L, a: wa, b: wb, in: dIn, out: dOut, jambs: [jamb(s0 + (qa - 0.5) * K.ds, (lo + hi) / 2), jamb(s0 + (qb + 1.5) * K.ds, (lo + hi) / 2)], s0: s0 + qa * K.ds, nY, cols: cols.slice(qa, qb + 1) } });
       }
     }
@@ -248,8 +245,7 @@ export function planOpenings(statics: readonly Box[]): Opening[] {
  *  across the doorway, and the light that gets through is what the gaps of the SHORTEST chain from jamb to jamb leave: the cut that lets least through.
  *  Each gap less the `play` a shut leaf has at a jamb. So a leaf a hand's width off its frame is open by that hand's width, whichever way it swings and
  *  however thick the wall, a pair of leaves by the gap between them, and nothing here knows what a door is. What a leaf leaves over its head is a slit,
- *  as in a wall: a height nothing hangs at, lower than `slit`, is as open as the height under it. (`area`, the disk's, counts only what the straight way
- *  through finds open: nothing until a leaf has swung clear of the wall's depth, a quarter of the way round.) */
+ *  as in a wall: a height nothing hangs at, lower than `slit`, is as open as the height under it. */
 function ajarOf(o: Opening, near: readonly Near[]): number {
   const K = LOOK_OPENINGS, c = o.cut, at = (n: number, s: number): Pt => [n, s], outlines = near.map(nr => outline(nr, c.axis)), last = c.cols.length - 1;
   const wide = new Float64Array(c.nY), hung = new Uint8Array(c.nY);   // a height's open width, m; and whether anything hangs at it
@@ -272,16 +268,13 @@ function ajarOf(o: Opening, near: readonly Near[]): number {
   return sum * K.dy;
 }
 
-/** what is open of each opening NOW: its `full` less what a door's leaf covers where it hangs (the leaf with its true shape: a shut one covers all of its
- *  doorway, one swung out a part; one swung into the room covers only what of it is still in the wall's depth, and shadows the rest itself). Writes `area`. The light half: made again when a leaf swings. */
+/** what is open of each opening NOW (`ajar`): its `full` where nothing hangs in it, else the narrowest way through past what does (ajarOf). The light
+ *  half: made again when a leaf swings. */
 export function openAreas(list: readonly Opening[], dynamics: readonly Box[]): void {
   const K = LOOK_OPENINGS, leaves: Box[] = [], near: Near[] = []; for (const b of dynamics) if (blocks(b, true)) leaves.push(b);
   for (const o of list) {
     const c = o.cut; nearLine(leaves, c.axis, c.L, c.s0, c.s0 + c.cols.length * K.ds, near);
-    if (!near.length) { o.area = o.ajar = o.full; continue; }
-    const cols = c.cols.slice(); for (let q = 0; q < cols.length; q++) if (cols[q]) cols[q] = openAt(near, c.axis, c.a, c.b, c.s0 + (q + 0.5) * K.ds, c.nY, cols[q]);
-    shutSlits(cols, c.nY); shutCracks(cols); o.area = count(cols) * K.ds * K.dy;   // (what a leaf leaves over its head or under its foot is a slit, as in a wall)
-    if (o.area < K.small) o.area = 0;
+    if (!near.length) { o.ajar = o.full; continue; }
     o.ajar = ajarOf(o, near);
   }
 }
@@ -297,13 +290,5 @@ export function openingLooks(zen: ArrayLike<number>, hor: ArrayLike<number>, sky
     const sky = skyK * (K.up * zen[i] + (1 - K.up) * hor[i]), groundE = Math.PI * skyK * (0.947 * zen[i] + 0.053 * hor[i]) + sunE * (sun ? sun.color[i] : 0);
     r[i] = 0.5 * (sky + K.ground * groundE / Math.PI);
   }
-  return r;
-}
-/** … and A DISK's: the same × `amount`, BY DAY ONLY. It fades out as the sky's own mean radiance falls from 0.12 to 0.04 (every hour of the day is over
- *  that, a night's sky is under it: a night's rooms are the game's, as dark as they were, and an opening that would give next to nothing takes no place
- *  in the light list). */
-export function openingRadiance(zen: ArrayLike<number>, hor: ArrayLike<number>, skyK: number, sun: { intensity: number; dir: ArrayLike<number>; color: ArrayLike<number> } | undefined, amount: number): Vec3 {
-  const up = skyK * (0.2126 * (0.8 * zen[0] + 0.2 * hor[0]) + 0.7152 * (0.8 * zen[1] + 0.2 * hor[1]) + 0.0722 * (0.8 * zen[2] + 0.2 * hor[2])), t = Math.min(1, Math.max(0, (up - 0.04) / 0.08)), day = t * t * (3 - 2 * t);
-  const r = openingLooks(zen, hor, skyK, sun), k = Math.max(0, amount) * day; r[0] *= k; r[1] *= k; r[2] *= k;
   return r;
 }
