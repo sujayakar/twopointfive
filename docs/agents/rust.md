@@ -100,7 +100,8 @@ first system across (the game's own maths). No rule of play has changed and noth
       `crouchPose` (the crouch laid over that), `mvPre` (the recoil bled off, the muzzle's dip, the trained glide's pelvis), `mvTrunk` (the
       trunk's share of MOVES), `mvPostBody` (the flinch, the start, the hit, the blinded hunch, the fold, a hurt and a shaken man's carriage,
       the toss's wind-up), `longBody` (the long gun's trunk set), `lifeLayer` (the breath, the body's mass, the weight shift, the standing
-      foot lock), `stanceBody`, `softKnees`, `runPlant`, `steadyLayer` (the crouch walk carried level), `sneakBody`, `creepBody`, `watchSlip`
+      foot lock), `stanceBody`, `runArms` (a run's arms carried close, RUNARMS: `docs/agents/player.md`), `softKnees`,
+      `runPlant`, `steadyLayer` (the crouch walk carried level), `sneakBody`, `creepBody`, `watchSlip`
       and `watchLook`, `kickBody`, `toesUp`, `wallBody` (the wall hold: its feet, its sidle's gait, its peek), `leanBody`, `actPose` (a
       one-shot action's clip over the pose, and the slump), `woundBody` (the wounded man's clip, his head up to the wound), `gazeKeep` (it turns
       nothing: it ANSWERS the yaw the host's twists take out, and an answer is compared like a column), and one RULE OF THE CHARACTER'S THAT
@@ -197,18 +198,21 @@ first system across (the game's own maths). No rule of play has changed and noth
       each with `snug` and without, standing and walking, his chest turned and pitched to an aim and not, with and without a rifle
       under it on his back), the throw (the full overhand, shorter ones, a hard throw two steps off, the toss at several sizes;
       standing, crouched and walking; a swing begun inside the last; the free hand's throw with a long gun kept in the other; a toss
-      with a hand up on a gun; a blast that folds him mid-swing and a swing begun already folded; `THROW_BY` off) and the wall-pose
-      probe's two drives. Every call both ways from the same start: pose singles, bones, columns, answers and
-      the scratch poses compared. A layer asked under 100 times fails the line. Measured 2026-11-03, one seed, bun, 0 differ of:
-      standPose 496,085 · lifeLayer 496,085 · mvPre 496,085 · handsPass 496,085 · gazeKeep 496,085 · turnWeigh 275,671 ·
-      mvPostBody 102,650 · longBody 87,552 · longArms 87,371 · mvTrunk 86,637 · stealthLayer 82,014 · crouchPose 69,679 · toesUp
-      69,325 · actPose 62,301 · clutchArm 61,073 · watchSlip 33,913 · watchLook 33,913 · stanceBody 23,823 · wallBody 15,591 ·
-      wallArms 15,591 · sneakBody 15,306 · carryArms 15,249 · sneakArms 13,607 · holdLayer 10,044 · heldLayer 9,972 · runPlant
-      9,407 · softKnees 7,767 · creepBody 7,263 · steadyLayer 5,970 · creepArms 3,606 · workLayer 3,595 · doorLayer 3,528 ·
-      readyLayer 3,234 · radioPose 3,229 · bigLayer 2,764 · throwLayer 2,267 · reloadArm 1,608 · mvPostArms 1,076 · watchArm 1,070
-      · kitLayer 1,026 · swapPose 742 · lockpickLayer 716 · blowLegs 610 · blowTrunk 610 · blowArms 610 · woundBody 600 ·
-      tellLayer 580 · knifePose 556 · haulLayer 540 · woundLimbs 534 · boundArms 522 · signalLayer 450 · cablePose 446 · catchArm
-      317 · pistolReloadArm 297 · smokePose 271 · kickBody 240 · takenLayer 236 · leanBody 234 · nvPose 216 · torchUpLayer 174.
+      with a hand up on a gun; a blast that folds him mid-swing and a swing begun already folded; `THROW_BY` off), a run with its arms
+      carried close (`RUNARMS` raised for the drive, the animator's ground speed HELD: up from a walk through the jog to a full sprint and
+      back, a jog held, a sprint that comes and goes; nothing drawn, the pistol out, the rifle coming up into both arms and put away
+      mid-run) and the wall-pose probe's two drives. Every call both ways from the same start: pose singles, bones, columns, answers and
+      the scratch poses compared. A layer asked under 100 times fails the line. Measured 2026-11-04, one seed, bun, 0 differ of:
+      standPose 509,533 · lifeLayer 509,533 · mvPre 509,533 · handsPass 509,533 · gazeKeep 509,533 · turnWeigh 282,391 ·
+      mvPostBody 109,378 · longBody 87,904 · longArms 87,739 · mvTrunk 86,989 · stealthLayer 84,262 · crouchPose 74,159 · toesUp
+      73,805 · clutchArm 63,227 · actPose 62,301 · watchSlip 35,967 · watchLook 35,967 · stanceBody 23,823 · wallBody 15,591 ·
+      wallArms 15,591 · sneakBody 15,306 · carryArms 15,249 · sneakArms 13,607 · runPlant 10,376 · holdLayer 10,044 · heldLayer
+      9,972 · softKnees 8,460 · creepBody 8,162 · steadyLayer 5,970 · runArms 4,007 · creepArms 3,606 · workLayer 3,595 ·
+      doorLayer 3,528 · readyLayer 3,234 · radioPose 3,229 · bigLayer 2,764 · throwLayer 2,267 · reloadArm 1,608 · mvPostArms
+      1,076 · watchArm 1,070 · kitLayer 1,026 · swapPose 742 · lockpickLayer 716 · blowLegs 610 · blowTrunk 610 · blowArms 610 ·
+      woundBody 600 · tellLayer 580 · knifePose 556 · haulLayer 540 · woundLimbs 534 · boundArms 522 · signalLayer 450 · cablePose
+      446 · catchArm 317 · pistolReloadArm 297 · smokePose 271 · kickBody 240 · takenLayer 236 · leanBody 234 · nvPose 216 ·
+      torchUpLayer 174.
       WHAT NO DRIVE REACHES (counted once with a counter on each branch, then taken out): a thing in the right fist during the close-in
       carriage and its wide pose's own pole; a magazine change with the gear rows off (the marks from the hip) and with the hip line off;
       in the hand pass, a layer's note smaller than 0.03; a smoke or a goggle flip with no twist on the head; a haul with no twist.
@@ -218,7 +222,9 @@ first system across (the game's own maths). No rule of play has changed and noth
       For the last five (the hold, the held man, the big tool, the throw) the counters named every input the drives above list, by phase
       and variant, and each was reached with the layer live and easing out; what they did NOT split, and so nobody counted: the hold's
       inner tests on its own clocks (the sway, a spring's rest), the big tool's point exactly on his pelvis, a chest pitched but not
-      turned, and the two fall-backs to the TypeScript (a beat of more than 64 blows, a throw table of more than 16 keys). A review
+      turned, and the two fall-backs to the TypeScript (a beat of more than 64 blows, a throw table of more than 16 keys). `runArms`,
+      counted the same way: the jog alone, the sprint's share part and whole, the run's share part and whole, each hand behind, through
+      and past its lift, a long gun part of the way up; unreached, the two shoulder joints on one spot (no rig has them there). A review
       read two more that the counters had not split, each driven since: the disarm begun WITH the grab (the game begins every one
       there; the pistol hand's rap on his gun) and a blast's fold with `THROW_BY` off.
       `caps`: a size both languages write down (the most keys of a knife blow, blows of a beat, keys of a throw table; where the keys
@@ -236,7 +242,7 @@ first system across (the game's own maths). No rule of play has changed and noth
       bench and back on every ask, and some `put`s make a new array where the TypeScript writes in place; the knob list is written whole as
       every tick opens and at every update outside one; the bench's layout (where columns, the hand pass's columns and a path of keys
       stand, a key's width, each layer's own numbers) is written by hand on both sides, held only by `both` on the branches a drive
-      reaches. `src/sim/built.ts` is 917 KB of text with every layer in (203 KB before the first; 741 KB with the first fifty-six), loaded
+      reaches. `src/sim/built.ts` is 920 KB of text with every layer in (203 KB before the first; 741 KB with the first fifty-six), loaded
       and started by every page with the row off. It is the layers' own arithmetic (the module's code section; some 10 KB a layer), and
       no build setting takes it back: measured on a scratch copy, the module is 664 KB at opt-level 3, 633 at 2, 601 at s, 595 at z.
     - NOBODY COMPARED: `steadyLayer`'s rise (`MOVES.steady` = 2) is reached by no drive; the wall hold's arms were compared on whichever of

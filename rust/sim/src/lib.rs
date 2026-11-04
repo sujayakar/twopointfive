@@ -50,7 +50,7 @@ pub const SCRATCH_LEN: usize = 1024;
 static mut SCRATCH: [f64; SCRATCH_LEN] = [0.0; SCRATCH_LEN];
 
 /// The version of the exports: src/sim/sim.ts names the one it was written against, and a page that loaded another says so instead of calling into it.
-pub const ABI: u32 = 20;
+pub const ABI: u32 = 21;
 
 // ---- the C face (wasm32: these are the module's exports)
 #[no_mangle]
@@ -232,6 +232,11 @@ pub extern "C" fn layer_crouch_pose(g: usize, at: usize, at_b: usize, at_c: usiz
 #[no_mangle]
 pub extern "C" fn layer_soft_knees(g: usize, at: usize) -> u32 {
     layers::soft_knees(g, at)
+}
+/// CharacterAnimator.runArms
+#[no_mangle]
+pub extern "C" fn layer_run_arms(g: usize, at: usize) -> u32 {
+    layers::run_arms(g, at)
 }
 /// CharacterAnimator.runPlant
 #[no_mangle]
