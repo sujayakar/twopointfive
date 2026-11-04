@@ -18,7 +18,6 @@
 //                · the entry (doortools.ts): a man sent to his point inside goes THROUGH THE ORDERED DOOR — one who is not at it when the word comes (the fight
 //                  had him, he was late to the stack) is walked to its mouth by known floor first, never in by the room's other door.
 // With no operative on the floor nothing here runs. (src/game is one import cycle: nothing below is built from another game module's exports at module load.)
-import { men, teamActive, teamSquad } from './seats';
 import type { Vec3 } from '../math/vec';
 import type { Game } from './game';
 import type { Door } from './doors';
@@ -87,10 +86,10 @@ export class ClearedRooms {
   known = 0;
   /** four times a second: where the team stands is known ground */
   tick() {
-    const g = this.g; if (!teamActive(g)) return;
+    const g = this.g; if (!g.orders.active) return;
     if (this.last >= 0 && Math.abs(g.time - this.last) < 0.25) return; this.last = g.time;
-    for (const gd of teamSquad(g)) if (gd.state !== 'dead') this.mark(gd.char.pos);
-    for (const pl of men(g)) if (!pl.down) this.mark(pl.char.pos);
+    for (const gd of g.orders.squad()) if (gd.state !== 'dead') this.mark(gd.char.pos);
+    if (!g.player.down) this.mark(g.player.char.pos);
   }
   /** A WALK'S PRICE LIST: nav.findPath's `penalty` for a walk from `from` to `to` — every cell of a room nobody of the team has been in is `dear` times a
    *  cell of known floor, bar the room he stands in and the room his mark is in; `also`: rooms dear whatever is known of them (the room an entry is FOR,

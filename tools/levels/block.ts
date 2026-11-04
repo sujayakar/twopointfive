@@ -356,14 +356,12 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
   // A district telephone exchange. One family: octagon drums, ladders, grids of cells, coloured cords. Safety yellow is the loading hall's alone.
   {
     const P = livedPieces({ add: K.add, grp: K.grp, prop: K.prop }, C as unknown as Parameters<typeof livedPieces>[1]), A = P.at(0, 0, 0), Q = Math.PI / 4;
-    // ROUND THINGS that stand still are the kits' (livedPieces.ts at().round, over src/scene/gwotKit.ts roundSlabs), by how far ACROSS they are: `oct` a small one
-    // (two squares s across; from 0.37 m the kit makes it an octagon), `oct8` a larger one as the octagon whose slabs are s long — the shape the round rule
-    // (src/scene/round.ts) makes one round box of
-    const oct = (x: number, y0: number, z: number, s: number, h: number, col: Vec3) => A.round(x, y0, z, s / 1.86, h, col);
-    // (a LOOSE thing's body: a prop's part cannot say it is round, so these two stay parts written by hand — the two squares, the octagon stepped 3 mm)
+    const oct = (x: number, y0: number, z: number, s: number, h: number, col: Vec3) => { A.box(x, y0, z, s, h, s, col); A.box(x, y0, z, s, h - 0.004, s, col, Q); };   // (the turned square a hair lower: no two faces in one plane)
     const octParts = (y0: number, s: number, h: number, col: Vec3) => [P.part(0, y0, 0, s, h, s, col), P.part(0, y0, 0, s, h - 0.004, s, col, Q)];
+    // a LARGER round (0.4 m across and more) as a true octagon: four slabs through the centre, 45° apart, each as long as the round and tan 22.5° as wide — two
+    // turned squares that size read as a cog from above
     const T8 = Math.tan(Math.PI / 8);
-    const oct8 = (x: number, y0: number, z: number, s: number, h: number, col: Vec3) => A.round(x, y0, z, s / 1.92, h, col);
+    const oct8 = (x: number, y0: number, z: number, s: number, h: number, col: Vec3) => { for (let i = 0; i < 4; i++) A.box(x, y0, z, s, h - i * 0.003, s * T8, col, i * Q); };
     const oct8Parts = (y0: number, s: number, h: number, col: Vec3) => [0, 1, 2, 3].map(i => P.part(0, y0, 0, s, h - i * 0.003, s * T8, col, i * Q));
     /** a cable drum lying flat: two flanges, the cable between them, the hub's hole on top */
     const drumFlat = (x: number, z: number, r: number, h: number, flange: Vec3, cable: Vec3) => { const s = r * 1.85;

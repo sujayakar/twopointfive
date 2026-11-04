@@ -35,7 +35,7 @@
 // A leaf: nothing of the game is imported, so anything may import it.
 
 import { Vec3, v3, clamp } from '../math/vec';
-import { Box, copyBox, rayBox } from '../scene/boxes';
+import { Box, rayBox } from '../scene/boxes';
 
 export const AIMCOST = {
   /** a lamp breaks only to a round that meets it */
@@ -88,7 +88,7 @@ export function lampStruck(pos: Vec3, boxes: readonly (Box | undefined)[], stopp
       const toB = v3.sub(b.c, s.o); const db = v3.dot(toB, s.d); const r = Math.hypot(b.h[0], b.h[1], b.h[2]) + pad;
       if (db > reach + r || db < -r) continue;
       if (v3.len(v3.sub(toB, v3.scale(s.d, db))) > r) continue;
-      const grown = copyBox(b); grown.h = [b.h[0] + pad, b.h[1] + pad, b.h[2] + pad];
+      const grown: Box = { ...b, h: [b.h[0] + pad, b.h[1] + pad, b.h[2] + pad] };
       if (rayBox(s.o, s.d, grown, reach)) return true;
       // (rayBox answers nothing for a ray that STARTS inside the box — a muzzle pressed to the fixture, a leg born in it: no way in from here to
       //  anywhere ahead, and a way in coming back from past it, is exactly that)

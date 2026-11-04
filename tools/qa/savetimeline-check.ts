@@ -1,8 +1,7 @@
 // THE SAVE TIMELINE (src/game/savestate.ts SAVETIMELINE): the saves roll in two rings, each keeps a picture, a team on the floor is saved in memory, and every
 // entry of the strip loads and plays on as the run it was taken from.
 //   bun run tools/qa/savetimeline-check.ts          (probes.ts savetimeline; SAVETIMELINE_BREAK=1 leaves the switch off and must FAIL;
-//                                                    SAVESINCE_BREAK=1 nudges one man after each put-back of a take since the base in (5b) and must FAIL;
-//                                                    SAVEBASE_BREAK=1 drops the base a run's first tick took in (5c) and must FAIL)
+//                                                    SAVESINCE_BREAK=1 nudges one man after each put-back of a take since the base in (5b) and must FAIL)
 // What it holds, on the plain night alone and on a yard with a pair on the floor (train-orders, once Training 5):
 //   (1) the set ROLLS at its cap: seven autosaves and seven saves by hand leave the newest five of each — neither kind pushes out the other — and the strip
 //       (`timeline`) lists the ten in the mission clock's order;
@@ -13,9 +12,6 @@
 //       does not fit has the pictures thrown out for it;
 //   (5) WITH A PAIR ON THE FLOOR a save is kept (no file can be: the unit refusal stands for files), rolls in its own rings, loads and plays on as the run it
 //       was taken from; the files in the store are not taken back by it; a lesson's own autosave lands; F5 saves and a bare Enter once down goes back;
-//   (5c) such a run's saves STAND ON A BASE taken in the run's first tick (SAVETIMELINE.base): the first save of the run is a take since it, a restart
-//       gives the next run its own, the run and its loads are those of a run with no base, the host's warm-up before the first tick keeps and changes
-//       nothing, and a run with autosave off takes none;
 //   (6) what one save weighs.
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
@@ -62,15 +58,14 @@ async function night(seed: number, on: boolean): Promise<any> {
   steps(W, 0.5); return W;
 }
 /** a stage yard as a row would start it (the yards were Training 5 and 1: no row and no lesson of their own since 2026-10-23; their rows are tools/qa/yards.ts) */
-async function lesson(id: string, seed: number, on: boolean, pre?: () => void, staged?: (W: any) => void): Promise<any> {
+async function lesson(id: string, seed: number, on: boolean): Promise<any> {
   const E = yardRow(id); if (!E) throw new Error(`no yard '${id}'`);
   Math.random = seeded(seed);
   const W: any = await hushed(() => standUp({ level: levelOfFile(E.level) })); const g = W.game;
-  SAVETIMELINE.on = on; pre?.();   // (`pre`: a switch of the timeline's as this run wants it, set before the staging reads it)
+  SAVETIMELINE.on = on;
   if (stoodAnim) { MOVES.on = stoodAnim.moves; TURN.on = stoodAnim.turn; }   // (the animator as the stand has it: a save in memory holds its momentum)
   const { why } = await hushed(() => startFromQuery(g, new URLSearchParams(scenarioQuery(E) as string))); if (why) throw new Error(`${id}: start refused — ${why}`);
   g.godMode = true; g.playerInvisible = true;
-  staged?.(W);   // (the run as it is staged, its first tick not yet run)
   steps(W, 1); return W;
 }
 
@@ -223,7 +218,7 @@ export async function savetimelineCheck(): Promise<boolean> {
       const SECS_B = 4, BREAK_B = process.env.SAVESINCE_BREAK === '1';
       const play = async (since: boolean) => {
         const W = await lesson('train-orders', 11, ON), g = W.game, S = g.saves, shelf = (S as any).shelf; S.enabled = false; SAVETIMELINE.since = since;
-        const out = { based: !!shelf.last, refs: [] as string[], kinds: [] as boolean[], loads: [] as string[], pairs: 0, bits: 0, thrown: '', fails: [] as string[] }, cams = new Map<string, any>(), ref = new Map<string, string>();   // (based: the run's first tick, in `lesson`, left a base — SAVETIMELINE.base with every switch it needs up, as the stand has them)
+        const out = { refs: [] as string[], kinds: [] as boolean[], loads: [] as string[], pairs: 0, bits: 0, thrown: '', fails: [] as string[] }, cams = new Map<string, any>(), ref = new Map<string, string>();
         const walk = (label: string) => WALK[Number(label.split('#')[1]) % 4], pairs: [string, any, any][] = [];
         const save = (label: string): any => {
           W.input.keys.clear(); steps(W, 3); const base = shelf.last;
@@ -263,8 +258,7 @@ export async function savetimelineCheck(): Promise<boolean> {
       };
       const on = await play(true), off = await play(false), fails = [...on.fails.map(f => `since: ${f}`), ...off.fails.map(f => `whole: ${f}`)];
       const sinceN = on.kinds.filter(Boolean).length;
-      // (the first save of a run: the whole take — or, where the run's first tick left a base on the shelf, a take since that; (5c) holds the base itself)
-      if (on.kinds[0] !== on.based) fails.push(on.based ? 'the first save of the run was not taken since the base the run\'s first tick took' : 'the first save of the run reads as taken since another');
+      if (on.kinds[0]) fails.push('the first save of the run reads as taken since another');
       if (sinceN < on.kinds.length - 2) fails.push(`${sinceN} of ${on.kinds.length} saves were taken since the one before (want all but the first; one whole walk forced by a stale chain is let by)`);
       if (off.kinds.some(Boolean)) fails.push('with the switch off a save reads as taken since another');
       if (on.refs.join() !== off.refs.join()) fails.push('the run is not the same run with the saves taken since one another (the seconds after each save, by digest)');
@@ -272,58 +266,6 @@ export async function savetimelineCheck(): Promise<boolean> {
       if (!on.pairs || on.bits !== on.pairs) fails.push(`${on.bits} of ${on.pairs} takes since the base on the shelf, put back, are to the bit a whole take of the same moment`);
       line(!fails.length, '(5b) train-orders, a pair on the floor: a save in memory taken since the one before it is the same save — each of the five kept loads and plays on as its save did with the snapshots it was taken since gone from the ring, a save made after a put-back loads and so do an older and a newer one, the run and the seconds after every load are those of whole takes, and the moment before each save, taken since the base on the shelf and put back, is to the bit a whole take of it; after a take that throws half way the next is a whole one and right; switch off = every save a whole take',
         `${sinceN} of ${on.kinds.length} taken since another · ${on.loads.length} loads · ${on.bits} of ${on.pairs} put back beside a whole take, the same state word${BREAK_B ? ' (SAVESINCE_BREAK: one man nudged after each put-back)' : ''}${fails.length ? '\n    ✗ ' + fails.join('\n    ✗ ') : ''}`);
-    }
-    // ---- (5c) the same pair: THE RUN'S BASE (SAVETIMELINE.base, Checkpoints.prime / warm; SAVEBASE_BREAK=1: the base is dropped after the run's first tick and the line must FAIL)
-    {
-      const SECS_C = 4, BREAK_C = process.env.SAVEBASE_BREAK === '1';
-      const play = async (base: boolean) => {
-        const out = { based: false, warm: '', first: false, bit: '', again: false, againFirst: false, gone: false, autoOff: false, refs: [] as string[], loads: [] as string[], fails: [] as string[] };
-        // THE HOST'S WARM-UP, where the page makes it — the run staged, its first tick not yet run: it keeps nothing and changes nothing (the shelf as it
-        // was, the state word the same word; that it ran, the shelf's count says; that the run is the same run, the digests against the other side say)
-        const W = await lesson('train-orders', 13, ON, () => { SAVETIMELINE.since = true; SAVETIMELINE.base = base; }, (W: any) => {
-          const g = W.game, S = g.saves, shelf = (S as any).shelf, n0 = shelf.warmed, w0 = stateHash(g); S.warm(g); const ran = shelf.warmed - n0;
-          out.warm = shelf.last ? 'the warm-up left a snapshot on the shelf' : stateHash(g) !== w0 ? 'the warm-up changed the game\'s state word' : ran !== (base ? 1 : 0) ? `the warm-up ran ${ran} times with the switch ${base ? 'on' : 'off'}` : ''; });   // (the run's first tick is in `lesson`, after this)
-        const g = W.game, S = g.saves, shelf = (S as any).shelf; S.enabled = false;
-        if (BREAK_C) shelf.last = null;
-        const b0 = shelf.last; out.based = !!b0 && b0.game === g;
-        // a save by hand three seconds on, the seconds after it, its load and the seconds after that
-        const saveLoad = (label: string, key: string): { since: boolean; pair: [any, any] | null } | null => {
-          W.input.keys.clear(); steps(W, 3); const b = shelf.last, pair: [any, any] | null = b ? [takeSnapshot(g, b), takeSnapshot(g)] : null;
-          const r = S.write(g, 'manual', label); if (!r.ok || !r.info?.mem) { out.fails.push(`${label}: ${r.ok ? 'not kept in memory' : r.why}`); return null; }
-          const since = !!b && shelf.get(r.info.key)?.snap.chain === b.chain, cam = camKeep(W);
-          W.input.keys.add(key); const ref = digestRun(W, SECS_C, SEED).hash; out.refs.push(ref);
-          const why = S.load(g, r.info.key); if (why) { out.fails.push(`${label}: would not load — ${why}`); return null; }
-          camPut(W, cam); W.input.keys.clear(); W.input.keys.add(key); const d = digestRun(W, SECS_C, SEED).hash; out.loads.push(d);
-          if (d !== ref) out.fails.push(`${label}: the ${SECS_C} s after its load digest ${d}, after its save ${ref}`);
-          return { since, pair };
-        };
-        const one = saveLoad('base #0', 'KeyW'); out.first = !!one?.since;
-        // A RESTART: the old run's saves and its base go, and the next run's first tick takes a base of its own (a whole walk: on a chain of its own)
-        // (autosave is on for that tick, as it is for the first run's in `lesson`: a base is taken only where an autosave could be)
-        { const m0 = g.mission, was = shelf.last; W.input.keys.clear(); g.restartEncounter(); S.enabled = true; W.step(DT); S.enabled = false; steps(W, 1 - DT); const b1 = shelf.last;
-          out.gone = !(S.slots() as any[]).some(x => x.mem); out.again = g.mission !== m0 && !!b1 && b1 !== was && b1.chain !== was?.chain;
-          const two = saveLoad('base #1', 'KeyD'); out.againFirst = !!two?.since; }
-        // …and with AUTOSAVE OFF a run takes none: a machine that never autosaves pays for no take
-        { g.restartEncounter(); steps(W, 1); out.autoOff = !shelf.last; }
-        // TO THE BIT, last (a put-back that goes round the controller): the moment before the run's first save, taken since the base and whole, is one state word
-        if (one?.pair) { const word = (snap: any) => { restoreSnapshot(snap); return stateHash(g); }; const a = word(one.pair[0]), b = word(one.pair[1]); if (a !== b) out.bit = `taken since the run's base and put back the state word is ${a}; a whole take of the same moment gives ${b}`; }
-        W.input.keys.clear(); return out;
-      };
-      const since0 = SAVETIMELINE.since, base0 = SAVETIMELINE.base;
-      const on = await play(true), off = await play(false), fails = [...on.fails.map(f => `base: ${f}`), ...off.fails.map(f => `no base: ${f}`)];
-      SAVETIMELINE.since = since0; SAVETIMELINE.base = base0;
-      if (!on.based) fails.push('the run\'s first tick left no base on the shelf');
-      if (!on.first) fails.push('the first save of the run was not taken since its base (a whole take in a frame of play)');
-      if (on.bit) fails.push(on.bit);
-      if (!on.gone || !off.gone) fails.push('a restart kept the old run\'s saves in memory');
-      if (!on.again) fails.push('the first tick after a restart took no base of the new run\'s own'); else if (!on.againFirst) fails.push('the first save after a restart was not taken since the new run\'s base');
-      if (on.warm) fails.push(on.warm); if (off.warm) fails.push(`switch off: ${off.warm}`);
-      if (!on.autoOff) fails.push('with autosave off a run\'s first tick still took a base');
-      if (off.based || off.first || off.again || off.againFirst) fails.push(`with the switch off a base was taken (after the first tick ${off.based}, the first save since one ${off.first}, after the restart ${off.again}, the first save after it since one ${off.againFirst})`);
-      if (on.refs.join() !== off.refs.join()) fails.push(`the run is not the same run with a base under its saves (the seconds after each save, by digest: ${on.refs.join(',')} against ${off.refs.join(',')})`);
-      if (on.loads.join() !== off.loads.join()) fails.push('a load plays on differently in a run with a base under its saves');
-      line(!fails.length, '(5c) train-orders, a pair on the floor: the run\'s first tick takes its base — the first save of the run is a take since it and is to the bit a whole take of its moment, it loads and plays on as its save did, a restart lets the old saves go and gives the next run a base of its own, and the run and its loads are those of a run with no base; the host\'s warm-up, made before the first tick, keeps nothing and changes nothing; autosave off = no base; switch off = no base, nothing warmed, the first save a whole take',
-        `${on.refs.length} saves and ${on.loads.length} loads a side · the first save since the base ${on.first}, after the restart ${on.againFirst}${BREAK_C ? ' (SAVEBASE_BREAK: the base dropped after the first tick)' : ''}${fails.length ? '\n    ✗ ' + fails.join('\n    ✗ ') : ''}`);
     }
     // ---- (6) weights: a lesson alone, in play
     {

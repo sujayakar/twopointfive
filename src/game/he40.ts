@@ -10,7 +10,6 @@
 // blast's one hashed roll aside). Sam's, and a teammate's on order (squad40.ts: the same round by `fireShell`). Rounds in flight live on Game.shells; game.ts steps them beside the rings.
 //
 // (No top-level statement here uses another game module's export: src/game is one import cycle — see CLAUDE.md.)
-import { isManId } from './seats';
 import { Vec3, v3, quat } from '../math/vec';
 import { BoxFlag, makeBox, Box } from '../scene/boxes';
 import type { Character } from './character';
@@ -18,6 +17,7 @@ import type { Game, Guard } from './game';
 import { SHELL_ITEM, type ThrowSolution } from './throwables';
 import { bodyHit } from './combat';
 import { civilianBodies, toAlarmed } from './civilians';
+import { PLAYER_ID } from './consts';
 import { chipMark, staticSurface } from './marks';
 import { clackFx } from './particleFx';
 import { arcSolve, launchVel, staggerGuard } from './launcher';
@@ -123,7 +123,7 @@ function dud(g: Game, sh: Shell, at: Vec3, vel: Vec3, met: ShellEnd['met'], nois
   it.onBounce = (s, p, g) => { if (s > 1.0) g.audio.play('canisterBounce', p, Math.min(0.7, s / 8), { rate: 0.8 }); };   // its skitters after the slap: sound only (the slap was the event)
   g.audio.play('canisterBounce', at, 0.8, { rate: 0.7 }); clackFx(g, at);
   if (noise > 0) g.events.push({ kind: 'prop', pos: [at[0], 0, at[2]], time: g.time, loud: false, level: noise, who });
-  if (isManId(sh.shooter.id)) g.msg(`the 40 mm was a dud because it hit something ${sh.flown.toFixed(1)} m out, short of the ${HE40.armM} m it needs to arm`);
+  if (sh.shooter.id === PLAYER_ID) g.msg(`the 40 mm was a dud because it hit something ${sh.flown.toFixed(1)} m out, short of the ${HE40.armM} m it needs to arm`);
   HE40_STATS.duds++; logEnd({ at: v3.copy(at), flown: sh.flown, armed: false, met, report: null });
 }
 

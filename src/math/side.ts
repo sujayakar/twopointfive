@@ -64,45 +64,6 @@ export class SideSet<K extends object> extends WeakSet<K> {
   liveKeys(out: K[] = []): K[] { for (const r of this.sideKeys.refs) { const k = r.deref() as K | undefined; if (k !== undefined && super.has(k)) out.push(k); } return out; }
 }
 
-/** A VIEW STANDS FOR ITS GAME AS A KEY. A seat's view of the game (game/seats.ts) is another object than the Game it looks at, and a table keyed by "the game" that
- *  was handed a view would keep a second row for it: the frags in the air, the lanes, the glass would each exist once a seat. A view answers its game under `RAW`,
- *  and the two classes below — the same tables, for state that is THE GAME'S whoever asks — look every key up by it. A plain SideMap keyed by a game keeps a row
- *  for each view it is handed, which is right for state that is one PLAYER'S (the tap step, the creep, his own lamp's clock): the row is the seat's.
- *  `watchViewKeys()` (a check's: tools/qa/seats-check.ts) notes, from then on, every named table asked or written under a VIEW (`VIEW_KEYS.seen`) and every one
- *  asked or written under a Game of more than one seat ITSELF (`VIEW_KEYS.raw`). A table is one or the other: the check holds the first list against the tables
- *  that are a seat's (game/seats.ts SEAT_TABLES) and the second against the rest — a world table read through a view finds no row, a seat's read through the
- *  Game finds the wrong one, and neither throws. Nothing is noted, and no call costs anything more, until it is asked. */
-export const RAW: unique symbol = Symbol('raw');
-/** set on the view another cast of the squad's code is run over (game/squadcast.ts): what tells it from a Game and from a seat's view */
-export const CAST_VIEW: unique symbol = Symbol('cast view');
-export const rawKey = <K extends object>(k: K): K => (k as { [RAW]?: K })[RAW] ?? k;
-export const VIEW_KEYS = { watch: false, seen: new Set<string>(), raw: new Set<string>() };
-export class GameSideMap<K extends object, V> extends SideMap<K, V> {
-  override get(k: K): V | undefined { return super.get(rawKey(k)); }
-  override has(k: K): boolean { return super.has(rawKey(k)); }
-  override set(k: K, v: V): this { return super.set(rawKey(k), v); }
-  override delete(k: K): boolean { return super.delete(rawKey(k)); }
-}
-export class GameSideSet<K extends object> extends SideSet<K> {
-  override has(k: K): boolean { return super.has(rawKey(k)); }
-  override add(k: K): this { return super.add(rawKey(k)); }
-  override delete(k: K): boolean { return super.delete(rawKey(k)); }
-}
-
-export function watchViewKeys(): void {
-  if (VIEW_KEYS.watch) return; VIEW_KEYS.watch = true;
-  const note = (t: { sideName?: string }, k: unknown): void => {
-    if (t.sideName === undefined || typeof k !== 'object' || k === null) return;
-    if ((k as { [RAW]?: object })[RAW] !== undefined) VIEW_KEYS.seen.add(t.sideName);
-    else { const S = (k as { seats?: unknown; stepSeats?: unknown }); if (typeof S.stepSeats === 'function' && Array.isArray(S.seats) && S.seats.length > 1) VIEW_KEYS.raw.add(t.sideName); }
-  };
-  type Calls = Record<string, (this: { sideName?: string }, k: unknown, ...r: unknown[]) => unknown>;
-  for (const P of [SideMap.prototype, SideSet.prototype] as unknown as Calls[]) for (const m of ['get', 'has', 'delete', 'set', 'add']) {
-    const was = P[m]; if (typeof was !== 'function') continue;
-    P[m] = function (k, ...r) { note(this, k); return was.call(this, k, ...r); };
-  }
-}
-
 /** a module's own variable: read and written back through the two functions the module hands over */
 export interface SideVar { name: string; get: () => unknown; set: (v: never) => void }
 const VARS: SideVar[] = [];
@@ -128,10 +89,6 @@ export function wallClockKeys(o: object): readonly string[] | undefined { return
  *  ones free, what was last sent. A snapshot holds such an object as it is: never copied, never put back, never compared, and a restore into another game leaves
  *  that game its own. It is a class that extends this one (render/probe.ts `Plumbing`), so the snapshot knows it by its make and pays nothing per object. */
 export class HostOwned {}
-/** HOW MANY SNAPSHOTS HAVE BEEN PUT BACK in this process (game/rollback.ts restoreSnapshot counts). A put-back writes game objects from outside the game's own
- *  code, so a host-side copy of some of them that is kept current by being TOLD of writes (scene/boxMirror.ts: the grid's cells) reads this to know it was not
- *  told. The host's: no game reads it. */
-export const PUT_BACKS = { n: 0 };
 
 /** everything registered, for game/rollback.ts: the named tables (but the memos), the variables and the roots, each in the order of its NAME (the same on every machine, whatever order the modules ran in) */
 export function sideRegistry(): { tables: readonly Table[]; vars: readonly SideVar[]; roots: readonly { name: string; obj: object }[] } {

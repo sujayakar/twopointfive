@@ -35,7 +35,6 @@
 // NOT here: the IR ILLUMINATOR — a LIGHT only a tube sees by, on the same goggles. That one is irlight.ts (it retired nvg.ts's 'too dark for the tube, so white
 // light' for a man who carries one).
 // (src/game is one import cycle: nothing here is built from another game module's exports at module load.)
-import { hostMan, manOf } from './seats';
 import { SideSet } from '../math/side';
 import type { Vec3 } from '../math/vec';
 import type { Box } from '../scene/boxes';
@@ -67,7 +66,7 @@ export const IR_TINT: Vec3 = [0.2577, 0.2577, 0.2577];
 export type LaserBand = 'ir' | 'visible';
 /** the picture is the tube's: an infrared laser shows in it (post.wgsl: `frame.post.x > 0.5` is the intensifier, and post.x is Player.nvAmount — host/loop.ts;
  *  never under a debug view: the native post pass shows no tube there) */
-export function irViewer(g: Game): boolean { return viewTube ?? (hostMan(g).nvAmount > 0.5 && !(g.engine.settings.debugView > 0)); }
+export function irViewer(g: Game): boolean { return viewTube ?? (g.player.nvAmount > 0.5 && !(g.engine.settings.debugView > 0)); }
 /** A REPLAY VIEWER'S OWN TUBE (the engine replay's 'NV' switch: the picture's night vision is the viewer's, the run's goggles stay the tape's). Set only for the
  *  length of `irViewAs`, which Game.fogLift calls BETWEEN steps to make the infrared lines of a picture whose tube the run did not have on; no step ever sees it. */
 let viewTube: boolean | null = null;
@@ -105,7 +104,7 @@ export function laserOn(g: Game, gd: Guard): boolean {
  *  The muzzle rule (guards.ts muzzleCheck) lowers the gun for a colleague where he AIMS; this is where the bore points this frame — a man turning in the file —
  *  and it counts Sam. The red laser painted whom it painted and is left alone. */
 export function paintsOwn(g: Game, gd: Guard, on: Character): boolean {
-  if (manOf(g, on)) return !isHostile(gd.team, 'player');
+  if (on === g.player.char) return !isHostile(gd.team, 'player');
   const o = g.guards.find(x => x.char === on); return !!o && !isHostile(gd.team, o.team);   // (a hostage is nobody's colleague: the line lies on him like on a wall)
 }
 /** QA / the panel: every teammate's band and whether his laser is on, Sam's, and whether the picture shows the infrared ones */

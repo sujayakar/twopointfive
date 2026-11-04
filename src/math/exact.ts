@@ -317,18 +317,11 @@ const remade: (() => void)[] = [];
  *  written, on the engine's maths. Make it here instead: `fn` runs now, and again each time the switch changes, so the constant is the engine's with the switch
  *  off and the game's own with it on. exact-check.ts is red on a load-time call that is not inside one of these. */
 export function onExact(fn: () => void): void { remade.push(fn); fn(); }
-/** the fourteen, and the three lengths of math/hyp.ts, as one set */
-export type Maths = typeof SYS & { hyp2(a: number, b: number): number; hyp3(a: number, b: number, c: number): number; hyp4(a: number, b: number, c: number, d: number): number };
-let other: Maths | null = null;
-/** THE SAME ARITHMETIC FROM ELSEWHERE: while the switch is on, `fns` stand in Math's place instead of the functions above (null = the ones above again). The
- *  caller's promise is that they are the same functions TO THE BIT — src/sim/sim.ts hands in the Rust ones (its RUST.maths row), and tools/qa/rust-check.ts
- *  holds that promise. With the switch off this changes nothing: the engine's own are in place either way. */
-export function mathsFrom(fns: Maths | null): void { if (fns === other) return; other = fns; if (installed) install(true); }
 function install(on: boolean): void {
   installed = on; mathsEpoch++;
-  const from: typeof SYS = on ? (other ?? OWN) : SYS, M = Math as unknown as Record<string, unknown>;
+  const from = on ? OWN : SYS, M = Math as unknown as Record<string, unknown>;
   for (const k of Object.keys(SYS) as (keyof typeof SYS)[]) M[k] = from[k];
-  hypExact(on, on ? other : null);
+  hypExact(on);
   for (const fn of remade) fn();
 }
 /** `on` = the simulation (and everything else on the page) computes on the functions above; off (the module's default) = on the engine's own, as it always did.

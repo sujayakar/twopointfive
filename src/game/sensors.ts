@@ -45,7 +45,7 @@ export interface SensorStats { reads: number; asks: number; strays: number; fram
  *    2  every other meter: a unit's own, a held man's, a body's, a searcher's spots, a civilian's (each has a CPU estimate or its last answer to stand in)
  *    3  the fog of war's lines ('fow…': fogofwar.ts asks last, counts the room and forgets what it could not ask) */
 export function askRank(key: string, segment: boolean): number {
-  return segment ? (key.startsWith('fow') ? 3 : 1) : (key.startsWith('playerChest') || key.startsWith('playerHead') ? 0 : 2);
+  return segment ? (key.startsWith('fow') ? 3 : 1) : (key === 'playerChest' || key === 'playerHead' ? 0 : 2);
 }
 
 export function encodeValue(v: number | undefined): SensorEnc {

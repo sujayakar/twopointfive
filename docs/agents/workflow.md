@@ -71,7 +71,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   page and that picture do post to each other (measured in Chromium without a WebGPU adapter: `tools/qa/kitview-disk.cjs`; the picture
   itself up on a page from disk is NOT SEEN — the software adapter had not booted the second instance from disk in 150 s; never on a
   GPU). The page carries
-  `<meta name="tps-one-page">`, as before: no tool pages in Extras, no replay viewer (F7 sends its file to a backend the address names, and with none says the replay was not kept), and
+  `<meta name="tps-one-page">`, as before: no tool pages in Extras, no replay viewer (F7 hands its file over as a download), and
   `ui/menuStills.ts` asks for pictures there only when the page packs them. OUT of the file: the workbench, the replay viewer, the
   sounds and music pages, `public/assets/replays`. CHECK: `bun run build:one && node tools/qa/onefile-page.cjs` (a server that knows
   one address and 404s the same address with a query; `ONEFILE_BREAK=1` = the boot script taken out, must FAIL) — the pack (the `.bin`
@@ -122,7 +122,7 @@ preferences, etc." No accounts; nothing multiplayer.
   nothing of the page is up yet): yes replaces its settings and turns its sending on (its settings could not follow otherwise), no drops
   the word and boots the page as it was.
 - **Whether it sends** (`CLOUD.shareDefault`, ON since 10-26, the maintainer's pick of three: "On, with a notice" — everyone who opens the
-  link sends replays, stats, settings and (since the download door, 10-27) saved files, a line on the title page says so and Options has the off switch): the browser's own choice where
+  link sends replays, stats and settings, a line on the title page says so and Options has the off switch): the browser's own choice where
   it made one (Options ▸ Game ▸ Share replays and stats; localStorage `twopointsix.cloud.share`), else the default. THE NOTICE COMES FIRST:
   a browser that sends by the default ALONE (it made no choice, its address bar says nothing) makes not one request until the notice has
   been on its screen once (`twopointsix.cloud.told`). `src/ui/cloudnote.ts` draws the line on the title card (`CLOUD_NOTE`; a press opens
@@ -148,22 +148,6 @@ preferences, etc." No accounts; nothing multiplayer.
   four-man room clear, so about 17 MB an hour. On a REAL PAGE a squad mission's kept tape was measured at about 3 MB a minute packed
   (`docs/agents/replays.md`), so about 180 MB an hour a browser in `tapeChunks`, a third more on the wire (base64). Plan the backend's
   quota by the second one. Not measured on the service.
-- **A run's end goes up when it is kept** (10-30, off a real kept replay that stopped 12 s short of its win: the last round went at
-  0:55, the win came at 1:05, the tab shut 4 s later with the next round due at 1:15; the ending stayed in that browser's store until
-  its next visit). Three things, none with a switch of its own (it is the same sending, sooner, under `?cloud=0`, `?cloudtapes=0`,
-  `?cloudstats=0` and `?nokeep` as before). (1) The keeper files a run's end about a second after it and calls
-  `ReplayKey.onEndKept` (the kept replays' half, `src/ui/replaykey.ts`); `main.ts` sets that to a tape round. (2) `TapeSync.round()`
-  ASKED FOR WHILE ONE RUNS IS ONE MORE ROUND AFTER IT, one however many ask: a running round read the store when it began, so what was
-  filed since (a run's end, the tail a hidden page files before `leave`, `sync()` in a check) used to wait for the next 20 s beat. (3)
-  `Telemetry.frame` sends the `run` record the moment it writes it, as a request asked to outlive the page (`flush`'s fourth word), on
-  every page that sends records, kept tape or not; it used to wait up to 30 s or for the going page's flush.
-  CHECKED: `cloud-check` on both stands (`tapes`: three asks with the first held are two rounds, and the second carries what the
-  first could not see; `telemetry`: a run's record is on the backend with no flush asked), `CLOUD_BREAK=1` red on both rows; and one
-  won room on a real page on the software adapter against the stand-in (the script is not in the repo: `main.ts`'s one line is under
-  no committed check), where the record and the tape's ending were on the backend about a second after the script saw the verdict,
-  with no send forced. NOT DONE: a going page still cannot finish a tape round (a `keepalive` round was weighed and left: a 5 s squad
-  piece is about 50 KB packed and browsers cap those requests at 64 KB for all of a page's together). Never seen on a GPU; no real
-  replay has gone up under it yet.
 - **What a round costs the page** (`TapeSync`, every 20 s; raised by the kept replays' owner 10-26, who has chased single stutter frames):
   it reads only the pieces numbered past what went (`KeptStore.piecesFrom(sid, from)`, a read-only range read added to
   `src/replay/keepstore.ts` for this), sends a packed piece as the bytes the store holds — it is NOT unpacked — and does not read a visit
@@ -178,233 +162,14 @@ preferences, etc." No accounts; nothing multiplayer.
   rate, threads, the screen — the full list is below), `gpu` (timestamp queries or not, the canvas format, the device's features and four
   of its limits) and `bootMs` (the page's open to the game being up);
   `perf` (one a minute of live play) carries the picture's size (`res`, `out`) and `gpu` = the stretch's GPU TIME: readings, mean, 50th /
-  95th / 99th / worst ms, and each pass's mean ms in two lists, biggest first: `passes` (the compute passes) and `render` (the render
-  passes). The GPU time is the compute passes' union the quality ladder
-  is fed every frame (`main.ts`, the same call and the same list `GPU_RENDER_PASSES`: the render passes are left out, as there, because a
-  render pass's timestamps are not to be trusted on Metal — the first real records, 10-27, had `fxaa` and `post` on top of one list at
-  twice the frame's time, so they are listed apart and read with that in mind); the per-pass means are read off the engine's timer
-  (`gpu/timer.ts` `lastFrame`) one reading in 30. A WebGPU error
+  95th / 99th / worst ms, and each pass's mean ms (`passes`, biggest first). The GPU time is the compute passes' union the quality ladder
+  is fed every frame (`main.ts`, the same call: the render passes are left out, as there, because a render pass's timestamps are not to be
+  trusted on Metal); the per-pass means are read off the engine's timer (`gpu/timer.ts` `lastFrame`) one reading in 30. A WebGPU error
   the page did not catch and a lost device (not the page's own leaving) are `error` records. WHAT IT COSTS A FRAME: no query, readback or
   pass is added; a frame is a few adds into two small tables and makes no object (the game's facts are asked only when a record is
   written: once a minute, and at a run's end — `cloud-check` `telemetry` counts the asks), and a browser that does not send returns at
-  the first test. That is by reading the code and by the count of asks under bun: the cost was NEVER MEASURED on a page (the software
-  adapter here has no timestamp queries; the first `perf.gpu` a real page wrote is in the first real read, below).
-- **A tab that goes out of sight** (10-27, from the first real records: eleven `end` records in four visits, several the same, and `perf`
-  records of a tenth of a second). A hidden tab may come back, so `Telemetry.flush(going, facts, hidden)` writes an `end` only where
-  frames were played since the last one, and leaves a stretch of play shorter than `TELEMETRY.perfMin` (5 s) open; `pagehide` says all
-  it has. The LAST `end` of a visit is its total. `cloud-check` `telemetry` holds it.
-- **A load's whole time and its stages** (10-27, the maintainer: "also do we have load time telemetry?"; the `boot` record had the time
-  to the start card, the script's start, the device and the shader wait, and nothing else). `src/cloud/loadtime.ts` `bootRecord` now
-  makes the record, from what the page ALREADY TAKES (`ui/boot.ts`'s marks and spans, the browser's own resource timing): `whole` (ms
-  from the navigation's start to the later of the start card and the first frame's GPU work: THE LOAD; ABSENT where the first picture
-  never came back before the record was written, so a load cut short is read to its start card and never as a fast one), `shown` (the first picture),
-  `level`, `gltf` (the characters), `game`, the two tables whole as `marks` and `spans` (a mark added in `ui/boot.ts` is in the record
-  with no change here; the shader groups' spans are among them), `net` (what came down, this page's own files only, numbers only: `html`,
-  `script` ms and `scriptWire` / `scriptSize` bytes of the bundle, wire 0 = from the browser's cache and a few hundred = asked again and not sent, `files`, `wire`, `size`, `last`),
-  `rows`, the shader rows the load was STARTED with (`shaderRowsOn()`, read only), `nth` (which load of the TAB this is, counted in
-  sessionStorage at the backend's boot, so a load that wrote no record is still counted) and `mission` (the mission the page opened on, '' = the start page). A MISSION START IS A PAGE LOAD (`main.ts` does
-  `location.assign` on a pick), and so is the way back to the list: the browser calls those `navigate` like a first visit, so `nth` is
-  what tells a tab's first load from its tenth mission. The old flat keys stay. THE STAGES OVERLAP
-  (shaders compile while the characters load and the game is made): they do not add up to `whole`; the marks in time order are the
-  timeline. READ IT with `bun run tools/cloud/errors.ts --metrics`, section "the loads": a line a browser × kind of load (a tab's
-  first, a later one in the tab, a reload) × shader rows, each number a median, with how many of them opened on a mission. A record from before reads "to the start card" and its rows are what the visit's ADDRESS
-  asked for (`?<row>`, any value but 0; a row put on in Options is not there), said as such. That is the comparison for a change of the rows'
-  defaults: the same browser, the same kind of load, one set of rows against another. No switch of its own (`?cloudstats=0`).
-  `cloud-check` `telemetry` holds the record, the count of what came down and the report; `CLOUD_BREAK=1` writes the record as it was
-  and is red. On the real page (software adapter, a scratch script): one record with the page's own marks. A LOAD STARTED ON THE FIRST FRAME'S SHADERS is not
-  over at its first picture: the heaviest programs come in behind the start card, and `whole`, `shown` and `pipelinesMs` are then the
-  short wait. The boot's mark `laterReady` (the last program built behind the start is in; the performance work makes the mark, none
-  in the build yet) is the missing number: `later` on the load's record where the mark is there when the record is written, else ONE
-  small record of the visit, kind `later` (`{ later, after }`: ms from the page's start, and from the start card), looked for on the
-  records' half-minute beat for ten minutes (`loadtime.ts` `laterRecord`, `LOADTIME.late`, `LOADTIME.laterMs`). The load's record
-  is never held for it. The report joins the two by visit and prints "the last program built behind the start in at"; a load whose
-  rows include `firstframe` and that has neither reads "the programs built behind the start never said they were in" (the page went
-  first, or they took past ten minutes). THE KEPT PAGE'S WORDS (a mission start without a page load; the
-  shaders-once-a-visit work writes them on the load's record, this file only reads them): `kept` (1 = the load that made the page
-  and compiled, 2+ = a mission start on it, absent = a whole page), `made` (`pipelines` compiled of `asked`, and on a start the
-  `labels` of what was still compiled), and on kept 1 `shell` (ms the shell page took before the game's frame began; `whole` stays on
-  the frame's clock) and `shellNav` (the tab's own kind of load: the frame's is always a plain one). The report lists a start apart
-  ("mission starts on the kept page (no page load) … to its first picture"), adds the shell's ms to the first load's whole, reads a
-  reload off `shellNav`, and says "compiled N of M programs" (the median, with "N at the most" where one load of the line made more). A mission start's `waited` (ms the
-  kept page waited for the GPU to finish what the mission before had queued, `gpu/keep.ts`) prints as "waited … for the GPU to finish the
-  mission before (… at the longest)". A load's `calls` (the load's time inside its GPU calls, the same file) prints as "inside GPU calls … (… at
-  the most), the longest single call of any of them … (which)": the first is the median of the line's loads that timed it (the line says how
-  many where that is not all of them), the others are over those same loads.
-  THE OTHER LATE FACTS (10-28, off the maintainer's first Mac records and his "i also quite dislike the "popin" that happens from
-  starting the game too early when some shaders haven't finished"): `LOADTIME.late` lists the boot's marks that may come after the
-  load's record, by the record's key: `later` (`laterReady`) and `settled` (the moment a mission's START went live; the performance
-  work's `ui/settle.ts` is to make it, only on a page with a brief: NO PAGE OF THIS BUILD MAKES IT YET, and the name is that work's
-  word for it, not one seen in the tree). One that is there when the record is written rides on it; one that comes after goes in a
-  `later` record with what is new (`settledAfter` = ms since the start card), each fact once a visit, so a visit may write two. The
-  page adds its own late fact the same way: `cut` (`{ ms, pipelines, owners }`, and `failed` where it did not compile: the build of
-  the programs with the cut rule, `render/cutSwap.ts`, sent once the build has ended with its numbers). The report prints "START
-  live at" and "the cut programs built in" (a failed build is left out of that median). The page is asked on every beat for ten
-  minutes, since it cannot say that nothing more will come. A LEAVE'S RECORDS WENT UP TWICE on that Mac (a visit's last `end` and
-  `perf`, two calls 7 ms apart). The only road to that in the page's code is a leave's call that looked failed to the page, was put
-  back, and was sent again by the leave's second event (a page that goes fires "hidden" and "going"); a browser finishes a
-  keepalive request without the page, so a call that did not come back may have got there. The page cannot know, so THE BACKEND
-  KEEPS THE SAME RECORD ONCE (`cloud/convex/telemetry.ts` `put`: same visit, same moment on the page's clock, same kind, same words
-  whatever the order of their keys; one indexed read a record, no change to the table), and the report reads one written twice
-  before that once (`errors.ts` `once`; `pull.ts` dumps the table as it is). THE CAUSE IS INFERRED, NOT REPRODUCED: a headless
-  Chromium here fires both events and sends once, framed or not. A going flush with no facts (a lost device) used to close the
-  leave, so the stretch of play before every lost device was in no record: it now leaves the stretch to the leave that has the
-  facts. `cloud-check` holds the late facts (red under `CLOUD_BREAK=1`), the leave and the backend's keep-once (a backend rule: no
-  break path) and the report's `once`. A visit nobody played writes no `end` (there is no play to count): the start page's visit
-  ends without one, by design. NOT TIMED: a shader made when needed during play. A page opened in a tab nobody is looking at draws no frame, so its
-  `whole` runs until it is looked at (`maxRafGap` says so). Never seen on a GPU.
-- **Where the quality stood and when it moved** (10-28; the maintainer's first Mac records: "really bad performance", a minute that
-  ENDED on medium at half size and a mission that opened on low on an M4 Max, and nothing in a record said whether the ladder fell
-  in a mission's first seconds, while programs were still building, or was pushed down by the play). The minute's `perf` record has
-  `rung`: `from` = the page's short word for its quality as the stretch began (`main.ts` `rung:` in the cloudBoot deps: preset,
-  scale, the size drawn, `sharp`, `shed`, `pinned` when Auto is off) with `why` = the ladder's own last line by then (`ui/quality.ts`
-  `lastChange`: "calibrated (…): 10.0 ms compute at high → low ×0.60 …", the same line the debug recorder keeps as a `ladder`
-  event), and `moves` = [seconds of live play into the stretch, the new word, the ladder's line for it] for each change of either
-  (the first `TELEMETRY.moves`, then `more` counts the rest). The size is in the word so that a step of the height cap or of a
-  divisor is a move too. A fourth entry, 1, marks a change made while play was not live (a menu up, a held brief): its second is
-  where play stood, not when it happened. The page is asked every `TELEMETRY.rungSecs` of live play and on the first live frame
-  after a hold, never every frame, so a move is timed to a quarter second; a word that cannot be read makes no move. Read with
-  `errors.ts --metrics`, the section "where the quality stood and when it moved" (`--json`: `moves`): only visits whose quality
-  moved, a visit's stretches in order, each with its mission. No switch of its own (`?cloudstats=0`). `cloud-check` holds it;
-  `CLOUD_BREAK=1` is red. On a real page here (software adapter, a scratch script that plays a few seconds and changes the scale
-  by hand): one record with its `from`, the ladder's line and the move; the script draws nothing, so the size in the word read
-  0x0 there. Never seen on a GPU, and no real ladder has moved under it yet.
-- **The main thread's time on a frame** (10-28; asked for after the maintainer's slow rounds on a real Mac: one ran at 47 ms a frame with the
-  GPU's timed work at 10 ms, and no record said where the other 35 went). The minute's perf record carries `cpu { n, update, render, whole, calls, ticks }`
-  (`src/cloud/telemetry.ts`): over the stretch's played frames (`n`), the engine's render (`engine.render`, the frame's commands being built) and
-  the whole (from `perfrec.cpuFrameStart` to the records' own call), each as mean / p50 / p95 / worst in ms (half-millisecond bins up to 200 ms;
-  `worst` is exact); the game's update (`loop.updateMs`: every tick the frame ran) the same over THE FRAMES THAT RAN A TICK, with its own `n` (a
-  display faster than the tick rate draws frames between ticks: at 120 Hz half the frames run no update, and their zero would be the median);
-  and `ticks { mean, max }`, the game ticks a frame ran. The numbers are the F9 recorder's own, handed in by one `cpu:` line in `main.ts`; the
-  records' call comes AFTER the frame's update and its render (`stepFrame` runs both), so all three are that frame's. A frame the world is held still
-  on (the load brief, a lesson card, the objectives card over a live mission: the same test the quality's sample makes) is not counted, so
-  `cpu.n` can be under the record's `frames`; a frame after a gap of more than a second is counted here and not in `frames`, but for the
-  first frame after the tab was away. READ IT AS WALL TIME ON THE MAIN THREAD, NOT SCRIPT TIME
-  (a reviewer's catch, 10-28): `render` and `whole` are taken around `engine.render`, whose buffer writes and `submit` can block while the GPU
-  process is behind. A long `update` is the game's script for certain. A long `render` is the engine's script OR the thread held inside a GPU
-  call, and `update` / `render` / `whole` do not tell the two apart. `whole` small beside a long frame = the frame waits outside the frame
-  callback (the GPU process, the compositor, the display). THE SPLIT, `cpu.calls` (10-28): the page keeps a running total of the ms it spends
-  inside the GPU queue's `writeBuffer`, `writeTexture` and `submit` from the boot's freeze on (`gpu/keep.ts` `CALLS.play`, the kept page's
-  work; `?playclock=0` or `?callclock=0` takes it off). `main.ts` reads it where the frame's timer starts and again in the `cpu:` closure, so
-  the share is over THE SAME WINDOW AS `whole` (a call made between two frames is in no frame's share): `calls { n, mean, p50, p95, worst }`
-  on the played frames that had a clock (tenths of a millisecond up to 200 ms, the other tables' end; `worst` exact). HOW TO READ IT: set it
-  beside `whole`, NOT `render` alone: the game's update writes to the GPU too (the lights' buffer on every tick, the world's upload between
-  ticks), and those writes are in the share. `whole` minus `calls` is the most the page's own script can have taken; a `calls` close to
-  `whole` says the frame's time was spent inside those calls, held by the GPU process or copying; a small one says nothing either way,
-  because an encoder's call, `createBuffer` and `createTexture` can block too and are not timed, and a big copy and a blocked call read
-  alike. TRUST THE MEAN: a frame's share is a sum of many short reads of the clock, so on a browser whose clock steps in whole
-  milliseconds the median and the 95th are clock steps while the mean stays true. Absent where the page keeps no total. The report's
-  machines line sets it beside the whole frame OF THE SAME MINUTES, mean to mean ("inside the GPU's calls … on average and … at the 95th,
-  of a whole frame's … on average and … at the 95th (the … min that timed them)"). CHECKED: headless, the record's numbers and the report's
-  line (`cloud-check`, which hands the share in: the page's own subtraction in `main.ts` is NOT under it), and one real page on the
-  software adapter with its render stubbed, whose record carried `calls`. UNPROVEN: nobody has set a frame known to be held by the GPU
-  beside it; never seen on a GPU.
-  NOT IN `whole`: the few lines of the frame callback before the timer starts (the quality
-  sample), `bench.tick` / `perfsweep.tick` after the call, and anything the browser runs outside the frame callback (input handlers, timers,
-  layout, garbage collection). KNOWN GAP: a canvas of no size on a visible tab steps nothing and the loop's last numbers would be read again.
-  No switch of its own: it is part of the stats (`?cloud=0`, `?cloudstats=0`). The report's machines line prints a machine's medians ("the main
-  thread 9.0 ms a frame (render …; update … on the frames that ran a game tick, … ticks a frame)"). Check: `cloud-check` "a minute's record says how long the main thread took", red
-  under `CLOUD_BREAK=1` on both stands; one real page on the software adapter against the stand-in backend wrote the record (render stubbed there,
-  so its render read 0). No real round has been read with it yet; never seen on a GPU.
-- **A frozen picture in the records: the GPU's wait on a frame** (10-27, from a tester's notes on Windows: background shader compiles
-  froze the picture for seconds at a time while animation frames kept coming at full rate, so every frame time we record looked
-  normal; only a browser trace of PRESENTED frames showed it, and a page cannot read those). The stand-in: on a live frame, with no
-  question already out, the page asks the GPU queue when that frame's work is done (`onSubmittedWorkDone`, handed to `Cloud.frame` as
-  its fifth word) and the wait goes into the minute's `perf` record as `lag`: `n`, `mean`, `worst`, `over100`, `over500`, `over2000`.
-  One promise at a time and a new question only every fourth live frame (`CLOUD.gpuLagEvery`: a freeze of seconds is caught as well),
-  none on a pause card, none on a page that does not send; a wait the tab was hidden in is dropped; a queue that throws when asked is
-  not asked again. ON in the page, `?gpulag=0` puts it off (`CLOUD.gpuLag`). The report's machine line says the longest wait and how
-  many ran past half a second. UNPROVEN: nobody has set a real freeze beside it. A compile that stalls the browser's own drawing may or
-  may not hold this answer back; the first Windows records will say, read against a trace. `cloud-check` `off` holds the counting;
-  `CLOUD_BREAK=1` asks nothing. On the real page (software adapter, a scratch script, three of the page's own frames): the minute's
-  record carried `lag`. Never seen on a GPU.
-- **One reporter for errors** (10-27, the maintainer: "let's do an audit of all our errors and have them use some reusable error
-  reporter that sends up to convex"). `src/cloud/report.ts`, a leaf any file may import: `reportError(where, err, data?)` for what was
-  caught, `reportWarning(...)` for what the game went on from. `where` is a short stable name with dots (`gpu.splitrays.buffer`), `data`
-  a few numbers the place knew. It prints the line a `console.error` would have and hands the report on; `cloudBoot` asks for the
-  reports (`reportSink`) and writes each as an `error` record of the visit with `where`, the message, the top of the stack, `data`, and
-  `level: 'warning'` on a warning. The first coming of each (by where and words) is a record, the rest are counted on the visit's `end`
-  (`errors`, `warnings`); at most 16 distinct errors and 8 distinct warnings a visit, each with places of their own. What is reported
-  before the backend is up waits (32 errors and 16 warnings at most), and a first visit's wait on until the notice has been shown; a page
-  that dies with no backend up sends what it had reported with its `fatal`. Two comings whose words differ only in a number are one.
-  An object beside a line is said in brief (a few keys; a buffer or a long array by its kind and length). A report is MADE once: the same
-  line said again, whatever numbers it carries, is handed on as the report it already was (no stack is taken twice), and a page makes 200
-  at most, so a line printed every frame pays for its first coming only. THE NET: the game page calls `tapConsole()` once, so every `console.error` and
-  `console.warn` it makes is a record too, under the where `console.error` / `console.warn`, with no line of the game changed; a GPU
-  validation error and a lost device have places of their own (`gpu.uncaptured`, `gpu.device.lost`: `gpu/device.ts` calls `reportError`, its
-  printed lines word for word as they were). `reportError` prints exactly what the `console.error` it replaces printed. An error nothing caught is `window.error` /
-  `unhandledrejection`, a dead page still its `fatal`. The report (`tools/cloud/errors.ts`) groups by
-  kind and words and says `at <where>`: dead pages, then errors, then warnings. No switch of its own: it sends only where the visit's
-  records do (`?cloud=0`, `?cloudstats=0`). NOT COVERED: a catch that says nothing (the audit counted 388 and 34 promise catches; about
-  seventy are worth a record and are a one-line change each, in their owners' files), and the pages that are not the game hand their reports to nobody (the two
-  replay pages no longer: "The replay pages report too", below). New code: call `reportError` where you would have written
-  `console.error` in a catch, and never leave a callback's or a network call's catch empty. `cloud-check` `off` holds it (5 lines, and
-  the dead page's); `CLOUD_BREAK=1` never asks for the reports. On the real page (software adapter, a scratch script): a `console.error`,
-  a `console.warn` and an error nothing caught each became one record of the visit. Never seen on a GPU.
-- **The reporter's places** (10-27, the second step of the audit: the lines and catches their owners gave leave for). FOUR CALLS:
-  `reportError(where, err, data?)` prints what `console.error(err)` printed, every time (`data` is the record's and is never printed);
-  `reportErrorLine(where, ...said)` and `reportWarningLine(where, ...said)` are a `console.error(a, b)` / `console.warn(a, b)` moved whole,
-  printed as it was every time; `reportWarning(where, err, data?)` is what a catch that said nothing is given, and it PRINTS AT ITS FIRST
-  COMING ONLY, so a catch on a timer or in a loop does not fill the console (every coming is still counted). NAMED NOW: `gpu.pipeline`
-  (the label beside it), `gpu.shader.compile`, `gpu.splitrays.buffer` (the grid and the size beside it; `render/gatherSplit.ts`
-  `splitRefused` calls the reporter and the page has no hook of its own for it), `gpu.device.lost`, `gpu.uncaptured`,
-  `render.restir.twin`, `render.cut.twins`, `render.dust.twin`, `render.sharp.groups`, `bench.carry`, `bench.scene.said`, `bench.putBack`,
-  `bench.card.closed`, `journal.onStop`, `journal.save`, `page.note`, `save.picture`, `replay.keep.prune`, `replay.keep.say`,
-  `replay.keep.piece`, `replay.shelf.delete`, `replay.viewer.*` (boot, shelf.read, visit.read, notes.write, notes.send, send, send.shown)
-  and `replay.engine.*` (saving, shelve, keep, notes.send, shelf.read). LEFT SILENT ON PURPOSE, each by its owner's word: a catch that only
-  keeps a stored promise from being unhandled while its caller has the same rejection (the cut build, the particles' build, the boot's
-  early promises: the red card has those); a readback that fails every frame after a lost device (`gpu/timer.ts`, the particles', the
-  light meter's); a browser guard (no window, no IndexedDB commit, no CompressionStream, no Navigation API, a refused clipboard); a dev
-  server or shot server that is not there; the benchmark's card closed before its upload answered. A report in `src/game/journal.ts` is
-  the catch's only statement and hands over no game state: the reporter reads none, rolls no die and reads no clock. THE REPLAY PAGES are wired
-  by the next bullet. Checked headless on both stands: `cloud-check` (107), `splitrays-check` (its pin turned),
-  `replaybuf-probes` (121), `replaykeep-probes` (74, `REPLAYLEFT_BREAK=1` red), `gate.sh journal`, `probes.ts cardreplay`, `pipequeue`,
-  `shaderswhenneeded`, `shaderrows`, `bench`, `gpulost`, `nogpu`, `rollback-check --static`, `dice-check`. Never seen on a GPU.
-- **The replay pages report too** (10-27, the third step: `src/cloud/cloud.ts` `cloudReports(q, { page, uncaught?, build?, machine? })`).
-  The replay viewer (`/replay`, one line in `src/replay/viewer.ts`) and the game's page while it plays a replay's tape (`?playtape`, one
-  line in `src/main.ts`) boot no backend's side, so their reports used to wait in the page and go nowhere. Now each is one of the `error`
-  records of a name made for that page load (`page-…`, the name its saved files already had), behind ONE `visit` record marked
-  `page: 'replay'` or `page: 'tape'`; the page's death (`cloudFatal`) goes under the same name. UNDER THE RECORDS' OWN WORDS, and
-  narrower than a visit's: a backend, the browser's switch, `?cloud=0`, `?cloudstats=0` (a tape's page carries the OFF words its tape was
-  recorded under, `tapeSearch`), AND the notice already read in this browser or the sending its own choice. Such a page cannot show the
-  notice, so a browser that has not read it sends nothing from there. THE TAB REMEMBERS ITS VISIT'S OFF WORD: the viewer's address has
-  no words of its own (`replay.html#id=…`), so the game's page writes in the tab (`sessionStorage`, at `cloudAdopt`) whether its
-  address put the records off, and a page that reports asks it; a tape's page does not take the mark off, the next visit somebody plays
-  does; a viewer opened by itself in a fresh tab goes by the browser's own switch. (The viewer's notes and its Send go by their own
-  rules, as before.) NOTHING IS ASKED OF THE BACKEND UNTIL THERE IS A REPORT: a page with nothing to say makes no request, and no
-  hello ever (the browser's row counts visits and this is none). A page that knows no build asks its server for `/qa/commit` when it
-  first has something to say. The viewer has no listeners of its own for an error nothing caught, so `uncaught` takes those there
-  (`window.error`, `unhandledrejection`, kept from the first line of the page on); the game's page keeps its own (they lead to the red
-  card). The viewer's console is tapped from that line on, as the game's is. Another tab that says no, or clears the browser's storage,
-  stops the sending from here. No frame is counted and no `end` is written on such a page: a report there is its first coming and
-  carries no count. `PAGE_REPORTS.secs` (2): a report goes up that long after it was made. The reader (`tools/cloud/errors.ts`) counts
-  such a page apart from the visits ("0 visits · 1 other page"), says "on a page that is not a visit: replay" under the group, and
-  reads a browser's machine off a visit somebody played where it has one. TWO PLACES NOW SAY A RESULT, not only a throw: the viewer's
-  `replay.viewer.send` where the sending answered 'failed', and `replay.viewer.notes.write` where a kept visit's write answered false
-  (neither call ever rejects). THE SHELF SAYS ITS OWN FAILURES (`src/replay/shelf.ts`, by its owner's word): the catches that come
-  after a good open are real failures and report as warnings, each handing on what it handed on before, `replay.shelf.put` (null),
-  `replay.shelf.notes` (false), `replay.shelf.list` (an empty list, both lists) and `replay.shelf.get` (null); a browser with no
-  IndexedDB returns before them and stays silent, as do the open's own catch, the close and the last tidy-up. STILL REPORTING TO NOBODY: the sound pages, the editor and the workbench (developer pages). Check: `cloud-check`,
-  five lines headed "page reports", both stands; `CLOUD_BREAK=1` turns the first red (a browser that has not read the notice sends).
-  On the real viewer page (a stand-in backend, a scratch script): no request with nothing to say, then one visit record marked
-  `replay` with the build and four reports (a console.warn, a console.error, an error and a rejection nothing caught), and nothing at
-  all in a tab whose visit put the records off. The game's page still boots clean with its own reports. NOT DRIVEN: a tape's page
-  (`?playtape`) with a report on it. Never seen on a GPU.
-- **A run's end in the records is the verdict's** (10-27, from the first daily read of the real records: six room clears won and not one
-  `run` record, while all three exfiltrations had theirs). `Telemetry.frame` writes a `run` when the stage word it is handed moves into
-  `done` or `failed`, and the page handed it `game.mission.stage`: only the STEALTH mission moves that word into an end. A house taken, a
-  rescue, a night breach won and a team wiped end by their own rules and leave it where it was. The page now hands in
-  `endStage(game.mission.stage, game.verdict.result)` (`src/cloud/telemetry.ts`): the verdict's end where a run has one (`game/verdict.ts`
-  knows every kind's), else the mission's word. The record gained `over`, the verdict in brief (`kind`, `won`, `word`, `why`, `secs`,
-  `approach`, `void` = a cheat was on, `clean`, `lost` of `of`, `foesDown` of `foesOf`, `hostagesAlive` of `hostagesOf`), and one end is one
-  record: a word that moves from an end to the other end (a mission failed whose verdict then says won) writes nothing more. Under
-  `?noverdict` there is no verdict to read and a squad's mission writes no `run`, as before. No switch of its own: a record's content
-  under `?cloudstats=0`. `cloud-check` `telemetry` holds it on a real game (the kill house's room clear, every defender down: the word
-  stayed `infiltrate`, one record, `CLEAR`); `CLOUD_BREAK=1` reads the mission's word alone and is red. RECORDS FROM BEFORE this are
-  missing every squad win and loss that was not a player down: count those from the kept replays, not from `run`.
-- **The display's rate in the records** (same read: `machine.hz` was there only on a browser's first visit). The `visit` record is
-  written the moment the browser may send. On a first visit that is after the notice has been up two seconds, by which time the quality
-  ladder has seen a second of frames (`Quality.displayHz`); a returning browser writes it at boot, before a frame was shown, so the rate
-  was 0 and left out. The rate now rides on every `perf` record and every `run` as `hz`, once it has been seen. The `visit` is as it was.
+  the first test. That is by reading the code and by the count of asks under bun: NEVER MEASURED on a page, never seen on a GPU (the
+  software adapter here has no timestamp queries, so no `perf.gpu` has ever been written by a real page).
 - **The boot and the freezes in the records** (10-26, asked by the owner of the boot timings: shader compiles of tens of seconds on
   Windows at every load are the thing to see from players' machines). A `boot` record, once a visit: what `src/ui/boot.ts` already takes
   (`window.__boot`) — `interactive`, `pipelinesMs` (the ms the boot waited on shader pipelines), `pipelines` (total · done · failed), the
@@ -422,217 +187,21 @@ preferences, etc." No accounts; nothing multiplayer.
   `screen`, `view` (the window), `dpr`, `hz`, `fallback`; `gpu` (above); `bootMs`; `query` (the page's query string without `player`);
   `lang` (the browser's language). The adapter and chip are the GPU stats that were asked for. The full user agent, screen and window
   size, threads, memory, language and query string go further, and TOGETHER ARE CLOSE TO A FINGERPRINT of the machine. The title's notice
-  says "replays, stats, settings and saved files"; it does not list these. Trimming them was the maintainer's choice, put to him 10-26 before any
-  backend existed, of three: drop the full user agent and the language, keep everything, or the GPU and OS only. HIS PICK, 10-27: KEEP
-  EVERYTHING. Nothing is trimmed. Should that change, the lines to cut are one each: `cloud.ts` `hello` (`query`, `lang`) and the
+  says "replays, stats and settings"; it does not list these. Trimming them is the maintainer's choice, put to him 10-26 before any
+  backend exists; nothing is trimmed until he says. The lines to cut are one each: `cloud.ts` `hello` (`query`, `lang`) and the
   `machine` closure in `main.ts`.
-  ADDED 10-28: `power`, the benchmark report's own word ("plugged in", "on battery (62 %)"), on every minute's `perf` record, on a `run`, and
-  on the `visit` where the browser has answered by then (`cloud.ts` `powerAsker`: `navigator.getBattery`, asked once a visit, no prompt, only
-  by a visit whose stats may go; read as it stands each time a record is written, so a laptop unplugged mid-visit shows). WHY: one real Mac ran
-  its benchmark at High on battery one night and a mission at a third of the speed the next, and whether it was on battery the second time is
-  one of the things that would explain it. A low power mode is not something a page can read. The report's machines line says how much of a
-  machine's play was on battery and the lowest charge read. NEW SINCE HIS PICK: one more fact about the machine, sent under "keep everything";
-  it was said to him in the hosting thread, and the one line to cut is `power` in `cloud.ts`'s `new Telemetry`. Check: `cloud-check` "a
-  minute's record, a run's and the visit's say the machine's power". Headless only; no real browser's answer seen.
 - **Not sent**: the notes written on a kept visit (the viewer's and the list's; the dump reader would take a `{k:'notes'}` line), and a
   visit removed with the list's ✕ stays on the backend.
 - **CHECKS** (`npm ci` in `cloud/` first): `bun run tools/qa/cloud-check.ts` (under bun, both stands: `off` · `backend` · `tapes` ·
-  `identity` · `telemetry` · `prefs` · `files`; `CLOUD_BREAK=1` in front must FAIL `tapes`, `off`, `telemetry` and `files`: every third piece is dropped, a
-  browser that sends by the default does not wait for the notice, and a saved file's row is never written) and `PORT=<dev server> node tools/qa/cloud-page.cjs`
+  `identity` · `telemetry` · `prefs`; `CLOUD_BREAK=1` in front must FAIL `tapes` and `off`: every third piece is dropped, and a browser that
+  sends by the default does not wait for the notice) and `PORT=<dev server> node tools/qa/cloud-page.cjs`
   (headless Chromium, software adapter, three browser profiles; its step 4 sets the address a hosted build carries on the dev server's page and
   holds the notice rule: no request before the title's line, the line, then it sends). BOTH RUN AGAINST A STAND-IN (`cloud/test/standin.ts`: the real functions and
   schema in the service's test library behind the same two HTTP routes). `cd cloud && npx tsc --noEmit -p convex/tsconfig.json` typechecks
   the functions.
 - **Known limits**: the page has no secret, so anyone who reads it can call what a page calls. Every call is bounded; the TOTAL is not (no
   rate limit, no cap a browser or a visit). No accounts: an id is as private as its browser's storage and the links made from it.
-- **Saved files go up too** (the maintainer, 10-27: "can you make it so benchmark results upload automatically? can use convex file storage" ·
-  "we should do that for everything that gets downloaded"). `src/cloud/files.ts` `FileSync` + `cloud/convex/files.ts` (table `files`, the
-  bytes in the deployment's FILE STORAGE): `files:start` answers a one-time address, the page POSTs the bytes there, `files:put` writes
-  the row (visit, browser, when, name, kind, type, size, build, and `meta`: the few facts its saver put beside it as one JSON text, 16 KB at
-  most — a benchmark's report, a commit). The page's way in is `Cloud.save(name, blob, kind, meta?, done?)`, the whole answer (`sent`, `held`,
-  `off`, `no`, and later whether it arrived: the bullet "Nothing is downloaded any more" below), made to be the sink of the page's one
-  door for saved files (`src/host/savefile.ts` `SAVED.sink`; which answers the door reads as taken is the door's business).
-  `Cloud.file` is the older yes or no beside it: true only of a file that is going up now, false for one held for the notice, which
-  goes when the notice has been shown. Under the browser's switch and the notice like the
-  rest, its own word `?cloudfiles=0`. A browser still waiting for the notice HOLDS its files in memory (`FILESYNC.hold` 8, 192 MB,
-  oldest let go: a page opened straight onto a benchmark) and sends them once the notice has been shown; a switch that is off holds
-  none. THE NOTICE ON ANOTHER CARD: `cloudNote(card, undefined, {})` (`src/ui/cloudnote.ts`) puts the title's line on a card that is not
-  the title (a benchmark's result) and counts it seen by the same rule, less the live title; with `{ told }` it serves a page that has
-  no hook at all (the error card of a page that never started: `cloudFatal`'s answer). `node tools/qa/cloudnote-page.cjs` holds that
-  rule in a real browser on an empty page (four lines, ten seconds). The red error card calls it (below); the benchmark's card is the performance side's to add. BOUNDS: 32 MB a file, 64 files a visit, a name of plain characters with no folders (the backend refuses the rest and lets the
-  bytes go again). THE NOTICE NAMES THEM: once the page hands files over (by its download door: a recorder's take, a session journal; by `cloudFile`: a saved replay; an
-  exported checkpoint, a benchmark's result), the title's line reads "replays, stats, settings and saved files" (`CLOUD_NOTE`); the
-  maintainer's words for sending them were "everything that gets downloaded". A browser that was told by the older line is not told again.
-  NOT SENT: kind `level` (`FILESYNC.skip`: a level drawn in the editor is somebody's own work, not a record of play; lifting it is the
-  maintainer's call). Read back: `tools/cloud/pull.ts` writes them under `files/` with `files.json` (`--no-files` leaves them).
-  `cloud-check` family `files` (the red path sends the bytes and never writes the row). KNOWN LIMIT: bytes whose row was never written
-  (the page died between the two calls) stay in storage with no row; nothing sweeps them. NEVER RUN against the real service: the
-  stand-in's storage routes are this repo's own (`cloud/test/standin.ts`), so the service's upload address, its CORS answer to a POST
-  of bytes and its size limits have not been met by this code.
-- **Crashes, and reading them** (the maintainer, 10-27, after a tester's AMD machine failed to get a WebGPU adapter and the backend
-  heard nothing of it: "some way to get crash telemetry and metrics would be great. kinda like 'we have sentry at home' with convex").
-  THE RECORD: kind `fatal` = the page died: `message`, `stack` (lines, 16 at most), `stage` (where: 'adapter' · 'device' · 'boot' ·
-  'frame' · …), `data` (the reporter's own bag, plain JSON) and, on a visit that was up, `played` and `frames`. THE WAY IN is one
-  function for whatever puts the error card up: `cloudFatal(q, report)` (`src/cloud/cloud.ts`). Before `cloudBoot` — the game never
-  started, no GPU, no kept store — it names a visit itself (`fatal-…`), writes that visit's `visit` record (`started: false`, the
-  machine the reporter hands in or what `navigator` says) and the `fatal`, and sends at once; after `cloudBoot` it is the live visit's
-  `Cloud.fatal` and goes out on its records at once. Three a visit at most (`FATAL.max`). Same switch (`?cloudstats=0`, `?cloud=0`,
-  the browser's row) and the SAME NOTICE: a browser that has not seen it gets `waits: true` back, and the error card that shows the
-  notice's line (`ui/cloudnote.ts` works on any card) sends by `told()`. null back = nothing is or will be sent. The `error` kind stands
-  as it was (an uncaught error or rejection, a WebGPU error, a lost device: once a message a visit, eight messages). WHO CALLS IT: `main.ts`
-  sets the red card's one listener (`gpu/device.ts` `FATAL.tell`, told of every card after it is drawn: a start with no GPU, a lost
-  device, a throw in the frame loop, an uncaught error) before `main()` runs. `stage` is the card's own ('adapter', 'device'), else
-  'boot' while the start's story still has a sentence and 'run' after; `data` = `{ where, adapter, facts }` (the start's sentence, the
-  adapter's name, the reporter's bag: a start with no GPU hands what the machine said). A page that died before a visit was up asks
-  its own server for the build's commit (`/qa/commit`, a second and a half at most). A browser that has not been shown the notice
-  gets it ON THE CARD, first, and the record goes when it has been in view two seconds. Nothing under `?kitview`, on a build with no
-  backend, or under the words above. `node tools/qa/cloudfatal-page.cjs` holds it on the real page against the stand-in (the
-  adapter stubbed away; a built-in address as a hosted build has; then a page that booted and threw): 6 lines pass,
-  `CLOUDFATAL_BREAK=1` red. NEVER SEEN: a machine that really has no adapter, the real service taking a `fatal`.
-  READING: `bun run tools/cloud/errors.ts [--since ISO] [--metrics] [--json]` (address and key from the environment, as the pull;
-  queries only): a block a distinct message (two that differ in a number, an address or a place in a file are one), pages that died
-  first, then by how many browsers met it, each with its count, visits, browsers, builds, GPUs (the adapter, or "no WebGPU adapter ·
-  <the WebGL card>"), stage, first and last time and a stack; `--metrics` adds a line a browser (GPU, visits, the shader pipelines'
-  wait, the frame's median and 99th, the GPU's ms, the preset it sat on, minutes played). It reads the newest 2000 records a kind.
-  `cloud-check` holds the record (`off`) and the report (`telemetry`). Run once against the real backend, 10-27: two browsers, no
-  crashes and no errors yet, so no real `fatal` has been read.
-- **Notes on a replay go up too** (10-27: with the hand-over file leaving the page, what it alone carried needs a road). The notes
-  written on a kept visit in the viewer, and the F7 shelf's saved windows with theirs, are lines in the backend's `notes` table
-  (`cloud/convex/notes.ts`; a line per browser and key, `visit:<sid>` or `f7:<session>:<savedAt>`, written over when it changes), in
-  the hand-over format's own shapes (`{k:'notes'}`, `{k:'f7'}`: `replay/kept.ts`). `src/cloud/notes.ts` (`NoteSync`) is a sync of
-  what the browser holds: a round every 30 s reads the kept rows and the shelf and sends a line only where its text differs from the
-  one that last went (marks in `twopointsix.cloud.notes`); notes taken off again go as a line with none. A saved window whose visit is
-  NOT kept in this browser (its trace is in no tape) goes up whole, once, as a saved file of kind `f7`. THE SWITCH IS THE TAPES'
-  (`?cloudtapes=0`, `?cloud=0`, the browser's row, the notice first), and the notes of a visit whose tape may not go stay with it, as does a window saved out of such a visit:
-  a note is part of a replay, which the title's line names. BOUNDS: 256 KB a line, 16 lines a call, 1,500 keys a browser. THE VIEWER:
-  `cloudNotes(q, store)` (`cloud.ts`) is one round for a page that has no game: the replay viewer calls it after each save of a note
-  (`replay/viewer.ts` `flush`), so a note typed, changed or emptied there is on the backend within the second, with no game page
-  open. Rounds run one at a time with at most one more waiting (two saves a moment apart must not both send the line). Held on the
-  real viewer page by `tools/qa/cloudlocal-page.cjs` (typed, edited, a second one, the first emptied, then pulled and read in the
-  visit's moments). READ BACK: `tools/cloud/pull.ts`
-  appends the lines to the hand-over file it writes, after the visits, each behind a line break (a cut tape's last bytes may not end
-  a line), so `tools/qa/replay-dump.ts` reads them as it always did; `--no-notes` is not a word, a backend from before the table is
-  read without them. `cloud-check` family `notes` (six lines; the red path marks a line as sent that never went). NEVER RUN against
-  the real service; nothing calls the page's shelf under a real browser in a check (the shelf's two reads are `replay/shelf.ts`'s own).
-- **A local build has a local backend** (the maintainer, 10-27: "we can make the local build use a local convex deployment").
-  `bun run dev` sets `TPS_LOCAL_CLOUD=1`; `tools/serve.ts` then calls `tools/cloud/local.ts` `localCloud()`, which runs
-  `convex dev --tail-logs disable` in `cloud/` (Convex's own backend on this machine; it pushes `cloud/convex/` and keeps pushing as
-  the functions change), with no account when `cloud/` has no `.env.local` yet (`CONVEX_AGENT_MODE=anonymous`) and NEVER with a
-  deploy key, a deployment or an address from the shell (those are taken out of the child's environment: a dev server must not be
-  able to push to the deployment a key names). Needs `cd cloud && npm ci` once; without it the server says so and the page has no
-  backend. `TPS_DEV_CLOUD=<address>` in front hands the server a backend that is already up (a stand-in, a `convex dev` in another
-  terminal, or a hosted address), and nothing is started. NOT `TPS_CLOUD_URL`: that word is the hosted build's address for
-  `tools/build.ts` and the reading tools, and a shell that has it exported must not turn a dev server's play into the real
-  backend's data (a review found the first cut read it). A backend that answers at the address the tool last wrote but that THIS
-  start did not bring up is not taken: it may hold old functions or be another project's; `convex dev` stopping by itself is said
-  in a sentence. The dev server stops its `convex dev` with an interrupt (the tool stops its backend on that, not on a plain kill)
-  and starts it only once its own port is bound. A plain
-  `bun run tools/serve.ts` (every check's server) starts nothing. THE PAGE: a page served from `localhost` / `127.0.0.1` / `[::1]`
-  with no address built in asks its own server once, `GET /qa/cloud` (`cloud.ts` `cloudFind`, awaited by `cloudAdopt` in the game
-  and by `cloudNotes` in the viewer; a built page has an empty `dist/qa/cloud`), and takes a loopback or https address it is told as
-  its backend. ONLY A LOOPBACK ONE is the browser's OWN choice (`cloudLocal`, `cloudChosen`): it sends with no notice to wait for and
-  shows no line about sending (`ui/cloudnote.ts`), since nothing leaves the machine. A hosted address named that way is a backend
-  like a built-in one: the notice first. `?cloud=0` and the per-kind words still put it off, and an address
-  on the address bar still wins. The server does not wait for the backend: the address is handed out once it answers `GET /version`,
-  so a page loaded before that (a first run downloads Convex's backend) has none for that load. Data stays under `cloud/.convex/`
-  (ignored by git). READ IT BACK: `bun run tools/cloud/pull.ts --local --out DIR` and `bun run tools/cloud/errors.ts --local` take
-  the address and the key from `cloud/.convex/local/default/config.json`; the key is never printed. CHECKS: `cloud-check` family
-  `local` (eight lines, a fake `convex` and the stand-in: who asks, what is taken, that a hosted address is not the machine's own,
-  what is started and with which environment, when the address is handed out, that a backend this start did not bring up is not
-  handed out, the interrupt on stop); `node tools/qa/cloudlocal-page.cjs` (its own dev server handed the stand-in by `TPS_DEV_CLOUD`: a game page with no word
-  has the backend and its tape goes up; the viewer's notes as above; `CLOUDLOCAL_BREAK=1` starts the server with none and must
-  fail). NEVER RUN: `convex dev` itself. The machine these were written on cannot fetch Convex's backend, so the first real start
-  (the download, the anonymous deployment, where it writes its address) is the maintainer's; the two places the address is looked
-  for (`cloud/.env.local`'s `CONVEX_URL`, then the local config) are read from the tool's own source, not seen working.
-- **Nothing is downloaded any more: the backend's side** (the maintainer, 10-27: "we should get rid of local downloads entirely"; his
-  pick for a file that cannot go up, from a card: "No downloads, editor keeps files", so no browser download for any kind but the
-  editor's level files, and a save that cannot reach the backend SAYS it was not sent). This step is the backend's half only: the
-  door (`host/savefile.ts`) and each save button are their owners' and still download until they change. WHAT THEY GET:
-  `Cloud.save(name, blob, kind, meta?, done?)` (`cloud.ts`; beside `Cloud.file`, whose true / false stays for the sink line as it
-  is) answers `Saved`, in the door's own words: `'sent'` on its way (queued and going, not yet arrived), `'held'` until the notice has been read, `'off'` this browser does not send files (its
-  switch, `?cloud=0`, `?cloudfiles=0`), `'no'` this file cannot go (empty, over 32 MB, a level); `done(arrived)` is told once, later,
-  only of a file that was taken: true = its row is on the backend, false = it was let go (the backend refused it, four failed tries,
-  the switch went off while it waited, more than eight waiting). `cloudFile(q, name, blob, kind, meta?)` is the one-file way in for
-  a page that boots no game (the replay viewer; nothing calls it yet): it resolves `'sent' | 'failed' | 'off' | 'no'`, files the
-  file under a name made for the page load (`page-…`), tries a failed sending again by itself, and on the game's own page goes
-  through the visit that is up. A browser that has not read the notice on a page that cannot show it is `'off'`. `FileSync.add`
-  takes the same `done`; a file whose bytes are on their way is no longer the one let go when too many wait. A build with no
-  backend has no `Cloud` at all, so its door has no sink and its saver knows that by itself. CHECK: `cloud-check` family `files`,
-  three more lines (how a file ended, the page's answer, the one-file way in; the red path says "arrived" of a file with no row).
-  `Cloud.filesIdle(capMs = 15000)` is for a page about to leave (a card's Close navigates, and the sending is a file's only copy):
-  true once every file that may go has gone or been let go; false when the cap is over, a sending failed, or what is left waits for
-  the notice. `cloudSendsFiles(q)` is what a page asks before it draws a save button (a backend, the switch, the files' word, the
-  notice read or the sending the browser's own choice; game or no game; it sends and counts nothing). `cloudCarries(q, sid)` says
-  whether the notes of visit `sid` go up by themselves from this page (the replays' rules, and the visit is one of this browser's own
-  whose tape may go): false for a replay opened from a file, where a note reaches the backend only if somebody sends the file. A
-  REPLAY IS A REPLAY WHICHEVER ROAD IT TAKES (`replayMay`): a saved file of kind `replay` or `f7` goes only under the replays' own
-  word as well (`?cloudtapes=0` holds it back, through `Cloud.file`, `Cloud.save` and `cloudFile` alike; before, the door sent a saved
-  replay under that word), and one that names a visit of this browser in its facts (`meta.session`) only while that visit's tape
-  may go, so a window cut out of a visit played with the sending off stays with it. A replay that names no visit (a file opened in
-  the viewer, sent by a press) is not judged. A TEXT FILE IS PACKED on its
-  way (`FILESYNC.packFrom` 256 KB; JSON, ndjson, plain text; `CompressionStream`, and a browser without one, or a packer that
-  fails, sends the file as it is): a recorder's long take is some 50 MB of JSON, past the 32 MB bound on what is sent, and with nothing downloaded it would be
-  kept nowhere. The row is `<name>.gz`, `application/gzip`, with `packed: 'gzip'`, `rawBytes` and `rawType` in its facts, and
-  `tools/cloud/pull.ts` writes it out as it was saved under its own name. A text file is held up to `rawMax` 192 MB (= `holdBytes`: the
-  newest file is never the one let go, and one that could not be held alone is not taken); one past the bound even packed is let go
-  and its saver told. The pull unpacks no more than `rawMax` (a row's facts come from a browser); a long name keeps its head and
-  its extension under `.gz`. `cloudFile`'s retries on a page with no rounds of its own run until every file handed over has gone
-  or been let go, so each saver hears its end. The backend's bound and schema did not move. A NO-GAME
-  PAGE'S NOTES (`cloudNotes`) now carry a saved window whose visit is not kept whole, through the page's own file intake, as the
-  game's page does. CHECK: three more `files` lines (the page's question, a 3 MB take packed to a fifteenth and pulled back byte
-  for byte, the wait). NOT RUN: the no-game page's whole-window road (the shelf needs a browser), packing in a real browser.
-  NOT DONE HERE and nobody has seen it: any save button's words, the door without its click. NEVER RUN against the real service.
-- **THE FIRST REAL READ (10-27)**. The maintainer made the host's project and the backend's, and played. Read back with
-  `tools/cloud/pull.ts` (queries only): one browser (an Apple-silicon Mac, Chrome, Metal, timestamp queries on), four visits on the
-  build's head, two replays WHOLE (82 s in 22 pieces, 20 s in 5) that `replay-dump.ts` unpacked and of which one was run again by
-  `replay-at.ts --rerun` (exit 0), 27 records (`visit` 4, `boot` 4, `perf` 6, `run` 2, `end` 11) and a settings row at its eighth
-  revision. So the host's build, its deploy of the backend, the address in the page, the service's CORS answer and the notice's gate all
-  worked once, on one machine. WHAT THE RECORDS SAID: the pipelines took 13.4 s on the first load and 1.2 to 9.3 s after; Auto sat at
-  Very low and Low at half scale with the GPU at 10 to 14 ms a frame. Two flaws showed and are mended (the tab bullet and the two pass
-  lists, above).
-- **STILL NEVER SEEN**: the hosted page itself by anyone but the maintainer (this environment may reach the backend, not the host), the
-  link between two browsers on the hosted build, the notice's line, the two Options rows and the link's question by eye, two tabs of
-  one browser (the live switch), a Windows machine, a browser other than Chrome, the mended records from a real page.
-- **Co-op's control plane (11-02)** = `cloud/convex/games.ts` · `runners.ts` · `modal.ts` · `http.ts` · `crons.ts`, tables `games` and
-  `runners`. The maintainer: "we'll keep most of the backend in convex but then have the convex control plane spin up modal sandboxes for
-  each game server"; "we need to bound the total number of sandboxes and make sure we cleanup idle games". A page MAKES a game (`games:make`:
-  the setup record → a five-letter code, the first seat and its key), another JOINS by the code, both read `games:get` until an address is
-  there, then talk to the server. THE CAP is counted in the mutation that writes the game (a runner's `cap`; refused `full: …`) and it is a
-  cap on SERVERS: a place is held by every live game and by every game over whose server no sweep has yet seen gone (`dirty - swept`). A server
-  says how it is at `POST <site>/mp/heartbeat` (`{game, secret, state, tick, seats, outcome?}`; 410 = no live game has this id: stop).
-  THE REAPER (`games:reap`, a cron twice a minute, a mutation that reads the live games and no more) ends a game by four clocks
-  (`MP_START_S` 120 never heard from · `MP_SILENT_S` 45 silent · `MP_IDLE_S` 60 nobody connected · `MP_MAX_S` 3600 its life; the last two
-  one silence later than the server's own). A SERVER IS STOPPED BY THE SWEEP and no other way: list what the runner carries, stop what is
-  ours (`owner` = the deployment's host name) and names no live game; a sweep that did not finish is asked again by the reaper
-  (`runners.dirty` ≠ `swept`). A failed start reads `start failed` to a page; what the runner said is `games.detail`, a key's read
-  (`npx convex run games:list`). THE SEAM is `call` in `runners.ts` (start · stop · list · ready), two runners behind it by the runner's
-  address alone: `http(s)://` = HTTP with a bearer key — the dev server (`tools/mp/runner.ts`, wired in `tools/serve.ts` at `/mp/runner/`,
-  registers itself with the backend on its own machine; a child process a game, `MP_SERVER` names the server's file, `MP_CAP` 2) — and
-  `modal:<app>` = `modal.ts`, a Node action on Modal's client with the deployment's `MODAL_TOKEN_ID` / `MODAL_TOKEN_SECRET` (a sandbox a
-  game, image = `oven/bun` + the repository at the build's commit, `MP_HOST=0.0.0.0`, port 8080 behind a TLS tunnel, handed back once /health answers through
-  it, killed by Modal at `maxS` + 120 s). SAME BUILD: a runner says which builds its servers can be (`runners.builds`) and a game is made
-  only on a runner of the page's build (`build: …` otherwise); the dev server's is the one commit it runs from; `tools/host/build.sh`
-  tells the backend the page's commit at every deploy (`runners:hosted`, which has that image built and keeps the two builds before it, so
-  a page open across a deploy and a deploy rolled back still get servers). `cloud/`
-  now has ONE run-time package (`modal`, external in `cloud/convex.json`). CHECK: `bun run tools/qa/mp-control-check.ts [cap idle join door
-  reaper runner hosted]` — the stand-in backend, the REAL local runner, stand-in servers as real processes (`tools/mp/runner-standin.ts`),
-  clocks set to seconds; `MPCAP_BREAK=1` must fail `cap`, `MPREAP_BREAK=1` must fail `reaper` and `runner` (both words are dead on the
-  service: they are read only where `CONVEX_CLOUD_URL` is not set). Not game code: no stand of the two applies. By hand: `bun run dev`, then `bun run tools/mp/runner-try.ts`. ONE REAL SANDBOX (11-02, the hosted
-  backend on the build that first carried this): the deploy had registered the runner with the page's commit (`runners:list`: one build,
-  cap 4, its first sweep through); `runner-try.ts --cloud … --build …` made a one seat game; it read `waiting` at a `wss://` tunnel address
-  6 s later (so the image was ready, the sandbox up and /health answered through the tunnel), the backend went on hearing the server's
-  heartbeats, and at 66 s the game read `ended` by the server's own word (nobody connected for a minute) with the runner swept whole and no
-  game live. A CLIENT THROUGH THE TUNNEL (the same day, once the tunnel's hosts were allowed
-  where this is run): a second game, /health read over https at the tunnel's address, `tools/mp/bot.ts` sat in the seat over `wss` on the
-  line the try tool prints and walked 600 confirmed ticks with every state word the server's own (20 of 20); the backend read connected,
-  playing, then `ended` a minute after the client left, and the tunnel's address stopped answering. (bun's `WebSocket` does not take a
-  proxy from the environment: behind one, the client needs the `proxy` option.) NEVER SEEN on the real service: a browser page as the
-  client, two seats, a sandbox stopped while its server still ran (both ended themselves), the reaper's own ends (never started, silent, lifetime), a start that fails on
-  Modal, Modal's own kill at `maxS` + 120 s, two `make`s racing for the last place (the test library runs one mutation at a time); nor
-  `convex dev`'s own backend calling the dev server. NOT
-  DONE: a browser may hold seats in many games; a game's joiner brings no kit of his own (the setup record is the host's); nothing on the
-  page; a live game whose server the runner no longer lists is found by its silence (45 s), not by the sweep. THE REAL SERVER
-  (`tools/mp/server.ts`, step 1186) is what both runners start. A client's hello to it names its game, so a seat's holder is told that
-  name too (`game` in the view, the row's id). Run by hand on the join, no page: a dev server on a stand-in backend, `runner-try.ts`
-  (one seat, what a mission has today: the server refuses a setup whose seats are not the mission's own count; `--seats 2` for more), the scripted client `tools/mp/bot.ts`
-  on the line the try tool prints: starting, waiting, playing with the seat connected, ended 20 s after it left.
+- **NEVER RUN, NEVER SEEN (10-26)**: a real Convex deployment (the service's own limits, its CORS answer to a page on another origin, the
+  deploy from the host's build), the host's build itself (that its image has `bun`: the script installs it where it has not), the hosted
+  build itself in a browser (the page check sets its address on the dev server's page), anything of it on a GPU, the GPU's time in a
+  record from a real page, the notice's line, the two Options rows and the link's question by eye, two tabs of one browser (the live switch).

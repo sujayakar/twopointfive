@@ -14,8 +14,7 @@
 // model: a searcher noticing wet prints): a soaked man come indoors DRIPS for a few seconds (GPU water-drop particles off his hands and hem, particleFx's
 // 'debris' kind — nothing with the particles off) and leaves WET FOOTPRINTS, a 'wetprint' decal per step for his next WET.prints steps, fainter each step,
 // each fading out over WET.printFadeSecs (decals.wgsl wetPrintMark; nothing with the decals off).
-import { men, eachSeat, isManId } from './seats';
-import { SideMap, rollbackVar, rollbackRoot, GameSideMap } from '../math/side';
+import { SideMap, rollbackVar, rollbackRoot } from '../math/side';
 import { Vec3, v3, clamp } from '../math/vec';
 import type { Game } from './game';
 import type { Character } from './character';
@@ -23,6 +22,7 @@ import type { WeatherFrame } from '../render/frame';
 import type { Decal } from '../render/decals';
 import { INTERIOR, ANNEX } from './weather';
 import { gpuFx } from './particleFx';
+import { PLAYER_ID } from './consts';
 
 /** The knobs (Tab ▸ Weather ▸ wet characters; kept per machine like the whistle's). The first block is the model's, the second the look's — those ride to the
  *  GPU per character instance (anim/characters.ts setInstance) so the shaders need no uniform of their own. */
@@ -52,7 +52,7 @@ const mem = new SideMap<Character, WetMem>('wet.mem');
 const memOf = (c: Character): WetMem => { let m = mem.get(c); if (!m) { m = { skyT: -1, open: true, printsLeft: 0, lastOutWetT: -1e9, dripAcc: 0 }; mem.set(c, m); } return m; };
 /** the prints this module placed, with when: aged (param) and retired here, cleared with every other mark by resetLevelState */
 interface PrintRec { d: Decal; t0: number; k0: number; }
-const prints = new GameSideMap<Game, { list: PrintRec[]; ageT: number }>('wet.prints');
+const prints = new SideMap<Game, { list: PrintRec[]; ageT: number }>('wet.prints');
 const printsOf = (g: Game) => { let p = prints.get(g); if (!p) { p = { list: [], ageT: 0 }; prints.set(g, p); } return p; };
 /** counters for the panel / probes */
 export const WET_STATS = { skyTests: 0, prints: 0, drips: 0 };
@@ -90,7 +90,7 @@ export function rainNow(g: Game): number { return Math.max(0, (g.engine as { wea
 export function inRain(g: Game, c: Character): boolean { return rainNow(g) > 0.001 && openSky(g, c); }
 
 /** every character the game draws: Sam, then the guards (shift, units, the breach's cast — whoever is in Game.guards), living or not */
-export function everyCharacter(g: Game): Character[] { return [...men(g).map(pl => pl.char), ...g.guards.map(gd => gd.char)]; }
+export function everyCharacter(g: Game): Character[] { return [g.player.char, ...g.guards.map(gd => gd.char)]; }
 
 /** Once a frame (game.ts, after the weather has written this frame's rain): soak / dry everybody, and Sam's drips + print budget. */
 export function updateWetness(g: Game, dt: number) {
@@ -111,7 +111,7 @@ export function updateWetness(g: Game, dt: number) {
     }
     if (c.wet <= 0 && c.beads <= 0) { c.wetRain = 0; c.wetLine = Infinity; }   // dry: the next wetting starts from a whole man again unless whoever wets him says otherwise
   }
-  eachSeat(g, v => samAftermath(v, dt));
+  samAftermath(g, dt);
   agePrints(g);
 }
 
@@ -201,7 +201,7 @@ export function wetKnobs(out: Float32Array, o: number) {
  *  or up to a `line` (bind-pose m above the sole) as if he had waded that deep: 'wet to the knee' = soak(g, c, 1, 0, 0, 0.55) — the coat below the line, no drops, no rain */
 export function soak(g: Game, c: Character, wet = 1, beads = wet, rain = 0.8, line = Infinity) {
   c.wet = clamp(wet, 0, 1); c.beads = clamp(beads, 0, 1); c.wetRain = c.wet > 0 || c.beads > 0 ? rain : 0; c.wetLine = line > 0 ? line : Infinity;
-  if (isManId(c.id)) { const m = memOf(c); m.printsLeft = c.wet > 0.5 ? WET.prints : 0; m.lastOutWetT = g.time; }
+  if (c.id === PLAYER_ID) { const m = memOf(c); m.printsLeft = c.wet > 0.5 ? WET.prints : 0; m.lastOutWetT = g.time; }
 }
 export function dryAll(g: Game) { for (const c of everyCharacter(g)) { c.wet = 0; c.beads = 0; c.wetRain = 0; } }
 /** 'wet ▸ Sam 0.82 coat / 0.40 beads (indoors, dry air) · Kowalski 0.00 …' */

@@ -6,7 +6,6 @@
 // item on the floor (throwables.ts) and the count only ever falls. Any Character may fire one (fireRing takes the shooter): Sam today off the rifle in his hands
 // (player.ts: the RING attachment selected with the rifle's slot digit, let go on the right button), an operative handed the same rifle later. Rings in flight live on Game.rings; game.ts steps them right after the player and
 // draws them with the items.
-import { isManId, manById } from './seats';
 import { Vec3, v3, quat } from '../math/vec';
 import { GEAR, gearText } from './gear';
 import { BoxFlag, makeBox, Box } from '../scene/boxes';
@@ -17,6 +16,7 @@ import { RING_ITEM, spongeBoxes } from './throwables';
 import { killGuard, bodyHit } from './combat';
 import { civilianBodies, toAlarmed } from './civilians';
 import { endGuardScript } from './squad';
+import { PLAYER_ID } from './consts';
 import { chipMark, staticSurface } from './marks';
 import { clackFx } from './particleFx';
 import { w } from './words';   // (a leaf: the dialogue pass's one switch)
@@ -178,7 +178,7 @@ function clack(g: Game, at: Vec3, k = 1) {
  *  shooter's hand (breathing; what he held laid down; the found-body lines will say so), the dull thump of it, a thud-level noise at him. Lower: the stagger. Sam
  *  on the end of somebody else's ring: the flinch and a word — it does no damage to anybody, ever. Either way the ring drops at his feet, spent. */
 function ringHitsCharacter(g: Game, r: Ring, c: Character, gd: Guard | null, dir: Vec3, at: Vec3) {
-  const R = RING; const byPlayer = isManId(r.shooter.id);
+  const R = RING; const byPlayer = r.shooter.id === PLAYER_ID;
   const neck = c.bones.neck ?? v3.add(c.pos, [0, 1.42, 0]);
   const high = at[1] >= neck[1] - R.koBelowNeck;
   if (!gd) {   // Sam (an operative's ring, one day; his own can never reach him)
@@ -220,7 +220,7 @@ export function staggerGuard(g: Game, gd: Guard, dir: Vec3, shooter: Character) 
   if (g.aiEnabled) gd.witness.heard.small++;   // (his record: something got him — counted with the small things; the alert it tips him into books itself next frame)
   { const pool = w(gd.state === 'alert' ? STAGGER_LINES.filter(t => !/who's there/.test(t)) : STAGGER_LINES, STAGGER_LINES); g.say(gd, pool[Math.floor(simRandom() * pool.length) % pool.length]); }   // (words.ts: a man already fighting Sam knows who is there; one roll either way)
   g.events.push({ kind: 'prop', pos: v3.copy(c.pos), time: g.time, loud: false, level: R.hitNoise, who: shooter.id });
-  { const pl = manById(g, shooter.id); if (pl) pl.noise = Math.max(pl.noise, R.hitNoise); }
+  if (shooter.id === PLAYER_ID) g.player.noise = Math.max(g.player.noise, R.hitNoise);
 }
 /** the stagger lines (the QA soak counts them as their own smell, not a bark repeat) */
 export function staggerLines(): string[] { return [...STAGGER_LINES]; }

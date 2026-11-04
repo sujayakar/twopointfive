@@ -56,7 +56,6 @@
 // COUNTED and ride a checkpoint with the rest (runnerSnapshot / Restore).
 // The switch is off in the module and on the frozen stand, and acts only with MORALE.on: every seam returns on its first line, no man is met, no die is drawn.
 // Type-only game imports but for the functions below, used inside calls only (src/game is one import cycle).
-import { facedMan } from './seats';
 import { SideMap } from '../math/side';
 import type { Game, Guard, GuardScript } from './game';
 import type { Character } from './character';
@@ -152,7 +151,7 @@ function known(g: Game, gd: Guard): Foe[] {
  *  on); nobody for a man with magnesium in his eyes */
 function closeFoe(g: Game, gd: Guard): Character | null {
   if (g.time < gd.dazzledUntil) return null;
-  let best: Character | null = null, bd: number = RUNNER.closeM; const P = facedMan(g, gd);   // (the player he has in mind: seats.ts)
+  let best: Character | null = null, bd: number = RUNNER.closeM; const P = g.player;
   if (isHostile(gd.team, 'player') && !P.down && !g.playerInvisible) { const vis = canSee(g, gd); if (vis.visible && vis.dist <= bd && sightGain(g, gd, vis.dist) > 0.25) { best = P.char; bd = vis.dist; } }
   for (const o of g.guards) { if (o.state === 'dead' || !isHostile(gd.team, o.team)) continue; const vis = canSeeChar(g, gd, o.char, false); if (vis.visible && vis.dist <= bd && sightGainOn(g, gd, o, vis.dist) > 0.25) { best = o.char; bd = vis.dist; } }
   return best;

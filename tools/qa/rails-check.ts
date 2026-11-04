@@ -652,7 +652,7 @@ export async function railsCheck(): Promise<boolean> {
         const pair = (at: V) => { W.cursorAt(at); step(2); W.cursorAt(at); I.keys.add('ShiftLeft'); step(2); I.keys.add(KEY); I.pressed.add(KEY); step(); I.keys.delete(KEY); step(3); I.keys.delete('ShiftLeft'); step(12); };
         const at = (id: string): V => L.steps.find((T: any) => T.id === id).at;
         g.godMode = true; step(30); for (const m of O.squad()) m.god = true;
-        const g0 = PM.PLAN_STATS.goals, e = { locked: g.rails.locks('goal') as boolean, his: PM.goalsOn(O) as boolean, n: 0, goals: 0, plan: false, first: (CMDRING.goalHalf ? 2 : 4) as number };   // (first: who a first goal is for as this game was stood — half the squad's since `CMDRING.goalHalf`)
+        const g0 = PM.PLAN_STATS.goals, e = { locked: g.rails.locks('goal') as boolean, his: PM.goalsOn(O) as boolean, n: 0, goals: 0, plan: false };
         pair(at('door1')); e.n = on('guard').length; e.goals = PM.PLAN_STATS.goals - g0; e.plan = !!O.plan?.up;
         if (frame) for (let i = 0; i < 40 * 60 && g.lesson.step?.id !== 'door2'; i++) step(); else step(120);
         const g1 = PM.PLAN_STATS.goals, l = { step: (g.lesson.step?.id ?? '(none)') as string, locked: g.rails.locks('goal') as boolean, his: PM.goalsOn(O) as boolean, a: 0, b: 0, whole: false, goals: 0, plan: false };
@@ -662,7 +662,7 @@ export async function railsCheck(): Promise<boolean> {
       let A: any, B: any, C: any, D: any; try { A = await stand(true, false); B = await stand(true, true); C = await stand(false, false); D = await stand(true, false, false); } finally { knobsBack(k0); }
       const taught = A.e.locked && !A.e.his && A.e.n === 4 && A.e.goals === 0 && !A.e.plan && A.l.step === 'door2' && !A.l.locked && A.l.his && A.l.a === 2 && A.l.whole && A.l.goals === 1 && !A.l.plan;
       const untaught = B.e.locked && !B.e.his && B.e.n === 4 && B.e.goals === 0 && B.l.locked && !B.l.his && B.l.a === 0 && B.l.b === 4 && B.l.goals === 0 && !B.e.plan && !B.l.plan;
-      const free = !C.e.locked && C.e.his && C.e.n === C.e.first && C.e.goals === 1 && C.l.his && C.l.a === 2 && C.l.whole && C.l.goals === 1 && !C.l.plan;
+      const free = !C.e.locked && C.e.his && C.e.n === 4 && C.e.goals === 1 && C.l.his && C.l.a === 2 && C.l.whole && C.l.goals === 1 && !C.l.plan;
       verdict(taught && untaught && free,
         'the goal\'s step: Shift with the command key is the plain key until a step lists `goal` and parts a whole pair off from that step; a lesson that never lists it keeps the plain key; with the frame off the rule is his from the first tick',
         `the lesson as written (tut-queue): ${A.said}\n    no step lists it: ${B.said}\n    the frame off: ${C.said}`);

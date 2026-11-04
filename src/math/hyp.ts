@@ -118,10 +118,7 @@ export let hyp4: (a: number, b: number, c: number, d: number) => number = own4;
 /** THE GAME'S OWN MATHS (math/exact.ts, which alone calls this): on = every length by the one algorithm whatever the runtime's Math.hypot does — the Kahan sum,
  *  Chrome's own, so the page in Chrome computes the lengths it always did; off = each runtime's own bits again, as picked above. Under ?nohyp / TPS_NOHYP=1
  *  nothing moves: every length still goes through Math.hypot itself, which is then the game's own (the same sum, so the same bits, at the A/B's cost). */
-export function hypExact(on: boolean, other: { hyp2: typeof hyp2; hyp3: typeof hyp3; hyp4: typeof hyp4 } | null = null): void {
-  if (held) return;
-  hyp2 = on ? (other?.hyp2 ?? kahan2) : own2; hyp3 = on ? (other?.hyp3 ?? kahan3) : own3; hyp4 = on ? (other?.hyp4 ?? kahan4) : own4;   // (`other`: the same sums from elsewhere — exact.ts mathsFrom)
-}
+export function hypExact(on: boolean): void { if (held) return; hyp2 = on ? kahan2 : own2; hyp3 = on ? kahan3 : own3; hyp4 = on ? kahan4 : own4; }
 /** the Kahan sum for any number of terms (what Math.hypot becomes under the game's own maths) */
 export function kahanN(v: ArrayLike<number>): number {
   const n = v.length;

@@ -44,11 +44,10 @@
 // NOT here: a charge on a door (doortools.ts, and the doors goal's own blast), the frag (the gear goal), what either side makes of a hole afterwards.
 // Restart / a checkpoint's load: a new Player or a new cast is a fresh run — nothing set, nothing under way (sync); the wall itself is the engine's to put
 // back. A set charge is not saved.
-import { eachSeat, seatShare } from './seats';
 import { SideMap } from '../math/side';
 import { holdFireOrder } from './holdfire';   // (called inside blow only)
 import { Vec3, v3, clamp, lerp } from '../math/vec';
-import type { Game, Guard, Interactable, Player, Verb } from './game';
+import type { Game, Guard, Interactable, Verb } from './game';
 import type { Input } from './input';
 import type { OrderDef, OrderTarget, OrderNote, SquadOrders, Assignment } from './orders';
 import type { Box } from '../scene/boxes';
@@ -65,6 +64,7 @@ import { civiliansShown } from './civilians';   // (called inside blow only)
 import { NIGHTBREACH } from './nightbreach';
 import { COVER } from './cover';
 import { isHostile } from './teams';
+import { PLAYER_ID } from './consts';
 import { PACE } from './guards';
 import { WORDS, wg } from './words';   // (a leaf: the dialogue pass's one switch)
 import { SAMSTUN, dazzlePlayer } from './samstun';
@@ -443,7 +443,7 @@ export class WallCharge {
     this.row.page = page ? WALL_PAGE : undefined; this.row.key = page ? 3 : 5; S.register(this.row); this.seated = true;
   }
   /** a fresh run: nothing set, nothing under way (the counts are the door tools' to put back) */
-  reset() { this.ops = []; this.done = []; this.set = []; this.sam = null; this.offered = null; this.alone = 0; this.carried = this.brought = WALLCHARGE.carried === null ? null : seatShare(this.g, WALLCHARGE.carried); this.log = []; for (const k of Object.keys(this.stats) as (keyof WallCharge['stats'])[]) this.stats[k] = 0; this.lastBlow = null; this.walks = null; this.keep.asks = this.keep.hits = 0; this.away.clear(); this.awayMarks.clear(); this.awayNone.clear(); }
+  reset() { this.ops = []; this.done = []; this.set = []; this.sam = null; this.offered = null; this.alone = 0; this.carried = this.brought = WALLCHARGE.carried; this.log = []; for (const k of Object.keys(this.stats) as (keyof WallCharge['stats'])[]) this.stats[k] = 0; this.lastBlow = null; this.walks = null; this.keep.asks = this.keep.hits = 0; this.away.clear(); this.awayMarks.clear(); this.awayNone.clear(); }
   /** the switch went off mid-run: what is set comes off the wall and back into the bag, what is under way ends where it stands */
   private stop() { for (const op of [...this.ops]) this.end(op, 'switched off'); for (const c of this.set.splice(0)) this.giveBack(c, 'switched off'); this.sam = null; this.marker = null; this.walks = null; }
   private note(what: string) { this.log.push({ t: this.g.time, what }); if (this.log.length > 300) this.log.splice(0, 100); }
@@ -1060,7 +1060,7 @@ export class WallCharge {
   // ------------------------------------------------------------ the blast
   /** Sam's trigger on one charge (F, the menu's 'blow the charge', a probe): the wall opened through the engine's blast entry point, the stun charge's report
    *  and flash with nobody on its list, the door charge's rule for the men near it — and the squad that set it goes in behind it */
-  blow(c: SetWallCharge | null = this.nearest(), pressed = true): { hole: boolean; knocked: number; stunned: number; backblast: number; lost: number } | null { return this.g.fogOfWar.doing(this.g.player.char.id, () => this.blowRaw(c, pressed)); }   // (the whole blast — the hole, the pall, the mess — is the team's doing: fogofwar.ts FOG.ours)
+  blow(c: SetWallCharge | null = this.nearest(), pressed = true): { hole: boolean; knocked: number; stunned: number; backblast: number; lost: number } | null { return this.g.fogOfWar.doing(PLAYER_ID, () => this.blowRaw(c, pressed)); }   // (the whole blast — the hole, the pall, the mess — is the team's doing: fogofwar.ts FOG.ours)
   private blowRaw(c: SetWallCharge | null, pressed: boolean): { hole: boolean; knocked: number; stunned: number; backblast: number; lost: number } | null {
     if (!c) return null; const g = this.g, K = DOORTOOLS, W = c.wall, i = this.set.indexOf(c); if (i < 0) return null; this.set.splice(i, 1);
     holdFireOrder(g, 'wallCharge', { blown: true });   // (holdfire.ts: a charge starts the fight when it GOES, not when it is set)
@@ -1068,11 +1068,11 @@ export class WallCharge {
     const breach = W.outer && WALLCHARGE.outer && g.destr.walls.adopt(W.index) ? { breach: W.index } : null;   // (an outer wall: the engine takes it on now, and this blast alone opens it — WALLCHARGE.outer)
     const hung = WALLCHARGE.hung ? { hung: { wall: W.index, r: WALLCHARGE.hungM } } : null;   // (what hangs on the wall under the charge — a notice board — is the charge's too: WALLCHARGE.hung)
     if (WALLSHOT.on) g.cleared.roomAt(at);   // (WALLSHOT names the room beyond by the room map: built, if nobody has asked it yet, on the floor as it is BEFORE this hole joins two of its rooms)
-    g.destr.blast(at, { who: g.player.char.id, chaos: false, ...breach, ...hung });   // (the walls, the cover by it, the doors' and the glass's own lists; its dust and clutter are the stun charge's call below — once)
+    g.destr.blast(at, { who: PLAYER_ID, chaos: false, ...breach, ...hung });   // (the walls, the cover by it, the doors' and the glass's own lists; its dust and clutter are the stun charge's call below — once)
     const hole = this.holeAt(W);
     g.destr.pallWall(wallPt(W, hole ? hole.du : 0, 0, 0), wallN(W), W.alongX ? [1, 0, 0] : [0, 0, 1], T, !!hole, W.outer ? 'concrete' : 'drywall', WALLSHOT.on ? WALLSHOT.pall : 1);   // the charge's PALL (destruction.ts CHAOS.pall: nothing with the rule off)
     messWall(g, wallPt(W, hole ? hole.du : 0, 0, 0), wallN(W), T, !!hole);   // …and what it leaves on the floor (floormess.ts CHAOS.mess: nothing with the rule off)
-    const it = g.items.spawn('flash', wallPt(W, 0, 0.15, 0.5), [0, 0, 0], { fuse: 99, who: g.player.char.id }); it.fired = true;
+    const it = g.items.spawn('flash', wallPt(W, 0, 0.15, 0.5), [0, 0, 0], { fuse: 99, who: PLAYER_ID }); it.fired = true;
     const all = g.guards, last = g.messages[g.messages.length - 1]; g.guards = []; try { detonateStun(g, it, true); } finally { g.guards = all; }
     const m = g.messages[g.messages.length - 1]; if (m && m !== last && /flashbang/.test(m.text)) g.messages.pop();   // ('flashbang went off': this was not one)
     const ii = g.items.items.indexOf(it); if (ii >= 0) g.items.items.splice(ii, 1);
@@ -1102,18 +1102,15 @@ export class WallCharge {
       killGuard(g, cv, away(p), false, far ? 'struck' : 'shot', 'player', `${cv.callsign ?? 'a civilian'} down — ${far ? 'behind the wall' : 'at the charge'} when it went`); knocked++; }
     // (WALLKILL: the player at the charge, or behind the wall it opened inside knockM, with the line a man there needs — killed as a round kills him; the
     //  rocked hands and the blind seconds below are a living man's)
-    let sam = 0;
-    eachSeat(g, g => {   // (every player's man, as the first always was — seats.ts)
     if (WK && !g.player.down && !g.godMode && !g.puppet && !g.touring) { const pl = g.player, p = pl.char.pos, far = wallOff(W, p) < -T / 2, dist = flat(p, xz);
-      if (!(far && !hole) && dist < (far ? K.knockM : WK.nearM) && !g.col.solidBlocked(far ? inn : out, [p[0], 1.1, p[2]])) { hitPlayer(g, away(p)); pl.hitFlash = 1; chronHit(g, 'the wall charge'); samDown = samDown || pl.down; } }
-    const k = WALLCHARGE.safe && !g.player.down ? this.blastShare(W, g.player.char.pos, R) : 0; if (k > 0) this.samCaught(g.player, k, xz); sam = Math.max(sam, k);
+      if (!(far && !hole) && dist < (far ? K.knockM : WK.nearM) && !g.col.solidBlocked(far ? inn : out, [p[0], 1.1, p[2]])) { hitPlayer(g, away(p)); pl.hitFlash = 1; chronHit(g, 'the wall charge'); samDown = pl.down; } }
+    const sam = WALLCHARGE.safe && !g.player.down ? this.blastShare(W, g.player.char.pos, R) : 0; if (sam > 0) this.samCaught(sam, xz);
     // (samstun.ts: the blast does to the player what it does to a teammate standing there — on the charge's own side inside the reach with a line to it, blind the
     //  seconds a teammate there gets; beyond a wall it opened, inside stunM with a line, dazzled and never felled, as one of ours beyond a blown door is)
     if (SAMSTUN.on && !g.player.down && !g.puppet && !g.touring) { const p = g.player.char.pos, far = wallOff(W, p) < -T / 2, dist = flat(p, xz);
       if (!(far && !hole) && dist < (far ? K.stunM : R.reach) && !g.col.solidBlocked(far ? inn : out, [p[0], 1.1, p[2]])) dazzlePlayer(g, far ? (SH ? SH.oursSecs : K.backblastSecs) : nearSecs(dist), inn); }
-    });
     this.lastBlow = { reach: R.reach, indoors: R.indoors, sam, lost, samDown };
-    if (hole) moraleBlast(g, inn, g.player.char.id);   // (morale.ts: the men past the wall it opened are shaken by it — a return on its first line with the switch off)
+    if (hole) moraleBlast(g, inn, PLAYER_ID);   // (morale.ts: the men past the wall it opened are shaken by it — a return on its first line with the switch off)
     this.stats.blown++; if (hole) this.stats.holes++; else this.stats.duds++; this.stats.knocked += knocked + lost; this.stats.stunned += stunned; this.stats.backblast += backblast;
     g.msg(`charge blown — the wall${hole ? '' : ' · it held'}${knocked ? ` · ${knocked} down` : ''}${stunned ? ` · ${stunned} stunned` : ''}${lost ? ` · ${lost} of yours down` : ''}${backblast ? ` · ${backblast} of yours too close` : ''}${sam > 0 ? ' · you were too close' : ''}`);
     this.note(`blow wall ${W.index}: ${hole ? `hole ${(hole.half * 2).toFixed(2)} m` : 'no hole'} knocked ${knocked} stunned ${stunned} backblast ${backblast}${WK ? ` lost ${lost}${samDown ? ' · the player down' : ''}` : ''}`);
@@ -1132,8 +1129,8 @@ export class WallCharge {
    *  knocked along the blast (the animator's hit), the frame flashes as on a hit, no round and no throw leaves his hands for samSecs (Player.fireCd: the beat
    *  every fire site already honours, kept by a checkpoint), and his aim is open by suppression's own scalar until it drains. The camera's kick and the ring
    *  in his ears are blastFeel.ts's, by distance, as ever. Never a hit: Player.hitsLeft is not touched. */
-  private samCaught(pl: Player, k: number, from: Vec3) {
-    const c = pl.char, K = WALLCHARGE;
+  private samCaught(k: number, from: Vec3) {
+    const pl = this.g.player, c = pl.char, K = WALLCHARGE;
     c.anim.hitFrom(v3.sub(c.pos, from)); pl.hitFlash = Math.max(pl.hitFlash, k);
     pl.fireCd = Math.max(pl.fireCd, lerp(K.samSecs[1], K.samSecs[0], k)); pl.sup.v = Math.max(pl.sup.v, lerp(K.samSup, 1, k)); pl.sup.kick = Math.max(pl.sup.kick, k);
   }

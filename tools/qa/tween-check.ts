@@ -207,7 +207,7 @@ async function play(name: string, dtOf: (() => number) | null, opt: { tween?: bo
       if (dist(p.target, c.target) > 0 || p.distance !== c.distance) stat.cam++; if (dy !== 0) stat.camTurn++; if (jump) stat.cuts++; }
     if (tw.last.boxes + tw.last.men + tw.last.lights > 0) stat.blended++;
   };
-  const ctx: any = { game: g, input: W.input, cam: W.cam, view: W.canvas, host: W.engine, render, betweenTicks: () => { W.engine.world.relist(); }, tween: tw,
+  const ctx: any = { game: g, input: W.input, cam: W.cam, view: W.canvas, host: W.engine, render, betweenTicks: () => { W.engine.world.upload(true); }, tween: tw,
     smoke: null, audio: null, demo: null, attract: null, hud: null, bubbles: null, time: 0, updateMs: 0, frozen: () => false, present: () => false, fixedStep: () => true };
   const base = onUpdate; let ran = 0; onUpdate = (gg, dt, input) => { if (ran) after(); ran++; ticksRun++; base!(gg, dt, input); };   // (a tick's digest is taken before the next tick's script, as W.step's is)
   while (ran <= TICKS && frames < 100000) {
@@ -285,7 +285,7 @@ const plain = await play('120 Hz, the blend off', () => 1 / 120, { tween: false 
   onUpdate = () => { k++; W.cam.pin = { look: [k * 0.05 + (k >= 40 ? 30 : 0), 0.8, 2], yaw: 0.3 + k * 0.01, pitch: 0.9, dist: 12 + k * 0.02 }; pins.push(W.cam.pin); };   // (tick 40: a cut, 30 m off)
   let seen: Pin | null = null;   // the camera as the render finds it
   const scale = { v: 1 };
-  const ctx: any = { game: W.game, input: W.input, cam: W.cam, view: W.canvas, host: W.engine, render: () => { W.engine.world.upload(); seen = { look: [...W.cam.target] as V3, yaw: W.cam.yaw, pitch: W.cam.pitch, dist: W.cam.distance }; }, betweenTicks: () => { W.engine.world.relist(); }, tween: tw,
+  const ctx: any = { game: W.game, input: W.input, cam: W.cam, view: W.canvas, host: W.engine, render: () => { W.engine.world.upload(); seen = { look: [...W.cam.target] as V3, yaw: W.cam.yaw, pitch: W.cam.pitch, dist: W.cam.distance }; }, betweenTicks: () => { W.engine.world.upload(true); }, tween: tw,
     smoke: null, audio: null, demo: null, attract: null, hud: null, bubbles: null, time: 0, updateMs: 0, frozen: () => false, present: () => false, fixedStep: () => true, timeScale: () => scale.v };
   let wrong = 0, between = 0, cuts = 0, back = 0, frames = 0; const first: string[] = [];
   for (let f = 0; f < 200; f++) {
@@ -312,7 +312,7 @@ const plain = await play('120 Hz, the blend off', () => 1 / 120, { tween: false 
   for (const flashes of [true, false]) {
     Math.random = seeded(1); const W: any = await standUp({ seed: 5 }); FIXEDSTEP.on = true; TWEEN.on = true; TWEEN.flashes = flashes;
     const tw = new Tween(W.engine); let made: any = null, uploaded = 0, inList = 0, tickOfFrame = 0, armed = false;
-    const ctx: any = { game: W.game, input: W.input, cam: W.cam, view: W.canvas, host: W.engine, render: () => { W.engine.world.upload(); W.engine.lights.upload(0); if (made && W.engine.lights.lights.includes(made) && made.slot >= 0) uploaded++; }, betweenTicks: () => { W.engine.world.relist(); }, tween: tw,
+    const ctx: any = { game: W.game, input: W.input, cam: W.cam, view: W.canvas, host: W.engine, render: () => { W.engine.world.upload(); W.engine.lights.upload(0); if (made && W.engine.lights.lights.includes(made) && made.slot >= 0) uploaded++; }, betweenTicks: () => { W.engine.world.upload(true); }, tween: tw,
       smoke: null, audio: null, demo: null, attract: null, hud: null, bubbles: null, time: 0, updateMs: 0, frozen: () => false, present: () => false, fixedStep: () => true };
     onUpdate = (g) => { if (armed && tickOfFrame === 0 && !made) { const p = g.player.char.pos; made = g.engine.lights.flash([p[0], 1.2, p[2]], [1, 0.8, 0.5], 5, 3, 0.012, 0); } tickOfFrame++; };
     for (let f = 0; f < 12; f++) { tickOfFrame = 0; armed = f === 6; stepFrame(ctx, 1 / 30); if (made && W.engine.lights.lights.includes(made)) inList++; }
@@ -327,7 +327,7 @@ const plain = await play('120 Hz, the blend off', () => 1 / 120, { tween: false 
 { Math.random = seeded(1); const W: any = await standUp({ seed: 5 }); FIXEDSTEP.on = true; TWEEN.on = true;
   const tw = new Tween(W.engine); const st = { frozen: false, scripted: false }; let poses = 0; const pose = tw.pose.bind(tw); tw.pose = (a: number) => { poses++; pose(a); };
   let lastHand: Float32Array | null = null; const sk = W.engine.skin; const dj = sk.drawJoints.bind(sk); sk.drawJoints = (d: Float32Array, n: number) => { lastHand = d; dj(d, n); };
-  const ctx: any = { game: W.game, input: W.input, cam: W.cam, view: W.canvas, host: W.engine, render: () => { W.engine.world.upload(); }, betweenTicks: () => { W.engine.world.relist(); }, tween: tw,
+  const ctx: any = { game: W.game, input: W.input, cam: W.cam, view: W.canvas, host: W.engine, render: () => { W.engine.world.upload(); }, betweenTicks: () => { W.engine.world.upload(true); }, tween: tw,
     smoke: null, audio: null, demo: null, attract: null, hud: null, bubbles: null, time: 0, updateMs: 0, frozen: () => st.frozen, present: () => false, fixedStep: () => !st.scripted };
   W.input.keys.add('KeyW');
   for (let f = 0; f < 40; f++) stepFrame(ctx, 1 / 144);
@@ -344,7 +344,7 @@ const plain = await play('120 Hz, the blend off', () => 1 / 120, { tween: false 
 { const rows: string[] = []; let ok = true;
   { ok &&= plain.stat.frames === 0 && plain.text === ref.text; rows.push(`the fixed step with TWEEN off at 120 Hz: the same ${plain.rows.length} digests as the harness ${plain.text === ref.text}`); }
   { Math.random = seeded(1); const W: any = await standUp({ seed: 5 }); FIXEDSTEP.on = true; TWEEN.on = false; const tw = new Tween(W.engine); let hung = 0; tw.pose = () => { hung++; }; tw.capture = () => { hung++; };
-    const ctx: any = { game: W.game, input: W.input, cam: W.cam, view: W.canvas, host: W.engine, render: () => { W.engine.world.upload(); }, betweenTicks: () => { W.engine.world.relist(); }, tween: tw,
+    const ctx: any = { game: W.game, input: W.input, cam: W.cam, view: W.canvas, host: W.engine, render: () => { W.engine.world.upload(); }, betweenTicks: () => { W.engine.world.upload(true); }, tween: tw,
       smoke: null, audio: null, demo: null, attract: null, hud: null, bubbles: null, time: 0, updateMs: 0, frozen: () => false, present: () => false, fixedStep: () => true };
     for (let f = 0; f < 60; f++) stepFrame(ctx, 1 / 144);
     const a = hung; FIXEDSTEP.on = false; TWEEN.on = true; const dts: number[] = []; onUpdate = (_g, dt) => { dts.push(dt); }; for (let f = 0; f < 60; f++) stepFrame(ctx, 1 / 144); onUpdate = null;
@@ -362,7 +362,7 @@ const plain = await play('120 Hz, the blend off', () => 1 / 120, { tween: false 
     if (k === N) dAt = hashDigest(digestGame(g, true));
     if (k === 20) input.keys.add('KeyW'); if (k === 140) { input.keys.delete('KeyW'); input.keys.add('KeyD'); } if (k === 220) input.pressed.add('KeyC'); if (k === 300) { input.keys.delete('KeyD'); input.keys.add('KeyS'); } if (k === 420) input.keys.delete('KeyS');
     k++; };
-  const ctx: any = { game: W.game, input: W.input, cam: W.cam, view: W.canvas, host: W.engine, render: () => { W.engine.world.upload(); W.engine.lights.upload(0); if (tw.last.boxes + tw.last.men > 0) hung++; }, betweenTicks: () => { W.engine.world.relist(); }, tween: tw,
+  const ctx: any = { game: W.game, input: W.input, cam: W.cam, view: W.canvas, host: W.engine, render: () => { W.engine.world.upload(); W.engine.lights.upload(0); if (tw.last.boxes + tw.last.men > 0) hung++; }, betweenTicks: () => { W.engine.world.upload(true); }, tween: tw,
     smoke: null, audio: null, demo: null, attract: null, hud: null, bubbles: null, time: 0, updateMs: 0, frozen: () => false, present: () => false, fixedStep: () => true };
   let frames = 0; while (k <= N && frames < 5000) { stepFrame(ctx, 1 / 144); frames++; }
   onUpdate = null; W.game.replayTap = null;

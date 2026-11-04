@@ -1,2 +1,0 @@
-# the long hall is dressed: its look file lays the camp road and the sentry's beat
-2b225c55421697499a3b9705c3a9d34a31bc33fe

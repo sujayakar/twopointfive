@@ -9,8 +9,7 @@
     "typecheck": "tsc --noEmit -p convex/tsconfig.json"
   },
   "dependencies": {
-    "convex": "^1.48.0",
-    "modal": "^0.11.1"
+    "convex": "^1.48.0"
   },
   "devDependencies": {
     "convex-test": "^0.0.65",

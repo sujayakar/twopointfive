@@ -49,7 +49,7 @@
 // NOT BUILT: `arrive` squads (they validate and load; nobody comes — sixteen skinned characters are all on the floor with eleven defenders, and taking
 // bodies away mid-run is the room clear's bookkeeping to change first).
 // (src/game is one import cycle: nothing below is built from another game module's exports at module load.)
-import { SideMap, rollbackVar, GameSideMap } from '../math/side';
+import { SideMap, rollbackVar } from '../math/side';
 import { Vec3, v3 } from '../math/vec';
 import { dieOf, roll, type Die } from '../math/dice';   // (dice kept in state carry their word on an object: a rollback snapshot holds it — a mulberry32 closure's it cannot)
 import type { Game, Guard } from './game';
@@ -278,7 +278,7 @@ interface State { /** (stayask.ts) every squad here stays in its rooms: the net'
 /** (netAsk) the net's check of the SQUADS: when the next roll call is due, the one running (called → a squad asked for by name), who asks, the squad asked
  *  about, the squads nobody asks after again (`done`: men went to its posts — whatever they found — or a body of it was said on the net with nobody of it left to answer) */
 interface NetCheck { nextAt: number; stage: 'idle' | 'called' | 'asked'; t0: number; caller: Guard | null; about: Squad | null; done: Set<Squad>; /** squads asked for by name with nobody sent after (nobody free, or a fight took the net): asked for once more at a later check, and no oftener */ tried: Map<Squad, number>; /** how often a squad that answers has been asked what is going on */ queried: Map<Squad, number>; /** lines said a breath after what they answer */ say: { t: number; gd: Guard; text: string; cls?: number }[]; die: Die; tickT: number }
-const STATES = new GameSideMap<Game, State>('enemysquads.STATES');
+const STATES = new SideMap<Game, State>('enemysquads.STATES');
 /** the net's ask runs on this floor: its own switch, or (stayask.ts) a floor whose every squad stays in its rooms */
 const netAsks = (g: Game): boolean => SQUADS.netAsk || !!STATES.get(g)?.stayAsk;
 /** hard on a squads level (SQUADS.drill*): the table while harder defenders are on, their `squadDrill` row is, and squads are staged in this game — else null */

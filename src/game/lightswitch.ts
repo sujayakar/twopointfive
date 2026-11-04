@@ -34,7 +34,7 @@
 //
 // ON in the page (`?lightswitch=0` = as it was), OFF in the module and on the frozen harness stand (`TPS_LIGHTSWITCH=1`): a FROZEN_HOLDS row, in the knob
 // registry and a journal's tables; a recording from before the table replays with it off.
-import { SideMap, GameSideMap } from '../math/side';
+import { SideMap } from '../math/side';
 import { Vec3, v3 } from '../math/vec';
 import { Box, BoxFlag, makeBox, MKEY } from '../scene/boxes';
 import type { Game, Guard, Interactable, LightTarget, Player, Verb } from './game';
@@ -86,7 +86,7 @@ export interface WallSwitch {
  *  time of his turn to it) — and whether he is PLANTED at it for that long (Sam, with that rule: switchHand) */
 interface Hand { c: Character; sw: WallSwitch; at: number; dir: 1 | -1; dur: number; plant: boolean }
 interface St { /** every plate the level was given */ all: WallSwitch[]; /** those whose wall stands */ list: WallSwitch[]; hands: Hand[]; /** the level's geometry serial the walls were last asked after at */ serial: number }
-const states = new GameSideMap<Game, St>('lightswitch.states');
+const states = new SideMap<Game, St>('lightswitch.states');
 
 /** is the rule running (nothing under a show: its lights are its script's) */
 export function switchesLive(g: Game): boolean { return LIGHTSWITCH.on && !g.touring && !g.director.showing; }

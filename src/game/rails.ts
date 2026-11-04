@@ -144,9 +144,6 @@ const ACTS: Record<string, Act> = {
   //  and until then Shift with the key is the plain key, as on every lesson that never lists it. With the goal rule itself off (CMDRING.goals) the pair is
   //  the plain key on that step too. A lesson that opens `goal` gives `sprint` as well: railsFaults)
   goal: {},
-  // `twice`: the squad's key tapped twice is 'fall in' (cmdring.ts `twice`; orders.ts twiceOn asks `locks('twice')`). No lesson lists it today, so on
-  //  a tutorial mission a double press is two presses: it cannot undo the order a step has just asked for
-  twice: {},
   camera: {}, zoom: {},
   // (ownblow.ts: a charge his own hands set, set off from his own list — no key of its own: the row is `use`'s, and a mission that names this action or
   //  the squad's word has that row from the step that opens either)

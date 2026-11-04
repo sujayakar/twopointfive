@@ -1,10 +1,10 @@
 // Combat and kit: shots and hits, kills and what leaves dying hands, hand props / holsters / lasers, live throwables (canisters, stun) and their effects.
 // (Split out of game.ts mechanically: plain functions taking the Game as their first argument; Game keeps one-line delegators for
 //  anything other files call.)
-import { eachSeat, hostMan, viewOfBody, men } from './seats';
 import { railsSpare } from './rails';   // (asked inside killGuard only)
 import { rollbackVar } from '../math/side';
 import { Vec3, v3, clamp, lerp, quat } from '../math/vec';
+import { lookConfig } from '../render/frame';
 import { wandDrop } from './wand';
 import { DOORBLAST } from './doorblast';
 import { Character, THROW_BY, THROW_RELEASE } from './character';
@@ -115,7 +115,7 @@ function aiWide(g: Game, sg: Guard | null, shooter: Character, def: WeaponDef): 
   return S.base + Math.min(S.moveCap, tv * S.moveK) + Math.max(0, range - S.rangeFrom) * S.rangeK;
 }
 /** (the round's sparks, chips and dust are its shooter's doing — fogofwar.ts FOG.ours: a teammate's are drawn under the fog) */
-export function fireWeapon(g: Game, shooter: Character, target: Vec3, isPlayer: boolean, o: FireOpts = {}) { g = viewOfBody(g, shooter); const was = g.fogOfWar.begin(shooter.id); try { return fireWeaponRaw(g, shooter, target, isPlayer, o); } finally { barsUnmeet(g); g.fogOfWar.done(was); } }   // (fogofwar.ts FOG.ours: what a round throws up is its shooter's doing)
+export function fireWeapon(g: Game, shooter: Character, target: Vec3, isPlayer: boolean, o: FireOpts = {}) { const was = g.fogOfWar.begin(shooter.id); try { return fireWeaponRaw(g, shooter, target, isPlayer, o); } finally { barsUnmeet(g); g.fogOfWar.done(was); } }   // (fogofwar.ts FOG.ours: what a round throws up is its shooter's doing)
 function fireWeaponRaw(g: Game, shooter: Character, target: Vec3, isPlayer: boolean, o: FireOpts) {
   const sg = isPlayer ? null : g.guards.find(x => x.char === shooter) ?? null;   // the guard whose round this is (null: Sam, or a stray in a harness)
   if (sg?.workStow) stowFired(sg);   // (workstow.ts: a round out of a gun let go of for a two-handed job — it is in his hands at once; the fire site's own gate keeps this from happening)
@@ -151,7 +151,7 @@ function fireWeaponRaw(g: Game, shooter: Character, target: Vec3, isPlayer: bool
   if (gpu && lead) { muzzleSparksFx(g, muzzle, dir, shooter); casingFx(g, shooter, def); }   // + the spent case out of the port (heard landing half a second on: particleFx.ts)
   if (lead) g.audio.play(voiceOf(def), muzzle, 1);   // (gunlook.ts: … and a voice of its own)
   // --- hit scan
-  let tHit = 60; let hitGuard: Guard | null = null; let playerHit = false; let hitView: Game = g;   // (hitView: whose man a round found — the seat the shooter faces, or with two players the other's man standing in its way; seats.ts)
+  let tHit = 60; let hitGuard: Guard | null = null; let playerHit = false;
   let st0 = g.col.raycast(muzzle, dir, tHit); if (st0) tHit = st0.t;   // statics + door leaves
   let st = st0;                                                       // (the static the round STOPS in: the first one it meets — unless it goes through glass, below)
   // GLASS PENETRATION (glasspen.ts, behind GLASSPEN.on — off, or no sheet of glass first in the round's way, = `pen` null and every statement below is the one it
@@ -208,13 +208,12 @@ function fireWeaponRaw(g: Game, shooter: Character, target: Vec3, isPlayer: bool
     const t = isHostile(sgTeam, 'player') ? scan(g.player.char) : -1;   // (teams: an operative's round never tests Sam)
     if (tH >= 0 && (t < 0 || tH < t)) { tHit = tH; hitGuard = held; hostageHit = true; }
     else if (t >= 0) { tHit = t; playerHit = true; }
-    if (g.seats.length > 1 && isHostile(sgTeam, 'player')) for (const s of g.seats) { const pl = s.view.player; if (pl === g.player || pl.down) continue; const to = scan(pl.char); if (to >= 0 && to < tHit) { tHit = to; playerHit = true; hitGuard = null; hostageHit = false; hitView = s.view; } }   // (the other player's man is flesh to a defender's round too)
     for (const od of g.guards) {   // teams: every living man of a side hostile to the shooter's is a body this round can find — none for the staff (no AI side is their enemy: the loop finds nobody and their colleagues stay transparent, as ever)
       if (od === held || od.state === 'dead' || !od.char.alive || od.char === shooter || !isHostile(sgTeam, od.team) || od.god) continue;   // (god: a showcase cast's net — game.ts Guard.god — the round passes him as it passes a colleague)
       const to = scan(od.char); if (to >= 0 && to < tHit) { tHit = to; hitGuard = od; hostageHit = false; playerHit = false; }
     }
     if (ffOurs) {   // (friendlyfire.ts: a teammate's round is a round to Sam and to the other teammates too — his care, above, is what keeps it out of them)
-      for (const s of g.seats) { const pl = s.view.player; if (pl.down) continue; const tS = scan(pl.char, true); if (tS >= 0 && tS < tHit) { tHit = tS; playerHit = true; hitGuard = null; hostageHit = false; hitView = s.view; } }   // (every player's man: seats.ts)
+      if (!g.player.down) { const tS = scan(g.player.char, true); if (tS >= 0 && tS < tHit) { tHit = tS; playerHit = true; hitGuard = null; hostageHit = false; } }
       for (const od of g.guards) { if (od === held || od.char === shooter || !ffBody(od)) continue; const to = scan(od.char, true); if (to >= 0 && to < tHit) { tHit = to; hitGuard = od; hostageHit = false; playerHit = false; } }
     }
   }
@@ -227,11 +226,16 @@ function fireWeaponRaw(g: Game, shooter: Character, target: Vec3, isPlayer: bool
   if (st && st.index < 1e6 && !hitGuard && !playerHit && !through && (penLive || third) && Math.abs(tHit - st.t) < 1e-6) { if (penLive) spentInPane(g, st.index, hitP, dir, pen ? segAt(pen, tHit).e : eMuzzle, shooter.id, pel ?? undefined); else glassHit(g, st.index, hitP, dir, shooter.id); }   // (a pellet, rounds through glass live: EVERY pellet that stops in a pane marks it, by the shell rule a pellet that goes through is held to — glasspen.ts; with that switch off a pane is the starred wall it was and every third pellet stars it, as before)   // the round stopped in a static: if that is a glass pane it stars it (glass.ts — a hole and cracks ON the pane, the crack heard; the pane holds: the next round stops in it too)
   if (pel) { const ah = armAt;   // (the muzzle pushed through a leaf — pressed to the lock: the shell is in THAT leaf, where the arm crosses it)
     pelletEnd(pel, ah ? ah.index : st && !hitGuard && !playerHit && !through && Math.abs(tHit - st.t) < 1e-6 ? st.index : -1, tHit, ah ? ah.at : hitP); }
-  if (third) noteRound(g, shooter, muzzle, hitP, hitGuard?.char ?? (playerHit ? hitView.player.char : null));   // suppression: everybody ELSE this segment passed close to, or stopped close to, has felt it go by (suppression.ts — the man it went into is shot, not suppressed)
+  if (third) noteRound(g, shooter, muzzle, hitP, hitGuard?.char ?? (playerHit ? g.player.char : null));   // suppression: everybody ELSE this segment passed close to, or stopped close to, has felt it go by (suppression.ts — the man it went into is shot, not suppressed)
   if (pen && ph) eK = segAt(pen, ph.t).e / e0; else if (penLive) eK = eMuzzle / e0;
   if (ph && ph.t <= tHit + 1e-3 && third) { const J = def.propImpulse * eK; const pd = pen ? segAt(pen, ph.t).d : dir; g.props.applyImpulse(ph.prop, pen ? pathAt(pen, ph.t) : v3.mad(muzzle, dir, ph.t), [pd[0] * J, 0, pd[2] * J], shooter.id, true); }   // (not a prop standing behind the body the round stopped in) the row's few N·s, exaggerated over the real round so it reads: cartons hop, chairs twitch and roll — and it is heard at the prop
-  // bullet wake through smoke volumes
-  if (third) for (let d = 0.3; d < Math.min(tHit, 25); d += 0.28) { const p = pen ? pathAt(pen, d) : v3.mad(muzzle, dir, d); if (g.smoke.inSmokeDomain(p)) g.smoke.push({ pos: p, dir: pen ? segAt(pen, d).d : dir, speed: 5.5, radius: 0.07 }); }
+  // bullet wake through smoke volumes. On the look page the smoke takes each straight leg of the path as ONE line (smoke.ts `round`: the air along it is dragged with
+  // the round, so smoke follows it out of a plume and clear air in); anywhere else, and with that row at 0, the row of soft dots it always was
+  let lined = false;
+  if (third && lookConfig.on && lookConfig.stir > 0 && g.smoke.round) { const far = Math.min(tHit, 25);
+    if (pen) { for (const k of pen.segs) { const a = Math.max(k.t0, 0.3), b = Math.min(k.t0 + k.len, far); if (b > a) lined = g.smoke.round(v3.mad(k.o, k.d, a - k.t0), k.d, b - a) || lined; } }
+    else if (far > 0.3) lined = g.smoke.round(v3.mad(muzzle, dir, 0.3), dir, far - 0.3); }
+  if (third && !lined) for (let d = 0.3; d < Math.min(tHit, 25); d += 0.28) { const p = pen ? pathAt(pen, d) : v3.mad(muzzle, dir, d); if (g.smoke.inSmokeDomain(p)) g.smoke.push({ pos: p, dir: pen ? segAt(pen, d).d : dir, speed: 5.5, radius: 0.07 }); }
   // impact flash + sound
   const blind = !!hitGuard && g.fogOfWar.hidden(hitGuard); if (blind) g.fogOfWar.hush();   // (FOG.ours: a round that stopped in a man nobody on the team sees — no flash and no spray off him says where he stands)
   if (lead) { const fl = g.engine.lights.flash(v3.mad(hitP, dir, -0.05), [1, 0.8, 0.5], 1.5, 2.5, 0.05, 0); if (!blind) g.fogOfWar.lightBy(fl, shooter.id); }   // (FOG.ours: a teammate's round strikes where the picture shows it)
@@ -245,7 +249,7 @@ function fireWeaponRaw(g: Game, shooter: Character, target: Vec3, isPlayer: bool
   if (def.tracer && g.tune.tracers) g.tracers.round(firearmOf(g, shooter, isPlayer), def, muzzle, pen ? v3.normalize(v3.sub(hitP, muzzle)) : dir, pen ? v3.dist(muzzle, hitP) : tHit, hitGuard || playerHit ? 'flesh' : st || ph || through ? 'solid' : 'none', shooter.id);   // tracers (R6, tracers.ts): the row lights every third round and the last three of the box, counted off the gun that fired it — a streak travelling this same segment over the next few frames with a small light on its head, an ember where it stopped in geometry. A pistol row never asks (tracer null: not one instruction more than before); the flag off, nobody does
   if (ffOurs && (playerHit || (hitGuard && !hitGuard.civ && !isHostile('player', hitGuard.team)))) ffNote(sg, isPlayer, playerHit);
   if (ffOn && isPlayer && lead) ffPast(g, muzzle, hitP, hitGuard?.char ?? null);
-  recapRound(g, playerHit ? hitView.player.char : hitGuard?.char, playerHit ? hitView.player.down : hitGuard?.state === 'dead', shooter, muzzle, hitP, def, o.blind);   // deathrecap.ts: the round about to land on a man, for the end card (reads only)
+  recapRound(g, playerHit ? g.player.char : hitGuard?.char, playerHit ? g.player.down : hitGuard?.state === 'dead', shooter, muzzle, hitP, def, o.blind);   // deathrecap.ts: the round about to land on a man, for the end card (reads only)
   const manDown = !hitGuard ? null : () => {   // (by 'guard': the held man, above — the only colleague a guard's round ever tests — or, teams, an enemy AI man)
     const wasUp = hitGuard.state !== 'dead';
     if (wasUp && hitGuard.civ) g.snatch?.roundOn(hitGuard, sg);   // (snatch.ts: whose round found the man the team came for — the tally's, nothing else reads it)
@@ -261,7 +265,7 @@ function fireWeaponRaw(g: Game, shooter: Character, target: Vec3, isPlayer: bool
   //  by the first would be air to the other eight, and they would go on into whoever stands behind him)
   if (manDown && !pel) manDown(); else if (manDown && pelletDrops(pel!, hitGuard, tHit, dir)) pel!.late.push(manDown);
   if (AIM_DEBUG.log && !isPlayer) { const pcD = g.player.char; const hp = pcD.bones.hips ?? pcD.pos; AIM_DEBUG.log(`round g${shooter.id}: muzzle (${muzzle.map(v => v.toFixed(2))}) → target (${target.map(v => v.toFixed(2))}) dir (${flown.map(v => v.toFixed(2))}) static ${st ? st.t.toFixed(2) : '-'} prop ${ph ? ph.t.toFixed(2) : '-'} through ${through} tHit ${tHit.toFixed(2)} playerHit ${playerHit} — the player hips (${hp.map(v => v.toFixed(2))}) headTop ${(pcD.bones.headTop?.[1] ?? -1).toFixed(2)} pos (${pcD.pos.map(v => v.toFixed(2))})`); }   // (soak --trace)
-  const samHit = !playerHit ? null : () => { const pl = hitView.player; pl.char.anim.hitFrom(dir); pl.hitFlash = 1; if (pl.picking) { pl.picking = null; pl.fHeld = true; } if (pl.wanding) { wandDrop(pl); pl.fHeld = true; } g.audio.play('bodyHit', hitP, 0.9); if (!g.godMode) { hitPlayer(hitView, dir); chronHit(g, sg?.callsign); } };   // (a round in the vest ends any lock work, god mode or not — and that F press is spent; the debrief keeps whose round it was)
+  const samHit = !playerHit ? null : () => { g.player.char.anim.hitFrom(dir); g.player.hitFlash = 1; if (g.player.picking) { g.player.picking = null; g.player.fHeld = true; } if (g.player.wanding) { wandDrop(g.player); g.player.fHeld = true; } g.audio.play('bodyHit', hitP, 0.9); if (!g.godMode) { hitPlayer(g, dir); chronHit(g, sg?.callsign); } };   // (a round in the vest ends any lock work, god mode or not — and that F press is spent; the debrief keeps whose round it was)
   if (samHit && !pel) samHit(); else if (samHit && pelletDrops(pel!, null, tHit, dir)) pel!.late.push(samHit);
   // lights: a shot passing close to a fixture breaks it
   if (isPlayer) {
@@ -449,15 +453,6 @@ function rigKeys(out: Box[], n0: number) {
   for (let k = n0; k < out.length; k++) { const b = out[k]; const o = b.owner & 0xff; if (o === 0) continue; b.mkey = MKEY.rig + (o << 8) + Math.min(255, ord[o]++); }
 }
 function handPropsRaw(g: Game, out: Box[]) {
-  eachSeat(g, v => playerProps(v, out));   // (each player's own kit, over his seat's view — seats.ts)
-  for (const gd of g.guards) {
-    if (g.fogOfWar.hidden(gd)) { gd.char.inHand = null; continue; }   // fog of war (fogofwar.ts): a man nobody on the team sees is not drawn — nor what he carries (never true while it is off)
-    guardProps(g, gd, out);
-  }
-  for (const cv of civiliansShown(g)) { const an = cv.char.anim; if (an.bound === 1 && an.mv2Shown.bound > 0.6 && cv.state !== 'dead' && !g.fogOfWar.hidden(cv)) wristTieBoxes(cv.char, out); }   // a hostage's wrists are tied (rigProps.ts): the strap, while the binding shows
-}
-/** what the PLAYER carries and wears, as boxes (handPropsRaw's first rows) */
-function playerProps(g: Game, out: Box[]) {
   const pl = g.player, mine0 = out.length;
   const busy = pl.char.anim.hideHeldItem;   // hands on the lock tools (anim.lockpick) or both round a held man (the arm variant): empty hand, the Five-seveN on the thigh, no can, no lit lens — whatever the kit says. Holding a man with the pistol drawn (the gun variant) it stays in the hand — up beside his head, laid along the hold layer's gun hand like any carry — and its rail light with it if L had it on (updateHold poses the light off the same hand); drawn mid-hold (E) it comes into the fist as the animator's hand-over passes half way (holdGunSide), the fist then behind the man's shoulder; holstered mid-hold it is on the thigh from the key's frame like any E
   // the can in the hand: during a throw it is the one being thrown until the release frame and nothing for the rest of the swing (whatever the
@@ -491,6 +486,11 @@ function playerProps(g: Game, out: Box[]) {
   workProps(pl.char, out);   // (handwork.ts: the objective in his hands as it comes out of its rack)
   samLaserBoxes(g, out);   // (irlaser.ts: the IR laser on the gun in his hands, his goggles down, a scenario's team on the floor — nothing otherwise)
   if (g.rails?.skyOn) out.length = mine0;   // (rails.ts, the seat with nobody on the floor: the parked player is not drawn — game.ts drawMen — and neither is his kit)
+  for (const gd of g.guards) {
+    if (g.fogOfWar.hidden(gd)) { gd.char.inHand = null; continue; }   // fog of war (fogofwar.ts): a man nobody on the team sees is not drawn — nor what he carries (never true while it is off)
+    guardProps(g, gd, out);
+  }
+  for (const cv of civiliansShown(g)) { const an = cv.char.anim; if (an.bound === 1 && an.mv2Shown.bound > 0.6 && cv.state !== 'dead' && !g.fogOfWar.hidden(cv)) wristTieBoxes(cv.char, out); }   // a hostage's wrists are tied (rigProps.ts): the strap, while the pose shows them crossed behind her
 }
 /** PACK SIDE (packside.ts): where the hammer's grip point and handle are at the side of the pack this man wears, in his chest joint's own space — the drawer's
  *  place (rigProps.ts packSideBind) said to the hand that is DRAWN going for it (Character.packSidePass). null: no pack, or the switch off */
@@ -597,7 +597,7 @@ export function laserReach(g: Game, c: Character, self: Guard | null, civ = fals
   if (!isFinite(dir[0]) || v3.len(dir) < 0.5) return null;
   let L = 30, on: Character | null = null; const wh = g.engine.world.raycast(from, dir, L, BoxFlag.NoShadow | BoxFlag.Glass, c.id & 0xff); if (wh) L = wh.t;   // (glass: the dot lands on the man behind the pane, as the light does) · ceilings (NoPrimary) DO stop it — a flailing dazzled man must not paint a 30 m line through the roof
   const ph = g.props.raycast(from, dir, L); if (ph) L = Math.min(L, ph.t);
-  for (const pl of men(g)) if (c !== pl.char) { const tp = pl.char.rayHit(from, dir, L); if (tp >= 0 && tp <= L) { L = tp; on = pl.char; } }   // (a live Sam stops it; bodies on the floor do not — rayHit ignores the dead; a muzzle inside a body — the man stacked ahead — draws through, not blank)
+  if (c !== g.player.char) { const tp = g.player.char.rayHit(from, dir, L); if (tp >= 0 && tp <= L) { L = tp; on = g.player.char; } }   // (a live Sam stops it; bodies on the floor do not — rayHit ignores the dead; a muzzle inside a body — the man stacked ahead — draws through, not blank)
   for (const o of g.guards) { if (o === self || o.state === 'dead' || g.fogOfWar.hidden(o)) continue; const t = o.char.rayHit(from, dir, L); if (t >= 0 && t <= L) { L = t; on = o.char; } }
   if (civ) for (const cv of civilianBodies(g)) { const t = cv.char.rayHit(from, dir, L); if (t >= 0 && t <= L) { L = t; on = cv.char; } }
   if (L < 0.05) return null;
@@ -686,8 +686,8 @@ function detonateStunRaw(g: Game, it: Item, borrowed: boolean, sam?: { side?: Te
   bangScorch(g, at);   // decals (E1, marks.ts): the scorch on what it lay on and the splashes up whatever stands within a metre
   g.destr.bang(at, it.who, 1, !borrowed);    // DESTRUCTION (destruction.ts, behind tune.chaos): the desk over it cleared, papers up in a ring, the tile above down, dust off the ceiling, the litter about it up again — what it knocks about is heard as the THROWER's doing
   if (borrowed) g.destr.furnBlast(at, 'door', it.who);   // a CHARGE's borrowed bang (the door charge) reaches the furniture round it — a stun grenade's own never does (game/furnblast.ts)
-  { const ears = hostMan(g), eye = ears.char.bones.head ?? v3.add(ears.char.pos, [0, 1.6, 0]);   // (the ring in the ears is this host's man's)
-  if (!ears.down && v3.dist(eye, at) < B.dazzleRadius && !g.col.segmentBlocked(v3.add(at, [0, 0.3, 0]), eye)) g.audio.play('earRing', null, clamp(1.2 - v3.dist(eye, at) / B.dazzleRadius, 0.25, 0.8)); }
+  const eye = g.player.char.bones.head ?? v3.add(g.player.char.pos, [0, 1.6, 0]);
+  if (!g.player.down && v3.dist(eye, at) < B.dazzleRadius && !g.col.segmentBlocked(v3.add(at, [0, 0.3, 0]), eye)) g.audio.play('earRing', null, clamp(1.2 - v3.dist(eye, at) / B.dazzleRadius, 0.25, 0.8));
   g.events.push(borrowed ? { kind: 'bang', pos: v3.copy(at), time: g.time, loud: true, charge: true } : { kind: 'bang', pos: v3.copy(at), time: g.time, loud: true });
   let n = 0;
   const F = FLASH, entry = F.on && fightLive(g);   // (a room fight's flashbang — FLASH above; else the night game's dazzle, as it was)
@@ -720,9 +720,7 @@ function detonateStunRaw(g: Game, it: Item, borrowed: boolean, sam?: { side?: Te
   // stagger whoever threw it (SAMSTUN.ownSeen), its air shared with no line = a defender's concussion, or his own side's can only on top of him
   // (`sam.side`: a caller that swaps the thrower out of g.guards for the call — the door tools' bang, the breach drill — says whose can it is: teamOfId would
   // answer 'guard' for a man who is not on the list; `sam.spare`: he stands where that caller spares its own men — this side of the door, 'bang out' heard: with no line to it, nothing)
-  const samSide: Team = sam?.side ?? side;
-  let told = false;
-  eachSeat(g, g => { let samSecs = 0; const eye = g.player.char.bones.head ?? v3.add(g.player.char.pos, [0, 1.6, 0]);   // (every player's man, by his own eyes — seats.ts)
+  let samSecs = 0; const samSide: Team = sam?.side ?? side;
   if (SAMSTUN.on && !borrowed && fx.flags.dazzle && !g.player.down && !g.puppet && !g.touring) { const d = v3.dist(eye, at);   // (a door or wall charge borrowing this report has its own rule for who it catches: doortools.ts blow, wallcharge.ts)
     if (d <= B.dazzleRadius) { const u = clamp(d / B.dazzleRadius, 0, 1); let stag = 0;
       if (!entry) { if (!(sam?.spare && !SAMSTUN.ownSeen) && !g.col.segmentBlocked(from, eye)) samSecs = lerp(B.dazzleSeconds, B.dazzleMin, u); }   // (the night rule; where the caller spares its own men he is spared too once ownSeen is off — as before that rule)
@@ -736,8 +734,8 @@ function detonateStunRaw(g: Game, it: Item, borrowed: boolean, sam?: { side?: Te
         else if (own && sam?.spare && !SAMSTUN.ownSeen) reach = false;
         if (reach) { if (!full) { if (d <= F.ownM) samSecs = F.ownSecs * k; } else { samSecs = lerp(F.secs[0], F.secs[1], u) * k; stag = lerp(F.stagger[0], F.stagger[1], u) * k; } } }
       if (samSecs > 0) { dazzlePlayer(g, samSecs, at); if (stag > 0) staggerPlayer(g, stag, v3.sub(g.player.char.pos, at)); } } }
-  if (!told) { told = true; g.msg(side === 'hostile' ? (n ? `their stun charge — ${n} dazzled` : 'their stun charge went off') : n ? `flashbang — ${n} guard${n > 1 ? 's' : ''} dazzled` : 'flashbang went off'); }   // (a defender's: pressure.ts PRESSURE.stuns)   // (said once, whoever it blinded)
-  if (samSecs > 0) g.msg(`${samSide === 'player' || samSide === 'operative' ? 'a flashbang' : 'their stun charge'} blinded you`); });
+  g.msg(side === 'hostile' ? (n ? `their stun charge — ${n} dazzled` : 'their stun charge went off') : n ? `flashbang — ${n} guard${n > 1 ? 's' : ''} dazzled` : 'flashbang went off');   // (a defender's: pressure.ts PRESSURE.stuns)
+  if (samSecs > 0) g.msg(`${samSide === 'player' || samSide === 'operative' ? 'a flashbang' : 'their stun charge'} blinded you`);
 }
 
 /** Sandbox / panel: drop an armed canister at `p` as if it had just landed there, thrown from where the player stands (short fuse, no inventory cost). */

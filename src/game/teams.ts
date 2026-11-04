@@ -11,7 +11,6 @@
 //              nobody, and are kept in Game.civilians, not Game.guards, so no AI side ever acquires, lines up or holds fire round one; what they do about Sam
 //              (run, tell a guard, ring it in) is their own module's. The row is here so a held / downed civilian's Guard record has a side to name.
 // The table is the whole rule: isHostile(a, b). It is symmetric today; nothing relies on that.
-import { manOf, manById, facedMan } from './seats';
 import type { Game, Guard } from './game';
 import type { Character } from './character';
 import { WORDS } from './words';   // (a leaf: nothing of the game behind it)
@@ -45,12 +44,12 @@ export function staffVsOperatives(on: boolean) {
 
 /** the side a Character is on: Sam's, or that of the Guard whose body it is ('guard' for a stray the game does not know) */
 export function teamOfChar(g: Game, c: Character): Team {
-  if (manOf(g, c)) return 'player';
+  if (c === g.player.char) return 'player';
   return g.guards.find(x => x.char === c)?.team ?? 'guard';
 }
 /** the side of the character with this id (events and suppression carry ids, not objects) — 'player' for Sam's id, else the living or dead Guard's, else 'guard' */
 export function teamOfId(g: Game, id: number): Team {
-  if (manById(g, id)) return 'player';
+  if (id === g.player.char.id) return 'player';
   return g.guards.find(x => x.char.id === id)?.team ?? 'guard';
 }
 
@@ -59,8 +58,8 @@ export function teamOfId(g: Game, id: number): Team {
 export function hostileTo(gd: Guard, o: Guard | 'player'): boolean { return isHostile(gd.team, o === 'player' ? 'player' : o.team); }
 /** The Character his foe is — Sam's, or the hostile AI man's; null when he has nobody (an operative before a hostile has shown himself, a man whose foe died
  *  with no other in sight). Every place in the AI that used to read g.player.char for "the man I am after" reads this. */
-export function foeChar(g: Game, gd: Guard): Character | null { const f = gd.foe; return f === 'player' ? facedMan(g, gd).char : f ? f.char : null; }   // (the player he has in mind, where there is more than one: seats.ts)
+export function foeChar(g: Game, gd: Guard): Character | null { const f = gd.foe; return f === 'player' ? g.player.char : f ? f.char : null; }
 /** His foe is out of the fight — Sam down, or the man dead. False with nobody. */
-export function foeDown(g: Game, gd: Guard): boolean { const f = gd.foe; return f === 'player' ? facedMan(g, gd).down : !!f && f.state === 'dead'; }
+export function foeDown(g: Game, gd: Guard): boolean { const f = gd.foe; return f === 'player' ? g.player.down : !!f && f.state === 'dead'; }
 /** His foe is crouched (the aim point comes down; the sight gain's crouch discount): Sam's crouch, or the AI man's crouch pose (head down under fire, a drill's knee). */
-export function foeCrouched(g: Game, gd: Guard): boolean { const f = gd.foe; return f === 'player' ? facedMan(g, gd).crouch : !!f && f.char.anim.crouch > 0.5; }
+export function foeCrouched(g: Game, gd: Guard): boolean { const f = gd.foe; return f === 'player' ? g.player.crouch : !!f && f.char.anim.crouch > 0.5; }

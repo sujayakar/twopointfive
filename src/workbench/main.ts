@@ -10,13 +10,12 @@
 // /viewer#s/v, /gait and /editor#file= forward here. Every window hook of both pages stays: __ed __edshot __uishot __tools __view __scene (editor),
 // __viewer __char __step __gizmo __rig __rigSource __toss __cans __vtime __tac __hold __long __M __vrt (viewer; __vrt = the viewer Runtime — __rt is the GAME page's
 // RT-reflection knobs), __shot __engine __cam (shared), + __wb.
-import { initGpu, showFatal, showFatalError, PIPE_QUEUE } from '../gpu/device';
+import { initGpu, showFatal } from '../gpu/device';
 import { Engine } from '../engine';
 import { Quality, QUALITY_NAMES, QualityName } from '../ui/quality';
 import { Vec3, v3, clamp } from '../math/vec';
 import { RIG, rigSource } from '../game/rigProps';
 import { INHAND } from '../game/inhand';
-import { DOORWAY } from '../game/doors';
 import { GUNHAND } from '../game/gunhand';
 import { PACKSIDE } from '../game/packside';
 import { gearFromQuery, gearText } from '../game/gear';
@@ -51,7 +50,6 @@ async function main() {
   const app$ = $('app'); const canvas = $('view') as HTMLCanvasElement; const olay = $('olay') as HTMLCanvasElement; const loading = $('loading');
   const gpu = await initGpu(canvas);
   if (loading) loading.textContent = 'compiling shaders…';
-  PIPE_QUEUE.later = false;   // (the workbench waits for every program, whatever the game's row 'Start on first frame shaders' says: its debug views and stills have no stand-in, and it never settles the compile queue)
   const engine = await Engine.create(gpu, { sharp: true, gbaa: true });   // (every kernel through the async path — engine.ts init / gpu/device.ts: never compile the boot pipelines synchronously; the standalone editor boots the same way)
   const S = engine.settings; const W = engine.world; const LS = engine.lights;
   const url = readHash();
@@ -64,7 +62,6 @@ async function main() {
   PACKSIDE.on = new URLSearchParams(location.search).get('packside') === '1';   // (game/packside.ts: a long thing on a back that wears a pack stands at the pack's side — OFF here unless ?packside=1: there the across-the-back gizmos would move nothing on screen while a drag still rewrote their numbers)
   INHAND.on = new URLSearchParams(location.search).get('inhand') !== '0';   // (game/inhand.ts, as the game page boots it — host/profile.ts pageSwitches: what a staged man holds is drawn in his hand, so a rig number fitted here is judged on the picture the game draws; ?inhand=0 = as it was)
   GUNHAND.on = new URLSearchParams(location.search).get('gunhand') !== '0';   // (game/gunhand.ts, likewise: the moves that keep to the free hand — the whistle's torch, the throw, a long gun's reload — are judged here as the page plays them)
-  DOORWAY.leafWay = new URLSearchParams(location.search).get('leafway') !== '0';   // (game/doorswing.ts 'leaf room', as the game page boots it — host/profile.ts pageSwitches: the level editor shows each door the side the page will hang it)
   LOOK.on = lookOfQuery(new URLSearchParams(location.search));   // (the default look, as the game page boots it — host/profile.ts pageSwitches: the staged men wear the cast and the material tables the game draws; ?look=plain = the old cast. Set before the runtime fetches the cast)
   const qp = new URLSearchParams(location.search).get('quality');
   let qName: QualityName = (QUALITY_NAMES as string[]).includes(qp ?? '') ? qp as QualityName : (QUALITY_NAMES as string[]).includes(prefs.quality) ? prefs.quality : 'medium';
@@ -382,4 +379,4 @@ async function main() {
   }
 }
 
-main().catch(e => { console.error(e); showFatalError(e); });
+main().catch(e => { console.error(e); showFatal(String(e?.stack ?? e)); });
