@@ -574,15 +574,11 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
 
     // ---- the south apron = the impound bay: a pickup under its dust inside a red line, a yellow clamp on its front wheel, the notice on its roof; one motorbike
     L.room('apron_s');
-    // THE BAY STANDS OUT AT THE LOT'S EDGE, NOT AGAINST THE WALL. A defender's way round the building to the offices' other doors runs along the foot of the
-    // south wall (z 24.8), and that way is 1.3 m inside its length limit with nothing on it (pressure.ts flankMaxM; tools/qa/wayround-check.ts). A car on
-    // that line, as the bay first stood, sent him a metre further round: the way still fitted from his post and no longer did a stride off it
-    { const Z = 26.15;                                                             // the bay's middle: the car's side 1.2 m off the wall
-      G.pickup(20.7, Z, 0, 'truckTan');                                            // the kit's pickup, tan under its dust, nose east (5.0 x 1.8: the bay is drawn round it)
-      B(20.8, Z - 0.2, 21.3, Z + 0.15, 1.58, 1.586, P.paper, NS); B(20.8, Z - 0.2, 20.92, Z + 0.15, 1.586, 1.59, C.red, NS);   // the notice on its roof (0.5 x 0.35), a red band across its head
-      L.mat(17.95, Z - 1.1, 23.45, Z - 1.02, C.red, 0.02); L.mat(17.95, Z + 1.22, 23.45, Z + 1.3, C.red, 0.02); L.mat(17.95, Z - 1.02, 18.03, Z + 1.22, C.red, 0.02); L.mat(23.37, Z - 1.02, 23.45, Z + 1.22, C.red, 0.02);   // the bay's red line: the cage's line again, the same hand
-      { const b = G.piece(22.22, Z + 1.035, 0); b(0, 0, 0, 0.42, 0.38, 0.115, G.M.genYellow); b(0, -0.205, 0.76, 0.84, 0.1, 0.14, G.M.genYellow, { flags: NS }); } }   // the clamp on its near front wheel, in the kit's yellow: a plate against the tyre, an arm over it
-    G.motorbike(25.7, 27.0, 0.12);                                                  // one motorbike beside the bay, out at the lot's edge with it (the kit's: its bare metal a probe's width from a wall with the hall's lit panels behind it could show their light)
+    { G.pickup(20.7, 25.45, 0, 'truckTan');                                        // the kit's pickup, tan under its dust, nose east (5.0 x 1.8: the bay is drawn round it)
+      B(20.8, 25.25, 21.3, 25.6, 1.58, 1.586, P.paper, NS); B(20.8, 25.25, 20.92, 25.6, 1.586, 1.59, C.red, NS);   // the notice on its roof (0.5 x 0.35), a red band across its head
+      L.mat(17.95, 24.35, 23.45, 24.43, C.red, 0.02); L.mat(17.95, 26.67, 23.45, 26.75, C.red, 0.02); L.mat(17.95, 24.43, 18.03, 26.67, C.red, 0.02); L.mat(23.37, 24.43, 23.45, 26.67, C.red, 0.02);   // the bay's red line: the cage's line again, the same hand
+      { const b = G.piece(22.22, 26.485, 0); b(0, 0, 0, 0.42, 0.38, 0.115, G.M.genYellow); b(0, -0.205, 0.76, 0.84, 0.1, 0.14, G.M.genYellow, { flags: NS }); } }   // the clamp on its near front wheel, in the kit's yellow: a plate against the tyre, an arm over it
+    G.motorbike(25.7, 26.3, 0.12);                                                  // one motorbike beside the bay, two metres off the wall (the kit's: its bare metal a probe's width from a wall with the hall's lit panels behind it could show their light)
 
     // ---- the quiet side, north and west: a shipping container alone on the north verge; the smokers' bench against the west wall beside the fire exit
     L.room('verge');
