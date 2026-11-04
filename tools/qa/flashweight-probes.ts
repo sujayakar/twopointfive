@@ -31,7 +31,11 @@
 //   flashweight-feel    the Tab panel's 'Team feel' rows (game/teamfeel.ts) under a stand-in localStorage: only what differs from the build is stored, a fresh
 //                       Game reads it back, a bad stored value is passed over, the reset drops it. Also in the 'ui' family.
 // The family's own red path: FLASHWEIGHT_BREAK=1 bun run tools/qa/probes.ts flashweight-pace must FAIL (the pace rule switched off under the probe).
+// The lights' own: FLASHLIGHTS_BREAK=1 bun run tools/qa/probes.ts flashweight-lights must FAIL on both stands (every teammate's light read as off: a man is
+// then 'lit' only where a rule says his light would help nobody, and in the open no rule says that).
 import { standUp, ROOT } from './headless.ts';
+/** QA: the lights family's red path (see the head) */
+const LIGHTS_BREAK = process.env.FLASHLIGHTS_BREAK === '1';
 import { stage, setKnobs } from './bang-tally.ts';
 const { SCENARIOS } = await import(`${ROOT}/src/scene/scenarioList.ts`);
 const GDM: any = await import(`${ROOT}/src/game/guards.ts`);
@@ -290,7 +294,7 @@ async function emptyEntry(scn: string) {
   const feet = (x: any) => { const [px, , pz] = x.char.pos; return Math.max(feetAt(px, pz), feetAt(px + 0.3, pz), feetAt(px - 0.3, pz), feetAt(px, pz + 0.3), feetAt(px, pz - 0.3)); };
   // (lit, or dark by a rule that says this light would help nobody: the place is lit — LIGHTS.litOff — or the whole beam would end on the wall at his
   //  muzzle — LIGHTS.wallOff, by the rule's own reading as probes.ts light-wall holds it: never dark with a ray clear, never dark on a man in the beam)
-  const litOk = (x: any) => !!x.flashlight?.enabled || (GDM.placeLitSeen(g, x) && feet(x) >= GDM.LIGHTS.litAt * 0.8) || GDM.wallDarkSeen(g, x); let spared = 0, litInLit = 0, burnDark = 0; const run = new Map<any, number>();
+  const litOk = (x: any) => (!LIGHTS_BREAK && !!x.flashlight?.enabled) || (GDM.placeLitSeen(g, x) && feet(x) >= GDM.LIGHTS.litAt * 0.8) || GDM.wallDarkSeen(g, x); let spared = 0, litInLit = 0, burnDark = 0; const run = new Map<any, number>();
   const watch = () => { for (const x of team) { const on = !!x.flashlight?.enabled, pl = GDM.placeLitSeen(g, x); if (!on && pl) spared++; if (on && feet(x) < GDM.LIGHTS.litAt) burnDark++; const r = on && pl ? (run.get(x) ?? 0) + 1 : 0; run.set(x, r); if (r > 60 * GDM.LIGHTS.tail + 3) litInLit++; } };
   const sam = g.player.char.pos;
   step(60 * 6);   // (the hand-off's own noise is out of everybody's ears)
@@ -328,6 +332,7 @@ async function emptyEntry(scn: string) {
     unseen: m ? +m[1] : NaN, cells: m ? +m[2] : NaN, moves: m ? +m[3] : NaN, beat };
 }
 export const flashweightLights = guarded(async () => {
+  if (LIGHTS_BREAK) console.log('  (FLASHLIGHTS_BREAK: every teammate\'s light is read as off — the lines below must fail)');
   const F = family('flashweight-lights: weapon lights off until they help — every scenario: dark in file behind Sam, lit walking to a door alone, dark stacked on it, lit through the entry and the search, dark holding the room and following out');
   // (THE LIGHT RULE ALONE: since nvg.ts a quiet team in the dark walks on its goggles with no light at all — probes.ts nvg has that; what LIGHTS does with
   // the lights when they are its own to burn is measured here with the goggles off, as it was written)
