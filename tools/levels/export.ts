@@ -9,6 +9,7 @@ import { basename, resolve } from 'node:path';
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 const ROOT = resolve(import.meta.dir, '../..');
 const { OFFICE_PALETTE, OFFICE_FINISH } = await import(`${ROOT}/src/scene/officeGen.ts`);
+const { rowWord } = await import(`${ROOT}/src/scene/stuff.ts`);   // (what each paint is made of, by its name: written into the file's material rows)
 const { levelToData, loadLevel } = await import(`${ROOT}/src/scene/levelLoad.ts`);
 const { validateLevelData, serializeLevelData, parseLevelData, levelDataDigest, structuralDiff, canonicalLevelData } = await import(`${ROOT}/src/scene/levelData.ts`);
 const { WORLD } = await import(`${ROOT}/src/scene/world.ts`);
@@ -64,13 +65,13 @@ if (scenarios) level.scenarios = scenarios;   // (an ordinary, enumerable field:
 // THE LOOK'S SECOND FILE (tools/levels/gwotSkin.ts): a generator that exports `finish` changes the dressed level's clothes here — it exports `DRESS_AS` = the
 // generator whose level it is, so the dressing above is that level's, box for box
 if (gen.finish) { const n0 = level.boxes.length; const st = gen.finish(level, groups); if (st) console.log(`look: ${st.repainted} boxes repainted, ${st.kept} kept, ${st.decals} decals, ${st.props} props — ${Object.entries(st.by as Record<string, number>).sort((a, b) => b[1] - a[1]).slice(0, 10).map(([k, n]) => `${n} ${k}`).join(', ')}${st.relaid === undefined ? '' : ` — ${st.relaid} flat decals raised to draw in order, the highest top at ${((st.flatTop ?? 0) * 1000).toFixed(2)} mm, ${st.surfaced} now over a flat of the level`}`); if (groups.length !== level.boxes.length) throw new Error(`finish: ${groups.length} groups for ${level.boxes.length} boxes (from ${n0})`); }
-const materials: Record<string, { albedo: [number, number, number]; rough?: number; metal?: boolean }> = {};
+const materials: Record<string, { albedo: [number, number, number]; rough?: number; metal?: boolean; stuff?: string }> = {};
 { const seen = new Set<string>();
   for (const [m, alb] of Object.entries(OFFICE_PALETTE as Record<string, [number, number, number]>)) { const k = alb.join(','); if (seen.has(k)) continue; seen.add(k);
-    materials[m] = { albedo: [alb[0], alb[1], alb[2]], ...((OFFICE_FINISH as Record<string, { rough: number; metal?: boolean }>)[m] ?? {}) }; }
+    materials[m] = { albedo: [alb[0], alb[1], alb[2]], ...((OFFICE_FINISH as Record<string, { rough: number; metal?: boolean }>)[m] ?? {}), ...rowWord(m) }; }
   // a generator's OWN materials (its `MATERIALS` export — the GWOT kit's palette, src/scene/gwotKit.ts GWOT_MATERIALS): added after the office's, a colour the office already names keeps the office's name
-  for (const [m, row] of Object.entries((gen.MATERIALS ?? {}) as Record<string, { albedo: [number, number, number]; rough?: number; metal?: boolean }>)) { const k = row.albedo.join(','); if (seen.has(k) || materials[m]) continue; seen.add(k);
-    materials[m] = { albedo: [row.albedo[0], row.albedo[1], row.albedo[2]], ...(row.rough !== undefined ? { rough: row.rough } : {}), ...(row.metal ? { metal: true } : {}) }; } }
+  for (const [m, row] of Object.entries((gen.MATERIALS ?? {}) as Record<string, { albedo: [number, number, number]; rough?: number; metal?: boolean; stuff?: string }>)) { const k = row.albedo.join(','); if (seen.has(k) || materials[m]) continue; seen.add(k);
+    materials[m] = { albedo: [row.albedo[0], row.albedo[1], row.albedo[2]], ...(row.rough !== undefined ? { rough: row.rough } : {}), ...(row.metal ? { metal: true } : {}), ...(row.stuff !== undefined ? { stuff: row.stuff } : rowWord(m)) }; } }   // (what the paint is made of: the generator's own word for its row, else the table's for the name. scene/stuff.ts)
 const data = levelToData(level, {
   name: gen.NAME ?? name, materials, boxGroups: groups, ...(surfaces ? { surfaces } : {}),
   floors: [{ id: 'f0', name: 'ground floor', y: 0, ceiling: WORLD.ceilingY }],

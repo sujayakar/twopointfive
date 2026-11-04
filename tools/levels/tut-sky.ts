@@ -50,6 +50,7 @@ import { gwotKit, gwotOfOffice, GWOT_PALETTE, GWOT_MATERIALS, type GwotOpening }
 import { SNOW_PALETTE, SNOW_FINISH, SNOW_MATERIALS, type SnowMat } from '../../src/scene/gwotPalette';
 import { WORLD } from '../../src/scene/world';
 import { BoxFlag } from '../../src/scene/boxes';
+import { drawnAs, PANEL_GREY } from '../../src/scene/stuff';
 
 export const NAME = 'tut-sky';
 export const MATERIALS = { ...GWOT_MATERIALS, ...SNOW_MATERIALS };
@@ -503,9 +504,9 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
   G.wire(30.0, 6.4, 29.0, 6.4, 2.8); G.wire(19.3, 11.66, 19.3, 11.9, 2.75); G.wire(19.3, 11.9, GATE.b + 0.1, GATE.z, 2.62); G.wire(19.3, 11.9, 28.86, 15.0, 2.7);
   // ---- THE MAINS BOX on the kitchen's yard wall, a conduit up to the eaves: the breaker a teammate throws ----
   grp('breaker');
-  const brk = add({ c: [BREAKER[0], 1.35, 11.665], h: [0.28, 0.36, 0.045], albedo: [0.42, 0.44, 0.45], name: 'mains_box' });
+  const brk = add({ c: [BREAKER[0], 1.35, 11.665], h: [0.28, 0.36, 0.045], albedo: PANEL_GREY, name: 'mains_box' });
   const brkLed = add({ c: [BREAKER[0] - 0.18, 1.62, 11.715], h: [0.015, 0.015, 0.01], ...M.plasticBlack, emissive: [0.3, 4, 0.6], flags: BoxFlag.NoShadow });
-  add({ c: [BREAKER[0] + 0.16, 2.3, 11.64], h: [0.02, 0.6, 0.02], albedo: [0.3, 0.31, 0.32] });
+  add({ c: [BREAKER[0] + 0.16, 2.3, 11.64], h: [0.02, 0.6, 0.02], albedo: drawnAs('sheet', [0.3, 0.31, 0.32]) });
   // ---- THE EMERGENCY BEACONS: red, on a battery, turning only while the mains are out (game/lighting.ts). Four of the five are out of doors, on brackets a
   // man can see from above: the light a blackout is known by here is red sweeping over snow ----
   grp('beacons');

@@ -76,6 +76,7 @@ import { gwotKit, gwotOfOffice, GWOT_PALETTE, GWOT_MATERIALS } from '../../src/s
 import { WORLD } from '../../src/scene/world';
 import { BoxFlag } from '../../src/scene/boxes';
 import { livedQuiet } from './lived-quiet';
+import { drawnAs, PANEL_GREY } from '../../src/scene/stuff';
 
 export const NAME = 'crossing';
 export const NOTES = 'The border crossing at night, for two men sneaking. Its one idea: two lane men who watch each other along a seized container on the kerb, each with his back to the dark lot — nobody crosses the lane until both drop on one word. Also: a boom man watching the lit west crossing from his hut, a locked fence door under a battery camera at the east end, a blast screen across the far mouth of the lane, a customs house of three rooms north of the road, a lot and the generator shed south of it. Seven beats authored, five or six manned a deal. Regenerate: bun run tools/levels/export.ts crossing';
@@ -205,8 +206,8 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
   // ---------------- roofs (light-only): the house, the boom hut, the shed ----------------
   grp('ceiling');
   slab(12.9, H, 3.9, 31.1, H + 0.2, 9.6, [0.5, 0.47, 0.41], roof);
-  slab(3.9, H, 16.5, 8.1, H + 0.2, 20.1, [0.36, 0.35, 0.33], roof);
-  slab(29.9, H, 19.4, 36.1, H + 0.2, 24.1, [0.36, 0.35, 0.33], roof);
+  slab(3.9, H, 16.5, 8.1, H + 0.2, 20.1, drawnAs('block', [0.36, 0.35, 0.33]), roof);
+  slab(29.9, H, 19.4, 36.1, H + 0.2, 24.1, drawnAs('block', [0.36, 0.35, 0.33]), roof);
 
   // ---------------- the perimeter wall (2.4 m, coped) with its five foot gates; the road's two vehicle gates stand shut ----------------
   grp('walls.perimeter');
@@ -313,7 +314,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
   // ---------------- the generator shed: the set, its fuel, THE BREAKER on the east wall ----------------
   grp('shed');
   G.generator(33.2, 23.2, 0); G.drums(31.0, 23.2, 2); G.jerryCan(34.8, 20.2, 0.3, 'jerryYellow');
-  const brk = add({ c: [35.84, 1.35, 21.6], h: [0.04, 0.36, 0.28], albedo: [0.42, 0.44, 0.45], name: 'breaker_panel' });
+  const brk = add({ c: [35.84, 1.35, 21.6], h: [0.04, 0.36, 0.28], albedo: PANEL_GREY, name: 'breaker_panel' });
   const brkLed = add({ c: [35.79, 1.62, 21.42], h: [0.01, 0.015, 0.015], albedo: P.plasticBlack, rough: 0.5, emissive: [0.3, 4, 0.6], flags: BoxFlag.NoShadow });
   G.tube(33.0, 21.4, true, 'shed', true);
 
