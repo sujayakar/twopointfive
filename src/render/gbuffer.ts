@@ -18,6 +18,7 @@ import surfaceSrc from './shaders/surface.wgsl' with { type: 'text' };   // SURF
 import lookSrc from './shaders/look.wgsl' with { type: 'text' };         // THE LOOK PROTOTYPE (render/frame.ts lookConfig): fsBox's materials off real maps — in the module only on that page
 import { LOOK_NAMES, LOOK_N, LOOK_LAYERS, LOOK_ROUGH, lookLayer, lookMip } from './lookTex';
 import { GWOT_PALETTE, type GwotMat } from '../scene/gwotPalette';
+import { PAINT_STUFF, stuffOfName, type PaintRows } from '../scene/stuff';
 
 /** which stuff each paint of the 2010s palette is drawn as under the try (shaders/surface.wgsl's classes, by number); a paint with no row draws plain */
 const SURF_OF: Readonly<Partial<Record<GwotMat, number>>> = {
@@ -36,12 +37,14 @@ function classWgsl(name: string, of: Readonly<Partial<Record<GwotMat, number>>>)
   return `fn ${name}(a: vec3f) -> u32 {\n${exact.join('\n')}\n${dark.join('\n')}\n  return 0u;\n}\n`;
 }
 function surfaceWgsl(): string { return classWgsl('surfClass', SURF_OF) + surfaceSrc; }
-/** THE LOOK PROTOTYPE's classes: surface.wgsl's eight and three of its own (look.wgsl LOOK_CLOTH 9, LOOK_METAL 10, LOOK_PAINT 11) */
-export const LOOK_OF: Readonly<Partial<Record<GwotMat, number>>> = { ...SURF_OF,
-  sack: 9, sandbag: 9, hesco: 9, canvas: 9, tarpBlue: 9, blanketGrey: 9, blanketBrown: 9, rugRed: 9, rugNavy: 9, rugCream: 9, rugOchre: 9, rugGreen: 9, rugMadder: 9, coyote: 9,
-  rust: 10, iron: 10,
-  paintBlue: 11, paintGreen: 11, paintRust: 11, drumBlue: 11, drumRed: 11, genYellow: 11, truckWhite: 11, truckTan: 11, truckRed: 11, olive: 11,
-};
+/** the look's class number of a stuff (look.wgsl: a layer of lookTex.ts LOOK_NAMES and one; 0 = drawn plain, which 'plain' and 'waits' both are) */
+export const lookClassOf = (stuff: string | undefined): number => stuff === undefined ? 0 : (LOOK_NAMES as readonly string[]).indexOf(stuff) + 1;
+/** WHAT A PAINT NAME IS DRAWN AS: scene/stuff.ts PAINT_STUFF as the look's class numbers, less the names that are mixed (those have no class of their own:
+ *  the colour decides). The audit of a level reads this to tell a paint that is meant from one that got a material by the chance of its colour. */
+export const LOOK_BY_NAME: Readonly<Record<string, number>> = Object.fromEntries(Object.entries(PAINT_STUFF).filter(([, stuff]) => stuff !== 'mixed').map(([name, stuff]) => [name, lookClassOf(stuff)]));
+/** THE LOOK PROTOTYPE's classes of the palette's rows: surface.wgsl's eight and three of its own (look.wgsl LOOK_CLOTH 9, LOOK_METAL 10, LOOK_PAINT 11), read
+ *  off the table of names in its order (the shader's text below is written in this order, and a darkened paint is the first row it fits) */
+export const LOOK_OF: Readonly<Partial<Record<GwotMat, number>>> = Object.fromEntries(Object.entries(LOOK_BY_NAME).filter(([name, cls]) => cls > 0 && name in GWOT_PALETTE));
 
 /** WHAT A PAINT IS DRAWN AS (look.wgsl's classes; 0 = plain), by the rule lookClass writes out for the shader and with its numbers: the palette's own row first (a
  *  stand-in is that row), then a classed paint darkened in one piece (a worn patch is its ground × 0.7). The engine asks it of each box's AUTHORED paint and the
@@ -63,6 +66,21 @@ export function lookStuff(a: Readonly<ArrayLike<number>>): number {
 }
 /** … what it said of a colour before (a level has a few dozen paints; a colour is asked about for every box that moves, every frame) */
 const STUFF = new Map<number, number>();
+/** the key a colour is kept under (13 bits a channel), or -1 for one out of range */
+const paintKey = (a: Readonly<ArrayLike<number>>): number => { const r = Math.round(a[0] * 8192), g = Math.round(a[1] * 8192), b = Math.round(a[2] * 8192); return r >= 0 && r < 16384 && g >= 0 && g < 16384 && b >= 0 && b < 16384 ? r + 16384 * (g + 16384 * b) : -1; };
+/** A LEVEL'S PAINTS BY NAME (scene/stuff.ts): each colour a row of the level file names, with the class of what the table says that name is made of. A box
+ *  is written into a level file under the FIRST row that has its colour exactly (levelLoad.ts levelToData), and a loose prop's part wears a row's colour too, so
+ *  a row is found by the colour and no box carries a word of its own. So the first row of a colour speaks for that colour, and where it has no row in the
+ *  table, or the table says the name is mixed, the colour is left to the colour rule whatever later rows say. Paints written as numbers (a door's leaf, the
+ *  lived kit's toned paints) are the colour rule's too, unless their numbers happen to be a row's: that chance is what 'mixed' is for. */
+export function lookNamed(rows: PaintRows | null | undefined): Map<number, number> {
+  const named = new Map<number, number>(), seen = new Set<number>();
+  for (const [name, row] of Object.entries(rows ?? {})) {
+    const key = paintKey(row.albedo); if (key < 0 || seen.has(key)) continue; seen.add(key);
+    const stuff = stuffOfName(name); if (stuff !== undefined && stuff !== 'mixed') named.set(key, lookClassOf(stuff));
+  }
+  return named;
+}
 /** the cloth layer (lookTex.ts LOOK_NAMES): the one the men's cloth reads too */
 /** THE LOOK'S WORD FOR A BOX (scene/boxes.ts BoxWorld.stuffOf; common.wgsl boxLook): what it is made of (lookStuff, 4 bits), whether it MOVES (16: a box past the
  *  level's statics, rebuilt every frame, which carries its map with it), and a number of its own, 0‥90 (× 32), that shifts its map so two crates are not one crate
@@ -70,15 +88,18 @@ const STUFF = new Map<number, number>();
  *  jumped in the frame a wall went. A thing that moves is told by its motion key, or by its size; a thing that stands, by where it stands.
  *  (Known, left: a device's boxes are keyed by their order among the devices' boxes (game/devices.ts), so a tripwire's beam coming or going still moves the
  *  number of the device boxes after it; and two unkeyed movers of one size share a number.)
- *  `dry` = the paint a box had before the weather darkened it in place, if it did (game/weather.ts dryPaint): what a slab is made of is not changed by rain. */
-export function lookWordOf(dry?: (b: Box) => Readonly<ArrayLike<number>> | undefined): (b: Box, moves: boolean) => number {
+ *  `dry` = the paint a box had before the weather darkened it in place, if it did (game/weather.ts dryPaint): what a slab is made of is not changed by rain.
+ *  `rows` = the paint rows of the level file the game stands on (levelLoad.ts levelFileOf): a paint one of them names is what its NAME says it is made of
+ *  (lookNamed above), asked before any colour is weighed. None = by colour alone, as the look began. */
+export function lookWordOf(dry?: (b: Box) => Readonly<ArrayLike<number>> | undefined, rows?: PaintRows | null): (b: Box, moves: boolean) => number {
+  const named = lookNamed(rows);
   return (b, moves) => {
     const paint = (b.aniso === true && dry?.(b)) || b.albedo;   // (aniso is the weather's mark: nothing is authored with it)
     let h: number;
     if (moves) h = b.mkey !== undefined ? Math.imul(b.mkey | 0, 0x9e3779b1) : Math.imul(Math.round(b.h[0] * 1000) + 131 * Math.round(b.h[1] * 1000) + 17161 * Math.round(b.h[2] * 1000), 0x9e3779b1);
     else h = Math.imul(Math.round(b.c[0] * 100) + 7919 * Math.round(b.c[1] * 100) + 104729 * Math.round(b.c[2] * 100), 0x9e3779b1);
     h ^= h >>> 15; h = Math.imul(h, 0x85ebca6b); h ^= h >>> 13;
-    return lookStuff(paint) + (moves ? 16 : 0) + 32 * ((h >>> 0) % 91);
+    return (named.size ? named.get(paintKey(paint)) ?? lookStuff(paint) : lookStuff(paint)) + (moves ? 16 : 0) + 32 * ((h >>> 0) % 91);
   };
 }
 /** one turn of the event loop (a message, not a timer: a timer in a tab nobody is looking at is held to one a second) */

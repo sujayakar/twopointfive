@@ -5,7 +5,7 @@
 // here (a software page and then a GPU do that); these are the rules a picture cannot show you are broken until a level is lit by them.
 import { readFileSync } from 'node:fs';
 import { ROOT } from './headless.ts';
-const { lookLayer, lookMip, LOOK_LAYERS, LOOK_PAINTED, LOOK_NAMES, LOOK_N, LOOK_ROUGH } = await import(`${ROOT}/src/render/lookTex.ts`);
+const { lookLayer, lookMip, LOOK_LAYERS, LOOK_PAINTED, LOOK_NAMES, LOOK_N, LOOK_ROUGH, LOOK_TILE } = await import(`${ROOT}/src/render/lookTex.ts`);
 const { GBuffer, LOOK_OF, LOOK_MATCH, LOOK_DEFAULTS, lookStuff, lookWordOf, lookAmounts } = await import(`${ROOT}/src/render/gbuffer.ts`);
 const { GWOT_PALETTE } = await import(`${ROOT}/src/scene/gwotPalette.ts`);
 
@@ -61,6 +61,16 @@ const hollowsOf = (b: Uint8Array) => { let s = 0; for (let i = 3; i < b.length; 
     if (line[N - 1] > 1.25 * inside + 0.5) bad.push(`${LOOK_NAMES[l]} ${nm} ${axis ? 'up' : 'along'}: ${line[N - 1].toFixed(1)} at the edge, ${inside.toFixed(1)} the most inside`);
   }
   check(bad.length === 0, 'no layer has a seam: across a tile\'s edge the height and the paint step no more than they do inside the tile', bad.length ? bad.join(' · ') : `nearest ${worstAt}, ${worst.toFixed(2)} of the largest step inside`); }
+// 6b. old paint is chipped, not blotched: no bare patch reaches further than a hand and little of the tile is bare (the maintainer, 11-04, of patches up to
+// 36 cm on painted lids: "splotches on here look a bit weird, overdone"; that tile, the commit before this line, reads 35.9 cm and 5.1 % here)
+{ const l = (LOOK_NAMES as readonly string[]).indexOf('paint'), a = layers[l].a, bare = new Uint8Array(N * N), seen = new Uint8Array(N * N); let n = 0, wide = 0;
+  for (let i = 0; i < N * N; i++) if (lum(a[i * 4], a[i * 4 + 1], a[i * 4 + 2]) / 127.5 < 0.72) { bare[i] = 1; n++; }
+  for (let i = 0; i < N * N; i++) { if (!bare[i] || seen[i]) continue; let x0 = 0, x1 = 0, y0 = 0, y1 = 0; const todo: [number, number, number][] = [[i, 0, 0]]; seen[i] = 1;   // (a patch: bare texels that touch, across the tile's edge too; its size is how far it reaches along and up)
+    while (todo.length) { const [j, ox, oy] = todo.pop()!, x = j % N, y = (j / N) | 0; x0 = Math.min(x0, ox); x1 = Math.max(x1, ox); y0 = Math.min(y0, oy); y1 = Math.max(y1, oy);
+      for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) { const k = ((y + dy + N) % N) * N + (x + dx + N) % N; if (bare[k] && !seen[k]) { seen[k] = 1; todo.push([k, ox + dx, oy + dy]); } } }
+    wide = Math.max(wide, (Math.max(x1 - x0, y1 - y0) + 1) * LOOK_TILE / N); }
+  const share = n / (N * N);
+  check(wide <= 0.12 && share <= 0.02 && share >= 0.002, 'old paint is chipped, not blotched: its widest bare patch reaches no further than a hand (12 cm) and between 0.2 % and 2 % of the tile is bare', `widest ${(wide * 100).toFixed(1)} cm, ${(share * 100).toFixed(2)} % bare`); }
 // 7. a map carries no light: the normal is a direction, the finish stays about the layer's own, and a smaller copy is the same paint
 { const bad: string[] = [];
   for (let l = 0; l < LOOK_LAYERS; l++) { const b = layers[l].b; let long = 0, rs = 0;
@@ -119,7 +129,7 @@ const hollowsOf = (b: Uint8Array) => { let s = 0; for (let i = 3; i < b.length; 
   const gsrc = readFileSync(`${ROOT}/src/render/shaders/gbuffer.wgsl`, 'utf8'), csrc = readFileSync(`${ROOT}/src/render/shaders/common.wgsl`, 'utf8'), lsrc = readFileSync(`${ROOT}/src/render/shaders/look.wgsl`, 'utf8'), msrc = readFileSync(`${ROOT}/src/main.ts`, 'utf8');
   check(/if \(LOOK\) \{ o\.look = boxStuff\(bi\); \}/.test(gsrc) && !/lookClass\(o\.albedo\)/.test(gsrc) && /fn boxLook\(i: u32\) -> u32 \{ return u32\(boxMat\[i \* 4u \+ 1u\]\.w \* 0\.125\); \}/.test(csrc) && /fn boxStuff\(i: u32\) -> u32 \{ return boxLook\(i\) & 15u; \}/.test(csrc)
     && /if \(LOOK\) \{ w -= 8\.0 \* floor\(w \* 0\.125\); \}/.test(csrc) && /let word = boxLook\(bi\); let moves = \(word & 16u\) != 0u;/.test(lsrc) && /let salt = word >> 5u;/.test(lsrc) && /\|\| moves\) \{/.test(lsrc) && !/bi % (7|13)u/.test(lsrc)
-    && /mix\(1\.0, 0\.5 \+ cav, k2\.z\)/.test(lsrc) && /setStuffOf\(lookWordOf\(b => game\.weather\.dryPaint\(b\)\)\)/.test(msrc),
+    && /mix\(1\.0, 0\.5 \+ cav, k2\.z\)/.test(lsrc) && /setStuffOf\(lookWordOf\(b => game\.weather\.dryPaint\(b\)[,)]/.test(msrc),
     'the shader reads the box\'s word and takes it off the finish: no box is told what it is made of by the colour a corner is handed or how to lay its map by its place in the list, the hollows are drawn round a half, and the page asks the weather for a soaked slab\'s dry paint'); }
 // 9. the g-buffer's half, on a device that only counts: nothing is made in the constructor's turn, every layer and mip is written by the fill, and the cloth's tone
 //    and hollow are the block's last row once the cloth layer is made
