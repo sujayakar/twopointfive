@@ -78,7 +78,7 @@ const list = (SCENARIOS as any[]).filter(e => !want.length || want.includes(e.id
 if (want.length && !list.length) { console.error(`wayround-check: no mission or level of ${want.join(', ')} — ${(SCENARIOS as any[]).map(e => e.id).join(', ')}`); process.exit(2); }
 const child = (id: string, seed: number, lived: boolean) => new Promise<{ rows: Row[]; squads: boolean; lived: boolean; error?: string }>(res => {
   const p = spawn('bun', ['run', import.meta.path, '--one', `${id}:${seed}`], { cwd: ROOT, env: { ...process.env, TPS_LIVED: lived ? '1' : '0' }, stdio: ['ignore', 'pipe', 'pipe'] });
-  let o = '', e = ''; p.stdout.on('data', d => { o += d; }); p.stderr.on('data', d => { e += d; });
+  let o = '', e = ''; p.stdout.on('data', (d: Buffer) => { o += d; }); p.stderr.on('data', (d: Buffer) => { e += d; });
   p.on('close', () => { const line = o.trim().split('\n').pop() ?? ''; try { res(JSON.parse(line)); } catch { res({ rows: [], squads: false, lived, error: (e || o).trim().split('\n').pop()?.slice(0, 300) ?? 'no answer' }); } });
 });
 type Job = { e: any; seed: number; lived: boolean; r?: Awaited<ReturnType<typeof child>> };
