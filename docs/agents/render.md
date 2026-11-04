@@ -2561,6 +2561,20 @@ interleaved and filtered to their quiet minimum, and a row whose p75 sits far ab
   name is one thing: `chair` is fabric, the four `plastic*` plastic, the office's `metal` steel. KNOWN: `wood` stays planks, because the name is a
   bench, a crate and a pallet as well as a desk: a desk says veneer itself, with the second slice's word on a box. The class of a stuff is asked of
   `lookTex.ts lookStuffOf`, the one table. Seen on the software adapter, and the first three commits of it by the maintainer on his GPU through the preview.
+- **A BOX SAYS WHAT IT IS MADE OF, SECOND SLICE** (`Box.stuff`, a level file's `stuff` on a box or a prop's part, `src/scene/stuff.ts BOX_STUFFS`;
+  the maintainer, 11-04, of the showroom's desk and chair: "nicer materials on the chair and table"). A paint's NAME cannot part a desk from a
+  bench (both `wood`) or a car body from a partition (a level file names a box by its colour), so the PIECE says it: `lookWordOf` asks the box's
+  own word first, then its paint's name, then its colour. One of the look's materials that has a number (`lookStuffOf`: the stone and brick
+  under a mud wall are refused), `plain`, or `waits`. PICTURE ONLY: no rule of the game reads it, a level's fingerprint does not, and
+  `lived-check` reads a base's boxes with today's words; `?names=0` puts it off with the names. Written in the file only where it was said
+  (after `metal`, before `flags`). A loose prop's part carries it to the box the game makes (`props.ts`), and the page asks each part its word
+  before the first frame so its map is made (`main.ts`). SAID SO FAR, by the office kit (`officeGen.ts`, `levelKit.ts`): a desk, counter, low
+  table, conference table and credenza veneer; cubicle partitions, couch and sofa fabric; cabinets steel; a rug cloth; an outside door's frame
+  steel, an inside one's veneer. The level files of the generators that lay them are re-written by words alone. CHECK: `stuff-check` line 7
+  (`STUFF_BREAK=1` red): a word over a name and a colour, through the file and back, on a prop's part, refused words, the page's ask;
+  `lookmaps-check` asks a box that says a word for that word. NOT YET: a broken piece and a cut core inherit the word; the lived kit, the
+  compound's stucco and door leaves say theirs; a row on the look panel. Seen on the software adapter (the showroom); never on a GPU by us:
+  the maintainer has it on the preview.
 - **MARKS AS PAINT, A FIRST TRY** (`shaders/markings.wgsl markSoft`, behind `lookMarkSoft()` = `lookCfg.g.x`, 0 off the look page by gbuffer.ts's
   stub; the maintainer, 10-23: "we also need to get away from the pixel art textures"). A marking is still the level's 2-bit cell bitmap (2.5 cm
   cells), but on the look page it is not drawn as squares: the coverage is read over a one-cell footprint, cut back at half cover along a ragged line
