@@ -67,7 +67,7 @@ async function one(level: string) {
   const { BoxFlag } = await import(`${ROOT}/src/scene/boxes.ts`), { WORLD } = await import(`${ROOT}/src/scene/world.ts`), { cutConfig } = await import(`${ROOT}/src/scene/cut.ts`);
   const { geoTryLevel } = await import(`${ROOT}/src/scene/geoTry.ts`), { dressFront } = await import(`${ROOT}/src/scene/frontTry.ts`), { dressLorry, kitLorry } = await import(`${ROOT}/src/scene/lorryTry.ts`);
   const { dressPass } = await import(`${ROOT}/src/scene/passTry.ts`), { seatPosts } = await import(`${ROOT}/src/scene/lookMend.ts`);
-  const { skyPlan } = await import(`${ROOT}/src/render/placeField.ts`), { planOpenings, openAreas, LOOK_OPENINGS } = await import(`${ROOT}/src/render/openings.ts`);
+  const { skyPlan } = await import(`${ROOT}/src/scene/placePlan.ts`), { planOpenings, openAreas, LOOK_OPENINGS } = await import(`${ROOT}/src/scene/openings.ts`);   // (both moved to the scene folder with the floor plan, 11-04. These are loaded by a built path, as every check here loads the game, so the typecheck does not see a module move: RUN this after a rebase)
   const G = await import(`${ROOT}/src/render/gbuffer.ts`), { lookStuff, LOOK_OF, LOOK_MATCH } = G;
   /** stuff said BY A PAINT'S NAME, where the renderer has such a table (an export `LOOK_BY_NAME` of render/gbuffer.ts: a level file's material name → class). None today: a paint is what its colour says */
   const BY_NAME: Record<string, number> = (G as any).LOOK_BY_NAME ?? {};
@@ -214,7 +214,8 @@ async function all() {
   const base: Record<string, ReturnType<typeof slim>> | null = existsSync(BASE) ? JSON.parse(readFileSync(BASE, 'utf8')).levels : null;
   if (base && !PLAIN) { const moved = stood.flatMap(r => { const b = base[r.level], n: any = slim(r); if (!b) return [`${r.level}: no row in the baseline (a new level)`];
       const d = Object.keys(n).filter(key => (b as any)[key] !== n[key]).map(key => key === 'none' || key === 'byChance' ? `${key} ${pct((b as any)[key])} → ${pct(n[key])}` : `${key} ${(b as any)[key]} → ${n[key]}`); return d.length ? [`${r.level}: ${d.join(', ')}`] : []; });
-    console.log(moved.length ? `\nsince the baseline (before any dressing):\n  ${moved.join('\n  ')}` : '\nsince the baseline (before any dressing): nothing moved'); }
+    const fell = got.length - stood.length;   // (a level that did not stand has no counts to set against the baseline: say so, where "nothing moved" would read as all being well)
+    console.log(moved.length ? `\nsince the baseline (before any dressing):\n  ${moved.join('\n  ')}${fell ? `\n  (${fell} of ${got.length} levels did not stand and are not compared)` : ''}` : fell ? `\nsince the baseline (before any dressing): NOT COMPARED for ${fell} of ${got.length} levels, which did not stand${stood.length ? '; nothing moved on the rest' : ''}` : '\nsince the baseline (before any dressing): nothing moved'); }
   // `--counts`: a level's row for the table page (tools/qa/level-table.ts): its baseline row and the row as it stands now, as a dressing task's row.json keeps them
   if (flag('--counts')) for (const r of stood) console.log(`\n"counts" for ${r.level}'s row.json:\n${JSON.stringify({ before: base?.[r.level] ?? null, after: slim(r) })}`);
   if (!CHECK) { process.exit(stood.length === got.length ? 0 : 1); }
