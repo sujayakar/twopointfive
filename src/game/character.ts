@@ -2309,7 +2309,7 @@ export class CharacterAnimator {
     const surge = aL > 1e-5 ? -aL * SNEAK.surge * strideD * (1 + SNEAK.paceStride * pace) * P.crouchSpeed * c.Crouch_Fwd_Loop.duration / (4 * Math.PI) * Math.sin(th) * (this.reverse ? -1 : 1) : 0;   // (ground per cycle = stride factor × the clip's own; × the share of it the clip's stance really covers)
     // stand pose
     this.standPose(ph, wIdle, wWalk, wJog, wSprint);
-    if (RUNARMS.on && this.lg.run > 1e-3 && this.lg.w.x < 0.999) this.runArms(this.pA, this.lg.run, this.lg.sprint);   // the run's own arms carried close (RUNARMS), on the whole standing pose: by the run's share, so a sprint a heavy kit slows is not half the clip's wide arms again; not under a long gun that has both arms. (A layer of its own after the stand pose, in TypeScript on either side of RUST.walk: it runs its arms forward itself and solves on the pose)
+    if (RUNARMS.on && this.lg.run > 1e-3 && this.lg.w.x < 0.999) this.runArms(this.pA, this.lg.run, this.lg.sprint);   // the run's own arms carried close (RUNARMS), on the whole standing pose: by the run's share, so a sprint a heavy kit slows is not half the clip's wide arms again; not under a long gun that has both arms. (A layer of its own after the stand pose; with RUST.walk it is the module's run_arms)
     if (wRun > 1e-3 && SOFT_KNEE.on > 0.5) this.softKnees(this.pA, wRun);   // ease the push-off leg short of dead straight (see SOFT_KNEE — its own switch, not the linger's) before the plant re-solves the stance leg
     // the run's stance feet pinned to the floor and the ground's speed through each stance window (after the whole stand pose is together: it re-solves the
     // stance leg under whatever the blend made of it; the crouch blend, the life layer and the stances that follow keep the feet where they find them).
@@ -3637,6 +3637,16 @@ export class CharacterAnimator {
    *  sprint's. Each hand is read in the shoulder line's frame (to his left along the two shoulder joints, level; up; forward), its sideways travel drawn in
    *  by `w`, its fore-aft travel lengthened and its front lifted by `ws`, and the arm solved to it with the elbow behind him. The hand follows its forearm. */
   private runArms(pose: Pose, w: number, ws: number) {
+    const g = layerSlot(this.ch, pose, this.cast);   // (RUST.walk: rust/sim/src/layers.rs run_arms)
+    if (g < 0) this.runArmsOwn(pose, w, ws);
+    else if (!LAYERS.both) this.runArmsAsk(g, pose, w, ws);
+    else layerBoth('runArms', pose, this.fk, () => this.runArmsAsk(g, pose, w, ws), () => this.runArmsOwn(pose, w, ws));
+  }
+  private runArmsAsk(g: number, pose: Pose, w: number, ws: number) {
+    const a = f64(), o = POSE_BENCH.args; a[o] = w; a[o + 1] = ws;
+    layerRan(POSE_BENCH.x!.layer_run_arms(g, pose.at), this.fk);
+  }
+  private runArmsOwn(pose: Pose, w: number, ws: number) {
     const A = RUNARMS, nd = this.nodes, fk = this.fk; this.fkPart(pose, this.fkArms);
     const a = fk.pos[nd.upperArmL], b = fk.pos[nd.upperArmR]; let lx = a[0] - b[0], lz = a[2] - b[2]; const ll = Math.hypot(lx, lz); if (ll < 1e-4) return; lx /= ll; lz /= ll;
     const fx = -lz, fz = lx, keep = lerp(1, A.keep, w), pump = lerp(1, A.pump, ws);   // (forward, level: his left × up)

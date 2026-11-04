@@ -714,6 +714,45 @@ pub fn soft_knees(g: usize, at: usize) -> u32 {
     .unwrap_or(0)
 }
 
+/// CharacterAnimator.runArms — a run carries its arms close (character.ts RUNARMS): each hand read in the shoulder line's own frame (to his left along the
+/// two shoulder joints, level; up; forward), its sideways travel drawn in by the run's share of the standing pose, its fore-aft travel lengthened and its
+/// front lifted by the sprint's, and the arm solved to it with the elbow behind him. The hand follows its forearm.
+/// args: 0 the run's share (jog through sprint) · 1 the sprint's
+pub fn run_arms(g: usize, at: usize) -> u32 {
+    let (w, ws) = (bench().args[0], bench().args[1]);
+    with_pose(g, at, |d, rig, n, fk| {
+        if !cast(n, &ARM_ROLES) {
+            return 0;
+        }
+        fk.part(rig, d, list(FK_ARMS));
+        let (a, b) = (fk.at(role(UPPER_ARM_L)), fk.at(role(UPPER_ARM_R)));
+        let (mut lx, mut lz) = (a[0] - b[0], a[2] - b[2]);
+        let ll = hypot2(lx, lz);
+        if ll < 1e-4 {
+            return RAN | ran_list(FK_ARMS);
+        }
+        lx /= ll;
+        lz /= ll;
+        // (forward, level: his left × up)
+        let (fx, fz, keep, pump) = (-lz, lx, lerp(1.0, k(RUNARMS_KEEP), w), lerp(1.0, k(RUNARMS_PUMP), ws));
+        // (neither solve moves what the other reads: the second finds the skeleton current)
+        for right in [false, true] {
+            let sg = if right { -1.0 } else { 1.0 };
+            let (ua, fa, ha) = if right { (role(UPPER_ARM_R), role(FOREARM_R), role(HAND_R)) } else { (role(UPPER_ARM_L), role(FOREARM_L), role(HAND_L)) };
+            let (s, h) = (fk.at(ua), fk.at(ha));
+            let (dx, dz) = (h[0] - s[0], h[2] - s[2]);
+            let (out, fwd) = ((dx * lx + dz * lz) * sg, dx * fx + dz * fz);
+            let (o, f) = (k(RUNARMS_AT) + (out - k(RUNARMS_AT)) * keep, k(RUNARMS_MID) + (fwd - k(RUNARMS_MID)) * pump);
+            let y = h[1] - s[1] + k(RUNARMS_LIFT) * ws * clamp((fwd - k(RUNARMS_MID)) / k(RUNARMS_SWING), 0.0, 1.0);
+            let to = [s[0] + lx * sg * o + fx * f, s[1] + y, s[2] + lz * sg * o + fz * f];
+            let pole = [lx * sg * k(RUNARMS_POLE_0) + fx * k(RUNARMS_POLE_2), k(RUNARMS_POLE_1), lz * sg * k(RUNARMS_POLE_0) + fz * k(RUNARMS_POLE_2)];
+            two_bone_ik(rig, d, fk.rot, fk.pos, ua, fa, ha, &to, Some(&pole), k(RUNARMS_POLE_W) * w, None, right);
+        }
+        RAN | RAN_ALL
+    })
+    .unwrap_or(0)
+}
+
 /// character.ts bump
 #[inline(always)]
 fn bump(t: f64, a: f64, b: f64, c: f64, d: f64) -> f64 {

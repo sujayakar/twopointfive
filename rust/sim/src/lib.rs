@@ -213,6 +213,11 @@ pub extern "C" fn layer_crouch_pose(g: usize, at: usize, at_b: usize, at_c: usiz
 pub extern "C" fn layer_soft_knees(g: usize, at: usize) -> u32 {
     layers::soft_knees(g, at)
 }
+/// CharacterAnimator.runArms
+#[no_mangle]
+pub extern "C" fn layer_run_arms(g: usize, at: usize) -> u32 {
+    layers::run_arms(g, at)
+}
 /// CharacterAnimator.runPlant
 #[no_mangle]
 pub extern "C" fn layer_run_plant(g: usize, at: usize) -> u32 {
