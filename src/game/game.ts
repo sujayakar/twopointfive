@@ -2043,7 +2043,8 @@ export class Game {
     // settle. Gone, the blobs answer again. A NEW one with every encounter and whenever the senses come to the game, restartEncounter and above (`renew`):
     // its beat and the light model's sweep then start with the encounter, in a game that has run for an hour and in one a file was just loaded into.
     // With the light model up, the light that comes round is stepped on the same squares: sense.ts SENSE.bounce)
-    this.cpuSmoke.grid?.step(this.col, dt, SENSE.bounce ? col => steadyLamps(this, col) : null);
+    // …and under the open sky its smoke drifts with the weather's wind (SENSE.drift; wind.ts stormDrift)
+    this.cpuSmoke.grid?.step(this.col, dt, SENSE.bounce ? col => steadyLamps(this, col) : null, SENSE.drift ? () => this.wind.stormDrift() : null);
   }
   /** the sensors' asks (Sam's meter, the guards' smoke sight lines) and Sam's visibility off the last answer */
   private lightMeter(dt: number) {
