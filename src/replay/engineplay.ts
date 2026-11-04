@@ -50,7 +50,7 @@ import { drawFloor, drawLine, drawScene, mapFit, mapSize, mapToWorld, MAP_RING }
 import { TapeWalk } from './tapewalk';
 import { RecipeStand, layFlags, put, plain, type Plain } from './recipestand';
 import { shelfGet, shelfList, shelfNotes, shelfPut } from './shelf';
-import { viewerUrl, visitWord, visitPairs } from '../ui/replaykey';
+import { viewerUrl, VISIT_FLAGS } from '../ui/replaykey';
 import { cloudCarries, cloudFile, cloudNotes, cloudSendsFiles } from '../cloud/cloud';
 import { keptStore } from './keptui';
 import { TEXT_EVENT, rectZoom, textZoom } from '../ui/textsize';
@@ -163,11 +163,10 @@ export function tapeSearch(tape: RunTape, now: URLSearchParams, v: string): stri
  *  `net` words — src/net/page.ts): what the page must be booted on to be that run's page */
 export function recipeSearch(recipe: RunTape['recipe'], now: URLSearchParams, own: Record<string, string>): string {
   const out = new URLSearchParams();
-  for (const [k, val] of new URLSearchParams(recipe.search ?? '')) if (SENDING_WORDS.includes(k) ? SAYS_OFF.test(val) : !NOT_THE_RUNS.includes(k) && !visitWord(k, val)) out.append(k, val);   // (a visit's word is never the run's, whichever list a goal put it on: a tape recorded under one does not put it on the page that replays it)
+  for (const [k, val] of new URLSearchParams(recipe.search ?? '')) if (SENDING_WORDS.includes(k) ? SAYS_OFF.test(val) : !NOT_THE_RUNS.includes(k) && !VISIT_FLAGS.includes(k)) out.append(k, val);   // (a visit's word is never the run's, whichever list a goal put it on: a tape recorded under one does not put it on the page that replays it)
   out.set('seed', recipe.seed === null || recipe.seed === undefined ? 'off' : String(recipe.seed));
   out.set('noreplay', '');   // (no tape of a tape: the page's own buffer stays off, and nothing else takes Game.sensors.read)
-  for (const [k, v] of visitPairs(now)) out.append(k, v);   // (pair by pair: the dress's `look` word is the run's and stays as the recipe has it, ui/replaykey.ts visitWord)
-  for (const k of SENDING_WORDS) if (now.has(k)) out.set(k, now.get(k) ?? '');
+  for (const k of [...VISIT_FLAGS, ...SENDING_WORDS]) if (now.has(k)) out.set(k, now.get(k) ?? '');
   for (const [k, val] of Object.entries(own)) out.set(k, val);
   return '?' + out.toString();
 }
@@ -457,7 +456,7 @@ export class TapePlay {
   private toGame(): void {
     if (this.noting) this.noteClose(true);
     if (this.going) return; this.going = true; setTimeout(() => { this.going = false; }, 4000);
-    const now = new URLSearchParams(location.search), keep = new URLSearchParams(); for (const [k, v] of visitPairs(now)) if (k !== 'paused') keep.append(k, v); for (const k of SENDING_WORDS) if (now.has(k)) keep.set(k, now.get(k) ?? '');   // (the sending words too: a replay opened under ?cloud=0 does not hand him back to a game page that sends)
+    const now = new URLSearchParams(location.search), keep = new URLSearchParams(); for (const k of [...VISIT_FLAGS, ...SENDING_WORDS]) if (k !== 'paused' && now.has(k)) keep.set(k, now.get(k) ?? '');   // (the sending words too: a replay opened under ?cloud=0 does not hand him back to a game page that sends)
     const words = keep.toString(), home = location.origin + location.pathname + (words ? `?${words}` : '');   // (the replay page IS the game's page, on a tape)
     void this.landed().then(() => backToGame(this.id, home));
   }

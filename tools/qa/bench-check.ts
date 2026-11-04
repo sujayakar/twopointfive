@@ -237,21 +237,6 @@ const before = (p: ReturnType<typeof page>) => JSON.stringify([p.S, p.Q.current,
   const l0 = benchLegOfPage(tab(searchOf(t0.went[0])));
   check(!!l0 && l0.scene.id === BENCH_SCENES[0].id && l0.secs === '2' && l0.cap === 30 && l0.leg.index === 0 && l0.leg.of === BENCH_SCENES.length && l0.leg.set === BENCH_SET && l0.leg.notes.some(n => /started from the title/.test(n)), 'the first scene\'s page finds its part: the seconds a window, the short cap, and the note that its load is a second one');
   check(benchLegOfPage(tab(searchOf(t0.went[0]))) === null && store.size === 0, 'the same page loaded again in the middle is a plain mission page, and the record is dropped');
-  // a run asked for on the look prototype's page (11-02: it dropped the word, so every scene timed the plain build and the report said nothing)
-  { const tl = tab('?look&look=roomc:0.6&l%6Fok=expo:0&hills=0&nocutboxes&round=0&lookkit=1&fow&hour=noon&bench&quality=high'); benchBegin(false, tl);
-    let at = searchOf(tl.went[0] ?? ''), all = tl.went.length === 1; const seen: string[] = [];
-    for (let i = 0; i < BENCH_SCENES.length && all; i++) { const pg = tab(at), l = benchLegOfPage(pg), u = new URLSearchParams(at); seen.push(at);
-      all = !!l && u.getAll('look').join() === ',roomc:0.6,expo:0' && u.get('hills') === '0' && u.has('nocutboxes') && u.get('quality') === 'high' && !u.has('lookkit') && !u.has('fow') && !u.has('hour') && !u.has('round') && u.get('benchrun') === String(i);
-      if (l && i < BENCH_SCENES.length - 1) { l.leg.onward({ steps: l.leg.steps, notes: l.leg.notes, scenes: l.leg.scenes, boot: null, away: 0 }); at = searchOf(pg.went[0] ?? ''); } else l?.leg.over(); }
-    check(all && seen.length === BENCH_SCENES.length && store.size === 0, `a run asked for on the look prototype's page keeps the look's rows and its boot words on EVERY scene, written plain or percent-coded, and nothing of the visitor's kit, fog, hour or rule switches (${seen[seen.length - 1]})`);
-    const tp = tab('?look=plain&hills=0&bench'), ok = benchBegin(false, tp) === null && tp.went.length === 1, up = new URLSearchParams(searchOf(tp.went[0] ?? ''));
-    check(ok && !up.has('look') && !up.has('hills'), `the dress's own word is not the look prototype's: nothing of it rides along, nor a look word beside it (${tp.went[0]})`);
-    store.clear();
-    // a trial the look panel's button keeps off on this machine: the run times the look that page shows, and its address says which
-    const kept = new Map<string, string>([['twopointsix.hillrays', '0'], ['twopointsix.geotry', '0'], ['twopointsix.fronttry', '1'], ['twopointsix.cutboxes', '0']]); (globalThis as any).localStorage = { getItem: (k: string) => kept.get(k) ?? null };
-    const tk = tab('?look&geo=1&round=1&bench'), tn = tab('?bench'); benchBegin(false, tk); store.clear(); benchBegin(false, tn); store.clear(); delete (globalThis as any).localStorage;
-    const uk = new URLSearchParams(searchOf(tk.went[0] ?? '')), un = new URLSearchParams(searchOf(tn.went[0] ?? ''));
-    check(tk.went.length === 1 && uk.get('hills') === '0' && uk.get('geo') === '1' && uk.get('cutboxes') === '0' && uk.get('round') === '1' && !un.has('cutboxes') && !uk.has('front') && !uk.has('lorry') && !uk.has('dress') && tn.went.length === 1 && !un.has('hills') && !un.has('geo'), `a look trial this machine keeps off rides along as its own word (the cut boxes' switch with them), the address's word wins over the store, and a plain run takes nothing of it (${tk.went[0]})`); }
   // a run through to the end
   const t1 = tab('?quality=low&bench'); check(benchBegin(false, t1) === null && t1.how[0] === 'replace', 'begun from the address: that address is replaced, so Back does not ask for another run');
   let at = searchOf(t1.went[0]), steps = 0; const closedTo: string[] = [];
@@ -285,13 +270,8 @@ const before = (p: ReturnType<typeof page>) => JSON.stringify([p.S, p.Q.current,
   // the page's wiring, read as text
   const main = readFileSync(new URL('../../src/main.ts', import.meta.url), 'utf8'), loop = readFileSync(new URL('../../src/host/loop.ts', import.meta.url), 'utf8');
   check(/new HandsOff\(/.test(main) && /benchLegOfPage\(/.test(main) && /benchBegin\(/.test(main) && /new Bench\([^\n]*\brows: shaderRowsOn\b/.test(main) && /beforeTick/.test(main) && (loop.match(/ctx\.beforeTick(\?\.)?\(/g) ?? []).length === 2, 'the page plays a scene with the hands-off player, ticked before every game tick on either step');
-  check(/lq\.get\('lookkit'\) !== '0' && !runPage\(lq\)/.test(main) && /if \(!gq\.has\(BENCH_RUN_KEY\)\)[^\n]{0,260}buildLookPanel\(/.test(main) && /leg\.index === 0 && lookConfig\.on\) benchPage\.leg\.notes\.push\(/.test(main), 'on a scene\'s address the look prototype\'s page stands its kit, its fog put down and its panel off, and the first scene\'s page says in the notes that the run was played on it (read in main.ts: the page\'s half has no headless stand-in)');
   // …and with the machine's sandbox row off, from BEFORE the mission is staged (with 'no AI' kept the room clear refuses to start: nobody would move)
-  check(/\n  if \(!benchSceneWaits\(\) && !heldPage\(q\)\) loadSandbox\(game\);/.test(main) && main.indexOf('if (!benchSceneWaits() && !heldPage(q)) loadSandbox(game);') < main.indexOf('const booted = scenarioFromUrl(') && main.indexOf('const booted = scenarioFromUrl(') > 0, 'a scene\'s page does not read this machine\'s sandbox row, and that is settled before its mission is staged');
-  // …and "a run's page" is ONE question (host/runpage.ts), asked in each of those places: a benchmark's scene and a priced level (ui/pricerun.ts) both are one, both keep their own page, and only a priced level holds the quality ladder
-  { const { runPage, ownPage, heldPage } = await import('../../src/host/runpage'); const Q = (t: string) => new URLSearchParams(t);
-    check(runPage(Q('benchrun=0')) && runPage(Q('pricerun=3')) && !runPage(Q('roomclear&squad4')) && ownPage(Q('bench')) && ownPage(Q('pricelevels=pass')) && ownPage(Q('pricerun=1')) && !ownPage(Q('look&roomclear')) && heldPage(Q('pricerun=0')) && !heldPage(Q('benchrun=0'))
-      && /keepPageBoot\(q, ownPage\(q\) \|\| kitViewOn\)/.test(main), 'a run\'s page is one question (host/runpage.ts): a benchmark\'s scene and a priced level are both one and both keep their own page, and only a priced level holds the ladder'); }
+  check(/\n  if \(!benchSceneWaits\(\)\) loadSandbox\(game\);/.test(main) && main.indexOf('if (!benchSceneWaits()) loadSandbox(game);') < main.indexOf('const booted = scenarioFromUrl(') && main.indexOf('const booted = scenarioFromUrl(') > 0, 'a scene\'s page does not read this machine\'s sandbox row, and that is settled before its mission is staged');
   { store.clear(); const t = tab('?bench'); benchBegin(false, t); const at = searchOf(t.went[0]);
     const before = benchSceneWaits(tab(at)), plain = benchSceneWaits(tab('?levelFile=pass.json&roomclear=1')), twice = benchSceneWaits(tab(at)); benchLegOfPage(tab(at));
     check(before && twice && !plain && !benchSceneWaits(tab(at)), `asking whether a scene waits takes nothing: yes on the scene's address (twice), no on a plain page, and no once the scene was begun, which is the reload that is a plain mission page (${before} ${twice} ${plain})`); store.clear(); }

@@ -51,8 +51,6 @@ export class TexturePool {
     this.evict();
   }
   private destroyHead() { const e = this.lru.shift()!; const list = this.free.get(e.key); if (list) { const i = list.indexOf(e.tex); if (i >= 0) list.splice(i, 1); if (!list.length) this.free.delete(e.key); } this.parkedBytes -= e.bytes; e.tex.destroy(); }
-  /** this texture is parked here, not in anyone's hands (a frame capture leaves it out: render/framecap.ts) */
-  isParked(tex: GPUTexture): boolean { for (const e of this.lru) if (e.tex === tex) return true; return false; }
   /** distinct (kind, format, size, usage) keys with something parked — never an empty list behind a key (probes / the pool proof read it) */
   get keyCount(): number { return this.free.size; }
   get parkedCount(): number { return this.lru.length; }

@@ -74,15 +74,13 @@ struct BoxCutVOut {
     }
   }
   o.wpPrev = wpPrev;
-  o.mark = select(markSlotOf(b.flags), 0u, vi >= 36u && cutRoundAxis(bi) < 0);   // markings live on the box's own faces; a cut face shows the bare material (a ROUND's prism faces are one face: its marks run round it)
+  o.mark = select(markSlotOf(b.flags), 0u, vi >= 36u && !cutIsRound(bi));   // markings live on the box's own faces; a cut face shows the bare material (a ROUND's prism faces are one face: its marks run round it)
   o.lc = lc; o.hf = vec4f(h, select(face, -1.0, cap));
   return o;
 }
 
-/** ROUND: the axis (0‥2) this prism stands for a round thing about, −1 = an ordinary cut box. Two writers (the core row's w, scene/cut.ts packCut): a ROUND THING of
- *  the level (scene/round.ts, ROUND_CORE_W = 128: about the box's own y, and every ray meets the cylinder inside the prism) and the look page's trials (Box.cutRound,
- *  1024 × (1 + the axis): a prism every ray meets as it is). No ray reads either here. */
-fn cutRoundAxis(bi: u32) -> i32 { let w = u32(max(cutCoreRow(bi).w, 0.0)); if ((w & 128u) != 0u) { return 1; } return i32((w >> 10u) & 3u) - 1; }
+/** ROUND THINGS (scene/round.ts; the core row's w carries ROUND_CORE_W): this record is the prism the picture stands round a round box — no ray reads it */
+fn cutIsRound(bi: u32) -> bool { return (u32(max(cutCoreRow(bi).w, 0.0)) & 128u) != 0u; }
 
 /** GBAA across a cut: one edge candidate — a line where `coord` (some linear function of the box-local position, screen gradient g per pixel) reaches `edge`.
  *  boxEdgeOffset's arithmetic per candidate: the perpendicular distance in pixels picks the nearest, which is stored along its major screen axis. */
@@ -124,38 +122,22 @@ fn cutEdgeTake(s0: f32, g: vec2f, best: ptr<function, f32>, d: ptr<function, vec
   // toward a grazing view (a sheet seen edge-on mirrors) — inside a rim, which with the cut faces and the box's side faces shows the core: the bright edge of sheet
   // glass. The pattern is per pixel, stepped along the TAAU jitter's cycle when asked, so the resolve averages the door to a tint. Picture only.
   let core = cutCoreRow(bi); let cw = u32(max(core.w, 0.0));
-  // ROUND (a ROUND THING, scene/round.ts, about the box's own y; or Box.cutRound, a geometry trial, scene/geoTry.ts): the prism's faces round its axis are ONE round face to the picture. Their normal turns with the
-  // point (the silhouette and every ray keep the flat faces); marks and the look's paint read them as the box face that normal leans to (flatN: a rule that
-  // runs ALONG a face is asked a quarter of the round at a time, and what it leans the normal by is turned back onto the round), the look with the distance
-  // round the box unrolled; the end face gets the rolled rim of a drum's lid. Picture only. (The snow hook below knows a round about y only.)
-  let rax = cutRoundAxis(bi); var side = false; var lcS = v.lc; var hfS = v.hf; var flatN = n; var arc = 0.0;
-  if (rax >= 0 && !cap) {
+  // ROUND THINGS (scene/round.ts): the prism's faces round the box's own y are ONE round face to the picture. Their normal points straight out from the axis at
+  // the fragment (the silhouette keeps the prism's twelve flats; every ray meets the cylinder inside it — common.wgsl isectRound), marks read them as the box
+  // face that normal leans to, and the lid gets the rolled rim of a drum's. Picture only.
+  var side = false;
+  if ((cw & 128u) != 0u && !cap) {
     let q = boxRot(bi); let ln = quatRotate(vec4f(-q.xyz, q.w), n);
-    // AN ARC (Box.cutArc; a trial, scene/lorryTry.ts): the round's axis lies `arc` metres under the box's centre (it rides in the record's unused last row: cut.ts
-    // packCut), so a box cut to a few facets of a wide circle turns its normal about THAT axis: a bowed roof, a fender. Its paint is read straight down each
-    // quarter (no unrolling: the arc is shallow); only its facets and its top turn (the box's own upright faces and its underside stay flat) and its ends get no
-    // drum's rim.
-    let last = cutPlaneRow(bi, CUT_ROWS - 1u); arc = select(0.0, max(last.w - 1.0, 0.0), rax != 1 && dot(last.xyz, last.xyz) < 0.25);
-    var r = v.lc; r[rax] = 0.0; r.y += arc; let rl = length(r);
-    if (abs(ln[rax]) < 0.5 && rl > 1e-4 && !(arc > 0.0 && own < 0 && ln.y < 0.5)) {
-      side = true; r = r / rl; n = quatRotate(q, r);
-      let f = markFaceOf(r); let fa = i32(f / 2u); let ta = 3 - rax - fa;
-      lcS[ta] = select(h[fa] * atan2(v.lc[ta], abs(v.lc[fa])), v.lc[ta], arc > 0.0); lcS[fa] = sign(r[fa]) * h[fa]; hfS.w = f32(f);
-      var e = vec3f(0.0); e[fa] = sign(r[fa]); flatN = quatRotate(q, e);
-    } else if (abs(ln[rax]) > 0.5 && own < 0 && arc <= 0.0) {             // (both ends: a wheel shows one to each side of the lorry)
-      let d = h[(rax + 1) % 3] - rl;                         // metres in from the round's edge
+    let rl = length(v.lc.xz);
+    if (abs(ln.y) < 0.5 && rl > 1e-4) { side = true; n = quatRotate(q, vec3f(v.lc.x, 0.0, v.lc.z) / rl); }
+    else if (ln.y > 0.5) {
+      let d = h.x - rl;                                      // metres in from the round's edge
       albedo *= 1.0 - 0.45 * smoothstep(0.012, 0.02, d) * (1.0 - smoothstep(0.03, 0.042, d));
     }
   }
-  // AN OLD BREAK (Box.cutOld, the same trial): on the look page its cut faces are painted as a face of the core's stuff (the box face the cut leans to), and the snow lies on them below
-  let oldCut = (cw & 512u) != 0u && own >= 0 && !cap;
-  if (oldCut) {                                             // (the look's rules know upright faces and level ones: asked as the box face the cut leans to, as a round's side is)
-    let q = boxRot(bi); let f = markFaceOf(quatRotate(vec4f(-q.xyz, q.w), n)); hfS.w = f32(f);
-    var e = vec3f(0.0); e[i32(f / 2u)] = 1.0 - 2.0 * f32(f & 1u); flatN = quatRotate(q, e);
-  }
   var edge = own >= 0 && !side;
   if ((cw & 2u) != 0u && own < 0 && !cap) {
-    if (fax != 2 || best < f32((cw >> 3u) & 15u) * 0.25) { edge = true; }
+    if (fax != 2 || best < f32(cw >> 3u) * 0.25) { edge = true; }
     else {
       let see = fract(core.w);
       let ndv = abs(dot(n, normalize(frame.camPos - v.wp))); let fres = pow(saturate(1.0 - ndv), 5.0);
@@ -179,44 +161,19 @@ fn cutEdgeTake(s0: f32, g: vec2f, best: ptr<function, f32>, d: ptr<function, vec
     let dt = detailSurface(v.wp, n, bi, albedo, rough, metal, frame.matCfg.w);
     albedo = dt.albedo; rough = dt.rough; metal = dt.metal;
   }
-  var lookTilt = false; let gn = n;
-  if (LOOK && !cap && (own < 0 || side || oldCut)) {        // THE LOOK PROTOTYPE (look.wgsl; as fsBox, the class found here a pixel): a cut face shows the bare material; a round's side is painted as the face it leans to, an old break as its core's stuff
-    let bent = side || oldCut;                              // (…whose relief is added to the face's own normal and never marked as a tilt: common.wgsl lookGeoN would snap such a pixel to a box axis, which this face is not)
-    var lcls = boxStuff(bi); if (oldCut) { lcls = lookClass(albedo); }   // (the box's own word; an old break's core is a COLOUR in the cut's record and not a box, so it alone is still told by its colour)
-    let lk = lookSurface(lcls, v.wp, select(n, flatN, bent), bi, lcS, hfS, albedo, rough, dwx, dwy, distance(v.wp, frame.camPos) * 2.0 * frame.post.w * frame.invScreen.y);
-    albedo = lk.albedo; rough = lk.rough;
-    if (bent) { n = normalize(n + lk.n - flatN); } else { n = lk.n; lookTilt = lk.tilted; }
-  }
-  if (SURF_TRY && !LOOK && !cap && own < 0) {                         // SURFACES, A TRY (surface.wgsl; as fsBox): the box's own faces keep the pattern they had before the cut; a cut face shows the bare material
-    let sf = surfaceTry(v.wp, n, bi, v.lc, v.hf, v.albedo, albedo, rough, distance(v.wp, frame.camPos) * 2.0 * frame.post.w * frame.invScreen.y);
-    albedo = sf.albedo; n = sf.n; rough = sf.rough;
-  }
   if (v.mark != 0u && !cap && (own < 0 || side)) {
-    let mk = markSurfaceGB(v.mark, bi, v.wp, n, dwx, dwy, albedo, rough, lookMarkSoft());
+    let mk = markSurfaceGB(v.mark, bi, v.wp, n, dwx, dwy, albedo, rough);
     albedo = mk.albedo; rough = mk.rough;
   }
-  var snowA = 0.0;
-  if (LOOK && SNOW_SURF && rax == 1 && !cap && snowCfg.p[1].z > 0.5 && f32(bi) < snowCfg.p[1].w) { let rr = v.lc.xz * (length(v.lc.xz) / max(max(abs(v.lc.x), abs(v.lc.z)), 1e-4)); let sn = select(gn, flatN, side); let ls = lookSnow(boxStuff(bi), v.wp, sn, bi, select(vec3f(rr.x, v.lc.y, rr.y), lcS, side), hfS, v.albedo, albedo, rough, distance(v.wp, frame.camPos) * 2.0 * frame.post.w * frame.invScreen.y); if (ls.amt > 0.0) { albedo = ls.albedo; rough = ls.rough; metal = metal * (1.0 - ls.amt); if (ls.bank) { n = normalize(ls.n + gn - sn); lookTilt = false; if (SNOW_GLOW || SNOW_SPARKLE) { snowA = ls.amt * 0.6667; } } } }   // THE LOOK PROTOTYPE on a snow level (look.wgsl lookSnow, as fsBox; only a ROUND cut box, a trial: scene/geoTry.ts): the snow on its lid keeps a margin from the round edge, and the bank stands against its foot (the rule runs along a flat face, so it is asked a quarter of the round at a time and the bank's lean is turned back onto the round)
-  if (LOOK && SNOW_SURF && side && arc > 0.0 && hfS.w == 2.0 && snowCfg.p[1].z > 0.5 && f32(bi) < snowCfg.p[1].w && snowIsPaint(v.albedo)) {   // AN ARC IN THE SNOW PAINT (the lorry's caps, scene/lorryTry.ts): fsBox's snow, asked as the box's top face, its relief turned onto the arc
-    let sb = snowBox(v.wp, flatN, bi, lcS, hfS, false, true, snowIsLay(v.albedo), albedo, rough, distance(v.wp, frame.camPos) * 2.0 * frame.post.w * frame.invScreen.y);
-    if (sb.gone) { gone = true; }
-    else if (sb.amt > 0.0) { albedo = sb.albedo; rough = sb.rough; n = normalize(gn + sb.n - flatN); lookTilt = false; if (SNOW_GLOW || SNOW_SPARKLE) { snowA = sb.amt * 0.6667; } }
-  }
-  if (LOOK && SNOW_SURF && arc > 0.0 && !side && own < 0 && snowCfg.p[1].z > 0.5 && snowIsPaint(v.albedo)) { gone = true; }   // …and such a cap is a SHEET: its own upright faces and ends are not drawn, or they stand as straight lines where the snow's wandering edge has drawn back from them
-  if (LOOK && SNOW_SURF && oldCut && gn.y > 0.7 && snowCfg.p[1].z > 0.5) { let ls = lookSnow(boxStuff(bi), v.wp, vec3f(0.0, 1.0, 0.0), bi, vec3f(0.0, v.lc.y, 0.0), vec4f(0.3, v.hf.y, 0.3, 2.0), v.albedo, albedo, rough, distance(v.wp, frame.camPos) * 2.0 * frame.post.w * frame.invScreen.y); if (ls.amt > 0.0) { albedo = ls.albedo; rough = ls.rough; n = normalize(gn + ls.n - vec3f(0.0, 1.0, 0.0)); lookTilt = false; if (SNOW_GLOW || SNOW_SPARKLE) { snowA = ls.amt * 0.6667; } } }   // THE LOOK PROTOTYPE on a snow level: snow lies on an old break's faces that look up (lookSnow's top, asked as a wide flat top; the break keeps its own slope under the snow's grain)
   if ((frame.flags & FLAG_DECALS) != 0u) {
     let fp = distance(v.wp, frame.camPos) * 2.0 * frame.post.w * frame.invScreen.y;
-    let nl = n; if (lookTilt) { n = gn; }                   // (as fsBox: the mark on the face, the relief put back under it, the two held inside LOOK_MAX_TILT)
     var d = decalSurface(v.wp, n, v.id & 0xFFFFFu, albedo, fp);
     for (var r = 1u; r < DECAL_REPEAT; r++) { d = decalSurface(v.wp, n, v.id & 0xFFFFFu, albedo, fp); }   // (measurement only, as fsBox: render/decals.ts decalDebug)
     albedo = d.albedo; n = d.n; keep = d.keep;
-    if (lookTilt) { n = normalize(n + nl - gn); let c = dot(n, gn); if (c < 0.8773) { n = normalize(gn * 0.8773 + normalize(n - gn * c) * 0.48); } }
   }
   if (gone) { discard; }
   o.albedo = vec4f(albedo, keep);
   o.normal = vec4f(n * 0.5 + 0.5, 1.0);
-  if (LOOK && snowA > 0.0) { o.normal.a = 1.0 - snowA; }   // THE LOOK PROTOTYPE: a round's snow, as fsBox
-  if (LOOK && lookTilt) { o.normal.a = 0.0; }   // THE LOOK PROTOTYPE: as fsBox
   o.id = v.id;
   o.vel = motionOf(v.wp, v.wpPrev);
   o.mat = vec2f(rough, metal);
