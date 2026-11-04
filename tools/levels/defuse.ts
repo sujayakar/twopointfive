@@ -151,7 +151,7 @@ export function build(opts: K.KitOpts = {}): { level: Level; scenarios: LevelSce
 
   // ---------------- ground ----------------
   K.grp(k, 'ground');
-  K.slab(k, 0, -0.25, 0, 40, 0, 28, K.LOT);
+  K.slab(k, 0, -0.25, 0, 40, 0, 28, C.asphalt);
   K.slab(k, 0, 0, 0, 40, 0.01, 6.88, C.grass, { flags: BoxFlag.NoShadow });   // the back of the house: rough ground
   K.grp(k, 'floors');
   K.slab(k, 6, -0.1, 7, 34, 0.001, 17, C.carpet);

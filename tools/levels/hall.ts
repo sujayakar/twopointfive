@@ -24,7 +24,7 @@ import type { Vec3 } from '../../src/math/vec';
 import type { Level, LevelDoorDef } from '../../src/scene/level';
 import type { IssueData, KitViewData, LevelScenarios, Rect, StructureData } from '../../src/scene/scenarios';
 import type { SurfacesData } from '../../src/scene/levelData';
-import { officeKit, normalize3 as norm, OFFICE_PALETTE, LOT, type GeneratorTrace } from '../../src/scene/officeGen';
+import { officeKit, normalize3 as norm, OFFICE_PALETTE, type GeneratorTrace } from '../../src/scene/officeGen';
 import { WORLD } from '../../src/scene/world';
 import { BoxFlag } from '../../src/scene/boxes';
 import { livedKit } from './livedKit';
@@ -48,7 +48,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
 
   // ---- ground, floors, roof ----
   grp('ground');
-  slab(0, -0.25, 0, 40, 0, 28, LOT);
+  slab(0, -0.25, 0, 40, 0, 28, C.asphalt);
   grp('floors');
   slab(9, 0, 8, 37, 0.004, 20, C.lino);
   grp('ceiling');

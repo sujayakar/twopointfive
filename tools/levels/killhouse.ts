@@ -23,7 +23,7 @@ import type { Vec3 } from '../../src/math/vec';
 import type { Level, LevelDoorDef } from '../../src/scene/level';
 import type { KitViewData, LevelScenarios, ParData, Rect, StructureData } from '../../src/scene/scenarios';
 import type { SurfacesData } from '../../src/scene/levelData';
-import { officeKit, OFFICE_PALETTE, LOT, type GeneratorTrace } from '../../src/scene/officeGen';
+import { officeKit, OFFICE_PALETTE, type GeneratorTrace } from '../../src/scene/officeGen';
 import { WORLD } from '../../src/scene/world';
 import { BoxFlag } from '../../src/scene/boxes';
 import { PANEL_GREY } from '../../src/scene/stuff';
@@ -53,7 +53,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
 
   // ---- ground, floors, roof ----
   grp('ground');
-  slab(0, -0.25, 0, 40, 0, 28, LOT);
+  slab(0, -0.25, 0, 40, 0, 28, C.asphalt);
   grp('floors');
   slab(12, 0, 7, 28, 0.004, 20, C.lino);                                   // bare sealed screed through the house
   grp('ceiling');

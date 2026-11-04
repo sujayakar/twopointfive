@@ -12,7 +12,7 @@
 import type { Vec3 } from '../../src/math/vec';
 import { BoxFlag, type Box } from '../../src/scene/boxes';
 import type { PropDef, PropKind, PropPart } from '../../src/scene/level';
-import { sayPaint, drawnAs, toned } from '../../src/scene/stuff';
+import { sayPaint, toned, madeOf } from '../../src/scene/stuff';
 
 export interface LivedHost {
   add: (b: Partial<Box> & { c: Vec3; h: Vec3 }) => number;
@@ -27,7 +27,7 @@ export const INK = {
   oxblood: [0.32, 0.09, 0.07] as Vec3, navy: [0.08, 0.1, 0.3] as Vec3, bottle: [0.25, 0.45, 0.7] as Vec3, rubber: [0.06, 0.06, 0.065] as Vec3, copper: [0.6, 0.3, 0.15] as Vec3,
   tin: [0.05, 0.055, 0.06] as Vec3, enamel: [0.2, 0.36, 0.3] as Vec3,
 };
-drawnAs('metal', INK.rubber);   // (rubber is not metal: its dark grey is iron's, darkened, and so it was drawn)
+madeOf('rubber', INK.rubber);   // (until 11-04 its dark grey was drawn as bare iron, iron's grey darkened)
 sayPaint(INK.iron, 'iron', { stuff: 'metal', rough: 0.92 });   // (its numbers are the office's car-park paint: by them every iron fitting had that paint's finish and was drawn as bare iron. Said here as it was; scene/stuff.ts)
 /** a hash of an index in 0‥1 (the pieces' only dice) */
 export const h01 = (n: number, s = 0): number => { let x = Math.imul((n + 1) ^ 0x9e3779b9, 0x85ebca6b) ^ Math.imul(s + 1, 0xc2b2ae35); x ^= x >>> 15; x = Math.imul(x, 0x2c1b3c6d); x ^= x >>> 12; return (x >>> 0) / 4294967296; };

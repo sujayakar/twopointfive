@@ -7,7 +7,7 @@
 // the output) and the exported palette. Units: meters. +X east, +Z south, +Y up. Floor top at y=0.
 import { Vec3, DEG, quat } from '../math/vec';
 import { Box, BoxFlag, makeBox } from './boxes';
-import { saidFor, namePaints, paintOf, worded, type BoxStuff, drawnAs, PANEL_GREY, CHAIR_GREY, saidAs } from './stuff';
+import { saidFor, namePaints, paintOf, worded, type BoxStuff, drawnAs, PANEL_GREY, CHAIR_GREY, KERB_GREY, madeOf } from './stuff';
 import { WORLD } from './world';
 import type { Level, LightDef, PatrolRoute, Chokepoint, RoomClearPlan, BreachPlan, DaylightDef, LevelDoorDef, PropKind, PropPart, PropDef, DeviceDef, CivilianDef, VentDef } from './level';
 import { MarkingDef, MARKING_TEXEL, markStats } from './markings';
@@ -63,10 +63,6 @@ export const OFFICE_FINISH: Readonly<Record<string, { rough: number; metal?: boo
   partRed: { rough: 0.9 }, partBlue: { rough: 0.9 }, partTan: { rough: 0.9 }, red: { rough: 0.45 },   // (red = the extinguisher / agent cylinder: gloss enamel)
 };
 namePaints(C, OFFICE_FINISH);   // (the office's paints are known by the row handed over: add() below gives a box its paint's finish and what it is made of. scene/stuff.ts)
-/** THE LOT: the asphalt an office-kit level stands on. Asphalt is no stuff the look has, so the lot says nothing (plain) over its paint's row, which says
- *  metal because the kits paint iron fittings with the same paint. (Until 11-04 the lot was drawn, and a round into it read, as bare iron: its grey is iron's,
- *  darkened.) The same numbers and finish as the palette's asphalt: only what it is made of differs. */
-export const LOT: Vec3 = saidAs('plain', C.asphalt);
 
 /** one opening in a wall: a..b along it, y0..y1 up it (doors: 0..2.2 — the default, a door SLOT: the walls cut the real doorway inside it, doorSize.ts; windows: 0.9..2.4); glass: 'bay' = one pane per mullion bay (each breaks on its own), 'whole' = one pane across the opening (the mullions stand through it); tint = its albedo (default C.glassExt on these walls) */
 export type Opening = { a: number; b: number; y0?: number; y1?: number; mullions?: number; glass?: 'bay' | 'whole'; tint?: Vec3 };
@@ -82,7 +78,7 @@ export type Opening = { a: number; b: number; y0?: number; y1?: number; mullions
  *  rest of the front stands on a plinth set 6 cm back, the dispenser's recess. fluxK × the old slabs' intensity. */
 export function vendingSpec(kind: 'red' | 'blue', TX: number, fluxK = 1): { h: Vec3; body: Vec3; marks: MarkingDef[]; colW: number; plinth: Vec3 } {
   const lum = (c: readonly number[]) => 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2];
-  const red = kind === 'red', h: Vec3 = red ? [0.5, 0.775, 0.45] : [0.42, 0.775, 0.45], body: Vec3 = red ? [0.42, 0.05, 0.045] : drawnAs('cloth', [0.02, 0.03, 0.085]);
+  const red = kind === 'red', h: Vec3 = red ? [0.5, 0.775, 0.45] : [0.42, 0.775, 0.45], body: Vec3 = red ? [0.42, 0.05, 0.045] : madeOf('paint', [0.02, 0.03, 0.085]);   // (painted steel; the blue was drawn as cloth until 11-04, a navy rug's darkened)
   const e: Vec3 = red ? [2.6, 0.5, 0.35] : [0.4, 0.9, 2.8], L = lum(e) * (red ? 0.84 * 1.3 : 0.72 * 1.1) * fluxK, make = red ? MD.vendingRedMarks : MD.vendingBlueMarks;
   let marks = make(h, 1, TX);
   { const st = markStats(marks[0], body, TX); const k = L / Math.max(lum(st.meanL) * st.area, 1e-6); marks = make(h, k, TX); }
@@ -217,7 +213,7 @@ export function officeKit(trace?: GeneratorTrace, opts: GeneratorOpts = {}) {
   function cabinet(x: number, z: number, yaw: number) {   // filing cabinet, drawer fronts on local -Z
     const at = frameAt(x, z, yaw);
     add({ c: [x, 0.66, z], h: [0.23, 0.66, 0.3], yaw, albedo: [0.58, 0.58, 0.56], stuff: 'steel', ...mk(MD.cabinetMarks([0.23, 0.66, 0.3], TX)) });   // (markings: drawer seams + pulls)
-    if (!DEMOTE) for (let k = 0; k < 3; k++) add({ c: at(0, 0.3 + k * 0.4, -0.305), h: [0.19, 0.012, 0.006], yaw, albedo: drawnAs('cloth', [0.25, 0.25, 0.26]), flags: BoxFlag.NoShadow });   // (relief: the pull strips as boxes)
+    if (!DEMOTE) for (let k = 0; k < 3; k++) add({ c: at(0, 0.3 + k * 0.4, -0.305), h: [0.19, 0.012, 0.006], yaw, albedo: [0.25, 0.25, 0.26], flags: BoxFlag.NoShadow });   // (relief: the pull strips as boxes)
   }
   let paperSeed = 0;
   const papers = (x: number, y: number, z: number, yaw = 0, scribble = false) => { add({ c: [x, y + 0.02, z], h: [0.11, 0.02, 0.15], yaw, albedo: [0.86, 0.86, 0.82], flags: BoxFlag.NoShadow, ...mk(MD.paperMarks([0.11, 0.02, 0.15], 31 + paperSeed, false, TX)) }); add({ c: [x + 0.03, y + 0.05, z - 0.02], h: [0.1, 0.012, 0.14], yaw: yaw + 0.25, albedo: [0.9, 0.88, 0.8], flags: BoxFlag.NoShadow, ...mk(MD.paperMarks([0.1, 0.012, 0.14], 32 + paperSeed, scribble, TX)) }); paperSeed += 2; };   // (markings: text bars ON the sheets — the sheets stay boxes)
@@ -275,7 +271,7 @@ export function buildOfficeProcedural(trace?: GeneratorTrace, opts: GeneratorOpt
   // ---------------- ground & structure ----------------
   grp('ground');
   // exterior ground (asphalt south/east parking, grass north/west)
-  slab(0, -0.25, 0, 40, 0, 28, LOT);
+  slab(0, -0.25, 0, 40, 0, 28, C.asphalt);
   slab(0, 0, 0, 40, 0.01, 3.2, C.grass, { flags: BoxFlag.NoShadow }); // thin grass tint strips (decal-like, no rays)
   slab(0, 0, 3.2, 3.2, 0.01, 28, C.grass, { flags: BoxFlag.NoShadow });
   // interior floor finishes (thin decals over the base slab; NoShadow so rays ignore them, base slab catches rays)
@@ -373,7 +369,7 @@ export function buildOfficeProcedural(trace?: GeneratorTrace, opts: GeneratorOpt
   add({ c: [9.95, 1.57, 12.32], h: [0.075, 0.075, 0.0015], albedo: [0.1, 0.13, 0.2], flags: BoxFlag.NoShadow });                                                         // …with its centre punched out…
   add({ c: [10.78, 1.65, 12.3155], h: [0.46, 0.045, 0.0025], albedo: C.white, flags: BoxFlag.NoShadow }); add({ c: [10.66, 1.5, 12.3155], h: [0.34, 0.028, 0.0025], albedo: [0.6, 0.62, 0.66], flags: BoxFlag.NoShadow });   // …and two lines of 'name'
   }
-  add({ c: [4.36, 0.2, 22.4], h: [0.2, 0.2, 0.35], albedo: drawnAs('cloth', [0.2, 0.2, 0.21]) }); add({ c: [4.36, 0.406, 22.4], h: [0.17, 0.007, 0.31], albedo: [0.12, 0.09, 0.06], flags: BoxFlag.NoShadow });   // planter trough under the west glazing behind the couch (z 22.05‥22.75) and its soil…
+  add({ c: [4.36, 0.2, 22.4], h: [0.2, 0.2, 0.35], albedo: [0.2, 0.2, 0.21] }); add({ c: [4.36, 0.406, 22.4], h: [0.17, 0.007, 0.31], albedo: [0.12, 0.09, 0.06], flags: BoxFlag.NoShadow });   // planter trough under the west glazing behind the couch (z 22.05‥22.75) and its soil…
   add({ c: [4.36, 0.62, 22.2], h: [0.17, 0.21, 0.17], yaw: 0.5, albedo: C.plant }); add({ c: [4.37, 0.68, 22.58], h: [0.18, 0.27, 0.18], yaw: 0.2, albedo: [C.plant[0] * 1.15, C.plant[1] * 1.15, C.plant[2] * 1.1] });   // …two clumps
   add({ c: [11.6, 0.015, 16.5], h: [0.17, 0.015, 0.17], albedo: C.black }); add({ c: [11.6, 0.89, 16.5], h: [0.02, 0.86, 0.02], albedo: C.woodDark });               // coat stand against the cubicle wall: base, pole, pegs, a coat
   add({ c: [11.6, 1.69, 16.5], h: [0.14, 0.012, 0.012], albedo: C.woodDark }); add({ c: [11.6, 1.69, 16.5], h: [0.012, 0.012, 0.14], albedo: C.woodDark });
@@ -583,7 +579,7 @@ export function buildOfficeProcedural(trace?: GeneratorTrace, opts: GeneratorOpt
   shelf(29.6, 6.5, 1.6, 0.35, Math.PI / 2, 5, 2.1);
   add({ c: [23.0, 0.35, 5.0], h: [0.4, 0.35, 0.4], albedo: [0.35, 0.25, 0.15] }); add({ c: [23.0, 1.0, 5.0], h: [0.3, 0.35, 0.3], albedo: C.plant });
   rug(26.3, 6.9, 3.4, 2.6, [0.28, 0.14, 0.1]); papers(26.0, 0.76, 6.4, 0.2); bin(27.7, 6.9);
-  wallArt(22.09, 1.6, 6.6, 1.2, 0.8, drawnAs('plaster', [0.6, 0.55, 0.4]), false); plant(29.4, 9.4, 0.9);
+  wallArt(22.09, 1.6, 6.6, 1.2, 0.8, [0.6, 0.55, 0.4], false); plant(29.4, 9.4, 0.9);
   add({ c: [24.7, 0.3, 4.75], h: [0.9, 0.3, 0.45], albedo: [0.22, 0.2, 0.19], stuff: 'fabric' }); add({ c: [24.7, 0.62, 4.3], h: [0.9, 0.32, 0.12], albedo: [0.22, 0.2, 0.19], stuff: 'fabric' });   // low sofa under the north window (keeps the side door to the server room clear)
   // desk lamp: small fixture boxes + warm spot light
   add({ c: [27.2, 0.78, 6.0], h: [0.08, 0.02, 0.08], albedo: C.black }); add({ c: [27.2, 0.98, 6.0], h: [0.015, 0.2, 0.015], albedo: C.black });
@@ -711,7 +707,7 @@ export function buildOfficeProcedural(trace?: GeneratorTrace, opts: GeneratorOpt
       add({ c: [x, y, 12.343], h: [w / 2, h / 2, 0.002], albedo: alb, flags: BoxFlag.NoShadow, ...mk(MD.sheetMarks([w / 2, h / 2, 0.002], '+z', 61 + Math.round(x * 10), MD.MK.textGrey, TX)) });                  // sheets pinned to the notice board (they stay boxes; text bars ON them)
     add({ c: [35.0, 2.15, 12.295], h: [0.42, 0.25, 0.035], albedo: C.black, ...mk(DEMOTE ? MD.plateMark('+z', [-0.39, -0.22, 0.39, 0.22], { albedo: C.screenOff, rough: 0.08 }, 'base', TX) : []) }); if (!DEMOTE) add({ c: [35.0, 2.15, 12.332], h: [0.39, 0.22, 0.002], albedo: C.screenOff, flags: BoxFlag.NoShadow });   // bracket TV high in the north-east corner, off (its screen a glossy marking, or the sheet box)
     add({ c: [32.2, 1.45, 12.295], h: [0.13, 0.11, 0.035], albedo: C.white, ...mk(DEMOTE ? MD.firstAidMarks('+z', TX) : []) }); if (!DEMOTE) add({ c: [32.2, 1.45, 12.332], h: [0.05, 0.05, 0.002], albedo: [0.1, 0.45, 0.2], flags: BoxFlag.NoShadow });   // first-aid box (the green cross a fine glyph, or a square box)
-    floorPaint(34.75, 15.0, 0.7, 2.4, drawnAs('metal', [0.1, 0.1, 0.11]));                                                                // anti-fatigue mat along the counter
+    floorPaint(34.75, 15.0, 0.7, 2.4, madeOf('rubber', [0.1, 0.1, 0.11]));                                                                // anti-fatigue mat along the counter
     papers(31.15, 0.75, 19.85, 0.5); add({ c: [31.95, 0.79, 19.15], h: [0.035, 0.04, 0.035], albedo: C.white });  // magazines and a mug on the table
     bin(35.45, 17.5);                                                                                              // second bin, in the gap between the counter's end and the fridge
   }
@@ -719,7 +715,7 @@ export function buildOfficeProcedural(trace?: GeneratorTrace, opts: GeneratorOpt
   // ---------------- exterior ----------------
   grp('exterior');
   // parked van south-east, dumpster east, fence posts, street lamp poles
-  add({ c: [30.5, 0.95, 26.4], h: [2.2, 0.95, 0.95], yaw: 0.05, albedo: drawnAs('paint', [0.55, 0.55, 0.52]) }); add({ c: [31.95, 1.45, 26.33], h: [0.68, 0.3, 0.965], yaw: 0.05, albedo: [0.1, 0.12, 0.15] });   // van body + dark glazing band round the cab, on the body's own (yawed) axis: below the roof line and 1.5 cm proud of both flanks, so no two faces are coplanar (they z-fought)
+  add({ c: [30.5, 0.95, 26.4], h: [2.2, 0.95, 0.95], yaw: 0.05, albedo: [0.55, 0.55, 0.52] }); add({ c: [31.95, 1.45, 26.33], h: [0.68, 0.3, 0.965], yaw: 0.05, albedo: [0.1, 0.12, 0.15] });   // van body + dark glazing band round the cab, on the body's own (yawed) axis: below the roof line and 1.5 cm proud of both flanks, so no two faces are coplanar (they z-fought)
   add({ c: [38.2, 0.65, 14.0], h: [0.8, 0.65, 1.2], albedo: [0.1, 0.25, 0.15], ...mk(DEMOTE ? MD.plateMark('+y', [-0.74, -1.14, 0.74, -0.06], { albedo: [0.02, 0.02, 0.025] }, 'coarse', TX) : []) });   // dumpster (its open half's dark interior a coarse marking on the top when demoted)
   for (let i = 0; i < 9; i++) add({ c: [1.0, 0.6, 4 + i * 2.6], h: [0.05, 0.6, 0.05], albedo: C.woodDark });
   car(11.5, 26.4, Math.PI + 0.06, [0.42, 0.08, 0.07]); car(21.0, 26.95, -0.04, [0.5, 0.52, 0.55]);     // parked along the south lot
@@ -747,7 +743,7 @@ export function buildOfficeProcedural(trace?: GeneratorTrace, opts: GeneratorOpt
   if (!DEMOTE) { add({ c: [4.55, 1.2, 24.5425], h: [0.12, 0.08, 0.0025], albedo: C.screenOff, emissive: [0.12, 0.3, 0.55], flags: BoxFlag.NoShadow });                                  // …(relief) screen…
   add({ c: [4.55, 0.9, 24.5425], h: [0.2, 0.04, 0.0025], albedo: [0.8, 0.6, 0.1], flags: BoxFlag.NoShadow }); }                                                            // …instruction band…
   add({ c: [4.55, 2.0, 24.135], h: [0.2, 0.2, 0.015], albedo: [0.14, 0.3, 0.7], flags: BoxFlag.NoShadow });                                                                 // …and the P plate on the wall over it
-  add({ c: [38.2, 1.32, 13.4], h: [0.83, 0.02, 0.61], albedo: drawnAs('cloth', [0.08, 0.2, 0.12]) }); add({ c: [39.01, 1.91, 14.61], h: [0.02, 0.61, 0.6], albedo: drawnAs('cloth', [0.08, 0.2, 0.12]) });   // dumpster: north half-lid down, south half thrown back upright on the rim…
+  add({ c: [38.2, 1.32, 13.4], h: [0.83, 0.02, 0.61], albedo: madeOf('plastic', [0.08, 0.2, 0.12]) }); add({ c: [39.01, 1.91, 14.61], h: [0.02, 0.61, 0.6], albedo: madeOf('plastic', [0.08, 0.2, 0.12]) });   // dumpster: north half-lid down, south half thrown back upright on the rim…
   if (!DEMOTE) add({ c: [38.2, 1.3015, 14.6], h: [0.74, 0.0015, 0.54], albedo: C.screenOff, flags: BoxFlag.NoShadow }); add({ c: [38.0, 1.4, 14.75], h: [0.22, 0.1, 0.26], yaw: 0.4, albedo: drawnAs('metal', [0.06, 0.06, 0.07]) });   // …the open half dark to the rim (a marking on the body's top when demoted — below), a bag on top
   add({ c: [31.6, 2.52, 24.17], h: [0.12, 0.07, 0.05], albedo: [0.16, 0.17, 0.18] }); add({ c: [31.6, 2.49, 24.226], h: [0.09, 0.04, 0.006], albedo: [0.55, 0.5, 0.4], flags: BoxFlag.NoShadow });     // bulkhead light over the break-room door (housing, lens — unlit)…
   add({ c: [36.17, 2.52, 19.5], h: [0.05, 0.07, 0.12], albedo: [0.16, 0.17, 0.18] }); add({ c: [36.226, 2.49, 19.5], h: [0.006, 0.04, 0.09], albedo: [0.55, 0.5, 0.4], flags: BoxFlag.NoShadow });     // …and one north of the fire exit
@@ -759,7 +755,7 @@ export function buildOfficeProcedural(trace?: GeneratorTrace, opts: GeneratorOpt
   // 'in-geometry' at (32.9, 27.6); the same numbers on main). With the rim in the collision grid the push-out sees both faces at once and turns him out at the
   // corner. It costs the rim row of nav cells, where nothing is ever authored or rolled (a fix on a man standing at the kerb resolves to the nearest free cell, as at
   // any wall); the grey car's tyres stand 1 cm off it, the dumpster keeps 0.94 m to the east one.
-  slab(3.2, 0, 27.94, 40, 0.32, 28, drawnAs('sheet', [0.5, 0.5, 0.47])); slab(39.94, 0, 3.2, 40, 0.32, 27.94, drawnAs('sheet', [0.5, 0.5, 0.47]));
+  slab(3.2, 0, 27.94, 40, 0.32, 28, KERB_GREY); slab(39.94, 0, 3.2, 40, 0.32, 27.94, KERB_GREY);
   // street lamps (sodium) — poles outside RC slab height is fine
   grp('exterior.lamps');
   const lampAt = (x: number, z: number, name: string, dir: Vec3, on = true) => {

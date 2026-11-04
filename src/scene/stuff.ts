@@ -43,7 +43,7 @@ export const PAINT_STUFF: Readonly<Record<string, Stuff>> = {
   partRed: 'plain', partBlue: 'plain',   // (cubicle partitions, which say fabric themselves; and a car's body, lived things)
   partTan: 'cloth',     // (a partition; and a hut's stucco walls, drawn as cloth because the tan is a cream rug's, darkened)
   red: 'plain',         // (an extinguisher's enamel; and tape, a ball, a mast's lamps)
-  asphalt: 'metal',     // (the car park, drawn as bare iron because its grey is iron's, darkened; and the lived kit's iron fittings)
+  asphalt: 'plain',     // (the car park: no stuff the look has is tarmac yet, so it says nothing. Until 11-04 its grey was drawn as bare iron, iron's grey darkened; the lived kit's iron fittings, in the same numbers, say metal themselves: livedPieces.ts INK.iron)
   glassFrame: 'plain',  // (a window's frame; and every outside door's leaf, painted from the same numbers as the game runs)
   // ---- the snow kit's (the look lays its own snow over a thing; the paint under it stays plain)
   snow: 'plain', snowOld: 'plain', snowPacked: 'plain',
@@ -66,7 +66,7 @@ export const boxStuffOk = (v: unknown): v is BoxStuff => typeof v === 'string' &
  *  shape as a steel bench, a white table) it says nothing, and that paint's name speaks. So does whoever REPAINTS a box (the look's skin, the editor, the
  *  cars trial): a new paint drops the old word. Spread the answer into the box being made. */
 export const saidFor = <S extends BoxStuff>(stuff: S, paint: readonly number[], ...own: readonly (readonly number[])[]): { stuff?: S } =>
-  own.some(o => o[0] === paint[0] && o[1] === paint[1] && o[2] === paint[2]) ? { stuff } : {};
+  own.includes(paint) ? { stuff } : {};   // (the row handed over, not its numbers: a copy of the kit's wood is nobody's paint and gets no veneer, as it gets no finish)
 // ---- A PAINT IS KNOWN BY THE ROW HANDED OVER, NOT BY ITS NUMBERS ----
 /** what a kit knows of one of its paints: its name in the palette, its finish, and what it is made of ('plain' is no word: absent) */
 export interface Paint { readonly name: string; readonly rough?: number; readonly metal?: boolean; readonly stuff?: BoxStuff }
@@ -103,9 +103,11 @@ export function madeOf(stuff: BoxStuff, colour: [number, number, number], finish
  *  (a dark grey is iron's grey, darkened: a monitor's bezel was drawn as bare iron), written beside them so that no box moved the day the colour rule went.
  *  Every call is a place a choice is still owed: when somebody makes it, the call becomes a named paint or madeOf. (`grep drawnAs` is the list.) */
 export const drawnAs: typeof madeOf = (stuff, colour, finish) => madeOf(stuff, colour, finish);
-/** TWO PAINTS MANY LEVELS WRITE OUT, named once so that what each is made of is one decision in one place (both still as the look drew their colour): the grey
- *  of a breaker panel's door, and the grey of a stacking chair. */
-export const PANEL_GREY = drawnAs('sheet', [0.42, 0.44, 0.45]), CHAIR_GREY = drawnAs('paint', [0.5, 0.5, 0.48]);
+/** TWO PAINTS MANY LEVELS WRITE OUT, named once so that what each is made of is one decision in one place: the grey of a breaker panel's door (sheet steel),
+ *  and the grey of a stacking chair (still as the look drew its colour: nobody has chosen). */
+export const PANEL_GREY = madeOf('sheet', [0.42, 0.44, 0.45]), CHAIR_GREY = drawnAs('paint', [0.5, 0.5, 0.48]);
+/** … and a third that somebody did choose: the lot's concrete kerb (it was drawn as sheet metal) */
+export const KERB_GREY = madeOf('slab', [0.5, 0.5, 0.47]);
 /** the paint this array IS, if a kit named it: asked of the array a maker was handed (`b.albedo`), before it is copied */
 export const paintOf = (albedo: readonly number[] | undefined): Paint | undefined => albedo ? PAINTS.get(albedo) : undefined;
 /** A PAINT TONED IS THE SAME STUFF: `out` is the paint `from` in another tone (worn ground is its ground darker, a faded door its paint paler), so it

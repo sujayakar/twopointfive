@@ -66,7 +66,7 @@ export function canonMaterial(m: { albedo: readonly number[]; rough?: number; me
   const o: MaterialData = { albedo: roundVec(m.albedo.map(x => Math.max(0, x))) };
   if (m.rough !== undefined) o.rough = round6(Math.min(1, Math.max(0, m.rough)));
   if (m.metal) o.metal = true;
-  if (m.stuff && m.stuff !== 'plain') o.stuff = m.stuff;   // (what everything in this paint is made of: the row's word is all the picture reads, scene/stuff.ts)
+  if (m.stuff) o.stuff = m.stuff;   // (what everything in this paint is made of: the row's word is all the picture reads, scene/stuff.ts. 'plain' said is kept, as the exporters write it: a file whose rows say nothing at all is one from before the rule)
   if (m.notes) o.notes = m.notes;
   return o;
 }
@@ -88,7 +88,7 @@ export function materialUsers(ed: Editor, name: string): { boxes: string[]; prop
 function need(ed: Editor, name: string): MaterialData { const m = Object.prototype.hasOwnProperty.call(ed.data.materials, name) ? ed.data.materials[name] : undefined; if (!m) throw new Error(`no material '${name}' (palette: ${Object.keys(ed.data.materials).join(' ')})`); return m; }
 /** replace the whole palette record (order as given) — the one write path */
 function writeMaterials(ed: Editor, rec: Record<string, MaterialData>, label: string, coalesce?: string) { ed.doc.setPath(['materials'], rec, { label, coalesce }); }
-/** Edit a paint in place: any of albedo / rough (null = unset → matte) / metal / stuff (what it is made of; null or 'plain' = says nothing) / notes (empty = drop). LIVE: every box using it follows on the next scene sync.
+/** Edit a paint in place: any of albedo / rough (null = unset → matte) / metal / stuff (what it is made of; 'plain' = nothing the look draws; null = unset) / notes (empty = drop). LIVE: every box using it follows on the next scene sync.
  *  `coalesce` folds a slider drag into one undo step (seal at the drag's end). */
 export function materialSet(ed: Editor, name: string, patch: { albedo?: readonly number[]; rough?: number | null; metal?: boolean; stuff?: string | null; notes?: string | null }, opts: { coalesce?: string; label?: string } = {}) {
   const cur = need(ed, name);

@@ -80,12 +80,12 @@
 import type { Vec3 } from '../../src/math/vec';
 import type { Level, LevelDoorDef } from '../../src/scene/level';
 import type { KitViewWay, LevelScenarios, Rect } from '../../src/scene/scenarios';
-import { officeKit, normalize3, OFFICE_PALETTE, LOT, type GeneratorTrace } from '../../src/scene/officeGen';
+import { officeKit, normalize3, OFFICE_PALETTE, type GeneratorTrace } from '../../src/scene/officeGen';
 import * as MD from '../../src/scene/markingDefaults';
 import { WORLD } from '../../src/scene/world';
 import { BoxFlag, type Box } from '../../src/scene/boxes';
 import { livedPieces, INK, h01 } from './livedPieces';
-import { drawnAs, PANEL_GREY } from '../../src/scene/stuff';
+import { drawnAs, PANEL_GREY, madeOf } from '../../src/scene/stuff';
 
 
 export const NAME = 'block';
@@ -154,7 +154,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
 
   // ---------------- ground & structure ----------------
   grp('ground');
-  slab(0, -0.25, 0, 40, 0, 28, LOT);
+  slab(0, -0.25, 0, 40, 0, 28, C.asphalt);
   slab(0, 0, 0, 40, 0.01, 3.2, C.grass, { flags: BoxFlag.NoShadow });
   slab(0, 0, 3.2, 3.2, 0.01, 28, C.grass, { flags: BoxFlag.NoShadow });
   grp('floors');
@@ -433,7 +433,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
 
     // THE KITCHEN (nobody's): the range, the sink, the door into the back of the mess
     P.room('kitchen');
-    P.floor(17.4, 9.7, 5.8, 4.4, drawnAs('plaster', [0.5, 0.47, 0.4]), 0.004, 0.006);   // quarry tile
+    P.floor(17.4, 9.7, 5.8, 4.4, madeOf('slab', [0.5, 0.47, 0.4]), 0.004, 0.006);   // quarry tile
     A.box(19.95, 0, 9.6, 0.7, 0.9, 1.6, INK.iron);   // the range on the east wall
     oct(19.95, 0.9, 9.2, 0.3, 0.25, C.metal); A.box(19.95, 0.9, 10.0, 0.34, 0.16, 0.34, INK.brass);
     A.box(14.8, 0, 9.4, 0.6, 0.9, 2.4, C.white); A.box(14.8, 0.9, 9.4, 0.64, 0.03, 2.44, C.metal);   // the sink and drainer on the west wall

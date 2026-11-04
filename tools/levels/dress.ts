@@ -13,8 +13,8 @@ import * as MD from '../../src/scene/markingDefaults';
 import { DRESS_GROUP } from '../../src/game/destructionSwitch';
 
 const SCREEN_OFF: Vec3 = [0.02, 0.02, 0.025], BLACK: Vec3 = [0.04, 0.04, 0.045];   // (the kit's screenOff / black paints: the export names them by colour, finish and all)
-const MUGS: Vec3[] = [[0.82, 0.82, 0.8], [0.15, 0.2, 0.35], [0.55, 0.12, 0.1], drawnAs('cloth', [0.2, 0.2, 0.21])];
-const FILES: Vec3[] = [[0.2, 0.25, 0.4], [0.45, 0.12, 0.1], [0.12, 0.3, 0.2], drawnAs('metal', [0.1, 0.1, 0.11]), [0.62, 0.5, 0.2]];
+const MUGS: Vec3[] = [[0.82, 0.82, 0.8], [0.15, 0.2, 0.35], [0.55, 0.12, 0.1], [0.2, 0.2, 0.21]];
+const FILES: Vec3[] = [[0.2, 0.25, 0.4], [0.45, 0.12, 0.1], [0.12, 0.3, 0.2], [0.1, 0.1, 0.11], [0.62, 0.5, 0.2]];
 const lum = (a: Vec3) => 0.2126 * a[0] + 0.7152 * a[1] + 0.0722 * a[2];
 const r3 = (v: number) => Math.round(v * 1000) / 1000;
 function mulberry(a: number) { return () => { a |= 0; a = (a + 0x6d2b79f5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }

@@ -31,7 +31,7 @@ import type { Level } from '../../src/scene/level';
 import type { LevelScenarios, StructureData, ResponseData } from '../../src/scene/scenarios';
 import * as K from '../../src/scene/levelKit';
 import { livedPieces, INK, h01 } from './livedPieces';
-import { drawnAs } from '../../src/scene/stuff';
+import { drawnAs, KERB_GREY } from '../../src/scene/stuff';
 
 export const NAME = 'records';
 export const NOTES = 'The records office: the pair room clear\'s own level. Four held rooms; every room is a choice of door and door tool. Kit pieces only. Regenerate: bun run tools/levels/export.ts records';
@@ -138,7 +138,7 @@ export function build(opts: K.KitOpts = {}): { level: Level; scenarios: LevelSce
 
   // ---------------- ground ----------------
   K.grp(k, 'ground');
-  K.slab(k, 0, -0.25, 0, 40, 0, 28, K.LOT);
+  K.slab(k, 0, -0.25, 0, 40, 0, 28, C.asphalt);
   K.slab(k, 0, 0, 0, 40, 0.01, 6.88, C.grass, { flags: BoxFlag.NoShadow });        // north yard
   K.slab(k, 0, 0, 6.88, 9.88, 0.01, 23.1, C.grass, { flags: BoxFlag.NoShadow });   // west yard, down to the lot
   K.grp(k, 'floors');
@@ -196,7 +196,7 @@ export function build(opts: K.KitOpts = {}): { level: Level; scenarios: LevelSce
   for (const x of [11.4, 11.9]) K.cabinet(k, x, 7.45, Math.PI);                // cabinets on the north wall west of the window (clear of the back door's stack)
   for (const x of [16.0, 16.5]) K.cabinet(k, x, 7.45, Math.PI);                // …and east of it
   K.cardboardBox(k, 13.4, 12.55, 0.5, 0.2); K.cardboardBox(k, 12.75, 8.95, 0.45, -0.3);
-  K.wallArt(k, 17.925, 1.6, 8.6, 1.2, 0.8, drawnAs('plaster', [0.6, 0.55, 0.4]), false);
+  K.wallArt(k, 17.925, 1.6, 8.6, 1.2, 0.8, [0.6, 0.55, 0.4], false);
   K.ceilingPanel(k, 12.4, 8.3, true, 'records'); K.ceilingPanel(k, 15.6, 8.3, true, 'records');     // the north lane
   K.ceilingPanel(k, 12.4, 11.7, true, 'records'); K.ceilingPanel(k, 15.6, 11.7, true, 'records');   // the south lane
 
@@ -232,7 +232,7 @@ export function build(opts: K.KitOpts = {}): { level: Level; scenarios: LevelSce
   K.grp(k, 'exterior');
   K.car(k, 22.0, 20.4, 0.06, [0.32, 0.08, 0.07]);                   // the yard in the crook of the L: a parked car, dark
   K.car(k, 14.6, 25.4, Math.PI, [0.2, 0.22, 0.26]);                 // the lot: the car the team forms up behind
-  K.slab(k, 0, 0, 27.94, 40, 0.32, 28, drawnAs('sheet', [0.5, 0.5, 0.47])); K.slab(k, 39.94, 0, 0, 40, 0.32, 27.94, drawnAs('sheet', [0.5, 0.5, 0.47]));   // kerbs on the lot's south and east edges
+  K.slab(k, 0, 0, 27.94, 40, 0.32, 28, KERB_GREY); K.slab(k, 39.94, 0, 0, 40, 0.32, 27.94, KERB_GREY);   // kerbs on the lot's south and east edges
   K.grp(k, 'exterior.lamps');
   K.streetLamp(k, 33.5, 10.0, 'street_lamp_east', [-1, 0, 0]);     // off the east wall: it lights the stack on the staff room's east door, in front of that door's sidelight
   K.moon(k);

@@ -17,7 +17,7 @@
 import type { Vec3 } from '../../src/math/vec';
 import type { Level, LevelDoorDef } from '../../src/scene/level';
 import type { LevelScenarios, Rect } from '../../src/scene/scenarios';
-import { officeKit, normalize3 as norm, OFFICE_PALETTE, LOT, type GeneratorTrace } from '../../src/scene/officeGen';
+import { officeKit, normalize3 as norm, OFFICE_PALETTE, type GeneratorTrace } from '../../src/scene/officeGen';
 import { WORLD } from '../../src/scene/world';
 import { BoxFlag } from '../../src/scene/boxes';
 import { PANEL_GREY } from '../../src/scene/stuff';
@@ -32,7 +32,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
 
   // ---- ground, floor finishes, ceiling ----
   grp('ground');
-  slab(0, -0.25, 0, 40, 0, 28, LOT);                        // the whole world's ground: every ray and every foot lands on something
+  slab(0, -0.25, 0, 40, 0, 28, C.asphalt);                        // the whole world's ground: every ray and every foot lands on something
   grp('floors');
   slab(10, -0.1, 8, 30, 0.001, 22, C.carpet);                     // the building's base finish
   slab(10, 0, 13, 30, 0.004, 15.4, C.lino, { flags: BoxFlag.Gloss });   // the hall

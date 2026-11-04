@@ -52,12 +52,12 @@ import type { Vec3 } from '../../src/math/vec';
 import type { Level, LevelDoorDef } from '../../src/scene/level';
 import type { LevelScenarios, Rect, ResponseData } from '../../src/scene/scenarios';
 import type { SurfacesData } from '../../src/scene/levelData';
-import { officeKit, normalize3, OFFICE_PALETTE, LOT, type GeneratorTrace } from '../../src/scene/officeGen';
+import { officeKit, normalize3, OFFICE_PALETTE, type GeneratorTrace } from '../../src/scene/officeGen';
 import * as MD from '../../src/scene/markingDefaults';
 import { WORLD } from '../../src/scene/world';
 import { BoxFlag, type Box } from '../../src/scene/boxes';
 import { livedKit } from './livedKit';
-import { drawnAs, PANEL_GREY } from '../../src/scene/stuff';
+import { drawnAs, PANEL_GREY, madeOf } from '../../src/scene/stuff';
 
 export const NAME = 'depot';
 export const NOTES = 'The depot: a motor pool at night. Three huts round a floodlit yard inside a wall; the dark signals hut and the store\'s hatch hold the lit yard between them, and the hut\'s own door and the mains are at its back. One floor, box geometry only, the office\'s kit. Regenerate: bun run tools/levels/export.ts depot';
@@ -115,7 +115,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
 
   // ---------------- ground & structure ----------------
   grp('ground');
-  slab(0, -0.25, 0, 40, 0, 28, LOT);
+  slab(0, -0.25, 0, 40, 0, 28, C.asphalt);
   grp('floors');
   const floor = (x0: number, z0: number, x1: number, z1: number, alb: Vec3, extra: Partial<Box> = {}) => slab(x0, 0, z0, x1, 0.004, z1, alb, extra);
   const polished = { flags: BoxFlag.Gloss };
@@ -206,7 +206,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
   grp('generator');
   add({ c: [27.0, 0.55, 4.85], h: [1.0, 0.55, 0.5], albedo: [0.28, 0.3, 0.2], rough: 0.6, metal: true });     // the set, on the north wall
   add({ c: [26.3, 1.25, 4.6], h: [0.18, 0.15, 0.18], albedo: C.metal });                                   // its air filter
-  add({ c: [27.8, 2.05, 4.3], h: [0.05, 0.95, 0.05], albedo: drawnAs('cloth', [0.2, 0.2, 0.2]), flags: NS });                // the exhaust, up through the roof
+  add({ c: [27.8, 2.05, 4.3], h: [0.05, 0.95, 0.05], albedo: madeOf('metal', [0.2, 0.2, 0.2]), flags: NS });                // the exhaust, up through the roof
   add({ c: [28.9, 0.45, 8.9], h: [0.29, 0.45, 0.29], albedo: [0.42, 0.15, 0.1] }); add({ c: [28.3, 0.45, 9.0], h: [0.29, 0.45, 0.29], albedo: [0.42, 0.15, 0.1] });   // fuel drums in the south-east corner
   ceilingPanel(26.8, 7.0, false, 'generator');
   // THE MAINS: the breaker panel on the generator room's west wall, beside the set it switches (OCP it for a temporary blackout, shoot it for a permanent

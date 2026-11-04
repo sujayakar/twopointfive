@@ -18,7 +18,7 @@ import type { Vec3 } from '../../src/math/vec';
 import type { Level, LevelDoorDef } from '../../src/scene/level';
 import type { LevelScenarios, Rect, StructureData } from '../../src/scene/scenarios';
 import type { SurfacesData } from '../../src/scene/levelData';
-import { officeKit, normalize3 as norm, OFFICE_PALETTE, LOT, type GeneratorTrace } from '../../src/scene/officeGen';
+import { officeKit, normalize3 as norm, OFFICE_PALETTE, type GeneratorTrace } from '../../src/scene/officeGen';
 import { WORLD } from '../../src/scene/world';
 import { BoxFlag } from '../../src/scene/boxes';
 import { PANEL_GREY } from '../../src/scene/stuff';
@@ -34,7 +34,7 @@ export function build(more?: (K: ReturnType<typeof officeKit>) => void): { level
 
   // ---- ground, floors, roofs (the yard has none: open sky) ----
   grp('ground');
-  slab(0, -0.25, 0, 40, 0, 28, LOT);
+  slab(0, -0.25, 0, 40, 0, 28, C.asphalt);
   grp('floors');
   slab(10, 0, 6, 24, 0.004, 12, C.lino, { flags: BoxFlag.Gloss });      // the bunkhouse
   slab(22, 0, 16, 32, 0.004, 22, C.carpet);                              // the store

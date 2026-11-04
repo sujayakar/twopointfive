@@ -1014,8 +1014,8 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   the inside"). THE CAUSE WAS NOT THE CARS: what a round has hit is read from the COLOUR of its paint (`surfOf`: a palette name where the numbers have one,
   else how bright it is), so a white car was plasterboard (pale chips and a puff of gypsum), a blue one concrete, and its dark glass and tyres metal. A box
   can say what it is made of (`Box.stuff`, `scene/stuff.ts`), and with the rule on THE PICTURE OF A HIT reads that word first (`saidSurf`, the table
-  `STUFF_SURF`: car paint, steel and sheet are metal; veneer is wood; plaster and skim plasterboard; block, slab and pavers concrete; cloth and fabric
-  cloth); the colour is asked only of a box that says nothing, or whose word is not one thing to a round ('paint' and 'enamel' are a coat on a door, a drum,
+  `STUFF_SURF`: car paint, steel and sheet are metal; veneer is wood; plaster and skim plasterboard; block, slab and pavers concrete; fabric, the fine weave of a
+  seat or a screen, cloth on a frame; cloth, the coarse weave of a carpet, a rug, a sandbag or a tarpaulin, the soft thing that never sparks); the colour is asked only of a box that says nothing, or whose word is not one thing to a round ('paint' and 'enamel' are a coat on a door, a drum,
   a pipe or a line on a floor; the ground is what its paint says).
   **A RULE OF THE PICTURE ONLY, AND WHY.** The word is the look's: a level's plain file and its look twin say different words of the same box (whoever
   repaints a box drops its word), and the two are one simulation. A first cut let the chaos lane read the word and a review measured the two files part

@@ -19,7 +19,7 @@
 import { SideMap } from '../math/side';
 import { Vec3, Quat, v3, quat } from '../math/vec';
 import { Box, BoxFlag, makeBox, MKEY } from '../scene/boxes';
-import { drawnAs, wordFor } from '../scene/stuff';   // (no game module: the table of what a paint is made of)
+import { wordFor, madeOf } from '../scene/stuff';   // (no game module: the table of what a paint is made of)
 import { DESTRUCTION } from './destructionSwitch';
 import { gpuFx } from './particleFx';
 import type { Game, LightTarget } from './game';
@@ -47,7 +47,7 @@ export const FIXLOOK = {
   tray: [0.4, 0.41, 0.42] as Vec3, cover: [0.55, 0.55, 0.56] as Vec3, face: [0.78, 0.78, 0.75] as Vec3, tube: [0.8, 0.8, 0.78] as Vec3, soot: [0.06, 0.055, 0.05] as Vec3,
   diffuser: [0.8, 0.83, 0.86] as Vec3, shard: [0.85, 0.9, 0.9] as Vec3,
 };
-drawnAs('sheet', FIXLOOK.tray);   // (what the look made of the tray's grey by its colour until 11-04, kept so the picture did not move; nobody chose it. scene/stuff.ts)
+madeOf('sheet', FIXLOOK.tray);   // (a fixture's tray is folded sheet: scene/stuff.ts)
 export const FIXLOOK_STATS = { panels: 0, lamps: 0, beats: 0, boxes: 0, sparks: 0 };
 
 interface Piece { box: Box; v: Vec3; axis: Vec3; rate: number; ang: number; q0: Quat; floorY: number; yaw: number; delay: number; rest: boolean; bounced: boolean; glass: boolean; on: Box | null; onX: number; onZ: number }

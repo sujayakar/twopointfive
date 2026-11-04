@@ -57,9 +57,9 @@ const plainIs = (w: string | undefined) => w === undefined || w === 'plain' ? un
 
 // 4. the office's own paints, by name, as the game loads them
 { const d = dataOf('office.json'), L = loadLevel(d, { lived: true, dressing: true }) as any, at = (name: string) => L.boxes[d.boxes.findIndex((b: any) => b.material === name && b.stuff === undefined)];
-  const want: Record<string, string> = { wood: 'wood', woodDark: 'wood', carpet: 'cloth', carpetBlue: 'cloth', wall: 'plaster', concrete: 'block', lino: 'slab', stone: 'slab', metal: 'steel', black: 'plain', cardboard: 'plain', asphalt: 'metal' };
+  const want: Record<string, string> = { wood: 'wood', woodDark: 'wood', carpet: 'cloth', carpetBlue: 'cloth', wall: 'plaster', concrete: 'block', lino: 'slab', stone: 'slab', metal: 'steel', black: 'plain', cardboard: 'plain', asphalt: 'plain' };
   const got = Object.keys(want).map(n => { const b = at(n); return b ? said(cls(b)) : 'no such box'; });
-  check(Object.keys(want).every((n, i) => got[i] === want[n]), '4 the office\'s paints: a bench is wood, a carpet cloth, steel shelving steel, a partition wall plaster, the corridor slab; a bezel is plain because its name says so, card plain because it waits for a material; the car park is what its colour was drawn as (nobody has chosen)',
+  check(Object.keys(want).every((n, i) => got[i] === want[n]), '4 the office\'s paints: a bench is wood, a carpet cloth, steel shelving steel, a partition wall plaster, the corridor slab; a bezel is plain because its name says so, card plain because it waits for a material; the car park plain because no stuff the look has is tarmac',
     Object.keys(want).map((n, i) => `${n} ${got[i]}`).join(' · ')); }
 
 // 5. NOTHING ASKS A COLOUR: the same numbers are whatever their box says; a box that says nothing is plain whatever its colour; rain, a tone, a repaint change nothing
@@ -119,8 +119,8 @@ const plainIs = (w: string | undefined) => w === undefined || w === 'plain' ? un
   const skin = readFileSync(`${ROOT}/tools/levels/gwotSkin.ts`, 'utf8').includes('b.albedo = gwotAs(m, sim); b.rough = GWOT_FINISH[m]?.rough ?? ROUGH_CLOTH; delete b.stuff; worded(b);');
   // a piece broken off a thing is made of what the thing is
   const from = makeBox({ c: [0, 0, 0], h: [1, 1, 1], albedo: [0.2, 0.2, 0.2], stuff: 'veneer' }), copy = makeBox({ c: [0, 0, 0], h: [0.1, 0.1, 0.1], albedo: [0.2, 0.2, 0.2], ...wordOf(from) }), bare = makeBox({ c: [0, 0, 0], h: [0.1, 0.1, 0.1], albedo: [0.2, 0.2, 0.2], ...wordOf(makeBox({ c: [0, 0, 0], h: [1, 1, 1] })) });
-  check(says(own, 'veneer') && says(dark, 'veneer') && says(steel, 'steel') && says(white) && says(rug, 'cloth') && JSON.stringify(saidFor('veneer', [0.3, 0.31, 0.33], KIT_PALETTE.wood, KIT_PALETTE.woodDark)) === '{}' && dropped && skin && copy.stuff === 'veneer' && !('stuff' in bare),
-    '8 a word belongs to the paint it was said with: the kit\'s desk says veneer in its own wood paints; handed the kit\'s steel it is a steel bench (the paint handed over speaks) and handed white laminate it says nothing; a rug is cloth in any colour; the skin drops a repainted box\'s old word and gives it its new paint\'s; the editor\'s paint drops a box\'s own word; a piece broken off a thing copies the thing\'s word',
+  check(says(own, 'veneer') && says(dark, 'veneer') && says(steel, 'steel') && says(white) && says(rug, 'cloth') && JSON.stringify(saidFor('veneer', [0.3, 0.31, 0.33], KIT_PALETTE.wood, KIT_PALETTE.woodDark)) === '{}' && JSON.stringify(saidFor('veneer', [...KIT_PALETTE.wood], KIT_PALETTE.wood, KIT_PALETTE.woodDark)) === '{}' && saidFor('veneer', KIT_PALETTE.wood, KIT_PALETTE.wood).stuff === 'veneer' && dropped && skin && copy.stuff === 'veneer' && !('stuff' in bare),
+    '8 a word belongs to the paint it was said with: the kit\'s desk says veneer in its own wood paints; handed the kit\'s steel it is a steel bench (the paint handed over speaks), handed white laminate it says nothing, and handed a COPY of the wood\'s numbers it says nothing either (the row, not its numbers); a rug is cloth in any colour; the skin drops a repainted box\'s old word and gives it its new paint\'s; the editor\'s paint drops a box\'s own word; a piece broken off a thing copies the thing\'s word',
     `desk ${own[0]?.stuff}, dark ${dark[0]?.stuff}, as a steel bench ${steel[0]?.stuff ?? 'no word'}, white ${white[0]?.stuff ?? 'no word'} · rug ${rug[0]?.stuff} · the skin says the new word: ${skin} · the editor drops it: ${dropped} · a broken piece: ${copy.stuff}`); }
 
 // 9. A PAINT IS KNOWN BY THE ROW HANDED OVER, never by its numbers: a kit's finish and word come with the palette's own array; a copy of its numbers is nobody's
@@ -177,10 +177,11 @@ const plainIs = (w: string | undefined) => w === undefined || w === 'plain' ? un
   const was = M().wood.stuff; P.materialSet(ed, 'wood', { rough: 0.5 }); const kept = M().wood.stuff; P.materialPreset(ed, 'wood', P.FINISH_PRESETS[0].key); const preset = M().wood.stuff;
   const copy = P.materialDuplicate(ed, 'carpet'), copied = M()[copy].stuff; P.materialSet(ed, copy, { stuff: 'carpet' }); const set = M()[copy].stuff; P.materialSet(ed, copy, { stuff: null }); const cleared = M()[copy].stuff;
   let refused = false; try { P.materialSet(ed, copy, { stuff: 'banana' }); } catch { refused = true; }
+  const plainWas = M().black.stuff; P.materialSet(ed, 'black', { rough: 0.3 }); const plainKept = M().black.stuff;
   const fresh = P.materialCreate(ed, 'newpaint'), blank = Editor.blank('t').materials as Record<string, { stuff?: string }>;
-  check(was === 'wood' && kept === 'wood' && preset === 'wood' && copied === M().carpet.stuff && copied !== undefined && set === 'carpet' && cleared === undefined && refused && M()[fresh].stuff === undefined
+  check(was === 'wood' && kept === 'wood' && preset === 'wood' && copied === M().carpet.stuff && copied !== undefined && set === 'carpet' && cleared === undefined && refused && plainWas === 'plain' && plainKept === 'plain' && M()[fresh].stuff === undefined
     && blank.wood.stuff === 'wood' && blank.wall.stuff === 'plaster' && blank.metal.stuff === 'steel' && validateLevelData(ed.data as never).length === 0,
-    '13 the editor keeps a paint\'s word: a change of roughness and a finish preset leave the wood paint wood, a copy of the carpet paint is made of what the carpet is, the word is set and cleared by name and a word that is no stuff is refused; a new paint says nothing until told; a blank document\'s own paints say what their names are made of',
+    '13 the editor keeps a paint\'s word: a change of roughness and a finish preset leave the wood paint wood, a copy of the carpet paint is made of what the carpet is, the word is set and cleared by name and a word that is no stuff is refused; a paint that says plain still says it after an edit (as the exporters write it); a new paint says nothing until told; a blank document\'s own paints say what their names are made of',
     `wood: ${was} → after a roughness edit ${kept}, after a preset ${preset} · the carpet's copy: ${copied}, set ${set}, cleared ${cleared ?? 'nothing'} · banana refused ${refused} · blank: wood ${blank.wood.stuff}, wall ${blank.wall.stuff}, metal ${blank.metal.stuff}, asphalt ${blank.asphalt.stuff ?? 'nothing'}`); }
 
 console.log(`=== stuff: ${red ? 'FAILURES above' : 'ALL PASS'} ===`);

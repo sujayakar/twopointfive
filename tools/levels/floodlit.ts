@@ -41,7 +41,7 @@ import type { KitViewData, LevelScenarios, StructureData } from '../../src/scene
 import type { SurfacesData } from '../../src/scene/levelData';
 import * as K from '../../src/scene/levelKit';
 import { livedPieces, INK } from './livedPieces';
-import { drawnAs } from '../../src/scene/stuff';
+import { drawnAs, madeOf } from '../../src/scene/stuff';
 
 export const NAME = 'floodlit';
 export const NOTES = 'The floodlit yard: a room clear whose one idea is the mains breaker. A lit yard under the windows; the breaker in a shed outside the wall. Kit pieces only. Regenerate: bun run tools/levels/export.ts floodlit';
@@ -113,7 +113,7 @@ export function build(opts: K.KitOpts = {}): { level: Level; scenarios: LevelSce
 
   // ---------------- ground ----------------
   K.grp(k, 'ground');
-  K.slab(k, 0, -0.25, 0, 40, 0, 28, K.LOT);
+  K.slab(k, 0, -0.25, 0, 40, 0, 28, C.asphalt);
   K.slab(k, 4.12, 0, 13.12, 35.88, 0.01, 23.88, [0.34, 0.3, 0.24], { flags: BoxFlag.NoShadow });   // the yard: packed earth
   K.grp(k, 'floors');
   K.slab(k, 9, -0.1, 6, 31, 0.001, 13, C.concrete);
@@ -179,9 +179,9 @@ export function build(opts: K.KitOpts = {}): { level: Level; scenarios: LevelSce
 
   // ---------------- the yard ----------------
   K.grp(k, 'yard');
-  K.car(k, 11.0, 19.6, Math.PI / 2 + 0.08, drawnAs('plaster', [0.5, 0.47, 0.4]));                       // a pickup, west of the gate's line
+  K.car(k, 11.0, 19.6, Math.PI / 2 + 0.08, [0.5, 0.47, 0.4]);                       // a pickup, west of the gate's line
   for (const [x, z] of [[27.0, 18.2], [27.7, 18.5], [27.2, 18.95]]) K.add(k, { c: [x, 0.45, z], h: [0.29, 0.45, 0.29], albedo: [0.2, 0.3, 0.42] });   // fuel drums, east of it
-  for (let i = 0; i < 3; i++) K.add(k, { c: [16.2 + i * 0.62, 0.3, 13.6], h: [0.3, 0.3, 0.2], albedo: drawnAs('plaster', [0.5, 0.45, 0.33]) });   // sandbags under the eaves west of the front door
+  for (let i = 0; i < 3; i++) K.add(k, { c: [16.2 + i * 0.62, 0.3, 13.6], h: [0.3, 0.3, 0.2], albedo: madeOf('cloth', [0.5, 0.45, 0.33]) });   // sandbags under the eaves west of the front door
   K.add(k, { c: [21.6, 3.05, 13.3], h: [0.05, 3.05, 0.05], albedo: C.metal });     // the radio mast, up the front wall east of the door
 
   // ---------------- lights ----------------

@@ -31,7 +31,7 @@ import type { Level } from '../../src/scene/level';
 import type { KitViewData, LevelScenarios, StructureData } from '../../src/scene/scenarios';
 import type { SurfacesData } from '../../src/scene/levelData';
 import * as K from '../../src/scene/levelKit';
-import { drawnAs } from '../../src/scene/stuff';
+import { KERB_GREY } from '../../src/scene/stuff';
 
 export const NAME = 'mousehole';
 export const NOTES = 'The clinic: the level of the mission Mousehole. Three rooms and a duty room off one lit corridor the duty room covers; blank outer wall and thin partitions for wall charges. Kit pieces only. Regenerate: bun run tools/levels/export.ts mousehole';
@@ -170,7 +170,7 @@ export function build(opts: K.KitOpts = {}): { level: Level; scenarios: LevelSce
 
   // ---------------- ground ----------------
   K.grp(k, 'ground');
-  K.slab(k, 0, -0.25, 0, 40, 0, 28, K.LOT);
+  K.slab(k, 0, -0.25, 0, 40, 0, 28, C.asphalt);
   K.slab(k, 0, 0, 0, 40, 0.01, 6.88, C.grass, { flags: BoxFlag.NoShadow });          // the north yard: dark, where the team forms up
   K.slab(k, 33.12, 0, 6.88, 40, 0.01, 28, C.grass, { flags: BoxFlag.NoShadow });     // the east side
   K.grp(k, 'floors');
@@ -264,7 +264,7 @@ export function build(opts: K.KitOpts = {}): { level: Level; scenarios: LevelSce
   K.car(k, 20.0, 23.4, Math.PI / 2, [0.2, 0.22, 0.26]);
   K.add(k, { c: [30.5, 0.75, 5.6], h: [0.8, 0.75, 0.8], albedo: [0.2, 0.3, 0.42] });  // the water tank in the north yard's east end
   K.add(k, { c: [35.2, 0.5, 12.0], h: [0.6, 0.5, 0.9], albedo: C.metal });            // the generator on the east side
-  K.slab(k, 0, 0, 27.94, 40, 0.32, 28, drawnAs('sheet', [0.5, 0.5, 0.47])); K.slab(k, 39.94, 0, 0, 40, 0.32, 27.94, drawnAs('sheet', [0.5, 0.5, 0.47]));   // kerbs
+  K.slab(k, 0, 0, 27.94, 40, 0.32, 28, KERB_GREY); K.slab(k, 39.94, 0, 0, 40, 0.32, 27.94, KERB_GREY);   // kerbs
   K.grp(k, 'exterior.lamps');
   K.streetLamp(k, 6.6, 16.95, 'street_lamp_porch', [1, 0, 0]);                         // on the porch: whoever walks in the front way walks in lit
   K.moon(k);

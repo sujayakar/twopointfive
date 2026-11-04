@@ -47,12 +47,12 @@ import type { Vec3 } from '../../src/math/vec';
 import type { Level, LevelDoorDef } from '../../src/scene/level';
 import type { KitViewData, LevelScenarios, Rect } from '../../src/scene/scenarios';
 import type { SurfacesData } from '../../src/scene/levelData';
-import { officeKit, normalize3, OFFICE_PALETTE, LOT, type GeneratorTrace } from '../../src/scene/officeGen';
+import { officeKit, normalize3, OFFICE_PALETTE, type GeneratorTrace } from '../../src/scene/officeGen';
 import * as MD from '../../src/scene/markingDefaults';
 import { WORLD } from '../../src/scene/world';
 import { BoxFlag, type Box } from '../../src/scene/boxes';
 import { livedKit } from './livedKit';
-import { drawnAs, PANEL_GREY, CHAIR_GREY } from '../../src/scene/stuff';
+import { drawnAs, PANEL_GREY, CHAIR_GREY, madeOf } from '../../src/scene/stuff';
 
 export const NAME = 'warehouse';
 export const NOTES = 'The warehouse: a racked hall and a loading dock ringed by small rooms off an L-shaped service corridor, a way in on every face, the team starting outside. Eleven defenders in three squads (floor, dock, office). For the four man squad. One floor, box geometry only, the office\'s shell and kit. Regenerate: bun run tools/levels/export.ts warehouse';
@@ -129,7 +129,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
 
   // ---------------- ground & structure ----------------
   grp('ground');
-  slab(0, -0.25, 0, 40, 0, 28, LOT);
+  slab(0, -0.25, 0, 40, 0, 28, C.asphalt);
   slab(0, 0, 0, 3.2, 0.01, 28, C.grass, { flags: BoxFlag.NoShadow });                     // grass verges down the west side and along the north (the office's
   slab(3.2, 0, 0, 40, 0.01, 3.2, C.grass, { flags: BoxFlag.NoShadow });                   // two strips: `surfaces.grassEdge` below is the same 3.2 m)
   grp('floors');
@@ -584,7 +584,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
     // ---- the quiet side, north and west: a shipping container alone on the north verge; the smokers' bench against the west wall beside the fire exit
     L.room('verge');
     { const EARTH: Vec3 = [0.25, 0.21, 0.15];
-      L.mat(14.6, 0.1, 21.7, 2.9, drawnAs('plaster', [0.4, 0.38, 0.34]), 0.018);                       // THE DETAINED CONTAINER: a gravel hardstanding,
+      L.mat(14.6, 0.1, 21.7, 2.9, madeOf('gravel', [0.4, 0.38, 0.34]), 0.018);                       // THE DETAINED CONTAINER: a gravel hardstanding,
       B(15, 0.3, 21, 2.7, 0, 2.6, P.oxide);
       for (const z of [1.0, 2.0]) B(21, z - 0.03, 21.012, z + 0.03, 0.15, 2.45, C.metal, NS);   // its door bars,
       B(20.55, 0.294, 20.75, 2.706, 0, 2.606, C.red, NS);                          // the customs band round it at the door end (the cage's red: over the roof, down both sides),

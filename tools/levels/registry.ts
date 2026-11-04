@@ -35,7 +35,7 @@
 import type { Vec3 } from '../../src/math/vec';
 import type { Level, LevelDoorDef } from '../../src/scene/level';
 import type { KitViewData, LevelScenarios, Rect } from '../../src/scene/scenarios';
-import { officeKit, normalize3 as norm, OFFICE_PALETTE, LOT, type GeneratorTrace } from '../../src/scene/officeGen';
+import { officeKit, normalize3 as norm, OFFICE_PALETTE, type GeneratorTrace } from '../../src/scene/officeGen';
 import * as MD from '../../src/scene/markingDefaults';
 import { WORLD } from '../../src/scene/world';
 import { BoxFlag } from '../../src/scene/boxes';
@@ -102,7 +102,7 @@ const REGISTRY_KITVIEW: KitViewData = {
     { id: 'rg_leg_b', group: 'rg.pitch', c: [3.6, 0.33, 9.56], h: [0.025, 0.33, 0.025], material: 'galv|metal' },
     { id: 'rg_leg_c', group: 'rg.pitch', c: [3.2, 0.33, 10.24], h: [0.025, 0.33, 0.025], material: 'galv|metal' },
     { id: 'rg_leg_d', group: 'rg.pitch', c: [3.6, 0.33, 10.24], h: [0.025, 0.33, 0.025], material: 'galv|metal' },
-    { id: 'rg_typer', group: 'rg.pitch', c: [3.42, 0.745, 9.74], h: [0.15, 0.045, 0.17], material: 'asphalt' },
+    { id: 'rg_typer', group: 'rg.pitch', c: [3.42, 0.745, 9.74], h: [0.15, 0.045, 0.17], material: 'asphalt', stuff: 'metal' },
     { id: 'rg_carriage', group: 'rg.pitch', c: [3.52, 0.815, 9.74], h: [0.04, 0.025, 0.2], material: 'metal' },
     { id: 'rg_sheet', group: 'rg.pitch', c: [3.56, 0.9, 9.74], h: [0.02, 0.09, 0.105], albedo: [0.9, 0.89, 0.84], flags: ['NoShadow'] },
     { id: 'rg_paper', group: 'rg.pitch', c: [3.44, 0.72, 10.1], h: [0.105, 0.02, 0.15], albedo: [0.9, 0.89, 0.84], flags: ['NoShadow'] },
@@ -131,7 +131,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
 
   // ---------------- ground & structure ----------------
   grp('ground');
-  slab(0, -0.25, 0, 40, 0, 28, LOT);
+  slab(0, -0.25, 0, 40, 0, 28, C.asphalt);
   slab(0, 0, 0, 40, 0.01, 3.2, C.grass, { flags: BoxFlag.NoShadow });
   grp('floors');
   const polished = { flags: BoxFlag.Gloss };

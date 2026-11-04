@@ -78,7 +78,7 @@ import type { Vec3 } from '../../src/math/vec';
 import type { Level, LevelDoorDef } from '../../src/scene/level';
 import type { SurfacesData } from '../../src/scene/levelData';
 import type { KitViewData, LevelScenarios, PlacesData, Rect, StructureData } from '../../src/scene/scenarios';
-import { officeKit, normalize3, OFFICE_PALETTE, LOT, type GeneratorTrace } from '../../src/scene/officeGen';
+import { officeKit, normalize3, OFFICE_PALETTE, type GeneratorTrace } from '../../src/scene/officeGen';
 import * as MD from '../../src/scene/markingDefaults';
 import { WORLD } from '../../src/scene/world';
 import { BoxFlag, type Box } from '../../src/scene/boxes';
@@ -206,7 +206,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
 
   // ---------------- ground ----------------
   grp('ground');
-  slab(0, -0.25, 0, 40, 0, 28, LOT);                                              // the whole world's ground: every ray and every foot lands on something
+  slab(0, -0.25, 0, 40, 0, 28, C.asphalt);                                              // the whole world's ground: every ray and every foot lands on something
   slab(0, 0, 0, 40, 0.01, 3.2, C.grass, { flags: BoxFlag.NoShadow });                   // scrub outside the north and west walls
   slab(0, 0, 3.2, 3.2, 0.01, 28, C.grass, { flags: BoxFlag.NoShadow });
   grp('floors');
@@ -350,7 +350,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
 
   // ---------------- the garage (x 4..10.5, z 18..24): g_n from the west yard, g_e from the forecourt ----------------
   grp('garage');
-  car(7.2, 22.5, 0, drawnAs('plaster', [0.42, 0.4, 0.36]));                                                 // a car against the south wall: the floor north of it is the room
+  car(7.2, 22.5, 0, [0.42, 0.4, 0.36]);                                                 // a car against the south wall: the floor north of it is the room
   desk(5.2, 18.6, 1.8, 0.75, 0); papers(5.5, 0.76, 18.6, 0.2);                          // a workbench on the north wall
   pallet(9.5, 18.8, 1.2, 1.0);
   cardboardBox(4.6, 23.3, 0.5, 0.2); bin(9.9, 23.4); chair(5.3, 19.45, 0);

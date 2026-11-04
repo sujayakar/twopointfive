@@ -700,7 +700,7 @@ export class Editor {
       version: LEVEL_DATA_VERSION, name, meta: { grid: 0.25, bounds: { min: [0, -0.25, 0], max: [40, 8, 28] }, notes: 'created in the editor' },
       floors: [{ id: 'f0', name: 'ground floor', y: 0, ceiling: 3 }], materials,
       surfaces: { building: { x0: 4, x1: 36, z0: 4, z1: 24 }, grassEdge: 0, inside: 'carpet', outside: 'asphalt', verge: 'asphalt', zones: [] },
-      boxes: [{ id: 'ground', floor: 'f0', group: 'ground', c: [20, -0.125, 14], h: [20, 0.125, 14], material: 'asphalt' in materials ? 'asphalt' : Object.keys(materials)[0], ...('asphalt' in materials && materials.asphalt.stuff !== undefined ? { stuff: 'plain' } : {}) },   // (the lot says nothing over its paint's row, as the kits' lots do: scene/levelKit.ts LOT)
+      boxes: [{ id: 'ground', floor: 'f0', group: 'ground', c: [20, -0.125, 14], h: [20, 0.125, 14], material: 'asphalt' in materials ? 'asphalt' : Object.keys(materials)[0] },
               { id: 'breaker_panel', floor: 'f0', group: 'breaker', c: [4.3, 1.4, 4.3], h: [0.02, 0.3, 0.2], albedo: [0.3, 0.31, 0.33] }, { id: 'breaker_led', floor: 'f0', group: 'breaker', c: [4.33, 1.55, 4.3], h: [0.005, 0.01, 0.01], albedo: [0.04, 0.04, 0.045], emissive: [0.3, 4, 0.6], flags: ['NoShadow'] }],
       props: [], lights: [{ id: 'moon', kind: 'dir', pos: [0, 0, 0], dir: [0.45, -0.5, -0.74], color: [0.55, 0.7, 1], intensity: 0.9, range: 1e6, innerDeg: 0, outerDeg: 0, group: 'exterior', enabled: true, volumetric: 0, radius: 0.009, mains: false }],
       switchables: [], doors: [{ id: 'door_0', floor: 'f0', hinge: [10, 10], closedDir: 0, width: LEAF_W }], routes: [], chokepoints: [], volumes: [], devices: [], connectors: [],

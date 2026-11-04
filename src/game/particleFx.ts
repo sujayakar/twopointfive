@@ -121,11 +121,12 @@ const PROP_SURF: Record<string, Surf> = { chair: 'fabric', cardboard: 'cardboard
 // TPS_HITSTUFF=1 raises it there); in the registry (game/knobs.ts) and the journal. On or off the run is the same run by digest.
 // CHECK: tools/qa/hitstuff-check.ts (HITSTUFF_BREAK=1 must fail), both stands. Never seen on a GPU.
 export const HITSTUFF = { on: false };
-/** what each stuff a box may say is to a round — only the stuffs that are ONE thing to a round: 'paint' and 'enamel' are a coat on a door, a drum, a pipe
+/** what each stuff a box may say is to a round ('cloth', the look's coarse weave, is a carpet, a rug, a sandbag and a tarpaulin: the soft thing that gives
+ *  its own colour's tufts and dust and never a spark; 'fabric', the fine weave, is a seat or a screen on a frame) — only the stuffs that are ONE thing to a round: 'paint' and 'enamel' are a coat on a door, a drum, a pipe
  *  or a line on a floor, 'plain' and 'waits' say nothing, and the ground (earth, gravel) is what its paint already says */
 const STUFF_SURF: Partial<Record<BoxStuff, Surf>> = {
   carpaint: 'metal', steel: 'metal', metal: 'metal', sheet: 'metal', brushed: 'metal', louvre: 'metal',
-  glass: 'glass', rubber: 'plastic', plastic: 'plastic', wood: 'wood', veneer: 'wood', fabric: 'fabric', cloth: 'fabric', carpet: 'carpet',
+  glass: 'glass', rubber: 'plastic', plastic: 'plastic', wood: 'wood', veneer: 'wood', fabric: 'fabric', cloth: 'carpet', carpet: 'carpet',
   plaster: 'drywall', skim: 'drywall', stucco: 'concrete', 'mud wall': 'concrete', block: 'concrete', 'gloss block': 'concrete', 'board concrete': 'concrete', 'cast panel': 'concrete', slab: 'concrete', paver: 'concrete',
 };
 /** the words the picture of a hit reads (the check holds each to be a stuff a box may say) */

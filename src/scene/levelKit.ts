@@ -4,7 +4,7 @@
 // footprint is fitted by levelLoad.ts fitPropFootprint, as officeKit's are; officeGen.ts does not import this file. Units: metres. +X east, +Z south, +Y up. Floor top y = 0.
 import { Vec3 } from '../math/vec';
 import { Box, BoxFlag, makeBox } from './boxes';
-import { saidFor, namePaints, paintOf, worded, type BoxStuff, drawnAs, PANEL_GREY, saidAs } from './stuff';
+import { saidFor, namePaints, paintOf, worded, type BoxStuff, drawnAs, PANEL_GREY, madeOf } from './stuff';
 import { WORLD } from './world';
 import type { Level, LightDef, LevelDoorDef, PropKind, PropPart, PropDef } from './level';
 import { MarkingDef, MARKING_TEXEL } from './markings';
@@ -42,10 +42,6 @@ export const KIT_FINISH: Readonly<Record<string, { rough: number; metal?: boolea
   partRed: { rough: 0.9 }, partBlue: { rough: 0.9 }, partTan: { rough: 0.9 }, red: { rough: 0.45 },
 };
 namePaints(KIT_PALETTE, KIT_FINISH);   // (the kit's paints are known by the row handed over: add() below gives a box its paint's finish and what it is made of. scene/stuff.ts)
-/** THE LOT: the asphalt an office-kit level stands on. Asphalt is no stuff the look has, so the lot says nothing (plain) over its paint's row, which says
- *  metal because the kits paint iron fittings with the same paint. (Until 11-04 the lot was drawn, and a round into it read, as bare iron: its grey is iron's,
- *  darkened.) The same numbers and finish as the palette's asphalt: only what it is made of differs. */
-export const LOT: Vec3 = saidAs('plain', KIT_PALETTE.asphalt);
 export interface KitOpts { /** the objects carry their pixel-art markings (keyboards, cartons, cabinets, papers, racks); default on */ markings?: boolean; /** the base texel the bitmaps are generated for */ texel?: number; }
 /** What a generator accumulates: the Level's lists in add() order (box indices held by switchables / fixtures / beacons / the breaker all come from this one
  *  sequence), + the editor group of every box (`groups[i]` ≡ `boxes[i]`, for the level file). */
@@ -223,7 +219,7 @@ export function shelf(k: LevelKit, x: number, z: number, w: number, d: number, y
   }
 }
 /** a low sofa (the manager's office's): seat 1.8 × 0.9 with the back along local −Z */
-export function sofa(k: LevelKit, x: number, z: number, yaw: number, albedo: Vec3 = drawnAs('slab', [0.22, 0.2, 0.19])): void {
+export function sofa(k: LevelKit, x: number, z: number, yaw: number, albedo: Vec3 = madeOf('fabric', [0.22, 0.2, 0.19])): void {
   const at = frameAt(x, z, yaw);
   add(k, { c: at(0, 0.3, 0), h: [0.9, 0.3, 0.45], yaw, albedo }); add(k, { c: at(0, 0.62, -0.45), h: [0.9, 0.32, 0.12], yaw, albedo });
 }
