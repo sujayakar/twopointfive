@@ -1,5 +1,6 @@
 // Keyboard + mouse state.
-import { gameCode, camKey, KEYMAP } from '../host/keymap';
+import { gameCode, camKey, KEYMAP, SINK_LABEL } from '../host/keymap';
+import { KEPT } from '../gpu/keep';   // (a leaf)
 export class Input {
   keys = new Set<string>();
   pressed = new Set<string>();     // edge-triggered this frame
@@ -19,7 +20,7 @@ export class Input {
   /** called (rate-limited by the owner) when a real key / click is swallowed by the lock — lets the page tell the viewer why nothing happened */
   onLockedInput: (() => void) | null = null;
   /** asked about every real key before the game reads it: true = a UI surface took it (main.ts hands the tweak panel's onKey — ← / → over the panel walk its
-   *  systems) and the game never sees it. Order-independent, unlike a second capture listener on window. */
+   *  systems; a typed letter is the game's unless a field of the panel was clicked) and the game never sees it. Order-independent, unlike a second capture listener on window. */
   keyVeto: ((e: KeyboardEvent) => boolean) | null = null;
 
   /** Off-screen textarea that holds keyboard focus while playing inside someone else's page (an iframe embed such as the artifact viewer):
@@ -42,9 +43,9 @@ export class Input {
 
   constructor(private el: HTMLElement | null) {
     if (!el) return;   // detached (above): no DOM, no listeners — the state fields above are the whole object
-    const framed = (() => { try { return window.top !== window.self; } catch { return true; } })();
+    const framed = !KEPT.shelled && (() => { try { return window.top !== window.self; } catch { return true; } })();   // (a kept page's frame — gpu/keep.ts — is the game's own window in all but name: its keys are its window's, with no sink, as on a page with nothing above it)
     if (framed) {
-      const t = document.createElement('textarea'); t.setAttribute('aria-label', 'game input'); t.setAttribute('inputmode', 'none'); t.tabIndex = -1; t.autocomplete = 'off'; t.spellcheck = false; t.setAttribute('autocorrect', 'off'); t.setAttribute('autocapitalize', 'off');   // (no aria-hidden on a focused element — Chrome warns; inputmode none keeps touch keyboards down)
+      const t = document.createElement('textarea'); t.setAttribute('aria-label', SINK_LABEL); t.setAttribute('inputmode', 'none'); t.tabIndex = -1; t.autocomplete = 'off'; t.spellcheck = false; t.setAttribute('autocorrect', 'off'); t.setAttribute('autocapitalize', 'off');   // (no aria-hidden on a focused element — Chrome warns; inputmode none keeps touch keyboards down)
       t.style.cssText = 'position:fixed;left:0;top:0;width:1px;height:1px;opacity:0;pointer-events:none;resize:none;border:0;padding:0;';
       document.body.appendChild(t); this.sink = t;
     }

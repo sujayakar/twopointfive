@@ -65,21 +65,6 @@ export function powderDrawWord(): number {
 const U_HEAD = 32, U_WORDS = U_HEAD + POW_KICKS * 8;   // powder_field.wgsl PowU: 128 bytes, then the kicks (2 × vec4f each)
 interface Kick { x: number; z: number; force: number; age: number; dx: number; dz: number; seed: number }
 
-/** THE STEP'S PROGRAM IS THE DEVICE'S, COMPILED ONCE (the maintainer on shaders: "compile once", no compile at a moment of play). A field is thrown away when
- *  both snow rows are at nothing or the air is made anew, and made again when a row comes back: each new field compiled "powder step" again (found 11-03 by a
- *  one-boot read of the page: two switches of the look's layers, two more compiles). The layout and the pipeline are kept by device; a field is textures, a
- *  uniform buffer and a bind group. */
-const PROGRAMS = new WeakMap<GPUDevice, { bgl: GPUBindGroupLayout; pipe: Promise<GPUComputePipeline> }>();
-function programOf(device: GPUDevice): { bgl: GPUBindGroupLayout; pipe: Promise<GPUComputePipeline> } {
-  let p = PROGRAMS.get(device); if (p) return p;
-  const C = GPUShaderStage.COMPUTE;
-  const bgl = device.createBindGroupLayout({ label: 'powder', entries: [
-    { binding: 0, visibility: C, buffer: { type: 'uniform' } }, { binding: 1, visibility: C, texture: { sampleType: 'unfilterable-float' } }, { binding: 2, visibility: C, texture: { sampleType: 'uint' } },
-    { binding: 3, visibility: C, texture: { sampleType: 'unfilterable-float' } }, { binding: 4, visibility: C, storageTexture: { access: 'write-only', format: 'rgba16float' } }] });
-  const layout = device.createPipelineLayout({ label: 'powder', bindGroupLayouts: [bgl] }), module = makeShader(device, powSrc, 'powder_field');
-  p = { bgl, pipe: computePipelineAsync(device, { label: 'powder step', layout, compute: { module, entryPoint: 'powderStep' } }) };
-  PROGRAMS.set(device, p); return p;
-}
 export class PowderField {
   readonly w: number; readonly h: number;
   /** what the picture reads: rgba16float, w × h, texel (i, j) = cell (i, j)'s centre (world x = (i + ½) / POW_RES): r = the powder's column, g = column × height (m),
@@ -105,8 +90,12 @@ export class PowderField {
     this.nxt = device.createTexture({ label: 'powder next', size: [w, h], format: 'rgba16float', usage: T.STORAGE_BINDING | T.COPY_SRC });
     this.view = this.cur.createView();
     this.ubo = makeBuffer(device, U_WORDS * 4, GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST, 'powder uniforms');
-    const { bgl, pipe } = programOf(device);
-    this.whenReady = pipe.then(p => { this.pipe = p; this.ready = true; });
+    const C = GPUShaderStage.COMPUTE;
+    const bgl = device.createBindGroupLayout({ label: 'powder', entries: [
+      { binding: 0, visibility: C, buffer: { type: 'uniform' } }, { binding: 1, visibility: C, texture: { sampleType: 'unfilterable-float' } }, { binding: 2, visibility: C, texture: { sampleType: 'uint' } },
+      { binding: 3, visibility: C, texture: { sampleType: 'unfilterable-float' } }, { binding: 4, visibility: C, storageTexture: { access: 'write-only', format: 'rgba16float' } }] });
+    const layout = device.createPipelineLayout({ label: 'powder', bindGroupLayouts: [bgl] }); const module = makeShader(device, powSrc, 'powder_field');
+    this.whenReady = computePipelineAsync(device, { label: 'powder step', layout, compute: { module, entryPoint: 'powderStep' } }).then(p => { this.pipe = p; this.ready = true; });
     this.bind = device.createBindGroup({ label: 'powder', layout: bgl, entries: [
       { binding: 0, resource: { buffer: this.ubo } }, { binding: 1, resource: air.view }, { binding: 2, resource: air.cells },
       { binding: 3, resource: this.view }, { binding: 4, resource: this.nxt.createView() }] });

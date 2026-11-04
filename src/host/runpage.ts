@@ -5,8 +5,13 @@
 // and is a run's page everywhere at once; and a mission picked from such a page never carries the word on (scene/scenarioList.ts quitSearch).
 // A leaf: no imports, so any module may ask it at its top level.
 export const BENCH_RUN_WORD = 'benchrun', PRICE_RUN_WORD = 'pricerun';
+/** the words that ASK for a run: the benchmark's, the pricing run's */
+export const BENCH_WORD = 'bench', PRICE_LEVELS_WORD = 'pricelevels';
 export const RUN_PAGE_WORDS: readonly string[] = [BENCH_RUN_WORD, PRICE_RUN_WORD];
 export const runPage = (q: URLSearchParams): boolean => RUN_PAGE_WORDS.some(w => q.has(w));
+/** A RUN KEEPS ITS OWN PAGE (host/keeppage.ts `own`): the address that asks for one and every page of it load whole, each a boot of its own — that boot is what a
+ *  run measures, and a run walks from page to page by loading the next address, which a frame under a kept shell is not free to do. */
+export const ownPage = (q: URLSearchParams): boolean => q.has(BENCH_WORD) || q.has(PRICE_LEVELS_WORD) || runPage(q);
 /** … and A PAGE WHOSE PICTURE IS PRICED: a level of the pricing run. Its preset is pinned by its address, and the quality ladder's own switch is off from before
  *  its first frame (main.ts), so nothing of the picture moves with this machine's frame rate and a level's two pages stand on the same rows (ui/pricerun.ts ONE
  *  RUNG). Not the benchmark's scene: what its ladder does with the scene is part of what it reports. */

@@ -2,7 +2,7 @@
 // swept collision against the static boxes, bounce + friction, settle. Rendered as small dynamic boxes.
 import { Vec3, Quat, v3, quat } from '../math/vec';
 import { StaticCollision } from '../scene/collision';
-import { Box, BoxFlag, makeBox, MKEY } from '../scene/boxes';
+import { Box, BoxFlag, makeBox, boxOf, MKEY } from '../scene/boxes';
 import { SNOWBOG } from './snowBog';
 import type { PropSystem, Prop } from './props';
 import type { Team } from './teams';
@@ -106,7 +106,7 @@ export const GRAVITY = 9.81;
 
 /** makeBox's own object for an item's part, key for key (yaw, albedo, emissive, flags, owner, cutHeight, then c, h, rot), without its spread; the arguments are
  *  evaluated in the order the literal's fields were (c, h, yaw, rot, albedo, flags) */
-function itemBox(c: Vec3, h: Vec3, yaw: number, rot: Quat, albedo: Vec3, flags: number): Box { return { yaw, albedo, emissive: [0, 0, 0], flags, owner: 0, cutHeight: 1e6, c, h, rot }; }
+function itemBox(c: Vec3, h: Vec3, yaw: number, rot: Quat, albedo: Vec3, flags: number): Box { return boxOf(c, h, yaw, albedo, [0, 0, 0], flags, 0, rot); }
 
 /** A THING MEETS LYING SNOW (snowBog.ts, SNOWBOG.on; `bog` 0‥1 = how boggy the ground it touched is, 0 = a floor): the share of its slide and of its bounce
  *  it keeps, and how much faster than on a floor it may still be going and stop dead. One place for the pool's step and for frag.ts's forecast of it. */

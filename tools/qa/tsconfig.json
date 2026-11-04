@@ -5,5 +5,12 @@
     "noEmit": true,
     "allowImportingTsExtensions": true
   },
-  "include": ["./**/*.ts", "./types/**/*.d.ts", "../../types/**/*.d.ts", "../../src/debugHooks.ts"]
+  "include": [
+    "./**/*.ts",
+    "../mp/**/*.ts",
+    "../sim/**/*.ts",
+    "./types/**/*.d.ts",
+    "../../types/**/*.d.ts",
+    "../../src/debugHooks.ts"
+  ]
 }

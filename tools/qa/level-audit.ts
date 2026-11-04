@@ -67,7 +67,7 @@ async function one(level: string) {
   const { BoxFlag } = await import(`${ROOT}/src/scene/boxes.ts`), { WORLD } = await import(`${ROOT}/src/scene/world.ts`), { cutConfig } = await import(`${ROOT}/src/scene/cut.ts`);
   const { geoTryLevel } = await import(`${ROOT}/src/scene/geoTry.ts`), { dressFront } = await import(`${ROOT}/src/scene/frontTry.ts`), { dressLorry, kitLorry } = await import(`${ROOT}/src/scene/lorryTry.ts`);
   const { dressPass } = await import(`${ROOT}/src/scene/passTry.ts`), { seatPosts } = await import(`${ROOT}/src/scene/lookMend.ts`);
-  const { skyPlan } = await import(`${ROOT}/src/scene/placePlan.ts`), { planOpenings, openAreas, LOOK_OPENINGS } = await import(`${ROOT}/src/scene/openings.ts`);   // (both moved to the scene folder with the floor plan, 11-04. These are loaded by a built path, as every check here loads the game, so the typecheck does not see a module move: RUN this after a rebase)
+  const { skyPlan } = await import(`${ROOT}/src/render/placeField.ts`), { planOpenings, openAreas, LOOK_OPENINGS } = await import(`${ROOT}/src/render/openings.ts`);   // (loaded by a built path, as every check here loads the game, so the typecheck does not see a module that moves: RUN the audit after a merge)
   const G = await import(`${ROOT}/src/render/gbuffer.ts`), { lookStuff, LOOK_OF, LOOK_MATCH } = G;
   /** stuff said BY A PAINT'S NAME, where the renderer has such a table (an export `LOOK_BY_NAME` of render/gbuffer.ts: a level file's material name → class). None today: a paint is what its colour says */
   const BY_NAME: Record<string, number> = (G as any).LOOK_BY_NAME ?? {};

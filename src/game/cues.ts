@@ -37,6 +37,7 @@
 //   The one line that said what nobody then did — 'back to your posts', from a man whose side then stands where it is — is reworded for a unit (guards.ts),
 //   and a place on the net is named by the level's own rooms (dialogue.ts placeName: 'coming at him from the car park' on a floor with no car park).
 // (src/game is one import cycle: nothing below is built from another game module's exports at module load.)
+import { facedMan, men } from './seats';
 import { SideMap } from '../math/side';
 import type { Vec3 } from '../math/vec';
 import type { Game, Guard } from './game';
@@ -216,7 +217,7 @@ export class Cues {
   /** every ear of the team's a shout could reach: each player's who is up (one today), each living teammate's */
   private ears(): Vec3[] {
     const g = this.g, out: Vec3[] = []; const at = (p: Vec3): Vec3 => [p[0], p[1] + 1.6, p[2]];
-    if (g.player && !g.player.down) out.push(at(g.player.char.pos));
+    for (const pl of men(g)) if (pl && !pl.down) out.push(at(pl.char.pos));
     for (const o of g.guards) if (o.team === 'operative' && o.state !== 'dead' && o.char.alive) out.push(at(o.char.pos));
     return out;
   }
@@ -297,8 +298,8 @@ export class Cues {
       if (gd.state === 'alert' && M.state !== 'alert') M.alertT = t;
       const sight = t - gd.lastSeenT, still = Math.hypot(gd.char.vel[0], gd.char.vel[2]) < 0.3;
       if (gd.state === 'patrol' && M.state !== 'patrol' && D.mode === 'hold' && t - M.stoodT > 15) { if (this.cue(gd, 'calm')) M.stoodT = t; }
-      else if (g.player.down && gd.foe === 'player' && gd.state === 'alert' && !M.covered && still && flat(gd.char.pos, g.player.char.pos) < 3.5) { if (this.cue(gd, 'cover', this.at(g.player.char.pos)) || this.kindBusy('cover')) M.covered = true; }   // (said, or a man beside him has just said it for both)
-      else if (gd.state === 'alert' && D.mode === 'hold' && still && sight > K.stillSecs && t - M.alertT > K.stillSecs && t - gd.witness.heard.lastShotT > K.stillQuiet && t - M.againT > K.againSecs && !(gd.foe === 'player' && g.player.down) && !g.rescue?.crewHides(gd)) {   // (rescue.ts, Hard's crew: a man lying in wait does not name his room on the net)
+      else if (gd.foe === 'player' && facedMan(g, gd).down && gd.state === 'alert' && !M.covered && still && flat(gd.char.pos, facedMan(g, gd).char.pos) < 3.5) { if (this.cue(gd, 'cover', this.at(facedMan(g, gd).char.pos)) || this.kindBusy('cover')) M.covered = true; }   // (said, or a man beside him has just said it for both)
+      else if (gd.state === 'alert' && D.mode === 'hold' && still && sight > K.stillSecs && t - M.alertT > K.stillSecs && t - gd.witness.heard.lastShotT > K.stillQuiet && t - M.againT > K.againSecs && !(gd.foe === 'player' && facedMan(g, gd).down) && !g.rescue?.crewHides(gd)) {   // (rescue.ts, Hard's crew: a man lying in wait does not name his room on the net)
         if (this.cue(gd, 'still', this.at(gd.char.pos))) M.againT = t; }
       // a loud thing outside his room, and he has not gone: the dice said stay (rallyAt drawn again), or nobody of his side is posted where it came from
       if (D.noiseAt && D.noiseOut && D.noiseT > M.noiseT && M.ep < 0 && D.mode === 'hold') M.ep = D.noiseT;

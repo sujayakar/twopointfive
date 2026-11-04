@@ -330,9 +330,9 @@ export class WallBreak {
     for (let k = 0; k < rects.length; k++) {
       const { c, h } = this.rectBox(B, rects[k]);
       const cut = this.destr.breaks.ragged(B, rects[k], h);   // (the cut switch: a ragged end where the piece looks into the opening — undefined with it off)
-      if (k < B.slots.length) { const p = g.col.boxes[B.slots[k]]; p.c = c; p.h = h; p.flags = B.flags0; if (cut || p.cut) { p.cut = cut; p.cutCore = cut ? this.destr.breaks.endCore(B.surf, B.box.albedo) : undefined; } if (p.name === 'stud') { p.name = 'piece'; p.albedo = v3.copy(B.box.albedo); p.rough = B.box.rough; p.metal = B.box.metal; if (B.box.stuff !== undefined) p.stuff = B.box.stuff; } }
+      if (k < B.slots.length) { const p = g.col.boxes[B.slots[k]]; p.c = c; p.h = h; p.flags = B.flags0; if (cut || p.cut) { p.cut = cut; p.cutCore = cut ? this.destr.breaks.endCore(B.surf, B.box.albedo) : undefined; } if (p.name === 'stud') { p.name = 'piece'; p.albedo = v3.copy(B.box.albedo); p.rough = B.box.rough; p.metal = B.box.metal; } }
       else {
-        const p = makeBox({ c, h, yaw: B.box.yaw, albedo: v3.copy(B.box.albedo), flags: B.flags0, name: 'piece', rough: B.box.rough, metal: B.box.metal, aniso: B.box.aniso, ...(B.box.stuff !== undefined ? { stuff: B.box.stuff } : {}) }); if (cut) { p.cut = cut; p.cutCore = this.destr.breaks.endCore(B.surf, B.box.albedo); }
+        const p = makeBox({ c, h, yaw: B.box.yaw, albedo: v3.copy(B.box.albedo), flags: B.flags0, name: 'piece', rough: B.box.rough, metal: B.box.metal, aniso: B.box.aniso }); if (cut) { p.cut = cut; p.cutCore = this.destr.breaks.endCore(B.surf, B.box.albedo); }
         const i = g.col.addStatic(p, B.box); world.addStatic(p); B.slots.push(i); this.owner.set(i, B);
       }
     }
@@ -348,7 +348,7 @@ export class WallBreak {
     return true;
   }
   /** the picture's static tables are stale (BoxWorld re-packs by itself on the page; the native host's static serial reads this) */
-  private bump() { const w = this.g.engine.world as { geomSerial?: number }; w.geomSerial = (w.geomSerial ?? 0) + 1; }
+  private bump() { const w = this.g.engine.world as { geomSerial?: number }; w.geomSerial = (w.geomSerial ?? 0) + 1; this.g.col.wrote(); }
 
   // ---------------------------------------------------------------- opening cells
   /** Open `cells` of B (already-open ones ignored). Returns the change row, or null when nothing opened / the piece cap refused it. */
@@ -630,7 +630,8 @@ export class WallBreak {
     if (!hung.length) return this.planOf(at, opts, R);
     // (the boards the charge is set on stand in no line of the plan: hidden as the engine hides a static — the flags every ray reads when it is asked — and put back)
     const boxes = this.g.col.boxes, was = hung.map(j => boxes[j].flags); for (const j of hung) boxes[j].flags |= HIDE;
-    try { return this.planOf(at, opts, R); } finally { hung.forEach((j, k) => { boxes[j].flags = was[k]; }); }
+    this.g.col.wrote();
+    try { return this.planOf(at, opts, R); } finally { hung.forEach((j, k) => { boxes[j].flags = was[k]; }); this.g.col.wrote(); }
   }
   private planOf(at: Vec3, opts: BlastOpts, R: number): { B: Breakable; cells: number[]; d: number }[] {
     const g = this.g; const K = WALLS.blast;
@@ -704,7 +705,7 @@ export class WallBreak {
       const left: Box[] = [];
       if (B.nOpen + n < open.length) for (const rect of this.pieces(B, open)) {
         const { c, h } = this.rectBox(B, rect);
-        left.push(makeBox({ c, h, yaw: B.box.yaw, albedo: B.box.albedo, flags: B.flags0, name: 'piece', ...(B.box.stuff !== undefined ? { stuff: B.box.stuff } : {}) }));
+        left.push(makeBox({ c, h, yaw: B.box.yaw, albedo: B.box.albedo, flags: B.flags0, name: 'piece' }));
       }
       out.push({ id: B.id, kind: B.kind, standing, left, cells: n, hole });
     }

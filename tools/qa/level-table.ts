@@ -11,6 +11,9 @@
 //   <dir>/mac/*.json                  the file the page's own run hands back on a real GPU (`?look&pricelevels`, ui/pricerun.ts): the newest one is read,
 //                                     by the time the run itself wrote in it. Each row carries the run's own verdict (`over`): this page prints it and
 //                                     judges no GPU number itself
+//   <dir>/cloud/*.json                the same run's file from a rented GPU of another make (the cloud GPU goal's box): the newest one is read, and
+//                                     <dir>/cloud/note.txt is the sentence that says what card and what tree it ran on. Shown as its own table, RELATIVE
+//                                     ONLY: no verdict of its rows is printed and nothing of it is set against the budget, which is the Mac's
 //   <dir>/parts.json                  optional: { "<task's name>": ["level", …] }, for the levels that have no row yet
 //
 //   bun run tools/qa/level-table.ts --dir <dir>            writes <dir>/read-first.md, prints what it found and what is missing
@@ -50,7 +53,7 @@ const slimOf = (r: any): Slim | null => r && r.boxes && r.picture ? { boxes: r.b
 const macDir = `${D}/mac`, macFiles = existsSync(macDir) ? readdirSync(macDir).filter(f => f.endsWith('.json')).map(f => ({ f, j: json(`${macDir}/${f}`) })).filter(x => x.j && Array.isArray(x.j.rows)).sort((a, b) => String(b.j.at ?? b.f).localeCompare(String(a.j.at ?? a.f))) : [];
 const mac: any = macFiles[0]?.j ?? null, macRow = (level: string) => (mac?.rows ?? []).find((r: any) => r.level === level) ?? null;
 /** a file from before the run wrote its own verdicts: its numbers are shown, and no level is called over or under on them */
-const macOld = !!mac && (!(mac.rows as any[]).every(r => Array.isArray(r.over)) || !(mac.version >= 3));   // (… or from before it added up every stamped pass: version 3)
+const macOld = !!mac && (!(mac.rows as any[]).every(r => Array.isArray(r.over)) || !(mac.version >= 4));   // (… or from before its second span was the compute passes with the g-buffer: version 4. A version 3 file's is every stamped pass, which holds the display's wait under Metal)
 /** a field a row may write as a list or as one line */
 const asList = (a: unknown): string[] => Array.isArray(a) ? a.map(String) : typeof a === 'string' && a.trim() ? [a] : [];
 /** a level is dressed when its row says so outright */
@@ -59,6 +62,20 @@ const isDressed = (row: any): boolean => row?.dressed === true;
 const pct = (v: number | null | undefined, d = 1) => v === null || v === undefined || !isFinite(v) ? '—' : `${(100 * v).toFixed(v >= 0.0995 ? 0 : d)}%`;
 const more = (v: number | null | undefined) => v === null || v === undefined || !isFinite(v) ? '—' : `${v >= 0 ? '+' : ''}${(100 * v).toFixed(1)}%`;
 const arrow = (a: number | undefined, b: number | undefined) => a === undefined ? (b === undefined ? '—' : String(b)) : b === undefined || a === b ? String(a) : `${a} → ${b}`;
+// … and the newest file from a rented card, with the sentence that says what it ran on
+const cloudDir = `${D}/cloud`, cloudFiles = existsSync(cloudDir) ? readdirSync(cloudDir).filter(f => f.endsWith('.json')).map(f => ({ f, j: json(`${cloudDir}/${f}`) })).filter(x => x.j && Array.isArray(x.j.rows)).sort((a, b) => String(b.j.at ?? b.f).localeCompare(String(a.j.at ?? a.f))) : [];
+const cloud: any = cloudFiles[0]?.j ?? null, cloudNote = existsSync(`${cloudDir}/note.txt`) ? readFileSync(`${cloudDir}/note.txt`, 'utf8').trim() : '';
+/** a cloud row as this page shows it: the page without the look and the look page as it opens, over the file's second span (version 4: the compute passes and the
+ *  g-buffer; version 3: every stamped pass, the same thing to a tenth of a millisecond on a card with no display), the two passes the look moves most, and whether
+ *  the GPU kept up. Ranked by what the look adds in ms; the three dearest are marked. No verdict. */
+const ms2 = (v: unknown) => typeof v === 'number' ? v.toFixed(2) : '—';
+const cloudRows = ((cloud?.rows ?? []) as any[]).filter(r => r.page?.win && r.on).map(r => { const a = r.page.win, b = r.on, adds = typeof a.all === 'number' && typeof b.all === 'number' ? b.all - a.all : null;
+  return { level: r.level as string, size: `${(r.internal ?? []).join('×')}`, plain: a.all as number | null, look: b.all as number | null, adds, share: adds !== null && a.all ? adds / a.all : null,
+    layers: typeof r.off?.all === 'number' && typeof b.all === 'number' ? b.all - r.off.all : null, gather: [a.passes?.gather, b.passes?.gather], gbuf: [a.passes?.gbuffer, b.passes?.gbuffer], vol: [a.passes?.volumetrics, b.passes?.volumetrics],
+    behind: typeof b.lag === 'number' && b.lag > 3 ? b.lag as number : null, notes: asList(r.notes) }; }).sort((x, y) => (y.adds ?? -1e9) - (x.adds ?? -1e9));
+const cloudTop = new Set(cloudRows.slice(0, 3).map(r => r.level));
+const cloudLine = cloud ? `${cloud.gpu}, ${String(cloud.at).slice(0, 16).replace('T', ' ')} UTC, at quality ${cloud.quality}, ${cloudRows.length} level${cloudRows.length === 1 ? '' : 's'} with both pages timed` : '';
+const CLOUD_WHAT = 'These numbers are from a rented NVIDIA card, not from your Mac. They are relative only: they say which levels the look costs most on and in which pass, and nothing here is set against the budget. Each level is one held picture, with the quality ladder off and both pages at one size.';
 /** a row's library block in words: how many pieces it lays, what it added to the library, what it still wants from it */
 const lib = (row: any): string => { const L = row?.library; if (!L) return '—';
   const used = asList(L.used), added = asList(L.added), wanted = asList(L.wanted); return [used.length ? `uses ${used.length} piece${used.length === 1 ? '' : 's'}` : '', added.length ? `added: ${added.join(', ')}` : '', wanted.length ? `wants: ${wanted.join(', ')}` : ''].filter(Boolean).join('; ') || '—'; };
@@ -142,6 +159,10 @@ for (const r of rows) { const b = r.before, a = r.after, sw = r.m ? r.m.programs
   out.push(`| ${r.L.level} | ${arrow(b?.drawn, a?.drawn)} | ${arrow(b?.moving, a?.moving)} | ${arrow(b?.planes, a?.planes)} | ${arrow(b?.round, a?.round)} | ${arrow(b?.lampsOn, a?.lampsOn)} | ${b ? pct(b.none) : '—'}${a && b && Math.abs(a.none - b.none) > 0.0005 ? ` → ${pct(a.none)}` : ''} | ${r.ratio !== undefined ? more(r.ratio - 1) : '—'} | ${gpuCell(r.m)} | ${vsPage(r.m)} | ${vsOff(r.m)} | ${three(r.m, 'all')} | ${allVs(r.m)} | ${surface(r.m)} | ${r.m ? `${r.m.on.ms.toFixed(1)} ms` : '—'} | ${sw === undefined ? '—' : sw} |`); }
 out.push('');
 out.push('- **Software read, layers on** is how much longer a frame takes with the look\'s layers on than off, on the same page in the same boot, on a CPU renderer. It is a direction, not a price.', '- **GPU** columns are from your run. **GPU ms** is the time the GPU is busy with the compute passes, which is how the game times itself everywhere. The look\'s surface layers (paint, relief, finish, weather, marks) are drawn in a render pass that this number leaves out, so **Every stamped pass** adds the render passes\' own stamps to it, and that is judged against the same 10%. **Surface pass ms** shows that one pass by itself. **A frame every** is the time between two frames: on a display the game holds, it is the display\'s own rate.', '- **Programs made by the switch** should be 0: the look must not compile anything when its layers change.', '- **No material** is the share of the picture from above that the look draws flat.', '');
+if (cloud) { out.push('## On a rented NVIDIA card (relative)', '', CLOUD_WHAT, '', `The file: \`cloud/${cloudFiles[0].f}\`, ${cloudLine}.${cloudNote ? ' ' + cloudNote : ''}`, '');
+  out.push('| Level | Without the look, ms | With the look, ms | The look adds | Of which its layers | Gather ms | G-buffer ms | Volumetrics ms | Kept up at sixty |', '|---|---|---|---|---|---|---|---|---|');
+  for (const r of cloudRows) out.push(`| ${cloudTop.has(r.level) ? `**${r.level}**` : r.level} | ${ms2(r.plain)} | ${ms2(r.look)} | ${r.adds === null ? '—' : `${r.adds >= 0 ? '+' : ''}${r.adds.toFixed(2)} ms (${more(r.share)})`} | ${r.layers === null ? '—' : `${r.layers.toFixed(2)} ms`} | ${ms2(r.gather[0])} → ${ms2(r.gather[1])} | ${ms2(r.gbuf[0])} → ${ms2(r.gbuf[1])} | ${ms2(r.vol[0])} → ${ms2(r.vol[1])} | ${r.behind === null ? 'yes' : `no: the GPU ends a frame ${r.behind.toFixed(0)} frames late with the look`} |`);
+  out.push('', `The levels are in order of what the look adds; the three dearest are in bold. "Without the look" and "with the look" are the GPU's busy time over ${cloud.version >= 4 ? 'the compute passes and the g-buffer' : 'every pass the browser stamps'}. "Of which its layers" is what the look's own switchable layers add on the look page.`, ''); }
 const plainPage = json(`${D}/cost/pass/cost.json`)?.againstPlainPage;
 if (plainPage) { out.push('## What each page compiles', '');
   out.push(`On the pass, on the software page: the page without the look compiled ${plainPage.textKB[0]} KB of shader text in ${plainPage.pipelines[0]} pipelines and came ready in ${plainPage.readySecs[0]} s. The look page compiled ${plainPage.textKB[1]} KB in ${plainPage.pipelines[1]} and came ready in ${plainPage.readySecs[1]} s.`, 'The page without the look also compiles a second set of ray programs for cut boxes that swap in, which the look page does not need. The text size and the pipeline count carry over to a GPU; the seconds do not.', ''); }
@@ -234,7 +255,13 @@ ${costs}
 <p class="legend">No material is the share of the picture from above that the look draws flat. Software: layers on is how much longer a frame takes with the layers on than off, on a CPU renderer. Programs by the switch should be 0: the look must not compile anything when its layers change. GPU ms is the time the GPU is busy with the compute passes, which is how the game times itself everywhere. The look's surface layers (paint, relief, finish, weather, marks) are drawn in a render pass that this number leaves out, so Every stamped pass adds the render passes' own stamps to it, and that is judged against the same 10%. Surface pass ms shows that one pass by itself. A frame every is the time between two frames: on a display the game holds, it is the display's own rate.</p>
 ${plainPage ? `<h3>What each page compiles</h3><p>On the pass, on the software page: the page without the look compiled ${plainPage.textKB[0]} KB of shader text in ${plainPage.pipelines[0]} pipelines and came ready in ${plainPage.readySecs[0]} s. The look page compiled ${plainPage.textKB[1]} KB in ${plainPage.pipelines[1]} and came ready in ${plainPage.readySecs[1]} s. The page without the look also compiles a second set of ray programs for cut boxes that swap in, which the look page does not need. The text size and the pipeline count carry over to a GPU; the seconds do not.</p>` : ''}</section>
 
-<section><h2>How this page is made</h2>
+${cloud ? `<section><h2>On a rented NVIDIA card (relative)</h2><p>${esc(CLOUD_WHAT)}</p><p>The file is ${esc(cloudLine)}.${cloudNote ? ' ' + esc(cloudNote) : ''}</p>
+<div class="frame"><table><thead><tr><th>Level</th><th class="n gpu">Without the look, ms</th><th class="n gpu">With the look, ms</th><th class="n gpu">The look adds</th><th class="n gpu">Of which its layers</th><th class="n gpu">Gather ms</th><th class="n gpu">G-buffer ms</th><th class="n gpu">Volumetrics ms</th><th>Kept up at sixty</th></tr></thead><tbody>
+${cloudRows.map(r => `<tr><th scope="row">${cloudTop.has(r.level) ? `<b>${esc(r.level)}</b>` : esc(r.level)}</th><td class="n gpu">${ms2(r.plain)}</td><td class="n gpu">${ms2(r.look)}</td><td class="n gpu">${r.adds === null ? '—' : `${r.adds >= 0 ? '+' : ''}${r.adds.toFixed(2)} ms (${esc(more(r.share))})`}</td><td class="n gpu">${r.layers === null ? '—' : `${r.layers.toFixed(2)} ms`}</td><td class="n gpu">${ms2(r.gather[0])} → ${ms2(r.gather[1])}</td><td class="n gpu">${ms2(r.gbuf[0])} → ${ms2(r.gbuf[1])}</td><td class="n gpu">${ms2(r.vol[0])} → ${ms2(r.vol[1])}</td><td>${r.behind === null ? 'yes' : `no: the GPU ends a frame ${r.behind.toFixed(0)} frames late with the look`}</td></tr>`).join('\n')}
+</tbody></table></div>
+<p class="legend">The levels are in order of what the look adds, and the three dearest are in bold. "Without the look" and "with the look" are the GPU's busy time over ${cloud.version >= 4 ? 'the compute passes and the g-buffer' : 'every pass the browser stamps'}. "Of which its layers" is what the look's own switchable layers add on the look page.</p></section>
+
+` : ''}<section><h2>How this page is made</h2>
 <ul><li>${code('bun run tools/qa/level-audit.ts')} counts every level, headless, in under a minute. ${code('--check <level>')} is the budget check a dressed level must pass.</li><li>${code('node tools/qa/level-cost-page.cjs <level>')} boots the page once on the software renderer: programs compiled, layers off against on, two stills.</li><li>${code('bun run tools/qa/level-table.ts --dir <folder>')} builds this page from those files and from each dressing task's row.</li></ul></section>
 </div>
 `;

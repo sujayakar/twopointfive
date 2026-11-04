@@ -13,13 +13,12 @@ import { LightSet, cardSlotsFor, type RtLight } from './render/lights';
 import { emissiveDayK } from './render/photometry';
 import { lookVeilFrame } from './render/lookveil';
 import { PowderField, powderDrawWord } from './render/powderField';
-import { PlaceField } from './render/placeField';
-import { PlaceMap } from './scene/placePlan';
+import { PlaceField, PlaceMap } from './render/placeField';
 import { WallSides } from './render/wallSides';
 import { lookEyeFrame, type LookEye } from './render/lookeye';
 import { lookGrade, lookGradeFrame } from './render/lookgrade';
 import { lookExpoFrame } from './render/lookexpo';
-import { planOpenings, openAreas, openingRadiance, openingsKey, leavesKey, LOOK_OPENINGS, type Opening } from './scene/openings';
+import { planOpenings, openAreas, openingRadiance, openingsKey, leavesKey, LOOK_OPENINGS, type Opening } from './render/openings';
 import { buildWallRaster, wallRasterDiff, reachMaskSome, REACH_WORK, REACH_PACE, type ReachJob } from './render/reach';
 import { MeshShadows, MESH_MAX_CHARS } from './render/meshShadows';
 import { RigFit, RIG_KPAD } from './render/sdfrig';
@@ -136,7 +135,7 @@ export class Engine {
   /** this frame's shadeCfg and eyeCfg as the frame was handed them (a tool's and the debugger's: tools/qa/look-sheet.cjs prints them beside each still) */
   lookShadeCfg: [number, number, number, number] | undefined = undefined; lookEyeCfg: [number, number, number, number] | undefined = undefined;
   private lookGradeCfg: [number, number, number, number] | null = null;   // (this frame's gradeCfg, render/lookgrade.ts: the day's contrast undone under a roof)
-  /** THE LOOK PROTOTYPE's daylight at openings (scene/openings.ts; the panel's "Daylight at openings" row): one area light just inside each place the level
+  /** THE LOOK PROTOTYPE's daylight at openings (render/openings.ts; the panel's "Daylight at openings" row): one area light just inside each place the level
    *  is open to the sky by (a window, an open door, a blown hole, a passage's mouth). THE PICTURE'S ALONE: the lights are this engine's (`dayLights`, written
    *  here every frame from this method's own records and handed to the upload), never in the light set the game reads and a checkpoint holds, and their
    *  masks leave no note in reach.ts's side tables: nothing in the update, a checkpoint or a recording can tell the row is on. The openings are found again when the level's boxes have changed and then stood still for a few frames, what
@@ -280,9 +279,9 @@ export class Engine {
       .then(() => { this.ready = true; });   // (memoised: a second caller awaits the same build)
   }
   private initP: Promise<void> | null = null;
-  /** SOME PASS IS DRAWING WITH A STAND-IN WHILE ITS OWN PROGRAM COMPILES (gpu/device.ts laterProgress): a pipeline the boot left for later, or one a frame has just asked for
-   *  (PIPE_QUEUE.held — a tier the ladder stepped to, a row switched on), is not in yet, so this frame's picture and its GPU times are the stand-ins', not the settings' own.
-   *  False again once every one asked for has landed or failed (a failed one keeps its stand-in for good: nothing more will change). Always false with the two rows off. */
+  /** SOME PASS IS DRAWING WITH A STAND-IN WHILE ITS OWN PROGRAM COMPILES (gpu/device.ts laterProgress): a pipeline the boot left for later is not in yet,
+   *  so this frame's picture and its GPU times are the stand-ins', not the settings' own. False again once every one asked for has landed or failed (a failed one keeps its
+   *  stand-in for good: nothing more will change). Always false with the row 'Start on first frame shaders' off. */
   get standsIn(): boolean { return laterProgress.pending > 0; }
   /** construct + init in one await (the viewer, the editor, tools) */
   static async create(gpu: Gpu, opts: { sharp?: boolean; gbaa?: boolean; rcCfg?: RcConfig; onGroup?: (name: string) => void } = {}): Promise<Engine> {
@@ -412,10 +411,10 @@ export class Engine {
     // SHARP DIRECT: live only where there is something to decouple — TAAU on (the output-size history), the internal size below the output, and no debug view (those bypass the resolve and read
     // internal-size diagnostics); mirrored into the passes BEFORE their resize, like the TAAU switch (the composite-size set follows it)
     const sharpAsked = !!this.settings.sharpDirect && this.settings.taau && this.settings.debugView === 0 && (ow !== w || oh !== h);
-    // START ON FIRST FRAME SHADERS (gpu/device.ts PIPE_QUEUE.later, off by default): … or while no fragment composite is in yet — the pair is a LATER twin when the boot built the sharp
+    // START ON FIRST FRAME SHADERS (gpu/device.ts PIPE_QUEUE.later): … or while no fragment composite is in yet — the pair is a LATER twin when the boot built the sharp
     // path, passes.ts traceJobs: sharp direct stands in for it then, even where there is nothing to decouple. With the row off `sharp` is `sharpAsked`, the line as it always was.
     const sharp = sharpAsked || (PIPE_QUEUE.later && this.settings.taau && this.settings.debugView === 0 && !this.passes.fragCompReady);
-    this.passes.setSharp(sharp); this.passes.fragAsked = !sharpAsked;   // (fragAsked — OTHER SHADERS WHEN NEEDED, PIPE_QUEUE.held: the settings composite through the fragment pair, so the encode asks the browser for it the first such frame; nothing to ask for with the row off)
+    this.passes.setSharp(sharp);
     this.passes.setGbaa(!!this.settings.gbaa && this.settings.taau && this.settings.debugView === 0 && (sharp || this.settings.taauPhases <= 0));   // GBAA: on the TAAU path only (its blend sits between the composite and the resolve; the debug views and the FXAA chain bypass it), and only on a 1 : 1 raster it can own — sharp direct live, or the jitter off — never under the jittered upscale (that is C4: measured softer than main)
     this.passes.setOutlineCopy(!!this.outline?.on && this.outline.picture && this.settings.debugView === 0);   // THE OUTLINE BY THE PICTURE (render/outline.ts): a copy of the composite for it to read, kept only while its rows ask
     this.passes.fogFrame = this.fogFrame; this.passes.setFog(!!this.fogFrame?.on && this.settings.debugView === 0);   // FOG OF WAR (game/fogofwar.ts): its pass exists only while the game's switch is on (hdr takes the storage + copy usages then), and never under a debug view
@@ -598,11 +597,10 @@ export class Engine {
       if (n > 0 && this.cutSeen > 0 && (whole > 0) !== (this.cutWhole > 0)) { if (taauOn) this.resetTaa('cut pieces change shape'); else this.passes.dropRestirBeliefs(); }
       this.cutWhole = whole; this.cutSeen = n;
     }
-    this.lookOpeningLights();   // (THE LOOK PROTOTYPE: by day each opening to the sky is a light of its own, scene/openings.ts)
+    this.lookOpeningLights();   // (THE LOOK PROTOTYPE: by day each opening to the sky is a light of its own, render/openings.ts)
     { const P = this.passes, on = lookConfig.on; P.gradeH = on ? lookConfig.gradeH : 0; P.gradeS = on ? lookConfig.gradeS : 0; P.gradeSat = on ? lookConfig.gradeSat : 1; P.gradeC = 1; this.lookGradeCfg = null;   // (THE LOOK PROTOTYPE's grading rows, post.wgsl agx)
       if (on && lookConfig.gradeC !== 1) { const zen = this.settings.skyZenith, hor = this.settings.skyHorizon, g = lookGrade(lookConfig.sky * lookSkyLum(zen, hor, 0.8), Math.PI * lookConfig.sky * lookSkyLum(zen, hor, 0.947), this.lights.lights, this.settings.exposure * lookConfig.gradeExp, lookConfig.gradeC); P.gradeC = g[0]; P.gradeP = g[1]; this.lookGradeCfg = lookGradeFrame(g, this.settings.exposure * lookConfig.gradeExp); } }
     this.glassLightMasks();   // (glass: which listed panes each light can reach at all → RtLight.glassMask, packed by the upload below; all 0 with the experiment off)
-    if (!this.settings.restir) this.passes.need('pDirect');   // (PIPE_QUEUE.held: the old estimator is asked of the browser by the first frame whose settings run it)
     const restir = this.settings.restir || this.passes.restirStandsIn;   // (the estimator this frame's direct pass runs: the setting, or ReSTIR standing in while the old estimator — a LATER twin with the row 'Start on first frame shaders' on — is not in yet; the row off = the setting, always)
     this.lights.dirMasks = restir;   // the moon's / sun's directional reach masks ride only with the ReSTIR estimator (render/reach.ts reachMaskForDirectional; the OFF path's rows stay as they were)
     this.lights.dayExp = lookConfig.on && lookConfig.lamps > 0 ? lookExposure(lookConfig.exposure?.() ?? null, this.settings.skyZenith, this.settings.skyHorizon) : 1; this.lights.dayAmount = lookConfig.lamps;   // (THE LOOK PROTOTYPE's real light values: render/photometry.ts)
@@ -638,7 +636,6 @@ export class Engine {
     const numTransientNow = this.lights.lights.reduce((n, l) => n + ((l.ttl >= 0 || l.transient) && l.enabled ? 1 : 0), 0);   const firstTransientNow = numTransientNow ? this.lights.firstTransientSlot : 0;   // (+ the lowest SLOT holding one, from the upload above — the gather's subtraction loop starts there instead of at slot 0 (frame.p5Cfg.w; 0 when none is alive, so a still's frame block is byte for byte what it was — review R2.2))   // transient (ttl / flagged) lights alive this frame — the gather skips its subtraction loop at 0, the froxels draw them outside their history (the goggles' infrared lights are NOT among them: steady lights in the tube's picture — lights.ts LightSet.ir)
     const fx = this.passes.froxels;
     const froxAsked = s.froxelVol && s.froxelH >= 8 && s.froxelD >= 4 && (s.flags & (FrameFlags.Volumetrics | FrameFlags.Smoke)) !== 0;
-    if (froxAsked) { fx.need(); this.passes.need('pVolF'); }   // (PIPE_QUEUE.held: the froxel kernels and the march's froxel twin are asked of the browser by the first frame whose tier marches them)
     const froxOn = froxAsked && fx.ready && this.passes.volFReady;   // (fx.ready, volFReady: the kernels and the volumetric pass's froxel twin are LATER pipelines — render/froxels.ts init, passes.ts traceJobs)   // (beams AND smoke both off: nothing for the grid to hold — the old path draws the same nothing)
     const froxNear = Math.max(0.05, s.froxelNear, cam.pos[1] - Engine.FROXEL_CONTENT_TOP);   // (nothing to light hangs above FROXEL_CONTENT_TOP: the first slice starts where a ray from this height could first meet anything)
     const froxFar = Math.max(froxNear + 1, s.froxelFar);
@@ -695,7 +692,6 @@ export class Engine {
       numTransient: numTransientNow,
       smokeDraw: this.smokeDrawWords(), powderDraw: lookConfig.on ? powderDrawWord() : 0,
       sides: lookSides && this.wallSides.fits ? this.wallSides.words : null, sideCols: lookSides && this.wallSides.fits ? this.wallSides.cols : null,   // (THE LOOK PROTOTYPE's Walls have two sides row: lighting_common.wgsl diceTaps, diceFacePointBy)
-      placeCfg: placeOn && lookConfig.order > 0 ? [Math.min(lookConfig.order, 1), 0, 0, 0] : undefined,   // (THE LOOK PROTOTYPE, light keeps its order across places: with the place field, by day)
       lampCfg: lampK < 1 ? [lampK, lampK / emissiveDayK(this.lights.dayExp, this.lights.dayAmount), lookConfig.steady > 0 ? 1 : 0, Math.max(lookConfig.roomBright, 0.001)] : undefined,   // (.z: the Steady bounce row is up, lighting_common.wgsl dayBoundK · .w: the Room brightness row, composite.wgsl lookExpoGain)   // (common.wgsl lampFloorK, boxEmissiveRay)
       secMinE: s.secMinE * lampK,   // (by day a fixture is drawn at the hour's exposure × its night strength, render/photometry.ts, so the night's threshold is held at the same share of it: every lamp the night's cache carries, the day's does too)
       //   // R2 sequence over the octahedral texel: cascade direction aliasing becomes noise for the indirect temporal filter
@@ -783,7 +779,7 @@ export class Engine {
     this.passes.gatherStrata = !!s.gatherStrata;   // (stratified gather directions: which gather pipeline pair the encode takes this frame)
     this.passes.glassRefract = !!(s.glassRefract && s.glass && this.world.glassList.length > 0);   // (glass refraction: composite's GLASS_REFRACT twin — only while there is a pane list to bend through; glass off / no panes = the module as it was)
     { const P = this.passes; P.restirOn = restir; P.restirRays = s.restirRays; P.restirSpatial = s.restirSpatial; P.restirHistory = s.restirHistory; P.restirRadius = s.restirRadius; P.restirGradient = s.restirGradient; P.restirGradK = s.restirGradK; P.restirYoung = s.restirYoung; P.restirSpatialAll = s.restirSpatialAll; P.restirCoherent = s.restirCoherent; P.restirSampleHue = s.restirSampleHue; P.restirRatioRaw = s.restirRatioRaw; P.restirPermute = s.restirPermute; P.restirPenCap = s.restirPenCap; P.restirPenRays = s.restirPenRays; P.restirAudit = s.restirAudit; P.heldRays = s.heldRays; P.heldAdaptive = !!s.heldAdaptive; P.restirStableRetrace = !!s.restirStableRetrace; P.restirDimClass = s.restirDimClass || 0; P.restirHueSplit = s.restirHueSplit; P.restirKnownDark = s.restirKnownDark; P.restirJitter = this.jitter;
-      P.restirMotion = s.restirMotion; { const motionAsked = s.restirMotion > 0 && (this.camMovedAny || s.restirMotionStatic); if (motionAsked && s.restir) P.need('pRestirM'); P.restirMotionLive = motionAsked && P.restirMReady; } /* (PIPE_QUEUE.held: the motion twin is asked of the browser by the first frame whose settings would run it — not by one where ReSTIR only stands in for the old estimator) */ P.restirMotionV = s.restirMotionV; P.restirMotionMin = s.restirMotionMin; P.restirMotionPx = s.restirMotionPx; P.restirMotionDither = s.restirMotionDither; P.restirMotionTaps = s.restirMotionTaps;   // (MOTION: 0 = main's pipeline; passes.encode picks the RESTIR_MOTION twin otherwise)
+      P.restirMotion = s.restirMotion; P.restirMotionLive = s.restirMotion > 0 && (this.camMovedAny || s.restirMotionStatic) && P.restirMReady; P.restirMotionV = s.restirMotionV; P.restirMotionMin = s.restirMotionMin; P.restirMotionPx = s.restirMotionPx; P.restirMotionDither = s.restirMotionDither; P.restirMotionTaps = s.restirMotionTaps;   // (MOTION: 0 = main's pipeline; passes.encode picks the RESTIR_MOTION twin otherwise)
       if (restir) P.writeRestir(this.lights); }   // ReSTIR DI: the settings are the source of truth; the uniform (cfg + last frame's slot maps and light records, kept by lights.upload above) goes up every frame the pass runs
     { // the denoiser: which core, and the v3 clients' knobs (the settings are the source of truth, mirrored like every other pass option)
       this.passes.dnMode = s.denoiser === 'legacy' ? 'legacy' : 'v3';

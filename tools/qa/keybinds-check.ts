@@ -3,8 +3,11 @@
 //   KEYBINDS_BREAK=1 = a stray kept table (W moved to I) is on the machine while the 'nothing rebound' lines are asked: must FAIL
 //   QFREE_BREAK=1 = the board as it was (the wall hold on Q) while the 'no wall key' lines are asked: must FAIL
 //   LETTERS_BREAK=1 = the menu's letters left on G and H (the board as it was) where 'the menu's letters go with its key' is asked: must FAIL
+//   SINKKEY_BREAK=1 = the test as the three listeners spelled it (any text area is a field) where 'the hidden text box' is asked: must FAIL
 //   MOVEWORDS_BREAK=1 = the fast crouch walk (game/player.ts CROUCHRUN) left off where the words for Shift are asked with it on: must FAIL
 // WHAT IT HOLDS:
+//   the hidden box in somebody else's frame game/input.ts keeps the keys in a text box nobody sees: a key aimed at it is no typing (host/keymap.ts typedInto), so
+//                  F7 (ui/replaykey.ts), F8 (main.ts) and the kit's copy and paste (ui/loadout.ts) are not dropped there; a real field still is
 //   the words      while Shift in a crouch is a fast crouch walk, Options' Sprint row (ui/options.ts sprintSmall) and the old start card's list
 //                  (ui/menu.ts moveRowNow) say what Shift does crouched and that it's louder; off, both as they were (the drawn rows are not asked)
 //   the table      off in the module (a tool, the editor, the viewer: the build's keys whatever is kept); the page's boot turns it on · nothing rebound = every key is itself and every line of words comes back the same string · a row put on a key: that key gives the row's
@@ -244,6 +247,19 @@ export async function keybindsCheck(): Promise<boolean> {
       const ha = hashDigest(a.d), hb = hashDigest(b.d), hc = hashDigest(c.d);
       verdict(ha === hb && ha === hc && a.went > 1 && c.table >= 10, `the game (${process.env.TPS_PROFILE === 'shipped' ? 'the page\'s stand' : 'the frozen stand'}): the codes written straight in, the same keys through the keyboard with nothing rebound, and a rebound board's keys through the keyboard end in one digest`,
         `330 ticks, he went ${a.went.toFixed(2)} m · straight in ${ha} · the keyboard, as built ${hb}${ha === hb ? '' : ` (${diffDigest(a.d, b.d, 3).join('; ')})`} · ${c.table} rows moved ${hc}${ha === hc ? '' : ` (${diffDigest(a.d, c.d, 3).join('; ')})`}`); }
+    // ---- the hidden text box of a framed page is no field (host/keymap.ts typedInto): a key aimed at it reaches F7, F8 and the kit's copy and paste
+    { const SB = process.env.SINKKEY_BREAK === '1', { readFileSync } = await import('node:fs');
+      const old = (t: any) => !!t && /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName ?? ''), test: (t: any) => boolean = SB ? old : K.typedInto;
+      const el = (tagName: string, label?: string, has = true) => has ? { tagName, getAttribute: (k: string) => k === 'aria-label' ? label ?? null : null } : { tagName };
+      const edit = test({ tagName: 'DIV', isContentEditable: true }), sink = test(el('TEXTAREA', K.SINK_LABEL)), area = test(el('TEXTAREA')), named = test(el('TEXTAREA', 'notes')), input = test(el('INPUT')), select = test(el('SELECT')), bare = test(el('TEXTAREA', undefined, false)), div = test(el('DIV', K.SINK_LABEL)), none = test(null);
+      const input_ts = readFileSync(`${ROOT}/src/game/input.ts`, 'utf8'), labelled = /setAttribute\('aria-label', SINK_LABEL\)/.test(input_ts) && K.SINK_LABEL === 'game input';
+      const SITES: [string, RegExp, string, string][] = [['src/ui/replaykey.ts', /^const f7 = .*$/m, 'F7', '&& !typedInto(e.target);'], ['src/main.ts', /^.*e\.code === 'F8'.*perfsweep\.toggle.*$/m, 'F8', '&& !keymap.typedInto(e.target)) {'], ['src/ui/loadout.ts', /^.*isContentEditable \|\| String\(window\.getSelection.*$/m, 'the kit\'s copy and paste', 'if (typedInto(e.target) ||']];
+      // (…and the three that spell the test themselves name the same box: host/findme.ts imports nothing, the editor and the replay player are their own pages)
+      const SPELT = ['src/host/findme.ts', 'src/editor/app.ts', 'src/replay/engineplay.ts'], spelt = SPELT.filter(f => !readFileSync(`${ROOT}/${f}`, 'utf8').includes(`getAttribute?.('aria-label') !== '${K.SINK_LABEL}'`) && !readFileSync(`${ROOT}/${f}`, 'utf8').includes(`getAttribute('aria-label') !== '${K.SINK_LABEL}'`));
+      const sites = SITES.map(([file, re, what, asks]) => { const line = (readFileSync(`${ROOT}/${file}`, 'utf8').match(re)?.[0] ?? '').split('   // ')[0]; return { what, ok: line.includes(asks) && !/INPUT\||TEXTAREA\||SELECT\|/.test(line) }; });   // (the call itself, the way round it is asked, and no tag test of its own left beside it)
+      verdict(!sink && area && named && input && select && bare && !div && !none && (edit || SB) && labelled && sites.every(s => s.ok) && !spelt.length,
+        'the hidden text box of a framed page is no field: a key aimed at it is not typing, a real field still is, and F7, F8 and the kit\'s copy and paste ask that test',
+        `the hidden box: typing ${sink} · a text area ${area}, one with another label ${named}, an input ${input}, a select ${select}, a text area that cannot say its label ${bare} · a div with the box's label ${div}, editable text ${edit} · no target ${none} · game/input.ts labels its box '${K.SINK_LABEL}' ${labelled} · ${sites.map(s => `${s.what} asks it ${s.ok}`).join(' · ')} · the three files that spell the test themselves name the same box: ${spelt.length ? `NOT ${spelt.join(', ')}` : 'yes'}`); }
     // ---- the words for Shift say what it does in a crouch while CROUCHRUN is on (Options' row and the start page's list: ui/options.ts sprintSmall, ui/menu.ts moveRowNow)
     { const { CROUCHRUN, TWOGEARS } = await import(`${ROOT}/src/game/player.ts`), { sprintSmall } = await import(`${ROOT}/src/ui/options.ts`), { moveRowNow } = await import(`${ROOT}/src/ui/menu.ts`), was = { c: CROUCHRUN.on, t: TWOGEARS.on };
       const WBRK = process.env.MOVEWORDS_BREAK === '1', OLD = ['move · Shift sprint · C crouch · wheel = walking pace (slower is quieter)', 'move · Shift sprint · C crouch (slower and quiet)'], got: string[] = []; let ok = true;

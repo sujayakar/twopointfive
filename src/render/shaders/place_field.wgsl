@@ -7,12 +7,11 @@ struct PlaceU {
   parity: u32, snap: u32, kappa: f32, omega: f32,
   sam: vec2f, eyeOpen: f32, eyeClose: f32,
   y: f32, dark: f32, link: f32, skyEase: f32,
-  skyShare: f32, near: f32, nearDoor: f32, pad2: f32,
+  skyShare: f32, pad0: f32, pad1: f32, pad2: f32,
 };
 const PLACE_W: i32 = 100;
 const PLACE_H: i32 = 70;
 const PLACE_SOLID: f32 = -1000.0;
-const PLACE_NEAR: i32 = PLACE_W * PLACE_H + 4;   // where the second block begins: after the cells and their four words (render/placeField.ts PLACE_NEAR)
 @group(0) @binding(0) var<uniform> U: PlaceU;
 @group(0) @binding(1) var diceTex: texture_3d<f32>;
 @group(0) @binding(3) var maskTex: texture_2d<u32>;
@@ -21,24 +20,14 @@ const PLACE_NEAR: i32 = PLACE_W * PLACE_H + 4;   // where the second block begin
 fn maskAt(c: vec2i) -> u32 { if (c.x < 0 || c.y < 0 || c.x >= PLACE_W || c.y >= PLACE_H) { return 255u; } return textureLoad(maskTex, c, 0).r; }
 /** a cell's level, or PLACE_SOLID: off the map, in a wall, or free since a moment ago with no answer yet */
 fn cellAt(c: vec2i) -> f32 { if (maskAt(c) == 255u) { return PLACE_SOLID; } return field[c.y * PLACE_W + c.x]; }
-/** WHAT ONE NEIGHBOUR HANDS A CELL whose own map value is `m`, read once: xy = its pull (its level × the link, the link), z = THE BRIGHTEST PLACE A STRIDE
- *  AWAY as it hands it on (under −500 = it has none to hand).
- *  THE PULL: the link is whole between two cells of a place and U.link of that when either is a doorway's cell (the map's low bits 1, render/placeField.ts
- *  placeMask): two rooms through an open door stay two places, with a soft step at the threshold.
- *  THE BRIGHTEST PLACE A STRIDE AWAY (the field's second block; place_common.wgsl lookGainsOwn is its reader): the neighbour's own answer, U.near stops
- *  dimmer for the cell of floor between them and only U.nearDoor dimmer when either is a doorway's cell: so the first cell of a room inside its door holds
- *  the yard's level all but whole, and each cell further in a step less, never through a wall. Each cell then keeps the most of its own level and what
- *  its four neighbours hand it (placeSweep). EVERY STEP LOSES SOMETHING, a doorway's too: two cells that handed each other their answers whole would keep
- *  the brightest either ever held (a yard gone dim at dusk, a lamp put out), and the bound would stand open nine cells into the room for good. With a loss
- *  on every step a stale answer falls by at least U.nearDoor a sweep, and the block follows the levels both ways. */
-fn hand(c: vec2i, m: u32) -> vec3f {
-  let mn = maskAt(c); if (mn == 255u) { return vec3f(0.0, 0.0, PLACE_SOLID); }
-  let i = c.y * PLACE_W + c.x; let door = (m & 3u) == 1u || (mn & 3u) == 1u;
-  let v = field[i]; let nv = field[PLACE_NEAR + i];
-  var o = vec3f(0.0, 0.0, PLACE_SOLID);
-  if (v > -500.0) { let k = U.kappa * select(1.0, U.link, door); o = vec3f(v * k, k, PLACE_SOLID); }
-  if (nv > -500.0) { o.z = nv - select(U.near, U.nearDoor, door); }
-  return o;
+/** one neighbour's pull on a cell whose own map value is `m`: (its level × the link, the link). The link is whole between two cells of a place and
+ *  U.link of that when either is a doorway's cell (the map's low bits 1, render/placeField.ts placeMask): two rooms through an open door stay two places, with a
+ *  soft step at the threshold. */
+fn pull(c: vec2i, m: u32) -> vec2f {
+  let mn = maskAt(c); if (mn == 255u) { return vec2f(0.0); }
+  let v = field[c.y * PLACE_W + c.x]; if (v < -500.0) { return vec2f(0.0); }
+  let k = U.kappa * select(1.0, U.link, (m & 3u) == 1u || (mn & 3u) == 1u);
+  return vec2f(v * k, k);
 }
 
 /** what the cache holds over a cell: (log2 of it, how much the reading counts). THE LIGHT THAT FALLS ON THE FLOOR (the cache's +y slab: the irradiance on
@@ -74,17 +63,14 @@ fn placeSweep(@builtin(global_invocation_id) gid: vec3u) {
   let c = vec2i(gid.xy);
   if (c.x >= PLACE_W || c.y >= PLACE_H || ((gid.x + gid.y) & 1u) != U.parity) { return; }
   let i = c.y * PLACE_W + c.x; let m = textureLoad(maskTex, c, 0).r;
-  if (m == 255u) { field[i] = PLACE_SOLID; field[PLACE_NEAR + i] = PLACE_SOLID; return; }
+  if (m == 255u) { field[i] = PLACE_SOLID; return; }
   let t = reading(c);
-  let h0 = hand(c + vec2i(1, 0), m); let h1 = hand(c - vec2i(1, 0), m); let h2 = hand(c + vec2i(0, 1), m); let h3 = hand(c - vec2i(0, 1), m);
-  let s = h0.xy + h1.xy + h2.xy + h3.xy;
+  let s = pull(c + vec2i(1, 0), m) + pull(c - vec2i(1, 0), m) + pull(c + vec2i(0, 1), m) + pull(c - vec2i(0, 1), m);
   let w = t.y;
   let den = w + s.y; if (den <= 0.0) { return; }   // (no reading and no neighbour with an answer yet: it waits)
   let gs = (w * t.x + s.x) / den;
   let old = field[i];
-  let lv = select(old + U.omega * (gs - old), gs, old < -500.0);
-  field[i] = lv;
-  field[PLACE_NEAR + i] = max(lv, max(max(h0.z, h1.z), max(h2.z, h3.z)));
+  field[i] = select(old + U.omega * (gs - old), gs, old < -500.0);
 }
 
 /** THE EYE: the level of the place Sam stands in, eased as an eye is (opening slower than it closes), kept in the word after the last cell; the word after

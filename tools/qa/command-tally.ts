@@ -53,6 +53,7 @@ const { loadLevel } = await import(`${ROOT}/src/scene/levelLoad.ts`);
 const { withOfficeScript, isOfficeFamily } = await import(`${ROOT}/src/scene/level.ts`);
 const { lightEstimateAt } = await import(`${ROOT}/src/game/guards.ts`);
 const { ORDERS } = await import(`${ROOT}/src/game/orders.ts`);
+const { CMDRING: RINGK } = await import(`${ROOT}/src/game/cmdring.ts`);
 const { PLANLAY, PLANLAY_STATS } = await import(`${ROOT}/src/game/planlay.ts`);
 const { AUTOPILOT, AUTOPILOT_STATS, autoPick } = await import(`${ROOT}/src/game/autopilot.ts`);
 const { setDifficulty } = await import(`${ROOT}/src/game/difficulty.ts`);
@@ -169,7 +170,9 @@ class Run {
   }
   wait(secs: number) { this.step(Math.round(secs * 60)); }
   until(pred: () => boolean, secs: number): boolean { for (let i = 0; i < secs * 60 && !pred(); i++) this.step(); return pred(); }
-  key(code: string) { this.I.pressed.add(code); this.step(); }
+  /** (the squad's key is never pressed twice inside CMDRING.twice's window: this player's second press is a second try at an order, never 'fall in') */
+  key(code: string) { if (code === ORDERS.quickKey && RINGK.twice) { while (this.t < this.keyT + RINGK.twiceSecs + 0.05) this.step(); this.keyT = this.t; } this.I.pressed.add(code); this.step(); }
+  keyT = -9;
 
   // ── Sam's feet ──
   free(p: number[]): Vec3 | null { const nav = this.g.col.nav; const q = nav.isBlocked(p[0], p[2]) ? nav.nearestFreePoint(p[0], p[2]) : p; return q ? [q[0], 0, q[2]] : null; }

@@ -129,6 +129,11 @@ like that."
   that room has (0.6 m and over, readable from above); clutter of use; its own light or colour; its own floor decal;
   something to shove or break. **check** `lived` (counts things, names bare rooms); the rest **by eye**
   (`lived-check.ts <name> --sheet` prints what each room got).
+- **A thing is asked of the library by name.** `docs/library.md` lists every piece of every kit with its arguments, its
+  size, what it costs and what it is to a man, and every named paint; the two showrooms (`levels/gwot-yard.json`,
+  `levels/library-hall.json`) stand one of each, and a piece's line in a showroom's generator is the call to copy. A
+  thing another level could use is never a stack of boxes in one generator: add it to a kit, stand it in a showroom.
+  **check** `bun run tools/levels/library.ts --check`.
 - **`ground` · The ground is not one flat sheet.** From above, ground is most of the picture, and one paint over a whole
   court reads as a floor plan, not a place. What the renderer can carry, all of it in the look's kit
   (`src/scene/gwotKit.ts`): FINISHES laid as the place is used (`ground`: dust, dirt, gravel, a slab), so a road, a
@@ -340,7 +345,7 @@ stays dark. These are guidelines, not misses like the rest of this page: each sa
 - **Show, not tell.** No "play this first", no wordy options. No digit above 5 on a menu.
 - **Every word on the row is true to the file**, from every way in: title, `place` (6..64), `blurb` (the premise, never
   the answer; 20..140 on a squad row, 160 elsewhere), `lean`, `defenders`, `ways` (one name per start), `squads` when the
-  file names squads, a group of eight rows at most, `untuned: true` until somebody has played it. **check** `row`;
+  file names squads, a group of eight drawn rows at most (a row cut from the list, `offList`, is not counted), `untuned: true` until somebody has played it. **check** `row`;
   `probes.ts missions-list missions-screen levers-rules picker-list`.
 - **Its music**: two pieces in `src/audio/setlist.ts`. The maintainer: "we should curate the music for each level, not do
   it randomly". **check** `music`; `probes.ts music`.

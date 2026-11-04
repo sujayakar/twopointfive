@@ -28,9 +28,9 @@
 //                              His eyes are the player's own: no white. God mode changes none of it (a stun is not a hit).
 //       a civilian             the blow, and alarmed by it as by a noise at the door; the stamp only keeps a leaf from throwing her every frame.
 // By behaviour, never by hit points: nothing here hurts or kills anybody, and no rule of the mission is read or written (a stunned Sam fails nothing here).
+import { isManId, viewOfId } from './seats';
 import type { Game, Guard } from './game';
 import { DOORTHROW, MAN_FOLDED, MAN_BRACED, MAN_CALM, MAN_HELD, type DoorContact, type DoorStrike } from './doors';
-import { PLAYER_ID } from './consts';
 import { v3, type Vec3 } from '../math/vec';
 import { SAMSTUN, samStaggered, staggerPlayer } from './samstun';
 import { endGuardScript } from './squad';
@@ -49,13 +49,14 @@ const manOf = (g: Game, id: number): Guard | undefined => g.guards.find(x => x.c
 /** Doors.man (set by the Game): MAN_SIDE | MAN_FOLDED | MAN_BRACED | MAN_CALM | MAN_HELD for the man with this id; 0 = nobody the game knows */
 export function doorMan(g: Game, who: number): number {
   const T = DOORTHROW, now = g.time;
-  if (who === PLAYER_ID) { const pl = g.player; return 1 | (samStaggered(g) ? MAN_FOLDED : 0) | (g.puppet ? MAN_BRACED | MAN_HELD : pl.staggerUntil >= 0 && now < pl.staggerUntil + T.again ? MAN_BRACED : 0); }
+  const mine = viewOfId(g, who);   // (a player's man: his own seat's, seats.ts)
+  if (mine) { const pl = mine.player; return 1 | (samStaggered(mine) ? MAN_FOLDED : 0) | (g.puppet ? MAN_BRACED | MAN_HELD : pl.staggerUntil >= 0 && now < pl.staggerUntil + T.again ? MAN_BRACED : 0); }
   const gd = manOf(g, who); if (!gd) return 0;
   const until = Math.max(gd.staggerUntil, gd.dazzledUntil), side = gd.civ ? 3 : sideOf(gd.team);   // (−1: never folded — not 'just up' in a game's first seconds)
   return side | (now < until ? MAN_FOLDED : 0) | (gd.held ? MAN_BRACED | MAN_HELD : until >= 0 && now < until + T.again ? MAN_BRACED : 0) | (side === 3 || (side === 2 && gd.state !== 'alert' && gd.state !== 'search') ? MAN_CALM : 0);
 }
 /** whose leaf it was, for the teams' own table (nobody the game knows: no foe's) */
-const teamOf = (g: Game, id: number): Team | null => id === PLAYER_ID ? 'player' : manOf(g, id)?.team ?? null;
+const teamOf = (g: Game, id: number): Team | null => isManId(id) ? 'player' : manOf(g, id)?.team ?? null;
 
 /** game.ts updateDoors, right after the leaves are stepped (Sam's own place is settled by the caller, as after any leaf that moved him) */
 export function doorThrowAfter(g: Game, contacts: DoorContact[]): void {
@@ -63,7 +64,7 @@ export function doorThrowAfter(g: Game, contacts: DoorContact[]): void {
   for (const c of contacts) {
     if (!c.moved && !c.struck) continue;
     if (c.moved) DOORTHROW_STATS.carried++;
-    if (c.who === PLAYER_ID) { if (c.struck && c.struck.tier !== 'open') throwSam(g, c.struck); continue; }
+    { const mine = viewOfId(g, c.who); if (mine) { if (c.struck && c.struck.tier !== 'open') throwSam(mine, c.struck); continue; } }
     const gd = manOf(g, c.who); if (!gd || gd.state === 'dead') continue;
     if (c.moved) { const p = gd.char.pos; g.col.collideCircle(p, 0.3, 0.2, 1.5); g.col.clampToWorld(p, 0.3); gd.char.update(0); }   // (he has no walk this frame to keep him out of the wall the leaf carried him at: the statics are asked here, and his bones re-baked where he now is)
     if (c.struck) { if (c.struck.tier === 'open') startleMan(g, gd, c.struck); else throwMan(g, gd, c.struck); }

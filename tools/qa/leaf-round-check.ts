@@ -29,6 +29,7 @@ const stage = async (rule: boolean) => {
   for (const x of g.guards) if (x.state !== 'dead' && x.team === 'hostile') await quiet(() => killGuard(g, x, [0, 0, 1], true));
   for (const d of g.doors.list) d.locked = false;
   DOORMANNERS.leafRound = rule && !BREAK;
+  DOORMANNERS.leafStall = false;   // (these lines are the leaf's own count of a press — ROUND_SECS; the man's own half second is leaf-stall-check.ts)
   const d = g.doors.byName(DOOR), th = d.def.closedDir, u = [Math.cos(th), Math.sin(th)], n = [-u[1] * d.swing, u[0] * d.swing], h = d.def.hinge as V, W = d.def.width as number;
   /** a point by the frame: `along` m from the hinge along the shut leaf, `out` m to the side it opens into (the gallery; negative = in the room) */
   const pt = (along: number, out: number): V => [h[0] + u[0] * along + n[0] * out, 0, h[1] + u[1] * along + n[1] * out];

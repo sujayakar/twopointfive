@@ -1,13 +1,17 @@
 // THE REPLAY VIEWER (replay.html): a saved replay (src/replay/format.ts — F7 on the game page) drawn as a MAP of the floor with a scrubber. Every man is a disc with
 // his facing and his muzzle's line, ringed by his state, with the route ahead of him and the mark he is going to; rounds are lines, blasts rings, doors swing. A
 // click on a man says what he was doing; a click on the FLOOR puts a NOTE on that spot at that moment — the notes are kept in the file (and written back to this
-// browser's shelf as they are typed), and 'Download with notes' is the one file a thread needs. No game code runs here: the page reads the trace and nothing else.
+// browser's shelf as they are typed). NO FILE IS DOWNLOADED FROM THIS PAGE (the maintainer, 2026-10-27: "we should get rid of local downloads entirely"): a kept visit goes
+// to a build's backend by the game page's own rounds and a note the moment it is saved (src/cloud), and a replay that does not go up by itself has a Send
+// (`sendShown`). No game code runs here: the page reads the trace and nothing else.
 import type { ReplayFile, ReplayNote, Decoded, ManAt, ManDo, ReplayEvent } from './format';
-import { checkReplay, decode, sampleAt, clock, doWords, isErrorMark, errorMarks, lastRun, downloadReplay, backToGame } from './format';
+import { reportWarning } from '../cloud/report';
+import { checkReplay, decode, sampleAt, clock, doWords, isErrorMark, errorMarks, lastRun, backToGame, replayBlob } from './format';
 import { shelfList, shelfGet, shelfPut, shelfNotes, shelfDelete } from './shelf';
 import { assemble } from './kept';
-import { readVisit, wholeSent, beingWritten } from './keepstore';
-import { keptStore, keptNow, keptWords, dumpNow, mb } from './dumpui';
+import { readVisit, beingWritten } from './keepstore';
+import { keptStore, keptNow, keptWords, mb } from './keptui';
+import { cloudNotes, cloudCarries, cloudSendsFiles, cloudFile, cloudReports } from '../cloud/cloud';
 
 const $ = <T extends HTMLElement = HTMLElement>(id: string) => document.getElementById(id) as T;
 const map = $<HTMLCanvasElement>('map'), tl = $<HTMLCanvasElement>('tl'), ctx = map.getContext('2d')!, tctx = tl.getContext('2d')!;
@@ -33,7 +37,7 @@ function open(file: ReplayFile, id: number | null): string {
   flush(); F = file; D = decode(file); shelfId = id; keptSid = null; cur = 0; playing = false; sel = null; fitted = false; logAt = -1; notesDirty = true; whoKey = '';
   if (file.why === 'card') { const r0 = lastRun(file); if (r0 > 0) cur = D.r.find(r => r >= r0) ?? r0; }   // (opened from the end card: at the start of the run the card is about, not of the tries the ring still holds before it)
   $('empty').style.display = 'none';
-  for (const b of ['export', 'play', 'addNote']) ($<HTMLButtonElement>(b)).disabled = false;
+  for (const b of ['play', 'addNote']) ($<HTMLButtonElement>(b)).disabled = false;
   engineLink();
   const flags: string[] = []; const fl = file.flags ?? {};
   if (fl.godMode) flags.push('GOD MODE'); if (fl.aiEnabled === false) flags.push('AI OFF'); if (fl.infiniteAmmo) flags.push('UNLIMITED AMMO'); if (fl.playerInvisible) flags.push('INVISIBLE');
@@ -43,7 +47,7 @@ function open(file: ReplayFile, id: number | null): string {
   what.title = `${what.textContent}${flags.length ? ` · ${flags.join(' · ')}` : ''}`;   // (the bar cuts a long line short: the whole of it is the tooltip)
   for (const w of flags) { const sp = document.createElement('span'); sp.className = 'warn'; sp.textContent = w; what.append(sp); }
   document.title = `replay · ${file.level.scenario || file.level.file || 'the night'} · ${clock(file.seconds)}`;
-  buildLog(); return '';
+  buildLog(); void sendShown(true); return '';
 }
 async function openFromDisk(file: File) {
   let parsed: ReplayFile; try { parsed = JSON.parse(await textOf(file)) as ReplayFile; } catch (e) { say(`Could not read ${file.name}: ${(e as Error).message}`); return; }
@@ -51,11 +55,13 @@ async function openFromDisk(file: File) {
   // onto the shelf, so notes typed on it are kept here too — or back onto its own entry, if this browser already holds this replay (its notes, where the file brings none)
   const have = (await shelfList()).find(r => r.savedAt === parsed.savedAt && r.seconds === parsed.seconds);
   let id: number | null;
-  if (have) { id = have.id; const row = await shelfGet(id).catch(() => null);   // (the notes kept here AND the file's, by id, the shelf's copy of a note standing, as the engine replay page joins them: the file's alone wiped every note typed since it was saved)
+  if (have) { id = have.id; const row = await shelfGet(id).catch(e => { reportWarning('replay.viewer.shelf.read', e); return null; });   // (the notes kept here AND the file's, by id, the shelf's copy of a note standing, as the engine replay page joins them: the file's alone wiped every note typed since it was saved)
     if (row) { const kept = row.notes ?? [], ids = new Set(kept.map(n => n.id)), fresh = parsed.notes.filter(n => !ids.has(n.id)); parsed.notes = [...kept, ...fresh].sort((a, b) => a.r - b.r || a.n - b.n); if (fresh.length) await shelfNotes(id, parsed.notes); } }   // (a row that cannot be read changes nothing on the shelf: the file is shown as it came)
   else id = await shelfPut(parsed);
   try { const bad2 = open(parsed, id); if (bad2) { say(`${file.name}: ${bad2}`); return; } } catch (e) { say(`${file.name}: not a replay this page can draw (${(e as Error).message})`); void showShelf(); return; }
   if (id !== null) history.replaceState(null, '', `#id=${id}`);
+  // (no row to write notes on: where this browser sends, Send takes them with the replay, and the line says so)
+  else void sendShown(false).then(hidden => say(hidden ? "This browser couldn't keep this replay, so notes you add to it won't be saved." : "This browser couldn't keep this replay. Press Send to send it with your notes."));
 }
 async function openFromShelf(id: number) {
   const f = await shelfGet(id); if (!f) { say('That replay is no longer on the shelf'); return; }
@@ -71,9 +77,9 @@ function say(text: string) { const h = $('hint'); h.textContent = text; h.style.
 async function showShelf() {
   flush(); D = null; F = null; shelfId = null; keptSid = null; playing = false; sel = null; hover = null; whoKey = ''; $('empty').style.display = 'flex';
   renderNotes(); showWho(false); $('clock').textContent = '–'; $('clock').title = '';
-  for (const b of ['export', 'play', 'addNote']) ($<HTMLButtonElement>(b)).disabled = true;
+  for (const b of ['play', 'addNote']) ($<HTMLButtonElement>(b)).disabled = true;
   engineLink();
-  $('what').textContent = 'no replay open'; $('what').title = ''; $('log').textContent = ''; notesDirty = true;
+  $('what').textContent = 'no replay open'; $('what').title = ''; $('log').textContent = ''; notesDirty = true; void sendShown(true);
   void showKept();
   const box = $('shelf'); box.textContent = ''; const rows = await shelfList();
   if (!rows.length) { const d = document.createElement('div'); d.textContent = 'Nothing saved in this browser yet.'; box.append(d); return; }
@@ -86,31 +92,30 @@ async function showShelf() {
     row.onclick = () => void openFromShelf(r.id); row.append(s, n, x); box.append(row);
   }
 }
-/** EVERY RUN KEPT (keeper.ts): what this browser holds with no key pressed — whole page visits, newest first — and the hand-over: all of it as ONE file to attach
- *  in a thread. A row opens the whole visit here like any replay (notes on it ride in the next hand-over). */
+/** EVERY RUN KEPT (keeper.ts): what this browser holds with no key pressed — whole page visits, newest first. A row opens the whole visit here like any
+ *  replay. (Nothing here downloads one: the two buttons that downloaded all of it as one file, then 'Download with notes', were taken out on 2026-10-27.) */
 async function showKept() {
   const box = $('kept'), list = $('keptList'), line = $('keptLine'); if (!box) return;
   let S; try { S = await keptNow(); } catch { box.style.display = 'none'; return; }
   box.style.display = ''; line.textContent = keptWords(S);
-  ($<HTMLButtonElement>('dumpNew')).disabled = !S.fresh && !S.noted; ($<HTMLButtonElement>('dumpAll')).disabled = !S.visits;
   list.textContent = '';
   for (const r of S.rows) {
     const row = document.createElement('div'); row.className = 'row';
     const s = document.createElement('span'); s.textContent = `${new Date(r.lastAt).toLocaleString()} · ${clock(r.seconds)} · ${r.scenario || 'the night'} · ${mb(r.bytes)}`;
-    const n = document.createElement('em'); n.textContent = `${r.notes?.length ? `${r.notes.length} note${r.notes.length > 1 ? 's' : ''} · ` : ''}${beingWritten(r) ? 'being played' : wholeSent(r) ? (r.noted && r.notes?.length ? 'new notes' : 'handed over') : r.sent ? 'grown since' : 'new'}`;
+    const n = document.createElement('em'); n.textContent = `${r.notes?.length ? `${r.notes.length} note${r.notes.length > 1 ? 's' : ''} · ` : ''}${beingWritten(r) ? 'being played' : ''}`.replace(/ · $/, '');
     const x = document.createElement('i'); x.textContent = '✕'; x.title = 'remove from this browser';
     x.onclick = async ev => { ev.stopPropagation();
       if (beingWritten(r)) { say('That one is being played, or was a moment ago: try again in a minute'); return; }   // (its page would go on writing pieces to a visit with no start)
-      if ((!wholeSent(r) || (r.noted && r.notes?.length)) && !confirm(wholeSent(r) ? 'Its notes have not been handed over. Remove it?' : 'This kept replay has not been handed over. Remove it?')) return;
+      if (!confirm('Remove this replay from this browser?')) return;
       await keptStore().drop(r.sid); void showKept(); };
     row.onclick = () => void openKept(r.sid); row.append(s, n, x); list.append(row);
   }
 }
 async function openKept(sid: string) {
   let A: ReturnType<typeof assemble> = null;
-  try { const V = await readVisit(keptStore(), sid); A = V ? assemble(V) : null; } catch { /* said below */ }
+  try { const V = await readVisit(keptStore(), sid); A = V ? assemble(V) : null; } catch (e) { reportWarning('replay.viewer.visit.read', e); /* said below */ }
   if (!A) { say('That kept replay could not be read'); return; }
-  try { const bad = open(A.file, null); if (bad) { say(bad); return; } keptSid = sid; history.replaceState(null, '', `#kept=${sid}`); if (A.missing.length) say(`${A.missing.length} piece${A.missing.length > 1 ? 's' : ''} of this kept replay ${A.missing.length > 1 ? 'were' : 'was'} lost: marked in the log`); }
+  try { const bad = open(A.file, null); if (bad) { say(bad); return; } keptSid = sid; void sendShown(true); history.replaceState(null, '', `#kept=${sid}`); if (A.missing.length) say(`${A.missing.length} piece${A.missing.length > 1 ? 's' : ''} of this kept replay ${A.missing.length > 1 ? 'were' : 'was'} lost: marked in the log`); }
   catch (e) { say(`That kept replay could not be drawn (${(e as Error).message})`); void showShelf(); }
 }
 
@@ -258,9 +263,59 @@ function renderNotes(focusId?: string) {
 }
 /** the notes changed: written back to this browser's shelf soon (the row alone — shelf.ts), and at once when the words are left, the page hidden or another file opened */
 let dirty = false, writing: Promise<unknown> = Promise.resolve();   // (the notes' writes still on their way: a page that leaves waits for them)
-function keep() { if ((shelfId === null && keptSid === null) || !F) return; dirty = true; clearTimeout(saveT); saveT = window.setTimeout(flush, 250); }
+function keep() { sendStale(); if ((shelfId === null && keptSid === null) || !F) return; dirty = true; clearTimeout(saveT); saveT = window.setTimeout(flush, 250); }
 function flush() { clearTimeout(saveT); if (!dirty || (shelfId === null && keptSid === null) || !F) return; dirty = false; const N = F.notes.filter(n => n.text.trim());
-  const w = shelfId !== null ? shelfNotes(shelfId, N) : keptSid !== null ? keptStore().patch(keptSid, { notes: N, noted: true }) : null; if (w) writing = Promise.all([writing, Promise.resolve(w).catch(() => { /* */ })]); }
+  const w = shelfId !== null ? shelfNotes(shelfId, N) : keptSid !== null ? keptStore().patch(keptSid, { notes: N }) : null; if (w) { const kept = shelfId === null;   // (a shelf's own failed write is said by the shelf: replay/shelf.ts)
+    writing = Promise.all([writing, Promise.resolve(w).then(ok => { if (ok === false && kept) reportWarning('replay.viewer.notes.write', 'the notes were not written to this browser'); return ok; }).catch(e => reportWarning('replay.viewer.notes.write', e))]);
+    // a hosted build's backend is told at once (src/cloud/cloud.ts cloudNotes: it asks nothing where this browser does not send); never waited for — a page that
+    // leaves first loses nothing, the game's page sends the note on its next round
+    // WITH NO FILE TO HAND OVER (the page's download went on 2026-10-27), notes that did not go are said to be here only: once a page load, not at every key.
+    // Not gone = the round sent nothing or failed, OR this replay is one a round never carries (cloud.ts cloudCarries: opened from a file, another browser's
+    // visit, a visit played with the sending off)
+    // (said of the replay the note was typed on, while it is still the one open; and not over a Send that is going or has just taken these very notes)
+    const q = new URLSearchParams(location.search), sid = keptSid ?? F.session, f0 = F;
+    void Promise.resolve(w).then(() => cloudNotes(q, keptStore())).then(async sent => sent && await cloudCarries(q, sid)).then(went => {
+      const b = $<HTMLButtonElement>('send'); if (went || toldHere || F !== f0 || (!b.hidden && (b.disabled || b.dataset.went === 'sent'))) return;
+      toldHere = true; say(b.hidden ? "Your notes are saved in this browser, but they weren't sent." : "Your notes are saved in this browser. Press Send to send them."); }).catch(e => reportWarning('replay.viewer.notes.send', e)); } }
+let toldHere = false;
+/** SEND, FOR A REPLAY THAT DOES NOT GO UP BY ITSELF (the page's download went on 2026-10-27, and a notes round never carries a replay opened from a file,
+ *  another browser's visit or a visit played with the sending off — cloud.ts cloudCarries — nor one this browser would not shelve). Drawn only where a
+ *  press would do something: the replays' own word not off, this browser sending files from here. It reads like the engine replay's bar (engineplay.ts):
+ *  Send ↑ · Sending… · Sent ✓ / Not sent. Asked when a file opens (`fresh`: the button is put back) and after a send that did not go; `data-asked` is set
+ *  once an ask has landed (the page's check waits on it). → hidden or not, by the latest ask */
+let sendAsk = 0, sendGoing: Promise<unknown> = Promise.resolve(), sentSig = '';
+async function sendShown(fresh: boolean): Promise<boolean> {
+  const b = $<HTMLButtonElement>('send'), f = F, my = ++sendAsk;
+  if (fresh) { delete b.dataset.went; delete b.dataset.asked; sentSig = ''; b.textContent = 'Send ↑'; b.disabled = false; }
+  if (!f) { b.hidden = true; b.dataset.asked = '1'; return true; }
+  const q = new URLSearchParams(location.search), kept = shelfId !== null || keptSid !== null, sid = keptSid ?? f.session;
+  let hide = true; try { hide = /^(0|off|false|no)$/i.test(q.get('cloudtapes') ?? '') || !(await cloudSendsFiles(q)) || (kept && await cloudCarries(q, sid)); } catch (e) { reportWarning('replay.viewer.send.shown', e); /* hidden */ }
+  if (my === sendAsk) { b.hidden = hide; b.dataset.asked = '1'; }   // (a later ask stands: another file, or the kept visit's id set after its file was opened)
+  return b.hidden !== false;
+}
+/** what a send carries of the notes: a note with no words is no note (format.ts replayBlob leaves it out), so making one and leaving it changes nothing */
+const noteSig = (f: ReplayFile): string => JSON.stringify(f.notes.filter(n => n.text.trim()).map(n => [n.id, n.r, n.pos, n.text]));
+/** the notes changed: a button that said Sent of the file as it was can be pressed again. Nothing is asked — typing cannot change whether Send is drawn */
+function sendStale() { const b = $<HTMLButtonElement>('send'); if (F && b.dataset.went === 'sent' && noteSig(F) !== sentSig) { delete b.dataset.went; b.textContent = 'Send ↑'; b.disabled = false; } }
+/** a send still on its way, for a page that is about to leave: waited on, but not for ever (the engine replay's bar does the same) */
+const sendLanded = (): Promise<unknown> => Promise.race([sendGoing, new Promise(r => setTimeout(r, 8000))]);
+$('send').onclick = () => {
+  const b = $<HTMLButtonElement>('send'), f = F; if (b.disabled || !f) return;
+  b.blur(); b.disabled = true; b.textContent = 'Sending…'; delete b.dataset.went;
+  // (the visit it is a cut of goes as `of`, never `session`: the backend's side holds a file that names a session to that visit's own rule, and this is
+  // the replay that rule does not carry. A task's breath first: a whole kept visit is megabytes of text to write out, and the button reads Sending… meanwhile)
+  const sid = keptSid ?? f.session; let sig = '';
+  sendGoing = (async () => { await new Promise(r => setTimeout(r, 0)); sig = noteSig(f); const { name, blob } = replayBlob(f);
+    return cloudFile(new URLSearchParams(location.search), name, blob, 'replay', { ...(sid ? { of: sid } : {}), savedAt: f.savedAt, why: String(f.why ?? '').slice(0, 200), scenario: String(f.level.scenario ?? '').slice(0, 200) }); })()
+    .catch(e => { reportWarning('replay.viewer.send', e); return 'failed' as const; }).then(r => {
+      if (r === 'failed') reportWarning('replay.viewer.send', 'a replay sent from the viewer did not arrive');   // (the sending never rejects: it says so)
+      if (F !== f) { if (r !== 'sent') say("The replay you were sending wasn't sent."); return; }   // (another file is open: its button is its own, put back when it opened)
+      if (r === 'sent') { sentSig = sig; b.dataset.went = 'sent'; b.textContent = 'Sent ✓'; sendStale(); return; }   // (a note typed while it went is not in it: Send is back at once)
+      b.dataset.went = r; b.textContent = 'Not sent';
+      // (and asked again: a browser that stopped sending meanwhile draws no button that can only say Not sent)
+      setTimeout(() => { if (b.dataset.went === r && F === f) { delete b.dataset.went; b.textContent = 'Send ↑'; b.disabled = false; void sendShown(false); } }, 2500);
+    });
+};
 window.addEventListener('pagehide', flush); document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') flush(); });
 /** The picked (or hovered) man's card: over the foot of the side column, and the log's scroll makes room for it (`--who`), so no line of the log moves or
  *  hides when he is picked. Nobody picked = no card. */
@@ -355,24 +410,17 @@ for (const id of ['turn', 'routes', 'names', 'follow']) $(id).addEventListener('
 $('follow').addEventListener('change', restLog);
 if (typeof ResizeObserver !== 'undefined') new ResizeObserver(restLog).observe($('log'));
 $('addNote').onclick = () => noteAt(null);
-{ const sayKept = (t: string) => { $('keptLine').textContent = t; };
-  $('dumpNew').onclick = () => void dumpNow({}, sayKept).then(d => { if (d) setTimeout(() => void showKept(), 4000); });
-  $('dumpAll').onclick = () => void dumpNow({ all: true }, sayKept).then(d => { if (d) setTimeout(() => void showKept(), 4000); }); }
 $('shelfBtn').onclick = () => { history.replaceState(null, '', location.pathname + location.search); void showShelf(); };
 $<HTMLInputElement>('file').onchange = e => { const f = (e.target as HTMLInputElement).files?.[0]; if (f) void openFromDisk(f); (e.target as HTMLInputElement).value = ''; };
 // (a page the browser's Back hands back AS IT WAS LEFT holds the notes of then: one typed since on the engine replay is on the shelf, and the next write here
 // would lose it — the shelf's notes are read again. Only the notes: the scrub, the zoom and a file opened from disk, which no shelf holds, stay as they were)
 window.addEventListener('pageshow', e => { const id = shelfId; if (!e.persisted || id === null || dirty) return;
-  void shelfGet(id).then(row => { if (row && F && shelfId === id && !dirty) { F.notes = row.notes ?? []; notesDirty = true; } }).catch(() => { /* */ }); });
+  void shelfGet(id).then(row => { if (row && F && shelfId === id && !dirty) { F.notes = row.notes ?? []; notesDirty = true; sendStale(); } }).catch(e => reportWarning('replay.viewer.shelf.read', e)); });
 // ('‹ Game' is the way back to the game this replay was left for — its own entry in this window's history, else its address — and the title page only for a
 // replay that came from no game: format.ts backToGame)
-$('back').onclick = e => { const home = $<HTMLAnchorElement>('back').href; if (e.ctrlKey || e.metaKey || e.shiftKey || e.altKey) return; e.preventDefault(); flush(); void writing.then(() => backToGame(shelfId, home)); };
+$('back').onclick = e => { const home = $<HTMLAnchorElement>('back').href; if (e.ctrlKey || e.metaKey || e.shiftKey || e.altKey) return; e.preventDefault(); flush(); void Promise.all([writing, sendLanded()]).then(() => backToGame(shelfId, home)); };
 // (this window goes to the game page — never a new tab — once a note typed a moment ago is on the shelf for it to read; a held key is the visitor's own choice of tab)
-$('engine').onclick = e => { const to = $<HTMLAnchorElement>('engine').href; flush(); if (!to || e.ctrlKey || e.metaKey || e.shiftKey || e.altKey) return; e.preventDefault(); void writing.then(() => location.assign(to)); };
-$('export').onclick = async () => {
-  if (!F) return; flush(); const name = await downloadReplay(F);
-  const h = $('hint'); h.textContent = `${name} downloaded: drop it in a thread`; h.style.color = '#f0e9d9'; setTimeout(() => { h.style.color = ''; }, 5000);
-};
+$('engine').onclick = e => { const to = $<HTMLAnchorElement>('engine').href; flush(); if (!to || e.ctrlKey || e.metaKey || e.shiftKey || e.altKey) return; e.preventDefault(); void Promise.all([writing, sendLanded()]).then(() => location.assign(to)); };
 window.addEventListener('dragover', e => { e.preventDefault(); document.body.classList.add('drop'); });
 window.addEventListener('dragleave', e => { if (!e.relatedTarget) document.body.classList.remove('drop'); });
 window.addEventListener('drop', e => { e.preventDefault(); document.body.classList.remove('drop'); const f = e.dataTransfer?.files?.[0]; if (f) void openFromDisk(f); });
@@ -402,4 +450,9 @@ async function boot() {
 }
 /** for a script driving the page (and the page's own check): the open file, a way in without the shelf, the clock */
 (window as unknown as Record<string, unknown>).__viewer = { open: (f: ReplayFile) => open(f, null), get file() { return F; }, get cur() { return cur; }, seek, noteAt, get view() { return view; }, w2s, s2w, sel: (ci: number | null) => { sel = ci; } };
-void boot(); requestAnimationFrame(frame);
+// (what this browser holds and has not sent goes up as the page opens, not only after a note is typed: a saved window with no note on it would otherwise wait
+// for the next game page. After the page's own file is open, so the two do not read the same megabytes at once; cloud.ts cloudNotes asks nothing where this
+// browser does not send; never waited for)
+// (what goes wrong on this page is said to the backend too, under the records' own words and only in a browser that has read the notice: cloud.ts cloudReports)
+void cloudReports(new URLSearchParams(location.search), { page: 'replay', uncaught: true });
+void boot().catch(e => reportWarning('replay.viewer.boot', e)).then(() => cloudNotes(new URLSearchParams(location.search), keptStore())).catch(() => { /* */ }); requestAnimationFrame(frame);

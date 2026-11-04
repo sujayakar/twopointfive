@@ -75,10 +75,11 @@ export const FINDME_WIDTH = { min: 0, max: 1.5 };
 /** the most a teammate's rim is against his */
 export const FINDME_MATES = { max: 2 };
 /** the rims' inks as displayed, before the tone map: the pale one they were first drawn in (the colour row at none), and at its full the player's yellow
- *  and the two pairs' red and blue (a teammate of a squad with no pairs: blue) */
-export const OUTLINE_INK = { pale: [0.42, 0.5, 0.55], you: [0.95, 0.72, 0.12], red: [0.95, 0.22, 0.16], blue: [0.2, 0.45, 1] };
+ *  and the two pairs' red and blue (a teammate of a squad with no pairs: blue); `purple` is the second player's own man in a game of two (a player's man has his seat's tone: game/seats.ts seatTone) */
+export const OUTLINE_INK = { pale: [0.42, 0.5, 0.55], you: [0.95, 0.72, 0.12], red: [0.95, 0.22, 0.16], blue: [0.2, 0.45, 1], purple: [0.74, 0.32, 0.98] };
+export type OutlineHue = 'you' | 'red' | 'blue' | 'purple';
 /** `out` = the ink of a man of that hue at the colour row's word */
-export function outlineInk(out: number[], hue: 'you' | 'red' | 'blue'): void { const p = OUTLINE_INK.pale, c = OUTLINE_INK[hue], s = FINDME.colour; for (let i = 0; i < 3; i++) out[i] = p[i] + (c[i] - p[i]) * s; }
+export function outlineInk(out: number[], hue: OutlineHue): void { const p = OUTLINE_INK.pale, c = OUTLINE_INK[hue], s = FINDME.colour; for (let i = 0; i < 3; i++) out[i] = p[i] + (c[i] - p[i]) * s; }
 export const FINDME: FindMe = { ...FINDME_START };
 const LS = 'twopointsix.findme';
 

@@ -42,6 +42,7 @@
 //                  round, or Sam down (the game's own down card follows). A restart of any kind stages it again.
 //
 // Nothing here runs unless start() was called: tick() returns on its first line, and with the scenario off the game is the game as it was.
+import { cutToMen } from './seats';
 import { SideSet } from '../math/side';
 import { Vec3, v3, clamp } from '../math/vec';
 import type { Game, Guard } from './game';
@@ -540,7 +541,7 @@ export class Rescue {
     if ([...this.ops, ...this.hostiles].some(x => !g.guards.includes(x)) || this.hostages.some(h => !g.civilians.includes(h))) {   // the cast was taken off the floor under it by something short of a restart: a full restart, which stages
       g.restartEncounter(); if (!this.active) return;
     }
-    if (this.cut && cam) { this.cut = false; cam.target = v3.copy(g.followPos()); cam.desired = v3.copy(cam.target); }
+    if (this.cut && cam) { this.cut = false; cutToMen(g); }
     this.tickEntry();   // (first: what the door tools did last frame goes into the log at its own time, ahead of what this frame makes of it)
     if (input.hit('KeyF')) this.orderDoor();
     this.hear();

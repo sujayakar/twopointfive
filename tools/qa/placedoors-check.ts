@@ -1,4 +1,4 @@
-// A DOOR, HOWEVER IT HANGS, KEEPS TWO PLACES TWO (src/scene/placePlan.ts placeMask `gaps` + PLACE.minWide; the look page's One exposure row shows every
+// A DOOR, HOWEVER IT HANGS, KEEPS TWO PLACES TWO (src/render/placeField.ts placeMask `gaps` + PLACE.minWide; the look page's One exposure row shows every
 // place by its own level, so two places the map takes for one are shown wrong together). The maintainer on his GPU, 11-01, of the pass at midday: "it seems easy
 // to get into a state where the exposure is off, like moving between these two rooms": the kitchen was nearly black with Sam in it. Found here, not on a GPU:
 // with its yard door wide open the map made the kitchen one place with the open yard (the opening and half the window beside it read as one run five cells
@@ -11,7 +11,7 @@ import { readFileSync } from 'node:fs';
 import { standUp, ROOT } from './headless.ts';
 const { parseLevelData } = await import(`${ROOT}/src/scene/levelData.ts`);
 const { loadLevel } = await import(`${ROOT}/src/scene/levelLoad.ts`);
-const { placeMask, PLACE, PLACE_W, PLACE_RES } = await import(`${ROOT}/src/scene/placePlan.ts`);
+const { placeMask, PLACE, PLACE_W, PLACE_RES } = await import(`${ROOT}/src/render/placeField.ts`);
 const { WORLD } = await import(`${ROOT}/src/scene/world.ts`);
 const BRK = process.env.PLACEDOORS_BREAK === '1'; let red = false;
 const check = (ok: boolean, what: string, detail = '') => { red ||= !ok; console.log(`- ${ok ? 'PASS' : 'FAIL'} — ${what}${detail ? `\n    ${detail}` : ''}`); };

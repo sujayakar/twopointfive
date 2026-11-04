@@ -60,7 +60,7 @@ export class Prop {
     this.mass = def.mass; this.invMass = 1 / def.mass;
     this.invI = 1 / (def.mass * (this.hx * this.hx + this.hz * this.hz) / 3 * 1.5);   // slab inertia ×1.5: a little sluggish in yaw reads as weight and keeps corner contacts calm
     this.tune = KIND[def.kind];
-    this.boxes = def.parts.map((p, j) => makeBox({ c: [0, 0, 0], h: [p.h[0], p.h[1], p.h[2]], yaw: 0, albedo: p.albedo, flags: BoxFlag.Dynamic, name: def.name, mkey: MKEY.prop + id * 16 + j, ...(p.marks?.length ? { marks: p.marks } : {}), ...(p.stuff !== undefined ? { stuff: p.stuff } : {}) }));   // (mkey: motion identity per part — scene/boxes.ts)   // (the part's markings ride on its box: the tape and glyphs on a carton turn with it)
+    this.boxes = def.parts.map((p, j) => makeBox({ c: [0, 0, 0], h: [p.h[0], p.h[1], p.h[2]], yaw: 0, albedo: p.albedo, flags: BoxFlag.Dynamic, name: def.name, mkey: MKEY.prop + id * 16 + j, ...(p.marks?.length ? { marks: p.marks } : {}) }));   // (mkey: motion identity per part — scene/boxes.ts)   // (the part's markings ride on its box: the tape and glyphs on a carton turn with it)
     this.place();
   }
   get cs() { this.frame(); return this.cy; } get sn() { this.frame(); return this.sy; }
