@@ -2,7 +2,7 @@
 // Two rules rebuild what a level's own boxes already say, and neither knows a level by name:
 //   a ROUND THING is the kit's octagon (four slabs 45° apart) made one twelve-sided prism;
 //   a BROKEN WALL TOP is a bite out of a YARD WALL, and a yard wall is a wall with free floor under the open sky on both hands, on the renderer's own floor
-//   plan (render/placeField.ts skyPlan). Until 11-02 the test was a coping slab on the wall, which one kit lays: the levels built before it had none to find.
+//   plan (scene/placePlan.ts skyPlan). Until 11-02 the test was a coping slab on the wall, which one kit lays: the levels built before it had none to find.
 // Held here to a yard built by hand and to the levels as their files have them. No GPU: the picture is never SEEN here.
 //   bun run tools/qa/geotry-check.ts                  exit 0 = every line passed, 1 = one failed (the same on both stands: it reads level files and no switch)
 //   GEOTRY_BREAK=1 bun run tools/qa/geotry-check.ts   every spot is taken for open sky: must FAIL
@@ -10,7 +10,7 @@ import { readFileSync } from 'node:fs';
 import { ROOT } from './headless.ts';
 const { parseLevelData } = await import(`${ROOT}/src/scene/levelData.ts`);
 const { loadLevel } = await import(`${ROOT}/src/scene/levelLoad.ts`);
-const { skyPlan, placeMask, PLACE_W, PLACE_RES } = await import(`${ROOT}/src/render/placeField.ts`);
+const { skyPlan, placeMask, PLACE_W, PLACE_RES } = await import(`${ROOT}/src/scene/placePlan.ts`);
 const { WORLD } = await import(`${ROOT}/src/scene/world.ts`);
 const { LOOK_LEVELS } = await import(`${ROOT}/src/scene/look.ts`);
 const { geoTryLevel, breakWallTops } = await import(`${ROOT}/src/scene/geoTry.ts`);
