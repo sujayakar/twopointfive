@@ -402,6 +402,11 @@ export class Particles {
     r.pos[0] = pos[0]; r.pos[1] = pos[1]; r.pos[2] = pos[2]; r.radius = radius; r.strength = strength; r.up = up;
     r.bias[0] = b[0]; r.bias[1] = b[1]; r.bias[2] = b[2]; r.eye[0] = e[0]; r.eye[1] = e[1]; r.eye[2] = e[2]; r.kinds = kinds; r.flags = flags; r.seed = seed;
   }
+  /** LOOK ONLY: the hot air over each fire near the view, as jets that point up (game/fire.ts files them each frame; an empty list = none). They ride behind the
+   *  wind's records in the same block, marked (iflags bit 6), and only the falling snow reads them: particles.wgsl heatAir. The wind's own sum skips them.
+   *  THEY ARE THE FIRST LEFT OUT when the block is full (WIND_GPU_MAX records less a blast frame's impulses): the wind keeps its places. */
+  heat: readonly WindGpuSource[] = [];
+  setHeat(srcs: readonly WindGpuSource[]) { this.heat = srcs; }
   /** This frame's WIND (game/wind.ts, once a frame at the end of Game.update): the sources whose air the update kernel measures every live particle's drag against — kept by
    *  reference until the next call, packed at prepare() behind the impulses; an empty list = still air (nothing packed, nothing uploaded, the kernel's one branch). `knobs` =
    *  (sheet wake m/s, sheet kick ×, debris coupling), riding on every record. Allocates nothing; never wakes or moves anything by itself. */
@@ -537,10 +542,11 @@ export class Particles {
     }
     // WIND records BEHIND them (game/wind.ts → setWind): as many of this frame's sources as the impulses leave room for, up to WIND_GPU_MAX, only with something live to
     // move; the count in flags bits 16‥20; the three knobs on every record as two f16 pairs (particles_common.wgsl; the fourth half is spare). One tail upload covers impulses + winds.
-    if (live > 0 && this.winds.length) {
+    if (live > 0 && (this.winds.length || this.heat.length)) {
       const room = Math.min(WIND_GPU_MAX, MAX_IMPULSES - ni); const kn = this.windKnobs;
       const kA = f16pair(kn[0], kn[1]), kB = f16pair(kn[2], 0);
-      for (const s of this.winds) {
+      const nWind = this.winds.length, nAll = nWind + this.heat.length;
+      for (let si = 0; si < nAll; si++) { const s = si < nWind ? this.winds[si] : this.heat[si - nWind];   // (the wind's, then the look page's fires: no list is made)
         if (nw >= room) break;
         if (!(s.speed > 0)) continue;
         const b = (IMP_OFFSET + (ni + nw) * IMP_BYTES) / 4;
@@ -557,7 +563,7 @@ export class Particles {
           f[b] = s.pos[0]; f[b + 1] = s.pos[1]; f[b + 2] = s.pos[2]; f[b + 3] = s.reach;
           f[b + 4] = s.dir[0]; f[b + 5] = s.dir[1]; f[b + 6] = s.dir[2]; f[b + 7] = s.speed;
           f[b + 8] = s.tanSpread; f[b + 9] = s.r0; f[b + 10] = s.dMax; f[b + 11] = s.floorY ?? -1e9;
-          u[b + 14] = 2;
+          u[b + 14] = 2 | (s.heat ? 64 : 0);
         }
         u[b + 12] = (s.kinds ?? WIND_KINDS_DEFAULT) >>> 0; u[b + 13] = kA; u[b + 15] = kB;
         nw++;

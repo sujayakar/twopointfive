@@ -471,7 +471,7 @@ function furnish(K: ReturnType<typeof officeKit>, G: ReturnType<typeof gwotKit>)
   L.s(18.15, 9.38, 0, 0.5, 0.6, 0.24, 'plasticBlack'); for (let i = 0; i < 4; i++) L.s(17.7 + i * 0.3, 9.38, 0.5, 0.56, 0.1, 0.18, i % 2 ? 'drumBlue' : 'drumRed');   // the battery bank, its cell caps
   L.mat(16.0, 10.3, 3.0, 0.9, 'rubber'); L.line(14.55, 10.78, 17.45, 10.78, 0.06, 'prodYellow'); L.line(14.55, 9.82, 17.45, 9.82, 0.06, 'prodYellow');
   L.line(14.8, 11.7, 15.1, 10.0, 0.04, 'plasticBlack'); L.line(18.3, 13.1, 16.9, 9.8, 0.04, 'prodOrange'); L.line(18.5, 13.1, 18.15, 9.65, 0.04, 'plasticBlack');       // cable runs
-  L.d(18.2, 13.28, 0.75, 0.8, 0.08, 0.06, 'plasticBlack'); L.d(19.0, 13.25, 0.75, 0.76, 0.1, 0.07, 'prodGreen'); L.round(19.3, 13.25, 0.75, 0.79, 0.045, 'galv', false);   // a headset, a board out of the set, solder
+  L.d(18.2, 13.28, 0.75, 0.8, 0.08, 0.06, 'plasticBlack'); L.d(19.0, 13.25, 0.75, 0.76, 0.1, 0.07, 'prodGreen'); L.rnd(19.3, 13.25, 0.75, 0.79, 0.045, 'galv', false);   // a headset, a board out of the set, solder
   L.paper(19.55, 13.3, 0.75, 0.2, 0.2, 0.28);
   L.s(15.0, 13.3, 0, 0.19, 0.25, 0.12, 'drumRed'); L.d(15.0, 13.3, 0.19, 0.196, 0.22, 0.09, 'iron'); L.d(15.35, 13.2, 0, 0.02, 0.14, 0.015, 'galv', 0.5);              // the red toolbox, open
   for (let i = 0; i < 3; i++) L.d(19.86 - i * 0.05, 9.2 + i * 0.04, 0, 1.7 + i * 0.1, 0.012, 0.012, 'olive');                                                          // whip aerials stood in the corner
@@ -499,14 +499,14 @@ function furnish(K: ReturnType<typeof officeKit>, G: ReturnType<typeof gwotKit>)
   // ---- THE BUNK HUT = off watch: a home-made barbell and its bench, a crate between the cots with the radio, the wash stand, cards left on the felt ----
   L.room('bunk');
   L.s(7.5, 8.5, 0.3, 0.42, 0.6, 0.16, 'plasticBlack'); L.s(7.0, 8.5, 0, 0.3, 0.05, 0.14, 'iron'); L.s(8.0, 8.5, 0, 0.3, 0.05, 0.14, 'iron');
-  L.s(7.5, 8.02, 0.1, 0.14, 0.8, 0.02, 'iron'); L.round(6.78, 8.02, 0, 0.19, 0.13, 'slab'); L.round(8.22, 8.02, 0, 0.19, 0.13, 'slab');                                      // the bar: a pipe and two tins of concrete
+  L.s(7.5, 8.02, 0.1, 0.14, 0.8, 0.02, 'iron'); L.rnd(6.78, 8.02, 0, 0.19, 0.13, 'slab'); L.rnd(8.22, 8.02, 0, 0.19, 0.13, 'slab');                                      // the bar: a pipe and two tins of concrete
   L.s(6.9, 4.5, 0, 0.45, 0.3, 0.22, 'woodGrey'); L.s(6.8, 4.48, 0.45, 0.6, 0.13, 0.06, 'plasticBlack'); L.d(6.92, 4.48, 0.6, 0.95, 0.006, 0.006, 'galv'); L.mug(7.08, 4.56, 0.45, 'prodRed'); L.d(6.98, 4.33, 0.45, 0.6, 0.07, 0.01, 'paintCream');
-  L.s(4.4, 7.5, 0, 0.75, 0.22, 0.28, 'poplar'); L.round(4.42, 7.5, 0.75, 0.83, 0.17, 'plasticBlue'); L.d(4.132, 7.5, 1.2, 1.6, 0.006, 0.15, 'glassDark'); L.d(4.14, 7.92, 0.9, 1.4, 0.012, 0.1, 'rugCream');   // basin, mirror, towel
+  L.s(4.4, 7.5, 0, 0.75, 0.22, 0.28, 'poplar'); L.rnd(4.42, 7.5, 0.75, 0.83, 0.17, 'plasticBlue'); L.d(4.132, 7.5, 1.2, 1.6, 0.006, 0.15, 'glassDark'); L.d(4.14, 7.92, 0.9, 1.4, 0.012, 0.1, 'rugCream');   // basin, mirror, towel
   L.d(6.75, 4.145, 1.0, 1.7, 0.2, 0.025, 'olive'); L.d(7.2, 4.145, 1.05, 1.7, 0.18, 0.025, 'coyote');                                                                    // jackets on the wall
   L.d(9.55, 4.9, 0, 0.2, 0.05, 0.13, 'plasticBlack'); L.d(9.7, 4.92, 0, 0.2, 0.05, 0.13, 'plasticBlack', 0.2);                                                           // boots
   L.mat(9.3, 6.9, 0.7, 1.0, 'plasticGreen');
   L.s(4.8, 8.4, 0.42, 0.75, 0.22, 0.2, 'olive'); L.d(4.8, 8.4, 0.75, 0.756, 0.16, 0.16, 'coyote');                                                                       // a rucksack packed on the spare cot
-  L.round(7.0, 6.4, 0.03, 0.04, 0.16, 'galv', false); L.d(6.96, 6.4, 0.04, 0.12, 0.03, 0.03, 'prodOrange'); L.paper(7.5, 6.75, 0.03, 0.4, 0.07, 0.1); L.paper(7.68, 6.6, 0.03, -0.3, 0.07, 0.1, 'prodRed');
+  L.rnd(7.0, 6.4, 0.03, 0.04, 0.16, 'galv', false); L.d(6.96, 6.4, 0.04, 0.12, 0.03, 0.03, 'prodOrange'); L.paper(7.5, 6.75, 0.03, 0.4, 0.07, 0.1); L.paper(7.68, 6.6, 0.03, -0.3, 0.07, 0.1, 'prodRed');
   L.d(9.872, 5.3, 1.2, 1.8, 0.006, 0.3, 'paintCream');
   L.own(G.plasticChair(4.55, 5.5, 1.9, 'plasticBlue'), 'chair');
   L.carton('parcel', 7.4, 5.25, 0.3, 0.44, 0.32, 0.24, 'coyote', 'rugMadder');
@@ -514,10 +514,10 @@ function furnish(K: ReturnType<typeof officeKit>, G: ReturnType<typeof gwotKit>)
   // ---- THE GENERATOR SHED = the fitter's: a dead engine on a pallet, its parts laid out on a cloth, tins and filters on a steel shelf ----
   L.room('shed');
   L.s(4.65, 20.1, 0, 0.12, 0.45, 0.4, 'poplar'); L.s(4.65, 20.1, 0.12, 0.6, 0.3, 0.25, 'iron'); L.s(4.65, 20.1, 0.6, 0.72, 0.2, 0.18, 'rust'); L.s(4.65, 20.38, 0.25, 0.5, 0.12, 0.03, 'plasticBlack');
-  L.mat(5.6, 21.95, 1.3, 0.9, 'canvas', 0.15); L.round(5.3, 21.8, 0.03, 0.12, 0.06, 'galv', false); L.d(5.7, 22.1, 0.03, 0.04, 0.16, 0.015, 'iron', 0.6); L.d(5.95, 21.8, 0.03, 0.07, 0.05, 0.03, 'iron', 0.3);
+  L.mat(5.6, 21.95, 1.3, 0.9, 'canvas', 0.15); L.rnd(5.3, 21.8, 0.03, 0.12, 0.06, 'galv', false); L.d(5.7, 22.1, 0.03, 0.04, 0.16, 0.015, 'iron', 0.6); L.d(5.95, 21.8, 0.03, 0.07, 0.05, 0.03, 'iron', 0.3);
   const sy = L.shelf(9.14, 20.5, 1.5, 0.44, 1.4, false, 3)[2];
   L.s(9.14, 20.0, sy, sy + 0.2, 0.1, 0.08, 'prodRed'); L.s(9.14, 20.3, sy, sy + 0.26, 0.11, 0.11, 'drumBlue'); L.s(9.14, 20.62, sy, sy + 0.18, 0.09, 0.09, 'prodYellow');
-  L.round(9.14, 20.98, sy, sy + 0.14, 0.09, 'whitewash'); L.s(9.14, 20.5, 0.85, 1.0, 0.16, 0.55, 'coyote'); L.d(8.905, 20.9, 0.5, 1.0, 0.008, 0.12, 'rubber');           // oil, a filter, a carton, a belt hung
+  L.rnd(9.14, 20.98, sy, sy + 0.14, 0.09, 'whitewash'); L.s(9.14, 20.5, 0.85, 1.0, 0.16, 0.55, 'coyote'); L.d(8.905, 20.9, 0.5, 1.0, 0.008, 0.12, 'rubber');           // oil, a filter, a carton, a belt hung
   L.d(6.25, 22.6, 0, 0.05, 0.26, 0.2, 'galv');                                                                                                                         // a drain tray, wiped
   L.mat(4.6, 21.4, 0.7, 1.0, 'rubber'); L.line(4.27, 20.92, 4.93, 20.92, 0.06, 'prodYellow'); L.line(4.27, 21.88, 4.93, 21.88, 0.06, 'prodYellow');                     // the mat he stands on to throw the breaker
   L.d(4.15, 20.85, 1.3, 1.5, 0.03, 0.08, 'prodOrange'); L.d(4.135, 22.0, 1.2, 1.5, 0.008, 0.1, 'whitewash');                                                             // ear defenders, the hours sheet
@@ -526,7 +526,7 @@ function furnish(K: ReturnType<typeof officeKit>, G: ReturnType<typeof gwotKit>)
 
   // ---- THE FUEL POINT = the pump: a hand pump stood in a drum with its hose, the fire point on the wall, a row of cans, the sand box ----
   L.room('fuel');
-  L.round(31.9, 7.95, 0, 0.88, 0.29, 'drumBlue'); L.s(31.9, 7.95, 0.88, 1.3, 0.03, 0.03, 'iron'); L.s(32.02, 7.95, 1.25, 1.29, 0.14, 0.02, 'prodRed'); L.line(31.9, 7.62, 32.5, 7.35, 0.045, 'plasticBlack');
+  L.oct(31.9, 7.95, 0, 0.88, 0.29, 'drumBlue'); L.s(31.9, 7.95, 0.88, 1.3, 0.03, 0.03, 'iron'); L.s(32.02, 7.95, 1.25, 1.29, 0.14, 0.02, 'prodRed'); L.line(31.9, 7.62, 32.5, 7.35, 0.045, 'plasticBlack');
   L.d(35.872, 6.8, 0.9, 1.7, 0.006, 0.6, 'drumRed'); L.d(35.8, 6.5, 1.0, 1.25, 0.07, 0.1, 'prodRed'); L.d(35.8, 7.1, 1.0, 1.25, 0.07, 0.1, 'prodRed'); L.s(35.72, 7.62, 0, 0.55, 0.08, 0.08, 'drumRed'); L.d(35.72, 7.62, 0.55, 0.65, 0.03, 0.03, 'plasticBlack');
   L.d(33.76, 4.4, 0, 0.03, 0.95, 0.2, 'poplar'); for (let i = 0; i < 5; i++) L.s(33.0 + i * 0.38, 4.4, 0.03, 0.49, 0.08, 0.17, (['olive', 'jerryYellow', 'olive', 'olive', 'paintRust'] as const)[i]);
   L.line(29.7, 8.42, 35.8, 8.42, 0.1, 'prodYellow');
@@ -539,9 +539,9 @@ function furnish(K: ReturnType<typeof officeKit>, G: ReturnType<typeof gwotKit>)
   // ---- THE MAST YARD = the mast's own ground: cover plates over the feeder trench, the earthing pit, hazard paint on the footing and the stays. Nothing loose: it is lit and watched ----
   L.room('mast');
   for (let i = 0; i < 5; i++) L.mat(23.55 + i * 0.36, 17.2 - i * 0.58, 0.5, 0.5, 'tin', 0.55, 0.014);
-  L.round(21.75, 19.35, 0, 0.03, 0.26, 'iron', false); L.d(21.75, 19.35, 0.03, 0.036, 0.1, 0.02, 'prodYellow');
+  L.oct(21.75, 19.35, 0, 0.03, 0.26, 'iron', false); L.d(21.75, 19.35, 0.03, 0.036, 0.1, 0.02, 'prodYellow');
   for (const [ax, az] of [[18.6, 17.3], [26.3, 17.4], [23.6, 20.9]] as const) L.d(ax, az, 0.9, 1.15, 0.038, 0.038, 'prodYellow');
-  L.round(24.15, 19.3, 0, 0.06, 0.22, 'galv', false);
+  L.oct(24.15, 19.3, 0, 0.06, 0.22, 'galv', false);
   L.line(21.5, 16.8, 24.3, 16.8, 0.08, 'prodYellow'); L.line(21.5, 19.6, 24.3, 19.6, 0.08, 'prodYellow'); L.line(21.5, 16.8, 21.5, 19.6, 0.08, 'prodYellow'); L.line(24.3, 16.8, 24.3, 19.6, 0.08, 'prodYellow');
   L.d(22.9, 17.862, 1.2, 1.6, 0.2, 0.008, 'prodYellow');                                                                                                                    // the RF plate, on the lattice's north face
 
@@ -565,19 +565,19 @@ function furnish(K: ReturnType<typeof officeKit>, G: ReturnType<typeof gwotKit>)
   L.s(8.05, 9.6, 0.2, 1.8, 0.015, 0.47, 'tarpBlue'); L.s(9.05, 9.6, 0.2, 1.8, 0.015, 0.47, 'tarpBlue');                                                               // the stall: two tarp sides, open to the yard (what is drawn is what stops a man)
   L.s(8.05, 10.07, 0, 1.9, 0.025, 0.025, 'poplar'); L.s(9.05, 10.07, 0, 1.9, 0.025, 0.025, 'poplar'); L.s(8.55, 9.45, 1.8, 2.05, 0.5, 0.14, 'plasticBlack'); L.mat(8.55, 9.62, 0.9, 0.85, 'poplar');   // its posts; the tank laid across the tarps' tops
   L.s(7.0, 9.42, 0.5, 0.56, 0.6, 0.2, 'poplar'); L.s(6.55, 9.42, 0, 0.5, 0.1, 0.16, 'block'); L.s(7.45, 9.42, 0, 0.5, 0.1, 0.16, 'block');
-  L.round(6.7, 9.42, 0.56, 0.66, 0.17, 'plasticBlue', false); L.round(7.25, 9.42, 0.56, 0.66, 0.17, 'prodRed', false); L.d(6.98, 9.3, 0.56, 0.6, 0.04, 0.03, 'prodYellow');
+  L.rnd(6.7, 9.42, 0.56, 0.66, 0.17, 'plasticBlue', false); L.rnd(7.25, 9.42, 0.56, 0.66, 0.17, 'prodRed', false); L.d(6.98, 9.3, 0.56, 0.6, 0.04, 0.03, 'prodYellow');
   L.mat(7.1, 10.5, 3.2, 0.9, 'damp');
-  L.round(4.7, 11.15, 0, 0.8, 0.28, 'rust'); L.d(4.7, 11.15, 0.8, 0.805, 0.2, 0.2, 'plasticBlack'); L.mat(4.8, 11.2, 1.3, 1.3, 'oil', 0.3);
+  L.oct(4.7, 11.15, 0, 0.8, 0.28, 'rust'); L.d(4.7, 11.15, 0.8, 0.805, 0.2, 0.2, 'plasticBlack'); L.mat(4.8, 11.2, 1.3, 1.3, 'oil', 0.3);
   L.prop('bin', 'basket', 8.0, 11.0, 0, 2, [L.part(0, 0, 0.32, 0, 0.2, 0.2, 'plasticWhite'), L.part(0, 0.32, 0.38, 0, 0.17, 0.17, 'rugMadder')]);
   L.pail('wash', 9.6, 9.55, 'prodRed');
   L.carton('soap', 5.9, 9.5, 0.3, 0.4, 0.3, 0.22, 'coyote', 'whitewash');
 
   // ---- THE EAST YARD = dishes and the motor park: a dish taken down and laid on the ground beside its empty cradle, feeders run to the block, a wheel off by the truck, the windsock ----
   L.room('yard_east');
-  L.round(28.8, 12.8, 0, 0.12, 0.6, 'tin', false); L.d(28.8, 12.8, 0.12, 0.2, 0.06, 0.06, 'plasticBlack'); L.d(29.1, 13.2, 0, 0.04, 0.5, 0.015, 'galv', 0.9);
+  L.oct(28.8, 12.8, 0, 0.12, 0.6, 'tin', false); L.d(28.8, 12.8, 0.12, 0.2, 0.06, 0.06, 'plasticBlack'); L.d(29.1, 13.2, 0, 0.04, 0.5, 0.015, 'galv', 0.9);
   L.s(29.7, 12.4, 0, 0.12, 0.2, 0.2, 'block'); L.s(29.7, 12.4, 0.12, 1.0, 0.035, 0.035, 'galv'); L.s(29.7, 12.4, 1.0, 1.04, 0.24, 0.03, 'galv'); L.d(29.48, 12.4, 1.04, 1.3, 0.02, 0.02, 'galv'); L.d(29.92, 12.4, 1.04, 1.3, 0.02, 0.02, 'galv');   // the cradle it came off: a post and an empty yoke
   L.line(29.5, 10.3, 27.15, 10.6, 0.04, 'plasticBlack'); L.line(29.7, 11.6, 27.15, 11.2, 0.04, 'plasticBlack');
-  L.round(29.95, 15.0, 0, 0.19, 0.33, 'rubber'); L.d(29.95, 15.0, 0.19, 0.195, 0.14, 0.14, 'galv');
+  L.oct(29.95, 15.0, 0, 0.19, 0.33, 'rubber'); L.d(29.95, 15.0, 0.19, 0.195, 0.14, 0.14, 'galv');
   L.s(30.15, 16.2, 0, 0.19, 0.1, 0.07, 'drumRed'); L.d(29.85, 16.0, 0, 0.03, 0.3, 0.15, 'canvas', 0.2); L.d(29.8, 16.0, 0.03, 0.04, 0.1, 0.012, 'iron', 0.2); L.d(29.92, 15.95, 0.03, 0.04, 0.1, 0.012, 'iron', 0.5);
   L.line(30.25, 13.7, 30.25, 19.1, 0.08, 'whitewash'); L.line(32.55, 13.7, 32.55, 19.1, 0.08, 'whitewash');
   L.s(33.4, 14.4, 0, 0.12, 0.15, 0.15, 'block'); L.s(33.4, 14.4, 0.12, 3.2, 0.03, 0.03, 'galv'); L.s(33.75, 14.4, 2.95, 3.15, 0.33, 0.08, 'prodOrange'); L.d(33.75, 14.4, 2.94, 3.16, 0.06, 0.085, 'whitewash');
@@ -593,27 +593,4 @@ function furnish(K: ReturnType<typeof officeKit>, G: ReturnType<typeof gwotKit>)
   L.d(21.9, 24.17, 1.75, 1.78, 0.02, 0.05, 'iron'); L.d(21.9, 24.19, 1.35, 1.75, 0.045, 0.045, 'jerryYellow'); L.d(22.02, 24.14, 1.3, 1.62, 0.012, 0.012, 'iron');           // the gong: bracket, shell case, the bar to strike it with
   L.own(G.jerryCan(23.0, 24.75, 0.2, 'jerryYellow'), 'water');
   L.own(G.plasticChair(28.4, 24.6, 2.9, 'plasticWhite'), 'chair');
-
-  // ---- THE HILLTOP = the ground outside the wall on the three sides that are not the road, where two of the three starts and three of the four ways out are:
-  //      the track the pair comes up by (the west gate is named for it: wheel ruts from the road, along the wall and off over the hill's north edge, clear
-  //      of the two bushes), its foot branch to the gate, the path up the north slope to the back strip gate, the path down from the dish gate, hollows where
-  //      the dust lies darker, field stones (the road's dark gravel, a quarter of each scatter the kit's own darker mud: its pale mud reads as broken wall,
-  //      and no wall is broken here). Paint and walk-over stones only: no cover, only paint in the stretch of the track the Team & kit picture frames
-  //      (z 7 to 19), and no stone where the north wall hides the ground from the camera. A FOOT PATH is short lengths [x0, z0, x1, z1, wide] laid end
-  //      over end, each turned a little, and EVERY STAIN IS THE GROUND'S OWN DUST DARKER (one long rectangle, or a patch of another paint on bare dust,
-  //      reads as a mat from above at night) and lies UNDER the wheel ruts (tops under 8 mm), which are darker than it. ----
-  L.room('hill');
-  G.ruts(1.0, 24.13, 1.0, 0);
-  for (const [x0, z0, x1, z1, wide] of [
-    [1.9, 14.7, 3.1, 14.11, 0.75], [2.69, 14.27, 3.8, 13.95, 0.9],                                                    // the branch to the track gate
-    [24.3, 0.3, 23.76, 2.06, 0.75], [23.89, 1.64, 23.36, 3.25, 0.9], [23.54, 2.86, 22.95, 3.85, 0.7],                  // up the slope to the back strip gate
-    [36.15, 11.9, 37.48, 12.24, 0.75], [37.06, 12.12, 38.67, 12.65, 0.9], [38.26, 12.5, 39.7, 13.1, 0.7],              // down from the dish gate
-  ] as const) G.stain((x0 + x1) / 2, (z0 + z1) / 2, Math.hypot(x1 - x0, z1 - z0), wide, 'dust', Math.atan2(-(z1 - z0), x1 - x0), 0.74, 0.0045);
-  G.stain(2.9, 9.4, 1.3, 2.4, 'dust', 0.2, 0.8, 0.0035);
-  G.stain(2.2, 2.4, 2.2, 1.6, 'dust', 0.3, 0.8, 0.0035); G.stain(10.6, 1.6, 3.0, 1.6, 'dust', -0.15, 0.8, 0.0035); G.stain(11.3, 2.0, 1.5, 1.0, 'dust', 0.5, 0.62, 0.0045);
-  G.stain(18.4, 2.4, 2.2, 1.4, 'dust', 0.25, 0.8, 0.0035); G.stain(28.4, 1.5, 2.8, 1.7, 'dust', -0.3, 0.8, 0.0035); G.stain(29.0, 2.1, 1.4, 1.0, 'dust', 0.4, 0.62, 0.0045);
-  G.stain(38.2, 3.0, 2.0, 2.6, 'dust', 0.2, 0.8, 0.0035); G.stain(38.3, 18.9, 1.8, 3.2, 'dust', -0.15, 0.8, 0.0035); G.stain(38.0, 20.2, 1.2, 1.4, 'dust', 0.45, 0.62, 0.0045);
-  G.rubble(3.0, 4.6, 0.5, 5, 'gravel'); G.rubble(2.9, 1.6, 0.6, 6, 'gravel'); G.rubble(3.1, 21.9, 0.4, 5, 'gravel');
-  G.rubble(6.6, 1.3, 0.6, 6, 'gravel'); G.rubble(11.4, 1.2, 0.8, 6, 'gravel'); G.rubble(18.0, 1.4, 0.6, 6, 'gravel'); G.rubble(28.8, 1.5, 0.7, 6, 'gravel');
-  G.rubble(38.4, 2.4, 0.7, 6, 'gravel'); G.rubble(38.7, 6.6, 0.5, 5, 'gravel'); G.rubble(38.3, 19.6, 0.8, 6, 'gravel'); G.rubble(37.3, 22.2, 0.5, 5, 'gravel');
 }

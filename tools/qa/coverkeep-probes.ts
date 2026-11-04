@@ -1,6 +1,6 @@
 // The 'cover-keep' probe: A MAN TOLD TO COVER KEEPS HIS ANGLE (roomfight.ts ROOMFIGHT.coverKeep — coverPasses). Run through probes.ts:
 //   bun run tools/qa/probes.ts cover-keep        (family: roomfight)
-// PASS / FAIL each, headless. The queueing tutorial's level (levels/tut-queue.json) stood up with its four men and ONE of its enemies, the probe's puppet: he is
+// PASS / FAIL each, headless. The plan lesson's level (levels/tut-plan.json) stood up with its four men and ONE of its enemies, the probe's puppet: he is
 // stood where the probe wants him each frame, cannot be killed, sees nothing, and his muzzle points where the probe points it. Blue One is told to cover
 // up the lane from the back gate, as a player tells him; Red One stands beside him covering the side the puppet comes up on; the other two see nothing.
 // Then the puppet is stood a quarter turn off Blue One's way, and the probe reads where Blue One's gun goes:
@@ -33,7 +33,7 @@ function family(title: string): { verdict: Verdict; done: () => boolean } {
 const quiet = async <T>(fn: () => T | Promise<T>): Promise<T> => { const log = console.log, err = console.error, warn = console.warn; console.log = console.error = console.warn = () => { }; try { return await fn(); } finally { console.log = log; console.error = err; console.warn = warn; } };
 const wrap = (a: number) => { while (a > Math.PI) a -= 2 * Math.PI; while (a < -Math.PI) a += 2 * Math.PI; return a; };
 const yawTo = (a: number[], b: number[]) => Math.atan2(b[0] - a[0], b[2] - a[2]);
-const LEVEL = 'tut-queue', DT = 1 / 60, DEG = 180 / Math.PI;
+const LEVEL = 'tut-plan', DT = 1 / 60, DEG = 180 / Math.PI;
 /** where the maintainer's man stood, the way he was told to watch, and the man he turned to (his own recording of the lesson, to the metre) */
 const BLUE = [22.3, 0, 10.4], WAY = [22.5, 0, -18.9], RED = [23.5, 0, 9.6], SIDE = [33.0, 0, 10.4], LANE = [22.2, 0, 3.6], NEAR = [26.6, 0, 10.4], AWAY = [-60, 0, -60];
 /** the yard's two gates (the back gate he covers through, the road gate the side man shows in): stood open, as they were when he played it */

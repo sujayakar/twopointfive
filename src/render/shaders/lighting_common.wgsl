@@ -10,19 +10,102 @@ fn diceCoord(P: vec3f, slab: f32) -> vec3f {
   return vec3f(g.x, (slab + g.y) / 7.0, g.z);
 }
 
+/// EVERY READ KEEPS TO ITS SIDE OF A WALL (frame.sideCfg, common.wgsl sideAt; render/wallSides.ts, where the why is; the look page's row `walls`). The lattice read of
+/// P blends the four probe columns round it in plan, a metre apart, and a wall is a hand thick: within a metre of one the blend took in the probe on its far side. Here
+/// the columns that stand in another place than P are left out and the rest carry the read. The blend along each lattice row is still the sampler's, so the read is one
+/// tap where a wall runs along the lattice (most walls) and two at a corner; nothing is added where no wall is near (one word of the frame says so) or the row is down.
+/// n = 0 the plain read at P · 1 the read at a · 2 wa × a's + (1 − wa) × b's.
+struct DiceTaps { n: u32, a: vec3f, b: vec3f, wa: f32 };
+/// … by the place `own` that P is in (sideAt's word for P, or SIDE_UNKNOWN and up for the plain read). The four columns' places come from a table the frame carries
+/// (frame.sideCols, a nibble a column: wallSides.ts fills it with the same sideAt), so this function asks the plan nothing: a program pastes it at every read it makes.
+fn diceTapsBy(P: vec3f, own: u32) -> DiceTaps {
+  var t: DiceTaps; t.n = 0u; t.a = P; t.b = P; t.wa = 1.0;
+  if (own >= SIDE_UNKNOWN) { return t; }   // (16 up = nothing but P's own place in reach · 15 a doorway is every place's · 14 nothing known, or the row down)
+  let sp = c0Spacing().xz; let dims = vec2f(frame.rcC0Dims.xz);
+  let g = clamp((P.xz - RC_MIN.xz) / sp - 0.5, vec2f(0.0), dims - 1.0); let g0 = floor(g); let f = g - g0; let g1 = min(g0 + 1.0, dims - 1.0);
+  let c0 = RC_MIN.xz + (g0 + 0.5) * sp; let c1 = RC_MIN.xz + (g1 + 0.5) * sp;
+  var m: array<f32, 4>;   // (the four columns in a loop: the table's read is written into this program once, not four times)
+  for (var n = 0u; n < 4u; n++) {
+    let k = u32(select(g0.y, g1.y, n >= 2u)) * frame.rcC0Dims.x + u32(select(g0.x, g1.x, (n & 1u) == 1u));
+    let c = (frame.sideCols[k >> 5u][(k >> 3u) & 3u] >> ((k & 7u) * 4u)) & 15u; m[n] = select(0.0, 1.0, c == own || c >= SIDE_UNKNOWN);
+  }
+  let m00 = m[0]; let m10 = m[1]; let m01 = m[2]; let m11 = m[3];
+  let any = m00 + m10 + m01 + m11; if (any == 4.0 || any == 0.0) { return t; }   // (all P's own: the plain read · none: a place too narrow to hold a probe, read as it was)
+  // (a column the point lies exactly on has no weight for its neighbour: a hair of weight keeps the sum from being 0 when that neighbour is the only one left)
+  let wx0 = max(1.0 - f.x, 1e-3); let wx1 = max(f.x, 1e-3); let wz0 = max(1.0 - f.y, 1e-3); let wz1 = max(f.y, 1e-3);
+  let a0 = wx0 * m00; let b0 = wx1 * m10; let a1 = wx0 * m01; let b1 = wx1 * m11;
+  let r0 = (a0 + b0) * wz0; let r1 = (a1 + b1) * wz1;
+  let x0 = (c0.x * a0 + c1.x * b0) / max(a0 + b0, 1e-6); let x1 = (c0.x * a1 + c1.x * b1) / max(a1 + b1, 1e-6);
+  if (r1 <= 0.0) { t.n = 1u; t.a = vec3f(x0, P.y, c0.y); return t; }
+  if (r0 <= 0.0) { t.n = 1u; t.a = vec3f(x1, P.y, c1.y); return t; }
+  let wa = r0 / (r0 + r1);
+  if (abs(x0 - x1) < 1e-3) { t.n = 1u; t.a = vec3f(x0, P.y, mix(c1.y, c0.y, wa)); return t; }   // (the same columns in both rows: the sampler blends the rows too)
+  t.n = 2u; t.a = vec3f(x0, P.y, c0.y); t.b = vec3f(x1, P.y, c1.y); t.wa = wa; return t;
+}
+fn diceTaps(P: vec3f) -> DiceTaps {
+  var own = SIDE_UNKNOWN; if (WALL_SIDES && frame.sideCfg.x != 0u) { own = sideAt(P.x, P.z); }
+  return diceTapsBy(P, own);
+}
 // Irradiance at P for normal N from the dice volume (ambient-cube weighting by N^2).
-fn diceIrradiance(P: vec3f, N: vec3f) -> vec3f {
+// (THE TAPS IN A LOOP, one turn anywhere but beside a wall under the row above: the slab reads are written into a program once and not once a tap. Written out a tap, a
+// program that reads the cache in a dozen places grew by half its reads, and the final gather on the page, already the largest program there, came back from the software
+// adapter's compiler unbuilt: a boot with no error and a GPU process that died at the pass's first dispatch.)
+fn diceIrradianceBy(t: DiceTaps, N: vec3f) -> vec3f {
   let n2 = N * N;
   var E = vec3f(0.0);
   let fx = select(1.0, 0.0, N.x >= 0.0); let fy = select(3.0, 2.0, N.y >= 0.0); let fz = select(5.0, 4.0, N.z >= 0.0);
-  if (n2.x > 0.001) { E += n2.x * textureSampleLevel(diceTex, linSamp, diceCoord(P, fx), 0.0).xyz; }
-  if (n2.y > 0.001) { E += n2.y * textureSampleLevel(diceTex, linSamp, diceCoord(P, fy), 0.0).xyz; }
-  if (n2.z > 0.001) { E += n2.z * textureSampleLevel(diceTex, linSamp, diceCoord(P, fz), 0.0).xyz; }
+  for (var i = 0u; i < select(1u, 2u, t.n == 2u); i++) {
+    let Q = select(t.a, t.b, i == 1u); let w = select(t.wa, 1.0 - t.wa, i == 1u);   // (wa is 1 wherever there is one tap)
+    if (n2.x > 0.001) { E += (w * n2.x) * textureSampleLevel(diceTex, linSamp, diceCoord(Q, fx), 0.0).xyz; }
+    if (n2.y > 0.001) { E += (w * n2.y) * textureSampleLevel(diceTex, linSamp, diceCoord(Q, fy), 0.0).xyz; }
+    if (n2.z > 0.001) { E += (w * n2.z) * textureSampleLevel(diceTex, linSamp, diceCoord(Q, fz), 0.0).xyz; }
+  }
   return E;
 }
-fn diceMeanRadiance(P: vec3f) -> vec3f {
-  return textureSampleLevel(diceTex, linSamp, diceCoord(P, 6.0), 0.0).xyz;
+fn diceIrradiance(P: vec3f, N: vec3f) -> vec3f { return diceIrradianceBy(diceTaps(P), N); }
+/// WHERE A FACE READS THE CACHE (the same row). A face (S, n) reads a probe spacing out along its normal, on trust that a spacing of air stands in front of it. The side
+/// of a drum or a crate that looks at the wall it stands by has a hand of air, and a spacing out is the far side of that wall: the yard, by day thousands of times the
+/// room. Where the point a spacing (`off`) out is in another place than the air at the face, the read is made half as far, and failing that a hand off the face, where
+/// diceTaps above keeps it to the face's own place. The point as it always was with the row down, on a floor or a ceiling, and wherever nothing but one place is near.
+/// (ONE LOOK AT THE PLAN A FACE, in a loop: the air at the face, the point a spacing out, half as far, a hand off. The loop hands back the point and the plan's word
+/// for it, which is what diceTapsBy wants, so a face's read asks the plan in one place of the program and not in four.)
+struct DiceFace { P: vec3f, own: u32 };
+fn diceFaceBy(S: vec3f, n: vec3f, off: vec3f) -> DiceFace {
+  if (!WALL_SIDES || frame.sideCfg.x == 0u) { return DiceFace(S + n * off, SIDE_UNKNOWN); }
+  var own = SIDE_UNKNOWN; var X = S; var w = SIDE_UNKNOWN;
+  for (var i = 0u; i < 4u; i++) {
+    X = S + n * select(select(select(min(off, vec3f(0.12)), 0.5 * off, i == 2u), off, i == 1u), vec3f(0.04), i == 0u);
+    w = sideAt(X.x, X.z);
+    if (i == 0u) { own = select(w, SIDE_UNKNOWN, abs(n.y) > 0.99); continue; }   // (a floor or a ceiling, or a face with nothing but its own place near: the point a spacing out, as it always was)
+    if (own >= SIDE_UNKNOWN || (w & 15u) == own || (w & 15u) == SIDE_DOOR) { break; }
+  }
+  return DiceFace(X, w);
 }
+fn diceFacePointBy(S: vec3f, n: vec3f, off: vec3f) -> vec3f { return diceFaceBy(S, n, off).P; }
+fn diceIrradianceFaceBy(S: vec3f, n: vec3f, off: vec3f) -> vec3f { let f = diceFaceBy(S, n, off); return diceIrradianceBy(diceTapsBy(f.P, f.own), n); }
+fn diceIrradianceFace(S: vec3f, n: vec3f) -> vec3f { return diceIrradianceFaceBy(S, n, c0Spacing()); }
+/// A BRIGHTNESS BOUND MADE FOR A NIGHT, BY DAY (the look page's row `steady` under its row `rooms`, frame.lampCfg.xz; the maintainer on his GPU, 11-01, the pass's store at midday with
+/// its door open: "strange shimmering on metallic barrels", "night, dawn, and dusk look pretty good. midday and overcast are the broken ones"). A pass that
+/// bounds what one ray or one highlight may bring back does it with a fixed number made at night, when a lit room's surfaces sit near 0.1 to 1 and the bound
+/// is some hundreds of times that. By day a lamp is drawn at the hour's share and a room sits thousands of times lower, shown that many times up, while the
+/// open air past a door is as bright as ever: the same number bounds nothing there, and one ray that leaves by the door is a white streak that is somewhere
+/// else the next frame. The bound is therefore x this: a quarter of the light the cache says this point receives (E / pi), taken as no less than the
+/// hour's lamp share (a black room still mirrors a bright door) and never over 1. A quarter: the reflection pass's ray bound (60) is then some
+/// thirty times what a mid-grey wall beside the point sends back, far past white on the picture and no further (the picture clips a few times over the
+/// wall; what a bound allows past that is only noise at a highlight's edge). 1 at night, with either row down, off the look page.
+var<private> dayBound: f32 = 1.0;
+const DAY_BOUND_SHARE: f32 = 0.25;
+fn dayBoundK(P: vec3f, N: vec3f) -> f32 {
+  let s = frame.lampCfg.x; if (!(s > 0.0 && s < 1.0) || frame.lampCfg.z <= 0.0) { return 1.0; }
+  return min(DAY_BOUND_SHARE * max(luminance(diceIrradianceFace(P, N)) * (1.0 / 3.14159265), s), 1.0);
+}
+fn diceMeanRadiance(P: vec3f) -> vec3f {
+  let t = diceTaps(P); var L = vec3f(0.0);
+  for (var i = 0u; i < select(1u, 2u, t.n == 2u); i++) { L += select(t.wa, 1.0 - t.wa, i == 1u) * textureSampleLevel(diceTex, linSamp, diceCoord(select(t.a, t.b, i == 1u), 6.0), 0.0).xyz; }
+  return L;
+}
+/// (the lattice read as it is, walls or none: for a caller that picks its own cells one by one and wants each as the lattice holds it)
+fn diceMeanRadiancePlain(P: vec3f) -> vec3f { return textureSampleLevel(diceTex, linSamp, diceCoord(P, 6.0), 0.0).xyz; }
 
 // The cache's irradiance at a gather HIT (Ph, face normal n) reached by a ray that left the surface (P0, N0) — the read the final gather makes for its one bounce. Every dice
 // read samples a full probe spacing off the surface along its normal so the trilinear footprint cannot straddle the wall it is ON; but a face that looks BACK at the surface
@@ -34,11 +117,12 @@ fn diceMeanRadiance(P: vec3f) -> vec3f {
 // centre itself lies behind the plane (a wall off the metre lattice) the read steps to the first cell centre on P0's side. Identical to the plain read wherever the hit
 // face does not look back at the origin surface (dot(n, N0) ≥ −0.2) and the footprint stays on its side.
 fn diceIrradianceFrom(Ph: vec3f, n: vec3f, P0: vec3f, N0: vec3f) -> vec3f {
+  if (WALL_SIDES) { return diceIrradianceFace(Ph, n); }   // (ONE RULE: the floor plan says what is behind a wall, whatever surface the ray left: render/frame.ts wallSidesConfig. The rest of this function is dead code then)
   let sp = c0Spacing();
   var off = sp;
   let dn = dot(n, N0);
   if (dn < -0.2) { let sStar = dot(P0 - Ph, N0) / dn; off = min(sp, vec3f(max(sStar - 0.05, 0.02))); }   // the run along n to the origin surface's plane, less a margin
-  var Q = Ph + n * off;
+  var Q = diceFacePointBy(Ph, n, off);   // (… nor past a wall of the level the face looks at: the row `walls`, above)
   if (dot(Q - P0, N0) < 0.6 * max(sp.x, sp.z)) {   // near enough to the plane for a trilinear footprint to reach across it (skipped for the common far read: no change there)
     let g = (Q - RC_MIN) / sp; var home = (floor(g) + vec3f(0.5)) * sp + RC_MIN;
     for (var ax = 0u; ax < 3u; ax++) {
@@ -101,7 +185,8 @@ fn diceWalledPoint(Ph: vec3f, n: vec3f, skip: u32) -> vec4f {
   if ((m & 12u) == 0u) { Q.z = home.z; } else if ((m & 3u) == 0u) { Q.z = nb.z; }
   return vec4f(Q, 1.0);
 }
-fn diceIrradianceWalled(Ph: vec3f, n: vec3f, skip: u32) -> vec3f { let q = diceWalledPoint(Ph, n, skip); if (q.w == 0.0) { return vec3f(0.0); } return diceIrradiance(q.xyz, n); }
+fn diceIrradianceWalled(Ph: vec3f, n: vec3f, skip: u32) -> vec3f { if (WALL_SIDES) { return diceIrradianceFace(Ph, n); }   // (ONE RULE, as above: a man's side is read like any face, a hand off it where a spacing out is another place, and no box ray is asked)
+  let q = diceWalledPoint(Ph, n, skip); if (q.w == 0.0) { return vec3f(0.0); } return diceIrradiance(q.xyz, n); }
 /** is the thing a ray hit a man — his proxy, or a box he carries (his gun, his kit: boxes with an owner byte)? */
 fn bounceHitMan(hit: Hit) -> bool { if (hit.idx == CAPSULE_HIT) { return true; } return hit.idx >= 0 && boxOwner(boxGeo[u32(hit.idx)]) != 0u; }
 /** … and whose, where it says (a carried box; a proxy hit does not: 0) — the `skip` for the read off it */
@@ -119,6 +204,7 @@ fn bounceLeftNoWall(N0: vec3f, owner: u32, t: f32) -> bool { return owner != 0u 
 // One occlusion ray from P toward the neighbouring cell centre the trilinear footprint pulls from (per axis, the side P sits on within its own cell); blocked
 // → sample at P's own cell centre instead (nearest, no cross-wall blend). Exact wherever nothing solid lies between P and that neighbour.
 fn diceMeanRadianceWalled(P: vec3f) -> vec3f {
+  if (WALL_SIDES) { return diceMeanRadiance(P); }   // (ONE RULE, as above: the read at P keeps to P's place by the plan, and no occlusion ray is asked)
   let sp = c0Spacing();
   let g = (P - RC_MIN) / sp;                       // continuous cell coords
   let home = (floor(g) + vec3f(0.5)) * sp + RC_MIN; // P's own cell centre
@@ -129,11 +215,22 @@ fn diceMeanRadianceWalled(P: vec3f) -> vec3f {
   if (dist > 1e-3 && occluded(P, d / dist, dist, 0u)) {
     return textureSampleLevel(diceTex, linSamp, diceCoord(home, 6.0), 0.0).xyz;   // (home centre: the trilinear weights collapse onto P's own cell)
   }
-  return textureSampleLevel(diceTex, linSamp, diceCoord(P, 6.0), 0.0).xyz;
+  return diceMeanRadiance(P);
 }
 
 // Outgoing radiance of a diffuse box surface hit at P: emission + albedo/pi * (shadowed direct + last-frame bounce).
-fn hitRadiance(hit: Hit, P: vec3f) -> vec3f {
+// `ro` = where the ray that found the hit set out from (a cascade interval's start).
+// LIGHT KEEPS TO ITS ROOM (FLAG_RC_ROOM; the look page, engine.ts). The bounced light a hit is given was read a probe spacing out along the hit face's normal, on
+// trust that a spacing of air stands in front of every face. It does not: the back of a crate a hand's width off an outer wall looks at that wall, and a spacing
+// along its normal is the yard; a face in a room's corner has the next room inside its read's footprint. At night that is a little lamp light in the wrong room.
+// By day it is the open air's light, a thousand times a lamp's, inside every room, and a room with its doors shut and no window held a hundredth of the yard's
+// daylight. With the flag the read is made in air the ray is KNOWN to have crossed: a spacing back along the ray (or the ray's start, if that is nearer), and at
+// that point's own cell in plan, with no blend across to its neighbours, unless the cell's centre lies behind the face that was hit (a wall off the lattice the
+// cells are cut on: that probe is the next room's), where the read is the next cell's on the hit's side (the plain blended read at the point is the last
+// resort: it weighs in the probe behind the wall). No ray is spent on it: a leaf or a crate that stands
+// between the point and its cell's centre is not looked for. Blockier by a cell for the second bounce on, which the cache's own blur and the gather's read
+// smooth again.
+fn hitRadiance(hit: Hit, P: vec3f, ro: vec3f) -> vec3f {
   if (hit.inside) { return vec3f(0.0); }
   var L = vec3f(0.0);
   var albedo: vec3f;
@@ -141,15 +238,26 @@ fn hitRadiance(hit: Hit, P: vec3f) -> vec3f {
   else {
     let bi = u32(hit.idx);
     let b = boxGeo[bi];
-    if ((b.flags & (BOX_EMISSIVE | BOX_AREALIT)) == BOX_EMISSIVE) { L += boxEmissive(bi); }   // area-lit emitters glow on screen but light the scene through their analytic light
+    if ((b.flags & (BOX_EMISSIVE | BOX_AREALIT)) == BOX_EMISSIVE) { L += boxEmissiveRay(bi); }   // area-lit emitters glow on screen but light the scene through their analytic light
     albedo = boxAlbedoSec(bi);
   }
   var E = vec3f(0.0);
   if ((frame.flags & FLAG_DIRECT) != 0u) { E += directIrradiance(P, hit.n, 0u, frame.secMinE, false); }   // steady lights only (this feeds the cascades / dice); dimmer ones get unshadowed half credit
   if ((frame.flags & FLAG_BOUNCE) != 0u) {
     // sample a full probe spacing off the surface: the trilinear footprint then lies entirely on this side of a thin wall
-    if (BOUNCE_WALLS && bounceHitMan(hit)) { E += diceIrradianceWalled(P, hit.n, bounceHitOwner(hit)); }   // BOUNCE WALLS: a man's side is no wall (above; its own lattice spacing on y where the line below takes x's)
-    else { E += diceIrradiance(P + hit.n * c0Spacing().x, hit.n); }
+    if (!WALL_SIDES && BOUNCE_WALLS && bounceHitMan(hit)) { E += diceIrradianceWalled(P, hit.n, bounceHitOwner(hit)); }   // BOUNCE WALLS: a man's side is no wall (above; its own lattice spacing on y where the line below takes x's)
+    else if (!WALL_SIDES && (frame.flags & FLAG_RC_ROOM) != 0u) {   // (under WALL_SIDES the last line below is the read for every hit: the plan keeps it to the hit's own place, blended as the lattice blends)
+      let sp = c0Spacing(); let v = ro - P; let l = length(v);
+      var Q = P + hit.n * 0.02; if (l > 1e-3) { Q = P + v * (min(sp.x, l) / l); }
+      let home = (floor((Q - RC_MIN) / sp) + vec3f(0.5)) * sp + RC_MIN;
+      var R = vec3f(home.x, Q.y, home.z);
+      if (dot(R - P, hit.n) < 0.02) {   // (the cell's centre is behind the face that was hit, a wall off the lattice the cells are cut on: the next cell on the hit's side, whose centre is a spacing further out along the face's normal)
+        let an = abs(hit.n); if (an.x >= an.z) { R.x += sign(hit.n.x) * sp.x; } else { R.z += sign(hit.n.z) * sp.z; }
+        if (dot(R - P, hit.n) < 0.02) { R = Q; }
+      }
+      E += diceIrradiance(R, hit.n);
+    }
+    else { E += diceIrradianceFaceBy(P, hit.n, vec3f(c0Spacing().x)); }
   }
   L += albedo * E * (1.0 / 3.14159265);
   return L;

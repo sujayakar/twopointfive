@@ -1,7 +1,7 @@
 // The 'lasers' family: ENEMIES CARRY NO VISIBLE WEAPON LASER (combat.ts LASER; the maintainer, 10-06: "the enemies having super visible lasers is a bit much. it
 // makes the game easier but if it's too hard w/o we can find other ways to signal", then "we should probably just remove them for realism, not just tone them
 // down"). Run through probes.ts:
-//   bun run tools/qa/probes.ts lasers | laser-off
+//   bun run tools/qa/probes.ts lasers | laser-off | laser-scenarios
 // PASS / FAIL each, all headless: what is asked is WHICH BOXES the laser's draw hands the renderer and whether the game goes any differently without them
 // (nothing is drawn — how it LOOKS is not judged here).
 //   laser-off        the night game, a guard in the corridor:
@@ -10,6 +10,11 @@
 //                      · through Game.update, the man hunting Sam down the corridor, aiming and firing: no frame's boxes hold a laser line or dot on his bore;
 //                        the same seeded run with the switch on: nearly every frame's do;
 //                      · those two runs end in the same game, digest for digest (rounds fired, hits, every man's state): nothing reads the laser.
+//   laser-scenarios  every scenario on the start card's list:
+//                      · a defender made to hunt, his laser turned eight ways: not one box by default; the switch = the old draw field for field, under that
+//                        scenario's fog of war as it stands; a teammate's own laser is the old whole line either way;
+//                      · Sam put in plain sight inside that defender's room and the scenario left to play for fifteen seconds (the defenders hunt and fire), switch off against
+//                        switch on from the same seed: the same game, digest for digest.
 import { standUp, ROOT } from './headless.ts';
 import { stage } from './bang-tally.ts';
 const { v3, quat } = await import(`${ROOT}/src/math/vec.ts`);
@@ -136,3 +141,40 @@ export const laserOff = guarded(async () => {
   return F.done();
 });
 
+export const laserScenarios = guarded(async () => {
+  const F = family('laser-scenarios: every scenario — no defender shows a laser, the switch puts the old one back under that fog of war, a teammate\'s is untouched, the game plays the same');
+  for (const E of SCENARIOS as any[]) {
+    const S: any = await quiet(() => stage(E.id, 1)); const { g, step } = S; const FW = g.fogOfWar;
+    LASER.enemy = false; g.aiEnabled = false; step(3);
+    const foe = S.defs.map((x: any) => x.gd).find((x: any) => x.state !== 'dead' && (!FW.active || FW.seen(x))) ?? g.guards.find((x: any) => x.team === 'hostile' && x.state !== 'dead');
+    const mate = g.guards.find((x: any) => x.team === 'operative' && x.state !== 'dead');
+    if (!foe) { F.verdict(false, `${E.title}: a defender to turn`, 'none standing after the staging'); continue; }
+    // (a defender nobody sees showed nothing in the old draw either: bring Sam to where he is seen, if the fog is up)
+    if (FW.active && !FW.seen(foe)) { await quiet(() => g.teleportPlayer([foe.char.pos[0] + 0.9, 0, foe.char.pos[2]])); step(2); }
+    const c = foe.char, chest = c.bones.chest ?? [c.pos[0], 1.2, c.pos[2]];
+    let boxes = 0, oldBoxes = 0, oldLine = 0, diff = 0;
+    for (const st of ['alert', 'search']) { foe.state = st;
+      for (let k = 0; k < 8; k++) {
+        const dir = [Math.sin(k * Math.PI / 4), 0, Math.cos(k * Math.PI / 4)]; lay(foe, [chest[0] + dir[0] * 0.5, chest[1], chest[2] + dir[2] * 0.5], dir);
+        const now = draw(g, foe), old = drawOld(g, foe);
+        boxes += now.length; oldBoxes += old.length; oldLine += lineLen(old);
+        LASER.enemy = true; if (!same(draw(g, foe), old)) diff++; LASER.enemy = false;
+      } }
+    let mateOk = true, mateNote = 'no teammate in this one';
+    if (mate) { const mc = mate.char, mch = mc.bones.chest ?? [mc.pos[0], 1.2, mc.pos[2]]; let d2 = 0, n = 0;
+      for (const sw of [false, true]) { LASER.enemy = sw; for (let k = 0; k < 8; k++) { const dir = [Math.sin(k * Math.PI / 4), 0, Math.cos(k * Math.PI / 4)]; lay(mate, [mch[0] + dir[0] * 0.5, mch[1], mch[2] + dir[2] * 0.5], dir); const old = drawOld(g, mate); n += old.length; if (!same(draw(g, mate), old)) d2++; } }
+      LASER.enemy = false; mateOk = d2 === 0 && n > 0; mateNote = `${mate.callsign}'s own laser, eight ways, the switch off and on: ${d2} of 16 differ from the old draw's ${n} boxes (want 0)`; }
+    // the scenario playing itself, off against on (and off again: the control)
+    // (Sam, unhurt and in plain sight, put a step inside that defender's room: the defenders hunt and fire, the team answers as it will)
+    const at = [foe.char.pos[0] + 0.9, 0, foe.char.pos[2]];
+    const play = async (sw: boolean) => { const P: any = await quiet(() => stage(E.id, 1)); const pg = P.g; LASER.enemy = sw; pg.playerInvisible = false; await quiet(() => pg.teleportPlayer(at));
+      const foes = pg.guards.filter((x: any) => x.team !== 'operative'); const f0 = foes.reduce((n: number, x: any) => n + x.weapon.shotsFired, 0); let hunted = 0;
+      for (let f = 0; f < 900; f++) { pg.player.visibility = 1; P.W.step(DT); if (foes.some((x: any) => (x.state === 'alert' || x.state === 'search') && !x.muzzleDown && !x.held)) hunted++; }
+      LASER.enemy = false; return { d: digest(pg), raw: digestGame(pg, true), hunted, shots: foes.reduce((n: number, x: any) => n + x.weapon.shotsFired, 0) - f0, dead: pg.guards.filter((x: any) => x.state === 'dead').length }; };
+    const a = await play(false), b = await play(true), a2 = await play(false);
+    const sameGame = a.d === b.d, control = a.d === a2.d;
+    F.verdict(boxes === 0 && diff === 0 && oldLine > 1 && mateOk && sameGame && control && a.hunted > 60, `${E.title}: ${foe.callsign} (${foe.team}), fog of war ${FW.active ? 'up' : 'off'}`,
+      `hunting, his laser turned eight ways in alert and in search: ${boxes} boxes (want 0; the old draw: ${oldBoxes} boxes, ${f2(oldLine)} m of line) · LASER.enemy on against the old draw, field for field: ${diff} of 16 differ (want 0) · ${mateNote} · fifteen seconds of it with Sam in that room, off against on: ${sameGame ? 'the same game, digest for digest' : `DIFFERENT — ${diffDigest(a.raw, b.raw, 3).join(' · ')}`} (a defender hunting with his gun up in ${a.hunted} of 900 frames, ${a.shots} rounds from their side, ${a.dead} men down at the end; the control, off twice: ${control ? 'identical' : 'DIFFERENT — not repeatable, no verdict'})`);
+  }
+  return F.done();
+});

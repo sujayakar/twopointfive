@@ -1,5 +1,5 @@
 // The level-design devices (game/devices.ts, STATUS G4) headless: `bun run tools/qa/probes.ts devices` (family) or one of devices-camera / devices-keypad /
-// devices-laser / devices-editor. Staged like the other families: the whole Game over the fake GPU, real inputs, the light meter as the
+// devices-laser / devices-editor / devices-vision. Staged like the other families: the whole Game over the fake GPU, real inputs, the light meter as the
 // script's knob (player.visibility — the renderer never answers headless), the probe's smoke answer planted by hand (probe.results) where a plume is wanted.
 //   devices-camera   Sam lit in the corridor camera's picture: 'movement in …' at ~0.8 lit-s + a calm man sent (task 'device'), the floor up a step by ~2 lit-s
 //                    with the fix broadcast; Sam DARK in the same spot: nothing; a plume between (transmittance 0.15): nothing; the OCP: blind for its spell, then
@@ -13,6 +13,8 @@
 //                    the mains (battery survives) as the cameras; 'alarm' beams put the floor up
 //   devices-editor   __ed.device: add camera / keypad (locks its door) / laser, move / rotate / aim / end / duplicate / delete (the door comes off the pad's
 //                    lock), undo back to the original digest, validate + lint clean, planted lint faults reported
+//   devices-vision   the guards' OWN sight is untouched by the eye factoring: canSee / canSeeChar / sightGain over 4000 seeded stagings hash to the digest
+//                    recorded off main before the lane (d7745582)
 import { readFileSync } from 'node:fs';
 import { standUp, ROOT, fake } from './headless.ts';
 const { v3 } = await import(`${ROOT}/src/math/vec.ts`);
@@ -457,6 +459,38 @@ export async function devicesEditor() {
     v(fails.length === 0, '(b) lint: the office clean; planted — a camera in a wall, a beam end in a wall, a beam through a partition, a pad far from its door, a pad on the always-open face, a pad no route can name, a beam at an in-between height — each reported under its code', notes.map(x => x.slice(0, 70)).join('\n    '), fails);
   }
   console.log(`=== devices-editor: ${done() ? 'ALL PASS' : 'FAILURES above'} ===`);
+}
+
+// ================================================================================================================================ vision digest
+/** the digest recorded off MAIN (b737470, before this lane) with this very sweep: the eye factoring must leave every guard's sight what it was */
+export const VISION_DIGEST_MAIN = 'd7745582';
+export async function devicesVision() {
+  console.log("\n=== devices-vision: canSee / canSeeChar / sightGain over 4000 seeded stagings — the guards' own sight byte for byte what it was before the eye was factored out for the cameras ===");
+  const { v, done } = verdictFn('vision');
+  Math.random = seeded(99);
+  const W = await standUp(); const { game } = W;
+  for (let i = 0; i < 3; i++) W.step(DT);
+  game.aiEnabled = false;
+  const rnd = seeded(7);
+  let h = 0x811c9dc5 >>> 0; const mix = (x: number) => { const s = String(x); for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 0x01000193) >>> 0; } };
+  let n = 0, vis = 0, cone = 0;
+  const gd = game.guards[0], other = game.guards[1];
+  for (const o of game.guards) o.hold = true;
+  for (let k = 0; k < 4000; k++) {
+    const gp: Vec3 = [4.5 + rnd() * 31, 0, 4.5 + rnd() * 19]; const yaw = rnd() * Math.PI * 2 - Math.PI;
+    const sp: Vec3 = [gp[0] + (rnd() * 2 - 1) * 14, 0, gp[2] + (rnd() * 2 - 1) * 10];
+    gd.char.pos = v3.copy(gp); gd.char.vel = [0, 0, 0]; gd.char.bodyYaw = gd.char.aimYaw = yaw; gd.char.aimPitch = 0; gd.char.update(0);
+    gd.smokeTrans = rnd() < 0.2 ? rnd() : 1; gd.dazzledUntil = rnd() < 0.05 ? game.time + 1 : -1; gd.state = rnd() < 0.3 ? 'alert' : 'patrol';
+    game.player.char.pos = v3.copy(sp); game.player.crouch = rnd() < 0.4; game.player.char.update(0); game.player.visibility = rnd();
+    other.char.pos = [sp[0] + 0.7, 0, sp[2] + 0.4]; other.char.update(0);
+    const r = canSee(game, gd); const r2 = canSeeChar(game, gd, other.char, false);
+    mix(r.visible ? 1 : 0); mix(r.inCone ? 1 : 0); mix(r.dist); mix(r2.visible ? 1 : 0); mix(r2.inCone ? 1 : 0); mix(r2.dist);
+    if (r.visible) { vis++; mix(sightGain(game, gd, r.dist)); } if (r.inCone) cone++;
+    n++;
+  }
+  const digest = h.toString(16);
+  v(digest === VISION_DIGEST_MAIN, `the sweep's digest equals main's (${VISION_DIGEST_MAIN})`, `digest ${digest} over ${n} stagings · visible ${vis} · in cone ${cone}`, digest === VISION_DIGEST_MAIN ? [] : [`digest ${digest} ≠ ${VISION_DIGEST_MAIN}: a guard's canSee / sightGain changed`]);
+  console.log(`=== devices-vision: ${done() ? 'ALL PASS' : 'FAILURES above'} ===`);
 }
 
 export function devicesAllPass() { return allPassGlobal; }
