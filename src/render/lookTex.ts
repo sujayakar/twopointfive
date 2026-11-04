@@ -253,19 +253,28 @@ const metal: Mat = (u, v, t) => {
   tint(t, (1 - 0.3 * edge) * (1 - 0.4 * pits) * (1 + 0.5 * scratch));
   t.rough = mix(mix(0.5, 0.97, rust), 0.3, scratch);
 };
-// ---- old paint on steel or boards (a drum, a gate, a truck's door): dented, chalked by the sun, scuffed in long strokes, and gone in ragged patches with a
-// lifted rim, down to what is under it
+// ---- old paint on steel or boards (a drum, a gate, a truck's door): dented, chalked by the sun, scuffed in long strokes, and CHIPPED: specks the size of a
+// fingernail where it has been knocked, gathered in a few worn places, and here and there a flake a few fingers across with a lifted rim, down to what is
+// under it. Never a bare island: at the game's two centimetres a pixel a patch a hand across is a blot on a crate's lid (the maintainer, 11-04, of patches up
+// to 36 cm: "splotches on here look a bit weird, overdone").
+/** how hard the place has been knocked about, 0‥1: the few places old paint has chipped in */
+const paintWorn = (u: number, v: number) => smooth(0.5, 0.72, fbm(u, v, 5, 3, 192));
 const paint: Mat = (u, v, t) => {
-  const dent = fbm(u, v, 3, 3, 191), peel = fbm(u, v, 7, 4, 192), fine = vn(u, v, 90, 90, 193), chip = cells(u, v, 9, 194, 1.0), brush = vn(u, v, 4, 150, 195);
-  const e = peel + 0.35 * (0.5 - chip.f1) + 0.12 * (fine - 0.5);
-  const gone = smooth(0.66, 0.72, e), rim = smooth(0.59, 0.66, e) * (1 - gone);
+  const dent = fbm(u, v, 3, 3, 191), fine = vn(u, v, 90, 90, 193), brush = vn(u, v, 4, 150, 195);
+  const rag = 0.14 * (fine - 0.5) + 0.12 * (vn(u, v, 37, 37, 199) - 0.5);                   // a broken edge, in cells
+  // a chip is a shard: the middle of a cell of a scattered lattice, cut back from the cell's own straight sides (f2 − f1 = how far in from them), its edge broken.
+  // Whether a cell has one is asked ONCE, where its own point is (asked at each texel, a chip that straddled the edge of a worn place was sliced along it)
+  const fl = cells(u, v, 13, 194, 1.0), fk = fl.id < 0.4 * paintWorn(u + fl.dx / 13, v + fl.dy / 13) ? 0.82 - 0.3 * ((fl.id * 97.13) % 1) : 9, fe = fl.f2 - fl.f1 + rag;   // flakes: 3 to 9 cm across
+  const ch = cells(u, v, 46, 200, 1.0), ck = ch.id < 0.03 + 0.45 * paintWorn(u + ch.dx / 46, v + ch.dy / 46) ? 0.8 - 0.45 * ((ch.id * 61.7) % 1) : 9, ce = ch.f2 - ch.f1 + rag;   // chips: 1 to 3 cm
+  const gone = Math.max(smooth(fk, fk + 0.03, fe), smooth(ck, ck + 0.1, ce));
+  const rim = smooth(fk - 0.07, fk, fe) * (1 - gone);
   const scuff = smooth(0.82, 0.96, vn(u, v, 2, 70, 196)) * (1 - gone);
   const under = vn(u, v, 50, 50, 198);
   t.h = 0.003 * (dent - 0.5) + 0.00025 * (brush - 0.5) - 0.0007 * gone + 0.0004 * rim + 0.0004 * gone * (under - 0.5);
   tint(t, 0.93 + 0.16 * (dent - 0.5) + 0.06 * (brush - 0.5));
   hue(t, 1.1, 1.08, 1.06, smooth(0.4, 0.8, fbm(u, v, 2, 2, 197)) * 0.6);   // chalked pale in patches
-  tint(t, 1 + 0.3 * rim + 0.22 * scuff);
-  t.r = mix(t.r, 0.62 + 0.2 * under, gone); t.g = mix(t.g, 0.4 + 0.12 * under, gone); t.b = mix(t.b, 0.3 + 0.08 * under, gone);   // (a multiplier of the paint: bare patches come out dark and warm whatever the paint was)
+  tint(t, 1 + 0.25 * rim + 0.22 * scuff);
+  t.r = mix(t.r, 0.62 + 0.2 * under, gone); t.g = mix(t.g, 0.4 + 0.12 * under, gone); t.b = mix(t.b, 0.3 + 0.08 * under, gone);   // (a multiplier of the paint: bare metal comes out dark and warm whatever the paint was)
   t.rough = mix(mix(0.46 + 0.08 * brush, 0.72, scuff), 0.94, gone);
 };
 // ---- a plinth of field stone, the foot of a mud wall (shaders/look.wgsl lays it by the wall's height, not by a paint): stones the size of a loaf, wider than
