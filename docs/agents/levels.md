@@ -755,3 +755,48 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   are the seen ones, "one key light a court" is judgement, and a rule is added in front of them: judge a level's light at the hour its row plays at,
   and read which lights are lit. The `key` need's line now says that a link opens at the row's hour too. Its measure is as it was.
 
+- **A box says its shape** (`SHAPES`, `src/scene/shapes.ts`, 11-04; asked from the library's showroom: "could we make it so the cars have rounded
+  surfaces? look really blocky right now"). A box of a level file may carry `shape`: how it stands when shapes are on (`docs/level-format.md`: `round`
+  about its own x or z, `arc`, `cut` planes, `old`, and `with` = pieces that are there only when shapes are on), ALL IN THE BOX'S OWN FRAME, so the
+  editor's move, turn and copy carry it. A SHAPE IS CUT FROM THE PLAIN BOX: the box keeps its centre and half size; what is not inside them is a piece.
+  THE DATA NAMES THE SHAPE; the cut record is built from it by `cut.ts cutRecord`. ON in the page, `?shapes=0` puts it off; OFF in the module and on
+  the frozen stand, `TPS_SHAPES=1`; a `FROZEN_HOLDS` row; in the knob registry and the journal. READ ONCE, AS A LEVEL IS STOOD UP (`host/standup.ts
+  populateHost`, after the round things, before a box goes to the world and before `new Game`): a shaped box is given its record (`Box.shaped`), its
+  pieces follow the level's last box (`Box.piece`), and no box changes its number. THE SWITCH IS THE SIMULATION'S, as the round things' is: a shape's
+  record is met by the game's rays whatever the picture's cut-pieces switch says (`boxes.ts cutMet`, read by `rayBox`, `collision.ts`, and the module's
+  box copy `boxMirror.ts kindOf`); with cut pieces down only the picture and the GPU's rays fall back to the uncut box. ONE MODEL: every GPU and CPU
+  ray and the game's own module meet the shaped solid. A PIECE IS TRIM: drawn and nothing else. It says no flags and stands `NoShadow` (cut away with
+  its box where the box is), so no ray, eye or body meets it, and its own record follows the picture's cut-pieces switch; what must stop a round or a
+  man is a box of the level, which may say a shape of its own. It knows its box (`Box.of`) and follows it out of the picture where a level box is
+  hidden by its number (`shapes.ts withPieces`: a thing a round takes in `destruction.ts hide`, a kit view's hidden boxes in `host/kitView.ts`), and it
+  is never an item of its own to `destruction.ts`. WHAT WALKS MEETS THE PLAIN
+  LEVEL, BY CONSTRUCTION: a shaped box is pushed against as its uncut box, which is the plain one, and a piece is met by nobody; `thinLevel` and
+  `barLevel`, which mark boxes by their size as a level is stood up, read the plain boxes (`plainLevel` before them, `shapeLevel` after). So to the
+  simulation the shaped level is the plain level with some of its boxes cut. A BLAST: a box whose shape has a form (`boxes.ts shapeCut`) is one cell to
+  the wall engine and never a wall laid in cells, a hard wall's adoption included (`wallbreak.ts index / adoptable`: its cells would be cut from the
+  whole box; a wall that only hangs trim breaks as it did), a window's bar is left plain by `shapeLevel` (`winbars.ts` breaks it into lengths), and a piece is
+  one of the things that hang on what breaks (the wall engine's `ghosts`, the furniture blast's riders: any authored NoShadow static) and goes with
+  it. A shaped thin thing is still thin to a round (`wallpen.ts thinToll`). A LEVEL STOOD ON ITS SHAPES IS ANOTHER LEVEL: `savestate.ts levelFingerprint` takes in `shapes.ts shapeStamp` (the geometry
+  of the shapes that STAND, pieces included for their numbers in the list, to the millimetre; never a paint, a finish or `old`), so a checkpoint or a recording made on them is refused by the plain
+  level and the other way about, and by the level once a shape has changed, through the refusal every loader and tape player already has; with none
+  standing the fingerprint is the one the level always had, so no frozen fixture moves. A recording carries the stand's word (`standEnv.ts`) and the
+  table; one from before the table has the switch put down first (`shapesTape` in `replay/recipestand.ts` and `tools/qa/rerun.ts`, the stand's word in
+  `tools/qa/replay.ts`; `applyKnobs` afterwards). THE LINT REFUSES a shape on a tilted box or a kit view's box, flags on a piece, and a form on a box
+  with `markings` or the `Glass` flag (the mark painter and the pane engine read the whole box), until those readers read a shape, and a shape on a
+  slab of a kit octagon (found on the file's boxes as `round.ts` finds them); the check is red on a level file with a shape that does not stand.
+  `canonicalLevelData` re-keys a shape. A level built by a generator in the page is shaped as one
+  read from a file is: the shape rides on the Box. A piece is painted and finished by the reader a box is; its keys are its own list (`levelData.ts
+  PIECE_KEYS`), read by hand in `loadLevel`, `levelToData` and `canonShape`, so a key a box gains for its paint (a `stuff`) is added in those four
+  places together. THE PICTURE in this build draws a round and an arc as the flat facets they are cut to and
+  a cut face bare; `shapes.ts formBox` is the one place a shaped box is told more (one turning face, its own paint on an `old` cut) once the look's cut
+  pass is in the build. NO LEVEL SAYS A SHAPE YET: the vehicles are the first to (the kits' pickup, van, car and motorbike).
+  CHECK: `bun run tools/qa/shapes-check.ts` (`probes.ts shapes`; `SHAPES_BREAK=1` must fail), both stands, nine lines: the lint (eighteen refusals),
+  the trip to data and back and the canonical bytes; a yard whose pickup is given a shape of each kind stood up, put back and moved, and the number of its shapes; rayBox
+  and lineBox against references written in the check, with cut pieces up and down; the same walk grid and the same pushes up as down, on that yard and
+  on every level file that says a shape, and every said shape standing; five seconds with the switch down the same run by digest as the same level saying none; the fingerprint, the
+  stands' rows and a tape from before the table; a checkpoint refused across the switch both ways and opening in its own game; lines and circles
+  asked of the module inside a tick; and a blast that takes a shaped crate and the plate hung on it. MEASURED: with no level saying a shape, the 42
+  play-through runs (21 scenarios, seeds 1 and 2) have the build's digests on the frozen stand and on the shipped one. NOT DONE: nothing here has been
+  seen on a GPU or played; on the plain page a level with shapes keeps the cut ray programs live from boot, and what that costs (and whether a shaped
+  box shows plain for a moment before they compile) wants a number from a GPU before a level file says a shape; with `?nocutboxes` the page draws a
+  shaped box plain while the game's rays meet its shape (the round things' split).

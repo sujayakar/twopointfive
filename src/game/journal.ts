@@ -31,6 +31,7 @@ import { CASTOR } from './props';
 import { LIVED } from '../scene/lived';
 import { UNDERFOOT } from '../scene/collision';
 import { ROUND } from '../scene/round';
+import { SHAPES } from '../scene/shapes';
 import { cutConfig } from '../scene/cut';
 import type { Input } from './input';
 import type { FollowCamera } from './camera';
@@ -616,6 +617,7 @@ export function applyKnobs(g: Game, k: KnobsSnap): void {
     if ((P as { steady?: boolean } | undefined)?.steady === undefined) PAIR.steady = false; }   // (…and one from before the partner stopped turning about on his way: he walked back to a passed corner and squared to his man on every short wait, as it was made)
   if ((k.tables.COVER as { rearRead?: boolean } | undefined)?.rearRead === undefined) COVER.rearRead = false;   // (…and from before a rear man on a door-less mark read the ground for what to watch: his rear is the way he came. A recording that carries the key keeps its own.)
   if ((k.tables.COVER as { backTurn?: boolean } | undefined)?.backTurn === undefined) COVER.backTurn = false;   // (…and from before a back-pedalling man the deal let go of kept his path while his body came round: he walked forward along it, as the file was made)
+  if (!k.tables.SHAPES) SHAPES.on = false;   // (a file from before a box could say its shape: its vehicles were plain boxes — said again here; the level was stood up by shapesTape's word)
   if (!k.tables.ROUND) ROUND.on = false;   // (a file from before round things were round: its drums and tyres were the kit's octagons — said again here; the level was stood up by roundTape's word)
   if (k.tables.UNDERFOOT === undefined) UNDERFOOT.on = false;   // (…and from before a walker's feet were asked from where the walk grid's bake begins: a thing 0.2 m high stopped them, as the file was made)
   if ((k.tables.SNEAK as { sideStop?: number } | undefined)?.sideStop === undefined) SNEAK.sideStop = 0;   // (…and from before the partner's step aside was asked along its last quarter metre: the spot alone, as it was)
