@@ -1,2 +1,2 @@
-# 11-03, dress every level: the taxi wears genYellow (was jerryYellow), the two walks to the side gates are trodden
-5115e856ff56f306bab66368913b3c99d1028ae3
+# the kits' vehicles say their shapes: the boxes of each vehicle carry a shape, and a pickup's bonnet no longer carries its two panel lines
+ea42116a8d44ec30858df6c5917a806fd7224c12
