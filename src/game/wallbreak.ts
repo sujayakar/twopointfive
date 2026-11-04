@@ -38,7 +38,7 @@
 // boxes back as they were, appended statics cut off, nav re-baked. CHECKPOINTS carry it: savestate.ts files `snapshot()` and re-applies it after the restart; the
 // level fingerprint is taken over the AUTHORED statics only.
 import { Vec3, v3 } from '../math/vec';
-import { Box, BoxFlag, makeBox, shapeCut } from '../scene/boxes';
+import { Box, BoxFlag, makeBox, shapeCut, wordOf } from '../scene/boxes';
 import { WORLD } from '../scene/world';
 import type { Game } from './game';
 import type { WeaponDef } from './weapons';
@@ -298,7 +298,7 @@ export class WallBreak {
   /** the cell as a world box (for the chunk it sheds) */
   private cellBox(B: Breakable, ix: number, iy: number, iz: number): Box {
     const hx = (this.xb(B, ix + 1) - this.xb(B, ix)) / 2, hy = (B.yb[iy + 1] - B.yb[iy]) / 2, hz = (this.zb(B, iz + 1) - this.zb(B, iz)) / 2;
-    return makeBox({ c: this.cellCentre(B, ix, iy, iz), h: [hx, hy, hz], yaw: B.box.yaw, albedo: v3.copy(B.box.albedo) });
+    return makeBox({ c: this.cellCentre(B, ix, iy, iz), h: [hx, hy, hz], yaw: B.box.yaw, albedo: v3.copy(B.box.albedo), ...wordOf(B.box) });
   }
   /** greedy boxes over the closed cells (y first: an untouched wall column stays ONE floor-to-top piece, which is what the reach masks' wall raster counts) */
   /** the world centre and half-extents of one rect of `pieces()`: what `rebuild` stands up and what `wouldOpen` forecasts, from one place so they cannot part */
@@ -442,7 +442,7 @@ export class WallBreak {
       const c: Vec3 = [cell.c[0] + (this.hash() - 0.5) * cell.h[0], cell.c[1] + (this.hash() - 0.3) * cell.h[1], cell.c[2] + (this.hash() - 0.5) * cell.h[2]];
       const sp = 1.2 + 2.2 * this.hash(); const v: Vec3 = [out[0] * sp + (this.hash() - 0.5) * 0.8, 0.6 + 1.4 * this.hash(), out[2] * sp + (this.hash() - 0.5) * 0.8];
       const w: Vec3 = [(this.hash() - 0.5) * 9, (this.hash() - 0.5) * 5, (this.hash() - 0.5) * 9];
-      const got = this.destr.debris.spawn('chunk', makeBox({ c, h, yaw: cell.yaw, albedo: v3.copy(cell.albedo) }), v, w, who);
+      const got = this.destr.debris.spawn('chunk', makeBox({ c, h, yaw: cell.yaw, albedo: v3.copy(cell.albedo), ...wordOf(cell) }), v, w, who);
       budget.chunks--;
       if (got) WALL_STATS.chunks++; else { WALL_STATS.chunksDemoted++; if (P) P.emit('debris', c, v3.normalize(v), 6, { speed: 2.2, speedJit: 0.7, spread: 1.0, life: 16, lifeJit: 0.3, size: 0.012, sizeJit: 0.6, color: v3.copy(cell.albedo), owner: who }); }
     }
