@@ -2740,6 +2740,71 @@ interleaved and filtered to their quiet minimum, and a row whose p75 sits far ab
   no frame with a word in any level file; no word kept on a box a look's file repainted; the editor's paint drops it. NOT YET: a cut core
   takes its box's word; the lived kit, the compound's stucco and door leaves and frames say theirs; a row on the look panel; the editor
   shows no word. Seen on the software adapter (the showroom and the office); never on a GPU by us: the maintainer has it on the preview.
+- **A THING IS MADE OF WHAT IT SAYS: NOTHING READS A MATERIAL OFF A COLOUR ANY MORE** (11-04; `src/scene/stuff.ts`, `scene/levelLoad.ts`,
+  `render/gbuffer.ts lookWordOf`; the maintainer: "remove as many hacks or special cases as possible"). This ENDS the three bullets above it
+  (the name table's first slice, the box's own word, `lookStuff` and the generated `lookClass`): they are the record of how it came about.
+  THE RULE, WHOLE: a level file's material ROW says `stuff`; a box or a prop's part is made of its own word, else its row's, else it is plain
+  (the loader puts the word on the box; a box written as numbers has no row and says its own); the look reads `Box.stuff` and nothing else.
+  GONE: `gbuffer.ts classWgsl`, `lookStuff`, `lookNamed`, the palette match and its darkened test (CPU and the generated WGSL `lookClass` /
+  `surfClass`), `levelKit` and `officeGen FINISH_BY_ALBEDO`, `?names=0`, `?words=0`, and SURFACES, A TRY (`?surf`, `SURF_TRY`, `surfTryConfig`;
+  the look page replaced it; `shaders/surface.wgsl` is eight constants `look.wgsl` still names, until those become row words).
+  IN CODE A PAINT IS KNOWN BY THE ARRAY HANDED OVER, never by its numbers (`stuff.ts namePaints`, `paintOf`): a kit's palette row carries its
+  name, its finish and its word; a COPY of the numbers is nobody's paint, matte and plain, and nothing in the types says so: hand the row, tone
+  it with `toned` / `tonedAs` (a tone of a paint is that paint's stuff), stand in for it with `gwotAs`, repaint a box with `repainted`, and
+  copy a box's paint to a piece with `boxes.ts wordOf` (debris, a broken wall's cells, a blown table, a vehicle's parts). A piece's own word
+  goes with its own paints by the same rule (`saidFor`: the row, not its numbers). A colour written as numbers says its word beside it:
+  `madeOf('cloth', [...])` where somebody chose, `saidAs('stucco', C.partTan)` for one paint that is a second thing, and
+  `drawnAs('slab', [...])` where NOBODY chose and the word is only what the colour rule made of those numbers (grep `drawnAs(` for the
+  list still owed a decision: 51 in 17 files, officeGen 15; none of them is a word a round reads falsely, below). `PAINT_STUFF` has no
+  'mixed': a name says one thing, and a row's word is what the row is (asphalt says plain). A door's leaf says its paint's word
+  (`lookTidy.ts lookDoors`; a `look.ts LOOK_DOORS` row says one a side). An old cut's core says its stuff in the cut record (`cut.ts
+  CUT_CORE_STUFF`, bits 12..16). A SHAPE'S PIECE (`scene/shapes.ts`, a box's `shape.with`) says its word as a box does, its own or its
+  paint's row's, and the box stood up for it carries it. A TONE OF A PALETTE ROW is made of what the row is: the kit's `toned` (`gwotKit.ts`)
+  and the snow levels' rock (`tools/levels/snowRock.ts`) hand their numbers through `tonedAs`, which is how ground dressing, stains, worn
+  paths and cut rock keep their earth, gravel and slab. The look page's hand-built pieces (`frontTry`, `lorryTry`, `passTry`) are made of
+  palette rows and say their words. The editor keeps, copies, sets and shows a paint's word (`editor/paint.ts`, the paint panel's 'made of' row), a
+  said plain included; a blank document's paints say theirs.
+  LEVEL FILES: every level file of the build is its generator's output, so each was written again by its generator
+  (`tools/levels/export.ts`, `tools/level-export.ts`). `tools/levels/stuff-bake.ts` brings forward a file laid WITHOUT its generator (the
+  old rule frozen in `tools/levels/stuffWas.ts`, for that tool and `tools/qa/stuff-audit.ts`'s before side only: delete the three when
+  nobody holds a file from before; `tools/levels/paintUsers.ts` stays).
+  WHAT WAS CHANGED ON PURPOSE, because a word is now read by more than the look (next paragraph) and these were the colour rule's
+  mistakes, each read by the level's own task or the hit table's: THE CAR PARK's paint, `asphalt`, says plain (no stuff the look has is
+  tarmac yet; its grey was drawn as bare iron, and the lived kit's iron fittings in the same numbers say metal themselves); the compound's
+  packed-earth yard says earth (drawn as wood) and its house's walls stucco (the partition's tan, drawn as cloth); the lot's kerb is slab
+  (`KERB_GREY`, drawn as sheet); the vending machine's body is paint, the dumpster's lids plastic, a sofa fabric, the anti-fatigue mat and
+  the lived kit's rubber ink rubber, a quarry-tile floor slab, a gravel hardstanding gravel, sandbags cloth, an exhaust metal; a picture on
+  a wall, black file folders, mugs, a planter trough, pull strips and three vehicles' bodies say nothing (the vehicles' words are the
+  vehicles task's); the registry's lacquered leaves say paint and the consulate's varnished ones wood.
+  NO SWITCH: it is not a rule of play and both stands draw the same. THE CHECK: `bun run tools/qa/stuff-check.ts` (14 lines;
+  `STUFF_BREAK=1` strikes the rows' words and fails lines 2, 3, 4, 7, 13 and 14; line 14 is a shape's piece; line 10 holds that in `src/game` a box's word is READ in at
+  most one place, the picture of a hit) and `bun run tools/qa/stuff-audit.ts --before <ref>`, which prints what every box was and is, by
+  kind and file, and exits 1 where one lost or moved its material: against the head before this series it lists the 1,046 below and exits
+  1, by design.
+  MEASURED ON THE BUILD: the 58 level files as they stood, read by the old rule, against their generators' new output: 41,285 boxes and
+  parts, 40,239 drawn as before and 1,046 not. What the kit and the generators SAY now, where the colour rule guessed: 286 desk and table
+  tops veneer where their paint's name said wood, 73 cabinets and lockers steel where their white was taken for paint, 130 chairs and bins
+  plastic, 54 seats fabric, 82 crate slats wood where their colour was a mud wall's, 81 tyres and mats rubber; 138 dark things drawn as
+  bare iron by their colour say nothing (black plastic, file folders, the asphalt a level stands on); and the single pieces named above.
+  A paint handed over by lineage (toned, stood in for) keeps its word: 209 pieces of ground dressing and cut rock kept theirs only once the
+  kit's `toned` handed its numbers through `tonedAs`. No box's colour, size or place moved (`lived-check` holds every level's own part to
+  its base with the words set aside).
+  A ROUND'S HIT WILL READ THE WORD, AND IS NOT THE LOOK: the hit picture's rule (HITSTUFF, `game/particleFx.ts saidSurf`; it joins after
+  this series, with its check) reads `Box.stuff`. Measured where both stood together, on the look's preview: with every box saying its
+  row's word that rule heard 18,701 of 37,425 standing boxes (389 before), and on 4,295 of them another surface than the paint's colour
+  gave: sandbags, tarps, rugs and carpets the soft thing where they threw concrete chips, mud walls concrete where drywall, wood furniture
+  wood where concrete, iron and sheet things sparks; picture only, the run's digest the same with the rule up as down. That is why the
+  words above were corrected and not kept as drawn. Of the 51 words nobody chose, a round read 13 otherwise than the colour and each read
+  true (duckboards and pallets wood, a coffee machine metal); the depot's walls in the partition's tan still say cloth. NOT MEASURED ON
+  THIS BUILD: the rule is not in it yet. On the page every leaf in one paint is one stuff (leaves whose own shade was at or above their
+  paint's were plain before).
+  NOT COVERED: thrown and dropped kit, a gun model's parts with computed colours and a magazine in the hand say nothing and are plain
+  (not measured: whatever their colour happened to match before is gone). No debris is written to a checkpoint; a broken wall's or a blown
+  table's slice is re-applied after a restore by the code that copies the word. An editor document kept in a browser from before says
+  nothing in its rows and draws plain on the look page until it is brought forward (`stuff-bake.ts <file>`). Still read off a colour, and
+  OUT of this: what a round, a charge and a blast make of a box (`STYLE.md`: the game reads paint). NEVER SEEN ON A GPU by a person. On
+  the look's preview a cloud card drew eight scenes before and after with no error, the same pictures but for the words changed on
+  purpose (an office car park no longer rusted iron); as joined to the build it has been drawn by nothing but the shader compiler.
 - **MARKS AS PAINT, A FIRST TRY** (`shaders/markings.wgsl markSoft`, behind `lookMarkSoft()` = `lookCfg.g.x`, 0 off the look page by gbuffer.ts's
   stub; the maintainer, 10-23: "we also need to get away from the pixel art textures"). A marking is still the level's 2-bit cell bitmap (2.5 cm
   cells), but on the look page it is not drawn as squares: the coverage is read over a one-cell footprint, cut back at half cover along a ragged line
