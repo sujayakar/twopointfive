@@ -516,7 +516,8 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
     // the room's north half (drawn only but the table: they lie in the lane and cost no cover), in colours that stand off the rug's maroon; six glasses. One
     // of theirs: an ammunition tin pulled up at the table's head as a seventh seat. Colour: mustard and teal on maroon
     L.room('sala');
-    // THE TEA TABLE STANDS SOUTH-EAST OF THE ROOM'S MIDDLE, the east row drawn up to it, and a walk is left between it and the west row. It stood in the
+    // THE TEA TABLE STANDS SOUTH-EAST OF THE ROOM'S MIDDLE, the second row of cushions along the rug's north edge at its head, and a walk is left between
+    // it and the west row (the rows sat either side of it; a row east of it where it stands now would lie half off the rug). It stood in the
     // middle (x 16.0 to 17.2, z 16.05 to 16.6), on two lines a man of this room walks when a pair goes round: from the north door across to the east door
     // (to the garage: 23.4 m bare, 25.9 with the table, over its limit) and from his post out by the north door (to the guard hut: 45.2 m of 46, 45.9
     // with it). 0.6 m east and 0.5 south is the least move that gives both back (tools/qa/wayround-check.ts; twenty-five places were tried)
@@ -524,8 +525,8 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
     bx(16.82, 17.5, 16.65, 17.01, 0.35, 0.364, P.brass); L.thing(16.96, 0.364, 16.83, 0.06, 0.07, 0.06, C.black);   // tray and pot
     for (let k = 0; k < 6; k++) L.mug(17.14 + (k % 3) * 0.11, 0.364, 16.76 + (k > 2 ? 0.14 : 0), CREAM);           // six glasses: there are guests
     for (let k = 0; k < 3; k++) cushion(15.15, 15.75, 15.62 + k * 0.47, 16.07 + k * 0.47, [P.brass, TEAL, CREAM][k]);   // the west row
-    for (let k = 0; k < 3; k++) cushion(18.05, 18.65, 16.12 + k * 0.47, 16.57 + k * 0.47, [ORANGE, P.brass, TEAL][k]);  // the east row
-    bx(15.15, 15.3, 15.7, 16.8, 0.075, 0.2, C.chair, true); bx(18.5, 18.65, 16.2, 17.3, 0.075, 0.2, C.chair, true);   // blue bolsters along their backs
+    for (let k = 0; k < 3; k++) cushion(16.5 + k * 0.47, 16.95 + k * 0.47, 15.62, 16.1, [ORANGE, P.brass, TEAL][k]);    // the north row
+    bx(15.15, 15.3, 15.7, 16.8, 0.075, 0.2, C.chair, true); bx(16.6, 17.8, 15.62, 15.77, 0.075, 0.2, C.chair, true);  // blue bolsters along their backs
     yb(17.2, 16.3, 0.17, 0.1, 0, 0.2, P.oliveDrab, 0.1, true);                                                    // the ammunition tin, at the table's head
     { K.prop('chair', 19.0, 16.4, 0, 3, [{ off: [0, 0.1, 0], h: [0.22, 0.1, 0.11], yaw: 0, albedo: C.chair }]); L.own('bolster'); }
     { K.prop('chair', 14.75, 16.4, 0.3, 2.5, [{ off: [0, 0.07, 0], h: [0.24, 0.07, 0.24], yaw: 0, albedo: ORANGE }]); L.own('cushion'); }

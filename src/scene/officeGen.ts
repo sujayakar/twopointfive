@@ -71,6 +71,20 @@ export type Opening = { a: number; b: number; y0?: number; y1?: number; mullions
  *  props, ceiling panels) over one fresh set of lists — what buildOfficeProcedural below lays the office out with, statement for statement as they were inside it,
  *  and what a generator for ANOTHER level builds with (tools/levels/: the scenario levels — same boxes, same palette, same finishes, same markings; no new art).
  *  Every call appends to the kit's own `boxes` / `props` / `lights` / `switchables`; `grp(name)` names the editor group of what follows (trace.groups). */
+/** THE TWO VENDING MACHINES' LIT BODIES, for whoever stands one up (the office's break room; the smoke lab's yard): the upper body's half size and paint, and its
+ *  markings with the emissive field's radiances scaled so the ONE light game.ts registers for it has the LUMINOUS intensity of the slab it replaced (luminance of
+ *  its mean radiance × its area = luminance of the old slab's radiance × the old slab's area; luminance, not the peak channel the light's intensity keys on: the
+ *  field's light is whiter than the pure red or blue slab, and matched on the peak channel the meter read a third more in front of the machines). `red` is the
+ *  drinks machine (a painted red body, satin), `blue` the near-black navy one. colW = the half width of the control column, which stands on a flush block; the
+ *  rest of the front stands on a plinth set 6 cm back, the dispenser's recess. fluxK × the old slabs' intensity. */
+export function vendingSpec(kind: 'red' | 'blue', TX: number, fluxK = 1): { h: Vec3; body: Vec3; marks: MarkingDef[]; colW: number; plinth: Vec3 } {
+  const lum = (c: readonly number[]) => 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2];
+  const red = kind === 'red', h: Vec3 = red ? [0.5, 0.775, 0.45] : [0.42, 0.775, 0.45], body: Vec3 = red ? [0.42, 0.05, 0.045] : [0.02, 0.03, 0.085];
+  const e: Vec3 = red ? [2.6, 0.5, 0.35] : [0.4, 0.9, 2.8], L = lum(e) * (red ? 0.84 * 1.3 : 0.72 * 1.1) * fluxK, make = red ? MD.vendingRedMarks : MD.vendingBlueMarks;
+  let marks = make(h, 1, TX);
+  { const st = markStats(marks[0], body, TX); const k = L / Math.max(lum(st.meanL) * st.area, 1e-6); marks = make(h, k, TX); }
+  return { h, body, marks, colW: red ? 0.15 : 0.135, plinth: [0.02, 0.02, 0.024] };
+}
 export function officeKit(trace?: GeneratorTrace, opts: GeneratorOpts = {}) {
   const MARKS = opts.markings ?? true, DEMOTE = opts.demote ?? true, TX = opts.texel ?? MARKING_TEXEL;
   /** the box's markings, if the lane's markings are on (spread into an add() / a prop part) */
@@ -658,24 +672,17 @@ export function buildOfficeProcedural(trace?: GeneratorTrace, opts: GeneratorOpt
     // Calibration: the window's LUMINOUS intensity (luminance of its mean radiance × its area) = the old slab's (luminance of its radiance × its area). Luminance, not the peak
     // channel game.ts keys the light's intensity on: the window's light is whiter than the pure red / blue slab, and it is luminous flux that the light meter and the eye
     // integrate — matched on the peak channel the meter read a third more in front of the machines.
-    const lum = (c: readonly number[]) => 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2];
     const VENDING_FLUX_K = 1.0;   // TASTE: × the old slabs' luminous intensity. 1 = the break room lit exactly as before (and the fields as pale on screen as the old slabs: AgX desaturates radiance ≈ 2.3 at this exposure); ~0.5 reads a saturated red / blue front in a room half as bright
-    const eA: Vec3 = [2.6, 0.5, 0.35], eB: Vec3 = [0.4, 0.9, 2.8]; const LA = lum(eA) * (0.84 * 1.3) * VENDING_FLUX_K, LB = lum(eB) * (0.72 * 1.1) * VENDING_FLUX_K;
     // Each machine = an UPPER body (the marked front: field + control column) standing on a black PLINTH set 6 cm back over its left two-thirds — the dispenser
     // opening, a real recess with a real shadow, its back wall marked black with the flap bar — and a flush block under the control column. (+3 boxes a machine
-    // over the single body; footprint and height unchanged, so the nav grid and the collision are what they were.)
-    const plinth: Vec3 = [0.02, 0.02, 0.024];
-    const bodyA: Vec3 = [0.42, 0.05, 0.045], hA: Vec3 = [0.5, 0.775, 0.45];       // the red machine: painted red body (satin: rough 0.5 — just over high's traced range)
-    let marksA = MD.vendingRedMarks(hA, 1, TX);
-    { const st = markStats(marksA[0], bodyA, TX); const k = LA / Math.max(lum(st.meanL) * st.area, 1e-6); marksA = MD.vendingRedMarks(hA, k, TX); }
-    const vendA = add({ c: [28.62, 1.125, 12.9], h: hA, albedo: bodyA, rough: 0.5, ...mk(marksA) });
+    // over the single body; footprint and height unchanged, so the nav grid and the collision are what they were.) The body, its paint and its calibrated marks are
+    // vendingSpec's (below: the smoke lab's floor stands the same two machines in its yard).
+    const A = vendingSpec('red', TX, VENDING_FLUX_K), B = vendingSpec('blue', TX, VENDING_FLUX_K), plinth = A.plinth;
+    const vendA = add({ c: [28.62, 1.125, 12.9], h: A.h, albedo: A.body, rough: 0.5, ...mk(A.marks) });
     add({ c: [28.47, 0.175, 12.87], h: [0.35, 0.175, 0.42], albedo: plinth, ...mk(MD.dispenserMarks([0.35, 0.175, 0.42], TX)) });   // A's dispenser recess (x 28.12‥28.82, 6 cm back)
     add({ c: [28.97, 0.175, 12.9], h: [0.15, 0.175, 0.45], albedo: plinth });                                                          // flush block under A's column
     switchables.push({ name: 'vending', boxes: [vendA], group: 'breakroom', on: true, baseEmissive: [0, 0, 0] });
-    const bodyB: Vec3 = [0.02, 0.03, 0.085], hB: Vec3 = [0.42, 0.775, 0.45];       // the blue machine: near-black navy body (its field's cap and frame)
-    let marksB = MD.vendingBlueMarks(hB, 1, TX);
-    { const st = markStats(marksB[0], bodyB, TX); const k = LB / Math.max(lum(st.meanL) * st.area, 1e-6); marksB = MD.vendingBlueMarks(hB, k, TX); }
-    const vendBBody = add({ c: [29.55, 1.125, 12.9], h: hB, albedo: bodyB, rough: 0.5, ...mk(marksB) });
+    const vendBBody = add({ c: [29.55, 1.125, 12.9], h: B.h, albedo: B.body, rough: 0.5, ...mk(B.marks) });
     add({ c: [29.415, 0.175, 12.87], h: [0.285, 0.175, 0.42], albedo: plinth, ...mk(MD.dispenserMarks([0.285, 0.175, 0.42], TX)) });   // B's dispenser recess (x 29.13‥29.70)
     add({ c: [29.835, 0.175, 12.9], h: [0.135, 0.175, 0.45], albedo: plinth });                                                          // flush block under B's column
     switchables.push({ name: 'vending2', boxes: [vendBBody], group: 'breakroom', on: true, baseEmissive: [0, 0, 0] });

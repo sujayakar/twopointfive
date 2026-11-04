@@ -1148,6 +1148,81 @@ interleaved and filtered to their quiet minimum, and a row whose p75 sits far ab
   every 68 minutes (one frame's jump in its shape); `brazier*` is a name rule, not a level key; a brazier can still be shot out or jammed and the flame dies with
   its lamp. NEVER SEEN ON A GPU OR HEARD: the flame in motion through the temporal resolve (its 18-step dither, one-pixel embers under the clip), the flicker's
   feel on the yard, the plume, the sound, and every cost above.
+- **THE LOOK PAGE'S KIT** (11-01; `src/main.ts`, the block after `loadSandbox`; the maintainer: "for the look lab, can you make it so we have unlimited
+  ammo and all equipment? want to play with smoke grenades", "turning off fog of war would also be good for /look too"). On the look page alone: the
+  unlimited ammunition row is up from the start (so a thrown can goes back on the belt and a magazine never empties), Sam is never without two cans of
+  smoke, two stun charges and two frags whatever card he was dealt, and the fog of war is down unless the link asks for it by name (`?fow`).
+  `?lookkit=0` = the kit as dealt, the sandbox row as saved and the fog as the link has it. Not topped up: the rifle's rings and shells where it has no
+  tube, sticky cameras, the wand, wall charges. CHECKED: the look page booted on the software adapter with the kit lines (ammunition up, two of each
+  can, no error); the fog line was added after that boot and is typechecked only. Never played.
+- **THE LOOK PANEL'S "FIRE SMOKE" ROW** (10-28; `lookConfig.fireSmoke`, 1 on the look page, 0 = the fire's smoke as the build files it;
+  `game/fire.ts FIRE_LOOK_SMOKE`; the maintainer, of a drum fire on the look page by day, on a GPU: "smoke plume from fire looks a bit weird,
+  disconnected from fire. should be billowing more"). TWO CAUSES, both in `FIRE.smoke`. DISCONNECTED: the build files the gas with its middle 1.9 flame
+  heights over the coals (2.2 m over them: its foot is above a standing man's head so that no sight line near a fire is cut, the bullet above), and a
+  camera that looks down on the yard shows that height as a gap beside the flame. With the row up the steady source's middle is `up` 0.8 of the flame's
+  height over the coals, a little narrower and thinner, so the gas climbs out of the flame's tips. NOT BILLOWING: a steady source makes a smooth column.
+  With the row up the fire also PUFFS: every `puffEvery` 0.42 s a burst of thicker, hotter gas for `puffSecs` 0.26 s, a little off the middle and never
+  twice alike (the game's clock and the fire's own seed, no die), with a divergence of its own (`puffExpand`, smoke/types.ts `expand`: it pushes the air
+  round it apart, which the solver rolls up). All of them LOOK sources (`look: true`), so the headless stand's own smoke hears of none of them.
+  **THE PRICE, to be settled before any of it goes to the build:** in the page the men's sight lines are read off the solver, so a line that passes
+  within a hand of the drum between chest and head height now meets smoke; nobody has measured how much (`fire-page.cjs` asks those lines).
+  SEEN on the software adapter only (the pass at dusk, the solver stepped 10 s with the row up, then 14 s with it at 0; 480 × 300, a play view and a
+  close one): with the row up a pale column leaves the flame's own tips, warm at its foot, and widens as it climbs; with it at 0 the gas shows first well
+  over the flame. Whether it BILLOWS cannot be judged from a still at that size. NEVER SEEN ON A GPU; the numbers are a first setting.
+- **A FIRE AS ONE COLUMN, ON THE LOOK PAGE** (10-29; `lookConfig.fireFit`, on with the Fire smoke row up, `?firefit=0` = the pieces as they were;
+  `game/fire.ts FIRE_LOOK_SMOKE` and `axisAt`). The maintainer on a GPU, with a simulated fire beside his shot of the pass's drum: "interaction of smoke
+  with embers, heat distortion, hot part of the plume doesn't seem to look right. they should fit together more naturally?" READ OFF HIS SHOT: the gas over
+  the flame is a pale glowing haze (white solver smoke a hand from the fire's own lamp); the soot the flame draws is dark and stands on the flame's
+  leaning line while the gas was filed straight over the mouth; the embers leave the coals in a wide cone. WITH IT ON: (1) the steady source and the
+  puffs are born on the flame's own middle as `fire.wgsl fireBend` leans it (`axisAt` is its CPU twin: the capped wind x the look's lean) and leave along
+  that line's slope, not the old lean on top of it; (2) the gas is SOOT (`soot` [0.34, 0.31, 0.29], an emitter `tint`), so the volumetric pass's dust twin
+  draws it: lit warm from below by the fire, grey above, thinned at its edge and broken into billows with a lit side; (3) the drawn soot is only the
+  flame's dark tips: x 0.6 and gone by two flame heights, by each fire's OWN share (`FireRec d.z`, `FireShown.sootMix`, eased 0.5 a second and up only
+  while that fire's gas is filed, so a fire past `smoke.viewR` or on the rung that sheds its smoke keeps its drawn plume); (4) embers leave the upper
+  flame (`emberUp` 0.72 of its height) on the leaning middle, along it, in a cone of 0.2 rad at 1.5 x the table's speed; a crack's throw is wider from
+  the same place. The shimmer already followed the lean. No knob, no journal key: host's book and look sources only (`look: true`), nothing the game
+  reads. `tools/qa/fire-lab.cjs` takes `LOOK=fit=1` for the handover alone.
+  **THE PRICE, to be settled before any of it goes to the build:** a tinted source keeps `SmokeBinding.dusty` up, so the dust twin of the volumetric
+  march (three noise reads and four more density taps a sample in the soot, four more a light for its self shadow) runs on every frame a fire is in
+  range, where it ran for seconds after a blast; nobody has timed it. The twin draws a cloud's edge thinner than a sight line reads it
+  (`dust_look.wgsl`), on top of the Fire smoke row's own price above.
+  CHECKED: typecheck; `fire-check` 23 of 23 on both stands; `shaderrows-check`, `dice-check`, `rollback-check --static`; the fire's shader alone
+  (`fire-lab.cjs`, with and without the handover) and the look page (119 of 119 programs, no error) on the software adapter.
+  SEEN on the software adapter only (the pass at dusk, 18 drawn frames a tenth of a second apart and four more, 480 x 300: a play view and two from the
+  side; a frame there is over a minute): the embers climb in one narrow stream off the flame's tips along its lean; the flame's tips go dark red into a
+  thin grey column on the same line; from above the soot stands over the flame as a soft dark cloud, bluish under the dusk sky, with little of the
+  fire's own light in it (whether the lamp warms it on a GPU, where it made the white haze, is not known, nor whether 0.34 is too dark). NEVER SEEN ON A
+  GPU, never in motion; the numbers are a first setting.
+- **THE FIRE ON THE LOOK PAGE, AFTER HIS GPU LOOK OF 10-30** ("embers not visible in fog of war", "overall fire looks better but i can't really see the
+  smoke now", "would it be possible to have the fire fluid sim influence the snow particles?"). Three things, all look page only, in `game/fire.ts
+  FIRE_LOOK_SMOKE`:
+  (1) EMBERS UNDER THE FOG (`emberFog`): `FIRE.fog` keeps a known fire's flame in the fog's picture and the particle draw cut its embers there like
+  anything the team did not make, so the drum behind Sam's back burned without sparks. An ember of a fire whose flame the fog keeps (`K.fog` and the lamp's
+  class is not 1) is now filed with the particles' `ours` bit up, as the team's own effects are; a fire never seen lit keeps neither. The build cuts them
+  still (the fog's owner's call). It follows the fog's own row: with `FOG.ours` off (`?fogours=0`, an old tape) no ember is kept. `?emberfog=0` = as it was.
+  (2) THE SMOKE WAS ERASED BY THE DUST DRAWING. `dust_look.wgsl` thins a cloud within 0.2 to 0.5 m of where it ends, right for a room of dust; a fire's
+  column is 0.2 m wide, so every sample of it was an edge and it was drawn at about a tenth. The software stills of 10-29 did not show it because they
+  were taken in still air after the gas had pooled round the drum. Now a cell whose tint's blue is over its red (`DUST_FIRE_AT`) is SMOKE OF A FIRE: it
+  keeps the tint, the billows and the lit side and is neither thinned at its edge nor frayed (and skips the four edge taps). Every dust in the game is
+  warm or neutral (`game/dustLook.ts`, the burst's `smoke`), so none is read as that. `soot` is now a cool grey [0.46, 0.48, 0.53] (was 0.34);
+  `?firesoot=0` = the warm soot, so the column thinned away as it was. THE RULE RESTS ON A COLOUR: the first cool dust filed on the coarse lattice
+  would lose its edge too, and a `soot` retuned to neutral loses the column again. A bit of its own in the cell's word is the mend, and there is no spare.
+  (3) THE FALLING SNOW (`lookConfig.fireSnow`, `?firesnow=0`; table `snow`). The flakes are GPU particles carried by the wind's records and the air
+  field; the smoke solver's velocity is not published to them. So each fire near the view is filed with the particles as one more record of moving air
+  that only the falling snow reads (`render/particles.ts setHeat`, a jet record with iflags bit 6, which `windAir` skips; `particles.wgsl heatAir`, in the
+  compact kernel too): a jet up the flame's leaning middle (2.6 m/s at the mouth, halved 2.2 m up), a draught in toward the fire round it (0.3 of that,
+  fastest 0.9 m out), and a flake in the hot of the column melts (`HEAT_MELT_AT`, `HEAT_MELT_RATE`; how hot is the air's speed against `HEAT_FULL`, a
+  full fire's, so a fire burning low melts less). A closed form beside the solver: the two agree on
+  where the column stands and how it leans; a puff's roll does not move a flake. Publishing the solver's own velocity to the particles would be the real
+  thing and is not built. The kernel's text is behind the prelude's `LOOK`, so the build's kernel is as it was. The records ride behind the wind's in the
+  same block and are the FIRST LEFT OUT when it is full (eight records, less a blast frame's impulses). A fire put off in a running page clears them.
+  THE CHECK: `tools/qa/fire-check.ts`, the line 'look page' (kept embers, one jet up the fire's middle, none off the look page, with the rows off or
+  with the fire put off; `FIRE_BREAK=1` fails it), on both stands. SEEN on the software adapter only (480 × 300, the pass, the page booted
+  with the fog on and Sam in a room away from the yard): at dusk the embers are drawn over the flame in the picture taken with the fog on, and with the
+  fog put off the smoke stands as a pale column from the flame's tip to about two metres over it, as wide as the flame, faint against the wall; whether
+  the drum stood on floor the fog hid in that picture was not proved (the check line holds the rule). AT MIDDAY THE DRUM IS OUT: `game/hours.ts` puts the
+  level's lamps out by day and a fire is a lamp, so there is no flame, smoke or hot air to see then. The flakes round the fire were never seen moving,
+  on any adapter. NEVER SEEN ON A GPU.
 - **The floor rung draws an open fire without its smoke (FIRE SMOKE SHED: `settings.fireSmokeShed`, `ui/quality.ts fireSmokeOf`; 2026-10-23).** Asked when the fire
   was merged: price it by preset, and say whether a preset should drop its smoke. The maintainer's rule stands (the smoke stays near High and other things pay the frame
   budget first), so this is the one rung with nothing left to pay. THE PRICE, by the cost model and timed on no GPU: the fire's smoke is the solver's fixed 0.5 ms (other
@@ -1196,6 +1271,752 @@ interleaved and filtered to their quiet minimum, and a row whose p75 sits far ab
   shader's first bound were written; stopped early, so its error list was never read): verylow boots 119 of 119, `fireSmoke` true, a source filed within the first
   eight frames, 125 bricks. NEVER SEEN ON A GPU, and nobody has watched the ladder move beside a fire: the auto rule is the self-test's alone. A take that would settle the prices: the pass and mission 1's level by the fire, F8 at high and low, the page / `?firesmoke=0` / `?fire=0`, at the zoom the
   game opens at and at the closest; and a fire under a roof, where the plume pools (never measured).
+- **SURFACES, A TRY (`?surf` at boot; `render/frame.ts surfTryConfig`, OFF; the scene prelude's const `SURF_TRY`, `shaders/surface.wgsl`, read in `gbuffer.wgsl fsBox`
+  after the detail layer and before the wet ground and the markings):** an answer to "what would textures and normal maps buy on today's boxes", NOT the look
+  (`STYLE.md` rule 1 stands until the maintainer says otherwise; the picking of it is theirs). With the word, a box's PAINT is classed against `GWOT_PALETTE`
+  (`gbuffer.ts surfaceWgsl` writes `surfClass`: an exact test per palette paint, then a darkened-paint test for the classed ones; eight classes: mud wall, plaster, block,
+  earth, gravel, slab, wood, sheet) and the class's written pattern changes the pixel's albedo, normal and roughness in the g-buffer: no image, no binding, no
+  level data. Capped faces, glowing boxes, turned boxes and paints of no class are as they were. THE RELIEF IS HELD UNDER `SURF_TILT` 0.18 so the shading normal stays
+  inside `bounceLeftNoWall`'s 0.98 (a normal further off an axis asks the walled bounce read); detail finer than the pixel's footprint is faded out. WHAT SEES IT:
+  the g-buffer's readers only (direct, the filters' edge stops, composite). Rays, the light cache, reflection hits, the cards and the LIGHT METER read the box's
+  flat paint as ever, so nothing a man senses moves. Without the word the const is false and the branch is dead code, but it is still TEXT: the prelude gains the one const
+  line and the two g-buffer modules carry `surface.wgsl` and the generated `surfClass` (about 16 KB each) on every page. `surf` rides a replay page's address
+  (`ui/replaykey.ts VISIT_FLAGS`). KNOWN WRONG, left so because it is a try: THE CLASS IS A GUESS FROM THE COLOUR, so a paint outside the GWOT palette that is
+  a darker shade of a classed one takes its class (on the office: lino, stone and concrete draw as block, cartons as mud wall; try it on the GWOT levels), and
+  rain-darkened earth keeps or changes class while wet gravel and slab go plain; the pattern is laid in WORLD space for six of the eight classes, so it stays
+  put while a pushed prop slides under it; the footprint is the across-the-ray pixel size, too fine on a wall seen at a low angle (expect crawl there); relief past
+  `SURF_TILT` is clipped to a facet (the ribs of sheet metal most of all); a box yawed a few degrees can still lean past 0.98. A cut box's own faces keep the
+  pattern, its cut faces are bare. No check holds any of this. SEEN: on the software adapter only (the compound, squad of four, very low, 800×500, one seed,
+  night and midday, 118 of 118 pipelines, no GPU or console error, the same two views with and without the word). Never seen on a GPU: the look at the play
+  resolution, motion, shimmer under the temporal blend, the noise it adds to bounce light, and the cost (it is raster work, which no trusted timer covers).
+- **THE LOOK PROTOTYPE** (`?look` at boot, or the page `/look` = the game's page with `look` on the pass at night unless the link names its own `levelFile`; `?look=relief:1.4,air:2` opens it with those
+  amounts, each held to 0‥4, and `?look=plain|0|off` stays the GWOT dress's word and does not raise it; `render/frame.ts lookConfig`,
+  `shaders/look.wgsl`, `render/lookTex.ts`, the panel `ui/lookpanel.ts`; OFF on every other page). A place to find out how far materials carry a world of boxes,
+  NOT the look when it was made; the maintainer said yes to a material look on 11-01 and `STYLE.md`'s rule 1 and Surfaces are rewritten for it on this branch (the bullet THE MATERIAL MAPS ARE THE LOOK NOW, below, has what changed with that). Where the surfaces try above writes a pattern in the shader, this one samples MAPS:
+  eleven tiling materials (the try's eight classes and three more for what stood untouched beside them: cloth, bare metal and painted metal; the class is
+  `lookClass`, the try's table with those rows added, `gbuffer.ts LOOK_OF`) made on the CPU at boot, 512 × 512 over 2 m, as two mipped `rgba8unorm` texture
+  arrays (A = paint multiplier ÷ 2 + height, B = tangent normal + roughness + cavity; no image file ships). They sit at the g-buffer object group's bindings
+  11 to 14 with a repeating, anisotropic sampler and a 96-byte uniform block, ALL FOUR ONLY ON THAT PAGE: without the word the g-buffer modules get a stub of a few lines and the bind group is the page's as it was. What stays on every page: the prelude's `LOOK` / `LOOK_BOUNCE` consts, `lookGeoN` in `common.wgsl`, and one
+  flat `u32` varying on the box vertex output (zero). FOUR LAYERS, each a slider on the panel (`gbuffer.ts lookAmounts`, 0 = that layer off, all 0 = the boxes
+  as the game draws them, by an early return: none of the reads run): the maps (paint, relief, finish, cavity); the repeat broken for the four materials without courses (a second read, turned and
+  shifted, cross-faded by a slow noise and by height); weather that follows the BUILDING (a wall's foot damp to a ragged line with its tide mark, its head
+  bleached with runs under it, slow blotches, and on the ground the level's traffic map: walked earth pale and flat, stones against the walls); and small
+  boxes' edges rounded in the normal and rubbed pale. THE NORMAL: `fsBox` stores the tilted normal with the normal target's alpha 0 (a code no other writer
+  uses for a surface EXCEPT ON A SNOW LEVEL, where the alpha is the snow's mark in four steps: 1 plain, 2/3 thin snow, 1/3 snow, and 0 was only the clear.
+  There the tilt takes 0 where no snow lies, a snow pixel keeps the snow's normal and its mark, and on the look page `composite.wgsl snowGlowAmt` reads an alpha
+  under 0.17 as no snow. Every read and write of that alpha the prototype adds is a line of its own tagged THE LOOK PROTOTYPE in its comment, and
+  `snowglow-check` and `snowsparkle-check`, which hold the mark's writers and readers by their text, drop tagged lines before they read). `gdown` hands the working-size targets the box's own
+  FACE (`lookGeoN`: the box axis the normal leans on most, exact while the tilt is under `LOOK_MAX_TILT` 0.48; a mark laid over the relief, `decals.wgsl`, is laid on the face and the two are held under the cap together; a tilt under 0.02 is stored as the face, unmarked), so the reservoirs, the filters, the gather,
+  the reflections and `bounceLeftNoWall` read the flat wall they always read. Three readers see the relief: `sharp_direct.wgsl` scores each light that reaches the cell a second
+  time on the tilted normal and re-weighs each class's result by that ratio over the live lights' sum (capped at 4; a light the face itself turns from gives
+  nothing), `composite.wgsl` leans the bounced light by how far the facet looks up (`LOOK_BOUNCE` 0.7), and the fog of war's picture (`fogofwar.wgsl`, which
+  has no id to find the face by) shades what it remembers with it (the cap keeps a wall's facet under its `N.y > 0.5` test for a top). IT NEEDS SHARP DIRECT (every preset has it): with `?nosharp`
+  the working-size passes read the tilted normals themselves. Rays, the light cache, reflection hits and the LIGHT METER read the flat paint as ever, so
+  nothing a man senses moves. KNOWN WRONG, left so because it is a prototype (the first two and the last were mended on 11-01, the bullet below): the class was a guess from the colour a corner was handed; the maps were
+  laid in world space for six of eleven classes, so a pushed prop slid under them; relief past the tilt cap is clipped; the bounce's lean assumes its light
+  comes from above, and on the ground a facet can only lose bounce, never gain it; a facet lit by a light that only grazes the face gets at most four times
+  that light, and a light that reaches the cell but is shadowed at the pixel still has its say in which way the relief reads; the edges rule is by size (a box
+  under 1.3 m on its long side and 1.6 m tall), so two small boxes laid edge to edge show a groove; the maps cost about 5 s of the boot and 31 MB of texture. No check holds any of this.
+  ON A SNOW LEVEL (the second round, made for the pass; the panel's 'Snow that clings', 0 = none of it): `look.wgsl lookSnow`, called from `fsBox` for the
+  level file's own boxes, reads the snow field's cover. A TOP left out under the sky (a crate, a stack of planks, a sill, a gatepost) takes a cap of the
+  ground's own snow with a ragged, domed edge. A FACE that stands on open ground takes a bank against its foot, higher on the side the wind blows at,
+  with the snow's normal and mark; above the bank a thin rime and round clots that fade a stride up, which are paint and finish only. Never on bare metal
+  (stoves, flues and braziers are warm), on a lit, turned or glass box, or on a box painted as snow or as a path (a marking on a face is covered like the face). BARE EARTH AND GRAVEL within 0.3 m of lying snow are
+  frozen: frost grains, and dark ice in the low places, smooth enough to show a lamp. LYING SNOW (`look.wgsl lookGround`, one tagged line in `fsBox` and one in `snow.wgsl fsSnow`, after `snowShade`): its whole relief (the drifts' slopes,
+  the wind's ridges, the prints and their rims) × the panel's 'Snow relief' (1 = as the build draws it; the page opens at 1.5), and 'Snow crust': fresh snow
+  the wind has glazed, in streaks drawn out along it, takes roughness 0.56, which is over every preset's `rt.maxRough` so no glaze asks for a reflection ray.
+  The steeper normals are the snow's own, marked as snow: the working-size passes read them as they read the build's (the tilt is not handed back as a
+  face), so more relief is also more for the filters to hold still. AIR (the panel's row, `lookConfig.air`; 1 = the level's own haze, 0 = none) is × `settings.hazeDensity`
+  in the frame block and in the beams' air line. Known wrong here: a cut piece (`gbuffer_cut.wgsl`) takes no clinging snow, so a wall loses its bank where
+  a blast cut it; the frost reads the field, which knows no roof, so an earth floor inside an outer wall takes a hand's width of it along the wall; the
+  bank and the caps are paint: no ray, bounce or meter knows them, as with the snow's own hills.
+  SEEN: on the software adapter only (round one: the compound at midday; round two: the pass at night; squad of four, very low, one seed, 119 of 119 pipelines, no GPU or console error). Never seen on
+  a GPU: the look at the play resolution, motion, shimmer, and the cost (anisotropic array reads are raster work, which no trusted timer covers; read the
+  page's fps with the panel's "stay plain" box on and off: that measures everything but the class test a corner and the wider bind group).
+- **A GEOMETRY TRIAL** (`src/scene/geoTry.ts`; on only on the look page, `?look`, with cut boxes on; `?geo=0` or the look panel's Shapes button
+  leaves it out; no switch table and no state of its own: `main.ts geoTryOn` reads the link). Asked 2026-10-23: "how viable other modeling systems
+  (low poly triangles, analytic surfaces, SDFs) are for geometry", then the trial picked from a card. The answer tried is the CUT BOX
+  (`scene/cut.ts`), because the raster, every GPU ray and every CPU ray already meet it as one solid: nothing new to keep in step. It runs once,
+  after the level file loads and before its boxes go to the world (`bootLevel`), and sets `cutConfig.swap` false at boot (its cut boxes stand for
+  the whole visit, so the one set of ray programs with the cut rule is compiled from the start).
+  ROUND THINGS (`roundStacks`): the kit's octagon (`gwotKit.ts round`: four slabs 45° apart) becomes ONE regular twelve-sided prism, the box's four
+  faces + eight planes (the record's whole room), with `Box.cutRound = 2` (packed in the core row's w as 1024 × (1 + the axis); never with glass. Until the merge of 10-25 it was 128 ×: the build's ROUND THINGS, `scene/round.ts`, took 128 as their own bit, a cylinder about the box's y that every ray meets; `gbuffer_cut.wgsl cutRoundAxis` reads both and shades both with the one block, so on the look page a level's drum is the build's round thing and the trial's prisms are the lorry's wheels and the logs).
+  The other three slabs stay in the list, hidden (`NoPrimary | NoShadow`, shrunk): a level file's box indices are names. In `gbuffer_cut.wgsl
+  fsBoxCut` a round's side faces are one face: the normal turns with the point, marks run round it (the long face's band is put on all four sides;
+  a lid's one-paint patch is drawn again as a disc; a drum's two-paint lid is let go and the shader draws a rolled rim). The look's paint and its clinging snow
+  are rules that run along a flat face, so each is asked a quarter of the round at a time (the box face the normal leans to) and what it leans the
+  normal by is added back onto the round; such a pixel is never marked as a tilted normal (`common.wgsl lookGeoN` would snap it to a box axis). The
+  silhouette, the shadow and every ray keep the twelve flat faces. The snow hook knows a round about y only. On the pass: 19 octagons (drums, tyres, two stoves, the oven), so 57 fewer boxes for a ray to meet.
+  A BROKEN WALL TOP (`breakWallTops`): a yard wall gets one bite where nothing tall stands against it and no lamp or alarm hangs, no nearer than 10 m to
+  another bite (`BITE_APART`). A YARD WALL IS A WALL WITH THE SKY ON BOTH HANDS (changed 11-02; asked that day: "new assets or things for other
+  levels", because the tests will run on more than the pass): a plain upright box 3.4 m or longer and under 0.4 m thick, standing on the ground, with
+  free floor under the open sky two cells out on both sides of it the bite's whole length, on the renderer's own floor plan (`render/placeField.ts
+  skyPlan`: the plan the light of a place is read on, made of the level's boxes before the trial). A house's wall has a roof on one hand and is never
+  one. Until then the test was a coping slab of the wall's own length on its top, which only `gwotKit.ts` lays, and "something tall against it" was
+  asked by a thing's LONGER side both ways, so a wall ten metres long five metres off kept every bite away: the rule fired on the pass alone (2), and
+  on no level built before the kit. Now, from the files as they are: the pass 3, the compound 4, the crossing 6, the police post 5, the bazaar 3, the
+  depot 2; the block, the records office, the warehouse and the barracks none (they have no wall in the open). A coping is one thin plain slab in
+  the wall's line that runs on past the bite both ways, whatever its length (one slab may cap several walls), and is broken with the wall, as is the
+  snow a level laid on it; anything else lying on the top there, or drawn on the wall's face by it (an alarm's housing is two boxes no ray meets),
+  keeps the bite off. A BITE IS THREE TO FIVE STRETCHES, NONE UNDER 0.42 m (`PIECE_MIN`, `BITE_LINE`): the floor plan takes an upright box under
+  0.4 m long for a post, and the five stretches a bite was until then were five posts to it, a gap in the wall on the plan `wallSides.ts` keeps the
+  light of two places apart by (so on the pass's two bites for as long as the trial has stood). `breakWallTops` returns the bites it made.
+  The check: `bun run tools/qa/geotry-check.ts` (11 lines: a yard built by hand, a roof on one hand, one coping and its snow over two walls, posts,
+  lamps and alarms, every level's counts, no slab over either hand of a bite, the 2 m line, nothing left in a gap, the floor plan's wall cells;
+  `GEOTRY_BREAK=1` takes every spot for open sky and fails three). A LEVEL'S COUNTS ARE A FILE OF ITS OWN since the join (11-04):
+  `tools/qa/fixtures/geotry/<level>.txt`, "<round things> <bites>", no file = none of either, written in the commit that changes the level (the
+  folder's README). Until then a table of ten levels stood in the check's source, every level commit met in it, and it was stale the day the kit's
+  tyres and drums became round things (the depot: 10 for 0). EVERY level file is asked now, 44 of them and 106 bites where ten levels gave 32, which
+  found one fault of the check's own: it measured a turned box by its unturned size, so a container stood across the gwot yard read as hanging in a
+  bite three metres away. THE FINGERPRINT MOVED on every level that gained or lost a bite, the pass among
+  them (one of its two bites moved 4.9 m along the road wall and a third came in the west wall): look-page checkpoints and recordings of those
+  levels from before are refused, and `?geo=0` still takes the round things out with the bites. Seen: stills of the compound and the pass on the software
+  adapter at midday (the bite by the pass's road gate reads as a notch with its coping and snow broken), each booted with no GPU error. NEVER SEEN ON A GPU, and nobody has played
+  a level with them (a bite's top is above a standing eye and the 2 m line a sound is carried over; no run tally was taken).
+  ROUND THINGS on the other levels are what their kit says: the crossing 28, the police post 19, the bazaar 6, the compound 3; the levels furnished
+  by the older kit (`tools/levels/livedKit.ts`: a drum and a tyre are ONE square box there, and a loose drum, a bucket and a stool are props) have
+  NONE, and nothing in a level file says such a box is round. Making them round is a change to that kit and a new export of those levels (the build
+  branch's, not done). Of a bite:
+  the wall and coping are split at the bite and three to five cut boxes with slanted tops, each a step off its
+  neighbour, fill it; the level's snow caps on the coping are cut back to both sides of it; five picture-only lumps lie at the foot. The pieces are `Box.cutOld`
+  (512 in the core row's w): on the look page their cut faces take the look's paint as a face of the core's stuff, and the snow lies on the ones
+  that look up. A blast's fresh cut never sets it. A bite's middle stops at 2.0 m and its lowest edge at 1.98 m: no standing eye gains a line, and the
+  wall still stands over the 2 m line a sound is carried across (`collision.ts`). New boxes are APPENDED (nothing is removed), so `levelFileOf(level).boxes` is shorter than `level.boxes` on that page.
+  Known wrong: what pushes against a box meets the UNCUT box, so a man slides round a drum's square, a hand's width out from the round at its four
+  corners (the octagon was nearer); the bank of clinging snow steps at the four quarter lines of a round; the authored snow caps on a drum and a
+  tyre stack are still the kit's squares; a blast next to a round cannot cut it further (its record is full), and a wall charge on a piece of the bite
+  rebuilds it with a square top (`wallcharge.ts` does not read `cut`); the lumps cast no shadow. The trial changes what a ray and a body meet with no
+  knob and no journal key: only the level's fingerprint tells a save or a recording made with it from one made without (each is refused on the other).
+- **GROUND THAT RAYS CAN SEE, A TRIAL** (`src/scene/groundField.ts`; asked 10-23 after the geometry trial: "do both that and rays on the ground"). On
+  THE LOOK PROTOTYPE's page only (`?hills=0`, or the look panel's Ground button, puts it off; the page loads again). The snow hills were PICTURE ONLY: a ray
+  met the level's snow boxes under them, never the hill. Here the hills' height, as their mesh draws it (`snowField.ts` `mound`, 10 texels a metre, a texel
+  with nothing on it a finger under the ground as the mesh's corners are), rides in `boxMat`'s LAST rows (after the cut table: no new binding, 452 KB),
+  with a head row and the highest hill of each 1 m plan cell in front. `common.wgsl ghHit` marches the stretch of a ray that runs between the ground and
+  the highest hill, 0.1 m a step and 40 steps at most (a longer stretch in longer steps), one row a step over a cell with no hill, and answers the last
+  place the ray stood above the surface (four halvings), so what is shaded or traced on from a hit starts outside the hill. A ray that STARTS under the
+  surface meets nothing: the hills are a skin seen from above. It is asked by `occluded` (after the boxes leave the ray clear), `occludedT` and the
+  direct light's soft-character path (the hill is the cap a nearer box still beats) and both closest-hit walks (the hit is the ground slab's, its normal
+  the hill's slope; `fgather.wgsl giPointOnBox` lets such a sample keep its history). `occludedTBoxes` itself is untouched, so the fog of war's sight
+  and the walled cache read are as they were. Every pass that traces light takes it: the direct light's shadows, the gather, the cascades, reflections,
+  the volumes, the particles AND THE LIGHT METER (`probe.wgsl`): on that page a man behind a bank is darker to the meter than the headless stand-in
+  says. The game hands the rows over where it hands the field to the g-buffer (`game.ts syncSnowLook`), and whole again after a blast digs a hill
+  (`stepSnowTracks`).
+  Switch: the prelude's `const GROUND_RAYS` from `groundRayConfig.on`, raised by `main.ts` at boot; off = the reads are dead code and the buffer no longer
+  (the prelude gains one line of text on every page, the same on each). Not a rule of the game: no knob table, no journal key, no check of its own.
+  THE OPEN GROUND ROLLS (`?roll=<m>`, 0 to 0.25, off unless asked; `buildSnowField`'s `roll`): the lying snow under the open sky is baked with a slow
+  swell that deep at most, thinner where it is trodden or old (a path reads as a trench through it), none on cleared ground, under a roof or in a wall.
+  The mesh then covers the whole yard (88 k quads on the pass at 0.14, 40 k without) and the rays meet it. Nothing in the update reads it: a man's feet
+  stand on the level's flat ground, up to the swell's depth under the picture's snow.
+  Not in it: the hills' fine relief (the swell, the wind's ridges) and the boot prints, which stay a matter of the shading normal; a hill's own pixels
+  start their rays a finger and a half off the mesh and `GH_BIAS` (8 mm) is all that keeps the mesh's triangles and the march's four-texel blend apart.
+- **THE LOOK PANEL IS A PAGE OF THE DEBUGGER** (10-31; `ui/lookpanel.ts buildLookPanel(panel, …)`, `LOOK_SYSTEM` = 'Materials prototype', 'Look' on the
+  rail; `ui/panel.ts` is not changed). The maintainer: "there's also some flickering where the debug panel would help -- could you make the materials
+  prototype menu just another tab in the debug panel?" The look's rows were a fixed box of their own in the debugger's corner and over it, so on the look
+  page the debugger (the debug views, the denoiser, the gather) could not be used. Now they are sections of one more system of the debugger, made with its
+  own rows: Layers (a slider a row, a dot puts one back, the section's ↺ puts them all back; the frame's cost on top), Compare (hold = plain boxes, a switch
+  to stay plain), Hour, sun and moon, Quality, Trials, and Performance and Character lab once the page has made their engines. The debugger's search finds
+  a look row by its name or its tip, and backslash shuts and opens the lot. The page still OPENS with the panel up on that system (`panel.show`), as the box
+  was always up; so on the look page a key pressed with the pointer over the panel is the debugger's (a letter goes to its search), where the old box let
+  it through to the game. A row follows `window.__look.set` now (the panel reads its rows back each refresh); the old sliders did not. SEEN: the look
+  sheet's boot on the software adapter (`look-sheet.cjs --eval`, below): the system is on the rail and shown, a slider moves `lookAmounts`, its dot puts it
+  back, no page error. Never seen on a GPU or driven by hand.
+- **THE LOOK SHEET** (10-31; `node tools/qa/look-sheet.cjs`, its head has the flags). The maintainer, after finding a fifth day case himself: "overall i
+  worry that we're finding these cases one by one and not fixing them systematically. is that accurate?" It is: the day picture is the night renderer plus
+  a stack of corrections, each tuned on one view. The sheet is one boot of the look page on the software adapter that draws five places on the pass (the
+  yard with Sam in it; the yard with Sam indoors; a room with windows with Sam in it; that room with Sam in the yard; a windowless room with one bulb) at
+  every hour, as one picture with a table of how bright and how wide each cell is shown. DRAW IT BEFORE AND AFTER ANY CHANGE TO THE DAY'S LIGHT OR
+  EXPOSURE AND LOOK AT EVERY CELL before the change is called done. A row can carry look rows of its own (`overcast+lamps:0`). About an hour for the
+  whole sheet (a boot of six minutes, then some 25 s a frame); `--first` draws the rows that matter first and the sheet is rewritten after each row.
+- **THE LOOK PANEL'S SUN AND MOON ROWS** (`src/ui/lookpanel.ts`; the maintainer, 10-23: "do we model a sun at all for dawn/midday? i think that's a big
+  reason why it looks flat. and perhaps we should also model a moon on night levels (and can configure it)"). Both were there: every hour but night
+  puts in a sun (`game/hours.ts`, a kind-2 light with traced shadows where the level's moon stood), and every level is authored with a moon. What made
+  his picture flat: the pass is a snow level, and the snow's cloud (0.9) leaves the sun 9 % of the hour's own (`cloudLight`); the pass's moon is 0.06,
+  where the level kit's own is 0.9, so his night shadows were the gate lamp's. The rows set both for the VISIT: Sun = `__hour.sun(k)` (the share of the
+  hour's own sun; it then stands against the cloud, the sky still follows it), Moon / Moon height / Moon bearing = `window.__moon.set({ k, elev,
+  bearing })` (`main.ts weatherHourHooks`: the level's steady directional light; `?moon=k,elev,bearing` sets it at boot). A row is greyed while its light
+  is not up. THE MOON AND PLAY: the sun's strength is carried by a checkpoint and the journal (the hour's record) and the meter's CPU stand-in reads it
+  (`hourLight`); the moon's is NOT carried, and `guards.ts lightEstimateAt` skips every directional light but the hour's sun, so a raised moon moves the
+  picture and the GPU's meter and not the headless stand-in or the team's light rules. A moon worth playing under needs that stand-in to count it (the
+  sun's one segment test is the model) and a level's own number: a rule of the game, for a switch of its own.
+- **THE LOOK PANEL'S CLARITY ROW** (`render/gbuffer.ts setLook`; the maintainer on his GPU, 10-25: "it does feel a bit too "high frequency" for me, like
+  edges are cranked up (e.g. "clarity" knob in lightroom)"). One number over the four layers that set a surface against its own neighbourhood: Relief,
+  Cavities, Edges and Snow relief are each sent × Clarity (their rows keep their own numbers). Default 0.7; 1 = the layers as their rows say. Plain boxes
+  set it to 1 with the snow's relief, and Snow relief at exactly 1 (the game's own snow, what the sweep's row flips to) is sent as 1 whatever Clarity
+  says. Nobody has seen 0.7 on a GPU.
+- **THE LOOK PANEL'S SKY LIGHT ROW** (`lookConfig.sky`, `engine.ts` where the frame block is written; a MEASURING row, asked for by the maintainer's
+  midday note, 10-25: "we need much more ambient light coming from the sky. it shouldn't be so dark underneath the shed here"). The sky's zenith and
+  horizon as the picture and its rays have them × the row (0 to 4, default 1). It is the same lever as the debugger's sky brightness, put where the look
+  is judged, and it reaches the GPU only: what the game reads off the sky on the CPU (`hours.ts skyLum`, so the headless light meter) does not see it.
+  Not a fix and not a default to move: MEASURED with it (the plain page, the pass at midday, snow weather, software adapter): the lorry bay's floor
+  holds 3 to 12 % of the open yard's light, which is what one open side lets in (a view factor of 0.03 to 0.05 at five metres in, 0.12 at three), so the
+  sky's light arrives about right. The bay read black for three other reasons: one exposure set for sunlit snow (1.7), the tone curve's toe (scene ×
+  exposure 0.01 comes out at code 18, 0.05 at 59), and dirt whose paint is very dark (luminance about 0.1). Hence the next row.
+- **THE LOOK PANEL'S "EYES ADJUST TO SHADE" ROW** (`lookConfig.shade`, 0.7 on the look page, 0 = off; `engine.ts lookShade` writes `frame.shadeCfg`
+  @832, `composite.wgsl lookShadeGain` reads it; the maintainer, 10-25: "it shouldn't be so dark underneath the shed here", then "let's make sure the
+  ambient occlusion fix is general and fits nicely with our lighting pipeline. i want it to feel quite realistic!"). No light is added. By day, the
+  light a pixel SENDS BACK (its diffuse and its mirror share) is shown up to ×6 brighter where the place it is in holds less light than open air, as an
+  eye opens up looking into a shed. THE PLACE is read off the radiance cache (`diceMeanRadiance`, no ray) against what open air holds from the sky
+  alone, raised to the row's amount. It is the MOST of five reads (here and 0.6 of a cell to each side in plan), because a probe buried in a container
+  or a thick wall holds nothing and would make the ground beside it read as a dark place: a glow round every big thing. The price is on the kinder
+  side: within a cell of a bright neighbour (the inside of a shed's outer wall, a doorway) less is brought up, which reads as the shade a wall's foot
+  has anyway; a room under two cells wide with a bright yard on both sides is hardly brought up at all. THE PIXEL's own light bounds it: a pixel at or
+  over what open ground gets from the sky alone is left as it is (sunlit ground, a sun patch on a shed's floor, the pool under a lamp), and under that
+  the gain rolls off as the pixel nears it (place ∕ (1 + (place − 1)·Epix ∕ w)), so brighter stays brighter and nothing lands on one flat level. A
+  lamp's own face, a section cap, snow sparkle, beams, fire, the air, the weather and the lit GPU particles (casings, chips) are NOT scaled: a chip on a
+  shed's floor reads darker than the floor by the gain. It fades out as the sky's mean radiance falls from 0.35 to 0.08: dusk gets a little, night gets
+  none (the dark is the game's). "Hold: plain boxes" and the sweep's `look.all` row put it at 0. The two sky constants in `lookShade` (0.8 / 0.2 and
+  0.947 / 0.053) are the hemisphere integrals of `common.wgsl skyRadiance`'s ramp: retune one, redo the other.
+  **THE PICTURE ONLY**: guards, teammates and the light meter read the light as it is, so by day a shed LOOKS brighter than it hides you. That is a
+  break of "what the AI senses is what the picture shows" by the amount of the gain, ON by default on the prototype page because the maintainer asked
+  to see it, and to be settled before any of it goes to the build (the honest version is one exposure for the picture, chosen by where the camera
+  looks, which the game can read too). Seen on the software adapter only (the bay at midday); never seen on a GPU, never played.
+- **THE LOOK PAGE OPENS A SNOW LEVEL UNDER BROKEN CLOUD, AND ITS PANEL HAS A CLOUD ROW** (`ui/lookpanel.ts LOOK_SNOW_COVER` 0.5, `main.ts`
+  `__hour.cover(c)`; the maintainer, 10-25, of the pass at midday on a GPU: "i'd still expect a stronger directional light from the sun in midday").
+  What he saw was the game's own rule, not a fault of the hour: the snow weather's cloud is 0.9 (`weatherKinds.ts`), and under that `hours.ts`
+  leaves 0.09 of the hour's sun (0.54 of midday's 6), spreads its disc to 0.23 rad and greys the sky: an overcast, with no shadows. (So on his page a
+  lantern at a metre was eight times the sun, not equal to it.) `__hour.cover(c)` writes the picked weather's cover for the VISIT and hands the sun
+  back to it, so the sun, its disc and the sky follow by the same rule (Kasten and Czeplak's fits): at 0.5 midday's sun is 0.70 of its own (4.2), the
+  disc the hour's small one (hard shadows) and the sky 1.66 of its own. It moves the real light: the guards and both meters read it. The night is not
+  touched by cloud. NOT carried by a save or a recording (a take made on the look page re-runs elsewhere under the game's 0.9). Whether the GAME's
+  snow should fall from broken cloud by day is the weather's owner's and the maintainer's call; nothing outside the look page has moved. Checked on
+  the software adapter: the page's boot check reads the sun at midday under 0.5 and 0.9, and one still each of the gate at midday
+  (`rebuild/graphics-next/gate-midday-cloud.png`): under 0.9 open snow code 146 / 161 / 184 and the gate's shadow a vague 109 / 127 / 159; under 0.5
+  snow 205 / 210 / 219 (not clipped) and a hard-edged shadow 101 / 122 / 159. Never seen on a GPU.
+- **THE LOOK PANEL'S "EYES FOLLOW SAM" ROW** (10-28; `lookConfig.eyes`, 1 on the look page, 0 = the shade row alone as it was; `render/lookeye.ts
+  lookEyeFrame` writes `frame.eyeCfg` @880 (`FRAME_BYTES` 896), `composite.wgsl lookShadeGain` reads it; the maintainer, on a GPU: "overall i think light
+  levels looks really good. i wonder if we need to adjust our tone mapping based on where the characters eyes are though. like in this setting on overcast
+  the room should probably be a bit brighter (and then it's okay for outside to be a bit overexposed?)", and two minutes later, in a room with every door
+  shut: "it doesn't really _look_ like all the light is coming from the window? feels flat"). The shade row brings every place up by ITS OWN darkness,
+  wherever Sam stands, which evens out the very fall-off that says where a room's light comes in. THE EYE: the light on Sam as his meter has it
+  (`lookConfig.eye`, the page's word: `game.player.irradiance`) against what open ground gets from the sky alone (`shadeCfg.w`), eased over about a second
+  into the dark and a third of that back out (`LOOK_EYE.open` / `.close`; the first frame takes the reading outright: `Engine.lookEye.snap`). With him in
+  a place darker than the open: every place NO DARKER than his is brought up as his is, by one gain (so the light still falls off from the window, and
+  his place is `more` 0.4 of the way further toward the open air's brightness than the shade row took it: "a bit brighter"); a place darker still gets
+  only the share 1 − `drop` × … of its own extra; a pixel as bright as open ground, which the shade row left alone, is shown his gain to the
+  `out` 0.6 × the "Glare outside" row (`lookConfig.glare`, 0.1) times brighter (the yard through the door, about a tenth over); and the most a place
+  is brought up rises from 6 to 9. BOTH ROWS ARE FOR PLACES UNDER A ROOF (10-29; the maintainer on a GPU, Version 24: "indoors look better, but
+  outdoors looks very flat when eyes are indoors. seems like the "HDR" effect isn't quite set up right?", and of midday "a little flat"). Sam's
+  gain went on every pixel that was not in full light, the open yard's included: a shaded wall there and a man's dark side came up about twice
+  while the snow beside them, near the top of the curve, could only go to white (it was shown his gain to the 0.3, up to × 1.9). And the shade row
+  itself read a wall's shadow on the snow as a dark place (beside a wall the air holds about two thirds of the open air's light) and brought it up
+  by a third. Now `roof` = how far a place is under one, by what it holds against the open air (none over 0.8 of it, all under 0.4; a doorway and
+  a porch in between): the shade row's own gain and Sam's both go by it, so out in the open nothing is brought up for either. With him in the open the
+  picture is the shade row's exactly. By day only, as the shade row is. THE PICTURE ONLY, like the shade row: the same break of "what the AI senses is
+  what the picture shows", by the amount of the gain. Check: `tools/qa/lookeye-check.ts` (12 lines, the shader's gain mirrored on the CPU;
+  `LOOKEYE_BREAK=1` fails 9). The meter's 0 before its first answer is no reading (the eye would open wide on a level's first frames), and a restart
+  takes the first reading outright again (`game/airSim.ts`). SEEN on the software adapter only (the pass under overcast, 320 × 200): with the row at 0
+  the tea room and the kitchen are brought up in the middle of the floor and stay dark along their walls; with it up both rooms read evenly and clearly
+  and the snow outside the wall goes to white. NOT SETTLED: what the eye should do at night; a camera that looks at a place Sam is not in.
+- **THE LOOK PANEL'S GRADING ROWS** (10-29; Exposure, Contrast, Highlights, Shadows, Colour: `lookAmounts.gexp / contrast / highs / lows / colour`,
+  each 1 at rest but Contrast; `gbuffer.ts lookSync` → `lookConfig.grade*` → `engine.ts` → `passes.grade*` → `post.wgsl agx`; the maintainer on a
+  GPU, of midday: "image looks a little flat in midday, i think it looked better before. maybe needs some tuning for exposure/contrast/etc.? that's
+  what i'd reach for in lightroom"). MEASURED on stills of the pass's road at midday (Version 24, the powder on and off: the two are the same to a
+  code value, so the powder was not it): sunlit snow 215, a wall's shadow on it 140, and the darkest of Sam's kit in the sun 110. The tone curve
+  spreads sixteen and a half stops over the screen, which a night needs; a day on snow lives in the top four, so with the snow near white a black
+  rifle in full sun, four stops under it, lands on middle grey and the whole picture is pale. CONTRAST (`render/lookgrade.ts lookGrade`): BY DAY ONLY
+  (it fades out with the sky's own light over the shade row's span; a night is the game's), the picture's stops are turned, before the curve, about
+  the stop SUNLIT GROUND sits on at that hour (level ground of albedo 0.85 under that sky and sun at that exposure: 0.841 of the range at midday on
+  the pass), so the snow keeps the place the hour's exposure gave it and whatever is darker goes down: at 1.4 the rifle is 5.6 stops under the
+  snow where it was 4, a shadow on the snow 1.8 where it was 1.3. EXPOSURE is × the hour's own (0‥2 = two stops under to two over; it goes on
+  `frame.exposure`, so every reader of that follows). HIGHLIGHTS and SHADOWS add up to a stop and a half to, or take it from, what is over a stop
+  above middle grey, or under two below it. COLOUR is × the look's saturation. With every row at rest the tone map does not run the line (the
+  build's picture to the bit); `PostParams` grew four floats (the buffer is 64 bytes). THE DAY'S CONTRAST IS THE OPEN AIR'S: seen on a still
+  of the kitchen under overcast at 1.4, the turn pushed the room the eye rows had just brought up back down (a third of its distance under the
+  snow). So the composite gives a place under a roof back what the turn takes from it: `frame.gradeCfg` @896 (`FRAME_BYTES` 912;
+  `lookgrade.ts lookGradeFrame`: 1 ∕ the contrast, the radiance the turn is about) and `lookShadeGain`'s own `roof` (it now returns it), on the
+  pixel's reflected light under the turn's radiance, eight times at most: a room is shown as it was with the row at 1, a porch in between. A
+  pixel in full light is left (it sits at the turn already), and so is a lamp's own face. THE DEFAULT IS 1.35, picked on stills of the pass's
+  road at midday at 1, 1.3 and 1.6 (640 × 400, the software adapter): sunlit snow 212 / 208 / 203, a wall's shadow on it 140 / 110 / 82, the
+  darkest of Sam's kit 109 / 78 / 46; at 1.6 the shadows are cobalt (the turn is per channel, so it adds colour as a photo editor's contrast
+  does; Colour takes it back). Check: `tools/qa/lookgrade-check.ts` (7 lines; `LOOKGRADE_BREAK=1` turns about middle grey and fails 4).
+  Never seen on a GPU at the time of writing.
+- **A ROOM OF THE PASS AT MIDDAY, MEASURED (10-30; its points (1) and (3) were WRONG and (2) is not the whole of it, see the next bullet).** The maintainer on a GPU, the look page, the tea room: "lighting still looks
+  very flat indoors during midday (see flat shading on chair). also very odd pooling of shadow under window". Read on the software adapter, the same room.
+  HOW: debug views 3 (direct), 4 (the gather), 7 (the cache's irradiance) and 8 (both) are LINEAR on screen in a room's range (the Window light row at 0.5
+  halves view 3's pixels), so their pixels can be set against each other. Move the squad out first (a man at a window shadows half the room), and a pin's
+  pitch is held to about 60 degrees. WHAT IS THERE: the midday sun (56 degrees up) reaches the floor only as one sharp patch 0.4 by 1 m; all the other
+  direct light is the window lamps', 45 near a window, 22 a stride along the wall, 4 at the far wall. The gather's bounce is EVEN, 3 to 7 everywhere, and
+  a flux sum for that room (two lamps, dark floor, stone walls) gives about the same, so the amounts are right. The cache holds 40 to 90 in the room (sky
+  it leaks in); the picture does not draw it, the shade row and the gather's ray bound read it. RULED OUT, each by a still: the shade row's roll-off (a
+  curve linear up to open ground's light drew the same picture and was dropped), the Eyes follow Sam row, the gather's ray bound (`giFireflyK` 0 drew the
+  same), the Window light row (at 0 the room is darker and as flat). SO: (1) THE POOL is the lamp's dead ground. A window lamp is a Lambert disk on the
+  wall: it lights nothing beside or under itself, so the wall round a window and the floor at its foot have only the even bounce, a fifth of the lit
+  floor beside them, and the grade takes that to black. (2) THE CHAIR: from above its seat and the faces toward the window are lit alike by one wide soft
+  lamp, its shadow is soft, and the far lamps fill it. (3) The window's fall-off, 4.7 times in light from the near floor to the far, lands as about 2.4 on
+  screen; the sun's patch is drawn hardly brighter than the floor round it (the shade row leaves it and brings the room up). NOT BUILT, put to him: a
+  contrast of the room's own (the day's contrast is undone under a roof), the sun's patch left bright, and a window's and an open door's light as an
+  opening that sends sky down and the lit ground up. (11-01: a window, an open door and a blown hole ARE openings now, by one rule, each one light of the
+  mean of the two: THE LOOK PANEL'S "DAYLIGHT AT OPENINGS" ROW. The two-tone light is still not built.)
+- **A ROOM'S LIGHT IS READ ON THIS SIDE OF ITS WALLS, AND A SUN PATCH INDOORS KEEPS THE ROOM'S CONTRAST** (10-30; `lookConfig.footing`, 1 on the look
+  page, `?footing=0` = as it was; `frame.gradeCfg.z`, written by `engine.ts` on the look page whatever the Contrast row says; `composite.wgsl
+  lookPlaceHere` and the head of `lookShadeGain`, and the compact twin). The maintainer on a GPU: "very odd pooling of shadow under window". THE BULLET
+  ABOVE HAD THE CAUSE WRONG. The window lamp's dead ground only says why no direct light falls there. The black was the SHADE ROW not bringing that floor
+  up: `lookShadeGain` took the place's light as the most of five cache reads, 0.6 of a cell to each side, and the cache blends a point with the four
+  probes about it, so within a stride of any OUTER wall the open air beyond it was in the read, the floor was taken for a place in the day's light and
+  was shown at the yard's exposure and contrast: a black band along the foot of every outer wall, most plain beside a window where the lit floor is next
+  to it. (The old comment called it "the shade a wall's foot has anyway".) NOW the read is the blend of the four probes the point can SEE: a box ray to
+  each one's column at the point's height (the pixel's own man's gun is skipped, men's bodies are not asked), a probe beyond a wall or inside a crate
+  is left out and the others share its part; where the four hold about the same (the most under 1.3 times the least) no ray is asked and the read is the
+  plain one. The four side reads are gone with the row on (they were for a probe buried in a container, and that one is not seen). ONE box walk in the
+  text, ONE call site: the composite's rows in `shaderinline-check` went up by its 15 KB (the look's text is in the build's kernel, dead under `LOOK`).
+  SECOND, THE SUN PATCH: a pixel in full light was returned as the open air with no read, so the day's contrast was given back to the patch's soft edge
+  and not to the patch (a bright rim round a middle hardly brighter than the floor). Such a pixel is now asked where it is too, only when the contrast
+  row would touch it (darker than sunlit ground), and it is under a roof by a stricter span (the place holds under a quarter of the open air's light:
+  yes; over a half: no), so a sunlit wall's foot out of doors is the open air as it was. KNOWN AND LEFT: in a doorway or a porch (a place between a
+  quarter and 0.8 of the open air's light) the step at a shadow's edge is still there; the place's light steps where a probe comes into sight (a door's
+  jamb), by what that probe weighs there. Also wrong above: "4.7 times lands as 2.4" compared light with ENCODED pixels; in shown light the fall-off is
+  kept. THE CHECKS: `lookplace-check` mirrors the read over a cache of two values (this side 1, the far side 20) at 268,576 floor points within 0.9 m of
+  a ceiling-high wall in 57 levels: the old reads are over twice this side's light at 93.3 % of them (11 times on the mean), the new at 0.9 % (1.18
+  times), 2.2 box rays a point; `LOOKPLACE_BREAK=1` fails it. `lookgrade-check` is as it was (the caller's line is the same). COST: up to four box rays
+  of a cell's length for a pixel by a wall or a doorway, none in the middle of a room or in the open; five cache reads for a sunlit pixel darker than
+  sunlit ground: NEVER TIMED ON A GPU, never seen on one. NOT MENDED BY THIS: the chair (the next bullet). What stood here about it was
+  WRONG: "2.2 times across the seat is shown as 1.36, a white thing sits high on the tone curve, a matter of the grade". Compared light with encoded
+  pixels again, and the Highlights row at 0.3 and 0 gave the chair nothing back. And a window is still a lamp on the wall and not an opening that sends
+  the sky down and the lit ground up.
+  A point that sees none of its four probes (a face in a crack of the lorry) takes the brightest of them, so it is never a dark place. SEEN, the
+  software adapter, one page, the tea room from above, the row on against off: the middle of the room is the same picture (mean pixel difference
+  under 2 of 255); the floor under the window is 2.3 times brighter in shown light, the foot of the window wall 28 times and the wall behind the
+  table 51 times (they were black); the sun patch's middle is 1.8 times brighter and stands 2.1 times over the floor beside it where it stood 1.2
+  times. The yard from above, on against off: one pixel in a hundred differs by over 8 of 255, nearly all of them
+  brighter: slivers in the lorry's recesses (between cab and bed, under the cab's corners), which are places the old reads took for the open air.
+  The final text (a blind point takes the brightest) boots 119 of 119 and drew the yard again; its room stills are the text before that last line.
+- **A ROOM HAS THE DAY'S CONTRAST TOO, ABOUT ITS OWN LEVEL** (10-30; the look panel's "Room contrast" row `roomc`, 0.6 on the look page (the maintainer's number, 10-31, from his GPU: "indoor looks a lot better, i set room contrast to 0.6"; it shipped at 1), 0 = as it
+  was, `?look=roomc:0`; `lookConfig.roomContrast` → `frame.gradeCfg.w`; `composite.wgsl` under `lookShadeGain`'s call, and that function's z and w. Off
+  too with `?footing=0` and with the Contrast row at 1. PICTURE ONLY, the look page only, so no stand and no knob table). The maintainer on a GPU, the
+  tea room of the pass at midday: "lighting still looks very flat indoors during midday (see flat shading on chair)". THE CAUSE, found the long way:
+  the Contrast row (1.35, `render/lookgrade.ts`) turns the day's stops about sunlit ground, and the composite takes the WHOLE turn back under a roof so
+  that a room is not pushed down. So the yard has the row and a room has none of it: a room is drawn with its light as it is, beside a yard drawn a
+  third steeper. WHAT IT WAS NOT, each by stills of the white chair (seat against the face of its back, shown light): not the tone curve (above); not
+  the shade row's roll-off (a trial that raised the roll-off's top under a roof took the seat from 2.92 times the back to 3.36 at its most and doubled
+  the sun patch: the roll-off squeezes the chair by about 1.3, and the trial was dropped); and "the seat takes 14 times its back's light", read off
+  the direct and bounce debug views, was WRONG (those two views are not on one scale with the picture; by how the gain answered the trial the seat
+  holds about 3 times the back's light, which is about what the picture showed). THE RULE: a pixel under a roof is turned by the same contrast about
+  the level its place is shown at: × (l ∕ level)^((1 − x)·row), l = what the surface sends back after the shade gain, no further than three stops
+  under the level and two over it. The level is `ROOM_LEVEL` (0.5, set by eye from three stills of this one room) × what a surface sends back, after
+  the gain, in the light of the air its place is exposed for: Sam's room's for every place no darker than his (one level across his room, so the
+  fall-off from the window is turned about it too), a place's own with him out of doors. So the level is NOT the same for one room with Sam in it and
+  out of it (about a stop apart on paper, eased with his eye): never looked at. Under a roof by one span for a pixel in light and in shade (nothing
+  where the place holds half the open air's light or more, whole from a third down), so the row draws no rim at a shadow's edge. A PIXEL IN FULL
+  LIGHT IS TURNED TOO: a sun patch comes up by up to two fifths, so a sun stripe through a door is drawn brighter inside than on the ground it came in
+  over. THE CHECK: `lookroom-check` mirrors the lines as numbers with the tone map's turn as a power (two faces 3 times apart are shown 3.00 apart at
+  0 and 4.41 at 1, the yard's own; a surface at the level stays put; never under 0.58 or over 1.43 of what it was; no step at sunlit ground's
+  brightness; one weight in light and shade; one level across Sam's room); `LOOKROOM_BREAK=1` fails it. It does not mirror the tone curve's shoulder
+  or lookPlaceHere. COST: with the row up EVERY pixel in full light takes lookPlaceHere's read (five cache reads, and up to four box rays by a wall),
+  the sunlit yard too, where none was made: NEVER TIMED ON A GPU. SEEN, the software adapter only, one page, the tea room at midday, the row at 1
+  against 0 on one boot: the chair's seat stands 3.80 times over the face of its back where it stood 3.15; the chair's shadow on the floor is 0.64 of what it was, the floor beside it 0.78, the stone wall 0.81, the dark carpet 0.44, the sun patch 1.09 times; the still's mean pixel goes from 77.7 to 71.2. The room from above: the fall-off from the window, the shadows under the tables and the sun patch read where the picture was even, and it is DARKER, mean pixel 56.8 to 48.1 (most of this room sits under the level). The yard from above: mean pixel 205.7 both ways, 0.7 % of pixels differ by over 8 of 255. The page booted 119 of 119 with no page error. SEEN ON HIS GPU 10-31 ("indoor looks a lot better", the row at 0.6); never timed there, and the stills above are the row at 1.
+- **ONE EXPOSURE: ONE GAIN A PLACE, AND THE ROWS IT REPLACES** (10-31; the look panel's "One exposure" row `expo`, 1 on the look page, 0 = the rows as
+  they were, `?look=expo:0`; `lookConfig.expo`; `render/lookexpo.ts lookExpoFrame` → `frame.eyeCfg` with w under 0, which is `composite.wgsl
+  lookExpoGain`'s word; the place field `render/placeField.ts` + `shaders/place_field.wgsl`. PICTURE ONLY, the look page only, BY DAY ONLY (it rides
+  on the shade row), so no stand and no knob table: the guards and the light meter read the light as it is). The maintainer, 10-31, after a fifth day
+  case found on his GPU (a store with one bulb and no window, black on a grey day while the bulb glowed): "overall i worry that we're finding these
+  cases one by one and not fixing them systematically", "compare to night and dusk", and on the card he chose "Sheet, then one exposure model". WHAT
+  WAS THERE: Eyes adjust to shade (a gain by the place, capped at 6), Eyes follow Sam (four numbers, a cap of 9), a roll-off by the pixel's own light,
+  the day's contrast taken back out under a roof, Room contrast putting a share back about a room's level; each tuned on one room. THE MODEL, said
+  once: every PLACE gets one gain, from how many times darker than the open air it is (rp) and how many times darker the place Sam stands in is (rs).
+  His place: × rs (shown as the open air is with him out in it). A darker place: his gain × the shade row's share of its own extra dark, (rp ∕ rs)^0.7.
+  A brighter place: exposed for itself and shown over by at most rs^(0.6 × the Glare outside row). NO CAP ON THE PLACE AND NOTHING BY THE PIXEL short of the shoulder below: a
+  shadow's edge and a man's own shading keep the light's proportions. A place holding 0.8 of the open air's
+  light or more IS the open air (`EXPO_BAND` 1.25, `LOOK_EXPO.band`), and a darker one is counted from there, so nothing steps and a darker place is
+  never shown brighter than a lighter one. THE DAY'S CONTRAST is the yard's, in the place's own exposure: the place is toned as the open air is and
+  then shown as much darker as it is to be, which is one more gain for the whole place, (rp ∕ base)^(1 − 1∕contrast). The old rows' AMOUNTS still say
+  how much (shade = the share, eyes = how far the eye goes to his place, glare, contrast); Room contrast does nothing with the row up.
+  THE OPEN AIR IS WHAT THE CELLS UNDER THE OPEN SKY HOLD ON THIS MAP, not what open ground would hold in theory (the pass's walled yard holds 0.64 of
+  the theory's light and the snow past its wall 1.6 times it; counted from the theory the yard came out a fifth too bright). The map marks each free
+  cell that has no roof over it (`placeRoof`: a slab over head height, 0.9 m wide both ways, `weather.ts roofsOf`'s own test) and the field's third
+  word is the level a tenth of those cells are darker than (`PLACE.skyShare`, eased over half a second so the picture is never handed a step; a level
+  with no cell under the sky takes its brightest place). So every place under the sky is × 1 and a room is counted from the darkest open air there is.
+  A place is followed 14 stops down and no further (`EXPO_MOST`). THE SHOULDER
+  (`lookRoll`): what a place's gain hands on brighter than sunlit ground is rolled off toward `EXPO_TOP` 4 times it, in full from a gain of 1.5: a sun
+  patch through the door of a room shown hundreds of times brighter, the floor under its bulb, the yard mirrored in its floor (reflections and
+  highlights take the same roll). A glowing face and a lamp's own haze and beams take NO gain: a bulb's own glow is as bright as it was. (Since 11-02 the
+  shoulder is one part of the one rule for a place seen from another, and smoke's light takes the place's gain too: the bullet "A PLACE SEEN FROM ANOTHER".)
+  A PLACE IS WHAT WALLS, WINDOWS AND SHUT DOORS ENCLOSE: the place field, 100 × 70 cells of 0.4 m over the cache's floor plan, one number a cell: log2
+  of the light the air of the place holds. THE MAP is drawn from the level's boxes and again when one changes (`placeMask`): a cell is WALL when boxes
+  fill it from 0.45 m to 1.9 m, one box or several (`placeWall` gives a box's height slices as bits: a sill, its pane and the lintel over it make a
+  wall between them, so A WINDOW IS A WALL, whole or shot out, and the light through it is the room's own reading; a crate, a post under 0.6 m long, a
+  tilted box and a box a blast has hidden are not; a dynamic box shaped like a door's leaf counts where it hangs). A DOORWAY is a free run of 4 cells
+  or fewer whose way through opens out within 3 cells on both sides: its cells are marked, the pull across them is a hundredth, and two rooms through
+  an open door stay two places with a soft step at the threshold. A corridor is as narrow but stays narrow: one place along its length. An opening
+  over 1.6 m joins. Each free cell is pulled to what the radiance cache's up-facing slab holds over it (the light that falls on a floor there, not the mean light in the air) (only the probes it can see along the map; a probe
+  holding nothing counts a fiftieth) and, hard, to its free neighbours (red-black over-relaxation in place, 4 sweeps a frame, 160 when told to settle
+  outright: a first frame, a restart, a still). FOUR WORDS FOLLOW THE CELLS: Sam's eye (the field under his feet, eased on the GPU, 0.9 s to open,
+  0.35 s to close: there is no second eye by his meter), 1 once the field is live, the open air's LOW level (a tenth of the cells under the sky are darker:
+  what a room is counted from) and its MIDDLE level (what the key is held to, so a sunlit yard beside a shaded one is not shown at the shade's exposure).
+  NEVER BRIGHTER THAN THE NIGHT: no place's gain passes the night's exposure over the hour's (`eyeCfg.x`, `photometry.ts hourExposure`: 1,152 on the grey
+  day, 5,051 at midday), so a room lit by its lamps alone is shown as the night shows it and a room with no light is dark, not its noise. THE COMPOSITE READS THE FIELD AS A
+  UNIFORM BUFFER (`@group(1) @binding(17)`, 28 KB): its fragment stage has no sampled texture left. `lookPlaceField` never weighs in a cell across a
+  wall; in a wall's own cell with a different place each side (a wall's top, the floor at its foot) the side is picked by what the cache holds at the
+  pixel (`lookPlaceHere`, the kernel's one box walk, also the answer before the field's two programs are compiled and off the map). The composite's
+  budget row went 1024 → 1032 KB on purpose. NOT DONE HERE: `placeMask`'s stamp is a second writing of `game/airSim.ts`'s; a level whose walls are
+  under 1.9 m has no places.
+  THE CHECKS: `bun run tools/qa/lookexpo-check.ts` mirrors the gain as numbers on the kernel's own constants (the open air with Sam in it
+  is × 1 exactly; his room 700 times under the open has its pale floor shown 1.44 times as bright as the yard's with him out in it; order kept and no step over every pair of places, rows, day and dusk,
+  open country and walled yard; the shoulder; a room toned as the yard; the two kernels word for word; windows, doorways, corridors and roofs on the
+  map: 28 lines),
+  `LOOKEXPO_BREAK=1` (the old cap of 6) fails 8; `node tools/qa/place-field-page.cjs` runs the field ALONE on the software adapter over a stand-in
+  cache (a room whose light spans 2.6 stops has one level to 0.08 of a stop, the room behind its wall keeps its own, an open door moves it 0.06 of a
+  stop, a wide opening joins, a window leaves no hole, at rest nothing creeps, a change of light is followed inside half a second, the eye closes
+  faster than it opens: 15 of 15), `PLACEFIELD_BREAK=1` (no walls) fails 11. THE SHEET draws old and new on one boot and prints the field's own
+  levels a cell: `node tools/qa/look-sheet.cjs --rows overcast,overcast+expo:0,…`. COST: 9 small compute dispatches a frame and a 28 KB uniform; two
+  more pipelines, compiled after the page is up, the old rows run until they are: NEVER TIMED ON A GPU. SEEN: software adapter only. One boot of the code as pushed, midday and night
+  (picture means; lamp room · yard · room with windows): midday 0.142 · 0.594 · 0.097, night 0.224 · 0.140 · 0.240. On earlier boots of this row: the
+  lamp room on the grey day 0.118 and at dusk 0.037. WHAT THE STILLS SAY THAT NOBODY HAS RULED ON: a room with windows at midday is DARK with Sam in it
+  (median 0.06, its windows and their patches bright); the lamp room at dusk is about a fifth as bright as at night (Sam's place gain there is 13.6 and
+  the night bound 68.87 is not reached). NOT DRAWN on the code as pushed: dawn, dusk, the grey day, the two looking-in and looking-out views, and no
+  before row (`expo:0`) beside any cell. KNOWN AND NOT MENDED (a review of the diff): a wall cell takes its brighter neighbour's level inside half a stop;
+  reflections are multiplied by the place gain and then rolled again, and the wet coat's highlight is not rolled; the roll's knee when the Contrast row
+  gives no turn; the night bound ignores the Real light values amount; the eye stays as it was when the row goes back to 0, and the field's buffers are
+  never released; the cascade overlap is along x only; `placeField.maskKey` walks every box a frame. NEVER SEEN ON A GPU, AND NEVER TIMED ON ONE.
+- **THE BOUNCE HOLDS STILL BY DAY** (11-01; the look panel's row `steady`, "Steady bounce", 1 on the look page, `?look=steady:0` = both halves below as they
+  were; it sits under the `rooms` row and does nothing with that row down, at night, or off the look page. The maintainer on his GPU, the pass at midday
+  with doors open, two recordings: "lots of temporal instability for midday, also strange shimmering on metallic barrels", "lots of temporal instability on
+  the guy's back too", "overall night, dawn, and dusk look pretty good. midday and overcast are the broken ones"). ONE CAUSE, TWO PLACES IT SHOWS: a pass made
+  for nights judges light against a night-sized window or a night-sized number, and by day a room is lit through a door or a window by something small and
+  thousands of times brighter than the room. (1) THE CACHE'S MEAN (`render/diceRing.ts`, `shaders/dice_ring.wgsl`, `engine.ts`). The radiance cache shifts its
+  directions every frame (`frame.rcJitter`) and its dice was a running mean of about three frames (`rc.setDiceBlend(0.3)`). MEASURED on the software adapter,
+  the store with its door open at midday, Sam still: the light meter at Sam (the dice there) went 0.00094 to 0.0014 from frame to frame, a fifth either way,
+  and every reader of the dice went with it (the gather's second bounce and its outlier bound, a wet coat's sheen, the smoke, the meter, the One exposure
+  row's level of the place: the whole store's picture pulsed together). NOW the shift is one of a few fixed points taken in turn and the dice is the plain mean
+  of the cache's last bake at each: the cache bakes whole into the dice (its own mean off), `DiceRing.step` copies that bake into its slot of a texture eight
+  dice tall and one small program writes the mean of the slots held back into the dice, which everything binds as before. In a still scene each frame
+  replaces one bake with the same bake, so nothing changes; a real change of light is all in after one round. Points by `ringPoints(lamp share, row)`: none
+  at night, four at dawn and dusk, eight on a grey day and at midday (four or eight only: a round must be a whole number of the cache's own refresh rounds,
+  `settings.rcPeriods`). A re-primed cache drops what was held (`rc.reprimed`) and the ring fills as a plain mean. One more compute pipeline, made at the first
+  day frame with the row up and tried under an error scope; until it is ready, or on a cache too tall for the texture, the cache's own mean as it was.
+  (2) THE REFLECTION PASS'S BOUNDS (`lighting_common.wgsl dayBoundK` + `dayBound`, set in the three reflection programs: `reflect.wgsl`, `reflect_p5.wgsl` and
+  its compact twin). A ray may bring back 60 and the analytic highlights 160, numbers that at night are some hundreds of times a lit wall. In the store at
+  midday a wall sends back about 0.00016, so the bounds held nothing and a ray off a steel drum that left by the door was a white streak, somewhere else the
+  next frame. By day both are now x a quarter of the light the cache says the point receives (E / pi, taken as no less than the hour's lamp share, never over
+  1): about thirty times a mid-grey wall beside it for a ray. `frame.lampCfg.z` carries the row. LEFT AS IT WAS: the gather's own gloss ray and glints
+  (`GLOSS_RAY_MAX`, `GLOSS_GLINT_MAX`, read only on tiers without ray-traced reflections), the gather's 24 beside its relative bound, the denoiser. THE CHECK:
+  `bun run tools/qa/steadybounce-check.ts` (the points by hour, the slots, what is held as a ring fills and starts over, and a model probe in a still scene:
+  the ring's mean is one number every frame where the running mean swings 8 times over; `STEADYBOUNCE_BREAK=1` leaves the row at nothing and fails). The
+  sheet tool measures it: `node tools/qa/look-sheet.cjs --rows midday+steady:0,midday --views lamp-open,drums --settle 4 --flicker 10` (the door-open views;
+  `--flicker N` prints each frame's picture mean and light meter and saves a map of what changed). SEEN (software adapter, 640 x 400, Sam and the scene
+  still, the store's door open at midday): the light meter over ten frames with the row up 0.00117, 0.00116, 0.00116, 0.00114, 0.00113, 0.00112, 0.00112,
+  0.00112, 0.00112, where with it down it was 0.00103, 0.0011, 0.0014, 0.00119, 0.00094, 0.00113, 0.00096, 0.00124, 0.00099, 0.00095; the picture's 8 px
+  blocks changed by a middle 0.33 display levels where they changed by 1.13, and the store's floor is no longer lit up on the map of change. What still
+  changes there is Sam's rifle and a few thin edges, 15 levels at most, the same with the row down: a thing a pixel or two wide at this size.
+  The same on view `drums` (the store's steel drums against the lit wall, Sam beside them): with the row down the WHOLE picture pulsed, its mean 87.6 to
+  93.2 of 255 over ten frames, blocks' middle change 1.83 levels, 7.7 % of blocks over 3 levels, drum rims and crate tops lit up on the map of change; with
+  the row up the mean holds 90.8 to 91.2, the middle is 0.33, 2.2 % over 3 levels, the largest single change 23.5 against 26.3 (Sam's rifle and the drums'
+  rims at the bright wall). Both boots, and one more of the tree as committed, compiled 119 of 119 programs with no errors, the ring filling
+  a point a frame.
+  NOT SEEN: a man in motion (the flicker frames stand still), the overcast hour, the stagger and half-rate cache options with the ring (stagger gives the
+  ring two bakes a point, which can leave a two-frame ripple an eighth the size), frame time (one copy of the dice and one pass over it a frame, untimed),
+  any level but the pass. The light meter and the smoke read the dice, so on the look page the row also steadies what guards see by. An old red on this
+  branch, not from this change: `shaderinline-check`'s budget line (fgather, volumetrics, reflectP5 and particles over their rows since the look rows of
+  10-31). NEVER SEEN ON A GPU.
+- **THE PLACE MAP IS TOLD THE LEVEL'S DOORS** (11-01; `render/placeField.ts placeMask` `gaps` + `PLACE.gapNear`, `PLACE.minWide` 0.3 to 0.2,
+  `lookConfig.doorGaps` set in `main.ts` from `game.doors.list`, `engine.ts` hands it to `PlaceField.setBoxes`. The maintainer on his GPU, of the pass at
+  midday on the One exposure row: "it seems easy to get into a state where the exposure is off, like moving between these two rooms", with a shot of Sam in
+  the kitchen, the kitchen nearly black, his light meter at 0.121). THE FAULT, found on the CPU's map and not on a GPU: a doorway was whatever the SHAPES
+  said (a free run of four cells or fewer between walls that opens out on both sides), and the shapes change with how a leaf hangs. With the kitchen's yard
+  door wide open its opening and half the window beside it read as one run five cells wide (the 0.5 m pier between them was "a post" at `minWide` 0.3, and
+  one pane's half-width is a hair under 0.3), so the kitchen was ONE PLACE WITH THE OPEN YARD: its level was the yard's, the eye stood in the open, and the
+  room was shown hardly brought up at all. The bunk room's leaf at about 65 degrees did the same. THE MEND: each door is a line on the floor plan (hinge to
+  far jamb) and the free cells within `gapNear` of it are doorway cells outright; the shapes still find an opening no door hangs in. And a wall piece is
+  0.4 m long or more (`minWide` 0.2). THE CHECK: `bun run tools/qa/placedoors-check.ts` (the pass, headless: each of the seven doors through its whole
+  travel every 0.05 rad, 539 positions, and all open at once: no room reaches another room or the open sky but through a doorway cell;
+  `PLACEDOORS_BREAK=1`, no doors told and the old width, joins 25 and fails). `lookexpo-check` is as it was (28 lines). SEEN (software adapter, one still,
+  midday, the kitchen's three doors standing open, Sam in it): the eye at -5.1 stops against the open air's 0.12, the picture's middle 0.115, the slate
+  floor grey and read; with the doors as the sheet had them before (the yard door shut) it was -5.4 and 0.125. NOT DRAWN: the black kitchen itself on the
+  code before (the map's check stands for it), any other level. Levels whose door lists are empty or whose openings have no door are as they were.
+  NEVER SEEN ON A GPU.
+- **LIGHT STAYS IN ITS ROOM, AND A LAMP KEEPS ITS LIGHT BY DAY** (10-31; the look panel's row `rooms`, 1 on the look page, 0 = every number below as it was,
+  `?look=rooms:0`; `lookConfig.rooms`. IT CHANGES THE LIGHT ITSELF on the look page, so the light meter and the guards' light read change with it there; no
+  stand and no knob table, the look page is not the build. The maintainer, 10-31, of the pass's store, one bulb and no window: black on a grey day while
+  the bulb glowed, then "compare to night and dusk", then of the cases found one by one "not fixing them systematically"). ONE STATEMENT OF THE FAULT: by day
+  the Real light values row draws a lamp at the hour's exposure share of its night strength (`photometry.ts`: × 0.00087 on the grey day, × 0.0002 at
+  midday), and the open air is thousands of times a lamp's light. Every place where the renderer let a LITTLE light through a wall, or tested a lamp's
+  light against a FIXED level tuned at night, was invisible at night and is the whole picture of a shut room by day. THE MENDS, all under the one row:
+  (1) THE CACHE: the cascades' hand-over overlap (`rc.setOverlap`), the secondary threshold `secMinE` and the dim-pixel rule held at the day's lamp share,
+  and a bounce read that keeps to the hit's side of a wall (`FLAG_RC_ROOM`, `lighting_common.wgsl hitRadiance`: no ray, a plane test against the face that
+  was hit). (2) `frame.lampCfg` (the frame's last member, zeros off the look page): x = the day's lamp share `lampK` = dayExp ^ the Real light values
+  amount, y = what a glowing face is worth to a RAY (`boxEmissiveRay`: its night light × lampK; a mirror keeps `boxEmissive`). `lampFloorK()` holds every
+  fixed night floor a lamp's light is tested against at that share: a light's score floor `1e-4` in the direct estimators, ReSTIR, sharp direct, the
+  composite's pane light and the gather kernels, and the gather's firefly floor `0.35`. (3) THE WINDOW LIGHTS GET REACH MASKS (then `game.ts reachWindows`; since 11-01 the
+  engine decides them itself and the game has no part in it, the DAYLIGHT AT OPENINGS bullet below): the engine made them a frame after the level gave its own lights theirs, so each was a candidate in every room. (4) THE FIREFLY FLOOR was the midday
+  fault: a few gather rays in a shut room come back with daylight (the stills show a strip of it at the store's door; a CPU ray test of 60,000 rays from
+  inside the room found none that left it, so the strip is on this side), the bound let each in whole (0.35 is thousands of times a day-drawn bulb's
+  wall), and the filter spread it flat and white over the room. NOT HELD AT THE SHARE (a lamp's light in haze, smoke, particles and glass by day is
+  still tested against a night's level): `HAZE_MIN_E`, `SMOKE_MIN_E`, `P_MIN_E`, `CARD_MIN_E`, `GLASS_MIN_E`. WHAT WAS RULED OUT ON THE WAY, each by a
+  fresh-boot still (a row drawn after a row that switched a pass off is NOT evidence: its history is stale): the hidden sun, the sun's reach mask,
+  reflections, the bulb's own glowing fitting, the windows of other rooms. THE SHEET: `node tools/qa/look-sheet.cjs --rows midday,midday+rooms:0 --views
+  lamp`; its engine words `x.indirect:0`, `x.view:N`, `x.s.<setting>:<n>` and the `lit` print (which lights weigh at Sam, with their reach) are how each
+  cause was tested. SEEN: software adapter only, each on a fresh boot. The pass's store, one bulb: at midday
+  0.632 flat and white before the firefly floor, 0.142 after, warm, with Sam's shadow on the floor and the crates' on the wall; the grey day 0.118;
+  night 0.224 (0.194 on a boot with the rows in another order); dusk 0.037. STILL WRONG IN THE STILLS: by day a white strip of daylight is drawn at the
+  store's door on its right wall (and a small streak on the left wall on the grey day). The review's two mends (the bounce read's fallback cell, window
+  lights dropped from the masked list when the engine replaces them) changed no number at midday. NOT DRAWN: a before row (`rooms:0`) on the code as
+  pushed, any other shut room, any other level. NEVER SEEN ON A GPU.
+- **WALLS HAVE TWO SIDES: ONE RULE FOR EVERY READ OF THE CACHE** (11-01; the look page's row `walls`, read at BOOT: `?look=walls:0` and a reload = the older
+  guards; `render/frame.ts wallSidesConfig` → the prelude's `const WALL_SIDES`; `render/wallSides.ts`; `shaders/common.wgsl sideAt`, `sideOut`;
+  `lighting_common.wgsl diceTapsBy`, `diceFaceBy`). The maintainer on his GPU, the pass's store by day: "also lots of light leak when doors are closed", and of the work as a
+  whole: "i'd like us to try to remove as many "hacks" or special cases as possible -- I think having strong general systems is the core of this project". THE
+  FAULT: the cache is probes a metre apart and a read blends the four columns round its point; within a metre of a wall one of them is the next place, and a
+  face reads a spacing out along its normal, which by a wall is the next place too. At night that is a little lamp light in the wrong room; by day the next place is
+  the open air, thousands of times a shut room. THE RULE: the level's floor plan (the exposure's place map, 0.4 m cells, `placeField.ts placeMask`) is flood-filled
+  into places and handed to every shader as one u32 a cell at the end of the Frame uniform (`sideCfg` @928, `sides` @944, 28 KB: the scene group has no texture or
+  storage slot left, and the fog's sight table is a uniform of twice that already), with the place of each probe column of the first cascade after it, a nibble a
+  column (`sideCols` @28944, `wallSides.ts sideCols`: room for 4,480 columns, the finest cascade the debugger offers; a bigger one leaves the flag down). The two
+  tables are 30 KB of the block and are sent to the GPU only when they have changed (`FRAME_HEAD_BYTES`, `engine.ts sidesSent`); every other page sends the
+  head alone. A free cell's word is its place (0‥13, never shared by two places with cells
+  within three cells of each other; 15 = a doorway, every place's; +16 = nothing but this place within three cells, the plain read); a wall cell's word is the
+  wall's own line across x and across z (from the box's centre line, in 2.5 cm steps) and the place of each quarter, so a point 3 cm off a wall's face is on its
+  own side though the cell is 0.4 m. A read leaves out the columns that stand in another place (one tap along a wall, two at a corner), and a face whose point a
+  spacing out is another place reads half as far, else a hand off the face. WRITTEN TO BE PASTED ONCE: a face asks the plan in one loop (the air at the face, a
+  spacing out, half, a hand off: `diceFaceBy`) and hands the point with its word to `diceTapsBy`, whose four columns come from the table, and the slab reads run in
+  a loop over the taps (`diceIrradianceBy`). A face's read pastes `sideAt` into a program once; the first writing pasted it four times and sampled every slab twice. IT STANDS IN PLACE OF FOUR OLDER GUARDS, each of which met one case of the same fault
+  by means of its own and all of which are dead code under the const (their text is still in the modules: the build and every other page read as they did):
+  `diceIrradianceFrom` (08-12, the plane of the surface a gather ray left), `diceMeanRadianceWalled` and the view march's cached copy of it (08-09, an occlusion ray
+  for a point in smoke), BOUNCE WALLS `diceWalledPoint` (10-20, five to eight box rays off a man) and LIGHT KEEPS TO ITS ROOM in `hitRadiance` (10-31, the cache's
+  own nearest-cell read). WHY THE CONST AND NOT A LIVE ROW: the four compiled out are what pays for the rule in the final gather, which the software adapter
+  builds only while its routine's stack frame is under 524,288 bytes: 521,176 before this row, 519,976 with it, and 530,008 as first written, when the page booted
+  clean and the GPU process died at the gather's first dispatch (the bullet on the software adapter's limit below; `node tools/qa/kernel-stack.cjs`). WHAT IS A WALL'S LINE: the centre line of what makes the cell a wall on the map, one whole-height box or the boxes of one line that fill the height between
+  them (a sill, its pane, its lintel). A box that fills part of the height on a line of its own (a counter against the wall, a bench, a board) lays none and
+  stops none: as first written it did, and half the cells that said nothing on five levels were a wall with furniture against it. A wall cell with no line that
+  stands inside ONE place (a square pier, a tall stack) is that place's. WHAT IT DOES NOT KNOW: anything inside one place (a shelf unit, a crate: a read behind
+  one is the same room's, as it should be), a second storey (there is none: the lattice is the storey), and A WALL BUILT ASKEW BETWEEN TWO PLACES: those cells
+  say nothing, and a read there is the plain blend WITH NO GUARD AT ALL, since the older guards are compiled out. Counted on six levels (cells that say nothing
+  of all wall cells): the pass 25 of 641 (all the lorry's, askew in the yard; 58 before), bazaar 50 of 1250 (224 before), office 5 of 1049 (115 before), depot
+  14 of 876, barracks 5 of 886, consulate 6 of 977. WHEN THE WORDS ARE MADE AGAIN (`wallSides.ts sidesKey`): a wall, a pane's box, a door's line, and a leaf
+  COMING TO REST OR LEAVING IT, by the very test the words make (`SIDE_TURNED`). The map's own key steps every 0.04 rad, at other angles: a leaf that stopped
+  inside the step it was last keyed in kept the words of a leaf still ajar (a shut door that said nothing), and a swing made the words on every frame, 2 ms
+  each on the main thread. A leaf in mid-swing is keyed by a sixth of a quarter turn. The map itself is drawn once a frame for both its readers
+  (`placeField.ts PlaceMap`). THE CHECK: `bun run tools/qa/wallsides-check.ts` (the pass,
+  headless, the shader's read mirrored in TS: 11 places, 5674 pairs within three cells and none sharing a number; 318 face points 3 cm off six faces all on their
+  own side; 65964 floor points and none with a column across a wall; 28 slow closings from four angles and none left stale, the words made 122 times in 11,228
+  frames; the column table right at 40 × 28 and at 80 × 56; `WALLSIDES_BREAK=1` leaves one wall out of the map, skips the last rebuilds of each closing, and
+  fails three lines). The look page is
+  on neither stand, so there is no word for either. COST: `shaderinline-check` IS RED ON THIS BRANCH and its rows were not raised: it counts text and cannot see code a const compiles out, so it reads
+  higher than what is built (composite 1060 of 1032 KB, 1027 before this work, the smoke lab's two pictures and the sided reads; `fgather / main` 936 of 805
+  and `mainGi` 990 of 870, which were 894 and 957 and already over). Whoever takes the row to the build either cuts the dead guards' text or raises those rows
+  on purpose. The uniform array's cost on a GPU is not measured (`?look=walls:0` and a reload is the A/B; the look panel's cost sweep leaves the row out,
+  since moving it draws nothing). WHAT THE STILLS SAY (software adapter, the pass, High): midday and overcast, the shut store: the white floor behind the
+  drums, the red streak up the drum and the white speckle on the man in the corner are gone, and Sam throws a shadow from the bulb; the back door's wall is
+  clean. Night, two fresh boots with the row up and down: the same picture (mean difference 0.14 and 0.22 of 255 over two views), so the one rule does at
+  night what the four guards did there. A white band on the kitchen's side of the store wall by day is the same before and after: light on that face, not
+  this fault. NEVER SEEN ON A GPU.
+- **THE PLACE MAP AT A SHUT DOOR AND AT A WALL'S FOOT** (11-01; `placeField.ts PLACE.shutNear`, `gapNear`; `composite.wgsl lookPlaceField`, `sideOut`). The
+  maintainer, the pass's back door in overcast: "weird artifacts to the left of the door in overcast too", "doesn't show up in night but does for dawn and dusk".
+  Hard-edged blocks one map cell wide on the wall and the floor beside the door. Two causes. A shut leaf's crack counted as a doorway, so cells at the jamb were
+  every place's: a shut door's line is now wall from jamb to jamb (`placedoors-check`, its last line). And a point in a wall's own cell (the floor at a wall's
+  foot, a wall's top) had no place and took its level from the cache at the pixel: it now takes the place on its own side of the wall's line (`sideOut`, up to four
+  cells out), under the row above.
+- **A WET COAT DOES NOT MIRROR A LIGHT IT CANNOT SEE** (11-01; `composite.wgsl wetCoatSpec`, `WET_HIDDEN` 8). The maintainer: "still lots of fireflies/sparkles
+  in that room", "some on the shadowed side too", "lots of temporal instability on the guy's back too". The sheen scaled every light's lobe by its class's shadowed
+  over unshadowed light; in a shut room by day the hidden sun is the whole unshadowed sum, so its lobe was drawn at the bulb's strength. A light whose
+  unshadowed light is more than eight times the class's shadowed light is not there, faded out from four times so a shadow's soft edge is not a line where the
+  glint ends. ON THE LOOK PAGE BY DAY ONLY, under the Steady bounce row (`frame.lampCfg.z`; `?look=steady:0` is the A/B, and every other page and every night
+  draws the highlight as it did). A threshold, not a general rule: the general one is a shadowed evaluation of each light, which the composite does not have.
+  The coat's MIRROR of the room (its sheen) reads the cache like any face under the wall sides row (`diceFaceBy`), where it asked BOUNCE WALLS' box rays.
+- **ROOM BRIGHTNESS** (11-01; the look page's row `roomb`, live, 1 = as it is; `frame.lampCfg.w`, `composite.wgsl lookExpoGain`). The maintainer: "exposure does
+  seem a bit too bright when indoors but we can tweak it". A power on a place's gain where the gain is over 1: 0.9 is about half a stop off a room with windows
+  and a stop off a shut one. A knob for him to find the number with; the number then belongs in the exposure model, and the row goes.
+- **THE LIGHT DEBUG VIEWS SHOW A ROOM BY DAY** (11-01; `composite.wgsl`, views 3, 4, 7, 8). The maintainer: "i went through all the buffers in the debug view and
+  couldn't see what was causing the light leak really". The views drew scene light at the yard's exposure, so a shut room was black in every one of them by day.
+  On the look page they are now shown by each place's own gain, as the picture is.
+- **THE SOFTWARE ADAPTER REFUSES A BIG KERNEL WITHOUT SAYING SO: A CLEAN BOOT, THEN THE DEVICE LOST ON THE FIRST FRAME** (11-01; `node tools/qa/kernel-stack.cjs`).
+  All 119 pipelines made and no error, then `A valid external Instance reference no longer exists`: the GPU process had died (exit 11) the first time one pass was
+  dispatched. THE CAUSE, read in a debugger: SwiftShader pastes every call of a kernel into one routine, and its compiler (Subzero) gives the routine up when its
+  stack frame passes 524,288 bytes (`Ice::Cfg::setError("Stack size limit exceeded")` from `TargetX8664::addProlog`); the pipeline is still handed back, and the
+  first dispatch calls a null routine (`rr::Nucleus::invokeCoroutineBegin`, a read at address 0x10). THE FINAL GATHER LIVES AT THAT LIMIT: `fgatherS / main` on the
+  look page is 99.2 % of it (519,976 bytes; 521,176 at the commit before the wall sides), so a few lines added to anything it calls are enough, and what was added
+  need not be at fault: with the cut boxes compiled out the same kernel is 465,624 (they cost 60 KB of frame: `isectCut` is pasted 70 times). It is a limit of
+  the adapter the cloud tests on and no GPU's, but the frame grows with the same pasted size a Windows shader compiler pays for. WHAT TO DO: after a change to
+  anything the gather calls, `node tools/qa/kernel-stack.cjs` (40 s: the page's own text of one kernel, made and dispatched alone on zeros, with the compiler's
+  frame and limit read at its own check when gdb is on the machine; `--text` tries a cut before it is made; `--list`, `--kernel a,b`). Its texts are THE PAGE'S:
+  `wgsl-dump.ts`'s stand-in leaves `GROUND_RAYS`, `WX_KINDS`, `GLASS_BREAK` and `CUT_BOXES` down and the same kernel fits there with room. What costs frame: every
+  pasted call (a helper called at eleven places is eleven copies of everything it calls), a second texture read at each of them, a loop's own variables. What
+  bought it back here: one look at the plan a read where there were four, the columns from a table, the taps in a loop. Also measured: `compositeS / cs` on the
+  look page, 277,096 (52.9 %). ULTRA'S RESAMPLING GATHER HAS NEVER RUN ON THE SOFTWARE ADAPTER: `fgatherGiS / mainGi` is over the limit at the commit before
+  this work (109.8 %) and after it (111.2 %), so a software page at Ultra loses its device on the first frame and no sheet or still was ever drawn there. Not
+  measured: the other kernels' frames (the page draws at High, so each is under), and nothing here says how a GPU's compiler takes the same text.
+- **THE DAY PATH'S SPECIAL CASES, COUNTED** (11-01; the maintainer: "overall i worry that we're finding these cases one by one and not fixing them systematically", and
+  "i'd like us to try to remove as many "hacks" or special cases as possible -- I think having strong general systems is the core of this project"). Two faults
+  made nearly every day defect so far, and each wants ONE rule every pass obeys. (1) LIGHT THROUGH A WALL: now one rule, the floor plan (the bullet above), in
+  place of four guards. (2) A NUMBER MADE FOR A NIGHT: a bound or a threshold in absolute light, right when a lit room is near 1 and meaningless when the lamp
+  is a few thousandths of the sun. That one is NOT yet one rule. What still answers it case by case: `common.wgsl lampFloorK` (the gather's firefly floor held
+  at the day's lamp share; read in the direct pass, sharp direct, ReSTIR, both gathers and the composite); `lighting_common.wgsl dayBoundK` (reflection and
+  highlight bounds from the cache's own light at the point, `DAY_BOUND_SHARE` 0.25; both reflection passes); `composite.wgsl WET_HIDDEN` (a wet
+  coat's highlight of a light the point cannot see, bounded at 8 times what its class delivered). THE ONE RULE THEY WANT: every such bound is a multiple of the
+  light level of the PLACE the point is in, and the exposure already makes that number a cell (`render/placeField.ts`, the One exposure row): the three could
+  read it and their own constants go. Not built. ALSO STILL SPECIAL: a wall built askew between two places knows no line, so its cells read the cache unguarded and their place for the exposure is still
+  guessed from their neighbours (25 of the pass's 641 wall cells, the lorry's; `composite.wgsl lookPlaceField`'s last lines); a roofed lamp always asks its shadow ray (the rain leak's mend,
+  `reach` masks are a floor plan); Room contrast and Room brightness are taste rows over the place's gain; the older stack of day corrections is still in the
+  modules behind `?look=expo:0` for the A/B; and the four wall guards' text is still in the modules because the build's page reads them: they are deleted when
+  the row goes to the build, not before.
+- **A PLACE SEEN FROM ANOTHER IS THE PICTURE IT IS TO EYES IN IT, SHOWN DARKER** (11-02; look page only, part of the One exposure row `expo`, so
+  `?look=expo:0` is the rows before it; the maintainer on his GPU at midday on the pass, his eyes in the yard: the men in the bulb-lit store white at their
+  edges on a near-black floor, "weirdly not able to see where the glow is coming from here by flipping through the debug views", "it subsides a lot once i
+  shoot out the one light in the room"; and "weird that smoke looks black indoors but white outside"). Both were one fault: the exposure was a gain on the
+  DIFFUSE light of a place, and every other kind of light a place sends the eye was handled apart, or not at all. A room seen from the yard had its floor
+  taken down twelve to thirty times while a bulb's highlight on a man's kit kept the whole of its strength (the shoulder only rolled it off above sunlit
+  ground), so highlights read as a glow from nowhere; and smoke's light took no gain at all, so in a room shown a few hundred times brighter the smoke sat
+  hundreds of times under the floor behind it, black. THE ONE RULE (`shaders/place_common.wgsl`, one text pasted in front of the composite and of every
+  volumetric march by `passes.ts`): a place has three gains from the light it holds (`lookGains`: the gain it is shown by now; the gain it is shown by to eyes
+  that are in it, never under the first; the gain the open air is shown by now, never over the first), and ANY light of the place goes through `lookShowBy`:
+  exposed as for eyes in the place, rolled off there above sunlit ground (`lookRoll`, as it was), then taken down by the ratio of the first two gains, and
+  never darker than the open air shows the same light (a sun patch through a door of a room shown dark is as bright as the ground it came in over). To eyes
+  in the place it is the gain and the shoulder exactly as they were. What goes through it: the diffuse, the ray-traced mirrors, the gloss, glass's
+  highlight, the men's finish (`composite.wgsl lookShow`, both twins), and the smoke march's light step by step (`volumetrics.wgsl airShow`, both twins: the
+  air's place is the place field's cell under the step, `placeAir`; in a wall's cell the brightest free cell within two; over the ceiling's height the open
+  air). The volumetric programs bind the place field at group 1 binding 5. NOT YET THROUGH IT: a lamp's own haze and marched beams and the dust volume
+  (they still take no gain), a glowing face, particles. Debug view 10 (specular) is where the men's highlight shows. Check: `bun run
+  tools/qa/lookexpo-check.ts` (its CPU mirror of the three gains; a store 4,000 times under the yard seen from the yard: a glint keeps its ratio to the
+  floor as from inside and is never over 0.20 of sunlit ground, where a glint a hundred times the floor used to be handed on at 1.23 of it beside a floor at
+  0.012; the volumetric texts and the wiring are read; `LOOKEXPO_BREAK=1` fails). Seen on the software adapter only: one boot of the look page (119 programs,
+  none failed, no GPU error) and stills of the pass's store with two men under its bulb and a can of smoke, from the yard and from inside, at midday and at
+  night, beside the same two midday stills of the tree before. From the yard the glints on the men's hands and legs are down with the floor as it was (the
+  brightest pixel 224 of 255 before, 172 after; the middle pixel 12 both times) and the smoke is a pale puff lit like the room; from inside and at night
+  the two trees draw the same picture. NEVER SEEN ON A GPU. Cost not measured: the smoke march works a place's three gains (about fifteen `pow`) once a cell
+  of the place field a ray, not once a step (`airShow` keeps the last cell's answer). STILL OPEN from the same notes:
+  blotches on a room's floor in overcast, and a room with its doors open at midday (pale floor with the eyes in it, sun patches at the shoulder's white).
+- **THE SMOKE LAB** (11-01; `/smokelab` on the dev server = the look page on the lab's own floor with `&smokelab`; `src/host/smokelab.ts`, on the fire lab's
+  pattern; the floor is `docs/agents/levels.md`, THE SMOKE LAB'S FLOOR). The
+  maintainer: "could we make a separate smoke lab that's more suited to playing with it? would love to be able to visualize the bricks, the curls (could we turn
+  these on and off in the debug panel?), tweak the parameters etc." Its system in the panel: what the pool holds, a can at your feet or at the cursor, all of it
+  cleared, the field held still; TWO PICTURES of the solver, both the composite's (`smokeLabOver`) off one word the solver hands the readers (`SmokeSystem.show` →
+  `SP.show` → `smoke[0].show`): the BRICKS as wire (a walk of the page texture along the pixel's ray, the coarse lattice's bricks blue, the fine one's amber,
+  hidden behind what is solid) and the SPIN (while it is up `publish` leaves density × |curl| ÷ the row's full-colour number in a coarse texel's tint channel, and
+  the smoke is drawn again blue to red by it; the dust twin is held off meanwhile, since that channel is the dust's); each kind of curl on a box of its own
+  (vorticity confinement, the source's gusts, the look row `stir`); every number of `smoke.params` and of the pool as sliders with the build's numbers back by a
+  button and the numbers copied out as a line. It writes the tables the solver already reads; nothing is made without the word, and the two pictures are in the
+  composite only on a page opened with it (`render/frame.ts smokeLabConfig` → the prelude's `const SMOKE_LAB`, read in `main.ts` before the engine is made): every
+  other page's composite is the program it was. Fine-lattice gas is not coloured by spin. `/smokelab?levelFile=pass.json&roomclear&squad4` is the lab on
+  another level (a `levelFile` on the address wins). Seen on the software adapter only: never on a GPU.
+- **A ROUND THROUGH SMOKE IS ONE LINE** (11-02; the maintainer in the smoke lab: "also still can't see bullets leaving trails through the somke"). A round
+  used to be a row of soft shoves along its path (`combat.ts`: every 0.28 m, 7 cm across = a cell and a bit of the 5.5 cm lattice, a blend of 0.4 toward 5.5 m/s
+  for ONE step, at most twenty a frame with the bodies' shoves counted in), which moved nothing anyone could see. Now the solver has a LINE emitter
+  (`smoke.wgsl`, mode 3: a stretch of half length `tall` along `dir`) and `SmokeSystem.round(from, dir, len)` sends each straight leg of a round's path as a
+  `push` with `line`. THE DISTANCE: the shove, the swelling and the feed all measure an emitter through `emR2`, which for a line is the distance to the stretch
+  (round ends). THE BRICKS: the bricks an emitter wakes (`markEmit`) and the emitters a brick lists both ask `emInBox`, which for a line takes the point of the
+  stretch nearest the brick's middle, so a line reaches the bricks along it and not a sphere of its length; `emHalf` gives `markEmit` the stretch's own box of
+  bricks to walk. THE CUT (`smoke.ts push`): a leg is cut to each lattice's loose bounds and three radii past them, overlapping stretches of one lattice are
+  one, two plumes apart stay two (the clear air between is not sent), and a stretch goes in pieces of `LINE_MOST` 4 m at most. THE ENDS: the line stands two
+  radii inside each end of the leg, so its round ends do not shove the air behind what the round hit or came out of; a round that flies within about a radius
+  ALONG a thin partition still stirs the far side, as a walking body's shove does. THE LAW: the air along the path is brought UP to `wake.speed` 9 m/s along it,
+  `u += dir * max(speed * clamp(exp(-r²) * push, 0, 1) - dot(u, dir), 0)`: no frame length in it (so it is the same at 30 and at 144 frames a second), air
+  already that fast is left alone, nothing is slowed or turned, and a second round down the same line adds nothing while the first's jet stands. `wake.push` 4
+  = how flat the jet's top is (full speed out to 1.18 of `wake.radius` 0.12 m). A long thin jet is nearly free of divergence, so the pressure step leaves it
+  standing: it drags smoke after the round out of the far side of a plume, pulls clear air in at the near side, and its edges roll up. LOOK PAGE ONLY
+  (`combat.ts` asks under `lookConfig.on` with the look panel's Stirred smoke row up; anywhere else, with that row at 0, and with the lab's row "how fast a
+  round drags the air" at 0, the dots as they were), so the build's page is as it was. No frozen row: a headless run has no smoke system, and nothing here is
+  the simulation's state. It does change what a guard sees through smoke on the look page (the same field is the sight line). Check:
+  `bun run tools/qa/smokeline-check.ts` (the cut run as it stands over a system that is only its lists, the distance and the brick reach mirrored, the brick
+  reach against 400 lines and bricks at random, the texts read; `SMOKELINE_BREAK=1` measures a line as a point, sends a leg uncut and wakes bricks by its
+  middle, and fails). SEEN, software adapter only, the lab's can at dusk, the solver stepped at 1/30 s: a round through a young plume at knee
+  height throws a tongue of smoke about 0.6 m out of the far side within 1/15 s and a broad lobe by a third of a second; after a second it has merged with the
+  plume. An earlier boot (the law then a blend, equal to this one in still air at that step): a burst of five pushed the plume's bound out by 3.5 m, and a round
+  through the middle or just under the top of a 2 m plume showed nothing along its path from above, only the puff at its far side. No GPU error on any frame.
+  NEVER SEEN ON A GPU, and never with
+  a gun fired in play (the stills call `round` by hand): the path from `combat.ts` to the solver is under the text check alone. NOT DONE: a round does not part
+  the smoke up to the plume's top, so from the play camera a round through the middle of a tall plume shows at its far side and not along its path.
+- **HOW SMOKE IS DRAWN, AS ROWS: the smoke lab's "How it's drawn" and "Streaks the air can fold"** (11-01; `src/host/smokelab.ts`; `Engine.smokeDraw` →
+  `FrameParams.smokeDraw` → `frame.sideCfg.y / .z` (two spare words of the look prototype's block), read in `vol_common.wgsl` under that heading;
+  `passes.smokeDiffuseKeep` → `post.smokeKeep`;
+  `SmokeSystem.streak`). The maintainer, of the lab at dusk: "we *have* a lot of interesting high frequency detail in the sim now but it ends up looking flat
+  in the final image. 1. is this a lighting problem? 2. it also seems like we have some screen space smoothing on the large smoke volumes", then "let's make
+  it so we can play with the rendering stuff in a section", and of rounds pushing smoke, "it ends up not being legible". Read from the code: (1) yes. The
+  soft light on a plume is ONE ambient the froxels hand the march with no smoke in its way, so with little direct light a plume is one even tone; the
+  self-shadow is four taps 0.18 m apart, coarser than the curls. (2) yes, three: the march is at half size and scaled up by a 3 × 3 kernel, TAAU averages
+  frames, and `post.wgsl`'s SMOKE DIFFUSION mixes the whole pixel, the plume's own light included, toward the frame at a quarter and an eighth of the size
+  by the smoke looked through (up to 0.96 past optical depth 3). NOTHING IS DECIDED: every new row starts at the picture as it was (both frame words 0,
+  `smokeKeep` 0, no tint in a can's smoke, so the plain volumetric program runs), and no other page writes them. THE NEW ROWS: **creases go dark**
+  (`smokeCreaseIn`: the ambient at a sample × exp(−the smoke crowding round it), four taps on a tetrahedron 0.2 m out, asked every `volShadowEvery` steps,
+  in both lit marches: the classic one that ultra and high run and `smokeMarchJ`, where with `smokeMarchLights` 0 the lamps are in that light too and are
+  dimmed with it; the compact twin has the same lines); **how dark the far side of a fold is**
+  (`SMOKE_SELF_K` as a number, 6 = as it was) and **how far a fold's shadow looks** (0.72 m = as it was and the row's top: the march gathers the smoke within 0.75 m for those taps), both self-shadows alike, the dust twin's and the
+  froxels' too; **the smoke's own light stays sharp** (the volumetric pass now writes the smoke's own in-scatter luminance to `volReact.b`, always; post
+  reads it five taps wide and lets the diffusion go by its share of the blurred pixel: a sign through thin smoke still blurs, a thick lit plume does
+  not). THE REST of that section are the debugger's old rows gathered (multiple scattering, the diffusion and where it starts, TAAU's smoke reactivity, lamps
+  per step, the march step, quarter size, the upsample's depth guide). STREAKS: "yeah 1 makes sense" (of five ideas: a can that burns unevenly, so the
+  flow has something to fold). **dark bands** = a can's emitter takes a tint that comes and goes with its age (`pack`: the K word every coarse cell
+  already carries for dust, canister share still 0, so the published density and every sight line are what they were); the air carries it, the dust twin
+  draws it, and `sideCfg.z` bit 0 (up while the bound system's `streak.bands` is, `SmokeBinding.streaks`) tells `dust_look.wgsl` a tint is a streak: no edge thinning, no fray, no billow noise, so the field drawn is the
+  solver's own. Said plainly: while that row is up real dust is drawn as a plain tint too, because a texel does not say whose tint it is; the build
+  would want the canister share published. A band's times come from the can's age and where it lies. With `?nodustlook` no tint is kept and the row does
+  nothing. **puffs** = the can's output × a slow wave, the one row that moves the smoke itself. Costs: creases 4 texel
+  reads a refresh; bands run the kind transport in a can's bricks (it is skipped for plain canister smoke). CHECKED: `wgsl-compile` (68 texts),
+  `shaderrows-check` twins re-stamped (the compact march has the same two lines), `dust-look-check`, both typechecks, and one boot of `/smokelab` on the
+  software adapter with every row up (below). NEVER SEEN ON A GPU, and whether any of it reads well is his to say: the stills are 640 px on a software
+  adapter. Not built: idea 2 (a round carves a tube: the fine lattice in its wake), smoke reprojected by the solver's own velocity instead of averaged.
+  WHAT THE ROWS DO TOGETHER (11-02, the maintainer's lab at dusk with `densityScale` 3: "curious why there's so much orange in the smoke, also seems
+  nonphysical" and "horizontal striations that seem aligned with the grid"; one software boot, each row alone). ORANGE = "creases go dark" turned up. The row
+  dims the sky's soft light on smoke by an absolute optical depth 0.2 m out, so at a density scale of 3 nearly the whole plume counts as a crease: the
+  blue-violet sky light goes and what is left is the dusk sun's direct light, which is orange. At 1.5 alone the plume is orange with no bands. FINE BANDS =
+  the two fold shadow rows turned up (15 and 0.3 m): the four shadow taps then stand 7.5 cm apart, closer than the solver's 5.5 cm cells can resolve
+  smoothly, and the lattice shows as lines; at the defaults (6, 0.72 m) the same plume is smooth. The can's own uneven feed is NOT the cause (with it taken
+  out the lattice pattern is plainer). SIGNS STAY CRISP behind smoke only while "smoke blurs what is behind it" is at 0 (the page opens with it at 1). The
+  lab's "copy them" carries every drawing row now (`draw`, `streak`, `wake` beside the solver's numbers), so a pasted set says which of these were up. Not
+  done, and not without his word: the creases row measured against the plume's own thickness, the shadow taps jittered (it would grain the calm look).
+- **THE SMOKE LAB'S "A LAMP BEHIND SMOKE GLOWS THROUGH IT" ROW** (11-02; `Engine.smokeDraw.ahead`, bits 24‥31 of `frame.sideCfg.y`; `vol_common.wgsl
+  smokeAheadW` / `smokeAheadLobe`, the three marches of `volumetrics.wgsl` and its compact twin; 0 on every page = the picture as it was, a lab row only).
+  Smoke scatters most of a lamp's light on along the line it came by. The march's one lobe (g 0.35) is wide; under the row a NARROW one (g 0.8) is ADDED
+  for each light a step lights itself, through half the smoke both ways, as the many-scatter octave is: so looking at a lamp through thin smoke the smoke
+  before it glows with the lamp's colour, where blurring what is behind only smears the lamp. A lamp is a disc, not a point: the lobe is asked at the
+  disc's nearest edge to the line of sight and capped at 1 ∕ the disc's solid angle (a big panel close by is not a point's spike). The same lobe weighs
+  the froxel march's choice of its K strongest lights (`smokeMarchJ`; the two older per-pixel marches keep their order by bound), so the lamp one looks
+  toward is not the one dropped there. A MINOR light, which a step credits without a ray of its own, gets none of it: the lobe's peak is sixty times the
+  wide lobe's sideways value, and an untraced lamp would shine through a wall. Software smoke lab at dusk, a can before the blue
+  vending front (after the `face` class below, without which the front's light was nothing): the plume crossing the front goes from 162, 135, 149 to
+  167, 141, 158 at 0.5 and 172, 146, 164 at 1 (of 255), nothing else moves. A small gain there; whether it is worth a row is the maintainer's call on
+  his GPU. NOT SEEN: a GPU, a lamp seen low through a thin edge (where it should count most), a flashlight aimed at the camera through smoke.
+- **THE GLOW THROUGH SMOKE CROSSES THE SMOKE AS ITS FORWARD LIGHT DOES** (11-03; `vol_common.wgsl smokeAheadT`, used by the three marches of
+  `volumetrics.wgsl` and its compact twin; nothing with the row above at 0, so the plain build is as it was). The maintainer, of a sign behind a puff:
+  "i'm still not exactly sure why the vending machine textures coming through the smoke so clearly looks so nonphysical to me". MEASURED on a
+  capture of that view (software adapter): the picture is the wall times the smoke's transmittance plus the smoke's own light, and that held to the
+  digit, so nothing skipped the smoke. The reason it reads wrong is the ratio: the sign's face gives 2 to 2.7, the lit smoke in front of it 0.08 to
+  0.2, so through an optical depth of 4.2 (1.5 % let through) a white bar of the sign still adds a third to the pixel, and it adds it SHARP. Real
+  smoke that thick in front of a sign is lit up by the sign: the light it scatters forward hides the pattern behind a soft glow of the sign's colour.
+  The row "a lamp behind smoke glows through it" was that term, but it was cut down by the same thickness as light scattered sideways, on the way in
+  (the lamp to the sample) and on the way out (the sample to the eye), so where the smoke was thick enough to matter it gave almost nothing. Now the
+  narrow lobe crosses smoke as (1 - g) as thick, g the lobe's own 0.8: light scattered nearly straight on is nearly unscattered light, the textbook
+  reduction for a forward-peaked phase function. Both legs and the step's own share use it. WHAT A PICTURE SHOWS (the smoke lab at dusk on the software adapter, his rows; the row at 0 and at 0.65 INSIDE ONE BOOT, on
+  the tree before and the tree after, because the plume a can grows differs from boot to boot by as much as the change, which a first pair of
+  stills from two boots did not allow for): at 0 the sign's pattern and its lower edge stand sharp through the smoke, on both trees alike (within
+  1 of 255 where the plumes agree). The row at 0.65 lifted the smoke over the red face by 18 before and 30 after, over the blue face by 7 and 16,
+  the plume's middle by 4 and 13; over the whole picture a mean of 3.0 before and 4.4 after. So the old term was NOT nothing, as this bullet first
+  said: it gave about two thirds of what the new one gives near the sign and a third of it deep in the plume. After, the glow hides the sign's
+  lower edge and its small bars; before, both still showed. IT CHANGES THE PICTURE UNDER HIS TUNED ROW, so the row may want another number now.
+  Never seen on a GPU. A MARCH STOPS IN THICK SMOKE ONLY WHEN THE GLOW IS DONE
+  TOO (`smokeMarchDone`, the three marches' early-outs): with a lamp straight behind, every step of the plume adds about the same glow, so stopping
+  where the picture's transmittance fell under 2 to 4 % dropped the far part of a deep plume, at a depth dithered a pixel. With the row on, a march
+  now goes on until the glow's own weight is under the cut, which in practice is the plume's far side. THAT COSTS STEPS in thick smoke on the look
+  page (a thin plume was always marched whole): NOT MEASURED ON A GPU. On the software adapter, the smoke lab's close-up with smoke over most of the
+  picture, inside one boot: a whole frame took 82 to 90 s with the row at 0 and 83 to 92 s at 0.65, so nothing a software frame can show. With the row at 0 the test is the old one and `smokeAheadT` returns before its `pow`.
+- **THE LOOK PAGE DRAWS SMOKE BY THE LAB'S TUNED TABLE** (11-03; `render/smokeLook.ts SMOKE_LOOK`, put on by `main.ts` on the look page only,
+  `?smokelook=0` there = smoke as the build draws it; a benchmark asked for on the look page carries the word). The maintainer handed the smoke lab's
+  numbers back ("latest settings we should make these default"). Of that paste, the solver's, the pool's, the can's, the stir's, the streaks' and the
+  wake's numbers WERE the build's own already, so the smoke itself and what anyone sees through it did not move. Nine rows of the PICTURE differ and are
+  the table: creases 0.6, the far side of a fold 10.5, a fold's shadow reach 0.58 m, a lamp behind smoke glows through it 0.65, the smoke's own light
+  stays sharp 0, light glows through the body 0.15, smoke blurs what is behind it 0 (so the post blur is not run), its start 0, a moving plume leans on
+  the new frame 1, and the march's step 1 cell AS TUNED ON HIGH. The step is the quality preset's to write (`ui/quality.ts putSmoke`, its one writer,
+  asks `smokeLookStep`): high, medium and ultra go from 1.5 to 1, low and very low from 2 to 1.33, never under a cell, so the ladder's cheaper presets
+  keep their longer step. Lamps that light each step, a quarter size and free scaling stay the preset's (his paste had high's). Every other page draws
+  smoke as it did: the plain build's picture is not touched. The lab's "How it's drawn" ↺ now puts back what the page opened with. CHECK:
+  `bun run tools/qa/smokelook-check.ts` (7 lines: the table is the paste row for row, the paste's solver numbers are `defaultSmokeParams()`, each row
+  lands where the renderer reads it, the step off and on, the wiring; `SMOKELOOK_BREAK=1` fails). Software boot of the lab: the rows open on the table.
+  NOT MEASURED: what the shorter step costs (the march is 1.5 times the samples); his numbers were set by eye at dusk in the lab on his GPU.
+- **EVERY MAN DRAWN HAS HIS SHADOW PROXIES** (11-03; `scene/boxes.ts BoxWorld.MAX_CAST` = 16, the skinning's own count; `common.wgsl` and
+  `smoke.wgsl SceneInfo.charBounds`, `meshShadowT`, `traceCapsulesFrom`; shared renderer code, so every page, no switch: it is a capacity, not a
+  rule). The maintainer on a thirteen-man mission: "odd that the two guys don't have shadows from the window, the chimney does". The proxy list
+  (the round cones every shadow, bounce and reflection ray sees a man as) stopped at EIGHT characters, in list order: the player, his four and the
+  first three defenders. A ninth man was skinned and lit like anybody and threw no shadow of any kind, stood in no mirror and bounced no light.
+  Now the list holds every drawn man. The info block's word offsets are named (`INFO_BOUNDS`, `INFO_GLOBALS_Y`, `INFO_GRID`, `INFO_GLOBALS_B`,
+  `GLASS_WORD`), since the bounds array grew in place. THE MESH TREES STILL HOLD EIGHT (`render/meshbvh.ts MESH_MAX_CHARS`, 7.4 MB): a man past
+  them is his round cones to every ray. `meshShadowT` used to stop at the trees' count, which would have dropped his traced shadow again under
+  mesh shadows; it now walks the whole list, and the reflection tracer's mesh branch adds the cones of the men past the trees. COST: a shadow
+  ray tests up to sixteen cull spheres where it tested eight, and the soft shadows walk the cones of whoever is near. NOT MEASURED. The game's
+  budgets written for "eight cast shadows" (`guards.ts MAX_CHARACTERS`, the room fight's five defenders, the patrol routes, the QRF's count) are
+  untouched: they are rules of play now, their owners' to keep or lift. Checked on the software adapter, two boots that differ in this change: the pass at midday with
+  thirteen men, the sixth and the tenth of the list stood in a window's light. Before, the page's list reads 8 and only the sixth throws a shadow;
+  after, it reads 13 and both do; no GPU error. `probes.ts foursquad-budget` now holds the new statement on both stands (ten men, a place each, in
+  the floor's order; a man down goes last and keeps his cones), and `tools/qa/grid-globals.ts` reads the info block by the named offsets. Never
+  seen on a GPU. THE OFF WORD (11-03, at the join into the build): `?allproxies=0` in the page (`main.ts`, `BoxWorld.castCap` down to the mesh trees' eight) = the
+  list stops at the first eight men drawn, as it did; the list's room and the info block's layout do not move with it. `foursquad-budget` holds it
+  (`ALLPROXIES_BREAK=1` must fail one line). No game table: nothing in the update reads the list. The word never seen on a GPU.
 - **FIREFLIES ON MEN BY DAY: THE SUN'S REACH MASK HAD LOOKS STANDING INSIDE WALLS** (11-01; `render/reach.ts reachMaskForDirectional`'s fifth argument,
   `game.ts buildDirReach` `free`, `REACH_OPTS.solidLooks`, `?sunlooks=old` = the looks as they were). The maintainer, the pass at midday, men in lamp-lit
   rooms speckled white: "still lots of fireflies", "seems to be a direct light problem". CAUSE: under ReSTIR the hour's sun has a mask of the roofed cells
@@ -1220,3 +2041,543 @@ interleaved and filtered to their quiet minimum, and a row whose p75 sits far ab
   carried torch), not built: its cost and its soft overcast disc are unknown without a GPU. Software page, the pass at midday, men at the kitchen's wall,
   direct-light view, old mask against new in one boot: it showed nothing either way (the camera's own rule hid the men under the top of the wall they
   stood at), so the mend rests on the mask, not on a picture. NEVER SEEN ON A GPU.
+- **THE LOOK PANEL'S "STIRRED SMOKE CURLS" ROW** (10-31; `lookConfig.stir`, row `stir`, 1 on the look page, 0 = as it was, `?look=stir:0`; `game.ts
+  smokeWake` + `SMOKE_STIR`, `smoke/smoke.wgsl emBody`, `SmokePush.body`, `SmokeSystem.setStir`, `SmokeParams.stirConf`. The maintainer, 10-31, of a
+  smoke can in the yard: "i do wonder if there could be more turbulence or vorticity near the edges, especially when it's driven by player movement",
+  "the smoother flow when gently pushed by the wind like against the wall does look great", with the wavelet turbulence paper, whose idea is taken: detail
+  only where the flow already has energy). WHAT WAS THERE: a moving man was two soft shoves along his heading (hips 0.30 m, chest 0.26 m, reaching three
+  radii), and he is no obstacle: the smoke bulged ahead of him and closed behind with nothing shed. The solver's vorticity confinement was one strength
+  everywhere. THE ROW, three things: (1) HIS BODY is a standing capsule from 12 cm over the floor to half a metre over his hips, 0.24 m in radius (emitter
+  mode 2, `tall` = its half height, `emReach` = what wakes and lists a brick): the air inside goes with him, the pull is gone by 1.8 radii, and the
+  pressure step sends what he displaces round his sides. (2) HIS STRIDE: a kick just behind him, sideways,
+  that changes side with his own walk cycle (`c.anim.phase`, one cycle is two steps, so nothing is kept between frames and a turn does not
+  scramble it), at 0.9 of his speed and never over 2.2 m/s: a lattice
+  of 5.5 cm with this advection would smooth a walker's wake into two still eddies, and the kick is what sheds them. (3) CONFINEMENT IS RAISED ROUND A
+  BODY: × (1 + `stirConf` 2.0) at his capsule, back to the plain strength by three radii (the debugger's "curl round a moving body ×"). Smoke nobody walks
+  through is not touched: the wind's relax and a can's own plume are as they were. REMOVED: the solver's own uniform draught (`windX`, `windZ` and their
+  two sliders, which nothing set since `game/wind.ts`); its two parameter words carry the row. SIGHT: the guards' probe reads the same solver density, so
+  on the look page a wake changes sight lines a little; the maintainer the same day: "i'm actually fine with vision being a bit different than the
+  visuals, can be just the brick level stuff", so finer picture-only detail is allowed next. The headless stand-in drops a push: no digest moves.
+  Check: `bun run tools/qa/smokestir-check.ts` (what a moving man HANDS the solver, over one stride: with the row up one upright body a frame moving as
+  he moves and no soft shove, a kick across his way 7 frames to one side and 7 to the other of a 20 frame stride, growing with his speed to 2.2 m/s and
+  with the row; a man who stands is not told of; with the row at nothing, or off the look page, the build's two shoves: 5 lines), `SMOKESTIR_BREAK=1`
+  fails 3. SEEN: the look page boots with the solver's new kernels on the software adapter (119 of 119 pipelines, none failed, no page or GPU error).
+  NOTHING OF THE SMOKE ITSELF: a step of the solver takes seconds there and a can's cloud did not finish growing in eleven minutes, twice, so no still of
+  a wake was drawn. Whether a walker's wake curls, whether the kick reads as his legs or as a pulse, and whether calm smoke is untouched are for a GPU:
+  NEVER SEEN ON ONE, in a still or in motion. The numbers to turn there: `SMOKE_STIR` in `game.ts` (the kick's 0.9 and 2.2, the body's 0.24), the
+  debugger's "curl round a moving body ×", and the row itself (0 to 2).
+- **THE LOOK PANEL'S "DAYLIGHT AT OPENINGS" ROW** (11-01, in place of the 10-28 "Window light" row and its `render/lookwindow.ts`; the row's key is still
+  `windows`: `lookConfig.windows`, 1 on the look page, `?look=windows:0` = none; `render/openings.ts`, its numbers in `LOOK_OPENINGS`; `engine.ts lookOpeningLights` and
+  its `dayLights`, `render/lights.ts upload`'s `own`). The 10-28 row, after the maintainer in a room with every door shut under an overcast sky ("it doesn't really _look_ like all the light is
+  coming from the window? feels flat"): a shut room's daylight arrives through the radiance cache alone, probes a metre apart that hold a few broad
+  directions each, so it comes spread over the room with no way it came from. So by day each window was ALSO an area light (kind 3, `broad`, group `sky`): a
+  one-sided disk on the wall's inside face, its strength the glass's area × the radiance it looks out on. A window was an upright Glass box found once a
+  level, so an open door and a blown wall were nothing. The maintainer, 11-01, of windows and open doors as real openings: "yep let's do it. blowing holes
+  in walls should work too!". THE RULE NOW, one for all of them, from the level's boxes as they stand: AN OPENING IS WHERE FLOOR UNDER A ROOF MEETS FLOOR
+  UNDER THE SKY WITH NO WALL BETWEEN THEM, AND WALL ON BOTH HANDS. Glass is no wall to light; what is left of a wall round a hole is one. HOW
+  (`planOpenings`, statics only): a plan on the place map's cells but cut in eighths from the floor to the ceiling (the place map's own is cut between a
+  man's shin and his head, and a strip of glass over a door's height is nothing to it), with each cell's roof height; an edge is two cells side by side,
+  one roofed and one not, that light passes at a shared height, where a short flood under the roof finds `LOOK_OPENINGS.deep` 2 cells a man could stand on (so
+  not the strip under an eave, not a lorry's bed under its canvas); edges in a line are a stretch; each stretch is then MEASURED: the wall's plane is
+  sampled every 5 cm along and 10 cm up to the roof, a sample open when no solid box (not glass, not NoShadow) stands in the straight way through the
+  wall, from `reach` 0.5 m outside to the light's own plane (sandbags against the outside take what they cover; a cupboard in the room is in front of the
+  light and throws its own shadow, as does a leaf swung into the room). Open samples make stretches that end where the wall is shut from floor to roof for `jamb` 0.2 m or more (less is a mullion or a post). A
+  stretch that is still open at the end of what was looked at has no wall on that hand: an OPEN SIDE, no light (a stall's awning on posts, a canopy with
+  one wall behind it; the cache carries what comes in there). Slits under `crack` 0.12 m are shut, and so is a gap under `slit` 0.25 m high (a shed's wall that stops a hand under its roof is still a wall: with the
+  gap open no wall would be shut from floor to roof and the shed would have no jambs); less than `small` 0.25 m² is no opening; a stretch
+  longer than `span` 2 m and than twice its height is several lights side by side; one found twice within `same` 0.6 m is kept once. The light hangs 5 cm
+  inside the wall's inside face at the middle of what is open. A DOOR (`openAreas`, the light half, made again when a leaf swings): the doorway is always
+  in the plan, and its leaf, with its true shape, takes out the samples it stands across where it hangs, so a shut door's light is 0, one half way round
+  is part, and THE LIGHT NEVER MOVES while the door swings (its reach mask is made once). Light goes straight through or not at all: a leaf swung OUT a quarter
+  round still stands across the whole doorway and gives 0; one swung IN covers only what of it is still in the wall's depth. NOT AN OPENING: a door or a pane between two roofed places (a door under a canopy too), an
+  open side, glass out of doors. WHAT IS ONE that the old row never lit: an open outside door, a hole a charge blew, a window hole with no glass, a strip
+  of high glass, a passage's mouth and a garage bay's open side between their walls (the pass's bay and lean-to; the smoke lab's tunnel). STRENGTH:
+  `openingRadiance` × the open area, the area counted at `most` 2.5 m² at most: THE CACHE BRINGS THE SAME DAYLIGHT IN A SECOND TIME, and the bigger the
+  opening the more of it the probes resolve, so past a big window's size the light would only double the room; it is there to give the daylight a
+  direction (the old row counted a window's whole glass). The radiance is as it was: half the sky low down, half the ground lit by the sky and the sun
+  (`LOOK_OPENINGS.ground` 0.5), × the row, fading out as the sky's mean radiance falls from 0.12 to 0.04, so a night's rooms are as they were and nothing is
+  looked for then. THE LIGHTS ARE THE PICTURE'S ALONE (`engine.ts lookOpeningLights`): one light an opening, in the engine's own list (`dayLights`), handed to
+  the upload each frame (`lights.ts upload(time, own)`) and uploaded after the game's lights and the infrared ones. The light set itself is the
+  game's and goes into every checkpoint, so they are NOT kept in it. NOTHING THE GAME READS OR SAVES HOLDS ONE: the CPU's light estimates, the fog's
+  lamp list, the game's reach masks, the count a new man's torch is held to (`spawnUnit` throws at 64 steady lights; a first cut that kept 32 spare
+  lights in the game's list broke spawning on the block, the warehouse and the office), a checkpoint, and `stateHash`, which is the same to the bit
+  with every opening lit and masked as before the first frame (a second cut that kept them in the light set was in every checkpoint). So the update
+  with the row on is the update with it off; the GPU's light meter sees them as it sees everything in the picture, and the headless stand-in does
+  not, as it sees no bounce. Openings are found again when the level's boxes have changed and then stood still for `settle` 4 drawn frames (never on
+  the frame of a blast), at once on a level's first frame: the world's `geomSerial` says when to look, and every eighth frame besides, at
+  `openingsKey`, every static box's shape mixed number by number (a lintel and a frame's bar count; a box that turns wet does not). What is open
+  of each is measured again only when a leaf has moved (`leavesKey`). An opening that is where it was, or moved within `same`, or grew (a hole
+  blown beside it), keeps its light. ITS REACH MASK (where the `rooms` row is on, a light with none is a candidate in every room, so it is out
+  until it has one): decided by the engine against its own raster of the walls (`reach.ts buildWallRaster`, 0.4 to 2 ms, made at each finding), with
+  the jump field kept by the engine and no note in `reach.ts`'s side tables (`ReachJob.own`: they are in a checkpoint). A FIRST mask of a light that
+  would be lit now is decided whole, at once: a level's first frame (7 on the pass: 1.27 million sight-line steps, about 50 ms, once; 12 at the
+  most), a new hole, the rooms row put on in the middle of a level. A mask is decided AGAIN only where the wall raster itself has changed
+  (`wallRasterDiff`: a pane shot out or a crate gone redoes none), at the game's own pace for a lamp's (`REACH_PACE.steps` 60,000 steps a drawn
+  frame, about 2 ms; a mask is 130,000 to 310,000), the nearest first, the old one serving until the new is whole. It runs in the drawn frame, so the
+  lights come on behind the start card and on a paused page. A light's range is where its light, wide open, falls to nothing by the hour's own
+  radiance (a swinging leaf does not move it). More than `lit` 12 open at once: the nearest to SAM are lit (`lookConfig.eyeAt`, the camera's look-at
+  where nobody says). `photometry.ts lightClass` calls the group `sky` the hour's own; `engine.ts glassLightMasks` gives them their panes as it does
+  a lamp. LIMITS: A WALL MORE THAN ABOUT A DEGREE OFF THE GRID'S SQUARE GIVES NO OPENING (the hand-built room turned 0.02 rad keeps its window, turned 0.1 rad
+  loses it: the finder walks the grid's two axes; the old row found glass at any yaw; no level has such a wall today); the two-tone light (sky down onto the floor, lit ground up onto the ceiling)
+  is NOT built: one disk carries the mean (the light record has no spare word, so it is two lights an opening or a shader change); the double count
+  above stands until the cache's own rays stop bringing the open air into a roofed place; a wall thicker than 0.30 m has its light hang inside the
+  reveal (the way through is asked no deeper than `min(face, 0.45)`); a wall that stops more than `slit` under its roof all the way along is an open
+  side; a tilted or cut box blocks as the box round it; which twelve are lit moves with Sam, so on a floor with more than twelve a far room's daylight
+  loses its direction (the cache still lights it); a wall put back (a save put back, a reset) keeps its hole's light for the `settle` frames; when the
+  light buffer's 64 slots are full these are the first left out (they are uploaded last). WHERE A WALL SITS ON THE 0.4 m GRID CAN LOSE ITS OPENINGS
+  (a review's sweep of a room with a door and a window moved in 1 cm steps across a cell): a wall 0.24 m thick with the roof to its outer face loses
+  them at 1 place in 40, 0.30 m at 5, 0.40 m at 17; a roof that hangs 0.30 m past the wall at 19 and 0.45 m at 34 (the way through is asked no
+  deeper than the line where roof meets sky, and the samples all read open, an open side). Every outside door (199) and every unboarded window of
+  the shipped levels is found; a new level with an eave or a thick wall may get none. A thin panel within 0.3 m inside a window is taken for the
+  wall's own face (it shuts the window); a bookcase flush on the wall moves the light to its front. An opening in a wall on the map's last cell is
+  not found (no open ground beyond it on the grid). The door numbers below are the frozen stand's, where the tea door's leaf swings out; on the
+  shipped stand it swings in and 0.05 / 0.4 / 0.8 / 1.2 / 1.5 rad give 0 / 0.80 / 1.40 / 1.60 / 1.70 m². The engine keeps a second wall raster
+  beside the game's (0.4 to 2 ms a finding): the price of the game not knowing. Check: `tools/qa/openings-check.ts` (27 lines on both stands;
+  `OPENINGS_BREAK=1`, glass taken for wall, fails 10): a room built by hand (a 4 m window as two lights, high glass, a porch, a shed whose walls stop
+  10 cm under its roof open by its doorway alone, and a shut leaf a hand shorter than that doorway leaves it shut; an awning, a canopy, glass between rooms and out of
+  doors are none); the pass: 4 windows (tea 1.53 and 1.53 of 1.71 m² of glass, kitchen 0.99 of 1.14) and the bay's and lean-to's
+  open sides with every door shut, each outside door open 1.6 to 1.7 m², the tea door at 0.05 / 0.4 / 0.8 / 1.2 / 1.5 rad 0 / 0 / 0.50 / 1.20 / 1.60 m²
+  with no light moved, 11 reach masks none dark, a real breaching charge's hole in the store's outer wall 4.47 m² (asked on the shipped stand: the frozen
+  one holds a charge on an outer wall off), and the engine's own method on a stand-in with the game standing still (11 lights, the 7 open lit on the first frame with whole masks, all 11
+  masks whole 25 frames on at no more than the pace a frame and no work after; the door's light on and out with its place, range and mask unmoved;
+  `stateHash` the same before the first frame and after the last mask, the game's light list, reach lists and steady count as with the row off, and
+  a man still spawned; with `lit` at 3 the three nearest Sam are lit wherever the camera looks; a wall holed is a new light 4 frames after it stands
+  still, lit with its mask whole while the others stay lit by their old masks, and gone when the wall is put back; the rooms row off, on, and on for
+  the first time in the middle of a level never leaves a frame with fewer lit; the row at 0 takes all out); the office 13 with doors shut (7 over 2.5 m², 5 over head height; the old row
+  found 9); gwot-yard 1 and tut-quiet 0 (awnings); the smoke lab 2 shut and 6 open; radiance 0.51 grey, 0.83 midday, 0.26 dusk, 0 night. Every level
+  swept by hand: 1 to 27 openings, `planOpenings` 0.6 to 13 ms, `openAreas` under 0.5 ms. SEEN, the software adapter only, one page of
+  the text before the lights' list left the light set (the same shaders; 640 by 400, the look page on the pass under the grey sky with a squad of four, paused and stepped; 119 of 119 programs, no GPU error, no
+  page error): none of these lights in the game's list, 10 in the picture's (the look page's dressing boards the tea house's first window, shuts a
+  shutter on its second and nails a blanket over the kitchen's: 0.86, 0.77 and 0 m² there, so 6 are lit with every door shut). The kitchen with its
+  back door shut is lit warm by its bulb; the door open, its light comes on (0.87) and the room turns to cool daylight, brightest at the doorway, with
+  the men's shadows falling away from it; with the row at 0 the list is empty and only a patch by the doorway is daylit. The bay's own floor is nearly
+  black in its still (the eye is set for the yard there: not looked into). The store, shut, is lit by its lamp; holed by the game's own breaching
+  charge it floods with daylight through the hole, an eleventh light at 1.35 with its mask, debris still in the air. The final text booted 119 of 119 and drew the kitchen again, door shut and open, with the same
+  lights and no error. NEVER SEEN ON A GPU. Not measured: what the lights cost in the direct pass, the grain of a small disk in ReSTIR, the mask work's 2 ms a frame on his machine.
+  HOW MUCH IS COUNTED TWICE, MEASURED (11-02, after the maintainer's "midday still quite rough. also with doors open"; the pass's kitchen at midday, its two
+  outside doors and the store's door open, Sam in it, software adapter, `tools/qa/look-sheet.cjs --rows midday,midday+windows:0 --views kitchen`). The level
+  the place map holds for the room is −3.91 (log2) with the row on and −5.82 with it off: the opening lights are about three quarters of the room's light.
+  A test tree with the sky taken out of the cascades and of every gather ray (so no daylight came in a second time by the sky; the ground outside seen
+  through a door still did) held −4.21: the second helping is about a fifth of the room's light, 0.3 of a stop. So counting daylight once (a probe and a
+  gather ray that leave by a lit opening carry nothing, and `most` goes) would be the cleaner rule and would take one hack out, but it is NOT what makes that
+  room read flat, and it was not built. What the stills do show there: the kitchen's two outside doors face each other across 6 m with a window beside one,
+  so its floor is lit from both sides (2.5 to 1 from a door's pool to the middle of the room, before any shadow) on a pale concrete tile; the tea room on
+  the same sheet, a dirt floor lit from one side, reads deep. After the one-rule mend above (a place seen from another, and the roll-off in `lookShowBy`)
+  no cell of the midday sheet has a burnt area. The store's patch of door light, blotchy in his shot, cannot be judged on a software still three frames old.
+- **SHARP DIRECT NEVER GIVES A CLASS MORE THAN ITS LIVE LIGHTS SEND UNSHADOWED** (11-02, `sharp_direct.wgsl` and its compact twin; every page, no row). The
+  maintainer on his GPU, midday on the pass: "still seeing lots of splotches/glowing", "it seems like it's screen space, seems invariant when zooming", and on
+  11-02 earlier "not able to see where the glow is coming from here by flipping through the debug views", "it subsides a lot once i shoot out the one light in
+  the room". The pass draws each class as U at the output pixel times the ratio S / U of the internal texels round it, and a light walled off from the cell
+  stays in U on both sides so that the ratio carries across. Along such a light's terminator on anything round or in relief (a man's sleeve, a strap, a drum)
+  the pixel faces the light and its texels do not: their ratio is the room's lamp's and the pixel's U holds the walled-off light, which was then drawn at the
+  lamp's visibility. By night that light is another lamp behind a wall. By day it is the sun over the roof, thousands of times the lamp, so the pixel went
+  white and the bloom spread it. A debug view turns the pass off (engine.resize), which is why no view showed it. THE RULE: a walled-off light is dark by
+  proof (the edge rays and the slivers already took it so), so a class is bounded by its live lights' unshadowed sum times the ratio's own most. Nothing the
+  internal estimator measured is taken away: it never sends a ray to a walled-off light. SEEN, software adapter, two boots that differ in this line alone,
+  `look-sheet.cjs --rows midday --views lamp-out --settle 2`: the man in the shut bulb room had 98 pixels over half white (the brightest 184 of 255), after
+  none (the brightest 61), and no pixel of the picture outside him moved by more than 10 levels. NOT MENDED BY IT: a light that does reach the cell (a man
+  beside a sun patch, in a cell the sun's reach mask calls lit) can still be lent a neighbour's ratio. NEVER SEEN ON A GPU. His other word that day, "periodic
+  flashing of the glows as if it's throwing away the temporal buffer every so often": in his recording the edges of chairs, drums and wall feet near the lamp
+  go bright for about five frames and fade over the next ten to thirty, twice in 0.4 s after the camera stops. What drops the history was not found (the
+  recording does not show the HUD's res line; a scale step of the ladder remakes every target, but its cooldown is 2 s). THE OFF WORD (11-03, at the join into the build):
+  `?sharpcap=0` in the page (`render/frame.ts sharpCapConfig`, the scene prelude's `const SHARP_CAP`, read once at boot; both writings of the kernel keep the
+  bound behind it) = a class takes the ratio its taps carry with no bound, as it was. `tools/qa/sharpcap-check.ts` holds the texts, the prelude under each
+  setting and the page's line (`SHARPCAP_BREAK=1` must fail). The word never seen on a GPU.
+- **THE LOOK PANEL'S "REAL LIGHT VALUES" ROW** (10-28; `lookConfig.lamps`, 1 on the look page, 0 = as authored; `render/photometry.ts` holds the table and
+  the rule, `engine.ts lookExposure` sets `LightSet.dayExp` / `dayAmount`, `render/lights.ts upload` applies it; it REPLACES the 10-25 "Lamps by day" row, one
+  number for every lamp at every day hour. The maintainer, 10-25: "we don't have consistent, physically accurate light values (lumens?) across the image +
+  the right HDR mapping to screen … a lamp on the ground looks way too bright in daytime mode … same for the flashlight"; 10-28, of fixing it properly: "I
+  think my answer would be yes"). WHAT THE NUMBERS ARE: every level is authored as a night and its FIXTURES are real with one unit = 3.3 lux (a store's bulb
+  26 = 86 candela, 15 lux on the floor; a street lamp 260 from 5 m = 34 lux; a lantern 4.5 = 15 candela). What the night holds DOWN is whatever a real night
+  would white the picture out with: a weapon light is 10,000 candela where the game's is 200, a headlamp 15,000 against 400 to 500, a flash or a blast more
+  again, lamp glass 10,000 cd/m² against 10. An hour's sun and sky are not in the night's units: they are the real ones already × that hour's exposure
+  (a real sun is 30,000 units, the hour's is 1 to 6), and they stand in a fair proportion to each other (midday: the sky gives 0.29 of what the sun puts
+  on the ground; a real clear noon 0.2 to 0.25), so they are left as authored. THE RULE: `HOUR_SUN_LUX` says what each hour's sun stands for (midday
+  100,000 lux, overcast 3,800 as the bright patch of a 10,000 lux day, dawn 600 and dusk 500 as the first and last minutes of sun with the photocell's
+  lamps burning); from it the hour's exposure against the night's (`hourExposure`: midday 1/5,051, overcast 1/1,152, dawn 1/70, dusk 1/69, night 1);
+  every source that is not the hour's own is uploaded at min(as authored, its real strength × that exposure), by what it is (`lightClass`): a FIXTURE's real
+  strength is its authored one; a HAND light's (group `flashlights`, or `card`: the torches, the rail light) is 10,000 candela and a VEHICLE's lamp's
+  15,000 (`TRUE_CD`); a FLASH's (ttl, a tracer, a light `game/fire.ts` flickers) is 6 × its authored one (`FLASH_TRUE`); a glowing FACE (the frame's
+  `emissiveScale`, so boxes and emissive markings alike) 1,000 × (`EMISSIVE_TRUE`); the LIGHT THAT STANDS FOR A GLOWING FACE (kind 3: a ceiling panel's, a
+  screen's, a lit sign's; class `face`, 11-02, the bullet below) 50 × (`FACE_TRUE`). So at midday a bulb is 1/5,051, the rail light 1/100 (1.1 % of the sun
+  on a wall 3 m off; a real one about 1 %), lamp glass 0.20 of its night glow; at dusk a bulb is 1/69, the torch 0.63 of its night strength and glass in
+  full. The `min` is the night's hold: nothing is drawn brighter than the night draws it. The weather's cloud dims sun and sky under the hour's one
+  exposure (`hours.ts`), so lamps count for more under rain by themselves. The row's amount is in stops (k^amount). NOT scaled: the sun and the moon, a
+  lightning stroke (`transient`), an infrared illuminator, a device's sight cone (`group 'devices'`) and the Team & kit figure's staging (`kitview…`).
+  Applied to the UPLOADED record and the frame's scale alone, so the picture, the bounce, the beams and the GPU's light meter read one number;
+  `RtLight.intensity` and `settings.emissiveScale` are never written. WHERE NOBODY SAYS THE HOUR (`lookConfig.exposure` null: a night, or a level lit as a
+  day by its own sky) the exposure runs from 1 to midday's by that sky's mean radiance 0.08 to 0.35, read without the Sky light row, as before. A night is
+  left exactly as it was. "Hold: plain boxes" and the sweep's `look.all` do NOT move it (it is the light, not a layer). CHECK: `bun run
+  tools/qa/lookunits-check.ts` (17 lines: the table against `HOURS`, each class at midday and dusk on the renderer's own light set, the hold, the
+  proportions against the sun, nothing written, a fading torch, the row at a half, the night word for word; `LOOKUNITS_BREAK=1` fails 8). KNOWN BREAKS, to be settled before any of it goes to
+  the build: the game's CPU readers of the list (`guards.ts lightEstimateAt` and its callers: calm torch, power out, morale, night vision) still read the
+  authored strength, so by day a man can judge a lamp-lit room as lit that the picture and the GPU meter have as shade; the lit fog's own lamp list is
+  authored strength too (not read under the full picture, `FOG.full`); a lamp at 1/5,000 still holds its slot and its range; a glowing face lights its
+  surroundings through the bounce by the eye's factor (0.20 at midday) where its real share is the exposure's; ONE flash factor serves a rifle (× 3) and
+  a stun grenade (× 13); particles that glow of themselves (sparks, flame) are not scaled; indoors by day the only adaptation is the shade row's × 6
+  where a real room is some hundreds under the open air. The night's own moons are the levels' (41 of 53 are 0.9 = 3 lux, ten full moons): not touched.
+  IN THE PAGE on the software adapter (the pass, high × 0.5, 119 of 119 pipelines, no console or GPU error; four stills, each five frames after the change):
+  the engine handed the light set 1/69 at dusk with the row on and 1 with it off; at MIDDAY a test flashlight's pool on a floor in shade fell from 0.33 to
+  0.026 of the picture's white (the floor beside it 0.011) and two flashlight beams on open snow went from over the snow's own brightness to nothing to see;
+  at DUSK the same pool went 0.39 to 0.28 (a flashlight keeps 0.63 there). NOT SEEN: a fixture at dusk (none stood in that view); overcast and dawn; a
+  flash or a fire by day; the night compared in pictures (the check has the upload word for word); any of it on a GPU, moving, or played.
+- **A LIGHT THAT STANDS FOR A GLOWING FACE IS A CLASS OF ITS OWN: `face`, 50 × ITS AUTHORED STRENGTH** (11-02; `render/photometry.ts lightClass` /
+  `FACE_TRUE`; part of the Real light values row above, so `?look=lamps:0` is the page without it and no other page has it. The maintainer on his GPU, the
+  smoke lab at dusk with its blur row at 0: "something about the emissive on the vending machine still doesn't look right, and blur behind isn't the right
+  solution"). THE FAULT: `game.ts` gives every glowing marking and every thin glowing box (a ceiling panel, a screen, a sign) a kind-3 light of its
+  radiance × its area, and the row classed that light a FIXTURE, authored = real. But these are held down by the night like a torch: a vending machine's
+  front is 7 candela in the game and some 350 real, a 4,000 lumen panel 20 against 1,300, a monitor 1 against 40. So at dusk the sign's FACE was drawn in
+  full (`emissiveDayK`) and its LIGHT went up at 1/69, 0.027 units, under every floor a light is culled by (0.03): it lit no ground and no smoke, and a
+  bright sign with dead smoke over it reads as pasted on. Read off the software smoke lab, one boot: the sign's light put to 0 by hand changed nothing in
+  the picture. THE RULE: kind 3 that is not the sky's (`group 'sky'`, the look page's opening lights, are the hour's own and stay `none`) is class `face`,
+  real = 50 × authored: 0.73 of its night strength at dusk and dawn, 1/23 under overcast, 1/101 at midday (a panel puts 0.15 % of the sun on the floor
+  under it; a real one about 0.1 %). The face is still drawn by `EMISSIVE_TRUE` (0.20 at midday), which is the glass of a lamp and too much for a panel:
+  that is the frame's one scale for every glowing box, left alone. WHICH LEVELS: the pass has no such light, so its day look does not move; the smoke lab 2
+  (the vending fronts), the compound 15 and the records office 18 (ceiling panels 5 to 8 units, monitors 0.3), where rooms by day take their panels at 50
+  times what they did, still a hundredth of the night. CHECK: two lines in `lookunits-check` (the class at midday and at dusk), `openings-check` (an
+  opening's light is not one). SEEN on the software smoke lab at dusk, the same boot script before and after: the ground before the red front takes
+  its red, the smoke crossing the blue front is lit by it (brighter and cooler there than the plume's far side). NOT SEEN: a GPU; the compound or
+  the records office by day; midday or overcast anywhere.
+- **THE LOOK PAGE WITH A GEOMETRY TRIAL ON IS COMPILED WITHOUT THE ROUND TEST** (`main.ts urlFlagsBeforeEngine`: `roundConfig.gpu` is false when
+  `lookConfig.on` and a trial has put `cutConfig.swap` off; `?round=1` compiles it in; 10-25). After the build's round things came in by merge, the look
+  page lost its SOFTWARE device on its first drawn frame ("A valid external Instance reference no longer exists") where the plain page at the same
+  quality drew. Runs that settled it: look with every trial off and `round=0` draws; look with every trial on and `round=0` draws; look with every
+  trial on and rounds compiled in dies. The reading (the software adapter's room, above; not bisected further): a trial keeps the cut twin of every ray
+  walk live from the first frame and `ROUND_BOXES` adds the round test to each copy. `ROUND.on` (the game's own switch, the debugger's row) is NOT
+  moved: only the shader's half. On the pass nothing is lost, because the trial turns the kit's octagons into its own cut prisms before a round thing
+  is looked for. NOT so everywhere: the trial takes only octagons stepped 2 mm ± 1 mm (`geoTry.ts octagonAt`) where `round.ts` takes 0.5 to 4.5 mm, so
+  on a level whose octagons are stepped otherwise (block, consulate, records) and wherever the panel's Shapes row leaves an octagon alone, a round
+  thing is drawn and traced as its square box on this page while the game plays it round. The one-file hosted page takes no address flags, so it
+  cannot ask for `round=1`. Whether `?look&round=1` draws on a real GPU: never tried.
+  SINCE 10-26 the cut set traces a round as the picture's prism and its box walks no longer hold the round test (`docs/agents/levels.md`, the round
+  things' bullet, THE CUT SET): `?look&round=1` with every trial on DREW on the software adapter (119 of 119 pipelines) and lost its device again with
+  `&roundexact=1`. The exclusion in `main.ts` is LEFT IN all the same: taking it out changes what this page draws on levels other than the pass, and
+  that has not been looked at.
+- **THE LOOK PANEL'S PERFORMANCE ROWS** (`ui/lookpanel.ts perfRows`, `ui/perfsend.ts`; the maintainer, 10-25: "it'd be good to have a way to collect a lot
+  of perf data so you can see how it runs on my laptop", "i do worry that we have a few stuttering frames even if overall fps is pretty high"). The
+  measuring is the F9 recorder and the F8 sweep as they are (`ui/perfrec.ts`, `ui/perfsweep.ts`); the panel adds two buttons and a way out of a page that
+  cannot download. Record play = `rec.start` / `rec.stop` round his own play. Price the layers = the sweep over its own rows plus the look's:
+  `PerfSweep.extra` is a list of rows a PAGE owns (`{ row, flip }`, the flip made when the sweep arms, undone by its own undo when the sweep is kept
+  back), and the panel gives it `look.all` (plain boxes) and one `look.<row>` a layer (not Size, Sky light, Air, Clarity or Untile; Snow relief flips
+  to 1, its plain value). On a stop the recorder's own way out runs first, then `takeRead` makes the short read (frame time at the middle, the 95th and
+  99th and the worst; counts over 20 / 25 / 33 / 50 / 100 ms; the forty slowest frames outside a sweep's warm-up and settles, each with its CPU parts,
+  its GPU cost, the passes that ran over their own middle and what was logged within 0.4 s; every pass as mean and 95th) and shows it in a box with a
+  Copy button. A sweep's rows are NOT priced on the page: `tools/qa/perf-report.ts` prices them off the whole take. `sendTake` hands the read and the
+  whole take (gzipped, base64, 180,000-character parts) to `window.__takeStore.put(path, doc)` as `takes/<id>` and `takes/<id>/parts/<n>`, one take at a
+  time, a failed write tried once more. No page of this repo sets `__takeStore`: a page that hosts the one-file build hands it in, and without it nothing
+  is sent and the read sits in the box. `takeRead` was tried headless on made-up takes only; no take has left a page yet.
+  Where a store is handed in the recorder's own download is NOT tried (a hosted page starts none, and the try only raises the host's notice over a
+  take that did get out). FIRST TAKE FROM THE MAINTAINER'S MAC (10-25, the pass at night, high at half scale, world frozen, 20 rows × 3 rounds): base 15.5
+  ms of GPU; every layer of the look together gives back 0.8 ms (5 %), no single layer is outside the noise, the shade row is free. A third button, **Sharp direct**, is `?nosharp` from the panel (`sharpForce.v = false`, then the current preset put on again so its other resolve rows follow; again = as the preset): a hosted page's address takes no flags, and the debugger's own row only holds until the ladder's next preset. Asked for by the performance lane, 10-25, for a take on Auto with it off; not while a take or a sweep runs.
+- **POSTS SEATED IN A WALL'S END** (`scene/lookMend.ts seatPosts`, the look page only, `?seat=0` off; the maintainer, 10-25: "seems like a sorting issue
+  that's flickering to right of the red door"). The pass's gate post (0.34 m square) stands with one face exactly in the end face of the yard wall it
+  closes, so two faces shared a plane and the depth test flipped between the post's render and the wall's stone plinth. On the look page a post (tall,
+  8 to 30 cm half both ways, square to the world, drawn, no glass) with a face in the END face on the SAME side of a wall whose section is inside the
+  post's grows 4 mm in x and z when the level loads, and rises 4 mm where the two tops are level. A post that only stands AGAINST a wall is not matched.
+  Over every level file: 12 posts (pass 2, gwot-yard 2, police-post 2, tut-sky 2, snatch 2, depot 1, depot-gwot 1); the console says how many. The level
+  file is not touched: the right mend is in the level's own numbers, found by `tools/qa/zfight-check.ts` (`levels.md`). Never seen on a GPU.
+- **THE CHARACTER LAB** (`host/charlab.ts`, opened from the look panel; the maintainer, 10-25: "men up close look pretty good, but not perfect. IMO we
+  should just iterate on the characters in a character lab or the workbench"). Not a page of its own: on the running look page the camera is pinned on
+  YOU at a man's height (`FollowCamera.setPin` every frame; Angle, Height, Distance, Looks at, or turning slowly), you wear any variant of the cast
+  (`cast.ts castWear`, two arrows) and are painted as the SIDE of that outfit (`charLook.ts`), except in a mission that has you in the sneaking suit,
+  where every outfit is the suit. Nobody notices or hurts you while it is open: `playerInvisible` and `godMode` are raised once on Open, only where they
+  were down, and Leave puts down only what the lab raised, with your own outfit and the free camera back. You walk the mannequin into the light you want
+  to judge him in. THE EYE STAYS ON YOUR SIDE OF A WALL (`charLabFrame`: `col.segmentBlocked` from the look point to the eye and to a point 0.25 m to
+  either side of it, the distance bisected and 0.25 m kept off the wall); where that leaves it nearer than three quarters of the distance asked (3.8 m by default: the lens is a long one, 28°, and shows a man whole from about 3.6 m) it looks from the roomiest of the twelve
+  angles a twelfth of a turn apart, a nearer one preferred. Coming in is at once, going back out is eased. `quietUtility` is raised with the two
+  flags, as a show has it, so NO CHECKPOINT is written while the lab is open (`savestate.ts runNo`): a file with the lab's unseen player in it could
+  be loaded later with nothing to put the flag down. `window.__charlab` = `{ state, open, leave, wear, worn, outfits }`. Sam keeps his own
+  weapon in any outfit. Never seen on a GPU.
+- **A HOUSE FRONT DRESSED BY HAND, A TRIAL** (`src/scene/frontTry.ts dressFront`; the look page only; the maintainer, 10-23, of the pass's tea house seen
+  from over its yard: "this looks a bit too "regular" -- especially the face of the building we're looking at", and a minute before "the art style just
+  needs a lot of iteration. right now it does look a bit procedural"). The answer tried is AUTHORING, not another layer of noise: one wall gone over
+  piece by piece after the level loads (as the geometry trial does; `levels/pass.json` is not touched), every number placed by hand. The three windows
+  differ (boards, shutters, a blanket nailed over), the two red panels differ (one worn, one plastered over), mends of other mud, a spout with its
+  streak and ice, beam ends under the roof line, split wood under a window, a ladder leaned over the level's own planks, a plank bench with a can and
+  a pot, a few mud bricks at the wall's end. Made of what the engine has: plain and tilted boxes (`Box.rot`), twelve-sided prisms for round timber
+  (`cutRound` about z, a thin picture-only disc for the end grain) and thin cut boxes for flat shapes with an uneven outline. ONE MODEL: what closes a
+  window is a REAL box (sight, a round and the room's lamp stop at a board, a shutter, the blanket and pass between the boards), as is what stands on
+  the ground (none within a stride of a door; the swung shutter stands out at head height beside the planks) and the beam ends over every head; only
+  what lies flat on the wall is picture only, as the level's own panels are. COLOURS are the level palette's rows darkened in one piece (`of(row, k)`,
+  0.55 < k < 0.99), so `lookClass` gives each piece its map: a hand-picked colour between two rows gets none. Traps met: the wall past x = 28 at that
+  z is a partition INSIDE the bunk room, and the yard wall there has a door between its two panels; the level already stacks planks at x 21.4 to 22.85.
+  KNOWN: a tilted box takes no map and no clinging snow from the look (`lookSurface` leaves `BOX_ROT` alone) and a cut piece takes snow only about y;
+  a wall charge there leaves the pieces above a hand's height hanging (`scene/lookTidy.ts` takes a decal with its wall only from the foot). It knows
+  the house by three of its file's boxes (the two red panels, the second window's pane) and does nothing on any other level. Switch: `?front=0` or the
+  look panel's 'Dressed by hand' button (kept on the machine as `twopointsix.fronttry`; the page loads again); needs cut boxes on, and holds the cut
+  programs in from boot as the geometry trial does. Not a rule of the game: no knob, no journal key; the men's routes and sight along that wall change
+  on that page. If the look goes to the build this belongs in the level's file or its kit, not in code. Checked: 98 pieces placed, none malformed,
+  none in the level's own solids or by a door (a script over the loaded level); drawn on the software adapter only.
+- **A LORRY WITH CURVES, A TRIAL** (`src/scene/lorryTry.ts dressLorry`; the look page only, with cut boxes on; `?lorry=0` = the lorry as its file has
+  it, or the look panel's 'Curved' button, kept on the machine as `twopointsix.lorrytry`; the page loads again). The maintainer, 10-24, on a GPU picture of the pass's yard: "some curved surfaces on the truck would go a long way". The
+  pass's lorry (twenty boxes under four flat slabs of snow) is gone over by hand after the level loads, as the house front is; `levels/pass.json` is not
+  touched and the pieces are found by where the generator put them (`tools/levels/pass.ts LORRY`): any one missing = nothing is touched. The tilt is bowed
+  over four hoops with its snow on the bow; the cab's roof is an arch from a leaned windscreen back; the bonnet is a narrow engine cover with a round top
+  between two fenders that arch over the front wheels; wheels, hubs, lamp pods and a tank under the bed each side are round. 21 boxes added, 16 changed.
+  AN ARC (`Box.cutArc`, new): a round prism (`cutRound`) turns its normal about the box's own middle, which makes a drum but not a roof. With `cutArc` =
+  k metres the axis lies k UNDER the box's centre, so a box whose top is cut to seven facets of a wide circle (its top face + six planes) is shaded as
+  that circle. It rides in the record's unused LAST row (`cut.ts packCut`: `CUT_PAD`'s w + k; every reader of a plane stops at the first zero normal),
+  so an arc carries seven planes at most (an eighth plane drops the arc without a word); about x or z only. In `gbuffer_cut.wgsl` its facets and top
+  turn (the box's own upright faces and underside stay flat), the look's paint is read straight down each quarter (no unrolling), its ends get no drum's
+  rim, and an arc in the snow paint gets `snowBox`'s snow (grain, glow, the wandering edge) asked as the box's top face, and is drawn as a SHEET: its
+  upright faces and ends are discarded (they stood as straight lines where the wandering edge drew back), so a cap lies two centimetres over its roof.
+  Picture only: every ray meets the facets. A round's rolled rim is now on both end faces (a wheel shows one to each side).
+  WHAT A RAY AND A BODY MEET CHANGES on that page: the bonnet (1.5 m high, 0.98 m a side) is a hump 0.56 m a side that tops out at 1.46 m, with a
+  fender of at most 1.08 m beside it and, for 0.63 m in front of each fender, only the 0.78 m bumper; the tilt's eaves come down from 1.95 m to 1.6 m;
+  a tank closes a metre of the gap under the bed each side. No knob and no journal key, as the geometry trial.
+  KNOWN: no clinging snow from the look on an arc (the round's snow hook is about y only), so the authored caps are all the snow there is; the level's banks against the lorry are as they were; the lorry is found by twenty
+  numbers copied from the generator, and the console says so when one misses.
+  Checked: `dressLorry` on `levels/pass.json` under bun (21 added, 16 changed, every record seven planes or fewer where it is an arc); the page booted
+  on the software adapter with 0 console errors; four pictures (play camera, the nose, from above, dusk). Never seen on a GPU.
+- **THE LORRY'S FITTINGS, A TRIAL ON THE TRIAL** (`src/scene/lorryTry.ts kitLorry`; the look page only, with the lorry's curves on; `?lorrykit=0` = the
+  curved lorry without them; no panel button). The maintainer, 10-30, on a GPU picture of it at midday: "truck could use some dressing up. but overall the
+  round surfaces look nice". 43 boxes added after the curves (twelve of them cut prisms), found by the chassis rail: an exhaust stack in a heat shield up the cab's back corner,
+  a mirror on an arm each side, a beacon, a step, a door seam and a handle a side, an air cleaner on the cowl, a winch drum between two cheeks, two
+  hooks and a plate on the bumper, four stakes down each sideboard, three jerry cans racked on one of them, mud flaps, tail lamps, and the spare wheel
+  upright on the tailboard. Rounds are prisms of twelve sides (`ring`), colours are palette rows (none under 0.55 of its row; the beacon's orange and
+  the cans' olive are `gwotAs(…, 'metal')`, so a round into them throws metal, not a plant's or a cloth's debris). ONE MODEL: each is a real
+  box to rays and bodies; the spare stands 0.3 m off the tailboard from 0.75 to 1.71 m, a mirror as far out as the bank of snow along that side.
+  SEEN on the software adapter only (midday, 480 × 300, from over the cab and from behind): the stack, the beacon, the mirrors, the stakes, the air
+  cleaner and the racked cans read; the winch, the steps and the spare were not in those two frames. NEVER SEEN ON A GPU; its cost there is not measured
+  (`?lorrykit=0` against the page as it opens is the pair).
+- **THE PASS DRESSED WITH ROUND THINGS, A TRIAL** (`src/scene/passTry.ts dressPass`; the look page only, with cut boxes on; `?dress=0` = the pass as its
+  file has it, or the look panel's 'Dressed' button, kept on the machine as `twopointsix.passtry`; the page loads again). The maintainer, 10-29, asking what
+  rounds cost and whether to use them through a level: "dressing up the pass level we have would be another good experiment". Gone over by hand after the
+  level loads, as the lorry is; `levels/pass.json` is not touched and the chopping block is the test that this is the pass (not found = nothing touched).
+  Three pipes stacked along the bunk room's wall (two iron, one rust) with snow along their tops; three fuel drums standing in the pocket of yard by the
+  lean-to and one on its side; the chopping block made round, four logs by it and two along the wood pile; a loose tyre by the cart. 35 boxes added: the
+  page as it opens (the shapes, house front and lorry trials on too) goes from 607 boxes with 131 cut to 642 with 167, none with more than eight planes.
+  WHAT STANDS IS A CUT PRISM (`cutRound` about y, `lorryTry.ring(r, 2)`, as `geoTry.ts roundStacks` makes one), NOT `Box.round`: on the look page with a
+  geometry trial on, `roundConfig.gpu` is off (main.ts) and a `Box.round` is drawn and traced as the square box round it, which the first stills showed
+  (three square drums). So a body meets the box round each new piece and a ray meets the prism. Paints are the palette's own rows as they are (a row
+  darkened under 0.55 of itself is no row to the look's material maps, `gbuffer.ts classWgsl`, nor to what a round throws off it); the olive drum is
+  `gwotAs('olive', 'metal')`. No knob and no journal key, as the other trials.
+  TRIED AND TAKEN OUT: the file's 93 low heaps of snow with their tops cut to arcs (the page's snow surface already draws a smooth hill over each, so
+  nothing showed and 93 cut boxes bought nothing), and discs of snow on the drums' lids (a round's own end gets a drum's dark rim and no snow finish).
+  KNOWN: the snow along a lying round is a hand-fitted arc each time, because the cut pass's clinging snow knows a round about y only (the lorry's bullet
+  says the same); the look panel's trials are five positional arguments and four copies of one predicate.
+  SEEN on the software adapter only (midday, 480 x 300 drawn up to 960 x 600): the page boots with every program (119 of 119) and no error; the logs and
+  the lying drum read as round with their snow on the top line; the standing drums are round and show their twelve sides close up; the pipes read as
+  pipes. NEVER SEEN ON A GPU and NOT TIMED ANYWHERE: the page's fps with `?dress=0` and without is the reading asked of the maintainer.
+- **THE MEN ON THE LOOK PAGE, A FIRST ROUND** (`shaders/look.wgsl lookMan`, called from `gbuffer.wgsl fsSkin`; the maintainer, 10-23: "we need to spend a
+  LOT of time using these layers to make the characters look awesome. I think that's the next big frontier"). A man was one flat colour a material
+  slot with the mesh's creases; here each slot is drawn as the stuff it is, in his BIND pose (nothing swims as he moves), by his side and a number of
+  his own: cloth (thread from the cloth map round each limb, folds that ring the limb and gather at knee, hip, ankle and elbow as a relief the lamps
+  light, an operator's print cut from his own colour, dust on the knees, age), webbing (rows of tape, rubbed edges), helmet (cover, chips), metal
+  (bright edges, an oiled sheen), boots, skin (tone, the cold in the face, a day's growth). No snow is drawn on a man: a CAP on helmets and shoulders was here until 10-24 and snow caked on the boots and hems until 11-02, both out on the maintainer's word ("let's also remove the snow on boots"). Carried by one float: `vsSkin` packs slot + 16 x side (and, since round four, + 128 x the cast part) into `fin.w` on that page only (`charMaterials.ts charLookSides`, raised by
+  main.ts with the look), where the build keeps 1. Amount: the panel's Men row (`look=men:0` = the men as the build draws them; `window.__look.set({
+  men })` for a scripted picture). KNOWN GAPS: the tilted normal is stored as a man's normal always was (alpha 1), so the working-size passes read
+  the folds too: on a GPU look for crawl on cloth under the denoiser; the print and folds are noise, which is the "procedural" he named, so authored
+  maps for the men are the next round; nothing here has been seen on a GPU.
+- **THE MEN, ROUND TWO: TAILORING** (`shaders/look.wgsl manCut` and the slots' own blocks in `lookMan`; amount `lookCfg.g.y`, the panel's Kit detail row,
+  `look=tailor:0` = round one alone). Round one was print, folds and wear, all of it noise, and he had called the page "a bit procedural": round two
+  draws what a person CUT AND SEWED, placed by hand on the body in the bind pose. The cast stands in a T: an arm runs out along x round (y 1.435,
+  z -0.068) from |x| 0.22 to 0.70, a leg up along y round (|x| 0.093, z -0.045 at the shin to 0.01 at the thigh), an operator's helmet is y 1.65 to 1.86,
+  his boots y 0.03 to 0.27, his knee pads y 0.47 to 0.60 (measured from the cast, not guessed: see the preview below). OPERATORS: a combat shirt (the
+  body under the plates plain knit, only the sleeves printed; collar and short zip), a sleeve pocket with its flap and a loop field carrying a patch
+  and a tape, doubled elbows and knees and seat, the out seam stitched twice, cuffs and hems; the webbing's tape sewn down every 38 mm (a bar tack in
+  colour and relief: this is what makes a vest read as load-bearing kit); a helmet cover with four seams from the crown, a band with two cat's eyes at
+  the back, loop squares on the sides and a rubber rim; sand-coloured rough-out boots with laces between eyelets, a padded collar and a welt (side 0
+  only: the dark suit keeps dark boots and gloves); knee pads as hard caps scraped pale; gloves with a sand back, a dark palm and a knuckle bar. THE
+  OTHER SIDE: a shirt's placket with buttons, collar band and cuffs; loose trousers and the shirt's skirt hang in long vertical folds (relief); the
+  waistcoat is wool in a twill; headgear is felted wool. The shader has slot and side but NOT the part, so a shawl or scarf in `cloth_plain` gets the
+  shirt's lines too, and every hat is "wool": a part id in `fin` is the next step if that shows (round four carries it, for the webbing). WGSL TRAP: `patch` and `loop` are reserved words.
+  A PREVIEW WITHOUT THE PAGE made this round possible (a still of the men costs ten minutes here): rasterise the cast in its bind pose under bun
+  (`tools/qa/headless.ts loadCastCharacter`, `charMaterials.ts charSlots`) into point / normal / slot / cavity buffers for a front, back, side and top
+  view, then shade them with a numpy stand-in of `lookMan` (two seconds a man); design there, port to WGSL after. The stand-in is not in the repo (it
+  would drift): the shader is the truth. Never seen on a GPU; on the page only the software renderer has drawn it.
+- **THE MEN, ROUND THREE: THE PRINT, AND CLOTHES THAT WERE WORN** (`shaders/look.wgsl manCamo2`, `manPrint`, `manWorn`; the print's amount is
+  `lookCfg.g.z`, the panel's Printed cloth row, `look=print:0` = the first print; the worn clothes ride the Kit detail row). The maintainer's second
+  point was "we also need to get away from the pixel art textures", and the first print was that on a sleeve: one value noise cut at a level, whose
+  blobs come out square-shouldered along the lattice and read as big pixels up close. `manCamo2` is the print as it is on the bolt: a ground that
+  drifts from tan to sage with no edge, hard-edged shapes of green and of brown over it, cream flecks, dark twigs in the green; each field is three
+  octaves and every octave is turned off the last one's lattice (`manRot0` / `manRot1`), which is what takes the squares out. Sixteen noise taps a
+  printed pixel where the first print took six. THE OTHER SIDE'S one set of clothes (`manWorn`, `cloth_plain` on every side but the operators'): the
+  road in the trouser legs to a ragged line below the knee and on the seat, grime at the cuffs, the collar and where a man wipes his hands, rubbed
+  elbows, sweat down the back, a breast pocket with its flap (`manCut`), and on about half the men a stripe in the weave; a responder's duty shirt
+  takes under half the dirt and no stripe. The dirt is the side's own grime colour at half strength, so it darkens a pale shirt and dusts a dark one.
+  NO SNOW LIES ON A MAN (the maintainer on a GPU, 10-24: "weird that the men are covered in snow, shouldn't happen"): the cap on helmets and
+  shoulders is out, after three tries at making it smaller; only the cake on boots and hems stays. Do not put it back. (He saw the cap on a GPU; the build without it booted on the
+  software adapter with no console errors and has not been seen on a GPU.)
+  The print and the worn clothes were designed in the bind-pose preview, then ported; never seen on a GPU.
+- **THE MEN, ROUND FOUR: A PLATE CARRIER THAT IS MADE, AND THE PART REACHES THE PIXEL** (`shaders/look.wgsl manWeb`, `manVest`, `manRigPouch`; rides
+  the Kit detail row; `look=tailor:0` = round one's webbing with every other sewn thing gone too: no setting shows round two's carrier beside this). A close picture of the squad showed
+  the weakest thing on the page: rounds one and two taped EVERY webbing pixel, so a carrier was a wall of bricks from collar to belt, shoulders,
+  packs and straps alike, the "procedural" look he had named. THE PART ID NOW RIDES TO THE FRAGMENT (round two's known gap): `gbuffer.wgsl vsSkin`
+  adds 128 × the vertex's cast part to `fin.w` on the look page (`code` = slot + 16 × side + 128 × part, 4043 at most, exact in the float), and
+  the page says which parts matter once its cast is loaded (`gbuffer.ts lookParts`: 1 + the index of `op_suit` and of `chest_rig`, 0 = this cast
+  has none, sent as `lookCfg.g.w`). `manWeb` sorts a webbing pixel four ways. (1) THE OPERATORS' CARRIER (the webbing of `op_suit`, side 0 only:
+  the dark suit keeps its black harness as it was): tape rows only on the front panel (to 1.345 m), the back panel (to 1.385 m) and the
+  cummerbund, lower in relief (1.1 mm, was 2.2) and drawn as paler tape on the cloth, not as dark gaps; above them a plain plate bag with a
+  seam and the plate's clipped corners stitched through; a loop field on the chest with a name tape (its letters only marks) and a flag in two
+  drab tones; on the back a drag handle under the collar (a doubled strap boxed and crossed at each end, standing 2.8 mm off) and a loop field
+  with a call-sign tape and a glint square; shoulder straps padded between two rows of stitching, a buckle where each meets the front; a bound
+  hem. (2) HIS OTHER KIT (the `kit_*` packs, the chin strap): plain cloth, no tape. (3) A DEFENDER'S CANVAS CHEST RIG (`chest_rig`): no tape; a
+  twill, each pouch under a flap whose edge is stitched across at the toggle and stands 1.6 mm proud, a stitched hem. (0) Everything else (the
+  responders' kit, a cast with no such parts) as before. Everything on the carrier is placed by bind-pose coordinates on the one mesh the cast
+  has, and the part is found by its NAME in the page's boot (`main.ts`): another carrier mesh needs its own numbers, and nothing checks them.
+  KNOWN: the pouches on the carrier's front are `op_suit` too, so the tape rows run over them and the front seam crosses the chest pouch; the canvas rig's pouch mask is "the front of him between two heights", so the belt's front arc takes the hem line; a
+  pack on a man's back hides the handle and the back's loop field from most angles. SEEN: the numpy preview of `operator_2` and `defender_4`
+  (bind pose, four views) and the squad of four on the pass at dawn on the software adapter (very low, one seed, 119 of 119 pipelines, no
+  errors). Never seen on a GPU; the defenders' rig never seen on the page at all.
+- **BIG HAND-MADE RELIEF: STONE, MUD BRICK, PLANKS, DAUBED MUD** (`render/lookTex.ts`; the look page only; the maintainer, 10-23, sent two stills of a
+  2005 stealth game, a stone stairwell and a dark brick room, as the materials reference: "this looks pretty good and it's pretty much all materials,
+  right?"). What those stills have that noise does not: FEATURES A PERSON CAN NAME, each a few centimetres to half a metre, under one raking light.
+  So the maps were redrawn as things, not spectra: `wood` = eight rough-sawn boards of their own widths with wandering gaps, raised hard grain, knots
+  with swirl, checks from the butts, saw strokes on some, grey boards beside brown, nails with rust runs; `mud` = hand daubs with finger strokes and lap
+  ridges, a flaked last coat with a crisp ragged edge, one long crack net and fine crazing, straw, pebbles and the holes they left. Two NEW layers, 11
+  `field stone` (a jittered lattice of stones each proud by 2 to 5 cm with its own lean, clefts, chips, four rock colours, lichen) and 12 `mud brick`
+  (sixteen courses, a wandering bond, washed-out joints, crumbled and missing bricks). They are on no class: `look.wgsl lookSurface` lays them INTO a
+  mud wall wider than 0.6 m and taller than 0.24 m, stacked pieces included (the MASONRY block): a plinth of field stone to a wandering line about 0.35 m up with a
+  drip shadow under the render's lip, and mud brick showing in ragged holes where the render has fallen, more of them low on the wall, each with a
+  lit lip. Panel row Stonework (`look=stone:0` = plain mud walls). `LookCfg` grew to 7 vec4 (f.w stone, g.x marks); `LOOK_ROUGH` is read for the first
+  eleven layers only (the two new ones carry their base roughness in the block). TRAPS: a coursed map must never sit on a layer `untile` reads twice
+  (the second read is turned 0.61 rad: courses cross); the plinth's line is in world y, so a mud wall on a slope would step. A map can be judged
+  without the page: bake `lookLayer(n)` under bun and shade it flat, raked and top-lit (2 s a layer) before any still is asked for. Nothing here has
+  been seen on a GPU.
+- **THE MATERIAL MAPS ARE THE LOOK NOW** (the look page only still; 11-01, after the maintainer's yes to walking back "no image textures"). `STYLE.md` says what a
+  map may do (rule 1, Surfaces, Not the look, Holding new work to it), and four things the prototype had wrong are rules with a check. (1) WHAT A BOX IS MADE OF IS THE
+  BOX'S OWN WORD. `render/gbuffer.ts lookStuff(albedo)` is the rule `lookClass` wrote out for the shader (the palette's row, then a classed paint darkened in one piece;
+  the numbers are `LOOK_MATCH`), asked on the CPU of the box's paint AS IT WAS DRY. `gbuffer.ts lookWordOf(dry)` makes the box's look word: bits 0 to 3 the stuff, bit 4
+  "it moves" (a box past the level's statics), bits 5 up a number of the box's own, 0 to 90 (from its motion key or size if it moves, from where it stands if not).
+  `BoxWorld.setStuffOf` (the engine on the look page; null anywhere else, so the mat word on every other page and every headless stand is as it was) puts 8 × the word
+  above the finish in the mat record's last float (`common.wgsl boxLook` / `boxStuff` read it, `boxFinish` takes it off under `LOOK`; a finish there is good to a
+  500th). The shader used to ask the colour it was handed, which is the paint × the rain's `wetK` 0.5: a wet concrete slab was nobody's colour and drew flat, wet
+  tin was block. THE BIG LOT IN THE RAIN is soaked by overwriting its `albedo` (`weather.ts soak`), so the page hands `lookWordOf` the weather's own record
+  (`Weather.dryPaint`, wired in `main.ts` once the game stands; a box with `aniso` set is asked there first). `lookClass(colour)` is left for one caller, an old
+  break's core in `gbuffer_cut.wgsl`, which is a colour in a cut's record and not a box. STILL BY PAINT: a level file's `material` name is thrown away at load and
+  the stuff is found again from the colour, as it is for a round; ten pairs of the palette collide when one is worn dark to exactly the other (the check counts
+  them: mud × 0.95 is coyote, tin × 0.70 is block …). Landing wants the name kept.
+  (2) A MAP KEEPS ITS PAINT'S VALUE (`lookTex.ts lookLayer`, the row `even`): two things in a map multiply the paint. The multiplier of a layer under
+  `LOOK_PAINTED` is scaled by ONE number so its mean value (luminance) is 1; one number and not one a channel, which gave clean metal a blue cast in place of a
+  rust one. The hollows were `0.5 + ½ open`, never over 1, so every map was darkened a second time (gravel drew a tenth under its paint): they are stored as
+  ½ open + what puts their mean at ½, the mean weighed by the multiplier (worn wood's high places are its pale ones: counted texel by texel the two together
+  drew 3 % over), and the shader draws `0.5 +` the channel. Drawn together a painted layer is its paint within 0.2 % at any Cavities setting. The two masonry
+  layers are another stuff than the paint over them and keep their colour; their hollows are evened too. WHAT MOVES IN THE PICTURE HE HAS SEEN (value, at the
+  page's rows): cloth and bare metal about a sixth brighter (18 %), sheet an eighth, gravel and wood a tenth, painted metal 6 %, slab and plaster 3 to 4 %, mud walls 2 %;
+  earth 4 % DARKER, block as it was. On the software page (the pass's kitchen under the grey sky, one frame with the row and one without) a floor slab read
+  4 % brighter and a mud wall 3 %, a wooden table 17 % and a crate 23 % (dark things also take the brighter room's bounce), and the two men within half a per cent. THE MEN DO NOT MOVE: their cloth was tuned on his GPU against the cloth layer as it fell, so `lookMan` multiplies the layer's
+  tone back in and takes its hollow back out (`lookCfg.h.x`, `.y`, written by the fill when layer 8 is made). OFF WORD: `?look=even:0` and a reload = every map's
+  texels as its material wrote them (read when the maps are made; the panel's row "Maps keep their paint" says so and draws nothing when moved). It is the maps
+  as they were and NOT the whole picture before 11-01: (1) and (4) are mends of wrong answers and have no row (a wet slab is classed, a mover is in its own
+  frame, a static's shift is by where it stands), so the page before them is a checkout of the commit before.
+  (3) THE MAPS ARE MADE WHILE THE SHADERS COMPILE (`GBuffer.fillLook`, one of `Engine.init()`'s jobs, a turn of the event loop between layers): 6.5 s of arithmetic
+  under bun that used to run in the constructor, in front of the first compile, with the start card frozen. No frame is drawn before the last layer is in. It is
+  its own boot mark (`pipelines_materials`), so on a warm boot the card can stand at N of N pipelines for a few seconds while the last layers are made; a layer
+  is still half a second in one piece (a Worker would end that; not done). `tools/qa/wgsl-dump.ts` waits 180 s for init because of it.
+  (4) A THING THAT MOVES CARRIES ITS MAP: a box whose word says it moves is laid in its own frame whatever its stuff, shifted by its own number, and takes no
+  masonry. By the box's place in the list (as the shift was, `bi % 7`) every door's boards jumped in the frame a breach appended a static. Known, left: a device's
+  boxes are keyed by their order among the devices' boxes, so a tripwire's beam coming or going still moves the number of the device boxes after it (most carry a
+  turn and take no map); two unkeyed movers of one size share a number.
+  CHECK: `bun run tools/qa/lookmaps-check.ts`, 14 lines, the same on both stands (it stands no rule up); `LOOKMAPS_BREAK=1` = the row at 0 and four lines
+  fail (the value, paint × hollows, the masonry's hollows, and the rain's line, which under the word asks a wet thing's stuff of the colour it is handed).
+  THE RAIN'S LINE AND WHAT IS WET (11-04): since everything flat under open sky is wet in rain (`game/wetGround.ts`), a wet thing may be plain paint laid on the
+  ground (a weed, a rug, a mat, a stain: 36 of the compound's 177 wet things, 41 of 186 on the page's stand), of no stuff dry or wet. The level is
+  packed dry and each thing's word kept, then the rain is picked and it is packed again: every wet thing carries the word it carried dry, its paint's;
+  some of them are of a stuff, and the ground's own slabs always; a wet metal thing is handed its own colour. The lines: the value by one number with the hue kept; paint × hollows at three Cavities settings;
+  the masonry's hollows; the row's off word and the men's cloth handed back to a texel's rounding; the masonry's own colour; no seam; normals, finishes and far
+  copies; every palette paint its own row's stuff; worn paints and the counted collisions; the word through the real pack on the smoke lab's floor (stuff, the
+  moves bit on dynamics only, no mover's word changed by an appended static); the rain through the game's own weather on consulate-gwot's gravel lot; the
+  shaders' and the page's text; the fill's 260 writes with none at the making and a wait on a message before each layer (counted by the channels the fill makes: bun hands a port a
+  thousand messages in one go, so a count of the loop's turns from outside said nothing); the block's size and its last row. Only the three `even` lines have a
+  break path. No `FROZEN_HOLDS` row: the maps are a page's
+  picture and none of this is the game's state. SEEN: one boot on the software adapter. Nothing of this on a GPU. NOT DONE: a material name kept from the level
+  file, which is the root of what is left (the stuff is re-read from the colour at every pack through a cache, the weather is asked through a hook, any other
+  writer of a box's paint still changes its stuff, and `lookStuff` and the generated `lookClass` are two writings of one rule that no check holds together);
+  the cut core's class on the CPU; the maps made off the main thread or kept between visits; the far copies' cost (31 MB became 36 with thirteen layers); relief past the tilt cap.
+- **MARKS AS PAINT, A FIRST TRY** (`shaders/markings.wgsl markSoft`, behind `lookMarkSoft()` = `lookCfg.g.x`, 0 off the look page by gbuffer.ts's
+  stub; the maintainer, 10-23: "we also need to get away from the pixel art textures"). A marking is still the level's 2-bit cell bitmap (2.5 cm
+  cells), but on the look page it is not drawn as squares: the coverage is read over a one-cell footprint, cut back at half cover along a ragged line
+  (noise by box and marking, so two signs do not share an edge), the shares sharpened so two colours meet in a line and not a blur, and thin rubbed
+  patches let the surface through. An emissive entry keeps its cells (a lamp's face must not lose light), and past about 1.75 cells a pixel it is the
+  plain coverage again (nothing to draw). Panel row Painted marks (`look=marks:0` = square cells; what the row does today: THE ROW ON A GPU, below). The bitmaps themselves are still the level's: a
+  mark that is a coarse picture stays a coarse picture with soft edges, so authored marks at a finer cell are the round after. Never seen on a GPU.
+  THE SOFT READ IS ITS OWN (`markSoftRead`, 10-24), one read of the four cells around the pixel. (1) A PLAIN BILINEAR RAMP between cell centres.
+  The first try read `markTaps` at a one-cell footprint, which is already a quarter into its minified mean: 0.75 of the ramp + 0.25 of the nearest
+  cell, a step on every cell edge, so the cut sat on the cell edges and a staircase stayed a staircase with round corners. (2) A STROKE THAT RUNS
+  CORNER TO CORNER IS JOINED: where two cells of one paint meet only at a corner and the other two of the block are bare, the ramp is exactly half
+  cover at the corner (a stepped diagonal was a string of beads). The bridge adds cover there for that paint (a neck about 0.8 of a cell, as wide as
+  the stroke), so the pass gate's diamond is one painted line. NOT joined: two solid blocks meeting at a corner (the rugs' chequers of 2 by 2 squares;
+  the same rule leaves two bare cells meeting inside a painted field alone), a chequer of single cells, a paint that burns. Counted over
+  `levels/*.json`: 6,903 such corners in 8,075 marks; 4,608 are block corners and 36 a single-cell chequer (bazaar.json), left as they were; 2,259
+  are joined, in 748 marks. Among those are specks that touch at a corner (the dots of writing on a paper, rust speckle), which now fuse. KNOWN: it
+  reads its own record, so a corner on the seam between two records of one face is not joined (347 of them, most on rugs laid as four records, where
+  the block rule skips them anyway); the bridge is paint the far read (the plain coverage past 1.75 cells a pixel) and a reflection (`markHit`) do
+  not have, so a joined stroke is about a tenth heavier up close than far off. A wider smooth read (a B-spline over the cells, cut at 0.4) was tried
+  first and DROPPED: it filled one-cell holes (the police post's lattice), washed out a lone cell of one paint inside another, and did not keep the
+  cover. Seen on the software adapter at the pass gate (the diamond is one line, the bars have a brushed edge), a rug (the lozenges are slanted and
+  round, no steps) and a crate; never on a GPU. TRAP: the corner test first read its eight cells in two chains of `&&` over `markCell` calls, and
+  with that the software adapter never finished the look page's first frame (three boots of three; every pipeline compiled, no error). It is one
+  call site in a loop over `MK_BRIDGE` now. A page boot that reports its pipelines says nothing until a frame is drawn.
+  **THE ROW ON A GPU (10-25).** First: "turning on and off painted marks doesn't seem to do anything?" A test picture at the top of the row (red = how
+  near the soft read counts the pixel, green = its cover, blue = an entry that burns) showed the soft read working on his GPU: red patches, smooth green
+  lines, the diamond one slanted line. Then, with the read proven: "painted marks still doesn't look like it does anything until 2 where it's really
+  overdone" (2 was that test picture, read as the effect). CAUSE: at the distance the game is played from a cell is about two pixels, so a rounded
+  corner or a ragged edge is under a pixel; only a change of tone or of a whole stroke shows. THE ROW NOW (`markSoft`, 0 to 2, 1 the default; the test
+  picture is out): the SHAPE as before (all of it by 1); the HAND, the cut wandering slowly along the stroke (`0.5 + 0.32 × row × (noise - 0.5)` over
+  20 cm, clamped 0.22 to 0.82: a stripe a cell wide is 0.85 to 1.15 of one at 1); the WEAR, paint rubbed thin in patches of 9 and 30 cm measured in
+  METRES on the face (`pm = cell × texel`: a fine mark and a coarse one wear alike), a quarter of it touched at 1 and half at 2, up to 0.85 gone, each
+  patch fading at its rim; the AGE (`markTone`), the paint's own colour 0.82 of the frame's marking contrast at 1 and 0.64 at 2. A burning entry keeps
+  cells and colour. JUDGED BY EYE on the software adapter, the pass gate at midday, 480×300 at scale 1 from 5.2 m (his cells to a pixel): 0 = crisp
+  stripes and a stepped diamond; 1 = stripes nearly straight with faded lengths and round ends, the diamond a drawn line; 2 = stripes half gone. A
+  first cut swung the stroke's width more than twice as far over half the length (0.7, 11 cm): a row of stripes read as dripped wax, so it was halved.
+  KNOWN: the wear is noise by box and marking, not by where a thing is rubbed (a gate's foot, a rug's middle); writing made of single cells loses
+  letters at 2; the far read and a reflection (`markHit`) have none of it. The reworked row has never been seen on a GPU.
+- **A CAPTURE IS EVERY TARGET OF A FEW FRAMES, AND THE TRACE OF WHAT THE RENDERER CHANGED** (11-02; `src/render/framecap.ts`, wired in `main.ts`; every
+  page, nothing read by the game. The maintainer: "any telemetry or like tracing we can add to the graphic system to make it easier to debug the drops …
+  being able to get all the frame buffers … in a recording mode or something so we can debug stuff together and maybe also even try to optimize"; before
+  it, a flash at midday "as if it's throwing away the temporal buffer every so often" that showed in no debug view). HOW TO TAKE ONE: **F6** = THE WHOLE PICTURE over 2 frames, from the frame
+  after the key (since 11-03; the maintainer, of the window at the cursor it was: "can you make the captures for the entire frame? i don't want to have to
+  think about the cursor. and you can make it just start recording when we start it, it doesn't need to go back in history"; his first two captures had the
+  cursor on bare ground and not on the man he meant); **Shift+F6** = a window of the picture, 256 output pixels square at the cursor, over 8 frames (a tenth
+  the size: for a thing that flickers in one place); the look panel's Quality section
+  has both and "at next change"; by console `__framecap.start({ frames, px, whole, at: [u, v] })` (`whole: false` = the window), `__framecap.arm({…}, kinds?)` (waits and starts on
+  the frame the renderer next changes something, or only on the named kinds, e.g. `['long']` for a long frame, `['targets']`, `['scale']`),
+  `__framecap.stop()`, `__framecap.trace()`. The game's message line and the HUD's first lines say what it is doing and where the file went: `captures/<name>.tpscap.gz` under the dev server's checkout
+  (`tools/serve.ts` POST `/capture`, asked only by a page on a loopback host and answered only to this server's own page with the capture's header, as
+  the level API is; never over a file of the same name; the folder is gitignored) or, on a page served from anywhere else, out by the page's one save door (`host/savefile.ts`, kind `capture`: to whoever keeps the page's files, the size rule theirs; a download only with `?downloads=1`; the key's line says which in the door's own words). A CAPTURE OVER 24 MB IS ALSO WRITTEN
+  IN PIECES beside it, `<name>.part1of6.tpscap.gz` … (11-03: his first whole-picture capture was 137 MB and could not be handed on in one file; the
+  message line says how many; `tools/qa/capture-pieces.ts`: a piece is a plain cut of the gzipped file, the reader takes any one piece with the others
+  beside it and joins them, and names a piece that is missing or cut short; `bun run tools/qa/capture-pieces.ts captures/<name>.tpscap.gz` cuts one
+  that is already on disk; `framecap-check` holds all of it). HOW TO READ ONE: `bun run
+  tools/qa/capture-read.ts captures/<name>.tpscap.gz` writes beside it `report.txt` (the trace; each frame's length and state; for every target and
+  frame the share of texels that moved, by how much, the share that are zero, mean and max, NaN count; the frames that stand out), `strips/<target>.png`
+  (the target's window over the frames, left to right, one exposure for the run) and `index.html`. NO LISTS: `watchTextures` wraps the device's
+  `createTexture` once, so a capture takes every live 2D texture that may be copied from, named by its label (a pooled target is relabelled when it is
+  taken: `passes.ts take`, `gbuffer.ts`; parked ones are left out, `TexturePool.isParked`), and names what it did not take and why. The render targets
+  ask for COPY_SRC where they are made (`passes.ts SU` already did; `RT` and the g-buffer do now). `?framecap=0` (`framecap.ts FRAMECAP`, lowered in
+  `main.ts` before the Engine is built) = the targets made without that bit, as they were, no texture watched and the key dead: a usage is a texture's
+  from the moment it is made, so the capture cannot ask for it at the key, and the word is how a machine is held against the bit (a replay and a
+  benchmark carry it; `framecap-check` holds the switch). The trace has no list either: the page hands
+  `state()`, a flat record (internal and output size, scale, quality and the ladder's last line, taau, sharp, the debug view, the targets' re-make count
+  and line, hidden), and a change of ANY key is an event with its frame; a frame over 50 ms and 2.5 times the running length is a `long` event; the
+  last 900 frames' lengths and CPU milliseconds ride in every capture, with the passes' GPU timings. A new target or a new key of state is in the next
+  capture with nothing written for it. A window is the same part of the picture in a target of any size (`cropRect`); a depth target is copied whole
+  and cut on the CPU (WebGPU's rule). The copies are made after the frame is submitted. BESIDE THE F9 RECORDER (`ui/perfrec.ts`, the performance
+  thread's): that one is timings over minutes, with `scale`, `ladder` and `targets` events of its own; this one is the picture's numbers over frames.
+  CHECKS: `bun run tools/qa/framecap-check.ts` (the window, the file there and back, the reader naming the one history that restarts in a made-up
+  capture and the one re-made at another size, the trace, an armed start, a stop; `FRAMECAP_BREAK=1` fails 3) and, in the page on the software adapter, `PORT=<port> node
+  tools/qa/framecap-page.cjs` (the look page on the pass at midday, high: 91 targets over 3 frames in 4.8 MB, the whole picture once in 14.6 MB at
+  640 x 400, no GPU error, both read back; strips of the g-buffer, each light class, the histories and the picture looked at and right). NOT TAKEN
+  YET: volumes and layer stacks (the radiance cache, the smoke atlas, the look's maps) and seven small maps made without COPY_SRC (wear, snow, air
+  cells, place map, `hdrCopy`). ON A GPU (11-03, an M4 Max in Chrome, 1654 x 1000, high at x 0.70): the first two, windows of 8 frames, were 34 MB
+  each with 91 targets and read back whole; F6 reaches the page. A frame's targets there are 286 MB whole and 13 MB as a window, and gzip took a window
+  to about a third, so the whole picture over 2 frames should be near 190 MB (NOT RUN: that size, what it costs while it is taken, whether a file that
+  big is easy to hand over; `whole: false` and Shift+F6 are the small ones).
+- **FRAMES REACH THE GPU IN BURSTS, AND A TRIAL THAT HOLDS THEM BACK: `&pace`** (11-03; `src/host/gpuPace.ts`, `main.ts frame()`; OFF unless the page's
+  address has the word, on any page; nothing in the game reads it). The maintainer on his 120 Hz display, the HUD reading over 100: "despite saying
+  >100 fps it feels kinda laggy". WHAT HIS RECORDINGS AND CAPTURES SHOW: the page's frame callback runs at the display's rate whatever the GPU is
+  doing (the CPU side is about 1 ms), so with the GPU at 13 to 17 ms a frame, where the hold-60 ladder parks it, frames queue and are shown in pairs:
+  captured frame lengths 23.8, 6.6, 23.4, 6.5, 22.4, 2.4, 30.5, 2.3 ms, the last 900 frames' median 8.4 ms and 95th 43.6, over 120 frames of 50 to
+  60 ms in two and a half minutes; in a benchmark's recording the gaps of 26 ms or more hold 77 to 79 % of the time at a GPU union of 17 ms, and 27
+  to 47 % even at 8.8 ms. THE HUD's `fps` IS THE MEAN OF 1 ∕ dt, which a burst inflates: it read 170 to 188 where the frames a second were 53 to 55.
+  The same on the plain page and the look page: it is the frame loop's, not the look's. THE TRIAL: a display frame is passed over while N frames
+  handed to the GPU are not yet done (`queue.onSubmittedWorkDone`): `&pace` = 2 in flight at most, `&pace=1` = one. The HUD gains a `pace` row: the
+  frames a second by the mean frame length, how many are on the GPU, the share of display frames passed over. Checked on the software adapter only:
+  the page boots with the word with no GPU error, hands the GPU two frames and then waits for it (a software frame takes longer than the minute
+  watched, so no third frame and no `pace` row was seen). NEVER RUN ON A GPU: whether either feels better is the maintainer's to say. THE LASTING
+  MEND IS THE QUALITY LADDER'S OWNER'S: the build has its own pacing under the same word (on by default there, `?pace=0` off), and that replaces this
+  trial when the look joins the build. AT THE JOIN (11-03) THE TRIAL'S FILE AND ITS LINES IN `main.ts` WERE LEFT OUT, the one place the joined tree is not the
+  look branch's: the maintainer had said of it "&pace looks good, let's make it the default", and its rule (a display frame passed over while two are
+  still with the GPU) goes into the build's own pacer as one path (`src/host/pace.ts`, by its owner's change), not as a second pacer beside it. What
+  this bullet measured stands; `src/host/gpuPace.ts` and the HUD row described above are not in the build.

@@ -32,7 +32,15 @@ export interface SmokeEmitter {
 }
 
 /** One-frame velocity impulse (no density): characters wading through smoke, bullets. */
-export interface SmokePush { pos: Vec3; dir: Vec3; speed: number; radius: number; /** stir this lattice alone (absent = every lattice with smoke there) */ lattice?: 'fine' | 'coarse'; }
+export interface SmokePush { pos: Vec3; dir: Vec3; speed: number; radius: number; /** stir this lattice alone (absent = every lattice with smoke there) */ lattice?: 'fine' | 'coarse';
+  /** A MOVING BODY (smoke.wgsl emBody): a standing capsule of this half height about `pos` and of `radius`; the air inside it goes with it at `dir`·`speed` and the
+   *  air it displaces has to go round. Absent = the soft shove along `dir` a push always was */
+  body?: number;
+  /** A LINE (smoke.wgsl emR2): the shove is a stretch of this half length along `dir` about `pos`, of `radius`: what a round does to the air it goes through, one
+   *  emitter for the whole path through a plume. Absent = a point */
+  line?: number;
+  /** how hard: the share of the way to `dir`·`speed` the air is taken a second, at the middle (absent = the soft shove a push always was) */
+  push?: number; }
 
 /** One live WIND source this frame, in the shape both GPU consumers take it (game/wind.ts builds ≤ WIND_GPU_MAX of them; render/particles.ts packs them behind the
  *  impulses as ImpulseRec records in 'wind' mode, smoke.ts into its own small uniform for the forces step; render/shaders/wind_field.wgsl is the field both then
@@ -43,7 +51,7 @@ export interface SmokePush { pos: Vec3; dir: Vec3; speed: number; radius: number
  *  one of them (≤ 4; wind_field.wgsl windStormRoofs: the particles take the first two in the record and the other two off the Frame, where the rain's own test reads
  *  them; the solver the first two in the record and the other two in its block's spare words); `field` = that rule is on (the wisps read the field). bound = a sphere round the whole support (what the consumers cull by); kinds = the particle kinds that
  *  answer to it (bit per kind; absent = every kind that answers to wind at all). Never allocates anything in either consumer: wind only forces air already simulated. */
-export interface WindGpuSource { kind: 'jet' | 'storm'; name: string; pos: Vec3; dir: Vec3; speed: number; reach: number; tanSpread: number; r0: number; dMax: number; floorY?: number; interior?: [number, number, number, number]; annex?: [number, number, number, number]; roofs?: readonly (readonly number[])[]; field?: boolean; bound: { c: Vec3; r: number }; kinds?: number; }
+export interface WindGpuSource { kind: 'jet' | 'storm'; name: string; pos: Vec3; dir: Vec3; speed: number; reach: number; tanSpread: number; r0: number; dMax: number; floorY?: number; interior?: [number, number, number, number]; annex?: [number, number, number, number]; roofs?: readonly (readonly number[])[]; field?: boolean; bound: { c: Vec3; r: number }; kinds?: number; /** LOOK ONLY, the particles' list alone (render/particles.ts setHeat): a fire's rising air, which only the falling snow reads (particles.wgsl heatAir) */ heat?: boolean; }
 /** how many wind sources either GPU consumer takes a frame (the particles share the impulses' sixteen slots — impulses first; the solver's block holds eight) */
 export const WIND_GPU_MAX = 8;
 
@@ -57,6 +65,9 @@ export interface SmokeSystemLike {
   push(p: SmokePush): void;
   /** true if p lies inside one of the loose bounds round the smoke there is (a cheap 'could there be smoke here': a yes can be clear air) */
   inSmokeDomain(p: Vec3): boolean;
+  /** A ROUND'S STRAIGHT LEG through whatever smoke there is: from `from`, `len` metres along the unit `dir`. true = the smoke took it as a line; false / absent = it
+   *  did not, and the caller sends its old row of soft shoves */
+  round?(from: Vec3, dir: Vec3, len: number): boolean;
   /** gas on the fine lattice hotter than `heat` is not let go while this stands (0 = none kept, as the solver was built: sparse.fineKeep) — a fire whose flame is
    *  heat on that lattice asks for it (game/fire.ts FIRE.gas) and puts it back */
   keepHot?(heat: number): void;
@@ -73,4 +84,7 @@ export interface SmokeSystemLike {
    *  brick a source's bound overlaps toward the source's analytic field inside its support (smoke/wind_force.wgsl) with the per-particle-kind knobs the list
    *  carries ignored. It never makes, keeps alive or retires a brick — wind only bends smoke that is already there. `relax` = the rate (1/s) at the jet's core. */
   setWind?(srcs: readonly WindGpuSource[], relax: number): void;
+  /** how much more the solver keeps an eddy turning right round a moving body (a push with `body`), as × its tuned amount (SmokeParams.stirConf): 0 = one
+   *  strength everywhere, as it was. Game.smokeWake says it every frame */
+  setStir?(amount: number): void;
 }
