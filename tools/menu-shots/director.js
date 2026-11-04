@@ -124,6 +124,17 @@
     const r = sim(secs, () => { const p = m.char.pos; S.aim = [p[0], 1.25, p[2]]; if (G().time > t0 + 0.4 && n++ % 10 === 0) window.__click(0); return m.state === 'dead'; });
     S.aim = null; return r;
   }
+  // WHO COMES: the play runs until a man of the other side is within `r` metres of a place (of Sam, with no place), and the nearest such man is handed back
+  // as `man` (his name as `who`; `came()` gives him to a camera's text). `off` = only a man who has left his round; `line` = only one Sam has a clear line
+  // to (a wall or a shut door between them is not "come" yet). A man given as the place is not his own comer. For a picture whose subject is "the man who
+  // comes to look": a recipe that waited for him BY NAME stopped finding him when the quiet missions were hand-set to three men (2026-10-13), because a name
+  // is dealt by a man's place in the level's list, and the fourth and the sixth were no longer there
+  function comer(place, secs = 40, r = 4, o = {}) {
+    const self = typeof place === 'string' ? man(place) : place && place.char ? place : null;
+    const line = x => { const a = sam(), b = x.char.pos; return !G().col.segmentBlocked([a[0], 1.25, a[2]], [b[0], 1.25, b[2]]); };
+    let m = null; const res = sim(secs, () => { const c = place ? at(place) : sam(); m = nearest(foes().filter(x => x !== self && flat(x.char.pos, c) < r && (!o.off || x.state !== 'patrol') && (!o.line || line(x))), c); return !!m; });
+    S.came = m; return { ...res, who: m ? m.callsign : null, man: m };
+  }
   // a step of the play that has to have happened: a sim / lead that ran out of time stops the recipe here
   function must(r, what = 'the play') { if (!r || r.hit === false) throw new Error(`${what} never got there (t ${r?.t})`); return r; }
   // Sam's own verbs: the row of that kind and verb, performed with a tap of Space (false = no such row in reach)
@@ -144,8 +155,8 @@
     S.path = null; return { t: +G().time.toFixed(2), frames: n, why, d: +flat(sam(), gd.char.pos).toFixed(2) };
   }
   window.__ms = { S, quiet, sim, lead, draw, go, arrived, door, target, order, cam, info, flat, frame,
-    sam, ops, foes, man, at, nearest, since, short, approach, orderUntil, putDown, frameOn, verb, stalk,
+    sam, ops, foes, man, at, nearest, since, short, approach, orderUntil, putDown, comer, frameOn, verb, stalk,
     aim: p => { S.aim = p; }, hold: (k, on = true) => { on ? S.held.add(k) : S.held.delete(k); }, tap: k => window.__input.pressed.add(k), fire: () => window.__click(0),
-    shotNow: () => S.by.length > 0, shooters: () => G().guards.filter(x => S.by.includes(x.char.id)), shots: () => S.shots, bangBy, must };
+    came: () => S.came ?? null, shotNow: () => S.by.length > 0, shooters: () => G().guards.filter(x => S.by.includes(x.char.id)), shots: () => S.shots, bangBy, must };
   try { const e = E(); if (e.height > 0) window.__cam.aspect = e.width / e.height; window.__cam.rebuild(); } catch { /* an identity lens until the first step, as before */ }
 })();
