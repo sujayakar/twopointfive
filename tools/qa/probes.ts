@@ -1865,6 +1865,7 @@ async function noMagPickup() {
     game.godMode = false; game.playerInvisible = true; game.player.slot = 'pistol'; game.player.holstered = false;
     for (let i = 0; i < 10; i++) W.step(DT);
     parkAll(game); game.teleportPlayer([20, 0, 15.6]); W.step(DT);
+    const full = kit(game);   // (the kit as the stand hands it out: the issue pistol's magazines hold more than the first one's did)
     game.player.pistol.spare = [10]; game.player.pistol.mag = 2; game.player.pistol.chamber = 1;   // a spent kit, so a top-up would show
     hitPlayer(game, [1, 0, 0]);
     const own = game.items.items.find((x: any) => x.kind === 'pistol' && x.fill === 1);
@@ -1882,7 +1883,7 @@ async function noMagPickup() {
     const leftovers = game.items.items.filter((x: any) => x.kind === 'pistol');
     if (game.player === oldPl || game.player.down) fails.push('restart did not stand a fresh player up');
     if (leftovers.length) fails.push(`${leftovers.length} pistol item(s) survived the restart (fill ${leftovers.map((x: any) => x.fill).join(',')})`);
-    if (kit(game) !== 'chamber 1 mag 10 spare [10,10,10]') fails.push(`fresh kit is ${kit(game)} (want the full authored kit, not a top-up)`);
+    if (kit(game) !== full) fails.push(`fresh kit is ${kit(game)} (want the full authored kit, ${full}, not a top-up)`);
     verdict(fails.length === 0, '(c) Sam\'s own Five-seveN on the floor: only while he is down (no rows then), gone with the restart that stands him up', `down ${oldPl.down}, own gun ${own ? `fill ${own.fill} at (${own.pos[0].toFixed(2)}, ${own.pos[2].toFixed(2)}) settled ${settled}` : 'none'} · rows while down ${rowsDown.length} · after restart: ${game.items.items.length} item(s), kit ${kit(game)}${fails.length ? '\n    ✗ ' + fails.join('\n    ✗ ') : ''}`);
   }
   console.log(`=== no-mag-pickup: ${allPass ? 'ALL PASS' : 'FAILURES above'} ===`);
