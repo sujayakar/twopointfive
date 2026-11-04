@@ -702,51 +702,60 @@ fn lookPlaceHere(X: vec3f, skip: u32) -> f32 {
  *  AND THE DAY'S CONTRAST IS THE YARD'S, IN THE PLACE'S OWN EXPOSURE. The tone map turns the stops about sunlit ground (frame.gradeCfg.y), which is right
  *  for the open air and crushes a room that sits stops under it. So a place is toned as the open air is, and only then shown as much darker as it is to be:
  *  its light is brought all the way up to the open air's (× rp), turned, and shown base ∕ rp as bright. Said as what the tone map is handed, that is one
- *  more gain for the whole place, (rp ∕ base)^(1 − 1∕contrast): nothing here is by the pixel, so a shadow's edge, a sun patch and a man's own shading keep
+ *  more gain for the whole place, (rp ∕ base)^(1 − 1∕contrast): nothing here is by the pixel (but the Light in order row's cap on a pixel that holds more
+ *  light than its place where two places meet: lookExpoGain, below), so a shadow's edge, a sun patch and a man's own shading keep
  *  the light's own proportions, the room has the yard's contrast, and the tone map's shoulder takes what is over. */
 // (EXPO_BAND, EXPO_KEY, EXPO_MOST, EXPO_TOP, the place field's cells and words, the shoulder and the gains: place_common.wgsl, pasted in front of this kernel)
 /** the place at X, as (a level, another): the same number twice where the answer is plain; two where X is in a wall's cell with a different place on each
  *  side (the wall's top, and the strip of floor at its foot that the map's cell takes in): the caller says which by what the cache holds at the pixel.
+ *  z and w = THE BRIGHTEST PLACE A STRIDE AWAY (the field's second block, place_common.wgsl placeNear) from the place x is and from the place y is: by
+ *  the same weights where the answer is plain; in a wall's cell each is its OWN cell's, so the bound a pixel is given is of the side it is put on and
+ *  never of the other (a leaf hanging open in a doorway is such a cell with one place round it, and is what the Light in order row is for; a wall between
+ *  a yard and a room is one with two, and the room's side must not be handed the yard's).
  *  Under −500 = no field on this page yet, or nothing within two cells. Never read through a wall: in a free cell the neighbours weighed in are the two
  *  beside it (two free cells side by side are one side of any wall) and the diagonal one only past a free one. */
-fn lookPlaceField(X: vec3f) -> vec2f {
-  if (placeWord(1) < 0.5) { return vec2f(-1000.0); }
+fn lookPlaceField(X: vec3f) -> vec4f {
+  if (placeWord(1) < 0.5) { return vec4f(-1000.0); }
   let q = (X.xz - RC_MIN.xz) / RC_SIZE.xz * vec2f(f32(PLACE_W), f32(PLACE_H)); let c = vec2i(floor(q)); let own = placeCell(c);
   if (own > -500.0) {
     let f = q - floor(q) - 0.5; let s = vec2i(select(-1, 1, f.x >= 0.0), select(-1, 1, f.y >= 0.0)); let a = abs(f);
     let vx = placeCell(c + vec2i(s.x, 0)); let vz = placeCell(c + vec2i(0, s.y)); let vd = placeCell(c + s);
-    var ws = (1.0 - a.x) * (1.0 - a.y); var sum = own * ws;
-    if (vx > -500.0) { let w = a.x * (1.0 - a.y); sum += w * vx; ws += w; }
-    if (vz > -500.0) { let w = (1.0 - a.x) * a.y; sum += w * vz; ws += w; }
-    if (vd > -500.0 && (vx > -500.0 || vz > -500.0)) { let w = a.x * a.y; sum += w * vd; ws += w; }
-    return vec2f(sum / ws);
+    var ws = (1.0 - a.x) * (1.0 - a.y); var sum = own * ws; var sn = max(placeNear(c), own) * ws;
+    if (vx > -500.0) { let w = a.x * (1.0 - a.y); sum += w * vx; sn += w * max(placeNear(c + vec2i(s.x, 0)), vx); ws += w; }
+    if (vz > -500.0) { let w = (1.0 - a.x) * a.y; sum += w * vz; sn += w * max(placeNear(c + vec2i(0, s.y)), vz); ws += w; }
+    if (vd > -500.0 && (vx > -500.0 || vz > -500.0)) { let w = a.x * a.y; sum += w * vd; sn += w * max(placeNear(c + s), vd); ws += w; }
+    return vec4f(sum / ws, sum / ws, sn / ws, sn / ws);
   }
   // (THE WALL'S OWN SIDE, the look page's row `walls`, common.wgsl sideOut: the floor at a wall's foot and the wall's top are in the wall's cell, and which room's
   // level they are shown by was a guess from what the cache held at the pixel, which is the leak itself by day: a strip of one room's floor was shown by the room
   // next door's level, white. The cell knows the wall's line to 2.5 cm, so the point's side is known, and the first cell out on that side is its place)
-  if (frame.sideCfg.x != 0u) { let o = sideOut(X.x, X.z); if (o.x != 0 || o.y != 0) { for (var r = 1; r <= 4; r++) { let v = placeCell(c + o * r); if (v > -500.0) { return vec2f(v); } } } }
-  var hi = -1000.0; var lo = 1000.0;
-  for (var r = 1; r <= 2 && hi < -500.0; r++) { for (var dy = -r; dy <= r; dy++) { for (var dx = -r; dx <= r; dx++) { let v = placeCell(c + vec2i(dx, dy)); if (v > -500.0) { hi = max(hi, v); lo = min(lo, v); } } } }
-  if (hi < -500.0) { return vec2f(-1000.0); }
-  return vec2f(hi, lo);
+  if (frame.sideCfg.x != 0u) { let o = sideOut(X.x, X.z); if (o.x != 0 || o.y != 0) { for (var r = 1; r <= 4; r++) { let v = placeCell(c + o * r); if (v > -500.0) { let nv = max(placeNear(c + o * r), v); return vec4f(v, v, nv, nv); } } } }
+  var hi = -1000.0; var lo = 1000.0; var nh = -1000.0; var nl = -1000.0;
+  for (var r = 1; r <= 2 && hi < -500.0; r++) { for (var dy = -r; dy <= r; dy++) { for (var dx = -r; dx <= r; dx++) { let v = placeCell(c + vec2i(dx, dy)); if (v > -500.0) { let nv = placeNear(c + vec2i(dx, dy)); if (v > hi) { hi = v; nh = nv; } if (v < lo) { lo = v; nl = nv; } } } } }
+  if (hi < -500.0) { return vec4f(-1000.0); }
+  return vec4f(hi, lo, max(nh, hi), max(nl, lo));
 }
 /** the pixel's place as lookExpoGain found it for this pixel: its three gains (place_common.wgsl lookGains) and 1 once it has (0 = no gain by the place
  *  at this pixel: at night, off the look page, with the One exposure row down, a section cap) */
 var<private> lookNow: vec4f;
 /** `here` = the light the air of the pixel's place holds (the place field's; the cache's at the pixel where the field has no answer: the frames before
  *  its two programs are compiled, a point off its map). Sam's place is the field's own eye, eased on the GPU; until there is one he is taken to stand in
- *  the open. → the gain the place is shown by now; what the place sends the eye then goes through lookShow. */
-fn lookExpoGain(here: f32) -> f32 { let g = lookGains(here); lookNow = vec4f(g, 1.0); return g.x; }
+ *  the open. → the gain the place is shown by now; what the place sends the eye then goes through lookShow.
+ *  `own` = the light that falls on this pixel in the field's measure, and `near` = the brightest place a stride away (lookPlaceField's z; `here` where
+ *  the field did not answer), for the Light in order row (place_common.wgsl lookGainsOwn). */
+fn lookExpoGain(here: f32, own: f32, near: f32) -> f32 { let g = lookGainsOwn(here, own, near, frame.placeCfg.x); lookNow = vec4f(g, 1.0); return g.x; }
 /** light `c` of this pixel, before any gain, as its place shows it (place_common.wgsl lookShowBy: THE ONE RULE for the diffuse, the mirrors, the gloss
  *  and the men's finish); `g` = lookShadeGain's gain, which is all there is where the One exposure row has not spoken for the pixel */
 fn lookShow(c: vec3f, g: f32) -> vec3f { if (lookNow.w > 0.5) { return lookShowBy(c, lookNow.xyz); } return c * g; }
 const ROOM_LEVEL = 0.5;
-fn lookShadeGain(P: vec3f, N: vec3f, Epix: f32, skip: u32, l0: f32) -> vec4f {
+/** … `Eown` = the light on the pixel at its true strength, as the field holds light (the caller's: what is drawn whole, and the bounce over the scale it is
+ *  drawn by), for the Light in order row alone */
+fn lookShadeGain(P: vec3f, N: vec3f, Epix: f32, Eown: f32, skip: u32, l0: f32) -> vec4f {
   // ONE EXPOSURE (above): one gain a place, and neither the give-back nor the Room contrast line under the call runs (y, z and w are zeros). The place is
   // the field's; where the field has no answer, or two (a wall's own cell), this function's own read below settles it: the one call of it, so the
   // kernel carries one box walk and not two.
-  let expo = frame.eyeCfg.w < 0.0; var pick = vec2f(-1000.0);
-  if (expo) { pick = lookPlaceField(P + N * 0.3); if (pick.x > -500.0 && pick.x - pick.y < 0.5) { return vec4f(lookExpoGain(exp2(pick.x)), 0.0, 0.0, 0.0); } }
+  let expo = frame.eyeCfg.w < 0.0; var pick = vec4f(-1000.0);
+  if (expo) { pick = lookPlaceField(P + N * 0.3); if (pick.x > -500.0 && pick.x - pick.y < 0.5) { return vec4f(lookExpoGain(exp2(pick.x), Eown, exp2(pick.z)), 0.0, 0.0, 0.0); } }
   let out = max(frame.eyeCfg.z, 1.0); let lit = !expo && Epix >= frame.shadeCfg.w;
   // A SUN PATCH INDOORS KEEPS THE ROOM'S CONTRAST (frame.gradeCfg.z again; `l0` = what the surface sends back before this gain). A pixel in full light was
   // the open air outright, so the day's contrast was given back to a sun patch's soft edge and not to the patch: a bright rim round a middle hardly brighter
@@ -762,8 +771,9 @@ fn lookShadeGain(P: vec3f, N: vec3f, Epix: f32, skip: u32, l0: f32) -> vec4f {
   if (expo) {   // (in a wall's cell between two places: the one whose level is nearer what the cache holds at this pixel, read on this side of the wall)
     // (the field's levels are the light falling on the floor and `here` is the mean light in the air: brought to the field's by what each says of the open air)
     var h = here; let sky = placeWord(2); if (placeWord(1) > 0.5 && sky > -500.0) { h = here * exp2(sky) / max(frame.shadeCfg.y, 1e-9); }
-    if (pick.x > -500.0) { let l = log2(max(h, 1e-9)); h = exp2(select(pick.y, pick.x, abs(l - pick.x) <= abs(l - pick.y))); }
-    return vec4f(lookExpoGain(h), 0.0, 0.0, 0.0);
+    var near = h;
+    if (pick.x > -500.0) { let l = log2(max(h, 1e-9)); let up = abs(l - pick.x) <= abs(l - pick.y); h = exp2(select(pick.y, pick.x, up)); near = max(h, exp2(select(pick.w, pick.z, up))); }
+    return vec4f(lookExpoGain(h, Eown, near), 0.0, 0.0, 0.0);
   }
   let open = max(frame.shadeCfg.y / max(here, 1e-4), 1.0); let sam = max(frame.eyeCfg.x, 1.0);
   // (BOTH ARE FOR PLACES UNDER A ROOF. Out in the open a place still holds less than the open air where a wall stands beside it, up to about half: read as a
@@ -1181,7 +1191,7 @@ fn compositePixel(pix0: vec2f) -> vec3f {
       }
     } }
     var shadeG = 1.0;   // (1 anywhere but the look page by day: every × below is then the number it was)
-    if (LOOK) { if (frame.shadeCfg.x > 0.0 && ((id >> 29u) & 1u) == 0u) { let sg = lookShadeGain(P, N, luminance(Ed + Ei), (id >> 20u) & 0xffu, luminance(dif)); shadeG = sg.x; dif = lookShow(dif, shadeG); let lr = luminance(dif);
+    if (LOOK) { if (frame.shadeCfg.x > 0.0 && ((id >> 29u) & 1u) == 0u) { let sg = lookShadeGain(P, N, luminance(Ed + Ei), luminance(Ed) + luminance(Ei) / max(frame.indirectScale, 0.05), (id >> 20u) & 0xffu, luminance(dif)); shadeG = sg.x; dif = lookShow(dif, shadeG); let lr = luminance(dif);
       // THE DAY'S CONTRAST IS THE OPEN AIR'S (frame.gradeCfg, render/lookgrade.ts; the look panel's Contrast row): the tone map turns the day's stops about
       // sunlit ground, which sets a rifle and a shadow under the snow as they should be, and would push a room this row has just brought up back down by a
       // third of its distance under the snow. So a place under a roof is given back what the turn takes from it (by its own brightness against the turn's, eight
