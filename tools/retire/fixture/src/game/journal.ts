@@ -12,6 +12,8 @@ export function applyKnobs(t: { K?: Record<string, unknown> }): void {
 export function applyOld(k: any): void {
   if ((k.tables.K as Partial<typeof K> | undefined)?.quote === undefined) K.quote = "it's";   // (from before the word)
   if ((k.tables.K as Partial<typeof K> | undefined)?.stay === undefined) K.stay = false;   // (a row that stays: the line stays)
+  if ((k.tables.K as Partial<typeof K> | undefined)?.j1 === undefined) { K.j1 = false; K.stay = false; }   // (from before j1: it also puts a row that stays off)
+  const j2 = (k.tables.K as Partial<typeof K> | undefined)?.j2; if (j2 !== true) K.j2 = false;   // (the word read into a name)
 }
 /** a list of keys two things read */
 const SHARED = ['shared', 'stay'] as const;

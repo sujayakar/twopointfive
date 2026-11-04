@@ -49,7 +49,28 @@ const viaSink = { get v(): number { sink.push(3); return 1; } };   // (a getter 
 /** a getter of the game's own that does something, named as a recording's key is (`k.tables`) */
 const reg = { get tables(): number { return tell(9); } }; void reg;
 /** a recording's own words: an untyped thing with a key named like the table */
-const fromFile = (f: any): boolean => f.tables.K.extra === true;
+const fromFile = (f: any): boolean => f.tables.K.rec === true;
+function mkLoad2(): string { return K.e2 ? 'A' : 'B'; }
+const viaFn2 = mkLoad2();   // (a second read of the same row at load: a refusal names both)
+const holder = { get g(): string { return K.e4 ? 'on' : 'off'; } };
+const viaGetter = holder.g;   // (a getter read as the module loads)
+function init5(): string { return K.e5 ? 'on' : 'off'; }
+const api = { init5 };
+const viaShort = api.init5();   // (reached through a shorthand key)
+const runNow = (f: () => void): void => f();
+let viaArrow = ''; runNow(() => { viaArrow = K.e6 ? 'on' : 'off'; });   // (written where it is handed to a function of the game's own, which runs it at once)
+setTimeout(() => { if (K.on) LOG.sum += 0; }, 0);   // (handed to a timer: it runs after the page has written its switches)
+function readsH1(): number { return N.h1 * 2; }
+const h1AtLoad = readsH1();   // (a held number read in a function the module calls)
+let deepCount = 0;
+function d4(): boolean { deepCount++; return true; }
+function d3(): boolean { return d4(); }
+function d2(): boolean { return d3(); }
+function d1(): boolean { return d2(); }
+const thing = { get w3(): boolean { return d1(); } };   // (a getter that counts, four calls down: deeper than the tool reads)
+let cb9 = (): boolean => { deepCount += 10; return true; }; cb9 = ((f) => f)(cb9);
+const thing9 = { get w9(): boolean { return cb9(); } };   // (a getter that calls what a `let` holds)
+const thing11 = { get w11(): boolean { const o: number[] = []; o.push(1); return o.length > 0; }, get ang(): number { return Math.atan2(1, 2); } };   // (getters that change nothing outside themselves)
 const fastX = K.num > 2 && K.zero === 0; export { fastX };   // (rows whose own value is the page's: the same at load as later)
 
 export const CASES: Record<string, () => unknown> = {
@@ -159,7 +180,14 @@ export const CASES: Record<string, () => unknown> = {
   weightsTop(): number { const W3 = { calm: { a: 1, b: 2, legacyY: 4 } }; let t = 0; for (const g of Object.values(W3)) for (const v of Object.values(g)) t += v; if (K.old) t += W3.calm.legacyY; return t; },
   getterOverride(): number { const g = gv.val; if (K.old) return g; return 0; },
   getterSink(): number { const g = viaSink.v; if (K.old) return g; return 0; },
-  fromFile(): boolean { return fromFile(JSON.parse('{"tables":{"K":{"extra":false}}}')); },
+  fromFile(): boolean { return fromFile(JSON.parse('{"tables":{"K":{"rec":false}}}')); },
+  // ---- the fifth review's shapes
+  loadMore(): string { return [viaFn2, viaGetter, viaShort, viaArrow, h1AtLoad].join(' '); },
+  deepNamed(): number { return K.deepn.on ? 1 : K.deepn.old; },
+  getterDeep(): number { if (thing.w3 && K.old) return -1; return deepCount; },
+  getterLet(): number { if (thing9.w9 && K.old) return -1; return deepCount; },
+  getterOwn(): number { if (thing11.w11 && thing11.ang > 0 && K.old) return 1; return 2; },
+  switchCast(): number { switch (K.sw2 as string) { case 'a': return 1; default: return 2; } },
   gainNamed(): number { return K.old ? K.oldGain * 2 : 1; },
   switchSubject(): number { switch (K.sw) { case 'a': return 1; default: return 2; } },
   // ---- an import one of whose names is only a type

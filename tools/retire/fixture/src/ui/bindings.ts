@@ -26,6 +26,7 @@ export function bind(): void {
   ]);
   rows('K', [{ k: 'viaList', label: 'the only row of its list' }]);
   rows('K', [{ k: 'oldGain', label: 'a number of the old way' }]);
+  rows('K', [{ k: 'deepn.old', label: 'a number a level down, named by its path' }]);
   rows('K', [{ k: 'stay', label: 'on' }]);   // (a label that reads like a retired key is not the key)
   knobRows('sec', K as unknown as KnobTable, null, () => {}, [{ k: 'on', kind: 'toggle' }, { k: 'stay', kind: 'toggle' }]);
 }

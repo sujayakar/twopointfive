@@ -121,18 +121,27 @@ const namedThings = (() => { let made: { getters: Map<string, any[]>; methods: M
  *  that can be found by its name (two calls deep)? What a READ of a property is asked: a getter that only works something out is harmless to leave out; one
  *  that counts, draws or keeps something is not. (A call is asked more: pureFn must see that it only reads.) */
 const writeMemo = new Map<any, boolean>();
-function writesFn(f: any, depth = 2): boolean { f = unparen(f); if (!f || !f.body || !ts.isFunctionLike(f)) return false; const key = depth === 2 ? f : null; if (key && writeMemo.has(key)) return writeMemo.get(key)!;
+/** does running this getter (or what it calls, three calls deep) change anything but its own locals? What it cannot see into counts as a change: a call
+ *  deeper than that, a function a `let` or a parameter holds, a thing of the game's made anew, a method known only by an interface. Of the language's own:
+ *  the reading methods, `Math`, a few plain converters, a new Map or Set, and a method that changes one of the getter's OWN locals change nothing outside. */
+const PLAIN_GLOBALS = new Set(['Number', 'String', 'Boolean', 'parseInt', 'parseFloat', 'isNaN', 'isFinite', 'BigInt', 'Array', 'Object', 'structuredClone', 'encodeURIComponent', 'decodeURIComponent']);
+function writesFn(f: any, depth = 3): boolean { f = unparen(f); if (!f || !f.body || !ts.isFunctionLike(f)) return false; const key = depth === 3 ? f : null; if (key && writeMemo.has(key)) return writeMemo.get(key)!;
   const own = (x: any): boolean => { x = unparen(x); if (x?.kind !== SK.Identifier) return false; const d = checker.getSymbolAtLocation(x)?.valueDeclaration; return !!d && d.getStart() >= f.getStart() && d.end <= f.end; };
+  const symOf = (nm: any): any => { let sym = nm ? checker.getSymbolAtLocation(nm) : null; if (sym && (sym.flags & ts.SymbolFlags.Alias)) sym = checker.getAliasedSymbol(sym); return sym; };
   let hit = false; const visit = (n: any): void => { if (hit) return;
     if (n !== f && ts.isFunctionLike(n)) return;
     if (n.kind === SK.BinaryExpression && n.operatorToken.kind >= SK.FirstAssignment && n.operatorToken.kind <= SK.LastAssignment && !own(n.left)) { hit = true; return; }
     if ((n.kind === SK.PrefixUnaryExpression || n.kind === SK.PostfixUnaryExpression) && (n.operator === SK.PlusPlusToken || n.operator === SK.MinusMinusToken) && !own(n.operand)) { hit = true; return; }
-    if (n.kind === SK.DeleteExpression) { hit = true; return; }
-    if (depth > 0 && (n.kind === SK.CallExpression || n.kind === SK.PropertyAccessExpression)) { const nm = n.kind === SK.CallExpression ? (n.expression.kind === SK.Identifier ? n.expression : n.expression.kind === SK.PropertyAccessExpression ? n.expression.name : null) : n.name;
-      let sym = nm ? checker.getSymbolAtLocation(nm) : null; if (sym && (sym.flags & ts.SymbolFlags.Alias)) sym = checker.getAliasedSymbol(sym);
-      for (const d of sym?.declarations ?? []) { if (d.getSourceFile().isDeclarationFile) continue; const g = n.kind === SK.PropertyAccessExpression ? (d.kind === SK.GetAccessor ? d : null) : boundTo(d); if (g && g !== f && writesFn(g, depth - 1)) { hit = true; return; } }
-      // (a call it cannot see into — a method known only by an interface, one of the language's own that is not a reading method — is taken to write)
-      if (n.kind === SK.CallExpression && n.expression.kind === SK.PropertyAccessExpression && !(PURE_METHODS.has(n.expression.name.text) && libOwn(sym)) && !(sym?.declarations ?? []).some((d: any) => !d.getSourceFile().isDeclarationFile && boundTo(d))) { hit = true; return; } }
+    if (n.kind === SK.DeleteExpression || n.kind === SK.TaggedTemplateExpression || n.kind === SK.AwaitExpression || n.kind === SK.YieldExpression) { hit = true; return; }
+    if (n.kind === SK.CallExpression || n.kind === SK.NewExpression) { const e = unparen(n.expression), sym = symOf(e.kind === SK.Identifier ? e : e.kind === SK.PropertyAccessExpression ? e.name : null);
+      const seen = (sym?.declarations ?? []).filter((d: any) => !d.getSourceFile().isDeclarationFile).map(boundTo).filter((g: any) => g && ts.isFunctionLike(g) && g.body);
+      if (seen.length && n.kind === SK.CallExpression) { if (depth <= 0 || seen.some((g: any) => g !== f && writesFn(g, depth - 1))) { hit = true; return; } }
+      else if (sym && libOwn(sym)) { const onMath = e.kind === SK.PropertyAccessExpression && unparen(e.expression).kind === SK.Identifier && unparen(e.expression).text === 'Math';
+        const harmless = n.kind === SK.NewExpression ? (e.kind === SK.Identifier && (e.text === 'Map' || e.text === 'Set' || e.text === 'Array')) : e.kind === SK.Identifier ? PLAIN_GLOBALS.has(e.text) : e.kind === SK.PropertyAccessExpression && (onMath || PURE_METHODS.has(e.name.text) || own(e.expression));
+        if (!harmless) { hit = true; return; } }
+      else { hit = true; return; } }   // (it cannot be seen into)
+    if (n.kind === SK.PropertyAccessExpression) { const gs = (symOf(n.name)?.declarations ?? []).filter((d: any) => d.kind === SK.GetAccessor && !d.getSourceFile().isDeclarationFile && d.body && d !== f);
+      if (gs.length && (depth <= 0 || gs.some((g: any) => writesFn(g, depth - 1)))) { hit = true; return; } }
     n.forEachChild(visit); }; visit(f.body);
   if (key) writeMemo.set(key, hit); return hit; }
 const pureMemo = new Map<any, boolean>();
@@ -262,9 +271,11 @@ for (const r of rows) {
 
 // (a tool takes the game's tables through `await import(\`${ROOT}/src/…\`)`, which TypeScript reads as `any`: there the row is found by its name — TABLE.key on a
 // thing called TABLE, or on `<module>.TABLE` — and only where that thing has no type of its own)
+const untypedInGame: { row: string; where: string; text: string }[] = [];
 { const byTable = new Map<string, Row[]>(); for (const r of rows) if (rowDef.has(r.row)) { const t = r.row.split('.')[0]; byTable.set(t, [...(byTable.get(t) ?? []), r]); }
   const seenTok = new Set<any>(uses.map(u => u.node));
-  for (const f of files) { if (!isTool(f)) continue;   // (in the game an untyped thing with a key called TABLE is a recording's or a save's own words, not the table)
+  for (const f of files) { if (rel(f) === 'src/game/journal.ts') continue;   // (the journal reads a recording's own words under the tables' names: its lines have their own rule, below)
+    const game = !isTool(f);   // (in the game an untyped thing with a key called TABLE may be a recording's or a save's own words, or the table itself reached without a type: the tool cannot tell which, so the row is refused)
     const text = textOf(f); let any = false; for (const t of byTable.keys()) if (text.includes(t)) { any = true; break; } if (!any) continue; const sf = sfOf(f); if (!sf) continue;
     // (another name for the table in this file — `const KK = K`, `const KK = M.K`, `const { K: KK } = …` — is the table)
     const alias = new Map<string, string>(); { const names = (n: any) => { if (n.kind === SK.VariableDeclaration && n.name.kind === SK.Identifier && n.initializer) { const i = unparen(n.initializer), t = i?.kind === SK.Identifier ? i.text : i?.kind === SK.PropertyAccessExpression ? i.name.text : null; if (t && byTable.has(t) && n.name.text !== t) alias.set(n.name.text, t); }
@@ -275,7 +286,8 @@ for (const r of rows) {
           const root = e.kind === SK.Identifier ? alias.get(e.text) ?? e.text : null, table = root && byTable.has(root) ? root : byTable.has(chain[0]) && chain.length > 1 ? chain[0] : null;
           if (table) { const keys = table === root ? chain : chain.slice(1), path = `${table}.${keys.join('.')}`, r = byTable.get(table)!.find(x => x.row === path);
             if (r && !seenTok.has(n.name)) { let base = n; for (let i = 0; i < keys.length; i++) base = base.expression; const ty = checker.getTypeAtLocation(base);
-              if (ty.flags & ts.TypeFlags.Any) { seenTok.add(n.name); const up = upParen(n).parent; uses.push({ row: r, node: n.name, sf, write: up.kind === SK.BinaryExpression && upParen(up.left) === upParen(n) && up.operatorToken.kind === SK.EqualsToken, def: false, named: true }); } } } }
+              if ((ty.flags & ts.TypeFlags.Any) && game) { seenTok.add(n.name); untypedInGame.push({ row: r.row, where: at(sf, n.getStart(sf)), text: (n.getText() as string).slice(0, 80).replace(/\s+/g, ' ') }); }
+              else if (ty.flags & ts.TypeFlags.Any) { seenTok.add(n.name); const up = upParen(n).parent; uses.push({ row: r, node: n.name, sf, write: up.kind === SK.BinaryExpression && upParen(up.left) === upParen(n) && up.operatorToken.kind === SK.EqualsToken, def: false, named: true }); } } } }
       n.forEachChild(visit); }; visit(sf); } }
 
 { const out = arg('--uses'); if (out) {   // only the reading: where each row is used (for the census of switches)
@@ -295,6 +307,12 @@ if (!flag('--twins')) { for (const r of rows) if (RUST_KNOBS.includes(`"${r.row}
 
 // ---- 2. sort the uses: a read to fold, a write to take out, the row's own line — or a reason to refuse the row
 const refuse = new Map<string, string>(); const droppedLines: string[] = [], dropMissed: string[] = [];
+for (const x of untypedInGame) refuse.set(x.row, `${x.where}: read on an untyped thing under the table's name (${x.text}): that may be a recording's own words or the table itself reached without a type, and the tool cannot tell which. Fold it by hand first`);
+/** the journal's reads of a recording's own word for a row (see the check before the fold) */
+const recordingReads: { row: string; access: any; where: string }[] = [];
+/** a row refused for a read at load: every such read is said, not the last one found */
+const loadRefused = new Set<string>();
+const refuseLoad = (row: string, msg: string) => { if (loadRefused.has(row)) { const had = refuse.get(row)!; if (had.length < 1200) refuse.set(row, `${had} · ALSO ${msg}`); } else if (!refuse.has(row)) { refuse.set(row, msg); loadRefused.add(row); } };
 type Act = { use: Use; kind: 'read' | 'readLoad' | 'delStmt' | 'delProp' | 'delMember' | 'unassign' | 'const' | 'setInit' | 'hole'; node: any };
 /** is this row read anywhere inside the node? */
 const readIn = (n: any, row: string) => uses.some(x => x.row.row === row && !x.write && x.node.getSourceFile() === n.getSourceFile() && x.node.getStart() >= n.getStart() && x.node.end <= n.end);
@@ -332,49 +350,75 @@ function snapshotOf(x: any, decl: any): 'deep' | 'shallow' | null { x = unparen(
     if (c === 'JSON.parse' && a?.kind === SK.CallExpression && a.expression.getText() === 'JSON.stringify' && a.arguments.length === 1 && isLive(a.arguments[0], decl)) return 'deep';
     return null; }
   return i.kind === SK.ObjectLiteralExpression && i.properties.length === 1 && i.properties[0].kind === SK.SpreadAssignment && isLive(i.properties[0].expression, decl) ? 'shallow' : null; }
-/** what a thing waits for before it runs: null with no function round it (it runs as its module loads); else the function that must be CALLED first — a
- *  function that is kept (declared, a method, the value of a name or a field), or the class whose object must be made (a field of its objects). A function
- *  called on the spot (`(() => …)()`) or handed to a call that may run it at once (`LIST.map(k => …)`) puts nothing off. */
-const keeper = (n: any, strict = false): any => { for (let c = n, p = n.parent; p; c = p, p = p.parent) {
+/** A FUNCTION WRITTEN WHERE IT IS HANDED OVER: who runs it, and when? 'now' = called on the spot (`(() => …)()`), or handed to one of the language's own
+ *  that calls what it is handed before it returns (`LIST.map(k => …)`, `new Promise(res => …)`); 'later' = handed to something of the language's or the
+ *  browser's that keeps it (a listener, a timer, a `.then`); 'callee' = handed to a function of the game's own, which may run it at once or keep it;
+ *  null = not handed to anything (the value of a name, a field, a key). */
+const SYNC_CALLBACK = new Set([...CALLBACK_METHODS, 'forEach', 'reduce', 'reduceRight', 'flatMap', 'sort', 'toSorted', 'findLast', 'findLastIndex', 'from', 'replace', 'replaceAll']);
+const calleeSym = (q: any): any => { const e = unparen(q.expression), nm = e.kind === SK.PropertyAccessExpression ? e.name : e.kind === SK.Identifier ? e : null; return nm ? checker.getSymbolAtLocation(nm) : null; };
+const calleeName = (q: any): string => { const e = unparen(q.expression); return (q.kind === SK.NewExpression ? 'new ' : '') + (e.kind === SK.PropertyAccessExpression ? e.name.text : e.kind === SK.Identifier ? e.text : '(…)'); };
+const runsHanded = (q: any): boolean => { const e = unparen(q.expression); return q.kind === SK.NewExpression ? e.kind === SK.Identifier && e.text === 'Promise' : e.kind === SK.PropertyAccessExpression && SYNC_CALLBACK.has(e.name.text); };
+const handedTo = (fn: any): 'now' | 'later' | 'callee' | null => { if (fn.kind !== SK.ArrowFunction && fn.kind !== SK.FunctionExpression) return null; const f = upParen(fn), q = f.parent;
+  if (!q || (q.kind !== SK.CallExpression && q.kind !== SK.NewExpression)) return null; if (q.expression === f) return 'now'; if (!(q.arguments ?? []).includes(f)) return null;
+  const sym = calleeSym(q); if (sym && libOwn(sym)) return runsHanded(q) ? 'now' : 'later';
+  return 'callee'; };
+/** what a thing waits for before it runs: null with no function round it (it runs as its module loads); else the function that must be CALLED first, or the
+ *  class whose object must be made (a field of its objects). A function run where it is written ('now', above) puts nothing off. */
+const keeper = (n: any): any => { for (let p = n.parent; p; p = p.parent) {
     if (p.kind === SK.PropertyDeclaration && !(p.modifiers ?? []).some((m: any) => m.kind === SK.StaticKeyword)) return p.parent;
     if (!ts.isFunctionLike(p)) continue;
-    if (p.kind !== SK.ArrowFunction && p.kind !== SK.FunctionExpression) return p;
-    const f = upParen(p), q = f.parent; if (!((q.kind === SK.CallExpression || q.kind === SK.NewExpression) && (q.expression === f || (q.arguments ?? []).includes(f)))) return p;
-    // (strict, for FOLLOWING calls: a function handed to a call is run at once only by the language's own methods that call what they are handed —
-    //  `LIST.map(k => …)`. A handler handed to a listener or a timer runs later; for a READ that stands in one the looser answer is kept)
-    if (strict && q.expression !== f && !(q.kind === SK.CallExpression && q.expression.kind === SK.PropertyAccessExpression && (CALLBACK_METHODS.has(q.expression.name.text) || q.expression.name.text === 'forEach' || q.expression.name.text === 'reduce' || q.expression.name.text === 'flatMap' || q.expression.name.text === 'sort') && libOwn(checker.getSymbolAtLocation(q.expression.name)))) return p;
-    c = f; p = f; }   // (called on the spot, or handed to a call: go on up from that call)
+    if (handedTo(p) === 'now') { p = upParen(p); continue; }   // (go on up from the call that runs it)
+    return p; }
   return null; };
-/** THE FUNCTIONS THAT RUN AS A MODULE LOADS: every function a module's own top-level statements call, and what those call, to the end — followed by the
- *  declaration each call names (a call through an interface or a value handed about is not followed). The page's own files (src/*.ts) are where the
- *  page's switches are written and the game is booted after: the calls they make are not load time. */
+/** THE FUNCTIONS THAT RUN AS A MODULE LOADS: everything a module's own top-level statements call, make (`new C`: its fields and constructor, and its base's),
+ *  read through a getter, or hand to a function of the game's own (which may run it at once) — and what those do in turn, to the end. Each is followed by
+ *  the declaration its name leads to; a call through an interface or a value handed about is not followed, and what is handed to a listener, a timer or a
+ *  promise waits. The walk follows every call a function COULD make, not the ones it does make: a refusal names the chain, and `--late` takes the caller's
+ *  word against it. The file a page's script tag names is that page's program — it writes the switches and boots the game after — and is not walked. */
 let loadFnsMemo: Map<any, string> | null = null;
-function loadFns(): Map<any, string> { if (loadFnsMemo) return loadFnsMemo; const out = loadFnsMemo = new Map<any, string>(), calls = new Map<any, any[]>(), queue: any[] = [];
-  // (the file a page of the tree names in a script tag is that page's own: the program that writes the switches and boots the game, not a module loading)
+function loadFns(): Map<any, string> { if (loadFnsMemo) return loadFnsMemo; const out = loadFnsMemo = new Map<any, string>(), queue: any[] = [];
   const pages = new Set<string>(); for (const h of readdirSync(ROOT)) if (h.endsWith('.html')) for (const m of readFileSync(join(ROOT, h), 'utf8').matchAll(/<script[^>]*\ssrc=["'](?:\.?\/)?([^"']+\.ts)["']/g)) pages.add(m[1]);
-  for (const f of files) { if (isTool(f)) continue; const sf = sfOf(f); if (!sf) continue; const entry = pages.has(rel(f));
-    const visit = (n: any) => { if (n.kind === SK.CallExpression || n.kind === SK.NewExpression) { const k = keeper(n, true); if (k || !entry) { const l = calls.get(k); if (l) l.push(n); else calls.set(k, [n]); } } n.forEachChild(visit); }; visit(sf); }
-  const bodies = (d: any, made: boolean): any[] => { if (!d || d.getSourceFile().isDeclarationFile) return [];
+  const fnOf = (x: any): any => { x = unparen(x); return x && (x.kind === SK.ArrowFunction || x.kind === SK.FunctionExpression) ? x : null; };
+  const bodies = (d: any, made: boolean, deep = 0): any[] => { if (!d || deep > 3 || d.getSourceFile().isDeclarationFile) return [];
     if (d.kind === SK.ClassDeclaration || d.kind === SK.ClassExpression) { if (!made) return []; const outB: any[] = [d, ...d.members.filter((m: any) => m.kind === SK.Constructor && m.body)];
-      for (const h of d.heritageClauses ?? []) if (h.token === SK.ExtendsKeyword) for (const t of h.types) { let bs = checker.getSymbolAtLocation(t.expression); if (bs && (bs.flags & ts.SymbolFlags.Alias)) bs = checker.getAliasedSymbol(bs); for (const bd of bs?.declarations ?? []) outB.push(...bodies(bd, true)); }
+      for (const h of d.heritageClauses ?? []) if (h.token === SK.ExtendsKeyword) for (const t of h.types) outB.push(...named(t.expression, true, deep + 1));
       return outB; }
     if ((d.kind === SK.FunctionDeclaration || d.kind === SK.MethodDeclaration || d.kind === SK.GetAccessor) && d.body) return [d];
-    if ((d.kind === SK.VariableDeclaration || d.kind === SK.PropertyDeclaration || d.kind === SK.PropertyAssignment) && d.initializer) { const i = unparen(d.initializer); if (i.kind === SK.ArrowFunction || i.kind === SK.FunctionExpression) return [i]; if (made && i.kind === SK.ClassExpression) return bodies(i, true); }
+    if (d.kind === SK.ShorthandPropertyAssignment) { const v = checker.getShorthandAssignmentValueSymbol(d); return (v?.declarations ?? []).flatMap((x: any) => bodies(x, made, deep + 1)); }   // (`{ init }`: the function of that name)
+    if ((d.kind === SK.VariableDeclaration || d.kind === SK.PropertyDeclaration || d.kind === SK.PropertyAssignment) && d.initializer) { const i = unparen(d.initializer); if (fnOf(i)) return [i]; if (i.kind === SK.ClassExpression) return bodies(i, made, deep + 1);
+      if (i.kind === SK.Identifier || i.kind === SK.PropertyAccessExpression) return named(i, made, deep + 1); }   // (`{ init: start }`, `const go = start`: the function under its other name)
     return []; };
-  const named = (x: any, made: boolean): any[] => { x = unparen(x); const at0 = x.kind === SK.PropertyAccessExpression ? x.name : x; if (at0.kind !== SK.Identifier && at0.kind !== SK.PrivateIdentifier) return [];
-    let sym = checker.getSymbolAtLocation(at0); if (sym && (sym.flags & ts.SymbolFlags.Alias)) sym = checker.getAliasedSymbol(sym); return (sym?.declarations ?? []).flatMap((d: any) => bodies(d, made)); };
+  const named = (x: any, made: boolean, deep = 0): any[] => { x = unparen(x); const at0 = x.kind === SK.PropertyAccessExpression ? x.name : x; if (at0.kind !== SK.Identifier && at0.kind !== SK.PrivateIdentifier) return [];
+    let sym = checker.getSymbolAtLocation(at0); if (sym && (sym.flags & ts.SymbolFlags.Alias)) sym = checker.getAliasedSymbol(sym); return (sym?.declarations ?? []).flatMap((d: any) => bodies(d, made, deep)); };
+  const label = (fn: any): string => fn.kind === SK.Constructor ? `new ${fn.parent.name?.text ?? '(a class)'}` : fn.kind === SK.ClassDeclaration || fn.kind === SK.ClassExpression ? `the fields of ${fn.name?.text ?? 'a class'}` : fn.kind === SK.GetAccessor ? `get ${fn.name.getText()}` : fn.name?.getText?.() ?? (fn.parent?.name?.getText?.() as string | undefined) ?? 'a function';
   const mark = (fn: any, why: string) => { if (out.has(fn)) return; out.set(fn, why); queue.push(fn); };
-  const follow = (from: any, why: (c: any) => string) => { for (const c of calls.get(from) ?? []) { for (const fn of named(c.expression, c.kind === SK.NewExpression)) mark(fn, why(c));
-      for (const a of c.arguments ?? []) if (unparen(a).kind === SK.Identifier || unparen(a).kind === SK.PropertyAccessExpression) for (const fn of named(a, false)) mark(fn, why(c)); } };   // (a function handed to a call by its name may be run by it at once)
-  const nameOf = (c: any): string => { const e = unparen(c.expression); return (c.kind === SK.NewExpression ? 'new ' : '') + (e.kind === SK.PropertyAccessExpression ? e.name.text : e.kind === SK.Identifier ? e.text : '(…)'); };
-  follow(null, c => `${at(c.getSourceFile(), c.getStart())} ${(c.getText() as string).slice(0, 50).replace(/\s+/g, ' ')}`);
-  while (queue.length) { const fn = queue.shift(), why = out.get(fn)!; follow(fn, c => why.split(' → ').length >= 8 ? why : `${why} → ${nameOf(c)}`); }   // (the chain of calls from the top-level statement, by name, for whoever reads the refusal)
+  const scan = (root: any, whyOf: (n: any, name: string) => string) => {
+    const go = (n: any): void => {
+      if (n !== root && ts.isFunctionLike(n) && handedTo(n) !== 'now') return;   // (kept: it waits for its call — or is marked where it is handed over, below)
+      if (n !== root && (n.kind === SK.ClassDeclaration || n.kind === SK.ClassExpression)) {   // (a class written here: what is static runs now, the rest when an object is made)
+        for (const h of n.heritageClauses ?? []) go(h); for (const m of n.members) { if (m.kind === SK.PropertyDeclaration && (m.modifiers ?? []).some((x: any) => x.kind === SK.StaticKeyword) && m.initializer) go(m.initializer); else if (m.kind === SK.ClassStaticBlockDeclaration) go(m.body); } return; }
+      if (n.kind === SK.CallExpression || n.kind === SK.NewExpression) {
+        for (const fn of named(n.expression, n.kind === SK.NewExpression)) mark(fn, whyOf(n, label(fn)));
+        const sym = calleeSym(n), lib = !!sym && libOwn(sym), runs = !lib || runsHanded(n);   // (a function of the game's own may run what it is handed at once; of the language's, only the ones that say so)
+        if (runs) for (const a of n.arguments ?? []) { const ua = unparen(a);
+          if (ua.kind === SK.Identifier || ua.kind === SK.PropertyAccessExpression) for (const fn of named(ua, false)) mark(fn, whyOf(n, `${label(fn)} (handed to ${calleeName(n)})`));
+          else if (fnOf(ua) && !lib) mark(ua, whyOf(n, `a function handed to ${calleeName(n)}`)); } }
+      else if (n.kind === SK.PropertyAccessExpression && n.name.kind === SK.Identifier) {   // (a getter read is a call of its body)
+        let sym = checker.getSymbolAtLocation(n.name); if (sym && (sym.flags & ts.SymbolFlags.Alias)) sym = checker.getAliasedSymbol(sym);
+        for (const d of sym?.declarations ?? []) if (d.kind === SK.GetAccessor && d.body && !d.getSourceFile().isDeclarationFile) mark(d, whyOf(n, label(d))); }
+      n.forEachChild(go); };
+    if (root.kind === SK.ClassDeclaration || root.kind === SK.ClassExpression) { for (const m of root.members) if (m.kind === SK.PropertyDeclaration && !(m.modifiers ?? []).some((x: any) => x.kind === SK.StaticKeyword) && m.initializer) go(m.initializer); }
+    else root.forEachChild(go); };
+  for (const f of files) { if (isTool(f) || pages.has(rel(f))) continue; const sf = sfOf(f); if (!sf) continue; scan(sf, (n, name) => `${at(sf, n.getStart(sf))} ${name}`); }
+  const step = (why: string, name: string): string => why.endsWith('…') ? why : why.split(' → ').length >= 8 ? `${why} → …` : `${why} → ${name}`;   // (the chain of calls from the top-level statement, by name, for whoever reads the refusal; a long one says it was cut)
+  while (queue.length) { const fn = queue.shift(), why = out.get(fn)!; scan(fn, (_n, name) => step(why, name)); }
   return out; }
-/** does this run as its module loads? With no function round it, yes; inside a function, where a module's top-level statement calls that function (or
- *  one that calls it, to the end), and inside a class's field or constructor, where a top-level statement makes an object of the class. */
+/** does this run as its module loads? '' = it stands at a file's own top level; a chain = it stands in a function the walk above reached; null = no. */
 const atLoadWhy = (n: any): string | null => { const k = keeper(n); if (!k) return ''; const w = loadFns().get(k); return w === undefined ? null : w; };
 const atLoad = (n: any): boolean => atLoadWhy(n) !== null;
-const viaCall = (n: any): string => { const w = atLoadWhy(n); return w ? ` (in a function the module calls as it loads: ${w})` : ''; };
+const viaCall = (n: any): string => { const w = atLoadWhy(n); return w ? ` (in what the module runs as it loads: ${w})` : ''; };
+/** `--late ROW`: the caller's word that a read the walk reached does not happen before the page writes the row. Never for a read at a file's own top level. */
+const vouchedLate = (row: string, n: any): boolean => LATE.has(row) && !!atLoadWhy(n);
 /** what a write gives: in `A = B = x` both are given x (B is written there, not read) */
 const given = (as: any): any => { let r = as.right; for (let x = unparen(r); x?.kind === SK.BinaryExpression && x.operatorToken.kind === SK.EqualsToken; x = unparen(r)) r = x.right; return r; };
 const pageWrites: { row: string; node: any; rhs: any }[] = [], loadWrite = new Set<string>(), loadRead = new Map<string, string>();
@@ -386,7 +430,10 @@ for (const u of uses) {
     const written = !!as && as.kind === SK.BinaryExpression && as.left === acc && as.operatorToken.kind >= SK.FirstAssignment && as.operatorToken.kind <= SK.LastAssignment;
     // (… but a read made as the module loads, or off a copy taken then, read the OLD value and would now read the page's)
     if (!tool && acc && moduleVal.get(u.row.row) !== u.row.value && !written) { const decl = tableOfRow.get(u.row.row), mine = livePath(p, decl)?.join('.') === u.row.row.split('.').slice(1).join('.');
-      if (mine ? atLoad(p) : rel(u.sf.fileName) !== 'src/game/journal.ts') { refuse.set(u.row.row, `${where}: ${mine ? 'read as its module loads' + viaCall(p) : 'read on another thing of the table\'s type (a copy taken at load?)'}, where it is still ${literal.get(u.row.row)}: making the table's own value the page's would change what that reads (${((stmtOf(p) ?? p).getText() as string).slice(0, 80).replace(/\s+/g, ' ')})`); continue; } }
+      const shownH = ((stmtOf(p) ?? p).getText() as string).slice(0, 80).replace(/\s+/g, ' ');
+      if (mine && atLoad(p)) { if (vouchedLate(u.row.row, p)) note(`--late ${u.row.row}: taken on your word that this is not read before the page writes it: ${where}${viaCall(p)} (${shownH})`);
+        else { refuseLoad(u.row.row, `${where}: read as its module loads${viaCall(p)}, where it is still ${literal.get(u.row.row)}: making the table's own value the page's would change what that reads (${shownH})`); continue; } }
+      else if (!mine && rel(u.sf.fileName) !== 'src/game/journal.ts') { refuse.set(u.row.row, `${where}: read on another thing of the table's type (a copy taken at load?), where it is still ${literal.get(u.row.row)}: making the table's own value the page's would change what that reads (${shownH})`); continue; } }
     if (as && as.kind === SK.BinaryExpression && as.left === acc && as.operatorToken.kind === SK.EqualsToken && /^(src\/host\/(profile|standup)\.ts|tools\/qa\/headless\.ts)$/.test(rel(u.sf.fileName))) { acts.push({ use: u, kind: 'unassign', node: as });
       if (rel(u.sf.fileName) === 'src/host/profile.ts') pageWrites.push({ row: u.row.row, node: as, rhs: given(as) }); }
     continue; }
@@ -407,11 +454,13 @@ for (const u of uses) {
   { let base = access; for (let i = 1; i < u.row.row.split('.').length; i++) base = base?.expression; const decl = tableOfRow.get(u.row.row), file = rel(u.sf.fileName), shown = ((stmtOf(access) ?? access).getText() as string).slice(0, 90).replace(/\s+/g, ' ');
     if (!u.named && livePath(access, decl)?.join('.') !== u.row.row.split('.').slice(1).join('.')) {
       if (tool) { note(`${where}: ${u.row.row} read on another thing of the table's type in a tool (left as it is): ${shown}`); continue; }
-      if (file === 'src/game/journal.ts') { const iff = ts.findAncestor(access, (x: any) => x.kind === SK.IfStatement) as any; if (iff && access.getStart() >= iff.expression.getStart() && access.end <= iff.expression.end) recordingIfs.add(iff); continue; }   // (a recording's own word for the row: it goes with the journal's line for an old file, or the typecheck says where it stands)
+      if (file === 'src/game/journal.ts') { if (!isWrite) recordingReads.push({ row: u.row.row, access, where }); continue; }   // (a recording's own word for the row: it goes with the journal's line for an old file, or the typecheck says where it stands)
       const snap = !isWrite && base ? snapshotOf(base, decl) : null;
       if (snap && (snap === 'deep' || u.row.row.split('.').length === 2)) { acts.push({ use: u, kind: 'readLoad', node: access }); loadRead.set(u.row.row, where); continue; }   // (a copy taken as the module loaded holds the row's own value, not the page's)
       refuse.set(u.row.row, `${where}: the same key on another thing of the table's type (${shown}): that is not the table, so its value there is not the page's. Fold it by hand first`); continue; }
-    if (!tool && atLoad(access) && !(LATE.has(u.row.row) && atLoadWhy(access) !== '')) { if (isWrite) loadWrite.add(u.row.row); else if (moduleVal.get(u.row.row) !== u.row.value) { refuse.set(u.row.row, `${where}: read as its module loads${viaCall(access)}, before the page has written it (${shown}): there it is still ${literal.get(u.row.row)}. Fold it by hand first`); continue; } } }
+    if (!tool && atLoad(access)) { if (isWrite) loadWrite.add(u.row.row); else if (moduleVal.get(u.row.row) !== u.row.value) {
+        if (vouchedLate(u.row.row, access)) note(`--late ${u.row.row}: taken on your word that this is not read before the page writes it: ${where}${viaCall(access)} (${shown})`);
+        else { refuseLoad(u.row.row, `${where}: read as its module loads${viaCall(access)}, before the page has written it (${shown}): there it is still ${literal.get(u.row.row)}. Fold it by hand first`); continue; } } } }
   if (op.kind === SK.DeleteExpression) {   // (`delete file.tables.T.key`: a check making a file from before the key — the key is gone, so is the line)
     if (op.parent.kind === SK.ExpressionStatement) acts.push({ use: u, kind: 'delStmt', node: op.parent }); else acts.push({ use: u, kind: 'const', node: op });
     report.toolWrites.push({ row: u.row.row, at: where, kind: 'other', text: (stmtOf(op) ?? op).getText().slice(0, 100) }); continue; }
@@ -439,7 +488,8 @@ for (const u of uses) {
     refuse.set(u.row.row, `${where}: the game writes it as it runs: state, not a switch (${shown})`); continue;
   }
   if ((op.kind === SK.PrefixUnaryExpression || op.kind === SK.PostfixUnaryExpression) && (op.operator === SK.PlusPlusToken || op.operator === SK.MinusMinusToken)) { refuse.set(u.row.row, `${where}: ++ or -- on the row`); continue; }
-  if (op.kind === SK.SwitchStatement && op.expression === outer && !tool) { refuse.set(u.row.row, `${where}: the subject of a switch (${(op.getText() as string).slice(0, 60).replace(/\s+/g, ' ')}): its cases are not folded by this tool. Fold it by hand first`); continue; }
+  const sw = tool ? null : ts.findAncestor(outer, (x: any) => x.parent?.kind === SK.SwitchStatement && x.parent.expression === x || ts.isFunctionLike(x) || (x.kind >= SK.FirstStatement && x.kind <= SK.LastStatement));
+  if (sw && sw.parent?.kind === SK.SwitchStatement && sw.parent.expression === sw) { const op = sw.parent; refuse.set(u.row.row, `${where}: the subject of a switch (${(op.getText() as string).slice(0, 60).replace(/\s+/g, ' ')}): its cases are not folded by this tool. Fold it by hand first`); continue; }
   // the debugger's getter: `() => ROW` handed to a call that is a statement and that also holds the setter → the same statement goes (found from the setter); a lone getter folds
   acts.push({ use: u, kind: 'read', node: access });
 }
@@ -538,6 +588,22 @@ const keyLists: { el: any; row: string }[] = [], named: { node: any; row: string
         else if (v !== r.value) why = `the page gives it ${JSON.stringify(v)} (${pageFile}), and ${JSON.stringify(r.value)} was asked for`; }
       if (!why) for (const w of pageWrites) { if (w.row !== r.row) continue; const on = rides(w.rhs); if (on && on !== r.row) { why = `${at(w.node.getSourceFile(), w.node.getStart())}: the page's write of it rides ${on}, which stays (${(w.node.getText() as string).slice(0, 80).replace(/\s+/g, ' ')}): with that row's own word on the address this one was off too`; break; } }
       if (why) { refuse.set(r.row, `${why}. --trust ${r.row} takes your word for the value`); again = true; } } } }
+// THE JOURNAL'S LINE FOR AN OLD RECORDING — `if (the recording has no word for ROW) ROW = off;` — goes whole with the row. But once the row is gone NO
+// recording has its word, so whatever else that question guards would run for every recording made from now on: the line may only go where everything under
+// its `if` is the write of a row that retires in this run. Anything else (a row that stays written there, the word read into a name, a question that is not
+// an `if`'s) refuses the row. Asked again while it refuses anything: a row refused here may be what another line's `if` writes.
+{ const useAt = new Map<any, Use>(); for (const u of uses) if (!u.def) useAt.set(u.node, u);
+  const stays = (st: any): string | null => { if (!st) return null; if (st.kind === SK.Block) { for (const x of st.statements) { const w = stays(x); if (w) return w; } return null; }
+    if (st.kind === SK.ExpressionStatement) { const e = unparen(st.expression); if (e.kind === SK.BinaryExpression && e.operatorToken.kind === SK.EqualsToken) { const l = unparen(e.left), nm = l.kind === SK.PropertyAccessExpression ? l.name : l.kind === SK.ElementAccessExpression ? l.argumentExpression : null, u = nm ? useAt.get(nm) : undefined;
+        if (u && !u.row.hold && rowDef.has(u.row.row) && !refuse.has(u.row.row)) return null; } }
+    return (st.getText() as string).slice(0, 70).replace(/\s+/g, ' '); };
+  for (let again = true; again;) { again = false; recordingIfs.clear();
+    for (const r of recordingReads) { if (refuse.has(r.row)) continue; const iff = ts.findAncestor(r.access, (x: any) => x.kind === SK.IfStatement) as any, asked = !!iff && r.access.getStart() >= iff.expression.getStart() && r.access.end <= iff.expression.end;
+      const left = !asked ? null : stays(iff.thenStatement) ?? stays(iff.elseStatement);
+      if (!asked) refuse.set(r.row, `${r.where}: the journal reads a recording's own word for the row somewhere that is not the question of an \`if\` (${((stmtOf(r.access) ?? r.access).getText() as string).slice(0, 80).replace(/\s+/g, ' ')}): with the row gone no recording has that word. Fold that line by hand first`);
+      else if (left) refuse.set(r.row, `${r.where}: the journal's line for a recording from before the row also does something that stays (${left}): with the row gone no recording has its word, and that would run for every one. Fold that line by hand first`);
+      else recordingIfs.add(iff);
+      if (refuse.has(r.row)) again = true; } } }
 for (const r of rows) { const why = refuse.get(r.row); if (why) report.refused.push({ row: r.row, why }); else if (rowDef.has(r.row)) report.retired.push(r.row); }
 const live = new Set(report.retired);
 { const emptied = (list: any[], gone: Set<any>) => list.length > 0 && list.every(x => gone.has(x));
@@ -858,7 +924,7 @@ function tableKeyOrLocal(p: any): boolean { let o = p.parent; while (o && o.kind
   return !namedAsWord(p); }
 /** a knob table's key is also reached by its NAME as a word (a panel's list of rows, a recording's keys, a preset): is the key's name a quoted word anywhere in
  *  text that stays? Then the key stays, though nothing that stays reads it as `TABLE.key`. */
-function namedAsWord(p: any): boolean { const name = p.name?.text; if (!name || !/^[\w$]+$/.test(name)) return true; const re = new RegExp(`(['"\`])${name.replace(/\$/g, '\\$')}\\1`, 'g');
+function namedAsWord(p: any): boolean { const name = p.name?.text; if (!name || !/^[\w$]+$/.test(name)) return true; const re = new RegExp(`(['"\`])(?:[\\w$]+\\.)*${name.replace(/\$/g, '\\$')}(?:\\.[\\w$]+)*\\1`, 'g');   // (a panel names a row a level down by its path: 'guard.settleSecs' names both keys)
   for (const f of files) { const t = textOf(f); if (!t.includes(name)) continue; re.lastIndex = 0; let m: RegExpExecArray | null; const sf = sfOf(f); if (!sf) continue;
     while ((m = re.exec(t))) { if (goneAt(f, m.index)) continue; const tok = ts.getTokenAtPosition(sf, m.index); if ((tok.kind === SK.StringLiteral || tok.kind === SK.NoSubstitutionTemplateLiteral) && tok.getStart(sf) === m.index) return true; } }
   return false; }
@@ -945,7 +1011,8 @@ if (emptied.size) console.log(`  a loop left with nothing in it (kept, for its h
 console.log(`  a check's line that only read the switch (taken out; the lines that fed it want a hand): ${constLines.size}`);
 if (VERBOSE) { const badG = [...namedThings().getters].filter(([, ds]) => ds.some(d => !isTool(d.getSourceFile().fileName) && writesFn(d))).map(([k]) => k);
   console.log(`    properties whose read is never left out (a getter of that name in the game writes something): ${badG.join(' ') || '(none)'}`); }
-if (VERBOSE) { for (const h of report.hooks) console.log(`    hook ${h}`); for (const c of constLines) console.log(`    line ${c}`); for (const w of byKind('opposite')) console.log(`    opposite ${w.at} ${w.row}: ${w.text}`); for (const w of byKind('other')) console.log(`    other ${w.at} ${w.row}: ${w.text}`); for (const d of report.dead) console.log(`    dead ${d}`); for (const n of report.notes) console.log(`    note ${n}`); }
+for (const n of report.notes) if (n.startsWith('--late ')) console.log(`  ${n}`);   // (what was taken on the caller's word is always said)
+if (VERBOSE) { for (const h of report.hooks) console.log(`    hook ${h}`); for (const c of constLines) console.log(`    line ${c}`); for (const w of byKind('opposite')) console.log(`    opposite ${w.at} ${w.row}: ${w.text}`); for (const w of byKind('other')) console.log(`    other ${w.at} ${w.row}: ${w.text}`); for (const d of report.dead) console.log(`    dead ${d}`); for (const n of report.notes) if (!n.startsWith('--late ')) console.log(`    note ${n}`); }
 { const out = arg('--report'); if (out) writeFileSync(out, JSON.stringify({ ...report, constLines: [...constLines], leftovers, droppedLines, dropMissed, named: namedAt.filter(l => report.retired.includes(l.split(' ')[1].replace(/:$/, ''))), unread: [...unread.values()], emptied: [...emptied] }, null, 1)); }
 if (flag('--list')) for (const r of report.retired) console.log(`- \`${r}\``);
 if (WRITE) { for (const [f, t] of finalText) writeFileSync(f, t); console.log(`  written: ${finalText.size} files`); } else console.log('  (a dry run: --write writes it)');

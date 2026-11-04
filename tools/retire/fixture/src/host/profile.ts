@@ -29,6 +29,15 @@ export function pageSwitches(q: URLSearchParams): void {
   K.e2 = !q.has('noe2');
   K.e3 = !q.has('noe3');
   M.on = !q.has('nom');
+  K.rec = !q.has('norec');
+  K.j1 = !q.has('noj1');
+  K.j2 = !q.has('noj2');
+  K.deepn.on = !q.has('nodeepn');
+  K.e4 = !q.has('noe4');
+  K.e5 = !q.has('noe5');
+  K.e6 = !q.has('noe6');
+  K.sw2 = q.get('sw2') ?? 'b';
+  N.h1 = 6;
   N.reach = 5;   // the page's reach
 }
 export const FROZEN_HOLDS: Record<string, string> = {

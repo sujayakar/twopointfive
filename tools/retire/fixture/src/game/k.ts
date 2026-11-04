@@ -67,10 +67,26 @@ export const K = {
   e3: false,
   /** a number only the old way read, and which a panel's list still names as a word */
   oldGain: 4,
+  /** asked of an untyped thing in the game under the table's name */
+  rec: false,
+  /** the journal's line for it also writes a row that stays */
+  j1: false,
+  /** the journal reads a recording's word for it into a name */
+  j2: false,
+  /** a part whose other key a panel names by its path */
+  deepn: { on: false, old: 7 },
+  /** read through a getter as a module loads */
+  e4: false,
+  /** read in a function reached through a shorthand key as a module loads */
+  e5: false,
+  /** read in a function written where it is handed to a function of the game's as a module loads */
+  e6: false,
+  /** a word that is the subject of a switch under a cast */
+  sw2: 'a',
 };
 /** the table as it loaded: what a row's default is read from */
 export const K_DEFAULTS: typeof K = JSON.parse(JSON.stringify(K));
 /** a table typed by an index: a read of one of its rows cannot be found by its name */
 export const LOOSE: Record<string, boolean> = { a: false };
 /** N: a number the frozen stand holds at an old value */
-export const N = { reach: 3, far: 9, wide: 2, w2: 2, w3: 2 };
+export const N = { reach: 3, far: 9, wide: 2, w2: 2, w3: 2, h1: 2 };
