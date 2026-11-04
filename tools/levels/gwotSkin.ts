@@ -23,6 +23,7 @@ import { paletteName, surfOf } from '../../src/game/particleFx';
 import { breakClassOf, steelGrey } from '../../src/game/furnblast';
 import { DRESS_GROUP } from '../../src/game/destructionSwitch';
 import { isLived } from '../../src/scene/lived';
+import { tonedAs, worded } from '../../src/scene/stuff';
 import { flatsOverlap, isFlat, layFlats } from './flatLayers';
 
 export const LOOK_GROUP = 'look';
@@ -155,7 +156,7 @@ export function skinLevel(level: Level, groups: string[], S: Skin = {}): SkinSta
     if (!m) { st.kept++; continue; }
     const sim: GwotSim = (name ?? (steel ? (surf0 === 'drywall' ? '~steelPale' : '~steel') : '~' + surf0)) as GwotSim;
     const before = { name, surf: surf0, cls: breakClassOf(b.albedo), steel: steelGrey(b.albedo), dark: lum(b.albedo) > 0.1, pale: lum(b.albedo) > 0.7 };
-    const old = b.albedo; b.albedo = gwotAs(m, sim); b.rough = GWOT_FINISH[m]?.rough ?? ROUGH_CLOTH; delete b.stuff;   // (a word belongs to the paint it was said with: the skin's paint has a name of its own)
+    const old = b.albedo; b.albedo = gwotAs(m, sim); b.rough = GWOT_FINISH[m]?.rough ?? ROUGH_CLOTH; delete b.stuff; worded(b);   // (a word belongs to the paint it was said with: the old paint's goes, and the box is made of what the skin's paint is. scene/stuff.ts)
     if (!c.full) { if (GWOT_FINISH[m]?.metal) b.metal = true; else delete b.metal; }
     // THE CHECK: the game's own classifiers say the same of the box as before (a round, a charge, a blast and the destruction index read nothing else of a paint)
     const after = { name: paletteName(b.albedo), surf: surfOf(b.albedo), cls: breakClassOf(b.albedo), steel: steelGrey(b.albedo), dark: lum(b.albedo) > 0.1, pale: lum(b.albedo) > 0.7 };
@@ -174,7 +175,7 @@ export function skinLevel(level: Level, groups: string[], S: Skin = {}): SkinSta
       // (a prop that a blast takes apart is classed by its parts' paint like any box: the new paint stands for the old)
       const next = gwotAs(m, (name ?? (steel ? (surf === 'drywall' ? '~steelPale' : '~steel') : '~' + surf)) as GwotSim);
       if (paletteName(next) !== name || surfOf(next) !== surf || breakClassOf(next) !== breakClassOf(a) || steelGrey(next) !== steelGrey(a)) throw new Error(`skinLevel: prop ${k} (${p.kind}) part ${a.join(',')} → ${m} would change what the simulation reads`);
-      part.albedo = next; delete part.stuff; any = true; }   // (the part's word went with its old paint)
+      part.albedo = next; delete part.stuff; worded(part); any = true; }   // (the part's word went with its old paint, and the new paint says its own)
     if (any) st.props++;
   });
 
@@ -182,7 +183,7 @@ export function skinLevel(level: Level, groups: string[], S: Skin = {}): SkinSta
   const host: GwotHost = {
     add: b => { if (!((b.flags ?? 0) & BoxFlag.NoShadow) || (b.flags ?? 0) & ~BoxFlag.NoShadow) throw new Error(`skinLevel: the look may only add NoShadow decals (got flags ${b.flags ?? 0} at ${b.c.join(',')})`);
       if (b.c[1] - b.h[1] > 0.06) throw new Error(`skinLevel: a decal of the look starts at the floor (this one at ${(b.c[1] - b.h[1]).toFixed(2)} m, ${b.c.join(',')}) — see the head`);
-      boxes.push(makeBox(b)); groups.push(LOOK_GROUP); st.decals++; return boxes.length - 1; },
+      boxes.push(worded(makeBox(b))); groups.push(LOOK_GROUP); st.decals++; return boxes.length - 1; },   // (a decal is made of what it says, else what its paint is)
     prop: () => { throw new Error('skinLevel: the look adds no props'); }, wallX: () => { throw new Error('skinLevel: the look adds no walls'); }, wallZ: () => { throw new Error('skinLevel: the look adds no walls'); },
     lights: [], switchables: [], marks: true, texel: MARKING_TEXEL,
   };
@@ -193,7 +194,7 @@ export function skinLevel(level: Level, groups: string[], S: Skin = {}): SkinSta
   const floorAt = (x: number, z: number): Vec3 | null => { let best: Box | null = null, top = -1e9; for (const b of flats) if (Math.abs(b.c[0] - x) <= b.h[0] && Math.abs(b.c[2] - z) <= b.h[2] && b.c[1] + b.h[1] > top) { top = b.c[1] + b.h[1]; best = b; } return best ? best.albedo : null; };
   // (how high the topmost flat stands there: a ground decal is not laid where a flat stands over it — a runner, a threshold, the level's own rug — it would be buried, and take that flat's tone for a floor it does not lie on)
   const topAt = (x: number, z: number): number => { let top = -1e9; for (const b of flats) if (Math.abs(b.c[0] - x) <= b.h[0] && Math.abs(b.c[2] - z) <= b.h[2]) top = Math.max(top, b.c[1] + b.h[1]); return top; };
-  const tone = (a: Vec3, k: number): Vec3 => [Math.round(a[0] * k * 1e4) / 1e4, Math.round(a[1] * k * 1e4) / 1e4, Math.round(a[2] * k * 1e4) / 1e4];
+  const tone = (a: Vec3, k: number): Vec3 => tonedAs(a, [Math.round(a[0] * k * 1e4) / 1e4, Math.round(a[1] * k * 1e4) / 1e4, Math.round(a[2] * k * 1e4) / 1e4]);   // (the ground's own paint, darker: still that ground's stuff)
   const flat = (x: number, z: number, w: number, d: number, albedo: Vec3, yaw = 0, y = 0.011) => host.add({ c: [x, y, z], h: [w / 2, 0.002, d / 2], yaw, albedo, rough: 1, flags: BoxFlag.NoShadow });
   const roofs = bare.filter(b => (b.flags & BoxFlag.NoPrimary) && b.c[1] - b.h[1] >= 2.2 && b.h[0] >= 0.5 && b.h[2] >= 0.5 && !b.yaw);
   const roofed = (x: number, z: number) => roofs.some(b => Math.abs(b.c[0] - x) <= b.h[0] && Math.abs(b.c[2] - z) <= b.h[2]);

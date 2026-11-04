@@ -44,6 +44,7 @@ import { officeKit, normalize3 as norm, type GeneratorTrace } from '../../src/sc
 import { gwotKit, gwotOfOffice, GWOT_PALETTE, GWOT_MATERIALS, GW_SHELL } from '../../src/scene/gwotKit';
 import { WORLD } from '../../src/scene/world';
 import { BoxFlag } from '../../src/scene/boxes';
+import { PANEL_GREY } from '../../src/scene/stuff';
 
 export const NAME = 'tut-squad';
 export const NOTES = 'The tutorial\'s squad mission: one street through a walled yard, two easy rooms, then a stop for each thing the other side does. Regenerate: bun run tools/levels/export.ts tut-squad';
@@ -81,7 +82,7 @@ export function build() {
 
   // the mains breaker (on the hall's street face) and one emergency beacon: the game's blackout wants both
   grp('breaker');
-  const brk = add({ c: [34.0, 1.35, 22.84], h: [0.28, 0.36, 0.04], albedo: [0.42, 0.44, 0.45], name: 'breaker_panel' });
+  const brk = add({ c: [34.0, 1.35, 22.84], h: [0.28, 0.36, 0.04], albedo: PANEL_GREY, name: 'breaker_panel' });
   const led = add({ c: [33.82, 1.62, 22.79], h: [0.015, 0.015, 0.015], albedo: P.plasticBlack, rough: 0.5, emissive: [0.3, 4, 0.6], flags: BoxFlag.NoShadow });
   const breaker: Level['breaker'] = { pos: [34.0, 1.35, 22.7], boxes: [brk, led] };
   grp('beacons');
