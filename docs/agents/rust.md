@@ -200,7 +200,9 @@ first system across (the game's own maths). No rule of play has changed and noth
     answered their 101 slab steps both ways with none differing. WITH THE ROW OFF IT IS THE BUILD AS IT WAS, AND A MISSION'S BITS DO NOT SAY SO
     (`digest.ts rawBits` folds a door's angle and nothing of its slab): `tools/qa/slab-asitwas.ts` flies 900 torn leaves over four levels by the
     game's own entry and folds every number of every slab, its boxes, the noises, the tallies, the log and what a checkpoint would file after each
-    tick, 5.5 million numbers, against the words the tree before the columns folded; `rust-check`'s slabs section runs it. A SLAB'S STEP WITH ITS
+    tick, 5.5 million numbers, against the words the tree before the columns folded; `rust-check`'s slabs section runs it. A WORD THAT FOLDS A LEVEL'S
+    NUMBERS NAMES THE LEVEL'S BYTES: the check reads each level by the git blob id of its file at the recording, so a level dressed since leaves
+    it alone (it went red on the first build that dressed the compound, with nothing of the slabs changed). A SLAB'S STEP WITH ITS
     POSE (the office, every wooden leaf torn out from both faces, 182,700 steps a side): 162 µs in TypeScript, 67 µs in the module. A tick has a
     slab in the air for a second or two after a blast and at no other time, so this row is a rule moved, not a tick made shorter. Nobody has
     played with this row up.
