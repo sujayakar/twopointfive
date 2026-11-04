@@ -66,6 +66,11 @@ export const PRICE = {
   /** seconds OF THE GAME'S OWN CLOCK the mission plays before its picture is held; the last `slowS` of them at `slow` of its pace, so a frame runs one step of
    *  the game at most and the hold lands on the same step on a level's look page and on its page without the look; given up after `holdCapS` of the wall's */
   playS: 4, slowS: 0.1, slow: 0.1, holdCapS: 120,
+  /** THE GPU CATCHES UP BEFORE ANYTHING IS TIMED: a boot hands it seconds of work (its pipelines, its first frames), and for a while after the queue's "done"
+   *  comes many frames late whatever a frame costs (11-04, a rented card on a long run: hundreds of frames behind on a page with 6 ms of work, with the look
+   *  and without). The held picture is drawn until a frame's work is done within `lagFrames` frames three times running, for at most this many seconds; a
+   *  page still behind then says so on its row, and there the lag is the page's own. 0 = no wait (a check on an adapter whose frame is seconds long) */
+  catchS: 30,
   /** a turn: the start that is dropped, then the part that is measured (seconds; `pricesecs` on the address is the second) */ settleS: 1.2, measureS: 3,
   /** … and each wants this many frames, and gives up waiting for them after `capS` (a machine at two frames a second) */ settleFrames: 12, measureFrames: 30, capS: 25,
   /** turns of each state */ rounds: 2,
@@ -184,6 +189,19 @@ function layersOff(w: PageHooks): { how: string; back: () => void } | null {
   return back.length ? { how: back.length === rows.length ? `${rows.length} layers of the look put off` : `${back.length} of the look's ${rows.length} layers put off (the rest were off already)`, back: () => { for (let i = back.length - 1; i >= 0; i--) back[i](); } } : null;
 }
 
+/** the wait of PRICE.catchS: null = the GPU has caught up (or cannot be asked); else how many frames behind it still was when the time ran out */
+async function caughtUp(w: PageHooks, stop: () => boolean): Promise<number | null> {
+  const dev = w.__engine?.device; if (!dev || PRICE.catchS <= 0) return null;
+  let good = 0, lag = 0;
+  for (const t0 = performance.now(); performance.now() - t0 < PRICE.catchS * 1000 && !stop();) {
+    const a = await frame(), b = await frame(), dt = Math.min(100, Math.max(4, b - a));   // (two frames running: the time between frames, then a frame asked whole as a turn asks it)
+    await new Promise<void>(r => { const ch = new MessageChannel(); ch.port1.onmessage = () => { ch.port1.close(); r(); }; ch.port2.postMessage(0); });
+    await dev.queue.onSubmittedWorkDone().catch(() => { });
+    lag = (performance.now() - b) / dt;
+    if (lag <= PRICE.lagFrames) { if (++good >= 3) return null; } else good = 0;
+  }
+  return stop() ? null : lag;
+}
 /** one turn: the frames of `settle` dropped, then `measure` kept. Null = the tab was away through every try */
 async function turn(w: PageHooks, secs: number, stop: () => boolean): Promise<Bag | null> {
   const T = w.__engine?.timer, dev = w.__engine?.device;
@@ -260,6 +278,7 @@ async function price(c: Carry, i: number, loc: Location, view: ReturnType<typeof
     if (!held && Qh && typeof Qh.sample === 'function') { Qh.sample = () => { }; undo.push(() => { delete Qh.sample; }); }   // (a ladder left on takes no sample of the held picture: nothing of the size, the scale or what is shed moves between the turns. A held one samples nothing anyway)
     const cut = w.__cut?.programs; if (cut?.swap && cut.ready) await Promise.race([cut.ready, new Promise(r => setTimeout(r, 60000))]);   // (the second set of ray programs compiles after ready where the page has one: not charged to the switch)
     if (S.look) for (let t0 = performance.now(); !w.__perfsweep?.extra?.some(x => x.id.startsWith('look.')) && performance.now() - t0 < 5000;) await frame();   // (the look panel hands its rows to the sweep once the page's recorder is there: a few frames after ready)
+    { const behind = await caughtUp(w, () => stopped); if (behind !== null) notes.push(`the GPU was still ${behind.toFixed(0)} frames behind after ${PRICE.catchS} s of holding the picture: it does not keep up with this page at this preset on this machine`); }
     afterMade = made.n; const size0 = size();
     for (let r = 0; r < PRICE.rounds && !failed && !stopped; r++) for (const state of S.look ? ['off', 'on'] as const : ['on'] as const) {
       say(S.look ? `layers ${state}, turn ${r + 1} of ${PRICE.rounds}` : `turn ${r + 1} of ${PRICE.rounds}`);
