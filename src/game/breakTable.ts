@@ -16,7 +16,7 @@
 // THE SWITCH: every entry point returns on its first line unless cutBoxesOn() (scene/cut.ts: ?cutboxes) — off, the pool, the walls and the digests are the base
 // build's, statement for statement. Nothing at module level uses another game module (the import cycle: tables are literals, the rest runs inside functions).
 import { Vec3, v3, quat } from '../math/vec';
-import { Box, makeBox, MKEY } from '../scene/boxes';
+import { Box, makeBox, MKEY, wordOf } from '../scene/boxes';
 import { CutPlane, MAX_CUT_PLANES, cutBoxesOn, cutPrism, cutRecord, cutFit, cutThrough, cutToWorld, cutVerts } from '../scene/cut';
 import type { Game } from './game';
 import type { Chunk, ChunkKind, Debris } from './debris';
@@ -479,7 +479,7 @@ export class Breaks {
     const rot = b.rot ?? quat.yaw(b.yaw); const nw = quat.rotate(rot, n);
     for (let k = 0; k < 2; k++) {
       const f = cutFit(h, halves[k].cut); const w = cutToWorld(f.off, b.yaw, b.rot); const sgn = k === 0 ? -1 : 1;
-      const box = makeBox({ c: [b.c[0] + w[0], b.c[1] + w[1], b.c[2] + w[2]], h: f.h, yaw: b.yaw, rot: [rot[0], rot[1], rot[2], rot[3]], albedo: v3.copy(b.albedo) });
+      const box = makeBox({ c: [b.c[0] + w[0], b.c[1] + w[1], b.c[2] + w[2]], h: f.h, yaw: b.yaw, rot: [rot[0], rot[1], rot[2], rot[3]], albedo: v3.copy(b.albedo), ...wordOf(b) });
       const sep = 0.35 + 0.5 * r(10 + k);
       const v: Vec3 = [c.v[0] + nw[0] * sgn * sep, Math.max(c.v[1], 0) + 0.3 + 0.5 * r(12 + k), c.v[2] + nw[2] * sgn * sep];
       const wv: Vec3 = [c.w[0] + (r(14 + k) - 0.5) * 5, c.w[1] + (r(16 + k) - 0.5) * 3, c.w[2] + (r(18 + k) - 0.5) * 5];
@@ -599,7 +599,7 @@ export class Breaks {
     };
     const c0 = half(1), c1 = half(-1); if (!c0 || !c1) return false;
     b.h = H; b.cut = c0;
-    c.mate = makeBox({ c: b.c, h: [H[0], H[1], H[2]], yaw: b.yaw, rot: b.rot, albedo: v3.copy(b.albedo), flags: b.flags, name: 'debris', mkey: MKEY.debris + ((c.serial + 32768) & 65535) });
+    c.mate = makeBox({ c: b.c, h: [H[0], H[1], H[2]], yaw: b.yaw, rot: b.rot, albedo: v3.copy(b.albedo), ...wordOf(b), flags: b.flags, name: 'debris', mkey: MKEY.debris + ((c.serial + 32768) & 65535) });
     c.mate.cut = c1; c.mate.rough = b.rough; c.mate.metal = b.metal;
     BREAK_STATS.kinked++; BREAK_STATS.planes += c0.length + c1.length;
     return true;

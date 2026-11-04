@@ -69,12 +69,12 @@ export interface Box {
    *  material / per box in the level file (levelData.ts MaterialData.rough / metal, BoxData.rough / metal); the three below reach the GPU as ONE float in boxMat row 1's w
    *  (matWord, decoded by common.wgsl boxFinish) — the g-buffer writes roughness / metalness per pixel from it (+ the detail layer), reflect.wgsl reads the anisotropy. */
   rough?: number; metal?: boolean;
-  /** WHAT THIS BOX IS MADE OF, said by whoever made it (scene/stuff.ts): a material of the look, 'plain', 'waits', 'glass' or 'rubber'. A paint's NAME says it for most boxes
-   *  (the level's rows); a box says its own where it wears a paint for the colour alone (a car's body in the partition's blue) or a paint written as numbers.
-   *  The look reads it before any name or colour (render/gbuffer.ts lookWordOf), and so does the PICTURE of a round's hit (game/particleFx.ts HITSTUFF:
-   *  the sparks and chips it knocks out, the crack in solid glass); nothing in the simulation does. Authored (BoxData.stuff), or set by the code
-   *  that makes the box (a prop's part). It is part of the box's PAINT: whoever repaints the box drops it (stuff.ts saidFor). Absent = the paint's name,
-   *  then its colour. */
+  /** WHAT THIS BOX IS MADE OF (scene/stuff.ts): a material of the look, 'waits', 'glass' or 'rubber'; absent = plain. It is SAID, never read off the
+   *  colour: by the level file (the box's own `stuff`, else its material row's: levelLoad.ts puts it here when the file is read) or by the code that makes
+   *  the box (a kit's add() from the palette row it was handed, a prop's part, a door's leaf). The look draws exactly this (render/gbuffer.ts lookWordOf),
+   *  and the PICTURE of a round's hit reads it (game/particleFx.ts HITSTUFF: the sparks and chips it knocks out, the crack in solid glass); nothing in the
+   *  simulation does. It is part of the box's PAINT: whoever repaints the box says the new paint's word or drops this one, and whoever copies a box's
+   *  paint copies it. */
   stuff?: BoxStuff;
   /** anisotropic finish — the lobe stretched along the view direction so a lamp mirrors as a long streak, not a disc: the wet lot's standing water
    *  (game/weather.ts sets it with the rain; runtime only, never authored) */
@@ -118,6 +118,9 @@ export interface Box {
   /** AN OLD BREAK (the same trial): the cut faces were not made a moment ago. Picture only, packed with the record: on the look page they take the look's paint
    *  as a face of the core's stuff, and on a snow level the snow lies on the ones that face up. A blast's fresh cut never sets it. Not with cutGlass. */
   cutOld?: boolean;
+  /** WHAT AN OLD BREAK'S CORE IS MADE OF (with cutOld; as `stuff`): where the cut faces show another thing than the box is (a wall broken under its coping
+   *  shows the coping's stuff). Absent = the box's own `stuff`. Picture only, packed with the record on the look page. */
+  cutCoreStuff?: BoxStuff;
   /** ROUND (scene/round.ts — read its head): this box is a ROUND THING, the cylinder about its own y of radius h[0] (= h[2]) and half height h[1]. Every CPU ray
    *  and segment (rayBox, collision.ts lineBox) and what walks against it (collideCircle) meet the cylinder; with roundConfig.gpu so do the picture (the cut pass)
    *  and every GPU ray. Set by round.ts roundLevel as a level is stood up; never with a cut record. */
@@ -157,7 +160,7 @@ const lookKeyed = (b: Box): boolean => b.dress === true || (b.mkey !== undefined
  *  (tools/qa/boxshape-check.ts counts them). */
 export function boxOf(c: Vec3, h: Vec3, yaw: number, albedo: Vec3, emissive: Vec3, flags: number, owner: number, rot?: Quat, name?: string): Box {
   return { yaw, albedo, emissive, flags, owner, cutHeight: 1e6, c, h, rot, name, mkey: undefined, dc: undefined, dh: undefined, rough: undefined, metal: undefined, aniso: undefined,
-    marks: undefined, markGain: undefined, fogEmit: undefined, fogMark: undefined, wetK: undefined, cut: undefined, cutCore: undefined, cutGlass: undefined, cutRound: undefined, cutArc: undefined, cutOld: undefined, round: undefined, was: undefined, shape: undefined, shaped: undefined, piece: undefined, of: undefined, dress: undefined, stuff: undefined,
+    marks: undefined, markGain: undefined, fogEmit: undefined, fogMark: undefined, wetK: undefined, cut: undefined, cutCore: undefined, cutGlass: undefined, cutRound: undefined, cutArc: undefined, cutOld: undefined, round: undefined, was: undefined, shape: undefined, shaped: undefined, piece: undefined, of: undefined, dress: undefined, stuff: undefined, cutCoreStuff: undefined,
   } satisfies { [K in keyof Required<Box>]: Box[K] };   // (a field added to Box and not here does not typecheck)
 }
 export function makeBox(p: Partial<Box> & { c: Vec3; h: Vec3 }): Box {
@@ -170,9 +173,13 @@ export function makeBox(p: Partial<Box> & { c: Vec3; h: Vec3 }): Box {
 export function copyBox(b: Box): Box {
   return { yaw: b.yaw, albedo: b.albedo, emissive: b.emissive, flags: b.flags, owner: b.owner, cutHeight: b.cutHeight, c: b.c, h: b.h, rot: b.rot, name: b.name, mkey: b.mkey, dc: b.dc, dh: b.dh,
     rough: b.rough, metal: b.metal, aniso: b.aniso, marks: b.marks, markGain: b.markGain, fogEmit: b.fogEmit, fogMark: b.fogMark, wetK: b.wetK, cut: b.cut, cutCore: b.cutCore, cutGlass: b.cutGlass,
-    cutRound: b.cutRound, cutArc: b.cutArc, cutOld: b.cutOld, round: b.round, was: b.was, shape: b.shape, shaped: b.shaped, piece: b.piece, of: b.of, dress: b.dress, stuff: b.stuff,
+    cutRound: b.cutRound, cutArc: b.cutArc, cutOld: b.cutOld, round: b.round, was: b.was, shape: b.shape, shaped: b.shaped, piece: b.piece, of: b.of, dress: b.dress, stuff: b.stuff, cutCoreStuff: b.cutCoreStuff,
   } satisfies { [K in keyof Required<Box>]: Box[K] };
 }
+
+/** WHOEVER COPIES A BOX'S PAINT COPIES ITS WORD (Box.stuff: a piece broken off a thing is made of what the thing is). Spread beside the albedo of the
+ *  box being made: `makeBox({ …, albedo: v3.copy(b.albedo), ...wordOf(b) })`. */
+export const wordOf = (b: { stuff?: BoxStuff }): { stuff?: BoxStuff } => b.stuff !== undefined ? { stuff: b.stuff } : {};
 
 /** roughness a box without a finish is taken to have: fully matte — over every preset's rtMaxRough, so the reflection pass skips it outright */
 export const ROUGH_DEFAULT = 1.0;
@@ -675,7 +682,9 @@ export class BoxWorld {
    *  packed past the statics), and a number of its own. Asked at every pack of the box. null (every other page, every headless stand) = the word as it ever was.
    *  Set it with setStuffOf: the statics are packed only when one of their shadowed inputs moves, and this is not one of them. */
   stuffOf: ((b: Box, moves: boolean) => number) | null = null;
-  setStuffOf(f: ((b: Box, moves: boolean) => number) | null) { this.stuffOf = f; this.packEpoch++; }
+  /** … and for an old break's cut faces (Box.cutOld): the stuff of its core, packed with the cut's record (cut.ts packCut). null = none packed, as ever. */
+  coreStuffOf: ((b: Box) => number) | null = null;
+  setStuffOf(f: ((b: Box, moves: boolean) => number) | null, core: ((b: Box) => number) | null) { this.stuffOf = f; this.coreStuffOf = core; this.packEpoch++; }
   /** a dynamic box as the GPU gets it when the game draws it somewhere else than the simulation has it (Box.dc / dh): a copy at the drawn centre and size */
   private static drawnOf(b: Box): Box { const o = copyBox(b); o.c = b.dc!; o.h = b.dh ?? b.h; return o; }
   /** box i's geo + mat words (the pack proper — statement for statement what upload's one loop did per box; returns whether it counted as marked) */
@@ -695,7 +704,7 @@ export class BoxWorld {
     if (round) {   // ROUND THINGS: the picture's prism in this index's rows of the cut table (no cut bit: a ray meets the cylinder — common.wgsl isectBox — or, in a program compiled with the cut rule, this prism by the cut test: ROUND_AS_CUT)
       const q = i * CUT_STRIDE * 4; packRoundRows(this.cutData, q, b.h[0]); this.cutData[q + 32] = 0; this.cutData[q + 33] = 0; this.cutData[q + 34] = 0; this.cutData[q + 35] = ROUND_CORE_W;
     } else if (cutRows) {   // CUT BOXES: the flag bit + this index's rows of the cut table (uploaded by upload() over the packed range)
-      flags |= BOX_CUT_BIT; packCut(b.cut!, this.cutData, i * CUT_STRIDE * 4, b.cutCore, b.cutGlass, b.cutRound, b.cutOld, b.cutArc);
+      flags |= BOX_CUT_BIT; packCut(b.cut!, this.cutData, i * CUT_STRIDE * 4, b.cutCore, b.cutGlass, b.cutRound, b.cutOld, b.cutArc, b.cutOld && this.coreStuffOf ? this.coreStuffOf(b) : 0);
     }
     if (cutRows) { if (i < this.cutSplit) { if (i < this.cutLo) this.cutLo = i; if (i > this.cutHi) this.cutHi = i; } else { if (i < this.cutLoD) this.cutLoD = i; if (i > this.cutHiD) this.cutHiD = i; } }
     gf[o] = b.c[0]; gf[o + 1] = b.c[1]; gf[o + 2] = b.c[2]; gu[o + 3] = pack2x16f(Math.cos(b.yaw), Math.sin(b.yaw));
