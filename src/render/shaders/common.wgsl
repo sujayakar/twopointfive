@@ -1183,15 +1183,28 @@ const LIGHT_IR: u32 = 0x8000000u;
 //                   is AIMED AS THE LIGHT COMES: at one of PORTAL_POINTS points of the rectangle, picked in proportion to what each sends the
 //                   receiver. So its answer is a plain yes or no, as every light's is, and the share of a pixel's rays that get through is the share
 //                   of the portal's light that does.
+//   its hole        THE HOLE IS AS DEEP AS ITS WALL, AND THE LIGHT KNOWS IT (portalDeep, portalSeen). From a point off to one side the outside shows through
+//                   only part of the rectangle: the rest of it looks onto the hole's own far side, the wall's thickness. Until 11-04 the light was the whole
+//                   rectangle and every ray found that out for itself, one yes or no a pixel a frame: across the whole fan of a doorway's daylight a third
+//                   to nine tenths of the rays died on the wall the opening is cut in, and in a room shown hundreds of times brighter that chance was the
+//                   picture (the maintainer on his GPU: "boiling in the sun on the ground through the door, especially along left edge"). The far rim is the
+//                   same rectangle a wall's depth further out, so what a point sees through both is A RECTANGLE: the light is that part, its points are laid
+//                   in it, and a ray is left to find only what really stands in the way (a leaf, a man, the wall across the yard). An end with no wall
+//                   behind it has no rim (scene/openings.ts Opening.rims): the hand on which a long strip of glass goes on as the next light. Its
+//                   head and its foot always have one, a doorway's foot too: the threshold in the wall's depth is floor the picture draws and the
+//                   bounce lights, and the ground a portal stands for begins past the wall. The rim is taken half a sample of the walls wider
+//                   than the rectangle (PORTAL_RIM): where the real edge may stand. What the rule leaves in is found by a ray, as before; what it
+//                   left out no ray would look for, and the bounce gives up its sky by the whole rectangle (skyKeep).
 //   its record      colour = a reference radiance (half the low sky and half the ground outside: scene/openings.ts openingLooks) × WHAT IS OPEN of
 //                   the rectangle now (a leaf ajar leaves a hand's width), cosInner = that share of the rectangle (0‥1]; cosOuter = the rectangle's
-//                   half width along the wall, radius its half diagonal (a portal has no cone).
+//                   half width along the wall, radius its half diagonal (a portal has no cone); bits 11‥20 of the kind word = how deep its hole is, mm,
+//                   and bits 21‥22 = which of its two ends the hole has a far rim at (a lamp's marking rides there, which a portal has none of).
 //   who asks what   evalLightRaw KNOWS NOTHING OF A PORTAL: to it one is an area light as bright as its open part, and that is what every pass but
 //                   the picture's direct light gets (the cache, a bounce's hit off the screen, the light meter, the beams, a mote, a man's rim):
 //                   their ray stops short of it, so a leaf ajar dims it by the record and a wall across the yard does not. It is pasted wherever a
 //                   light is evaluated, some twenty places in the final gather, whose routine stands within a hundredth of the software adapter's
 //                   stack limit (tools/qa/kernel-stack.cjs): a line added there is a line the gather cannot have.
-//                   THE PICTURE'S DIRECT LIGHT (restir, direct, sharp_direct: evalLightDirect, then shadowSample) takes the whole rectangle and
+//                   THE PICTURE'S DIRECT LIGHT (restir, direct, sharp_direct: evalLightDirect, then shadowSample) takes the rectangle (what of it shows the outside, `its hole` above) and
 //                   lets its rays find what of it is leaf, wall or yard.
 const LIGHT_PORTAL: u32 = 0x10000000u;
 const PORTAL_SKY: f32 = 40.0;           // m past the opening a shadow ray that looks up goes on for (the world is 40 m long: what it has not met by then is the sky)
@@ -1202,6 +1215,30 @@ fn lightPortal(li: Light) -> bool { return (li.kind & LIGHT_PORTAL) != 0u; }
 /// half a portal's height (its radius is the half diagonal, cosOuter the half width), and its rectangle's area
 fn portalHigh(li: Light) -> f32 { return sqrt(max(li.radius * li.radius - li.cosOuter * li.cosOuter, 0.0)); }
 fn portalArea(li: Light) -> f32 { return 4.0 * li.cosOuter * portalHigh(li); }
+/// how deep a portal's hole is, m: from its plane back to the wall's outer face (scene/openings.ts Opening.deep; 0 = no depth is known: the whole rectangle)
+fn portalDeep(li: Light) -> f32 { return f32((li.kind >> 11u) & 0x3ffu) * 0.001; }
+/// which ends of its rectangle the hole has a far rim at (Opening.rims): the low end along the wall (portalSeen's first axis) and the high. Its head
+/// and its foot always have one
+fn portalRims(li: Light) -> vec2<bool> { return (vec2u(li.kind >> 21u) & vec2u(1u, 2u)) != vec2u(0u); }
+/// how much wider than the rectangle the far rim is taken, m along the wall and up it: half a sample of the walls each way (scene/openings.ts K.ds, K.dy),
+/// which is how far the real edge can stand outside the rectangle the samples gave
+const PORTAL_RIM = vec2f(0.025, 0.05);
+/// WHAT OF A PORTAL'S RECTANGLE A POINT SEES THE OUTSIDE THROUGH (`d` = from the point to the rectangle's middle, `hh` = half its height): the part whose
+/// way on also clears the hole's far rim, which is the same rectangle `portalDeep` further out. Seen from the point that rim lies on the portal's plane as
+/// a smaller rectangle drawn toward the point's own foot on it, so the answer is the overlap of the two: (.xy = its middle, .zw = its half sizes), in half
+/// widths along the wall and half heights up it. The whole, (0, 0, 1, 1), where no depth is known; .zw = 0 where nothing shows. An end the hole has no
+/// rim at (portalRims) is cut by nothing.
+fn portalSeen(li: Light, d: vec3f, hh: f32) -> vec4f {
+  let deep = portalDeep(li); let pz = -dot(d, li.dir);
+  if (!(deep > 0.0) || !(pz > 1e-4)) { return vec4f(0.0, 0.0, 1.0, 1.0); }
+  let half = vec2f(li.cosOuter, hh); let p = vec2f(d.z * li.dir.x - d.x * li.dir.z, -d.y);   // (the point's foot on the plane, from the rectangle's middle: along the wall and up)
+  let k = pz / (pz + deep);
+  let rim = portalRims(li);
+  let far = (half + PORTAL_RIM) * k;
+  let lo = select(-half, max(p * (1.0 - k) - far, -half), vec2<bool>(rim.x, true)); let hi = select(half, min(p * (1.0 - k) + far, half), vec2<bool>(rim.y, true));
+  if (hi.x <= lo.x || hi.y <= lo.y) { return vec4f(0.0); }
+  return vec4f((lo + hi) * 0.5, (hi - lo) * 0.5) / vec4f(half, half);
+}
 /// point i of PORTAL_POINTS on a portal's rectangle, in half widths along the wall and half heights up it from the middle: a lattice with one point to
 /// each eighth of the height, spread across by the golden ratio, the whole of it moved round the rectangle by u (0: where portalFlux has it)
 fn portalAt(i: i32, u: vec2f) -> vec2f { let k = f32(i) + 0.5; return fract(vec2f(k * 0.618034 + 0.5, k / f32(PORTAL_POINTS)) + u) * 2.0 - 1.0; }
@@ -1234,18 +1271,21 @@ fn portalPoint(li: Light, d: vec3f, N: vec3f, soft: f32, ground: vec3f) -> vec3f
 fn portalSoft(li: Light, high: f32) -> f32 { return li.cosOuter * high * (2.0 / (3.14159265 * f32(PORTAL_POINTS))); }
 /// … and the whole opening's, per m²: the mean over its points
 fn portalFlux(li: Light, P: vec3f, N: vec3f) -> vec3f {
-  let hh = portalHigh(li); let soft = portalSoft(li, hh); let d = li.pos - P; let T = vec3f(li.dir.z, 0.0, -li.dir.x) * li.cosOuter; let ground = portalGround(li);
+  let hh = portalHigh(li); let d = li.pos - P; let see = portalSeen(li, d, hh); let part = see.z * see.w;   // (the part of the rectangle the outside shows through from P, and its share of the whole)
+  if (!(part > 0.0)) { return vec3f(0.0); }
+  let soft = portalSoft(li, hh) * part; let T = vec3f(li.dir.z, 0.0, -li.dir.x) * li.cosOuter; let ground = portalGround(li);
   var s = vec3f(0.0);
-  for (var i = 0; i < PORTAL_POINTS; i++) { let a = portalAt(i, vec2f(0.0)); s += portalPoint(li, d + T * a.x + vec3f(0.0, hh * a.y, 0.0), N, soft, ground); }
-  return s / f32(PORTAL_POINTS);
+  for (var i = 0; i < PORTAL_POINTS; i++) { let a = see.xy + portalAt(i, vec2f(0.0)) * see.zw; s += portalPoint(li, d + T * a.x + vec3f(0.0, hh * a.y, 0.0), N, soft, ground); }
+  return s * (part / f32(PORTAL_POINTS));
 }
 /// THE SKY'S PART of the same sum, by luminance, on the six faces of a cube at P and with no face at all (the cache's dice: +x −x +y −y +z −z, the
 /// mean), the points looked at once: what a probe's own rays would have brought of the sky by this opening (rc.wgsl rcDice takes it out). The same walk
 /// of the same points as portalFlux: a change to the one is a change to the other, or the sky is counted more or less than once
 fn portalFaces(li: Light, P: vec3f) -> array<f32, 7> {
-  let hh = portalHigh(li); let soft = portalSoft(li, hh); let d = li.pos - P; let T = vec3f(li.dir.z, 0.0, -li.dir.x) * li.cosOuter;
+  let hh = portalHigh(li); let d = li.pos - P; let see = portalSeen(li, d, hh); let part = see.z * see.w; let soft = portalSoft(li, hh) * part; let T = vec3f(li.dir.z, 0.0, -li.dir.x) * li.cosOuter;
   var s: array<f32, 7>;
-  for (var i = 0; i < PORTAL_POINTS; i++) { let a = portalAt(i, vec2f(0.0)); let r = portalRay(li, d + T * a.x + vec3f(0.0, hh * a.y, 0.0), soft); let k = luminance(skyRadiance(r.xyz)) * r.w / f32(PORTAL_POINTS);
+  if (!(part > 0.0)) { return s; }
+  for (var i = 0; i < PORTAL_POINTS; i++) { let a = see.xy + portalAt(i, vec2f(0.0)) * see.zw; let r = portalRay(li, d + T * a.x + vec3f(0.0, hh * a.y, 0.0), soft); let k = luminance(skyRadiance(r.xyz)) * r.w * part / f32(PORTAL_POINTS);
     s[0] += k * max(r.x, 0.0); s[1] += k * max(-r.x, 0.0); s[2] += k * max(r.y, 0.0); s[3] += k * max(-r.y, 0.0); s[4] += k * max(r.z, 0.0); s[5] += k * max(-r.z, 0.0); s[6] += k; }
   return s;
 }

@@ -1914,7 +1914,8 @@ interleaved and filtered to their quiet minimum, and a row whose p75 sits far ab
   THE SKY ADD UP: a portal's light fades toward its range, and the ray keeps the rest of that window; an opening that is not in the list this
   frame is no portal and takes nothing. `frame.placeCfg.y` = the slot of the list's first portal + 1 (the walk starts there).
   WHO ASKS WHAT, because the final gather has no stack to spare (below): `evalLightRaw` is untouched and knows nothing of a portal. Only the picture's
-  direct light (restir, direct, sharp_direct: `evalLightDirect`, then `shadowSample`) takes the whole rectangle and traces through it. To every other
+  direct light (restir, direct, sharp_direct: `evalLightDirect`, then `shadowSample`) takes the rectangle itself and traces through it (since 11-04 what of
+  it shows the outside past the hole's far rim: THE HOLE IS AS DEEP AS ITS WALL, below). To every other
   pass (the cache's `directIrradiance`, a bounce's hit off the screen, the light meter, the beams, a mote, a man's rim) a portal is an area light AS
   BRIGHT AS WHAT IS OPEN OF IT NOW, with a ray that stops short of it. THE RECORD: colour = what an opening looks out on as one radiance
   (`scene/openings.ts openingLooks`: half the low sky, half the ground, which is `LOOK_OPENINGS.ground` 0.5 of the sun's and the whole sky's light
@@ -2190,6 +2191,43 @@ interleaved and filtered to their quiet minimum, and a row whose p75 sits far ab
   model shows by its own level, far over the frame's), 48 casings put on its floor: they read 161 of 255 by luminance on a floor at 217 before, dark
   grey dashes, and 233 with the mend, pale gold (154, 161, 174 and 239, 233, 213); the page booted and drew with no page or GPU error. NEVER SEEN
   ON A GPU. NOT DONE: a spark and the other glowing things; the lamps' haze and beams; a particle's own light carried from the sim.
+- **THE HOLE IS AS DEEP AS ITS WALL, AND AN OPENING'S DAYLIGHT KNOWS IT** (11-04; the look's page, where the openings' lights are; ON, the address's
+  `&holedepth=0` = the whole rectangle as it was, `settings.portalHole`; no shader variant: a depth of 0 is the old light. `common.wgsl portalSeen`,
+  `portalDeep`, `portalRims`, `PORTAL_RIM`; `scene/openings.ts Opening.deep` / `.rims`; `render/lights.ts portalHoleBits`). The maintainer on his M4,
+  the white roof's service door at midday: "boiling video has boiling in the sun on the ground through the door, especially along left edge". THE
+  CAUSE, found on software stills in the direct light's own view: the fan of daylight a doorway lays on the floor ends at its sides where the wall
+  the doorway is cut in hides the outside. From a point off to one side most of the rectangle looks onto the hole's own far side, 0.29 m of wall. The
+  light was the whole rectangle and each ray found that out for itself, one yes or no a pixel a frame: in the check's room 15 to 65 % of a pixel's
+  rays died on the jamb across the fan, and in a room the one exposure model shows hundreds of times brighter that chance was the picture. THE RULE:
+  the far rim of the hole is the same rectangle a wall's depth further out, so what a point sees the outside through is the overlap of two
+  rectangles, which is a rectangle. The light is that part: `portalFlux` (what the picture's direct light weighs), `portalFaces` (what the cache's
+  dice give up) and `shadowSample` (where the ray is aimed) lay the same eight points in it and take its share of the whole, so the hole's sides are
+  in the sum and a ray is left to find what really stands in the way (a leaf, a man, the wall across the yard). DEPTH: from where the light hangs
+  back to where the boxes that END the opening reach out (the wall's own, as `cut.jambs` finds them; the shallower end; `proud` alone where neither
+  end has one), not the wall's depth as `cut.out` has it, which a fence or a shutter near the line moves. In the kind word's bits 11 to 20, mm,
+  where a lamp's marking rides. RIMS: an end has a far rim where the opening itself ends, not where a long strip of glass goes on as its next
+  light, whatever post or bar stands between (bits 21 and 22; a light that says nothing of its rims has none, and a ray finds them). The head and
+  the foot always have one, a doorway's foot too: the threshold in the wall's depth is floor the picture draws and the bounce lights, and the ground
+  a portal stands for begins past the wall (the check's reference sum says the same now; before, that strip was counted as open ground by the
+  portal and again by the bounce). THE RIM IS TAKEN HALF A SAMPLE WIDER than the rectangle (`PORTAL_RIM`, pinned to `LOOK_OPENINGS.ds` and `.dy`):
+  the walls' real edge can stand that far outside the rectangle the samples gave, the bounce gives up its sky by the whole rectangle (`skyKeep`),
+  and what the rule left out no ray would look for; what it leaves in, a ray finds as before. WHAT ELSE IT MOVES: beyond the fan's sides the
+  portal now sends nothing where it sent a light no ray confirmed, and the estimator's picture of that floor loses a blue cast (drawn below); a
+  floor point a hand in front of the light's plane gets its full light where the eight points' cosine faded it over 25 cm (nearer the sum over the
+  doorway; a step at the plane is the limit, never seen on a GPU); a shadow's blur hint is still the whole rectangle's size (`li.radius`) where the
+  part seen is a sliver, as it always was. Checks: `bun run tools/qa/probes.ts portal` on both stands (its mirror lays the points as the shader does;
+  line 4z: across the fan 94 to 97 % of a pixel's rays reach sky where 35 to 85 % did, the light within 4 % of the sum over the doorway at every
+  point; line 4y: a strip of glass 4 m long in each of the room's four walls is two lights with rims 1 and 2 in the shader's order, each 0.95 to
+  0.97 × the sum over its own rectangle, 0.94 × with a rim at both ends; the ground line asks three points near the door now, 0.97 to 1.05 ×; the
+  text pins. `PORTALDEEP_BREAK=1` = the whole rectangle, fails 3; `PORTALRIMS_BREAK=1` = a rim at both ends whatever stands there, fails 1). The
+  mirror's rays went from 24 by 24 pixels to 48 by 48: at 24 a point 4 % of the rays reach sky from read 0.78 × or 0.97 × by the count alone. The
+  older figures in the portal's bullet above now read: 1.22 × a hand inside the sill, 0.96 to 1.05 × from 1 m in; 0.0 % and 5.6 % left in the dice.
+  `openings-check` both stands, `shaderrows-check`, all 69 shader texts compile, `tsc` both. The frozen stand has no openings' lights: nothing of it
+  moves. DRAWN, software adapter, the service door from inside at midday: the same build with `&holedepth=0` and without. With the
+  old light the floor beside the sun's patch is a cloud of blotches, in the picture and in the direct light's own view; with the new it is one
+  smooth wedge with a soft edge where the fan ends. Between two frames a patch of the fan's side changes by 0.44 of 255 in the mean with the old
+  light and by 0.26 with the new. Both pages booted (120 pipelines) and drew with no page or GPU error. NEVER SEEN ON A GPU, and not timed there (a few dozen
+  arithmetic operations a portal sample; `kernel-stack.cjs` not run again: the page booted and drew on the software adapter with no error).
 - **THE ROWS THE ONE EXPOSURE MODEL REPLACED ARE DELETED, AND ITS OWN ROW WITH THEM** (11-04; `composite.wgsl` and `compact/composite.wgsl
   lookShadeGain`, their caller, `engine.ts`, `ui/lookpanel.ts`; no switch: nothing a page draws with its rows as it opens was touched). The
   maintainer chose the model over mending the rows it replaced (10-31), and ruled every special case of the light fixed (11-04): the first of the

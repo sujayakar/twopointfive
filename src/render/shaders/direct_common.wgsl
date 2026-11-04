@@ -95,13 +95,15 @@ fn shadowSample(li: Light, Po: vec3f, N: vec3f, owner: u32, k: u32, n: u32, u0: 
       // AN OPENING TO THE OUTSIDE (common.wgsl LIGHT_PORTAL): the ray goes to a point of the opening's own rectangle (T runs along the wall, B up it) and on
       // through it to the sky or the ground it stands for. WHICH point: one of PORTAL_POINTS, the lattice portalFlux adds up moved round by this sample's two numbers,
       // picked in proportion to what each sends Po. So the rays go where the light comes from, and a ray's answer is yes or no like any light's.
-      let hh = portalHigh(li); let soft = portalSoft(li, hh); let u = vec2f(ur, ua); let ground = portalGround(li);
+      let hh = portalHigh(li); let see = portalSeen(li, toC, hh); let part = see.z * see.w;   // (THE PART OF THE RECTANGLE THE OUTSIDE SHOWS THROUGH FROM HERE, common.wgsl portalSeen: the rays go there and nowhere else, so the hole's own sides are in the light's sum and not in a ray's luck)
+      if (!(part > 0.0)) { return vec2f(0.0, -1.0); }
+      let soft = portalSoft(li, hh) * part; let u = vec2f(ur, ua); let ground = portalGround(li);
       var w: array<f32, PORTAL_POINTS>; var sum = 0.0;
-      for (var i = 0; i < PORTAL_POINTS; i++) { let at = portalAt(i, u); w[i] = luminance(portalPoint(li, toC + T * (at.x * li.cosOuter) + B * (at.y * hh), N, soft, ground)); sum += w[i]; }
+      for (var i = 0; i < PORTAL_POINTS; i++) { let at = see.xy + portalAt(i, u) * see.zw; w[i] = luminance(portalPoint(li, toC + T * (at.x * li.cosOuter) + B * (at.y * hh), N, soft, ground)); sum += w[i]; }
       if (sum <= 0.0) { return vec2f(0.0, -1.0); }
       var x = fract(ur * 61.0 + ua * 37.0 + 0.5) * sum; var sel = PORTAL_POINTS - 1;   // (a third number out of the two: which of the eight. A caller that passes no numbers, for the emitter's middle, gets the point half the light is under)
       for (var i = 0; i < PORTAL_POINTS; i++) { x -= w[i]; if (x < 0.0) { sel = i; break; } }
-      let at = portalAt(sel, u); d = toC + T * (at.x * li.cosOuter) + B * (at.y * hh); let dl = length(d); past = portalPast(li, Po, d / dl, dl);   // (up to the sky, or down to the ground just outside)
+      let at = see.xy + portalAt(sel, u) * see.zw; d = toC + T * (at.x * li.cosOuter) + B * (at.y * hh); let dl = length(d); past = portalPast(li, Po, d / dl, dl);   // (up to the sky, or down to the ground just outside)
     }
     lightDist = length(d); dir = d / lightDist; tmax = lightDist - 0.03 + past;
   }

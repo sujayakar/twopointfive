@@ -58,9 +58,9 @@ export interface RtLight {
   /** AN OPENING TO THE SKY (LIGHT_PORTAL; engine.ts lookOpeningLights, the look page's "Daylight at openings" row): a kind 3 light that is no lamp but the
    *  outside seen through a hole, an upright rectangle about `pos` facing `dir`. `halfWide` = half its width along the wall (`radius` = its half diagonal, so
    *  the shader has its height too), `share` = how much of it is open now, 0‥1 (a leaf ajar): the light's colour × intensity is what the opening looks
-   *  out on (scene/openings.ts openingLooks) × the OPEN area, which is how bright the opening is to a pass whose ray stops short of it; the picture's direct light takes the whole rectangle and
+   *  out on (scene/openings.ts openingLooks) × the OPEN area, which is how bright the opening is to a pass whose ray stops short of it; the picture's direct light takes the rectangle itself (what of it shows the outside past the hole's far rim, `deep` and `rims` below) and
    *  traces through it (common.wgsl LIGHT_PORTAL). They ride in the record's two cone words, which an area light does not use. Absent = an ordinary light */
-  portal?: { halfWide: number; share: number };
+  portal?: { halfWide: number; share: number; deep?: number; rims?: number };   // (deep, rims: how far back from its plane the wall's outer face is, m, and which ends of the hole have a far rim, scene/openings.ts Opening.deep / .rims: the kind word's bits 11‥24, where a lamp's marking rides)
 }
 
 /** the kind word's fog-of-war class bits (common.wgsl LIGHT_FOG_SEEN / LIGHT_FOG_UNSEEN; RtLight.fog) */
@@ -73,6 +73,9 @@ export const LIGHT_IR = 1 << 27;
  *  the sky that point sees through it (common.wgsl skyRadiance in the direction the point looks out by), its shadow rays run on through it to find that sky,
  *  and a ray of the bounce that leaves through it takes no sky of its own: the sky's light through an opening is counted once, by the light. */
 export const LIGHT_PORTAL = 1 << 28;
+/** a portal's hole as the kind word carries it: its depth, mm, in bits 11‥20 (common.wgsl portalDeep; a metre at the most, which reads as a shallower hole
+ *  than it is and leaves the rest to the rays; 0 = none known) and its ends' rims in bits 21‥22 (portalRims; none where none are said: what a rim would have cut, a ray finds) */
+export const portalHoleBits = (deep: number | undefined, rims?: number): number => (Math.min(1023, Math.max(0, Math.round((deep ?? 0) * 1000))) << 11) | (((rims ?? 0) & 3) << 21);
 export const MAX_LIGHTS = 64;
 const NO_LIGHTS: readonly RtLight[] = [];
 if (MAX_LIGHTS > 64) throw new Error('lights: MAX_LIGHTS > 64 — volumetrics.wgsl keeps its per-ray beam selection in a 64-bit mask (selLo/selHi); widen it first');   // (a WGSL shift by k ≥ 32 wraps: light 70 would alias light 38)
@@ -232,7 +235,7 @@ export class LightSet {
       const o = n * 16;
       // kind low byte + flags: 256 = transient (ttl light: excluded from accumulated signals), 512 = broad emitter class (wide penumbrae → its own denoise)
       const fc = ir ? 0 : ghost ? 2 : this.fogClass(l);
-      packLight(f, u, o, l, inten, l.kind | (ir ? LIGHT_IR : 0) | (l.ttl >= 0 || l.transient ? 256 : 0) | (l.broad ? 512 : 0) | (l.portal ? LIGHT_PORTAL : 0) | (l.markRef !== undefined && l.markRef >= 0 && l.markRef < 16384 ? 1024 | (l.markRef << 11) : 0) | (fc === 1 ? LIGHT_FOG_SEEN : fc === 2 ? LIGHT_FOG_UNSEEN : 0),   // + bit 10 / bits 11‥24: the emissive marking this light stands for (RtLight.markRef)
+      packLight(f, u, o, l, inten, l.kind | (ir ? LIGHT_IR : 0) | (l.ttl >= 0 || l.transient ? 256 : 0) | (l.broad ? 512 : 0) | (l.portal ? LIGHT_PORTAL | portalHoleBits(l.portal.deep, l.portal.rims) : 0) | (!l.portal && l.markRef !== undefined && l.markRef >= 0 && l.markRef < 16384 ? 1024 | (l.markRef << 11) : 0) | (fc === 1 ? LIGHT_FOG_SEEN : fc === 2 ? LIGHT_FOG_UNSEEN : 0),   // + bit 10 / bits 11‥24: the emissive marking this light stands for (RtLight.markRef)
         l.volumetric, ((l.owner & 0xff) | (((l.glassMask ?? 0) & 0xffffff) << 8)) >>> 0);   // owner byte + the glass pane mask above it (common.wgsl lightGlassMask)
       this.reachData.set((this.dirMasks && l.reachDir) ? l.reachDir : (l.reach ?? REACH_ALL), n * REACH_ROW_WORDS);   // the slot's reach row follows the light into whatever slot it lands in this frame (a directional light's own mask only under dirMasks)
       this.activeIdx.push(i); l.slot = n; if (firstT < 0 && !ir && (l.ttl >= 0 || l.transient)) firstT = n; if (ir) { this.irCount++; this.irSpell = true; } n++;   // (activeIdx: an index past `lights` is into `ir`, and past that into `own`)
