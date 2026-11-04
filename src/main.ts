@@ -49,7 +49,7 @@ import { loadCharacterSet, castUrlFor } from './anim/gltf';
 import * as charMatsMod from './render/charMaterials';
 import * as charLookMod from './game/charLook';
 import { buildLookPanel, LOOK_SNOW_COVER } from './ui/lookpanel';
-import { lookAmounts, lookNeedPaints, lookParts, lookSync, lookWordOf } from './render/gbuffer';
+import { lookAmounts, lookParts, lookSync, lookWordOf } from './render/gbuffer';
 import { scenePrelude, traceConfig, commonSource, glassBreakConfig, weatherKindConfig, weatherEdgeConfig, weatherVolConfig, rainShadowConfig, rainScaleConfig, rainWallsConfig, bounceWallsConfig, reflWallsConfig, wallSidesConfig, smokeLabConfig, surfTryConfig, lookConfig, snowConfig, snowLookConfig } from './render/frame';
 import { smokeGridConfig } from './smoke/smokeGrid';
 import * as cutMod from './scene/cut';
@@ -325,10 +325,10 @@ async function main() {
   boot.span('gameCtor', tGame); boot.mark('game');
   if (lookConfig.on) engine.world.setStuffOf(lookWordOf(b => game.weather.dryPaint(b), q.get('names') === '0' ? null : levelFileOf.get(game.level)?.materials));   // (THE LOOK PROTOTYPE's material maps: what a slab is made of is asked of its paint before the rain darkened it; and A PAINT'S NAME SAYS WHAT IT IS MADE OF, scene/stuff.ts: the rows of the level file this game stands on. ?names=0 = by colour alone, as the look began)
   if (LOOK.on) lookDoors(game.doors.list, engine.world.statics, LOOK_DOORS[(q.get('levelFile') ?? '').replace(/-gwot(?=\.json$)/, '')]);   // (picture only: under the default look a level that wears it has its door leaves in its own paint and weathered wood, not the office's veneer — scene/lookTidy.ts)
-  // … and the maps of what the level stands up with are made before its first frame (render/gbuffer.ts needLook, awaited with the pipelines below): every static
-  // and every door's leaf is asked its word, by the one rule and after the leaves have their paint, and the loose props' parts are named by their paint
+  // … and the maps of what the level stands up with are made before its first frame (render/gbuffer.ts needLook, awaited with the pipelines below): every static,
+  // door's leaf and loose prop's part is asked its word, by the one rule (whatever a paint is told by: its colour, or a name) and after the leaves have their paint
   let lookMaps: Promise<void> | undefined;
-  if (lookConfig.on && engine.world.stuffOf) { const word = engine.world.stuffOf; for (const b of engine.world.statics) word(b, false); for (const d of game.doors.list) word(d.box, true); lookNeedPaints(level.props.flatMap(p => p.parts.map(part => part.albedo)));
+  if (lookConfig.on && engine.world.stuffOf) { const word = engine.world.stuffOf; for (const b of engine.world.statics) word(b, false); for (const d of game.doors.list) word(d.box, true); for (const p of level.props) for (const part of p.parts) word(makeBox({ c: [0, 0, 0], h: part.h, albedo: part.albedo }), true);
     lookMaps = timed('materials', engine.gbuffer.needLook()); lookMaps?.catch(() => { /* awaited below */ }); }
   if (q.has('noweather')) game.weather.setEnabled(false);   // ?noweather: the storm experiment off from boot (weather.ts) — the plain night, byte for byte
   const probe = game.probe as IrradianceProbe;   // (the game holds a ProbeLike — src/game/sensors.ts; on this host it is the WebGPU kernel the Game built, whose encode / readback the frame drives)
