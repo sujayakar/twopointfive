@@ -183,14 +183,10 @@ fn cutEdgeTake(s0: f32, g: vec2f, best: ptr<function, f32>, d: ptr<function, vec
   var lookTilt = false; let gn = n;
   if (LOOK && !cap && (own < 0 || side || oldCut)) {        // THE LOOK PROTOTYPE (look.wgsl; as fsBox, the class found here a pixel): a cut face shows the bare material; a round's side is painted as the face it leans to, an old break as its core's stuff
     let bent = side || oldCut;                              // (…whose relief is added to the face's own normal and never marked as a tilt: common.wgsl lookGeoN would snap such a pixel to a box axis, which this face is not)
-    var lcls = boxStuff(bi); if (oldCut) { lcls = lookClass(albedo); }   // (the box's own word; an old break's core is a COLOUR in the cut's record and not a box, so it alone is still told by its colour)
+    var lcls = boxStuff(bi); if (oldCut) { lcls = (cw >> 12u) & 31u; }   // (the box's own word; an old break's core says its stuff in the cut's record: cut.ts CUT_CORE_STUFF)
     let lk = lookSurface(lcls, v.wp, select(n, flatN, bent), bi, lcS, hfS, albedo, rough, dwx, dwy, distance(v.wp, frame.camPos) * 2.0 * frame.post.w * frame.invScreen.y, lookW);
     albedo = lk.albedo; rough = lk.rough;
     if (bent) { n = normalize(n + lk.n - flatN); } else { n = lk.n; lookTilt = lk.tilted; }
-  }
-  if (SURF_TRY && !LOOK && !cap && own < 0) {                         // SURFACES, A TRY (surface.wgsl; as fsBox): the box's own faces keep the pattern they had before the cut; a cut face shows the bare material
-    let sf = surfaceTry(v.wp, n, bi, v.lc, v.hf, v.albedo, albedo, rough, distance(v.wp, frame.camPos) * 2.0 * frame.post.w * frame.invScreen.y);
-    albedo = sf.albedo; n = sf.n; rough = sf.rough;
   }
   if (v.mark != 0u && !cap && (own < 0 || side)) {
     let mk = markSurfaceGB(v.mark, bi, v.wp, n, dwx, dwy, albedo, rough, lookMarkSoft(), lookTrod());
