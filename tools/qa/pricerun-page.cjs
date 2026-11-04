@@ -7,6 +7,7 @@
 //       THE RUN AS THE PAGE RUNS IT, for a machine with a GPU: no short turns, the run's own quality unless one is named, every level on the
 //       mission list unless some are named. The same checks; what it times is that machine's, named in the file. Files go to --out, or $OUT.
 //       --look "look=walls:0&geo=0" = the look page's own words for the whole run (default `look`); --look-only = no page without the look (pricepage=0).
+//       --play N = the mission is played N seconds of its own clock before its picture is held (the run's own: 4), to see what a longer stand-up changes.
 // No dev server on the port: one is started from this checkout and stopped again by its pid. One software page at a time on a machine.
 // Exit 0 = the last page came up with a row for every level, each with its three states, no program made by the switch, the file handed over, no page error.
 const { chromium } = require('/opt/node-tools/node_modules/playwright');
@@ -15,7 +16,7 @@ const { spawn } = require('child_process');
 const ROOT = path.resolve(__dirname, '../..');
 const argv = process.argv.slice(2); const opt = (k, d) => { const i = argv.indexOf('--' + k); if (i < 0) return d; const v = argv[i + 1]; argv.splice(i, 2); return v; };
 const flag = k => { const i = argv.indexOf('--' + k); if (i < 0) return false; argv.splice(i, 1); return true; };
-const REAL = flag('real'), ONLY = flag('look-only'), LOOK = opt('look', 'look');
+const REAL = flag('real'), ONLY = flag('look-only'), LOOK = opt('look', 'look'), PLAY = Number(opt('play', 0)) || 0;
 const PORT = Number(opt('port', process.env.PORT || 5199)), OUT = path.resolve(opt('out', process.env.OUT || path.join(ROOT, 'dist/pricerun'))), QUALITY = opt('quality', REAL ? '' : 'verylow');
 const [VW, VH] = opt('size', REAL ? '1920x1080' : '320x180').split('x').map(Number), LEVELS = argv.length ? argv : REAL ? [] : ['vault'];   // (none named on a real run = every level on the list)
 // (…and the page is not told a script drives it: navigator.webdriver false, so it boots as it does for a person — the load brief, the attract reel, the device's retry)
@@ -32,7 +33,7 @@ let server = null, browser = null;   // (let go however the run ends: a throw be
   browser = await chromium.launch({ headless: true, channel: 'chromium', args: FLAGS });
   const ctx = await browser.newContext({ viewport: { width: VW, height: VH }, deviceScaleFactor: 1, acceptDownloads: true });
   // a frame is seconds long here: a turn is a frame dropped and two kept, and a long frame is not the tab having been away
-  await ctx.addInitScript(real => { window.__testVisible = true; if (!real) window.__priceOpts = { playS: 0.5, catchS: 0, settleS: 0, settleFrames: 1, measureFrames: 2, capS: 240, awayS: 600 }; }, REAL);   // (half a second of the game's clock: thirty steps of the page's own scripted step, two a frame; no wait for the GPU to catch up, whose frame is seconds long here)
+  await ctx.addInitScript(([real, play]) => { window.__testVisible = true; if (!real) window.__priceOpts = { playS: 0.5, catchS: 0, settleS: 0, settleFrames: 1, measureFrames: 2, capS: 240, awayS: 600 }; if (play > 0) window.__priceOpts = { ...(window.__priceOpts || {}), playS: play }; }, [REAL, PLAY]);   // (half a second of the game's clock: thirty steps of the page's own scripted step, two a frame; no wait for the GPU to catch up, whose frame is seconds long here)
   const page = await ctx.newPage(), errors = [], pages = []; let saved = null, gaveUp = '';
   page.on('pageerror', x => errors.push('pageerror: ' + String(x && x.stack || x).slice(0, 400)));
   page.on('console', m => { const x = m.text(); if (/price every level/.test(x)) { log('page:', x.slice(0, 300)); gaveUp = gaveUp || x.slice(0, 300); } if (m.type() === 'error' && !/Failed to load resource/.test(x)) errors.push(x.slice(0, 300)); });   // (the run's own word on the console is always its end without a file: stopped, refused, or no session store — not waited on for the cap)
@@ -55,7 +56,7 @@ let server = null, browser = null;   // (let go however the run ends: a throw be
   await browser.close(); browser = null; if (server) { server.kill(); server = null; }
   console.log(REAL ? `\n=== pricerun-page --real: ${LEVELS.join(', ') || 'every level on the list'} at ${QUALITY || 'the run\'s own quality'}, ${VW}x${VH}: the run as the page runs it; what it times is this machine's (${file?.gpu ?? 'no file'}) ===`
     : `\n=== pricerun-page: ${LEVELS.join(', ')} at ${QUALITY}, software adapter: the chain is what is checked, no number here is a price ===`);
-  const rows = file?.rows ?? [], STEP = REAL ? 4 : 0.5, PER = ONLY ? 1 : 2, want = (LEVELS.length || rows.length) * PER + 1;
+  const rows = file?.rows ?? [], STEP = PLAY > 0 ? PLAY : REAL ? 4 : 0.5, PER = ONLY ? 1 : 2, want = (LEVELS.length || rows.length) * PER + 1;
   check(!!file, 'the run reached its last page and left its file on the page', file ? `${rows.length} rows; asked for quality ${file.quality}; ${file.gpu}` : `it stopped at page ${pages.length}: ${pages[pages.length - 1] ?? '?'}`);
   check(pages.length === want && pages.slice(1).every((u, i) => new RegExp(`[?&]pricerun=${i}(&|$)`).test(u) && /[?&]downloads=1(&|$)/.test(u) && /[?&]look(=|&|$)/.test(u) === (ONLY || i % 2 === 0)), `the chain is the address that asked, then for each level its look page and its page without the look, in order, each carrying the visitor's flag (${want} loads)`, pages.map(u => u.replace(`http://localhost:${PORT}`, '')).join('\n    '));
   check(LEVELS.length ? rows.length === LEVELS.length && rows.every((r, i) => r.level === LEVELS[i]) : rows.length > 1 && new Set(rows.map(r => r.level)).size === rows.length, LEVELS.length ? 'a row for every level asked for, in the order asked' : 'a row for each level of the list, none twice', rows.map(r => r.level).join(', '));
