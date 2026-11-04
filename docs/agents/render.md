@@ -2193,7 +2193,8 @@ interleaved and filtered to their quiet minimum, and a row whose p75 sits far ab
   colour: an old break in an office partition draws plain), the audit's reading, `?surf` retired, a row on the look panel. KNOWN: the look's wood is
   planks and its cloth one weave, so a desk is a plank top and a swivel chair is cloth until the look has a veneer and a plastic; the office's `metal`
   and `glassFrame` WAIT (drawn plain): the look's `metal` is bare iron gone to rust, under which an office shelf drew as a wreck, and its `paint` is
-  chipped in dark splotches the maintainer flagged on the showroom's door and boxes the same night, so clean steel waits for a layer of its own; `asphalt` as gravel is a bend. Seen only on the software adapter.
+  chipped in dark splotches the maintainer flagged on the showroom's door and boxes the same night, so clean steel waits for a layer of its own; the name `asphalt` is TWO paints of one colour (the office's car park and the lived kit's iron fittings, 20 slabs to 277 boxes) and says metal, as the
+  colour alone did, until a box can say its own word. Seen only on the software adapter.
 - **MARKS AS PAINT, A FIRST TRY** (`shaders/markings.wgsl markSoft`, behind `lookMarkSoft()` = `lookCfg.g.x`, 0 off the look page by gbuffer.ts's
   stub; the maintainer, 10-23: "we also need to get away from the pixel art textures"). A marking is still the level's 2-bit cell bitmap (2.5 cm
   cells), but on the look page it is not drawn as squares: the coverage is read over a one-cell footprint, cut back at half cover along a ragged line
