@@ -13,7 +13,7 @@
 // A NAME NEVER CHANGES A COLOUR. The simulation reads colours (a round's dust by its paint, a sheet of paper by how pale it is): this table gives a paint a
 // material and leaves its numbers alone. Nothing in the simulation reads this table.
 import type { GwotMat } from './gwotPalette';
-import { LOOK_NAMES } from '../render/lookTex';   // (a module of arithmetic with no imports of its own: the look's list of materials is the one list)
+import { LOOK_NAMES, lookStuffOf } from '../render/lookTex';   // (a module of arithmetic with no imports of its own: the look's list of materials is the one list)
 
 export type Stuff = typeof LOOK_NAMES[number] | 'plain' | 'waits' | 'mixed';
 
@@ -52,8 +52,9 @@ export const PAINT_STUFF: Readonly<Record<string, Stuff>> = {
 export const BY_COLOUR: ReadonlySet<Stuff> = new Set<Stuff>(['mud wall', 'plaster', 'block', 'earth', 'gravel', 'slab', 'wood', 'sheet', 'cloth', 'metal', 'paint']);
 /** what the table says of a paint name: undefined for a name it has no row for (never a method of every object: a level may name a paint `constructor`) */
 export const stuffOfName = (name: string): Stuff | undefined => Object.hasOwn(PAINT_STUFF, name) ? PAINT_STUFF[name] : undefined;
-/** WHAT A BOX MAY SAY IT IS MADE OF (Box.stuff, a level file's `stuff` on a box or a prop's part): a material of the look, plain, or waits */
-export const BOX_STUFFS: readonly string[] = [...LOOK_NAMES, 'plain', 'waits'];
+/** WHAT A BOX MAY SAY IT IS MADE OF (Box.stuff, a level file's `stuff` on a box or a prop's part): a material of the look, plain, or waits. A material is a
+ *  name the look has a NUMBER for (lookTex.ts lookStuffOf): the stone and the brick under a mud wall are layers the mud wall shows, and no box is made of them. */
+export const BOX_STUFFS: readonly string[] = [...LOOK_NAMES.filter(n => lookStuffOf(n) > 0), 'plain', 'waits'];
 export const boxStuffOk = (v: unknown): v is Exclude<Stuff, 'mixed'> => typeof v === 'string' && BOX_STUFFS.includes(v);
 /** a level's material rows as the look is handed them: a name and its colour */
 export type PaintRows = Readonly<Record<string, { albedo: readonly number[] }>>;
