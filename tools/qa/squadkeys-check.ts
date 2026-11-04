@@ -38,10 +38,6 @@ export async function squadKeysCheck(): Promise<boolean> {
   // ---- no part
   const n = squadRows(built, true, false, false) as Row[];
   line(!n.some(r => r[0].length > 1) && n.length === k.length - (BREAK ? 0 : 1), 'no part: with goals off there is no row for a part of the squad', say(n));
-  // ---- twice (the key tapped twice is 'fall in', game/cmdring.ts `twice`: the command key's row says so, and only then)
-  const tw = squadRows(built, true, true, false, true) as Row[], twSaid = tw[0]?.[2] ?? '';
-  line(/tap it twice to call everyone back to you/.test(twSaid) && /tap it to give the usual order/.test(twSaid) && /hold it a moment to open the wheel/.test(twSaid) && !/twice/.test(k[0][2] ?? '') && tw.length === k.length,
-    "twice: with the key tapped twice being 'fall in' the command key's row says so between its tap and its hold, and without the rule it does not", `"${twSaid}"`);
   // ---- words
   const said = [...k, ...withKey].filter(r => r[1] !== 'Who takes the next order' && /plan mode/i.test(`${r[1]} ${r[2] ?? ''}`)).map(r => r[1]);
   // (two builds pass this: the one where `?goals=0` still had plan mode, with both behind `goals` being off, and the one with plan mode out of the game, where neither is in the source at all)

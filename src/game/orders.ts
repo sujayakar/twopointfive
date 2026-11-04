@@ -56,7 +56,6 @@
 // ordering an operative under one of Sam's orders is not arbitrated; the stack's marks are geometry (stackPosts), not tactics.ts's authored clear-plan marks.
 // (src/game is one import cycle: nothing below is built from another game module's exports at module load — the knobs are a plain literal, the order table is
 // built in the constructor.)
-import { seatHas } from './seats';
 import { SideMap, SideSet } from '../math/side';
 import { Vec3, v3, wrapAngle } from '../math/vec';
 import type { Game, Guard, GuardScript, Interactable, PairId } from './game';
@@ -70,7 +69,7 @@ import type { FollowCamera } from './camera';
 import type { View } from '../host/hud';
 import { order } from './squad';
 import { crossesDoor, frameOf } from './guards';
-import { INTERACT_KEY } from './consts';
+import { PLAYER_ID, INTERACT_KEY } from './consts';
 import { NIGHTBREACH } from './nightbreach';
 import { COVER } from './cover';
 import { GLASSPEN, GLASSPEN_STATS, glassPenLive, shotThroughGlass, glassTollSig } from './glasspen';   // (GLASS IS NOT COVER: stackPosts → behindGlass; used at order time only, nothing touched at load)
@@ -256,30 +255,6 @@ export const ORDERS = {
    *  (Found on the compound: Sam walking along a wall at a man beside an open door, the man stepped back into the doorway, in the leaf's swing; Sam could
    *  not shut the leaf across his way, and for as long as he worked at it he was 'walking at him' — so the man kept the doorway.) Off = the spot as it was. */
   asideClear: false,
-  /** `fileQueue` (ON in the page — `?filequeue=0` — off here and on the frozen harness stand, `TPS_FILEQUEUE=1`; a FROZEN_HOLDS row) = NOBODY IS DEALT A
-   *  MARK HE WOULD HAVE TO SQUEEZE PAST A MATE FOR. Stack marks a stride apart (`fileQueueGap`) are one file; a file is TIGHT where one of its marks has no
-   *  floor `DOORMANNERS.roundOut` off it on either hand (a wall one side, a car or a passage's far wall the other: nobody walks round a man there). In a
-   *  tight file a man is not dealt a mark beyond a mate's when the mate will be standing on his first (his walk there the shorter): each such crossing
-   *  costs the deal `fileQueueCost` — one of them less than splitting a pair between two jambs (1000), more than the guns' order of a file (gunroles.ts, 400 for each pair out of order — these add up, so two of those outrank one crossing) and every metre of walking — so the file
-   *  fills from its far end, in the order the men come to it. (Found on the compound's garage: the lead stood in the mouth of the lane between the car and
-   *  the wall, and the two bound for the marks beyond him pushed him down it for twenty seconds.) Off = the deal that walks the least in all, as it was. */
-  fileQueue: false, fileQueueGap: 1.3, fileQueueCost: 500,
-  /** `propRound` (ON in the page — `?propround=0` — off here and on the frozen harness stand, `TPS_PROPROUND=1`; a FROZEN_HOLDS row) = A TEAMMATE WALKS
-   *  ROUND A CHAIR WHERE THERE IS FLOOR TO. The walk grid is the level's statics: a chair, a carton, a bin is not on it, so a man's way ran straight through
-   *  one and his body shoved it ahead of him — into the doorway he was bound for, where it stood pinned against the jamb and the next man walked on the spot
-   *  against it until somebody pushed it through (the compound's sala side door: four and a half seconds). With this on, a teammate's way (guards.ts goTo)
-   *  pays `propRoundCost` times over for every cell within `propRoundPad` of the circle of a movable thing THAT STANDS WITHIN `propRoundDoor` (2.5 m) OF A
-   *  DOOR'S FRAME, as it stands when the way is laid (a thing farther off does no harm shoved, and the men's ways there are as they were): he goes round it
-   *  where there is floor, and walks into it as before where it is the only way (a thing in a doorway is still pushed through). THE WAY ROUND IS TAKEN ONLY
-   *  WHERE IT IS NO MORE THAN `propRoundMore` METRES LONGER than the way over the statics alone AND CROSSES THE VERY SAME DOORS (and where the dear search finds one at all): the orders'
-   *  own reading of a man's way — which doors it crosses, which rooms — is of that plain way, and a chair must never send him through another door. The
-   *  cell he stands on is never dear. Nothing is avoided once he is walking: the way is laid again when his goal changes or he is stuck, as ever. IT IS FOR A
-   *  MAN AT THE TEAM'S WALK (teampace.ts `teamAtWalk`): one going into a room at an entry's pace, on a step of the room fight's, with somebody in his
-   *  sights, running from a grenade or with leave to run takes the plain way, the one his entry was laid on — so with the team's walk off this rule is off too. AND NOT FOR A MAN A DRILL HAS TAKEN
-   *  (`owners`, the night breach's F): a drill's marks were set to the centimetre on the plain ways. (Found on the night breach drill's twelve seeds: come
-   *  to the stack by the way round, the thrower stood a centimetre off, his can clipped the jamb and came back out, and the room was lost on nine of the
-   *  twelve where the plain way takes all twelve.) Off = the way over the statics alone, as it was. */
-  propRound: false, propRoundPad: 0.25, propRoundCost: 6, propRoundMore: 2, propRoundDoor: 2.5,
   /** … and he keeps going for that spot this long after Sam's own pace last said so: a man at the team's walk is not always off the line before Sam is on him,
    *  and Sam stopped BY him reads as Sam stopped — the man then took where he stood for his place and the two stood chest to chest in a doorway */
   asideHold: 1.5,
@@ -547,8 +522,6 @@ export class SquadOrders {
   cmdRing: RingState | null = null;
   /** the ring's key is down and its ring not yet up (cmdring.ts holdSecs): the game's clock when it went down, and what the cursor was on */
   cmdPress: { t0: number; t: OrderTarget; /** Shift was down as the key went down (CMDRING.goals: a tap of it adds a goal, planmode.ts planGoal) */ add?: boolean } | null = null;   // (… or Shift down as the key comes up: a chord pressed a little out of order is still the chord)
-  /** the last plain tap of the ring's key, what it was on and where the cursor was (CMDRING.twice: a second one there inside `twiceSecs` is 'fall in' for everyone). Not kept over a pause, a page out of focus or a load: the hand that comes back starts again */
-  tapWas: { at: number; t: OrderTarget; /** where the cursor was, in the view's pixels */ x: number; y: number } | null = null;
   /** what was ordered when (the probes read it; capped) */
   log: { t: number; order: string; who: string[]; target: string; /** the quick key gave it with the autopilot on (autopilot.ts: its plan is drawn a little longer) */ auto?: boolean; /** the word's key sent it off a laid plan (planlay.ts) */ laid?: boolean }[] = [];
   /** the plan laid for the word, and the one kept for the next try (planlay.ts — nothing is ever in it with that switch off) */
@@ -649,7 +622,7 @@ export class SquadOrders {
   /** IS HE ONE OF THE MEN THESE ORDERS MOVE: an operative unit — Sam's squad, the one cast there was. A second cast of this class and the door tools
    *  (squadcast.ts: the response team run through the squad's own door and room code) is built with its own answer (OtherCast); every roster here and in
    *  doortools.ts is read through this one test. */
-  mine(gd: Guard): boolean { return this.cast ? this.cast.mine(gd) : !!gd.unit && gd.team === 'operative' && seatHas(this.g.seat, gd); }   // (… of this book's seat, in a game of more than one: seats.ts)
+  mine(gd: Guard): boolean { return this.cast ? this.cast.mine(gd) : !!gd.unit && gd.team === 'operative'; }
   /** the player is one of these men's own — nobody stands in his line with a gun up, a can of theirs spares him on their side of the door (Sam's squad: yes) */
   get sams(): boolean { return !this.cast; }
   /** whose side a can of theirs is (combat.ts detonateStun) */
@@ -776,7 +749,7 @@ export class SquadOrders {
     const g = this.g, K = ORDERS; if (g.puppet?.aim) return this.targetAt(g.aimPoint);
     { const m = g.rails?.markUnder(input, cam, canvas); if (m) return this.targetAt(m); }   // (a tutorial mission's ring on the screen is the place it marks — rails.ts; null off such a level)
     const ray = cam.ray(input.mouseX / Math.max(1, canvas.clientWidth), input.mouseY / Math.max(1, canvas.clientHeight));
-    const hit = g.engine.world.raycast(ray.ro, ray.rd, 200, undefined, g.player.char.id);
+    const hit = g.engine.world.raycast(ray.ro, ray.rd, 200, undefined, PLAYER_ID);
     const p: Vec3 = hit ? v3.mad(ray.ro, ray.rd, hit.t) : cam.groundPoint(input.mouseX / Math.max(1, canvas.clientWidth), input.mouseY / Math.max(1, canvas.clientHeight), 0) ?? g.aimPoint;
     let man: Guard | null = null, best = hit ? hit.t + 0.3 : 200;
     for (const gd of this.squad()) { if (gd.state === 'dead') continue; const t = gd.char.rayHit(ray.ro, ray.rd, best); if (t >= 0 && t < best) { best = t; man = gd; } }
@@ -803,7 +776,7 @@ export class SquadOrders {
   private sceneHit(ro: Vec3, rd: Vec3, first?: { t: number; index: number } | null): { t: number; index: number } {
     const W = this.g.engine.world, skip = BoxFlag.NoShadow | BoxFlag.NoPrimary | BoxFlag.Glass;
     if (first) { const b = W.all[first.index]; if (b && !b.owner && !(b.flags & BoxFlag.Glass)) return { t: first.t, index: first.index }; }
-    let t0 = 0, owner = this.g.player.char.id;
+    let t0 = 0, owner = PLAYER_ID;
     for (let k = 0; k < 16; k++) {
       const hit = W.raycast(k ? v3.mad(ro, rd, t0) : ro, rd, 200, skip, owner); if (!hit) break;
       owner = W.all[hit.index]?.owner ?? 0; t0 += hit.t; if (!owner) return { t: t0, index: hit.index };
@@ -925,7 +898,7 @@ export class SquadOrders {
   /** Esc (Game.escape, ahead of the pause menu): the menu, if it is up, steps back a page — from its first page it is dismissed. True = the press was used here. */
   /** a memory save put back (savestate.ts loadMem, after the snapshot is restored): a ring that stood when the save was made, a press half made
    *  are the hand's, not the saved moment's — brought back, the ring took the next click for a wedge with nobody having asked for it */
-  loaded(): void { if (this.cmdRing) { this.menu = null; this.cmdRing = null; } this.cmdPress = null; this.tapWas = null; }
+  loaded(): void { if (this.cmdRing) { this.menu = null; this.cmdRing = null; } this.cmdPress = null; }
   escape(): boolean { if (!this.menu) return false; if (this.cmdRing) { this.menu = null; this.cmdRing = null; CMDRING_STATS.cancelled++; }   // (cmdring.ts: Esc gives nothing, whatever page the ring is on)
     else if (!this.pageBack()) this.menu = null; this.escUsed = true; return true; }
   /** the page's Esc went to the pause (backkey.ts: Esc is only the pause): that press is nobody's in the tick */
@@ -1054,8 +1027,7 @@ export class SquadOrders {
     this.sync();
     if (this.escUsed) { this.escUsed = false; input.pressed.delete('Escape'); }
     const g = this.g, v = this.view;
-    if (!this.active || g.player.down) { this.menu = null; this.cmdRing = null; this.cmdPress = null; this.tapWas = null; v.input = v.cam = v.canvas = null; return; }
-    if (this.tapWas && (input.pressed.has('Blur') || input.pressed.has('Thawed'))) this.tapWas = null;   // (CMDRING.twice: game time stands still under a pause — the tap after it is a first tap. 'Thawed': host/loop.ts, the first tick after any frozen frame)
+    if (!this.active || g.player.down) { this.menu = null; this.cmdRing = null; this.cmdPress = null; v.input = v.cam = v.canvas = null; return; }
     v.input = input; v.cam = cam; v.canvas = canvas;
     if (this.lay.laid.length) layPrune(g);   // (planlay.ts: a man who is down is off the plan)
     if (this.whole()) this.who = 'all';   // (CMDRING.wholeSquad: the orders are everyone's, however the choice was left)
@@ -1066,7 +1038,7 @@ export class SquadOrders {
     const M = this.menu;
     if (!M) {   // no menu at the top of the frame: the quick key, or the press that puts it up — and nothing else in this frame is the menu's
       if (PLANLAY.on && this.lay.laid.length && !!layKey() && input.pressed.delete(layKey())) laySend(g);   // (planlay.ts: the word's key, a plan laid — sent, and the press is nobody else's)
-      else if (input.hit(K.quickKey)) this.tapGive(this.targetUnder(input, cam, canvas), input);   // the target's own order, at once (autopilot.ts: on a door they wait on, they go in — by the entry they pick)
+      else if (input.hit(K.quickKey)) this.tapGive(this.targetUnder(input, cam, canvas));   // the target's own order, at once (autopilot.ts: on a door they wait on, they go in — by the entry they pick)
       else if ((key || mid) && g.player.sel.downT < 0) this.open(this.targetUnder(input, cam, canvas));   // (never over a Space press in hand: one list at a time)
       return;
     }
@@ -1115,7 +1087,7 @@ export class SquadOrders {
       const P = this.cmdPress;
       if (P) {
         if (!C.on || input.pressed.has('Blur') || input.pressed.has('Paused')) { this.cmdPress = null; return false; }
-        if (!input.down(C.key)) { this.cmdPress = null; CMDRING_STATS.quick++; this.tapGive(P.t, input, (P.add || input.down('ShiftLeft') || input.down('ShiftRight')) && goalsOn(this)); return true; }   // (CMDRING.goals: the tap with Shift adds a goal — a part of the squad takes it)
+        if (!input.down(C.key)) { this.cmdPress = null; CMDRING_STATS.quick++; this.tapGive(P.t, (P.add || input.down('ShiftLeft') || input.down('ShiftRight')) && goalsOn(this)); return true; }   // (CMDRING.goals: the tap with Shift adds a goal — a part of the squad takes it)
         const digit = C.stay && C.stayDigit && this.ringDigit(input);   // (a digit inside the press: the ring's wedge, so the ring is up now — CMDRING.stayDigit)
         if (!digit && g.time - P.t0 < ringHoldSecs() - 1e-6) return false;
         this.cmdPress = null; if (!this.backFree()) return false;
@@ -1126,7 +1098,7 @@ export class SquadOrders {
       if (!input.hit(C.key) || !this.ringFree(input)) return false;
       input.pressed.delete(C.key);
       const add = goalsOn(this) && (input.down('ShiftLeft') || input.down('ShiftRight'));   // (CMDRING.goals: Shift with the key — its tap adds a goal; kept down it is the ring, as ever)
-      if (C.holdSecs > 0 && C.tapNow && !input.down(C.key)) { CMDRING_STATS.quick++; this.tapGive(this.targetUnder(input, cam, canvas), input, add); return true; }   // (down and up inside one tick: a tap, given on its own tick)
+      if (C.holdSecs > 0 && C.tapNow && !input.down(C.key)) { CMDRING_STATS.quick++; this.tapGive(this.targetUnder(input, cam, canvas), add); return true; }   // (down and up inside one tick: a tap, given on its own tick)
       if (C.holdSecs > 0) { this.cmdPress = { t0: g.time, t: this.targetUnder(input, cam, canvas), ...(add ? { add } : {}) };
         return C.stay && C.stayDigit && this.ringDigit(input) ? this.ringInput(input, cam, canvas) || true : true; }   // (the key and a digit in one tick: the same)
       const t = this.targetUnder(input, cam, canvas), G = this.goalPart(t, add); return G === null ? true : this.ringUp(t, input, canvas, g.time, cam, G);
@@ -1261,23 +1233,7 @@ export class SquadOrders {
   /** a TAP's order on `t` (the quick key, the ring's key let go inside its hold) — nothing where a tutorial step teaches the key HELD and the hold is there
    *  to be had (rails.ts tapOff: the step says so under its line). A wedge of the ring that gives the same order is not a tap: it goes to quickGive itself.
    *  `goal`: the tap was made with Shift and adds a goal (CMDRING.goals, planmode.ts planGoal) — a tap all the same, so the same step refuses it */
-  private tapGive(t: OrderTarget, input: Input, goal = false) { if (CMDRING.on && ringHoldSecs() > 0 && this.g.rails?.tapOff()) return;
-    if (goal) { this.tapWas = null; planGoal(this, t); return; }
-    // (CMDRING.twice: the second plain tap in the same place inside the window is 'fall in' for everyone — the first was given as it came up, as ever.
-    //  THE SAME PLACE is a hand that has not moved (the cursor within `twicePx` of where it was: what a still cursor reads can change between two
-    //  taps, a man walking under it or the view moving with him), or the same door. A hand that moved to another thing, however near, gives that
-    //  thing's order: a tap put right is not a double tap)
-    const W = this.tapWas, now = this.g.time, x = input.mouseX, y = input.mouseY; this.tapWas = null;
-    const same = !!W && (Math.hypot(x - W.x, y - W.y) <= CMDRING.twicePx || (W.t.kind === 'door' && t.kind === 'door' && W.t.door === t.door));
-    if (this.twiceOn() && W && same && now >= W.at && now - W.at <= CMDRING.twiceSecs + 1e-6) { this.allIn(); return; }
-    this.tapWas = { at: now, t, x, y }; this.quickGive(t); }
-  /** CMDRING.twice is asked here: the ring's key, and on a tutorial mission only from a step that lists `twice` (rails.ts `locks`, as the goals ask
-   *  `goal`: a first-timer's double press must not undo the order a step has just asked for, and no mission lists it today) */
-  private twiceOn(): boolean { return CMDRING.twice && CMDRING.on && !this.g.rails?.locks('twice'); }
-  /** CMDRING.twice: every teammate falls in — an order without Shift, so every goal goes with it. Not said twice over a 'fall in' the first tap gave them all. */
-  private allIn() { const men = this.men('all'), p = this.g.player.char.pos; CMDRING_STATS.twice++;
-    if (men.every(m => { const A = this.of(m); return !!A && A.order === 'fallIn' && A.post === null; })) return;
-    this.byHand = true; try { this.give('fallIn', { kind: 'none', at: [p[0], 0, p[2]] }, undefined, { men }); } finally { this.byHand = false; } }
+  private tapGive(t: OrderTarget, goal = false) { if (CMDRING.on && ringHoldSecs() > 0 && this.g.rails?.tapOff()) return; if (goal) planGoal(this, t); else this.quickGive(t); }
   /** the quick key's own order on `t`, given by hand: on a door the men wait on, the entry they pick (autopilot.ts); else the target's first row */
   private quickGive(t: OrderTarget) { this.byHand = true; try { if (!(AUTOPILOT.on && autoQuick(this.g, t))) { const d = this.defaultFor(t); if (d) this.give(d.id, t); } } finally { this.byHand = false; } }
   /** The quick key's order on `t` for exactly these men (planmode.ts: a goal's men) — the squad's own choice there (autopilot.ts autoPick)
@@ -1456,7 +1412,7 @@ export class SquadOrders {
         if (plain && flat(A.goal, mark) > 0.05) { A.goal = [mark[0], 0, mark[2]]; A.markT = A.movedT = g.time; A.mark[0] = p[0]; A.mark[2] = p[2]; }
         if (A.via.length) { if (flat(p, A.via[0]) < 0.9) A.via.shift(); A.goal = A.via[0] ?? v3.copy(A.post); }   // (the way round a locked door, a waypoint at a time)
         d = flat(p, mark); speed = A.pace ?? (d > K.briskIn ? K.brisk : stackLinePace(g, gd, A, d, K.brisk) ?? K.onto);
-        if (A.pace !== undefined) teamFight(g, gd); else if (!A.thru && !A.via.length) speed = teamDash(g, gd, mark, d, A.order === 'stack' && !!A.door) ?? speed;   // (teampace.ts: an entry keeps its pace; a run to cover straight across floor a known man has a line on, the fight's pace when his mark is a place in a stack, TEAMPACE.doorBrisk — nothing with its switch off)
+        if (A.pace !== undefined) teamFight(g, gd); else if (!A.thru && !A.via.length) speed = teamDash(g, gd, mark, d) ?? speed;   // (teampace.ts: an entry keeps its pace; a run to cover straight across floor a known man has a line on — nothing with its switch off)
         if (A.pace === undefined && d > K.briskIn) speed = teamTold(g, gd) ?? speed;   // (… and a leg a tutorial step tells them to run, round its corners too, walked in over its last metres as any leg is: rails.ts runs — nothing off a frame)
         { const sp = sneakPost(g, gd, A.order) ?? unseenPost(g, gd, A.order); if (sp !== null) { low = true; speed = Math.min(speed, sp); } }   // (sneak.ts: sent to a mark while the silent squad sneaks, he goes there low with Sam — nothing with its switch off)
         const short = g.fight.short(gd);   // (LIGHTS.litMan, roomfight.ts holdShort: in the dark on a lit man with Sam in his line — his walk waits, and so do the clocks that would call a standing man stuck)
@@ -2496,50 +2452,19 @@ export class SquadOrders {
   /** men to spots, the pairing that walks the least in all (two men: both ways tried; three or four: every way tried, and — where `groups` says which spots
    *  belong together: a jamb's file, a rank — each PAIR of the squad kept in one group before any walking is saved; otherwise each man in turn his nearest free
    *  spot) */
-  /** ORDERS.fileQueue, for one deal of a stack: what a dealing (`at[i]` = the spot of man i) costs in men squeezing past one another, or null where no
-   *  file among the spots is tight (nothing is priced, no walk is asked for) */
-  private fileCross(men: Guard[], spots: Vec3[]): ((at: number[]) => number) | null {
-    const g = this.g, nav = g.col.nav, K = ORDERS, n = spots.length, W = DOORMANNERS.roundOut; if (n < 2 || men.length < 2) return null;
-    const root = spots.map((_, i) => i), find = (i: number): number => root[i] === i ? i : (root[i] = find(root[i]));
-    for (let i = 0; i < n; i++) for (let j = i + 1; j < n; j++) if (flat(spots[i], spots[j]) <= K.fileQueueGap) root[find(i)] = find(j);
-    const tight = new Set<number>();
-    for (let i = 0; i < n; i++) {
-      let o = -1; for (let j = 0; j < n; j++) if (j !== i && find(j) === find(i) && (o < 0 || flat(spots[i], spots[j]) < flat(spots[i], spots[o]))) o = j;
-      if (o < 0) continue;
-      const m = spots[i], l = flat(m, spots[o]); if (l < 0.05) continue;
-      const nx = -(spots[o][2] - m[2]) / l, nz = (spots[o][0] - m[0]) / l; let room = false;
-      for (const sd of [1, -1]) { const q: Vec3 = [m[0] + nx * sd * W, 0, m[2] + nz * sd * W]; if (!nav.isBlocked(q[0], q[2]) && !g.col.solidBlocked([m[0], 0.45, m[2]], [q[0], 0.45, q[2]])) room = true; }
-      if (!room) tight.add(find(i));
-    }
-    if (!tight.size) return null;
-    const walk = (gd: Guard, to: Vec3): number => { const p = gd.char.pos, w = nav.findPath(p, to); if (!w) return 1e6; let l = 0, q: Vec3 = p; for (const c of w) { l += flat(q, c); q = c; } return l + flat(q, to); };
-    const L = men.map(gd => spots.map((m, j) => tight.has(find(j)) ? walk(gd, m) : 0));
-    // x would have to get past y: y's mark lies on x's walk to his own, and y is on it before x comes by
-    const past = (x: number, jx: number, y: number, jy: number) => L[x][jy] + flat(spots[jy], spots[jx]) <= L[x][jx] + 0.5 && L[x][jy] > L[y][jy];
-    return at => { let c = 0;
-      for (let a = 0; a < at.length; a++) for (let b = a + 1; b < at.length; b++) { const ja = at[a], jb = at[b]; if (find(ja) !== find(jb) || !tight.has(find(ja))) continue;
-        if (past(a, ja, b, jb) || past(b, jb, a, ja)) c += K.fileQueueCost; }
-      return c; };
-  }
   pair(men: Guard[], spots: Vec3[], groups?: number[], front?: Vec3): [Guard, Vec3][] {   // (`front`: the frame a STACK's marks stand on — gunroles.ts: a room gun's man nearer it than a long gun's; nothing with that switch off)
-    const cross = front && ORDERS.fileQueue && !FILEQUEUE_BREAK ? this.fileCross(men, spots) : null;
     if (men.length > 2 && men.length <= 4 && spots.length >= men.length) {
-      const n = men.length, used = spots.map(() => false), cur: number[] = [], gr = front ? gunFileRanks(men) : null; let best: number[] = [], bc = Infinity, best0: number[] = [], bc0 = Infinity;
+      const n = men.length, used = spots.map(() => false), cur: number[] = [], gr = front ? gunFileRanks(men) : null; let best: number[] = [], bc = Infinity;
       const ids = this.pairs().map(id => men.map((gd, i) => this.pairOf(gd) === id ? i : -1).filter(i => i >= 0)).filter(l => l.length > 1);
       const rec = (i: number, walk: number) => {
-        if (i === n) { let c = walk; if (groups) for (const l of ids) c += 1000 * (new Set(l.map(m => groups[cur[m]])).size - 1); if (gr) c += gunFileCost(gr, cur.map(j => spots[j]), front!);
-          if (cross) { if (c < bc0) { bc0 = c; best0 = [...cur]; } c += cross(cur); }
-          if (c < bc) { bc = c; best = [...cur]; } return; }
+        if (i === n) { let c = walk; if (groups) for (const l of ids) c += 1000 * (new Set(l.map(m => groups[cur[m]])).size - 1); if (gr) c += gunFileCost(gr, cur.map(j => spots[j]), front!); if (c < bc) { bc = c; best = [...cur]; } return; }
         for (let j = 0; j < spots.length; j++) { if (used[j]) continue; used[j] = true; cur[i] = j; rec(i + 1, walk + flat(men[i].char.pos, spots[j])); used[j] = false; }
       };
       rec(0, 0);
-      if (cross && best.length === n && best.some((j, i) => j !== best0[i])) STACK_OWN.queue++;
       if (best.length === n) return men.map((gd, i) => [gd, spots[best[i]]] as [Guard, Vec3]);   // (none found — a position that is not a number: the plain rule below)
     }
     if (men.length === 2 && spots.length === 2) { const d = (i: number, j: number) => flat(men[i].char.pos, spots[j]), gr = front ? gunFileRanks(men) : null, gc = (a: number, b: number) => gr ? gunFileCost(gr, [spots[a], spots[b]], front!) : 0;
-      const xc = (a: number, b: number) => cross ? cross([a, b]) : 0;
-      if (cross && (d(0, 0) + d(1, 1) + gc(0, 1) <= d(0, 1) + d(1, 0) + gc(1, 0)) !== (d(0, 0) + d(1, 1) + gc(0, 1) + xc(0, 1) <= d(0, 1) + d(1, 0) + gc(1, 0) + xc(1, 0))) STACK_OWN.queue++;
-      return d(0, 0) + d(1, 1) + gc(0, 1) + xc(0, 1) <= d(0, 1) + d(1, 0) + gc(1, 0) + xc(1, 0) ? [[men[0], spots[0]], [men[1], spots[1]]] : [[men[0], spots[1]], [men[1], spots[0]]]; }
+      return d(0, 0) + d(1, 1) + gc(0, 1) <= d(0, 1) + d(1, 0) + gc(1, 0) ? [[men[0], spots[0]], [men[1], spots[1]]] : [[men[0], spots[1]], [men[1], spots[0]]]; }
     const left = [...spots]; return men.map(gd => { let bi = 0; left.forEach((s, i) => { if (flat(gd.char.pos, s) < flat(gd.char.pos, left[bi])) bi = i; }); return [gd, left.length > 1 ? left.splice(bi, 1)[0] : left[0]] as [Guard, Vec3]; });
   }
 
@@ -2633,29 +2558,6 @@ const OFF_M = 0.3, ROUND_ITER = 30000, MOUTH_M = 0.8;
 const SAME_PLUS_M = 2;
 const SAMEWAY_BREAK = (globalThis as { process?: { env?: Record<string, string | undefined> } }).process?.env?.SAMEWAY_BREAK === '1';   // (QA: the rule's own check must fail with this set)
 const SELFBODY_BREAK = (globalThis as { process?: { env?: Record<string, string | undefined> } }).process?.env?.SELFBODY_BREAK === '1';   // (QA: ORDERS.selfBody's own check must fail with this set)
-const FILEQUEUE_BREAK = (globalThis as { process?: { env?: Record<string, string | undefined> } }).process?.env?.FILEQUEUE_BREAK === '1';   // (QA: ORDERS.fileQueue's own check must fail with this set)
-const PROPROUND_BREAK = (globalThis as { process?: { env?: Record<string, string | undefined> } }).process?.env?.PROPROUND_BREAK === '1';   // (QA: ORDERS.propRound's own check must fail with the rule's body out)
-/** ORDERS.propRound: of the way over the statics alone (`plain`) and the way laid with movable things dear (`round`, null: that search found none), the one
- *  he walks — the way round, where it is at most `propRoundMore` metres the longer */
-export function propWay(g: Game, from: Vec3, plain: Vec3[], round: Vec3[] | null): Vec3[] {
-  if (!round || !round.length) return plain;
-  const len = (w: Vec3[]) => { let l = 0, q = from; for (const c of w) { l += flat(q, c); q = c; } return l; };
-  if (len(round) > len(plain) + ORDERS.propRoundMore) return plain;
-  const doors = (w: Vec3[]) => { const out: Door[] = []; let q = from; for (const c of w) { for (const d of g.doors.list) if (!out.includes(d) && crossesDoor(q, c, d)) out.push(d); q = c; } return out; };
-  const a = doors(plain), b = doors(round); return a.length === b.length && a.every(d => b.includes(d)) ? round : plain;   // (the very doors the plain way crosses, no other: the orders read the plain way)
-}
-/** ORDERS.propRound, asked by guards.ts goTo when it lays a man's way: `pen` with the cells about every movable thing made dear — for a teammate only, and
- *  only with the rule on (else `pen` itself, untouched: the search is then the very search it was) */
-export function propPenalty(g: Game, gd: Guard, pen: ((ix: number, iz: number) => number) | undefined): ((ix: number, iz: number) => number) | undefined {
-  const K = ORDERS; if (!K.propRound || PROPROUND_BREAK || gd.team !== 'operative' || !g.props.props.length || g.orders.owners.some(o => o.owns(gd))) return pen;
-  const nav = g.col.nav, cs = nav.cell, dear = new Set<number>();
-  const doors = g.doors.list, by = K.propRoundDoor;
-  for (const p of g.props.props) { if (!doors.some(d => Math.hypot(d.frameCentre[0] - p.x, d.frameCentre[2] - p.z) < by)) continue; const r = p.radius + K.propRoundPad, x0 = Math.floor((p.x - r) / cs), x1 = Math.floor((p.x + r) / cs), z0 = Math.floor((p.z - r) / cs), z1 = Math.floor((p.z + r) / cs);
-    for (let z = z0; z <= z1; z++) for (let x = x0; x <= x1; x++) if (x >= 0 && z >= 0 && x < nav.W && z < nav.H && Math.hypot((x + 0.5) * cs - p.x, (z + 0.5) * cs - p.z) < r) dear.add(nav.idx(x, z)); }
-  dear.delete(nav.idx(Math.floor(gd.char.pos[0] / cs), Math.floor(gd.char.pos[2] / cs)));   // (where he stands: he is not 'stepping into' it, and the search's own smoothing counts the cell a leg starts on)
-  if (!dear.size) return pen;
-  const cost = K.propRoundCost; return (ix, iz) => (dear.has(nav.idx(ix, iz)) ? cost : 1) * (pen ? pen(ix, iz) : 1);
-}
 const ASIDECLEAR_BREAK = (globalThis as { process?: { env?: Record<string, string | undefined> } }).process?.env?.ASIDECLEAR_BREAK === '1';   // (QA: ORDERS.asideClear's own check must fail with this set)
 const TRAILDOORS_BREAK = (globalThis as { process?: { env?: Record<string, string | undefined> } }).process?.env?.TRAILDOORS_BREAK === '1';   // (QA: ORDERS.trailDoors' own check must fail with this set)
 /** ORDERS.sameWay: how far way `a` gets from way `b` (each a walk's corners, in order), asked every half metre of `a`, and where on `a` that is */

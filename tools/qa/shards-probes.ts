@@ -15,8 +15,7 @@
 //                         debris — to the same game with this model's seams pulled out (the debris pool's glass door null, a stub where game.ts / floor.ts call it); and with glass
 //                         breaking off (the shipped default) the model counts nothing at all. (The cross-BUILD digest against 25e5e7c is on rebuild/glass/shards.md.)
 import { standUp, ROOT, fake } from './headless.ts';
-import { CONF_PANE, CONF_FAR, floatPartition, type SeamsOut } from './office-pane.ts';
-import type { GlassShards } from '../../src/game/shards.ts';
+import { CONF_PANE, CONF_FAR, floatPartition } from './office-pane.ts';
 const { v3 } = await import(`${ROOT}/src/math/vec.ts`);
 const { fireWeapon } = await import(`${ROOT}/src/game/combat.ts`);
 const { WEAPONS } = await import(`${ROOT}/src/game/weapons.ts`);
@@ -254,7 +253,7 @@ export async function shardsRest() {
   const snd = W.audioLog!.filter((a: any) => a.name === 'glassTinkle' || a.name === 'glassShatter'); const first = Math.min(...snd.map((a: any) => a.t)) - t0;
   F.verdict(atRelease === 0 && snd.length + SHARD_STATS.soundsMerged >= made && first > 0.15 && snd.some((a: any) => a.name === 'glassShatter') && snd.some((a: any) => a.name === 'glassTinkle'), 'the landing is what sounds (a clink, or a shatter when it breaks) — nothing at release, the first after the fall', `${snd.length} sounds + ${SHARD_STATS.soundsMerged} landings inside a voice's gap thickening the next (${snd.filter((a: any) => a.name === 'glassShatter').length} shatters), none at release, the first ${first.toFixed(2)} s on (thrown down at ~1 m/s onto desks 0.75 m up and the floor)`);
   const gaps = evs.slice(1).map((e, i) => e.time - evs[i].time);
-  F.verdict(evs.length >= (SHARDS.byFall ? 1 : 2) && gaps.every(d => d >= SHARDS.eventGap - 1e-9) && evs.every(e => e.level >= SHARDS.level - 1e-9 && e.level <= SHARDS.level + 0.06 && e.who === 2 && e.loud === false), 'the landings file \'prop\' hearing events at the landing level, blamed on who broke it, never closer together than the gap', `${SHARDS.byFall ? 'by the fall (SHARDS.byFall: the fragments\' own landings tell the floor, the plates\' do not — the drop lands inside one gap): ' : ''}${evs.length} events (smallest gap ${Math.min(...gaps).toFixed(2)} s), levels ${[...new Set(evs.map(e => e.level.toFixed(2)))].join(' / ')}, who ${[...new Set(evs.map(e => e.who))].join(',')}`);
+  F.verdict(evs.length >= 2 && gaps.every(d => d >= SHARDS.eventGap - 1e-9) && evs.every(e => e.level >= SHARDS.level - 1e-9 && e.level <= SHARDS.level + 0.06 && e.who === 2 && e.loud === false), 'the landings file \'prop\' hearing events at the landing level, blamed on who broke it, never closer together than the gap', `${evs.length} events (smallest gap ${Math.min(...gaps).toFixed(2)} s), levels ${[...new Set(evs.map(e => e.level.toFixed(2)))].join(' / ')}, who ${[...new Set(evs.map(e => e.who))].join(',')}`);
   // a plate woken and put back to sleep adds no glass to the floor
   const lit0 = [...S.litter.values()].reduce((a: number, b: number) => a + b, 0);
   for (const c of plates) { c.rest = false; c.v = [0, 0.4, 0]; }
@@ -305,10 +304,7 @@ const VOLLEY: Vec3[] = [[7.4, 1.3, 10], [7.42, 1.31, 10], [6.3, 1.0, 10], [7.9, 
 async function recordVolley(seed: number, opts: { breakOn: boolean; shardsOn: boolean; cut?: boolean; walk?: boolean; dice?: boolean }) {
   const S = await stage(seed, opts); const { W, game, flush } = S;
   if (opts.dice) game.glassBreak.setType(CONF_FAR, 'tempered');   // (the determinism volley: one toughened sheet struck below, so a sheet pouring as dice — by the wave, or dropped at once — is inside what is compared)
-  if (opts.cut) {   // the model OUT: the pool's glass door null, and where the game calls the model a stand-in that answers every public member of it (SeamsOut: the type check names a gap)
-    game.destr.debris.glass = null;
-    game.shards = { pending: [], litter: new Map(), log: [], live: 0, plateCount: 0, release() { return false; }, spall() {}, evicted() {}, crossed() { return false; }, underfoot() { return 0; }, step(_p: Vec3, l: number) { return l; }, update() {}, reset() {}, clear() {}, summary() { return 'cut'; }, test() { return 0; } } satisfies SeamsOut<GlassShards> as any;
-  }
+  if (opts.cut) { game.destr.debris.glass = null; game.shards = { update() {}, reset() {}, step(_p: Vec3, l: number) { return l; }, release() { return false; }, litter: new Map(), log: [], live: 0, plateCount: 0, summary() { return 'cut'; } } as any; }   // the model OUT: the pool's glass door null, a stub where game.ts / floor.ts call it
   W.audioLog = [];
   const rounds: string[] = [], events: string[] = [], emits: string[] = []; const seen = new WeakSet<any>();
   for (let f = 0; f < 60 * 10; f++) {

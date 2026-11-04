@@ -12,7 +12,6 @@
 import type { Game } from '../game/game';
 import { clock, type KeptNote, type RunVerdict, type VerdictMan } from '../game/verdict';
 import { pipsEl } from './verdictPips';
-import { shownName } from '../host/names';
 
 /** a mission played by a squad (its end card is the men's): everything but the stealth game alone or as two */
 export function squadVerdict(V: RunVerdict): boolean { return V.kind !== null && V.kind !== 'quiet'; }
@@ -45,9 +44,9 @@ export function verdictHead(game: Game, V: RunVerdict, kept: KeptNote | null): H
 
 export function verdictMen(game: Game, V: RunVerdict): HTMLElement {
   const box = el('div', 'vd-men'), T = Math.max(1, V.secs), pct = (t: number) => `${(Math.min(1, Math.max(0, t / T)) * 100).toFixed(1)}%`;
-  for (const m of namedMen(game, V)) {
+  for (const m of V.men) {
     const row = el('div', `vd-man t-${m.tone ?? 'mate'} s-${m.state}`);
-    const name = el('span', 'nm'); name.textContent = m.name; name.title = m.name; row.appendChild(name);   // (the title: a long picked name is cut by the column)
+    const name = el('span', 'nm'); name.textContent = m.name; row.appendChild(name);
     const bar = el('span', 'bar'), fill = el('i', 'fill'); fill.style.width = m.state === 'up' ? '100%' : pct(m.downAt); bar.appendChild(fill);
     for (const t of m.drops) { const d = el('i', 'drop'); d.style.left = pct(t); d.title = `${clock(t)} · took down a defender`; bar.appendChild(d); }
     if (m.state !== 'up') { const x = el('i', 'fell'); x.textContent = m.state === 'dead' ? '✕' : m.state === 'wounded' ? '✚' : 'z'; x.style.left = pct(m.downAt); x.title = fellWords(m); bar.appendChild(x); }
@@ -67,12 +66,6 @@ export function verdictSlot(game: Game, V: RunVerdict): HTMLElement | null {
   return slot.children && slot.children.length ? slot : null;
 }
 
-/** THE VERDICT'S MEN AS A PAGE NAMES THEM: a player's picked name over his number (host/names.ts), in his own row and in the words of whoever he put
- *  down. The verdict itself keeps the game's names: they are its state */
-export function namedMen(game: Game, V: RunVerdict): VerdictMan[] {
-  const alias = new Map<string, string>(); for (const m of V.men) if (m.human) alias.set(m.name, shownName(game, m.id, m.name));
-  return V.men.map(m => ({ ...m, name: (m.human ? alias.get(m.name) : undefined) ?? m.name, downBy: alias.get(m.downBy) ?? m.downBy }));
-}
 /** when, where and to whom a man went down (the cross's tooltip, the map mark's) */
 export function fellWords(m: VerdictMan): string {
   const how = m.state === 'dead' ? 'down' : m.state === 'wounded' ? 'down wounded' : 'out cold';

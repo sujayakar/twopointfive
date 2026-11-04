@@ -33,9 +33,8 @@
 // listed only where it is the order's own door, the room fit's, or the point the player himself gave (cover / move / hold) — a door tool's 'threat first'
 // writes a sensed place there. A man the fight has (`yieldT`, or the room fight's own point on his script) is drawn dim: that he is fighting is on his body.
 //
-// A SECOND PLAYER (game/seats.ts): a plan is a SEAT's — `floorPlan` is asked of a seat's view, whose `orders` and `player` are that seat's — and a page
-// draws every seat's (ui/planfloor.ts plansToDraw): its own whole, another's as `PlanFor` says (nothing that is its own player's alone to act on)
-// and fainter (`PLAN.others`).
+// A SECOND PLAYER: `men` are the squad's and would be the same for both; `who` (the open menu's men) and a door's `now` (the men orders go to, who is
+// nearest a set charge, who is down) are the SEAT's — today the one player's, read off `g.orders` and `g.player` at the two marked places.
 //
 // PLAN.on: on on every stand (it is picture only: with nobody asking `floorPlan` nothing runs; asked, a run's digest is the same — tools/qa/plan-check.ts);
 // `?noplan` in the page = nothing drawn, the HUD as it was. IT KEEPS NOTHING OF ITS OWN: the nav grid's answer for a leg, kept between asks, lives with
@@ -55,7 +54,6 @@ import { squadThrowPlans, squadThrowKept, type SquadThrowKept } from './squadthr
 import { FRAG } from './frag';
 import { AUTOPILOT, showSecsOf } from './autopilot';   // (read inside floorPlan only)
 import { PLANLAY, layMen, layPoint, layKey, layPending } from './planlay';   // (the same)
-import { teamPaired } from './seats';   // (the same)
 
 export const PLAN = {
   on: true,
@@ -87,17 +85,7 @@ export const PLAN = {
   reaskSecs: 0.5,
   /** the quiet pair's man waiting on the mark: the key (and, with `keyLit` off, its bar) is this far ahead of his feet, metres */
   pairBarM: 0.55,
-  /** A GAME OF SEVERAL PLAYERS: another player's squad's plan is drawn on this page this much as strong as the page's own (ui/planfloor.ts
-   *  plansToDraw); 0 = not asked for, the page as it was. A guess: nobody has seen it on a GPU. Picture only */
-  others: 0.45,
 };
-/** FOR WHOM A PLAN IS ASKED (a game of several players: every seat's plan is on every page). `own` false = the plan of ANOTHER player's squad, for the
- *  page of someone who cannot act on it: its men, its ordered throws, what waits and what is laid, and nothing that is its own player's alone — no ring
- *  for his open menu, no throw he is only offered, no key on a door or a laid order and none marked as the one the key would send. `reading` = the one
- *  who looks has his OWN order menu up: the standing orders are listed then too, as his own squad's are (PLAN.menuOnly) — so a plan shows in full while
- *  either its player or the looker is in the order mode, and otherwise as orders just given, going out with their age */
-export interface PlanFor { own: boolean; reading: boolean }
-const MINE: PlanFor = { own: true, reading: false };
 
 export interface PlanMan {
   gd: Guard;
@@ -269,11 +257,11 @@ function waitsOnKey(g: Game, out: FloorPlan, toneOf: (gd: Guard) => Tone | null)
 
 /** The squad's plan as it stands this frame, for the overlay. Empty with the switch off, with no squad on the floor, and under any show.
  *  `kept` = the asker's own store (PlanKept); with none, nothing is kept past this one ask and every leg is asked of the grid afresh. */
-export function floorPlan(g: Game, kept: PlanKept = planKept(), who: PlanFor = MINE): FloorPlan {
+export function floorPlan(g: Game, kept: PlanKept = planKept()): FloorPlan {
   const out: FloorPlan = { men: [], who: [], you: null, doors: [], throws: [], laid: [], mode: true };
   const S = g.orders; if (!PLAN.on || !S.active) return out;
   // outside the order mode: only what the order book was just told (its log: who, when) — a module's own re-assign of a man stamps him anew and is not that
-  const mode = out.mode = !PLAN.menuOnly || !!S.menu || who.reading, given = new Map<string, number>();   // (the SEAT's menu: see the head; or the looker's own: PlanFor)
+  const mode = out.mode = !PLAN.menuOnly || !!S.menu, given = new Map<string, number>();   // (the SEAT's menu: see the head)
   // (autopilot.ts: a row the quick key gave is drawn for its own, longer, time — `slow` = how much slower such a man's picture ages —, and the squad's own
   // change of plan, SquadOrders.shows, as one of those. The NEWEST thing that names a man is the one he is drawn by, and it alone: with that switch off no
   // row is stamped, `shows` is empty and this is the line it was)
@@ -285,9 +273,7 @@ export function floorPlan(g: Game, kept: PlanKept = planKept(), who: PlanFor = M
     if (AUTOPILOT.on) for (let i = S.shows.length - 1; i >= 0 && g.time - S.shows[i].t < far && S.shows[i].t <= g.time; i--) for (const c of S.shows[i].who) note(c, S.shows[i].t, showSecsOf({ auto: true }, PLAN.freshSecs));
     for (const [c, e] of last) if (g.time - e.t < e.secs) { given.set(c, e.t); if (e.secs !== PLAN.freshSecs) slow.set(c, PLAN.freshSecs / e.secs); }
   }
-  // (a man's colour is his pair's wherever the TEAM is in pairs — seats.ts teamPaired: a seat's own book of a game of two holds one pair, and its men
-  // are still the red pair or the blue one on the rims and in the debrief)
-  const paired = teamPaired(g), toneOf = (gd: Guard): Tone | null => (paired ? S.pairOf(gd) : null);
+  const toneOf = (gd: Guard): Tone | null => (S.paired ? S.pairOf(gd) : null);
   for (const gd of S.squad()) {
     if (gd.state === 'dead') continue;
     const A = S.of(gd); if (!A || !A.post) continue;
@@ -307,12 +293,11 @@ export function floorPlan(g: Game, kept: PlanKept = planKept(), who: PlanFor = M
     out.men.push({ gd, tag: planTag(gd.callsign), tone: toneOf(gd), age, path: walking && PLAN.paths ? wayOf(g, kept, gd, A, mark) : [], mark, there, held, aim: PLAN.sectors ? aim : null, watch: PLAN.sectors ? watch : null, onDoor: !!watch && onDoor });
   }
   if (PLAN.word) waitsOnKey(g, out, toneOf);
-  if (!who.own) for (const d of out.doors) { d.key = null; d.now = false; }   // (the press is its own player's)
   // a plan laid for the word (planlay.ts): in the order mode all of it; with the menu down an order just laid, going out as an order just given does —
   // and while one waits the key is the plan's, so nothing else is marked as what the key would send now
   if (layPending(g)) {
     for (const d of out.doors) d.now = false;
-    const F = who.own ? keyCap(layKey()) : '';
+    const F = keyCap(layKey());
     for (const o of S.lay.laid) {
       const age = g.time - o.t, k = mode ? 1 : age >= 0 && age < PLAN.freshSecs ? Math.min(1, (1 - age / PLAN.freshSecs) / 0.4) : 0; if (k <= 0) continue;
       const men = layMen(g, o); if (!men.length) continue;
@@ -326,13 +311,12 @@ export function floorPlan(g: Game, kept: PlanKept = planKept(), who: PlanFor = M
   if (PLAN.throws) {
     const ours = new Set(S.squad());
     for (const T of squadThrowPlans(g, kept.throws ??= squadThrowKept())) {
-      if (!ours.has(T.gd) || T.gd.state === 'dead' || T.points.length < 2 || (T.preview && !who.own)) continue;
+      if (!ours.has(T.gd) || T.gd.state === 'dead' || T.points.length < 2) continue;
       const walked = !T.preview && out.men.some(m => m.gd === T.gd && m.path.length > 1);   // (ordered: his way is already his order's, above)
       out.throws.push({ gd: T.gd, tag: planTag(T.gd.callsign), tone: toneOf(T.gd), kind: T.kind, preview: !!T.preview, from: [T.from[0], 0, T.from[2]],
         walk: !walked && PLAN.paths && T.walk && T.walk.length > 1 ? T.walk.map((q): Vec3 => [q[0], 0, q[2]]) : [], arc: flat(T.points[T.points.length - 1], T.land) > 0.1 ? [...T.points, [T.land[0], 0, T.land[2]]] : T.points, land: [T.land[0], 0, T.land[2]], reach: T.kind === 'frag' ? FRAG.lethalM : 0 });
     }
   }
-  if (!who.own) return out;
   const M = S.menu;   // (the SEAT's: see the head)
   if (M && PLAN.who) for (const gd of M.men) if (gd.state !== 'dead') out.who.push({ gd, at: [gd.char.pos[0], 0, gd.char.pos[2]], tone: toneOf(gd) });
   if (M && PLAN.who && !g.player.down) { const p = g.player.char.pos; out.you = [p[0], 0, p[2]]; }   // (the SEAT's own man)

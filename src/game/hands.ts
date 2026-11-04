@@ -36,12 +36,12 @@
 //
 // Habits: nothing here rolls a die or reads the camera, the canvas or a graphics setting; every input is a row performed (Game.act); all state is the
 // Player's (per player), short-lived, and counted as 'busy' by the checkpoints (savestate.ts playerBusy), so it needs no slice of its own.
-import { viewOf } from './seats';
 import { Vec3, v3, clamp, smoothstep, lerp, wrapAngle } from '../math/vec';
 import type { Game, Guard } from './game';
 import type { Door } from './doors';
 import { DOORWAY } from './doors';
 import { RAG, RAG_COUNT } from './ragdoll';
+import { PLAYER_ID } from './consts';
 
 export const HANDS = {
   /** THE switch — the page: on (`?nohands` off); the frozen stand: off (`TPS_HANDS=1` on) */
@@ -449,18 +449,18 @@ export function doorMoveTick(g: Game, dt: number) {
     const hw = pl.char.anim.doorHands();
     if (m.t < HANDS.doorReach || (Math.max(hw.L, hw.R) < 0.6 && m.t < HANDS.handSecs)) return;
     const goal = clearSpot(g, d, d.angle, m.target);
-    if (goal === undefined) { pl.doorMove = null; if (m.open === d.isClosed()) g.doors.use(d, p, pl.char.id, pl.keys); return; }   // (no room after all: as it always was — unless the leaf has meanwhile got where the row wanted it)
-    if (m.open) { g.doors.use(d, p, pl.char.id, pl.keys); if (d.latched) { pl.doorMove = null; return; } }
+    if (goal === undefined) { pl.doorMove = null; if (m.open === d.isClosed()) g.doors.use(d, p, PLAYER_ID, pl.keys); return; }   // (no room after all: as it always was — unless the leaf has meanwhile got where the row wanted it)
+    if (m.open) { g.doors.use(d, p, PLAYER_ID, pl.keys); if (d.latched) { pl.doorMove = null; return; } }
     m.stage = 'swing'; m.t = 0; if (goal) { m.goal = goal; m.stepBest = Infinity; m.stepStall = 0; m.round = m.open && openSide(d, m.target, p) < 0.05 && openSide(d, m.target, goal) > 0; }   // (else: clear where he is — a step in to a leaf going away from him runs on)
   }
   const rem = m.target - d.angle, left = Math.abs(rem);
-  if (m.open ? left < 0.02 : Math.abs(d.angle) < 0.14) { d.vel = 0; if (!m.open) g.doors.pullTo(d, pl.char.id); pl.doorMove = null; return; }   // open: left standing · shut: the sprung last bit and the latch are the door's own
+  if (m.open ? left < 0.02 : Math.abs(d.angle) < 0.14) { d.vel = 0; if (!m.open) g.doors.pullTo(d, PLAYER_ID); pl.doorMove = null; return; }   // open: left standing · shut: the sprung last bit and the latch are the door's own
   if (left < m.best - 1e-4 || m.goal) { m.best = Math.min(m.best, left); m.stallT = 0; }   // (while his feet are still on their way clear, the leaf is only waiting for them: no stall is counted)
   else { m.stallT += dt; if (m.stallT > HANDS.stallSecs) { d.vel = 0; pl.doorMove = null; return; } }
   const rate = HANDS.doorRate * clamp(left / 0.45, 0.3, 1) * smoothstep(-0.05, 0.12, m.t);
   const next = d.angle + Math.sign(rem) * Math.min(left, rate * Math.min(dt, 0.05));
   const now = leafDist(d, d.angle, p), then = leafDist(d, next, p);
-  d.latched = false; d.closing = false; d.vel = 0; d.lastWho = pl.char.id; if (m.open) d.quietT = Math.min(d.quietT, -1.0);
+  d.latched = false; d.closing = false; d.vel = 0; d.lastWho = PLAYER_ID; if (m.open) d.quietT = Math.min(d.quietT, -1.0);
   const free = then >= bodyR(d) - 0.02;
   // coming out round its free end from behind where it will stand: his way crosses the line the leaf ends on, so the leaf keeps clear of the whole of the way
   // he still has to go, not only of where he is — it would otherwise be standing across it by the time he got there
@@ -520,7 +520,7 @@ export function doorMoveLowers(g: Game): boolean {
 export function teamDoorHand(g: Game, gd: Guard): Door | null {
   if (!doorOn() || !HANDS.team || g.touring) return null;
   const c = gd.char; if (c.anim.kicking) return null;
-  for (const op of viewOf(g, gd).doorTools.ops) { const k = op.kick; if (op.lead === gd && op.phase === 'kick' && k && k.hand && !op.door.off && Math.hypot(c.pos[0] - k.pos[0], c.pos[2] - k.pos[2]) < HANDS.teamPreM) return op.door; }
+  for (const op of g.doorTools.ops) { const k = op.kick; if (op.lead === gd && op.phase === 'kick' && k && k.hand && !op.door.off && Math.hypot(c.pos[0] - k.pos[0], c.pos[2] - k.pos[2]) < HANDS.teamPreM) return op.door; }
   const slow = Math.hypot(c.vel[0], c.vel[2]) < HANDS.teamPace;
   for (const d of g.doors.list) {
     if (d.off || d.lastWho !== c.id || Math.abs(d.vel) < HANDS.teamVel) continue;

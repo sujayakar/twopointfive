@@ -14,7 +14,6 @@
 // The table is per VARIANT of the cast (anim/gltf.ts; game/cast.ts says who wears which) + a small per-man jitter off his id (never a die). Sam is 1 exactly; with no cast loaded
 // (the mannequin) everybody is 1; a man at 1 takes the code path as it was (the same buffers, no copy). While two bodies must register — a man in Sam's arm, a body hauled by the
 // ankles — the held one eases to 1 and back. The eased value is presentation state: not saved, not in any digest.
-import { manOf, men } from './seats';
 import { SideMap } from '../math/side';
 import type { Game } from './game';
 import type { Character } from './character';
@@ -33,14 +32,14 @@ export const STATURE_TUNE = { jitter: 0.015, min: 0.92, max: 1.05, easePerSec: 0
 const hash01 = (n: number) => { let x = (n | 0) * 0x9E3779B1; x ^= x >>> 15; x = Math.imul(x, 0x85EBCA6B); x ^= x >>> 13; return ((x >>> 0) % 4096) / 4095; };
 /** the man's own stature (1 for Sam, and for everybody with no cast loaded) */
 export function statureBase(g: Game, c: Character): number {
-  if (manOf(g, c)) return 1;
+  if (c === g.player.char) return 1;
   const v = castVariantOf(g, c); if (!v) return 1;
   const T = STATURE_TUNE; const s = (STATURE[v.name] ?? 1) + (hash01(c.id) * 2 - 1) * T.jitter;
   return Math.round(Math.min(T.max, Math.max(T.min, s)) * 1000) / 1000;
 }
 /** two bodies that must meet: he is in Sam's arm, or is the body Sam hauls */
 function paired(g: Game, c: Character): boolean {
-  for (const pl of men(g)) if (pl.dragging?.char === c) return true;
+  if (g.player.dragging?.char === c) return true;
   const rec = g.guards.find(x => x.char === c) ?? g.civilians.find(x => x.char === c);
   return !!rec?.held;
 }

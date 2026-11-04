@@ -256,27 +256,14 @@ export function doWords(d: ManDo, cast: CastRow[]): string {
 }
 /** the name a replay file goes out under */
 export function replayName(f: ReplayFile): string { return `twopointsix-replay-${f.savedAt.replace(/[:.]/g, '-').replace(/Z$/, '')}-${Math.round(f.seconds)}s${f.notes.length ? `-${f.notes.length}notes` : ''}.json`; }
-/** a replay file's JSON text IN PARTS, which joined are exactly `JSON.stringify(F)`: a long list (the samples, the run tape's steps) goes a few hundred rows a
- *  part. A whole kept visit is longer than one string may be in a browser (about half a gigabyte), so its text is never built as one. */
-export function replayParts(F: unknown): string[] {
-  const parts: string[] = [], ROWS = 256;
-  const put = (v: unknown, depth: number): void => {
-    if (Array.isArray(v) && v.length > ROWS) { parts.push('['); for (let i = 0; i < v.length; i += ROWS) parts.push((i ? ',' : '') + JSON.stringify(v.slice(i, i + ROWS)).slice(1, -1)); parts.push(']'); return; }
-    if (depth < 2 && v !== null && typeof v === 'object' && Object.getPrototypeOf(v) === Object.prototype) {
-      let first = true;
-      for (const [k, x] of Object.entries(v)) { if (x === undefined || typeof x === 'function' || typeof x === 'symbol') continue; parts.push(`${first ? '{' : ','}${JSON.stringify(k)}:`); first = false; put(x, depth + 1); }
-      parts.push(first ? '{}' : '}'); return;
-    }
-    parts.push(JSON.stringify(v));
-  };
-  put(F, 0); return parts;
-}
-/** a replay as ONE file's bytes and the name it goes under: the notes that have words in it, plain JSON written in parts (the backend's road packs a text
- *  file itself on its way, cloud/files.ts: packing it here too would make two shapes of one kind of file). What F7 with no shelf sends (ui/replaykey.ts),
- *  the map viewer's Send (viewer.ts) and the engine replay's bar (engineplay.ts) */
-export function replayBlob(F: ReplayFile): { name: string; blob: Blob } {
-  const out: ReplayFile = { ...F, notes: F.notes.filter(n => n.text.trim()) };
-  return { name: replayName(out), blob: new Blob(replayParts(out), { type: 'application/json' }) };
+/** hand a replay to the browser as ONE file, the notes that have words in it, gzipped when it is large (the viewer and the tools read both): the map viewer's
+ *  'Download with notes' and the engine replay's Save. The name it went out under. */
+export async function downloadReplay(F: ReplayFile): Promise<string> {
+  const out: ReplayFile = { ...F, notes: F.notes.filter(n => n.text.trim()) }; let name = replayName(out);
+  const text = JSON.stringify(out); let blob = new Blob([text], { type: 'application/json' });
+  if (text.length > 3e6 && typeof CompressionStream !== 'undefined') { try { blob = await new Response(blob.stream().pipeThrough(new CompressionStream('gzip'))).blob(); name += '.gz'; } catch { /* plain */ } }
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name; document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 2000);
+  return name;
 }
 
 // ── ONE WINDOW (the maintainer, 10-15: "replays should just play in the current window, not open a new tab"): the game page leaves a mark when it goes to a

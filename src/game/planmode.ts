@@ -33,24 +33,22 @@ function goalParts(S: SquadOrders): { idle: Guard[]; groups: Guard[][] } {
 }
 /** WHO TAKES A GOAL ADDED ON `t` (CMDRING.goals has the rule), and how they come to: 'his' — a teammate under the cursor (where it still picks one,
  *  `wholeSquad` off): his alone · 'all' — on himself, or nothing going: everyone · 'same' — a door some of them are on already: those men ·
- *  'idle' — the men with nothing to do · 'split' — half of the biggest group on one thing, a whole pair where it has two (CMDRING.goalHalf: and half
- *  of a squad with nothing going, where it is more than one man). Null: every group is one
+ *  'idle' — the men with nothing to do · 'split' — half of the biggest group on one thing, a whole pair where it has two. Null: every group is one
  *  man and nobody is free (the caller says so). Nothing is ordered and nothing counted here: the tap (planGoal) and the ring (orders.ts ringUp,
  *  CMDRING.goalRing) both ask it. */
 export function goalMen(S: SquadOrders, t: OrderTarget): { men: Guard[]; how: 'his' | 'all' | 'same' | 'idle' | 'split' } | null {
   const all = S.men('all'), { idle, groups } = goalParts(S), spot = t.kind === 'floor' && !t.thing;   // (a bare spot, by a wall or not: a place to watch)
   if (t.kind === 'none' && t.man) return { men: S.recipients(t), how: 'his' };
-  const half = !groups.length && CMDRING.goalHalf && all.length > 1;   // (CMDRING.goalHalf: with nothing going the squad gives up half of itself, as a group on one thing does below)
-  if (t.kind === 'none' || (!groups.length && !half)) return { men: all, how: 'all' };
+  if (t.kind === 'none' || !groups.length) return { men: all, how: 'all' };
   const on = t.kind === 'door' ? groups.find(G => G.every(m => S.of(m)?.door === t.door)) : null;
   if (on) return { men: on, how: 'same' };
-  if (idle.length && !half) return { men: idle, how: 'idle' };
+  if (idle.length) return { men: idle, how: 'idle' };
   const far = (men: Guard[]) => men.reduce((s, m) => s + Math.hypot(m.char.pos[0] - t.at[0], m.char.pos[2] - t.at[2]), 0) / men.length;
   const line = (men: Guard[]) => spot ? men.filter(m => S.hasLine(m, t)).length / men.length : 0;   // (a spot to watch: the men who can see it)
   const best = (ls: Guard[][]) => ls.reduce((a, b) => line(b) > line(a) || (line(b) === line(a) && far(b) < far(a) - 1e-6) ? b : a);
-  const pool = half ? [all] : groups, size = Math.max(...pool.map(G => G.length)); if (size < 2) return null;
-  const G = best(pool.filter(x => x.length === size));
-  const parts = S.pairs().map(id => G.filter(m => S.pairOf(m) === id)).filter(l => l.length * 2 <= G.length + (half ? 1 : 0) && l.length > 0);   // (half of a squad of three is the nearer of its pair and its odd man)
+  const size = Math.max(...groups.map(G => G.length)); if (size < 2) return null;
+  const G = best(groups.filter(x => x.length === size));
+  const parts = S.pairs().map(id => G.filter(m => S.pairOf(m) === id)).filter(l => l.length * 2 <= G.length && l.length > 0);
   return { men: parts.length ? best(parts) : [...G].sort((a, b) => line([b]) - line([a]) || far([a]) - far([b])).slice(0, G.length >> 1), how: 'split' };
 }
 /** … and Shift + the key kept down is the ring for those men (CMDRING.goalRing: orders.ts ringUp) */

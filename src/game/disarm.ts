@@ -21,7 +21,6 @@
 // falls from where it is. A checkpoint is not written with an item off the floor (savestate.ts), and a hold is not filed at all.
 //
 // State: Hold.strip (player.ts), gone with the hold; Item.carried. No module state, no dice of its own (an item's spawn draws the four it always draws).
-import { men } from './seats';
 import type { Game, Guard } from './game';
 import type { Hold } from './player';
 import type { Item } from './throwables';
@@ -71,7 +70,7 @@ export function disarmHand(H: Hold): boolean { return !!H.strip && H.strip.t < H
 /** once a frame, after everybody has been posed (game.ts): the move's clock, the take, the gun carried, the gun let go */
 export function disarmTick(g: Game, dt: number): void {
   const pl = g.player, H = pl.holding, S = H?.strip ?? null;
-  for (const it of g.items.items) if (it.carried && it !== S?.item && (g.seats.length === 1 || !men(g).some(o => o.holding?.strip?.item === it))) letGo(g, it, pl.char);   // (a gun in his hand and no hold to carry it for — however that ended — falls from where it is)
+  for (const it of g.items.items) if (it.carried && it !== S?.item) letGo(g, it, pl.char);   // (a gun in his hand and no hold to carry it for — however that ended — falls from where it is)
   if (pl.catchDue !== undefined && (!H || !S || g.time >= pl.catchDue || H.phase !== 'grab')) {   // (HOLD.stripFirst: the catch's voice as the arm lands — or now, if the hold or the move ended first: a grab is never silent)
     pl.catchDue = undefined; g.audio.play('grabCatch', v3.add((H?.g.char ?? pl.char).pos, [0, 1.4, 0]), DISARM_GAIN.catch, { rate: 1 }); }
   if (!H || !S) return;
