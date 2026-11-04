@@ -303,6 +303,7 @@ export function pageSwitches(q: URLSearchParams): void {
   DOORPATH.on = !q.has('nodoorpath') && q.get('doorpath') !== '0'; if (q.get('doorpath') === 'gun') DOORPATH.gun = true;
   WALLSNAP.on = !q.has('nowallsnap');   // back to the wall, the feel pass (game/wallsnap.ts): the take on one eased clock with stepping feet and a settle, the way off keeping his momentum, and Q with the rifle in hand STACKS on the wall (low ready; the cursor round an open end steps him out): ON in the page; ?nowallsnap = the hold as it was
   WALLSNAP.press = q.get('wallpress') !== '0';   // …taken without the key (game/wallsnap.ts `press`, player.ts wallPress): a move key held into a wall takes it as its key does (while this is on the hold has no key on the page's board: host/keymap.ts qFree) — ON in the page (Options ▸ Game has its row, kept per machine); ?wallpress=0 = Q alone, as it was
+  WALLSNAP.pressRun = q.get('wallrun') !== '0';   // …and at a run (wallsnap.ts `pressRun`, player.ts wallPress / wallRanOn; acts only with `press`): a sprint held straight into a wall takes it as a walk does, and that run, its keys still held, does not then take him off it — ON in the page; ?wallrun=0 = never at a run, as it was
   WALLSNAP.voice = q.get('wallvoice') !== '0';   // …heard (wallsnap.ts `voice`): his back landing on a wall and his stepping off it each have a sound, the player's ears only; ?wallvoice=0 = the faint scuff alone, as it was
   WALLSNAP.leanGun = q.has('noleangun') ? 0 : LEAN_GUN_M;   // …and the step-out round an end goes as far as the RIFLE needs (wallsnap.ts `leanGun`): round an end on his gun side the eyes' 0.6 m left the rifle in the jamb and its rounds in the wood; ?noleangun = 0.6 m whichever side, as it was
   WALLSNAP.slow = q.get('wallslow') !== '0';   // …and unhurried (wallsnap.ts `slow`): the take runs twice its seconds and the pose comes on and lets go at half its rate; ?wallslow=0 = the take as it was
@@ -635,6 +636,7 @@ export const FROZEN_HOLDS: Record<string, string> = {
   'AIRDUST.on': 'TPS_AIRDUST=1',
   'WALLSNAP.on': 'TPS_WALLSNAP=1',
   'WALLSNAP.press': 'TPS_WALLPRESS=1',
+  'WALLSNAP.pressRun': 'TPS_WALLRUN=1',
   'WALLSNAP.voice': 'TPS_WALLVOICE=1',
   'WALLSNAP.slow': 'TPS_WALLSLOW=1',
   'WALLSNAP.leanGun': 'TPS_LEANGUN=1',
