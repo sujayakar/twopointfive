@@ -302,17 +302,22 @@ export async function musicCheck(): Promise<boolean> {
       line(!why.length, "the team's nerves: with every defender down a teammate's left-over wariness does not hold the score up; a fight and a show's own men still read; switch off = as it was", why.join(' · ') || told);
     }
     // ---- a tape: the run tape carries every registry table and its player puts each over the page's — the score's switch is the viewer's own (knobs.ts VISIT_OWN)
-    { const K: any = await import(`${ROOT}/src/game/knobs.ts`), E: any = await import(`${ROOT}/src/replay/engineplay.ts`), R = K.knobRegistry() as { MUSIC: typeof MUSIC; PACE: { max: number } }, pace = R.PACE.max, own = [...K.VISIT_OWN];
+    // The player lays its tables through the recipe's stand (replay/recipestand.ts, the one a networked game's page uses too), so the stand-in is a player with a
+    // stand of its own, and its tape is one made of this page now (runtape.ts tablesNow: every registry table as JSON) with two rows changed — a tape that lacks a
+    // table is read as one from before that table and has its switch put off, which is not what this line asks.
+    { const K: any = await import(`${ROOT}/src/game/knobs.ts`), E: any = await import(`${ROOT}/src/replay/engineplay.ts`), RS: any = await import(`${ROOT}/src/replay/recipestand.ts`), R = K.knobRegistry() as { MUSIC: typeof MUSIC; PACE: { max: number } }, pace = R.PACE.max, own = [...K.VISIT_OWN];
+      const today = (): Record<string, unknown> => Object.fromEntries(Object.entries(K.knobRegistry()).map(([n, t]) => [n, JSON.parse(JSON.stringify(t))])), at = MUSIC.pieces, was = JSON.stringify(today());
       if (process.env.MUSIC_BREAK === '1') K.VISIT_OWN.length = 0;   // the red path: the player writes every table the tape has
       try {
         const got: boolean[] = [];
         for (const mine of [true, false]) { MUSIC.pieces = mine;
-          E.TapePlay.prototype.tables.call({ tape: { recipe: { knobs: null, tables: { MUSIC: { pieces: !mine, minutes: 99 }, PACE: { max: pace + 0.5 } } } }, kitOf() {} });
+          E.TapePlay.prototype.tables.call({ rs: new RS.RecipeStand({ knobs: null, tables: { ...today(), MUSIC: { pieces: !mine, minutes: 99 }, PACE: { max: pace + 0.5 } } }) });
           got.push(MUSIC.pieces === mine && MUSIC.minutes === keep.minutes && R.PACE.max === pace + 0.5); R.PACE.max = pace; }
-        const src = await Bun.file(`${ROOT}/src/replay/engineplay.ts`).text(), sites = (src.match(/K\.knobsPlayed\(\)/g) ?? []).length, whole = /K\.(knobsNamed|knobRegistry)\(\)/.test(src);
-        line(R.MUSIC === MUSIC && got.every(Boolean) && sites === 2 && !whole && !('MUSIC' in K.knobsPlayed()) && !K.JOURNAL_KNOBS.includes('MUSIC'),
+        MUSIC.pieces = at; const rest = JSON.stringify(today()) === was;   // (… and nothing else of this page moved: the tape's other tables are this page's own)
+        const src = await Bun.file(`${ROOT}/src/replay/engineplay.ts`).text() + await Bun.file(`${ROOT}/src/replay/recipestand.ts`).text(), sites = (src.match(/K\.knobsPlayed\(\)/g) ?? []).length, whole = /K\.(knobsNamed|knobRegistry)\(\)/.test(src);
+        line(R.MUSIC === MUSIC && got.every(Boolean) && rest && sites === 2 && !whole && !('MUSIC' in K.knobsPlayed()) && !K.JOURNAL_KNOBS.includes('MUSIC'),
           "a tape: its player puts the tape's tables over the page's and leaves the score's switch as the viewer has it, on or off (?onetheme holds on a tape made without it)",
-          `pieces on kept ${got[0]} · off kept ${got[1]} · the player's table puts through knobsPlayed ${sites} of 2${whole ? ' · and one over the whole registry' : ''} · a recording carries MUSIC ${K.JOURNAL_KNOBS.includes('MUSIC')}`);
+          `pieces on kept ${got[0]} · off kept ${got[1]} · every other table as it stood ${rest} · the player's and its stand's table puts through knobsPlayed ${sites} of 2${whole ? ' · and one over the whole registry' : ''} · a recording carries MUSIC ${K.JOURNAL_KNOBS.includes('MUSIC')}`);
       } finally { R.PACE.max = pace; K.VISIT_OWN.length = 0; K.VISIT_OWN.push(...own); }
     }
   } finally { Object.assign(MUSIC, keep); MUSIC.pieces = stand; Math.random = sys; }

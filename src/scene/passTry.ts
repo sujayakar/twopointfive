@@ -16,12 +16,13 @@ import { BoxFlag, type Box } from './boxes';
 import { cutRecord } from './cut';
 import type { Vec3 } from '../math/vec';
 import { GWOT_PALETTE, SNOW_PALETTE, gwotAs } from './gwotPalette';
+import { toned, worded } from './stuff';
 import { ring, arc } from './lorryTry';
 
 type More = Partial<Box>;
 const P = GWOT_PALETTE, SNOW = SNOW_PALETTE.snow, DECAL = BoxFlag.NoShadow;
-const of = (row: Vec3, k: number): Vec3 => [row[0] * k, row[1] * k, row[2] * k];
-const mk = (c: Vec3, h: Vec3, yaw: number, albedo: Vec3, o: More = {}): Box => ({ c, h, yaw, albedo, emissive: [0, 0, 0], flags: 0, owner: 0, cutHeight: 1000000, rough: 0.6, ...o });
+const of = (row: Vec3, k: number): Vec3 => toned(row, k);   // (a row toned is the row's stuff: scene/stuff.ts)
+const mk = (c: Vec3, h: Vec3, yaw: number, albedo: Vec3, o: More = {}): Box => worded({ c, h, yaw, albedo, emissive: [0, 0, 0], flags: 0, owner: 0, cutHeight: 1000000, rough: 0.6, ...o });
 /** what stands: a round of radius r from y0 to y1 */
 const upright = (b: Box, r: number): Box => { b.cut = cutRecord(b.h, ring(r, 2)).cut; b.cutRound = 2; return b; };
 /** … as a prism of twelve sides with a turning normal (scene/geoTry.ts roundStacks' way: on the look page with a geometry trial on the GPU's own round test is

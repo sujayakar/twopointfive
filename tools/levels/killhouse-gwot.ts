@@ -20,6 +20,7 @@ import { lookMarks } from './lookMarks';
 import type { Level } from '../../src/scene/level';
 import type { LevelScenarios, TeamStart } from '../../src/scene/scenarios';
 import type { Vec3 } from '../../src/math/vec';
+import { madeOf } from '../../src/scene/stuff';
 
 export const NAME = 'killhouse-gwot';
 export const DRESS_AS = 'killhouse';
@@ -40,7 +41,7 @@ const SKIN: Skin = {
   // plywood for everything the plain file has in wood (the barricade, the crates, the targets, the table tops), sandbags and a HESCO berm on the range
   pick: c => c.name === 'wood' ? 'ply' : c.group === 'range' && c.name === 'partTan' ? 'sandbag' : c.group === 'range' && c.name === 'concrete' ? 'hesco' : undefined,
   dress: (G, level, T) => {
-    const M = lookMarks(T), tape = T.tone(P.plasticWhite, 0.9), worn = T.tone(VIOLET, 0.8);
+    const M = lookMarks(T), tape = madeOf('paint', T.tone(P.plasticWhite, 0.9)), worn = T.tone(VIOLET, 0.8);
     const rc = (level.scenarios as LevelScenarios | undefined)?.roomClear; if (!rc) throw new Error('killhouse-gwot: the level carries no room clear to read its marks off');
     // THE GROUND A RANGE WEARS, laid before any paint so the marks lie on it: the range road along the south edge and the spur a truck backs up toward the
     // ready line (wheels), the beat the details walk round the house a stride off its walls and out to the firing line (feet), and gravel raked between the

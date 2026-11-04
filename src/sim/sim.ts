@@ -305,13 +305,15 @@ export const RUST = {
 };
 /** the rows that work their lengths and angles out in the module, and so answer only where the game's own maths stand in Math's place (EXACT.on) */
 const OWN_MATHS: readonly string[] = ['maths', 'fog', 'poses', 'sight', 'light', 'smoke', 'sound', 'paths', 'doors', 'walk', 'props', 'slabs', 'items'];
-/** THE ROWS THAT ARE ON WHERE THE GAME IS PLAYED (the page, and so the shipped stand; `?rust<row>=0` / `TPS_RUST<ROW>=0` puts one off, `?rust=0` all of
- *  them): the systems that are the same game to the bit in the module AND cost nothing there, measured. The box world's lines are faster in the module;
- *  a circle against it and the fog's sight pass ask the same copy of the boxes and were measured no slower (docs/agents/rust.md, "Rows that are on", has
- *  the numbers). A row that is not here is a proof and no more yet: its state or its layers are right in the module, but while what calls them is
- *  TypeScript every question crosses, and a crossing costs more than the answer (the poses, the walk's layers, the die, the doors, what falls, the maths). The senses' rows
- *  answer only on the CPU-sense stand. A runtime with no WebAssembly keeps every row off whatever this says (the setters below), and plays the same game. */
-export const RUST_ON: readonly (keyof typeof RUST)[] = ['lines', 'circles', 'fog'];
+/** THE ROWS THAT ARE ON WHERE THE GAME IS PLAYED (the page and both of the harness's stands; `?rust<row>=0` / `TPS_RUST<ROW>=0` puts one off, `?rust=0` /
+ *  `TPS_RUST=0` all of them): EVERY row but the maths. Each is the same game to the bit in the module, by its differential and by the missions under both
+ *  engines (tools/qa/rust-check.ts). They are not all cheaper there yet: the box world's lines, the furniture and the poses with the walk's layers are; a
+ *  row whose callers are still TypeScript pays a crossing a question (the die, a door, a sound's path, a route) and is on all the same, because the
+ *  TypeScript behind it is going and the game must be played the way it will be kept (docs/agents/rust.md, "Rows that are on", has every number).
+ *  The maths stay TypeScript (math/exact.ts): a sine a crossing is the dearest crossing there is, and the module works its own out inside itself.
+ *  The rows that work lengths and angles out (OWN_MATHS) answer only under the game's own maths. A runtime with no WebAssembly keeps every row off
+ *  whatever this says (the setters above), and plays the same game. */
+export const RUST_ON: readonly (keyof typeof RUST)[] = ['lines', 'circles', 'fog', 'poses', 'dice', 'sight', 'light', 'smoke', 'sound', 'paths', 'doors', 'falls', 'walk', 'props', 'slabs', 'items', 'rays'];
 /** is `row` one of them */
 export const rustOn = (row: string): boolean => (RUST_ON as readonly string[]).includes(row);
 /** THE ADDRESS'S WORDS ABOUT THE ROWS (`rust`, and `rust<row>` a row: host/profile.ts pageRows reads them). They are the VISIT's, never a run's: which

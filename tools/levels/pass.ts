@@ -49,6 +49,7 @@ import { gwotKit, gwotOfOffice, GWOT_PALETTE, GWOT_MATERIALS, type GwotOpening }
 import { SNOW_PALETTE, SNOW_FINISH, SNOW_MATERIALS, type SnowMat } from '../../src/scene/gwotPalette';
 import { WORLD } from '../../src/scene/world';
 import { BoxFlag } from '../../src/scene/boxes';
+import { PANEL_GREY } from '../../src/scene/stuff';
 
 export const NAME = 'pass';
 export const NOTES = 'The pass: a walled teahouse and truck halt on a high pass road, at night, in winter. Eight men in four rooms round a yard under snow; the snow is in the file (ground, drifts, caps, trodden paths, ruts), laid by hand. Two ways in: the road west of the gate, and the back of the kitchen outside the wall. Regenerate: bun run tools/levels/export.ts pass';
@@ -300,13 +301,24 @@ export function build(extra: PassExtra = {}): { level: Level; scenarios: LevelSc
   // ---- THE LORRY: a two-axle lorry with a canvas tilt, where it stopped when the pass shut (KEPT: it is the yard's one piece of cover, what screens
   // the gateway from the tea room's windows and what the ruts are laid to). Nose toward local +X ----
   grp('lorry');
-  const LS = G.lorry(LORRY.x, LORRY.z, LORRY.yaw), L = G.piece(LORRY.x, LORRY.z, LORRY.yaw);   // (the kit's lorry, box for box what stood here; LS = the shapes it says)
+  const L = G.piece(LORRY.x, LORRY.z, LORRY.yaw);
+  for (const lx of [2.2, -1.2, -2.25]) for (const s of [-1, 1]) L(lx, s * 0.98, 0, 0.96, 0.48, 0.15, M.rubber);
+  L(-0.1, 0, 0.5, 0.74, 3.1, 0.42, M.iron);                                                   // the chassis
+  L(3.42, 0, 0.5, 0.78, 0.06, 1.12, M.iron);                                                  // bumper
+  L(2.75, 0, 0.74, 1.5, 0.62, 0.98, M.truckRed);                                              // bonnet
+  L(1.55, 0, 0.74, 1.5, 0.62, 1.12, M.truckRed);                                              // the cab: doors
+  L(1.55, 0, 1.5, 2.08, 0.58, 1.06, M.glassDark);                                             // … glass
+  L(1.5, 0, 2.08, 2.2, 0.62, 1.1, M.truckRed);                                                // … roof
+  for (const s of [-1, 1]) L(3.38, s * 0.7, 0.86, 1.02, 0.02, 0.1, M.plasticWhite);           // headlamps (dead)
+  L(-1.15, 0, 0.74, 0.9, 2.05, 1.16, M.woodGrey);                                             // the bed
+  for (const s of [-1, 1]) L(-1.15, s * 1.14, 0.9, 1.45, 2.05, 0.03, M.poplar);               // sideboards
+  L(-3.17, 0, 0.9, 1.45, 0.03, 1.16, M.poplar); L(0.87, 0, 0.9, 1.7, 0.03, 1.16, M.poplar);   // tailboard, headboard
+  L(-1.15, 0, 0.9, 1.95, 1.95, 1.06, M.canvas);                                               // the load under its canvas
   grp('snow.lorry');
-  // CAPS, laid on the lorry's bowed tops by the kit's one rule (G.lay: each slab keeps to the crown, and a sheet of snow follows the bow under it — trim, there
-  // only when shapes are on): the tilt (deep: it has stood for days), a second fall over the first (one outline: two nested ones read as slabs), the cab's
-  // roof, the bonnet
-  { const lay = (t: typeof LS.tops.load, lx: number, y0: number, y1: number, hx: number, hz: number, nth = 0) => G.lay(LORRY.x, LORRY.z, LORRY.yaw, t, lx, 0, y0, y1, hx, hz, S.snow, nth);
-    lay(LS.tops.load, -1.15, 1.95, 2.05, 1.84, 0.96); lay(LS.tops.load, -1.15, 2.05, 2.11, 1.84, 0.96, 1); lay(LS.tops.roof, 1.5, 2.2, 2.27, 0.55, 1.02); lay(LS.tops.bonnet, 2.8, 1.5, 1.555, 0.52, 0.9); }
+  L(-1.15, 0, 1.95, 2.05, 1.84, 0.96, S.snow, { flags: DECAL });                              // CAPS: the tilt (deep: it has stood for days),
+  L(-1.15, 0, 2.05, 2.11, 1.84, 0.96, S.snow, { flags: DECAL });                              //   a second fall over the first, the whole tilt (one outline: two nested ones read as slabs)
+  L(1.5, 0, 2.2, 2.27, 0.55, 1.02, S.snow, { flags: DECAL });                                 //   the cab's roof
+  L(2.8, 0, 1.5, 1.555, 0.52, 0.9, S.snow, { flags: DECAL });                                 //   the bonnet
   L(3.72, 0, 0, 0.44, 0.25, 1.0, S.snow);                                                     // BANK (stops feet): the nose stands into the wind; snow is banked on the bumper,
   L(4.12, 0, 0, 0.3, 0.2, 0.9, S.snow);                                                       //   stepping down
   L(4.47, 0, 0, 0.17, 0.2, 0.75, S.snow);                                                     //   to a lip a man wades
@@ -454,7 +466,7 @@ export function build(extra: PassExtra = {}): { level: Level; scenarios: LevelSc
   G.wire(9.6, 7.0, 11.88, 7.0, 2.8); G.wire(8.6, 9.0, 8.6, 13.5, 2.8); G.wire(12.1, 20.3, 21.0, 22.0, 2.62);
   // ---- the breaker (the lean-to's back wall) and one emergency beacon: the game's blackout wants both ----
   grp('breaker');
-  const brk = add({ c: [6.16, 1.35, 8.0], h: [0.04, 0.36, 0.28], albedo: [0.42, 0.44, 0.45], name: 'breaker_panel' });
+  const brk = add({ c: [6.16, 1.35, 8.0], h: [0.04, 0.36, 0.28], albedo: PANEL_GREY, name: 'breaker_panel' });
   const brkLed = add({ c: [6.21, 1.62, 7.82], h: [0.01, 0.015, 0.015], albedo: P.plasticBlack, rough: 0.5, emissive: [0.3, 4, 0.6], flags: BoxFlag.NoShadow });
   grp('beacons');
   add({ c: [17.6, H - 0.06, 8.6], h: [0.07, 0.06, 0.07], albedo: [0.2, 0.2, 0.22], flags: BoxFlag.NoShadow | BoxFlag.NoPrimary });

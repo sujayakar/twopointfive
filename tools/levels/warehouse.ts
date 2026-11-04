@@ -53,6 +53,7 @@ import { WORLD } from '../../src/scene/world';
 import { BoxFlag, type Box } from '../../src/scene/boxes';
 import { livedKit } from './livedKit';
 import { gwotKit, gwotOfOffice } from '../../src/scene/gwotKit';
+import { drawnAs, PANEL_GREY, CHAIR_GREY, madeOf } from '../../src/scene/stuff';
 
 export const NAME = 'warehouse';
 export const NOTES = 'The warehouse: a racked hall and a loading dock ringed by small rooms off an L-shaped service corridor, a way in on every face, the team starting outside. Eleven defenders in three squads (floor, dock, office). For the four man squad. One floor, box geometry only, the office\'s shell and kit. Regenerate: bun run tools/levels/export.ts warehouse';
@@ -177,17 +178,17 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
 
   // ---------------- the plant room (x 4..10, z 4..8): p_s on the corridor, plant_ext on the north face ----------------
   grp('plant');
-  add({ c: [9.1, 0.95, 5.0], h: [0.55, 0.95, 0.55], albedo: [0.5, 0.5, 0.48], rough: 0.4 });                          // boiler
+  add({ c: [9.1, 0.95, 5.0], h: [0.55, 0.95, 0.55], albedo: CHAIR_GREY, rough: 0.4 });                          // boiler
   add({ c: [9.2, 0.7, 6.7], h: [0.45, 0.7, 0.45], albedo: [0.2, 0.3, 0.45], rough: 0.4 });                            // pressure vessel
   add({ c: [8.2, 2.55, 4.4], h: [1.6, 0.06, 0.06], albedo: C.metal, flags: BoxFlag.NoShadow });                       // pipe run under the ceiling
   add({ c: [9.1, 2.3, 5.0], h: [0.07, 0.4, 0.07], albedo: C.metal, flags: BoxFlag.NoShadow });                        // flue
   // the control cabinet on the north wall, west of the door: the old mission's rack (a placeholder the level format wants)
   const DRIVE_RACK = 0; const slots: { u: number; y: number; amber: boolean }[] = [];
   for (let u = 0; u < 10; u++) { if (((u * 7) % 5) > 1) continue; slots.push({ u, y: 0.32 + u * 0.178, amber: u % 7 === 3 }); }
-  const rackBody = add({ c: [4.7, 1.05, 4.75], h: [0.33, 1.05, 0.5], albedo: [0.06, 0.06, 0.07], rough: 0.3, ...mk(MD.rackMarks([0.33, 1.05, 0.5], slots.map(sl => ({ v: sl.y - 1.05, amber: sl.amber })), TX)) });
+  const rackBody = add({ c: [4.7, 1.05, 4.75], h: [0.33, 1.05, 0.5], albedo: drawnAs('metal', [0.06, 0.06, 0.07]), rough: 0.3, ...mk(MD.rackMarks([0.33, 1.05, 0.5], slots.map(sl => ({ v: sl.y - 1.05, amber: sl.amber })), TX)) });
   const rackFront: Vec3 = [4.7, 1.1, 5.28];
   switchables.push({ name: 'rack0_leds', boxes: [rackBody], group: 'server_leds', on: true, baseEmissive: [0, 0, 0], flicker: true, mains: false });
-  const brk = add({ c: [5.2, 1.35, 7.9], h: [0.28, 0.36, 0.04], albedo: [0.42, 0.44, 0.45], name: 'breaker_panel' });
+  const brk = add({ c: [5.2, 1.35, 7.9], h: [0.28, 0.36, 0.04], albedo: PANEL_GREY, name: 'breaker_panel' });
   const brkLed = add({ c: [5.02, 1.62, 7.85], h: [0.015, 0.015, 0.01], albedo: C.black, emissive: [0.3, 4, 0.6], flags: BoxFlag.NoShadow });
   add({ c: [5.2, 2.3, 7.9], h: [0.03, 0.6, 0.03], albedo: [0.3, 0.3, 0.32], flags: BoxFlag.NoShadow });
   cardboardBox(4.6, 7.2, 0.5, 0.2);
@@ -206,8 +207,8 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
   add({ c: [24.55, 0.45, 5.4], h: [0.35, 0.45, 1.1], albedo: C.white, ...mk(MD.cupboardMarks([0.35, 0.45, 1.1], '-x', 3, TX)) }); add({ c: [24.55, 0.92, 5.4], h: [0.38, 0.03, 1.15], albedo: [0.2, 0.2, 0.22] });   // counter along the east wall
   add({ c: [24.5, 1.0, 7.3], h: [0.4, 1.0, 0.4], albedo: [0.75, 0.75, 0.74] });                                       // fridge
   add({ c: [24.6, 1.1, 4.8], h: [0.25, 0.15, 0.2], albedo: [0.15, 0.15, 0.16] });                                     // microwave
-  table(21.4, 5.6); chair(20.3, 5.6, Math.PI / 2, [0.5, 0.5, 0.48]); chair(22.5, 5.6, -Math.PI / 2, [0.5, 0.5, 0.48]); papers(21.6, 0.75, 5.55, 0.5);
-  chair(18.4, 7.3, 2.4, [0.5, 0.5, 0.48]); bin(17.5, 4.6);
+  table(21.4, 5.6); chair(20.3, 5.6, Math.PI / 2, CHAIR_GREY); chair(22.5, 5.6, -Math.PI / 2, CHAIR_GREY); papers(21.6, 0.75, 5.55, 0.5);
+  chair(18.4, 7.3, 2.4, CHAIR_GREY); bin(17.5, 4.6);
   add({ c: [18.6, 1.3, 7.92], h: [0.6, 0.4, 0.02], albedo: [0.2, 0.35, 0.3] });                                       // notice board on the south wall
   ceilingPanel(21.0, 6.0, true, 'break', false, 1.2, 0.6, [8, 7.6, 6.9]);
 
@@ -390,7 +391,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
     [10.35, 10.85, 11.35, 11.85, 12.35, 13.35, 13.85].forEach((x, k) => L.thing(x, 2.0, 4.48, 0.12, 0.07, 0.14, k === 0 ? C.white : YEL));   // the helmets: the foreman's white, one missing
     soft(12.85, 2.0, 4.45, 0.16, 0.03, 0.12, P.hiVis); soft(10.4, 2.0, 6.2, 0.14, 0.03, 0.18, P.hiVis); L.thing(10.4, 2.0, 7.2, 0.2, 0.12, 0.26, C.chair);   // a vest where it should be, another and a kit bag on the west row
     for (const z of [4.6, 5.15]) L.hung(16.92, z, false, 0.4, 1.0, 1.6, P.hiVis);  // two vests on the east wall
-    L.mat(10.8, 4.85, 14.0, 5.55, [0.34, 0.26, 0.17], 0.035); for (const x of [11.58, 12.38, 13.18]) L.mat(x, 4.85, x + 0.05, 5.55, C.black, 0.037);   // the duckboard: one long board (darker than a carton), dark gaps across it
+    L.mat(10.8, 4.85, 14.0, 5.55, drawnAs('mud wall', [0.34, 0.26, 0.17]), 0.035); for (const x of [11.58, 12.38, 13.18]) L.mat(x, 4.85, x + 0.05, 5.55, C.black, 0.037);   // the duckboard: one long board (darker than a carton), dark gaps across it
     for (const x of [12.0, 13.4]) { const at = K.frameAt(x, 7.45, 0.1);           // two flattened cartons on clear floor along the south wall, a few degrees off it (the one yaw nothing else here has), sandals at their feet
       add({ c: at(0, 0.008, 0), h: [0.5, 0.008, 0.31], yaw: 0.1, albedo: C.cardboard, flags: NS });
       add({ c: at(0.66, 0.012, 0.06), h: [0.11, 0.012, 0.045], yaw: 0.1, albedo: C.black, flags: NS }); }
@@ -588,7 +589,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
     // ---- the quiet side, north and west: a shipping container alone on the north verge; the smokers' bench against the west wall beside the fire exit
     L.room('verge');
     { const EARTH: Vec3 = [0.25, 0.21, 0.15];
-      L.mat(14.6, 0.1, 21.7, 2.9, [0.4, 0.38, 0.34], 0.018);                       // THE DETAINED CONTAINER: a gravel hardstanding,
+      L.mat(14.6, 0.1, 21.7, 2.9, madeOf('gravel', [0.4, 0.38, 0.34]), 0.018);                       // THE DETAINED CONTAINER: a gravel hardstanding,
       G.container(18, 1.5);                                                        // the kit's twenty-footer, its doors to the east,
       B(20.55, 0.274, 20.75, 2.726, 0, 2.596, C.red, NS);                          // the customs band round it at the door end (the cage's red: over the roof, down both sides),
       B(21.053, 0.6, 21.061, 2.4, 1.25, 1.4, C.red, NS); B(21.061, 1.44, 21.12, 1.56, 1.1, 1.26, P.brass, NS);   // the seal across its doors and a brass padlock on it

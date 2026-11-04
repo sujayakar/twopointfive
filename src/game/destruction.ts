@@ -35,6 +35,7 @@
 import { isManId, menUp } from './seats';
 import { Vec3, v3 } from '../math/vec';
 import { Box, BoxFlag, boxOf } from '../scene/boxes';
+import { withPieces } from '../scene/shapes';   // (a leaf helper: the trim a box says goes where the box goes)
 import type { Door } from './doors';
 import { doorBlastReach } from './doorblast';   // (called inside doorsFor only: src/game is one import cycle)
 import { WORLD } from '../scene/world';
@@ -644,7 +645,7 @@ export class Destruction {
     emitDust(P, [b.c[0], b.c[1] + 0.08, b.c[2]], [0, 1, 0], 3, { shape: 'puff', speed: 0.6, speedJit: 0.5, lift: 0.2, life: 1.2, lifeJit: 0.3, size: 0.12, sizeJit: 0.3, posJit: 0.1, color: [0.7, 0.68, 0.64] });
     return true;
   }
-  private hide(d: Destructible) { const b = this.g.col.boxes[d.i]; this.hidden.set(d.i, b.flags); b.flags |= BoxFlag.NoPrimary | BoxFlag.NoShadow;   // (the trim it says is drawn while it is: scene/boxes.ts trimDrawn)
+  private hide(d: Destructible) { const b = this.g.col.boxes[d.i]; this.hidden.set(d.i, b.flags); b.flags |= BoxFlag.NoPrimary | BoxFlag.NoShadow; for (const j of withPieces(this.g.col.boxes, [d.i])) if (j !== d.i && !this.hidden.has(j)) { const t = this.g.col.boxes[j]; this.hidden.set(j, t.flags); t.flags |= BoxFlag.NoPrimary | BoxFlag.NoShadow; }   // (…and the trim it says goes with it: scene/shapes.ts)
     if (d.mate !== undefined && d.kind === 'housing') { const s = this.g.col.boxes[d.mate]; if (!this.hidden.has(d.mate)) { this.hidden.set(d.mate, s.flags); s.flags |= BoxFlag.NoPrimary | BoxFlag.NoShadow; } }
     this.g.col.wrote(); this.g.smoke.obstaclesChanged?.(b.c, Math.hypot(b.h[0], b.h[1], b.h[2]) + 0.6); }   // the smoke solver's obstacle field round it is stale now (the thing, and a housing's screen 0.3 m off, are no longer solid): live bricks there re-bake (smoke.ts)
 
@@ -827,7 +828,7 @@ export class Destruction {
       } }
     if (g.col.solidBlocked([cx, y - 0.05, cz], [cx, y - 0.6, cz])) return false;   // …nor with something standing right under it
     const T = CHAOS.tile;
-    const box: Box = boxOf([cx, y, cz], v3.copy(T.half), 0, v3.copy(T.albedo), [0, 0, 0], BoxFlag.Dynamic, 0);
+    const box: Box = boxOf([cx, y, cz], v3.copy(T.half), 0, v3.copy(T.albedo), [0, 0, 0], BoxFlag.Dynamic, 0); box.stuff = 'paint';   // (`stuff`: what the look made of this grey by its COLOUR until 11-04, kept so the picture did not move; nobody chose it. scene/stuff.ts drawnAs)
     const c = this.debris.spawn('tile', box, [(this.hash() - 0.5) * 0.4, -0.2, (this.hash() - 0.5) * 0.4], [(this.hash() - 0.5) * 3, (this.hash() - 0.5) * 1, (this.hash() - 0.5) * 3], who);
     if (!c && !DEBRIS.dress) { DESTR_STATS.tilesRefused++; return false; }   // (DEBRIS.dress: the tile is down whether or not the pool had room to show it — what is counted and what can still fall is not the pool's to say)
     this.tilesDown.add(key); this.lastTileT = g.time; this.tileCount++; DESTR_STATS.tiles++; dlog(g, `tile ${key} dropped`);

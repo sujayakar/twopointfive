@@ -22,7 +22,6 @@
 //   bun run tools/qa/lesson-run.ts tut-solo                the scripted player through every step to the debrief
 //   page: ?levelFile=tut-solo.json&quiet&hour=dusk&weather=dust
 import type { Vec3 } from '../../src/math/vec';
-import { glowShape } from '../../src/scene/carShapes';
 import type { Level, LevelDoorDef, PatrolRoute } from '../../src/scene/level';
 import type { LevelScenarios, LessonData, LessonStep, QuietData, Rect, IssueData } from '../../src/scene/scenarios';
 import type { SurfacesData } from '../../src/scene/levelData';
@@ -33,6 +32,7 @@ import { WORLD } from '../../src/scene/world';
 import { BoxFlag } from '../../src/scene/boxes';
 import { findCarLamps } from '../../src/game/carlamps';
 import { LAST_IN, LAST_MEN } from '../../levels/tut-solo.script';
+import { PANEL_GREY } from '../../src/scene/stuff';
 
 export const NAME = 'tut-solo';
 export const NOTES = 'The tutorial\'s solo loud mission: a walled fuel halt on a road, walked along one line (road, gate, truck court, arch, gun court, shop, store) and back out. Its fights are staged by levels/tut-solo.script.ts. Regenerate: bun run tools/levels/export.ts tut-solo';
@@ -186,11 +186,11 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
     if (heads.length !== 2 || tails.length !== 2) throw new Error(`tut-solo: the van's lamps were not found (${heads.length} head, ${tails.length} tail): the kit's lenses have moved`);
     const mid = [(heads[0].c[0] + heads[1].c[0]) / 2, (heads[0].c[2] + heads[1].c[2]) / 2], l = Math.hypot(mid[0] - VAN_AT[0], mid[1] - VAN_AT[1]), nx = (mid[0] - VAN_AT[0]) / l, nz = (mid[1] - VAN_AT[1]) / l;
     heads.forEach((b, k) => {
-      const fb = add({ c: [b.c[0] + nx * 0.04, b.c[1], b.c[2] + nz * 0.04], h: [0.008, b.h[1] + 0.006, b.h[2] + 0.006], yaw: b.yaw, ...M.plasticWhite, emissive: [34, 31, 24], shape: glowShape(b.shape, b.h, [0.008, b.h[1] + 0.006, b.h[2] + 0.006], [0.04, 0, 0], 0.006), flags: BoxFlag.NoShadow });
+      const fb = add({ c: [b.c[0] + nx * 0.04, b.c[1], b.c[2] + nz * 0.04], h: [0.008, b.h[1] + 0.006, b.h[2] + 0.006], yaw: b.yaw, ...M.plasticWhite, emissive: [34, 31, 24], flags: BoxFlag.NoShadow });
       lights.push({ kind: 'spot', pos: [b.c[0] + nx * 0.08, b.c[1], b.c[2] + nz * 0.08], dir: norm([nx, -0.1, nz]), color: [1.0, 0.93, 0.78], intensity: 150, range: 14, innerDeg: 12, outerDeg: 30, name: `van_lamp_${k}`, group: 'exterior', enabled: true, volumetric: 0.35, fixtureBox: fb, radius: 0.06, mains: false });
     });
     tails.forEach((b, k) => {   // (each a small red light of its own, so a round puts the glow out as it does any lamp's)
-      const fb = add({ c: [b.c[0] - nx * 0.03, b.c[1], b.c[2] - nz * 0.03], h: [0.006, b.h[1] + 0.006, b.h[2] + 0.006], yaw: b.yaw, albedo: [0.5, 0.05, 0.04], rough: 0.4, emissive: [7, 0.4, 0.25], shape: glowShape(b.shape, b.h, [0.006, b.h[1] + 0.006, b.h[2] + 0.006], [-0.03, 0, 0], 0.006), flags: BoxFlag.NoShadow });
+      const fb = add({ c: [b.c[0] - nx * 0.03, b.c[1], b.c[2] - nz * 0.03], h: [0.006, b.h[1] + 0.006, b.h[2] + 0.006], yaw: b.yaw, albedo: [0.5, 0.05, 0.04], rough: 0.4, emissive: [7, 0.4, 0.25], flags: BoxFlag.NoShadow });
       lights.push({ kind: 'point', pos: [b.c[0] - nx * 0.1, b.c[1], b.c[2] - nz * 0.1], dir: [0, -1, 0], color: [1.0, 0.12, 0.08], intensity: 1.6, range: 3, innerDeg: 0, outerDeg: 180, name: `van_tail_${k}`, group: 'exterior', enabled: true, volumetric: 0, fixtureBox: fb, radius: 0.04, mains: false });
     });
     const bay: Vec3 = [VAN_AT[0] - nx * 2.3, 1.84, VAN_AT[1] - nz * 2.3];
@@ -340,7 +340,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
 
   // ---- the breaker and the beacon every level carries (the generator's lot, behind the shop: nobody is sent there) ----
   grp('breaker');
-  const brk = add({ c: [28.0, 1.35, 10.34], h: [0.28, 0.36, 0.04], albedo: [0.42, 0.44, 0.45], name: 'breaker_panel' });
+  const brk = add({ c: [28.0, 1.35, 10.34], h: [0.28, 0.36, 0.04], albedo: PANEL_GREY, name: 'breaker_panel' });
   const led = add({ c: [27.82, 1.62, 10.29], h: [0.015, 0.015, 0.015], albedo: P.plasticBlack, rough: 0.5, emissive: [0.3, 4, 0.6], flags: BoxFlag.NoShadow });
   grp('beacons');
   add({ c: [20.5, 2.28, 5.18], h: [0.07, 0.06, 0.07], albedo: [0.2, 0.2, 0.22], flags: BoxFlag.NoShadow });

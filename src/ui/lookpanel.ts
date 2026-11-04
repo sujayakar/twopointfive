@@ -10,15 +10,15 @@ import type { Panel } from './panel';
 import { POWDER, POWDER_DRAW } from '../render/powderField';
 
 /** rows that are not the materials' own: "plain boxes" leaves them as they are */
-const LIVE: ReadonlySet<string> = new Set(['even', 'size', 'sky', 'lamps', 'veil', 'puffs', 'eyes', 'firesmoke', 'windows', 'glare', 'stir', 'roomc', 'expo', 'rooms', 'steady', 'roomb', 'gexp', 'contrast', 'highs', 'lows', 'colour']);
+const LIVE: ReadonlySet<string> = new Set(['even', 'size', 'sky', 'lamps', 'veil', 'puffs', 'eyes', 'firesmoke', 'windows', 'glare', 'stir', 'roomc', 'expo', 'rooms', 'steady', 'roomb', 'order', 'gexp', 'contrast', 'highs', 'lows', 'colour']);
 const ROWS: readonly [keyof typeof lookAmounts, string, string, number][] = [
   ['clarity', 'Clarity', 'one number over Relief, Cavities, Edges and Snow relief: how hard neighbouring detail is set against each other. Lower = calmer surfaces', 1.5],
   ['paint', 'Paint', 'the colour the maps add to the box paint', 1.5],
   ['relief', 'Relief', 'how deep the normal maps cut', 1.6],
   ['shine', 'Finish', 'roughness from the maps', 1.5],
   ['cavity', 'Cavities', 'joints and pits hold shadow', 1.5],
-  ['weather', 'Weather', 'damp wall feet, bleached tops, runs, trodden ground', 1.5],
-  ['untile', 'Break the repeat', 'two turned copies cross-faded', 1],
+  ['weather', 'Weather', 'damp wall feet, bleached tops, runs, trodden ground; on what somebody keeps, use: lanes, chipped and changed pieces, knocked wall feet and worn paint where feet go', 1.5],
+  ['untile', 'Break the repeat', 'a stuff made of pieces deals them from its map and is laid in bays; a plain coat is read twice and cross-faded; a kept place drifts a shade over ten metres. Past 1: stronger bays and drift', 2],
   ['edges', 'Edges', 'small boxes: rounded, rubbed corners', 1.5],
   ['snow', 'Snow that clings', 'a snow level: blown against wall feet, lying on what was left out', 1.5],
   ['ground', 'Snow relief', '× the depth of lying snow\'s drifts, wind ridges and prints (1 = as the game draws it)', 3],
@@ -47,6 +47,7 @@ const ROWS: readonly [keyof typeof lookAmounts, string, string, number][] = [
   ['steady', 'Steady bounce', 'by day, the bounced light holds still. By day a room is lit by what comes in at a door or a window, which is small and very bright, and the bounce caught it on some frames and missed it on others, so walls, shiny things and people pulsed. With this up the bounce is the average of a few fixed looks taken in turn, so nothing changes from frame to frame while the scene is still, and a real change of light comes in over about an eighth of a second. A reflection is also held to a brightness that fits the room it is in, where it was held to a number made for nights and one stray ray out of a door was a white streak. 0 = both as at night. Needs the row above', 2],
   ['walls', 'Walls have two sides', 'one rule for every read of the bounced light: the level\'s own floor plan says which side of each wall and shut door a point is on, and a read keeps to its side. The bounce is kept at points a metre apart and every surface blends the points around it, so within a metre of a wall it took in the point on the far side: by day the far side of an outer wall is the open air, and the floor behind a row of drums in a shut room glowed. It stands in place of four older guards that each met one case of this. Read when the page opens: put ?look=walls:0 on the address and reload for the page with the older guards', 1],
   ['roomb', 'Room brightness', 'by day, how far a room is brought up toward the open air\'s brightness. 1 = as the One exposure row shows it. Lower and every room is shown darker, a dark shut room by more than a room with windows: 0.9 takes about half a stop off a room with windows and a stop off a shut one. 0 = no room is brought up at all. Over 1 = brighter. It does nothing at night or out of doors', 1.5],
+  ['order', 'Light in order', 'by day, seen from a brighter place: what stands where two places meet (an open door\'s leaf, the floor just inside a door, a man in a hole blown in a wall) is shown as the brighter place would show that much light, and no longer by the dim room\'s whole gain. Deep in a room nothing changes. 0 = as it was', 1],
   ['gexp', 'Exposure', 'the whole picture brighter or darker, as a camera\'s exposure: 1 = the hour\'s own, 0 = two stops under, 2 = two stops over', 2],
   ['contrast', 'Contrast', 'by day, how far everything darker than sunlit ground is set under it. The snow keeps its brightness, shadows and dark kit go down. 1 = the tone curve as the game has it, which is made for nights and leaves a day pale', 2],
   ['highs', 'Highlights', 'the bright end only: sunlit snow, sky light on a wall. Under 1 pulls them down so the snow keeps its shape, over 1 pushes them up', 2],

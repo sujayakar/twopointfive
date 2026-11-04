@@ -1,2 +1,2 @@
-# the kits' vehicles say their shapes: the boxes of each vehicle carry a shape, and a pickup's bonnet no longer carries its two panel lines
-d7ea428c8bacf24905b7c04de196d90ac028015e
+# the cut rock is the palette's slab darkened (tools/levels/snowRock.ts), and the slope below the road is scree
+de76b236d2cf5c22a43144b89d88703da80aa9aa

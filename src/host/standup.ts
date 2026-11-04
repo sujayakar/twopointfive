@@ -126,7 +126,7 @@ import { SNATCHOUT } from '../game/snatchout';
 import { RESCUEFLUSH } from '../game/rescueflush';
 import { EXACT } from '../math/exact';
 import { POSEMATH } from '../anim/skeleton';
-import { rustRows, rustRow } from '../sim/sim';
+import { rustRows, rustRow, rustOn } from '../sim/sim';
 import { SENSE } from '../game/sense';
 import { CMDCHECK } from '../game/cmd';
 import { DOZE } from '../game/doze';
@@ -226,17 +226,20 @@ export function populateHost(host: HostApi, level: Level): void {
   for (const ld of level.lights) host.lights.add(lightFromDef(ld));
 }
 
-/** THE GAME'S OWN MATHS (src/math/exact.ts) on the harness: off on the frozen stand, so every frozen digest, tally and fixture runs on the functions it was recorded
- *  on (TPS_EXACT=1 raises it); the shipped stand keeps the page's (on), and TPS_EXACT=0 there is the page's ?noexact. Written BEFORE anything is built — a level's
- *  boxes and a Game's constructor keep what they work out — so a tool that builds a level itself calls this first. */
-export function pinMaths(): void { if (pinned('TPS_EXACT')) EXACT.on = String((globalThis as any).process?.env?.TPS_EXACT ?? '') === '1'; }
+/** THE GAME'S OWN MATHS (src/math/exact.ts) on the harness: ON on both stands, as the page (TPS_EXACT=0 = the engine's own functions, the page's ?noexact:
+ *  the stand every frozen digest, tally and fixture was recorded on before the Rust module's rows went on, which answer only under the game's own). Written
+ *  BEFORE anything is built — a level's boxes and a Game's constructor keep what they work out — so a tool that builds a level itself calls this first. */
+export function pinMaths(): void { if (pinned('TPS_EXACT')) EXACT.on = String((globalThis as any).process?.env?.TPS_EXACT ?? '1') !== '0'; }
 /** A POSE'S BULK ARITHMETIC IN SINGLES (src/anim/skeleton.ts POSEMATH) on the harness: off on the frozen stand (TPS_POSESINGLES=1 raises it); the shipped stand
  *  keeps the page's (on), and TPS_POSESINGLES=0 there is the page's ?posesingles=0. Written BEFORE the game is built: an animator measures its clips as it is made. */
 export function pinPoseMath(): void { if (pinned('TPS_POSESINGLES')) POSEMATH.singles = String((globalThis as any).process?.env?.TPS_POSESINGLES ?? '') === '1'; }
-/** THE RUST MODULE'S ROWS (src/sim/sim.ts RUST) on the harness: every row off on the frozen stand (TPS_RUST<ROW>=1 raises one — TPS_RUSTMATHS, TPS_RUSTLINES — the
- *  page's ?rust<row>); the shipped stand keeps the page's (RUST_ON: lines, circles and fog on), and TPS_RUST<ROW>=0 there is the page's ?rust<row>=0. A row is never
- *  a rule of play: the same game to the bit on or off. */
-export function pinRust(): void { for (const r of rustRows()) { const w = 'TPS_RUST' + r.toUpperCase(); if (pinned(w)) rustRow(r, String((globalThis as any).process?.env?.[w] ?? '') === '1'); } }
+/** THE RUST MODULE'S ROWS (src/sim/sim.ts RUST) on the harness: the rows of RUST_ON are on on both stands, as the page (every row but the maths).
+ *  TPS_RUST<ROW>=0 puts one off and =1 raises one (TPS_RUSTMATHS=1), the page's ?rust<row>; TPS_RUST=0 = every row down unless its own word raises it, the
+ *  page's ?rust=0. A row is never a rule of play: the same game to the bit on or off. THE STAND AS IT WAS RECORDED BEFORE THE ROWS: TPS_EXACT=0 TPS_RUST=0. */
+export function pinRust(): void {
+  const env = ((globalThis as any).process?.env ?? {}) as Record<string, string | undefined>, plain = env.TPS_RUST === '0';
+  for (const r of rustRows()) { const w = 'TPS_RUST' + r.toUpperCase(), said = env[w]; if (said !== undefined) rustRow(r, said === '1'); else if (plain) rustRow(r, false); else if (pinned(w)) rustRow(r, rustOn(r)); }
+}
 /** THE SENSES ON THE CPU (src/game/sense.ts) on the harness: off on both stands, as the page (TPS_CPUSENSE=1 raises it, the page's ?cpusense) */
 export function pinSenses(): void { if (pinned('TPS_CPUSENSE')) SENSE.cpu = String((globalThis as any).process?.env?.TPS_CPUSENSE ?? '') === '1';
   if (pinned('TPS_SMOKEGRID')) SENSE.grid = String((globalThis as any).process?.env?.TPS_SMOKEGRID ?? '') === '1';   // (…and their smoke on the coarse grid: off on both stands, TPS_SMOKEGRID=1 raises it, the page's ?smokegrid)
@@ -361,6 +364,7 @@ export async function standGame(host: HostApi, opts: StandOpts = {}): Promise<St
     if (pinned('TPS_THROWBY')) THROW_BY.on = String((globalThis as any).process?.env?.TPS_THROWBY ?? '') === '1';   // a throw reads its distance (src/game/character.ts THROW_BY): off, so every throw is the one overhand every frozen pose, strip and digest was read on; `TPS_THROWBY=1` turns it on (the shipped default)
     if (pinned('TPS_TEAMPACE')) TEAMPACE.on = String((globalThis as any).process?.env?.TPS_TEAMPACE ?? '') === '1';   // teammates slower than the player, running only for a reason (src/game/teampace.ts): off, so the team walks every leg at the pace every frozen probe, digest and tape has it
     if (pinned('TPS_DOORBRISK')) TEAMPACE.doorBrisk = String((globalThis as any).process?.env?.TPS_DOORBRISK ?? '') === '1';   // nobody sprints to a stack (src/game/teampace.ts teamDash): off, so a frozen probe that raises the team's pace sees the runs to cover it saw; TPS_DOORBRISK=1 raises it
+    if (pinned('TPS_WALKAIM')) TEAMPACE.walkAim = String((globalThis as any).process?.env?.TPS_WALKAIM ?? '') === '1';   // a walking teammate's gun goes where he walks while he has no line to his order's aim point (src/game/teampace.ts walkLead): off, so a man sent to a door carries his gun on it from his first step, as in every frozen probe, tally and digest; `TPS_WALKAIM=1` turns it on
     if (pinned('TPS_PACING')) TEAMPACE.pacing = String((globalThis as any).process?.env?.TPS_PACING ?? '') === '1';   // a teammate paces himself on the player (src/game/teampace.ts teamWalkOf): off, so a frozen probe that raises the team's pace reads the flat walk it read; TPS_PACING=1 raises it
     if (pinned('TPS_GLASSDROP')) GLASSREAL.drop = String((globalThis as any).process?.env?.TPS_GLASSDROP ?? '') === '1';   // toughened glass drops at once (src/game/glassbreak.ts GLASSREAL): off, so a diced sheet lets go in the wave every frozen glass probe, tally and tape timed
     if (pinned('TPS_GLASSPLACE')) GLASSREAL.place = String((globalThis as any).process?.env?.TPS_GLASSPLACE ?? '') === '1';   // a pane's glass by where it sits (the same table): off, so outside glass is toughened and inside float, the kinds every frozen glass probe and stack mark was dealt on
