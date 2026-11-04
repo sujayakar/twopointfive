@@ -10,11 +10,16 @@
 //     runs under a hut with no floor of its own). (This was scene/lookTidy.ts wetTidy, the page's own step, on levels in the look's paints only and with no
 //     sky test; it is this step's now, on every level and off the page too, and there is one writer of a sheet's wet word.)
 // A BOX IS WET WHOLE OR NOT AT ALL (the renderer reads one word a box): that is why a slab asks for SOME sky and a thing laid for one place for MOST of it.
-// HOW WET SHOWS IS WHAT THE THING IS MADE OF. What sheds water goes darker and takes the film (Box.wetK under 1; glossy, BoxFlag.Gloss, a water film's
-// roughness, its lobe stretched along the view). What SOAKS it up goes darker and takes no film and no puddle (a lawn, a mat, a rug, card). Bare METAL takes
-// the film and does not go darker: its albedo is its mirror (F0), and water dims no mirror (Box.wetK is 1 on it: wet, and the same colour). Today a box says
-// what it is made of through its paint (particleFx.ts surfOf, what the thing is to a round) and its `metal`: `soaks` below reads the first, and reads the
-// box's own word when a box has one.
+// "Some" and "most" are two answers to one question only because of that. The rain is already drawn by the roofs' rectangles: were the wet film masked a
+// pixel by those same rectangles, every flat thing could ask for ANY sky, the picture would be right at a canopy's edge, and the 13 of 25 would go. That is
+// the renderer's follow-up, not this step's.
+// HOW WET SHOWS IS WHAT THE THING IS MADE OF. What sheds water takes the film (glossy, BoxFlag.Gloss, a water film's roughness, its lobe stretched along
+// the view). What SOAKS it up takes no film and no puddle (a lawn, a mat, a rug, card). DARKER is what a porous thing does as it drinks: dust, concrete,
+// asphalt, cloth; a sealed one (a painted line, plastic, a glazed tile) barely darkens in life, and bare METAL not at all — its albedo is its mirror (F0),
+// and water dims no mirror. Today the darkening is ONE NUMBER STANDING FOR TWO (Box.wetK = weather.ts WET_ALBEDO, 0.5, on everything but metal, sealed and
+// porous alike: the measured look of the wet lot), and 1 on metal (wet, and the same colour). How much a thing darkens belongs in its stuff's row beside
+// whether it soaks, when boxes say what they are made of. Until then a box says what it is made of through its paint (particleFx.ts surfOf, what the thing
+// is to a round) and its `metal`: `soaks` below reads the first.
 // THE LOT IS NOT THIS STEP'S. weather.ts setWet soaks the lot's slab in place (its albedo halved: a round's material is read from that, and the runs were
 // measured with it), under the level's own storm and a picked rain alike. This step never writes an albedo; a sheet lying on the lot follows it.
 // WHEN: weather.ts setWet tells the step in the very call that wets or dries the lot (`follow`), so the lot and the yard are never one wet and one dry for a
@@ -38,7 +43,9 @@ import { surfOf } from './particleFx';
  *  stand on the ground, start at 22. The check holds the kit's table under this number (wetground-check.ts line 1). */
 export const WET_OVER = 0.02;
 const top = (b: Box) => b.c[1] + b.h[1];
-/** does what this box is made of soak water up (no film on it, no puddle): cloth, a lawn, card. Read from its paint, the one word a box has for it today */
+/** does what this box is made of soak water up (no film on it, no puddle): cloth, a lawn, card. Read from its paint, the one word a box has for it today —
+ *  so it must be asked of a box whose `albedo` is as authored. This step never writes an albedo and never asks it of the lot, the one box the weather
+ *  halves in place (weather.ts setWet): a paint at half its tone reads as another thing (a dirt yard as metal) */
 export const soaks = (b: Box): boolean => { const s = surfOf(b.albedo); return s === 'carpet' || s === 'fabric' || s === 'foliage' || s === 'cardboard'; };
 /** a sheet lying on the ground: drawn only, thin, low, not under the ground */
 export const groundSheet = (b: Box): boolean => (b.flags & SHEET_MASK) === BoxFlag.NoShadow && b.h[1] <= 0.02 && top(b) <= 0.03 && b.c[1] - b.h[1] >= 0;

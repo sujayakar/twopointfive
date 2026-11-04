@@ -1030,10 +1030,12 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   table under the number) and what STANDS on it (a mat, a rug, a duckboard from 22). (3) was `scene/lookTidy.ts wetTidy`, a step of the PAGE alone, on
   levels in the look's paints alone, with no sky test of its own (a sheet in a hut with no floor was wet with the lot): it is deleted there (lookTidy
   keeps its wall decals), so a sheet's wet word has one writer, and the rule now runs off the page and on every level.
-  HOW WET SHOWS IS WHAT THE THING IS MADE OF: what sheds water goes darker and takes the film (`Box.wetK` 0.5, `BoxFlag.Gloss`, `WET_ROUGH`, `aniso`);
-  what SOAKS it up goes darker and takes no film (`wetGround.ts soaks`: cloth, a lawn, card, read from the paint by `particleFx.ts surfOf`, the one word
-  a box has for it today; it becomes the box's own word when boxes say what they are made of); bare METAL takes the film and is NOT darkened (`wetK` 1:
-  its albedo is its mirror, and the packer multiplies albedo by `wetK`).
+  HOW WET SHOWS IS WHAT THE THING IS MADE OF: what sheds water takes the film (`BoxFlag.Gloss`, `WET_ROUGH`, `aniso`); what SOAKS it up takes none
+  (`wetGround.ts soaks`: cloth, a lawn, card, read from the paint by `particleFx.ts surfOf`, the one word a box has for it today, and asked only of a
+  box whose albedo is as authored: never of the lot, which the weather halves in place); bare METAL takes the film and is NOT darkened (`wetK` 1: its
+  albedo is its mirror, and the packer multiplies albedo by `wetK`). DARKER is what a porous thing does as it drinks; a sealed one (a painted line,
+  plastic, a glazed tile) barely darkens in life. Today `wetK` 0.5 is ONE NUMBER STANDING FOR TWO, on sealed and porous alike (the measured look of the
+  wet lot): how much a thing darkens belongs in its stuff's row beside whether it soaks, when boxes say what they are made of.
   THE LOT stays the weather's: `setWet` soaks its slab in place (the albedo a round's material is read from: gameplay, as measured), and tells the step
   in that same call (`WetGround.follow`), so the lot and the yard are never one wet and one dry for a frame drawn with no update between (a pause, the
   start card); the picture's block of `Game.update` asks again every tick, which follows a level whose boxes changed (the count of statics and the
@@ -1063,5 +1065,8 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   pass-four 0, built for snow). The 42 play-through digests: the same on the frozen stand, on shipped with lived rooms off and on shipped (no rain is
   picked in those). `probes.ts hourwx` ALL PASS on both stands with the two bars moved; `probes.ts weather` 28 of 29 on both, the one red `rainwalls`,
   which is red on the base too. `rollback-check --static`, `knobs-check`, `dice-check` pass.
+  NOT DONE, AND WHAT WOULD REMOVE A NUMBER: a slab's "some sky" and a finish's "most" are two answers to one question only because wet is one word a
+  box. The rain is drawn by the roofs' rectangles: were the wet film masked a pixel by those same rectangles, every flat thing could ask for any sky,
+  the picture would be right at a canopy's edge, and the 13 of 25 would go. A renderer follow-up, the graphics goal's to take (its word, 11-04).
   NOBODY HAS SEEN IT: no GPU has drawn a wet yard; whether a soaked lawn at half albedo with no film reads right beside wet dust, and wet metal at full
   colour beside it, is for a look.
