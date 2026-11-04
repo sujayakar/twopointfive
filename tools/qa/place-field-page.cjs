@@ -92,6 +92,35 @@ function fieldPng(file, f, mask, w, h, K = 6) {
     const d0 = nr(open, 13, 13.6), d1 = nr(open, 13, 12.4), d2 = nr(open, 13, 10.6), bOpen = Math.abs(nr(open, 19, 11) - lv(open, 19, 11)), far = nr(open, 30, 20) - lv(open, 30, 20);
     check(open.f.length >= 2 * open.w * open.h + 4 && under === 0 && own === cells && cells > 300 && d0 > YARD - 1 && d0 > d1 && d1 > d2 && d2 >= lv(open, 13, 10.6) && d0 - d1 > 0.5 && bOpen < 1e-3 && Math.abs(far) < 0.1,
       `the brightest place a stride away: never under a cell's own level (${under} cells); with the door shut every cell of both rooms holds its own (${own} of ${cells}); with it open the cell inside the door holds ${n(d0)} against the yard's ${n(YARD)} and it falls into the room (${n(d1)} at 1.6 m, ${n(d2)} at 3.4 m, over the room's ${n(lv(open, 13, 10.6))}); room B behind the wall holds its own (off by ${bOpen.toFixed(4)}); the far yard is the yard's (${n(far)} over its level)`); }
+  { // A DOOR OPENS BY DEGREES (scene/placePlan.ts placeMask `steps`; shaders/place_field.wgsl hand and doorShut): the same room with the map told its
+    // door's line, the leaf at four angles. The door's line is two cells deep here (the wall's middle lies on a cell boundary)
+    const N2 = open.w * open.h + 4, K = open.w * open.h, cellOf = (r, x, z) => Math.floor((z - r.min[1]) * r.res) * r.w + Math.floor((x - r.min[0]) * r.res), STEPS = open.door.steps, PER_STOP = open.door.perStop;
+    const shutD = await run({ door: 'shut', degrees: true }), a29 = await run({ door: 'ajar', swing: 0.5, degrees: true }), a46 = await run({ door: 'ajar', swing: 0.8, degrees: true }), openD = await run({ door: 'open', degrees: true });
+    fieldPng(path.join(OUT_DIR, 'place_ajar.png'), a29.f, a29.m, a29.w, a29.h);
+    const stepOf = m => (m !== 255 && (m & 3) === 1 ? (m >> 3) & 31 : 0), shutOf = m => (stepOf(m) ? (STEPS - stepOf(m)) / PER_STOP : 0);
+    const door = r => { let lo = 99, hi = 0, n = 0; for (const z of [13.8, 14.2]) for (let x = 12.7; x < 13.5; x += 0.4) { const m = r.m[cellOf(r, x, z)]; if (m === 255) continue; n++; lo = Math.min(lo, stepOf(m)); hi = Math.max(hi, stepOf(m)); } return { lo, hi, n }; };
+    const sS = door(shutD), s29 = door(a29), s46 = door(a46), sO = door(openD); let wallsMoved = 0; for (let i = 0; i < K; i++) if ((a29.m[i] === 255) !== (a46.m[i] === 255) || (a29.m[i] === 255) !== (openD.m[i] === 255)) wallsMoved++;
+    check(sS.n === 0 && s29.n >= 4 && s29.lo === s29.hi && s46.lo === s46.hi && sO.lo === sO.hi && s29.lo >= 1 && s29.lo < s46.lo && s46.lo < sO.lo && sO.lo === STEPS && wallsMoved === 0,
+      `by degrees a shut door's line is wall, and the doorway's cells say how open the door is: step ${s29.lo} of ${STEPS} with the leaf at 29 degrees, ${s46.lo} at 46, ${sO.lo} swung clear (a doorway whole); between those three no wall cell of the map moved (${wallsMoved})`);
+    // the second block as the rule says it, from the levels and the map each run handed back: a cell keeps the most of its own level and what each free
+    // neighbour hands it, PLACE.near stops dimmer, or across a doorway's cell PLACE.nearDoor, and ONCE, on the hand out of a door's line, the stops its
+    // door stands under wide open
+    const model = r => { const lvl = r.g, m = r.m, W = r.w, H = r.h, near = new Float32Array(K); for (let i = 0; i < K; i++) near[i] = m[i] === 255 ? -1000 : lvl[i];
+      for (let pass = 0, moved = true; moved && pass < 400; pass++) { moved = false;
+        for (let j = 0; j < H; j++) for (let i = 0; i < W; i++) { const k = j * W + i; if (m[k] === 255) continue; let v = near[k];
+          for (const [di, dj] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) { const x = i + di, z = j + dj; if (x < 0 || z < 0 || x >= W || z >= H) continue; const q = z * W + x; if (m[q] === 255) continue;
+            const isDoor = (m[k] & 3) === 1 || (m[q] & 3) === 1;
+            v = Math.max(v, near[q] - (isDoor ? open.place.nearDoor + Math.max(0, shutOf(m[q]) - shutOf(m[k])) : open.place.near)); }
+          if (v > near[k] + 1e-6) { near[k] = v; moved = true; } } }
+      let worst = 0; for (let i = 0; i < K; i++) if (m[i] !== 255) worst = Math.max(worst, Math.abs(near[i] - r.g[N2 + i])); return worst; };
+    const off = [open, shut, wide, shutD, a29, a46, openD].map(model);
+    check(off.every(d => d < 0.02), `the brightest place a stride away is the rule's own answer in every cell of all seven scenes, the three with a door that says how open it is among them (the furthest any cell is from it: ${off.map(d => d.toFixed(4)).join(', ')} stops)`);
+    // THE RULE AS IT IS SAID, not as it is coded: the room's first cell inside the door is held to what a wide door gives it, less a stop for each halving
+    // of the door's open share, once, though the hand crosses three cells' edges here
+    const nr = (r, x, z) => r.g[N2 + cellOf(r, x, z)], mean = r => over(r, r.f, ...A).mean, inD = [a29, a46, openD].map(r => nr(r, 13, 13.4)), want = [s29.lo, s46.lo].map(st => inD[2] - (STEPS - st) / PER_STOP);
+    check(Math.abs(inD[0] - want[0]) < 0.05 && Math.abs(inD[1] - want[1]) < 0.05 && inD[0] > a29.g[cellOf(a29, 13, 13.4)] + 0.3 && Math.abs(inD[2] - nr(open, 13, 13.4)) < 0.05
+      && Math.abs(mean(shutD) - as.mean) < 0.05 && mean(a29) >= mean(shutD) - 0.02 && mean(a46) >= mean(a29) - 0.02 && mean(openD) >= mean(a46) - 0.02 && Math.abs(mean(openD) - a.mean) < 0.05 && over(a29, a29.f, 10.2, 8.2, 15.8, 12).span < 0.4,
+      `what the room takes from the yard comes in with the swing: the first cell of the room inside the door is held to ${n(inD[2])} with the door swung clear (${n(nr(open, 13, 13.4))} on the map that says nothing), ${n(inD[1])} at 46 degrees (the rule: ${n(want[1])}) and ${n(inD[0])} at 29 (the rule: ${n(want[0])}; the room's own level there is ${n(a29.g[cellOf(a29, 13, 13.4)])}); room A's own level goes ${n(mean(shutD))}, ${n(mean(a29))}, ${n(mean(a46))}, ${n(mean(openD))} from shut to clear (${n(as.mean)} and ${n(a.mean)} without the row), one level across at every step`); }
   stop(); console.log(`pictures in ${OUT_DIR}`); if (errors.length) console.log(errors.join('\n'));
   console.log(fails || errors.length ? `=== place-field-page: ${fails} of ${checks} FAILED, ${errors.length} errors ===` : `=== place-field-page: ALL ${checks} PASS ===`); process.exit(fails || errors.length ? 1 : 0);
 })().catch(e => { console.error(e); stop(); process.exit(1); });

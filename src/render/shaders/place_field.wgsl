@@ -13,6 +13,8 @@ const PLACE_W: i32 = 100;
 const PLACE_H: i32 = 70;
 const PLACE_SOLID: f32 = -1000.0;
 const PLACE_NEAR: i32 = PLACE_W * PLACE_H + 4;   // where the second block begins: after the cells and their four words (render/placeField.ts PLACE_NEAR)
+const DOOR_STEPS: f32 = 31.0;      // a doorway's openness as the map carries it (scene/placePlan.ts DOOR_STEPS, DOOR_PER_STOP: lookexpo-check compares)
+const DOOR_PER_STOP: f32 = 6.0;
 @group(0) @binding(0) var<uniform> U: PlaceU;
 @group(0) @binding(1) var diceTex: texture_3d<f32>;
 @group(0) @binding(3) var maskTex: texture_2d<u32>;
@@ -25,6 +27,11 @@ fn cellAt(c: vec2i) -> f32 { if (maskAt(c) == 255u) { return PLACE_SOLID; } retu
  *  AWAY as it hands it on (under −500 = it has none to hand).
  *  THE PULL: the link is whole between two cells of a place and U.link of that when either is a doorway's cell (the map's low bits 1, render/placeField.ts
  *  placeMask): two rooms through an open door stay two places, with a soft step at the threshold.
+ *  A DOOR OPENS BY DEGREES (doorShut: the map's bits above, scene/placePlan.ts placeMask `steps`): the pull across a doorway's cell is × the share of
+ *  the doorway that is open, and the brightest place a stride away is handed out of the doorway DIMMER BY THAT SHARE, ONCE, on the hand that leaves the
+ *  door's line (two doors whose lines touch in a row are charged as the more shut of the two; a stop for each halving: a door a quarter open passes a quarter of the yard, so the room is held to the yard's level less two stops),
+ *  on top of U.nearDoor. So the floor inside a door, which gets that share of the yard's light, is shown by the level of that share, and what a room
+ *  takes from the yard comes in with the swing with no number of its own. A map with no such bits (the row at 0) is every doorway wide open, to the bit.
  *  THE BRIGHTEST PLACE A STRIDE AWAY (the field's second block; place_common.wgsl lookGainsOwn is its reader): the neighbour's own answer, U.near stops
  *  dimmer for the cell of floor between them and only U.nearDoor dimmer when either is a doorway's cell: so the first cell of a room inside its door holds
  *  the yard's level all but whole, and each cell further in a step less, never through a wall. Each cell then keeps the most of its own level and what
@@ -36,10 +43,13 @@ fn hand(c: vec2i, m: u32) -> vec3f {
   let i = c.y * PLACE_W + c.x; let door = (m & 3u) == 1u || (mn & 3u) == 1u;
   let v = field[i]; let nv = field[PLACE_NEAR + i];
   var o = vec3f(0.0, 0.0, PLACE_SOLID);
-  if (v > -500.0) { let k = U.kappa * select(1.0, U.link, door); o = vec3f(v * k, k, PLACE_SOLID); }
-  if (nv > -500.0) { o.z = nv - select(U.near, U.nearDoor, door); }
+  let sm = doorShut(m); let sn = doorShut(mn); let shut = max(sm, sn);   // (stops under wide open; 0 = wide, or the map does not say)
+  if (v > -500.0) { let k = U.kappa * select(1.0, select(U.link * exp2(-shut), U.link, shut == 0.0), door); o = vec3f(v * k, k, PLACE_SOLID); }
+  if (nv > -500.0) { o.z = nv - select(U.near, U.nearDoor + max(0.0, sn - sm), door); }   // (… + what the giver's door is shut by over the taker's: 0 inside one door's line and into it, the door's stops out of it)
   return o;
 }
+/** how far under wide open a doorway cell's door stands, in stops (0 = wide open, or the map does not say, or the cell is no doorway's) */
+fn doorShut(m: u32) -> f32 { let s = (m >> 3u) & 31u; return select(0.0, (DOOR_STEPS - f32(s)) / DOOR_PER_STOP, m != 255u && (m & 3u) == 1u && s != 0u); }
 
 /** what the cache holds over a cell: (log2 of it, how much the reading counts). THE LIGHT THAT FALLS ON THE FLOOR (the cache's +y slab: the irradiance on
  *  a face that looks up, lighting_common.wgsl diceIrradiance), as a light meter laid face up reads it, and the same kind of number as the game's own
