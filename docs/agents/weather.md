@@ -1150,6 +1150,12 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
     A ROW'S NAME FITS THE PANEL'S NAME COLUMN (twenty letters; the first names were cut off and two read the same): the full sentence is the head
     of the row's tip. "copy them" hands back the tables' own keys. Checked on the software adapter: the page boots and a picture of the panel
     shows the section with every name whole. NEVER SEEN ON A GPU; no row has been moved by anybody.
+  - **THE POWDER'S STEP IS COMPILED ONCE A DEVICE** (11-03; `render/powderField.ts programOf`). A field is thrown away when both snow rows are at nothing
+    and made again when one comes back, and each new field compiled "powder step" again: found by a one-boot read of the pass's page (two switches of the
+    look's layers, two more compiles), against his "compile once". The layout and the pipeline are kept by device now; a field is its textures, its
+    uniform buffer and its bind group. `lookveil-check`'s last line counts the compiles on a made-up device (two fields, one compile). The fault was in
+    the tree from the day the field was written (10-28). Not looked for: the same thing in the look's other small programs (the place field's two, the
+    eye's).
   - **A PUFF IS A MOUND** (10-29). White on white, a kick's round was a faint ring in a midday still. The sun's ray is read a second time `POWDER_PUFF`
     0.3 m up, where only a thick column counts (blown powder stands that high too, and shaded from up there the road between its threads went grey): what
     stands there over the pixel's own shades the round's far half (its own light down to 0.45 of the sun's share) and the snow behind it as far as its
