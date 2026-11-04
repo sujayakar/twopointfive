@@ -851,6 +851,71 @@ first system across (the game's own maths). No rule of play has changed and noth
     it: they are to be told the night's sky when the switch comes on. The quiet missions, the lessons and the solo night have NOT been tallied
     with it, and they are where it matters most (Sam in a moonlit yard): that is the tally the switch owes before it comes on. Nobody has
     played it. Never seen on a GPU: the only picture it has been held against is the one kept report.
+- **The coarse grid's smoke drifts with the wind and stays low in it** (`src/game/sense.ts SENSE.drift`; `rust/sim/src/bricks.rs` steps 3b and 4,
+  `K.wind`, the scratch table `WIND`; `src/game/wind.ts stormDrift`; `src/scene/collision.ts gridStep`, `GridWind`). THE SWITCH: OFF everywhere
+  today (the page's `?smokedrift`, the harness's `TPS_SMOKEDRIFT=1`; carried by the knob registry in `SENSE`, a recording from before the key
+  replays with it off; it is the grid's, so it acts only with `?cpusense&smokegrid`). Off, a level with no wind, or under a roof = the step as it
+  was, to the bit. No row of `FROZEN_HOLDS`, as `SENSE.grid`, `bounce` and `moon` have none: both stands have it off and it is to come on with
+  them. A rule NEW in Rust: no TypeScript twin.
+  - WHY. The first run of the error tool on a GPU (the next bullet) read the grid against the picture under the open sky: off by 0.883 of the light
+    at the middle, deciding the other way on 64.8 % of the lines. The picture's solver pulls the smoke's whole velocity toward the storm's flat
+    wind about three times a second (`smoke/wind_force.wgsl windForce`), the rise too: out of doors its smoke blows along and stays under head
+    height (on the page's software adapter a canister's smoke stood 1.3, 1.8 and 2.6 m tall at 1, 3 and 6 s under a roof and 1.3, 1.3 and 1.8 m
+    under the sky). The grid's stood over the canister and rose as it does in a room. THE MAINTAINER'S CALL, 2026-11-04, asked whether smoke out
+    of doors should rise instead: "let's just leave it as is and have a smoke tuning pass before the release". So the grid follows the picture as
+    it is, and if that pass lets outdoor smoke rise, step 4's damping is what to take out again.
+  - WHAT IT IS, two things by one share. THE DRIFT (3b): before the spread, each step carries smoke across the open faces in plan out of the cell
+    upwind (a donor's own density, so nothing is made), at the wind's speed at that height times the share of it the two squares have. IT DOES
+    LITTLE OF ITS OWN (4): a face passes less of the smoke's own spread by that share. Upward, none in the open (the wind is flat), so out of
+    doors the smoke stays in the layers it was let out into; sideways, down to `SENSE.smoke.inWind` of it (0.15), enough to get round what the
+    wind pushes it against, as the picture's does by its pressure. (With the same 0.15 kept upward the grid was off again against the picture:
+    0.213 at the middle and 20.5 % the other way.) THE WIND is the weather's own vector as the game holds it (`weather.ts wind`), wherever `Wind.blows()`
+    says the weather blows at all — the one test the picture's storm uses too — and NONE OF A MACHINE'S OWN WIND SETTINGS (the master,
+    `WIND.storm`, `WIND.stormK`, and the weather's own on / off, `?noweather` and the panel's box, which is the session's and which no snapshot
+    or recording carries: what a player turns down is his picture, and with the storm switched off on his page the game's smoke still drifts),
+    no gust, no vent, no draught at a door. So it reads the hour, the kind and the weather's numbers and nothing else. NOTE: the rest of the
+    weather acts on the simulation only under a picked kind (`weather.ts simLive`); this acts under the office's unpicked night storm too,
+    because that storm moves the picture's smoke and the picture's smoke is what the page's senses read. THE SHARE of a square metre is
+    `stormShare` (0 under a roof, easing to 1 over the lee off it), from the footprints as the weather's roofs and `WX_OWN.wind` give them at the
+    moment of asking, not from the storm's record (which the frame's dressing step keeps fresh, and a host with the wind turned down or no
+    picture does not take). ITS RISE WITH HEIGHT is the storm field's (`WIND_FIELD.stormLow`, `stormGain`, `stormFullAt`: 0.55 of it at the
+    ground, all of it by 2.5 m; `wind-probes.ts` holds the shader's own three numbers to them). A pass carries at most a quarter of a cell across
+    a face, so a faster wind takes more passes of the step (eight at most: 10 m/s along an axis; faster than that it is slowed whole, both axes by
+    one number, never bent). What goes over the plan's edge has left the level and is in the book as given back (`H_GIVEN` now holds both). The
+    host writes the shares, a number a square metre, into the module's scratch table before a step, and only while there is smoke to move
+    (`SmokeGrid.smoky`, read off the game's block).
+  - THE CHECK: `bun run tools/qa/smokedrift-check.ts` on both stands (`SMOKEDRIFT_BREAK=1` tells the game a wind of nothing and must fail `switch`,
+    `drift`, `calm`, `low`, `mass`, `bearing` and `back`). On the office: the switch, the drift downwind, no change in a room or with no wind in the weather, the same
+    drift with the weather switched off in the session, the book with what went over the edge, a put-back and a fresh game handed the snapshot. On `gwot-yard.json`: the dust's wind (past one pass a step)
+    carries the smoke on its own bearing (1.9° off; with each axis capped by itself, as it was first written, it went 20° to the side), of one of
+    the game's canisters in the rain's wind none is above 1.5 m at 8 s where 17 % is in still air, a wind toward −x and −z goes its way and over
+    the near edges, and the bricks are said.
+  - THE BRICKS, SAID. In still air one of the game's canisters takes about 15 bricks. In the rain's wind (1.1, 0.45 m/s) on the yard it takes 62
+    and three take 92 of the 160, because a plume is long; nothing was refused in 45 s. A level with more open ground or more canisters can still
+    take them all: the grid then says it cannot answer and the blobs do (`smokegrid-check.ts full`), which neither drift nor stay low nor know
+    walls, so a line's answer would jump between two smokes: this is not to come on before there are bricks enough that it does not happen. More
+    bricks (the index is a byte: 255 at most without widening it) is a change to the state's layout and the Rust goal's to place.
+  - AGAINST THE PICTURE (the kept report; `adrift` in the tool's rows, `adrift:roof` and `adrift:sky` in `BUDGET`): under the open sky 0.000 at the
+    middle, 0.250 at the 95th and 2.7 % deciding the other way on 443 lines, where the grid in still air has 0.883, 1.000 and 64.8 %; under a
+    roof the two are one smoke (0.019, 0.526, 10.3 %). WHAT THAT DOES NOT SAY: every line of the plan runs at eye height, and out of doors the
+    picture's smoke stays under it, so the agreement is that neither hides a standing man, and smoke gone
+    altogether or blown the wrong way would read as well (the check above is what holds those). What a line at a crouching man's height reads through
+    the plume, on either, nobody has measured: the plan wants lines at more than one height before this comes on. The report is one machine's
+    (Apple Metal), made before the walk waited for its last reading.
+  - MEASURED (2026-11-04, a 4-core cloud box, headless). THE SWITCH DOWN IS THE BUILD AS IT WAS: `tickcost.ts --each --list` over five missions,
+    36,859 ticks, every run to the bit against the tree before, and the same 80 games by digest on the server's stand (below). WITH IT UP, the
+    server's stand with the grid and the light model (`TPS_PROFILE=shipped TPS_CPUSENSE=1 TPS_SMOKEGRID=1 TPS_CPULIGHT=1`), compound-four,
+    warehouse-four, pass-four, hostage-rescue and block-squads, 16 seeds each: 76 of the 80 games are the same game; won 57 → 56, men lost 154 →
+    156 of 288. The four that moved are two on the compound and two on the pass, where smoke is thrown out of doors in a wind (one squad that
+    lost three came through whole, one that came through whole was wiped): too few to say it helps or hurts. `rollback-check` whole with the
+    switch up on both stands: all pass. `smokegrid-check`, `cpulight-check`, `modelerr.ts`, `rust-check`, `simstate-check`, `knobs-check`,
+    `dice-check`, `rollback-check --static` on the tree: pass; `probes.ts wind` is red on `wind-identity` on both stands, as on the tree before.
+    THE PAGE, headless Chromium on the software adapter, frames not drawn: it boots plain, with the grid, and with the switch up, with no page
+    error, and six seconds after one of the game's canisters is let out in the office's north strip the grid's smoke has its middle 0.25 m from
+    the canister with the switch down and 2.0 m downwind with it up; `modelerr-page.cjs` walks its smallest plan with the new row in the report.
+    NOT MEASURED: the quiet missions and the lessons with it up; a level under the dust or the downpour in play; what a step costs with a long
+    plume standing; smoke meeting a wall in the wind (it has a sideways spread to get round by, and nobody has looked at what it does there).
+    Nobody has played it. Never seen on a GPU: the only picture it has been held against is the one kept report.
 - **The model against the picture** (`src/host/modelerr.ts`; the page's `?modelerr`, `tools/qa/modelerr.ts`, `tools/qa/modelerr-page.cjs`; the
   maintainer, 2026-11-02: "we'd want some way during development of bounding the error between the two but then just let them proceed independently
   when actually running the game"). A DEVELOPMENT TOOL: nothing of it is made without the word and the game never reads it. The senses' CPU models

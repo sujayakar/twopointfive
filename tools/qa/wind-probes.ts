@@ -100,6 +100,12 @@ export async function windField(): Promise<boolean> {
     const want: [string, number][] = [['WIND_DEFLECT_H', WIND_FIELD.deflectH], ['WIND_DEFLECT_LOSS', WIND_FIELD.deflectLoss], ['WIND_SUPPORT_SIG', WIND_FIELD.supportSigma], ['WIND_STORM_TOP', WIND_FIELD.stormTop], ['WIND_STORM_LEE', WIND_FIELD.stormLee]];
     const fails: string[] = [];
     for (const [k, v] of want) { const m = new RegExp(`const ${k}: f32 = ([0-9.]+);`).exec(wg); if (!m) fails.push(`${k} missing`); else if (Math.abs(parseFloat(m[1]) - v) > 1e-9) fails.push(`${k} = ${m[1]} ≠ ${v}`); }
+    // (…and the storm's rise with height, which the game's own smoke drifts by too — sense.ts SENSE.drift: written out in both of the shader's storm functions)
+    { const rise = [...wg.matchAll(/let hgt = ([0-9.]+) \+ ([0-9.]+) \* clamp\(p\.y \/ ([0-9.]+), 0\.0, 1\.0\);/g)];
+      if (rise.length !== 2) fails.push(`the storm's rise with height is written ${rise.length} times (want 2: windStorm, windStormRoofs)`);
+      for (const m of rise) if (parseFloat(m[1]) !== WIND_FIELD.stormLow || parseFloat(m[2]) !== WIND_FIELD.stormGain || parseFloat(m[3]) !== WIND_FIELD.stormFullAt) fails.push(`the storm's rise with height ${m[1]} + ${m[2]} × y / ${m[3]} ≠ WIND_FIELD ${WIND_FIELD.stormLow} + ${WIND_FIELD.stormGain} × y / ${WIND_FIELD.stormFullAt}`); }
+    { const pw = await Bun.file(`${ROOT}/src/render/shaders/particles.wgsl`).text(), m = /let h = \(([0-9.]+) \+ ([0-9.]+) \* clamp\(p\.y \/ ([0-9.]+), 0\.0, 1\.0\)\) \/ ([0-9.]+);/.exec(pw);   // (…and the wisps' share of it, particles.wgsl wispShare: the same three, over the first)
+      if (!m) fails.push('particles.wgsl wispShare: the storm\'s rise with height is not written as it was'); else if (parseFloat(m[1]) !== WIND_FIELD.stormLow || parseFloat(m[2]) !== WIND_FIELD.stormGain || parseFloat(m[3]) !== WIND_FIELD.stormFullAt || parseFloat(m[4]) !== WIND_FIELD.stormLow) fails.push(`particles.wgsl wispShare: (${m[1]} + ${m[2]} × y / ${m[3]}) / ${m[4]} ≠ WIND_FIELD`); }
     if (!/fn windJet\(pos: vec3f, dir: vec3f, speed: f32, reach: f32, tanSpread: f32, r0: f32, dMax: f32, floorY: f32, p: vec3f\) -> vec3f/.test(wg)) fails.push('windJet signature changed (particles.wgsl windAir and smoke/wind_force.wgsl both call it positionally)');
     if (!/fn windStorm\(windV: vec3f, interior: vec4f, annex: vec4f, p: vec3f\) -> vec3f/.test(wg)) fails.push('windStorm signature changed');
     const sm = await Bun.file(`${ROOT}/src/smoke/smoke.ts`).text(), pt = await Bun.file(`${ROOT}/src/render/particles.ts`).text();

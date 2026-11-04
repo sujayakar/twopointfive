@@ -97,6 +97,9 @@ export const SENSED = { sight: 0, light: 0, smoke: 0, sound: 0, paths: 0 };
 /** eyes one question of a sight pass can name (four bits each, and the count above them: rust/sim/src/fog.rs) */
 const SIGHT_EYES = 7;
 const bothPanes: { bi: number; t: number }[] = [];   // (the check's: the panes the module listed for the question in hand)
+/** THE WIND THE COARSE GRID'S SMOKE DRIFTS BY (`gridStep`; game/wind.ts stormDrift): the vector (m/s), its rise with height (`low` of it at the ground,
+ *  `gain` more by `fullAt` metres up) and the share of it each square metre of the plan has (0 under a roof … 1 in the open) */
+export interface GridWind { x: number; z: number; low: number; gain: number; fullAt: number; share: (x: number, z: number) => number }
 export class StaticCollision {
   private cells: number[][];        // per 1m cell: static box indices whose footprint overlaps and that matter for movement
   private W = WORLD.gridW; private H = WORLD.gridH; private cs = WORLD.gridCell;
@@ -457,9 +460,13 @@ export class StaticCollision {
    *  leaves as they stand. The copy is the grid's to stand up: where no row of RUST has it standing for this tick, it is made the boxes as they are for
    *  the step alone and let go again, with no question of the game's sent to it (so nobody who opens a tick has to know a grid is there). False = nothing
    *  was done (the module does not run here, more leaves than a list holds, or no grid stands on this level): the state is as it was, the emitters not
-   *  taken. */
-  gridStep(st: SimState, pending: readonly number[], n: number, K: { decay: number; spread: number; rise: number; riseRate: number; gone: number },
-    glow: { K: { albedo: number; share: number; passes: number; sweep: number }; lamps: (col: StaticCollision) => boolean } | null = null): boolean {
+   *  taken.
+   *  `wind`: the smoke under the open sky drifts by this vector (m/s; sense.ts SENSE.drift), each square metre of the plan by the share of it `share`
+   *  gives (0 under a roof … 1 in the open) and by its rise with height (`low` of it at the ground, `gain` more by `fullAt` metres up), and
+   *  spreads of its own by less there (`K.inWind` of its spread where the wind blows whole). None, or a plan of more squares than the table holds: still air, the step as it was. */
+  gridStep(st: SimState, pending: readonly number[], n: number, K: { decay: number; spread: number; rise: number; riseRate: number; gone: number; inWind: number },
+    glow: { K: { albedo: number; share: number; passes: number; sweep: number }; lamps: (col: StaticCollision) => boolean } | null = null,
+    wind: GridWind | null = null): boolean {
     const M = this.mirror; if (M.owes) M.again(this.boxes, this.glassWalkable);
     const mine = !M.live;
     if (mine) { if (simWhyNot()) return false; M.open(this.boxes, this.cells, this.tiltedAt, this.W, this.H, this.cs, this.dynamicBoxes, this.glassWalkable, false, false, false, 0); if (!M.live) return false; }
@@ -472,8 +479,14 @@ export class StaticCollision {
       // A step carries as many as the scratch holds, 170, the LATEST of them: the grid's own list holds 64, and `pending` is kept to that many by
       // whoever fills it, sense.ts SmokeGrid.emit)
       const x = M.x, m = f64(), at = M.scratch, all = pending.length - pending.length % 6, e = Math.min(all, M.scratchLen - M.scratchLen % 6); for (let i = 0, from = all - e; i < e; i++) m[at + i] = pending[from + i];
+      // (THE WIND, bricks.rs 3b: its share a square metre, row by row, two squares to a brick's side — the plan as the grid lays it, bricks.rs step)
+      let wx = 0, wz = 0, low = 1, gain = 0, fullAt = 1;
+      if (wind && (wind.x !== 0 || wind.z !== 0)) {
+        const nx = 2 * Math.ceil(this.W * this.cs / 2), nz = 2 * Math.ceil(this.H * this.cs / 2);
+        if (nx * nz <= M.windCap) { for (let z = 0, o = M.wind; z < nz; z++) for (let i = 0; i < nx; i++) m[o++] = wind.share(i + 0.5, z + 0.5); wx = wind.x; wz = wind.z; low = wind.low; gain = wind.gain; fullAt = wind.fullAt; }
+      }
       const G = glow?.K, g = st.bind();
-      return x.grid_step(g, st.stamp, M.slot, M.gridCopy(), set, n, e / 6, K.decay, K.spread, K.rise, K.riseRate, K.gone, lamps, G ? G.albedo : 0, G ? G.share : 0, G ? G.passes : 0, G ? G.sweep : 0) !== -1;
+      return x.grid_step(g, st.stamp, M.slot, M.gridCopy(), set, n, e / 6, K.decay, K.spread, K.rise, K.riseRate, K.gone, lamps, G ? G.albedo : 0, G ? G.share : 0, G ? G.passes : 0, G ? G.sweep : 0, wx, wz, low, gain, fullAt, K.inWind) !== -1;
     } finally { if (mine) M.shut(); }
   }
   /** segmentBlocked as this file answers it (and the whole of it wherever the module does not: outside a tick, with RUST.lines off) */
