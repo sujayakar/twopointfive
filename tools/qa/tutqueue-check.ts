@@ -19,8 +19,6 @@
 //      leaves him; Shift with the key by the first gate turns all four to it. THE SECOND GATE IS THE WHEEL'S: a Shift tap there gives nothing and says to
 //      keep the key down; kept down, the ring is up for the whole pair a tap would have sent, with no more than five wedges and the step's own line for
 //      the one to press, and that wedge turns the pair to the gate while the other pair stays on the first.
-//  10. THE KEY TAPPED TWICE IS NOT THE LESSON'S (a third game, CMDRING.twice raised): on the first door's step a second tap inside the window is the
-//      key's order again, all four still stack on it, and nobody falls in — no step lists `twice`, so a double press cannot undo what a step asked for.
 //   9. THE WRONG HAND IN THE YARD IS PUT RIGHT BY THE LINES THAT FOLLOW IT (a second game, the two door fights taken by hand): a Shift tap on a stray
 //      spot first, and the first gate's own line still parts a pair to it; then the key kept down with NO Shift by the second gate — the wheel of the
 //      mission before, for everyone — and its second wedge turns all four to that gate: the step goes by, the next line asks for the first gate again,
@@ -32,7 +30,7 @@ const { parseLevelData } = await import(`${ROOT}/src/scene/levelData.ts`);
 const { loadLevel } = await import(`${ROOT}/src/scene/levelLoad.ts`);
 const { startFromQuery } = await import(`${ROOT}/src/game/scenarioRun.ts`);
 const { RAILS } = await import(`${ROOT}/src/game/rails.ts`);
-const { CMDRING, CMDRING_STATS } = await import(`${ROOT}/src/game/cmdring.ts`);
+const { CMDRING } = await import(`${ROOT}/src/game/cmdring.ts`);
 const { AUTOPILOT } = await import(`${ROOT}/src/game/autopilot.ts`);
 const { checkLesson } = await import(`${ROOT}/src/game/lesson.ts`);
 const { knobsCopy, knobsBack } = await import(`${ROOT}/src/game/knobs.ts`);
@@ -152,9 +150,8 @@ export async function tutqueueCheck(): Promise<boolean> {
       const M = O.menu, ring = M?.part ? `${names(M.men)}${M.flat ? '' : ' (NOT the one ring)'}` : M ? 'everyone' : 'no ring', rows: string[] = M?.rows.map((r: any) => r.id) ?? [], line = g.rails.prompt()?.line ?? '', digit = `Digit${rows.indexOf('cover') + 1}`;
       R.I.keys.add(digit); R.I.pressed.add(digit); R.step(); R.I.keys.delete(digit); R.step(3); R.I.keys.delete(CMDRING.key); R.I.keys.delete('ShiftLeft'); R.step(10);
       const e2 = R.watching(E), n2 = R.watching(Nn), pair = n2.length === 2 && O.pairOf(n2[0]) === O.pairOf(n2[1]);
-      const first = CMDRING.goalHalf ? 2 : N, kept = !CMDRING.goalHalf || (e1.length === 2 && O.pairOf(e1[0]) === O.pairOf(e1[1]) && e1.every((m: any) => e2.includes(m)));   // (the first goal is half the squad's since `CMDRING.goalHalf`: the pair it sent is the pair left on the road gate)
-      verdict(onCall && following && there && clear && e1.length === first && kept && tapped === 0 && /held down/.test(note) && !!M?.part && !!M.flat && M.men.length === 2 && rows.indexOf('cover') === 1 && rows.length <= 5 && line === g.level.scenarios.lesson.steps.find((T: any) => T.id === 'gateB').flatLine && e2.length === 2 && pair,
-        `the yard: called and walked out through the hall, every man has a line to the spot by each gate; the first gate turns ${CMDRING.goalHalf ? 'a whole pair, who stay on it' : 'all four'}; at the second a Shift tap gives nothing, and the pair kept down is the ring for a whole pair, whose wedge turns them to it`,
+      verdict(onCall && following && there && clear && e1.length === N && tapped === 0 && /held down/.test(note) && !!M?.part && !!M.flat && M.men.length === 2 && rows.indexOf('cover') === 1 && rows.length <= 5 && line === g.level.scenarios.lesson.steps.find((T: any) => T.id === 'gateB').flatLine && e2.length === 2 && pair,
+        'the yard: called and walked out through the hall, every man has a line to the spot by each gate; the first gate turns all four; at the second a Shift tap gives nothing, and the pair kept down is the ring for a whole pair, whose wedge turns them to it',
         `the key on himself: all four fall in ${following} · he reached the ring: ${there} (${pl.char.pos[0].toFixed(1)}, ${pl.char.pos[2].toFixed(1)}) · ${lines.join(' · ')} · turned to the road gate: ${names(e1)} · a Shift tap by the back gate: ${tapped ? 'AN ORDER' : 'nothing'}, the note "${note}" · kept down, the ring for: ${ring} · its rows: ${rows.join(', ') || 'none'} · the line "${line}" · wedge ${rows.indexOf('cover') + 1}: to the back gate ${names(n2)}, left on the road gate ${names(e2)}`); }
     // ---- 9 (a second game: both door fights taken by hand, the lesson walked on to the yard's steps, the squad called and stood in the yard's ring)
     { const R = await rig(), g = R.g, O = R.O, pl = g.player, at = (id: string): V => R.stepOf(id).at;
@@ -162,7 +159,7 @@ export async function tutqueueCheck(): Promise<boolean> {
       for (const r of g.roomClear.rooms) if (r.def.id === 'guardroom' || r.def.id === 'hall') r.cleared = true;
       R.stand([28.4, 0, 16.0]); R.until(() => R.up() === 'call', 60); R.W.cursorAt(pl.char.pos); R.step(2); R.key(false); R.step(10);
       R.stand(at('yard')); R.until(() => R.up() === 'gateA', 20); R.step(240); const onA = R.up() === 'gateA';
-      // (a stray hand first: Shift with the key on a bare spot of the yard turns all four to it, or a pair since `CMDRING.goalHalf` — and the step's own line still sends a pair to the gate)
+      // (a stray hand first: Shift with the key on a bare spot of the yard turns all four to it — and the step's own line still parts a pair to the gate)
       const stray: V = ([[30.6, 0, 7.6], [26.0, 0, 8.4], [27.8, 0, 11.6], [25.2, 0, 7.0]] as V[]).find(p => [pl, ...O.men('all')].every((m: any) => flat(m.char.pos, p) > 1.5)) ?? [30.6, 0, 7.6]; R.W.cursorAt(stray as [number, number, number]); R.key(true); R.step(10); const s0 = R.watching(stray).length;   // (the stray spot is a bare one nobody stands on: under a man the key is his)
       R.mark('gateA'); R.key(true); R.step(10); const e1 = R.watching(at('gateA')); R.until(() => R.up() === 'gateB', 4); const onB = R.up() === 'gateB';
       // (the wrong wheel: the key kept down with no Shift is everyone's, and its second wedge is the same word — all four turn to the back gate)
@@ -172,16 +169,9 @@ export async function tutqueueCheck(): Promise<boolean> {
       const n1 = R.watching(at('gateB')), left = R.watching(at('gateA')); R.until(() => R.up() === 'split', 4); const onSplit = R.up() === 'split', line = g.rails.prompt()?.line ?? '';
       R.mark('split'); R.key(true); R.step(10); const e2 = R.watching(at('gateA')), n2 = R.watching(at('gateB')), pairs = e2.length === 2 && n2.length === 2 && O.pairOf(e2[0]) === O.pairOf(e2[1]) && O.pairOf(n2[0]) === O.pairOf(n2[1]);
       R.until(() => R.up() === 'hold', 6); const onHold = R.up() === 'hold';
-      verdict(onA && s0 === (CMDRING.goalHalf ? 2 : N) && e1.length === 2 && onB && !!M && !M.part && n1.length === N && left.length === 0 && onSplit && /road gate/.test(line) && pairs && onHold,
+      verdict(onA && s0 === N && e1.length === 2 && onB && !!M && !M.part && n1.length === N && left.length === 0 && onSplit && /road gate/.test(line) && pairs && onHold,
         'the wrong hand in the yard is put right by the lines that follow: after a stray Shift tap the first gate still gets a pair; the wheel for everyone turns all four to the second gate, the next line asks for the first again, and a Shift tap there leaves a pair on each',
         `the yard's first step up: ${onA} · a stray Shift tap at (${stray[0]}, ${stray[2]}): ${s0} watch it · then by the road gate: ${names(e1)} · '${onB ? 'gateB' : R.up()}' · the key kept down with no Shift: the ring for ${ring} · its wedge: to the back gate ${names(n1)}, on the road gate ${names(left)} · then '${onSplit ? 'split' : R.up()}' "${line}" · a Shift tap by the road gate: road ${names(e2)}, back ${names(n2)} · then '${R.up()}'`); }
-    // ---- 10 (a third game: the key tapped twice on the first door's step)
-    { const R = await rig(), g = R.g, O = R.O, N = O.men('all').length; CMDRING.twice = true;
-      R.stand(R.stepOf('corner').at); R.until(() => R.up() === 'door1', 3); const t0 = CMDRING_STATS.twice, onMark = R.mark('door1'), g0 = g.time; R.key(false); R.key(false); const dt = g.time - g0; R.step(10);
-      const a = R.on('guard'), fallen = O.men('all').filter((m: any) => O.of(m)?.order === 'fallIn');
-      verdict(onMark && dt < CMDRING.twiceSecs && g.rails.locks('twice') && a.length === N && fallen.length === 0 && CMDRING_STATS.twice === t0,
-        'the key tapped twice is not the lesson\'s: on the first door\'s step a second tap inside the window is the key\'s order again, and all four still stack',
-        `the cursor on its ring: ${onMark} · the two taps ${dt.toFixed(2)} s apart (the window is ${CMDRING.twiceSecs} s) · the frame locks it: ${g.rails.locks('twice')} · stacked on the door: ${names(a)} · falling in: ${fallen.length}`); }
   } finally { knobsBack(keep.knobs); RAILS.on = keep.on; AUTOPILOT.on = keep.ap; }
   console.log(all ? '=== tutqueue-check: ALL PASS ===' : '=== tutqueue-check: FAIL ===');
   return all;

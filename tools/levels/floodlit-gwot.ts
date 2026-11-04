@@ -25,25 +25,8 @@ const PAD: [number, number] = [20.0, 18.6], PAD_R = 3.2;
 const SKIN: Skin = {
   wall: 'block', house: 'render', inner: 'whitewash', frameOut: 'iron', frameIn: 'woodGrey', dado: null,
   floor: { lino: 'slab' }, noRug: /./, metals: ['olive', 'galv', 'iron', 'rust'], patches: 0,   // (no patches: one would lie over the pad)
-  // floodlit.ts's own colours as the stuff they are: the yard's packed earth is GRAVEL (a second ground inside the wall: the dust stops at the gate), the fuel
-  // drums and the generator set wear their paint, the sandbags under the eaves are sandbags
-  own: [[[0.34, 0.3, 0.24], 'gravel'], [[0.2, 0.3, 0.42], 'drumBlue'], [[0.5, 0.45, 0.33], 'sandbag'], [[0.5, 0.42, 0.1], 'genYellow'], [[0.5, 0.47, 0.4], 'truckTan']],
-  dress: (G, _level, T) => {
+  dress: (_G, _level, T) => {
     const M = lookMarks(T), white = T.tone(P.plasticWhite, 0.9), [cx, cz] = PAD;
-    // THE GROUND A FUEL POST WEARS, laid before the pad's paint so the paint lies on it. WHEELS: the track along the outside of the south wall that the team
-    // came up, in at the gate, and round to where the pickup stands. FEET: the beat from the front door round the pad to the gate (nobody walks across a
-    // pad), the way in from the foot gate, and outside the wall the walk from the track to the shed's door. FUEL: what the drums have dripped. Each is its
-    // own ground darker or a second finish; the pad itself stays clean.
-    { const lot = T.floorAt(20, 26.6) ?? P.dust, yard = T.floorAt(8, 20) ?? P.gravel;
-      G.ruts(0.6, 26.5, 39.4, 26.5); G.ruts(20.0, 26.0, 20.0, 24.3);
-      /** a beat feet have worn: its own ground darker down its middle, with a fainter shoulder either side (no edge to read as a painted line) */
-      const beat = (pts: [number, number][], ground: Vec3) => { M.path(pts, 1.2, T.tone(ground, 0.9)); M.path(pts, 0.5, T.tone(ground, 0.78)); };
-      G.ruts(18.3, 23.0, 12.6, 22.9);
-      beat([[18.4, 13.7], [16.0, 15.6], [16.0, 21.6], [18.2, 23.3]], yard);
-      beat([[19.6, 13.7], [24.0, 15.6], [24.0, 21.6], [21.8, 23.3]], yard);
-      beat([[4.6, 21.8], [9.0, 22.0]], yard);
-      beat([[8.6, 25.3], [3.0, 25.3], [3.0, 20.1]], lot);
-      G.patch(27.3, 18.6, 2.0, 1.5, 'oil', 0.3); G.patch(26.2, 19.3, 1.0, 0.6, 'oil', -0.4); G.patch(11.0, 17.0, 1.1, 0.8, 'oil', 0.2); }
     // THE RING: an octagon, the way a pad is painted with a roller and a string
     { const pts: [number, number][] = []; for (let i = 0; i <= 8; i++) { const a = Math.PI / 8 + i * Math.PI / 4; pts.push([cx + Math.cos(a) * PAD_R, cz + Math.sin(a) * PAD_R]); } M.path(pts, 0.16, ORANGE); }
     // THE H, read from the gate

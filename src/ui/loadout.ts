@@ -46,7 +46,6 @@ import { squadChoices, squadSearch, squadOfQuery, startSize, storeSquad, rosterO
 import { KIT, KIT_SOLO, SLOTS, SUITS, bigOf, kitPacks, kitDefault, type MemberKit, kitGun, kitRowCan, kitChanged, kitCost, kitLoadout, kitLoadoutOf, kitLoadouts, kitMission, kitIssueWhole, kitPool, kitRingsLent, kitStealthHand, kitStealthOn, kitRows, kitShown, kitSmokes, kitTeam, kitTreeOn, kitWalls, kitWords, kitWorn, squadCost } from '../game/kit';
 import { memberCard, tintCss, clipWorn, clipKey, gunCanOf, KIT_CAN, KIT_CLIP, KIT_LENT, type MemberCard, type MemberCardOpts } from './kitCard';
 import { menuTheme } from './theme';
-import { typedInto } from '../host/keymap';
 import { KITDENSE } from './kitDense';
 import { gunIcon, kitIcon } from './kitIcons';
 import { WEAPONS, type WeaponId } from '../game/weapons';
@@ -79,8 +78,6 @@ export interface LoadoutOpts {
   onDeploy?: (search: string, n: SquadSize) => void;
   /** told at the end of every paint (the one starting page draws the picked man from it: ui/kitFigure.ts) */
   onPaint?: (s: LoadoutScreen) => void;
-  /** the words on the block that deploys (absent: 'Deploy' and the team's size). A host that deploys its own way says what its way is (ui/coop.ts) */
-  deployWords?: string;
 }
 /** one keyboard row of the screen: the element that takes the highlight, and what A D and Enter do on it (absent: nothing / Deploy). A row with keys of its
  *  own (the kit card) takes them first — `key`: true = taken, false = the screen's (W / S off its edge walk on) — and is told when the highlight walks onto
@@ -337,7 +334,7 @@ export function openLoadout(entry: LoadoutEntry, opts: LoadoutOpts = {}): Loadou
       if (keyed) { if (S.sel === 0) (card as unknown as { scrollTop: number }).scrollTop = 0; (S.rows[S.sel]?.el as unknown as { scrollIntoView?: (o: unknown) => void } | undefined)?.scrollIntoView?.({ block: 'nearest' }); }   // (a short window scrolls the rows: the highlighted row is kept in sight, the first row with the mission's head over it — by the KEYS only: a click's focus that scrolled the rows moved the button from under the cursor and lost the click)
       if (kitCard) { if (S.rows[S.sel]?.el === kitHost) kitCard.focus(); else kitCard.blur(); }   // (the card's own highlight shows only while the keys are in it)
       backBtn.classList.toggle('sel', S.rows[S.sel]?.el === btnRow && onBack); goBtn.classList.toggle('sel', S.rows[S.sel]?.el === btnRow && !onBack);
-      goBtn.textContent = opts.deployWords ?? `Deploy · ${sizeWords(squad)}`;
+      goBtn.textContent = `Deploy · ${sizeWords(squad)}`;
       opts.onPaint?.(S);
     },
     key(code, repeat = false) { if (!open) return false; keyed = true; try { return keys(code, repeat); } finally { keyed = false; } },
@@ -423,7 +420,7 @@ if (typeof window !== 'undefined' && typeof window.addEventListener === 'functio
     const S = current; if (!S || !S.open || (currentKeys && !currentKeys())) return;
     const chord = e.ctrlKey || e.metaKey, clip = e.altKey || (chord && e.shiftKey) || !S.card ? null : clipKey(e);   // (C or V by the letter on the key — kitCard.ts — bare or with Ctrl / Cmd: the kit's copy and paste)
     if (chord && clip) { const t = e.target as { tagName?: string; isContentEditable?: boolean } | null;   // (… the chord only while it is not the browser's own: no text field has the keys, no text on the page is selected)
-      if (typedInto(e.target) || t?.isContentEditable || String(window.getSelection?.() ?? '')) return; }   // (the hidden text box of a framed page is no field: host/keymap.ts)
+      if (/^(INPUT|TEXTAREA|SELECT)$/.test(t?.tagName ?? '') || t?.isContentEditable || String(window.getSelection?.() ?? '')) return; }
     else if (e.ctrlKey || e.metaKey || e.altKey) return;   // (the browser's own: reload, devtools)
     if (/^F\d+$/.test(e.code)) return;   // (the recorders' keys and the browser's stay theirs, and BEFORE the stop below: F7 to F10 never reached their listeners behind this one)
     e.stopImmediatePropagation(); if (!chord) eaten.add(e.code);   // (a chord's release is not waited for: macOS sends no keyup for a key let go under Cmd, and one left here would eat the game's next release of that key)

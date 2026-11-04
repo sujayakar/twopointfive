@@ -43,6 +43,12 @@ struct VOut { @builtin(position) pos: vec4f, @location(0) uv: vec2f };
 
 fn linearDepth(d: f32, pix: vec2f) -> f32 { return distance(worldFromDepth(pix, d), frame.camPos); }
 
+/// a guide's normal: the g-buffer's — on the look page (look.wgsl) the box's own FACE where the look tilted it, so every weight below is the one it always was
+fn geoN(p: vec2i) -> vec3f {
+  let n = textureLoad(gNormal, p, 0).xyz * 2.0 - 1.0;
+  if (LOOK && textureLoad(gNormal, p, 0).a < 0.17) { return lookGeoN(normalize(n), textureLoad(gId, p, 0).x); }   // THE LOOK PROTOTYPE
+  return n;
+}
 fn upsampleIndirect(pix: vec2i, pin: vec2f, z: f32, N: vec3f) -> vec3f {   // pin = the pixel's position on the INTERNAL raster (= pixf; under SHARP pixf × in∕out)
   let hdims = vec2i(textureDimensions(indirectTex));
   var ip = pix; if (SHARP) { ip = vec2i(floor(pin)); }           // the internal pixel this pixel falls in
@@ -59,7 +65,7 @@ fn upsampleIndirect(pix: vec2i, pin: vec2f, z: f32, N: vec3f) -> vec3f {   // pi
         let d = textureLoad(gDepth, gpx(src), 0);
         if (d >= 1.0) { continue; }
         let zs = linearDepth(d, ipos(vec2f(src) + 0.5));
-        let ns = textureLoad(gNormal, gpx(src), 0).xyz * 2.0 - 1.0;
+        let ns = geoN(gpx(src));
         var w = select(1.0 - t.x, t.x, dx == 1) * select(1.0 - t.y, t.y, dy == 1) + 1e-4;
         w *= exp(-abs(zs - z) / max(z * 0.02, 0.02));
         w *= pow(max(dot(ns, N), 0.0), 8.0) + 0.001;
@@ -79,7 +85,7 @@ fn upsampleIndirect(pix: vec2i, pin: vec2f, z: f32, N: vec3f) -> vec3f {   // pi
       let d = textureLoad(gDepth, gpx(src), 0);
       if (d >= 1.0) { continue; }
       let zs = linearDepth(d, ipos(vec2f(src) + 0.5));
-      let ns = textureLoad(gNormal, gpx(src), 0).xyz * 2.0 - 1.0;
+      let ns = geoN(gpx(src));
       var sp = vec2f(src - pix); if (SHARP) { sp = vec2f(src) + 0.5 - pin; }
       var w = exp(-dot(sp, sp) * (0.18 * (4.0 / f32(gdiv * gdiv))));   // spatial falloff in units of the texel spacing (0.18 /px² at gdiv 2)
       w *= exp(-abs(zs - z) / max(z * 0.02, 0.02) );
@@ -112,7 +118,7 @@ fn upsampleSpecular(pix: vec2i, pin: vec2f, z: f32, N: vec3f) -> vec3f {
       if (((tid >> 28u) & 1u) != 0u || tIdx == 0xFFFFFu) { continue; }
       if ((boxGeo[tIdx].flags & BOX_GLOSS) == 0u) { continue; }
       let zs = linearDepth(d, ipos(vec2f(src) + 0.5));
-      let ns = textureLoad(gNormal, gpx(src), 0).xyz * 2.0 - 1.0;
+      let ns = geoN(gpx(src));
       var sp = vec2f(src - pix); if (SHARP) { sp = vec2f(src) + 0.5 - pin; }
       var w = exp(-dot(sp, sp) * (0.18 * (4.0 / f32(gdiv * gdiv))));
       w *= exp(-abs(zs - z) / max(z * 0.02, 0.02) );
@@ -140,7 +146,7 @@ fn upsampleSpecAny(pix: vec2i, pin: vec2f, z: f32, N: vec3f) -> vec3f {
       let d = textureLoad(gDepth, gpx(src), 0);
       if (d >= 1.0) { continue; }
       let zs = linearDepth(d, ipos(vec2f(src) + 0.5));
-      let ns = textureLoad(gNormal, gpx(src), 0).xyz * 2.0 - 1.0;
+      let ns = geoN(gpx(src));
       var sp = vec2f(src - pix); if (SHARP) { sp = vec2f(src) + 0.5 - pin; }
       var w = exp(-dot(sp, sp) * (0.18 * (4.0 / f32(gdiv * gdiv))));
       w *= exp(-abs(zs - z) / max(z * 0.02, 0.02) );
@@ -318,7 +324,7 @@ fn paneLight(X: vec3f, n: vec3f) -> vec3f {
     if (!ev.ok) { continue; }
     let E = ev.E * abs(dot(n, ev.L));
     let w = luminance(E);
-    if (w < 1e-4) { continue; }
+    if (w < 1e-4 * lampFloorK()) { continue; }
     if (w > bestW) { rest += best; best = E; bestW = w; bestL = ev.L; bestD = ev.dist.x; bestI = i32(i); }
     else { rest += E; }
   }
@@ -348,6 +354,7 @@ const WET_F0: f32 = 0.02;            // water at normal incidence
 const WET_TILT: f32 = 0.9;           // a bead's rim tilts the normal this far (tan): a flattened cap, not a hemisphere
 const WET_SPEC_MAX: f32 = 30.0;      // luminance bound on the direct lobes (scene-referred: white long before this after the tonemap — a bound on sparkle outliers, not a look)
 const WET_SHEEN: f32 = 0.6;          // × the ambient sheen
+const WET_HIDDEN: f32 = 8.0;         // a light this many times brighter here, unshadowed, than everything its class delivered shadowed is hidden (below)
 // The lobes are shadowed PER EMITTER CLASS (EdS = the sharp class's shadowed direct here, EdB = the broad class's: the two targets the direct chain keeps apart): each class's
 // lobes × that class's own shadowed ∕ unshadowed ratio. One ratio over both drew the highlight of a light that is wholly hidden — the sodium street lamp behind the outer
 // wall, broad, orange, the brightest unshadowed term in the rooms beside it — on every upturned pouch and boot the moment a torch (sharp) put any light on the man.
@@ -371,7 +378,17 @@ fn wetCoatSpec(id: u32, P: vec3f, N: vec3f, z: f32, EdS: vec3f, EdB: vec3f, Ei: 
     let NdotL = dot(N, ev.L);
     if (NdotL <= 0.0) { continue; }
     let broad = lightBroad(li);
-    if (broad) { UdB += ev.E * NdotL; } else { UdS += ev.E * NdotL; }   // what the direct pass scored here for it, unshadowed, in its class
+    // A LIGHT THAT IS PLAINLY HIDDEN HERE DRAWS NO HIGHLIGHT (the maintainer on his GPU, 11-01, the pass by day: "lots of temporal instability on the guy's back",
+    // "still lots of fireflies/sparkles in that room"). The class's ratio below is right where one light makes most of the unshadowed sum AND is the one that
+    // arrives. In a shut room by day the sun makes all of the sum and none of it arrives: the ratio is the bulb's light over the sun's, and the sun's lobe times
+    // it is a highlight of the bulb's strength where the SUN would mirror, through the roof, on every bead that faces it, coming and going with the noise in the
+    // shadowed light. A light whose own unshadowed light here is over WET_HIDDEN times all the shadowed light its class delivered cannot be arriving (what
+    // arrives is at least each seen light's share), so it is left out of the lobes and of the sum the ratio is taken against.
+    // ON THE LOOK PAGE BY DAY, under its Steady bounce row (frame.lampCfg.z; `?look=steady:0` = the highlight as it was, and so is every other page), and
+    // faded out over the half of WET_HIDDEN below it, so that a penumbra's edge is not a line where the glint ends.
+    var keep = 1.0;
+    if (frame.lampCfg.z > 0.0) { keep = 1.0 - smoothstep(0.5 * WET_HIDDEN, WET_HIDDEN, luminance(ev.E) * NdotL / max(luminance(select(EdS, EdB, broad)), 1e-6)); if (keep <= 0.0) { continue; } }
+    if (broad) { UdB += keep * ev.E * NdotL; } else { UdS += keep * ev.E * NdotL; }   // what the direct pass scored here for it, unshadowed, in its class
     let NsL = dot(Ns, ev.L);
     if (NsL <= 0.0) { continue; }
     let hv = ev.L + V;
@@ -385,7 +402,7 @@ fn wetCoatSpec(id: u32, P: vec3f, N: vec3f, z: f32, EdS: vec3f, EdB: vec3f, Ei: 
     let D = a2 / (3.14159265 * dn * dn) * ((a * a) / a2);   // GGX at the widened width × (a/a')²: the lobe's energy, spread over the disc
     let Vis = 0.5 / (NsL * (NdotV * (1.0 - ap) + ap) + NdotV * (NsL * (1.0 - ap) + ap) + 1e-4);   // height-correlated Smith, the usual approximation
     let uf = 1.0 - VdotH; let F = WET_F0 + (1.0 - WET_F0) * uf * uf * uf * uf * uf;   // Schlick (the base clamped above: pow of a negative ulp is NaN on some backends)
-    let lobe = ev.E * (D * Vis * F * NsL);
+    let lobe = ev.E * (keep * D * Vis * F * NsL);
     if (broad) { sumB += lobe; } else { sumS += lobe; }
   }
   let visS = clamp(luminance(EdS) / max(luminance(UdS), 1e-4), 0.0, 1.0);
@@ -398,7 +415,7 @@ fn wetCoatSpec(id: u32, P: vec3f, N: vec3f, z: f32, EdS: vec3f, EdB: vec3f, Ei: 
   let uv1 = 1.0 - NdotV; let Fv = WET_F0 + (1.0 - WET_F0) * uv1 * uv1 * uv1 * uv1 * uv1;
   let R = reflect(-V, Ns);
   var env = Ei;
-  if ((frame.flags & FLAG_BOUNCE) != 0u) { if (BOUNCE_WALLS) { let q = diceWalledPoint(P, N, (id >> 20u) & 0xffu); if (q.w > 0.0) { env = diceIrradiance(q.xyz, R); } } else { env = diceIrradiance(P + N * c0Spacing(), R); } }   // (BOUNCE WALLS, lighting_common.wgsl: a man by a wall never mirrors the room behind it)
+  if ((frame.flags & FLAG_BOUNCE) != 0u) { if (WALL_SIDES) { let f = diceFaceBy(P, N, c0Spacing()); env = diceIrradianceBy(diceTapsBy(f.P, f.own), R); } else if (BOUNCE_WALLS) { let q = diceWalledPoint(P, N, (id >> 20u) & 0xffu); if (q.w > 0.0) { env = diceIrradiance(q.xyz, R); } } else { env = diceIrradiance(P + N * c0Spacing(), R); } }   // (BOUNCE WALLS, lighting_common.wgsl: a man by a wall never mirrors the room behind it; under the look page's WALL SIDES the one rule: his side read like any face, on its own side of a wall)
   env = mix(vec3f(luminance(env)), env, 0.5);   // half the chroma: the cache is a metre coarse and a wet coat's mirror is blurry — the brightness is the cue, a cell-wide colour cast (a green cabinet glazing a black suit teal) is not
   let sheen = env * ((1.0 / 3.14159265) * Fv * WET_SHEEN * (1.0 - 0.5 * rough));
   L += sheen;
@@ -429,7 +446,9 @@ const SNOW_GLOW_WHITEN: f32 = 0.6;                        // how far the lamp's 
 const SNOW_GLOW_REACH: f32 = 0.12;                        // metres: the stencil's arm (1 ‥ 14 px)
 const SNOW_GLOW_CONF: f32 = 0.03;                         // the stencil's mean N·L (per class) under which the term fades out
 const SNOW_GLOW_SHADE: vec3f = vec3f(0.93, 1.0, 1.11);    // × the bounce and the sky's light on snow in full shade (luminance kept): never dead grey
-fn snowGlowAmt(a: f32) -> f32 { return clamp((1.0 - a) * 1.5, 0.0, 1.0); }
+fn snowGlowAmt(a: f32) -> f32 {
+  if (LOOK && a < 0.17) { return 0.0; }   // THE LOOK PROTOTYPE: the alpha's fourth code is a wall's relief, not snow
+  return clamp((1.0 - a) * 1.5, 0.0, 1.0); }
 fn snowGlow(sPix: vec2i, P: vec3f, N: vec3f, z: f32, EdS: vec3f, EdB: vec3f) -> vec3f {
   var fac = vec4f(0.0); var kS = vec3f(0.0); var kB = vec3f(0.0); let V = (frame.camPos - P) / max(z, 1e-4);   // SNOW SPARKLE (below): this pixel's facet, what it flashes per class
   if (SNOW_SPARKLE) { snowSparkleL = vec3f(0.0); fac = snowSparkleFacet(P, N, z); if (!SNOW_GLOW && fac.w <= 0.0) { return vec3f(0.0); } }   // (the sparkle alone, and no facet here: nothing to do)
@@ -534,6 +553,250 @@ fn snowSparkleLobe(Nf: vec3f, L: vec3f, V: vec3f) -> f32 {
 }
 fn snowSparkleFresh(rough: f32) -> f32 { return smoothstep(SNOW_SPARKLE_ROUGH.x, SNOW_SPARKLE_ROUGH.y, rough) * (1.0 - smoothstep(SNOW_SPARKLE_ROUGH.z, SNOW_SPARKLE_ROUGH.w, rough)); }
 
+// ---- THE LOOK PROTOTYPE — LOOSE SNOW IN THE AIR (powderTex = render/powderField.ts's field; frame.veilA / veilB, render/lookveil.ts; the look panel's
+// "Blowing snow" row) ----
+// The powder the wind carries over lying snow, and the puff a boot throws, are ONE LAYER OF STUFF carried by the game's own air (the field the falling flakes
+// ride): it is simulated over the level's floor plan and only DRAWN here, on the pixel under it. A texel says how much powder stands over that spot (a column:
+// what it hides seen from straight above) and how high it stands. A pixel under the layer's top is seen through the part of the column above it, along the
+// eye's ray (read where that ray is halfway up, so a puff has a near side and a far side), which is also what lets powder stand in front of a boot. Its light is
+// THIS PIXEL's own (the same sun, shadow, sky and bounce) on a whiter powder, never darker than what is under it (that reads as smoke); toward the sun it thins
+// the direct light on what lies just down-sun of it, clear of its own foot, and it is brighter on the side the sun is on and under a low sun.
+const POWDER_ALBEDO: vec3f = vec3f(0.97, 0.98, 1.0);
+const POWDER_TOP: f32 = 0.9;   // m: no powder stands higher than this (the call's gate)
+// HOW IT IS DRAWN (the maintainer, 10-29, of the field drawn as it stands, on a GPU: "i don't really see blowing snow and snow puffs at all?"). The field is a
+// tenth of a metre a cell and thin: drawn as it stands it is a faint wash, white on white, that only flattens the snow under it. What blowing snow shows is
+// THREADS, a hand wide and a stride long, lying along the wind. So the field says WHERE the powder is, HOW MUCH and WHICH WAY the air runs there (its own
+// velocity, the b and a it carries), and the threads are drawn inside it: a grain a hand across, averaged along the air's way at this spot and slid along at
+// the air's speed there. A thread bends where the air bends and stops where the field has nothing: nothing here has a wind of its own.
+const POWDER_GAIN: f32 = 3.0;       // × the field's column as it is drawn
+const POWDER_THIN: f32 = 0.12;      // the share of the column that lies between threads …
+const POWDER_THREAD: f32 = 5.0;     // … and in a thread's middle (a sixth of the ground is under a thread, so the column's mean is about kept)
+const POWDER_GRAIN: f32 = 0.07;     // m: a thread's width
+const POWDER_REACH: f32 = 0.042;    // m: the step along the air between the reads a thread is averaged over. UNDER a grain, or the reads fall on
+                                    // grains of their own and a thread is drawn as a row of beads (seen: fish scales over a whole road at 0.17 m and four reads)
+const POWDER_READS: i32 = 10;       // reads along the air: a thread is about 0.45 m long by a grain wide
+const POWDER_PUFF: f32 = 0.3;       // m: the height of the sun's second read (a walker's kick is thrown to 0.3 m, a sprinter's to 0.46)
+const POWDER_TURN: f32 = 1.6;       // s: the threads are drawn twice, each slid for this long and then begun again, cross-faded (a pattern slid for ever on air that turns is torn apart)
+// THE LOOK PANEL'S SNOW WISPS ROWS (frame.sideCfg.w, a byte a row; render/powderField.ts POWDER_DRAW): 0 = the const above, so the picture is as it was until a row is moved
+fn powderRow(shift: u32, own: f32, unit: f32) -> f32 { let b = (frame.sideCfg.w >> shift) & 0xffu; return select(own, f32(b) * unit, b != 0u); }
+fn powderGain() -> f32 { return powderRow(0u, POWDER_GAIN, 0.05); }
+fn powderGrain() -> f32 { return powderRow(24u, POWDER_GRAIN, 0.001); }
+fn powderNoise(p: vec2f) -> f32 {
+  let i = floor(p); let f = fract(p); let u = f * f * (3.0 - 2.0 * f);
+  return mix(mix(hash13(vec3f(i, 7.31)), hash13(vec3f(i + vec2f(1.0, 0.0), 7.31)), u.x), mix(hash13(vec3f(i + vec2f(0.0, 1.0), 7.31)), hash13(vec3f(i + vec2f(1.0, 1.0), 7.31)), u.x), u.y);
+}
+/** how much of a thread lies over ground point q (0‥1), in air that runs at v (m/s) there. In still air there is no thread to draw
+ *  (the reads fall on one spot, and one read of the grain is the grain's own square cells: seen in a yard's lee), so the powder there is even */
+fn powderThreads(q: vec2f, v: vec2f) -> f32 {
+  let sp = length(v); let run = smoothstep(0.05, 0.3, sp); let d = v * (POWDER_REACH * run / (max(sp, 1e-3) * POWDER_GRAIN));
+  var acc = 0.0; var w2 = 0.0;
+  for (var i = 0; i < 2; i++) {
+    let ph = fract(frame.time / POWDER_TURN + 0.5 * f32(i)); let w = 1.0 - abs(2.0 * ph - 1.0);
+    let o = (q - v * ((ph - 0.5) * POWDER_TURN)) / powderGrain() + vec2f(37.0, 91.0) * f32(i);
+    var sum = 0.0;
+    for (var j = 0; j < POWDER_READS; j++) { sum += powderNoise(o + (f32(j) - 0.5 * f32(POWDER_READS - 1)) * d); }
+    acc += w * sum / f32(POWDER_READS); w2 += w * w;
+  }
+  return mix(0.16, smoothstep(0.52, 0.8, 0.5 + (acc - 0.5) * 1.5 * inverseSqrt(max(w2, 0.25))), run);   // (the two drawings' weights sum to 1; the spread of their mix is held level as they cross)
+}
+/** a texel of the field (r = the column, g = column × height, b a = the air's velocity) as it is drawn at q: its column in threads, × POWDER_GAIN. A thick
+ *  column (a boot's puff) is drawn whole, lumpy only at its thin rim */
+fn powderDrawn(t: vec4f, q: vec2f) -> f32 {
+  return t.r * powderGain() * mix(powderRow(8u, POWDER_THIN, 1.0 / 255.0) + powderRow(16u, POWDER_THREAD, 0.1) * powderThreads(q, t.ba), 1.0, smoothstep(0.25, 0.9, t.r));   // (whole by a column of 0.9, half by 0.55: with
+  // clamp(r) a kick's round was more streaks among the streaks half a second on; whole from 0.4 a line of kicks was one white haze over the road for seconds: both seen)
+}
+fn powderRead(q: vec2f) -> vec4f { return textureSampleLevel(powderTex, linSamp, (q - frame.veilB.xy) * frame.veilA.xy, 0.0); }
+fn powderHigh(t: vec4f) -> f32 { return clamp(t.g / max(t.r, 1e-3), 0.05, POWDER_TOP); }
+/** what the powder does to the pixel at P seen along V (toward the eye): x = how much of the pixel it hides, y = the share of the sun's light it leaves on the
+ *  pixel, z = × the powder's own direct light (its sunny side over 1, its far side under) */
+fn lookPowder(P: vec3f, V: vec3f) -> vec3f {
+  let vy = max(V.y, 0.35);
+  let mid = P.xz + V.xz * (0.5 * max(powderHigh(powderRead(P.xz)) - P.y, 0.0) / vy);
+  let t0 = powderRead(mid); let h0 = powderHigh(t0);   // where the eye's ray crosses it
+  let so = frame.veilB.zw; let s2 = dot(so, so);
+  // the sun's ray from this point climbs through the layer on its way up: the powder where that ray is a hand over the point is what shades it
+  let qs = mid + so * 0.1; var ts = vec4f(0.0); var tp = vec4f(0.0); if (s2 > 0.0) { ts = powderRead(qs); tp = powderRead(mid + so * POWDER_PUFF); }
+  if (max(max(t0.r, ts.r), tp.r) < 0.003) { return vec3f(0.0, 1.0, 1.0); }
+  let c0 = powderDrawn(t0, mid);
+  let over = clamp((h0 - P.y) / h0, 0.0, 1.0);   // the share of the column that is above this point
+  let hide = (1.0 - exp(-c0 * over / vy)) * frame.veilA.z;
+  if (s2 <= 0.0) { return vec3f(hide, 1.0, 1.0); }
+  let cs = powderDrawn(ts, qs) * smoothstep(0.05, 0.15, powderHigh(ts) - P.y);
+  // only what stands toward the sun OVER what stands here throws shade: under even powder the ground is lit by the powder too (white stuff over white ground:
+  // from above the two together are as bright as the ground was, and a wash of shade under it reads as smoke). So a thread and a puff are shown by their far
+  // edge's shade and their sunny edge's light, as a drift's ridge is
+  // A PUFF IS A MOUND: the sun's ray is read once more, POWDER_PUFF up, where only a kick's round stands (a thread is a hand high). What stands there over
+  // the pixel's own shades it: the round's far half, and the snow behind it as far as its height throws (white on white, a puff was a faint ring: seen)
+  let cp = tp.r * powderGain() * smoothstep(0.08, 0.7, tp.r) * smoothstep(POWDER_PUFF - 0.3, POWDER_PUFF + 0.05, powderHigh(tp) - P.y);   // (a THICK column only: blown powder stands this high too, and shaded from up there the road between its threads went grey: seen)
+  let far = max(cp - c0 * over, 0.0);
+  let more = max(max(cs, cp) - c0 * over, 0.0);
+  let shade = 1.0 - 0.7 * frame.veilA.z * (1.0 - exp(-more * min(sqrt(1.0 + s2), 1.8)));   // (a low sun's ray runs long through the layer; held, or a dusk's road is all stripes)
+  return vec3f(hide, shade, clamp(1.0 + 0.3 * (c0 - cs) - 0.6 * far, 0.45, 1.35));
+}
+
+/** THE PLACE'S LIGHT IS READ ON THIS SIDE OF THE WALL (frame.gradeCfg.z, render/frame.ts lookConfig.footing; 0 = the five reads as they were, to the bit).
+ *  The maintainer, 10-30, a room at midday on a GPU: "very odd pooling of shadow under window". The cache blends a point with the four probes about it in
+ *  plan, and the five reads reached 0.6 of a cell further: within a stride of an OUTER wall the open air beyond it was in the read, the floor there was
+ *  taken for a place in the day's light, and it was not brought up. Beside a window, where the window's own light does not fall, that was a soft black pool
+ *  at the wall's foot with the room's lit floor round it. So the read is the blend of the four probes about the point that the point can SEE (a box ray to
+ *  each one's column at the point's height; `skip` = the pixel's own man, whose gun must not hide the air from him; men's bodies are not asked): a probe
+ *  beyond a wall or inside a crate is left out and the others share its part. A doorway and a window's opening let the light through, as they do. Where the
+ *  four hold about the same (the most under 1.3 times the least: the middle of a room, the open) no ray is asked and the read is the plain one; the walled
+ *  answer comes in as they part (in full from twice). It sees none of them (a face in a crack of the lorry): the brightest of the four, so it is not taken for a dark place. The side reads are gone with the row on: they were there for a
+ *  probe buried in a container, and that one is not seen. A STEP IS LEFT where a probe comes into sight (a door's jamb): its share is what it weighs there.
+ *  Up to four box rays of a cell's length for a pixel by a wall, none elsewhere: never timed on a GPU. */
+fn lookPlaceHere(X: vec3f, skip: u32) -> f32 {
+  if (frame.gradeCfg.z <= 0.0) { let s = c0Spacing() * 0.6; let dx = vec3f(s.x, 0.0, 0.0); let dz = vec3f(0.0, 0.0, s.z); return max(max(luminance(diceMeanRadiancePlain(X)), max(luminance(diceMeanRadiancePlain(X + dx)), luminance(diceMeanRadiancePlain(X - dx)))), max(luminance(diceMeanRadiancePlain(X + dz)), luminance(diceMeanRadiancePlain(X - dz)))); }
+  let sp = c0Spacing(); let plain = luminance(diceMeanRadiancePlain(X));
+  let home = (floor((X - RC_MIN) / sp) + vec3f(0.5)) * sp + RC_MIN; let nb = home + select(vec3f(-1.0), vec3f(1.0), X >= home) * sp;
+  let f = clamp(abs(X - home) / sp, vec3f(0.0), vec3f(0.5));   // (the neighbour's share on each axis)
+  var v: array<f32, 4>; var lo = 1e9; var hi = 0.0;
+  for (var k = 0u; k < 4u; k++) { let c = luminance(diceMeanRadiancePlain(vec3f(select(home.x, nb.x, (k & 1u) != 0u), X.y, select(home.z, nb.z, (k & 2u) != 0u)))); v[k] = c; lo = min(lo, c); hi = max(hi, c); }
+  let t = smoothstep(1.3, 2.0, hi / max(lo, 1e-5));
+  if (t <= 0.0) { return plain; }
+  var sum = 0.0; var ws = 0.0;
+  for (var k = 0u; k < 4u; k++) {
+    let w = select(1.0 - f.x, f.x, (k & 1u) != 0u) * select(1.0 - f.z, f.z, (k & 2u) != 0u);
+    if (w <= 1e-4) { continue; }
+    let d = vec3f(select(home.x, nb.x, (k & 1u) != 0u), X.y, select(home.z, nb.z, (k & 2u) != 0u)) - X; let l = length(d);
+    if (l < 1e-3 || occludedTBoxes(X, d / max(l, 1e-3), l, skip, -1.0) < 0.0) { sum += w * v[k]; ws += w; }
+  }
+  if (ws <= 1e-4) { return mix(plain, hi, t); }   // (it sees none: a point inside a thing, a face in a crack. The brightest of the four, as the five reads would have had it: never a dark place)
+  return mix(plain, sum / ws, t);
+}
+/** THE LOOK PROTOTYPE — EYES ADJUST TO SHADE (frame.shadeCfg, engine.ts lookShade; the panel's row): how many times brighter the light this pixel sends
+ *  back is shown. One exposure for a sunlit yard and the inside of a shed leaves the shed black, as a camera does and an eye does not. Two readings (no ray, but for lookPlaceHere's by a wall with its row on):
+ *  THE PLACE — the radiance cache's mean radiance in the air here, against what open air holds from the sky alone: (open ∕ here)^x, never under 1, never over
+ *  z. WITH lookConfig.footing AT 0 (as it was; at 1 it is lookPlaceHere's read above, on this side of the wall): the MOST of five reads (here, and 0.6 of a cell to each side in plan): a probe buried in a container or a thick wall holds nothing, and must not make
+ *  the ground beside it read as a dark place (a glow round every big thing). The price is on the other side and is the kinder one: within a cell of a bright
+ *  neighbour (the inside of a shed's outer wall, a doorway) less is brought up, which reads as the shade a wall's foot has anyway. It is the light of the
+ *  place, not of the pixel, so a shadow's edge, a crease and a man's own shading keep their contrast.
+ *  THE PIXEL — its own light (Epix: the irradiance the picture shades it with) against what open ground gets from the sky alone (w): a pixel at or over that
+ *  is left as it is (sunlit ground, a sun patch on a shed's floor, the pool under a lamp: and no read is made for it, but for a sun patch under lookConfig.footing, below, and with the Room contrast row up, when every such pixel takes lookPlaceHere's read), and under it the gain rolls off as the
+ *  pixel nears it — place ∕ (1 + (place − 1)·Epix ∕ w) — so brighter stays brighter all the way up and nothing lands on one flat level.
+ *  The caller scales what the surface sends back (its diffuse and its mirror share): a lamp's own face, the air in front of it and a section cap are not.
+ *  THE EXPOSURE FOLLOWS SAM (frame.eyeCfg, render/lookeye.ts; the panel's "Eyes follow Sam" row; all zeros = everything above exactly as it was). Bringing every
+ *  place up by ITS OWN darkness evens out the very fall-off that says where a room's light comes in (the maintainer, 10-28, in a shut room: "it doesn't really
+ *  _look_ like all the light is coming from the window? feels flat"), and it does not know where Sam stands ("we need to adjust our tone mapping based on where
+ *  the characters eyes are … the room should probably be a bit brighter (and then it's okay for outside to be a bit overexposed?)"). So with Sam in a dark place
+ *  (eyeCfg.x = how many times darker than the open air it is): every place NO DARKER than his is brought up as his is, by one gain, so the light still falls off
+ *  from the window; a place darker still gets only the share 1 − y of its own extra; and a pixel as bright as open ground, which was left alone, is shown z
+ *  times brighter: the yard through the door, a little overexposed. With him in the dark the most a place is brought up rises to eyeCfg.w. */
+/** THE LOOK PROTOTYPE — ONE EXPOSURE (frame.eyeCfg.w < 0; render/lookexpo.ts lookExpoFrame; the panel's "One exposure" row; the maintainer, 10-31, of the rows
+ *  above being mended a case at a time: "i worry that we're finding these cases one by one and not fixing them systematically", and of a store with one bulb in
+ *  overcast against the same room at night: "compare to night and dusk"). The rows above grew as corrections to each other: a gain by the place, capped at six
+ *  and nine times; a roll-off by the pixel's own light; the day's contrast taken back out under a roof and a share of it put back about a room's level. This is
+ *  the same picture said once, with no cap and nothing by the pixel. ONE GAIN A PLACE, from two numbers: how many times darker than the open air the place is
+ *  (rp: the place field against the open air's level, which is the field's own word for what the cells under the open sky hold; a place holding 1 ∕ EXPO_BAND of the open air's light or more IS the open air, and a darker one is
+ *  counted from there, so the open air by a wall's foot and under a tree is left alone and nothing steps) and how many times darker the place Sam stands in is (rs: the
+ *  field under his feet, eased as an eye is, to the power of the Eyes follow Sam row, −eyeCfg.w − 1).
+ *    HIS PLACE is shown as the MIDDLE of the open air is: rs^a times brighter (a = eyeCfg.y, the day's share), which is the open air's low level, and THE KEY
+ *      more: the field's middle word over its low one, × EXPO_BAND (the level half the cells under the sky are darker than, over the level a tenth are).
+ *      The key is by where Sam stands alone, in with the square root of his darkness: one number a picture, so the order of its places is as it was.
+ *    A DARKER PLACE gets his gain and the share x (shadeCfg.x, the shade row) of its own extra dark: (rp ∕ rs)^x. So a room 9 stops under the yard is shown
+ *      under 3 stops under it from the yard, and a room off Sam's own keeps a dark end.
+ *    NEVER BRIGHTER THAN THE NIGHT: no place's gain passes eyeCfg.x, the night's exposure over the hour's (render/photometry.ts: 1,152 on the grey day). A room
+ *      lit by its lamps alone is then shown as the night shows it, and a room with no light of its own is as dark as it is at night, not its noise.
+ *    A BRIGHTER PLACE is exposed for itself, and shown over by his darkness to the power eyeCfg.z at the most (the Glare outside row: the yard through the
+ *      door and the lit room beside a dark store, a little overexposed, and never a darker place shown brighter than a lighter one).
+ *  AND THE DAY'S CONTRAST IS THE YARD'S, IN THE PLACE'S OWN EXPOSURE. The tone map turns the stops about sunlit ground (frame.gradeCfg.y), which is right
+ *  for the open air and crushes a room that sits stops under it. So a place is toned as the open air is, and only then shown as much darker as it is to be:
+ *  its light is brought all the way up to the open air's (× rp), turned, and shown base ∕ rp as bright. Said as what the tone map is handed, that is one
+ *  more gain for the whole place, (rp ∕ base)^(1 − 1∕contrast): nothing here is by the pixel (but the Light in order row's cap on a pixel that holds more
+ *  light than its place where two places meet: lookExpoGain, below), so a shadow's edge, a sun patch and a man's own shading keep
+ *  the light's own proportions, the room has the yard's contrast, and the tone map's shoulder takes what is over. */
+// (EXPO_BAND, EXPO_KEY, EXPO_MOST, EXPO_TOP, the place field's cells and words, the shoulder and the gains: place_common.wgsl, pasted in front of this kernel)
+/** the place at X, as (a level, another): the same number twice where the answer is plain; two where X is in a wall's cell with a different place on each
+ *  side (the wall's top, and the strip of floor at its foot that the map's cell takes in): the caller says which by what the cache holds at the pixel.
+ *  z and w = THE BRIGHTEST PLACE A STRIDE AWAY (the field's second block, place_common.wgsl placeNear) from the place x is and from the place y is: by
+ *  the same weights where the answer is plain; in a wall's cell each is its OWN cell's, so the bound a pixel is given is of the side it is put on and
+ *  never of the other (a leaf hanging open in a doorway is such a cell with one place round it, and is what the Light in order row is for; a wall between
+ *  a yard and a room is one with two, and the room's side must not be handed the yard's).
+ *  Under −500 = no field on this page yet, or nothing within two cells. Never read through a wall: in a free cell the neighbours weighed in are the two
+ *  beside it (two free cells side by side are one side of any wall) and the diagonal one only past a free one. */
+fn lookPlaceField(X: vec3f) -> vec4f {
+  if (placeWord(1) < 0.5) { return vec4f(-1000.0); }
+  let q = (X.xz - RC_MIN.xz) / RC_SIZE.xz * vec2f(f32(PLACE_W), f32(PLACE_H)); let c = vec2i(floor(q)); let own = placeCell(c);
+  if (own > -500.0) {
+    let f = q - floor(q) - 0.5; let s = vec2i(select(-1, 1, f.x >= 0.0), select(-1, 1, f.y >= 0.0)); let a = abs(f);
+    let vx = placeCell(c + vec2i(s.x, 0)); let vz = placeCell(c + vec2i(0, s.y)); let vd = placeCell(c + s);
+    var ws = (1.0 - a.x) * (1.0 - a.y); var sum = own * ws; var sn = max(placeNear(c), own) * ws;
+    if (vx > -500.0) { let w = a.x * (1.0 - a.y); sum += w * vx; sn += w * max(placeNear(c + vec2i(s.x, 0)), vx); ws += w; }
+    if (vz > -500.0) { let w = (1.0 - a.x) * a.y; sum += w * vz; sn += w * max(placeNear(c + vec2i(0, s.y)), vz); ws += w; }
+    if (vd > -500.0 && (vx > -500.0 || vz > -500.0)) { let w = a.x * a.y; sum += w * vd; sn += w * max(placeNear(c + s), vd); ws += w; }
+    return vec4f(sum / ws, sum / ws, sn / ws, sn / ws);
+  }
+  // (THE WALL'S OWN SIDE, the look page's row `walls`, common.wgsl sideOut: the floor at a wall's foot and the wall's top are in the wall's cell, and which room's
+  // level they are shown by was a guess from what the cache held at the pixel, which is the leak itself by day: a strip of one room's floor was shown by the room
+  // next door's level, white. The cell knows the wall's line to 2.5 cm, so the point's side is known, and the first cell out on that side is its place)
+  if (frame.sideCfg.x != 0u) { let o = sideOut(X.x, X.z); if (o.x != 0 || o.y != 0) { for (var r = 1; r <= 4; r++) { let v = placeCell(c + o * r); if (v > -500.0) { let nv = max(placeNear(c + o * r), v); return vec4f(v, v, nv, nv); } } } }
+  var hi = -1000.0; var lo = 1000.0; var nh = -1000.0; var nl = -1000.0;
+  for (var r = 1; r <= 2 && hi < -500.0; r++) { for (var dy = -r; dy <= r; dy++) { for (var dx = -r; dx <= r; dx++) { let v = placeCell(c + vec2i(dx, dy)); if (v > -500.0) { let nv = placeNear(c + vec2i(dx, dy)); if (v > hi) { hi = v; nh = nv; } if (v < lo) { lo = v; nl = nv; } } } } }
+  if (hi < -500.0) { return vec4f(-1000.0); }
+  return vec4f(hi, lo, max(nh, hi), max(nl, lo));
+}
+/** the pixel's place as lookExpoGain found it for this pixel: its three gains (place_common.wgsl lookGains) and 1 once it has (0 = no gain by the place
+ *  at this pixel: at night, off the look page, with the One exposure row down, a section cap) */
+var<private> lookNow: vec4f;
+/** `here` = the light the air of the pixel's place holds (the place field's; the cache's at the pixel where the field has no answer: the frames before
+ *  its two programs are compiled, a point off its map). Sam's place is the field's own eye, eased on the GPU; until there is one he is taken to stand in
+ *  the open. → the gain the place is shown by now; what the place sends the eye then goes through lookShow.
+ *  `own` = the light that falls on this pixel in the field's measure, and `near` = the brightest place a stride away (lookPlaceField's z; `here` where
+ *  the field did not answer), for the Light in order row (place_common.wgsl lookGainsOwn). */
+fn lookExpoGain(here: f32, own: f32, near: f32) -> f32 { let g = lookGainsOwn(here, own, near, frame.placeCfg.x); lookNow = vec4f(g, 1.0); return g.x; }
+/** light `c` of this pixel, before any gain, as its place shows it (place_common.wgsl lookShowBy: THE ONE RULE for the diffuse, the mirrors, the gloss
+ *  and the men's finish); `g` = lookShadeGain's gain, which is all there is where the One exposure row has not spoken for the pixel */
+fn lookShow(c: vec3f, g: f32) -> vec3f { if (lookNow.w > 0.5) { return lookShowBy(c, lookNow.xyz); } return c * g; }
+const ROOM_LEVEL = 0.5;
+/** … `Eown` = the light on the pixel at its true strength, as the field holds light (the caller's: what is drawn whole, and the bounce over the scale it is
+ *  drawn by), for the Light in order row alone */
+fn lookShadeGain(P: vec3f, N: vec3f, Epix: f32, Eown: f32, skip: u32, l0: f32) -> vec4f {
+  // ONE EXPOSURE (above): one gain a place, and neither the give-back nor the Room contrast line under the call runs (y, z and w are zeros). The place is
+  // the field's; where the field has no answer, or two (a wall's own cell), this function's own read below settles it: the one call of it, so the
+  // kernel carries one box walk and not two.
+  let expo = frame.eyeCfg.w < 0.0; var pick = vec4f(-1000.0);
+  if (expo) { pick = lookPlaceField(P + N * 0.3); if (pick.x > -500.0 && pick.x - pick.y < 0.5) { return vec4f(lookExpoGain(exp2(pick.x), Eown, exp2(pick.z)), 0.0, 0.0, 0.0); } }
+  let out = max(frame.eyeCfg.z, 1.0); let lit = !expo && Epix >= frame.shadeCfg.w;
+  // A SUN PATCH INDOORS KEEPS THE ROOM'S CONTRAST (frame.gradeCfg.z again; `l0` = what the surface sends back before this gain). A pixel in full light was
+  // the open air outright, so the day's contrast was given back to a sun patch's soft edge and not to the patch: a bright rim round a middle hardly brighter
+  // than the floor. With the row on such a pixel is asked where it is too, but only when the contrast row would touch it (darker than sunlit ground), and it
+  // is under a roof by a stricter span (a place holding under a quarter of the open air's light is, over a half is not): a sunlit wall's foot out of doors is
+  // the open air as it was. In a doorway or a porch the step at a shadow's edge is still there.
+  let roomC = frame.gradeCfg.w > 0.0 && frame.gradeCfg.x > 0.0 && frame.gradeCfg.z > 0.0;   // (the Room contrast row is up: it wants lookConfig.footing's read too, so ?footing=0 is the page as it was before either)
+  if (lit && !roomC && !(frame.gradeCfg.z > 0.0 && frame.gradeCfg.x > 0.0 && l0 * out > 0.0 && l0 * out < frame.gradeCfg.y)) { return vec4f(out, 0.0, 0.0, 0.0); }
+  // (with the Room contrast row up, at the foot of this function, a pixel in full light is asked where it is whatever its brightness: a sun patch is turned
+  // about its room's level with the rest of the room. The whole read, in the open too: a plain read cannot tell the open air from the foot of an outer wall
+  // indoors, which is what lookPlaceHere is for, and would leave a band of the patch there unturned.)
+  let here = lookPlaceHere(P + N * 0.3, skip);
+  if (expo) {   // (in a wall's cell between two places: the one whose level is nearer what the cache holds at this pixel, read on this side of the wall)
+    // (the field's levels are the light falling on the floor and `here` is the mean light in the air: brought to the field's by what each says of the open air)
+    var h = here; let sky = placeWord(2); if (placeWord(1) > 0.5 && sky > -500.0) { h = here * exp2(sky) / max(frame.shadeCfg.y, 1e-9); }
+    var near = h;
+    if (pick.x > -500.0) { let l = log2(max(h, 1e-9)); let up = abs(l - pick.x) <= abs(l - pick.y); h = exp2(select(pick.y, pick.x, up)); near = max(h, exp2(select(pick.w, pick.z, up))); }
+    return vec4f(lookExpoGain(h, Eown, near), 0.0, 0.0, 0.0);
+  }
+  let open = max(frame.shadeCfg.y / max(here, 1e-4), 1.0); let sam = max(frame.eyeCfg.x, 1.0);
+  // (BOTH ARE FOR PLACES UNDER A ROOF. Out in the open a place still holds less than the open air where a wall stands beside it, up to about half: read as a
+  // dark place, a wall's shadow on the snow was brought up by half as much again while the sunlit snow beside it was left, and with Sam indoors his gain went
+  // on every outdoor pixel that was not in full light, a shaded wall and a man in the yard twice over. On a GPU, 10-29: midday "a little flat", and the yard
+  // seen from a room "very flat". So a place that holds over 0.8 of the open air's light is the open air, one under 0.4 is under a roof, and a doorway and a
+  // porch are in between)
+  let roof = smoothstep(1.25, 2.5, open); let own = mix(1.0, open, roof);
+  let samHere = mix(1.0, sam, roof);
+  var dark = max(own, samHere); if (own > sam && frame.eyeCfg.y > 0.0) { dark = own * pow(sam / own, frame.eyeCfg.y); }   // (zeros: `own` itself, to the bit)
+  let place = clamp(pow(dark, frame.shadeCfg.x), 1.0, max(frame.shadeCfg.z, frame.eyeCfg.w));
+  // THE LEVEL THE PLACE IS SHOWN AT (z; the caller's, for the Room contrast row, frame.gradeCfg.w; 0 with the row at 0): what a surface sends back, after
+  // this gain, where it holds the light of the air its place is exposed for. That air is `dark` times dimmer than the open air's (Sam's room's for every place
+  // no darker than his, so one level for the whole of his room and the fall-off from its window is about it; a place's own with him out of doors), and a pixel
+  // in that share of open ground's light takes the roll-off's gain there. × ROOM_LEVEL: where the room's middle greys sit against that (set by eye from
+  // stills of one room). AND HOW FAR THE PLACE IS UNDER A ROOF FOR THAT ROW (w): one span for a pixel in full light and one in shade, so the row's turn has
+  // no step at a shadow's edge (y has one: a sun patch's is a stricter span than the shade's). Nothing where the place holds half the open air's light or
+  // more, which is as far as a wall's foot out of doors goes, and whole from a third down.
+  let under = smoothstep(2.0, 3.0, open);
+  var level = 0.0; if (roomC) { level = ROOM_LEVEL * frame.shadeCfg.y / dark * place / (1.0 + (place / out - 1.0) / dark); }
+  if (lit) { return vec4f(out, smoothstep(2.0, 4.0, open), level, under); }
+  return vec4f(place / (1.0 + (place / out - 1.0) * Epix / frame.shadeCfg.w), roof, level, under);   // (y = how far the place is under a roof: the caller's, for the day's contrast)
+}
 fn linearToSrgb(c: vec3f) -> vec3f {
   return select(1.055 * pow(c, vec3f(1.0 / 2.4)) - 0.055, c * 12.92, c <= vec3f(0.0031308));
 }
@@ -608,6 +871,8 @@ fn refractedRead(pixf: vec2f, P0: vec3f, N0: vec3f, gp: GlassPath) -> GlassRead 
 struct BeamSeg { a: vec4f, b: vec4f, e: vec4f };
 struct Beams { n: u32, p0: u32, p1: u32, p2: u32, k: vec4f, seg: array<BeamSeg, 8>, fireN: vec4u, fire: array<FireRec, 4>, fireLook: FireLook };   // (… and, behind the segments, THE OPEN FIRES: passes.ts setFires — fire.wgsl FireRec, fireN.x of them, and the look's numbers they are all drawn with, FireLook; the reflection pass's own struct stops at the segments)
 @group(1) @binding(15) var<uniform> beams: Beams;
+@group(1) @binding(16) var powderTex: texture_2d<f32>;   // THE LOOK PROTOTYPE: the loose snow in the air (render/powderField.ts: r = its column, g = column × height); a 1×1 "none" anywhere else, read only under LOOK with frame.veilA.z > 0
+@group(1) @binding(17) var<uniform> placeBuf: PlaceBuf;   // THE LOOK PROTOTYPE: the place field (render/placeField.ts; lookExpoGain). A buffer, not a texture: this stage has no sampled texture left. All zeros = no field
 const BEAM_R0 = 0.0022;                           // combat.ts beamBoxes: the beam's own half-width, m
 fn beamOutdoors(p: vec2f) -> bool {
   if (WX_KINDS) { if (frame.cardCfg.y != 0u) { return !wxRoofed(p); } }
@@ -689,6 +954,58 @@ fn fireOver(c: vec3f, pixf: vec2f, rd: vec3f, tMax: f32) -> vec3f {
   }
   return col;
 }
+/** THE SMOKE LAB'S TWO PICTURES (host/smokelab.ts; `/smokelab`). smoke[0].show is the solver's word, 0 on every other page (nothing below runs then): bit 0 = THE BRICKS,
+ *  the wire of every 8³-cell brick that holds something to fetch, the coarse lattice's in blue and the fine one's in amber, drawn where the pixel's ray meets a brick's
+ *  near face (and, fainter, its far one) and hidden behind what is solid; bit 1 = THE SPIN, the coarse smoke drawn again by how hard the air in it turns (the curl the
+ *  step keeps: smoke.wgsl publish leaves density × spin in the texel's .y while the bit is up), still air blue, the full spin red, over the smoke as it is lit. Both are
+ *  drawn at a fixed brightness on the screen (÷ the frame's exposure), so they read the same at any hour. A lab's picture: 48 steps and no care for cost. */
+fn labEdge(f: vec3f, w: f32) -> f32 { let n = step(vec3f(0.5 - w), abs(f - 0.5)); return step(1.5, n.x + n.y + n.z); }
+fn labBox(ro: vec3f, rd: vec3f, inv: vec3f, c: vec3i, e: f32, tin: f32, tmax: f32) -> f32 {
+  let ex = spgExit(ro, rd, inv, c, vec3f(e)); let tout = min(ex.x, min(ex.y, ex.z)); let w = clamp(0.0018 * tin / e, 0.015, 0.12);
+  var a = 0.0;
+  if (tin < tmax) { a = labEdge((ro + rd * tin) / e - vec3f(c), w); }
+  if (tout < tmax) { a = max(a, 0.45 * labEdge((ro + rd * tout) / e - vec3f(c), w)); }
+  return a;
+}
+fn smokeLabOver(color: vec3f, ro: vec3f, rd: vec3f, tmax: f32, jit: f32) -> vec3f {
+  let word = u32(smoke[0].show); var c = color; let lit = 0.5 / max(frame.exposure, 1e-9); let inv = safeInv(rd);
+  if ((word & 2u) != 0u) {
+    let sp = smokeSegment(ro, rd, tmax);
+    if (sp.mask != 0u && sp.tExit > sp.tEnter) {
+      let dt = (sp.tExit - sp.tEnter) / 48.0; var T = 1.0; var acc = vec3f(0.0);
+      for (var i = 0.0; i < 48.0 && T > 0.02; i += 1.0) {
+        let x = smokeTexelAt(ro + rd * (sp.tEnter + (i + jit) * dt));
+        if (x.x > 0.002) {
+          let s = clamp(x.y / x.x, 0.0, 1.0); let a = 1.0 - exp(-x.x * 6.0 * dt);
+          acc += T * a * mix(mix(vec3f(0.08, 0.25, 1.0), vec3f(1.0, 0.9, 0.1), smoothstep(0.0, 0.5, s)), vec3f(1.0, 0.12, 0.04), smoothstep(0.5, 1.0, s)); T *= 1.0 - a;
+        }
+      }
+      c = c * T + acc * lit;
+    }
+  }
+  if ((word & 1u) != 0u) {
+    let e = SPG_B0; let tb = isectBounds(ro, inv, vec3f(0.0), vec3f(SPG_N0) * e);
+    var t = max(tb.x, 0.0) + 1e-3; let tend = min(tb.y, tmax); var a0 = 0.0; var a1 = 0.0;
+    for (var i = 0; i < 160 && t < tend; i++) {
+      let b = vec3i(floor((ro + rd * t) / e)); let ex = spgExit(ro, rd, inv, b, vec3f(e)); let tout = min(ex.x, min(ex.y, ex.z));
+      if (all(b >= vec3i(0)) && all(b < SPG_N0)) {
+        let p = textureLoad(smokePage, b + vec3i(0, SPG_TEXY0, 0), 0).x;
+        if ((p & 0x7fffffffu) != 0u) { a0 = max(a0, labBox(ro, rd, inv, b, e, t - 1e-3, tmax)); }
+        if ((p >> 31u) != 0u) {
+          var tf = t; let tfe = min(tout, tend);
+          for (var j = 0; j < 12 && tf < tfe; j++) {
+            let f = vec3i(floor((ro + rd * tf) / SPG_B1)); let fx = spgExit(ro, rd, inv, f, vec3f(SPG_B1)); let tfo = min(fx.x, min(fx.y, fx.z));
+            if (all(f >= vec3i(0)) && all(f < SPG_N1)) { if (textureLoad(smokePage, f, 0).x != 0u) { a1 = max(a1, labBox(ro, rd, inv, f, SPG_B1, tf - 1e-3, tmax)); } }
+            tf = max(tfo, tf) + 1e-3;
+          }
+        }
+      }
+      t = max(tout, t) + 1e-3;
+    }
+    c = mix(c, vec3f(0.1, 0.8, 1.0) * lit, 0.85 * a0); c = mix(c, vec3f(1.0, 0.55, 0.08) * lit, 0.85 * a1);
+  }
+  return c;
+}
 /** the hot gas of a fire the smoke solver carries (fire.wgsl fireFlameG): the fine lattice's heat there */
 fn fireGas(p: vec3f) -> f32 { return spgFineHot(p).y; }
 /** THE SHIMMER OF THE HOT AIR OVER A FIRE (fire.wgsl fireShimmer; game/fire.ts FIRE.look.shimmer, `?fireheat=0`): how far, in pixels, this pixel reads the
@@ -728,7 +1045,11 @@ fn compositePixel(pix0: vec2f) -> vec3f {
   if (depth >= 1.0) {
     // background: sky through the view ray
     let Pfar = worldFromDepth(pixf, 1.0);
-    color = skyRadiance(normalize(Pfar - frame.camPos));
+    // PAST THE LEVEL'S RIM IS THE DARK (the maintainer, 10-15: "we should just have black outside the edges of the map, not extend"). An eye's ray that hits
+    // nothing and looks down is looking at the void past the rim: it showed the sky's under-horizon, a share of the horizon's colour, which is navy at night and
+    // a grey floor by day. To the eye there is nothing there (a ray of the bounce still takes the under-horizon as the ground beyond: skyRadiance is unchanged)
+    let rdSky = normalize(Pfar - frame.camPos);
+    color = skyRadiance(rdSky) * (1.0 - clamp(-rdSky.y * 8.0, 0.0, 1.0));
     rdT = normalize(Pfar - frame.camPos);
   } else {
     // Where the surface this pixel shows is READ: under the pixel — or, through REFRACTING glass (GLASS_REFRACT: passes.ts compiles this module a second time with it true, taken while
@@ -755,7 +1076,7 @@ fn compositePixel(pix0: vec2f) -> vec3f {
             let gp = glassRefractPath(frame.camPos + V * gh.t, V, u32(gh.idx), gh.n, ior);
             glassT = pow(max(gh.trans, vec3f(1e-3)), vec3f(frame.glassCfg.y * gp.len / max(gp.unit, 1e-4))) * (1.0 - F);
             if (gp.ok) {
-              N0 = normalize(textureLoad(gNormal, pix, 0).xyz * 2.0 - 1.0);
+              N0 = normalize(geoN(pix));
               let rr = refractedRead(pixf, P0, N0, gp);
               if (rr.ok) { sPix = rr.pix; sPixf = vec2f(rr.pix) + 0.5; sDepth = rr.depth; moved = true; if (SHARP) { sPin = sPixf * inOverOut() + frame.sharpCfgC.xy; } else { sPin = sPixf; } }
             }
@@ -780,14 +1101,16 @@ fn compositePixel(pix0: vec2f) -> vec3f {
     }
     let albedo4 = textureLoad(gAlbedo, sPix, 0);
     let albedo = albedo4.rgb;                   // (.a = the decals' gloss-keep: exactly 1 unless a mark's soot lies on this pixel — gbuffer.wgsl fsBox)
-    let N = normalize(textureLoad(gNormal, sPix, 0).xyz * 2.0 - 1.0);
     id = textureLoad(gId, sPix, 0).x;
+    var N = normalize(textureLoad(gNormal, sPix, 0).xyz * 2.0 - 1.0);
+    let Nl = N; if (LOOK && textureLoad(gNormal, sPix, 0).a < 0.17) { N = lookGeoN(Nl, id); }   // (Nl: the stored normal. THE LOOK PROTOTYPE, look.wgsl: where the look tilted it, N below is the box's own face — the guides' and the cache's normal, as ever — and Nl only leans the bounce)
     let boxIdx = id & 0xFFFFFu;
     let P = worldFromDepth(sPixf, sDepth);
     let z = distance(P, frame.camPos);
     let EdS = textureLoad(directTex, sPix, 0).rgb; let EdB = textureLoad(softTex, sPix, 0).rgb;   // the shadowed direct per emitter class (sharp, broad)
     let Ed = EdS + EdB;
-    let Ei = upsampleIndirect(sPix, sPin, z, N);
+    var Ei = upsampleIndirect(sPix, sPin, z, N);
+    if (LOOK) { Ei *= clamp(1.0 + LOOK_BOUNCE * (Nl.y - N.y), 0.45, 1.6); }   // the relief in bounced light: most of it comes from above (the sky, a ceiling's wash), so a facet leaning up takes more of it
     var emissive = vec3f(0.0);
     var glossPix = false;                       // this pixel is the polished top of a BOX_GLOSS floor box (world geometry, never a character)
     if (((id >> 28u) & 1u) == 0u && boxIdx != 0xFFFFFu) {
@@ -849,23 +1172,59 @@ fn compositePixel(pix0: vec2f) -> vec3f {
         if (SNOW_SPARKLE) { sparkle = snowSparkleL * (sa * snowSparkleFresh(textureLoad(gMat, sPix, 0).x)); }
       }
     }
+    if (LOOK) { if (frame.veilA.z > 0.0 && ((id >> 29u) & 1u) == 0u && P.y < POWDER_TOP) {   // THE LOOK PROTOTYPE: loose snow in the air (lookPowder above) — any pixel under the layer's top: the snow, a boot, a wall's foot; never a section cap's
+      let vv = lookPowder(P, normalize(frame.camPos - P));
+      if (vv.x > 0.0 || vv.y < 1.0) {
+        let sunK = clamp(frame.veilA.w / max(luminance(Ed), 1e-4), 0.0, 1.0);   // the share of this pixel's direct light the sun can have given: the powder's shade and its sunny side are the sun's, never a lamp's
+        let ground = dif - albedo * Ed * ((1.0 - vv.y) * sunK / PI);
+        // (powder is stuff in the air, not a floor: a low sun lights it full on where it only grazes the ground, which is why spindrift glows at dusk. So the
+        // sun's share of this pixel's light is taken back up by the cosine the ground paid, to at most twice.
+        // Only the sun's: of this pixel's direct light, no more than the sun can put on a face turned as this one is, so a
+        // lamp's pool brighter than that keeps its powder as the lamp lit it. A dim lamp in a wall's shadow cannot be told from the sun here, and is taken up too)
+        let toSun = normalize(vec3f(frame.veilB.z, 1.0, frame.veilB.w)); let facing = max(dot(N, toSun), 0.0);
+        let sunPix = frame.veilA.w * facing / toSun.y; let sunsOwn = clamp(sunPix / max(luminance(Ed), 1e-4), 0.0, 1.0);
+        let graze = min(1.0 / max(facing, 0.5), 2.0);
+        dif = mix(ground, max(POWDER_ALBEDO * (Ed * mix(1.0, vv.z * graze, sunsOwn) + Ei) * (1.0 / PI), ground), vv.x);
+        sparkle *= 1.0 - vv.x;   // (the facets under the powder do not flash through it)
+        // (and the powder has grains of its own that catch the sun for a moment: a few in a thousand of 3 cm spots, new ten times a second)
+        dif += POWDER_ALBEDO * Ed * (sunsOwn * vv.x * step(0.994, hash13(vec3f(floor(P.xz / 0.03), floor(frame.time * 10.0)))) * (2.0 / PI));
+      }
+    } }
+    var shadeG = 1.0;   // (1 anywhere but the look page by day: every × below is then the number it was)
+    if (LOOK) { if (frame.shadeCfg.x > 0.0 && ((id >> 29u) & 1u) == 0u) { let sg = lookShadeGain(P, N, luminance(Ed + Ei), luminance(Ed) + luminance(Ei) / max(frame.indirectScale, 0.05), (id >> 20u) & 0xffu, luminance(dif)); shadeG = sg.x; dif = lookShow(dif, shadeG); let lr = luminance(dif);
+      // THE DAY'S CONTRAST IS THE OPEN AIR'S (frame.gradeCfg, render/lookgrade.ts; the look panel's Contrast row): the tone map turns the day's stops about
+      // sunlit ground, which sets a rifle and a shadow under the snow as they should be, and would push a room this row has just brought up back down by a
+      // third of its distance under the snow. So a place under a roof is given back what the turn takes from it (by its own brightness against the turn's, eight
+      // times at most), and a room is shown as it was
+      if (frame.gradeCfg.x > 0.0 && sg.y > 0.0) { let l = luminance(dif); if (l > 0.0 && l < frame.gradeCfg.y) { let u = min(pow(l / frame.gradeCfg.y, (frame.gradeCfg.x - 1.0) * sg.y), 8.0); dif *= u; } }   // (the surface's own light only: a mirrored window on a dark floor is not this dark, and would be given eight times its light)
+      // A ROOM HAS THE DAY'S CONTRAST TOO, ABOUT ITS OWN LEVEL (frame.gradeCfg.w, lookConfig.roomContrast, the panel's Room contrast row `roomc`; 0 = as it
+      // was). The line above takes the whole turn back under a roof, so out of doors the picture has the Contrast row and a room has none: a white chair by a
+      // window, drawn with the light as it is and no more, beside a yard drawn a third steeper (the maintainer, 10-30, on a GPU: "lighting still looks very
+      // flat indoors during midday (see flat shading on chair)"). With the row up a room is turned by the same contrast about the level it is shown at
+      // (lookShadeGain's z): what is under that goes down and what is over it comes up, by the tone map's own power (1 − x of the pixel's stops from the level,
+      // since the turn itself is undone above). No further than three stops under the level and two over it (white, where the level is a middle grey): past those the pixel is shown by
+      // the most the turn gives, so a brighter pixel is never shown darker than a dimmer one. A PIXEL IN FULL LIGHT UNDER A ROOF IS TURNED TOO (lookShadeGain
+      // asks where it is with this row up): a sun patch is the brightest thing in its room and comes up by two fifths, so a sun stripe through a door is drawn
+      // brighter inside than on the ground it came in over.
+      if (frame.gradeCfg.x > 0.0 && frame.gradeCfg.w > 0.0 && sg.w > 0.0 && sg.z > 0.0 && lr > 0.0) { dif *= pow(clamp(lr / sg.z, 0.125, 4.0), (1.0 - frame.gradeCfg.x) * min(frame.gradeCfg.w, 1.0) * sg.w); }
+    } }   // THE LOOK PROTOTYPE: eyes adjust to shade (above) — the surface's reflected light only
     if (metalK > 0.0) { dif *= 1.0 - 0.7 * metalK; }   // metalK: 0 unless the reflections are traced AND this is a metal under the cutoff
     color = (dif + emissive) * glassT + crackL;
     var spec = vec3f(0.0);                      // glossy floors (FLAG_GLOSS) / glass (FLAG_GLASS): the reflection radiance, added as it is — specular is not tinted by the diffuse albedo; both flags off = never read, colour untouched
     var refl = vec3f(0.0);                      // the ray-traced reflections (frame.rtCfg.w > 0; the host never raises FLAG_GLOSS with them): outgoing radiance, BRDF already applied by the pass — added as it is × the cutoff fade × the decals' gloss-keep (soot does not mirror), through the pane's transmission if one stands in front
-    if (reflK > 0.0) { refl = upsampleRefl(sPixf) * (reflK * albedo4.a); color += refl * glassT; }
-    if ((frame.flags & FLAG_GLOSS) != 0u && glossPix) { spec = upsampleSpecular(pix, pin, zg, Ng) * select(albedo4.a, specK, glassPix); color += spec; }   // × the decals' gloss-keep: soot on the lino does not mirror the ceiling panel (1.0 wherever no mark lies) — except through a pane, whose texels carry the floor's AND the pane's reflection in one read: the pane's must not vanish over a scorch behind it, so the keep is waived there (and the cracks' boost applies)
-    else if (glassPix) { spec = upsampleSpecAny(pix, pin, zg, Ng) * specK; color += spec; }
-    if ((id & 0x50000000u) == 0x50000000u) { let ws = wetCoatSpec(id, P, N, z, EdS, EdB, Ei); spec += ws; color += ws * glassT; }   // a WET character pixel (bits 30 + 28: gbuffer.wgsl fsSkin — never a dry man's, never with the setting off): the clear coat's light, through the pane like the rest of him if he stands behind one
+    if (reflK > 0.0) { refl = lookShow(upsampleRefl(sPixf) * (reflK * albedo4.a), shadeG); color += refl * glassT; }
+    if ((frame.flags & FLAG_GLOSS) != 0u && glossPix) { spec = lookShow(upsampleSpecular(pix, pin, zg, Ng) * select(albedo4.a, specK, glassPix), shadeG); color += spec; }   // × the decals' gloss-keep: soot on the lino does not mirror the ceiling panel (1.0 wherever no mark lies) — except through a pane, whose texels carry the floor's AND the pane's reflection in one read: the pane's must not vanish over a scorch behind it, so the keep is waived there (and the cracks' boost applies)
+    else if (glassPix) { spec = lookShow(upsampleSpecAny(pix, pin, zg, Ng) * specK, shadeG); color += spec; }
+    if ((id & 0x50000000u) == 0x50000000u) { let ws = lookShow(wetCoatSpec(id, P, N, z, EdS, EdB, Ei), shadeG); spec += ws; color += ws * glassT; }   // a WET character pixel (bits 30 + 28: gbuffer.wgsl fsSkin — never a dry man's, never with the setting off): the clear coat's light, through the pane like the rest of him if he stands behind one
     if (SNOW_SPARKLE) { spec += sparkle; color += sparkle * glassT; }   // SNOW SPARKLE: light, not paint — added as it is
     if (((id >> 29u) & 1u) == 1u) { color = mix(frame.capColor.rgb, albedo * frame.capColor.rgb * 4.0, frame.capColor.a); }
     if (dbg == 1u) { color = select(albedo, albedo * glassT + vec3f(0.0, 0.08, 0.06), glassPix); }   // (albedo view: pixels behind glass carry the tint and a faint teal wash, so the panes can be found)
-    else if (dbg == 2u) { color = N * 0.5 + 0.5; }
-    else if (dbg == 3u) { color = Ed * (1.0 / PI); }
-    else if (dbg == 4u) { color = Ei * (1.0 / PI); }
+    else if (dbg == 2u) { color = Nl * 0.5 + 0.5; }
+    else if (dbg == 3u) { color = Ed * (shadeG / PI); }   // (× shadeG, here and in 4, 7, 8: on the look page by day a room's light is thousands of times under the yard's and the picture shows each place by its own gain; without it every room of these views was black by day, and a leak of daylight into one could not be found in them. 1 at night and off the look page)
+    else if (dbg == 4u) { color = Ei * (shadeG / PI); }
     else if (dbg == 6u) { color = vec3f(1.0 - exp(-z * 0.06)); }   // view distance, monotonic (white = far)
-    else if (dbg == 7u) { color = diceIrradiance(P + N * 0.27, N) * (1.0 / PI); }
-    else if (dbg == 8u) { color = (Ed + Ei) * (1.0 / PI); }
+    else if (dbg == 7u) { color = diceIrradiance(P + N * 0.27, N) * (shadeG / PI); }
+    else if (dbg == 8u) { color = (Ed + Ei) * (shadeG / PI); }
     else if (dbg == 9u) { color = vec3f(abs(textureLoad(directTex, pix, 0).a), abs(textureLoad(softTex, pix, 0).a), 0.0); }   // denoiser blur hints (r sharp, g broad)
     else if (dbg == 10u) { color = spec + refl; }                   // every specular term alone: the glossy floors' / the panes' / a wet coat's (spec) and the ray-traced reflections' (refl) — black wherever none is up
     else if (dbg == 11u || dbg == 12u) { color = textureLoad(directTex, pix, 0).rgb; }   // ReSTIR diagnostics (restir.wgsl writes them raw into S0, the filter chain is skipped): 11 = r/g history M ÷ cap per class, b = 1 − tile gradient confidence; 12 = r rays ÷ 6, g taps, b neighbour-shaded
@@ -896,5 +1255,6 @@ fn compositePixel(pix0: vec2f) -> vec3f {
       color = wxFogApplySurf(color, dirS, zg, select(Ng.xz, vec2f(0.0), ((idg >> 20u) & 0x1FFu) != 0u));
     } else { color = wxFogApply(color, select(dirS, rdT, sky), select(zg, 0.0, sky), sky); }
   } }
+  if (SMOKE_LAB && frame.numSmoke > 0u && smoke[0].show != 0.0) { let dl = worldFromDepth(pixf, min(depth, 1.0)) - frame.camPos; let far = length(dl); color = smokeLabOver(color, frame.camPos, dl / max(far, 1e-6), select(far, 1e4, depth >= 1.0), ign(pixf + f32(frame.frameIdx & 63u) * 5.588238)); }   // (THE SMOKE LAB's pictures, over everything: smokeLabOver above; one read of a uniform on every other page)
   return max(color, vec3f(0.0));
 }

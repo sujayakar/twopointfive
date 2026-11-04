@@ -36,10 +36,10 @@
 //     whole (resetLevelState; a checkpoint load is a restart, so holes are never saved — and no static is appended, so savestate's levelFingerprint is untouched).
 import { Vec3, v3 } from '../math/vec';
 import { Box, BoxFlag, makeBox } from '../scene/boxes';
-import type { Game, Player } from './game';
-import { men } from './seats';
+import type { Game } from './game';
 import { hitSeed, glassImpact, glassEvent, GLASSFX } from './glass';
 import { hash01 } from './debris';
+import { PLAYER_ID } from './consts';
 import { chaosOf } from './destruction';
 import { gpuFx } from './particleFx';
 import { WIND, WIND_FIELD, type WindSource } from './wind';
@@ -261,7 +261,7 @@ export class GlassBreak {
   /** the type of pane bi as it will break (an override from setType, else typeOf) — null for anything that is not a sheet of glass */
   typeOfPane(bi: number): GlassType | null { const b = this.g.level.boxes[bi]; if (!b || !(b.flags & BoxFlag.Glass) || Math.min(b.h[0], b.h[2]) > 0.05) return null; return this.types.get(bi) ?? this.typeOf(b, bi); }
   /** make pane bi break as `type` from here on (tuning, probes, a level's own table); the pane is made whole first. null = back to typeOf. An override is the level's word on the pane: reset() keeps it */
-  setType(bi: number, type: GlassType | null) { if (type) this.types.set(bi, type); else this.types.delete(bi); this.panes.delete(bi); this.g.col.wrote(); this.blasted.length = 0; const src = this.gusts.get(bi); if (src) { const i = this.g.wind.all.indexOf(src); if (i >= 0) this.g.wind.all.splice(i, 1); this.gusts.delete(bi); } }
+  setType(bi: number, type: GlassType | null) { if (type) this.types.set(bi, type); else this.types.delete(bi); this.panes.delete(bi); this.blasted.length = 0; const src = this.gusts.get(bi); if (src) { const i = this.g.wind.all.indexOf(src); if (i >= 0) this.g.wind.all.splice(i, 1); this.gusts.delete(bi); } }
   private stateOf(bi: number): PaneState | null {
     let st = this.panes.get(bi); if (st) return st;
     const type = this.typeOfPane(bi); if (!type) return null;   // (a Glass box thicker than a sheet — solid glass — never comes apart)
@@ -495,13 +495,13 @@ export class GlassBreak {
     while (D.next < D.clumps.length && D.clumps[D.next].key <= key0 + DICE_TIE) { this.releaseClump(st, D, D.clumps[D.next]); D.next++; }
     if (D.next >= D.clumps.length) this.diceDone(st);
   }
-  private diceDone(st: PaneState) { st.gone = true; st.walkable = true; this.g.col.wrote(); if (st.exterior) this.gustDirty = true; }
+  private diceDone(st: PaneState) { st.gone = true; st.walkable = true; if (st.exterior) this.gustDirty = true; }
   private stepDice(st: PaneState) {
-    if (GLASSREAL.drop) { if (this.g.time - st.dice!.t0 >= GLASSREAL.hang) this.dropAll(st, st.dice!); else if (st.walkable) { st.walkable = false; this.g.col.wrote(); } return; }
+    if (GLASSREAL.drop) { if (this.g.time - st.dice!.t0 >= GLASSREAL.hang) this.dropAll(st, st.dice!); else st.walkable = false; return; }
     const D = st.dice!; const R = (this.g.time - D.t0 - GLASSBREAK.diceHang) * GLASSBREAK.diceSpeed; let n = 0;
     // (clumps with the same key go together whatever the budget: the renderer opens by ONE threshold on the key — fill() hands it the midpoint between the last clump out and the next in)
     while (D.next < D.clumps.length && (D.clumps[D.next].key <= D.clumps[D.next - 1].key + DICE_TIE || (D.clumps[D.next].key <= R && n < GLASSBREAK.clumpsPerFrame))) { this.releaseClump(st, D, D.clumps[D.next]); D.next++; n++; }
-    if (D.next >= D.clumps.length) this.diceDone(st); else if (st.walkable) { st.walkable = false; this.g.col.wrote(); }
+    if (D.next >= D.clumps.length) this.diceDone(st); else st.walkable = false;
   }
   private releaseClump(st: PaneState, D: Dice, c: Clump) {
     D.out[c.k] = 1; GB_STATS.clumps++; GB_STATS.dropped++;
@@ -539,7 +539,7 @@ export class GlassBreak {
   }
   private releaseSheet(st: PaneState, away: Vec3, k: number) {
     if (st.gone) return;
-    st.gone = true; st.walkable = true; this.g.col.wrote(); st.pending.length = 0; GB_STATS.sheets++; GB_STATS.dropped++; if (st.exterior) this.gustDirty = true;
+    st.gone = true; st.walkable = true; st.pending.length = 0; GB_STATS.sheets++; GB_STATS.dropped++; if (st.exterior) this.gustDirty = true;
     const n = this.normalOf(st); const outSign = v3.dot(n, away) >= 0 ? 1 : -1; const N = v3.scale(n, outSign);
     const pts: Pt[] = [[-st.hu, -st.hv], [st.hu, -st.hv], [st.hu, st.hv], [-st.hu, st.hv]];
     this.note(`pane ${st.bi}: the laminated sheet leaves its frame`); this.plog(st, 'sheet blown out');
@@ -585,7 +585,7 @@ export class GlassBreak {
       velocity, spin: [(h1 - 0.5) * GLASSBREAK.spin, (h2 - 0.5) * 2, (h3 - 0.5) * GLASSBREAK.spin], tint: v3.copy(st.box.albedo), grain: 0, cause, who: st.lastWho, seed: (hitSeed(st.bi, cw) ^ f.fid) >>> 0 }, f.fid);
     this.afterRelease(st);
   }
-  private afterRelease(st: PaneState) { const w = this.walkableNow(st); if (w !== st.walkable) { st.walkable = w; this.g.col.wrote(); } if (st.exterior) this.gustDirty = true; }
+  private afterRelease(st: PaneState) { st.walkable = this.walkableNow(st); if (st.exterior) this.gustDirty = true; }
   /** a fragment has let go (its hole is already real): the break heard — one crack and one hearing event per pane per frame — then the consumer, or the stand-in */
   private emit(st: PaneState, f: GlassFragment, key: number) {
     const g = this.g;
@@ -678,9 +678,8 @@ export class GlassBreak {
   /** RAKING: Sam, on his feet, WALKS INTO what is left of a run pane that is mostly hole — the pieces in his way (not the teeth, nothing wholly above walkClearH) go,
    *  away from him, nearest first; the support pass takes what that leaves hanging. Asked only of panes that have run and are not yet walkable. Sam alone: nobody
    *  else walks at glass (the nav grid has every pane as a wall), and a man filing PAST a partition must not take it down. */
-  private rake(st: PaneState) { for (const pl of men(this.g)) this.rakeBy(st, pl); }   // (any player's man: seats.ts)
-  private rakeBy(st: PaneState, pl: Player) {
-    const g = this.g; const K = GLASSBREAK;
+  private rake(st: PaneState) {
+    const g = this.g; const K = GLASSBREAK; const pl = g.player;
     if (!pl || pl.down || pl.holding || pl.dragging || pl.wall) return;
     // cheap gates first — this is asked every frame of every run pane: within rakeM of the sheet, inside its width, and his legs are taking him AT it, more at it
     // than along it (the commanded velocity — the pane itself has stopped his body; a shallow pass along the glass is not a walk into it)
@@ -697,7 +696,7 @@ export class GlassBreak {
       if (f.area < K.toothArea && f.frame.bottom + f.frame.left + f.frame.right + f.frame.top > 1e-4) continue;   // teeth: shouldered through, as the walk rule has it
       st.pending.push({ fid: f.fid, at: g.time + 0.04 + 0.12 * Math.abs(f.cen[0] - mu) + 0.05 * hash01(st.bi * 71 + f.fid), cause: 'rake', from, k: 1 }); took++;
     }
-    if (took) { st.lastWho = c.id; st.pending.sort((a, b) => a.at - b.at || a.fid - b.fid); GB_STATS.raked += took; this.plog(st, `raked: ${took} pieces`); this.note(`pane ${st.bi}: ${took} pieces raked out`); }
+    if (took) { st.lastWho = PLAYER_ID; st.pending.sort((a, b) => a.at - b.at || a.fid - b.fid); GB_STATS.raked += took; this.plog(st, `raked: ${took} pieces`); this.note(`pane ${st.bi}: ${took} pieces raked out`); }
   }
   /** the movement rule: every piece reaching below walkClearH above the floor has fallen — but for teeth (pieces under toothArea still in the frame) */
   private walkableNow(st: PaneState): boolean {
@@ -804,7 +803,7 @@ export class GlassBreak {
     for (const st of this.panes.values()) if (st.nOpen || st.dice || st.gone) s += ` | pane ${st.bi} ${st.type} ${Math.round(100 * this.openFraction(st.bi))}% open${st.run ? ' run' : ''}${st.walkable ? ' (walkable)' : ''}`;
     return s;
   }
-  reset() { this.panes.clear(); this.g.col.wrote(); this.blasted.length = 0; for (const src of this.gusts.values()) { const i = this.g.wind.all.indexOf(src); if (i >= 0) this.g.wind.all.splice(i, 1); } this.gusts.clear(); this.gustDirty = false; }
+  reset() { this.panes.clear(); this.blasted.length = 0; for (const src of this.gusts.values()) { const i = this.g.wind.all.indexOf(src); if (i >= 0) this.g.wind.all.splice(i, 1); } this.gusts.clear(); this.gustDirty = false; }
 }
 function nearestOn(b: Box, p: Vec3): Vec3 {
   const cs = Math.cos(b.yaw), sn = Math.sin(b.yaw); const px = p[0] - b.c[0], pz = p[2] - b.c[2];

@@ -50,11 +50,10 @@
 // Nothing is saved: the list is made again every frame from who has his goggles down, and a carrier's reading of his place (IRLIGHT.auto: when it last read
 // dark, how far his light has eased) is kept per Game and starts again after a load — a light inside its hold at the save is out or full at once. UNTUNED BY EYE: nothing here was seen on a GPU.
 // (src/game is one import cycle: nothing here is built from another game module's exports at module load.)
-import { hostMan, eachSeat } from './seats';
-import { SideMap, GameSideMap } from '../math/side';
+import { SideMap } from '../math/side';
 import { Vec3, v3, clamp, DEG } from '../math/vec';
 import type { RtLight } from '../render/lights';
-import type { Game, Guard, Player } from './game';
+import type { Game, Guard } from './game';
 import type { Character } from './character';
 import { nvgDown, tubeVis, tubeSig, nvgPlaceLight, NVG } from './nvg';
 import { wandEye, WAND } from './wand';
@@ -103,18 +102,18 @@ export function irFlags() { try { const q = new URLSearchParams(location.search)
 const NEAR_BREAK = (globalThis as { process?: { env?: Record<string, string | undefined> } }).process?.env?.IRNEAR_BREAK === '1';   // (QA: the rule's own check must fail with this set)
 
 /** the key Sam's reading is kept under while the place read is his wand's (no character's id is negative) */
-const WAND_KEY0 = -1;
+const WAND_KEY = -1;
 const HEAD_Y = 1.62, LENS_AHEAD = 0.14, LENS_CLEAR = 0.3, LENS_R = 0.04;
 /** one carrier's reading of his place (IRLIGHT.auto): when his fan was last read, when anything last read dark, how much of his light burns, and as of when */
 /** …and under IRLIGHT.meter: `fresh`: no reading of his has been decided yet (the first one that is puts his light at full or out at once) · `t0`: when
  *  the reading began · `own`: the CPU's light on the floor under him where it calls that dark (−1: it does not) · `pts`: the dark points of his fan the
  *  renderer is asked about, x, z and the CPU's light at each · `since`: when each slot was first asked (Infinity: not in use; the last is the wand's own floor) */
 interface Need { readT: number; darkT: number; k: number; t: number; fresh: boolean; t0: number; own: number; pts: number[]; since: number[] }
-interface Kit { sam: RtLight | null; /** a later seat's man's, by his id (seats.ts) */ more: Map<number, RtLight>; men: Map<Guard, RtLight>; seen: Map<Guard, { t: number; E: number }>; need: Map<number, Need>;
+interface Kit { sam: RtLight | null; men: Map<Guard, RtLight>; seen: Map<Guard, { t: number; E: number }>; need: Map<number, Need>;
   /** IRLIGHT.near: how far each carrier's light is turned down for what stands in front of it (1 = not at all), and as of when */
   near: Map<number, { t: number; k: number }> }
-const kits = new GameSideMap<Game, Kit>('irlight.kits');
-const kitOf = (g: Game): Kit => { let K = kits.get(g); if (!K) { K = { sam: null, more: new Map(), men: new Map(), seen: new Map(), need: new Map(), near: new Map() }; kits.set(g, K); } return K; };
+const kits = new SideMap<Game, Kit>('irlight.kits');
+const kitOf = (g: Game): Kit => { let K = kits.get(g); if (!K) { K = { sam: null, men: new Map(), seen: new Map(), need: new Map(), near: new Map() }; kits.set(g, K); } return K; };
 const lamp = (name: string, owner: number): RtLight => ({ name, group: 'infrared', kind: 1, pos: [0, -10, 0], dir: [0, 0, 1], color: [1, 1, 1], intensity: 0, range: IRLIGHT.reach,
   innerDeg: IRLIGHT.core, outerDeg: IRLIGHT.cone, radius: LENS_R, volumetric: 0, owner, enabled: false, fixtureBox: -1, flicker: 0, ttl: -1, age: 0, peakIntensity: 0 });   // (volumetric 0: no beam in the haze — at the tube's gain its own back-scatter would be all it showed)
 
@@ -209,7 +208,7 @@ function burn(g: Game, kit: Kit, key: number, at: Vec3, yaw: number, each: boole
 
 /** Sam's burns exactly while the picture is the tube's (0.5: post.wgsl's own swap, engine.ts's own test for handing the list over) — not by Player.nv: his
  *  goggles are asked for a few frames before the picture comes and lift a few before it goes (player.ts eases nvAmount, kitanim.ts holds the tube at his eyes) */
-const samOn = (pl: Player) => pl.nvAmount > 0.5;
+const samOn = (g: Game) => g.player.nvAmount > 0.5;
 /** his lamp is out of the list: the renderer's slot memory of it goes with it (lights.ts upload maps last frame's slot to this frame's by the object) */
 const out = (L: RtLight | null | undefined) => { if (L) { L.enabled = false; L.slot = -1; } };
 
@@ -231,7 +230,7 @@ export function irNearOf(g: Game, key: number): number { const s = kits.get(g)?.
 /** Once a frame from Game.update, after everybody has moved and the doors have swung: the list of infrared lights (LightSet.ir) made again from whose goggles are down. */
 export function irLightTick(g: Game) {
   const list = g.engine.lights.ir, K = kits.get(g);
-  if (!IRLIGHT.on) { if (list.length) list.length = 0; if (K) { out(K.sam); for (const L of K.more.values()) out(L); K.men.clear(); K.seen.clear(); K.near.clear(); for (const id of [...K.need.keys()]) drop(g, K, id); } return; }
+  if (!IRLIGHT.on) { if (list.length) list.length = 0; if (K) { out(K.sam); K.men.clear(); K.seen.clear(); K.near.clear(); for (const id of [...K.need.keys()]) drop(g, K, id); } return; }
   const kit = K ?? kitOf(g); list.length = 0; kit.seen.clear();
   /** his light posed, and in the list if any of it burns (auto: only where his place is too dark for the tube) */
   // (the renderer is asked only where it answers: Sam's own meter — asked every frame, game.ts lightMeter — has an answer. Headless it never has. Read once
@@ -240,19 +239,16 @@ export function irLightTick(g: Game) {
   const lit = (L: RtLight, key: number, at: Vec3, yaw: number, each: boolean, ownKey: string | null) => {
     live ??= IRLIGHT.auto && IRLIGHT.meter && !SENSE.cpu && g.lightAt('playerChest') !== undefined;
     const k = burn(g, kit, key, at, yaw, each, live, ownKey); if (k > 0) { L.intensity *= k * nearK(g, kit, key, L); L.peakIntensity = L.intensity; list.push(L); } else out(L); };
-  // (EVERY PLAYER'S MAN has his own — seats.ts: the first seat's is `sam`, as it was; a later seat's under his id, its wand reading under a key of its own.
-  //  The GPU meter's chest key is the man's this host plays: nobody else's chest is metered there)
-  const mine = new Set<number>(), host = hostMan(g);
-  eachSeat(g, v => { const pl = v.player, sc = pl.char, first = v.seat.index === 0, WAND_KEY = WAND_KEY0 - v.seat.index; mine.add(sc.id); mine.add(WAND_KEY);
-  if (samOn(pl)) {
-    let L = first ? kit.sam : kit.more.get(sc.id) ?? null; if (!L) { L = lamp(first ? 'ir_sam' : `ir_sam${v.seat.index}`, sc.id); if (first) kit.sam = L; else kit.more.set(sc.id, L); } pose(g, L, sc);
+  const sc = g.player.char;
+  if (samOn(g)) {
+    const L = kit.sam ??= lamp('ir_sam', sc.id); pose(g, L, sc);
     // (the wand under a door, his goggles down — WAND.nv: the picture he is given is the lens's, so the flood is the lens's too, level along its look — and
     // the place read is the one the lens looks into, from a stride past the leaf)
-    const eye = WAND.nv ? wandEye(v) : null; if (eye) { L.pos = v3.copy(eye.pos); L.dir = [eye.look[0], 0, eye.look[2]]; }
+    const eye = WAND.nv ? wandEye(g) : null; if (eye) { L.pos = v3.copy(eye.pos); L.dir = [eye.look[0], 0, eye.look[2]]; }
     if (eye) { drop(g, kit, sc.id); lit(L, WAND_KEY, [eye.pos[0] + eye.look[0] * 0.7, 0, eye.pos[2] + eye.look[2] * 0.7], Math.atan2(eye.look[0], eye.look[2]), true, null); }
-    else { drop(g, kit, WAND_KEY); lit(L, sc.id, sc.pos, sc.aimYaw, true, pl === host ? 'playerChest' : null); }
-  } else { out(first ? kit.sam : kit.more.get(sc.id)); drop(g, kit, sc.id); drop(g, kit, WAND_KEY); } });
-  if (!IRLIGHT.team) { kit.men.clear(); for (const id of kit.need.keys()) if (!mine.has(id)) drop(g, kit, id); return; }
+    else { drop(g, kit, WAND_KEY); lit(L, sc.id, sc.pos, sc.aimYaw, true, 'playerChest'); }
+  } else { out(kit.sam); drop(g, kit, sc.id); drop(g, kit, WAND_KEY); }
+  if (!IRLIGHT.team) { kit.men.clear(); for (const id of kit.need.keys()) if (id !== sc.id && id !== WAND_KEY) drop(g, kit, id); return; }
   for (const gd of kit.men.keys()) if (!g.guards.includes(gd)) { kit.men.delete(gd); drop(g, kit, gd.char.id); }
   for (const gd of g.guards) {
     if (gd.state === 'dead' || !nvgDown(g, gd)) { out(kit.men.get(gd)); drop(g, kit, gd.char.id); continue; }
@@ -304,7 +300,7 @@ export function irCarried(): boolean { return IRLIGHT.on && IRLIGHT.team; }
 /** QA / the panel: whose illuminator burns */
 export function irLightState(g: Game): { sam: boolean; men: Guard[]; shown: boolean } {
   const list = g.engine.lights.ir, K = kits.get(g);
-  return { sam: !!K?.sam && list.includes(K.sam), men: K ? [...K.men].filter(([, L]) => list.includes(L)).map(([gd]) => gd) : [], shown: hostMan(g).nvAmount > 0.5 };
+  return { sam: !!K?.sam && list.includes(K.sam), men: K ? [...K.men].filter(([, L]) => list.includes(L)).map(([gd]) => gd) : [], shown: g.player.nvAmount > 0.5 };
 }
 /** 'IR light off: …' / 'IR light: yours on · Blue One · Blue Two — nobody without goggles sees it' */
 export function irLightSummary(g: Game): string {

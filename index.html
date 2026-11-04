@@ -4,7 +4,6 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>twopointsix — 2.5D RT stealth sandbox</title>
-  <link rel="icon" href="data:," />
   <style>
     /* THE FIGHT SCREEN WEARS THE MENUS' LOOK (src/ui/theme.ts): sand ink on warm black and the ONE orange, which here marks what leads on: the row a tap of Space does,
        the objective, a lost man's way. Every other hue still means something (gold / red / blue = who an order goes to; amber then red = alarm; blue = a door; red = a man).
@@ -80,7 +79,7 @@
     @media (max-width: 1340px) { body.touring #interact { margin-top: calc(7.5vh / var(--tz, 1) + 190px); } }
     /* THE TWEAK PANEL (Tab; ui/panel.ts + bindings.ts): a two-level tool — SYSTEMS down a left rail, collapsible SECTIONS on the selected system's page — in the HUD's own
        thin sand mono. Header: a status strip (preset · resolution · fps · gpu ∪, so it is worth having up with the read-out off), the search box (every system at once;
-       click it to type; ← / → or [ / ] walk the rail) and the 'all knobs' switch that reveals the A/B rows (.row.adv) and the rarely-touched sections (.advsec). */
+       hover the panel and type, ← / → or [ / ] walk the rail) and the 'all knobs' switch that reveals the A/B rows (.row.adv) and the rarely-touched sections (.advsec). */
     #panel { position: absolute; right: 8px; top: 8px; width: 372px; max-height: calc(100% - 16px); overflow: hidden; z-index: 12; display: flex; flex-direction: column; font: 11px/1.3 var(--h-mono); color: var(--h-ink); background: rgba(var(--h-plate),0.94); border: 1px solid rgba(var(--h-edge),0.22); border-radius: 4px; box-shadow: 0 8px 32px rgba(0,0,0,0.5); }
     #panel.hidden { display: none; }
     #panel .phead { flex: none; padding: 6px 8px 5px; border-bottom: 1px solid rgba(var(--h-edge),0.16); background: rgba(var(--h-plate),0.6); }
@@ -329,12 +328,13 @@
     #menu.title .actions .xhead:first-child { margin-top: 0; }
     #menu.title .actions .btn.xrow { display: block; width: min(520px, 100%); font-size: 20px; padding: 10px 18px 9px; text-decoration: none; color: var(--m-btn-text); }
     #menu.title .actions .btn.xrow b { display: block; font-weight: inherit; }
+    #menu.title .actions .btn.xrow small { display: block; margin-top: 3px; font: 11px/1.3 var(--m-mono); letter-spacing: 0; text-transform: none; color: var(--m-soft); }
     #menu.title .actions .btn.xrow:hover, #menu.title .actions .btn.xrow:focus { padding-left: 28px; outline: none; }
     #menu.title .actions .btn.xback { margin-top: 14px; font-size: 18px; color: var(--m-soft); }
     /* a short window (960 x 540): the Extras list and its way back stay above the fold */
     @media (max-height: 640px) { #menu.title .head::after { margin-top: 12px; } #menu.title .actions.extras { gap: 3px; margin-top: 12px; }
       #menu.title .actions.extras .xhead { margin: 7px 0 2px 4px; } #menu.title .actions.extras .btn.xrow { font-size: 15px; padding: 5px 18px 4px; }
-      #menu.title .actions.extras .btn.xback { margin-top: 6px; font-size: 14px; padding: 5px 18px 4px; } }
+      #menu.title .actions.extras .btn.xrow small { margin-top: 1px; font-size: 10px; } #menu.title .actions.extras .btn.xback { margin-top: 6px; font-size: 14px; padding: 5px 18px 4px; } }
     #menu.title .tfill { flex: 1 1 auto; min-height: 16px; }
     #menu.title .note.bootstatus { width: min(360px, 100%); margin: 0 0 10px; font: 11px var(--m-mono); color: var(--m-soft); }
     #menu.title .cheats { align-self: flex-start; margin: 0 0 10px; padding: 4px 9px; font: 600 11px/1.2 var(--m-head); letter-spacing: 0.14em; text-transform: uppercase; color: #f0c27a; background: rgba(232,180,106,0.08); border: 1px dashed rgba(232,180,106,0.5); border-radius: 2px; cursor: pointer; }
@@ -513,7 +513,7 @@
     #menu .vd-why { margin-top: 6px; font: 12px/1.4 ui-sans-serif, system-ui, -apple-system, sans-serif; color: var(--m-soft); letter-spacing: 0.03em; }
     #menu .vd-men { display: grid; gap: 5px; margin: 0 0 12px; }
     #menu .vd-man { display: grid; grid-template-columns: 92px minmax(0, 1fr) 40px; align-items: center; gap: 10px; --tone: #b7a98a; }
-    #menu .vd-man.t-you { --tone: var(--m-bright); } #menu .vd-man.t-purple { --tone: #a98be8; } #menu .vd-man.t-red { --tone: #c9655b; } #menu .vd-man.t-blue { --tone: #5b8fc9; }
+    #menu .vd-man.t-you { --tone: var(--m-bright); } #menu .vd-man.t-red { --tone: #c9655b; } #menu .vd-man.t-blue { --tone: #5b8fc9; }
     #menu .vd-man .nm { font: 700 13px/1 var(--m-head); letter-spacing: 0.12em; text-transform: uppercase; color: var(--tone); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     #menu .vd-man:not(.s-up):not(.vd-count) .nm { text-decoration: line-through; text-decoration-color: #ff9c84; }
     #menu .vd-man .bar { position: relative; display: block; height: 12px; background: rgba(var(--m-edge),0.08); border-left: 1px solid rgba(var(--m-edge),0.4); }
@@ -529,7 +529,7 @@
     #menu .vd-count.host .sq i { border-color: rgba(var(--m-edge),0.6); } #menu .vd-count.host .sq i.on { background: var(--m-bright); border-color: var(--m-bright); }
     #menu .vd-count .n { font-size: 12px; color: var(--m-soft); }
     #menu .db-map .vfell { position: absolute; transform: translate(-50%, -50%); font: 700 13px/1 ui-monospace, SFMono-Regular, Menlo, monospace; font-style: normal; color: #b7a98a; text-shadow: 0 0 3px #000, 0 0 6px #000; cursor: help; }
-    #menu .db-map .vfell.t-you { color: var(--m-bright); } #menu .db-map .vfell.t-purple { color: #a98be8; } #menu .db-map .vfell.t-red { color: #c9655b; } #menu .db-map .vfell.t-blue { color: #5b8fc9; }
+    #menu .db-map .vfell.t-you { color: var(--m-bright); } #menu .db-map .vfell.t-red { color: #c9655b; } #menu .db-map .vfell.t-blue { color: #5b8fc9; }
     #menu .db.vd-on .db-t1 { display: none; }
     #menu .db.vd-solo .vd-time { display: none; }   /* (the stealth card has its own clock, the mission's: one clock a card) */
     #menu .db.vd-squad .db-head, #menu .db.vd-squad .db-stats, #menu .db.vd-squad .db-badges, #menu .db.vd-squad .db-tlhead, #menu .db.vd-squad .db-timeline, #menu .db.vd-squad .db-legend,

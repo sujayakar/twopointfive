@@ -2,11 +2,6 @@
 // conference glazing one along, and every probe that said "pane 110" was shooting its neighbour's edge). levels/office.json boxes[i] ≡ world.statics[i].
 import office from '../../levels/office.json';
 
-/** A MODEL'S STAND-IN FOR A SEAMS-OUT RUN (a probe that holds "the switch off is the game with the model taken out" puts one where the model stood). Written
- *  `{ … } satisfies SeamsOut<TheClass>`: every public member of the class has to be answered, so the day the game opens a new door onto the model the type check
- *  names the stand-in, where a hand-kept list threw in the middle of a volley or, worse, answered for a different building. */
-export type SeamsOut<T> = { [K in keyof T]: unknown };
-
 /** the index of the office's pane whose centre stands at (x, z); throws when there is none (a probe aimed at a pane that is gone should say so, not shoot a wall) */
 export function officePane(x: number, z: number): number {
   const i = (office as { boxes: { c: number[]; flags?: string[] }[] }).boxes.findIndex(b => !!b.flags?.includes('Glass') && Math.abs(b.c[0] - x) < 0.01 && Math.abs(b.c[2] - z) < 0.01);

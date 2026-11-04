@@ -12,7 +12,7 @@ import { quietWords } from '../game/quiet';
 import { debriefOf, fmtEvent, fmtMMSS, pinned, PIN, roomOf, indoors, roomsOf, ROOMS, eventText } from '../game/chronicle';
 import type { Debrief, ChronEvent } from '../game/chronicle';
 import { verdictLine, type RunVerdict } from '../game/verdict';
-import { verdictHead, verdictMen, verdictSlot, verdictPanels, squadVerdict, fellWords, namedMen } from './verdictCard';
+import { verdictHead, verdictMen, verdictSlot, verdictPanels, squadVerdict, fellWords } from './verdictCard';
 
 /** the map's width in CSS px at most (the canvas is drawn at the nav grid's own resolution × an integer and scaled by CSS to the column it sits in) */
 const MAP_MAX_W = 420;
@@ -142,7 +142,7 @@ function buildMap(game: Game, events: ChronEvent[], V: RunVerdict | null = null)
   if (QW) { for (const X of game.quiet.exits) { const ex = game.doors.byName(X.door)?.frameCentre ?? [X.x, 0, X.z]; mark('⇥', 'exit', ex[0], ex[2], X.name); } }
   else { const ex = game.doors.byName(M.exfilDoor)?.frameCentre; if (ex) mark('⇥', 'exit', ex[0], ex[2], 'the fire exit'); }
   for (const e of events) { if (!pinned(e)) continue; const p = PIN[e.kind]!; const pin = el('i', `pin ${p.cls}`); pin.textContent = p.glyph; pin.title = fmtEvent(e, game); place(pin, e.pos[0], e.pos[2]); }
-  if (V) for (const m of namedMen(game, V)) { if (!m.downPos || (m.human && !squadVerdict(V))) continue; const x = el('i', `vfell t-${m.tone ?? 'mate'}`); x.textContent = m.state === 'dead' ? '✕' : m.state === 'wounded' ? '✚' : 'z'; x.title = fellWords(m); place(x, m.downPos[0], m.downPos[1]); }   // (where each man of the team fell; not a `mark`: the three marks are the level's)
+  if (V) for (const m of V.men) { if (!m.downPos || (m.human && !squadVerdict(V))) continue; const x = el('i', `vfell t-${m.tone ?? 'mate'}`); x.textContent = m.state === 'dead' ? '✕' : m.state === 'wounded' ? '✚' : 'z'; x.title = fellWords(m); place(x, m.downPos[0], m.downPos[1]); }   // (where each man of the team fell; not a `mark`: the three marks are the level's)
   // the room under the cursor
   box.title = 'the floor';
   (box as any).onmousemove = (ev: MouseEvent) => { const r = cv.getBoundingClientRect?.(); if (!r || !r.width) return; const x = (ev.clientX - r.left) / r.width * wx, z = (ev.clientY - r.top) / r.height * wz; if (x >= 0 && z >= 0 && x < wx && z < wz) box.title = roomOf([x, 0, z], game.level); };
@@ -150,7 +150,7 @@ function buildMap(game: Game, events: ChronEvent[], V: RunVerdict | null = null)
 }
 /** teal at the start of the run through green to amber at its end */
 /** a man's colour on the map (the rows' colours: index.html .vd-man.t-…) */
-const TONE: Record<string, string> = { you: '#f0e9d9', purple: '#a98be8', red: '#c9655b', blue: '#5b8fc9', mate: '#b7a98a' };
+const TONE: Record<string, string> = { you: '#f0e9d9', red: '#c9655b', blue: '#5b8fc9', mate: '#b7a98a' };
 function pathColour(u: number): string { const h = 170 - 130 * Math.min(1, Math.max(0, u)); return `hsl(${h.toFixed(0)}, 78%, ${(52 + 10 * u).toFixed(0)}%)`; }
 
 function el(tag: string, cls?: string) { const e = document.createElement(tag); if (cls) e.className = cls; return e; }

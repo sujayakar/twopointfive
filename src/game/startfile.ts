@@ -12,7 +12,6 @@
 // fight's from the first frame, and one of them shot a roamer through the conference glazing 0.9 s in, starting the clock before the player had touched a key.
 // Nothing here draws a die, reads the camera or keeps state: the men's assignments are the orders' own (and are saved or dropped with them).
 // Type-only game imports: nothing here is built from another game module's exports at load (src/game is one import cycle).
-import { rawGame, dealSeats, seatHas } from './seats';
 import type { Game, Guard } from './game';
 
 /** the switch: off in the module, raised by the page (host/profile.ts pageSwitches; ?nofallin = the men start with no order, as they did) and by the shipped stand;
@@ -22,7 +21,6 @@ export const START = { fallIn: false };
 /** Called by a scenario as it stages, after its men are on their marks and Sam is on his: every living one of `men` on 'fall in'. Returns how many took it. */
 export function teamStartsFallenIn(g: Game, men: Guard[]): number {
   if (!START.fallIn) return 0;
-  if (g.seats.length > 1 && rawGame(g) === g) { dealSeats(g); let k = 0; for (const s of g.seats) k += teamStartsFallenIn(s.view, men.filter(m => seatHas(s, m))); return k; }   // (each pair on its own player — seats.ts)
   const S = g.orders, up = men.filter(m => m.state !== 'dead'); if (!up.length) return 0;
   const def = S.defs.find(d => d.id === 'fallIn'); if (!def) return 0;
   const p = g.player.char.pos;

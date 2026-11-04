@@ -47,9 +47,7 @@ export const SPRINTDOOR = { on: false,
 /** QA: shoulders through, handles ripped and leaves booted off their hinges since the last reset */
 export const SPRINTDOOR_STATS = { bashes: 0, rips: 0, kicks: 0 };
 
-/** what of a man the door stamps are read off: the player's own, or a look ahead's copy of him (walkahead.ts) */
-export type DoorStamps = Pick<Player, 'down' | 'doorRipUntil' | 'doorBashAt' | 'doorBashLean'>;
-const live = (g: Game, pl: Pick<Player, 'down'>) => SPRINTDOOR.on && !pl.down && !g.puppet && !g.touring;
+const live = (g: Game, pl: Player) => SPRINTDOOR.on && !pl.down && !g.puppet && !g.touring;
 
 /** What his door contact carries this frame (game.ts updateDoors): the rule's numbers while he is at a sprint, nothing otherwise. */
 export function sprintDoorRun(g: Game, pl: Player): DoorContact['run'] {
@@ -113,17 +111,17 @@ export function sprintDoorAfter(g: Game, pl: Player, own: DoorContact): void {
 }
 
 /** The share of his top speed his run is held to this frame (player.ts): `ripPace` while his hand is ripping a leaf round, else 1. */
-export function sprintDoorPace(g: Game, pl: DoorStamps, now = g.time): number { return live(g, pl) && now < pl.doorRipUntil ? SPRINTDOOR.ripPace : 1; }
+export function sprintDoorPace(g: Game, pl: Player): number { return live(g, pl) && g.time < pl.doorRipUntil ? SPRINTDOOR.ripPace : 1; }
 
 /** Is the turn of his shoulder into a leaf (or his head coming back off it) still running: what a checkpoint asks before it writes the stamp. */
-export function sprintDoorTurning(g: Game, pl: DoorStamps, now = g.time): boolean { return SPRINTDOOR.leanSecs > 0 && now - pl.doorBashAt < SPRINTDOOR.leanSecs + SETTLE; }
+export function sprintDoorTurning(g: Game, pl: Player): boolean { return SPRINTDOOR.leanSecs > 0 && g.time - pl.doorBashAt < SPRINTDOOR.leanSecs + SETTLE; }
 
 /** Radians added to the yaw his body runs at (player.ts): the shoulder turned into the leaf he has just gone through, easing back square. null = no turn
  *  running and none just ended: the sprint's facing exactly as it was. Read off the stamp alone — the stamp is only ever written with the rule live, and a turn
  *  under way when the switch is thrown runs out instead of snapping. */
-export function sprintDoorLean(g: Game, pl: DoorStamps, now = g.time): number | null {
-  if (!sprintDoorTurning(g, pl, now)) return null;
-  const t = (now - pl.doorBashAt) / SPRINTDOOR.leanSecs; if (t < 0) return null;
+export function sprintDoorLean(g: Game, pl: Player): number | null {
+  if (!sprintDoorTurning(g, pl)) return null;
+  const t = (g.time - pl.doorBashAt) / SPRINTDOOR.leanSecs; if (t < 0) return null;
   return t >= 1 ? 0 : pl.doorBashLean * SPRINTDOOR.lean * (1 - t) * (1 - t);
 }
 

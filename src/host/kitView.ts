@@ -73,7 +73,6 @@ import type { LoopCtx } from './loop';
 import type { RtLight } from '../render/lights';
 import type { KitViewLamp, KitViewLight, KitViewWay } from '../scene/scenarios';
 import type { Box } from '../scene/boxes';
-import { withPieces } from '../scene/shapes';
 import { BoxFlag } from '../scene/boxes';
 import type { Vec3 } from '../math/vec';
 import type { KitPlanLevel, KitViewPlanned } from './kitViewPlan';
@@ -759,8 +758,7 @@ export function kitViewStart(d: KitViewDeps): KitView {
   const sunk = new WeakSet<Box>(); let sunkN = 0;
   const sink = (idx: readonly number[]) => {
     const W = engine.world; let n = 0, x0 = Infinity, z0 = Infinity, x1 = -Infinity, z1 = -Infinity;
-    for (const i of withPieces(game.level.boxes, idx)) { const b = game.level.boxes[i]; if (!b || sunk.has(b) || W.statics[i] !== b) continue;   // (with the trim a sunk box says: scene/shapes.ts)
-        // (index for index the level's boxes head the world's: one that is not is left alone)
+    for (const i of idx) { const b = game.level.boxes[i]; if (!b || sunk.has(b) || W.statics[i] !== b) continue;   // (index for index the level's boxes head the world's: one that is not is left alone)
       const r = Math.hypot(b.h[0], b.h[2]); x0 = Math.min(x0, b.c[0] - r); x1 = Math.max(x1, b.c[0] + r); z0 = Math.min(z0, b.c[2] - r); z1 = Math.max(z1, b.c[2] + r);
       sunk.add(b); b.c[1] -= 30; n++; }
     // (…and off the FLOOR: the nav grid asks its bake's own question again where they stood — collision tests a box where it is, so a sunk one shuts no cell.

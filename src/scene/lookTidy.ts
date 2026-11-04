@@ -44,7 +44,7 @@ function wetIs(b: Box): boolean { return b.wetK !== undefined || (!!(b.flags & B
 function wetTidy(statics: Box[], T: Tidy): void {
   for (const r of T.wet) { const d = statics[r.d], g = statics[r.g]; if (!d || !g) continue; const on = wetIs(g); if (on === r.on) continue; r.on = on;
     if (on) { d.wetK = g.wetK ?? 0.5; d.flags = r.flags0 | BoxFlag.Gloss; d.rough = g.rough; d.aniso = true; }
-    else { d.wetK = undefined; d.flags = r.flags0; d.rough = r.rough0; d.aniso = r.aniso0; } }   // (set, never deleted: a box keeps its one layout — scene/boxes.ts boxOf)
+    else { delete d.wetK; d.flags = r.flags0; if (r.rough0 === undefined) delete d.rough; else d.rough = r.rough0; if (r.aniso0 === undefined) delete d.aniso; else d.aniso = r.aniso0; } }
 }
 /** once a frame, from the page: cheap while nothing has broken (one compare of the world's geometry serial) and nothing has got wet or dried (one test a
  *  ground decal). A wall's decals go and come back WHOLE with the wall's box — a hole in one cell bares that wall's foot along its length, and the frame the
@@ -70,7 +70,7 @@ export function lookTidy(world: { statics: Box[]; geomSerial: number }): void {
 const ACCENTS = ['paintBlue', 'paintGreen', 'paintRust'] as const;
 const near = (a: Vec3, b: Vec3): boolean => Math.abs(a[0] - b[0]) < 0.004 && Math.abs(a[1] - b[1]) < 0.004 && Math.abs(a[2] - b[2]) < 0.004;   // (a paint or one of its stand-ins: gwotAs shifts by ≤ 0.0024)
 /** the page calls it once the game stands, with the switch on (main.ts); returns how many leaves it painted */
-export function lookDoors(doors: readonly { def: { name: string; exterior?: boolean; steel?: boolean }; box: Box }[], statics: readonly Box[], paint?: { out: readonly [number, number, number]; in?: readonly [number, number, number] }): number {
+export function lookDoors(doors: readonly { def: { name: string; exterior?: boolean; steel?: boolean }; box: Box }[], statics: readonly Box[], paint?: { out: readonly [number, number, number]; in?: readonly [number, number, number]; stuff?: Box['stuff'] }): number {
   const count = [0, 0, 0]; let wears = false;
   for (const b of statics) { if (gwotSimOf(b.albedo) === undefined) continue; wears = true; ACCENTS.forEach((a, i) => { if (near(b.albedo, GWOT_PALETTE[a])) count[i]++; }); }
   if (!wears) return 0;
@@ -79,6 +79,6 @@ export function lookDoors(doors: readonly { def: { name: string; exterior?: bool
   const wood: Vec3 = paint?.in ? [paint.in[0], paint.in[1], paint.in[2]] : GWOT_PALETTE.woodGrey, faded: Vec3 = [accent[0] * 0.7 + wood[0] * 0.3, accent[1] * 0.7 + wood[1] * 0.3, accent[2] * 0.7 + wood[2] * 0.3];
   for (const d of doors) { if (d.def.steel) continue;
     const h = hashStr(d.def.name), k = 0.9 + (h % 1000) / 1000 * 0.2, a = d.def.exterior ? accent : (h >>> 10) % 4 === 0 ? faded : wood;   // (one inside door in four keeps some old paint)
-    d.box.albedo = [a[0] * k, a[1] * k, a[2] * k]; n++; }
+    d.box.albedo = [a[0] * k, a[1] * k, a[2] * k]; if (paint?.stuff) d.box.stuff = paint.stuff; n++; }   // (a row that says what its leaves are made of: the colour rule is not asked)
   return n;
 }
