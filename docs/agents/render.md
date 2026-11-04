@@ -2754,12 +2754,16 @@ interleaved and filtered to their quiet minimum, and a row whose p75 sits far ab
   list still owed a decision: 51 in 17 files, officeGen 15; none of them is a word a round reads falsely, below). `PAINT_STUFF` has no
   'mixed': a name says one thing, and a row's word is what the row is (asphalt says plain). A door's leaf says its paint's word
   (`lookTidy.ts lookDoors`; a `look.ts LOOK_DOORS` row says one a side). An old cut's core says its stuff in the cut record (`cut.ts
-  CUT_CORE_STUFF`, bits 12..16). The look page's hand-built pieces (`frontTry`, `lorryTry`, `passTry`, `carTry`) are made of palette rows
-  and say their words. The editor keeps, copies, sets and shows a paint's word (`editor/paint.ts`, the paint panel's 'made of' row), a
+  CUT_CORE_STUFF`, bits 12..16). A SHAPE'S PIECE (`scene/shapes.ts`, a box's `shape.with`) says its word as a box does, its own or its
+  paint's row's, and the box stood up for it carries it. A TONE OF A PALETTE ROW is made of what the row is: the kit's `toned` (`gwotKit.ts`)
+  and the snow levels' rock (`tools/levels/snowRock.ts`) hand their numbers through `tonedAs`, which is how ground dressing, stains, worn
+  paths and cut rock keep their earth, gravel and slab. The look page's hand-built pieces (`frontTry`, `lorryTry`, `passTry`) are made of
+  palette rows and say their words. The editor keeps, copies, sets and shows a paint's word (`editor/paint.ts`, the paint panel's 'made of' row), a
   said plain included; a blank document's paints say theirs.
-  LEVEL FILES were brought forward by `tools/levels/stuff-bake.ts` (the old rule frozen in `tools/levels/stuffWas.ts`, for that tool and
-  `tools/qa/stuff-audit.ts` only: delete those three when no file from before is left; `tools/levels/paintUsers.ts` stays). A level whose
-  file was its generator's fresh output is its generator's new output (20 of 60); the rest wait for their generators.
+  LEVEL FILES: every level file of the build is its generator's output, so each was written again by its generator
+  (`tools/levels/export.ts`, `tools/level-export.ts`). `tools/levels/stuff-bake.ts` brings forward a file laid WITHOUT its generator (the
+  old rule frozen in `tools/levels/stuffWas.ts`, for that tool and `tools/qa/stuff-audit.ts`'s before side only: delete the three when
+  nobody holds a file from before; `tools/levels/paintUsers.ts` stays).
   WHAT WAS CHANGED ON PURPOSE, because a word is now read by more than the look (next paragraph) and these were the colour rule's
   mistakes, each read by the level's own task or the hit table's: THE CAR PARK's paint, `asphalt`, says plain (no stuff the look has is
   tarmac yet; its grey was drawn as bare iron, and the lived kit's iron fittings in the same numbers say metal themselves); the compound's
@@ -2768,31 +2772,35 @@ interleaved and filtered to their quiet minimum, and a row whose p75 sits far ab
   the lived kit's rubber ink rubber, a quarry-tile floor slab, a gravel hardstanding gravel, sandbags cloth, an exhaust metal; a picture on
   a wall, black file folders, mugs, a planter trough, pull strips and three vehicles' bodies say nothing (the vehicles' words are the
   vehicles task's); the registry's lacquered leaves say paint and the consulate's varnished ones wood.
-  NO SWITCH: it is not a rule of play and both stands draw the same. THE CHECK: `bun run tools/qa/stuff-check.ts` (13 lines;
-  `STUFF_BREAK=1` strikes the rows' words and fails lines 2, 3, 4, 7 and 13; line 10 holds that in `src/game` a box's word is READ only by
-  the picture of a hit) and `bun run tools/qa/stuff-audit.ts --before <ref>`, which prints what every box was and is, by kind and file, and
-  exits 1 where one lost or moved its material: against the preview before this it lists the 118 below and exits 1, by design.
-  MEASURED: the 60 files against the preview, 41,989 boxes and parts, 41,871 drawn as before and 118 not, every one of a kind named above
-  (they are in the four files whose generators wrote them, office, office-relief, consulate and registry, and the lots and the compound's
-  yard and walls in the rest); every generator's new output against its old brought forward, 38,904 boxes, 604 differ (the kinds above
-  over every level that has them, 110 file folders and 72 rubber things the largest; and what handing paints over by lineage does: 147
-  plastic stand-ins plain to plastic, 76 lived wood toned mud wall to wood, 26 that lost a word a darkened number gave them); the standing
-  game on all 60 levels with lived rooms and dressing, 44,980 boxes, 117 differ, the same ones, and no box's colour or size moved; the
-  look page's 1,251 trial boxes over every level, none drawn otherwise; 21 scripted play-throughs, one a mission, on the frozen stand keep
-  their digests against the preview.
-  WHAT ELSE MOVED, AND IS NOT THE LOOK: with HITSTUFF up (the shipped stand) a round's hit is read by word on 18,701 of 37,425 standing
-  boxes (389 before), and on 4,295 of them that is another surface than the paint's colour gave: sandbags, tarps, rugs and carpets are the
-  soft thing where they threw concrete chips, mud walls concrete where drywall, wood furniture wood where concrete, iron and sheet things
-  sparks. Picture only (`hitstuff-check` line 5: the run's digest is the same up as down). Of the 51 words nobody chose, a round reads 13
-  otherwise than the colour and each of those reads true (duckboards and pallets wood, a coffee machine metal); the depot's walls in the
-  partition's tan still say cloth. On the page every leaf in one paint is one stuff (leaves whose own shade was at or above their paint's
-  were plain before).
+  NO SWITCH: it is not a rule of play and both stands draw the same. THE CHECK: `bun run tools/qa/stuff-check.ts` (14 lines;
+  `STUFF_BREAK=1` strikes the rows' words and fails lines 2, 3, 4, 7, 13 and 14; line 14 is a shape's piece; line 10 holds that in `src/game` a box's word is READ in at
+  most one place, the picture of a hit) and `bun run tools/qa/stuff-audit.ts --before <ref>`, which prints what every box was and is, by
+  kind and file, and exits 1 where one lost or moved its material: against the head before this series it lists the 1,046 below and exits
+  1, by design.
+  MEASURED ON THE BUILD: the 58 level files as they stood, read by the old rule, against their generators' new output: 41,285 boxes and
+  parts, 40,239 drawn as before and 1,046 not. What the kit and the generators SAY now, where the colour rule guessed: 286 desk and table
+  tops veneer where their paint's name said wood, 73 cabinets and lockers steel where their white was taken for paint, 130 chairs and bins
+  plastic, 54 seats fabric, 82 crate slats wood where their colour was a mud wall's, 81 tyres and mats rubber; 138 dark things drawn as
+  bare iron by their colour say nothing (black plastic, file folders, the asphalt a level stands on); and the single pieces named above.
+  A paint handed over by lineage (toned, stood in for) keeps its word: 209 pieces of ground dressing and cut rock kept theirs only once the
+  kit's `toned` handed its numbers through `tonedAs`. No box's colour, size or place moved (`lived-check` holds every level's own part to
+  its base with the words set aside).
+  A ROUND'S HIT WILL READ THE WORD, AND IS NOT THE LOOK: the hit picture's rule (HITSTUFF, `game/particleFx.ts saidSurf`; it joins after
+  this series, with its check) reads `Box.stuff`. Measured where both stood together, on the look's preview: with every box saying its
+  row's word that rule heard 18,701 of 37,425 standing boxes (389 before), and on 4,295 of them another surface than the paint's colour
+  gave: sandbags, tarps, rugs and carpets the soft thing where they threw concrete chips, mud walls concrete where drywall, wood furniture
+  wood where concrete, iron and sheet things sparks; picture only, the run's digest the same with the rule up as down. That is why the
+  words above were corrected and not kept as drawn. Of the 51 words nobody chose, a round read 13 otherwise than the colour and each read
+  true (duckboards and pallets wood, a coffee machine metal); the depot's walls in the partition's tan still say cloth. NOT MEASURED ON
+  THIS BUILD: the rule is not in it yet. On the page every leaf in one paint is one stuff (leaves whose own shade was at or above their
+  paint's were plain before).
   NOT COVERED: thrown and dropped kit, a gun model's parts with computed colours and a magazine in the hand say nothing and are plain
   (not measured: whatever their colour happened to match before is gone). No debris is written to a checkpoint; a broken wall's or a blown
   table's slice is re-applied after a restore by the code that copies the word. An editor document kept in a browser from before says
   nothing in its rows and draws plain on the look page until it is brought forward (`stuff-bake.ts <file>`). Still read off a colour, and
-  OUT of this: what a round, a charge and a blast make of a box (`STYLE.md`: the game reads paint). NEVER SEEN ON A GPU by a person; a
-  page boot on the software adapter draws a frame with no error.
+  OUT of this: what a round, a charge and a blast make of a box (`STYLE.md`: the game reads paint). NEVER SEEN ON A GPU by a person. On
+  the look's preview a cloud card drew eight scenes before and after with no error, the same pictures but for the words changed on
+  purpose (an office car park no longer rusted iron); as joined to the build it has been drawn by nothing but the shader compiler.
 - **THE LOOK'S SHADER NAMES NO STUFF: WHAT IT DID BY NAME IS A WORD IN THE STUFF'S ROW** (11-04; `render/lookTex.ts STUFFS`, `gbuffer.ts
   lookWgsl`, `shaders/look.wgsl lookSurface` and `lookSnow`). `look.wgsl` had eleven constants that were one stuff's number each
   (`SURF_MUD` … `LOOK_CARPAINT`) and seven tests of a box's class against them; a new stuff could not be a mud wall's cousin without a

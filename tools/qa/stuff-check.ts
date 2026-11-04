@@ -1,7 +1,7 @@
 // A THING IS MADE OF WHAT IT SAYS (src/scene/stuff.ts; src/scene/levelLoad.ts; src/render/gbuffer.ts lookWordOf).
 //   bun run tools/qa/stuff-check.ts            exit 0 = every line passes
 //   STUFF_BREAK=1 bun run tools/qa/stuff-check.ts     every level file is read with its material rows' words struck out (a file from before 11-04, loaded
-//                                                    as it stood): lines 2, 3, 4, 7 and 13 must FAIL
+//                                                    as it stood): lines 2, 3, 4, 7, 13 and 14 must FAIL
 // No game is stood up and no picture is looked at: what a box is drawn as is decided on the CPU (the loader puts a word on the box, lookWordOf reads it) and
 // this asks it. What a material LOOKS like on a desk is a page's still and then a GPU's. The same on both stands: nothing here is a rule of play and no
 // stand's word reaches it. What every box WAS drawn as before the colour rule went, against what it is now, is tools/qa/stuff-audit.ts.
@@ -184,6 +184,21 @@ const plainIs = (w: string | undefined) => w === undefined || w === 'plain' ? un
     && blank.wood.stuff === 'wood' && blank.wall.stuff === 'plaster' && blank.metal.stuff === 'steel' && validateLevelData(ed.data as never).length === 0,
     '13 the editor keeps a paint\'s word: a change of roughness and a finish preset leave the wood paint wood, a copy of the carpet paint is made of what the carpet is, the word is set and cleared by name and a word that is no stuff is refused; a paint that says plain still says it after an edit (as the exporters write it); a new paint says nothing until told; a blank document\'s own paints say what their names are made of',
     `wood: ${was} → after a roughness edit ${kept}, after a preset ${preset} · the carpet's copy: ${copied}, set ${set}, cleared ${cleared ?? 'nothing'} · banana refused ${refused} · blank: wood ${blank.wood.stuff}, wall ${blank.wall.stuff}, metal ${blank.metal.stuff}, asphalt ${blank.asphalt.stuff ?? 'nothing'}`); }
+
+// 14. A SHAPE'S PIECE SAYS ITS WORD AS A BOX DOES (scene/shapes.ts, a box's `shape.with`): its own, else its paint's row's, else nothing; the box stood up for
+//     it carries the word; the file keeps only a word that is another thing than the row's, and a word that is no stuff is refused
+{ const { shapeLevel } = await import(`${ROOT}/src/scene/shapes.ts`);
+  const D = dataOf('office.json') as any, M = D.materials, bi = D.boxes.findIndex((b: any) => b.material === 'wood' && b.rot === undefined && b.markings === undefined && b.shape === undefined && !(b.flags ?? []).includes('Glass')), b = D.boxes[bi];
+  const up = b.h[1] + 0.02;
+  b.shape = { with: [{ off: [0, up, 0], h: [0.05, 0.02, 0.05], material: 'metal' }, { off: [0.12, up, 0], h: [0.05, 0.02, 0.05], material: 'metal', stuff: 'plastic' }, { off: [-0.12, up, 0], h: [0.05, 0.02, 0.05], albedo: [0.31, 0.27, 0.4] }, { off: [0, up, 0.12], h: [0.05, 0.02, 0.05], material: 'wood', stuff: 'plain' }] };
+  const errs = validateLevelData(D), L = loadLevel(D) as any, said = (L.boxes[bi].shape.with as any[]).map(w => w.stuff ?? 'nothing');
+  shapeLevel(L.boxes, true); const stood = (L.boxes as any[]).filter(x => x.piece === true && x.of === bi).map(x => x.stuff ?? 'nothing'); shapeLevel(L.boxes, false);
+  const back = (levelToData(L, { materials: M }) as any).boxes[bi].shape.with.map((w: any) => w.stuff ?? 'nothing');
+  const bad = JSON.parse(JSON.stringify(D)); bad.boxes[bi].shape.with[0].stuff = 'banana'; const refused = validateLevelData(bad).some((e: string) => e.includes('banana'));
+  const row: string = M.metal?.stuff ?? 'nothing';   // (what the file's own row says the kit's metal is made of)
+  check(errs.length === 0 && row !== 'nothing' && said.join() === [row, 'plastic', 'nothing', 'nothing'].join() && stood.join() === said.join() && back.join() === ['nothing', 'plastic', 'nothing', 'plain'].join() && refused,
+    '14 a shape\'s piece says its word as a box does: a piece in a named paint is made of what that paint\'s row says, one that says its own word is that, one written as numbers and one that says plain over a row are nothing; the box stood up for each carries the same; the file keeps only the word that is another thing than the row\'s; a word that is no stuff is refused',
+    `the row: ${row} · loaded: ${said.join(', ')} · stood up: ${stood.join(', ')} · written back: ${back.join(', ')} · banana refused ${refused} · ${errs.length} errors${errs.length ? `: ${errs.slice(0, 2).join(' | ')}` : ''}`); }
 
 console.log(`=== stuff: ${red ? 'FAILURES above' : 'ALL PASS'} ===`);
 process.exit(red ? 1 : 0);
