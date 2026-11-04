@@ -64,6 +64,8 @@ const TIME = async (n) => {
   const yieldMacro = () => new Promise(res => { const ch = new MessageChannel(); ch.port1.onmessage = () => res(); ch.port2.postMessage(0); });
   for (let i = 0; i < n; i++) { const t = performance.now(); window.__runFrames(1, 1 / 600); await dev.queue.onSubmittedWorkDone(); ms.push(performance.now() - t); await yieldMacro(); }
   const T = e.timer, passes = T?.enabled ? Object.fromEntries([...T.lastFrame].map(([k, v]) => [k, +v.toFixed(2)])) : null;
+  // (the union of every pass but the present: frames are serialized here and this adapter has no display to wait for, so the render passes stay in. The page's
+  //  own GPU span on a real GPU leaves them out, ui/pricerun.ts DRAWN: the two are not the same quantity, and this one is in cost.json only as `passMs`)
   return { ms, passes, union: T?.enabled ? +T.unionMs(['present']).toFixed(2) : null };
 };
 // ---- in the page: the frame as it stands, read back as a PNG
@@ -78,12 +80,16 @@ const STILL = async () => {
 const PLAY = (secs) => { const e = window.__engine, real = e.render; let threw = null; e.render = () => { };
   try { for (let i = 0; i < Math.round(secs * 60) && !threw; i++) { try { window.__runFrames(1, 1 / 60); } catch (x) { threw = `frame ${i}: ${x && x.stack || x}`; } } } finally { e.render = real; } return threw; };
 
+/** ONE SCENE on every boot of a level: the die pinned (the page draws it from the clock otherwise, and a mission with no seed of its own is dealt anew each
+ *  boot), and the look page as the mission plays on it, not as it opens for a visitor (`lookkit=0`: the fog of war and the kit as dealt, where a visitor's look
+ *  page puts the fog down). So the look page and the page without the look are the same picture but for the look, and the pricing run times the same */
+const SCENE = '&seed=1&lookkit=0';
 const median = a => { const s = [...a].sort((x, y) => x - y), n = s.length; return n ? (n % 2 ? s[(n - 1) / 2] : (s[n / 2 - 1] + s[n / 2]) / 2) : NaN; };
 const up = () => new Promise(res => { const r = http.get({ host: 'localhost', port: PORT, path: '/', timeout: 2000 }, x => { x.resume(); res(x.statusCode === 200); }); r.on('error', () => res(false)); r.on('timeout', () => { r.destroy(); res(false); }); });
 
 /** one page: boot, count, and (on the look page) the off / on turns and the stills */
 async function boot(browser, level, query, look, dir) {
-  const R = { page: look ? 'look' : 'plain', url: `http://localhost:${PORT}/?${look ? 'look&' : ''}${query}&paused&mute&quality=${QUALITY}`, errors: [], gpuErrors: [] };
+  const R = { page: look ? 'look' : 'plain', url: `http://localhost:${PORT}/?${look ? 'look&' : ''}${query}${SCENE}&paused&mute&quality=${QUALITY}`, errors: [], gpuErrors: [] };
   const page = await browser.newPage({ viewport: { width: W, height: H }, deviceScaleFactor: 1 });
   await page.addInitScript(() => { window.__testVisible = true; }); await page.addInitScript(COUNT);
   page.on('pageerror', x => R.errors.push('pageerror: ' + String(x && x.stack || x).slice(0, 500)));
@@ -145,7 +151,7 @@ async function boot(browser, level, query, look, dir) {
     const row = rows.find(r => r.level === level), dir = path.join(OUT, level); fs.mkdirSync(dir, { recursive: true });
     const query = row.address.replace(/^\?/, '');
     const L = await boot(browser, level, query, true, dir), P = PLAIN_PAGE ? await boot(browser, level, query, false, dir) : null;
-    const out = { level, mission: row.missions[0], hour: row.hour, address: `?look&${query}`, adapter: 'software (SwiftShader)', read: RELATIVE, quality: QUALITY, window: [W, H], frames: FRAMES, rounds: ROUNDS, at: new Date().toISOString(), look: L, plainPage: P };
+    const out = { level, mission: row.missions[0], hour: row.hour, address: `?look&${query}${SCENE}`, adapter: 'software (SwiftShader)', read: RELATIVE, quality: QUALITY, window: [W, H], frames: FRAMES, rounds: ROUNDS, at: new Date().toISOString(), look: L, plainPage: P };
     if (P && L.pipelineLabels && P.pipelineLabels) { const had = new Set(P.textHashes); const count = a => a.reduce((m, l) => (m.set(l, (m.get(l) ?? 0) + 1), m), new Map()), a = count(L.pipelineLabels), b = count(P.pipelineLabels);
       out.againstPlainPage = { textsOnlyOnLook: L.textHashes.filter(h => !had.has(h)).length, textsShared: L.textHashes.filter(h => had.has(h)).length, textKB: [P.compiled?.textKB, L.compiled?.textKB], pipelines: [P.compiled?.pipelines, L.compiled?.pipelines],
         pipelinesOnlyOnLook: [...a].filter(([l, n]) => n > (b.get(l) ?? 0)).map(([l, n]) => n - (b.get(l) ?? 0) > 1 ? `${l} ×${n - (b.get(l) ?? 0)}` : l), readySecs: [P.readySecs, L.readySecs], frameMs: [P.frameMs?.onMedian, L.frameMs?.onMedian] }; }

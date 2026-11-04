@@ -8,19 +8,21 @@
 //   tools/qa/fixtures/level-audit-base.json        every level before it was dressed: the "before" of a level whose row has none
 //   <dir>/cost/<level>/cost.json      tools/qa/level-cost-page.cjs --out <dir>/cost: one boot on the software adapter (a relative read), look.png, and with
 //                                     --plain-page the same mission without the look, plain-page.png
-//   <dir>/mac/*.json                  the file the page's own run hands back on a real GPU (`?look&pricelevels`, ui/pricerun.ts): the newest one is read
+//   <dir>/mac/*.json                  the file the page's own run hands back on a real GPU (`?look&pricelevels`, ui/pricerun.ts): the newest one is read,
+//                                     by the time the run itself wrote in it. Each row carries the run's own verdict (`over`): this page prints it and
+//                                     judges no GPU number itself
 //   <dir>/parts.json                  optional: { "<task's name>": ["level", …] }, for the levels that have no row yet
 //
 //   bun run tools/qa/level-table.ts --dir <dir>            writes <dir>/read-first.md, prints what it found and what is missing
-//   bun run tools/qa/level-table.ts --dir <dir> --check    … and exits 1 when a level of the list has no row in the table's inputs at all
+//   bun run tools/qa/level-table.ts --dir <dir> --check    … and exits 1 when a level of the list has nothing in the folder: no row, no audit, no page read
 //   --open "<one line>"  the one line that serves the tree the levels' own addresses open on (the dressed levels' preview branch), said above the table
 //   --tree "<a sentence>"  what tree that line serves, said under it (a mend picked onto the branch for the run)
 //   --run "<one line>"  the one line the page gives him to get the pricing run going (or --branch <name>: the plain git line for that branch)
 // It also writes <dir>/read-first.html: the same page as one HTML file to publish (its stills are linked by the same relative paths).
-// THE BUDGET is the one PROPOSED on 11-02 and not ruled on: on High the GPU's time with the look within 10% of look off, a frame under 16.6 ms, shaders compiled
-// once. Only a GPU answers it. Until a file from one is in <dir>/mac/, a level is called out from what can be counted (level-audit.ts's bars) and from the
+// THE BUDGET is the one PROPOSED on 11-02 and not ruled on: on High the GPU's time with the look within 10% of look off, sixty frames a second held, shaders
+// compiled once. Only a GPU answers it. Until a file from one is in <dir>/mac/, a level is called out from what can be counted (level-audit.ts's bars) and from the
 // software read, and the page says so beside every such line.
-import { readFileSync, writeFileSync, existsSync, readdirSync, statSync } from 'node:fs';
+import { readFileSync, writeFileSync, existsSync, readdirSync } from 'node:fs';
 import { resolve, dirname } from 'node:path';
 
 const HERE = dirname(new URL(import.meta.url).pathname), ROOT_DIR = resolve(HERE, '../..');
@@ -44,20 +46,31 @@ const base: Record<string, Slim> = json(`${HERE}/fixtures/level-audit-base.json`
 const parts: Record<string, string[]> = json(`${D}/parts.json`) ?? {};
 const slimOf = (r: any): Slim | null => r && r.boxes && r.picture ? { boxes: r.boxes.all, moving: r.boxes.moving, drawn: r.boxes.drawn, planes: r.boxes.planes, round: r.shapes.rounds + r.shapes.pass, bites: r.shapes.walls, lampsOn: r.lamps.on, lamps: r.lamps.all,
   panels: r.lamps.panels, glowing: r.glowing, openings: r.openings.found, props: r.props, none: r.picture.none, byChance: r.picture.byChance } : null;
-// the newest file a GPU handed back
-const macDir = `${D}/mac`, macFiles = existsSync(macDir) ? readdirSync(macDir).filter(f => f.endsWith('.json')).map(f => ({ f, t: statSync(`${macDir}/${f}`).mtimeMs })).sort((a, b) => b.t - a.t) : [];
-const mac: any = macFiles.length ? json(`${macDir}/${macFiles[0].f}`) : null, macRow = (level: string) => (mac?.rows ?? []).find((r: any) => r.level === level) ?? null;
+// the newest file a GPU handed back: by the time the run wrote in it (a copy or a checkout gives every file the same age on disk), of the files that read
+const macDir = `${D}/mac`, macFiles = existsSync(macDir) ? readdirSync(macDir).filter(f => f.endsWith('.json')).map(f => ({ f, j: json(`${macDir}/${f}`) })).filter(x => x.j && Array.isArray(x.j.rows)).sort((a, b) => String(b.j.at ?? b.f).localeCompare(String(a.j.at ?? a.f))) : [];
+const mac: any = macFiles[0]?.j ?? null, macRow = (level: string) => (mac?.rows ?? []).find((r: any) => r.level === level) ?? null;
+/** a file from before the run wrote its own verdicts: its numbers are shown, and no level is called over or under on them */
+const macOld = !!mac && !(mac.rows as any[]).every(r => Array.isArray(r.over));
+/** a field a row may write as a list or as one line */
+const asList = (a: unknown): string[] => Array.isArray(a) ? a.map(String) : typeof a === 'string' && a.trim() ? [a] : [];
+/** a level is dressed when its row says so outright */
+const isDressed = (row: any): boolean => row?.dressed === true;
 
 const pct = (v: number | null | undefined, d = 1) => v === null || v === undefined || !isFinite(v) ? '—' : `${(100 * v).toFixed(v >= 0.0995 ? 0 : d)}%`;
 const more = (v: number | null | undefined) => v === null || v === undefined || !isFinite(v) ? '—' : `${v >= 0 ? '+' : ''}${(100 * v).toFixed(1)}%`;
 const arrow = (a: number | undefined, b: number | undefined) => a === undefined ? (b === undefined ? '—' : String(b)) : b === undefined || a === b ? String(a) : `${a} → ${b}`;
 /** a row's library block in words: how many pieces it lays, what it added to the library, what it still wants from it */
-const lib = (row: any): string => { const L = row?.library; if (!L) return '—'; const list = (a: unknown) => Array.isArray(a) ? a.map(String) : [];
-  const used = list(L.used), added = list(L.added), wanted = list(L.wanted); return [used.length ? `uses ${used.length} piece${used.length === 1 ? '' : 's'}` : '', added.length ? `added: ${added.join(', ')}` : '', wanted.length ? `wants: ${wanted.join(', ')}` : ''].filter(Boolean).join('; ') || '—'; };
+const lib = (row: any): string => { const L = row?.library; if (!L) return '—';
+  const used = asList(L.used), added = asList(L.added), wanted = asList(L.wanted); return [used.length ? `uses ${used.length} piece${used.length === 1 ? '' : 's'}` : '', added.length ? `added: ${added.join(', ')}` : '', wanted.length ? `wants: ${wanted.join(', ')}` : ''].filter(Boolean).join('; ') || '—'; };
 /** the address that opens a level, printed once whole: a row may write its address with the host, with a scheme too, or as the query alone */
 const addr = (r: { row: any; L: { query: string } }): string => `localhost:5173/${String(r.row?.address ?? `?look&${r.L.query.slice(1)}`).trim().replace(/^(https?:\/\/)?localhost(:\d+)?\/?/, '').replace(/^\//, '')}`;
 /** a GPU run's three states for a level, ms: the page without the look, the look page with its layers off, with them on */
 const gpuCell = (m: any): string => !m || m.on.gpu === null ? '—' : `${m.page?.win.gpu ?? '—'} → ${m.off.gpu ?? '—'} → ${m.on.gpu}`;
+/** … the look against the page without it (only where the run timed that page), the layers on against off, and the surface pass's own stamp, off → on */
+const vsPage = (m: any): string => m?.page ? more(m.gpuOverPage) : '—', vsOff = (m: any): string => m ? more(m.gpuMore) : '—';
+const three = (m: any, k: 'gpu' | 'cost'): string => !m || m.on?.[k] === null || m.on?.[k] === undefined ? '—' : `${m.page?.win?.[k] ?? '—'} → ${m.off?.[k] ?? '—'} → ${m.on[k]}`;
+const costVs = (m: any): string => !m ? '—' : more(m.page ? m.costOverPage : m.costMore);
+const surface = (m: any): string => { const a = m?.off?.passes?.gbuffer, b = m?.on?.passes?.gbuffer; return typeof a === 'number' && typeof b === 'number' ? `${a.toFixed(2)} → ${b.toFixed(2)}` : '—'; };
 const cell = (s: string) => s.replace(/\|/g, '/').replace(/\n/g, ' ');
 const passCost = json(`${D}/cost/pass/cost.json`)?.look?.frameMs?.onOverOff as number | undefined;
 const heaviest = (k: keyof Slim) => Object.entries(base).reduce((m, [lv, b]) => (b[k] as number) > m[1] ? [lv, b[k] as number] as [string, number] : m, ['', 0] as [string, number]);
@@ -69,10 +82,7 @@ const rows = levels.map(L => {
   const still = (f: string) => existsSync(`${D}/levels/${L.level}/${f}`) ? `levels/${L.level}/${f}` : null;
   // ---- over the proposed budget, and why
   const over: string[] = [], forGpu: string[] = [];
-  if (m) { const vs = m.page ? m.gpuOverPage : m.gpuMore, from = m.page ? m.page.win.gpu : m.off.gpu;   // (against the page without the look where the run timed it: the budget's own "look off"; else against the layers off)
-    if (vs !== null && vs !== undefined && vs > (mac.bar?.gpuMore ?? 0.1)) over.push(`on the GPU the look adds ${more(vs)} against ${m.page ? 'the page without the look' : 'its layers off'} (${from} → ${m.on.gpu} ms; the bar is +10%)`);
-    if (m.on.ms > (mac.bar?.frameMs ?? 16.6)) over.push(`a frame takes ${m.on.ms.toFixed(1)} ms with the layers on (the bar is 16.6 ms)`);
-    if (m.programs?.bySwitch > 0) over.push(`switching the layers made ${m.programs.bySwitch} shader programs (the bar is none)`); }
+  if (m) over.push(...asList(m.over));   // (the run's own verdict on its row, in its words: ui/pricerun.ts priceOver is the one place a GPU number is judged)
   if (cost?.look?.compiled?.bySwitch && (cost.look.compiled.bySwitch.pipelines > 0 || cost.look.compiled.bySwitch.modules > 0)) over.push(`switching the layers compiled ${cost.look.compiled.bySwitch.pipelines} more programs on the software page (the bar is none)`);
   const now = after ?? before;
   if (now) { for (const [what, k] of [['boxes drawn', 'drawn'], ['boxes that move', 'moving'], ['cut planes', 'planes'], ['lamps burning', 'lampsOn'], ['boxes that glow', 'glowing']] as [string, keyof Slim][]) {
@@ -82,11 +92,11 @@ const rows = levels.map(L => {
     if (now.byChance > AUDIT_BARS.chance) over.push(`${pct(now.byChance)} of the picture is a material by chance (the bar is ${pct(AUDIT_BARS.chance)})`); }
   const ratio = cost?.look?.frameMs?.onOverOff as number | undefined;
   if (!m && ratio !== undefined && passCost !== undefined && L.level !== 'pass' && ratio - 1 > 1.25 * (passCost - 1) && ratio - 1 > 0.05) forGpu.push(`on the software page the layers add ${more(ratio - 1)}, the pass ${more(passCost - 1)}`);
-  return { L, row, part, before, after, cost, m, over, forGpu, ratio, stills: { before: still('before.png'), after: still('after.png'), look: existsSync(`${D}/cost/${L.level}/look.png`) ? `cost/${L.level}/look.png` : null, plain: existsSync(`${D}/cost/${L.level}/plain-page.png`) ? `cost/${L.level}/plain-page.png` : null } };
+  return { L, row, audit, part, before, after, cost, m, over, forGpu, ratio, stills: { before: still('before.png'), after: still('after.png'), look: existsSync(`${D}/cost/${L.level}/look.png`) ? `cost/${L.level}/look.png` : null, plain: existsSync(`${D}/cost/${L.level}/plain-page.png`) ? `cost/${L.level}/plain-page.png` : null } };
 });
 
 // ---- the page
-const dressed = rows.filter(r => r.row?.dressed === true).length, priced = rows.filter(r => r.m).length, read = rows.filter(r => r.cost?.look?.frameMs?.onOverOff).length, overs = rows.filter(r => r.over.length);
+const dressed = rows.filter(r => isDressed(r.row)).length, priced = rows.filter(r => r.m).length, read = rows.filter(r => r.cost?.look?.frameMs?.onOverOff).length, overs = rows.filter(r => r.over.length);
 const out: string[] = [];
 out.push('# Every level in the new look: dressed or not, and what it costs', '');
 out.push(`Built ${new Date().toISOString().slice(0, 16).replace('T', ' ')} UTC by \`tools/qa/level-table.ts\` from the files in this folder. Do not edit it by hand: the next build writes over it.`, '');
@@ -103,13 +113,14 @@ out.push('Then open this and leave the tab in front:', '', '```', 'localhost:517
 out.push('Each level loads twice. The look page plays four seconds, holds its picture still and times it with the look\'s layers off and on in turn. Then the same mission loads without the look and is timed at the same moment.', 'The last page shows the table and saves one file, `price-levels-<date>.json`, to your downloads. Drop that file in the task and this page fills in.', '');
 out.push('"Look off" has two meanings and the file has both. The page without the look is the game as it is drawn today, and it is what the budget means. The layers off is the look page with every layer that has a cost put off at once: same shaders, same shapes, same camera.', '');
 out.push('- `?look&pricelevels=pass,block,compound` prices only those.', '- Add `&quality=medium` for another preset. The default is High, the one the budget is said for.', '- Add `&pricepage=0` to skip the loads without the look: half the time, and only the layers are priced.', '- Esc stops the run.', '');
-out.push(mac ? `The newest file here: \`mac/${macFiles[0].f}\`, from ${mac.gpu}, ${String(mac.at).slice(0, 16).replace('T', ' ')} UTC, quality ${mac.quality}.` : 'No file from a GPU is here yet, so every cost below is a count or a software read.', '');
+const macLine = mac ? `from ${mac.gpu}${mac.machine?.hz ? `, a ${mac.machine.hz} Hz display` : ''}, ${String(mac.at).slice(0, 16).replace('T', ' ')} UTC, at quality ${mac.quality}` : '', OLD = 'It is from an older build of the run, which wrote no verdicts: its numbers are shown and no level is called over or under on them. Run it again from the line above.';
+out.push(mac ? `The newest file here: \`mac/${macFiles[0].f}\`, ${macLine}.${macOld ? ' ' + OLD : ''}` : 'No file from a GPU is here yet, so every cost below is a count or a software read.', '');
 
 out.push('## Over the proposed budget', '');
 if (!overs.length) out.push('No level is over a bar that can be read here.', '');
 else { out.push(mac ? 'Each line says which number puts the level there.' : 'Each line says which count puts the level there. These are the bars a count can answer; the GPU bars wait for your run.', '');
-  for (const r of overs) out.push(`- **${r.L.level}**${r.row?.dressed ? '' : ' (not dressed yet)'}: ${r.over.join('; ')}.`); out.push(''); }
-const gpus = rows.filter(r => r.forGpu.length && !r.m);
+  for (const r of overs) out.push(`- **${r.L.level}**${isDressed(r.row) ? '' : ' (not dressed yet)'}: ${r.over.join('; ')}.`); out.push(''); }
+const gpus = rows.filter(r => r.forGpu.length && !r.m && !r.over.length);
 if (gpus.length) { out.push('### Not over a bar, but wants a GPU read first', '', 'The look was timed on one level, the pass. These ask more of a frame than the pass does.', '');
   for (const r of gpus) out.push(`- **${r.L.level}**: ${r.forGpu.join('; ')}.`); out.push(''); }
 
@@ -121,16 +132,16 @@ out.push('## Where each level stands', '');
 if (OPEN) out.push('The addresses in this table open on the tree this one line serves:', '', '```', OPEN, '```', '');
 out.push('| Level | Task | Dressed | Stills | Open it | From the library | What is left | Needs your eye on a GPU |', '|---|---|---|---|---|---|---|---|');
 for (const r of rows) { const s = r.stills, pics = [s.before ? `[before](${s.before})` : '', s.after ? `[after](${s.after})` : '', !s.after && s.look ? `[look, software](${s.look})` : '', !s.before && s.plain ? `[without the look, software](${s.plain})` : ''].filter(Boolean).join(' · ') || '—';
-  out.push(`| ${r.L.level} | ${cell(r.part)} | ${r.row ? (r.row.dressed ? 'yes' : 'not yet') : 'no row yet'} | ${pics} | \`${cell(addr(r))}\` | ${cell(lib(r.row))} | ${cell((r.row?.left ?? []).join('; ') || (r.row ? '—' : 'not started'))} | ${cell((r.row?.needs_his_eye ?? []).join('; ') || '—')} |`); }
+  out.push(`| ${r.L.level} | ${cell(r.part)} | ${r.row ? (isDressed(r.row) ? 'yes' : 'not yet') : 'no row yet'} | ${pics} | \`${cell(addr(r))}\` | ${cell(lib(r.row))} | ${cell(asList(r.row?.left).join('; ') || (r.row ? '—' : 'not started'))} | ${cell(asList(r.row?.needs_his_eye).join('; ') || '—')} |`); }
 out.push('', 'The hour is the one the mission opens at: ' + [...new Set(rows.map(r => r.L.hour))].map(h => `${h} (${rows.filter(r => r.L.hour === h).length})`).join(', ') + '.', '');
 
 out.push('## What each level costs', '');
 out.push('Counts are before → after dressing, as the look page draws the level at the hour its mission opens at. One number means it has not moved.', '');
-out.push('| Level | Boxes drawn | Boxes that move | Cut planes | Round things | Lamps burning | No material | Software read, layers on | GPU ms: no look → layers off → on | Look against no look | Frame on GPU | Programs made by the switch |', '|---|---|---|---|---|---|---|---|---|---|---|---|');
+out.push('| Level | Boxes drawn | Boxes that move | Cut planes | Round things | Lamps burning | No material | Software read, layers on | GPU ms: no look → layers off → on | Look against no look | Layers on against off | A frame\'s cost ms: no look → layers off → on | Cost, look against no look | Surface pass ms: off → on | A frame every | Programs made by the switch |', '|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|');
 for (const r of rows) { const b = r.before, a = r.after, sw = r.m ? r.m.programs?.bySwitch : r.cost?.look?.compiled?.bySwitch?.pipelines;
-  out.push(`| ${r.L.level} | ${arrow(b?.drawn, a?.drawn)} | ${arrow(b?.moving, a?.moving)} | ${arrow(b?.planes, a?.planes)} | ${arrow(b?.round, a?.round)} | ${arrow(b?.lampsOn, a?.lampsOn)} | ${b ? pct(b.none) : '—'}${a && b && Math.abs(a.none - b.none) > 0.0005 ? ` → ${pct(a.none)}` : ''} | ${r.ratio !== undefined ? more(r.ratio - 1) : '—'} | ${gpuCell(r.m)} | ${r.m ? more(r.m.page ? r.m.gpuOverPage : r.m.gpuMore) : '—'} | ${r.m ? `${r.m.on.ms.toFixed(1)} ms` : '—'} | ${sw === undefined ? '—' : sw} |`); }
+  out.push(`| ${r.L.level} | ${arrow(b?.drawn, a?.drawn)} | ${arrow(b?.moving, a?.moving)} | ${arrow(b?.planes, a?.planes)} | ${arrow(b?.round, a?.round)} | ${arrow(b?.lampsOn, a?.lampsOn)} | ${b ? pct(b.none) : '—'}${a && b && Math.abs(a.none - b.none) > 0.0005 ? ` → ${pct(a.none)}` : ''} | ${r.ratio !== undefined ? more(r.ratio - 1) : '—'} | ${gpuCell(r.m)} | ${vsPage(r.m)} | ${vsOff(r.m)} | ${three(r.m, 'cost')} | ${costVs(r.m)} | ${surface(r.m)} | ${r.m ? `${r.m.on.ms.toFixed(1)} ms` : '—'} | ${sw === undefined ? '—' : sw} |`); }
 out.push('');
-out.push('- **Software read, layers on** is how much longer a frame takes with the look\'s layers on than off, on the same page in the same boot, on a CPU renderer. It is a direction, not a price.', '- **GPU** columns are from your run. **Programs made by the switch** should be 0: the look must not compile anything when its layers change.', '- **No material** is the share of the picture from above that the look draws flat.', '');
+out.push('- **Software read, layers on** is how much longer a frame takes with the look\'s layers on than off, on the same page in the same boot, on a CPU renderer. It is a direction, not a price.', '- **GPU** columns are from your run. **GPU ms** is the time the GPU is busy with the compute passes, which is how the game times itself everywhere. The look\'s surface layers (paint, relief, finish, weather, marks) are drawn in a render pass that this number leaves out, so **A frame\'s cost** times a whole frame, script and every pass, without the wait for the display, and that is judged against the same 10%. **Surface pass ms** shows that one pass by itself and is in no verdict. **A frame every** is the time between two frames: on a display the game holds, it is the display\'s own rate.', '- **Programs made by the switch** should be 0: the look must not compile anything when its layers change.', '- **No material** is the share of the picture from above that the look draws flat.', '');
 const plainPage = json(`${D}/cost/pass/cost.json`)?.againstPlainPage;
 if (plainPage) { out.push('## What each page compiles', '');
   out.push(`On the pass, on the software page: the page without the look compiled ${plainPage.textKB[0]} KB of shader text in ${plainPage.pipelines[0]} pipelines and came ready in ${plainPage.readySecs[0]} s. The look page compiled ${plainPage.textKB[1]} KB in ${plainPage.pipelines[1]} and came ready in ${plainPage.readySecs[1]} s.`, 'The page without the look also compiles a second set of ray programs for cut boxes that swap in, which the look page does not need. The text size and the pipeline count carry over to a GPU; the seconds do not.', ''); }
@@ -141,13 +152,13 @@ writeFileSync(`${D}/read-first.md`, out.join('\n'));
 // ---- the same page as one HTML file, to publish (a page he can open): the stills by the same relative paths, published beside it
 { const esc = (s: unknown) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
   const code = (s: string) => `<code>${esc(s)}</code>`, list = (a: string[]) => a.length ? `<ul>${a.map(x => `<li>${x}</li>`).join('')}</ul>` : '';
-  const state = (r: typeof rows[number]) => r.row?.dressed ? '<span class="pill ok">dressed</span>' : r.row ? '<span class="pill warn">in work</span>' : '<span class="pill">not started</span>';
+  const state = (r: typeof rows[number]) => isDressed(r.row) ? '<span class="pill ok">dressed</span>' : r.row ? '<span class="pill warn">in work</span>' : '<span class="pill">not started</span>';
   const pic = (src: string | null, label: string) => src ? `<a class="still" href="${esc(src)}"><img src="${esc(src)}" alt="${esc(label)}" loading="lazy"><span>${esc(label)}</span></a>` : '';
   const stand = rows.map(r => { const s = r.stills, pics = [pic(s.before, 'before'), pic(s.after, 'after'), !s.after ? pic(s.look, 'look on, software') : '', !s.before ? pic(s.plain, 'without the look, software') : ''].join('');
-    return `<tr><th scope="row">${esc(r.L.level)}<small>${esc(r.L.missions.join(' · '))} · ${esc(r.L.hour)}</small></th><td>${state(r)}<small>${esc(r.part)}</small></td><td class="stills">${pics || '<span class="none">none yet</span>'}</td><td>${code(addr(r))}</td><td>${esc(lib(r.row))}</td><td>${esc((r.row?.left ?? []).join('; ') || (r.row ? '—' : 'not started'))}</td><td>${esc((r.row?.needs_his_eye ?? []).join('; ') || '—')}</td></tr>`; }).join('\n');
+    return `<tr><th scope="row">${esc(r.L.level)}<small>${esc(r.L.missions.join(' · '))} · ${esc(r.L.hour)}</small></th><td>${state(r)}<small>${esc(r.part)}</small></td><td class="stills">${pics || '<span class="none">none yet</span>'}</td><td>${code(addr(r))}</td><td>${esc(lib(r.row))}</td><td>${esc(asList(r.row?.left).join('; ') || (r.row ? '—' : 'not started'))}</td><td>${esc(asList(r.row?.needs_his_eye).join('; ') || '—')}</td></tr>`; }).join('\n');
   const num = (b: number | undefined, a: number | undefined) => `<td class="n">${esc(arrow(b, a))}</td>`;
-  const costs = rows.map(r => { const b = r.before, a = r.after, m = r.m, sw = m ? m.programs?.bySwitch : r.cost?.look?.compiled?.bySwitch?.pipelines, vs = m ? (m.page ? m.gpuOverPage : m.gpuMore) : null, flag = r.over.length ? ' class="over"' : '';
-    return `<tr${flag}><th scope="row">${esc(r.L.level)}</th>${num(b?.drawn, a?.drawn)}${num(b?.moving, a?.moving)}${num(b?.planes, a?.planes)}${num(b?.round, a?.round)}${num(b?.lampsOn, a?.lampsOn)}<td class="n">${b ? pct(b.none) : '—'}${a && b && Math.abs(a.none - b.none) > 0.0005 ? ` → ${pct(a.none)}` : ''}</td><td class="n soft">${r.ratio !== undefined ? more(r.ratio - 1) : '—'}</td><td class="n gpu">${esc(gpuCell(m))}</td><td class="n gpu">${m ? more(vs) : '—'}</td><td class="n gpu">${m ? `${m.on.ms.toFixed(1)}` : '—'}</td><td class="n">${sw === undefined ? '—' : sw}</td></tr>`; }).join('\n');
+  const costs = rows.map(r => { const b = r.before, a = r.after, m = r.m, sw = m ? m.programs?.bySwitch : r.cost?.look?.compiled?.bySwitch?.pipelines, flag = r.over.length ? ' class="over"' : '';
+    return `<tr${flag}><th scope="row">${esc(r.L.level)}</th>${num(b?.drawn, a?.drawn)}${num(b?.moving, a?.moving)}${num(b?.planes, a?.planes)}${num(b?.round, a?.round)}${num(b?.lampsOn, a?.lampsOn)}<td class="n">${b ? pct(b.none) : '—'}${a && b && Math.abs(a.none - b.none) > 0.0005 ? ` → ${pct(a.none)}` : ''}</td><td class="n soft">${r.ratio !== undefined ? more(r.ratio - 1) : '—'}</td><td class="n gpu">${esc(gpuCell(m))}</td><td class="n gpu">${vsPage(m)}</td><td class="n gpu">${vsOff(m)}</td><td class="n gpu">${esc(three(m, 'cost'))}</td><td class="n gpu">${costVs(m)}</td><td class="n gpu">${esc(surface(m))}</td><td class="n gpu">${m ? `${m.on.ms.toFixed(1)}` : '—'}</td><td class="n">${sw === undefined ? '—' : sw}</td></tr>`; }).join('\n');
   const page = `<title>Levels in the new look</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
 <style>
@@ -198,14 +209,14 @@ ${TREE ? `<p>${esc(TREE)}</p>` : ''}
 <p>Each level loads twice. The look page plays four seconds, holds its picture still and times it with the look's layers off and on in turn. Then the same mission loads without the look and is timed at the same moment. The last page shows the table and saves one file, ${code('price-levels-<date>.json')}, to your downloads. Drop that file in the task and this page fills in.</p>
 <ul><li>${code('?look&pricelevels=pass,block,compound')} prices only those.</li><li>Add ${code('&quality=medium')} for another preset. The default is High, the one the budget is said for.</li><li>Add ${code('&pricepage=0')} to skip the loads without the look: half the time, and only the layers are priced.</li><li>Esc stops the run.</li></ul>
 <p>"Look off" has two meanings and the file has both. The page without the look is the game as it is drawn today, and it is what the budget means. The layers off is the look page with every layer that has a cost put off at once: same shaders, same shapes, same camera.</p>
-<p>${mac ? `The newest file here is from ${esc(mac.gpu)}, ${esc(String(mac.at).slice(0, 16).replace('T', ' '))} UTC, at quality ${esc(mac.quality)}.` : 'No file from a GPU is here yet, so every cost below is a count or a software read.'}</p></div></section>
+<p>${mac ? `The newest file here is ${esc(macLine)}.${macOld ? ' ' + OLD : ''}` : 'No file from a GPU is here yet, so every cost below is a count or a software read.'}</p></div></section>
 
 <section><h2>The budget</h2><p>This is the budget proposed on 2 November. You have not ruled on its numbers.</p>
 <ul><li>An M4 Max holds 60 on High, with GPU time within 10 % of look off.</li><li>An RTX 4080 at 4K stays locked at 60. An M1 Max stays under 16.6 ms. The AMD box shows no new failure.</li><li>Shaders compile once. A layer over 0.5 ms gets a tier row.</li></ul>
 <p>Nothing on this page was seen on a GPU unless its column is shaded. Counts are exact. A software read is the same page on a CPU renderer, where a frame takes seconds: a direction, not a price.</p></section>
 
 <section><h2>Over the proposed budget</h2>
-${overs.length ? `<p>${mac ? 'Each line says which number puts the level there.' : 'Each line says which count puts the level there. These are the bars a count can answer. The GPU bars wait for your run.'}</p><ul class="overs">${overs.map(r => `<li><b>${esc(r.L.level)}</b>${r.row?.dressed ? '' : ' (not dressed yet)'}: ${esc(r.over.join('; '))}.</li>`).join('')}</ul>` : '<p>No level is over a bar that can be read here.</p>'}
+${overs.length ? `<p>${mac ? 'Each line says which number puts the level there.' : 'Each line says which count puts the level there. These are the bars a count can answer. The GPU bars wait for your run.'}</p><ul class="overs">${overs.map(r => `<li><b>${esc(r.L.level)}</b>${isDressed(r.row) ? '' : ' (not dressed yet)'}: ${esc(r.over.join('; '))}.</li>`).join('')}</ul>` : '<p>No level is over a bar that can be read here.</p>'}
 <h3>The heaviest level in each count</h3><p>The pass is the level the look was timed on, so its own count is beside each.</p>${list(heavy.map(h => `${esc(h.what)}: <b>${esc(h.level)}</b> with ${h.n} (the pass has ${h.pass}).`))}
 ${gpus.length ? `<h3>Not over a bar, but wants a GPU read first</h3><p>The look was timed on one level, the pass. These ask more of a frame than the pass does.</p>${list(gpus.map(r => `<b>${esc(r.L.level)}</b>: ${esc(r.forGpu.join('; '))}.`))}` : ''}</section>
 
@@ -217,10 +228,10 @@ ${stand}
 
 <section><h2>What each level costs</h2>
 <p>Counts are before → after dressing, as the look page draws the level at the hour its mission opens at. One number means it has not moved. Shaded columns are from a GPU.</p>
-<div class="frame"><table><thead><tr><th>Level</th><th class="n">Boxes drawn</th><th class="n">That move</th><th class="n">Cut planes</th><th class="n">Round things</th><th class="n">Lamps burning</th><th class="n">No material</th><th class="n">Software: layers on</th><th class="n gpu">GPU ms: no look → layers off → on</th><th class="n gpu">Look vs no look</th><th class="n gpu">Frame ms</th><th class="n">Programs by the switch</th></tr></thead><tbody>
+<div class="frame"><table><thead><tr><th>Level</th><th class="n">Boxes drawn</th><th class="n">That move</th><th class="n">Cut planes</th><th class="n">Round things</th><th class="n">Lamps burning</th><th class="n">No material</th><th class="n">Software: layers on</th><th class="n gpu">GPU ms: no look → layers off → on</th><th class="n gpu">Look vs no look</th><th class="n gpu">Layers on vs off</th><th class="n gpu">A frame's cost ms: no look → layers off → on</th><th class="n gpu">Cost vs no look</th><th class="n gpu">Surface pass ms: off → on</th><th class="n gpu">A frame every, ms</th><th class="n">Programs by the switch</th></tr></thead><tbody>
 ${costs}
 </tbody></table></div>
-<p class="legend">No material is the share of the picture from above that the look draws flat. Software: layers on is how much longer a frame takes with the layers on than off, on a CPU renderer. Programs by the switch should be 0: the look must not compile anything when its layers change.</p>
+<p class="legend">No material is the share of the picture from above that the look draws flat. Software: layers on is how much longer a frame takes with the layers on than off, on a CPU renderer. Programs by the switch should be 0: the look must not compile anything when its layers change. GPU ms is the time the GPU is busy with the compute passes, which is how the game times itself everywhere. The look's surface layers (paint, relief, finish, weather, marks) are drawn in a render pass that this number leaves out, so A frame's cost times a whole frame, script and every pass, without the wait for the display, and that is judged against the same 10%. Surface pass ms shows that one pass by itself and is in no verdict. A frame every is the time between two frames: on a display the game holds, it is the display's own rate.</p>
 ${plainPage ? `<h3>What each page compiles</h3><p>On the pass, on the software page: the page without the look compiled ${plainPage.textKB[0]} KB of shader text in ${plainPage.pipelines[0]} pipelines and came ready in ${plainPage.readySecs[0]} s. The look page compiled ${plainPage.textKB[1]} KB in ${plainPage.pipelines[1]} and came ready in ${plainPage.readySecs[1]} s. The page without the look also compiles a second set of ray programs for cut boxes that swap in, which the look page does not need. The text size and the pipeline count carry over to a GPU; the seconds do not.</p>` : ''}</section>
 
 <section><h2>How this page is made</h2>
@@ -229,9 +240,9 @@ ${plainPage ? `<h3>What each page compiles</h3><p>On the pass, on the software p
 `;
   writeFileSync(`${D}/read-first.html`, page); }
 
-const missing = rows.filter(r => !r.before && !r.after).map(r => r.L.level);
+const missing = rows.filter(r => !r.row && !r.audit && !r.cost).map(r => r.L.level);   // (nothing of the level in the folder: the committed baseline does not count)
 console.log(`level-table: ${rows.length} levels → ${D}/read-first.md`);
 console.log(`  rows from the dressing tasks: ${rows.filter(r => r.row).length} (${dressed} dressed) · audit files: ${rows.filter(r => r.after).length} · software reads: ${read} · priced on a GPU: ${priced}${mac ? ` (mac/${macFiles[0].f})` : ''}`);
 console.log(`  over a bar: ${overs.map(r => r.L.level).join(', ') || 'none'} · for a GPU first: ${gpus.map(r => r.L.level).join(', ') || 'none'}`);
-if (missing.length) console.log(`  no counts at all for: ${missing.join(', ')}`);
+if (missing.length) console.log(`  nothing in the folder for: ${missing.join(', ')}`);
 process.exit(argv.includes('--check') && missing.length ? 1 : 0);
