@@ -209,7 +209,7 @@ export function officeKit(trace?: GeneratorTrace, opts: GeneratorOpts = {}) {
   }
   function car(x: number, z: number, yaw: number, body: Vec3) {   // local +X forward
     const at = frameAt(x, z, yaw);
-    const S = carShapes({ body: { albedo: body }, hub: hubPaint([0.5, 0.52, 0.53]) });   // (S: the shape each box says — scene/carShapes.ts)
+    const S = carShapes({ hub: hubPaint([0.5, 0.52, 0.53]) });   // (S: the shape each box says — scene/carShapes.ts)
     add({ c: [x, 0.62, z], h: [2.2, 0.34, 0.86], yaw, albedo: body, shape: S.body });                                   // lower body
     add({ c: at(-0.25, 1.2, 0), h: [1.25, 0.27, 0.8], yaw, albedo: [0.07, 0.08, 0.1], shape: S.glass });                 // greenhouse (dark glass)
     add({ c: at(-0.25, 1.49, 0), h: [1.15, 0.03, 0.76], yaw, albedo: body, shape: S.roof });                             // roof

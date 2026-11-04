@@ -510,15 +510,15 @@ export function gwotKit(host: GwotHost) {
   /** COVER (full height at the cab): a PICKUP, 5.0 × 1.8, nose toward local +X: cab, open bed, tailgate. `load`: what rides in the bed; `mount`: a pedestal
    *  gun in the bed (the "technical") */
   const pickup = (x: number, z: number, yaw = 0, body: GwotMat = 'truckWhite', opts: { load?: 'none' | 'drums' | 'sacks' | 'crates'; mount?: boolean } = {}) => {
-    const b = piece(x, z, yaw), P = M[body], S = pickupShapes({ body: P, hub: hubPaint(GWOT_PALETTE.galv) });   // (S: the shape each box says — scene/carShapes.ts)
+    const b = piece(x, z, yaw), P = M[body], S = pickupShapes({ hub: hubPaint(GWOT_PALETTE.galv) });   // (S: the shape each box says — scene/carShapes.ts)
     for (const sx of [-1.5, 1.52]) for (const sz of [-1, 1]) b(sx, sz * 0.78, 0, 0.74, 0.37, 0.13, M.rubber, { shape: S.wheel(sz) });
     b(0, 0, 0.3, 0.8, 2.45, 0.86, P, { shape: S.tub });                                     // the body tub, sill to waistline
     b(2.47, 0, 0.36, 0.58, 0.05, 0.88, M.plasticBlack, { shape: S.bumperFront }); b(-2.47, 0, 0.36, 0.58, 0.05, 0.88, M.plasticBlack, { shape: S.bumperRear });   // bumpers
     b(1.75, 0, 0.8, 1.0, 0.7, 0.84, P, { shape: S.bonnet });                                // bonnet (it had two panel lines marked on it: a box that says a form carries no marks, and a crowned bonnet needs none)
-    b(0.38, 0, 0.8, 1.08, 0.7, 0.86, P); b(0.38, 0, 1.08, 1.5, 0.64, 0.8, M.glassDark, { shape: S.glass }); b(0.36, 0, 1.5, 1.58, 0.6, 0.78, P, { shape: S.roof });   // the cab: doors, glass, roof
+    b(0.38, 0, 0.8, 1.08, 0.7, 0.86, P, { shape: S.doors }); b(0.38, 0, 1.08, 1.5, 0.64, 0.8, M.glassDark, { shape: S.glass }); b(0.36, 0, 1.5, 1.58, 0.6, 0.78, P, { shape: S.roof });   // the cab: doors (and the glass's posts, in their paint), glass, roof
     b(-1.42, 0, 0.8, 0.83, 1.0, 0.76, M.plasticBlack, mk(face('+y', 'coarse', [{ mul: 1.9 }], (i, j) => j % 3 === 1 ? 1 : 0, 0, 2)));   // the bed liner, ribbed
-    for (const sz of [-1, 1]) b(-1.42, sz * 0.83, 0.8, 1.18, 1.03, 0.03, P);                 // bed sides
-    b(-2.42, 0, 0.8, 1.18, 0.03, 0.86, P); b(-0.36, 0, 0.8, 1.18, 0.03, 0.86, P);           // tailgate, the bed's front wall
+    for (const sz of [-1, 1]) b(-1.42, sz * 0.83, 0.8, 1.18, 1.03, 0.03, P, { shape: S.bedSide(sz) });   // bed sides
+    b(-2.42, 0, 0.8, 1.18, 0.03, 0.86, P, { shape: S.tailgate }); b(-0.36, 0, 0.8, 1.18, 0.03, 0.86, P);   // tailgate, the bed's front wall
     for (const sz of [-1, 1]) { b(2.43, sz * 0.66, 0.62, 0.76, 0.03, 0.16, M.plasticWhite, { shape: S.head(sz) }); b(-2.43, sz * 0.72, 0.62, 0.78, 0.03, 0.1, M.truckRed, { shape: S.tail(sz) }); }
     const at = frameAt(x, z, yaw);
     if (opts.mount) { b(-1.3, 0, 0.83, 1.5, 0.05, 0.05, M.iron); b(-1.05, 0, 1.5, 1.62, 0.7, 0.05, M.iron); b(-1.3, 0.16, 1.44, 1.6, 0.12, 0.09, M.olive); b(-1.75, 0, 1.46, 1.58, 0.05, 0.2, M.iron); }
@@ -529,14 +529,14 @@ export function gwotKit(host: GwotHost) {
   /** COVER (head high): a PANEL VAN 4.9 × 1.8 × 1.95, nose toward local +X, its two back doors standing open on the load bay (the spot a stride behind them is
    *  local (−3.2, 0): where a man is put in) */
   const van = (x: number, z: number, yaw = 0, body: GwotMat = 'truckWhite') => {
-    const b = piece(x, z, yaw), P = M[body], S = vanShapes({ body: P, hub: hubPaint(GWOT_PALETTE.galv) });   // (S: the shape each box says — scene/carShapes.ts)
+    const b = piece(x, z, yaw), P = M[body], S = vanShapes({ hub: hubPaint(GWOT_PALETTE.galv) });   // (S: the shape each box says — scene/carShapes.ts)
     for (const sx of [-1.45, 1.5]) for (const sz of [-1, 1]) b(sx, sz * 0.8, 0, 0.74, 0.37, 0.13, M.rubber, { shape: S.wheel(sz) });
     b(0, 0, 0.3, 0.86, 2.4, 0.9, P, { shape: S.body });                                     // the body, sill to waistline
     b(2.43, 0, 0.36, 0.58, 0.05, 0.9, M.plasticBlack, { shape: S.bumper }); b(-2.43, 0, 0.3, 0.44, 0.05, 0.9, M.plasticBlack, { shape: S.step });   // bumper, the rear step
     b(2.0, 0, 0.86, 1.06, 0.4, 0.86, P, { shape: S.bonnet });                               // bonnet
-    b(1.3, 0, 0.86, 1.1, 0.4, 0.9, P); b(1.3, 0, 1.1, 1.62, 0.36, 0.84, M.glassDark, { shape: S.glass }); b(1.22, 0, 1.62, 1.95, 0.34, 0.86, P, { shape: S.brow });   // the cab: doors, glass, the roof's brow
+    b(1.3, 0, 0.86, 1.1, 0.4, 0.9, P, { shape: S.doors }); b(1.3, 0, 1.1, 1.62, 0.36, 0.84, M.glassDark, { shape: S.glass }); b(1.22, 0, 1.62, 1.95, 0.34, 0.86, P, { shape: S.brow });   // the cab: doors, glass, the roof's brow
     b(-0.5, 0, 0.86, 1.95, 1.4, 0.9, P, { shape: S.load });                                 // the load box
-    for (const sz of [-1, 1]) b(-2.15, sz * 0.87, 0.86, 1.95, 0.25, 0.03, P, { shape: S.baySide });   // the open bay: its sides, roof, the dark inside
+    for (const sz of [-1, 1]) b(-2.15, sz * 0.87, 0.86, 1.95, 0.25, 0.03, P, { shape: S.baySide(sz) });   // the open bay: its sides, roof, the dark inside
     b(-2.15, 0, 1.89, 1.95, 0.25, 0.9, P, { shape: S.bayRoof }); b(-1.89, 0, 0.86, 1.89, 0.02, 0.84, M.plasticBlack); b(-2.15, 0, 0.86, 0.88, 0.25, 0.84, M.plasticBlack);
     for (const sz of [-1, 1]) b(-2.77, sz * 1.1, 0.5, 1.9, 0.42, 0.025, P, {}, sz * 0.5);   // the two back doors, swung out
     for (const sz of [-1, 1]) { b(2.43, sz * 0.66, 0.62, 0.76, 0.03, 0.16, M.plasticWhite, { shape: S.head(sz) }); b(-2.41, sz * 0.86, 0.9, 1.2, 0.02, 0.04, M.truckRed, { shape: S.tail(sz) }); }
@@ -545,7 +545,7 @@ export function gwotKit(host: GwotHost) {
    *  shapes its boxes say (scene/carShapes.ts lorryShapes): a level that snows it in says `snow*` of its own caps */
   const lorry = (x: number, z: number, yaw = 0) => {
     const L = piece(x, z, yaw), S = lorryShapes({ red: M.truckRed, canvas: M.canvas, iron: M.iron, galv: M.galv, rust: M.rust, rubber: M.rubber, poplar: M.poplar, white: M.plasticWhite, glass: M.glassDark, jerry: M.jerryYellow, olive: M.olive, orange: M.prodOrange });
-    for (const lx of [2.2, -1.2, -2.25]) for (const s of [-1, 1]) L(lx, s * 0.98, 0, 0.96, 0.48, 0.15, M.rubber, { shape: S.wheel(s, lx > 0) });
+    for (const lx of [2.2, -1.2, -2.25]) for (const s of [-1, 1]) L(lx, s * 0.98, 0, 0.96, 0.48, 0.15, M.rubber, { shape: S.wheel(s) });
     L(-0.1, 0, 0.5, 0.74, 3.1, 0.42, M.iron, { shape: S.chassis });                            // the chassis
     L(3.42, 0, 0.5, 0.78, 0.06, 1.12, M.iron, { shape: S.bumper });                            // bumper
     L(2.75, 0, 0.74, 1.5, 0.62, 0.98, M.truckRed, { shape: S.bonnet });                        // bonnet
@@ -561,9 +561,9 @@ export function gwotKit(host: GwotHost) {
   };
   /** COVER (waist, thin): a small MOTORBIKE on its stand, nose toward local +X */
   const motorbike = (x: number, z: number, yaw = 0, tank: GwotMat = 'truckRed') => {
-    const b = piece(x, z, yaw), S = bikeShapes(M[tank]);   // (S: the shape each box says — scene/carShapes.ts)
+    const b = piece(x, z, yaw), S = bikeShapes();   // (S: the shape each box says — scene/carShapes.ts)
     b(0.66, 0, 0, 0.6, 0.3, 0.05, M.rubber, { shape: S.wheel }); b(-0.62, 0, 0, 0.6, 0.3, 0.05, M.rubber, { shape: S.wheel });
-    b(0.02, 0, 0.26, 0.56, 0.2, 0.12, M.iron, { shape: S.engine }); b(0.18, 0, 0.56, 0.84, 0.24, 0.12, M[tank], { shape: S.tank }); b(-0.36, 0, 0.62, 0.8, 0.34, 0.11, M.plasticBlack, { shape: S.seat });
+    b(0.02, 0, 0.26, 0.56, 0.2, 0.12, M.iron); b(0.18, 0, 0.56, 0.84, 0.24, 0.12, M[tank], { shape: S.tank }); b(-0.36, 0, 0.62, 0.8, 0.34, 0.11, M.plasticBlack, { shape: S.seat });
     b(0.6, 0, 0.6, 1.02, 0.03, 0.03, M.galv); b(0.56, 0, 1.0, 1.04, 0.02, 0.32, M.iron, { shape: S.bars }); b(0.74, 0, 0.78, 0.94, 0.05, 0.07, M.iron, { shape: S.lamp });
     b(-0.84, 0, 0.66, 0.7, 0.16, 0.13, M.iron); b(-0.4, 0.16, 0.28, 0.36, 0.42, 0.035, M.iron, { shape: S.exhaust });   // (nothing pale on it: from above a bike is two black wheels in line and one tank of colour)
   };

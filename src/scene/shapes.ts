@@ -6,14 +6,16 @@
 // THE DATA NAMES THE SHAPE, never the engine's record (scene/levelData.ts BoxData.shape, scene/levelLoad.ts reads and writes it). Everything in it is said in
 // the box's OWN frame (metres from its centre along its own axes), so a box that is moved, turned or copied takes its shape along:
 //   round   1 | 3            the box is a twelve-sided prism about its own x or z (a wheel on its axle, a tank): the box is square across that axis, or
-//                            within a fifth of it (the round's radius is then the smaller half, and the longer way keeps the box's own two faces)
+//                            within 15 hundredths of it (the round's radius is then the smaller half, and the longer way keeps the box's own two faces: past that the
+//                            round's own planes would take them)
 //   arc     { axis, rise }   the box's top is a round about its own x or z that rises `rise` from its sides to its middle (a bowed roof, a bonnet, an arch)
 //   cut     [nx, ny, nz, d]… planes, each keeping n · p ≤ d (a corner rounded in plan, a pane that leans): 8 at most, 5 beside an arc (whose own facets
 //                            give way to them: six with one plane, four with up to three, two with up to five), none beside a round
 //   old     true             not a fresh break: the cut faces take the box's own paint and lying snow (a pressed panel, not a snapped end). The PICTURE's
 //                            word, and nothing reads it until the look's cut pass is in the build
 //   with    [ piece… ]       pieces of TRIM that are there only when shapes are on (a hub, an arch over a wheel, a post between two panes): each an `off`
-//                            from the box's centre, a half size, a yaw from the box's own, a paint and a form of the kinds above
+//                            from the box's centre, a half size, a yaw from the box's own, a form of the kinds above, and a paint — or none: a piece
+//                            that says no paint WEARS ITS BOX'S (its colour and finish as the box stands), so whoever repaints the box repaints it
 // A SHAPE IS CUT FROM THE PLAIN BOX: the box keeps its centre and its half size. So the shaped level, to the simulation, is the plain level with some of
 // its boxes cut — never a thing standing where none stood.
 // A PIECE IS TRIM: drawn, and nothing else. It stands NoShadow, the flag of every drawn-only static, so no ray, eye or body meets it and it casts no
@@ -64,7 +66,7 @@ export type ShapePlane = [number, number, number, number];
 /** the kinds of shape (see the head) */
 export interface ShapeForm { round?: 1 | 3; arc?: { axis: 1 | 3; rise: number }; cut?: ShapePlane[]; old?: true }
 /** a piece of trim that is there only when shapes are on: `off` = its centre from the box's, in the box's frame; `yaw` = from the box's own */
-export interface ShapePiece extends ShapeForm { off: Vec3; h: Vec3; yaw?: number; albedo: Vec3; rough?: number; metal?: boolean }
+export interface ShapePiece extends ShapeForm { off: Vec3; h: Vec3; yaw?: number; /** absent = the box's own paint and finish */ albedo?: Vec3; rough?: number; metal?: boolean }
 /** how a box stands when shapes are on */
 export interface BoxShape extends ShapeForm { with?: ShapePiece[] }
 /** the most planes a shape may say: the record's rows, one fewer beside an arc (the picture's record keeps its last row for the arc) */
@@ -113,7 +115,7 @@ export function shapeErrors(s: unknown, h: Vec3, pieceKeys: readonly string[], p
   const nCut = Array.isArray(planes) ? planes.length : 0;
   if (o.round !== undefined) {
     if (o.round !== 1 && o.round !== 3) { out.push('round is the axis 1 (x) or 3 (z); a cylinder on its end is a round thing of the kit'); form = false; }
-    else { const a = o.round === 1 ? hh[2] : hh[0]; if (Math.abs(hh[1] - a) > 0.2 * Math.min(hh[1], a) + 1e-9) out.push(`round ${o.round}: the box must be square across that axis, or within a fifth of it (${hh[1]} by ${a})`); }
+    else { const a = o.round === 1 ? hh[2] : hh[0]; if (Math.abs(hh[1] - a) > 0.15 * Math.min(hh[1], a) + 1e-9) out.push(`round ${o.round}: the box must be square across that axis, or within 15 hundredths of it (${hh[1]} by ${a})`); }
     if (nCut) out.push('round takes every plane of the record: no cut beside it');
   } else if (o.arc !== undefined) {
     const a = o.arc as { axis?: unknown; rise?: unknown };
@@ -173,7 +175,8 @@ export function shapeLevel(boxes: Box[], on: boolean): number {
     formBox(b, s); b.shaped = true;
     for (const w of s.with ?? []) {
       const o = cutToWorld(w.off, b.yaw);   // (the box's own frame: cut.ts)
-      const p = makeBox({ c: [b.c[0] + o[0], b.c[1] + o[1], b.c[2] + o[2]], h: [w.h[0], w.h[1], w.h[2]], yaw: b.yaw + (w.yaw ?? 0), albedo: [w.albedo[0], w.albedo[1], w.albedo[2]], flags: BoxFlag.NoShadow | (b.flags & BoxFlag.Cutaway), ...(w.rough !== undefined ? { rough: w.rough } : {}), ...(w.metal ? { metal: true } : {}), cutHeight: b.cutHeight, piece: true, of: i });   // (cut away with its box, where the box is)
+      const p = makeBox({ c: [b.c[0] + o[0], b.c[1] + o[1], b.c[2] + o[2]], h: [w.h[0], w.h[1], w.h[2]], yaw: b.yaw + (w.yaw ?? 0), ...(w.albedo ? { albedo: [w.albedo[0], w.albedo[1], w.albedo[2]] as Vec3, ...(w.rough !== undefined ? { rough: w.rough } : {}), ...(w.metal ? { metal: true } : {}) } : { albedo: [b.albedo[0], b.albedo[1], b.albedo[2]] as Vec3, rough: b.rough, ...(b.metal ? { metal: true } : {}) }),   // (its own paint, or its box's as the box stands)
+        flags: BoxFlag.NoShadow | (b.flags & BoxFlag.Cutaway), cutHeight: b.cutHeight, piece: true, of: i });   // (cut away with its box, where the box is)
       formBox(p, w); tail.push(p);
     }
     made++;
