@@ -48,15 +48,41 @@ fn lookFin(v: vec2f) -> vec2f { return select(vec2f(0.0), clamp(v, vec2f(-4096.0
 fn lookSlot(layer0: i32) -> i32 { let layer = clamp(layer0, 0, LOOK_LAYERS - 1); return i32(lookCfg.s[layer / 4][layer % 4]); }
 fn lookBase(layer: i32) -> f32 { return LOOK_BASE[clamp(layer, 0, LOOK_LAYERS - 1)]; }
 /** a stuff's own row (the prelude's LOOK_KEEP: lookTex.ts STUFFS): x = laid in place, its map lies by the world; y = how far sun and years blotch it
- *  (0 = a place somebody keeps: no blotch, no drift of hue, none of the traffic's dirt); z = it takes a damp foot and a bleached head */
-fn lookKeep(layer: i32) -> vec3f { return LOOK_KEEP[clamp(layer, 0, LOOK_LAYERS - 1)]; }
-/** A STUFF MADE OF PIECES (the prelude's LOOK_UNIT; lookTex.ts STUFFS' unit): what a piece of the WORLD at map place `uvm` (metres) on face `face` multiplies its
- *  paint by, so a wall of eighty panels is not a tile's eight shades over and over, and two walls that look the same way are not one pattern twice. 1 for a
- *  stuff that is not made of pieces */
-fn lookPieceTone(layer: i32, uvm: vec2f, face: i32) -> f32 {
-  let un = LOOK_UNIT[clamp(layer, 0, LOOK_LAYERS - 1)]; if (un.w <= 0.0) { return 1.0; }
-  let row = i32(floor(uvm.y / un.y)); let col = i32(floor(uvm.x / un.x + select(0.0, 0.5, un.z > 0.5 && (row & 1) != 0)));
-  return 1.0 + un.w * (2.0 * snowHash(vec2i(col + 131 * face, row - 57 * face), u32(layer) + 77u) - 1.0);
+ *  (0 = a place somebody keeps: no blotch, no drift of hue, none of the weather's traffic dirt); z = it takes a damp foot and a bleached head; w = how hard USE shows
+ *  on it where it is kept (`worn`: a piece stained, chipped or changed, a wall's foot knocked) */
+fn lookKeep(layer: i32) -> vec4f { return LOOK_KEEP[clamp(layer, 0, LOOK_LAYERS - 1)]; }
+/** A STUFF MADE OF PIECES (the prelude's LOOK_UNIT; lookTex.ts STUFFS' unit): what a piece of the WORLD at map place `uvm` (metres) on face `face` does to its
+ *  paint (x: times it) and its finish (y: added to it), so a wall of eighty panels is not a tile's eight shades over and over, and two walls that look the
+ *  same way are not one pattern twice. (1, 0) for a stuff that is not made of pieces.
+ *  EVERY PIECE HAS ITS OWN SHADE, and where use shows (`worn`, the stuff's row × the page's Weather: 0 = the shade alone) A PIECE IN FOUR HAS A HISTORY, one of
+ *  three by a die of its own: it was CHANGED for a new one (a clear step of shade, a fresher face), something stood or ran on it and left a STAIN (a soft
+ *  patch that stays inside the piece), or it is CHIPPED at a corner (3 to 8 cm gone on the slant, its core dark and rough). Less use = fewer pieces with a
+ *  history and never another history for the same piece. Sizes are metres in the world, so a chip is a chip on a paver and on a block, and no edge is
+ *  drawn finer than the pixel (`fp`, metres a pixel). None of it is in the map: a tile's sixteen pavers with one chip between them would be a chip every
+ *  two metres */
+fn lookPiece(layer: i32, uvm: vec2f, face: i32, worn: f32, fp: f32) -> vec2f {
+  let un = LOOK_UNIT[clamp(layer, 0, LOOK_LAYERS - 1)]; if (un.w <= 0.0) { return vec2f(1.0, 0.0); }
+  let ry = uvm.y / un.y; let row = i32(floor(ry)); let cx = uvm.x / un.x + select(0.0, 0.5, un.z > 0.5 && (row & 1) != 0); let col = i32(floor(cx));
+  let id = vec2i(col + 131 * face, row - 57 * face); let sd = u32(layer) + 77u;
+  var tone = 1.0 + un.w * (2.0 * snowHash(id, sd) - 1.0);
+  if (worn <= 0.0 || snowHash(id, sd + 1u) >= 0.26 * min(worn, 1.0)) { return vec2f(tone, 0.0); }
+  let kind = snowHash(id, sd + 8u);
+  let f = vec2f(cx - floor(cx), ry - floor(ry)); let m = f * un.xy;              // where in the piece: 0‥1, and metres from its low corner
+  var dr = 0.0;
+  if (kind < 0.2) {
+    tone += (0.035 + 1.5 * un.w) * select(-0.7, 1.0, snowHash(id, sd + 2u) < 0.75); dr = -0.05;   // changed: paler three times in four (new), else a darker make
+  } else if (kind < 0.62) {
+    let c = vec2f(0.25) + 0.5 * vec2f(snowHash(id, sd + 3u), snowHash(id, sd + 4u)); let r = 0.16 + 0.2 * snowHash(id, sd + 5u);   // (r: of the piece's short side)
+    let d = length((f - c) * un.xy / min(un.x, un.y)) + 0.07 * (detailNoise(uvm * 23.0) - 0.5);
+    let st = (1.0 - smoothstep(0.55 * r, r, d)) * smoothstep(0.0, 0.08, min(min(f.x, 1.0 - f.x), min(f.y, 1.0 - f.y)));
+    tone *= 1.0 - 0.09 * st; dr = 0.07 * st;
+  } else {
+    let h2 = snowHash(id, sd + 6u); let cn = vec2f(select(m.x, un.x - m.x, h2 < 0.5), select(m.y, un.y - m.y, fract(h2 * 2.0) < 0.5));   // metres from one of its four corners
+    let sz = 0.03 + 0.05 * snowHash(id, sd + 7u); let e = max(0.006, fp);
+    let ch = (1.0 - smoothstep(sz - e, sz, cn.x + cn.y + 0.012 * (detailNoise(uvm * 61.0) - 0.5) * (1.0 - smoothstep(0.008, 0.02, fp)))) * (1.0 - smoothstep(sz, 3.0 * sz, fp));
+    tone *= 1.0 - 0.3 * ch; dr = 0.25 * ch;
+  }
+  return vec2f(tone, dr);
 }
 fn lookTap(layer: i32, st0: vec2f, dx0: vec2f, dy0: vec2f) -> LookTap {
   let slot = lookSlot(layer); let st = lookFin(st0); let dx = lookFin(dx0); let dy = lookFin(dy0);
@@ -119,7 +145,8 @@ fn lookSurface(cls0: u32, wp: vec3f, n: vec3f, bi: u32, lc: vec3f, hf: vec4f, al
       tn = mix(tn, vec2f(c * g2.x + s * g2.y, -s * g2.x + c * g2.y), w);
       tp.a = mix(tp.a, t2.a, w); tp.b = mix(tp.b, t2.b, w);
     }
-    var mult = tp.a.rgb * 2.0 * lookPieceTone(layer, uv / max(k2.w, 0.1), select(i32(floor(dot(wp, n) * 100.0 + 0.31)) + 4096 * i32(ax), i32(salt), keep.x < 0.5 || moves)); var cav = tp.b.a; var dr = tp.b.z - lookBase(layer);   // (which face: the plane it lies in, to the centimetre, for what stands still; the box's own number for what moves)
+    let pc = lookPiece(layer, uv / max(k2.w, 0.1), select(i32(floor(dot(wp, n) * 100.0 + 0.31)) + 4096 * i32(ax), i32(salt), keep.x < 0.5 || moves), keep.w * min(k.w, 1.0) * (1.0 - wild), fp);   // (use shows only where a place is kept: on a wild stuff the weather has the say)
+    var mult = tp.a.rgb * 2.0 * pc.x; var cav = tp.b.a; var dr = tp.b.z - lookBase(layer) + pc.y;   // (which face: the plane it lies in, to the centimetre, for what stands still; the box's own number for what moves)
     // ---- MASONRY: what the wall is MADE of, laid by the wall's own height and length and never by a tile's repeat. A mud wall that stands on the ground has a
     // plinth of field stone (lookTex.ts 'field stone', in the wall's metres from the ground up) to a line that wanders along it, the render lapping down over the
     // stones' heads with a rounded lip; and where the render has let go, in patches that gather above the plinth, the mud brick under it ('mud brick'), a
@@ -205,6 +232,17 @@ fn lookSurface(cls0: u32, wp: vec3f, n: vec3f, bi: u32, lc: vec3f, hf: vec4f, al
         alb *= 1.0 + 0.22 * bleach; alb *= 1.0 - 0.3 * run;   // (runs come in stretches, under where the head sheds, never as a fence of stripes)
       }
     }
+  }
+  // ---- USE on a wall somebody keeps (the stuff's `worn`), where it stands on the floor: boots, a trolley and a mop's bucket knock the coat off its foot in
+  // STRETCHES, to a ragged line a finger to a hand high, the stuff under the coat showing grey and dull. In metres along the wall, so it does not stop
+  // where two boxes of one wall meet, and each face's plane has its own run of it. (The dirt in the crease and on the floor along it is the detail layer's,
+  // detail.wgsl, on every page. A wild wall has the weather's damp foot in this one's place.)
+  if (k.w > 0.0 && cls != 0u && wild == 0.0 && keep.w > 0.0 && !lying && b.c.y - b.h.y < 0.05 && wp.y < 0.3) {
+    let along = uv.x + 31.7 * snowHash(vec2i(i32(floor(dot(wp, n) * 100.0 + 0.31)), i32(ax)), 5u);
+    let stretch = smoothstep(0.44, 0.6, detailNoise(vec2f(along * 0.55, 4.1)));
+    let high = (0.035 + 0.12 * detailNoise(vec2f(along * 2.7, 8.3))) * mix(0.75, 0.3 + 0.9 * detailNoise(vec2f(along * 37.0, 1.9)), 1.0 - smoothstep(0.008, 0.02, fp));   // (its teeth are finer than a far pixel: there the line is plain)
+    let knock = stretch * (1.0 - smoothstep(high - max(0.008, fp), high, wp.y)) * keep.w * min(k.w, 1.0);
+    alb = mix(alb, mix(alb, vec3f(0.4, 0.39, 0.38), 0.75), knock); rough += 0.22 * knock;
   }
   // ---- EDGES: a small box's arrises rounded and rubbed (a crate, a table, a sill — not a wall, whose boxes meet their neighbours edge to edge)
   if (k2.y > 0.0 && max(b.h.x, b.h.z) < 0.65 && b.h.y < 0.8 && min(b.h.x, min(b.h.y, b.h.z)) > 0.02) {   // (half-extents: under 1.3 m on its long side and 1.6 m tall)

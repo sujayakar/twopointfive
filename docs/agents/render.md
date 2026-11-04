@@ -1562,6 +1562,20 @@ interleaved and filtered to their quiet minimum, and a row whose p75 sits far ab
   (a cost to measure before a car park of them is a default). Agreed words, proposed to the cars part: body `carpaint`, roughness about 0.2, not metal (a
   metallic paint: metal, 0.3); glass plain, 0.05 to 0.1; bumpers and arch trim `plastic`, 0.5; chrome and hubcaps `steel` with metal, 0.25; tyres plain, 0.9.
   It takes the `kept` rule (no damp foot, no bleached head). Drawn as a tile; never seen on a page or a GPU.
+- **USE SHOWS ON A KEPT PLACE: `worn`, A STUFF'S OWN WORD** (11-04; `render/lookTex.ts STUFFS`, `shaders/look.wgsl`; the look's page only, under its
+  Weather row, 0 = none). The maintainer, of the white roof on his GPU: "directionally nice but still doesn't have enough "personality / cm^2"". His
+  pictures' kept walls and floors are not weathered, but every patch says it was made and used: tie holes, a chipped corner, paint knocked off a
+  wall's foot, a changed paver. A kept stuff (`fades` absent) had none of it, since the weather's rules skip it. `worn` (0 to 1, absent on steel,
+  enamel, carpet) is how hard use shows, and the shader gives it two things BY WHERE IT IS IN THE WORLD, never in the map (a tile's sixteen pavers
+  with one chip between them is a chip every two metres): (1) `lookPiece` (was `lookPieceTone`): a piece in four has a history, one of three by a
+  die of its own: changed for a new one (a clear step of shade), stained (a soft patch inside the piece), chipped at a corner (3 to 8 cm on the
+  slant, dark and rough; metres, so a chip is a chip on a paver and on a block). Less use = fewer such pieces, never another history for the same
+  piece. (2) A kept wall that stands on the floor has its coat knocked off its foot in stretches, to a ragged line a finger to a hand high, each
+  face's plane its own run. No edge is drawn finer than the pixel. (The dirt in a floor's crease and along its walls was already the detail
+  layer's, `detail.wgsl`, on every page: the look adds none.) In the maps themselves: a cast panel has six tie holes 4 cm across (four of 2 cm
+  were specks at a pixel of a centimetre and a half). Enamel stays a clean coat: a chip in its map would come round every two metres along a
+  painted line. `lookmaps-check` line 11 holds the row (use on kept stuffs only, none on the sixteen older ones, so every
+  other level's picture is as it was). Shader texts compile (`wgsl-compile`); NEVER SEEN ON A GPU, and the amounts are a first guess.
 - **TEN KEPT STUFFS, AND A STUFF SAYS ITS OWN ROW** (11-04; `render/lookTex.ts` stucco, skim, gloss block, board concrete, cast panel, paver, brushed,
   louvre, enamel, carpet; the level `white-roof`, `docs/agents/levels.md`). The maintainer, of a game whose pictures he sent: "it has some very
   tastefully done high frequency detail but overall quite flat", "an antidote to our repeating textures that look generated", and, after trying the
@@ -1573,7 +1587,7 @@ interleaved and filtered to their quiet minimum, and a row whose p75 sits far ab
   (1) A MAP HOLDS NOTHING BETWEEN A HAND AND A DOOR WIDE BUT ITS OWN PIECES: soft tone or sheen inside the two-metre tile is seen to repeat at the
   game's size (brushed steel's first smears and the skim's first shiny patches did). (2) A STUFF MADE OF PIECES says so (`unit`: a piece's size, its
   bond, how far a piece's shade may sit from the next's). The map draws the joints at that size (`piece`) and gives the pieces no shade; `look.wgsl
-  lookPieceTone` gives each piece of the WORLD its shade by where it is and which face it is on, so a wall of eighty panels is not a tile's eight
+  lookPiece` gives each piece of the WORLD its shade by where it is and which face it is on, so a wall of eighty panels is not a tile's eight
   over and over and two walls that look the same way are not one pattern twice. (3) WHAT A STUFF IS TO THE SHADER IS ITS ROW, by name, in
   `lookTex.ts STUFFS` (a name without a row does not compile): `rough`, `relief`, `built` (laid in place: the map lies by the world, so courses run on
   from one box of a wall to the next), `fades` (how far the weather blotches it; absent = a place somebody keeps: no blotch, no drift of hue, none of
