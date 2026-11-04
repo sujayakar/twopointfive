@@ -6,16 +6,25 @@
 // rounds through the real alert branch, the HUD row through the real overlay code on a stand-in DOM. The refactored tree must reproduce every entry exactly:
 // the guard section is seeded and records the frame of every round and the cadence he drew after it, so even the ORDER in which Math.random is consumed has to
 // survive. PASS / FAIL per section; `--print` dumps the freshly measured card as a paste-ready literal.
+import { readFileSync, writeFileSync, existsSync } from 'node:fs';
+import { resolve } from 'node:path';
 import { standUp, ROOT } from './headless.ts';
 const { v3 } = await import(`${ROOT}/src/math/vec.ts`);
 const { fireWeapon, hitPlayer } = await import(`${ROOT}/src/game/combat.ts`);
 const { resetChase } = await import(`${ROOT}/src/game/guards.ts`);
 const { Overlay } = await import(`${ROOT}/src/ui/overlay.ts`);
-const { harnessProfile } = await import(`${ROOT}/src/host/profile.ts`);
 
 type Vec3 = [number, number, number];
 const DT = 1 / 60;
 const PRINT = process.argv.includes('--print');
+// THE PAGE'S STAND HAS A CARD OF ITS OWN (tools/qa/fixtures/weapons-card-shipped.json): EXPECT below was written down on the frozen stand, and the page raises rules
+// it never knew (the issue pistol's own row and name, the kit's click before a round, a guard's start before his first), so under TPS_PROFILE=shipped the same
+// sections are held to the numbers THAT stand gave when its card was last written — `TPS_PROFILE=shipped bun run tools/qa/probes.ts weapons-identity --write`
+// writes it afresh, knowingly, as --print does for EXPECT. WEAPONSCARD_BREAK=1 slows the drawn pistol's own row by a tenth of a second a round: the player's
+// section must FAIL on either stand.
+const { harnessProfile } = await import(`${ROOT}/src/host/profile.ts`);
+const SHIPPED = harnessProfile() === 'shipped', CARD_FILE = resolve(ROOT, 'tools/qa/fixtures/weapons-card-shipped.json');
+const CARD_BREAK = process.env.WEAPONSCARD_BREAK === '1', WRITE = process.argv.includes('--write');
 function seeded(a: number) { return () => { a |= 0; a = (a + 0x6D2B79F5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
 /** A guard planted at `p` facing yaw, still, no path, posed twice (bones where the sight tests read them). */
 function place(gd: any, p: Vec3, yaw: number) { gd.char.pos = v3.copy(p); gd.char.vel = [0, 0, 0]; gd.speed = 0; gd.char.bodyYaw = gd.char.aimYaw = yaw; gd.char.aimPitch = 0; gd.path = []; gd.pathGoal = null; gd.char.update(0); gd.char.update(DT); }
@@ -91,6 +100,7 @@ async function stagePlayer(seed: number) {
   for (let i = 0; i < 5; i++) W.step(DT);
   game.guards.forEach((gd: any, i: number) => park(gd, i));
   game.teleportPlayer([21.5, 0, 11.5]); game.player.slot = 'pistol'; game.player.holstered = false; game.player.crouch = false; game.player.pistol.lightOn = false;
+  if (CARD_BREAK) { const d: any = game.player.pistol.def; if (!d.__slowed) Object.defineProperties(d, { cd: { value: d.cd + 0.1, configurable: true, enumerable: true }, __slowed: { value: true, configurable: true } }); }   // (the red path: the row itself, as a careless edit of the table would leave it)
   W.cam.yaw = 0; W.cam.rebuild?.(); W.step(DT); W.step(DT);
   return W;
 }
@@ -98,11 +108,7 @@ const WALL: Vec3 = [21.5, 1.2, 10.0];   // the corridor's north wall between the
 
 // ================================================================ the probe
 export async function weaponsIdentity() {
-  // (NOT ASKED ON THE SHIPPED STAND, as threshold-identity is not: the card at the bottom was written down on the frozen stand before the weapon table, and the
-  // page's stand raises rules it never knew — the issue pistol's own row and name, the kit's click before a round, a guard's start before his first — so four of
-  // its sections read otherwise there by those rules' own work, and the line would say nothing of the table. The question is the frozen stand's.)
-  if (harnessProfile() === 'shipped') { console.log('\n=== weapons-identity: NOT ASKED on the shipped stand — its card is the frozen stand\'s (run it with no TPS_PROFILE) ==='); return true; }
-  console.log('\n=== weapons-identity: the pistols\' every number, driven and recorded — cadence, magazine, staged reload, report, flash, hearing event, prop kick, guard spread / reload beat, one-shot, drops, muzzle, the kit row (frozen before the WeaponDef refactor; nothing may move) ===');
+  console.log('\n=== weapons-identity: the pistols\' every number, driven and recorded — cadence, magazine, staged reload, report, flash, hearing event, prop kick, guard spread / reload beat, one-shot, drops, muzzle, the kit row (frozen before the WeaponDef refactor; nothing may move' + (SHIPPED ? ' — the page\'s stand: against its own card, tools/qa/fixtures/weapons-card-shipped.json' : '') + (CARD_BREAK ? ' — WEAPONSCARD_BREAK: the drawn pistol\'s row slowed' : '') + ') ===');
   const card: Record<string, any> = {};
 
   // ---------------------------------------------------------------- (1) the player's Five-seveN through the real input path: a click every frame at a wall until it is dry
@@ -306,8 +312,10 @@ export async function weaponsIdentity() {
   // ---------------------------------------------------------------- verdicts
   if (PRINT) console.log('\n--- measured card (paste over EXPECT) ---\nconst EXPECT: Record<string, any> = ' + JSON.stringify(card, null, 1).replace(/\n\s*/g, ' ') + ';\n');
   let allPass = true;
+  if (WRITE && SHIPPED && !CARD_BREAK) { writeFileSync(CARD_FILE, JSON.stringify(card, null, 1) + '\n'); console.log(`--- the page's card written: ${CARD_FILE} ---`); }
+  const WANT: Record<string, any> = SHIPPED ? (existsSync(CARD_FILE) ? JSON.parse(readFileSync(CARD_FILE, 'utf8')) : {}) : EXPECT;
   for (const sec of Object.keys(card)) {
-    const want = EXPECT[sec], got = card[sec];
+    const want = WANT[sec], got = card[sec];
     const diffs: string[] = [];
     if (want === undefined) diffs.push('no expectation recorded for this section');
     else for (const k of new Set([...Object.keys(want), ...Object.keys(got)])) { const a = JSON.stringify(got[k]), b = JSON.stringify(want[k]); if (a !== b) diffs.push(`${k}: got  ${a}\n        want ${b}`); }
