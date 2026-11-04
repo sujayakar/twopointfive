@@ -50,7 +50,7 @@ import * as charMatsMod from './render/charMaterials';
 import * as charLookMod from './game/charLook';
 import { buildLookPanel, LOOK_SNOW_COVER } from './ui/lookpanel';
 import { lookAmounts, lookParts, lookSync } from './render/gbuffer';
-import { scenePrelude, traceConfig, commonSource, glassBreakConfig, weatherKindConfig, weatherEdgeConfig, weatherVolConfig, rainShadowConfig, rainScaleConfig, rainWallsConfig, bounceWallsConfig, reflWallsConfig, sunGlintConfig, wallSidesConfig, smokeLabConfig, lookConfig, snowConfig, snowLookConfig } from './render/frame';
+import { scenePrelude, traceConfig, commonSource, glassBreakConfig, weatherKindConfig, weatherEdgeConfig, weatherVolConfig, rainShadowConfig, rainScaleConfig, rainWallsConfig, bounceWallsConfig, reflWallsConfig, sunGlintConfig, glintPickConfig, wallSidesConfig, smokeLabConfig, lookConfig, snowConfig, snowLookConfig } from './render/frame';
 import { smokeGridConfig } from './smoke/smokeGrid';
 import * as cutMod from './scene/cut';
 import { cutConfig, initCutSwitch, type CutPlane } from './scene/cut';
@@ -256,6 +256,7 @@ async function main() {
     if (lookConfig.on) for (const kv of lv.join(',').split(',')) { const [k, v] = kv.split(':'); if (Object.hasOwn(lookAmounts, k) && v !== undefined && v !== '' && isFinite(+v)) (lookAmounts as Record<string, number>)[k] = Math.min(4, Math.max(0, +v)); }
     wallSidesConfig.on = lookConfig.on && lookAmounts.walls > 0; smokeLabConfig.on = smokeLabAsked(q); smokeLook.on = lookConfig.on && q.get('smokelook') !== '0'; }   // (WALLS HAVE TWO SIDES: a const of the shaders, so the row is read here, before the engine is made: render/frame.ts wallSidesConfig; ?look=relief:1.4,air:2 opens the page with those amounts: a still without the panel)
   if (q.has('nobouncewalls')) bounceWallsConfig.on = false;   // ?nobouncewalls: the radiance cache read a probe spacing along a man's normal whatever stands there — a man by a lit room's outer wall takes the room's bounce and mirrors its lamps, as it was (render/frame.ts bounceWallsConfig)
+  if (q.get('glintpick') === '1') glintPickConfig.on = true;   // &glintpick=1 (the look's page only: the prelude asks lookConfig.on too): the lamps' highlights past the three strongest by one weighted pick, none credited unseen (render/frame.ts glintPickConfig; a const of the shaders, so read here)
   if (q.has('nosunglint')) sunGlintConfig.on = false;   // ?nosunglint: no directional light gives a smooth finish a highlight, as it was (render/frame.ts sunGlintConfig; a const of the shaders, so read here, before the first pipeline)
   if (q.has('noreflwalls')) reflWallsConfig.on = false;   // ?noreflwalls: a metal's reflection rays read the cache a probe spacing along the hit's normal whatever stands there, as it was (render/frame.ts reflWallsConfig; the picture from before both rules is ?nobouncewalls&noreflwalls: with this one on, a man mirrored in steel takes the walled read whatever the other word says)
   if (q.has('norainscale')) rainScaleConfig.on = false;   // ?norainscale: a splash ring as bright however wide the volumetric pass's texel draws it — blobs on the lit ground with the camera pulled back, as it was (render/frame.ts rainScaleConfig)

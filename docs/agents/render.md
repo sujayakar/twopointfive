@@ -1930,6 +1930,42 @@ interleaved and filtered to their quiet minimum, and a row whose p75 sits far ab
   shade's; untinted through glass, as a lamp's; with rays traced the denoiser places it at the first ray's hit. CHECK `tools/qa/probes.ts
   sunglint` (family `render`; `SUNGLINT_BREAK=1` must fail), both stands; `shaderrows-check` holds the compact pass's text. Never timed, never
   seen on a GPU, night included: the three numbers are first guesses.
+- **NO LAMP'S HIGHLIGHT IS CREDITED UNSEEN** (11-04; the scene prelude's `GLINT_PICK`, `render/frame.ts glintPickConfig`, `rtGlints` in the
+  three reflection passes; the look's page only, `&glintpick=1`, OFF unless asked; a const of the shaders, so a reload of the address is the
+  A/B). One of the nine special cases of the light the maintainer ruled fixed (11-04). THE RULE AS IT WAS: of the lamps whose highlight
+  reaches a smooth pixel the four strongest get a shadow ray and every other is added at HALF strength with no ray ("off the lobe, dim by
+  construction"). So a fifth lamp behind a wall glints at half, and a fifth in plain sight is drawn at half. WITH THE WORD the three
+  strongest keep their rays, the rest are summed, and the fourth ray goes to ONE lamp picked from the rest by its weight: THE REST'S OWN SUM
+  is drawn if that one is seen, through the smoke on its segment, and nothing if it is not. The pick is a reservoir with one number handed
+  on, so the lamps are still walked once, the first of the rest is taken without asking the number, and no weight is divided by itself.
+  The number is the caller's: the pixel's own lobe offset (seeded by the pixel, the same every frame whatever the jitter does to the point)
+  stepped by 0.7548777 each frame (not the golden ratio, whose step nearly repeats every eight frames, the jitter's cycle: a review's model had
+  each jitter phase meet almost the same pick for 140 frames), so a still pixel walks through its lamps; no draw is added to the kernel's random stream. NO RAY
+  MORE and no call site more (`shaderinline`: the reflection kernels read 743 and 327 KB, as they did). A PIXEL FOUR LAMPS OR FEWER REACH
+  DRAWS WHAT IT DREW: the same slots in the same order, the fourth's own highlight as the sum of one. WITH THE REST ALL IN SIGHT AND NO SMOKE BETWEEN every frame
+  is the frame before, colours and all, and the old sum whole (through smoke the rest's sum is dimmed by the picked lamp's own segment, so the
+  frames differ and their mean is right). WITH SOME HIDDEN the frames differ and their mean is the seen share of the
+  rest's light, in the rest's mean colour and not the seen ones' own. KNOWN AND NOT MENDED (a review's models, not seen): the highlights
+  are NOT NOISE-FREE with the word, as the pass's comments said of them: the specular denoiser clamps its history into the frame's
+  neighbourhood, which is not linear in sparse bright frames, so where one hidden lamp holds most of the rest's weight the seen remainder may
+  settle dim and flicker (modelled 5 to 15 % under); the luminance bound `RT_GLINT_MAX` is then on a frame's sample and not on the sum, so
+  the mean falls short wherever the three strongest and the WHOLE rest together pass the bound, though their true sum is under it (a model: 22 % short with the true sum at
+  62 % of the bound); under rays set to 0 the returned distance is still chosen by the lamps' own weights (the pick keeps its
+  own). THE ROUGHNESS LIMIT, the other half of that special case as first listed, WAS ALREADY A FADE: `composite.wgsl` weighs the reflection
+  term down over the 0.12 of roughness under the preset's limit (`reflK`), so the pass's own `rough > maxR` return is where that weight is
+  already nothing; the limit itself is a preset's budget for rays, and stays. THE SAME HALF CREDIT STANDS ELSEWHERE and is not this step's:
+  `composite.wgsl paneLight` (the cracks' light, one ray), `fgather.wgsl glassShade` (the dust glow, two rays) and its twin in
+  `gather_split.wgsl`; the particles credit 0.35 past their three strongest; the froxels drop what they do not trace. ITS END: on the
+  maintainer's yes the word goes, `GLINT_PICK` with it, and the four slots and the half are deleted from the three texts in the same commit.
+  THE CHECK: `probes.ts sunglint` lines 4 and 5, both stands (the word ships down and is wired; one text in the three passes, its lines and
+  the caller's number word for word, no `rnd()` or hash in the function; the arithmetic written again in colour: four lamps or fewer in
+  every order and with a tie, 165 cases, the same as before and as the truth; six in sight steady and whole; the mean over 4096 frames of
+  the shader's own numbers within half a percent of the truth for two hidden and eight mixed in either order, 2.1 % off over 16 frames; the
+  half's own error printed: 6.9 % short with six in sight, 8.1 % bright with two hidden; `GLINTPICK_BREAK=1` asks the same of the half and
+  fails). DRAWN, software adapter, the library hall at night: without the word the page is 0 of 2,304,000 bytes from the build before it; with
+  `&glintpick=1` it boots with all 120 programs and no error, and its opening view has the same mean and the same 95th percentile as without (0.111
+  and 0.465): no view was drawn that shows the difference, so the trial's proof is the check's arithmetic. Never seen on a GPU: whether the pick's noise where lamps are partly hidden settles under the denoiser, still or
+  in motion, is the page's to show.
 - **USE SHOWS ON A KEPT PLACE: `worn`, A STUFF'S OWN WORD** (11-04; `render/lookTex.ts STUFFS`, `shaders/look.wgsl`; the look's page only, under its
   Weather row, 0 = none). The maintainer, of the white roof on his GPU: "directionally nice but still doesn't have enough "personality / cm^2"". His
   pictures' kept walls and floors are not weathered, but every patch says it was made and used: tie holes, a chipped corner, paint knocked off a
