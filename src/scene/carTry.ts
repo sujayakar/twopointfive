@@ -48,10 +48,10 @@ const MADE = {
     // (a metal's colour IS what it mirrors: lifted, or a deep blue would mirror a tenth of the sky and stand black)
     return metal ? { albedo: [Math.min(0.9, d[0] * 1.6 + 0.02), Math.min(0.9, d[1] * 1.6 + 0.02), Math.min(0.9, d[2] * 1.6 + 0.02)], rough: 0.26, metal: true, stuff: 'carpaint' } : { albedo: d, rough: 0.07, stuff: 'carpaint' };
   },
-  glass: (m: CarMat): CarMat => CAR_FINISH.word === 'was' ? { albedo: m.albedo, rough: 0.07, stuff: 'plain' } : { albedo: [0.07, 0.085, 0.1], rough: 0.05, metal: true, stuff: 'plain' },   // (tinted glass from above is a dark mirror of the sky: a tenth of it)
+  glass: (m: CarMat): CarMat => CAR_FINISH.word === 'was' ? { albedo: m.albedo, rough: 0.07, stuff: 'glass' } : { albedo: [0.07, 0.085, 0.1], rough: 0.05, metal: true, stuff: 'glass' },   // (tinted glass from above is a dark mirror of the sky: a tenth of it)
   trim: (m: CarMat): CarMat => ({ albedo: m.albedo, rough: 0.5, stuff: 'plastic' }),
   hub: (m: CarMat): CarMat => ({ albedo: m.albedo, rough: 0.25, metal: true, stuff: 'steel' }),
-  tyre: (m: CarMat): CarMat => ({ albedo: m.albedo, rough: 0.9, stuff: 'plain' }),
+  tyre: (m: CarMat): CarMat => ({ albedo: m.albedo, rough: 0.9, stuff: 'rubber' }),
 };
 export interface CarFrame { x: number; z: number; yaw: number }
 type Put = (lx: number, lz: number, y0: number, y1: number, hx: number, hz: number, m: CarMat, o?: Partial<Box>, dyaw?: number) => Box;

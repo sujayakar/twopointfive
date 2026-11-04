@@ -7,7 +7,7 @@
 // rounds by it): the particles hash their own serial. The one sound it adds — a case landing — is scheduled off the shot on the CPU (the GPU cannot call
 // back), and is deliberately NOT a hearing event: the report it follows already is one, at the same spot, an order of magnitude louder.
 import { SideMap } from '../math/side';
-import { BoxFlag } from '../scene/boxes';
+import { BoxFlag, type Box, type BoxStuff } from '../scene/boxes';
 import { Vec3, v3 } from '../math/vec';
 import { OFFICE_DATA } from '../scene/level';
 import { gwotSimOf } from '../scene/gwotPalette';
@@ -97,11 +97,66 @@ export function paintStandsFor(albedo: Vec3): Vec3 {
 }
 const PROP_SURF: Record<string, Surf> = { chair: 'fabric', cardboard: 'cardboard', bin: 'metal', plant: 'foliage' };
 
+// ------------------------------------------------------------------ what a hit LOOKS like goes by what the thing says it is made of
+// HITSTUFF. Asked 2026-11-04, of the cars on the look's preview: "shooting metal shouldn't have particle debris, maybe just sparks? shooting glass should make
+// cracks (but maybe not fracture?)", then "for most glass we do want to simulate the fractures -- I think props like cars should be an exception", "since we
+// don't want to model the inside". THE CAUSE WAS NOT THE CARS: what a round has hit is read from the COLOUR of its paint (surfOf above: a palette name where
+// the numbers have one, else how bright it is), so a white car was plasterboard — pale chips and a puff of gypsum — a blue one concrete, its dark glass
+// and its tyres metal. A box can SAY what it is made of (Box.stuff, scene/stuff.ts), and with this on THE PICTURE OF A HIT reads that word first; the colour
+// is asked only of a box that says nothing, or whose word is not one thing to a round (the table below).
+// A RULE OF THE PICTURE, AND OF NOTHING ELSE. The word is the look's: a level's plain file and its look twin say different words of the same box (whoever
+// repaints a box drops its word, stuff.ts), and the two are one simulation. So the word is read only where no number of the game moves:
+//   · what a round knocks out — sparks, chips, dust: GPU particles (impactFx, through hitLook: the one place a hit's picture is worked out);
+//   · the mark where it stopped (marks.ts bulletMark): GLASS THAT IS NOT A PANE — a solid thing that says 'glass', with nothing modelled behind it — takes
+//     the crack the screens have, every round, and stays; a pane (BoxFlag.Glass) is the pane engine's as it was, and fractures;
+//   · the burst a hot zone adds (destruction.ts burst: particles only), and WHICH mark the chaos lane draws where it lays one on a box that says its stuff
+//     (destruction.ts damageDecal: the dent for metal, the shred for cloth, the crack for solid glass, else a chip — one mark either way, for the
+//     run's digest counts them, and the lane's dice and its bucket move as they did).
+// With it on METAL THROWS NO CHIPS, anywhere. NOT read: everything the simulation makes of a hit — whether the chaos lane lays a mark at all, its dice and
+// its puffs into the smoke (destruction.ts round), what a round goes through, what a blast breaks, where a charge may be set (wallpen.ts, wallbreak.ts, wallcharge.ts,
+// furnblast.ts). Those read the paint, as they did. So a white car that says 'carpaint' can still cough the chaos lane's pale puff into the smoke under
+// sustained fire: the simulation hearing a box's word is another change, and needs a level and its look twin to say the same words first.
+// A THING THE WALL ENGINE BREAKS SHOULD NOT SAY 'glass': its wear rides a round's hole (wallwear.ts), and solid glass is given a crack in the hole's place.
+// THE SWITCH: HITSTUFF.on — ON in the page (`?hitstuff=0` = by the colour, as it was), OFF in the module and on the frozen stand (FROZEN_HOLDS;
+// TPS_HITSTUFF=1 raises it there); in the registry (game/knobs.ts) and the journal. On or off the run is the same run by digest.
+// CHECK: tools/qa/hitstuff-check.ts (HITSTUFF_BREAK=1 must fail), both stands. Never seen on a GPU.
+export const HITSTUFF = { on: false };
+/** what each stuff a box may say is to a round — only the stuffs that are ONE thing to a round: 'paint' and 'enamel' are a coat on a door, a drum, a pipe
+ *  or a line on a floor, 'plain' and 'waits' say nothing, and the ground (earth, gravel) is what its paint already says */
+const STUFF_SURF: Partial<Record<BoxStuff, Surf>> = {
+  carpaint: 'metal', steel: 'metal', metal: 'metal', sheet: 'metal', brushed: 'metal', louvre: 'metal',
+  glass: 'glass', rubber: 'plastic', plastic: 'plastic', wood: 'wood', veneer: 'wood', fabric: 'fabric', cloth: 'fabric', carpet: 'carpet',
+  plaster: 'drywall', skim: 'drywall', stucco: 'concrete', 'mud wall': 'concrete', block: 'concrete', 'gloss block': 'concrete', 'board concrete': 'concrete', 'cast panel': 'concrete', slab: 'concrete', paver: 'concrete',
+};
+/** the words the picture of a hit reads (the check holds each to be a stuff a box may say) */
+export const HIT_STUFFS: readonly string[] = Object.keys(STUFF_SURF);
+/** what `b` SAYS it is, for the picture of a hit, or undefined: the rule is off, it says nothing, its word is not one thing to a round, or it is a PANE
+ *  (BoxFlag.Glass: the pane engine's, whatever it says) — then what the hit was always read by is asked (surfOf). (A word is looked up as its own key only: a file opened leniently can carry any string.) */
+export function saidSurf(b: Box | null | undefined): Surf | undefined { return HITSTUFF.on && b && b.stuff !== undefined && (b.flags & BoxFlag.Glass) === 0 && Object.hasOwn(STUFF_SURF, b.stuff) ? STUFF_SURF[b.stuff] : undefined; }
+/** a solid thing of glass that is not a pane, by its own word: a round cracks it and it stays (a pane is the pane engine's) */
+export function solidGlass(b: Box | null | undefined): boolean { return saidSurf(b) === 'glass'; }
+/** the chips a round knocks out of solid glass that only cracks: a pinch (a pane that breaks throws the row's nine, and the pane engine its shards) */
+export const SOLID_GLASS_CHIPS = 3;
+/** the crack a round leaves in it: the radius a dead screen's has (destruction.ts damageDecal), a pistol's and a rifle's, and a pellet's of a shell (a
+ *  shell lays one a pellet, as it lays a hole a pellet: nine small stars, not nine large ones) */
+export const SOLID_GLASS_CRACK = { pistol: 0.085, rifle: 0.11, pellet: 0.035, strength: 0.9 };
+/** WHAT A HIT LOOKS LIKE: the surface a round's sparks, chips and dust are chosen by, the colour they are tinted from, and whether it is solid glass —
+ *  for a prop's part (`box`: the very part, where the caller knows it), a door's leaf, a static, or nothing but a normal. The box's own word first (the
+ *  rule on: `said`), then what the hit has always been read by: a prop's kind, a leaf as wood, a pane as glass, a static's paint. */
+export function hitLook(g: Game, hit: { index?: number; prop?: Prop; box?: Box }): { surf: Surf; albedo: Vec3; solid: boolean; said: boolean } {
+  let albedo: Vec3 = [0.5, 0.5, 0.5], surf: Surf = 'concrete', b: Box | undefined;
+  if (hit.prop) { b = hit.box ?? hit.prop.boxes[0]; surf = PROP_SURF[hit.prop.def.kind] ?? 'plastic'; albedo = hit.prop.boxes[0]?.albedo ?? albedo; }
+  else if (hit.index !== undefined && hit.index >= 1e6) { b = g.col.dynamicBoxes[hit.index - 1e6]; surf = 'wood'; albedo = b?.albedo ?? [0.42, 0.3, 0.19]; }
+  else if (hit.index !== undefined && g.col.boxes[hit.index]) { b = g.col.boxes[hit.index]; albedo = b.albedo; surf = (b.flags & BoxFlag.Glass) ? 'glass' : surfOf(albedo); }   // (a pane / the solid-glass bottle: glass chips, no gypsum puff — review 08-12)
+  const said = saidSurf(b);
+  return said ? { surf: said, albedo: b!.albedo, solid: said === 'glass', said: true } : { surf, albedo, solid: false, said: false };   // (a part that speaks is tinted by its own paint)
+}
+
 // ------------------------------------------------------------------ recipes
 /** what one round knocks out of each surface: sparks (emissive), chips (lit, tinted), dust puffs (lit) — counts for a pistol round; a rifle's ×1.4 */
 interface ImpactRecipe { sparks: number; chips: number; dust: number; chipTint: Vec3 | 'albedo' | 'pale'; dustTint: Vec3 | 'albedo'; sparkSpeed?: number; chipSize?: number }
 const IMPACT: Record<Surf, ImpactRecipe> = {
-  metal:     { sparks: 16, chips: 2,  dust: 0, chipTint: [0.08, 0.08, 0.09], dustTint: [0.5, 0.5, 0.5], sparkSpeed: 6, chipSize: 0.005 },
+  metal:     { sparks: 16, chips: 2,  dust: 0, chipTint: [0.08, 0.08, 0.09], dustTint: [0.5, 0.5, 0.5], sparkSpeed: 6, chipSize: 0.005 },   // (chips: none with HITSTUFF on — impactFx)
   plastic:   { sparks: 6,  chips: 5,  dust: 1, chipTint: 'albedo', dustTint: [0.5, 0.5, 0.5] },
   glass:     { sparks: 4,  chips: 9,  dust: 0, chipTint: [0.1, 0.11, 0.12], dustTint: [0.5, 0.5, 0.5], chipSize: 0.006 },
   wood:      { sparks: 0,  chips: 12, dust: 3, chipTint: [0.66, 0.52, 0.34], dustTint: [0.62, 0.52, 0.4] },   // fresh wood under the finish is pale
@@ -131,21 +186,17 @@ export const PFX = {
 // ------------------------------------------------------------------ sites
 /** A round stopped in something solid at `hitP` travelling `dir`: what it knocks out, by what it hit — a static / door leaf (`index` as StaticCollision.raycast
  *  reports it: ≥ 1e6 = a leaf), loose furniture (`prop`), or just a normal. Sparks off metal, pale chips + a puff off plaster, splinters off wood… */
-export function impactFx(g: Game, hitP: Vec3, dir: Vec3, hit: { n: Vec3; index?: number; prop?: Prop }, def: WeaponDef) {
+export function impactFx(g: Game, hitP: Vec3, dir: Vec3, hit: { n: Vec3; index?: number; prop?: Prop; box?: Box }, def: WeaponDef) {
   const P = gpuFx(g); if (!P) return;
-  let albedo: Vec3 = [0.5, 0.5, 0.5]; let surf: Surf;
-  if (hit.prop) { surf = PROP_SURF[hit.prop.def.kind] ?? 'plastic'; albedo = hit.prop.boxes[0]?.albedo ?? albedo; }
-  else if (hit.index !== undefined && hit.index >= 1e6) { surf = 'wood'; albedo = g.col.dynamicBoxes[hit.index - 1e6]?.albedo ?? [0.42, 0.3, 0.19]; }
-  else if (hit.index !== undefined && g.col.boxes[hit.index]) { const b = g.col.boxes[hit.index]; albedo = b.albedo; surf = (b.flags & BoxFlag.Glass) ? 'glass' : surfOf(albedo); }   // (a pane / the solid-glass bottle: glass chips, no gypsum puff — review 08-12)
-  else surf = 'concrete';
-  const R = IMPACT[surf]; const k = def.cls === 'pistol' ? 1 : PFX.impactScaleRifle;
+  const { surf, albedo, solid } = hitLook(g, hit);
+  const R = IMPACT[surf], chips = HITSTUFF.on && surf === 'metal' ? 0 : solid ? SOLID_GLASS_CHIPS : R.chips; const k = def.cls === 'pistol' ? 1 : PFX.impactScaleRifle;
   const n = v3.normalize(hit.n); const dn = v3.dot(dir, n);
   const refl = v3.normalize(v3.sub(dir, v3.scale(n, 2 * dn)));               // the ricochet direction
   const at = v3.mad(hitP, n, 0.015);                                           // a hair proud of the surface (the trace grid would eat anything born inside it)
   if (R.sparks > 0) P.emit('spark', at, v3.normalize(v3.add(v3.scale(refl, 0.6), v3.scale(n, 0.4))), Math.round(R.sparks * k), { speed: R.sparkSpeed ?? 5, speedJit: 0.6, spread: PFX.sparkSpread, life: PFX.sparkLife, lifeJit: 0.4, size: PFX.sparkSize });
-  if (R.chips > 0) {
+  if (chips > 0) {
     const tint: Vec3 = R.chipTint === 'albedo' ? albedo : R.chipTint === 'pale' ? v3.lerp(albedo, [0.86, 0.85, 0.82], 0.55) : R.chipTint;
-    P.emit('debris', at, v3.normalize(v3.add(n, v3.scale(refl, 0.3))), Math.round(R.chips * k), { speed: PFX.chipSpeed, speedJit: 0.7, spread: PFX.chipSpread, life: PFX.chipLife, lifeJit: 0.3, size: R.chipSize ?? PFX.chipSize, sizeJit: 0.5, color: tint });
+    P.emit('debris', at, v3.normalize(v3.add(n, v3.scale(refl, 0.3))), Math.round(chips * k), { speed: PFX.chipSpeed, speedJit: 0.7, spread: PFX.chipSpread, life: PFX.chipLife, lifeJit: 0.3, size: R.chipSize ?? PFX.chipSize, sizeJit: 0.5, color: tint });
   }
   if (R.dust > 0) {
     const tint: Vec3 = R.dustTint === 'albedo' ? v3.lerp(albedo, [0.5, 0.5, 0.5], 0.5) : R.dustTint;

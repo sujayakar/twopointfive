@@ -2301,7 +2301,8 @@ interleaved and filtered to their quiet minimum, and a row whose p75 sits far ab
   the maintainer, 11-04, of the showroom's desk and chair: "nicer materials on the chair and table"). A paint's NAME cannot part a desk from a
   bench (both `wood`) or a car body from a partition (a level file names a box by its colour), so the PIECE says it: `lookWordOf` asks the box's
   own word first, then its paint's name, then its colour. One of the look's materials that has a number (`lookStuffOf`: the stone and brick
-  under a mud wall are refused), `plain`, or `waits`. PICTURE ONLY: no rule of the game reads it, a level's fingerprint does not, and
+  under a mud wall are refused), `plain`, `waits`, or one of the two the look draws plain and the picture of a round's hit reads, `glass` (solid, not a pane) and `rubber`
+  (`game/particleFx.ts HITSTUFF`, `docs/agents/destruction.md`). PICTURE ONLY: no rule of the game reads it, a level's fingerprint does not, and
   `lived-check` reads a base's boxes with today's words. `?words=0` = the boxes' own words off and the names on (the picture before this
   slice); `?names=0` puts both off. Written in the file only where it was said (after `metal`, before `flags`).
   THE RULE: A WORD BELONGS TO THE PAINT IT WAS SAID WITH (`stuff.ts saidFor`). (1) A piece says a word for its OWN paints only: the kit's desk
