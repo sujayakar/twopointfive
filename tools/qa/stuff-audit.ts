@@ -1,5 +1,6 @@
 // WHAT EVERY BOX OF EVERY LEVEL IS MADE OF, BEFORE AND AFTER (src/scene/stuff.ts: a thing is made of what it says).
-//   bun run tools/qa/stuff-audit.ts                         every levels/*.json: as HEAD has it against the working tree
+//   bun run tools/qa/stuff-audit.ts                         every levels/*.json: as HEAD has it against the working tree (once HEAD's files say their words this
+//                                                           compares words with words: give --before a ref from before the rule to see what the colour rule drew)
 //   bun run tools/qa/stuff-audit.ts --before <ref|dir>      "before" = that commit's files (git show), or the files of a folder
 //   bun run tools/qa/stuff-audit.ts --after <dir>           "after" = the files of a folder (a generator's fresh output, say)
 //   bun run tools/qa/stuff-audit.ts barracks compound-gwot  only those
@@ -35,6 +36,7 @@ const keysOf = (d: D): string[] => [...paintUsers(d)].map(({ o, where, kind }) =
 const colourOf = (d: D, o: { material?: string; albedo?: number[] }): string => { const m = rowOf(d, o); return m !== undefined ? m : `[${o.albedo!.join(', ')}]`; };
 
 const BY = ['own', 'name', 'colour', 'darkened', 'none'] as const;
+let oldFiles = 0;
 const tot = { files: 0, users: 0, same: 0, lost: 0, moved: 0, gained: 0, unmatched: 0, by: Object.fromEntries(BY.map(b => [b, 0])) as Record<string, number>, said: 0, rowSaid: 0, plain: 0 };
 const kinds = new Map<string, { n: number; files: Map<string, number>; eg: string[] }>();
 const note = (kind: string, f: string, eg: string) => { const k = kinds.get(kind) ?? { n: 0, files: new Map<string, number>(), eg: [] }, name = f.replace('.json', ''); k.n++; k.files.set(name, (k.files.get(name) ?? 0) + 1); if (k.eg.length < LIST) k.eg.push(`${f.replace('.json', '')} ${eg}`); kinds.set(kind, k); };
@@ -43,7 +45,7 @@ console.log(`${'level'.padEnd(26)}${'boxes'.padStart(7)}  before by: ${BY.map(b 
 for (const f of names) {
   const t0 = textBefore(f); if (t0 === null) { console.log(`${f.replace('.json', '').padEnd(26)}  (not there before)`); continue; }
   const d0 = parseLevelData(t0) as D, d1 = parseLevelData(readFileSync(`${AFTER}/${f}`, 'utf8')) as D;
-  const old = fromBefore(d0), w0 = old ? wasAll(d0) : nowAll(d0), w1 = nowAll(d1), u0 = [...paintUsers(d0)], u1 = [...paintUsers(d1)];
+  const old = fromBefore(d0); if (old) oldFiles++; const w0 = old ? wasAll(d0) : nowAll(d0), w1 = nowAll(d1), u0 = [...paintUsers(d0)], u1 = [...paintUsers(d1)];
   // the same boxes in the same places, or matched by name
   let pair: (number | undefined)[];
   if (u0.length === u1.length && u0.every((u, i) => u.where === u1[i].where)) pair = u1.map((_, i) => i);
@@ -64,5 +66,7 @@ for (const f of names) {
 console.log(`${'ALL'.padEnd(26)}${String(tot.users).padStart(7)}             ${BY.map(b => String(tot.by[b]).padStart(8)).join('')}   ${String(tot.same).padStart(6)}${String(tot.lost).padStart(6)}${String(tot.moved).padStart(6)}${String(tot.gained).padStart(7)}          ${String(tot.said).padStart(6)}${String(tot.rowSaid).padStart(7)}${String(tot.plain).padStart(7)}`);
 if (kinds.size) { console.log(`\nwhat changed, by kind:`); for (const [k, v] of [...kinds].sort((a, b) => b[1].n - a[1].n)) console.log(`  ${String(v.n).padStart(5)}  ${k}   [${[...v.files].map(([f, n]) => n > 1 ? `${f} ×${n}` : f).join(', ')}]${v.eg.length ? `\n         ${v.eg.join('\n         ')}` : ''}`); }
 const bad = tot.lost + tot.moved + (STRICT ? tot.gained : 0);
-console.log(`\n=== stuff-audit: ${tot.files} files, ${tot.users} boxes and parts · ${tot.same} drawn as before · ${tot.lost} lost their material · ${tot.moved} drawn as another · ${tot.gained} were plain and are a material now${tot.unmatched ? ` · ${tot.unmatched} not there before` : ''} — ${bad ? 'CHANGES above' : 'NOTHING THAT HAD A MATERIAL MOVED'} ===`);
+// (what "before" was: a side whose files already say their words is read by today's rule, so the count is words against words and says nothing of the colour rule)
+const against = oldFiles === tot.files ? 'against what the colour rule drew' : oldFiles === 0 ? 'WORDS AGAINST WORDS: the before side already says what its boxes are made of, so this does NOT compare with the old colour rule (give --before a ref from before it)' : `against the colour rule for ${oldFiles} files and words against words for the other ${tot.files - oldFiles}`;
+console.log(`\n=== stuff-audit: ${tot.files} files, ${tot.users} boxes and parts · ${tot.same} drawn as before · ${tot.lost} lost their material · ${tot.moved} drawn as another · ${tot.gained} were plain and are a material now${tot.unmatched ? ` · ${tot.unmatched} not there before` : ''} — ${bad ? 'CHANGES above' : 'no box that had a material lost or moved it'}, ${against} ===`);
 process.exit(bad ? 1 : 0);
