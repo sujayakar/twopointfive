@@ -42,6 +42,8 @@ export const MAX_GLASS = 32;
  *  with the round's GPU half up it is not sent (BoxWorld.packBox). */
 export const BOX_ROUND_BIT = 8;
 
+/** what a box may say it is made of: anything the table of names may, but 'mixed' (that is a word about a NAME) */
+export type BoxStuff = Exclude<import('./stuff').Stuff, 'mixed'>;
 export interface Box {
   c: Vec3;            // center
   h: Vec3;            // half extents (local axes)
@@ -68,6 +70,11 @@ export interface Box {
    *  material / per box in the level file (levelData.ts MaterialData.rough / metal, BoxData.rough / metal); the three below reach the GPU as ONE float in boxMat row 1's w
    *  (matWord, decoded by common.wgsl boxFinish) — the g-buffer writes roughness / metalness per pixel from it (+ the detail layer), reflect.wgsl reads the anisotropy. */
   rough?: number; metal?: boolean;
+  /** WHAT THIS BOX IS MADE OF, said by whoever made it (scene/stuff.ts): a material of the look, 'plain' or 'waits'. A paint's NAME says it for most boxes
+   *  (the level's rows); a box says its own where it wears a paint for the colour alone (a car's body in the partition's blue) or a paint written as numbers.
+   *  The look reads it before any name or colour (render/gbuffer.ts lookWordOf); nothing in the simulation does. Authored (BoxData.stuff), or set by the code
+   *  that makes the box (a prop's part, a door's leaf). Absent = the paint's name, then its colour. */
+  stuff?: BoxStuff;
   /** anisotropic finish — the lobe stretched along the view direction so a lamp mirrors as a long streak, not a disc: the wet lot's standing water
    *  (game/weather.ts sets it with the rain; runtime only, never authored) */
   aniso?: boolean;
@@ -149,7 +156,7 @@ const lookKeyed = (b: Box): boolean => b.dress === true || (b.mkey !== undefined
  *  (tools/qa/boxshape-check.ts counts them). */
 export function boxOf(c: Vec3, h: Vec3, yaw: number, albedo: Vec3, emissive: Vec3, flags: number, owner: number, rot?: Quat, name?: string): Box {
   return { yaw, albedo, emissive, flags, owner, cutHeight: 1e6, c, h, rot, name, mkey: undefined, dc: undefined, dh: undefined, rough: undefined, metal: undefined, aniso: undefined,
-    marks: undefined, markGain: undefined, fogEmit: undefined, fogMark: undefined, wetK: undefined, cut: undefined, cutCore: undefined, cutGlass: undefined, cutRound: undefined, cutArc: undefined, cutOld: undefined, round: undefined, was: undefined, shape: undefined, shaped: undefined, piece: undefined, of: undefined, dress: undefined,
+    marks: undefined, markGain: undefined, fogEmit: undefined, fogMark: undefined, wetK: undefined, cut: undefined, cutCore: undefined, cutGlass: undefined, cutRound: undefined, cutArc: undefined, cutOld: undefined, round: undefined, was: undefined, shape: undefined, shaped: undefined, piece: undefined, of: undefined, dress: undefined, stuff: undefined,
   } satisfies { [K in keyof Required<Box>]: Box[K] };   // (a field added to Box and not here does not typecheck)
 }
 export function makeBox(p: Partial<Box> & { c: Vec3; h: Vec3 }): Box {
@@ -162,7 +169,7 @@ export function makeBox(p: Partial<Box> & { c: Vec3; h: Vec3 }): Box {
 export function copyBox(b: Box): Box {
   return { yaw: b.yaw, albedo: b.albedo, emissive: b.emissive, flags: b.flags, owner: b.owner, cutHeight: b.cutHeight, c: b.c, h: b.h, rot: b.rot, name: b.name, mkey: b.mkey, dc: b.dc, dh: b.dh,
     rough: b.rough, metal: b.metal, aniso: b.aniso, marks: b.marks, markGain: b.markGain, fogEmit: b.fogEmit, fogMark: b.fogMark, wetK: b.wetK, cut: b.cut, cutCore: b.cutCore, cutGlass: b.cutGlass,
-    cutRound: b.cutRound, cutArc: b.cutArc, cutOld: b.cutOld, round: b.round, was: b.was, shape: b.shape, shaped: b.shaped, piece: b.piece, of: b.of, dress: b.dress,
+    cutRound: b.cutRound, cutArc: b.cutArc, cutOld: b.cutOld, round: b.round, was: b.was, shape: b.shape, shaped: b.shaped, piece: b.piece, of: b.of, dress: b.dress, stuff: b.stuff,
   } satisfies { [K in keyof Required<Box>]: Box[K] };
 }
 
