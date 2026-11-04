@@ -1544,6 +1544,16 @@ interleaved and filtered to their quiet minimum, and a row whose p75 sits far ab
   when a cabinet stood end-on to it, and depended on which way a square box was described. `WEARFOOT_BREAK=1` (the band as every other page has it) fails the
   probe's line. On the dressed yard's map 31 % of the band's texels are gone, on the crossing 30 %; 4 ms a level, 14 at most (2000 boxes at random yaws:
   about 0.15 s). Seen as a map; the still drawn was of try (3); never seen on a GPU.
+- **OLD PAINT IS CHIPPED, NOT BLOTCHED** (11-04; `render/lookTex.ts paint`, the look's layer for drums, gates, painted crates, a stall's sheet, a painted door; the
+  look's page only). The maintainer on a dressed yard at midday, of dark islands on a green sheet, blue crates and a green door: "splotches on here look a bit
+  weird, overdone". The tile peeled in ragged patches reaching 36 cm (5 % of it bare) with a pale rim; at the game's two centimetres a pixel a patch a hand
+  across is a blot on a crate's lid. Now: chips, the shards of a scattered lattice (1 to 3 cm), gathered in the few places that took the knocks, and here and
+  there a flake up to 10 cm with a lifted rim; 1.1 % bare. Whether a cell has a chip is asked once, where the cell's own point is (asked at each texel, a
+  chip that straddled a worn place's edge was sliced along it). The chalking, the dents and the long scuffs are as they were. AND EVERY BOX HAS ITS OWN PLACE
+  ON ITS MAP: `look.wgsl` shifted a box's own map (wood, sheet, cloth, metal, paint, anything that moves) by its number modulo 7, so two lids in a yard wore
+  one blot; it is the whole number now (91 places; two unkeyed movers of one size still share one: `gbuffer.ts lookWordOf`). `lookmaps-check.ts` holds the
+  tile (the widest bare patch reaches 12 cm at most, 0.2 to 2 % bare; the old tile fails that line). Not changed: what is under the paint is still a
+  multiplier of the paint (dark and warm), so it cannot be rust on blue. Seen as a tile and in a software still; never seen on a GPU.
 - **A WET COAT DOES NOT MIRROR A LIGHT IT CANNOT SEE** (11-01; `composite.wgsl wetCoatSpec`, `WET_HIDDEN` 8). The maintainer: "still lots of fireflies/sparkles
   in that room", "some on the shadowed side too", "lots of temporal instability on the guy's back too". The sheen scaled every light's lobe by its class's shadowed
   over unshadowed light; in a shut room by day the hidden sun is the whole unshadowed sum, so its lobe was drawn at the bulb's strength. A light whose
