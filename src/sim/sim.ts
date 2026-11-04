@@ -18,7 +18,7 @@ import { mathsFrom, EXACT, type Maths } from '../math/exact';
 import { kahanN } from '../math/hyp';
 
 /** the version of the exports this file was written against (rust/sim/src/lib.rs ABI) */
-export const SIM_ABI = 15;
+export const SIM_ABI = 16;
 
 /** the module's exports, by name (rust/sim/src/lib.rs: plain C functions, `<module>_<thing>`) */
 export interface SimExports {
@@ -57,6 +57,9 @@ export interface SimExports {
   pose_run(g: number, at: number, root: number): number; pose_parent_rot(g: number, at: number, i: number): number;
   pose_turn(g: number, at: number, nodes: number, i: number, how: number): number;
   pose_ik(g: number, at: number, a: number, b: number, c: number, flags: number): number;
+  knob_addr(table: number): number; knob_len(table: number): number;
+  layer_mv_trunk(g: number, at: number): number; layer_long_body(g: number, at: number): number; layer_life(g: number, at: number): number; layer_mv_pre(g: number, at: number): number;
+  layer_stance_body(g: number, at: number): number; layer_stand_pose(g: number, at: number, atB: number, atC: number): number; layer_crouch_pose(g: number, at: number, atB: number, atC: number): number; layer_soft_knees(g: number, at: number): number; layer_run_plant(g: number, at: number): number; layer_sneak_body(g: number, at: number): number; layer_steady(g: number, at: number, atC: number): number; layer_creep_body(g: number, at: number): number; layer_kick_body(g: number, at: number, atC: number): number; layer_toes_up(g: number, at: number): number; layer_wall_body(g: number, at: number, atC: number, atB: number, atRest: number): number; layer_watch_slip(g: number, at: number): number; layer_watch_look(g: number, at: number): number; layer_mv_post_body(g: number, at: number): number; layer_turn_weigh(): number; layer_lean_body(g: number, at: number): number; layer_gaze_keep(g: number, at: number): number; layer_sneak_arms(g: number, at: number, atB: number): number; layer_carry_arms(g: number, at: number, atB: number, atAim: number): number; layer_wall_arms(g: number, at: number, atB: number, atRest: number): number; layer_act_pose(g: number, at: number, atB: number, atRest: number): number; layer_wound_body(g: number, at: number, atB: number, atRest: number): number; layer_wound_limbs(g: number, at: number, atB: number, atRest: number): number; layer_mv_post_arms(g: number, at: number, atB: number, atRest: number): number; layer_watch_arm(g: number, at: number, atB: number, atRest: number): number; layer_creep_arms(g: number, at: number, atB: number, atRest: number): number; layer_clutch_arm(g: number, at: number, atB: number, atRest: number): number; layer_bound_arms(g: number, at: number, atB: number, atRest: number): number; layer_reload_arm(g: number, at: number, atB: number, atRest: number): number; layer_pistol_reload_arm(g: number, at: number, atB: number, atRest: number): number; layer_hands_pass(g: number, at: number): number; layer_door_layer(g: number, at: number, atB: number, atRest: number): number; layer_work_layer(g: number, at: number, atB: number, atRest: number): number; layer_ready_layer(g: number, at: number, atB: number, atRest: number): number; layer_kit_layer(g: number, at: number, atB: number, atRest: number): number; layer_taken_layer(g: number, at: number): number; layer_blow_legs(g: number, at: number): number; layer_blow_trunk(g: number, at: number): number; layer_blow_arms(g: number, at: number, atB: number, atRest: number): number; layer_knife_pose(g: number, at: number, atB: number, atRest: number): number; layer_cable_pose(g: number, at: number, atB: number, atRest: number): number; layer_stealth_layer(g: number, at: number, atB: number, atRest: number): number; layer_swap_pose(g: number, at: number, atB: number, atRest: number, atSw: number): number; layer_lockpick_layer(g: number, at: number, atB: number, atRest: number): number; layer_haul_layer(g: number, at: number, atB: number, atRest: number): number; layer_torch_up(g: number, at: number, atB: number): number; layer_radio_pose(g: number, at: number, atB: number, atRest: number): number; layer_smoke_pose(g: number, at: number, atB: number, atRest: number): number; layer_nv_pose(g: number, at: number, atB: number, atRest: number): number; layer_signal_layer(g: number, at: number, atB: number, atRest: number): number; layer_tell_layer(g: number, at: number, atB: number, atRest: number): number; layer_long_arms(g: number, at: number, atB: number, atAim: number, atRest: number): number;
   /** skeleton.ts sampleClip: clip `clip` (its number from clip_end) at time t into the pose, whose own count of nodes is `nodes` */
   pose_sample(g: number, at: number, nodes: number, clip: number, t: number, looped: number): number;
   // the clips (rust/sim/src/clips.rs): a character file's animations, copied in once. clip_begin (0 = no room) · clip_track for each track → where its times
@@ -123,7 +126,7 @@ export interface SimExports {
 export const SIM_EXPORTS: readonly (keyof SimExports)[] = ['memory', 'sim_abi', 'sim_scratch', 'sim_scratch_len', 'maths_sin', 'maths_cos', 'maths_tan', 'maths_asin', 'maths_acos', 'maths_atan', 'maths_atan2',
   'maths_exp', 'maths_log', 'maths_log2', 'maths_log10', 'maths_pow', 'maths_tanh', 'maths_hypot2', 'maths_hypot3', 'maths_hypot4', 'maths_hypot_n',
   'world_addr', 'world_cap', 'world_shape', 'world_leaves', 'world_things', 'lines_blocked', 'lines_leaves', 'lines_ray', 'lines_ray_things', 'collide_circle', 'collide_touches', 'collide_gather', 'fog_eyes', 'fog_see',
-  'pose_addr', 'pose_rig', 'pose_blend', 'pose_run', 'pose_parent_rot', 'pose_turn', 'pose_ik', 'pose_sample', 'clip_begin', 'clip_track', 'clip_end',
+  'pose_addr', 'pose_rig', 'pose_blend', 'pose_run', 'pose_parent_rot', 'pose_turn', 'pose_ik', 'pose_sample', 'clip_begin', 'clip_track', 'clip_end', 'knob_addr', 'knob_len', 'layer_mv_trunk', 'layer_long_body', 'layer_life', 'layer_mv_pre', 'layer_stance_body', 'layer_stand_pose', 'layer_crouch_pose', 'layer_soft_knees', 'layer_run_plant', 'layer_sneak_body', 'layer_steady', 'layer_creep_body', 'layer_kick_body', 'layer_toes_up', 'layer_wall_body', 'layer_watch_slip', 'layer_watch_look', 'layer_mv_post_body', 'layer_turn_weigh', 'layer_lean_body', 'layer_gaze_keep', 'layer_sneak_arms', 'layer_carry_arms', 'layer_wall_arms', 'layer_act_pose', 'layer_wound_body', 'layer_wound_limbs', 'layer_long_arms', 'layer_mv_post_arms', 'layer_watch_arm', 'layer_creep_arms', 'layer_clutch_arm', 'layer_bound_arms', 'layer_reload_arm', 'layer_pistol_reload_arm', 'layer_hands_pass', 'layer_door_layer', 'layer_work_layer', 'layer_ready_layer', 'layer_kit_layer', 'layer_taken_layer', 'layer_blow_legs', 'layer_blow_trunk', 'layer_blow_arms', 'layer_knife_pose', 'layer_cable_pose', 'layer_stealth_layer', 'layer_swap_pose', 'layer_lockpick_layer', 'layer_haul_layer', 'layer_torch_up', 'layer_radio_pose', 'layer_smoke_pose', 'layer_nv_pose', 'layer_signal_layer', 'layer_tell_layer',
   'sight_contact', 'light_lamps', 'light_cap', 'light_estimate', 'smoke_blobs', 'smoke_cap', 'smoke_trans', 'nav_addr', 'nav_cap', 'nav_path', 'hear_direct', 'hear_route',
   'state_addr', 'state_len', 'state_games', 'state_layout', 'state_parts', 'state_part', 'dice_roll',
   'grid_reset', 'grid_clear', 'grid_dirty', 'grid_step', 'grid_trans',
@@ -194,7 +197,7 @@ export function mathsOfRust(): Maths {
 
 // ---- WHICH SYSTEMS RUN IN RUST
 let mathsOn = false, linesOn = false, circlesOn = false, fogOn = false, posesOn = false, diceOn = false;
-let sightOn = false, lightOn = false, smokeOn = false, soundOn = false, pathsOn = false;
+let sightOn = false, lightOn = false, smokeOn = false, soundOn = false, pathsOn = false, walkOn = false;
 let doorsOn = false, fallsOn = false, propsOn = false, slabsOn = false, itemsOn = false;
 /** A row a system: on = that system of the update runs in the Rust module, off = in TypeScript as it always did. THE TWO ARE THE SAME GAME TO THE BIT — that is
  *  what lets a system move at all, and tools/qa/rust-check.ts holds each row to it (whole missions played both ways, every tick's raw bits). So a row is never
@@ -223,6 +226,10 @@ let doorsOn = false, fallsOn = false, propsOn = false, slabsOn = false, itemsOn 
  *          the module's memory (src/sim/state.ts) and rolled there. THE FIRST STATE OF THE GAME THAT LIVES IN THE MODULE: it is what the rollback snapshot,
  *          the saves in memory and the state's word were taught to carry a block for. A proof like `maths` (a draw from TypeScript then costs a call), and the
  *          die has to be there before any rule that rolls it is. A game takes the row as its next tick opens. ?rustdice / TPS_RUSTDICE=1 raise it.
+ *  walk    the animator's layers (game/character.ts CharacterAnimator: what makes a blend of clips a man who leans into his walk, breathes, keeps his soles
+ *          where he put them, flinches, holds a wall), a layer at a time (rust/sim/src/layers.rs): each asked once on the pose where it lives, so it needs
+ *          `poses` at home and the game's own maths; the TypeScript method stays behind the row as `<name>Own`. Not yet: the two holds, the big tools, the throw, and the update itself.
+ *          ?rustwalk / TPS_RUSTWALK=1 raise it.
  *
  *  THE SENSES, a row each (asked through src/scene/collision.ts; every one inside a tick and where the game's own maths stand, since each works its lengths out
  *  in the module):
@@ -280,6 +287,8 @@ export const RUST = {
   set doors(v: boolean) { doorsOn = !!v && !simWhyNot(); },
   get falls(): boolean { return fallsOn; },
   set falls(v: boolean) { fallsOn = !!v && !simWhyNot(); },
+  get walk(): boolean { return walkOn; },
+  set walk(v: boolean) { walkOn = !!v && !simWhyNot(); },
   get props(): boolean { return propsOn; },
   set props(v: boolean) { propsOn = !!v && !simWhyNot(); },
   get slabs(): boolean { return slabsOn; },
@@ -288,7 +297,7 @@ export const RUST = {
   set items(v: boolean) { itemsOn = !!v && !simWhyNot(); },
 };
 /** the rows that work their lengths and angles out in the module, and so answer only where the game's own maths stand in Math's place (EXACT.on) */
-const OWN_MATHS: readonly string[] = ['maths', 'fog', 'poses', 'sight', 'light', 'smoke', 'sound', 'paths', 'doors', 'props', 'slabs', 'items'];
+const OWN_MATHS: readonly string[] = ['maths', 'fog', 'poses', 'sight', 'light', 'smoke', 'sound', 'paths', 'doors', 'walk', 'props', 'slabs', 'items'];
 /** the rows by name, for what treats them all alike: the page's address (?rust<row>), the harness's word (TPS_RUST<ROW>=1), a recording's own (journal.ts) */
 export const rustRows = (): string[] => Object.keys(RUST);
 export function rustRow(row: string, on: boolean): void { if (rustRows().includes(row)) (RUST as Record<string, boolean>)[row] = on; }

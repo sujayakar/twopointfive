@@ -25,7 +25,7 @@ pub struct Bench {
     pub rot: [f64; MAX_NODES * 4],
     pub pos: [f64; MAX_NODES * 3],
     /// a question's own numbers, and its answer where that is a few doubles
-    pub args: [f64; 16],
+    pub args: [f64; ARGS],
     pub pose: [S; POSES * MAX_NODES * NODE],
     pub mask: [S; MAX_NODES],
     /// the rig: every node's parent (−1 = none), and the nodes parents first
@@ -36,7 +36,7 @@ pub struct Bench {
 static mut BENCH: Bench = Bench {
     rot: [0.0; MAX_NODES * 4],
     pos: [0.0; MAX_NODES * 3],
-    args: [0.0; 16],
+    args: [0.0; ARGS],
     pose: [S::ZERO; POSES * MAX_NODES * NODE],
     mask: [S::ZERO; MAX_NODES],
     parent: [0; MAX_NODES],
@@ -88,6 +88,10 @@ fn clamp(x: f64, a: f64, b: f64) -> f64 {
 fn abs(x: f64) -> f64 {
     f64::from_bits(x.to_bits() & 0x7fff_ffff_ffff_ffff)
 }
+
+/// how many doubles a question's own numbers may be (the IK's eleven; a layer's numbers, the state it keeps between ticks, the hand pass's columns and a
+/// path of keys handed to it: layers.rs)
+pub const ARGS: usize = 600;
 
 /// A RIG AS A FUNCTION SEES IT
 pub struct Rig<'a> {
@@ -215,6 +219,10 @@ pub(crate) fn store_unit(d: &mut [S], o: usize, x: f64, y: f64, z: f64, w: f64) 
     put(d, o + 1, y / l);
     put(d, o + 2, z / l);
     put(d, o + 3, w / l);
+}
+/// Pose.setRot of a rotation made unit (quat.normalize): node i's local rotation
+pub fn set_unit(d: &mut [S], i: usize, q: &[f64; 4]) {
+    store_unit(d, i * NODE + 3, q[0], q[1], q[2], q[3]);
 }
 /// skeleton.ts rotateLocal: local ← local · q
 pub fn rotate_local(d: &mut [S], i: usize, q: &[f64; 4]) {
@@ -463,6 +471,42 @@ macro_rules! poses_of {
         }
     };
 }
+/// A LAYER'S WAY IN (layers.rs): the singles of the pose at `at` (of game `g`'s pool, or of the bench), the rig on the bench and its count of nodes, handed to
+/// `f` — or None where a question would answer false
+pub fn with_pose<R>(g: usize, at: usize, f: impl FnOnce(&mut [S], &Rig, usize, &mut Fk) -> R) -> Option<R> {
+    let b = bench();
+    let (n, rig) = rig_of!(b);
+    let s = start(g, at, n)?;
+    let mut fk = Fk { rot: &mut b.rot[..], pos: &mut b.pos[..] };
+    Some(f(&mut poses_of!(b, g)[s..s + n * NODE], &rig, n, &mut fk))
+}
+/// THE RUN-FORWARD BONES on the bench (PoseFK.rot / .pos): what a layer runs forward it finds here, and the host reads back the nodes a layer says it ran
+pub struct Fk<'a> {
+    pub rot: &'a mut [f64],
+    pub pos: &'a mut [f64],
+}
+impl Fk<'_> {
+    /// CharacterAnimator.fkPart: PoseFK.run for the nodes of `list` alone (a list holds every ancestor of a node it holds, parents first; a node the rig has
+    /// not is skipped)
+    pub fn part(&mut self, rig: &Rig, d: &[S], list: &[u32]) {
+        for &i in list {
+            let i = i as usize;
+            if i < rig.parent.len() {
+                fk_node(d, self.rot, self.pos, i, rig.parent[i]);
+            }
+        }
+    }
+    /// a node's origin as last run
+    #[inline(always)]
+    pub fn at(&self, i: usize) -> [f64; 3] {
+        [self.pos[i * 3], self.pos[i * 3 + 1], self.pos[i * 3 + 2]]
+    }
+    /// a node's model rotation as last run
+    #[inline(always)]
+    pub fn rot(&self, i: usize) -> [f64; 4] {
+        [self.rot[i * 4], self.rot[i * 4 + 1], self.rot[i * 4 + 2], self.rot[i * 4 + 3]]
+    }
+}
 /// blendPose: poses `a`, `b` → `out`, all three in the one array
 pub fn ask_blend(g: usize, a: usize, b: usize, w: f64, masked: bool, out: usize, n: usize) -> bool {
     let (Some(a), Some(b), Some(out)) = (start(g, a, n), start(g, b, n), start(g, out, n)) else {
@@ -472,6 +516,34 @@ pub fn ask_blend(g: usize, a: usize, b: usize, w: f64, masked: bool, out: usize,
     let d = poses_of!(bn, g);
     blend(d, a, b, w, if masked { Some(&bn.mask[..n]) } else { None }, out, n);
     true
+}
+/// skeleton.ts buildMask, onto the bench's mask (what a masked `ask_blend` then reads): an entry is a node, its weight, and whether its whole subtree takes
+/// that weight. A later entry lies over an earlier one; a node the rig has not is skipped; every other node is nought.
+pub fn ask_mask(entries: &[(usize, f64, bool)]) {
+    let b = bench();
+    let (n, rig) = rig_of!(b);
+    for m in b.mask[..n].iter_mut() {
+        *m = S::ZERO;
+    }
+    for &(root, w, sub) in entries {
+        if root >= n {
+            continue;
+        }
+        put(&mut b.mask, root, w);
+        if sub {
+            // (parents first: a node is in the subtree when its parent is)
+            let mut inside = [false; MAX_NODES];
+            inside[root] = true;
+            for &i in rig.order {
+                let i = i as usize;
+                let par = rig.parent[i];
+                if par >= 0 && inside[par as usize] {
+                    inside[i] = true;
+                    put(&mut b.mask, i, w);
+                }
+            }
+        }
+    }
 }
 /// sampleClip: clip `c` (clips.rs) at time `t` into the pose — only the nodes the clip has tracks for are written. `nodes` = the pose's own count
 /// (a sample needs no rig); false also for a clip the table does not hold, or one that writes a node the pose has not

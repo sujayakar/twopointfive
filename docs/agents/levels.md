@@ -82,6 +82,98 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   stays open, nothing solid within 1.1 m of a door's line, no floor cut off from the spawn, no walk between authored points more than 30 % + 1.5 m longer; `--sheet` = what each room got.
 
 <!-- was CLAUDE.md lines 2303–2306 -->
+- **An older level is dressed from the look's kit, and its look file says what its own colours are** (dress every level, 11-03; tools and level
+  data, no switch but `LIVED`). Three things a level with a second look file can now do:
+  · ITS OWN COLOURS: `tools/levels/gwotSkin.ts Skin.own`, a table from a colour the generator wrote as numbers (a lived room's wall to wall floor, a
+  yard's packed earth, a car) to the palette paint the box wears in the look file. Asked after the level's `pick`, before the shared rules, the colour
+  matched as written, through the same stand-in (`gwotAs`) and the same check that the simulation reads the same of the box. A target that is no row of
+  the palette throws. The shared rules had no word for such a colour, so the box kept it and drew flat on the look page.
+  · THE LOOK'S KIT ON AN OLDER FLOOR: a generator on the office kit or the functional kit lays `src/scene/gwotKit.ts` pieces in its lived tier through
+  `gwotKit(gwotOfOffice(K))` / `gwotKit(gwotOfKit(k, K))`: a round drum, a tyre stack, sandbags, crates, field stones. The skin LEAVES a box, and a
+  prop's part, that already wears a palette paint or a stand-in and no paint of the office's (`inLook`); before, it painted them over by the office
+  paint each stands for (a blue drum olive, a field stone the house's wall). So on an older level a palette paint comes only from a kit piece, never
+  typed into the generator: the skin would leave it and nothing would repaint it.
+  · THE GROUND: a look file's `dress` lays the lot's wear before its paint: `G.ruts` where wheels go, a trodden beat where feet go (`lookMarks path` in
+  the ground's own paint through `T.tone(T.floorAt(x, z), 0.8)`), `G.patch` and a second finish (`M.fill` in a ground row) where the use leaves one.
+  The `ground` need of `tools/qa/level-needs.ts` reads the look twin on its own line.
+  TRAPS: a lived PROP a kit piece makes (`jerryCan`, `gasBottle`) wants its `lived.<room>.…` name written by the generator. A solid that tops out
+  between 0.20 and 0.25 m stops a body on floor the walk grid calls free (lived-check is red on it). A level's KEPT square boxes (a yard's own drums,
+  a tyre room's stacks, a car as two boxes) cannot become kit pieces without moving the frozen stand: they are left.
+  CHECKED: `export.ts --check` on all fourteen look files with and without each tools step (none moved); `look-check.ts` on a twin that carries kit
+  pieces (the kill house: all its lines pass, the destruction's indexes list the same boxes in both files). NOT SEEN ON A GPU.
+- **The kill house is dressed** (dress every level, 11-03; level data: its lived tier under `LIVED`, `?lived=0` = the level as it was, and its look
+  file; no new switch). `tools/levels/killhouse.ts` had no lived tier: it has one now, the RANGE ROUND THE HOUSE, laid from the look's kit by name
+  (`crates`, `jerryCan`, `drum`, `tyres`, `sandbags`, `blocks`, `woodPile`, `rubble`): the ready line's ammunition, water and tyres, the end of the
+  south sandbag line, lane markers and sandbag returns at the butts, the house's spares on the dark north side, field stones. Nothing stands in a
+  start box or on its way to its door, within 2 m of the house's walls, or before a window. `killhouse-gwot.ts` lays the ground before its violet
+  marks: the range road and a spur (ruts), the beat round the house and out to the firing line (the lot's own earth darker, a faint shoulder either
+  side), gravel between the firing line and the targets. ROUND THINGS 0 → 18 (16 tyres in seven stacks and 2 drums: the count files
+  `tools/qa/fixtures/round/killhouse.txt` and `killhouse-gwot.txt` ride in this commit); the look twin's `ground` need passes (was one bare stretch of
+  542 m²); the picture with no material 1.4 % → 1.7 %.
+  LEFT, kept boxes (a base move): the three tyre stacks in the tyre room and the south sandbag line are the level's own square boxes.
+  MOVES on the shipped stand: the kill house's play-through digests on both seeds (furniture is real), and any recording, checkpoint or kept replay
+  made on it parts from this step (the fingerprint counts the lived boxes). The frozen stand's level is the level it was.
+  CHECKED on the step this is cut on: `lived-check` (the look file's base, `fixtures/level-base/killhouse-gwot.txt`, rides in this commit),
+  `level-needs --run` on both stands, `look-check` (the kill house's lines all pass), `map-check` (48 scripted runs, none threw: it plays the frozen
+  stand, so it does not meet the furniture).
+  PLAY-THROUGHS (`PT_DIGEST=1 tools/qa/playthrough.ts --seeds 1-2`, 21 missions): frozen 42 of 42 the same digest as the step; shipped with
+  `TPS_LIVED=0` 42 of 42; shipped 40 of 42, the two that differ the kill house's own, both still 'taken' (97 s → 94 s with one man fewer standing, 90 s → 91 s with the same three).
+  WHY, from a trace of seed 1: the same to the tenth of a second until 51 s; then the stack on the mess door forms 0.8 s sooner and the man 6.6 m inside
+  the mess wins an exchange he lost before. Nothing new stands indoors. ON 24 SEEDS, the level as it was against dressed: taken 22 → 21, men standing
+  43 → 50 of 96, mean 92 s → 94 s, none of it outside the scatter. A squad a few tenths early or late at a door flips that room's fight either way.
+  Pictures: before and after from the play camera, the level's night, dry, on the software adapter. NOT SEEN ON A GPU; nobody has played it.
+- **The registry's and the consulate's own floors are materials** (dress every level, 11-03; their look files only: paint, no box added or moved, no
+  switch). Each lays a wall to wall floor of its own colour in every lived room (`livedPieces floor`), and the skin had no word for those colours, so
+  on the look page they drew flat: 23 % of the registry's picture and 28 % of the consulate's had no material. `registry-gwot.ts` and
+  `consulate-gwot.ts` now say what each is (`Skin.own`). THE REGISTRY keeps a room told by its floor from above: oxide floor paint in the lobby, blue in
+  the copy room and green in the hall (the look's tiles lie on them), cream cloth in the reading room, a red carpet in the registrar's office, the
+  bare slab between the stacks, hessian in the sorting room, an ochre runner down the gallery: 23 % → 4.1 %. THE CONSULATE's staff floors are none of
+  them a colour, because the plum carpet is that place's one accent: grey felt, bare boards, matting, hessian, slab: 28 % → 22 %.
+  LEFT on the consulate, on purpose: the plum carpets and their brass (5.2 %: an accent is a colour of the file's own, and the look gives a material by
+  colour only), the kitchen's terracotta (about 3 %: the palette has no tile, and its oxide paint made that floor louder than the plum), the back
+  verge in the palette's scrub (7.6 %: a plant's paint, no ground the look can draw), and the strip at a wall's foot where
+  gravel darkened lands on the palette's oil (1.1 %). They wait for a box that says its stuff by name, a tile and a grass ground; none is bent to a row.
+  MOVES: nothing a run reads (the new paint stands for the old one: `look-check` line 3), so no play-through digest on any stand; the look files'
+  bytes, so each twin's base for lived-check rides in this commit (`fixtures/level-base/registry-gwot.txt`, `consulate-gwot.txt`). A picture or a
+  recording of these two shows other floors.
+  NOT SEEN ON A GPU; nobody has played it.
+- **The floodlit yard and the two charges are dressed** (dress every level, 11-03; level data: lived things under `LIVED`, and their look files).
+  THE FLOODLIT YARD: its yard was one box in a colour of the generator's own, 23 % of the picture with no material: it is gravel now (a second ground
+  inside the wall: the dust stops at the gate), and the drums, the generator, the sandbags and the pickup wear palette paint (24 % → 2.5 %). Its look
+  file lays the track along the south wall and in at the gate, the pickup's ruts, the beat from the front door round the landing pad to the gate
+  (nobody walks across a pad), the walk from the track to the shed, and oil under the drums. Its lived tier gains, from the look's kit, the empties
+  dumped in the dead east end (3 standing drums and one on its side), two spare tyres by the pickup, the generator's drum in the shed and the stones
+  turned out of the gateway. The open ground between the gate and the door stays open; no lamp changed (`floodlit-check` green on both stands).
+  ROUND 0 → 6. THE TWO CHARGES: the workshops' floor is the bare slab its look file says it is, the hall's runner and the big mat are plain cloth, the
+  two
+  workshops' own mats keep their red and blue as carpet (from above that is how the two charges' rooms are told apart), the two cars wear car paint
+  (4.8 % → 1.3 %); the lot has the street's ruts, each car's way in, the walk to the front door and the beat that parts before the house and goes
+  round each end to a workshop's back door (the level's two ways to each charge, worn into the ground); and from the kit, sacks against the front wall,
+  two drums, the spare wheels, firewood at the back, field stones. ROUND 0 → 4. Both look files' `ground` need passes (192 and 315 m² were bare).
+  LEFT, kept boxes (a base move): the yard's three fuel drums, both levels' cars (two boxes each), the sandbags under the eaves. The pad's orange and
+  the wire's copper are accents.
+  MOVES on the shipped stand: any recording, checkpoint or kept replay made on either level; the two charges' play-through digests (the floodlit
+  yard's two keep theirs: its new things stand where no route passes). THE TWO CHARGES' TWO STANDARD RUNS END SOONER, both still 'taken'
+  (112 s → 65 s, 194 s → 83 s): the squad's walk across the lot is 0.2 s later past the two new drums and the fight inside falls differently; no path, door or
+  defender's place changed and nothing new stands indoors. ON 100 PAIRED SEEDS the dressed level is the same for who wins and how many men stand
+  (taken 95 → 92, 7 runs flip to a loss and 4 to a win, 297 → 294 men of 400) and ends 9.7 s sooner on average (118.9 s → 109.2 s), win or lose; why
+  sooner is not read. THE TWO CHARGES' SHIPPED DIGESTS MOVE ON EVERY SEED (3 of 100 pairs are the same run): a later read that finds them moved
+  against a build before this step has found this step, not a red.
+  Count files and look-file bases ride in this commit (`fixtures/round/`: floodlit `0 6`, defuse `0 4`, plain and look file; `fixtures/level-base/`:
+  both look files). The frozen stand's levels
+  are the levels they were. A YARD OF OTHER PAINT BOUNCES OTHER LIGHT: the page's light meter reads that bounce and the headless one does not, so what
+  a man reads in the lit yard on a GPU is not measured here. NOT SEEN ON A GPU; nobody has played it.
+- **The long hall is dressed** (dress every level, 11-03; level data: lived things under `LIVED`, and its look file; stands on the step that made the
+  lived kit's drums round). The hall itself stays bare: it is the level. Round the wing, from the look's kit: the porch's ammunition crates, a drum,
+  the sandbag line carried on, the tyres off the truck; firewood and two drums against the blank south wall; spare block at the back; field stones.
+  Nothing stands in the strip the hall's two guns see through the open front door, on a start mark, or before the bunks' window. The look file lays
+  the camp road, a spur to the sandbag line, the walk to the porch and the sentry's beat right round the wing, under the bunks' window (the one other
+  way into a room). ROUND 2 → 10. The look file's `ground` need passes (453 m² was bare).
+  MOVES on the shipped stand: the hall's play-through digests, recordings, checkpoints and kept replays. Its two standard runs: seed 1 a wipe at 92 s → taken at 118 s, seed 2 a wipe at 83 s both times.
+  From a trace of seed 1: the same to the tenth of a second until 70 s, the same three men lost the same way to the hall's own guns; then the last
+  man wins by a tenth of a second the exchange at the post's door that he lost before. ON 24 SEEDS, as it was against dressed: taken 11 → 11, men
+  standing 20 → 19 of 96, mean 88.5 s → 88.7 s. Count files (`fixtures/round/hall.txt`, `hall-gwot.txt`: `0 10`) and the look file's base ride here.
+  NOT SEEN ON A GPU; nobody has played it.
 - **A roof over walkable floor is the kit's ceiling** (a LEVEL RULE, no switch): `K.ceiling` (levelKit.ts `ceiling()`: a slab flagged `NoPrimary`, so the camera sees the floor under it) or a slab
   flagged `NoPrimary` by hand — and, if rain should stop at it, inside `weather.ts roofsOf`'s height band: underside at `WORLD.ceilingY` − 0.25 (2.75 m) or over, top no higher than + 0.45, at
   least 0.9 m across both ways (`roofsOf` asks only height and size, never the flag: a DRAWN slab there stops the rain and hides the room). Floodlit's generator shed had the one drawn roof
@@ -125,6 +217,25 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   at (26.7, 18.5) from 60 s on, where that commander never looks. One build join later (64504143) the same three seeds end and the check is ALL PASS on
   both stands. Not the table (the old floor's seeds are wiped before they get that far): a man of a squad that may leave can park in a room nobody holds.
   Never seen on a GPU, never played; the page booted on the software adapter.
+- **The depot is dressed: its yard is poured, and its look twin says what things are made of** (11-03; `tools/levels/depot.ts`,
+  `depot-gwot.ts`; no switch of its own). THE YARD: the hardstanding wore `block`, which the look lays in courses like a wall on its
+  side, over a quarter of the picture from above; it is `slab` now with the signals hut's raised floor, and the rooms that had lino are
+  `woodGrey` boards. `DEPOT_PAINT` names the generator's own colours and the twin's `own` gives each its palette row: `olive` for
+  the trucks, the signals shelter and the generating set, `drumRed` for the oxide drums, `paintRust` for the main gate's leaves,
+  `iron` for the stove, a hub and the pickets. The twin's `dress` lays the wear FIRST, under the letters and the bays: the ways
+  between the doors, the back way from the gap to the generator room's door, the track round the outside of the wall. ONE LIVED
+  PLACE MORE, `lived.road`, outside the wall: five kit bushes past the track and broken block at the wall's foot. Nothing new stands
+  inside the wall, where every metre of cover is the level's problem, and nothing new is lit: the floodlit yard and the dark
+  nests are the level's idea and were left as they are. Left flat: tyres, cartons, car glass, the shelter's chassis (a hair too
+  dark for a row to stand for it), rubber mats, the kit's scrub. KEPT SQUARE: the five fuel drums are boxes of the level's own
+  part, on the frozen stand.
+  CHECKED (no GPU: counted and drawn on the software adapter, never seen on one, never played): `lived-check` green on both files
+  (the twin by its base file, `tools/qa/fixtures/level-base/depot-gwot.txt`); `level-needs depot --run` no FAIL on both stands;
+  play-through digests, 21 missions on seeds 1 and 2: frozen 42 of 42 as before, shipped with the lived switch off 42 of 42, and
+  shipped as it ships the depot's two runs keep their digests too (the scripted player never meets the scrub). The look page's
+  audit: 5.2 % of the picture with no material before, 3.5 % after.
+  THE TWIN'S FINGERPRINT MOVED (paint and decals), the plain file's by its lived things: a checkpoint or a recording made on the
+  depot on the shipped stand parts from this step; none was re-recorded.
 - **'(OLD floor)' after the block's name in these files** (10-13, the docs tidy after the rebuilt block was named, steps 219 / 220) = that figure, hold, door or mark was measured
   or staged on the block as it stood BEFORE the rebuild and has not been taken again: the six-hold lane figures and the standing-team table in enemies.md, the wall charge's marks
   in destruction.md, the door order tallies in door-tools.md (`mb` is gone; `m_s` is another door now), the pairs-by-door figure in team-feel.md. Tagged where the block's owner
@@ -133,6 +244,18 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   CHECKS THE TAGGED LINES NAME were red on the rebuilt floor when the tags were written (968d8756: `probes.ts corridor` on shipped, its hold on block-four drawing nobody;
   `probes.ts wallsafe` on frozen, two lines) and their owners have re-staged both since: on the build of 8c2c7cea (10-13) corridor is ALL PASS on both stands — it holds
   `block-squads` now, see enemies.md — and wallsafe is ALL PASS on frozen. The tagged FIGURES are still the old floor's; only the checks moved.
+- **The block under the look: its walls are render, each room's floor is what it is made of, its standing rounds are the kit's** (dress every level, 11-03;
+  no switch: level data, the look file by `tools/levels/block-gwot.ts`, the rounds under `LIVED`). The look draws a box as what its paint says, so a paint
+  picked for its colour is drawn as the wrong stuff. The twin had the cement walls in `hesco` (drawn woven); they are `render`. The rooms' own floors
+  (block.ts lays one wall to wall in each lived room, in a colour of its own) went through the furniture questions and came out cloth, olive steel, mud and
+  nothing: `FLOORS` in the twin, five rows of the skin's own-colour table (`gwotSkin.ts` `own`), says what each is. `oct` / `oct8` in block.ts call
+  `livedPieces.ts at().round`; the loose drum's and the gas bottle's bodies stay parts written by hand (a prop's part cannot say it is round). KEPT ON
+  PURPOSE: the pistachio accent (`prodGreen`, a row with no material, 5.8 % of the picture: the level audit's 10 % bar is red on the block by one point
+  until a paint can name its stuff) and the lino in `canvas` (a paint row was tried: the look chips paint to red and the floor read as rusting steel). The
+  squads file is exported with it (`export.ts blocksquads`). Bases: `tools/qa/fixtures/level-base/block-gwot.txt` and `block-squads-gwot.txt`; round counts
+  `tools/qa/fixtures/round/` (0 and 6, four files). Measured: the 21 missions' play-throughs on two seeds against step 1239, three reads (frozen, shipped
+  with `TPS_LIVED=0`, shipped): the block's four runs (block-four and block-squads, seeds 1 and 2) keep their digests on all three, and so does every other
+  level's. Drawn on the software adapter only: never seen on a GPU, never played by a person.
 - **The level check plays the level's own marks too** (`tools/qa/scenario-level-probes.ts`, 10-13; tests only, no switch). The room clear parts (`pair`, `four`)
   default to seeds `0, 1, 2, 3` (they were `1, 2, 3`): seed 0 is the hand placement the page deals on every load (`game/samestart.ts`), 1 to 3 are dealt floors
   of the same file. The rescue part keeps `1, 2, 3`; `--seeds`, when given, is taken by both. A seed is the placement AND the run's die, so the page's floor is
@@ -218,6 +341,31 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   all-quick; wire it in once it is green (`--skip kit` gives the exit code of the rest meanwhile). NOT ASKED BY IT: anything by eye or by play (the idea,
   the five checks, light per room, sight lines at the starts, whether furniture reads from above, whether a picture looks like play), and `said` holds
   only that a level is NAMED in these files. It stands no game up: nothing here was seen on a GPU or played.
+- **The records office dressed for the look** (level data, no new switch; 2026-11-03; "we'll want to dress up all the levels and check their budget", and the
+  library steer: pieces by name, paint by palette row). `tools/levels/records.ts` lays its yards from the library in the lived tier (`G = gwotKit(gwotOfKit(k, K))`,
+  groups `lived.yard`, `.water`, `.edge`, `.lane`, `.stones`): precast barriers on the kerb south and east (open where the team stands, at the three bays and at
+  the street's end), a ladder and two ranging rods on the yard car's roof with two tyres and two drums behind it, a hand pump, a water tank and a dish out in the
+  west yard, two stacks of block on the back lane, field stones; the burn drum is the kit's drum. `records-gwot.ts`: `SKIN.own` gives the generator's own colours
+  a paint of the palette (the two cars truckTan and truckRed with glassDark cabins, the kerbs tWall, the sofa blanketBrown, the ash gravel, the readers' coir
+  coyote; a grey body cannot wear truckWhite, the skin's check throws: a pale grey stands for steel), the dado is truckTan (the cloth row drew a woven wall), and
+  UNDER the surveyors' marks the ground is laid as it is used with the kit's patches and ruts at 8 mm (a patch at its default height lies OVER a mark): grit at
+  the kerbs, the bays' ruts and oil, paving to the front door, the staff's way round the west side, the back lane's bed and ruts, a drain, damp where roofs shed.
+  NOT MOVED: any box of the level's own part in the plain file (the two cars and the kerbs are kept boxes), a lamp, the hour, a mark. KEPT CLEAR, each from a
+  review: the lane along the west wall that a man at the front office's corner holds the back door down (a tank and a dish stood there blocked 40 of 126 of his
+  lines), the ground against the outer walls (a wall charge's setter), the look's chain, sight lines and glyphs. WORDS: the lived things go with `?lived=0`
+  (`TPS_LIVED`), the paint and decals with `?look=plain` (`TPS_LOOK`); the frozen stand has neither. CHECKS: `export.ts records --check`; `lived-check records
+  records-gwot` (the twin's own part moved: its base is its own file under `tools/qa/fixtures/level-base/`); `level-needs records --run` on both stands (the
+  twin's `ground` note goes from three bare stretches to a pass); `level-lint`; `kitview-plan records`; `wallfurn-check --levels records.json` (the same lines
+  as before); `probes.ts look`. Round things: 0 bare, 6 lived, in both files. MEASURED (play-through digests, 21 scenarios, seeds 1 and 2): frozen 42 of 42 as
+  the step before; shipped with `TPS_LIVED=0` 42 of 42; shipped, every other level's runs keep their digests and records-pair's two move (seed 1 wiped at 100 s
+  as before; seed 2 taken at 27 s where it was 39: the pair is on its first stack 0.3 s sooner, the defenders' reinforce order deals another way and two of them
+  are caught at the office door as they dig in). Two seeds is a look, not a count. The look page's audit: 4.9 % of the picture with no material to 3.3 %, boxes
+  drawn 1102 to 1263, round things 0 to 6, lamps as they were; the file is 1073 boxes where it was 897 (past lived-check's warning at about 900, as five other
+  level files are). PARTS FROM THIS STEP: a checkpoint or a recording made on the level with the lived-in rooms on; `tools/qa/fixtures/coop-reference.json`'s
+  records-pair row. SEEN: stills on the software adapter only, night and midday, on the look page and on this build's page, no console or device error. Never
+  seen on a GPU, never played by a person. LEFT: the two cars are the old kit's two boxes (they want the library's curved vehicle, and a base move); bins, stool
+  and buckets are square props (a prop's part cannot say it is round); the kit's drum is sealed where a burn drum is open; the lot's edge wants a knee rail the
+  library does not have.
 - **The two foot bands that ran across a doorway are mended** (level data, no switch; 10-18; the two the dado bullet above left as "NOT mended", the `doorway`
   need's two reds). `G.skirt` lays one band the length it is given, so a band given a whole wall crosses that wall's doors. Glasshouse: the back wall's foot
   was `G.skirt('x', 8, 10, 30, -1)`, 0.76 m of it across door `back`; it is two calls now, 10 to 13.76 and 14.74 to 30 (the frame's outer faces). Crossing:
@@ -497,19 +645,82 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   the other way as long as it names no part of a round thing as broken; one that does (a blast took a drum, rounds shot one out) is refused by
   `canLoad` with the static's name, in both directions — also a save from before this rule, loaded on the page as it opens.
   CHECK: `tools/qa/round-check.ts` (`probes.ts round`; `ROUND_BREAK=1` must fail) on BOTH stands: every level file's count against a pinned
-  table (282 across 18 files as the files have them, 343 across 28 with lived-in rooms; add a row when a level gains a round thing; a ring of
-  four slabs the rule did not take is red), each made one round box and three specks and put back box for box; `rayBox`, `lineBox` and the
+  table (282 across 18 files as the files have them, 343 across 28 with lived-in rooms, at this step; 364 across 22 and 456 across 36 at step
+  1239; a level that gains a round thing now gains a count file under `tools/qa/fixtures/round/`, not a row; a ring of four slabs the rule did
+  not take is red), each made one round box and three specks and put back box for box; `rayBox`, `lineBox` and the
   shader's rule put into TypeScript over f32 against a point-in-cylinder reference (4800 seeded rays, the GPU rule within 0.2 mm and on the
-  same kind of face); at the pass's brazier 64 lines of sight just inside the radius all stopped and 64 just outside all free (the octagon: 56
-  and 48), a pushed body at one distance all the way round (the octagon: 0.578 to 0.601 m), Sam put inside it stood outside at one distance, a
-  round stopped on the curve; tut-pair's seven chewable drums one cell each; a save loading with the switch as saved and across it; a lone
+  same kind of face); at the pass's brazier, from 67 sides, lines of sight just inside the radius all stopped and just outside all free (the
+  octagon: 60 and 48), a man walked into it or put half way to its middle left against the curve (the octagon: up to 7 mm inside it and 16 mm
+  clear), rounds from beside it and from 3 m stopped on the curve (the octagon: none, up to 19 mm off), Sam put inside it stood outside at one
+  distance; tut-pair's seven chewable drums one cell each; a save loading with the switch as saved and across it; a lone
   round's walk grid a disc; ten seconds of the pass with the switch down the same run by digest on a level that was rounded and put back;
   fingerprint, stands, an old recording; the box world's words, rows and lists with the GPU half up and down. PAGE: `node
   tools/qa/round-page.cjs --root . --out <dir>` boots the pass twice on the software adapter (`round=0` and as it opens), wants every pipeline
   compiled and no console or GPU error, and writes a still of the brazier from each.
+  EVERY LEVEL'S ROUND THINGS, WHERE THEY STAND (`round-check` line 4c; the routine is `tools/qa/round-lib.ts probeRound`, and line 4's brazier
+  is handed to the same one): no recorded run reaches most round things (the depot's ten tyres became round and no play-through result
+  moved), so every level that holds one is stood up with the switch and each round box, its middle, height and radius written out from what
+  the level authored, is asked three things from 67 sides of the game's own collision world: a line of sight just inside its radius is
+  stopped and one a hair outside is free; a round fired at it, from beside it and from 3 m, stops on the curve with the normal straight out;
+  a man walked into it stands straight out from it against its curve. A thing in a level has neighbours, so all but the inside lines are
+  asked only from the sides the routine's own reference finds OPEN (no other box near the line, the round's path or the man's way out: a
+  distance from a segment to every other box's footprint, which asks the collision world nothing). In a PILE (round things whose middle is
+  over this one: a stack of tyres) the man must stand against the pile and inside none of it. Each is asked twice: of the TypeScript's
+  answers, and inside a tick with the Rust rows for lines and circles up, of the module's copy of the level. Frozen stand 364 round things in
+  22 levels, shipped 456 in 36, all green both ways; RED: an answer that is not a round's, from either, and a count that is not the level's.
+  `ROUND_BREAK=1` hands the routine the kit's octagons and it says of every one that it is not round (the line prints how many).
+  A LEVEL THAT GAINS A ROUND THING IS HELD BY THIS LINE WITH NO NEW LINE (its count file is all it adds). Printed, not red: round things no
+  man can reach (on a stand, in a truck's bed, in a row by a wall: 53 frozen, 57 shipped); on the shipped stand 67 that end under a walking
+  man's feet (a tyre 0.2 m high: the underfoot rule), of which sight and rounds are asked; and a thing hemmed in on every side, which is asked
+  the inside lines only and named (none today: nothing can meet its curve where it stands, and the box round it would answer the same). The
+  depot's ten tyres are all met by lines and rounds and seven of them by a man (three lie under a stack). THE ROUTINE ITSELF (line 4d): 2,400
+  seeded things among seeded neighbours (boxes turned and fully rotated, glass, hidden boxes, round things beside and over them): of 1,200
+  round ones none is called not round, and of the same things left as the kit's octagon or as the square box round it, every one a round has a
+  way in to is. HOW HARD: a round and a man hold the curve to a thousandth of a millimetre; lines alone hold the radius only between 1 % under
+  and 1.5 % over. Collision only: nothing here is a picture, and nobody is walked by the game's own mover (line 4b does that for the brazier).
   NOT MEASURED, NOT SEEN: no tour, soak or mission tally was run with the switch up (the office, which those run on, has no round thing; the
   check's ten seconds of the pass meet none); nobody has played it; NEVER SEEN ON A GPU — the stills are the software adapter's at the lowest
   preset, so motion, a round's edge against bright ground, the marks' seams round a drum and what the round branch costs a frame are unknown.
+- **The lived kit's round pieces are the kits' one round** (dress every level, 11-03; no switch: level data under `LIVED`). A round is written ONE way:
+  `src/scene/gwotKit.ts roundSlabs(r)` holds the octagon's numbers (four slabs 45° apart from 0.2 m, tops stepped 2 mm; two squares under it) and the
+  kit's own `round` reads them (no level built with that kit moved: `export.ts --check` on every level). `tools/levels/livedKit.ts round(x, z, y0, y1,
+  r, paint, yaw, { lid, ribs, drawn })` and `livedPieces.ts at().round(lx, y0, lz, r, h, paint)` lay it over the office kit; `tyres` and `drumFixed`
+  are built with it (each was one square box, which the round rule could not tell from a crate). From 0.2 m the octagon lies inside the square it
+  replaced; a smaller one's second square reaches 1.32 r. A round under 8 mm thick throws (lay a flat). MOVED: the depot (10 tyres) and the long hall
+  (2 standing drums), each with its look twin: lived things only, so the frozen stand's level is the level it was, and on the shipped stand a
+  recording, checkpoint or kept replay made on those two parts from this step (their fingerprint counts the lived boxes). `round-check.ts KNOWN` has
+  their rows: a level that gains an octagon gains a row there.
+  LEFT: a LOOSE drum, bucket or stool is a prop, and a prop's part cannot say it is round (the rule looks in a level's boxes). Writing a prop's body as
+  slabs was tried and dropped: a blast throws a prop part by part, so a drum went as four overlapping slabs against the blast's piece budget, and the
+  two squares of a small one stand outside the footprint it collides with. The mend is a part that says it is round, in the simulation and the picture.
+  Other writers of the same numbers by hand, not touched: `lived-quiet.ts rnd` and `oct`, `lived-train.ts rd`.
+  CHECKED (both stands): typecheck; `export.ts --check` every level (tut-queue stale and train-ground throwing before and after); `lived-check` every
+  level; `level-needs --run` depot and hall; `probes.ts round` (its line 7 was red before this step). NOT SEEN ON A GPU; nobody has played it.
+- **Six ground and yard pieces joined the 2010s kit** (dress every level, 11-03; no switch: the kit only, no level lays them in this step; `src/scene/gwotKit.ts`).
+  The maintainer: "as we dress the levels, I'd love for us to have a library of objects, materials, etc. that we reuse across them". Each was first written
+  by hand in one generator; a thing a second level could use is a kit piece. `kerbStones(x0, z0, x1, z1, paint, pitch)` painted stones a stride apart (or
+  at any pitch), the edge of a government yard or a track; `plantBed(x, z, len, wid, yaw, rows)` a kerb of blocks round turned earth with rows of
+  seedlings; `hearth(x, z, yaw, ash)` a cold fire, a ring of stones on its ash; `seedTray(x, z, baseY, w, d, yaw)` a tray of seedlings on a bench;
+  `seep(x0, z0, x1, z1, mat)` the stain where water runs out under a wall, in lengths that overlap and wander (the line is the stain's middle: lay it
+  0.6 m out from the wall's face); `stain(x, z, w, d, ground, yaw, k)` the ground's OWN paint darker (wet concrete, a floor walked dark). Beds, stones
+  and hearth are walked over (under 0.19 m); seep and stain are decals. `patch` is another row's stuff lying on the ground, `stain` the same ground
+  darker: its paint is the row times k (0.55 to 0.99, the band in which the picture's classifier still reads that row) and it throws where that tone
+  is ANOTHER row's colour (gravel × 0.7 is `oil`); a toned paint is for drawn-only things, a round knows a paint by its exact colour. The kit keeps
+  its own copy of the classifier's two numbers (`TONE`): one table for both once they share a tree. `tyres(x, z, 1)`: one tyre lying alone is 0.27 m,
+  as the older kit's is (at 0.20 it topped out in the band the walk grid cannot read and `lived-check` was red on it); no generator laid one, so no
+  level moved. `tools/levels/livedKit.ts livedTail(props, grp)` → `{ room(id), done() }` is the block six generators copy at their lived tail
+  (group `lived.<room>`, props named `lived.<room>.<kind><n>`); nothing calls it yet. NO LEVEL FILE MOVES (`export.ts --check` on every level;
+  tut-queue stale before and after) and the showroom is not touched: the library's own hall shows new pieces. CHECKED: the src typecheck; each
+  piece laid once by hand headless (the walked-over ones top out at 0.17 m, a lone tyre at 0.27, two at 0.40; `stain` throws on gravel × 0.7 and on
+  a k outside the band; the tail's names run on across two `done()`s). NOT SEEN ON A GPU, and no picture of the pieces has been drawn at all yet:
+  the two levels that asked for them (the snatch, the glasshouse) lay them in their own step.
+- **The 2010s kit lays a kerb** (dress every level, 11-03; no switch: the kit only, no level lays it in this step; `src/scene/gwotKit.ts`).
+  `kerb(x0, z0, x1, z1, mat = 'block', gaps = [], len = 1.9)` is a run of precast stones 0.3 m wide and 0.14 m high laid end to end, a finger apart
+  and none quite in line: the edge of a lot, a road or a loading apron. The run is cut into round(length / len) stones; `gaps` names the stones left
+  out, counted from the first end (a broken one, a dropped kerb where wheels cross). Plain statics, walked over (under 0.19 m), lit and shadowed. A
+  run or a `len` under 0.3 m throws. It is NOT `kerbStones` (painted stones a stride apart, the bullet above): a kerb is one continuous line of
+  concrete. NO LEVEL FILE MOVES (`export.ts --check`). CHECKED: the src typecheck; laid headless along a lot's edge with two stones left out
+  (`lived-check` and the walk grid take it as floor). NOT SEEN ON A GPU; the warehouse and the records office lay it in their own steps.
 - **The level skill carries lighting guidelines, and the level command names two lights that face each other (`key`, the nineteenth need, 10-23).**
   The maintainer, of the plan tutorial's yard: "this tutorial level just looks really *flat*", then "seems like we should generally (even independent of
   this thread) have some lighting guidlines that we put in our level skill". The graphics work read the cause from the level file and a still drawn on

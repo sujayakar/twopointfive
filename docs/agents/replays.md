@@ -641,7 +641,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   steps, parted never, Sam and every man where the recording left them. Software adapter; never seen on a GPU. STILL OPEN, not this bullet's: what the
   lab's panel does to the men (a gap, a seat, the lamps) is on no tape, and a lab tape from before the 'pose' rows is staged by the address's scenario.
 - **A replay keeps the viewer's shader words** (10-27). The shader rows on trial (`ui/shaderrows.ts`: `compactshaders`, `firstframe`,
-  `splitrays`; five when this was written, two taken out since: `render.md`), the compile queue's `pipequeue` and `shadertrim` are words of the VISIT (`ui/replaykey.ts VISIT_FLAGS`, the rows by `SHADER_ROW_WORDS`): how this
+  `splitrays`; five when this was written, two taken out since: `render.md`), the compile queue's `pipequeue`, `shadertrim` and `shaderfold` are words of the VISIT (`ui/replaykey.ts VISIT_FLAGS`, the rows by `SHADER_ROW_WORDS`): how this
   machine builds its shaders, read once as the page loads. They were on neither list, so `?playtape=..&compactshaders=1` was sent on to the tape's address
   without the word and built the plain way, and a tape recorded under one put it on the page that replayed it. Now the page keeps its own and takes none
   from the tape; the end card's Replay hands them on too. CHECK: `probes.ts cardreplay`, the line "keeps its own address's shader words" (it reads the
