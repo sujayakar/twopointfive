@@ -15,7 +15,7 @@
 // met). A ray meets less: the body's corners (0.22 m of the nose, 0.1 m of the tail), the bonnet's shoulders (it falls 0.2 m from its middle to its sides)
 // and the glass above the waist, which leans in by up to 0.42 m at the roof of a car. A lamp keeps its place, half size and paint (game/carlamps.ts finds
 // it by those). Never seen on a GPU.
-import { BoxFlag, type Box } from './boxes';
+import { BoxFlag, type Box, type BoxStuff } from './boxes';
 import { cutPlane, cutRecord, cutFit, type CutPlane } from './cut';
 import type { Vec3 } from '../math/vec';
 import { GWOT_PALETTE } from './gwotPalette';
@@ -23,7 +23,17 @@ import { gwotKit, type GwotHost } from './gwotKit';
 import { ring, radiusOf } from './lorryTry';
 
 const D = Math.PI / 180;
-export type CarMat = { albedo: Vec3; rough?: number; metal?: boolean };
+export type CarMat = { albedo: Vec3; rough?: number; metal?: boolean; stuff?: BoxStuff };
+/** WHAT A VEHICLE'S PARTS ARE MADE OF (asked 11-04 of the showroom's cars: "i think the materials could use some work though ... maybe we want a car paint
+ *  material too?"). Each part keeps the colour its kit box had and says its stuff and its own finish — the shine is the box's roughness, the stuff's map only
+ *  varies it: a body panel is car paint and smooth, glass near a mirror, bumpers and liners plastic, a hub bright steel, a tyre matt rubber. */
+const MADE = {
+  body: (m: CarMat): CarMat => ({ albedo: m.albedo, rough: 0.2, stuff: 'carpaint' }),
+  glass: (m: CarMat): CarMat => ({ albedo: m.albedo, rough: 0.07, stuff: 'plain' }),
+  trim: (m: CarMat): CarMat => ({ albedo: m.albedo, rough: 0.5, stuff: 'plastic' }),
+  hub: (m: CarMat): CarMat => ({ albedo: m.albedo, rough: 0.25, metal: true, stuff: 'steel' }),
+  tyre: (m: CarMat): CarMat => ({ albedo: m.albedo, rough: 0.9, stuff: 'plain' }),
+};
 export interface CarFrame { x: number; z: number; yaw: number }
 type Put = (lx: number, lz: number, y0: number, y1: number, hx: number, hz: number, m: CarMat, o?: Partial<Box>, dyaw?: number) => Box;
 const of = (m: CarMat, k: number): CarMat => ({ ...m, albedo: [m.albedo[0] * k, m.albedo[1] * k, m.albedo[2] * k] });
@@ -32,7 +42,7 @@ const of = (m: CarMat, k: number): CarMat => ({ ...m, albedo: [m.albedo[0] * k, 
 function putter(F: CarFrame, out: Box[]): Put {
   const cs = Math.cos(F.yaw), sn = Math.sin(F.yaw);
   return (lx, lz, y0, y1, hx, hz, m, o = {}, dyaw = 0) => {
-    const b: Box = { c: [F.x + cs * lx + sn * lz, (y0 + y1) / 2, F.z - sn * lx + cs * lz], h: [hx, (y1 - y0) / 2, hz], yaw: F.yaw + dyaw, albedo: m.albedo, emissive: [0, 0, 0], flags: 0, owner: 0, cutHeight: 1000000, rough: m.rough ?? 0.5, ...(m.metal ? { metal: true } : {}), ...o };
+    const b: Box = { c: [F.x + cs * lx + sn * lz, (y0 + y1) / 2, F.z - sn * lx + cs * lz], h: [hx, (y1 - y0) / 2, hz], yaw: F.yaw + dyaw, albedo: m.albedo, emissive: [0, 0, 0], flags: 0, owner: 0, cutHeight: 1000000, rough: m.rough ?? 0.5, ...(m.metal ? { metal: true } : {}), ...(m.stuff ? { stuff: m.stuff } : {}), ...o };
     out.push(b); return b;
   };
 }
@@ -182,10 +192,10 @@ interface Kind { name: string; sig: SigBox[]; anchor: number; /** which made box
 const matOf = (b: Box): CarMat => ({ albedo: b.albedo, rough: b.rough, ...(b.metal ? { metal: true } : {}) });
 function kinds(): Kind[] {
   return [
-    { name: 'pickup', sig: record(G => G.pickup(0, 0, 0)), anchor: 4, body: 12, lamps: [16, 17, 18, 19], shape: (F, at) => pickupShape(F, { body: matOf(at(4)), tyre: matOf(at(0)), glass: matOf(at(9)), trim: matOf(at(5)), hub: HUB() }) },
-    { name: 'van', sig: record(G => G.van(0, 0, 0)), anchor: 4, body: 12, lamps: [19, 20, 21, 22], shape: (F, at) => vanShape(F, { body: matOf(at(4)), tyre: matOf(at(0)), glass: matOf(at(9)), trim: matOf(at(5)), hub: HUB() }) },
-    { name: 'motorbike', sig: record(G => G.motorbike(0, 0, 0)), anchor: 2, body: 0, lamps: [], shape: (F, at) => bikeShape(F, { tyre: matOf(at(0)), iron: matOf(at(2)), tank: matOf(at(3)), seat: matOf(at(4)), galv: matOf(at(5)) }) },
-    { name: 'car', sig: CAR_SIG(), anchor: 0, body: 12, lamps: [7, 8, 9, 10], shape: (F, at) => carShape(F, { body: matOf(at(0)), tyre: matOf(at(3)), glass: matOf(at(1)), trim: matOf(at(3)), hub: HUB() }) },
+    { name: 'pickup', sig: record(G => G.pickup(0, 0, 0)), anchor: 4, body: 12, lamps: [16, 17, 18, 19], shape: (F, at) => pickupShape(F, { body: MADE.body(matOf(at(4))), tyre: MADE.tyre(matOf(at(0))), glass: MADE.glass(matOf(at(9))), trim: MADE.trim(matOf(at(5))), hub: MADE.hub(HUB()) }) },
+    { name: 'van', sig: record(G => G.van(0, 0, 0)), anchor: 4, body: 12, lamps: [19, 20, 21, 22], shape: (F, at) => vanShape(F, { body: MADE.body(matOf(at(4))), tyre: MADE.tyre(matOf(at(0))), glass: MADE.glass(matOf(at(9))), trim: MADE.trim(matOf(at(5))), hub: MADE.hub(HUB()) }) },
+    { name: 'motorbike', sig: record(G => G.motorbike(0, 0, 0)), anchor: 2, body: 0, lamps: [], shape: (F, at) => bikeShape(F, { tyre: MADE.tyre(matOf(at(0))), iron: matOf(at(2)), tank: MADE.body(matOf(at(3))), seat: matOf(at(4)), galv: matOf(at(5)) }) },
+    { name: 'car', sig: CAR_SIG(), anchor: 0, body: 12, lamps: [7, 8, 9, 10], shape: (F, at) => carShape(F, { body: MADE.body(matOf(at(0))), tyre: MADE.tyre(matOf(at(3))), glass: MADE.glass(matOf(at(1))), trim: MADE.trim(matOf(at(3))), hub: MADE.hub(HUB()) }) },
   ];
 }
 
