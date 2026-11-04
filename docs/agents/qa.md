@@ -402,6 +402,26 @@ but synthetic writes still work.
   tube sees a dark man), `devices` (e) (`TPS_HANDS=1`), `controls-behind` (d) and (f) (`TPS_KITANIM=1`), `selector-rows` (`TPS_CLOSE=1`, `TPS_HANDSLOT=1`,
   `TPS_LIGHTSWITCH=1`, a line each), `workstow-mate` (`TPS_SQUADDEAL=1 TPS_TEAMPACE=1 TPS_PACING=1`, all three: a round leaves a teammate's hung gun as he is
   taken off a charge). A line no set of words flips is not a held row's doing: the tool says so, and what the shipped stand itself makes of it.
+- **Retiring a switch: `bun run tools/retire/retire.ts ROW=value … | --rows rows.json [--write]`** (2026-11-04; the maintainer: "can you look for switches we
+  haven't flipped in at least 3 days and clean all of those up?"). A settled rule's switch is a second way through the code that nobody takes. The tool takes
+  rows with the value each has IN THE PAGE and leaves one way: every read becomes the value and the code is folded round it; the page's address word, the
+  stand's hold, the journal's line for an old file, the debugger's toggle and a tool's own raise or put-back go; the row goes from its table, from
+  `FROZEN_HOLDS`, its stand word from `STAND_ENV`, its address word from the lists of address words, its name from a panel's list of rows and from what a
+  machine keeps; and what only the dropped branch used goes with it, to a fixed point. It reads the tree with TypeScript's own language service
+  (`vendor/typescript`, or `TS_LIB=<path to typescript.js>` in a cloud checkout) and is a dry run without `--write`. IT REFUSES, with the place: a row the game
+  writes as it runs (state, not a switch), a row Options writes (the player's), a getter and setter, a row an object literal in the game holds at another
+  value, a row the game reads through a list of keys, a value that is not of the row's kind, and the rows of the Rust module's twins. Exit 3 = some rows were
+  refused and the rest done. IT SAYS, for a hand: a constant left in a condition beside a call it cannot see to the bottom of (`--pure name,name` vouches for
+  a query, and the command line is then the record of what was vouched for), a value nothing reads any more whose making still happens (a die drawn, a call
+  made: the name goes, the call stays), a loop left with nothing in it, and every place a CHECK asked for the retired path. `--drop file.ts:name` takes a
+  declaration out with the statements that call it; `--drop-at file.ts:line[:words]` one statement of a check. THE PROOF OF A RUN is not the tool's: both
+  typechecks; the page's stand run for run the same before and after (`TPS_PROFILE=shipped PT_DIGEST=1 bun run tools/qa/playthrough.ts --seeds 1-2 --json f`:
+  42 digests); the frozen stand after = the frozen stand before with the retired rows' words raised; and the family's checks run before and after on the
+  page's stand, line by line, where a line that went from PASS to FAIL is an arm of the retired path and is taken out by name. THE TOOL'S OWN CHECK:
+  `bun run tools/retire/retire-check.ts` runs it on a small tree of its own (`tools/retire/fixture`) and holds that each of 46 cases there answers the same,
+  draws the same dice and makes the same calls after the fold as before it, that the folded tree compiles, and that what names a retired row is gone while
+  what only looks like it is not; `RETIRE_BREAK=1` folds one row at the wrong value and must fail. A shape the tool folds wrongly goes into the fixture as a
+  case first. Memory: a hundred rows at once is about a minute and 4 GB; all of a family's rows go in one run, not all families in one.
 - **Not every `FROZEN_HOLDS` word is a `TPS_` word** (10-13, read off `src/host/profile.ts`; the knob registry's owner's note). Raised by a word of their own: the door rules
   (`ONEWAY=1`, `QA_FRAMEHOLDS=1`, `QA_DOORMANNERS=1`, `QA_DOORBLAST=1`, `QA_DOORSTAY=1`), `SLOTS=on`, `CUTBOXES=1`, `GLASSFX=on` (three rows), `SQUADS=radiocheck-call` (three
   rows). No word under probes.ts at all: `DESTRUCTION.on`, `RUBBLE.on`, `EVICT.on` (`PT_DESTR` / `PT_KICK` / `PT_POP`, playthrough.ts alone), `FRAG.defenders` (`--set`),
