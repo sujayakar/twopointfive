@@ -48,10 +48,10 @@ const word = lookWordOf(), cls = (albedo: readonly number[], flags = 0) => word(
     `${rows} rows in ${files} files · ${byName} of them differ from what the colour alone gives${wrong.length ? ` · ${wrong.slice(0, 5).join(' · ')}` : ''}`); }
 
 // 4. the office's furniture and floors, by name; and what the colour alone made of them
-{ const M = dataOf('office.json').materials, want: Record<string, string> = { wood: 'wood', woodDark: 'wood', chair: 'cloth', carpet: 'cloth', carpetBlue: 'cloth', metal: 'waits', wall: 'plaster', concrete: 'block', lino: 'slab', asphalt: 'gravel', black: 'plain', cardboard: 'waits' };
+{ const M = dataOf('office.json').materials, want: Record<string, string> = { wood: 'wood', woodDark: 'wood', chair: 'cloth', carpet: 'cloth', carpetBlue: 'cloth', metal: 'waits', wall: 'plaster', concrete: 'block', lino: 'slab', asphalt: 'metal', black: 'plain', cardboard: 'waits' };
   hand(M); const got = Object.keys(want).map(n => cls((M as any)[n].albedo)); lookNames(null); const was = Object.keys(want).map(n => lookStuff((M as any)[n].albedo));
   const said = (c: number) => c === 0 ? 'plain' : LOOK_NAMES[c - 1];
-  check(Object.keys(want).every((n, i) => got[i] === lookClassOf(want[n])) && was[0] === 0 && was[2] === 0 && was[3] === 0, '4 the office\'s paints: a desk is wood, a chair and a carpet cloth, a partition plaster, the lot gravel, a bezel plain because its name says so and steel shelving plain because the look has no clean steel yet; by the colour alone the desk, the chair and the carpet were nobody\'s',
+  check(Object.keys(want).every((n, i) => got[i] === lookClassOf(want[n])) && was[0] === 0 && was[2] === 0 && was[3] === 0, '4 the office\'s paints: a desk is wood, a chair and a carpet cloth, a partition plaster, a bezel plain because its name says so and steel shelving plain because the look has no clean steel yet; by the colour alone the desk, the chair and the carpet were nobody\'s',
     Object.keys(want).map((n, i) => `${n} ${said(got[i])}${got[i] !== was[i] ? ` (was ${said(was[i])})` : ''}`).join(' · ')); }
 
 // 5. a row may say its own; a name with no row and no word is the colour's; two rows of one colour: the first; nothing handed over is changed

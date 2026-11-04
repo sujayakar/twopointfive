@@ -24,7 +24,8 @@ export const PAINT_STUFF: Readonly<Record<string, Stuff>> = {
   metal: 'waits', glassFrame: 'waits',   // (an office's steel is CLEAN steel: shelving, desk legs, lamp posts, mullions. The look's 'metal' is bare iron gone to rust and its 'paint' is chipped: a shelf drew as a wreck under the one and splotched under the other, so it stays plain until the look has a clean steel)
   carpet: 'cloth', carpetBlue: 'cloth', carpetRed: 'cloth', chair: 'cloth', partRed: 'cloth', partBlue: 'cloth', partTan: 'cloth',
   wall: 'plaster', ceiling: 'plaster', wallDark: 'block', concrete: 'block', stone: 'slab', lino: 'slab',
-  asphalt: 'gravel',   // (a bend, said as one: the look has no tarmac, and gravel is the nearest ground)
+  asphalt: 'metal',   // (TWO PAINTS, ONE COLOUR: the lived kit's iron fittings have the office car park's numbers, and a file writes both under this name. Nearly
+                      //  every box of that colour is an iron fitting, so the name says metal, as the colour alone did; the car park wants a tarmac and a word of its own)
   black: 'plain', white: 'plain', screenOff: 'plain', glass: 'plain', glassExt: 'plain',
   cardboard: 'waits', plant: 'waits', grass: 'waits',
   // ---- the snow kit's (the look lays its own snow over a thing; the paint under it stays plain)
