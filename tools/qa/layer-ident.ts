@@ -23,7 +23,7 @@ const ROOT = resolve(import.meta.dir, '../..');
 process.env.TPS_PROFILE ??= 'shipped'; process.env.TPS_CPUSENSE ??= '1'; process.env.TPS_RUSTPOSES = '1'; process.env.TPS_RUSTWALK = '1';
 const BREAK = process.env.RUST_BREAK === '1', args = process.argv.slice(2), flag = (n: string) => { const i = args.indexOf(n); return i >= 0 ? args[i + 1] : undefined; };
 /** the layers that have moved (rust/sim/src/layers.rs, a `pub fn` each), by the name game/character.ts asks them both ways under */
-const LAYERS_MOVED = ['standPose', 'crouchPose', 'softKnees', 'runPlant', 'steadyLayer', 'sneakBody', 'creepBody', 'watchSlip', 'watchLook', 'mvPostBody', 'kickBody', 'toesUp', 'wallBody', 'stanceBody', 'mvPre', 'mvTrunk', 'longBody', 'lifeLayer', 'leanBody', 'gazeKeep', 'turnWeigh', 'sneakArms', 'carryArms', 'wallArms', 'actPose', 'woundBody', 'woundLimbs', 'longArms', 'mvPostArms', 'watchArm', 'creepArms', 'clutchArm', 'boundArms', 'reloadArm', 'pistolReloadArm', 'handsPass', 'signalLayer', 'tellLayer', 'smokePose', 'nvPose', 'torchUpLayer', 'radioPose', 'lockpickLayer', 'haulLayer', 'swapPose', 'stealthLayer', 'cablePose', 'takenLayer', 'blowLegs', 'blowTrunk', 'blowArms', 'knifePose', 'readyLayer', 'kitLayer', 'doorLayer', 'workLayer', 'holdLayer', 'heldLayer', 'catchArm', 'bigLayer', 'throwLayer'], FLOOR = 100;
+const LAYERS_MOVED = ['standPose', 'crouchPose', 'softKnees', 'runArms', 'runPlant', 'steadyLayer', 'sneakBody', 'creepBody', 'watchSlip', 'watchLook', 'mvPostBody', 'kickBody', 'toesUp', 'wallBody', 'stanceBody', 'mvPre', 'mvTrunk', 'longBody', 'lifeLayer', 'leanBody', 'gazeKeep', 'turnWeigh', 'sneakArms', 'carryArms', 'wallArms', 'actPose', 'woundBody', 'woundLimbs', 'longArms', 'mvPostArms', 'watchArm', 'creepArms', 'clutchArm', 'boundArms', 'reloadArm', 'pistolReloadArm', 'handsPass', 'signalLayer', 'tellLayer', 'smokePose', 'nvPose', 'torchUpLayer', 'radioPose', 'lockpickLayer', 'haulLayer', 'swapPose', 'stealthLayer', 'cablePose', 'takenLayer', 'blowLegs', 'blowTrunk', 'blowArms', 'knifePose', 'readyLayer', 'kitLayer', 'doorLayer', 'workLayer', 'holdLayer', 'heldLayer', 'catchArm', 'bigLayer', 'throwLayer'], FLOOR = 100;
 const { standUp } = await import('./headless.ts');
 const S: any = await import(`${ROOT}/src/sim/sim.ts`), SK: any = await import(`${ROOT}/src/anim/skeleton.ts`), RK: any = await import(`${ROOT}/src/game/rustknobs.ts`);
 const KN: any = await import(`${ROOT}/src/game/knobs.ts`), PT: any = await import(`${ROOT}/tools/qa/playthrough.ts`);
@@ -287,7 +287,18 @@ async function quietWalk(secs: number): Promise<void> {
               thr({ long }); thr({ long, dist: 5 }); thr({ long, dist: 3.5, crouch: true }); thr({ long, dist: 8, walk: true }); thr({ long, dist: 2, speed: 8 }); thr({ long, dist: 1.5 }); thr({ long, dist: 0.5, crouch: true }); thr({ long, dist: 2.5, walk: true });
               thr({ long, again: 18 }); thr({ long, dist: 6, again: 30 }); thr({ long, dist: 1.2, again: 14 }); thr({ long, fold: 8 }); thr({ long, dist: 4, fold: 15 }); thr({ long, dist: 1, fold: 10 }); thr({ long, folded: true, fold: 20 }); thr({ long, dist: 12, by: false }); thr({ long, fold: 8, by: false }); thr({ long, dist: 1, folded: true, fold: 14, by: false }); thr({ long, crouch: true, walk: true }); }
             GH.GUNHAND.on = false; thr({ dist: 1.5, aim: true }); thr({ dist: 0.6, aim: true, again: 16 }); thr({ aim: true }); thr({ dist: 5, aim: true }); thr({ long: true, dist: 1.5 }); thr({ long: true, dist: 0.8, again: 12 }); thr({ long: true, dist: 2 }); thr({ long: true });
-          } finally { HM.THROW_BY.on = wasBy; GH.GUNHAND.on = wasGh; GH.GUNHAND.throwFree = wasFree; } } } }
+          } finally { HM.THROW_BY.on = wasBy; GH.GUNHAND.on = wasGh; GH.GUNHAND.throwFree = wasFree; } }
+        // …and a run with its arms carried close (RUNARMS: on in the page, off on the stand this runs on, so it is raised for the drive). The animator's
+        // ground speed is HELD at the drive's (he runs on the spot: the layer reads the pose, not the ground): up from a walk through the jog to a full
+        // sprint and back down, a jog held, a sprint that comes and goes; with nothing drawn, the pistol out, and the rifle coming up into both arms and
+        // put away again mid-run (the layer stands down as the long gun takes the arms)
+        { const wasRa = HM.RUNARMS.on, pl = g.player;
+          const run = (o: { v: (f: number) => number; drawn?: boolean; rifle?: [number, number] }) => { g.teleportPlayer(home); const slot = pl.slot; let at = 0; pl.holstered = !o.drawn;
+            try { hold({ speed: () => o.v(at) }, 220, f => { at = f; if (o.rifle && pl.hasRifle) { if (f === o.rifle[0]) { pl.slot = 'rifle'; pl.holstered = false; } if (f === o.rifle[1]) { pl.slot = slot; pl.holstered = true; } } }); }
+            finally { pl.slot = slot; pl.holstered = true; } };
+          HM.RUNARMS.on = true;
+          try { run({ v: f => 1.2 + f * 0.03 }); run({ v: f => 7.5 - f * 0.03 }); run({ v: () => 3.4 }); run({ v: f => 3.6 + 2.4 * Math.sin(f / 18) }); run({ v: f => 1.5 + f * 0.025, drawn: true }); run({ v: () => 5.5, drawn: true });
+            run({ v: () => 5, rifle: [20, 130] }); run({ v: f => 2.6 + f * 0.02, rifle: [60, 150] }); } finally { HM.RUNARMS.on = wasRa; } } } }
   } finally { CL.CLOSE.on = was; CL.CLOSE.noKnife = wasBare; KA.KITANIM.close = wasClose; }
 }
 
