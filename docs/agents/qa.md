@@ -452,7 +452,8 @@ but synthetic writes still work.
   viewer by the same reader) and the card's lines (a whole run each, the unnamed tier among them); `ladder-replay.ts --selftest` plays a 36 fps fight with
   the word under hold 60 and as now, through a pinned High and through auto with sharp direct its own to shed and a size left behind, and then the page's
   own order (a ladder made from what a browser remembers, the address read, a hand's pick, Reset): nothing moves and nothing is written as the machine's
-  choice; `ADAPT_BREAK=1` leaves the word off and the seven lines that play it fail. Never run on a GPU), the backend's own words and the
+  choice; `ADAPT_BREAK=1` leaves the word off and the seven lines that play it fail. Run on a cloud NVIDIA card (two benchmark runs, every
+  High line of the three scenes at one size, the notes as said); never on a Mac or a Windows card), the backend's own words and the
   shader rows' words (`ui/shaderrows.ts SHADER_ROW_WORDS`, e.g. `compactshaders`) ride along: anything else would make it another fight than the set's, and
   the report has a note naming the words that were not kept. THE ROWS WERE DROPPED UNTIL 2026-10-27, so `?bench&compactshaders=1` measured the plain build
   on every scene (found by the maintainer, who saw no difference on a second run); a row set in Options always applied. Since then the report has a
@@ -538,7 +539,10 @@ but synthetic writes still work.
   the sweep's 'GPU ms given back' and the ladder's own number are the compute passes alone, so a feature that moves g-buffer work is under-priced
   there. `bench-check` has the mean on a rounded clock, a hitch in a long and in a short window, the missing stamp (none, or nothing but the 0
   the timer gives a pair never written), the column and its line on a whole run's card, a browser with no timings, an old result, and the pass's
-  name against the engine's. Never run on a GPU.
+  name against the engine's. Run on a cloud NVIDIA card (the column on every line of four cards, 0.39 to 0.79 ms on the High lines, rising
+  with the size over the presets); never on a Mac or a Windows card with this build. A BENCHMARK WAITS FOR THE GPU as a player's page does
+  (`docs/agents/render.md`, the page waits for the GPU; a result's `wait`): a card from before that, made on a machine with no display, has
+  frame rates and 'one feature changed' rows that are not to be believed on any line over the display's frame.
 - **Stalls: the recorder watches the page's own thread** (`ui/perfrec.ts`, from 10-25). A frame's marks see only inside the frame, and a stall is nearly
   always between two frames. While a take runs ON THE PAGE (never headless: a headless take is the file it was; `perfrec.watch = false` leaves it off on
   a page too) a 4 ms timer answers, and each frame's `beat` is the longest it went silent in the GAP before the frame: from the end of the step before to

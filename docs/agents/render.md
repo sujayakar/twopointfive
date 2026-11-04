@@ -212,8 +212,15 @@ interleaved and filtered to their quiet minimum, and a row whose p75 sits far ab
   = from before). WHAT THIS CHANGES ELSEWHERE: a benchmark's frame rate is now the pace a player's page gets, so on a fast display where the
   queue answers late it can read under what the card could do (the limit named above, for play), and on a slow headless card a scene runs in
   slow motion against its wall-clock cap as it does on a slow machine with a display. On an adapter slower than five seconds a frame the wait
-  gives frames up (`lost`) and nothing is bounded: the software adapter's page tools prove mechanics there, never a number. MEASURED: see the
-  cloud card's lines at the end of this bullet. ON THE REAL PAGE (headless Chromium 153,
+  gives frames up (`lost`) and nothing is bounded: the software adapter's page tools prove mechanics there, never a number. MEASURED ON A
+  CLOUD CARD (an NVIDIA A10, Vulkan, headless Chrome 157, 60 Hz, High with the size held, the benchmark run twice on two boxes before and
+  twice after; relative only, never on a Mac or a Windows card): the held picture went from '60 fps, a frame every 16.6 ms' beside 17.8 ms of
+  GPU work to 50 to 53 fps (a frame every 16.8, 95th centile 33.5); GPU time and the g-buffer's the same as before on every line; and the
+  sweep's rows, which had disagreed between the boxes, agree in sign and near enough in size (the whole other preset 7.8 and 8.2, mesh
+  shadows off 3.2 and 3.9, sharp direct off 2.0 and 1.9, the top of the climb -3.6 and -3.9). WHAT THE WAIT COSTS THERE: the queue's answer
+  comes late on that headless browser, so 'as it opened' reads 57 fps with 7.3 ms of GPU work (60 before) and the heaviest scene 33 fps where
+  frames had been handed over at 47: a benchmark's frame rate on such a card is the pace a player's page gets on it, under what the card could
+  do, and a card from before the step is not to be held against one from after by its frame rates. Its GPU times can be. ON THE REAL PAGE (headless Chromium 153,
   software adapter, not driven):
   the title at 640 x 360, very low, watched for seven minutes after it came ready. It came ready as ever, drew 20 frames in
   those minutes, never had more than two with the GPU, and printed no error. A frame takes about 11 s on this adapter, so every one of them outlasted
