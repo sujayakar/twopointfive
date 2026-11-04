@@ -43,7 +43,7 @@ first system across (the game's own maths). No rule of play has changed and noth
   - `lines` — the box world's line tests (`collision.ts segmentBlocked`, `segmentBlockedDynamic`: every sight line, round and reach) from `rust/sim/src/lines.rs`,
     over the module's copy of the boxes (next bullet), inside a tick. `?rustlines`, `TPS_RUSTLINES=1`. The length is worked out in TypeScript and handed
     over, so the row answers under either maths. Glass: the module imports nothing, so where the host has a question about a pane (`glassOpen`, a line of
-    fire counting panes) the walk LISTS the glass it crosses and TypeScript judges the list. THE RAY IS THIS ROW'S TOO (`collision.ts raycast` →
+    fire counting panes) the walk LISTS the glass it crosses and TypeScript judges the list. THE RAY IS A ROW OF ITS OWN, `rays` (`?rustrays`, `TPS_RUSTRAYS=1`; `collision.ts raycast` →
     `lines.rs ray`, 2026-11-03: the nearest thing a ray meets, how far along, and the normal of the face it enters by — `boxes.ts rayBox` whole, over
     plain, tilted, round and cut boxes; the leaves standing in `dynamicBoxes` first, then the grid in the same half-metre steps). Every rule of the
     things that flies something through a level asks it (a round, a thrown can, a torn leaf, a piece of debris: 102 callers), so it had to be in the
@@ -51,7 +51,9 @@ first system across (the game's own maths). No rule of play has changed and noth
     is no pane, no pane stood nearer, open or shut, and the TypeScript's walk ends on the same thing. If it is a pane, the host asks its one
     question of it (`glassOpen`, which only reads): shut, and it is the answer; open, and the ray flies on to what stands beyond, which only the
     host's own walk can follow, so the ray is asked again in TypeScript whole. `raycastHere` is the TypeScript's own. `RAYS.n` counts the
-    module's, `RAYS.host` the ones walked again (an open pane; a ray that is not a number, which the host's walk fails on loudly). OFF EVERYWHERE for now. Measured 2026-11-03 on a 4-core cloud
+    module's, `RAYS.host` the ones walked again (an open pane; a ray that is not a number, which the host's walk fails on loudly). The ray rode the lines' row for a
+    day, on no named build; it has its own so that the lines' row can be on in the page while the ray waits its turn, and a rule stepped in the
+    module (a slab, a thrown thing) asks its rays there whatever this row says. BOTH OFF EVERYWHERE for now. Measured 2026-11-03 on a 4-core cloud
     box under bun: a sight line 1.81 → 1.08 µs on the office and 1.03 → 0.77 µs on the compound (`tools/qa/segment-bench.ts`). THE TICK, with `lines`,
     `circles` and `fog` up together against none (`tools/qa/tickcost.ts --each --list --rounds 2`, two runs, one seed each, the same bits in every table;
     the rows-off table taken before and after): 4.81 → 4.59 ms mean over 13,676 ticks, and 4.81 again off. pass-four 5.28 / 5.13 → 4.68 ms (its ticks
@@ -300,7 +302,7 @@ first system across (the game's own maths). No rule of play has changed and noth
     THE RAY with its row off 2.17 → 2.12 µs. THE TICK (`tickcost.ts --each --list --rounds 2`, five missions, one seed each, 38,634 ticks, the same
     bits in every table): the build before 3.52 ms, this with every row off 3.51, with `props`, `lines` and `circles` up 3.34 (−5 %; a mission's p99
     10 to 23 % lower). The five missions are the same game to the bit with all fourteen rows up and with none, under bun and under node (26,583
-    ticks); `--both --rows props,doors,lines` answered 14.2 million questions twice (646,786 rays, the furniture's step on every one of 38,634 ticks)
+    ticks); `--both --rows props,doors,lines` (the rays were the lines' row's then: `rays` is in the list now) answered 14.2 million questions twice (646,786 rays, the furniture's step on every one of 38,634 ticks)
     with none differing; `rollback-check` whole on both stands with the rows up. WHAT IT COSTS A SNAPSHOT, not measured as time: with the row off the
     columns are ONE array of 13,328 bytes and the clock in its head is written every tick, so a snapshot after every tick copies it whole where it
     copied the fields that changed; with the row on they are in the game's block, which is shared a 4 KB piece at a time. (ONE array is the store's

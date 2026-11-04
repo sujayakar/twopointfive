@@ -22,7 +22,7 @@
 // A run is FAIR only if it met every kind of thing the step does. ITEMS_BREAK=1 (or RUST_BREAK=1) is the red path: the module is handed a tick one
 // unit in the last place too long, and the run must FAIL.
 process.env.TPS_PROFILE ??= 'shipped'; process.env.TPS_CPUSENSE ??= '1'; process.env.TPS_EXACT = '1'; process.env.TPS_RUSTITEMS = '1';   // (the game's own maths: the step runs in the module under no other)
-process.env.TPS_RUSTLINES = '0'; process.env.TPS_RUSTCIRCLES = '0'; process.env.TPS_RUSTFOG = '0';   // (the TypeScript's arm is all TypeScript, whatever the stand has on: its rays are collision.ts's own walk)
+process.env.TPS_RUSTLINES = '0'; process.env.TPS_RUSTRAYS = '0'; process.env.TPS_RUSTCIRCLES = '0'; process.env.TPS_RUSTFOG = '0';   // (the TypeScript's arm is all TypeScript, whatever the stand has on: its rays are collision.ts's own walk)
 import { resolve } from 'path';
 import { standUp } from './headless.ts';
 const ROOT = resolve(import.meta.dir, '../..');

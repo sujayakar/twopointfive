@@ -198,7 +198,7 @@ export function mathsOfRust(): Maths {
 // ---- WHICH SYSTEMS RUN IN RUST
 let mathsOn = false, linesOn = false, circlesOn = false, fogOn = false, posesOn = false, diceOn = false;
 let sightOn = false, lightOn = false, smokeOn = false, soundOn = false, pathsOn = false, walkOn = false;
-let doorsOn = false, fallsOn = false, propsOn = false, slabsOn = false, itemsOn = false;
+let doorsOn = false, fallsOn = false, propsOn = false, slabsOn = false, itemsOn = false, raysOn = false;
 /** A row a system: on = that system of the update runs in the Rust module, off = in TypeScript as it always did. THE TWO ARE THE SAME GAME TO THE BIT — that is
  *  what lets a system move at all, and tools/qa/rust-check.ts holds each row to it (whole missions played both ways, every tick's raw bits). So a row is never
  *  a rule of play: a recording made with one on replays with it off, and the frozen stand's fixtures do not care. A row is ON in the page once its system is
@@ -209,10 +209,13 @@ let doorsOn = false, fallsOn = false, propsOn = false, slabsOn = false, itemsOn 
  *          call from TypeScript into the module costs more than the dozen operations it saves (bun: sin 27 ns here, 44 ns there; V8 about level), so this row
  *          is the proof that the two arithmetics are one — and the Rust systems that follow call the Rust maths with no crossing.
  *  lines   the box world's line tests (src/scene/collision.ts segmentBlocked, shotBlocked through it, segmentBlockedDynamic: every line of sight, every
- *          straight run of a sound, every reach and line of fire; and raycast: the nearest thing along a ray, how far and by which face — a round's
- *          flight, a thrown can's bounce, a torn leaf's slide) from the module's copy of the box world (src/scene/boxMirror.ts) — INSIDE A TICK: there the
+ *          straight run of a sound, every reach and line of fire) from the module's copy of the box world (src/scene/boxMirror.ts) — INSIDE A TICK: there the
  *          copy is proven against the boxes as the tick opens; a question asked outside one (the page's own, a tool's) is answered in TypeScript as it always
  *          was. ?rustlines / TPS_RUSTLINES=1 raise it.
+ *  rays    the box world's ray (collision.ts raycast: the nearest thing along a ray, how far and by which face — a round's flight, a thrown can's bounce,
+ *          a torn leaf's slide) from the same copy, inside a tick. A ROW OF ITS OWN, though it is lines.rs that answers: the lines' row can be on in the
+ *          page while this one waits its turn. A rule stepped in the module (the slabs', the thrown things') asks its rays there whatever this row says.
+ *          ?rustrays / TPS_RUSTRAYS=1 raise it.
  *  circles a circle against the box world (collision.ts collideCircle, circleTouches, gather: a body's footprint pushed out of the statics, what a prop or a
  *          rag doll rests against) from the same copy, inside a tick. ?rustcircles / TPS_RUSTCIRCLES=1 raise it.
  *  fog     the fog of war's sight pass (game/fogofwar.ts update: which of the team's eyes has a line to each man and each body): the loop over the eyes and
@@ -295,6 +298,8 @@ export const RUST = {
   set slabs(v: boolean) { slabsOn = !!v && !simWhyNot(); },
   get items(): boolean { return itemsOn; },
   set items(v: boolean) { itemsOn = !!v && !simWhyNot(); },
+  get rays(): boolean { return raysOn; },
+  set rays(v: boolean) { raysOn = !!v && !simWhyNot(); },
 };
 /** the rows that work their lengths and angles out in the module, and so answer only where the game's own maths stand in Math's place (EXACT.on) */
 const OWN_MATHS: readonly string[] = ['maths', 'fog', 'poses', 'sight', 'light', 'smoke', 'sound', 'paths', 'doors', 'walk', 'props', 'slabs', 'items'];
