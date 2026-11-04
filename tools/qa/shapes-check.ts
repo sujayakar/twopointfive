@@ -30,6 +30,8 @@ async function hushed<T>(f: () => T | Promise<T>): Promise<T> { const log = cons
 const LEVEL_FILES = readdirSync(`${ROOT}/levels`).filter(f => f.endsWith('.json') && !f.includes('.lint')).sort();
 const dataOf = (file: string): any => JSON.parse(readFileSync(`${ROOT}/levels/${file}`, 'utf8'));
 const levelOf = (d: any) => loadLevel(parseLevelData(JSON.stringify(d)));
+/** levels with a vehicle under a roof, where a blast's furniture rule reaches it (line 11) */
+const BLAST_LEVELS = ['bazaar.json', 'pass.json', 'compound.json'];
 const norm = (a: Vec3): Vec3 => { const l = Math.hypot(a[0], a[1], a[2]) || 1; return [a[0] / l, a[1] / l, a[2] / l]; };
 const at = (o: Vec3, d: Vec3, t: number): Vec3 => [o[0] + d[0] * t, o[1] + d[1] * t, o[2] + d[2] * t];
 /** a point in a box's own frame, and a point of that frame in the world (yaw about +y: local +x → (cos, 0, −sin), +z → (sin, 0, cos)) — written out here, not
@@ -60,7 +62,7 @@ function shapedYard(): { d: any; tub: number; wheel: number; bonnet: number; cra
   // the crate: wood, a metre long, on the yard's ground three metres off the pickup's side; two corners cut, and a plate hung on its long face
   const cc = worldOf(T.c, yaw, [0, 0, 3]); const CR = 0.12, ch: Vec3 = [0.5, 0.4, 0.3];
   B.push({ id: 'shapes_check_crate', floor: T.floor, c: [cc[0], 0.4, cc[2]], h: ch, yaw, material: 'woodDark',
-    shape: { cut: [1, -1].map((sg): Plane => [Math.SQRT1_2, 0, sg * Math.SQRT1_2, Math.SQRT1_2 * (ch[0] + ch[2] - CR)]), with: [{ off: [0, 0.1, 0.305], h: [0.2, 0.12, 0.005], albedo: [0.8, 0.8, 0.75] }] } });
+    shape: { cut: [1, -1].map((sg): Plane => [Math.SQRT1_2, 0, sg * Math.SQRT1_2, Math.SQRT1_2 * (ch[0] + ch[2] - CR)]), with: [{ off: [0, 0.1, 0.305], h: [0.2, 0.12, 0.005], ...(T.material ? { material: T.material } : { albedo: [0.8, 0.8, 0.75] }) }] } });   // (the plate is painted by NAME where the yard's pickup is: a piece's paint read the way a box's is)
   return { d, tub, wheel, bonnet, crate: B.length - 1 };
 }
 const flat = (B: any[]) => JSON.stringify(B.map(b => [b.c, b.h, b.yaw, b.flags, b.marks ?? null, b.cut ?? null, b.shaped ?? null, b.piece ?? null]));
@@ -274,6 +276,29 @@ export async function shapesCheck(): Promise<boolean> {
       line(arcs && files > 0 && pieces > 0 && floats.length === 0,
         '10 an arc beside its box\'s own planes is cut to fewer facets and is still the round (rays down its middle land on it, never under it and no farther over it than that many facets stand off, and farther than the next count would); and no trim hangs in the air: in every level file that says a shape each piece touches its box\'s shaped solid, a box beside it, or a piece that does',
         `${said.join(' · ')}\n    ${files} level files, ${pieces} pieces, ${floats.length} hang on nothing${floats.length ? `:\n    ${floats.slice(0, 10).join('\n    ')}` : ''}`); }
+
+    // (11) a blast and a vehicle: trim is no part of the furniture (it stands on nothing, joins nothing, loads nothing), so the furniture of a level stood on
+    // its shapes is the furniture of the plain level, a blast takes the same boxes of both, and the trim of a box that went goes with it. Found by a review:
+    // a wheel arch, as a drawn-only rider, had joined a pickup's wheel to its bed, and one blast took the bed, the tailgate and the tail lamps with the wheel.
+    { const DS: any = await import(`${ROOT}/src/game/destructionSwitch.ts`), ds0 = DS.DESTRUCTION.on, said: string[] = []; let levels = 0, groupsBad = 0, blasts = 0, goneBad = 0, trimBad = 0, trimGone = 0;
+      const gone = (b: any) => (b.flags & BoxFlag.NoPrimary) !== 0, groupsOf = (G: any) => JSON.stringify(G.destr.furn.inventory().list.map((x: any) => x.members));
+      try { DS.DESTRUCTION.on = true;
+        for (const f of BLAST_LEVELS) { const d = dataOf(f), up = await stand(d, true), down = await stand(d, false), A: any[] = up.game.col.boxes, Bv: any[] = down.game.col.boxes; levels++;
+          const ga = groupsOf(up.game), gb = groupsOf(down.game); if (ga !== gb) groupsBad++;
+          // the first piece of furniture that holds a box with trim of its own: the blast goes off half a metre from that box, the same blast in both games
+          const withTrim = new Set(A.filter(b => b.piece === true).map(b => b.of)), grp = (up.game.destr.furn.inventory().list as any[]).find(x => x.members.some((i: number) => withTrim.has(i)));
+          if (!grp) { said.push(`${f}: no furniture with trim${ga === gb ? '' : ', AND THE FURNITURE DIFFERS'}`); continue; }
+          const t = A[grp.members.find((i: number) => withTrim.has(i))], at: Vec3 = [t.c[0] + 0.55, 0.4, t.c[2]], n = Bv.length; blasts++;
+          for (const h of [up, down]) { const c0 = h.game.tune.chaos; try { h.game.tune.chaos = 0.5; await hushed(() => { h.game.destr.blast(at, { who: PLAYER_ID, radius: 2.4 }); for (let i = 0; i < 60; i++) h.step(DT); }); } finally { h.game.tune.chaos = c0; } }
+          let took = 0, differ = 0, tg = 0, tb = 0;
+          for (let i = 0; i < n; i++) { if (A[i].piece === true || Bv[i].piece === true) continue; if (gone(A[i])) took++; if (gone(A[i]) !== gone(Bv[i])) differ++; }
+          for (const p of A) if (p.piece === true) { if (gone(p)) tg++; if (gone(p) !== gone(A[p.of])) tb++; }
+          goneBad += differ; trimBad += tb; trimGone += tg;
+          said.push(`${f}: the furniture ${ga === gb ? 'the same' : 'DIFFERS'} (${grp.members.length} boxes in the piece blasted) · the blast took ${took} boxes, ${differ} otherwise with shapes down · ${tg} pieces of trim went with their boxes, ${tb} did not follow`); } }
+      finally { DS.DESTRUCTION.on = ds0; }
+      line(levels > 0 && groupsBad === 0 && blasts > 0 && goneBad === 0 && trimBad === 0 && trimGone > 0,
+        '11 a blast beside a vehicle that says shapes: the furniture of the level stood on its shapes is box for box the furniture of the plain level, the same blast takes the same boxes of both, and the trim of every box that went is gone with it (and of none that stands)',
+        said.join('\n    ')); }
   } finally { Object.assign(SHAPES, was); cutConfig.on = cutWas; Object.assign(SHAPES_STATS, stats0); Math.random = rnd; }
   console.log(`=== shapes: ${all ? 'ALL PASS' : 'FAILURES above'} ===`);
   return all;

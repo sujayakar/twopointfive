@@ -1,2 +1,2 @@
 # the kits' vehicles say their shapes: the boxes of each vehicle carry a shape, and a pickup's bonnet no longer carries its two panel lines
-9a288f2c1237abca5ac2944e43d7e1cc945a977e
+d189d3430cdd2950776f5b2a7f7fb1e582e46e65

@@ -69,7 +69,7 @@ export interface ShapeForm { round?: 1 | 3; arc?: { axis: 1 | 3; rise: number };
 export interface ShapePiece extends ShapeForm { off: Vec3; h: Vec3; yaw?: number; /** absent = the box's own paint and finish */ albedo?: Vec3; rough?: number; metal?: boolean }
 /** how a box stands when shapes are on */
 export interface BoxShape extends ShapeForm { with?: ShapePiece[] }
-/** the most planes a shape may say: the record's rows, one fewer beside an arc (the picture's record keeps its last row for the arc) */
+/** the most planes a shape may say: the record's rows; beside an arc, ARC_PLANES of the box's own (the arc's facets take the rest: arcFacets) */
 export const SHAPE_PLANES = MAX_CUT_PLANES, ARC_PLANES = 5;
 /** how many facets an arc is cut to beside `nCut` planes of its box's own (the record has eight rows and the picture's keeps its last for the arc) */
 export const arcFacets = (nCut: number): 2 | 4 | 6 => nCut <= 1 ? 6 : nCut <= 3 ? 4 : 2;

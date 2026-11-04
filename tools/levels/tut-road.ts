@@ -31,7 +31,7 @@
 //   bun run tools/qa/tut-road-check.ts                     the lesson played as said, and failed the two ways its lines warn of
 //   page: ?levelFile=tut-road.json&quiet
 import type { Vec3 } from '../../src/math/vec';
-import { glowShape } from '../../src/scene/carShapes';
+import { glowShape, pickupLens } from '../../src/scene/carShapes';
 import type { Level, LevelDoorDef, PatrolRoute } from '../../src/scene/level';
 import type { LevelScenarios, LessonData, LessonStep, QuietData, Rect, IssueData } from '../../src/scene/scenarios';
 import type { SurfacesData } from '../../src/scene/levelData';
@@ -336,7 +336,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
   const TRUCK = { x: 34.4, z: 17.75, yaw: Math.PI };                                           // the roadblock's own truck, nose down the road, its lamps on
   const TS = G.pickup(TRUCK.x, TRUCK.z, TRUCK.yaw, 'truckRed', { load: 'crates' });
   for (const [k, lz] of [[0, -0.66], [1, 0.66]] as const) {
-    const lens = add({ c: at(TRUCK, 2.49, 0.69, lz), h: [0.02, 0.06, 0.13], yaw: TRUCK.yaw, ...M.plasticWhite, emissive: [26, 24, 20], flags: DECAL });
+    const lens = add({ c: at(TRUCK, 2.49, 0.69, lz), h: [0.02, 0.06, 0.13], yaw: TRUCK.yaw, ...M.plasticWhite, emissive: [26, 24, 20], shape: pickupLens([0.02, 0.06, 0.13], [2.49, 0, lz]), flags: DECAL });
     const d = at({ x: 0, z: 0, yaw: TRUCK.yaw }, 1, 0, 0);
     lights.push({ kind: 'spot', pos: at(TRUCK, 2.6, 0.69, lz), dir: norm([d[0], -0.035, d[2]]), color: [1.0, 0.93, 0.8], intensity: 110, range: 22, innerDeg: 9, outerDeg: 24,
       name: `block_lamp_${k}`, group: 'exterior', enabled: true, volumetric: 0.35, fixtureBox: lens, radius: 0.07, mains: false });

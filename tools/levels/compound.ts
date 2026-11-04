@@ -639,7 +639,9 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
     // the roof rack's rails. With shapes on the roof is bowed and cut back to the glass: each rail stands on two feet on the bow, and the first carries the
     // rack's two cross bars, the roof sign on the front one — trim, said in the rail's own frame (the taxi stands at (7.2, 22.5), unturned)
     { const rail = (z0: number, z1: number, bars: boolean) => { const c: Vec3 = [6.95 - 7.2, 1.545, (z0 + z1) / 2 - 22.5], h: Vec3 = [0.95, 0.025, 0.025];
-        slab(6.0, 1.52, z0, 7.9, 1.57, z1, C.black, { shape: { with: [...feetOn(TAXI.tops.roof, c, h, [-0.6, 0.55]), ...(bars ? [-0.93, 0.93].map(u => ({ off: [u, 0, 0.625] as Vec3, h: [0.02, 0.02, 0.65] as Vec3 })) : [])] } }); };
+        // (the front bar reaches forward to the sign's back, 7.92: the sign is bolted to it and stands out over the windscreen as a taxi's does)
+        const trim = [...feetOn(TAXI.tops.roof, c, h, [-0.6, 0.55]), ...(bars ? ([[-0.93, 0.02], [0.94, 0.03]] as const).map(([u, hx]) => ({ off: [u, 0, 0.625] as Vec3, h: [hx, 0.02, 0.65] as Vec3 })) : [])];
+        slab(6.0, 1.52, z0, 7.9, 1.57, z1, C.black, trim.length ? { shape: { with: trim } } : {}); };
       rail(21.85, 21.9, true); rail(23.1, 23.15, false); }
     bx(6.3, 7.5, 21.98, 23.02, 1.52, 1.8, P.canvas, true); for (const x of [6.6, 7.2]) bx(x, x + 0.04, 21.97, 23.03, 1.52, 1.81, BROWN, true);   // the bundle on the roof between them, roped (drawn only)
     bx(7.55, 7.86, 22.2, 22.8, 1.52, 1.7, TEAL, true); bx(7.92, 8.06, 22.3, 22.7, 1.52, 1.64, P.brass);             // a suitcase (drawn only), the roof sign

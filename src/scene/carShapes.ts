@@ -2,7 +2,7 @@
 // and of the shapes as a trial drew them, "Yes, build these in". Every car, pickup, van, motorbike and lorry the kits build is a stack of plain boxes: from
 // above every line of it is straight. Here is the SHAPE each box of a stack says (scene/shapes.ts: a level file's box may say how it stands when shapes are
 // on), worked out once for every kit that builds the vehicle:
-//   · the body's upright corners are rounded in plan (more at the nose than at the tail), and what stands on or in front of a corner (a bumper, a lamp, a
+//   · the body's upright corners are rounded in plan (more at the nose than at the tail; a van's tail is square), and what stands on or in front of a corner (a bumper, a lamp, a
 //     bed's side, a tailgate) is cut back with it;
 //   · the bonnet is crowned from side to side and falls to the nose; a car's bonnet and boot fall away at their ends;
 //   · the glass leans (the windscreen back, the rear window forward, the sides in) between POSTS in the body's paint, under a roof bowed from side to side
@@ -18,7 +18,7 @@
 // vehicles (tools/levels/gwotSkin.ts) repaints their trim. Trim of another stuff (a hub, a mirror, a tank) says its own.
 // A PIECE SAYS ITS TIGHTEST BOX (fitted): with cut pieces off a piece is drawn as its uncut box, and a post said as the whole greenhouse would swallow it.
 // EVERY FORM HERE IS `old`: a pressed panel, a pane, a moulding — never a fresh break.
-// WHAT A RAY MEETS LESS OF: the body's corners (up to 0.22 m of the nose, 0.1 m of the tail), a bonnet's shoulders, the glass above the waist, which leans in
+// WHAT A RAY MEETS LESS OF: the body's corners (up to 0.24 m of the nose, 0.16 m of the tail: the car's; a pickup's 0.22 and 0.1), a bonnet's shoulders, the glass above the waist, which leans in
 // by up to 0.42 m at the roof of a car, and a roof's overhang. A LORRY'S TILT KEEPS ITS EAVES ABOVE A MAN'S HEAD (its bow is 0.15 m, to 1.8 m: the pass's
 // yard is laid out on what the lorry hides). A lamp keeps its place, half size and paint (game/carlamps.ts finds it by those).
 // NO TWO FACES IN ONE PLANE: under a roof the glass and the posts stop 4 mm short of it (a bowed roof is thin at its edge, and what reached up into it showed
@@ -97,9 +97,9 @@ export function greenhouse(h: Vec3, tilt: { f: number; r: number; s: number }, p
   return { glass: { ...cutOf(h, [...(tilt.f > 0 ? [F] : []), ...(tilt.r > 0 ? [R] : []), ...(tilt.s > 0 ? [S(1), S(-1)] : []), ...(low > 0 ? [plane(0, 1, 0, h[1] - low)] : [])]) }, posts: trim };
 }
 /** where a leaning greenhouse's top edge lies, for the roof over it: the glass's half size, its tilts, and how far the roof oversails (more than a post is
- *  proud). Returns the reach from the GLASS's centre: toward the nose, toward the tail, to each side. */
-export function glassTop(h: Vec3, tilt: { f: number; r: number; s: number }, over = 0.03): { front: number; rear: number; side: number } {
-  const H = 2 * h[1]; return { front: h[0] - H * Math.tan(tilt.f * D) + over, rear: h[0] - H * Math.tan(tilt.r * D) + over, side: h[2] - H * Math.tan(tilt.s * D) + over };
+ *  proud). Returns the reach from the GLASS's centre: toward the nose, toward the tail. */
+export function glassTop(h: Vec3, tilt: { f: number; r: number; s: number }, over = 0.03): { front: number; rear: number } {
+  const H = 2 * h[1]; return { front: h[0] - H * Math.tan(tilt.f * D) + over, rear: h[0] - H * Math.tan(tilt.r * D) + over };
 }
 /** A ROOF over a greenhouse (its plain box of half size h, its centre `dx` toward the nose from the glass's): bowed from side to side by `rise`, and cut
  *  back at the nose and the tail to the glass's top edge (`top`: glassTop) where it reached beyond */
@@ -109,8 +109,7 @@ export function roofShape(h: Vec3, dx: number, rise: number, top: { front: numbe
 /** A LAMP'S LENS (its plain box of half size h, its centre `d` from the body's in the body's frame): its four corners taken off, and where it sits on a
  *  rounded corner of the body (`bodyCut`: the body's own planes) its end taken back with that corner, so it lies `proud` of the panel all along */
 export function lensShape(h: Vec3, bodyCut: readonly ShapePlane[], d: Vec3, proud = 0.012): BoxShape | undefined {
-  const r = Math.min(h[1], h[2]) * 0.8, k = Math.SQRT1_2, own = [-1, 1].flatMap(sy => [-1, 1].map(sz => plane(0, sy * k, sz * k, k * ((h[1] - r) + (h[2] - r)) + r)));
-  return said({ ...cutOf(h, [...withCorners(bodyCut, d, proud), ...own]) });
+  return said({ ...cutOf(h, [...withCorners(bodyCut, d, proud), ...edgesOff(h, Math.min(h[1], h[2]) * 0.8)]) });
 }
 /** THE GLOW A LEVEL HANGS ON A LAMP THAT IS LIT (a sliver of half size h, `dx` along the lamp's own x from it and `grow` larger across): the lamp's
  *  shape, said of the sliver, so the light ends where the lens does */
@@ -139,7 +138,7 @@ export const fallOf = (t: BowedTop, s: number): number => { const { R } = bowOf(
  *  pushed onto its shape, so it is there only when shapes are on. `nth`: the slab lies on `nth` earlier falls (a second fall is a ridge half as wide, and
  *  lays no sheet). Returns the slab's own shape, or nothing where it need say none. */
 export function layOn(t: BowedTop, c: Vec3, h: Vec3, paint: CarPaint, o: { nth?: number; gap?: number } = {}): BoxShape | undefined {
-  const { x, w, R } = bowOf(t), nth = o.nth ?? 0, gap = o.gap ?? 0.02, lift = 0.02, d: Vec3 = sub(c, t.c), len: 0 | 2 = x === 2 ? 0 : 2;
+  const { x, w, R } = bowOf(t), nth = o.nth ?? 0, gap = o.gap ?? 0.02, lift = 0.02, d: Vec3 = sub(c, t.c);
   const keep = Math.sqrt(2 * R * gap - gap * gap) / 2 ** nth, flat = keep / 2;
   // the slab: from (flat, its top) down to (keep, its underside) each side of the crown, which lies −d[x] from the slab's own middle
   const a = keep - flat, b = 2 * h[1], k = b * flat + a * h[1], side = (sg: number): ShapePlane => x === 2 ? plane(0, a, sg * b, k - sg * b * d[2]) : plane(sg * b, a, 0, k - sg * b * d[0]);
@@ -151,22 +150,27 @@ export function layOn(t: BowedTop, c: Vec3, h: Vec3, paint: CarPaint, o: { nth?:
   }
   return said({ ...cutOf(h, [side(1), side(-1), ...own]) });
 }
-/** FEET under a thing that stands on a bowed top (a rack's rail, a ladder's stile: its centre `c` in the vehicle's frame, its half size h, lying along the
- *  vehicle): one at each of `at` (metres along the thing from its middle) that is over the top, from the thing's underside down to the bow — trim of the
- *  THING's own box, in its paint */
+/** FEET under a thing that stands on a bowed top (a rack's rail, a ladder's stile: its centre `c` in the vehicle's frame, its half size h, lying ALONG THE
+ *  VEHICLE whichever way the top is bowed): one at each of `at` (metres along the thing from its middle) that is over the top, from the thing's underside
+ *  down to the bow where that foot stands — trim of the THING's own box, in its paint */
 export function feetOn(t: BowedTop, c: Vec3, h: Vec3, at: readonly number[], foot = 0.02): ShapePiece[] {
-  const { x } = bowOf(t), d = sub(c, t.c), len: 0 | 2 = x === 2 ? 0 : 2, drop = r6(d[1] - h[1] - t.h[1] + fallOf(t, Math.abs(d[x]) + Math.min(h[x], foot)));
-  if (drop < 0.004) return [];
-  const ends = (t.shape.cut ?? []).filter(p => Math.abs(p[1]) < 1e-6), fh: Vec3 = len === 0 ? [foot, r6(drop / 2), Math.min(h[2], foot)] : [Math.min(h[0], foot), r6(drop / 2), foot];
-  return at.filter(u => { const q: Vec3 = len === 0 ? [d[0] + u, 0, d[2]] : [d[0], 0, d[2] + u]; return Math.abs(q[len]) < t.h[len] && ends.every(p => p[0] * q[0] + p[2] * q[2] <= p[3]); })
-    .map((u): ShapePiece => ({ off: len === 0 ? [r6(u), r6(-h[1] - drop / 2), 0] : [0, r6(-h[1] - drop / 2), r6(u)], h: fh }));
+  const { x } = bowOf(t), d = sub(c, t.c), ends = (t.shape.cut ?? []).filter(p => Math.abs(p[1]) < 1e-6), fz = Math.min(h[2], foot), out: ShapePiece[] = [];
+  for (const u of at) {
+    const q: Vec3 = [d[0] + u, 0, d[2]];   // the foot's place on the top, from the top's own middle
+    if (Math.abs(q[0]) >= t.h[0] || Math.abs(q[2]) >= t.h[2] || !ends.every(p => p[0] * q[0] + p[2] * q[2] <= p[3])) continue;
+    const drop = r6(d[1] - h[1] - t.h[1] + fallOf(t, Math.abs(q[x]) + (x === 2 ? fz : foot)));   // (to the bow under the foot's lower edge)
+    if (drop >= 0.004) out.push({ off: [r6(u), r6(-h[1] - drop / 2), 0], h: [foot, r6(drop / 2), fz] });
+  }
+  return out;
 }
 
 export interface CarPaints { hub: CarPaint }
 
+/** a pickup's body: its half size, and its four rounded corners (said once: its own shapes and a level's lit lens on it are cut by the same planes) */
+const PICKUP_TUB: Vec3 = [2.45, 0.25, 0.86], pickupCorners = (): ShapePlane[] => corners(PICKUP_TUB, [0.22, 3], [0.1, 1]);
 /** A PICKUP, 5.0 × 1.8, nose toward local +x (scene/gwotKit.ts pickup): the shape each box of its stack says */
 export function pickupShapes(P: CarPaints) {
-  const tubC: Vec3 = [0, 0.55, 0], tubH: Vec3 = [2.45, 0.25, 0.86], tubCut = corners(tubH, [0.22, 3], [0.1, 1]);
+  const tubC: Vec3 = [0, 0.55, 0], tubH = PICKUP_TUB, tubCut = pickupCorners();
   const glassC: Vec3 = [0.38, 1.29, 0], glassH: Vec3 = [0.64, 0.21, 0.8], tilt = { f: 30, r: 12, s: 12 }, top = glassTop(glassH, tilt), G = greenhouse(glassH, tilt);
   const doorsC: Vec3 = [0.38, 0.94, 0], wheelH: Vec3 = [0.37, 0.37, 0.13], bonnetH: Vec3 = [0.7, 0.1, 0.84];
   const arches = [-1.5, 1.52].flatMap(lx => [-1, 1].map(s => archPiece([lx, 0.37, s * 0.78], wheelH, s, tubC)));
@@ -189,13 +193,13 @@ export function pickupShapes(P: CarPaints) {
 
 /** a lit lens a level stands on a pickup's nose or tail (half size h, its centre `d` from the pickup's middle on the ground: [x, _, z]): cut as the kit's own
  *  lamps are, back with the body's rounded corner */
-export const pickupLens = (h: Vec3, d: Vec3): BoxShape | undefined => lensShape(h, corners([2.45, 0.25, 0.86], [0.22, 3], [0.1, 1]), [d[0], 0, d[2]]);
+export const pickupLens = (h: Vec3, d: Vec3): BoxShape | undefined => lensShape(h, pickupCorners(), [d[0], 0, d[2]]);
 
 /** A PANEL VAN, 4.9 × 1.8 × 1.95, nose toward local +x, its back doors open (scene/gwotKit.ts van): the shape each box of its stack says. Its roof is one
  *  bow of 6 cm from the windscreen to the back doors — the brow, the load box and the strip over the open bay each say the same arc, and the bay's sides
  *  stop under it */
 export function vanShapes(P: CarPaints) {
-  const bodyC: Vec3 = [0, 0.58, 0], bodyH: Vec3 = [2.4, 0.28, 0.9], bodyCut = corners(bodyH, [0.22, 3], [0.08, 1]);
+  const bodyC: Vec3 = [0, 0.58, 0], bodyH: Vec3 = [2.4, 0.28, 0.9], bodyCut = corners(bodyH, [0.22, 3], [0, 0]);   // (a square tail: a van's tail lamps stand on its back corners, and a corner taken off there took the lamp with it)
   const glassC: Vec3 = [1.3, 1.36, 0], glassH: Vec3 = [0.36, 0.26, 0.84], tilt = { f: 28, r: 0, s: 4 }, bow = 0.06, G = greenhouse(glassH, tilt, [-0.3], 0);   // (the brow stands on the glass, flat underneath: nothing to stop short of)
   const doorsC: Vec3 = [1.3, 0.98, 0], wheelH: Vec3 = [0.37, 0.37, 0.13], bonnetH: Vec3 = [0.4, 0.1, 0.86], browC: Vec3 = [1.22, 1.785, 0], browH: Vec3 = [0.34, 0.165, 0.86], sideH: Vec3 = [0.25, 0.545, 0.03];
   const arches = [-1.45, 1.5].flatMap(lx => [-1, 1].map(s => archPiece([lx, 0.37, s * 0.8], wheelH, s, bodyC)));
@@ -271,7 +275,7 @@ const trimFor = (o: Vec3) => (lx: number, lz: number, y0: number, y1: number, hx
  *  WHAT A RAY MEETS LESS OF: the tilt's shoulders above 1.8 m, the bonnet's (it narrows from 0.98 m a side to 0.56 at its top, 1.5 m up), the cab roof's front
  *  and back edges, the top of the windscreen. Everything else here is trim: a tank, a fender, a mirror stop nothing. A level that snows it in lays its caps on `tops` (layOn). */
 export function lorryShapes(P: LorryPaints) {
-  const hub = { ...tone(P.galv, 0.6), rough: 0.45, metal: true }, zinc = { ...tone(P.galv, 0.6), rough: 0.38, metal: true }, iron = { ...P.iron, rough: 0.5, metal: true }, galv = { ...P.galv, rough: 0.38, metal: true };
+  const hub = hubPaint(P.galv.albedo), zinc = { ...tone(P.galv, 0.6), rough: 0.38, metal: true }, iron = { ...P.iron, rough: 0.5, metal: true }, galv = { ...P.galv, rough: 0.38, metal: true };
   const wheelH: Vec3 = [0.48, 0.48, 0.15], bonnetC: Vec3 = [2.75, 1.12, 0], bonnetH: Vec3 = [0.62, 0.38, 0.98], doorsC: Vec3 = [1.55, 1.12, 0], glassC: Vec3 = [1.55, 1.79, 0];
   // the chassis (its centre (−0.1, 0.62, 0)): a tank under the bed, a step under the door (behind the front wheel) and a mud flap behind the rear wheel, a side
   const ch = trimFor([-0.1, 0.62, 0]), chassis: BoxShape = { with: [-1, 1].flatMap(s => [
