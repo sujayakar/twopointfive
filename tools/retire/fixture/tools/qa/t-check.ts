@@ -2,7 +2,9 @@
 const ROOT = '../..';
 const { K } = await import(`${ROOT}/src/game/k.ts`);
 const KK = K;   // (another name for the table)
-const line = (ok: boolean, label: string): void => { console.log(`  ${ok ? 'PASS' : 'FAIL'}  ${label}`); };
+const line = (ok: boolean, label: string): boolean => { console.log(`  ${ok ? 'PASS' : 'FAIL'}  ${label}`); return ok; };
+const STAGE: Record<string, boolean> = {};
+const setFlag = (v: boolean, what: string): void => { STAGE[what] = v; };   // (it sets the stage for the next line: not a line itself)
 export async function check(): Promise<void> {
   const keep = { on: K.on, extra: K.extra, stay: K.stay };
   K.on = true; Object.assign(K, { extra: true });
@@ -12,6 +14,27 @@ export async function check(): Promise<void> {
   for (const key of ['on', 'extra'] as const) K[key] = keep[key];
   K.stay = keep.stay;
   line(K.stay === keep.stay, 'a row that stays is as the check found it');
+  setFlag(!K.old, 'night'); line(STAGE.night === true, 'the stage is set for the line after it');
+  const both = [K.on, K.stay]; [K.on, K.stay] = both;   // (a kept pair put back through a pattern)
+  const pair = [K.stay, (K.on = true, K.stay)]; K.on = keep.on;
+  line(pair[0] === pair[1] && both.length === 2, 'a pattern and a comma that wrote the rule are still a pattern and a value');
+  await direct();
+  table();
+  await each('kept', async () => {
+    line(K.stay === keep.stay, 'the first line of a group');
+    const kept = line(!K.on || K.stay === true, 'a verdict kept in a name is not a statement of its own');
+    if (!kept) console.log('  (it was red)');
+  });
 }
+const each = async (_name: string, fn: () => Promise<void>): Promise<void> => { await fn(); };
+/** a check that prints its verdicts itself, with no helper */
+async function direct(): Promise<void> {
+  console.log(`  ${K.stay === keep2.stay ? 'PASS' : 'FAIL'}  printed straight from a function: a row that stays`);
+  console.log(`  ${(K.on ? 1 : 2) === 2 ? 'PASS' : 'FAIL'}  printed straight from a function: the rule off`);
+}
+const keep2 = { stay: false };
+/** a check that prints a line a case, each under words worked out as it runs */
+const CASES2 = [{ name: 'the first case', want: 2 }, { name: 'the second case', want: 2 }];
+function table(): void { for (const c of CASES2) console.log(`  ${(CASES2.indexOf(c) === 1 && K.on ? 1 : 2) === c.want ? 'PASS' : 'FAIL'}  ${c.name}: ${c.want}`); }
 function offArm(): number { return K.on ? 1 : 2; }
 if ((import.meta as { main?: boolean }).main) await check();

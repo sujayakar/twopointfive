@@ -41,7 +41,8 @@ const plain = verdict([]), all = verdict(words);
 console.log(`the plain frozen stand: ${plain} · with all ${words.length} words raised: ${all}`);
 if (plain === 'missing') { console.log('the line is not printed on the frozen stand: nothing to bisect'); process.exit(1); }
 if (plain === (green ? 'green' : 'red')) { console.log(`already ${plain} on the plain frozen stand: ${green ? 'nothing to find' : 'no held row explains it (--green finds a rule that mends it)'}`); process.exit(1); }
-if (!flips(words)) { console.log(`raising every word does not flip it: not one of the held rows' doing (the shipped stand itself: ${verdict([], 'shipped')})`); process.exit(1); }
+const wordless = Object.entries(FROZEN_HOLDS as Record<string, string>).filter(([, note]) => !/^[A-Z][A-Z0-9_]*=[A-Za-z0-9-]+/.test(note)).map(([row]) => row);
+if (!flips(words)) { console.log(`raising every word does not flip it (the shipped stand itself: ${verdict([], 'shipped')}). Not tried: the ${wordless.length} held rows that no word raises (${wordless.slice(0, 8).join(', ')}${wordless.length > 8 ? ', …' : ''}), and what the shipped stand does besides its rows (the kit, the cast)`); process.exit(1); }
 
 /** delta debugging: the smallest list every word of which is needed */
 function ddmin(ws: string[]): string[] {

@@ -404,20 +404,36 @@ but synthetic writes still work.
   `FROZEN_HOLDS`, its stand word from `STAND_ENV`, its address word from the lists of address words, its name from a panel's list of rows and from what a
   machine keeps; and what only the dropped branch used goes with it, to a fixed point. It reads the tree with TypeScript's own language service
   (`vendor/typescript`, or `TS_LIB=<path to typescript.js>` in a cloud checkout) and is a dry run without `--write`. IT REFUSES, with the place: a row the game
-  writes as it runs (state, not a switch), a row Options writes (the player's), a getter and setter, a row an object literal in the game holds at another
-  value, a row the game reads through a list of keys, a value that is not of the row's kind, and the rows of the Rust module's twins. Exit 3 = some rows were
-  refused and the rest done. IT SAYS, for a hand: a constant left in a condition beside a call it cannot see to the bottom of (`--pure name,name` vouches for
-  a query, and the command line is then the record of what was vouched for), a value nothing reads any more whose making still happens (a die drawn, a call
-  made: the name goes, the call stays), a loop left with nothing in it, and every place a CHECK asked for the retired path. `--drop file.ts:name` takes a
-  declaration out with the statements that call it; `--drop-at file.ts:line[:words]` one statement of a check. THE PROOF OF A RUN is not the tool's: both
+  writes as it runs (state, not a switch), a row Options writes (the player's), a getter and setter, a row an object literal or a map of tables' rows holds
+  at another value, a row the game reads through a list of keys (or writes through a list something else reads too), a row read as its module loads where
+  its own value is not the page's (the page has written nothing yet: at a file's top level, or in a function or a class's field that a file's top level
+  calls or makes, followed call by call; the page's own files `src/*.ts` boot the game after the switches and are not followed), a row that is the subject of a `switch`, the same key read on another thing of the table's type (a parameter, a kept copy that
+  is not taken at load: a copy taken at load, `X_DEFAULTS`, is read as the row's OWN value), a row read through a list of keys handed to a call with the table, a row the game writes through a list of keys or
+  through a pattern, a held number whose old value something read as its module loaded, a table typed by an index, a value that is not of the row's
+  kind, and the rows of the Rust module's twins. AND A VALUE THAT IS NOT THE PAGE'S, where the page itself says what that is: `--page page.json` is every
+  table as a stand-up of the page left it (`TPS_PROFILE=shipped bun run tools/qa/stand-dump.ts --out page.json`, on the tree about to be folded), and a row
+  the dump gives another value, or does not hold, is refused; so is a row whose write in the page rides a row that stays (`A = B && !q.has('noa')`: with
+  B's word on the address A was off too). `--trust ROW,ROW` takes the caller's word for those. (Reading the page's writes off the code was tried first and
+  dropped: their order, an early return and a helper are the code's to run.) Exit 3 = some rows were refused and the rest done. A CALL IS NEVER FOLDED AWAY FOR ITS NAME: `x.get(k) && ROW` loses the call only where `get` is the language's own
+  (a Map's), the function's body only reads, or the caller vouches for it (`--pure name,name`; the command line is then the record of what was vouched for).
+  A game object's `get`, a getter (also under a type that calls it plain data, or reached by a key), a method some other class overrides, a function a `let`
+  holds and a default worked out at the call all stay. A method of the language's own that is not a reading one (`sort`, a Map's `delete`) is never asked of the game's same-named bodies. An import whose last use as a value went stays as a bare import, where it was: its module still loads
+  (asked twice: of what the run dropped as it rendered the file, and once more of the finished text by its words alone). A number of a knob table whose last reader went stays where its name is still a quoted word somewhere (a panel's list of rows). IT SAYS, for a hand: a constant left in a
+  condition beside a call it cannot see to the bottom of, a value nothing reads any more whose making still happens (a die drawn, a call made: the name
+  goes, the call stays), a loop left with nothing in it, and every place a CHECK asked for the retired path. `--drop file.ts:name` takes a declaration out
+  with the statements that call it; `--drop-at file.ts:line[:words | :column]` one statement of a check, and only a statement that is nothing but the call
+  (a verdict kept in a name, returned, passed on by a helper, or a call that prints a line a case is said as NOT FOUND; `lines.ts diff` does not place a
+  line whose place printed other lines of the run too). THE PROOF OF A RUN is not the tool's: both
   typechecks; the page's stand run for run the same before and after (`TPS_PROFILE=shipped PT_DIGEST=1 bun run tools/qa/playthrough.ts --seeds 1-2 --json f`:
   42 digests); the frozen stand after = the frozen stand before with the retired rows' words raised; and the family's checks run before and after on the
   page's stand, line by line, where a line that went from PASS to FAIL is an arm of the retired path and is taken out by the place it was printed from:
   `bun run tools/retire/lines.ts run <dir> [--tree <the tree before>] <the check files the fold's report names>` before and after, `lines.ts diff <before>
-  <after> --drop places.json`, `retire.ts --drop-lines places.json --write`, and `run` once more. WHAT GOES THAT WAY, by kind: the stand's and the journal's
+  <after> --drop places.json`, `retire.ts --drop-lines places.json --write`, and `run` once more. (`diff` also says a check that DIED after the fold, one
+  that throws exits 1 as a red check does, and does not count a line that was red before under other words.) After a fold that took a row with a slider
+  out: `bun run tools/gen-scene-notes.ts` (the scene panel's notes are keyed by row). WHAT GOES THAT WAY, by kind: the stand's and the journal's
   lines, the off arm, the on arm measured against the off arm ("a quarter of those metres"), and the lines of a check that held a newer rule off for its
   length; in the first fifteen checks of the squad's family that was 65 of 147 lines. A check left saying nothing goes whole (`--drop`). THE TOOL'S OWN CHECK:
-  `bun run tools/retire/retire-check.ts` runs it on a small tree of its own (`tools/retire/fixture`) and holds that each of 46 cases there answers the same,
+  `bun run tools/retire/retire-check.ts` runs it on a small tree of its own (`tools/retire/fixture`) and holds that each of its cases there (104 today) answers the same,
   draws the same dice and makes the same calls after the fold as before it, that the folded tree compiles, and that what names a retired row is gone while
   what only looks like it is not; `RETIRE_BREAK=1` folds one row at the wrong value and must fail. A shape the tool folds wrongly goes into the fixture as a
   case first. Memory: a hundred rows at once is about a minute and 4 GB; all of a family's rows go in one run, not all families in one.

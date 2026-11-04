@@ -7,4 +7,5 @@ export function standGame(): void {
   if (pinned('TPS_EXTRA')) K.extra = envOf().TPS_EXTRA === '1';
   if (pinned('TPS_KEEP')) K.stay = envOf().TPS_KEEP === '1';
   if (pinned()) N.reach = 3;                              // the old reach
+  if (pinned()) N.wide = 2;
 }

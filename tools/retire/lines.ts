@@ -30,8 +30,10 @@ async function main(): Promise<void> {
 function commandsOf(tree: string, file: string, probes: string[]): string[][] {
   const b = basename(file), names: string[] = [];
   for (const l of probes) { if (!l.includes(`./${b}'`) && !l.includes(`/${b}\``) && !l.includes(`./${b}"`)) continue;
-    for (const m of l.matchAll(/\bon\(([^()]*)\)/g)) { const first = /'([^']+)'/.exec(m[1]); if (first) names.push(first[1]); }
-    for (const m of l.matchAll(/await \w+\('([a-z0-9-]+)',/g)) names.push(m[1]); }
+    // (the probe's own name is what its line runs it under — `await run('name', …)`; the first word of `on(…)` is the name too, except on a line that opens
+    // a family, where it is the family: asking for that would run every probe of it)
+    const own = [...l.matchAll(/await \w+\('([a-z0-9-]+)',/g)].map(m => m[1]);
+    if (own.length) names.push(...own); else for (const m of l.matchAll(/\bon\(([^()]*)\)/g)) { const first = /'([^']+)'/.exec(m[1]); if (first) names.push(first[1]); } }
   const uniq = [...new Set(names)].filter(n => /^[a-z0-9-]+$/.test(n));
   if (uniq.length) return uniq.map(n => ['tools/qa/probes.ts', n]);
   return /-(check|probes)\.ts$/.test(b) && existsSync(join(tree, file)) ? [[file]] : [];
@@ -74,28 +76,46 @@ function paired(a: string[], b: string[]): [number, number][] {
 }
 function diff(tree: string, before: string, after: string, dropOut: string | null, jsonOut: string | null): number {
   const src = new Map<string, string[]>(), srcLine = (f: string, n: number): string => { let s = src.get(f); if (!s) { s = existsSync(join(tree, f)) ? readFileSync(join(tree, f), 'utf8').split('\n') : []; src.set(f, s); } return s[n - 1] ?? ''; };
-  /** the frame of the call that printed a line: the innermost one whose source line holds a run of the line's own words; else the frame above the helper that
-   *  formats a verdict (the innermost line that writes both 'PASS' and 'FAIL') */
-  const place = (frames: string[], label: string): string | null => { let helper = -1;
-    for (let i = 0; i < frames.length; i++) { const [f, ln] = frames[i].split(':'), text = srcLine(f, Number(ln)), fmt = text.includes("'PASS'") && text.includes("'FAIL'");
-      if (!fmt && shared(text.slice(0, 600), label.slice(0, 200)) >= 14) return frames[i]; if (fmt) helper = i; }
-    return helper >= 0 && helper < frames.length - 1 ? frames[helper + 1] : null; };
-  const res = { commands: 0, broke: [] as { cmd: string; label: string; at: string | null }[], mended: [] as { cmd: string; label: string }[], died: [] as { cmd: string; exit: number | null; tail: string }[], silent: [] as string[], sameRed: 0 };
+  /** the frame of the call that printed a line. Innermost first: a line that writes both 'PASS' and 'FAIL' AND holds a run of the verdict's own words printed
+   *  it straight (that statement is the place); one that writes both and holds none of its words is a helper that formats verdicts, and the place is the
+   *  call of it — the nearest frame above it holding the verdict's words (a second helper may stand between), else the frame just above. With no such
+   *  line at all: the innermost frame holding the verdict's words. */
+  const place = (frames: string[], label: string): string | null => { const holds = (i: number): boolean => { const [f, ln] = frames[i].split(':'); return shared(srcLine(f, Number(ln)).slice(0, 600), label.slice(0, 200)) >= 14; };
+    for (let i = 0; i < frames.length; i++) { const [f, ln] = frames[i].split(':'), text = srcLine(f, Number(ln)); if (!(text.includes("'PASS'") && text.includes("'FAIL'"))) continue;
+      if (holds(i)) return frames[i];
+      for (let j = i + 1; j < Math.min(frames.length, i + 4); j++) if (holds(j)) return frames[j];
+      return i + 1 < frames.length ? frames[i + 1] : null; }
+    for (let i = 0; i < frames.length; i++) if (holds(i)) return frames[i];
+    return null; };
+  const res = { commands: 0, broke: [] as { cmd: string; label: string; at: string | null }[], mended: [] as { cmd: string; label: string }[], died: [] as { cmd: string; exit: number | null; tail: string }[], silent: [] as string[], sameRed: 0, gone: 0 };
+  /** did it stop on an error nothing caught? (an exit that is neither 0 nor 1; or a 1 with the words of one near its end and fewer lines than before: a
+   *  check that fails its lines exits 1 too, and says all of them) */
+  const threw = (A: ReturnType<typeof read>, B: ReturnType<typeof read>): boolean => (A.code !== 0 && A.code !== 1) || (A.code === 1 && A.lines.length < B.lines.length && /(^|\n)\s*(\w*Error: |error: )|\n\s+at \S[^\n]*:\d+:\d+\)?\n/.test(A.text.slice(-2000)));
   for (const f of readdirSync(after).sort()) { if (!f.endsWith('.txt') || !existsSync(join(before, f))) continue;
     const B = read(join(before, f)), A = read(join(after, f)); res.commands++;
-    const tp = join(after, f.replace(/\.txt$/, '.trace.jsonl')), traces: Trace[] = existsSync(tp) ? readFileSync(tp, 'utf8').split('\n').filter(Boolean).map(l => JSON.parse(l) as Trace).filter(t => t.v === 'FAIL') : [], used = new Set<number>();
-    const at = (label: string): string | null => { const i = traces.findIndex((t, k) => !used.has(k) && (t.text.includes(label.slice(0, 120)) || norm(t.text).includes(norm(label).slice(0, 100)))); if (i < 0) return null; used.add(i); return place(traces[i].frames, label); };
-    if (A.code !== 0 && A.code !== 1 && (B.code === 0 || B.code === 1)) { res.died.push({ cmd: A.head, exit: A.code, tail: A.text.trim().split('\n').slice(-5, -1).join(' / ').slice(0, 240) }); continue; }
+    const tp = join(after, f.replace(/\.txt$/, '.trace.jsonl')), all: Trace[] = existsSync(tp) ? readFileSync(tp, 'utf8').split('\n').filter(Boolean).map(l => JSON.parse(l) as Trace) : [], traces = all.filter(t => t.v === 'FAIL'), used = new Set<number>();
+    // (how many lines of this run each place printed: a place that printed several — a helper's own print, a loop that prints a line a case — is not ONE
+    // line of the check, and taking it out would take the green ones with it)
+    const printed = new Map<string, number>(); for (const t of all) { const p = place(t.frames, t.text.replace(/^\s*(?:-\s+)?(?:PASS|FAIL)\s*(?:—|-)?\s*/, '')); if (p) printed.set(p, (printed.get(p) ?? 0) + 1); }
+    const at = (label: string): string | null => { const i = traces.findIndex((t, k) => !used.has(k) && (t.text.includes(label.slice(0, 120)) || norm(t.text).includes(norm(label).slice(0, 100)))); if (i < 0) return null; used.add(i); const p = place(traces[i].frames, label); return p && (printed.get(p) ?? 0) > 1 ? null : p; };
+    if (threw(A, B) && !threw(B, A)) { res.died.push({ cmd: A.head, exit: A.code, tail: A.text.trim().split('\n').slice(-6, -1).join(' / ').slice(0, 240) }); continue; }
     if (!A.lines.length && B.lines.length) { res.silent.push(A.head); continue; }   // (it ran and said nothing: every line it had is gone — a check that holds nothing goes whole, `retire.ts --drop`)
     const pairs = paired(B.lines.map(x => norm(x[1])), A.lines.map(x => norm(x[1]))), inPair = new Set(pairs.map(p => p[1]));
     for (const [i, j] of pairs) { const b = B.lines[i], a = A.lines[j];
       if (b[0] === 'PASS' && a[0] === 'FAIL') res.broke.push({ cmd: A.head, label: a[1].slice(0, 200), at: at(a[1]) });
       else if (b[0] === 'FAIL' && a[0] === 'PASS') res.mended.push({ cmd: A.head, label: a[1].slice(0, 160) });
       else if (b[0] === 'FAIL') { res.sameRed++; at(a[1]); } }
-    A.lines.forEach((a, j) => { if (!inPair.has(j) && a[0] === 'FAIL') res.broke.push({ cmd: A.head, label: a[1].slice(0, 200), at: at(a[1]) }); });   // (a red line with no line to pair with before)
+    // a red line with no line of the same words before: red before too under other words (a digest, a name in it changed) where a red line that is also
+    // unpaired before shares most of its words; else it broke
+    const inPairB = new Set(pairs.map(p => p[0])), loose = B.lines.map((b, i) => ({ b, i })).filter(x => !inPairB.has(x.i)), usedB = new Set<number>();
+    A.lines.forEach((a, j) => { if (inPair.has(j) || a[0] !== 'FAIL') return; const na = norm(a[1]);
+      const alike = (x: string, y: string): boolean => { const n = Math.min(x.length, y.length); let p = 0, q = 0; while (p < n && x[p] === y[p]) p++; while (q < n - p && x[x.length - 1 - q] === y[y.length - 1 - q]) q++; return p + q >= 0.6 * n; };   // (the same line but for a word in the middle of it)
+      const was = loose.find(x => !usedB.has(x.i) && x.b[0] === 'FAIL' && alike(norm(x.b[1]), na));
+      if (was) { usedB.add(was.i); res.sameRed++; at(a[1]); } else res.broke.push({ cmd: A.head, label: a[1].slice(0, 200), at: at(a[1]) }); });
+    res.gone += loose.filter(x => !usedB.has(x.i) && x.b[0] === 'PASS').length;   // (said before, not said after: taken out with the switch, or never reached)
   }
   const places = [...new Set(res.broke.map(b => b.at).filter((x): x is string => !!x))].sort(), unplaced = res.broke.filter(b => !b.at);
-  console.log(`${res.commands} commands · ${res.broke.length} lines PASS → FAIL (${places.length} places${unplaced.length ? `, ${unplaced.length} NOT PLACED: by hand` : ''}) · ${res.mended.length} FAIL → PASS · ${res.sameRed} red before and after · ${res.died.length} commands died${res.silent.length ? ` · ${res.silent.length} say nothing any more (drop them whole)` : ''}`);
+  console.log(`${res.commands} commands · ${res.broke.length} lines PASS → FAIL (${places.length} places${unplaced.length ? `, ${unplaced.length} NOT PLACED: by hand` : ''}) · ${res.mended.length} FAIL → PASS · ${res.sameRed} red before and after · ${res.gone} said before and not after · ${res.died.length} commands died${res.silent.length ? ` · ${res.silent.length} say nothing any more (drop them whole)` : ''}`);
   for (const c of res.silent) console.log(`  SILENT ${c.slice(0, 140)}`);
   for (const d of res.died) console.log(`  DIED ${d.cmd.slice(0, 110)} exit ${d.exit} | ${d.tail}`);
   for (const b of res.broke) console.log(`  BROKE ${b.at ?? '(not placed)'} | ${b.label.slice(0, 120)}`);
@@ -107,12 +127,14 @@ function diff(tree: string, before: string, after: string, dropOut: string | nul
 // ---- the preload (this same file loaded in front of a check, LINES_TRACE_OUT set): every PASS / FAIL line is also written to that file with its call's frames
 if (import.meta.main) await main();
 else if (process.env.LINES_TRACE_OUT) {
-  const out = process.env.LINES_TRACE_OUT, real = console.log.bind(console);
+  const out = process.env.LINES_TRACE_OUT, real = console.log.bind(console), HERE = process.cwd();   // (the check runs in its tree: the folder as the system names it, which is how a stack frame names its files — a tree reached through a link too)
   console.log = (...a: unknown[]): void => {
     real(...a);
     try {
       for (const ln of a.map(x => typeof x === 'string' ? x : String(x)).join(' ').split('\n')) { const m = /^\s*(?:-\s+)?(PASS|FAIL)\b/.exec(ln); if (!m) continue;
-        const frames = (new Error().stack ?? '').split('\n').map(f => /((?:tools|src)\/[^\s():]+\.ts):(\d+):(\d+)/.exec(f)).filter((f): f is RegExpExecArray => !!f).map(f => `${f[1]}:${f[2]}:${f[3]}`);
+        // (a frame's file as it is named from the tree's root: a checkout under some other `src/` must not be read as the game's)
+        const root = HERE.replace(/\/+$/, '') + '/';
+        const frames = (new Error().stack ?? '').split('\n').map(f => /\(?(\/[^\s()]+?\.ts):(\d+):(\d+)\)?\s*$/.exec(f)).filter((f): f is RegExpExecArray => !!f && f[1].startsWith(root) && /^(tools|src)\//.test(f[1].slice(root.length)) && !f[1].endsWith('/tools/retire/lines.ts')).map(f => `${f[1].slice(root.length)}:${f[2]}:${f[3]}`);
         appendFileSync(out, JSON.stringify({ v: m[1], text: ln.trim().slice(0, 240), frames }) + '\n'); }
     } catch { /* the check's own output is what matters */ }
   };
