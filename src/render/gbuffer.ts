@@ -89,7 +89,7 @@ const SEEN = { bits: 0, grew: 0 };
 function lookSeen(stuff: number) { const bit = 1 << stuff; if (stuff > 0 && !(SEEN.bits & bit)) { SEEN.bits |= bit; SEEN.grew++; } }
 /** nothing has been any stuff yet (a check starts from here; the page never does: one level a page) */
 export function lookForget() { SEEN.bits = 0; SEEN.grew++; }
-/** say by colour what is about to be drawn: every paint handed here has its stuff's map made by the next needLook() (a check; the page asks its boxes their words: main.ts) */
+/** say what a level is about to draw before its first frame: every paint handed here has its stuff's map made by the next needLook() (main.ts, with the level stood up) */
 export function lookNeedPaints(paints: Iterable<Readonly<ArrayLike<number>>>) { for (const a of paints) lookSeen(lookStuff(a)); }
 /** THE LOOK'S WORD FOR A BOX (scene/boxes.ts BoxWorld.stuffOf; common.wgsl boxLook): what it is made of (lookStuff, 5 bits), whether it MOVES (a box past the
  *  level's statics, rebuilt every frame, which carries its map with it: 32), and a number of its own, 0‥44 (× 64), that shifts its map so two crates are not one crate
