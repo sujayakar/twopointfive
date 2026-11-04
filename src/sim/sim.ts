@@ -18,7 +18,7 @@ import { mathsFrom, EXACT, type Maths } from '../math/exact';
 import { kahanN } from '../math/hyp';
 
 /** the version of the exports this file was written against (rust/sim/src/lib.rs ABI) */
-export const SIM_ABI = 17;
+export const SIM_ABI = 18;
 
 /** the module's exports, by name (rust/sim/src/lib.rs: plain C functions, `<module>_<thing>`) */
 export interface SimExports {
@@ -37,10 +37,12 @@ export interface SimExports {
   maths_hypot_n(n: number): number;
   // the box world's copy (rust/sim/src/world.rs — written by src/scene/boxMirror.ts, which names the tables)
   world_addr(w: number, table: number): number; world_cap(table: number): number;
-  world_shape(w: number, gw: number, gh: number, cs: number, boxes: number, tilted: number): void; world_leaves(w: number, set: number, n: number): void;
+  world_shape(w: number, gw: number, gh: number, cs: number, boxes: number, tilted: number): void; world_leaves(w: number, set: number, n: number): void; world_things(w: number, n: number): void;
   // the line tests through it (rust/sim/src/lines.rs — src/scene/collision.ts segmentBlocked / segmentBlockedDynamic past their length)
   lines_blocked(w: number, a0: number, a1: number, a2: number, b0: number, b1: number, b2: number, len: number, shrink: number, through: number, set: number, ask: number): number;
   lines_leaves(w: number, a0: number, a1: number, a2: number, b0: number, b1: number, b2: number, len: number, need: number, set: number): number;
+  /** collision.ts raycast: −1 nothing met · −2 the host answers (glass it has a rule for) · else the static's index, or 1e6 + the leaf's; t and the normal → the scratch */
+  lines_ray(w: number, a0: number, a1: number, a2: number, r0: number, r1: number, r2: number, tmax: number, set: number): number;
   // a circle against it (rust/sim/src/collide.rs — src/scene/collision.ts collideCircle / circleTouches / gather)
   collide_circle(w: number, px: number, pz: number, r: number, y0: number, y1: number, iterations: number): number;
   collide_touches(w: number, x: number, z: number, r: number, y0: number, y1: number, cap: number): number;
@@ -96,6 +98,20 @@ export interface SimExports {
   doors_addr(table: number): number; doors_cap(table: number): number;
   /** every leaf of the game in slot g stepped and placed, over world w: the noises listed */
   doors_update(g: number, w: number): number;
+  // the furniture men shove (rust/sim/src/props.rs — src/game/props.ts PropSystem.update, over the hand-over src/sim/propshome.ts names)
+  props_addr(table: number): number; props_cap(table: number): number;
+  /** every thing of the game in slot g stepped, over world w: the noises listed */
+  props_update(g: number, w: number): number;
+  // a leaf off its hinges, in the air (rust/sim/src/slabs.rs — src/game/doorblast.ts stepSlab, over the hand-over src/sim/slabshome.ts names)
+  slabs_addr(table: number): number; slabs_cap(table: number): number;
+  /** one slab of the game in slot g stepped, over world w: 0 = stepped · 1 = the host's to take (nothing written) · 2 = no such step */
+  slabs_step(g: number, w: number): number;
+  // what is thrown or dropped (rust/sim/src/items.rs — src/game/throwables.ts Throwables.update, over the hand-over src/sim/itemshome.ts names)
+  items_addr(table: number): number; items_cap(table: number): number;
+  /** the pool of the game in slot g walked from the hand-over's row down, over world w: 0 = every row taken · 1 = the hand-over's row is the host's · 2 = no such walk */
+  items_update(g: number, w: number): number;
+  /** the furniture's ray (props.ts PropSystem.raycast) over world w's copy of its parts: −1, or which thing of the level's list; t, the normal and the part → scratch 0 … 4 */
+  lines_ray_things(w: number, a0: number, a1: number, a2: number, r0: number, r1: number, r2: number, tmax: number): number;
   // what falls and what it leaves (rust/sim/src/falls.rs — src/sim/fallshome.ts FallStore, whose rules game/shards.ts calls)
   falls_schedule(g: number, list: number, t: number, x: number, y: number, z: number, name: number, gain: number, rate: number, amount: number, who: number, event: number, level: number, dust: number, cap: number): number;
   falls_deposit(g: number, x: number, z: number, amount: number): void;
@@ -109,12 +125,12 @@ export interface SimExports {
 /** every export this file expects, for the check that the built module and this face name the same things (tools/qa/rust-check.ts) */
 export const SIM_EXPORTS: readonly (keyof SimExports)[] = ['memory', 'sim_abi', 'sim_scratch', 'sim_scratch_len', 'maths_sin', 'maths_cos', 'maths_tan', 'maths_asin', 'maths_acos', 'maths_atan', 'maths_atan2',
   'maths_exp', 'maths_log', 'maths_log2', 'maths_log10', 'maths_pow', 'maths_tanh', 'maths_hypot2', 'maths_hypot3', 'maths_hypot4', 'maths_hypot_n',
-  'world_addr', 'world_cap', 'world_shape', 'world_leaves', 'lines_blocked', 'lines_leaves', 'collide_circle', 'collide_touches', 'collide_gather', 'fog_eyes', 'fog_see',
+  'world_addr', 'world_cap', 'world_shape', 'world_leaves', 'world_things', 'lines_blocked', 'lines_leaves', 'lines_ray', 'lines_ray_things', 'collide_circle', 'collide_touches', 'collide_gather', 'fog_eyes', 'fog_see',
   'pose_addr', 'pose_rig', 'pose_blend', 'pose_run', 'pose_parent_rot', 'pose_turn', 'pose_ik', 'pose_sample', 'clip_begin', 'clip_track', 'clip_end', 'knob_addr', 'knob_len', 'layer_mv_trunk', 'layer_long_body', 'layer_life', 'layer_mv_pre', 'layer_stance_body', 'layer_stand_pose', 'layer_crouch_pose', 'layer_soft_knees', 'layer_run_plant', 'layer_sneak_body', 'layer_steady', 'layer_creep_body', 'layer_kick_body', 'layer_toes_up', 'layer_wall_body', 'layer_watch_slip', 'layer_watch_look', 'layer_mv_post_body', 'layer_turn_weigh', 'layer_lean_body', 'layer_gaze_keep', 'layer_sneak_arms', 'layer_carry_arms', 'layer_wall_arms', 'layer_act_pose', 'layer_wound_body', 'layer_wound_limbs', 'layer_long_arms', 'layer_mv_post_arms', 'layer_watch_arm', 'layer_creep_arms', 'layer_clutch_arm', 'layer_bound_arms', 'layer_reload_arm', 'layer_pistol_reload_arm', 'layer_hands_pass', 'layer_throw_layer', 'layer_big_layer', 'layer_hold_layer', 'layer_held_layer', 'layer_catch_arm', 'layer_door_layer', 'layer_work_layer', 'layer_ready_layer', 'layer_kit_layer', 'layer_taken_layer', 'layer_blow_legs', 'layer_blow_trunk', 'layer_blow_arms', 'layer_knife_pose', 'layer_cable_pose', 'layer_stealth_layer', 'layer_swap_pose', 'layer_lockpick_layer', 'layer_haul_layer', 'layer_torch_up', 'layer_radio_pose', 'layer_smoke_pose', 'layer_nv_pose', 'layer_signal_layer', 'layer_tell_layer',
   'sight_contact', 'light_lamps', 'light_cap', 'light_estimate', 'smoke_blobs', 'smoke_cap', 'smoke_trans', 'nav_addr', 'nav_cap', 'nav_path', 'hear_direct', 'hear_route',
   'state_addr', 'state_len', 'state_games', 'state_layout', 'state_parts', 'state_part', 'dice_roll',
   'grid_reset', 'grid_clear', 'grid_dirty', 'grid_step', 'grid_trans',
-  'pose_new', 'pose_clear', 'doors_addr', 'doors_cap', 'doors_update',
+  'pose_new', 'pose_clear', 'doors_addr', 'doors_cap', 'doors_update', 'props_addr', 'props_cap', 'props_update', 'slabs_addr', 'slabs_cap', 'slabs_step', 'items_addr', 'items_cap', 'items_update',
   'falls_schedule', 'falls_deposit', 'falls_due', 'falls_step', 'falls_heard', 'falls_clear', 'falls_cap'];
 
 let X: SimExports | null = null, why: string | null = null;
@@ -182,7 +198,7 @@ export function mathsOfRust(): Maths {
 // ---- WHICH SYSTEMS RUN IN RUST
 let mathsOn = false, linesOn = false, circlesOn = false, fogOn = false, posesOn = false, diceOn = false;
 let sightOn = false, lightOn = false, smokeOn = false, soundOn = false, pathsOn = false, walkOn = false;
-let doorsOn = false, fallsOn = false;
+let doorsOn = false, fallsOn = false, propsOn = false, slabsOn = false, itemsOn = false, raysOn = false;
 /** A row a system: on = that system of the update runs in the Rust module, off = in TypeScript as it always did. THE TWO ARE THE SAME GAME TO THE BIT — that is
  *  what lets a system move at all, and tools/qa/rust-check.ts holds each row to it (whole missions played both ways, every tick's raw bits). So a row is never
  *  a rule of play: a recording made with one on replays with it off, and the frozen stand's fixtures do not care. A row is ON in the page once its system is
@@ -196,6 +212,10 @@ let doorsOn = false, fallsOn = false;
  *          straight run of a sound, every reach and line of fire) from the module's copy of the box world (src/scene/boxMirror.ts) — INSIDE A TICK: there the
  *          copy is proven against the boxes as the tick opens; a question asked outside one (the page's own, a tool's) is answered in TypeScript as it always
  *          was. ?rustlines / TPS_RUSTLINES=1 raise it.
+ *  rays    the box world's ray (collision.ts raycast: the nearest thing along a ray, how far and by which face — a round's flight, a thrown can's bounce,
+ *          a torn leaf's slide) from the same copy, inside a tick. A ROW OF ITS OWN, though it is lines.rs that answers: the lines' row can be on in the
+ *          page while this one waits its turn. A rule stepped in the module (the slabs', the thrown things') asks its rays there whatever this row says.
+ *          ?rustrays / TPS_RUSTRAYS=1 raise it.
  *  circles a circle against the box world (collision.ts collideCircle, circleTouches, gather: a body's footprint pushed out of the statics, what a prop or a
  *          rag doll rests against) from the same copy, inside a tick. ?rustcircles / TPS_RUSTCIRCLES=1 raise it.
  *  fog     the fog of war's sight pass (game/fogofwar.ts update: which of the team's eyes has a line to each man and each body): the loop over the eyes and
@@ -229,7 +249,20 @@ let doorsOn = false, fallsOn = false;
  *          lock's clocks, and where its box stands) from rust/sim/src/doors.rs, the leaves' own numbers at home in the block (sim/doorshome.ts). The state is
  *          at home on either maths; the step runs there inside a tick, where the game's own maths stand and the box world's copy does. ?rustdoors / TPS_RUSTDOORS=1.
  *  falls   what falls and what it leaves (sim/fallshome.ts FallStore: the landings the simulation has scheduled for things that let go, and the litter map of
- *          broken glass a footfall is louder on) kept in the game's block and worked there (rust/sim/src/falls.rs). Either maths. ?rustfalls / TPS_RUSTFALLS=1. */
+ *          broken glass a footfall is louder on) kept in the game's block and worked there (rust/sim/src/falls.rs). Either maths. ?rustfalls / TPS_RUSTFALLS=1.
+ *  props   the furniture men shove (game/props.ts PropSystem.update: each chair, carton, bin and plant coasting, pushed, knocking and coming to rest, and
+ *          the scrapes and knocks of it) from rust/sim/src/props.rs, each thing's own numbers at home in the block (sim/propshome.ts). It writes NO row of
+ *          the box world (furniture is not in it): the boxes the picture draws are placed from the columns, as they were. The state is at home on either
+ *          maths; the step runs there inside a tick, where the game's own maths stand and the box world's copy does. ?rustprops / TPS_RUSTPROPS=1.
+ *  slabs   a leaf off its hinges, in the air (game/doorblast.ts stepSlab: the loose slab flying, toppling, stopped by what its rays find, slamming flat
+ *          and coming to rest clear of every static) from rust/sim/src/slabs.rs, each slab's own numbers at home in the block (sim/slabshome.ts). It
+ *          writes no row of the box world: the host poses the slab's box from the columns after each slab's step, as it did. A step whose ray ends on a
+ *          pane is handed back to the TypeScript whole (a pane's open question is the host's). ?rustslabs / TPS_RUSTSLABS=1.
+ *  items   what is thrown or dropped (game/throwables.ts Throwables.update: a can, a grenade, a magazine, a gun out of a dying hand — ageing, falling,
+ *          bouncing off walls, leaves and furniture, coming to rest, dropping off a chair that moved) from rust/sim/src/items.rs, each thing's own
+ *          numbers at home in the block (sim/itemshome.ts). The pool is walked in one call; what a thing does to anything else (a bounce said, a share
+ *          of momentum for a chair, its time up) is listed and done by the host after. A row whose ray ends on a pane, or that bounces on ground
+ *          that may be lying snow, is handed back to the TypeScript whole. ?rustitems / TPS_RUSTITEMS=1. */
 export const RUST = {
   get maths(): boolean { return mathsOn; },
   set maths(v: boolean) { const on = !!v && !simWhyNot(); if (on === mathsOn) return; mathsFrom(on ? mathsOfRust() : null); mathsOn = on; },   // (a runtime that cannot run the module keeps the row off: the same game either way)
@@ -259,9 +292,17 @@ export const RUST = {
   set falls(v: boolean) { fallsOn = !!v && !simWhyNot(); },
   get walk(): boolean { return walkOn; },
   set walk(v: boolean) { walkOn = !!v && !simWhyNot(); },
+  get props(): boolean { return propsOn; },
+  set props(v: boolean) { propsOn = !!v && !simWhyNot(); },
+  get slabs(): boolean { return slabsOn; },
+  set slabs(v: boolean) { slabsOn = !!v && !simWhyNot(); },
+  get items(): boolean { return itemsOn; },
+  set items(v: boolean) { itemsOn = !!v && !simWhyNot(); },
+  get rays(): boolean { return raysOn; },
+  set rays(v: boolean) { raysOn = !!v && !simWhyNot(); },
 };
 /** the rows that work their lengths and angles out in the module, and so answer only where the game's own maths stand in Math's place (EXACT.on) */
-const OWN_MATHS: readonly string[] = ['maths', 'fog', 'poses', 'sight', 'light', 'smoke', 'sound', 'paths', 'doors', 'walk'];
+const OWN_MATHS: readonly string[] = ['maths', 'fog', 'poses', 'sight', 'light', 'smoke', 'sound', 'paths', 'doors', 'walk', 'props', 'slabs', 'items'];
 /** THE ROWS THAT ARE ON WHERE THE GAME IS PLAYED (the page, and so the shipped stand; `?rust<row>=0` / `TPS_RUST<ROW>=0` puts one off, `?rust=0` all of
  *  them): the systems that are the same game to the bit in the module AND cost nothing there, measured. The box world's lines are faster in the module;
  *  a circle against it and the fog's sight pass ask the same copy of the boxes and were measured no slower (docs/agents/rust.md, "Rows that are on", has
