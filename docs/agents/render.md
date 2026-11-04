@@ -32,7 +32,10 @@ program); harnesses that hash against main served beside stay valid, since both 
 ## GPU timing — known traps
 
 `engine.timer` timestamps are per pass. **Render-pass** timestamps (gbuffer/composite/post/fxaa) on Metal span the
-wait for the drawable and read ≈ one frame — ignore them (the HUD lists compute passes only). Scripted
+wait for the drawable and read ≈ one frame — ignore them (the HUD lists compute passes only). (2026-11-04: of the four, the g-buffer's
+does NOT read so on the one Mac whose takes were looked at: on an M4 Max it moved with g-buffer work and not with the frame's length, and
+read 0.33 ms on a page with 21 ms of waiting a frame, where `post` and `fxaa` read 5. So the benchmark's card gives it its own column,
+apart from its GPU number: `docs/agents/qa.md`, what a line of the card prices. The totals here still leave all four out.) Scripted
 `__runFrames` stepping returns stale timer values UNLESS each frame is followed by `await device.queue.onSubmittedWorkDone()`
 + a MessageChannel yield: that serializes frames (no cross-frame overlap inflating passes) and lets the readbacks resolve
 even with the pane hidden — two 30-frame baselines then agree to ~0.02 ms and match the live HUD (this is how the trade-off
@@ -69,7 +72,11 @@ interleaved and filtered to their quiet minimum, and a row whose p75 sits far ab
   once a real cut is off, floor SCALE_FLOOR 0.5). THOSE ARE THE 'AS NOW' BANDS: since 10-10 the ladder's default is HOLD 60 (`settings.ladderAim` 60, the maintainer's pick; `?aim=asnow` or `?aim=0` = the bands above for the visit, `?aim=90|120|display` other targets, Tab ▸ Frame ▸ 'ladder: frame rate to hold'; `ui/quality.ts HOLD / ladderBands`): the same climb, but two 1-s windows under ~58 fps with the GPU the limit cut the scale straight to what the cost model says holds 60 (to the floor, then the preset under auto), and pixels come back on measured GPU room; a page something else paces is left alone (as now: `settings.ladderPaced`, `?ladderpaced=0`; under an aim, since 10-14: `settings.ladderHeld`, default on, `?ladderheld=0` or Tab ▸ Frame ▸ 'ladder: an aim leaves a held page alone' = an aim as it was. The maintainer's Mac on a low battery, 10-14: the browser held the page at 30 fps, the GPU clocked down and read ~1.5× longer, and hold 60 stepped High from 770 to 600 rows for a rate that stayed 30. What cut it (read off the code and the replay, not the budget rule first blamed): the union at High's start read 13.9 ms on the slow clock, over the 13.33 ms back-off band, so the `hot` rule took a step every two windows, and the strict restore (the next step priced under 12.0 ms) never gave one back. On, the as-now paced check runs under an aim too: (a) a slow window is PROVEN paced when the union fits the aim's frame less HOLD.pacedMs (10.67 ms at 60) and the frame is more than those 6 ms over it; (b) slow, not GPU-bound, not proven, no pace known: over the back-off band the band's own step goes first as ever (and is judged like any cut); inside it, a judged cut to the highest scale the cost model prices under that floor (none where the scale floor cannot reach it: a small window, a union far over; a step further if it lands short). Proven there, the frame decides: no shorter = the pixels straight back to where the chain began, the failed-rung marks it left restored, that rate remembered as the page's pace; shorter by PACED.probeGain (15 %: a missed vsync bought back is a whole refresh, less is the rate's own wobble) = the cut stays and the level it left is a failed rung; no step up while a cut waits for its verdict; (c) a cut that proves nothing by the end of its 12 s trial goes back to where it started with no pace learnt, the next held off 60 s, doubling; after a judged take-back the next cut comes no sooner than the re-test would; (d) at the pace: no cut for the union's size, no `hot` step, no preset starved, and a scale under the tier's start comes back a grid step at a time on the frame's own room, each step judged (the frame grew = the step off and the pace forgotten); (e) the pace is dropped for a re-test after PACED.recheckSecs (120 s, doubling), which is those same judged cuts again (about 10 s under the tier's start). Check: `ladder-replay.ts --selftest`, the 'page something else holds' block (sixteen cases: held five minutes, the hold lifting, arriving cut, a fight on a held page, a fixed 60 Hz display missing vsync under and over the band, real load, the re-test, the marks, four never-held machines with other overheads, auto, a cut that tells nothing, a machine the cost model is wrong about, the failed rung after a cut that helped, a CPU-bound frame that wobbles, nothing holding); `LADDERHELD_BREAK=1` in front must FAIL eight of its lines (exit 1). Measured 10-14, headless only, after two reviews (the second found a never-held fixed 60 Hz machine left 25 % short of pixels, a cut / step up / cut loop where the model is wrong, a sawtooth after a cut that helped, and cuts repeating on a wobbling rate: all four mended and now cases above): off = the tree before it move for move (600 fuzz machines, as now either way and an aim with it off, four sets: no outside holds / real ones × overhead inside 6 ms / up to 9); on, machines nothing ever held spend the same seconds under 58 fps with overhead inside 6 ms (within 0.1 s of 400) and fewer past it (a fixed display: 116 → 105 of 400, the judged cut finds a missed vsync the old rule let be); with holds coming and going, about 0.5 s more per machine under 58 fps outside the held spells, fixed 60 Hz +4.6 s of 197 (the limit below). 84 steadily held machines whose GPU time follows the pixels more or less than the model says: 26 keep more pixels, 50 the same, 8 lose under 0.015 of mean scale (the trial dips). His take 5 replayed (`--aim 60 --sweeps`, a sweep take, so read the rows only): mean 573 rows off, 730 on. His two F9 takes: identical moves off and on. The real page on the software adapter at his window size, fed held windows through its own ladder (`Quality.simulate`): ×0.75 at 3 s, ×0.70 at 6 s, ×0.55 at 9 s, ×0.77 again at 12 s and for the rest of two minutes; `?ladderheld=0` ends ×0.70. KNOWN LIMITS: a fight that starts on a held page before its pace is known, or a re-test inside one, is cut as before until it is over (the floor cannot bring 23 ms under 10.7); where the model says the scale floor cannot reach the proof's floor, nothing changes; a hold lifting mid-fight on a fixed 60 Hz display, with no fast second between, waits for the re-test; a hold that lifts and comes back inside the hold-off sits at ×0.70 as before until the next judged cut; a frame rate that wobbles 15 % a second by itself can read as a cut that helped (one step under the tier's start then stays held off); everything rests on HOLD.pacedMs = 6 as the frame's overhead past the union. The replay tool's own held-frame test (`heldOut`) stays apart from `holdProof` on purpose: it re-prices a RECORDED frame and knows the take's display rate, which the ladder does not. Never seen on a GPU or a held browser). `bun run tools/qa/ladder-replay.ts --selftest | <F9 take> --check | --aim 60` = the ladder replayed headless over a recording; quality-plan.ts's ladder checks pin as-now. Since 08-12 the ladder also CLIMBS on measured headroom (`settings.ladderClimb`, default on; `capClimb` off): union-driven,
   0.05 a rung up to ×0.95 (1.0 would drop sharp direct), then gather ⅓ → ½ and beams ¼ → ½, backing off newest-first with doubling holds; 'cruising' is judged from
   the GPU union priced at the next preset by the cost model (`Quality.hopRatio`), no longer from an fps threshold a 60 Hz display could never reach; `?quality=` holds
-  the climb off. `?nomotioncalm` puts off what is now (08-12, the maintainer's call) the DEFAULT: Tab ▸ Frame / `__gimo.calm()` = the gi-motion lane's bundle (restirSpatialAll + restirPenRays + taauMotionAlpha 0.25 +
+  the climb off, and `?adapt=0` (2026-11-04, `ui/quality.ts visit`, the one reader of the address's two ladder words, called at boot, by Reset and by the viewer) opens the
+  visit with NOTHING ADAPTING: the row 'Hold frame rate' off, and where no tier is named the tier the page stands on held at its own start size, unmeasured,
+  as `?quality=` would hold it. Nothing moves the picture, which is what two benchmark runs need to be held against each other (`docs/agents/qa.md`, the
+  benchmark's carried words, which also says what the word leaves to a hand in Options and to the pacer). The row alone was not that: under auto with the
+  row off sharp direct is still shed, the tier still given up and the last visit's size resumed (found by reading, 11-04). `?nomotioncalm` puts off what is now (08-12, the maintainer's call) the DEFAULT: Tab ▸ Frame / `__gimo.calm()` = the gi-motion lane's bundle (restirSpatialAll + restirPenRays + taauMotionAlpha 0.25 +
   taauSharpenMotion 0.15) that calms the DIRECT chain under camera motion at the price of contact-shadow softness — the maintainer's call (docs/internal/gi-motion.md). Since 08-11 `renderScale` is RELATIVE TO THE CAP: internal h = min(maxInternalHeight, cssH·dpr) × renderScale, so 1.0 =
   the preset's rows on any window tall enough and every step below it is real (`capScale`, `effectiveScale` = the true internal/css·dpr ratio for the cost model); render
   targets are pooled and temporal histories RESAMPLED across size changes (render/texpool.ts, `settings.keepHistories`), cascade instances parked per grid (`engine.rebuildRc` /
@@ -92,7 +99,7 @@ interleaved and filtered to their quiet minimum, and a row whose p75 sits far ab
   or `?aim=`) the page draws at that rate: `paceEvery(displayHz, target)` = floor(hz / target + edge) display frames go to one drawn frame. Every second
   at 120, 144 and 165 Hz, every third at 180, every fourth at 240; every one at 60 to 116, at an aim of the display's own rate (`?aim=120` on a 120 Hz
   display draws every frame), at 'as now', with the ladder off (a pinned preset with Options ▸ Hold frame rate off), and while the page measures the
-  machine (`quality.calibrating`, `bench.active`, `perfsweep.active`: a benchmark's numbers are made as they always were). Never under `?kitview`, which
+  machine (`quality.calibrating`, `bench.active`, `perfsweep.active`: no rate is held there; a benchmark and a sweep still wait for the GPU, below). Never under `?kitview`, which
   has its own pacer. Only a frame that comes EARLY is passed over (`ts - lastWorked < (every - slack) · period`, on the frame callback's own stamps): one
   that is due or late is always worked, so a machine that cannot hold the pace is never slowed further and a late frame moves the beat. It sits in
   `main.ts frame()` before the time is taken (the step takes the real time since the last WORKED frame, and the ladder samples that gap, so it reads a
@@ -113,7 +120,7 @@ interleaved and filtered to their quiet minimum, and a row whose p75 sits far ab
   row for the aim); telemetry's per-minute rows from a 120 Hz machine now read 16.7 ms a frame at aim 60 while `hz` says 120. `window.__pace()` = `{on,
   hz, every, skipped, worked, target, fps}` and the give-way fields of the next bullet. Check: `tools/qa/pace-check.ts` (stamps played through the pacer at 60, 100, 120, 144 and 240 Hz with a
   wobble, with frames held back, in pairs from the first frame, across a change of display both ways; the readout on the recording's own gaps, on a hitch
-  and at two frames a second; the wiring read off the source; the switch on the stand; 51 lines on each stand with the next two bullets'; `EVENPACE_BREAK=1` fails 9 on each, two of them lines of the wait for
+  and at two frames a second; the wiring read off the source; the switch on the stand; 54 lines on each stand with the next two bullets'; `EVENPACE_BREAK=1` fails 9 on each, two of them lines of the wait for
   the GPU that stand on the even pace). On
   the real page (headless Chromium, software adapter): boots with no error; on the browser's own 60 Hz frames nothing is passed over; handed callbacks
   stamped as a 120 Hz display stamps them it reads 120 and passes over every second one. MEASURED: nothing on a display. The cause is read off two
@@ -175,8 +182,8 @@ interleaved and filtered to their quiet minimum, and a row whose p75 sits far ab
   finishes, one or two display frames apart, never back to back; with work under HALF a paced frame on a fast display the look page drew more than 60
   (uneven: gaps of 8 and 17 ms mixed, at 11 ms of work) and the build draws the even 60 the ladder holds. `?pace=0` with the rule on is the look page's
   `&pace` to the letter; `?aim=120` holds 120. Which of the two he wants under 8 ms of work is his to say; it was said to him. A FRAME HELD FOR THE GPU
-  IS THE MACHINE'S OWN PACE: the ladder and the visit's records read its gap (`held`, not `gave`). Not while the page measures the machine
-  (`quality.calibrating`, a benchmark, a sweep: `room` 0), where frames go as they always did; on while a take is recorded. NOT under `?kitview`: the
+  IS THE MACHINE'S OWN PACE: the ladder and the visit's records read its gap (`held`, not `gave`). Not during the boot's calibration by itself
+  (`room` 0, frames go as they always did); a benchmark and a sweep wait since 11-04 (`pageRoom`, further down); on while a take is recorded. NOT under `?kitview`: the
   kit picture's own pacer reads how late its frames come and steps down to an even pace by that, and a frame held here after that pacer had taken it
   would hide the lateness from it (a window of it nobody is at still gives way). THE QUEUE IS ASKED once for every frame that DREW
   (`behind.drawn`): a card that hides the picture hands the GPU nothing and asks nothing. The visit's records ask the same queue the same thing on
@@ -187,11 +194,33 @@ interleaved and filtered to their quiet minimum, and a row whose p75 sits far ab
   `pace` row (the display as read, every which frame, frames on the GPU of how many, the share of the frames asked for since the strip was last written
   that found no room; 'not waiting for the gpu' where the rule is not acting); `__pace()` adds `{flight, flying, held, lost}`. Checks:
   `tools/qa/pace-check.ts` (120 Hz with no rate held and the GPU at 17 ms: two with the GPU at the most and the GPU's own 58.8 frames a second; the
-  ladder's 60 with the work at 15 and at 20 ms; a 60 Hz display at 5 and 25 ms; at one; the page measuring; each answer its own frame's; two frames
+  ladder's 60 with the work at 15 and at 20 ms; a 60 Hz display at 5 and 25 ms; at one; who waits (`pageRoom`); the boot's calibration (nothing held, frames pile up); a benchmark at the card's own pace; each answer its own frame's; two frames
   never answered for; A TAB THAT SLEEPS with two frames in flight, four ways: asleep 3 s with the answers come meanwhile it draws every frame at once;
   asleep 30 s and never answered both are given up on the first frame back; asleep 3 s with the GPU still at the two it holds six display frames and
-  draws on; asleep 3 s and never answered it waits, ten seconds from the hand-over at the most; the wiring; 51 lines on each stand; `FLIGHT_BREAK=1`
-  fails 9 on each stand: frames pile up without end). ON THE REAL PAGE (headless Chromium 153,
+  draws on; asleep 3 s and never answered it waits, ten seconds from the hand-over at the most; the wiring; 54 lines on each stand; `FLIGHT_BREAK=1`
+  fails 11 on each stand: frames pile up without end). A BENCHMARK AND AN F8 SWEEP WAIT TOO (2026-11-04, `host/pace.ts pageRoom`, the one rule the
+  frame loop and the readout read; until then every measuring page was left out, 'which wants its frames as they come'). On a display the browser
+  holds a page's frames back by itself, and a sweep on a 120 Hz laptop with 15 ms of GPU work repeated to a tenth of a millisecond over three
+  rounds. A headless browser on a cloud card has no display: on a scene over 16.7 ms the page handed over a frame every 16.7 ms whatever the card
+  did, the queue grew for as long as the scene was held (found by the pricing run, which measured the GPU's 'done' 115 to 629 frames late), a row
+  flipped in a sweep reached the passes' stamps in another row's turn, and the card's frame rate read the display's 60. Two benchmark cards of
+  one build on two such boxes agreed on GPU time to 2 % on eight lines of nine and disagreed on their sweep rows (mesh shadows off 'gave back'
+  1.1 ms on one and cost 0.6 on the other). With the wait a measuring page is at most two frames ahead of the GPU, as a player's is, and where
+  the card keeps up nothing is held. A benchmark's own calibration waits with it, so a run opens with no pile behind it; only the boot's
+  calibration by itself (a second and a half that counts frames as they come: on the software adapter the wait would stretch it without end) and
+  `?kitview` still say room 0. The even pace and giving way stay off while measuring, as before. A result says what it ran under (`wait`; absent
+  = from before). WHAT THIS CHANGES ELSEWHERE: a benchmark's frame rate is now the pace a player's page gets, so on a fast display where the
+  queue answers late it can read under what the card could do (the limit named above, for play), and on a slow headless card a scene runs in
+  slow motion against its wall-clock cap as it does on a slow machine with a display. On an adapter slower than five seconds a frame the wait
+  gives frames up (`lost`) and nothing is bounded: the software adapter's page tools prove mechanics there, never a number. MEASURED ON A
+  CLOUD CARD (an NVIDIA A10, Vulkan, headless Chrome 157, 60 Hz, High with the size held, the benchmark run twice on two boxes before and
+  twice after; relative only, never on a Mac or a Windows card): the held picture went from '60 fps, a frame every 16.6 ms' beside 17.8 ms of
+  GPU work to 50 to 53 fps (a frame every 16.8, 95th centile 33.5); GPU time and the g-buffer's the same as before on every line; and the
+  sweep's rows, which had disagreed between the boxes, agree in sign and near enough in size (the whole other preset 7.8 and 8.2, mesh
+  shadows off 3.2 and 3.9, sharp direct off 2.0 and 1.9, the top of the climb -3.6 and -3.9). WHAT THE WAIT COSTS THERE: the queue's answer
+  comes late on that headless browser, so 'as it opened' reads 57 fps with 7.3 ms of GPU work (60 before) and the heaviest scene 33 fps where
+  frames had been handed over at 47: a benchmark's frame rate on such a card is the pace a player's page gets on it, under what the card could
+  do, and a card from before the step is not to be held against one from after by its frame rates. Its GPU times can be. ON THE REAL PAGE (headless Chromium 153,
   software adapter, not driven):
   the title at 640 x 360, very low, watched for seven minutes after it came ready. It came ready as ever, drew 20 frames in
   those minutes, never had more than two with the GPU, and printed no error. A frame takes about 11 s on this adapter, so every one of them outlasted
@@ -2440,8 +2469,12 @@ interleaved and filtered to their quiet minimum, and a row whose p75 sits far ab
   masonry. By the box's place in the list (as the shift was, `bi % 7`) every door's boards jumped in the frame a breach appended a static. Known, left: a device's
   boxes are keyed by their order among the devices' boxes, so a tripwire's beam coming or going still moves the number of the device boxes after it (most carry a
   turn and take no map); two unkeyed movers of one size share a number.
-  CHECK: `bun run tools/qa/lookmaps-check.ts`, 14 lines, the same on both stands (it stands no rule up); `LOOKMAPS_BREAK=1` = the row at 0 and three lines
-  fail (the value, paint × hollows, the masonry's hollows). The lines: the value by one number with the hue kept; paint × hollows at three Cavities settings;
+  CHECK: `bun run tools/qa/lookmaps-check.ts`, 14 lines, the same on both stands (it stands no rule up); `LOOKMAPS_BREAK=1` = the row at 0 and four lines
+  fail (the value, paint × hollows, the masonry's hollows, and the rain's line, which under the word asks a wet thing's stuff of the colour it is handed).
+  THE RAIN'S LINE AND WHAT IS WET (11-04): since everything flat under open sky is wet in rain (`game/wetGround.ts`), a wet thing may be plain paint laid on the
+  ground (a weed, a rug, a mat, a stain: 36 of the compound's 177 wet things, 41 of 186 on the page's stand), of no stuff dry or wet. The level is
+  packed dry and each thing's word kept, then the rain is picked and it is packed again: every wet thing carries the word it carried dry, its paint's;
+  some of them are of a stuff, and the ground's own slabs always; a wet metal thing is handed its own colour. The lines: the value by one number with the hue kept; paint × hollows at three Cavities settings;
   the masonry's hollows; the row's off word and the men's cloth handed back to a texel's rounding; the masonry's own colour; no seam; normals, finishes and far
   copies; every palette paint its own row's stuff; worn paints and the counted collisions; the word through the real pack on the smoke lab's floor (stuff, the
   moves bit on dynamics only, no mover's word changed by an appended static); the rain through the game's own weather on consulate-gwot's gravel lot; the
@@ -2502,7 +2535,7 @@ interleaved and filtered to their quiet minimum, and a row whose p75 sits far ab
   the frame the renderer next changes something, or only on the named kinds, e.g. `['long']` for a long frame, `['targets']`, `['scale']`),
   `__framecap.stop()`, `__framecap.trace()`. The game's message line and the HUD's first lines say what it is doing and where the file went: `captures/<name>.tpscap.gz` under the dev server's checkout
   (`tools/serve.ts` POST `/capture`, asked only by a page on a loopback host and answered only to this server's own page with the capture's header, as
-  the level API is; never over a file of the same name; the folder is gitignored) or a download anywhere else. A CAPTURE OVER 24 MB IS ALSO WRITTEN
+  the level API is; never over a file of the same name; the folder is gitignored) or, on a page served from anywhere else, out by the page's one save door (`host/savefile.ts`, kind `capture`: to whoever keeps the page's files, the size rule theirs; a download only with `?downloads=1`; the key's line says which in the door's own words). A CAPTURE OVER 24 MB IS ALSO WRITTEN
   IN PIECES beside it, `<name>.part1of6.tpscap.gz` … (11-03: his first whole-picture capture was 137 MB and could not be handed on in one file; the
   message line says how many; `tools/qa/capture-pieces.ts`: a piece is a plain cut of the gzipped file, the reader takes any one piece with the others
   beside it and joins them, and names a piece that is missing or cut short; `bun run tools/qa/capture-pieces.ts captures/<name>.tpscap.gz` cuts one

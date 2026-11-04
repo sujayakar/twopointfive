@@ -10,17 +10,32 @@
 //                          shipped stand — Mousehole's: both are always among the levels then)
 //   bun run tools/qa/probes.ts wallfurn      (also under `wallcharge`)
 //
-// Per level — every level a squad mission or a squad's training lesson plays on (the plain files: a look's second file is the same boxes), and the office (the room clear staged where the level has one; destruction, the wall charge and outer walls on):
+// Per level — every level a squad mission or a squad's training lesson plays on (the plain files: a look's second file is the same boxes), and the office (the room clear staged where the level has one; destruction, the wall charge and outer walls on; `held`, last below, asks more levels than these):
 //   same      a place the plain rule accepts is THE SAME PLACE with the rule on: the charge settles where it always did (the rule is asked only where the
 //             plain one found no floor on any slide)
 //   promise   EVERY place the rule adds (--cap N = an even sample of N a level): the charge really set and blown there — blow() itself reports the hole, and
 //             after it the wall is holed, the plain nav grid has floor behind it, and a short walk leads from the setting man's spot through to it
 //   barracks  the wall in his screenshot (static 52): refused along its whole length with the rule off, accepted with it on; then the squad of four ordered
 //             onto it, the charge blown on F, and every man through the hole; and a second charge on that wall once the first has holed it
+//   held      A LEVEL'S PLACES FOR A WALL CHARGE, HELD IN A FILE OF ITS OWN: `tools/qa/fixtures/wallcharge/<name>.txt` holds how many places the plain rule
+//             accepts on `levels/<name>.json` (the '(N places)' this check prints for the level), on the frozen stand and then on the shipped one: two
+//             whole numbers on a line, a space between; a line that starts with `#` says what was given up on purpose, which places and why. FAIL
+//             when the level has another number than its file holds on the stand of the run. FEWER: something took a place where a charge could be
+//             set and nobody chose it (the compound's dressing, 11-03: wood piles at the outside foot of the wall the squad breaches took 23 of 891).
+//             MORE is red too and says what to write, so that no slack builds up under which a later loss would pass. A file a level, not a table
+//             here, so that two branches that each dress a level do not write at one place (tools/qa/fixtures/level-base/, round/ and carlamps/ are
+//             the same mend). A run that names no level asks EVERY level a mission on the list plays on (the tutorials and the quiet missions too: a
+//             wall there can be breached by a player who chooses to) and every level with a file; the ones the lines below do not sweep are stood up
+//             for this count alone. A look's second file is asked against its level's file. RED, never 'nothing to compare': a level with no file, a
+//             file that is not two counts, a file for no level under levels/, a file for a look's second file. A run that is neither stand as it
+//             comes (lived-in rooms pinned on over the frozen stand, or off under the shipped one) counts another level than either number: it
+//             says so and is not asked.
+//             WHAT IT DOES NOT SEE: a place lost and another gained in one change (it is a count, not the set of places).
+//             WALLPLACES_BREAK=1 = the sweep is read as one place short on every level: the line must fail on each, on both stands.
 // --baseline: the promise asked instead of the places the PLAIN rule accepts, at the plain rule's own spots (what a charge does there with or without this
 // rule — the plain rule's duds are not this check's to fail on; a count for whoever owns them).
 import { standUp, ROOT } from './headless.ts';
-import { readFileSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
 const DT = 1 / 60, f2 = (x: number) => (Number.isFinite(x) ? x.toFixed(2) : String(x));
@@ -34,10 +49,12 @@ export async function wallfurnCheck(o: { levels?: string[]; cap?: number; baseli
   const { loadLevel } = await import(`${ROOT}/src/scene/levelLoad.ts`);
   const { parseLevelData } = await import(`${ROOT}/src/scene/levelData.ts`);
   const { startFromQuery } = await import(`${ROOT}/src/game/scenarioRun.ts`);
-  const { SCENARIOS } = await import(`${ROOT}/src/scene/scenarioList.ts`);
+  const { SCENARIOS, ALL_MISSIONS } = await import(`${ROOT}/src/scene/scenarioList.ts`);
   const BREAK = process.env.WALLFURN_BREAK === '1', RULE = !BREAK, CAP = o.cap ?? Infinity;
   const all: string[] = [...new Set<string>([...[...SCENARIOS].filter((e: any) => e.kind !== 'quiet').map((e: any) => e.level).filter((l: any) => typeof l === 'string'), 'office.json'])].sort();
   const LEVELS = [...(o.levels ?? all)]; if (BREAK) for (const f of ['mousehole.json', 'barracks.json']) if (!LEVELS.includes(f)) LEVELS.unshift(f);
+  const held = await heldPlaces(), promised = new Set(LEVELS);   // (`promised`: the levels the lines of this check were written for; a level added below is stood up for its held count alone)
+  if (!o.levels) for (const f of [...new Set<string>([...[...ALL_MISSIONS].filter((e: any) => !e.offList).map((e: any) => typeof e.level === 'string' ? e.level : 'office.json'), ...held.rows.keys()])].sort()) if (!LEVELS.includes(f)) LEVELS.push(f);
   const quiet = async <T>(fn: () => T | Promise<T>): Promise<T> => { if (o.verbose) return await fn(); const l = console.log, e = console.error, w = console.warn; console.log = console.error = console.warn = () => { }; try { return await fn(); } finally { console.log = l; console.error = e; console.warn = w; } };
   let fails = 0, checks = 0;
   const verdict = (ok: boolean, label: string, detail: string) => { checks++; if (!ok) fails++; console.log(`- ${ok ? 'PASS' : 'FAIL'} — ${label}\n    ${detail}`); };
@@ -85,6 +102,11 @@ export async function wallfurnCheck(o: { levels?: string[]; cap?: number; baseli
     const P = sweep(R), moved = P.filter(p => p.aOk && (!p.bOk || Math.abs(p.a.u - p.b.u) > 1e-9)), added = uniq(P.filter(p => p.bOk && !p.aOk).map(p => p.b)), plain = uniq(P.filter(p => p.aOk).map(p => p.a));
     console.log(`  ${P.length} asks · the plain rule accepts ${P.filter(p => p.aOk).length} (${plain.length} places), with the rule on ${P.filter(p => p.bOk).length} · places added ${added.length}`);
     verdict(moved.length === 0, 'a place the plain rule accepts is the same place with the rule on', `moved or lost ${moved.length}${moved.length ? ' · ' + moved.slice(0, 4).map(p => `static ${p.a.index} u ${f2(p.a.u)} → ${p.bOk ? f2(p.b.u) : 'refused'}`).join(' · ') : ''}`);
+    { const own = file.replace(/-gwot\.json$/, '.json'), name = `${held.dir}/${own.replace(/\.json$/, '.txt')}`, want = held.rows.get(own), n = plain.length - (held.broken ? 1 : 0), short = held.broken ? ' · WALLPLACES_BREAK: the sweep read as one place short' : '';
+      if (held.col < 0) console.log(`  held: not asked · ${held.stand}`);
+      else if (!want) { if (!held.bad.some(b => b.startsWith(name + ' '))) verdict(false, 'held: the level has a file of its places for a wall charge', `${name} is not there · ${n} places on ${held.stand}: its line is the frozen stand's count, a space, the shipped stand's${short}`); }
+      else verdict(n === want[held.col], 'held: the level has the places for a wall charge that its file holds', `${n} places on ${held.stand} · ${name} holds ${want[held.col]}${n < want[held.col] ? ' · FEWER: something took a place where a charge could be set' : n > want[held.col] ? ` · MORE: write ${n} there` : ''}${short}`); }
+    if (!promised.has(file)) return;
     const pool = o.baseline ? plain : added;
     const take = pool.length <= CAP ? pool : pool.filter((_, k) => Math.floor(k * CAP / pool.length) !== Math.floor((k - 1) * CAP / pool.length));
     const bad: string[] = [];
@@ -163,8 +185,25 @@ export async function wallfurnCheck(o: { levels?: string[]; cap?: number; baseli
 
   try { for (const f of LEVELS) await level(f); }
   finally { Object.assign(WALLCHARGE, saved); DESTRUCTION.on = dOn; Math.random = rnd; }
+  if (held.bad.length) verdict(false, 'held: every file of held wall-charge places is two counts for a level under levels/', held.bad.join('\n    '));
   console.log(`\n=== wallfurn-check: ${fails ? `${fails} FAILED` : 'ALL PASS'} (${checks} checks) ===`);
   return fails === 0;
+}
+
+/** the held counts (the head's `held` says what a file is): each level's two numbers, the files that are no such line, and which number this run is held to */
+async function heldPlaces(): Promise<{ dir: string; rows: Map<string, [number, number]>; bad: string[]; col: number; stand: string; broken: boolean }> {
+  const { LIVED } = await import(`${ROOT}/src/scene/lived.ts`), { harnessProfile } = await import(`${ROOT}/src/host/profile.ts`);
+  const dir = 'tools/qa/fixtures/wallcharge', rows = new Map<string, [number, number]>(), bad: string[] = [];
+  if (existsSync(resolve(ROOT, dir))) for (const t of readdirSync(resolve(ROOT, dir)).filter(t => t.endsWith('.txt')).sort()) {
+    const level = t.replace(/\.txt$/, '.json');
+    if (!existsSync(resolve(ROOT, 'levels', level))) { bad.push(`${dir}/${t} is the count of no file under levels/`); continue; }
+    if (/-gwot\.txt$/.test(t)) { bad.push(`${dir}/${t} is a count for a look's second file: such a file is asked against its level's file and has none of its own`); continue; }
+    const body = readFileSync(resolve(ROOT, dir, t), 'utf8').split('\n').map(l => l.trim()).filter(l => l && !l.startsWith('#')), m = body.length === 1 ? /^(\d+) (\d+)$/.exec(body[0]) : null;
+    if (!m) { bad.push(`${dir}/${t} is not two counts (the places the plain rule accepts on the frozen stand, then on the shipped one: two whole numbers on one line, a space between; a line that starts with # is a note)`); continue; }
+    rows.set(level, [Number(m[1]), Number(m[2])]);
+  }
+  const shipped = harnessProfile() === 'shipped', col = shipped && LIVED.on ? 1 : !shipped && !LIVED.on ? 0 : -1;
+  return { dir, rows, bad, col, stand: col === 1 ? 'the shipped stand' : col === 0 ? 'the frozen stand' : `the ${shipped ? 'shipped' : 'frozen'} stand with its lived-in rooms pinned ${LIVED.on ? 'on' : 'off'} is neither stand a file is counted on`, broken: process.env.WALLPLACES_BREAK === '1' };
 }
 
 if (import.meta.main) {

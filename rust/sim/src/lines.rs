@@ -5,10 +5,16 @@
 //! TypeScript says WHY each line is what it is (the embedded origin, the pad, which cells matter); this file only has to be it. tools/qa/rust-check.ts holds
 //! the two together: every question a mission asks answered by both, and the missions themselves played both ways.
 //!
+//! THE RAY (collision.ts raycast, and boxes.ts rayBox whole: where a ray first enters anything, how far along, and the face it enters by) is here too: the
+//! same leaves first, the same cells in the same half-metre steps, the nearest entry kept. Every rule of the things that flies something through a level
+//! asks it (a torn leaf, a thrown can, a round).
+//!
 //! What is not here is a rule of play that is still TypeScript: whether a pane is open where a line crosses it (game/glassbreak.ts), and whether a round gets
 //! through the panes on its line (game/glasspen.ts). The module asks nobody (it imports nothing): where the host has either question, the walk LISTS the
 //! glass the line crosses — which pane, and where the line enters it — and goes on; the host judges the list when the walk is back. A pane's open question
-//! only reads, so asking it after the walk, and not at all when something solid ended it, is the same answer.
+//! only reads, so asking it after the walk, and not at all when something solid ended it, is the same answer. (THE RAY takes every pane as shut and
+//! says the nearest thing it meets. If that is no pane, no pane stood nearer, open or shut, and the host's walk ends on the same thing; if it is a
+//! pane, the host asks its one question of it: shut, and it is the answer; open, and the ray flies on, which only the host's own walk can follow.)
 
 use crate::maths::hypot3;
 use crate::world::*;
@@ -144,80 +150,10 @@ fn planes_of<'a>(o: &'a World, b: &[f64]) -> (&'a [f64], usize) {
     (&o.cut[at..at + CUT_PLANES * 4], b[R_CUTN] as usize)
 }
 
-/// boxes.ts rayBox for a box that is not a plain yawed one (round, cut or rotated, asked in that order): where the ray enters it, if it does within tmax
+/// boxes.ts rayBox for a box that is not a plain yawed one (round, cut or rotated): where the ray enters it, if it does within tmax (ray_box_n's answer
+/// without the face: one walk of each shape in this file)
 fn ray_box_t(o: &World, a0: f64, a1: f64, a2: f64, r0: f64, r1: f64, r2: f64, b: &[f64], tmax: f64) -> Option<f64> {
-    let kind = b[R_KIND] as u32;
-    if kind & K_ROUND != 0 {
-        // rayBoxRound
-        let (ox, oy, oz, dx, dy, dz) = to_local(a0, a1, a2, r0, r1, r2, b);
-        let (rr, hy) = (b[R_H], b[R_H + 1]);
-        let (mut t0, mut t1, mut face) = (0.0, tmax, false);
-        if !slab(hy, oy, inv_or(dy), &mut t0, &mut t1, &mut face) {
-            return None;
-        }
-        let (qa, hb, qc) = (dx * dx + dz * dz, ox * dx + oz * dz, ox * ox + oz * oz - rr * rr);
-        if qa < 1e-18 {
-            if qc > 0.0 {
-                return None;
-            }
-        } else {
-            let disc = hb * hb - qa * qc;
-            if disc < 0.0 {
-                return None;
-            }
-            let s = sqrt(disc);
-            let (ta, tb) = ((-hb - s) / qa, (-hb + s) / qa);
-            if ta > t0 {
-                t0 = ta;
-                face = true;
-            }
-            if tb < t1 {
-                t1 = tb;
-            }
-            if t0 > t1 {
-                return None;
-            }
-        }
-        return if face { Some(t0) } else { None };
-    }
-    if kind & K_CUT != 0 {
-        // rayBoxCut
-        let (ox, oy, oz, dx, dy, dz) = to_local(a0, a1, a2, r0, r1, r2, b);
-        let (mut t0, mut t1, mut entered) = (0.0, tmax, false);
-        if !slab(b[R_H], ox, inv_or(dx), &mut t0, &mut t1, &mut entered) {
-            return None;
-        }
-        if !slab(b[R_H + 1], oy, inv_or(dy), &mut t0, &mut t1, &mut entered) {
-            return None;
-        }
-        if !slab(b[R_H + 2], oz, inv_or(dz), &mut t0, &mut t1, &mut entered) {
-            return None;
-        }
-        let (planes, n) = planes_of(o, b);
-        let (c0, _c1, k) = cut_clip(planes, n, ox, oy, oz, dx, dy, dz, t0, t1)?;
-        if k < 0 && !entered {
-            return None;
-        }
-        return Some(c0);
-    }
-    // rayBoxRot
-    let (ox, oy, oz) = unrotate(b, a0 - b[R_C], a1 - b[R_C + 1], a2 - b[R_C + 2]);
-    let (dx, dy, dz) = unrotate(b, r0, r1, r2);
-    let (mut t0, mut t1, mut entered) = (0.0, tmax, false);
-    if !slab(b[R_H], ox, inv_or(dx), &mut t0, &mut t1, &mut entered) {
-        return None;
-    }
-    if !slab(b[R_H + 1], oy, inv_or(dy), &mut t0, &mut t1, &mut entered) {
-        return None;
-    }
-    if !slab(b[R_H + 2], oz, inv_or(dz), &mut t0, &mut t1, &mut entered) {
-        return None;
-    }
-    if entered {
-        Some(t0)
-    } else {
-        None
-    }
+    ray_box_n(o, a0, a1, a2, r0, r1, r2, b, tmax).map(|h| h.0)
 }
 
 /// collision.ts lineBox: the interval [t0, t1] over which the LINE lies inside the box, and how deep inside it the origin sits; None = the line misses it
@@ -690,4 +626,329 @@ pub fn leaf_line(w: usize, set: i32, need: u32, a0: f64, a1: f64, a2: f64, b0: f
         Err(said) => return said,
     };
     Some(leaves_blocked(w, a0, a1, a2, b0, b1, b2, len, need, set))
+}
+
+// ---- THE RAY: the nearest thing along it, how far, and the face it is entered by (collision.ts raycast, boxes.ts rayBox)
+
+/// one slab of rayBox with the face it enters by: the interval cut down by the faces at ±h along axis `k`; the entry's axis and sign kept. false = nothing left
+#[inline(always)]
+#[allow(clippy::too_many_arguments)]
+fn slab_n(h: f64, o: f64, inv: f64, t0: &mut f64, t1: &mut f64, axis: &mut i32, sgn: &mut f64, k: i32) -> bool {
+    let mut ta = (-h - o) * inv;
+    let mut tb = (h - o) * inv;
+    let mut s = -1.0;
+    if ta > tb {
+        core::mem::swap(&mut ta, &mut tb);
+        s = 1.0;
+    }
+    if ta > *t0 {
+        *t0 = ta;
+        *axis = k;
+        *sgn = s;
+    }
+    if tb < *t1 {
+        *t1 = tb;
+    }
+    !(*t0 > *t1)
+}
+/// a direction out of a fully rotated box's frame: quat.rotate(rot, v), its expression over scalars
+#[inline(always)]
+fn rotate(b: &[f64], vx: f64, vy: f64, vz: f64) -> (f64, f64, f64) {
+    let (qx, qy, qz, qw) = (b[R_ROT], b[R_ROT + 1], b[R_ROT + 2], b[R_ROT + 3]);
+    let (tx, ty, tz) = (2.0 * (qy * vz - qz * vy), 2.0 * (qz * vx - qx * vz), 2.0 * (qx * vy - qy * vx));
+    (vx + qw * tx + (qy * tz - qz * ty), vy + qw * ty + (qz * tx - qx * tz), vz + qw * tz + (qx * ty - qy * tx))
+}
+/// a face normal of the box's own frame, in the world's: by its rotation, or turned by its yaw (the cos and sin the copy keeps beside it)
+#[inline(always)]
+fn out_of(b: &[f64], l0: f64, l1: f64, l2: f64) -> (f64, f64, f64) {
+    if (b[R_KIND] as u32) & K_ROT != 0 {
+        rotate(b, l0, l1, l2)
+    } else {
+        let (cs, sn) = (b[R_COS], b[R_SIN]);
+        (cs * l0 + sn * l2, l1, -sn * l0 + cs * l2)
+    }
+}
+/// the unit vector of axis `k`, times `sgn` (the other two the literal zeros the TypeScript writes)
+#[inline(always)]
+fn face_of(axis: i32, sgn: f64) -> (f64, f64, f64) {
+    (if axis == 0 { sgn } else { 0.0 }, if axis == 1 { sgn } else { 0.0 }, if axis == 2 { sgn } else { 0.0 })
+}
+
+/// boxes.ts rayBox, whole (a round box, a cut one, a fully rotated one, a plain yawed one, asked in that order): where the ray enters the box within tmax
+/// and the normal of the face it enters by. None = it does not, or it starts inside (the rule rayBox documents).
+#[allow(clippy::too_many_arguments)]
+fn ray_box_n(o: &World, a0: f64, a1: f64, a2: f64, r0: f64, r1: f64, r2: f64, b: &[f64], tmax: f64) -> Option<(f64, f64, f64, f64)> {
+    let kind = b[R_KIND] as u32;
+    if kind & K_ROUND != 0 {
+        // rayBoxRound: face 0 = none entered (the origin is inside), 1 = an end, 2 = the side
+        let (ox, oy, oz, dx, dy, dz) = to_local(a0, a1, a2, r0, r1, r2, b);
+        let (rr, hy) = (b[R_H], b[R_H + 1]);
+        let (mut t0, mut t1, mut face, mut sgn) = (0.0, tmax, -1i32, 0.0);
+        if !slab_n(hy, oy, inv_or(dy), &mut t0, &mut t1, &mut face, &mut sgn, 1) {
+            return None;
+        }
+        let (qa, hb, qc) = (dx * dx + dz * dz, ox * dx + oz * dz, ox * ox + oz * oz - rr * rr);
+        if qa < 1e-18 {
+            if qc > 0.0 {
+                return None;
+            }
+        } else {
+            let disc = hb * hb - qa * qc;
+            if disc < 0.0 {
+                return None;
+            }
+            let s = sqrt(disc);
+            let (ta, tb) = ((-hb - s) / qa, (-hb + s) / qa);
+            if ta > t0 {
+                t0 = ta;
+                face = 2;
+            }
+            if tb < t1 {
+                t1 = tb;
+            }
+            if t0 > t1 {
+                return None;
+            }
+        }
+        if face < 0 {
+            return None;
+        }
+        let (mut l0, mut l1, mut l2) = (0.0, sgn, 0.0);
+        if face == 2 {
+            let (hx, hz) = (ox + dx * t0, oz + dz * t0);
+            let len = sqrt(hx * hx + hz * hz);
+            let il = 1.0 / (if len != 0.0 && len == len { len } else { 1.0 });
+            l0 = hx * il;
+            l1 = 0.0;
+            l2 = hz * il;
+        }
+        let (n0, n1, n2) = out_of(b, l0, l1, l2);
+        return Some((t0, n0, n1, n2));
+    }
+    if kind & K_CUT != 0 {
+        // rayBoxCut
+        let (ox, oy, oz, dx, dy, dz) = to_local(a0, a1, a2, r0, r1, r2, b);
+        let (mut t0, mut t1, mut axis, mut sgn) = (0.0, tmax, -1i32, 0.0);
+        if !slab_n(b[R_H], ox, inv_or(dx), &mut t0, &mut t1, &mut axis, &mut sgn, 0) {
+            return None;
+        }
+        if !slab_n(b[R_H + 1], oy, inv_or(dy), &mut t0, &mut t1, &mut axis, &mut sgn, 1) {
+            return None;
+        }
+        if !slab_n(b[R_H + 2], oz, inv_or(dz), &mut t0, &mut t1, &mut axis, &mut sgn, 2) {
+            return None;
+        }
+        let (planes, n) = planes_of(o, b);
+        let (c0, _c1, k) = cut_clip(planes, n, ox, oy, oz, dx, dy, dz, t0, t1)?;
+        if k < 0 && axis < 0 {
+            return None;
+        }
+        let (l0, l1, l2) = if k >= 0 {
+            let p = &planes[k as usize * 4..k as usize * 4 + 3];
+            (p[0], p[1], p[2])
+        } else {
+            face_of(axis, sgn)
+        };
+        let (n0, n1, n2) = out_of(b, l0, l1, l2);
+        return Some((c0, n0, n1, n2));
+    }
+    let (mut t0, mut t1, mut axis, mut sgn) = (0.0, tmax, -1i32, 0.0);
+    if kind & K_ROT != 0 {
+        // rayBoxRot
+        let (ox, oy, oz) = unrotate(b, a0 - b[R_C], a1 - b[R_C + 1], a2 - b[R_C + 2]);
+        let (dx, dy, dz) = unrotate(b, r0, r1, r2);
+        if !slab_n(b[R_H], ox, inv_or(dx), &mut t0, &mut t1, &mut axis, &mut sgn, 0) {
+            return None;
+        }
+        if !slab_n(b[R_H + 1], oy, inv_or(dy), &mut t0, &mut t1, &mut axis, &mut sgn, 1) {
+            return None;
+        }
+        if !slab_n(b[R_H + 2], oz, inv_or(dz), &mut t0, &mut t1, &mut axis, &mut sgn, 2) {
+            return None;
+        }
+        if axis < 0 {
+            return None;
+        }
+        let (l0, l1, l2) = face_of(axis, sgn);
+        let (n0, n1, n2) = rotate(b, l0, l1, l2);
+        return Some((t0, n0, n1, n2));
+    }
+    // the plain yawed box
+    let (cs, sn) = (b[R_COS], b[R_SIN]);
+    let (px, py, pz) = (a0 - b[R_C], a1 - b[R_C + 1], a2 - b[R_C + 2]);
+    let (lx, lz, ly) = (cs * px - sn * pz, sn * px + cs * pz, py);
+    let (dx, dz, dy) = (cs * r0 - sn * r2, sn * r0 + cs * r2, r1);
+    let (ix, iy, iz) = (inv_or(dx), inv_or(dy), inv_or(dz));
+    if !slab_n(b[R_H], lx, ix, &mut t0, &mut t1, &mut axis, &mut sgn, 0) {
+        return None;
+    }
+    if !slab_n(b[R_H + 1], ly, iy, &mut t0, &mut t1, &mut axis, &mut sgn, 1) {
+        return None;
+    }
+    if !slab_n(b[R_H + 2], lz, iz, &mut t0, &mut t1, &mut axis, &mut sgn, 2) {
+        return None;
+    }
+    if axis < 0 {
+        return None;
+    }
+    let (l0, l1, l2) = face_of(axis, sgn);
+    Some((t0, cs * l0 + sn * l2, l1, -sn * l0 + cs * l2))
+}
+
+/// the ray's answer when nothing is met, and when the host must answer it itself (a ray that is not a number)
+pub const RAY_NONE: i32 = -1;
+pub const RAY_HOST: i32 = -2;
+/// what a leaf's index is offset by in the answer (collision.ts raycast: index ≥ 1e6 = a dynamic occluder)
+pub const RAY_LEAF: i32 = 1_000_000;
+
+/// collision.ts raycast: the nearest thing the ray from a along the unit r meets within tmax — the leaves of list `set` first (−1: none), then the statics of
+/// the cells round the ray, walked in half-metre steps. → RAY_NONE · RAY_HOST · the
+/// static's index, or RAY_LEAF + the leaf's; and into `out` how far along, then the face's normal. EVERY PANE IS TAKEN AS SHUT (the head of this file).
+#[allow(clippy::too_many_arguments)]
+pub fn ray(w: usize, a0: f64, a1: f64, a2: f64, r0: f64, r1: f64, r2: f64, tmax: f64, set: i32, out: &mut [f64]) -> i32 {
+    ray_but(w, a0, a1, a2, r0, r1, r2, tmax, set, -1, out)
+}
+/// …with ONE LEAF OF THE LIST LEFT OUT, `but` (−1: none): the ray of a thing that is itself one of the leaves (a slab off its hinges is no wall to
+/// itself: doorblast.ts withoutLeaf). The leaves keep their own indices in the answer.
+#[allow(clippy::too_many_arguments)]
+pub fn ray_but(w: usize, a0: f64, a1: f64, a2: f64, r0: f64, r1: f64, r2: f64, tmax: f64, set: i32, but: i32, out: &mut [f64]) -> i32 {
+    let o = world(w);
+    let (mut best, mut bi, mut bn) = (tmax, -1i32, (0.0, 1.0, 0.0));
+    if set >= 0 {
+        let s = set as usize;
+        for i in 0..o.leaves[s] as usize {
+            if i as i32 == but {
+                continue;
+            }
+            let at = (s * MAX_LEAVES + i) * REC;
+            if let Some((t, n0, n1, n2)) = ray_box_n(o, a0, a1, a2, r0, r1, r2, &o.leaf[at..at + REC], best) {
+                if t < best {
+                    best = t;
+                    bi = RAY_LEAF + i as i32;
+                    bn = (n0, n1, n2);
+                }
+            }
+        }
+    }
+    let id = o.ask();
+    let steps = js_ceil(tmax / 0.5) + 1.0;
+    let (cs, gw, gh) = (o.cs, o.w as f64, o.h as f64);
+    let wi = o.w as usize;
+    let mut i = 0.0;
+    while i <= steps {
+        let t = (i / steps) * tmax;
+        if t > best + 1.5 {
+            break;
+        }
+        let (x, z) = (floor((a0 + r0 * t) / cs), floor((a2 + r2 * t) / cs));
+        if x != x || z != z {
+            return RAY_HOST; // (a ray that is not a number: the host's walk fails on it loudly, and goes on doing so)
+        }
+        let mut dz = -1.0;
+        while dz <= 1.0 {
+            let mut dx = -1.0;
+            while dx <= 1.0 {
+                let (cx, cz) = (x + dx, z + dz);
+                dx += 1.0;
+                if !(cx >= 0.0 && cz >= 0.0 && cx < gw && cz < gh) {
+                    continue;
+                }
+                let c = cz as usize * wi + cx as usize;
+                let (k0, k1) = (o.start[c] as usize, o.start[c + 1] as usize);
+                for k in k0..k1 {
+                    let b = o.items[k] as usize;
+                    if o.stamp[b] == id {
+                        continue;
+                    }
+                    o.stamp[b] = id;
+                    let fl = o.flags[b];
+                    if fl & F_NO_SHADOW != 0 {
+                        continue;
+                    }
+                    if let Some((t, n0, n1, n2)) = ray_box_n(o, a0, a1, a2, r0, r1, r2, &o.rec[b * REC..b * REC + REC], best) {
+                        if t < best {
+                            best = t;
+                            bi = b as i32;
+                            bn = (n0, n1, n2);
+                        }
+                    }
+                }
+            }
+            dz += 1.0;
+        }
+        i += 1.0;
+    }
+    if bi < 0 {
+        return RAY_NONE;
+    }
+    out[0] = best;
+    out[1] = bn.0;
+    out[2] = bn.1;
+    out[3] = bn.2;
+    bi
+}
+
+/// A RAY ASKED BY A RULE OF THE MODULE'S (a slab off its hinges, a thrown thing): collision.ts raycast as a rule over there gets it, with what only the
+/// host can answer said as RAY_HOST — a ray of no length or of no number (collision.ts walks those itself), and, where the host has a rule for panes
+/// (`ask`), a ray that ends on a pane of glass: shut, the pane is the answer; open, the ray flies on to what stands beyond; which, the host alone can
+/// say. `set` and `but` as ray_but takes them. → RAY_NONE · RAY_HOST · the static's index, or RAY_LEAF + the leaf's; `out` as ray writes it.
+#[allow(clippy::too_many_arguments)]
+pub fn ray_rule(w: usize, a0: f64, a1: f64, a2: f64, r0: f64, r1: f64, r2: f64, tmax: f64, set: i32, but: i32, ask: bool, out: &mut [f64]) -> i32 {
+    if !(tmax > 0.0 && tmax < 1e6) {
+        return RAY_HOST;
+    }
+    let k = ray_but(w, a0, a1, a2, r0, r1, r2, tmax, set, but, out);
+    if ask && k >= 0 && k < RAY_LEAF && world(w).flags[k as usize] & F_GLASS != 0 {
+        return RAY_HOST;
+    }
+    k
+}
+
+/// where ray_things says which part it met, after how far along and the normal
+pub const RAY_PART: usize = 4;
+/// game/props.ts PropSystem.raycast: the nearest PART of any thing of furniture the ray from a along the unit r meets within tmax — the things in the
+/// furniture's own order (the world's `thing_live`), each passed by if the upright cylinder that holds it is clear of the ray in plan or lies behind it
+/// or beyond the best so far, its parts (list THING_SET of the leaves) in their order. → −1, or which thing of the level's list; and into `out` how far
+/// along, the face's normal, and which part of the list.
+#[allow(clippy::too_many_arguments)]
+pub fn ray_things(w: usize, a0: f64, a1: f64, a2: f64, r0: f64, r1: f64, r2: f64, tmax: f64, out: &mut [f64]) -> i32 {
+    let o = world(w);
+    let (mut best, mut bp, mut bn, mut bb) = (tmax, -1i32, (0.0, 1.0, 0.0), 0usize);
+    let fl = crate::maths::hypot2(r0, r2);
+    for r in 0..o.things as usize {
+        let (id, start, count) = (o.thing_live[r * TL] as usize, o.thing_live[r * TL + 1] as usize, o.thing_live[r * TL + 2] as usize);
+        if id >= MAX_THINGS || start + count > MAX_LEAVES {
+            continue;
+        }
+        let radius = o.thing[id * TH + TH_RADIUS];
+        let (ox, oz) = (o.thing[id * TH + TH_X] - a0, o.thing[id * TH + TH_Z] - a2);
+        let along = if fl > 1e-6 { (ox * r0 + oz * r2) / fl } else { 0.0 };
+        if fl > 1e-6 && (along < -radius || along > best * fl + radius) {
+            continue;
+        }
+        let perp2 = ox * ox + oz * oz - along * along;
+        if perp2 > (radius + 0.05) * (radius + 0.05) {
+            continue;
+        }
+        for i in start..start + count {
+            let at = (THING_SET * MAX_LEAVES + i) * REC;
+            if let Some((t, n0, n1, n2)) = ray_box_n(o, a0, a1, a2, r0, r1, r2, &o.leaf[at..at + REC], best) {
+                if t < best {
+                    best = t;
+                    bp = r as i32;
+                    bn = (n0, n1, n2);
+                    bb = i;
+                }
+            }
+        }
+    }
+    if bp < 0 {
+        return -1;
+    }
+    out[0] = best;
+    out[1] = bn.0;
+    out[2] = bn.1;
+    out[3] = bn.2;
+    out[RAY_PART] = bb as f64;
+    bp
 }

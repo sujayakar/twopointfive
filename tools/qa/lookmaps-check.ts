@@ -1,6 +1,7 @@
 // THE MATERIAL MAPS (src/render/lookTex.ts, shaders/look.wgsl, STYLE.md's Surfaces): what a map may and may not do, held by number.
 //   bun run tools/qa/lookmaps-check.ts            exit 0 = every line passes
-//   LOOKMAPS_BREAK=1 bun run tools/qa/lookmaps-check.ts     the maps as they were (the look row `even` at 0), each left as dark as it fell: must FAIL
+//   LOOKMAPS_BREAK=1 bun run tools/qa/lookmaps-check.ts     the maps as they were (the look row `even` at 0), each left as dark as it fell, and a wet thing's stuff
+//                                                           asked of the colour it is handed: must FAIL
 // No game is stood up: the maps are arithmetic and the rest is the g-buffer's own code on a device that only counts what it is handed. The picture is not looked at
 // here (a software page and then a GPU do that); these are the rules a picture cannot show you are broken until a level is lit by them.
 import { readFileSync } from 'node:fs';
@@ -107,15 +108,25 @@ const hollowsOf = (b: Uint8Array) => { let s = 0; for (let i = 3; i < b.length; 
     const cls = (i: number) => Math.floor(world.matData[i * MAT_STRIDE + 7] / 8) & 15;
     world.setStuffOf(lookWordOf()); world.upload(); const blind = li < 0 ? -1 : cls(li);
     world.setStuffOf(lookWordOf((b: any) => g.weather.dryPaint(b))); world.upload(); const told = li < 0 ? -1 : cls(li);
-    // … and a picked rain, which darkens every other open slab for the picture alone (Box.wetK): the paint is untouched, the colour a corner is handed is not
-    const W2 = await stand('compound-gwot'), g2 = W2.game, w2 = g2.engine.world, st2 = w2.statics as any[]; g2.weather.setKind('rain'); for (let i = 0; i < 10; i++) W2.step(1 / 60);
+    // … and a picked rain, which darkens what it wets for the picture alone (Box.wetK): the paint is untouched, the colour a corner is handed is not. The level
+    // is packed DRY first and each thing's word kept, then the rain is picked and it is packed again: the sentence itself, word against word
+    const W2 = await stand('compound-gwot'), g2 = W2.game, w2 = g2.engine.world, st2 = w2.statics as any[], cls2 = (i: number) => Math.floor(w2.matData[i * MAT_STRIDE + 7] / 8) & 15;
+    w2.setStuffOf(lookWordOf((b: any) => g2.weather.dryPaint(b))); w2.upload(); const dryWord = new Map<any, number>(st2.map((b, i) => [b, cls2(i)]));
+    g2.weather.setKind('rain'); for (let i = 0; i < 10; i++) W2.step(1 / 60);
     w2.setStuffOf(lookWordOf((b: any) => g2.weather.dryPaint(b))); w2.upload();
-    const wetOnly = st2.filter(b => b.wetK !== undefined), cls2 = (i: number) => Math.floor(w2.matData[i * MAT_STRIDE + 7] / 8) & 15;
-    const wetOff = wetOnly.filter(b => cls2(st2.indexOf(b)) !== lookStuff(b.albedo) || lookStuff(b.albedo) === 0).length;
-    const darker = wetOnly.filter(b => { const m = st2.indexOf(b) * MAT_STRIDE; return Math.abs(w2.matData[m] - b.albedo[0] * b.wetK) < 1e-4 && b.wetK < 1; }).length;
-    check(li >= 0 && !!dry && lookStuff(dry) === of.gravel && lookStuff(lot.albedo) !== of.gravel && told === of.gravel && blind !== of.gravel && wetOnly.length > 0 && wetOff === 0 && darker === wetOnly.length,
-      'rain does not change what a thing is made of: the game\'s own weather darkens a gravel lot in place, and the lot is still gravel because its word is asked of the paint it had dry (asked of the colour it has now, it was not); and a slab a picked rain darkens for the picture alone is handed to the shader darker and keeps its paint and so its stuff (what the darker colour of a concrete slab or of gravel would be read as is the line above: nothing)',
-      li < 0 ? 'consulate-gwot: no lot found' : `consulate-gwot: the lot's paint now ${lot.albedo.map((v: number) => v.toFixed(3)).join(' ')} (class ${lookStuff(lot.albedo)}), dry ${dry ? [...dry].map((v: number) => v.toFixed(3)).join(' ') : 'not kept'} (class ${dry ? lookStuff(dry) : '?'}); packed as ${told}, and as ${blind} with the weather not asked; compound-gwot under a picked rain: ${wetOnly.length} slab wet for the picture alone, ${darker} handed darker, ${wetOff} not its paint's stuff`); }
+    const wetOnly = st2.filter(b => b.wetK !== undefined);
+    // WHAT IS WET: every flat thing under open sky (game/wetGround.ts), not the open ground alone. So a wet thing may be a thing of plain paint laid on the ground
+    // (a weed, a rug, a mat, a stain): of no stuff dry, and of none wet. The line's claim is asked of the wet things that ARE of a stuff (there must be some: a
+    // darker gravel or concrete is read as nothing), and the GROUND itself (a slab whose middle is below the floor, as the lot above is found) is always of one.
+    // A wet metal thing is handed its own colour (wetK 1).
+    // LOOKMAPS_BREAK=1 holds a wet thing to the stuff of the colour it is handed in place of the word it carried dry: the line must fail.
+    const dryOf = (b: any) => BRK ? lookStuff(b.albedo.map((v: number) => v * b.wetK)) : dryWord.get(b);
+    const wetStuff = wetOnly.filter(b => (dryWord.get(b) ?? 0) > 0), wetOff = wetOnly.filter(b => { const c = cls2(st2.indexOf(b)); return c !== dryOf(b) || c !== lookStuff(b.albedo); }).length;
+    const bare = wetOnly.filter(b => lookStuff(b.albedo) === 0), bareGround = bare.filter(b => b.c[1] < 0).length, ground = wetOnly.filter(b => b.c[1] < 0).length;
+    const darker = wetOnly.filter(b => { const m = st2.indexOf(b) * MAT_STRIDE; return Math.abs(w2.matData[m] - b.albedo[0] * b.wetK) < 1e-4 && (b.metal ? b.wetK === 1 : b.wetK < 1); }).length;
+    check(li >= 0 && !!dry && lookStuff(dry) === of.gravel && lookStuff(lot.albedo) !== of.gravel && told === of.gravel && blind !== of.gravel && wetStuff.length > 0 && ground > 0 && wetOff === 0 && bareGround === 0 && darker === wetOnly.length,
+      'rain does not change what a thing is made of: the game\'s own weather darkens a gravel lot in place, and the lot is still gravel because its word is asked of the paint it had dry (asked of the colour it has now, it was not); and each thing a picked rain wets for the picture alone is handed to the shader darker and carries the word it carried dry, its paint\'s (what the darker colour of a concrete slab or of gravel would be read as is the line above: nothing); a wet thing of no stuff is a thing of plain paint laid on the ground, which had none dry, and never the ground itself',
+      li < 0 ? 'consulate-gwot: no lot found' : `consulate-gwot: the lot's paint now ${lot.albedo.map((v: number) => v.toFixed(3)).join(' ')} (class ${lookStuff(lot.albedo)}), dry ${dry ? [...dry].map((v: number) => v.toFixed(3)).join(' ') : 'not kept'} (class ${dry ? lookStuff(dry) : '?'}); packed as ${told}, and as ${blind} with the weather not asked; compound-gwot under a picked rain: ${wetOnly.length} things wet for the picture alone, ${darker} handed darker (a metal one its own colour), ${wetStuff.length} of a stuff, ${wetOff} with another word than dry; ${bare.length} things of plain paint laid on the ground, ${ground} slabs of the ground wet and ${bareGround} of them of no stuff`); }
   const gsrc = readFileSync(`${ROOT}/src/render/shaders/gbuffer.wgsl`, 'utf8'), csrc = readFileSync(`${ROOT}/src/render/shaders/common.wgsl`, 'utf8'), lsrc = readFileSync(`${ROOT}/src/render/shaders/look.wgsl`, 'utf8'), msrc = readFileSync(`${ROOT}/src/main.ts`, 'utf8');
   check(/if \(LOOK\) \{ o\.look = boxStuff\(bi\); \}/.test(gsrc) && !/lookClass\(o\.albedo\)/.test(gsrc) && /fn boxLook\(i: u32\) -> u32 \{ return u32\(boxMat\[i \* 4u \+ 1u\]\.w \* 0\.125\); \}/.test(csrc) && /fn boxStuff\(i: u32\) -> u32 \{ return boxLook\(i\) & 15u; \}/.test(csrc)
     && /if \(LOOK\) \{ w -= 8\.0 \* floor\(w \* 0\.125\); \}/.test(csrc) && /let word = boxLook\(bi\); let moves = \(word & 16u\) != 0u;/.test(lsrc) && /let salt = word >> 5u;/.test(lsrc) && /\|\| moves\) \{/.test(lsrc) && !/bi % (7|13)u/.test(lsrc)

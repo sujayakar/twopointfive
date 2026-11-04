@@ -1,9 +1,9 @@
 // CPU-side spatial helpers over the static boxes: circle push-out, line-of-sight, nav grid + A*.
 import { Vec3, v3, quat, hyp2, hyp3 } from '../math/vec';
-import { Box, BoxFlag, rayBox } from './boxes';
-import { cutConfig, cutClip, CUT_CLIP, MAX_CUT_PLANES } from './cut';
+import { Box, BoxFlag, rayBox, cutMet } from './boxes';
+import { cutClip, CUT_CLIP, MAX_CUT_PLANES } from './cut';
 import { WORLD } from './world';
-import { BoxMirror, MIRRORED, SENSES, FACE, senseRows } from './boxMirror';
+import { BoxMirror, MIRRORED, SENSES, FACE, senseRows, type Furniture } from './boxMirror';
 import { RUST, f64, u32, u8, simWhyNot } from '../sim/sim';
 import type { SimState } from '../sim/state';
 import { EXACT } from '../math/exact';
@@ -34,7 +34,7 @@ export function lineBox(a: Vec3, rd: Vec3, b: Box): { t0: number; t1: number; de
     if (qa < 1e-18) { if (qc > 0) return null; }
     else { const disc = qb * qb - qa * qc; if (disc < 0) return null; const s = Math.sqrt(disc), ta = (-qb - s) / qa, tb = (-qb + s) / qa; if (ta > t0) t0 = ta; if (tb < t1) t1 = tb; if (t0 > t1) return null; }
     depth = Math.min(h[0] - Math.sqrt(ox * ox + oz * oz), h[1] - Math.abs(oy));
-  } else if (b.cut !== undefined && cutConfig.on && b.cut.length > 0) {   // CUT BOXES (scene/cut.ts): the interval inside the CUT solid, and the origin's depth under its nearest face — a cut plane included
+  } else if (b.cut !== undefined && cutMet(b)) {   // CUT BOXES (scene/cut.ts): the interval inside the CUT solid, and the origin's depth under its nearest face — a cut plane included
     if (!cutClip(b.cut, ox, oy, oz, dx, dy, dz, t0, t1)) return null;
     t0 = CUT_CLIP.t0; t1 = CUT_CLIP.t1;
     for (let k = 0; k < b.cut.length && k < MAX_CUT_PLANES; k++) { const c = b.cut[k]; if (c.n[0] === 0 && c.n[1] === 0 && c.n[2] === 0) break; depth = Math.min(depth, c.d - (c.n[0] * ox + c.n[1] * oy + c.n[2] * oz)); }   // (the planes cutClip read: ≤ MAX_CUT_PLANES, ended by a zero normal)
@@ -91,12 +91,17 @@ const shotPanes: { bi: number; t: number }[] = [];   // shotBlocked's scratch (t
 /** THE CHECK'S SWITCH OVER THE RUST ROWS OF THIS FILE (tools/qa/rust-check.ts raises it; nothing else does): on = every question a row sends to the module is
  *  ALSO answered here, the two compared, and every row of the module's copy compared with its box (boxMirror.ts stale) — `asked` questions, `differ` of them
  *  answered differently, `stale` rows that were not their box, and the first of either in words. The game plays on the TypeScript's answer while it is on. */
-export const BOTH = { on: false, asked: 0, differ: 0, stale: 0, first: '' };
+export const BOTH = { on: false, asked: 0, differ: 0, stale: 0, first: '', things: 0 };
 /** the same check's count of the senses' questions the module answered, a row each (RUST.sight … paths; boxMirror.ts SENSES): a row that is on and never asked proves nothing */
 export const SENSED = { sight: 0, light: 0, smoke: 0, sound: 0, paths: 0 };
+/** …and of the rays the module answered (RUST.rays: raycast) */
+export const RAYS = { n: 0, host: 0 };
 /** eyes one question of a sight pass can name (four bits each, and the count above them: rust/sim/src/fog.rs) */
 const SIGHT_EYES = 7;
 const bothPanes: { bi: number; t: number }[] = [];   // (the check's: the panes the module listed for the question in hand)
+/** THE WIND THE COARSE GRID'S SMOKE DRIFTS BY (`gridStep`; game/wind.ts stormDrift): the vector (m/s), its rise with height (`low` of it at the ground,
+ *  `gain` more by `fullAt` metres up) and the share of it each square metre of the plan has (0 under a roof … 1 in the open) */
+export interface GridWind { x: number; z: number; low: number; gain: number; fullAt: number; share: (x: number, z: number) => number }
 export class StaticCollision {
   private cells: number[][];        // per 1m cell: static box indices whose footprint overlaps and that matter for movement
   private W = WORLD.gridW; private H = WORLD.gridH; private cs = WORLD.gridCell;
@@ -146,8 +151,8 @@ export class StaticCollision {
   /** A TICK OPENS (Game.stepSeats): with a row of RUST on that asks the box world, the copy is made the boxes as they stand and the questions of this tick go
    *  to the module; with none, nothing happens here at all. */
   tickOpen(): void { const M = this.mirror, S = EXACT.on ? senseRows() : 0;   // (the senses answer under the game's own maths alone: senseSet)
-     if (RUST.lines || RUST.circles || RUST.fog || S || (RUST.doors && EXACT.on)) M.open(this.boxes, this.cells, this.tiltedAt, this.W, this.H, this.cs, this.dynamicBoxes, this.glassWalkable, RUST.lines, RUST.circles, RUST.fog, S); else if (M.live) M.shut(); }
-  /** THE WORLD A RULE OF THE MODULE'S MAY STEP OVER NOW (the doors' step: game/doors.ts): the copy, standing, with the game's own leaves `dyn` in it as they
+     if (RUST.lines || RUST.rays || RUST.circles || RUST.fog || S || ((RUST.doors || RUST.props || RUST.slabs || RUST.items) && EXACT.on)) M.open(this.boxes, this.cells, this.tiltedAt, this.W, this.H, this.cs, this.dynamicBoxes, this.glassWalkable, RUST.lines, RUST.circles, RUST.fog, S, RUST.rays); else if (M.live) M.shut(); }
+  /** THE WORLD A RULE OF THE MODULE'S MAY STEP OVER NOW (the doors' step: game/doors.ts; the furniture's: game/props.ts): the copy, standing, with the game's own leaves `dyn` in it as they
    *  are — or null (no tick, no copy, a level too big for it, another list in the leaves' place): the TypeScript steps. */
   rulesWorld(dyn: Box[]): BoxMirror | null { const M = this.mirror; if (M.owes) M.again(this.boxes, this.glassWalkable); return M.rules(dyn) ? M : null; }
   /** the foot of a span as the statics are asked it (footBand), for a rule that asks them in the module */
@@ -319,6 +324,15 @@ export class StaticCollision {
     }
     return this.dynamicHit(a, d0 * il, d1 * il, d2 * il, len, needFlags);
   }
+  /** THE FURNITURE'S RAY, ANSWERED BOTH WAYS (the check's: BOTH; game/props.ts PropSystem.raycast calls this with what it answered): the module is asked the
+   *  same ray over its copy of the furniture's parts (lines.rs ray_things), the two answers are compared, and the copy with the furniture as it stands. */
+  thingsBoth(P: Furniture, ro: Vec3, rd: Vec3, tmax: number, t: { t: number; n: Vec3; prop: unknown; box: Box } | null): void {
+    const M = this.mirror; if (!M.live || M.owes || !M.things(P)) return;
+    const k = M.x.lines_ray_things(M.slot, ro[0], ro[1], ro[2], rd[0], rd[1], rd[2], tmax), m = f64(), at = M.scratch;
+    const ok = k < 0 ? t === null : t !== null && P.props[k] === t.prop && Object.is(m[at], t.t) && Object.is(m[at + 1], t.n[0]) && Object.is(m[at + 2], t.n[1]) && Object.is(m[at + 3], t.n[2]) && M.thingBox(P, m[at + 4]) === t.box;
+    const st = M.staleThings(P); BOTH.asked++; BOTH.things++; BOTH.stale += st; if (!ok) BOTH.differ++;
+    if ((st || !ok) && !BOTH.first) BOTH.first = `the furniture's ray [${ro.join(', ')}] → [${rd.join(', ')}] (${tmax}, ${k}): ${ok ? '' : 'the two answers differ; '}${st} row(s) of the copy not the furniture`;
+  }
   private compared(M: BoxMirror, set: number, ok: boolean, what: string, a: Vec3, b: Vec3, p: number, q: number): void {
     const st = M.stale(this.boxes, this.dynamicBoxes, set); BOTH.asked++; BOTH.stale += st; if (!ok) BOTH.differ++;
     if ((st || !ok) && !BOTH.first) BOTH.first = `${what} [${a.join(', ')}] → [${b.join(', ')}] (${p}, ${q}): ${ok ? '' : 'the two answers differ; '}${st} row(s) of the copy not their box`;
@@ -331,7 +345,7 @@ export class StaticCollision {
     const uu = r0 * r0 + r2 * r2, su = Math.sqrt(uu), lu = len * uu;   // (the segment on the floor plan: a + t · (r0, r2), t in [0, len])
     for (let i = 0; i < dyn.length; i++) {
       const db = dyn[i]; if ((db.flags & needFlags) !== needFlags) continue;
-      if (db.rot || db.round === true || (db.cut !== undefined && cutConfig.on && db.cut.length > 0)) { if (segClear(a0, a1, a2, r0, r1, r2, len, db, SEG_PAD)) continue; const hit = rayBox(a, [r0, r1, r2], db, len); if (hit && hit.t >= 0) return true; continue; }
+      if (db.rot || db.round === true || (db.cut !== undefined && cutMet(db))) { if (segClear(a0, a1, a2, r0, r1, r2, len, db, SEG_PAD)) continue; const hit = rayBox(a, [r0, r1, r2], db, len); if (hit && hit.t >= 0) return true; continue; }
       // an upright leaf stands inside the cylinder of radius |h0| + |h2| round its centre: a segment whose floor-plan line passes further off than that (the cross
       // product, no division), or whose stretch of it ends before / starts after it, cannot enter the leaf — rayBox would say no
       const c = db.c, h = db.h; const R = (h[0] < 0 ? -h[0] : h[0]) + (h[2] < 0 ? -h[2] : h[2]) + SEG_PAD;
@@ -459,9 +473,13 @@ export class StaticCollision {
    *  leaves as they stand. The copy is the grid's to stand up: where no row of RUST has it standing for this tick, it is made the boxes as they are for
    *  the step alone and let go again, with no question of the game's sent to it (so nobody who opens a tick has to know a grid is there). False = nothing
    *  was done (the module does not run here, more leaves than a list holds, or no grid stands on this level): the state is as it was, the emitters not
-   *  taken. */
-  gridStep(st: SimState, pending: readonly number[], n: number, K: { decay: number; spread: number; rise: number; riseRate: number; gone: number },
-    glow: { K: { albedo: number; share: number; passes: number; sweep: number }; lamps: (col: StaticCollision) => boolean } | null = null): boolean {
+   *  taken.
+   *  `wind`: the smoke under the open sky drifts by this vector (m/s; sense.ts SENSE.drift), each square metre of the plan by the share of it `share`
+   *  gives (0 under a roof … 1 in the open) and by its rise with height (`low` of it at the ground, `gain` more by `fullAt` metres up), and
+   *  spreads of its own by less there (`K.inWind` of its spread where the wind blows whole). None, or a plan of more squares than the table holds: still air, the step as it was. */
+  gridStep(st: SimState, pending: readonly number[], n: number, K: { decay: number; spread: number; rise: number; riseRate: number; gone: number; inWind: number },
+    glow: { K: { albedo: number; share: number; passes: number; sweep: number }; lamps: (col: StaticCollision) => boolean } | null = null,
+    wind: GridWind | null = null): boolean {
     const M = this.mirror; if (M.owes) M.again(this.boxes, this.glassWalkable);
     const mine = !M.live;
     if (mine) { if (simWhyNot()) return false; M.open(this.boxes, this.cells, this.tiltedAt, this.W, this.H, this.cs, this.dynamicBoxes, this.glassWalkable, false, false, false, 0); if (!M.live) return false; }
@@ -474,8 +492,14 @@ export class StaticCollision {
       // A step carries as many as the scratch holds, 170, the LATEST of them: the grid's own list holds 64, and `pending` is kept to that many by
       // whoever fills it, sense.ts SmokeGrid.emit)
       const x = M.x, m = f64(), at = M.scratch, all = pending.length - pending.length % 6, e = Math.min(all, M.scratchLen - M.scratchLen % 6); for (let i = 0, from = all - e; i < e; i++) m[at + i] = pending[from + i];
+      // (THE WIND, bricks.rs 3b: its share a square metre, row by row, two squares to a brick's side — the plan as the grid lays it, bricks.rs step)
+      let wx = 0, wz = 0, low = 1, gain = 0, fullAt = 1;
+      if (wind && (wind.x !== 0 || wind.z !== 0)) {
+        const nx = 2 * Math.ceil(this.W * this.cs / 2), nz = 2 * Math.ceil(this.H * this.cs / 2);
+        if (nx * nz <= M.windCap) { for (let z = 0, o = M.wind; z < nz; z++) for (let i = 0; i < nx; i++) m[o++] = wind.share(i + 0.5, z + 0.5); wx = wind.x; wz = wind.z; low = wind.low; gain = wind.gain; fullAt = wind.fullAt; }
+      }
       const G = glow?.K, g = st.bind();
-      return x.grid_step(g, st.stamp, M.slot, M.gridCopy(), set, n, e / 6, K.decay, K.spread, K.rise, K.riseRate, K.gone, lamps, G ? G.albedo : 0, G ? G.share : 0, G ? G.passes : 0, G ? G.sweep : 0) !== -1;
+      return x.grid_step(g, st.stamp, M.slot, M.gridCopy(), set, n, e / 6, K.decay, K.spread, K.rise, K.riseRate, K.gone, lamps, G ? G.albedo : 0, G ? G.share : 0, G ? G.passes : 0, G ? G.sweep : 0, wx, wz, low, gain, fullAt, K.inWind) !== -1;
     } finally { if (mine) M.shut(); }
   }
   /** segmentBlocked as this file answers it (and the whole of it wherever the module does not: outside a tick, with RUST.lines off) */
@@ -556,7 +580,7 @@ export class StaticCollision {
           const bi = cell[k]; if (stamp[bi] === id) continue; stamp[bi] = id;
           const bx = boxes[bi]; if (bx.flags & skip) continue;
           let t0 = -Infinity, t1 = Infinity, depth: number;
-          if (bx.rot || bx.round === true || (bx.cut !== undefined && cutConfig.on && bx.cut.length > 0)) {   // (CUT BOXES: a cut static takes lineBox, which holds the cut rule — the scalar copy below is the whole box's; ROUND THINGS: lineBox holds the round too)
+          if (bx.rot || bx.round === true || (bx.cut !== undefined && cutMet(bx))) {   // (CUT BOXES: a cut static takes lineBox, which holds the cut rule — the scalar copy below is the whole box's; ROUND THINGS: lineBox holds the round too)
             if (segClear(a0, a1, a2, r0, r1, r2, len, bx, pad)) continue; const s = lineBox(a, rdv ??= [r0, r1, r2], bx); if (!s) continue; t0 = s.t0; t1 = s.t1; depth = s.depth; }
           else {
             // nowhere near the segment — outside the box's height span, or its floor-plan line / stretch clear of the cylinder (|h0| + |h2|) that holds the box at any
@@ -620,6 +644,25 @@ export class StaticCollision {
 
   /** Closest static hit along a ray (t, box index) or null. Solid: an intact glass pane IS hit (a round, a canister, a spark, a shin all meet it); a broken one is not. */
   raycast(ro: Vec3, rd: Vec3, tmax: number): { t: number; index: number; n: Vec3 } | null {
+    const M = this.mirror; if (M.owes) M.again(this.boxes, this.glassWalkable);
+    if (!M.rays || !(tmax > 0 && tmax < 1e6)) return this.raycastHere(ro, rd, tmax);
+    // RUST.rays, inside a tick (rust/sim/src/lines.rs ray: the walk below, statement for statement, over the module's copy of the boxes and of whichever
+    // leaves stand in dynamicBoxes now) — WITH EVERY PANE TAKEN AS SHUT. If the nearest thing it meets is no pane, no pane stood nearer, open or shut, and
+    // the walk below ends on the same thing. If it is a pane, this file asks its one question (glassOpen: a pane's open question only reads): shut, and
+    // it is the answer; open, and the ray flies on to what stands beyond, which the walk below follows whole (RAYS.host counts those).
+    const set = M.leaves(this.dynamicBoxes); if (set === -2) return this.raycastHere(ro, rd, tmax);
+    const k = M.x.lines_ray(M.slot, ro[0], ro[1], ro[2], rd[0], rd[1], rd[2], tmax, set);
+    if (k === -2) { RAYS.host++; return this.raycastHere(ro, rd, tmax); }
+    let hit: { t: number; index: number; n: Vec3 } | null = null;
+    if (k >= 0) { const m = f64(), at = M.scratch; hit = { t: m[at], index: k, n: [m[at + 1], m[at + 2], m[at + 3]] };   // (read out before anybody is asked anything)
+      if (k < 1e6 && this.glassOpen && (this.boxes[k].flags & BoxFlag.Glass) && this.glassOpen(k, v3.mad(ro, rd, hit.t))) { RAYS.host++; return this.raycastHere(ro, rd, tmax); } }
+    RAYS.n++;
+    if (BOTH.on) { const t = this.raycastHere(ro, rd, tmax);
+      this.compared(M, set, hit === null ? t === null : t !== null && t.index === hit.index && Object.is(t.t, hit.t) && Object.is(t.n[0], hit.n[0]) && Object.is(t.n[1], hit.n[1]) && Object.is(t.n[2], hit.n[2]), 'raycast', ro, rd, tmax, k); return t; }
+    return hit;
+  }
+  /** raycast as this file answers it */
+  raycastHere(ro: Vec3, rd: Vec3, tmax: number): { t: number; index: number; n: Vec3 } | null {
     let best = tmax, bi = -1; let bn: Vec3 = [0, 1, 0];
     this.dynamicBoxes.forEach((db, i) => { const hit = rayBox(ro, rd, db, best); if (hit && hit.t < best) { best = hit.t; bi = 1e6 + i; bn = hit.n; } });   // index ≥ 1e6: dynamic occluder
     const id = ++this.stampId; const steps = Math.ceil(tmax / 0.5) + 1;

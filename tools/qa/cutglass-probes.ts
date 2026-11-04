@@ -33,8 +33,9 @@ function family(title: string): { verdict: Verdict; done: () => boolean } {
 }
 const resetStats = () => { for (const k of Object.keys(GB_STATS)) (GB_STATS as any)[k] = 0; for (const k of Object.keys(SHARD_STATS)) (SHARD_STATS as any)[k] = 0; };
 /** run `fn` with the cut switch at `on`, and put it back whatever happens (the switch is a module global: the next probe must find it as it was) */
-// (headless.ts lets CUTBOXES=1|0 pin the switch for a whole run at every stand-up: these probes set it themselves, so the variable is put to the same value for their length)
-function pinEnv(on: boolean): () => void { const keys = ['CUTBOXES', 'CUT_BOXES'].filter(k => process.env[k] !== undefined), had = keys.map(k => process.env[k]!); for (const k of keys) process.env[k] = on ? '1' : '0'; return () => { keys.forEach((k, i) => { process.env[k] = had[i]; }); }; }   // (both spellings: headless.ts reads either)
+// (headless.ts lets CUTBOXES=1|0 pin the switch at every stand-up, and with no word the shipped stand raises it as the page does: these probes set it
+//  themselves, so the word is given for their length whether the run came with one or not)
+function pinEnv(on: boolean): () => void { const keys = ['CUTBOXES', 'CUT_BOXES'], had = keys.map(k => process.env[k]); process.env.CUTBOXES = on ? '1' : '0'; if (had[1] !== undefined) process.env.CUT_BOXES = on ? '1' : '0'; return () => { keys.forEach((k, i) => { if (had[i] === undefined) delete process.env[k]; else process.env[k] = had[i]; }); }; }   // (both spellings: headless.ts reads either)
 async function withCut<T>(on: boolean, fn: () => Promise<T>): Promise<T> { const was = cutConfig.on; const unpin = pinEnv(on); cutConfig.on = on; try { return await fn(); } finally { cutConfig.on = was; unpin(); } }
 
 // the pane (by where it stands: office-pane.ts) = the conference partition's second sheet (shards-probes.ts): c (7.5, 1.5, 10), annealed; Sam in the corridor south of it

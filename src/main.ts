@@ -18,7 +18,7 @@ import { CHARLAB, charLabOpen, charLabLeave, charLabWear, charLabWorn, charLabOu
 import { kitSoloIf, kitFresh, kitShow, kitPlayer, kitGun, kitLessonPage, kitLoad, kitRows, KIT, ISSUE, SUITS, TRIMS } from './game/kit';
 import { kitBoot } from './ui/kitPreview';
 import { missionsBusy, reopenMissionsAfterLoad, openMissionsIfAsked, OFFLIST_UI } from './ui/missions';
-import { START_PAGE, startPage, openStartPage, openList } from './ui/startpage';
+import { START_PAGE, startPage, startPageWanted, openStartPage, openList } from './ui/startpage';
 import { setFigureCast } from './ui/kitFigure';
 import { PICKS, PICKS_UI, pickRedirect, pickQuitSearch, pickOfQuery, pickHref } from './scene/picks';
 import { initGpu, showFatal, showFatalError, pipelineProgress, gpuStory, pipeQueue, laterIdle, laterHold, laterProgress, PIPE_QUEUE, FATAL, plainAir } from './gpu/device';
@@ -28,7 +28,7 @@ import { rigTable } from './render/sdfrig';
 import { rigDebugTrace } from './render/rigDebug';
 import { Engine } from './engine';
 import type { HostApi } from './host/api';
-import { SAVED, SAVE_UP } from './host/savefile';
+import { SAVED, SAVE_UP, saveFile, savedWords } from './host/savefile';
 import type { IrradianceProbe } from './render/probe';
 import { buildLevel, buildBundledLevel, bootedLocalLevel, withOfficeScript, isOfficeFamily, OFFICE_DATA, OFFICE_SCENARIOS } from './scene/level';
 import { loadLevel, levelFileOf, levelNameOf } from './scene/levelLoad';
@@ -47,7 +47,7 @@ import { findMeOutline } from './ui/findme';
 import { makeOutlineFrame } from './render/outline';
 import { SavePicture } from './render/savepic';
 import { SAVEPIC } from './host/savepic';
-import { EVENPACE, pacer, rateMeter } from './host/pace';
+import { EVENPACE, pacer, pageRoom, rateMeter } from './host/pace';
 import { TWEEN, Tween } from './host/tween';
 import { AheadDraw } from './host/ahead';
 import { v3, Vec3, quat } from './math/vec';
@@ -100,8 +100,6 @@ import { PerfSweep } from './ui/perfsweep';
 import { Bench, benchView, machineFacts, type BenchScene } from './ui/bench';
 import { sharpCapConfig } from './render/frame';
 import { benchBegin, benchLegOfPage, benchSceneWaits, BENCH_RUN_KEY } from './ui/benchrun';
-import { priceLevelsPage } from './ui/pricerun';
-import { heldPage, ownPage, runPage } from './host/runpage';
 import { BENCH_SCENES } from './host/benchScenes';
 import { HandsOff } from './host/handsoff';
 import { oneAirFlip, wispMotesFlip } from './ui/sweepSnow';
@@ -161,7 +159,7 @@ import { rowSettings } from './game/rowset';
 import { HOUR, HOURS, HOUR_IDS, initHour, applyHour, hourOf, hourSummary, hourLightAt, setSunStrength, sunStrength, sunToCloud, hourSun, hourWorldChanged } from './game/hours';
 import { lightEstimateAt } from './game/guards';
 import { STRESS, standExtra, stressTick, stressSummary, extraSpots } from './game/stress';
-import { Quality, QUALITY_NAMES, QualityName, ladderAimOf, smokeKeepOf, rtVeto, p5Veto, sharpForce, gbaaForce, iqForce, gimVeto, froxelVeto, froxelForce } from './ui/quality';
+import { Quality, ladderAimOf, smokeKeepOf, rtVeto, p5Veto, sharpForce, gbaaForce, iqForce, gimVeto, froxelVeto, froxelForce } from './ui/quality';
 import { buildPanel } from './ui/bindings';
 import { SceneTweak } from './ui/sceneTweak';
 import { sceneLayers } from './ui/sceneLayers';
@@ -198,7 +196,6 @@ import { RUNNER, RUNNER_STATS, runnerOf, runnerBreak } from './game/runner';
 import { sim, RUST, RUST_ON, simSay, simWhyNot, mathsOfRust } from './sim/sim';
 import { knobRegistry, knobsCopy, knobsBack } from './game/knobs';   // (last on purpose: every game module above is already loaded, so this import changes nobody's load order)
 import type { Gpu } from './gpu/device';
-import { RENDER_PASSES } from './gpu/timer';
 import { PLAYTAPE, tapeFromUrl } from './replay/engineplay';
 import { NETPLAY, NET_JOIN, netFromUrl, netKeyed, netLeave } from './net/page';
 import { netRows } from './ui/netrows';
@@ -225,7 +222,7 @@ async function main() {
   const q = new URLSearchParams(location.search);
   // THE KEPT PAGE (gpu/keep.ts, host/keeppage.ts): the tab's own page keeps the GPU device and shows the game in a frame of this address, so a mission start —
   // a load of that frame — compiles no shader this visit has compiled already. A shell boots nothing more; ?keeppage=0 = every load a whole page, as it was
-  const keep = keepPageBoot(q, ownPage(q) || kitViewOn);   // (a run of any kind keeps its own page: host/runpage.ts)
+  const keep = keepPageBoot(q, q.has('bench') || q.has(BENCH_RUN_KEY) || kitViewOn);
   if (keep.role === 'shell') { boot.stopRafProbe(); readyResolve(); return; }
   if (keep.role === 'leave') return;
   if (!kitViewOn && await cloudAdopt(q)) return;   // a browser handed another's id (`?player=`) takes it and its settings before a single key is read, then loads once more without the word (cloud/cloud.ts; no request at all on a build with no backend)
@@ -244,7 +241,6 @@ async function main() {
   // page goes there BEFORE anything boots: that scene's load is then this machine's first, and it is the one the report times. Never in ?kitview's own window.
   let benchRefused: string | null = null;
   if (q.has('bench') && !q.has(BENCH_RUN_KEY) && !kitViewOn) { benchRefused = benchBegin(false); if (benchRefused === null) return; console.info(`benchmark: ${benchRefused}`); }   // (a refusal — a tab with no session store — is said on the HUD's line once the page is up)
-  if (!kitViewOn && priceLevelsPage(q)) return;   // `?pricelevels` (ui/pricerun.ts): the look's layers off against on, on every level of the mission list, a page a level, hands off
   // `?playtape=<shelf id | file>` (replay/engineplay.ts): a saved replay played on THIS page — the real renderer and mixer — off its run tape. The page is first sent to
   // the tape's own query (so this boot is the recording's boot); `tape` then lays the tape's knob tables and kit over this machine's at each point below. Absent = nothing.
   const tapePlay = q.has(PLAYTAPE) ? await tapeFromUrl(q) : null; if (tapePlay === 'moved') return;
@@ -303,12 +299,12 @@ async function main() {
   if (q.has('norainshadow')) rainShadowConfig.on = false;   // ?norainshadow: the rain lit by the reach masks alone — through a shut door, through the wall a weapon light is pointed at — as it was (render/frame.ts rainShadowConfig)
   initHour(q);   // ?hour=dawn|midday|overcast|dusk (+ ?sun=0‥1): the level at another hour than its own night (src/game/hours.ts) — standGame lays it over the level; no flag = the level as authored
   recipeTables();
-  const brief = tape || net || kitViewOn || q.has('paused') || runPage(q) ? null : loadBrief(location.search);   // THE LOAD BRIEF (ui/loadbrief.ts): a page that boots a mission of the list shows that mission, not the old card's controls list — never a page nobody sits at (a replay, ?kitview's window, the automation boot, a benchmark's scene)
+  const brief = tape || net || kitViewOn || q.has('paused') || q.has(BENCH_RUN_KEY) ? null : loadBrief(location.search);   // THE LOAD BRIEF (ui/loadbrief.ts): a page that boots a mission of the list shows that mission, not the old card's controls list — never a page nobody sits at (a replay, ?kitview's window, the automation boot, a benchmark's scene)
   const card = brief ?? bootCard(); loading.textContent = '';
   const tick = () => document.hidden ? Promise.resolve() : new Promise<void>(r => setTimeout(r, 0));   // (a hidden pane / background tab services timers about once a second and paints nothing anyway: no yield there)
   await tick();
   const tGpu = performance.now();
-  const rigPage = q.has('bench') || runPage(q) || navigator.webdriver === true;   // a measurement or a driven page: it keeps its own page and its own timings
+  const rigPage = q.has('bench') || q.has(BENCH_RUN_KEY) || navigator.webdriver === true;   // a measurement or a driven page: it keeps its own page and its own timings
   const gpu = await initGpu(canvas, { retry: !kitViewOn && !rigPage, canvasRead: SAVEPIC.on && saveMod.SAVETIMELINE.on && !kitViewOn, keeper: keep.keeper });   // (a real loss of the device loads this page again — gpu/device.ts GPU_LOST; never the kit picture's window: the start page is told below and draws its standing man; never a benchmark or a driven page, which must see the card)
   startCallClock(gpu.device);   // (the load's clock on its buffer, texture and submit calls, to the boot's freeze: gpu/keep.ts)
   if (kitViewOn) void gpu.device.lost.then(() => kitViewFatal());   // (?kitview: the device's own card — gpu/device.ts — is seen by nobody in there: the start page is told there is no picture)
@@ -459,8 +455,7 @@ async function main() {
   { const os = new URLSearchParams(location.search).get('onesolve'); if (os !== null) engine.settings.oneSmokeSolve = !(os === '0' || os === 'off' || os === 'false'); }   // ?onesolve=0: each preset back on its own smoke pressure pairs (ui/quality.ts ONE SMOKE SOLVE) — before the Quality below applies its first preset
   { const fs = new URLSearchParams(location.search).get('fireshed'); if (fs !== null) engine.settings.fireSmokeShed = !(fs === '0' || fs === 'off' || fs === 'false'); }   // ?fireshed=0: verylow keeps an open fire's smoke, as every other preset does (ui/quality.ts FIRE SMOKE SHED) — before the Quality below applies its first preset
   const quality = new Quality(engine, smoke); window.__quality = quality;
-  { const qp = new URLSearchParams(location.search).get('quality'); if (qp && (QUALITY_NAMES as string[]).includes(qp)) { quality.auto = false; quality.climbAllowed = false; quality.apply(qp as QualityName); } }   // ?quality= pins for this visit without touching the remembered choice
-  const priced = heldPage(new URLSearchParams(location.search)); if (priced) quality.adaptive = false;   // a priced page (host/runpage.ts): the ladder's switch off before any frame is sampled, so the preset's own scale and rows stand (with a pinned preset its sample() then does nothing at all)
+  quality.visit(location.search);   // the address's ladder words, before a frame is sampled: ?quality=<tier> holds that tier for this visit without touching the remembered choice, and ?adapt=0 switches the ladder off (ui/quality.ts visit: nothing adapts, so two benchmark runs draw the same pixels)
   { const ap = new URLSearchParams(location.search).get('aim'); const aim = ap === null ? null : ladderAimOf(ap); if (aim !== null) engine.settings.ladderAim = aim; else if (ap !== null) console.warn(`?aim=${ap}: not one of asnow | 0 | 60 | 90 | 120 | display — the ladder keeps its default (${engine.settings.ladderAim === 60 ? 'hold 60' : 'settings.ladderAim ' + engine.settings.ladderAim})`); if (engine.settings.ladderAim) quality.watchDisplay(); }   // the frame rate the ladder works to (ui/quality.ts HOLD): settings.ladderAim's default is HOLD 60; ?aim= sets it for this visit, ?aim=asnow (or ?aim=0) = the ladder as it was before the aim
   { const lh = new URLSearchParams(location.search).get('ladderheld'); if (lh !== null) engine.settings.ladderHeld = !(lh === '0' || lh === 'off' || lh === 'false'); }   // ?ladderheld=0: the paced check off under an aim (ui/quality.ts, under PACED) = hold 60 cuts a held page on the union's size alone, as before
   { const ls = new URLSearchParams(location.search).get('laddershed'); if (ls !== null) engine.settings.ladderShed = !(ls === '0' || ls === 'off' || ls === 'false'); }   // ?laddershed=0: auto cuts resolution with sharp direct left on (ui/quality.ts SHED), as before
@@ -475,7 +470,7 @@ async function main() {
   buildPanel(panel, engine, game, smoke, cam, overlay, audio, quality, () => ({ fps: fpsSm, union: unionSm }));   // (the status strip reads the frame loop's own smoothed numbers — only ever called from the panel's refresh, long after they exist)
   if (sneakLabAsked(new URLSearchParams(location.search))) sneakLabBoot(game, panel);   // ?sneaklab: the lab's own system in the panel, open (host/sneaklab.ts) — without the word nothing of it is made
   if (fireLabAsked(new URLSearchParams(location.search))) fireLabBoot(game, panel);   // ?firelab: the fire's numbers live in the panel (host/firelab.ts), nothing of it made without the word
-  if (modelErrAsked(q) && !tape && !net) modelErrBoot(game, q.get('modelerr'), sceneOf(q), () => ({ adapter: gpu.adapterInfo, ...(gpu.adapterFallback ? { fallback: 'yes' } : {}), ...(sessionrec.commit ? { commit: sessionrec.commit } : {}) }));   // ?modelerr: the game's own senses measured against the picture (host/modelerr.ts), nothing of it made without the word
+  if (modelErrAsked(q) && !tape && !net) modelErrBoot(game, q.get('modelerr'), sceneOf(q), () => ({ adapter: gpu.adapterInfo, ...(gpu.adapterFallback ? { fallback: 'yes' } : {}), ...(sessionrec.commit ? { commit: sessionrec.commit } : {}) }), { held: () => menu.isOpen, startPage: startPageWanted() });   // ?modelerr: the game's own senses measured against the picture (host/modelerr.ts), nothing of it made without the word
   if (net) netRows(panel, net);   // (a networked game: the debugger's Network page — this page's connection made worse on purpose, live: ui/netrows.ts; nothing of it is made on any other page)
   if (smokeLabAsked(new URLSearchParams(location.search))) smokeLabBoot(game, panel, smoke, engine);   // ?smokelab: the solver's bricks and curls drawn, its numbers live in the panel (host/smokelab.ts), nothing of it made without the word
   // ?tweak: the one off scene tweak panel (ui/sceneTweak.ts) — the picture's layers with their switches and numbers, live; without the word nothing of it is made or read
@@ -540,14 +535,14 @@ async function main() {
   { const host = game.saves.onPutBack; game.saves.onPutBack = info => { host?.(info); cutToHim(); vRun = null; }; }   // (…and the run's books below start over: the Mission is the same OBJECT put back, and a load is another try, as a file's is — an end already filed must not stand for the end to come)
   // the start card's sandbox row (god mode / no AI / unlimited ammo) as this machine last left it — but not on a benchmark scene's page: its fight is the set's, and with
   // 'no AI' kept the mission below refuses to start at all (nobody would move), so the row has to stand off BEFORE the scenario is staged, not at the scene's start
-  if (!benchSceneWaits() && !heldPage(q)) loadSandbox(game);   // (… nor on a level's page of the pricing run, host/runpage.ts: it stands the row off the same way, for its whole life)
+  if (!benchSceneWaits()) loadSandbox(game);
   // THE LOOK PROTOTYPE's kit (the maintainer, 11-01: "unlimited ammo and all equipment? want to play with smoke grenades", and "turning off fog of war would also
   // be good for /look too"; ?lookkit=0 = the kit as dealt, the sandbox row as saved and the fog as the link has it): the unlimited ammunition row is up from the
   // start (not saved from here: the debugger's box still puts it down), Sam is never without two cans of smoke, two stun charges and two frags whatever card he
   // was dealt, and the fog of war is down unless the link asks for it by name (?fow). The page's alone; looked at a frame, since a mission deals its kit and
   // writes its fog late, and again at every restart.
   { const lq = new URLSearchParams(location.search);
-    if (lookConfig.on && lq.get('lookkit') !== '0' && !runPage(lq)) {   // (never on a benchmark's scene page: the set's own kit and fog, ui/benchrun.ts)
+    if (lookConfig.on && lq.get('lookkit') !== '0' && !lq.has(BENCH_RUN_KEY)) {   // (never on a benchmark's scene page: the set's own kit and fog, ui/benchrun.ts)
       const fog = lq.has('fow') || lq.has('fogofwar');
       game.infiniteAmmo = true;
       const top = () => { const pl = game.player; pl.canisters = Math.max(pl.canisters, 2); pl.flashbangs = Math.max(pl.flashbangs, 2); pl.frags = Math.max(pl.frags, 2);
@@ -711,7 +706,7 @@ async function main() {
   window.__timeScale = 1;
   if (new URLSearchParams(location.search).has('hud')) readout.set(true);
   // F6: A FRAME CAPTURE (render/framecap.ts): every target the renderer wrote, the whole picture over 2 frames (Shift+F6: a window at the cursor over 8 frames, a tenth the size), with the
-  // trace of what the renderer changed and each frame's length. One file, to the dev server's captures/ folder (or a download); read with tools/qa/capture-read.ts.
+  // trace of what the renderer changed and each frame's length. One file, to the dev server's captures/ folder (a page served from anywhere else hands it to the save door, host/savefile.ts); read with tools/qa/capture-read.ts.
   // `__framecap.arm()` waits for the renderer's next change (a quality step, its targets re-made) and captures from that frame.
   const framecap = new FrameCap(gpu.device, {
     state: () => ({ internal: `${engine.width}×${engine.height}`, out: `${engine.outWidth}×${engine.outHeight}`, scale: +engine.settings.renderScale.toFixed(3), quality: quality.label, ladder: quality.lastChange,
@@ -721,7 +716,8 @@ async function main() {
     parked: t => engine.pool.isParked(t), adapter: gpu.adapterInfo,
     save: async (name, gz) => {   // (the dev server is a thing of a page served from this machine: a page opened from anywhere else is asked for nothing but a download)
       if (/^(localhost|127\.0\.0\.1|\[::1\])$/.test(location.hostname)) try { const r = await fetch(`/capture?name=${name}`, { method: 'POST', body: gz as BodyInit, headers: { 'X-Frame-Capture': '1', 'Content-Type': 'application/octet-stream' } }); const m = r.ok ? /^captured(?: in (\d+) pieces)?$/.exec(await r.text()) : null; if (m) return `→ captures/${name}.tpscap.gz${m[1] ? ` · to hand it on: its ${m[1]} pieces, ${name}.part1of${m[1]} …` : ''}`; } catch { /* no dev server behind this page */ }
-      const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([gz as BlobPart])); a.download = `${name}.tpscap.gz`; document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 2000); return '→ your downloads';
+      const w = saveFile('capture', `${name}.tpscap.gz`, new Blob([gz as BlobPart]));   // (anywhere else it leaves by the page's one door, host/savefile.ts: to whoever keeps the page's files, and to the browser only with ?downloads=1)
+      return w.local ? '→ your downloads' : savedWords('The capture', w.went);
     },
     said: s => { try { game.msg(s); } catch { /* */ } },
   });
@@ -731,7 +727,7 @@ async function main() {
   // F9: the perf recorder (ui/perfrec.ts) — a stress-test dump the maintainer hands back: per-frame GPU passes + CPU sections + state + events → the one door (host/savefile.ts: a backend's intake, no download) + shot server
   const perfrec = new PerfRecorder(engine, game, cam, quality, s => { perfNote = s; perfNoteT = 4; try { game.msg(s); } catch (e) { reportError('page.note', e); } });   // (also on the message line, so REC start / saved shows without the debug read-out)
   let perfNote = '', perfNoteT = 0;
-  const GPU_RENDER_PASSES = [...RENDER_PASSES];   // the passes the GPU union leaves out (gpu/timer.ts: the one list); the backend's records list them apart
+  const GPU_RENDER_PASSES = ['composite', 'post', 'fxaa', 'gbuffer', 'pdraw', 'present'];   // the passes the GPU union leaves out (render passes: their timestamps are not to be trusted on Metal); the backend's records list them apart
   let cloudCallsAt = NaN;   // (the page's running ms inside its GPU calls when this frame's timer started — gpu/keep.ts CALLS.play; NaN = no clock then)
   let cloudGpuMs = NaN;   // this frame's GPU union where the ladder's sample below had a new one (the backend's records read the same number: cloud/telemetry.ts)
   let lastTimerResolved = -1;   // engine.timer.resolved when the ladder was last fed a GPU union (a sample gets 0 = 'no timings' unless a NEW readback resolved since)
@@ -858,17 +854,13 @@ async function main() {
       if (window.__pauseLoop || kitView?.rest()) { last = performance.now(); lastTs = -1; pace.reset(); rate.reset(); requestAnimationFrame(frame); return; }   // (…and ?kitview's picture at rest — a still one held, the live one paused off its step: nothing stepped or drawn until it is asked again — host/kitView.ts)   // test hook: only scripted __runFrames advance anything (deterministic captures)
       if (kitView?.skip(ts)) { requestAnimationFrame(frame); return; }   // (?kitview's even pace on a fast display: this display frame is passed over whole — `last` is not touched, so the next step takes the real time since the last one)
       // (an even pace on a fast display, host/pace.ts: while the ladder holds a frame rate the page draws at that rate, and a display frame that comes before the next drawn one is due is passed over whole, as ?kitview's
-      // are above. Not while the page measures the machine, which wants its frames as they come: the boot's calibration, a benchmark, an F8 sweep. Never under ?kitview, which has its own. ?pace=0 = every display frame worked.)
+      // are above. Not while the page measures the machine, which holds no rate: the boot's calibration, a benchmark, an F8 sweep. Never under ?kitview, which has its own. ?pace=0 = every display frame worked.)
       // (…and a window nobody is at gives way, host/pace.ts `giveway`: without the system's focus it keeps one frame with the GPU at a time and leaves the GPU as long again to the windows somebody is at. Under ?kitview too:
       // the kit picture is a live window of its own, and its pacer above knows nothing of who is looking. Not while a take is recorded, which is a measure as the three above are. ?giveway=0 = it draws as a focused one.)
-      // (…and the page waits for the GPU, host/pace.ts `flight`: a frame is not begun while two are still with it; a frame held for that is the machine's own pace. Not while the page measures the machine, and
-      // not under ?kitview, whose own pacer reads how late its frames come. ?flight=0 = nothing waits, ?flight=1 = one frame with the GPU at a time.)
-      // (A PRICED PAGE, host/runpage.ts heldPage, is nobody's window to give way with: its frames are what the run times. It still WAITS FOR THE GPU as a
-      //  player's page does: with nothing waiting, a level whose frame the GPU cannot finish in a display frame queued hundreds of frames ahead on a rented
-      //  card, 11-04, and a switch of the look's layers then showed in the stamps ten seconds late — inside the other state's turn)
-      //  (… and it is paced to no target of the ladder's: asked for with `quality=auto`, its frames would be evened to the ladder's band and read as the band's)
-      const measuring = quality.calibrating || bench.active || perfsweep.active, away = EVENPACE.giveway && !measuring && !priced && !perfrec.recording && !attended(), room = measuring || kitView ? 0 : EVENPACE.flight;
-      if (pace.skip(ts, !kitView && !measuring && !priced && (quality.adaptive || quality.auto) ? quality.bands.target : 0, away, room)) { requestAnimationFrame(frame); return; }
+      // (…and the page waits for the GPU, host/pace.ts `flight`: a frame is not begun while two are still with it; a frame held for that is the machine's own pace. A benchmark and a sweep wait too; only the
+      // boot's calibration by itself and ?kitview do not (host/pace.ts pageRoom says who and why). ?flight=0 = nothing waits, ?flight=1 = one frame with the GPU at a time.)
+      const tools = bench.active || perfsweep.active, measuring = quality.calibrating || tools, away = EVENPACE.giveway && !measuring && !perfrec.recording && !attended(), room = pageRoom({ calibrating: quality.calibrating, measuring: tools, kitView: !!kitView });
+      if (pace.skip(ts, !kitView && !measuring && (quality.adaptive || quality.auto) ? quality.bands.target : 0, away, room)) { requestAnimationFrame(frame); return; }
       const rested = pace.gave !== gaveLast; gaveLast = pace.gave;   // (a display frame was passed over for giving way since the last worked one: this frame's gap is the rule's, not the machine's)
       if (prewarmAt === -3 && frameCount >= 1) (window as any).__prewarm();
       const now = performance.now(); const rawDt = (now - last) / 1000; const dt = Math.min(1 / 20, rawDt) * (window.__timeScale ?? 1); last = now;
@@ -1070,7 +1062,7 @@ async function main() {
       lines.push(row('quality', `${quality.label}${quality.adaptive ? ' +adapt' : ''}`));
       lines.push(row('fps', `${fpsSm.toFixed(0)}`));
       { const asked = pace.worked + pace.held + pace.gave, noRoom = pace.held + pace.gave, dA = asked - paceRow.asked, dN = noRoom - paceRow.noRoom; paceRow.asked = asked; paceRow.noRoom = noRoom;   // the page's pace (host/pace.ts): the display as read, which of its frames are asked for, and of the frames asked for since this strip was last written, how many found the GPU with no room
-        const waits = !(quality.calibrating || bench.active || perfsweep.active || kitView) && EVENPACE.flight > 0;
+        const waits = pageRoom({ calibrating: quality.calibrating, measuring: bench.active || perfsweep.active, kitView: !!kitView }) > 0;
         lines.push(row('pace', `${pace.hz ? `${pace.hz.toFixed(0)} hz` : 'display not read'}${pace.every > 1 ? ` · every ${pace.every}` : ''} · ${waits ? `${pace.flying} of ${EVENPACE.flight} on the gpu · ${(100 * dN / Math.max(1, dA)).toFixed(0)}% held for it` : 'not waiting for the gpu'}${pace.lost ? ` · ${pace.lost} unanswered` : ''}`)); }
       lines.push(row('gpu ms', `${t.total(['composite', 'post', 'fxaa', 'gbuffer']).toFixed(2)}`));
       unionSm = unionSm * 0.9 + t.unionMs(['composite', 'post', 'fxaa', 'gbuffer', 'pdraw']) * 0.1;   // the UNION of the compute passes' intervals: what the frame really cost on the GPU — the Σ above double-counts passes Metal ran side by side (direct beside the cascade chain is normal at play cadence: docs/internal/p0a-cascades.md)

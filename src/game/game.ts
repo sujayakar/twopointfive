@@ -30,7 +30,7 @@ import { buildSnowField, snowCfgRows, type SnowField } from '../render/snowField
 import { groundRayConfig, packGroundField } from '../scene/groundField';
 import { makeSnowTracks, updateSnowTracks, clearSnowTracks, formSnowTracks, TRACK_RES, type SnowTracks } from './snowTracks';
 import { updateSnowMarks, clearSnowMarks } from './snowMarks';
-import { snowBogAt } from './snowBog';
+import { snowBogAt, snowBogMay } from './snowBog';
 import { attachSnowBlast, clearSnowBlast, stepSnowDigs } from './snowBlast';
 import { SNOW_LOOK, snowLevel, WEATHER_PRESETS } from './weatherKinds';
 import { levelNameOf } from '../scene/levelLoad';
@@ -208,6 +208,7 @@ import { Wind, loadWind } from './wind';
 import { updateAirSim, attachAir, airResend } from './airSim';
 import { AirDust } from './airDust';
 import { Moths } from './moths';
+import { WetGround } from './wetGround';
 import { GlassBreak, loadGlassBreak } from './glassbreak';
 import { GlassShards, loadShards } from './shards';
 import { kitFresh } from './kit';
@@ -1090,6 +1091,8 @@ export class Game {
   airDust!: AirDust;
   /** MOTHS (game/moths.ts): a dozen fluttering specks round the lit sodium lamps at night; ticked after the wind, their boxes into the frame's dynamics */
   moths!: Moths;
+  /** WET GROUND (game/wetGround.ts): the open ground a picked rain wets, as the picture draws it — dressing, ticked in the picture's block */
+  wetGround = new WetGround();
   /** GLASS BREAKING (game/glassbreak.ts): the panes' impact lists / Voronoi cells / dropped masks and the shards they become — always constructed (its hooks answer 'whole' for
    *  a pane never hit), inert unless tune.glassBreak (default off) AND chaos > 0 outside the tour; the renderer's half is the boot-time prelude const GLASS_BREAK */
   glassBreak!: GlassBreak;
@@ -1225,7 +1228,7 @@ export class Game {
     // loose furniture: simulated on the CPU, emitted as dynamic boxes every frame (rendered + traced like everything else), deliberately never registered as
     // collision occluders — a chair must not hide the player, muffle a shot or dent the nav grid; guards path through props and shove them aside
     this.props = new PropSystem(level.props, this.col, (e) => this.onPropEvent(e));
-    this.items = new Throwables(this.col, this.props); this.items.bog = (x, y, z) => snowBogAt(this, x, y, z);   // (… and bog down where they land in lying snow: snowBog.ts, 0 everywhere with its switch off)
+    this.items = new Throwables(this.col, this.props); this.items.bog = { may: () => snowBogMay(this), at: (x, y, z) => snowBogAt(this, x, y, z) };   // (… and bog down where they land in lying snow: snowBog.ts, 0 everywhere with its switch off)
       // canisters and dropped magazines bounce off (and nudge) the furniture
     this.tracers = new Tracers(engine.lights, sparkSink(this)); this.tracers.fog = { begin: who => this.fogOfWar.begin(who), done: was => this.fogOfWar.done(was), lightBy: (l, who) => this.fogOfWar.lightBy(l, who) };   // tracer streaks: their head lights live in the engine's LightSet (transient), their embers are sparks — GPU sparks while that path is on, the CPU pool's otherwise (particleFx.ts sparkSink)
     this.decals = new Decals(engine.device); engine.setDecals?.(this.decals);   // (the QA harness's engine stand-in has no renderer to hand it to: the list still fills, nothing draws)
@@ -1435,13 +1438,13 @@ export class Game {
   private onPropEvent(e: PropEvent) {
     // a castor chair coasting (props.ts CASTOR) is voiced by rollTick, not from here: nobody hears it and no die is drawn — the game is the same game with or without
     if (e.sound === 'roll') {
-      if (e.roll === 'start' && !this.rolls.some(r => r.p === e.prop)) this.rolls.push({ p: e.prop, x: e.prop.x, z: e.prop.z, k: 0, moveT: -1e9, voice: 0 });
+      if (e.roll === 'start' && !this.rolls.some(r => r.p === e.prop)) this.rolls.push({ p: e.prop, x: e.pos[0], z: e.pos[2], k: 0, moveT: -1e9, voice: 0 });   // (where it was AS IT STARTED, which the event says: the step that made the noise may have moved it on before this is heard)
       return;
     }
     { const pl = e.who === undefined ? null : manById(this, e.who); if (pl) pl.noise = Math.max(pl.noise, e.level); }
     const t = e.prop.tune; const jitter = 0.95 + simRandom() * 0.1;
     if (e.sound === 'thud') { this.audio.play('propThud', e.pos, clamp(0.35 + 0.15 * e.speed, 0.3, 1), { rate: t.thudRate * jitter }); this.destr?.thud(e.pos, 0.4 + 0.3 * e.speed, e.who); }   // (…and the litter round its feet twitching with the knock: destruction.ts impulses, behind chaos)
-    else if (!e.prop.rolling) this.audio.play('propScrape', e.pos, clamp(0.25 + 0.18 * e.speed, 0.25, 1), { rate: t.scrapeRate * jitter });   // (a chair already rolling on its castors is heard rolling: no scrape voiced over it — its event, below, is filed all the same)
+    else if (!e.rolling) this.audio.play('propScrape', e.pos, clamp(0.25 + 0.18 * e.speed, 0.25, 1), { rate: t.scrapeRate * jitter });   // (a chair already rolling on its castors is heard rolling: no scrape voiced over it — its event, below, is filed all the same)
     this.events.push({ kind: 'prop', pos: v3.copy(e.pos), time: this.time, loud: e.level > 0.7, level: e.level, who: e.who });
   }
 
@@ -1818,6 +1821,7 @@ export class Game {
     if (DRESS.moths) this.moths.update(dt);              // the moths' orbits (moths.ts) — after the wind that scatters them
     if (DRESS.snow) this.syncSnowLook();
     if (DRESS.rain) updateRainFx(this, dt, me.cam);        // PARTICLE RAIN (rainFx.ts): the near-field drop recycler + drips + the lattice's stand-back disc (frame.weatherE) — after the wind (its drops ride the same field) — a return that zeroes the disc unless settings.particleRain is on and rain is drawn
+    this.wetGround.follow(this);   // WET GROUND (wetGround.ts, dressing: DRESS.wetGround is read inside, so the row put down DRIES what the step wetted): the yard is as wet as the weather just said — the renderer's words of the statics only
     updateItems(this, dt);
     updateGlass(this);   // glass: a stun charge beside the glazing stars the panes near it (this frame's 'bang' events, each looked at once) — and, with glass breaking on, takes cells out of them
     this.glassBreak.update(dt);   // glass breaking (glassbreak.ts): queued cells fall as shards within the frame's budget, the support pass drops the tongues left hanging, the gusts through shot-out exterior panes — nothing to do unless a pane has been hit with the switch on
@@ -2065,7 +2069,8 @@ export class Game {
     // settle. Gone, the blobs answer again. A NEW one with every encounter and whenever the senses come to the game, restartEncounter and above (`renew`):
     // its beat and the light model's sweep then start with the encounter, in a game that has run for an hour and in one a file was just loaded into.
     // With the light model up, the light that comes round is stepped on the same squares: sense.ts SENSE.bounce)
-    this.cpuSmoke.grid?.step(this.col, dt, SENSE.bounce ? col => steadyLamps(this, col) : null);
+    // …and under the open sky its smoke drifts with the weather's wind (SENSE.drift; wind.ts stormDrift)
+    this.cpuSmoke.grid?.step(this.col, dt, SENSE.bounce ? col => steadyLamps(this, col) : null, SENSE.drift ? () => this.wind.stormDrift() : null);
   }
   /** the sensors' asks (Sam's meter, the guards' smoke sight lines) and Sam's visibility off the last answer */
   private lightMeter(dt: number) {

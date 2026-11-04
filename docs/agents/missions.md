@@ -863,8 +863,10 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
     NOTE); the one locked door is meant to be shot down or kicked, the two door charges are spare; the hour and weather it wants (a low late sun with dust) are URL keys only, a row cannot
     carry them. Never seen on a GPU, never played by a hand. Nobody has seen the gunner go down behind his bags when he is shot at and come up again, a dazed man on his feet in the nest, or the last man throw his rifle down and run: all are read from the runs' logs. A call for the maintainer: whether the hall's last man may run and open the locked door (the door's lesson skipped), and whether a dazed man standing up to forty seconds reads right.
 - **The plan mode mission is out (2026-10-26)**: plan mode left the game (`docs/agents/squad.md`, 'PLAN MODE IS GONE'), and the row `tut-plan`, its
-  script, generator, scripted player, page run and check went with it. `levels/tut-plan.json` stays as a floor for the squad's checks, with no
-  lesson block and no mission. The bullet below, and every later one that speaks of plan mode in a lesson, is history.
+  script, generator, scripted player, page run and check went with it. `levels/tut-plan.json` stayed for a while as a floor for the squad's checks
+  and went on 2026-11-04 with its menu still: it had no generator and no mission, so it could not be exported again and `look` and `level-needs`
+  were red on it. goals-check, onesignal-check, coverkeep-probes and sameway-probes stand on `levels/tut-queue.json` now (the same floor, kept up by
+  its generator), all lines green on both stands. The bullet below, and every later one that speaks of plan mode in a lesson, is history.
 - **'A harder fight' does without plan mode, and its entries are on the go key (2026-10-26)** (`tools/levels/tut-squad.ts` → `levels/tut-squad.json`,
   `tools/qa/lessons/tut-squad.ts`, `tools/qa/tut-squad-page.cjs`). The row stays cut from the lists (`offList`) and opens by its address; it is kept
   whole because the kit plan walkthrough (`ui/kitPlan.ts`) and the packed-for rule (`kit.ts ISSUE.picked`, kitpack-check, kitguide-page) stand on
@@ -1572,6 +1574,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
 - THE BAZAAR ROW, DRESSED OUTSIDE ITS WALLS (2026-11-03; `tools/levels/bazaar.ts`, lived things only: groups `lived.lane`, `lived.northside`, `lived.streetend`, and three round things in `lived.alley`, `lived.butcher`, `lived.coppersmith`). THE SWITCH is `LIVED` (`?lived=0` in the page; off on the frozen stand, `TPS_LIVED=1` raises it there): off, the level is box for box as it was, and `lived-check bazaar` holds that. WHAT: the three starts stood on one sheet of dust (the level command's `ground`: 435 m² bare, now none of 40 m²). Now a cart track runs the length of the lane behind the south wall (the kit's `ruts`), a path is worn from it to the lane gate, another goes from the alley's mouth round the back of the row to the alley gate and on down the east side to the street gate (the kit's `stain`, the dust's own paint at 0.78, a leg a piece; each ends square on its gate's built threshold, which is 0.86 m from the hinge and not the generator's 1.2 m slot), the south wall's outer face and the tea house's gable are damp at the foot (`skirt`), and field stones lie at the track's far edge and past the east wall (`rubble`). All of it is paint on the ground or a stone under 0.19 m, every stone two metres and more off a wall's outer face: no cover, no lamp, no authored point, no kept box. ROUND: the burn barrel, the butcher's block and the coppersmith's wide pan are written with the kit's `roundSlabs`, so the round rule finds them (6 round things bare, 9 with the lived rooms in: `tools/qa/fixtures/round/bazaar.txt`). A round is smaller than the two squares it replaced: with `ROUND` on, quiet-light's map has one walk cell more beside the barrel and two beside the block, and no cell's light moved. The spilt flour by the oven is three drifts (one sheet of it read as a mat on the look page). LEFT, by rule: the shop fronts' glass frames (the kit's wall writes the office paint `glassFrame`) and every door frame and leaf wait for a box that says its stuff by name; the bushes are kept props. MEASURED, headless, both stands, before and after on the same tree: `quiet-check` 27 of 27 deals; `quiet-light` and its `--blackout` map (frozen: the same file; shipped: the three cells above and nothing else); `quiet-pair --seeds 1-12`, three arms, 36 runs a stand, the same run for run on both stands (the scripted careful Sam ends one run of the 72, before and after: the level is hard for the script, so the tallies say only that nothing laid is on his way); `wallfurn-check --levels bazaar.json` on the shipped stand, 984 asks, 768 and 880 accepted, before and after. The mission is in no play-through, so none of the 42 digests is its own. NOBODY HAS PLAYED IT; NEVER SEEN ON A GPU. Stills on the software adapter (Chromium 141), the look as frozen: `rebuild/dress-levels/levels/bazaar/`.
 - THE COUNTING HOUSE'S CLERK'S WAITS ARE HAND-SET (`tools/levels/vault.ts`, route `counting`, `wait: [31, 20]`; it was `[22, 26]`): the west yard is open while he sits at his desk AND the yard's walker is off the gate side, and the walker's first three laps run 78‥81 s (he stops to talk with the shack's man; 64.7 s after), so at 22 s the two slid together and the windows were 12 s, then 5 s and 1 s — a man who watched twenty seconds first got in at 2:16. Now the longest window of each lap is 21 · 14 · 13 · 22 · 17 · 11 · 11 · 17 · 22 s over ten minutes (pin 7, idle, shipped stand, moon). TWICE THE DESK PLUS THE SMOKE STAYS AT OR UNDER 82 s: at 83 (`[31, 26]`, tried) the clerk reached his corner too late for the first radio check on 5 of 15 dealt set-A seeds and the code answer took 258 s for 181. Pin 7, scripted: devices answered 93 s from start delays 0‥20 s and 158 s from 30‥80 (it was 93 / 223), the clerk's code 175 s on every delay and on all 15 set-A seeds of 24 (it was 164). 24 dealt seeds, shipped stand, moon, the counts above unchanged: devices 24 clean · code 19 (24 out) · pan 13 (24 out) · devices ignored 0 (13 out, 11 down) · breaker 0 (24 down). Set B's clerk (`counting_b`) is untouched. `probes.ts vault` plays only the devices plan and the careless walk, each of the four deals stood by its pin (`quiet-pin.ts vault --all`), on seed 1: the code answer's time is held by no gate — re-run `vault-run.ts --plan code --seeds 1-24 --moon` after touching either wait. The fingerprint is unchanged (checkpoints load); a replay or recording of the level from before parts at 22 s. The margin under 82 s was not measured. Never seen on a GPU, never played by anybody.
 - THE RELAY STATION AS TWO, HAND-SET (`tools/levels/quiet-relay.ts`; no geometry, the fingerprint unchanged). STARTS REORDERED: the west track is first (it was third; the north slope was first), so a pin or a saved deal index from before names another start (0/0/0 is still `quiet=32`). From the north slope the first man met is the walker and a following partner was the one first noticed on 4 of 6; from the west the problem is the lit, locked, camera'd comms door in the picket's eye. THE PICKET'S LAP STARTS ON HIS LEAD-IN (same three points, rotated; `wait: [0, 110, 4]`): he is on his stand from the second second — before, a partner ordered to his back in the first ten seconds was sent across his front (`pairorders.ts` goes for the back of the way a man mostly faces; the general mend is there, and the crossing's two lane men keep the old shape). Pin 32, `--squad 1`, shipped stand, a scratch runner: upright walk 0 of 8; THE PARTNER ON THE PICKET ordered at 12 s 5 of 6 out, all GHOST 100 (4 clean at 67‥68 s; one never 'set': the stalk flips between two near-equal ways), at 25 s 3 of 3 clean (80‥86 s), at 45 s 3 of 3 clean on a second order (157‥167 s); THE BREAKER by Sam's hands 18 of 18 clean at start delays 0 / 30 / 60 (46 / 76 / 106 s; 3 of 6 at delay 45), by the partner at the panel with a 4 s wait at the corner 12 of 12 (7 of 9 without it); it wants three OCPs (lamp_west, the door camera, the inside camera). Not readable before contact: the picket (dark, no torch). The breaker is reset through the compound wall (`lighting.ts` errand stand and its 1.3 m reset radius: a claim, not mended). The mission's key art still stages the pair at the north gate (`tools/menu-art.ts`, `tools/menu-shots/recipes.cjs`). `quiet-check`, `export --check`, `level-lint`, `quiet-light`, `takecheck-check` green.
+- THE RELAY STATION'S HILLTOP IS DRESSED (dress every level, 11-03; `tools/levels/quiet-relay.ts`, the tail of `furnish`, room `hill`: level data under `LIVED`, no switch of its own; on the page `?lived=0` is the level as it was, the frozen stand never loads it and `TPS_LIVED=1` raises it on a frozen run). The level command's `ground` need named ONE bare sheet, 251 m² of dust: the ground outside the wall on the three sides that are not the road, where the mission's own start (the west track), the slope start and three of the four ways out are. Laid from the kit alone (`G.ruts`, `G.stain`, `G.rubble`): the track as wheel ruts from the road along the west wall and off over the hill's north edge (clear of the two bushes), its foot branch to the track gate, the path up the slope to the back strip gate, the path down from the dish gate, hollows where the dust lies darker, field stones (the road's dark `gravel`: the kit's pale `mud` reads as broken wall and no wall is broken here; `rubble` still makes three in ten of any scatter its own `mudDark`). Paint and walk-over stones only; only paint in the stretch of the track the Team & kit picture frames, and no stone where the north wall hides the ground from the camera. A FOOT PATH IS SHORT LENGTHS laid end over end, each turned a little, and every stain is the ground's own dust darker (0.74 to 0.8, a smaller 0.62 inside the big ones), lying UNDER the ruts: one long rectangle, or a patch of another paint on bare dust, reads as a mat from above at night, and a stain over a rut paints it out. NOTHING INSIDE THE WALL MOVED, and no lamp: the light was judged first from a still of each court and left (the mast's two floods on the block's face are the key and the south band behind the mast is the dark; warm pools at the west lamp, the gate lamp, the fuel point and in the rooms; the track and the slope are the moon's). COUNTS: 802 to 884 boxes in the file, props and round things as they were (32; 18 / 21). `ground` passes (the largest bare piece left is 28 m² of dirt). MEASURED before and after on both stands, step 1245: `quiet-light` and its `--blackout` map are the same cell for cell, `quiet-check` 27 of 27 deals; `quiet-pair` seeds 1 to 12, three arms (alone, the partner following, the partner used): 36 of 36 runs the same run on the frozen stand, which does not load lived things, and 36 of 36 on the shipped stand, where the tool loads all 884 boxes: the pair starts on the track and goes in by the track gate, and never meets a stone (the shipped tallies, the same both times: nobody out alone, 1 of 12 with the partner following and 1 of 12 with him used; the row is marked untuned). The page's own light on Sam at the start mark is 0.479 before and after. NONE OF THE 42 PLAY-THROUGHS IS THIS MISSION: their digests only show nothing else moved. CHECKED, both stands unless said: export `--check`, `lived-check`, `level-needs quiet-relay --run`, `level-lint`, `kitview-plan`, the `quiet` and `workthings` probes, `takecheck-check`, `doze-check`, `wallfurn-check` (shipped: the same 40 places), the generators' typecheck. A TAPE OR A CHECKPOINT of this level taken with lived rooms on parts from this step; one taken with them off does not. NOT MENDED, a general gap: a rain the player PICKS wets the world's ground slab and not a decal lying on it (`weather.ts setWet`), so under a picked rain these marks stay dry and read paler than the wet ground; the level's own night is dry. NEVER SEEN ON A GPU and not played by a person: stills of the start and the yards before and after on the software adapter (the look page as frozen, Chromium 141, the level's night, dry) are all anybody has seen.
 - **The compound's defenders are placed by hand** (`tools/levels/compound.ts`, head 'PLACED BY HAND'; `GARRISON`; no switch: it is the level's data, and the page
   opens on it because `SAMESTART` is on — the plain `?levelFile=compound.json&roomclear&squad4` link, no `freshstart=0` needed). Placed: the shed 4 men (one more
   mark on its back-strip door), the garage 1 (bait), the sala 1, the hut a squad of its own that stays (`mayLeave: false`), the Keep's three rooms stay lit when the
@@ -1586,15 +1589,46 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   props are as they were): an old checkpoint loads, an old tape's re-run will not match (the marks moved). Page: rebuild/authored-levels/loud-levels.md.
 - **The ground outside the compound's wall is no longer bare** (dress every level, 11-03; no switch: level data under `LIVED`, room `lived.outside`). Both
   ways in start on the strip between the perimeter wall and the map's edge, which had nothing on it. `tools/levels/compound.ts` lays the look's kit there
-  (`gwotKit(gwotOfOffice(K))`: three wood piles, field stones in four places, two stacks of block, two tyres), every piece at the wall's foot or out at the
-  edge so that the walk to each gate and the ground the four stand on stay clear; the twin treads the two walks darker (`M.path`). A lying drum and bushes
-  were tried and taken out: from the play camera at night they read as an orange crate and dark boxes. The generator's own octagon is the lived kit's
-  `round` (a pot of 0.2 m and over too): 8 rounds where 3 were. The taxi wears `genYellow` (a paint; it wore a jerry can's plastic yellow, drawn flat). A
-  TALLY MOVES: the pieces at the wall's foot take 23 of the wall's 891 places for a wall charge (`TPS_PROFILE=shipped bun run tools/qa/wallfurn-check.ts
-  --levels compound.json`: 868 places, all pass, the rule's 45 added places unchanged). Base: `tools/qa/fixtures/level-base/compound-gwot.txt`; round counts
-  0 and 8, both files. Measured: the 21 missions' play-throughs on two seeds against step 1239: frozen 42 of 42 digests the same, shipped with `TPS_LIVED=0`
-  42 of 42; shipped, compound-four's two runs move and no other level's. Their endings do not: seed 1 is taken with 3 of 4 up at 198.8 s (198.9 before, the
-  same man down at 39.7 s, 18 orders, 6 entries), seed 2 is wiped at 33.6 s as before, the same four down at the same seconds. Two seeds is a look, not a
+  (`gwotKit(gwotOfOffice(K))`: three wood piles, field stones in four places, two stacks of block, two tyres), every piece out at the strip's outer edge
+  (the next bullet says why none is at the wall's foot), so that the walk to each gate and the ground the four stand on stay clear; the twin treads the two
+  walks darker (`M.path`). A lying drum and bushes were tried and taken out: from the play camera at night they read as an orange crate and dark boxes. The
+  generator's own octagon is the lived kit's `round` (a pot of 0.2 m and over too): 8 rounds where 3 were. The taxi wears `genYellow` (a paint; it wore a
+  jerry can's plastic yellow, drawn flat). Base: `tools/qa/fixtures/level-base/compound-gwot.txt`; round counts 0 and 8, both files. Measured: the 21
+  missions' play-throughs on two seeds against step 1239: frozen 42 of 42 digests the same, shipped with `TPS_LIVED=0` 42 of 42; shipped, compound-four's
+  two runs move and no other level's. Their endings do not: seed 1 is taken with 3 of 4 up at 198.8 s (198.9 before, the same man down at 39.7 s, 18 orders,
+  6 entries), seed 2 is wiped at 33.6 s as before, the same four down at the same seconds. Two seeds is a look, not a count. Drawn on the software adapter
+  only: never seen on a GPU, never played by a person.
+- **Nothing solid stands at the outside foot of the compound's wall: a wall charge's place and the defenders' way round live there** (11-04, the mend of the
+  bullet above; no switch: level data under `LIVED`). The dressing of 11-03 had stood wood piles and block stacks against the outside of the perimeter wall
+  and counted neither thing. (1) WALL CHARGES: a charge needs a place to stand at the wall, and the squad breaches this wall from its starts. The piles took
+  23 of the wall's 891 places (6 on the west wall opposite the garage, 17 on the north wall either side of the back gate); `TPS_PROFILE=shipped bun run
+  tools/qa/wallfurn-check.ts --levels compound.json` reads 891 before the dressing, 868 with it, 891 now. (2) THE WAY ROUND: the defenders' way to the guard
+  hut's other door (`hut_e` / `hut_w`) comes down the strip outside the west wall hugging the wall and round the corner, 45.16 m of the 46 a way round may
+  be (`pressure.ts flankMaxM`); a block stack and a wood pile at the wall's foot behind the west start made it 46.06 m. `tools/qa/wayround-check.ts`,
+  shipped and frozen alike on seeds 1 to 3: 9 ways lost and 23 squeezed before the dressing, 21 and 107 with it, 9 and 23 now, and the same ways as before
+  the dressing, length for length. Those 9 and 23 were the older lived rooms' (the shed by `shed_s`, the garage by `g_e`, the guard hut by `hut_e`): the
+  next bullet gives them back. THE RULE the generator now keeps: every piece outside the wall lies at the strip's OUTER EDGE. (3) AND NOT BESIDE A START
+  MARK: the same block stack and wood pile laid at the edge but 2 m behind the rear man's mark at the west start changed how the four step off, and both
+  scripted runs with them (seed 1 taken with 1 of 4 up where it had 3; seed 2 taken where it was wiped at 34 s); 5 m behind him they change nothing, and
+  stones there never did. Measured: the 21 missions' play-throughs on two seeds against the dressed level (step 1265 with the check), three reads (frozen,
+  shipped with `TPS_LIVED=0`, shipped): 42 of 42 digests the same on each, compound-four's two included, so the mend moves no run. The opening frame and the
+  two starts were drawn again on the software adapter: never seen on a GPU, never played by a person.
+- **The compound's older rooms give the defenders every way round: the sala's tea table and the shed's chaff cutter moved** (11-04, on the maintainer's word
+  for the older furniture that blocks a way round: "sure go for it"; no switch: level data under `LIVED`, the rooms furnished before the levels were
+  dressed). `tools/qa/wayround-check.ts` counted 9 ways lost and 23 squeezed on the compound, all older than the dressing, and two pieces owned every one
+  (found by leaving each lived room, then each piece, out in turn). THE TEA TABLE stood in the middle of the sala (x 16.0 to 17.2, z 16.05 to 16.6), on two
+  lines a man of that room walks when a pair goes round: from the north door across to the east door (to the garage: 23.38 m bare, 25.89 with the table,
+  over its limit) and from his post out by the north door (to the guard hut: 45.18 m of 46, 45.85 with it). It stands 0.6 m east and 0.5 south now, the second
+  cushion row laid along the rug's north edge at its head (a row east of it lay half off the rug; cushions are drawn only and take no way, place or
+  cover) and a walk left between it and the west row; twenty-five places were tried and nothing nearer gives both ways back (south alone
+  frees the first and costs the second, east alone the reverse). THE CHAFF CUTTER stood where a man sent round to the shed's south door needed to stand (his
+  next way was 56 m) and cost the shed's own man 0.26 m of the 1.1 he has to spare to the guard hut; it stands 0.25 m north (0.2 is not enough) and 0.45
+  west, the west only to keep its flywheel clear of the level's own cardboard box, its chaff heap with it. COVER: the table is 0.35 m high and covers
+  nobody; the cutter is waist-high, was on neither shed man's line to the east door and is on neither now. All 2,496 ways stand with the lived rooms on,
+  shipped and frozen alike on seeds 1 to 3, so `tools/qa/fixtures/wayround/compound-four.txt` is gone: the compound owes nothing. Wall-charge places 891 to
+  895. Measured: the 21 missions' play-throughs on two seeds against the level before the two moves: frozen 42 of 42 digests the same, shipped with
+  `TPS_LIVED=0` 42 of 42; shipped, compound-four's two runs move and no other level's: seed 1 is taken with 3 of 4 up at 154.6 s where it was 198.8 s
+  (another man down, later), seed 2 wiped at 34.5 s where it was 33.6 s, the same four down. A play change that was asked for; two seeds is a look, not a
   count. Drawn on the software adapter only: never seen on a GPU, never played by a person.
 - **Mousehole's defenders are placed by hand** (`tools/levels/mousehole.ts`, the `post` room's marks carry the comment; no switch: the level's data, and the
   page opens on it under `SAMESTART`). Placed: ward 1, exam 3, store 2, with the three marks by the blank north wall moved to 2.7 m off it (a wall charge knocks
@@ -1658,16 +1692,25 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   stencil ochre drew flat (110 decals); sack loads are `sandbag`, and one left out on the apron is under a tarp; three parking bays are painted by the
   staff door. No material, by the level audit: 8.8 % of the picture to 5.5 %; what is left is door leaves (painted at run time), cardboard, paper,
   plastic and rubber (plain by their rows). THE KIT PICTURE's hidden boom is named by its own group (`lived.boom`), not by four typed box numbers a
-  lived thing laid before them would move. THE PICKUP'S LAMPS: the kit's pickup has the head and tail lamps `carlamps.ts` finds, so with lived rooms
-  in (the shipped stand) the warehouse has four vehicle lamps for targets, none glowing; `carlamps-check`'s table has the rows (`[0, 0, 0]` or `[2, 2,
-  0]`: none where lived rooms are left out), and its line 1 does not count such a level among the files with vehicles on a stand that leaves lived
-  rooms out. BASE: the twin's own part moved, so `tools/qa/fixtures/level-base/warehouse-gwot.txt` holds its blob. MEASURED (headless): frozen stand
-  and shipped with `TPS_LIVED=0`, the play-through digests of all 21 missions on seeds 1 and 2 keep their word (42 of 42 each, against the step
-  before); shipped, the warehouse's two runs move their digest and end as before at the same second (taken at 210.2 s with 1 of 4 up, taken at 206.5 s
-  with 2 of 4 up), and every other run keeps its digest. `carlamps-check` on both stands (line 1 green; line 8 red as on the step before),
-  `lived-check`, `lived-stack-check` (no stack moves against the step before), `level-needs --run` on both stands, `export.ts --check`. The
-  fingerprint MOVED on the shipped stand: checkpoints, recordings and kept replays of the warehouse made before this step are refused. Stills on the
-  software adapter only; never seen on a GPU, never played by a person.
+  lived thing laid before them would move. THE HALL'S EXAMINING TABLE STANDS AGAINST ITS NORTH WALL (26.9, 11.65), west of the corner man's mark
+  (11-04; the maintainer: "move it"). Out in the lane (27.4, 12.9, where the older lived room had it) it lay on the one cheap line from the hall's
+  north door to the standing places outside the dock's north door, the line that skirts that door's own lane: a floor-squad man sent round to the dock
+  was priced 38 m round the racks where the bare hall gives 7.4, and refused, so that squad never went round to the dock. `wayround-check
+  warehouse-four` (shipped, seeds 1 to 3, 6336 asked): 58 lost and 26 squeezed with the older lived rooms, 54 and 28 as dressed, NONE lost and 28 with
+  the table moved, and its bar says `0 28`. The 28 are the impound bay on the foot of the south wall, where the older car stood too (26 the older
+  rooms had, and one way twice that the kit's longer pickup puts 9 cm across the check's 2 m line); the bay is left there on purpose: out at the lot's
+  edge it clears all 28 and also opens the wall's foot to the team's eyes, and the mission's two seeds got easier. WALL CHARGES: the table takes 11
+  places on the hall's north wall (757 places with lived rooms in, 768 as dressed, 754 before; 896 with them out), on purpose: a charge is not set
+  through a table. THE PICKUP'S LAMPS: the kit's pickup has the head and tail lamps `carlamps.ts` finds, so with lived rooms in (the shipped stand)
+  the warehouse has four vehicle lamps for targets, none glowing; `carlamps-check`'s table has the rows (`[0, 0, 0]` or `[2, 2, 0]`: none where lived
+  rooms are left out), and its line 1 does not count such a level among the files with vehicles on a stand that leaves lived rooms out. BASE: the
+  twin's own part moved, so `tools/qa/fixtures/level-base/warehouse-gwot.txt` holds its blob. MEASURED (headless): frozen stand and shipped with
+  `TPS_LIVED=0`, the play-through digests of all 21 missions on seeds 1 and 2 keep their word (42 of 42 each, against the step before); shipped, the
+  warehouse's two runs move their digest and end as before at the same second (taken at 210.2 s with 1 of 4 up, taken at 206.5 s with 2 of 4 up), and
+  every other run keeps its digest. `carlamps-check` on both stands (line 1 green; line 8 red as on the step before), `lived-check`,
+  `lived-stack-check` (no stack moves against the step before), `level-needs --run` on both stands, `export.ts --check`. The fingerprint MOVED on the
+  shipped stand: checkpoints, recordings and kept replays of the warehouse made before this step are refused. Stills on the software adapter only;
+  never seen on a GPU, never played by a person.
 - **The barracks' defenders are placed by hand** (`tools/levels/barracks.ts`: the hand placement merged over the build's four out-hung doors, both files the
   generator's; no switch: the level's data, and the page opens on it under `SAMESTART`). Placed: a GALLERY POST of two in the north gallery's east bay (`ngal_e`,
   a room in the data, no new geometry) — the arch man (31.0, 8.9) and the door man (32.6, 9.4), BOTH IN THE EAST OPENING — dark, looking across the yard at the lit south gallery; day room
@@ -1715,17 +1758,28 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   shared rules); the armoury's cartons are olive tins and plywood cases, the stores pallet olive cases, the sentry box and the sign police green, the
   hearth's cheeks mud brick. The laundry's boiler is `rust`, not galvanised: bright metal a probe's width from the east wall with the lot lamp behind
   it is what the level command's `leak` note counts (25 things as before, the twin 15 against 16). No material, by the level audit: 6.8 % of the
-  picture to 4.7 %; what is left is door leaves (painted at run time), the pickup's glass, cardboard, white sheets, plastic and rubber. KEPT: the
-  pickup is two boxes of the level's own part (a base move), as are the cots, lockers and shelves. BOXES: the plain file is 979 against
-  `lived-check`'s warning at about 900 (899 before). BASE: the twin's own part moved, so `tools/qa/fixtures/level-base/barracks-gwot.txt` holds its
-  blob. MEASURED (headless): frozen stand and shipped with `TPS_LIVED=0`, the play-through digests of all 21 missions on seeds 1 and 2 keep their word
-  (42 of 42 each, against the step before); shipped, the barracks' two runs move and the scripted player loses both ways (seed 1 wiped at 76.1 s to
-  wiped at 91.2 s, seed 2 wiped at 106.8 s to wiped at 163.6 s), and every other run keeps its digest. Seed 1 parts at 21 s in the laundry, where two
-  men of the first entry pass the tubs, round now, on a line 0.2 m further south (read off a trace of both trees). `lived-check`, `lived-stack-check`
-  (no stack moves against the step before), `barracks-check --static` (its B2 line for the n_end entry red as on the step before), `level-needs --run`
-  on both stands, `export.ts --check`. The fingerprint MOVED on the shipped stand: checkpoints, recordings and kept replays of the barracks made
-  before this step are refused. The tallies in the bullet above were not re-read: they are a scripted commander's on 24 to 72 seeds, and furniture has
-  moved them before. Stills on the software adapter only; never seen on a GPU, never played by a person.
+  picture to 4.7 %; what is left is door leaves (painted at run time), the pickup's glass, cardboard, white sheets, plastic and rubber. FOUR OLDER
+  PIECES MOVED OFF THE DEFENDERS' WAYS ROUND (11-04; the maintainer on finding and moving the older furniture that blocks them: "sure go for it").
+  `wayround-check barracks-four` (shipped, seeds 1 to 3, 6996 asked) counted 22 ways lost and 20 squeezed, the same with the older lived rooms and as
+  dressed; every one is on a way the level leaves 0.3 to 0.6 m inside its 46 m limit with no furniture at all, so a piece that costs a step loses it.
+  Each of the four is needed (tried without each) and each moved the least that gives its ways back: the lot's MOTORBIKE 1.2 m out from the foot of
+  the east wall, to (38.0, 4.3): at the wall it stood on the line the way up the lot runs along (14 lost, 10 squeezed); the sick bay's cloth SCREEN
+  0.45 m nearer its bed (z 22.78): it stood across the line from the room's west end to its east door, and the search left by the north door instead,
+  0.9 m longer (8 lost); the row of four FOOT LOCKERS in the first bunk room 0.4 m west: its east end clipped the line from the east door to the
+  gallery door (16 squeezed once the lost ways were back); the day room's CARROM BOARD and its two stools 0.45 m north, up to the settee: it stood on
+  the west man's line to the east door (2 squeezed). Now all 5787 ways stand and the mission has no bar file. Wall-charge places with lived rooms in:
+  512 to 518 (the bike off the wall gives six back; 580 with them out). `lived-stack-check`: one stack moves (the fourth man inside n1 stands at
+  (16.48, 6.05) where the lockers had him at (17.18, 6.05)). KEPT: the pickup is two boxes of the level's own part (a base move), as are the cots,
+  lockers and shelves. BOXES: the plain file is 979 against `lived-check`'s warning at about 900 (899 before). BASE: the twin's own part moved, so
+  `tools/qa/fixtures/level-base/barracks-gwot.txt` holds its blob. MEASURED (headless): frozen stand and shipped with `TPS_LIVED=0`, the play-through
+  digests of all 21 missions on seeds 1 and 2 keep their word (42 of 42 each, against the step before); shipped, the barracks' two runs move and the
+  scripted player loses both ways (seed 1 wiped at 76.1 s to wiped at 91.2 s, seed 2 wiped at 106.8 s to wiped at 163.6 s), and every other run keeps
+  its digest. Seed 1 parts at 21 s in the laundry, where two men of the first entry pass the tubs, round now, on a line 0.2 m further south (read off
+  a trace of both trees). `lived-check`, `lived-stack-check` (no stack moves against the step before), `barracks-check --static` (its B2 line for the
+  n_end entry red as on the step before), `level-needs --run` on both stands, `export.ts --check`. The fingerprint MOVED on the shipped stand:
+  checkpoints, recordings and kept replays of the barracks made before this step are refused. The tallies in the bullet above were not re-read: they
+  are a scripted commander's on 24 to 72 seeds, and furniture has moved them before. Stills on the software adapter only; never seen on a GPU, never
+  played by a person.
 - **`DARKFOE` and the loud levels' dark plans** (10-13, seeds 1-12, hard, the merged tree, on / held off with `TPS_DARKFOE=0` / the designer's same seeds before
   the rule): the compound's B (way 2, `PT_BREAKER=order PT_NV=1`) 12 · 39/48 / 12 · 33 / 11 · 33 — still the best answer; the warehouse's hall first in the dark
   5 · 11/48 / 4 · 8 / 6 · 11 — still the worst thing tried. `plan-fights.ts` reads no light anywhere (no `lightEstimateAt`, no `visibilityOf`).
@@ -2144,6 +2198,27 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   IT ON A GPU. The maintainer's to judge: the shot is taken from the doorway's light and not from the dark; whether the beam reads as "right behind
   him" from the store; whether a first-time player fires the one grenade once the right button opens (he cannot before the swap; after it he can swap
   back); the card's words; five sponge rounds.
+- **The ledger's town has an east side** (2026-11-03; the tail of `tools/levels/tut-quiet.ts` under LIVED IN, `levels/tut-quiet.json`; level data only, under
+  the lived switch — `LIVED.on`: ON in the page, `?lived=0` = the level as it was; OFF on the frozen stand, `TPS_LIVED=1` raises it; no switch of its own).
+  The level had no lived tier. It has one, of two groups, and BOTH ARE PAST THE YARD'S WALL: `lived.neighbour`, the yard east of the back court (a rope bed
+  left out under the snow, a water butt at the house's corner, a dish on its pole, snow blown against the two walls nobody walks by), and `lived.lot`, the
+  corner behind the neighbour's house (his water tank on its plinth, split wood, the builder's left-over block, the deep snow of a corner). 35 boxes, 21 of
+  them solid, no loose prop, NO LAMP; every piece is the look's kit's by name (`charpoy`, `drum`, `satDish`, `waterTank`, `woodPile`, `blocks`) with the
+  generator's own snow on it (`cap`, `drift`, `bank`), laid through `livedKit.ts livedTail`. WHY THERE: the shop's yard is the lesson's light and sight,
+  every lamp pool and wall of it placed for one beat, and it was already furnished; what was bare was the town round it (`level-needs` `ground`: 126 m² of
+  snow in one sheet, now none over 40 m²). The yard's wall stands 2.47 m with no gate on that side: no man of the shop has a line to a new thing and no way
+  leads from one into the yard. A PLAYER CAN WALK THERE (out by the street gate and round the back of the town); no line of the lesson sends him, and the
+  ways round the neighbour's house stay open (`lived-check`'s one-floor line was red on the first lay: a butt and a tank had shut them). NO TRODDEN PATH
+  IS LAID, though the first lay had three: the paint of one is play (`snowBog.ts`: a thrown thing bogs less on packed snow) and its footsteps are the
+  footstep map's (`surfaces.zones`), which is the level's own part and has no lived half, so a lived path would look hard and sound soft. Wanted, the
+  loader's and `lived-check`'s: a footstep zone that goes with the switch. Round things 14 to 16 with the lived things in
+  (`tools/qa/fixtures/round/tut-quiet.txt`). MEASURED (headless, no GPU): `lesson-run tut-quiet --digest`, seeds 1 and 2, is the SAME RUN AS THE STEP
+  BEFORE on all three stands (frozen with `TPS_RAILS=1`, shipped with `TPS_LIVED=0`, shipped): 24 of 24 steps, the same digest word each; so no guard saw
+  or heard anything he had not. `lesson-gate tut-quiet` (four dice on the shipped stand, two at a reader's pace), `lesson-check`, `rails-check`,
+  `quiet-check`, `smokebreak-check`, `level-needs tut-quiet --run`, `lived-check`, `map-check`, `level-lint` (no warning) green on both stands. NOT
+  MEASURED: how lit a man reads beside a new thing on the page's meter (it has bounce; the headless one has none), and what a man who has gone looking
+  does among them: the scripted player never leaves the yard. Never seen on a GPU, never played by a person: at the mission's own hour the new things
+  lie in the moon's dark and show as shapes.
 - **A man told to have a smoke lights one** (2026-10-22; `src/game/smokebreak.ts SMOKEBREAK` / `updateSmokeBreak`, called from `game.ts` beside the
   breath in the cold; the order is `director.ts OrderPatch.smoke` → `GuardScript.smoke`; the arm is `character.ts smokeLayer`, its numbers `SMOKEARM`
   in that file). The maintainer: "cigarette break animation (with real smoke!) would be sick". THE SWITCH: `SMOKEBREAK.on`, ON in the page
@@ -2311,6 +2386,25 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   HAS NEVER BEEN SEEN ON A GPU and not on the page at all (headless runs only): the third container, the camp's wall, how the alley reads, whether a
   floor of 0.2 is what his GPU shows past the gap, the red of the beacons over the whole yard and whether the lamps going out reads as the moment it is
   meant to be are his to judge.
+- **The truck park stands on a road** (2026-11-03; the tail of `tools/levels/tut-pair.ts` under LIVED IN, `levels/tut-pair.json`; level data only, under the
+  lived switch — `LIVED.on`: ON in the page, `?lived=0` = the level as it was; OFF on the frozen stand, `TPS_LIVED=1` raises it; no switch of its own). The
+  level had no lived tier. It has one, and ALL OF IT IS OUTSIDE THE YARD'S WALL: inside it every piece is the lesson's (a shadow the two work along, a
+  line a man has or has not, a pool to walk round: the generator's head says why each stands where it does) and the yard was full, so nothing is added
+  there and no lamp anywhere. `lived.road`: the ruts of the two's own pickup, up from the south edge to where it stands (the first picture: how they
+  came), the road's ruts down from the north to the gravel at the truck gate, two drums and two tyres that mark that gate from the road, field stones.
+  `lived.verge`: the track round the yard behind the north wall (the south verge had its half) and stones at the foot of the north and east walls, clear
+  of the far gate. 60 boxes, 13 of them solid (the drums and tyres; the stones are walk-over), no loose prop; the look's kit by name (`ruts`, `drum`,
+  `tyres`, `rubble`), laid through `livedKit.ts livedTail`. The drums and tyres stand against the OUTSIDE of the yard's wall, which no man sees through
+  and which lies between them and every way the two are sent; the low south-west moon lays their shadows on that wall's foot. A player can walk up the
+  road to them (no line of the lesson sends him, and the chained gate is no way in). Round things 35 to 39 with the lived things in
+  (`tools/qa/fixtures/round/tut-pair.txt`). MEASURED (headless, no GPU): `lesson-run tut-pair --digest`, seeds 1 and 2, is the SAME RUN AS THE STEP BEFORE
+  on all three stands (frozen with `TPS_RAILS=1`, shipped with `TPS_LIVED=0`, shipped): 18 of 18 steps, the same digest word each, at the script's own
+  light floor of 0.2. `lesson-gate tut-pair` (four dice on the shipped stand, two at a reader's pace), `lesson-check`, `rails-check`, `quiet-check`,
+  `level-needs tut-pair --run`, `lived-check`, `map-check`, `level-lint` green on both stands. OLD AND NOT THIS: `probes.ts pair-steady` is red on the
+  shipped stand on the step before too, with the same numbers (one about-turn at 39.2 s of a wait). NOT MEASURED: the partner reads the light on himself,
+  and on the page that light has the moon's bounce; a darker rut under the two at the start changes that bounce by an amount nobody has read. LEFT, the
+  level's own part (a change there moves the frozen stand): the eleven bushes and the drum on its side, which the look draws as boxes until the library
+  has shapes for them. Never seen on a GPU, never played by a person.
 - **The frame's eyes are the player's view, not the squad's knowledge** (2026-10-22; `RAILS.eyeView`, a knob of the frame's table: on with the frame, off for
   a recording from before the key, `journal.ts applyKnobs`; `?eyeview=0` puts it off in the page, as `?eyefirst=0` and `?lineclear=0` do the frame's two
   other late rules; on the frozen stand the frame itself is off and `TPS_RAILS=1` raises all of it; `RAILS_BREAK=1` is its break path). A MEND OF THE STEP BEFORE IT (`eyeFirst`):
