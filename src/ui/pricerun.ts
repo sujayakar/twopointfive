@@ -80,6 +80,9 @@ export const PRICE = {
    *  the bar on a frame's time is that with 2% of the clock's noise on it */ frameMs: 17,
   /** … and the GPU keeping up: its "done" for a frame no later than this many frames after the frame began (it is about 1.2 when it keeps up) */ lagFrames: 3,
   /** A RENDER PASS'S STAMPS SPAN THE DISPLAY'S WAIT where the compute passes with the g-buffer take this much of the time between frames and this much of it more than the compute passes alone */ waitAll: 0.85, waitGap: 0.25,
+  /** THE LAG IS JUDGED ONLY WHERE THE STAMPS AGREE: the GPU's "done" coming late is the page's own cost where its stamped work fills this much of the time
+   *  between frames. Late with less than that is not explained by the passes (seen on a long run in one tab: pages with 6 ms of work hundreds of frames
+   *  late, with the look and without), so it is said on the row and nothing is judged by it */ fullFrame: 0.8,
 };
 
 /** one state's turns on one page */
@@ -230,6 +233,10 @@ const winOf = ({ ms, gpu, all, work, passes }: Bag): PriceWin => { const s = [..
 /** A RENDER PASS'S STAMPS SPAN THE DISPLAY'S WAIT in this state (the header): the compute passes with the g-buffer take about the whole time between frames and far more
  *  than the compute passes alone, so the g-buffer's stamp holds a wait on this machine. Nothing is judged by `all` then */
 export const spansWait = (w: PriceWin): boolean => w.all !== null && w.gpu !== null && w.all >= PRICE.waitAll * w.ms && w.all - w.gpu >= PRICE.waitGap * w.ms;
+/** the stamped work fills the frame in this state (PRICE.fullFrame): a late "done" is then the page's own */
+export const fullFrame = (w: PriceWin): boolean => (w.all ?? w.gpu ?? 0) >= PRICE.fullFrame * w.ms;
+/** … and late without that: said, not judged */
+const lateUnexplained = (w: PriceWin, what: string): string[] => w.lag !== null && w.lag > PRICE.lagFrames && !fullFrame(w) ? [`${what}: the GPU's "done" came ${w.lag.toFixed(0)} frames late with ${w.all ?? w.gpu ?? '—'} ms of stamped work in a ${w.ms} ms frame: the passes do not explain it, and nothing is judged by it`] : [];
 /** what `on` adds to the compute passes with the g-buffer over `base`, as a share of base's GPU's span (null: no stamps, or a display's wait in them) */
 const added = (on: PriceWin, base: PriceWin): number | null => on.all === null || base.all === null || !base.gpu || spansWait(on) || spansWait(base) ? null : +((on.all - base.all) / base.gpu).toFixed(4);
 /** what a page stands on of the ladder's */
@@ -278,7 +285,7 @@ async function price(c: Carry, i: number, loc: Location, view: ReturnType<typeof
     if (!held && Qh && typeof Qh.sample === 'function') { Qh.sample = () => { }; undo.push(() => { delete Qh.sample; }); }   // (a ladder left on takes no sample of the held picture: nothing of the size, the scale or what is shed moves between the turns. A held one samples nothing anyway)
     const cut = w.__cut?.programs; if (cut?.swap && cut.ready) await Promise.race([cut.ready, new Promise(r => setTimeout(r, 60000))]);   // (the second set of ray programs compiles after ready where the page has one: not charged to the switch)
     if (S.look) for (let t0 = performance.now(); !w.__perfsweep?.extra?.some(x => x.id.startsWith('look.')) && performance.now() - t0 < 5000;) await frame();   // (the look panel hands its rows to the sweep once the page's recorder is there: a few frames after ready)
-    { const behind = await caughtUp(w, () => stopped); if (behind !== null) notes.push(`the GPU was still ${behind.toFixed(0)} frames behind after ${PRICE.catchS} s of holding the picture: it does not keep up with this page at this preset on this machine`); }
+    { const behind = await caughtUp(w, () => stopped); if (behind !== null) notes.push(`the GPU's "done" still came ${behind.toFixed(0)} frames late after ${PRICE.catchS} s of holding the picture`); }
     afterMade = made.n; const size0 = size();
     for (let r = 0; r < PRICE.rounds && !failed && !stopped; r++) for (const state of S.look ? ['off', 'on'] as const : ['on'] as const) {
       say(S.look ? `layers ${state}, turn ${r + 1} of ${PRICE.rounds}` : `turn ${r + 1} of ${PRICE.rounds}`);
@@ -299,11 +306,11 @@ async function price(c: Carry, i: number, loc: Location, view: ReturnType<typeof
     if (off.gpu === null) notes.push('the browser stamps no GPU times here: the frame\'s time is all there is, and under the display\'s rate it says nothing');
     next.rows = [...c.rows, judged({ level: L.level, mission: L.mission, title: L.title, hour: L.hour, query: loc.search, ...facts, out: [E.outWidth, E.outHeight], off, on, gpuMore: ratio(on.gpu, off.gpu), allMore: added(on, off), msMore: ratio(on.ms, off.ms) ?? 0, gpuOverPage: null, allOverPage: null, msOverPage: null,
       offBy, programs: { boot: bootMade, after: afterMade - bootMade, bySwitch: made.n - afterMade }, boot: w.__boot?.line ?? '',
-      notes: [...notes, ...(spansWait(on) || spansWait(off) ? [`the g-buffer's stamp spans the wait for the display on this machine (with it ${on.all} ms, the compute passes alone ${on.gpu} ms, a frame every ${on.ms} ms): what the look's surface layers cost cannot be read here, and nothing is judged by "with the g-buffer"`] : [])], over: [] })]; }
+      notes: [...notes, ...lateUnexplained(on, 'the layers on'), ...(spansWait(on) || spansWait(off) ? [`the g-buffer's stamp spans the wait for the display on this machine (with it ${on.all} ms, the compute passes alone ${on.gpu} ms, a frame every ${on.ms} ms): what the look's surface layers cost cannot be read here, and nothing is judged by "with the g-buffer"`] : [])], over: [] })]; }
   else { const at = c.rows.findIndex(r => r.level === L.level);   // (the page without the look: its turns go on the level's own row, beside the look page's)
     if (at < 0) next.notes = [...c.notes, `${L.level}: the page without the look was timed (GPU ${on.gpu ?? '—'} ms, with the g-buffer ${on.all ?? '—'} ms, a frame every ${on.ms} ms) but its look page was not`];
     else { const R = c.rows[at]; next.rows = c.rows.map((r, k) => k !== at ? r : judged({ ...R, page: { win: on, ...facts, programs: { boot: bootMade, after: made.n - bootMade }, boot: w.__boot?.line ?? '' }, gpuOverPage: ratio(R.on.gpu, on.gpu), allOverPage: added(R.on, on), msOverPage: ratio(R.on.ms, on.ms),
-        notes: [...R.notes, ...notes.map(t => `the page without the look: ${t}`), ...(facts.internal.join('×') !== R.internal.join('×') || facts.scale !== R.scale ? [`the page without the look drew at ${facts.internal.join('×')} ×${facts.scale}, the look page at ${R.internal.join('×')} ×${R.scale}: not the same size`] : []),
+        notes: [...R.notes, ...notes.map(t => `the page without the look: ${t}`), ...lateUnexplained(on, 'the page without the look'), ...(facts.internal.join('×') !== R.internal.join('×') || facts.scale !== R.scale ? [`the page without the look drew at ${facts.internal.join('×')} ×${facts.scale}, the look page at ${R.internal.join('×')} ×${R.scale}: not the same size`] : []),
           ...(rungDiffers(R.rung, facts.rung).length ? [`the two pages stood on different rungs of the quality ladder (the look page / the page without it): ${rungDiffers(R.rung, facts.rung).join(', ')}`] : []),
           ...(heldAt !== R.heldAt ? [`the page without the look was held at ${heldAt ?? '—'} s of the game's clock, the look page at ${R.heldAt ?? '—'} s: not the same step`] : [])] })); } }
   if (i + 1 < of) { if (!write(next)) throw new Error('the session store took no more'); const N = c.steps[i + 1]; loc.replace(loc.pathname + priceSearch(N.level, i + 1, c.quality, N.look ? c.look : null, c.keep) + loc.hash); return; }
@@ -333,7 +340,7 @@ export function priceOver(r: PriceRow, bar: PriceFile['bar']): string[] {
     // (the frame's time and the lag are said with the baseline's beside them, and a cause is named only where the numbers carry it: both over is the machine's,
     //  and the look is said to put the GPU behind only where it is half as late again as the baseline)
     r.on.ms <= bar.frameMs ? '' : `a frame comes every ${r.on.ms.toFixed(1)} ms with the look on, ${from.ms.toFixed(1)} ms on ${vs}${from.ms > bar.frameMs ? ': neither holds sixty a second at this preset on this machine' : ''} (the bar is ${bar.frameMs} ms)`,
-    r.on.lag === null || r.on.lag <= bar.lagFrames ? '' : `the GPU is done ${r.on.lag.toFixed(1)} frames after a frame began with the look on${from.lag !== null ? `, ${from.lag.toFixed(1)} on ${vs}` : ''}${
+    r.on.lag === null || r.on.lag <= bar.lagFrames || !fullFrame(r.on) ? '' : `the GPU is done ${r.on.lag.toFixed(1)} frames after a frame began with the look on${from.lag !== null ? `, ${from.lag.toFixed(1)} on ${vs}` : ''}${
       from.lag !== null && from.lag > bar.lagFrames ? ': it keeps up on neither at this preset on this machine' : from.lag !== null && r.on.lag >= 1.5 * from.lag ? ': the look puts it behind, whatever the frame clock says' : ''} (the bar is ${bar.lagFrames})`,
     r.programs.bySwitch > 0 ? `switching the layers made ${r.programs.bySwitch} shader programs (the bar is none)` : ''].filter(Boolean);
 }
