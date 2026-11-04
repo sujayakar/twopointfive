@@ -1405,7 +1405,7 @@ interleaved and filtered to their quiet minimum, and a row whose p75 sits far ab
   any level but the pass. The light meter and the smoke read the dice, so on the look page the row also steadies what guards see by. An old red on this
   branch, not from this change: `shaderinline-check`'s budget line (fgather, volumetrics, reflectP5 and particles over their rows since the look rows of
   10-31). NEVER SEEN ON A GPU.
-- **THE PLACE MAP IS TOLD THE LEVEL'S DOORS** (11-01; `render/placeField.ts placeMask` `gaps` + `PLACE.gapNear`, `PLACE.minWide` 0.3 to 0.2,
+- **THE PLACE MAP IS TOLD THE LEVEL'S DOORS** (11-01; `scene/placePlan.ts placeMask` `gaps` + `PLACE.gapNear`, `PLACE.minWide` 0.3 to 0.2,
   `lookConfig.doorGaps` set in `main.ts` from `game.doors.list`, `engine.ts` hands it to `PlaceField.setBoxes`. The maintainer on his GPU, of the pass at
   midday on the One exposure row: "it seems easy to get into a state where the exposure is off, like moving between these two rooms", with a shot of Sam in
   the kitchen, the kitchen nearly black, his light meter at 0.121). THE FAULT, found on the CPU's map and not on a GPU: a doorway was whatever the SHAPES
@@ -1502,6 +1502,212 @@ interleaved and filtered to their quiet minimum, and a row whose p75 sits far ab
   every place's: a shut door's line is now wall from jamb to jamb (`placedoors-check`, its last line). And a point in a wall's own cell (the floor at a wall's
   foot, a wall's top) had no place and took its level from the cache at the pixel: it now takes the place on its own side of the wall's line (`sideOut`, up to four
   cells out), under the row above.
+- **STONES GATHER ALONG A LONG FACE, NOT ROUND A THING PUT DOWN** (11-04, in place of 11-03's shelter rule; `render/wear.ts buildWearMap(level, nav, longFoot)`,
+  `faceRuns`, `bandByFaces`). THE SWITCH: on the look's page only (`game.ts` asks for it when `lookConfig.on`), and `?longfoot=0` there is the band as every
+  other page has it. Every other page has the traffic map's wall channel byte for byte as it always was (`bandByOccupancy`, the old code whole; checked
+  against the old file on all 58 level files, and `probes.ts materials-wear` holds its sum on the office), so `detail.wgsl`'s grime band in the build does
+  not move. The maintainer, 11-03 on the smoke lab's shed with the look on: "circles on ground near table legs are weird"; his 11-04 shots of a dressed yard
+  (said of the paint, next bullet) show the same dark ring of stones at every crate, bench foot and stall post. The channel is 1 at the foot of ANYTHING
+  standing on the floor, to 0 at 16 cm, and `look.wgsl` brings the gravel up in it and darkens it. On the look's page each FACE of a standing box now lays its
+  band × how long the straight line of faces is that it is a piece of: faces that look the same way (3°), lie within 12 cm of this face's plane (a wall's
+  pillar, a board leant on it) and meet end to end (3 cm). Nothing under 1.25 m, the whole band from 2.5 m. Asked face by face, never as groups of boxes; each
+  box lays its band exact from its own rectangle (no occupancy, no distance transform: a turned wall has no steps) and a texel keeps the most any box gives
+  it. A wall keeps its band at any yaw, beside a crate pushed against it, and along a front of piers and window sills whichever way it lies; a table leg, a
+  post, a pier, a crate, a crate against a wall or touching a corner pillar have none; a block or a row of crates has it along its long sides and not at its
+  ends. A band is a strip along something; round a prop it was a halo. KNOWN: a piece of wall under 1.25 m between two doorways has none (a lintel does not
+  carry the line). TWO WAYS TO MAKE ONE CHANNEL until the look is the page: then `bandByOccupancy` goes. THE THREE TRIES BEFORE THIS, for whoever is tempted:
+  (1) the share of floor stood on within 0.3 m (11-03, commit 693b7403) cleared legs and left every crate its ring; (2) the longest straight run of stood-on
+  texels lost the band at the steps of a turned wall, cut a wall's band where a crate stood against a block, and gave a long block a band at its corners;
+  (3) joining BOXES that lie in line into one foot (a union) joined a crate to a wall through the wall's pillar, measured a segmented front across itself
+  when a cabinet stood end-on to it, and depended on which way a square box was described. `WEARFOOT_BREAK=1` (the band as every other page has it) fails the
+  probe's line. On the dressed yard's map 31 % of the band's texels are gone, on the crossing 30 %; 4 ms a level, 14 at most (2000 boxes at random yaws:
+  about 0.15 s). Seen as a map; the still drawn was of try (3); never seen on a GPU.
+- **OLD PAINT IS CHIPPED, NOT BLOTCHED** (11-04; `render/lookTex.ts paint`, the look's layer for drums, gates, painted crates, a stall's sheet, a painted door; the
+  look's page only). The maintainer on a dressed yard at midday, of dark islands on a green sheet, blue crates and a green door: "splotches on here look a bit
+  weird, overdone". The tile peeled in ragged patches reaching 36 cm (5 % of it bare) with a pale rim; at the game's two centimetres a pixel a patch a hand
+  across is a blot on a crate's lid. Now: chips, the shards of a scattered lattice (1 to 3 cm), gathered in the few places that took the knocks, and here and
+  there a flake up to 10 cm with a lifted rim; 1.1 % bare. Whether a cell has a chip is asked once, where the cell's own point is (asked at each texel, a
+  chip that straddled a worn place's edge was sliced along it). The chalking, the dents and the long scuffs are as they were. AND EVERY BOX HAS ITS OWN PLACE
+  ON ITS MAP: `look.wgsl` shifted a box's own map (wood, sheet, cloth, metal, paint, anything that moves) by its number modulo 7, so two lids in a yard wore
+  one blot; it is the whole number now (91 places; two unkeyed movers of one size still share one: `gbuffer.ts lookWordOf`). `lookmaps-check.ts` holds the
+  tile (the widest bare patch reaches 12 cm at most, 0.2 to 2 % bare; the old tile fails that line). Not changed: what is under the paint is still a
+  multiplier of the paint (dark and warm), so it cannot be rust on blue. Seen as a tile and in a software still; never seen on a GPU.
+- **FOUR OFFICE STUFFS, ROOM FOR 31, AND A LEVEL HAS THE MAPS IT DRAWS AND NO OTHERS** (11-04; `render/lookTex.ts`, `render/gbuffer.ts`, `shaders/look.wgsl`; the
+  look's page only). The maintainer, of a desk and a swivel chair in a dressed office at midday: "nicer materials on the chair and table". The look had one
+  wood (weathered planks with gaps), one cloth (a sack's weave) and one metal (iron gone to rust), so a desk drew as a pallet, a chair as a sandbag and steel
+  shelving as a wreck. NEW LAYERS, things made in a factory and kept indoors: `veneer` (leaves 40 cm wide, fine straight grain, pores, flush joints, no gaps or
+  knots; laid the long way like boards), `plastic` (one colour, a pebbled skin, hairline scratches, rubbed smooth where it is handled), `fabric` (a tight
+  two-yarn melange with a faint twill and pills where it is sat on), `steel` (a baked coat with the spray's orange peel, fine scratches, no rust and no chips:
+  `paint` is the coat left out). They take no damp foot and no bleached head (`kept` in `lookSurface`), and a third of the slow blotches. NO PALETTE ROW NAMES
+  THEM on this branch: a level's own table of paint names does (the dress goal's `scene/stuff.ts`), asking `lookStuffOf(name)` for the number. A STUFF'S
+  NUMBER is its place in `LOOK_NAMES` and one; new stuffs go in FRONT of the two masonry layers, whose places the shader is told (`LOOK_L_STONE`, `LOOK_L_BRICK`
+  in the prelude `gbuffer.ts lookWgsl` writes, with each layer's base roughness as a const array: the block's rows c, d, e.xyz are no longer read). THE WORD
+  (`lookWordOf`, `LOOK_WORD`; `common.wgsl boxStuff`): five bits of stuff, one of moving, then the box's own number, now 0 to 44 (it was four bits and 0 to
+  90): the word rides one float above the finish and the float had no bit to spare, so 31 stuffs are paid for by the number's range alone. THE MAPS: a layer
+  is 2.8 MB and about half a second of arithmetic, so a layer is made the first time a box IS that stuff (`lookWordOf` notes it; `main.ts` asks every static and
+  door leaf its word and names the props' paints before the first frame, and waits: `needLook`), with the layers its drawing reads (`LOOK_WITH`: a mud wall's stone and brick, earth's
+  gravel), into the next SLOT of arrays that are only as long as the slots in use (grown by a copy on the GPU). The block carries the table from layer to
+  slot (`LookCfg.s`, 272 bytes now); a stuff with no slot draws plain. The boot makes the men's cloth alone. A layer is made in SLICES (`lookLayerSliced`:
+  30 ms at the boot, 3 ms in play, the event loop between; one body with `lookLayer`, the same bytes), so a thing that first appears in play as a stuff no
+  static, door or prop was (a held thing, a thrown one) costs no frame: it draws plain for the second or so its map takes. The `even` row is read once, at the
+  making of the arrays. They take the `kept` rule BY NAME: a stuff added later says in `look.wgsl` how it is laid and whether the weather touches it. `lookmaps-check.ts` holds the names against the
+  shader's, the float, the slots and the block. Drawn as tiles (rebuild pictures); a software boot; never seen on a GPU.
+- **CAR PAINT IS A STUFF; ITS SHINE IS THE BOX'S** (11-04; `render/lookTex.ts carpaint`, stuff 16, `look.wgsl LOOK_CARPAINT`; the look's page only). The
+  maintainer, of the rounded cars in the dressed showroom: "i think the materials could use some work though. we already have some metal shaders right? maybe
+  we want a car paint material too?". A truck's body drew as old `paint` (chips and rust specks all over), a saloon's as nothing. The layer is an enamel
+  under a clear coat: one colour, the spray's orange peel as a wobble of the shine only, a film of road dust in soft patches that dulls the coat where it
+  lies, the runs a rain leaves down through it, hairline cloth marks, a stone chip the size of a lentil here and there (0.1 % bare). In colour it is nearly
+  flat ON PURPOSE: what it draws is where the coat is clean and where it is dulled (roughness 0.17 clean to 0.43 under dust). A MAP ONLY VARIES THE FINISH A
+  BOX WAS GIVEN (`rough + dr`), so the gloss is whoever makes the car's to say on each box, and smooth finishes are what the ray-traced reflections trace
+  (a cost to measure before a car park of them is a default). Agreed words, proposed to the cars part: body `carpaint`, roughness about 0.2, not metal (a
+  metallic paint: metal, 0.3); glass plain, 0.05 to 0.1; bumpers and arch trim `plastic`, 0.5; chrome and hubcaps `steel` with metal, 0.25; tyres plain, 0.9.
+  It takes the `kept` rule (no damp foot, no bleached head). Drawn as a tile; never seen on a page or a GPU.
+- **LIGHT KEEPS ITS ORDER WHERE TWO PLACES MEET** (11-04; the look panel's row `order` "Light in order", live, 1 on the look's page, 0 = as it was to
+  the bit; `frame.placeCfg.x`, a new member, the last of the frame's head; `place_common.wgsl lookGainsOwn`, called by `composite.wgsl` and
+  `compact/composite.wgsl lookExpoGain`; the place field's SECOND BLOCK, `render/placeField.ts PLACE_NEAR`, `place_field.wgsl hand`). The
+  maintainer, of the white roof at midday on his GPU: "is there some nonphysical stuff going on here with doors? door looks like it's lit even though
+  the ground immediately in front of it is in shadow", then "is there a way we can make the exposure stuff more general and not special case doors?
+  this should hold for holes from wall charges too right?", "or even areas with very different brightnesses outdoors". CAUSE, read from the code:
+  the One exposure row gives a place ONE gain from the light on its floor, and a dark place's is large (9 stops under the yard is shown 3 under).
+  What stands at its mouth in the light of the place beside it (an open leaf, a sill, the reveal of a hole a charge blew) got the dark place's
+  whole gain and was drawn brighter than the lighter place it is lit by. Only sunlit ground's brightness stopped it (`lookRoll`). His "odd blocky
+  artifact near doors when they open and close" is likely the same: a leaf's place is read 30 cm off its face on 40 cm cells and flips between
+  yard and room as it swings. THE RULE NAMES NO OPENING: a pixel that holds more light than its place is shown as a place holding its own light
+  would be, AS FAR AS THE BRIGHTEST PLACE A STRIDE AWAY HOLDS, and as far as the light of the place the eyes are in (`lookEyeRs`: with Sam in the
+  room nothing moves). THE BRIGHTEST PLACE A STRIDE AWAY is a second number a cell of the place field, solved in the same sweep: the most of the
+  cell's own level and what its four neighbours hand it, each `PLACE.near` (half a stop) dimmer for the cell of floor between and `PLACE.nearDoor` (an
+  eighth) across a doorway's own cells, never through a wall or a pane. So the first cell inside a door holds the yard's level all but whole, a room
+  five stops under its yard is its own again four metres in, and DEEP IN A ROOM EVERY PIXEL IS TO THE BIT AS IT WAS. EVERY STEP LOSES SOMETHING, a
+  doorway's too: with none there, a doorway's two cells kept the brightest answer either ever held (a yard gone dim), a review's find. THE FALL-OFF IS
+  SLOWER THAN A DOORWAY'S LIGHT FALLS INTO A ROOM: at a stop a cell the gain rose inward faster than the light fell, and a software draw had a strip of
+  floor a stride inside the door brighter than the threshold. In a wall's own cell with no side known the bound is of the cell the pixel's level was taken from, never
+  of the other side's (a review asked for no bound there at all, and a draw showed that undid the leaf: a leaf hanging open IS such a cell). Where the field is smooth (the open air) the two
+  numbers hardly differ and nothing moves: the rule acts where the gain steps, which is where order was lost. THE MEASURE: the pixel's own light is
+  what is drawn whole (the sun's, a lamp's, an opening's) plus the bounce over the scale it is drawn by (`indirectScale`, 0.35): the field's.
+  By the model's arithmetic (`lookexpo-check`): a room 30 times under the open air, a leaf a cell and a half in holding 0.4 of the open air's
+  light: far end 0.11, leaf 0.65, the shade outside 0.35; the leaf was 3.7, ten times the shade. ON THE SOFTWARE ADAPTER (the white roof at midday,
+  its service door open, the row off and on, at a stop a cell): the leaf 0.30 with a white rim to 0.15 beside a sunlit dado of the same paint at
+  0.40; the floor inside the door 0.91 to 0.77, the sunlit deck outside 0.77 both times; nothing outside the doorway moved. THE TWICE THAT IS LEFT is not the exposure's: the
+  leaf holds LESS light than the shaded ground (0.4 against 1) and is drawn with more, because an opening's light is drawn whole and the sky's ×
+  0.35 (the task "Count daylight once indoors" takes that out; with one scale the same leaf lands at two thirds of the shade).
+  THROWN OUT ON THE WAY, each by a still or on paper: THE RULE WITH NO BRIGHTEST-PLACE BOUND (every pixel an opening lights holds more than its
+  room's level, so a whole daylit room seen from the yard went dark and flat: the hall's wall 0.026 to 0.006; an earlier still had passed it
+  because the member sat past the frame's head and never reached the GPU); a cap with no limit at the eyes' light (it flattened the bright half of
+  the room Sam stands in); the member at the frame's END (`frame-layout` now holds it in the head); the pixel's light as drawn over the bounce's
+  scale (what is drawn whole was counted three times over). NOT REACHED, on purpose: the bound does not pass a pane (a window's light is the
+  room's own, so a sill in it keeps the room's gain), and out of doors a sunlit thing in a deep shade is as the field's own smoothing leaves it.
+  KNOWN: the bound is read by the field's own bilinear weights, so it is as coarse as
+  the field (40 cm); with the Room brightness row over about 1.3 a gain falls faster than the light rises; the air (`volumetrics.wgsl`) keeps
+  its place's gain; a leaf's place is still read off its face. THE BUFFER: `PlaceBuf` is 56,016 bytes (was 28,016), still one uniform. CHECK
+  `tools/qa/lookexpo-check.ts` (the opening's line, the solver's rule written again on a made-up plan, the texts; `LOOKEXPO_BREAK=1` puts the row
+  down and both fail), both stands; `frame-layout`. Software draws of a doorway and a room with the row off and on. Never seen on a GPU.
+- **A SMOOTH FINISH CATCHES THE SUN** (11-04; the scene prelude's `SUN_GLINT`, `render/frame.ts sunGlintConfig`, `rtGlints` in the three reflection
+  passes `shaders/reflect.wgsl`, `reflect_p5.wgsl`, `compact/reflect_p5.wgsl`; on on the look's page, `?nosunglint` at boot = as it was, a visit
+  flag; every other page as it was). The maintainer, of a car's gloss paint beside two pictures of the real thing: "mm doesn't look good. we don't
+  need to go full hyperrealistic but we should sell it more". Every lamp's highlight on a smooth finish is added analytically, and the one light the
+  loop left out is the brightest: a directional one. The sky a reflection ray comes back with (`common.wgsl skyRadiance`) is a gradient with no sun
+  in it. So by day NOTHING smooth showed the sun: no streak along a car's wing, no glint on a pipe or on the lumps of a gloss-painted wall. With the
+  word a directional light (THE SUN, AND BY NIGHT THE MOON) goes through the same loop, from its own direction, as wide as its disc, following the
+  shading normal (a relief catches it), with rules of its own, all in the function's head: it is a FIFTH CANDIDATE outside the lamps' contest for
+  their four shadow rays, with a fifth turn of the one shadow loop (so no kernel gains a call site: `render/kernels.ts`, a call is pasted whole;
+  two earlier shapes were thrown out, one that took a lamp's ray on every sunlit pixel and one that pasted 48 KB into each reflection kernel on
+  every page); NEVER CREDITED UNSHADOWED (a sun let in at half through a rough lobe's skirt would light a shut room); its ray stops at the
+  world's top; it FADES IN over `RT_SUN_CUT` (0.02) to three times that of the light's own irradiance, whatever the exposure, and under the cut
+  throws no ray; it is BOUNDED BY ITS OWN LIGHT at `RT_SUN_PEAK` (2, about ten white walls: the lobe alone is 80 at a grazing eye and 130 on steel,
+  a pixel-wide line on every round rim); and its lobe is never under `RT_SUN_ALPHA` (0.07, a finish of about 0.26), against sparks off a relief's
+  normals under the jitter (the maintainer's midday fireflies). Without the word the flag is a constant false: the lines are the lines they were,
+  plus one empty turn. Where to expect it: a face that looks half way between the eye and the sun. From the play camera with the sun behind it
+  that is a round thing's flank, a curved panel, a lump's shoulder; a flat floor shows it only when the camera looks toward the sun, and then all
+  of it does. By the arithmetic a finish of 0.2 at the mirror is about four white walls and one at 0.45 under half of one. ONLY WHERE THE
+  REFLECTION PASS RUNS: a finish under the preset's roughness cut (0.55 ultra, 0.45 high, 0.35 medium, none on low), at that pass's resolution
+  and through its denoiser. No game table. KNOWN, LEFT: one ray at the disc's middle, so under cloud its edge in a shadow is harder than the
+  shade's; untinted through glass, as a lamp's; with rays traced the denoiser places it at the first ray's hit. CHECK `tools/qa/probes.ts
+  sunglint` (family `render`; `SUNGLINT_BREAK=1` must fail), both stands; `shaderrows-check` holds the compact pass's text. Never timed, never
+  seen on a GPU, night included: the three numbers are first guesses.
+- **USE SHOWS ON A KEPT PLACE: `worn`, A STUFF'S OWN WORD** (11-04; `render/lookTex.ts STUFFS`, `shaders/look.wgsl`; the look's page only, under its
+  Weather row, 0 = none). The maintainer, of the white roof on his GPU: "directionally nice but still doesn't have enough "personality / cm^2"". His
+  pictures' kept walls and floors are not weathered, but every patch says it was made and used: tie holes, a chipped corner, paint knocked off a
+  wall's foot, a changed paver. A kept stuff (`fades` absent) had none of it, since the weather's rules skip it. `worn` (0 to 1, absent on steel,
+  enamel, carpet) is how hard use shows, and the shader gives it two things BY WHERE IT IS IN THE WORLD, never in the map (a tile's sixteen pavers
+  with one chip between them is a chip every two metres): (1) `lookPiece` (was `lookPieceTone`): a piece in four has a history, one of three by a
+  die of its own: changed for a new one (a clear step of shade), stained (a soft patch inside the piece), chipped at a corner (3 to 8 cm on the
+  slant, dark and rough; metres, so a chip is a chip on a paver and on a block). Less use = fewer such pieces, never another history for the same
+  piece. (2) A kept wall that stands on the floor has its coat knocked off its foot in stretches, to a ragged line a finger to a hand high, each
+  face's plane its own run. No edge is drawn finer than the pixel. (The dirt in a floor's crease and along its walls was already the detail
+  layer's, `detail.wgsl`, on every page: the look adds none.) In the maps themselves: a cast panel has six tie holes 4 cm across (four of 2 cm
+  were specks at a pixel of a centimetre and a half). Enamel stays a clean coat: a chip in its map would come round every two metres along a
+  painted line. `lookmaps-check` line 11 holds the row (use on kept stuffs only, none on the sixteen older ones, so every
+  other level's picture is as it was). Shader texts compile (`wgsl-compile`); NEVER SEEN ON A GPU, and the amounts are a first guess.
+- **HOW A LEVEL IS WALKED SHOWS IN ITS SURFACES, AND ONE LAYER WEARS A PIXEL** (11-04; `src/scene/ways.ts levelWays`; `render/wear.ts buildWearMap`'s
+  `walked`; `shaders/look.wgsl` USE AND DIRT, `lookWears`, `lookWay`; `detail.wgsl detailSurface`'s `byLook`; the look's page only, `?walked=0` at
+  boot = the traffic map as every other page has it). The maintainer: "i think there's a lot of room to add personality to textures. wear, paths in
+  the ground, different materials can all tell a story for how people walk through the level, its logic, leading the player for game play". THE MAP
+  OF WAYS is one function of what a level already says: four counts on the walk grid's own cells (patrol = its routes; team = every start of every
+  scenario to each room and thing it goes for; doors = both faces of every frame and every pair of outer doors, door to door; hint = the author's own by name, the level file's
+  `scenarios.walked`, `docs/level-format.md`), each the number of ways over the cell, not summed and not saturated; beside them `paths`, the same
+  ways as the lines they were traced along, and `lost`, the ways the search found no path for (a straight line then; no level has one). A name is
+  looked for as a door's id first. Pure, no module state; its
+  path searches are on tables of its own (`findPathAside`); nothing in `src/game` imports it. Cost: 2 to 7 ms on `block`, 3 on `compound`, under 1
+  on the office. THE READER: on the look's page the traffic map's lanes are those paths, traced as a route's legs always were, by `wear.ts WAY` (a route
+  1, a team's way 0.45, door to door 0.3, a hint its own weight); a level with no routes had no lane at all, and a raid's yard now has the trodden line from where the team comes in to the doors it
+  goes for. Every other page's map is to the byte what it was. WHAT A SURFACE SHOWS OF IT: wild ground is beaten flat and pale along a lane (as it
+  was, now with lanes to show); on a floor somebody keeps a lane is a shade darker (a fifth at the busiest before the tone curve, about a tenth on a pale deck in the sun; by the stuff's `worn`) and a piece's history (changed, stained, chipped) is likelier where feet go, asked at the
+  piece's own middle so a lane's edge never cuts a history in two; a kept wall's foot is knocked in more stretches beside a lane; paint on the floor
+  (a hatched bay, a stencil) goes first where feet go. ONE ANSWER A MARK: the detail layer (`detail.wgsl`, every page) and the look layer both read the
+  traffic map and both ran, so a wild floor's band at a wall was double and so was a wild wall's foot. Three marks come of the map and each now has
+  one answer on the look's page, by what the surface is. A LANE: on a floor with a finish to wear the detail layer's scuff; on wild ground with none
+  the weather's (beaten pale); on a kept floor the dirt feet bring in on top, by the stuff's `worn`. THE BAND AT A WALL'S FOOT: on wild ground the
+  weather's; on any other floor the detail layer's dust. THE SKIRTING: on a wild wall the weather's damp foot; on any other the detail layer's
+  shoe marks. HOW: the g-buffer asks `lookWears` once a pixel and tells both layers (a cut face and a round's side have the detail layer's wear from
+  neither, as before); the detail layer then leaves its two terms, and the look layer CALLS them, `detail.wgsl detailFloorWear` and
+  `detailSkirtWear`, one copy of the numbers, on the sample it read itself with what the weather answers for left out. The look layer reads the map
+  ONCE a pixel (a floor where it is, a kept wall a stride out from its foot; a pieced floor asks once more at its piece's middle), whoever dresses
+  the pixel. So a kept floor and a finished floor are what they were; wild ground and wild walls lose the second copy of their band. The white roof's six ways (the
+  stair's landing to the lounge's door, to the service door and to the plant; the service door to the plant; through the service room and the
+  lounge) are in its generator, with three named places for their ends (`docs/agents/levels.md`). CHECK
+  `bun run tools/qa/probes.ts ways` (family `render`; `WAYS_BREAK=1` fails the reader's line): the map on `block`, the white roof's names, the
+  office's patrol, the lane in the traffic map, the wiring by its text. NEVER SEEN ON A GPU, and what a surface shows of a lane is a first guess.
+- **NO SURFACE REPEATS AT ANY SIZE: THE DEAL, BAYS, AND A STUFF'S OWN `untiles`** (11-04; `shaders/look.wgsl lookDeal`, `lookPiece`; `render/lookTex.ts
+  STUFFS` words `untiles` and `bay`, the prelude's `LOOK_LAY`; the look's page only, under its No repeat row, 0 = the page as it was). The maintainer,
+  of the white roof on his GPU: "this is starting to look very good btw! I think the main thing to iterate on is making it look less repetitive at the
+  different scales". A map is two metres and a deck is forty, and three sizes repeated: the map itself (every piece of a paver deck came round every
+  two metres, grain and all), the field of pieces (one even grid to the walls), and the whole face (forty metres of one shade). ONE ANSWER A SIZE,
+  each by where the surface is in the WORLD and none in a map. (1) A STUFF MADE OF PIECES DEALS ITS MAP'S PIECES: the piece of the world at a place is
+  drawn from another piece of the map, picked by a die of the world piece's own and of the face it is on (the face's plane FROM THE BOX, one number
+  a face: taken from the pixel it could flip a centimetre and speckle the wall); a bond keeps a course's parity. Exact: one
+  read, no cross-fade, the caller's own slopes; a piece's edge is a joint in every piece, so nothing shows where two dealt pieces meet. A map may now
+  hold pieces that differ. (2) PIECES ARE LAID IN BAYS (`bay`: pieces along and up to a movement joint; pavers six by six, a cast wall in lifts of
+  three panels): a bay has a shade its own on top of its pieces', and the joint between two bays is wider and darker than a piece's (under the row,
+  as the deal is). A bonded stuff
+  has no bay along (its courses are half a piece out of step). (3) A KEPT PLACE DRIFTS: three in a hundred of shade over ten metres. (Bays and the drift go on to twice their strength with the row past 1, for
+  the page to try; the deal is on or off.) AND THE SHADER
+  NAMES NO STUFF: which stuffs are read twice and cross-faded (the older rule for what has no courses) was four class names in `look.wgsl`; it is the
+  row's `untiles` now, and stucco, skim and carpet have it. CHECK `lookmaps-check` line 11: the four older stuffs still untile and no other of the
+  sixteen; nothing made of pieces untiles; a bay is of whole pieces; a bonded map has an even count of courses. Shader texts compile. NEVER SEEN ON A
+  GPU; a software draw of the white roof's deck with the row off and on is what was looked at.
+- **TEN KEPT STUFFS, AND A STUFF SAYS ITS OWN ROW** (11-04; `render/lookTex.ts` stucco, skim, gloss block, board concrete, cast panel, paver, brushed,
+  louvre, enamel, carpet; the level `white-roof`, `docs/agents/levels.md`). The maintainer, of a game whose pictures he sent: "it has some very
+  tastefully done high frequency detail but overall quite flat", "an antidote to our repeating textures that look generated", and, after trying the
+  Paint row down on a GPU, "it all still just looks pretty flat and \"slop\" ... it's all quite intentionally dressed", "i'm referring specifically to
+  the texture work". So these are drawn the way such surfaces are MADE: one colour (the box's) with next to nothing added, and everything in the
+  relief, the finish and the pieces. Soft lumps of stucco under gloss paint; a rolled skim; painted block in courses; concrete that kept its form
+  boards, their grain and its air holes; concrete cast in metre panels with a struck joint, four fixing holes and a little dirt in the joints and
+  under their lower lip; half-metre pavers; brushed steel; a louvre; plain gloss enamel; a loop-pile carpet. THREE RULES CAME WITH THEM.
+  (1) A MAP HOLDS NOTHING BETWEEN A HAND AND A DOOR WIDE BUT ITS OWN PIECES: soft tone or sheen inside the two-metre tile is seen to repeat at the
+  game's size (brushed steel's first smears and the skim's first shiny patches did). (2) A STUFF MADE OF PIECES says so (`unit`: a piece's size, its
+  bond, how far a piece's shade may sit from the next's). The map draws the joints at that size (`piece`) and gives the pieces no shade; `look.wgsl
+  lookPiece` gives each piece of the WORLD its shade by where it is and which face it is on, so a wall of eighty panels is not a tile's eight
+  over and over and two walls that look the same way are not one pattern twice. (3) WHAT A STUFF IS TO THE SHADER IS ITS ROW, by name, in
+  `lookTex.ts STUFFS` (a name without a row does not compile): `rough`, `relief`, `built` (laid in place: the map lies by the world, so courses run on
+  from one box of a wall to the next), `fades` (how far the weather blotches it; absent = a place somebody keeps: no blotch, no drift of hue, none of
+  the traffic's dirt), `soaks` (a damp foot, a bleached head), `unit`. The shader's lists of stuffs by name for these are gone (`kept`, the classes
+  laid in a box's frame); the sixteen older stuffs' rows give the statements they had (× 1, or the same 0.3). Lumps and joints are drawn larger than
+  life: at the game's zoom a pixel is about 1.5 cm, and relief finer than 3 cm reads only as finish. A level's door row (`scene/look.ts LOOK_DOORS`)
+  may say what its leaves are made of (`stuff`). NOT DONE: a piece is not fitted to a box's face (the level stands on a half-metre grid instead; a
+  40 cm block does not divide it), the older `block` keeps its tile's own shades. (By day no smooth finish had a sun glint when this was
+  written: "A SMOOTH FINISH CATCHES THE SUN" above.) CHECK `tools/qa/lookmaps-check.ts` (every layer: no seam, as bright
+  as its paint, the word's room; the rows: line 11). The tiles were judged as software pictures under one raking light and the level as software
+  stills. Never seen on a GPU.
 - **A WET COAT DOES NOT MIRROR A LIGHT IT CANNOT SEE** (11-01; `composite.wgsl wetCoatSpec`, `WET_HIDDEN` 8). The maintainer: "still lots of fireflies/sparkles
   in that room", "some on the shadowed side too", "lots of temporal instability on the guy's back too". The sheen scaled every light's lobe by its class's shadowed
   over unshadowed light; in a shut room by day the hidden sun is the whole unshadowed sum, so its lobe was drawn at the bulb's strength. A light whose
@@ -1763,7 +1969,7 @@ interleaved and filtered to their quiet minimum, and a row whose p75 sits far ab
   NEVER SEEN ON ONE, in a still or in motion. The numbers to turn there: `SMOKE_STIR` in `game.ts` (the kick's 0.9 and 2.2, the body's 0.24), the
   debugger's "curl round a moving body ×", and the row itself (0 to 2).
 - **THE LOOK PANEL'S "DAYLIGHT AT OPENINGS" ROW** (11-01, in place of the 10-28 "Window light" row and its `render/lookwindow.ts`; the row's key is still
-  `windows`: `lookConfig.windows`, 1 on the look page, `?look=windows:0` = none; `render/openings.ts`, its numbers in `LOOK_OPENINGS`; `engine.ts lookOpeningLights` and
+  `windows`: `lookConfig.windows`, 1 on the look page, `?look=windows:0` = none; `scene/openings.ts`, its numbers in `LOOK_OPENINGS`; `engine.ts lookOpeningLights` and
   its `dayLights`, `render/lights.ts upload`'s `own`). The 10-28 row, after the maintainer in a room with every door shut under an overcast sky ("it doesn't really _look_ like all the light is
   coming from the window? feels flat"): a shut room's daylight arrives through the radiance cache alone, probes a metre apart that hold a few broad
   directions each, so it comes spread over the room with no way it came from. So by day each window was ALSO an area light (kind 3, `broad`, group `sky`): a
@@ -2174,6 +2380,56 @@ interleaved and filtered to their quiet minimum, and a row whose p75 sits far ab
   file, which is the root of what is left (the stuff is re-read from the colour at every pack through a cache, the weather is asked through a hook, any other
   writer of a box's paint still changes its stuff, and `lookStuff` and the generated `lookClass` are two writings of one rule that no check holds together);
   the cut core's class on the CPU; the maps made off the main thread or kept between visits; the far copies' cost (31 MB became 36 with thirteen layers); relief past the tilt cap.
+- **A PAINT'S NAME SAYS WHAT IT IS MADE OF, FIRST SLICE** (`src/scene/stuff.ts PAINT_STUFF`, `render/gbuffer.ts lookNamed` and `lookWordOf`; the
+  maintainer on the showroom, 11-04: "nicer materials on the chair and table"). The look decided what a box is made of from its COLOUR, so the
+  office's paints, which are the simulation's own names and no palette row, were nobody's: a desk, a chair and a carpet drew flat. Now ONE TABLE
+  says what each paint NAME the kits write is made of: a material of the look (`lookTex.ts LOOK_NAMES`), `plain` (meant flat: plastic, laminate,
+  rubber, a screen), `waits` (no material yet: card, foliage, a lawn, a clean steel; drawn plain) or `mixed`. The palette's rows moved into it
+  (checked against `GwotMat` by the compiler) and `LOOK_OF` is read off it, the same classes in the same order, so the shader's text is unchanged.
+  THE LEVEL'S OWN ROWS carry the names: the loader keeps a file's `materials` beside the level (`levelLoad.ts levelFileOf`) and the page makes the
+  look's word for a box with them (`lookWordOf(dry, rows)`): a paint a row names is its name's stuff, asked before any colour is weighed. A box
+  and a loose prop's part are written under the FIRST row that has their colour exactly, so the row is found by the colour and no box carries a
+  word. THAT IS ALSO ITS LIMIT, and what `mixed` is for: a file's writer names a box by its colour, and the kits have used one colour for two
+  things. The showroom's car body is written as the blue partition, a hut's stucco as the tan one, the lived kit's iron fittings as the car park
+  (277 boxes to 20 slabs), an outside door's leaf has the window frame's numbers. Those six names (`partRed`, `partBlue`, `partTan`, `red`,
+  `asphalt`, `glassFrame`) are left to the colour rule, as before there was a table, and so is every paint written as numbers (door leaves and
+  frames, the lived kit's toned paints, cars). A NAME NEVER CHANGES A COLOUR: the simulation reads colours and reads nothing here. `?names=0` on
+  the look page = by colour alone, as it was (a word of the look page: a benchmark carries it). BOTH STANDS: nothing, it is no rule of play and
+  the harness cannot see it; no knob, no journal key. No shader text, no level file moved. CHECK: `bun run tools/qa/stuff-check.ts` (`STUFF_BREAK=1`
+  must fail): every paint name in every level file has a row (90 names in 59 files: 57 a material, 21 plain, 6 waiting, 6 mixed); the palette's
+  classes as they were; on every file a box wearing a row's paint is drawn as the first row of its colour says, standing or moving (3948 rows,
+  649 of them something else by colour alone); the office's paints; the car body, the leaf, the iron and the stucco are the colour's; the page's
+  wiring. `lookmaps-check`'s text test of main.ts takes the second argument. NOT YET (the second slice, `stuff-by-name` in the dressing notes): a
+  word on a box, which is what parts the mixed names and names a paint written as numbers; the level format's `stuff` on a box, a part and a row
+  (a level's accent as a material); the cut core's class in `gbuffer_cut.wgsl` (still `lookClass` of the colour: an old break in an office
+  partition draws plain); `?surf` retired; a row on the look panel. THE LOOK'S FOUR OFFICE MATERIALS (veneer, plastic, fabric, steel; asked for this, 11-04) have their rows where a
+  name is one thing: `chair` is fabric, the four `plastic*` plastic, the office's `metal` steel. KNOWN: `wood` stays planks, because the name is a
+  bench, a crate and a pallet as well as a desk: a desk says veneer itself, with the second slice's word on a box. The class of a stuff is asked of
+  `lookTex.ts lookStuffOf`, the one table. Seen on the software adapter, and the first three commits of it by the maintainer on his GPU through the preview.
+- **A BOX SAYS WHAT IT IS MADE OF, SECOND SLICE** (`Box.stuff`, a level file's `stuff` on a box or a prop's part, `src/scene/stuff.ts BOX_STUFFS`;
+  the maintainer, 11-04, of the showroom's desk and chair: "nicer materials on the chair and table"). A paint's NAME cannot part a desk from a
+  bench (both `wood`) or a car body from a partition (a level file names a box by its colour), so the PIECE says it: `lookWordOf` asks the box's
+  own word first, then its paint's name, then its colour. One of the look's materials that has a number (`lookStuffOf`: the stone and brick
+  under a mud wall are refused), `plain`, `waits`, or one of the two the look draws plain and the picture of a round's hit reads, `glass` (solid, not a pane) and `rubber`
+  (`game/particleFx.ts HITSTUFF`, `docs/agents/destruction.md`). PICTURE ONLY: no rule of the game reads it, a level's fingerprint does not, and
+  `lived-check` reads a base's boxes with today's words. `?words=0` = the boxes' own words off and the names on (the picture before this
+  slice); `?names=0` puts both off. Written in the file only where it was said (after `metal`, before `flags`).
+  THE RULE: A WORD BELONGS TO THE PAINT IT WAS SAID WITH (`stuff.ts saidFor`). (1) A piece says a word for its OWN paints only: the kit's desk
+  is veneer in the kit's two wood paints and says nothing when a caller hands it steel or white (a steel bench, a white table: that paint's
+  name speaks); a chair says nothing itself (the kit's chair paint is fabric by name) and a caller that hands it a paint of its own says
+  what that is (the manager's dark chair). A piece that is one thing in any colour says so always (a rug is cloth; floor paint and a dirt
+  track are NOT rugs and are laid as their own flat boxes). (2) Whoever REPAINTS a box drops its word: the look's skin
+  (`tools/levels/gwotSkin.ts`, boxes and prop parts; `look-check` counts `stuff` as paint), the editor's paint commands, the cars trial.
+  (3) Whoever COPIES a box's paint copies its word: a holed wall's standing and fallen pieces (`wallbreak.ts`). A loose prop's part carries
+  it to the box the game makes (`props.ts`), and the page asks those boxes their word before the first frame so the map is made (`main.ts`).
+  SAID SO FAR, by the office kit (`officeGen.ts`, `levelKit.ts`): desks, the reception counter, low table, conference table and credenza
+  veneer; cubicle partitions, couch and sofa fabric; cabinets steel; rugs cloth. NO DOOR FRAME says a word: a frame goes with its leaf, and
+  both wait for the doors' own slice. The level files of the generators in step with their files are re-written by words alone.
+  CHECK: `stuff-check` lines 7 and 8 (`STUFF_BREAK=1` red on 7): a word over a name and a colour, through the file and back, on the box the
+  game makes of a prop's part, refused on a box, a part and a gear screen's box; the desk as itself, as a steel bench and as a white table;
+  no frame with a word in any level file; no word kept on a box a look's file repainted; the editor's paint drops it. NOT YET: a cut core
+  takes its box's word; the lived kit, the compound's stucco and door leaves and frames say theirs; a row on the look panel; the editor
+  shows no word. Seen on the software adapter (the showroom and the office); never on a GPU by us: the maintainer has it on the preview.
 - **MARKS AS PAINT, A FIRST TRY** (`shaders/markings.wgsl markSoft`, behind `lookMarkSoft()` = `lookCfg.g.x`, 0 off the look page by gbuffer.ts's
   stub; the maintainer, 10-23: "we also need to get away from the pixel art textures"). A marking is still the level's 2-bit cell bitmap (2.5 cm
   cells), but on the look page it is not drawn as squares: the coverage is read over a one-cell footprint, cut back at half cover along a ragged line

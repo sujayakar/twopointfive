@@ -1008,3 +1008,48 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   a defender's grenade; the pair's card both ways; a watcher's memory and his own throw; a teammate passed over; off = as it was; the journal;
   the stand), 14 lines green on both stands; `DOWNKILL_BREAK=1` fails (a), (a2), (d), (e), (f), (f2), (f3), (g2) on both. Never seen on a GPU,
   nobody has played it.
+- **What a hit looks like goes by what the thing says it is made of** (`src/game/particleFx.ts HITSTUFF`, 2026-11-04; the maintainer, shooting the trial
+  cars on the look's preview: "shooting metal shouldn't have particle debris, maybe just sparks? shooting glass should make cracks (but maybe not
+  fracture?)", then "for most glass we do want to simulate the fractures -- I think props like cars should be an exception", "since we don't want to model
+  the inside"). THE CAUSE WAS NOT THE CARS: what a round has hit is read from the COLOUR of its paint (`surfOf`: a palette name where the numbers have one,
+  else how bright it is), so a white car was plasterboard (pale chips and a puff of gypsum), a blue one concrete, and its dark glass and tyres metal. A box
+  can say what it is made of (`Box.stuff`, `scene/stuff.ts`), and with the rule on THE PICTURE OF A HIT reads that word first (`saidSurf`, the table
+  `STUFF_SURF`: car paint, steel and sheet are metal; veneer is wood; plaster and skim plasterboard; block, slab and pavers concrete; fabric, the fine weave of a
+  seat or a screen, cloth on a frame; cloth, the coarse weave of a carpet, a rug, a sandbag or a tarpaulin, the soft thing that never sparks); the colour is asked only of a box that says nothing, or whose word is not one thing to a round ('paint' and 'enamel' are a coat on a door, a drum,
+  a pipe or a line on a floor; the ground is what its paint says).
+  **A RULE OF THE PICTURE ONLY, AND WHY.** The word is the look's: a level's plain file and its look twin say different words of the same box (whoever
+  repaints a box drops its word), and the two are one simulation. A first cut let the chaos lane read the word and a review measured the two files part
+  (four rounds into a cabinet that says 'steel' in registry.json: 4 dents on the plain file, 4 gypsum puffs on the twin). So the word is read only where no
+  number of the game moves: `hitLook` (the ONE place a hit's picture is worked out: `impactFx`'s sparks, chips and dust, a prop's very part and a door's
+  leaf included); the mark where the round stopped (`marks.ts bulletMark`); the burst a hot zone adds (`destruction.ts burst`, particles only); and WHICH
+  mark the chaos lane draws where it lays one on a box that says its stuff (`damageDecal`: the dent for metal, the shred for cloth, the crack for solid
+  glass, each at its own size, else a chip; ONE mark either way, because the run's digest counts decals, and its dice and bucket move as they did; never a
+  second 'bullet', which a wall's wear would take for the round's own hole: `wallwear.ts own`).
+  NOT read by anything the simulation makes of a hit: the chaos lane's surf, its puffs into the smoke, what a round goes through, what a blast breaks, where
+  a charge may be set (`wallpen.ts`, `wallbreak.ts`, `wallcharge.ts`, `furnblast.ts`). SO A WHITE CAR THAT SAYS 'carpaint' CAN STILL COUGH THE LANE'S PALE
+  PUFF INTO THE SMOKE under sustained fire. The simulation hearing a box's word is another change, and it needs a level and its look twin to say the same
+  words first (the library's rule that a repaint drops the word would have to become "what a thing IS" beside "how it is drawn").
+  TWO NEW WORDS A BOX MAY SAY (`stuff.ts BOX_STUFFS`; the look has no material for either and draws them plain by the box's finish): `'glass'`, a SOLID
+  thing of glass with nothing modelled behind it — not a pane: a sheet a round shatters says so with `BoxFlag.Glass` and is the pane engine's, as it was —
+  and `'rubber'` (a tyre is dark, and by its colour was metal). A round into solid glass (`solidGlass`) leaves the CRACK a dead screen has in place of the
+  hole, every round and whatever the chaos dial says, a pinch of glass (`SOLID_GLASS_CHIPS` 3) and no burst, and the box stands; a shell lays a small crack a pellet (`SOLID_GLASS_CRACK`). A THING THE WALL ENGINE BREAKS SHOULD NOT SAY 'glass'
+  (its wear rides a round's hole, and solid glass is given a crack in the hole's place; no level has one). METAL THROWS NO CHIPS with
+  the rule on, anywhere (the row's two dark flecks; the sparks and the dent stay). ALSO CHANGED IN THE PICTURE, since they say words already: the office's
+  cubicle partitions say 'fabric' and throw cloth where they threw gypsum (the chaos lane has always read them as cloth), a sofa throws cloth where it threw
+  concrete, a cabinet that says 'steel' sparks where a pale one threw gypsum.
+  SWITCH: ON in the page (`?hitstuff=0` = by the colour, as it was), OFF in the module and on the frozen stand (`TPS_HITSTUFF=1`), a `FROZEN_HOLDS` row, in
+  the registry and the journal (a recording from before the table plays with it off: `applyKnobs`; the rule is read at each hit). On or off, the same run.
+  WHO SAYS A WORD TODAY: on the preview the trial cars (`scene/carTry.ts`: body 'carpaint', glass 'glass', tyres 'rubber', trim 'plastic', hubs 'steel'),
+  the office's desks, partitions, sofas and cabinets, `levels/white-roof.json`. THE KITS' OWN VEHICLES SAY NOTHING YET (check line 1 holds that): they say
+  theirs when `stuff` is in the build and the vehicles' lasting shapes are.
+  CHECK: `bun run tools/qa/hitstuff-check.ts` (`probes.ts hitstuff`, family `destruction`; `HITSTUFF_BREAK=1` fails lines 2, 3 and 4), seven lines on both
+  stands, real rounds on the office with a stand-in for the GPU particles that keeps what the game asks of them at the hit: the car's body by its paint,
+  the same up as down; saying 'carpaint', sparks, no chips, no dust; a tyre saying 'rubber', plastic's chips and no dent; the glass saying 'glass', the
+  crack in place of the hole on every round, with the chaos lane off too, six chips from two rounds and the box standing; a cabinet that is metal by its
+  paint, the same sparks and no chips; AND THE SAME RUN up as down — by digest, by the chaos lane's own die and counters and by the count of marks — over four rounds a spot at the top of
+  the chaos dial (the harness holds the dial at 0: the check raises it): the car's body, glass and a tyre saying their words, a box of each word the
+  level itself says (steel, veneer, fabric), a wall, a thing of metal and a window pane that says 'glass' too; the words, the lint and the stands.
+  MEASURED ON: one seed (1) of `levels/office.json`, both stands, by this check; a reviewer's stress run (72 to 84 rounds at the dial's top, words put on
+  breakable partitions and a wall, wall wear live) had the same digest, lane die, counters, cells opened and props up as down. No play-through tally
+  was taken: nothing the tally reads can move. NOT DONE: nothing here has been
+  seen on a GPU; the crack is the screens' mark at the screens' size and nobody has looked at it on a car's window.

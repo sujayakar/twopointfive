@@ -573,3 +573,31 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   of the yard is one finish, left bare on purpose: nothing there should stop the wind). Every bulb is lit. The address opens it at a dry dusk (`&hour=dusk&weather=clear`: the plain page's own night came up in rain, which is noise over
   smoke); an hour or a weather on the address wins. Drawn on the software adapter only (the whole floor at dusk with cans burning in the yard, the tunnel,
   the kitchen and the shed, no GPU errors): never seen on a GPU, and nobody has thrown smoke on it by hand.
+- **THE WHITE ROOF, A LOOK STUDY** (11-04; `levels/white-roof.json` from `tools/levels/white-roof.ts`; open it as
+  `?look&solo&levelFile=white-roof.json&hour=midday`; no mission names it). The maintainer: "maybe as a prototype, could you try making a small level
+  that recreates the ... look based on all the screenshots i've sent you?", of the texture work in particular. One sentence: a kept roof in full sun
+  where every surface is one colour and shows what it is made of by its relief, its finish and its pieces. Hand placement: the hall's wall the whole
+  north side (cast panels over an orange stucco plinth, the biggest face that looks at the camera); the plant, four cast volumes of four heights with
+  a yellow line round every top, in the middle where the sun throws shadows off them; the yellow wall cast against boards behind it; a block of two
+  rooms in painted block (a skimmed floor and stucco piers; a carpet and one orange wall); one solid orange stair head; a painted pad. Every box says
+  its `stuff` (the ten kept stuffs, `docs/agents/render.md`), and walls stand on a half-metre grid so a paver's and a panel's joints land on walls'
+  ends. Its doors are orange gloss outside and white inside (`LOOK_DOORS`). `level-needs white-roof`: no FAIL, two NOTEs (no mission row; the open deck
+  is one paint over 231 m²). `level-lint` passes; `round-check` knows its ten round things. Nothing here is a mission: no
+  scenarios but door names, the stealth mission's three places only because the format wants them. Drawn on the software adapter only; never seen on
+  a GPU, never played.
+  SECOND PASS, the same day, after he looked ("directionally nice but still doesn't have enough "personality / cm^2""): what his pictures carry on
+  every patch beside the stuff. PAINT A PAINTER LEFT, as markings on the box that carries it (`scene/markings.ts`: a stencil face `STENCIL` with
+  `GEN.text`, `GEN.stripes`, `GEN.frame`; recipes `stencilMarks`, `hazardMarks`, `outlineMarks`, `boltMarks`, `ratingPlateMarks` in
+  `markingDefaults.ts`, any level's to call): the hall's bays and the way out, a number on every pier and on every plant volume's top, warning
+  stripes on the piers' plinths, on the low volume's foot and on the deck before each outer door, a hatch's yellow outline, bolt heads on the steel
+  band (now five butted plates) and on the kick plate, a maker's plate. No digit over 5 and no compass word. SMALL FITTINGS: conduit with clips and
+  boxes, vents in the hall's wall, clamps and flanges on the pipes, a hose cabinet, door numbers on plates, a grated drain, an orange railing by
+  the pad, and by the stair a pallet of spare pavers, two tins, a bucket and a plank. 267 boxes, 47 markings (632 of the table's 6144 rows),
+  seventeen round things. A BAND OF COLOUR IS THE WALL'S OWN STUFF in another colour on a skin a finger proud (the hall's plinth in cast panel, a
+  metre of orange on the room block's two outer faces in gloss block), so the joints run on under the colour's hard edge, as on every second wall of
+  his pictures. And use shows on its stuffs (`worn`, `docs/agents/render.md`). Second pass drawn on the software adapter only; never seen on a GPU.
+  HOW IT IS WALKED (11-04, `scenarios.walked`; `docs/agents/render.md`, "HOW A LEVEL IS WALKED SHOWS IN ITS SURFACES"): six ways by name, from the
+  stair's landing to the lounge's door, the service door and the plant, from the service door to the plant, and through the two rooms. A way's
+  ends are names, so the roof now NAMES THREE PLACES (`scenarios.places`: stair landing, plant pad, service room). Those are words the game may say
+  of this level (`game/dialogue.ts placeName`) and middles a response sweep may walk to (`game/qrf.ts`); no mission is staged on the roof, so
+  nothing says them today and nobody has heard them. The level's fingerprint does not move (words and a picture's list).
