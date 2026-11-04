@@ -79,7 +79,7 @@ check(pm.length === 1 && kb < 40 && kb < realKb / 3, `and is a small text: ${kb.
     const word = E.smokeDrawWords()[0], ts = (f: string) => readFileSync(`${ROOT}/src/${f}`, 'utf8');
     const WRITERS = ['host/smokelab.ts', 'render/smokeLook.ts'], OWN = ['engine.ts', 'render/frame.ts'];
     const named = (readdirSync(`${ROOT}/src`, { recursive: true }) as string[]).map(f => f.replace(/\\/g, '/')).filter(f => f.endsWith('.ts') && !OWN.includes(f) && /\bsmokeDraw\b/.test(ts(f))).sort();
-    const carried = ts('engine.ts').includes('smokeDraw: this.smokeDrawWords(),') && ts('render/frame.ts').includes('u[232] = sd ? 1 : 0; u[233] = p.smokeDraw ? p.smokeDraw[0] >>> 0 : 0;')
+    const carried = ts('engine.ts').includes('smokeDraw: this.smokeDrawWords(),') && ts('render/frame.ts').includes('u[232] = sd && sc ? 1 : 0; u[233] = p.smokeDraw ? p.smokeDraw[0] >>> 0 : 0;')
       && C.includes('fn smokeAheadW() -> f32 { return f32((frame.sideCfg.y >> 24u) & 255u) * 0.01; }');
     check(E.smokeDraw.ahead === 0 && word >>> 24 === 0 && carried && named.join() === WRITERS.join(), `any load: the weight of a lamp's glow through smoke reaches the frame at 0, so the real march's cut is the plain one's (the row ${E.smokeDraw.ahead}, the top byte of the frame's word ${word >>> 24}, the word ${carried ? 'carried to sideCfg.y as the shader reads it' : 'NOT carried to sideCfg.y as the shader reads it'}; the row is named by ${named.join(', ') || 'nobody'})`); }
   check(PLAIN_AIR.labels.join() === ['vol', ...TWINS].join(), `the labels a lost device is read against are the pass's four (${PLAIN_AIR.labels.join(', ')})`); }
