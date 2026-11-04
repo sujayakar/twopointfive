@@ -90,7 +90,7 @@ export function loadLevel(data: LevelData, opts: { validate?: boolean; dressing?
     const stuff = stuffOf(b, m); if (stuff !== undefined) p.stuff = stuff;
     if (b.shape) {   // A SHAPE (scene/shapes.ts): carried on the box as authored — its planes copied, a piece's paint and finish resolved as a box's are; given to the box when the level is stood up
       const s = b.shape, sh: BoxShape = { ...formOf(s) };
-      if (s.with) sh.with = s.with.map((w): ShapePiece => ({ off: V(w.off), h: V(w.h), ...(w.yaw ? { yaw: w.yaw } : {}), albedo: albedoOf(w), ...finishOf(w), ...formOf(w) }));
+      if (s.with) sh.with = s.with.map((w): ShapePiece => ({ off: V(w.off), h: V(w.h), ...(w.yaw ? { yaw: w.yaw } : {}), ...(w.material !== undefined || w.albedo !== undefined ? { albedo: albedoOf(w), ...finishOf(w) } : {}), ...formOf(w) }));
       p.shape = sh;
     }
     return makeBox(p);
@@ -249,7 +249,7 @@ export function levelToData(level: Level, opts: LevelToDataOpts): LevelData {
     const marks = copyMarkings(mk); if (marks) d.markings = marks;
     if (b.shape) {   // A SHAPE (scene/shapes.ts), as it was read: a piece's paint by name where the level has one, its finish only where it is not the material's
       const s = b.shape, sd: ShapeData = { ...formOf(s) };
-      if (s.with) sd.with = s.with.map((w): ShapePieceData => { const wp = paint(w.albedo); return { off: V(w.off), h: V(w.h), ...(w.yaw ? { yaw: w.yaw } : {}), ...wp, ...finish(w, wp as { material?: string }), ...formOf(w) }; });
+      if (s.with) sd.with = s.with.map((w): ShapePieceData => { if (!w.albedo) return { off: V(w.off), h: V(w.h), ...(w.yaw ? { yaw: w.yaw } : {}), ...formOf(w) }; const wp = paint(w.albedo); return { off: V(w.off), h: V(w.h), ...(w.yaw ? { yaw: w.yaw } : {}), ...wp, ...finish(w, wp as { material?: string }), ...formOf(w) }; });
       d.shape = sd;
     }
     return d;

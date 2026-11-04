@@ -84,6 +84,7 @@ import { WORLD } from '../../src/scene/world';
 import { BoxFlag, type Box } from '../../src/scene/boxes';
 import { livedKit } from './livedKit';
 import { drawnAs, madeOf, saidAs, PANEL_GREY, CHAIR_GREY } from '../../src/scene/stuff';
+import { feetOn } from '../../src/scene/carShapes';
 
 export const NAME = 'compound';
 export const NOTES = 'The compound: a perimeter wall with a lit main gate and two dark side gates, yard all round a main house of eight rooms off one corridor (three outside doors, two open windows, four loops inside), and a garage, a shed and a guard hut across the yard. Eight held rooms, four squads. For the four man squad, who start outside the wall. One floor, box geometry only, the office\'s kit. Regenerate: bun run map:export compound';
@@ -350,7 +351,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
 
   // ---------------- the garage (x 4..10.5, z 18..24): g_n from the west yard, g_e from the forecourt ----------------
   grp('garage');
-  car(7.2, 22.5, 0, [0.42, 0.4, 0.36]);                                                 // a car against the south wall: the floor north of it is the room
+  const TAXI = car(7.2, 22.5, 0, [0.42, 0.4, 0.36]);                                                 // a car against the south wall: the floor north of it is the room
   desk(5.2, 18.6, 1.8, 0.75, 0); papers(5.5, 0.76, 18.6, 0.2);                          // a workbench on the north wall
   pallet(9.5, 18.8, 1.2, 1.0);
   cardboardBox(4.6, 23.3, 0.5, 0.2); bin(9.9, 23.4); chair(5.3, 19.45, 0);
@@ -628,7 +629,11 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
     // load), a child's bicycle stood against the pallet stack by the north wall (drawn only: the east door's line is near), a rope bed stood on its side, flattened
     // cardboard under the engine. Colour: the taxi's yellow, echoed on its roof
     L.room('garage');
-    bx(6.0, 7.9, 21.85, 21.9, 1.52, 1.57, C.black); bx(6.0, 7.9, 23.1, 23.15, 1.52, 1.57, C.black);                // the roof rack's rails
+    // the roof rack's rails. With shapes on the roof is bowed and cut back to the glass: each rail stands on two feet on the bow, and the first carries the
+    // rack's two cross bars, the roof sign on the front one — trim, said in the rail's own frame (the taxi stands at (7.2, 22.5), unturned)
+    { const rail = (z0: number, z1: number, bars: boolean) => { const c: Vec3 = [6.95 - 7.2, 1.545, (z0 + z1) / 2 - 22.5], h: Vec3 = [0.95, 0.025, 0.025];
+        slab(6.0, 1.52, z0, 7.9, 1.57, z1, C.black, { shape: { with: [...feetOn(TAXI.tops.roof, c, h, [-0.6, 0.55]), ...(bars ? [-0.93, 0.93].map(u => ({ off: [u, 0, 0.625] as Vec3, h: [0.02, 0.02, 0.65] as Vec3 })) : [])] } }); };
+      rail(21.85, 21.9, true); rail(23.1, 23.15, false); }
     bx(6.3, 7.5, 21.98, 23.02, 1.52, 1.8, P.canvas, true); for (const x of [6.6, 7.2]) bx(x, x + 0.04, 21.97, 23.03, 1.52, 1.81, BROWN, true);   // the bundle on the roof between them, roped (drawn only)
     bx(7.55, 7.86, 22.2, 22.8, 1.52, 1.7, TEAL, true); bx(7.92, 8.06, 22.3, 22.7, 1.52, 1.64, P.brass);             // a suitcase (drawn only), the roof sign
     for (const x of [9.17, 9.83]) { bx(x - 0.22, x + 0.22, 19.3, 19.33, 0, 0.44, C.black, true); bx(x - 0.11, x + 0.11, 19.33, 19.336, 0.11, 0.33, C.concrete, true); }   // the child's bicycle, upright against the pallet stack: two wheels (their middles the wall's grey) …
