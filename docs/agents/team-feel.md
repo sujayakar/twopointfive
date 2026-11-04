@@ -346,7 +346,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   barracks-four seed 2 taken with three men at 165 s where one stood at 81 s; Mousehole seed 2 a second sooner), teammates standing 71 → 74 of
   148; two seeds are no tally. The frozen stand, seed 1: 21 of 21 the same.
   KNOWN: the squad is still dark for much of a walk ALONG a wall, rightly by this rule and wrongly to the eye: the men aim at their mark through
-  the wall beside them (warehouse, compound, kill house: a third of the walking man-frames). That is the aim's to mend, not the light's. A gun
+  the wall beside them (walking man-frames dark for a real wall in `flashweight-lights`: warehouse 753 of 1389, compound 563 of 1602, kill house 471 of 1436). That is the aim's to mend, not the light's. A gun
   pointed straight down in the open now lights a small patch at his own feet where it was dark. A recording made on the page before this replays
   with the mended rule and drifts from its first relit light. The hand torch hangs more (`docs/agents/enemies.md`, its bullet: 420 → 636 man-frames of 27000 in `torch-wall`'s night). The real page boots on the software
   adapter with the rule on, takes the stack order and steps three seconds with no page error; it could not be stepped further in reasonable time.
