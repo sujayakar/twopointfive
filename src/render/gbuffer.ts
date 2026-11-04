@@ -14,12 +14,12 @@ import { cutConfig, CUT_ROWS } from '../scene/cut';
 import snowSrc from './shaders/snow.wgsl' with { type: 'text' };   // THE SNOW'S SURFACE (render/snowField.ts): fsBox's snow + the hills' two entry points — dead code unless the prelude's SNOW_SURF is up
 import { SNOW_CFG_FLOATS } from './snowField';
 import gdownSrc from './shaders/gdown.wgsl' with { type: 'text' };     // SHARP DIRECT: the internal-size view of an output-size raster (encodeDown)
-import { LOOK_WITH, LOOK_PAINTED, lookLayerSliced, type LookName } from './lookTex';
+import { LOOK_WITH, LOOK_PAINTED, lookLayerSliced, lookStuffOf, type LookName } from './lookTex';
 import surfaceSrc from './shaders/surface.wgsl' with { type: 'text' };   // SURFACES, A TRY (render/frame.ts surfTryConfig): fsBox's materials — dead code unless the prelude's SURF_TRY is up
 import lookSrc from './shaders/look.wgsl' with { type: 'text' };         // THE LOOK PROTOTYPE (render/frame.ts lookConfig): fsBox's materials off real maps — in the module only on that page
 import { LOOK_NAMES, LOOK_N, LOOK_LAYERS, LOOK_ROUGH, lookLayer, lookMip } from './lookTex';
 import { GWOT_PALETTE, type GwotMat } from '../scene/gwotPalette';
-import { PAINT_STUFF, stuffOfName, type PaintRows } from '../scene/stuff';
+import { PAINT_STUFF, BY_COLOUR, stuffOfName, type PaintRows } from '../scene/stuff';
 
 /** which stuff each paint of the 2010s palette is drawn as under the try (shaders/surface.wgsl's classes, by number); a paint with no row draws plain */
 const SURF_OF: Readonly<Partial<Record<GwotMat, number>>> = {
@@ -38,14 +38,14 @@ function classWgsl(name: string, of: Readonly<Partial<Record<GwotMat, number>>>)
   return `fn ${name}(a: vec3f) -> u32 {\n${exact.join('\n')}\n${dark.join('\n')}\n  return 0u;\n}\n`;
 }
 function surfaceWgsl(): string { return classWgsl('surfClass', SURF_OF) + surfaceSrc; }
-/** the look's class number of a stuff (look.wgsl: a layer of lookTex.ts LOOK_NAMES and one; 0 = drawn plain, which 'plain' and 'waits' both are) */
-export const lookClassOf = (stuff: string | undefined): number => stuff === undefined ? 0 : (LOOK_NAMES as readonly string[]).indexOf(stuff) + 1;
+/** the look's class number of a stuff: lookTex.ts lookStuffOf, the one table (0 = drawn plain, which 'plain' and 'waits' both are) */
+export const lookClassOf = lookStuffOf;
 /** WHAT A PAINT NAME IS DRAWN AS: scene/stuff.ts PAINT_STUFF as the look's class numbers, less the names that are mixed (those have no class of their own:
  *  the colour decides). The audit of a level reads this to tell a paint that is meant from one that got a material by the chance of its colour. */
 export const LOOK_BY_NAME: Readonly<Record<string, number>> = Object.fromEntries(Object.entries(PAINT_STUFF).filter(([, stuff]) => stuff !== 'mixed').map(([name, stuff]) => [name, lookClassOf(stuff)]));
 /** THE LOOK PROTOTYPE's classes of the palette's rows: surface.wgsl's eight and three of its own (look.wgsl LOOK_CLOTH 9, LOOK_METAL 10, LOOK_PAINT 11), read
  *  off the table of names in its order (the shader's text below is written in this order, and a darkened paint is the first row it fits) */
-export const LOOK_OF: Readonly<Partial<Record<GwotMat, number>>> = Object.fromEntries(Object.entries(LOOK_BY_NAME).filter(([name, cls]) => cls > 0 && name in GWOT_PALETTE));
+export const LOOK_OF: Readonly<Partial<Record<GwotMat, number>>> = Object.fromEntries(Object.entries(PAINT_STUFF).filter(([name, stuff]) => BY_COLOUR.has(stuff) && name in GWOT_PALETTE).map(([name, stuff]) => [name, lookClassOf(stuff)]));   // (a palette row of a stuff added since the eleven is found by its name only: scene/stuff.ts BY_COLOUR)
 
 /** WHAT A PAINT IS DRAWN AS (look.wgsl's classes; 0 = plain), by the rule lookClass writes out for the shader and with its numbers: the palette's own row first (a
  *  stand-in is that row), then a classed paint darkened in one piece (a worn patch is its ground × 0.7). The engine asks it of each box's AUTHORED paint and the
