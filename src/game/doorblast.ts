@@ -19,9 +19,11 @@
 // (markings want an upright face) and the marks rounds left on it do not ride it down; a checkpoint taken while it flies files it already lying where it
 // will stop, so the load never hears it land.
 // (src/game is one import cycle: nothing below is built from another game module's exports at module load.)
+import { men } from './seats';
 import { SideMap } from '../math/side';
 import { Vec3, v3, quat, clamp, lerp } from '../math/vec';
 import { BoxFlag } from '../scene/boxes';
+import { leafWrote } from '../scene/boxMirror';
 import type { Game } from './game';
 import type { Door, DoorSlab } from './doors';
 import { wandDrop } from './wand';
@@ -213,11 +215,12 @@ function reaches(g: Game, d: Door, at: Vec3): boolean {
 /** Sam's hands come off a leaf that has left its frame: easing it, picking its lock, keying its pad — there is no lock left to finish (a pick run on would
  *  file 'lock picked') */
 function handsOff(g: Game, d: Door) {
-  const pl = g.player;
-  if (pl.easing === d) pl.easing = null;
-  if (pl.picking === d) { pl.picking = null; pl.char.anim.lockpick = false; pl.speedSm = 0; }
-  if (pl.coding === d) { pl.coding = null; pl.codeT = 0; }
-  if (pl.wanding?.door === d) wandDrop(pl);   // (wand.ts: the cable was under that leaf)
+  for (const pl of men(g)) {
+    if (pl.easing === d) pl.easing = null;
+    if (pl.picking === d) { pl.picking = null; pl.char.anim.lockpick = false; pl.speedSm = 0; }
+    if (pl.coding === d) { pl.coding = null; pl.codeT = 0; }
+    if (pl.wanding?.door === d) wandDrop(pl);   // (wand.ts: the cable was under that leaf)
+  }
 }
 
 /** THE LEAF COMES OFF: out of its frame away from `from` (where the blast was), thrown `k` (0‥1) of DOORBLAST.speed; `who` is blamed for the crack of it and for
@@ -293,7 +296,7 @@ export function splinter(g: Game, d: Door, dir: Vec3, who: number, at?: Vec3): b
       const top = fly * lerp(K.topple[0], K.topple[1], r2);   // (about the leaf's width axis: its top the way the round left)
       const f = { ...d.box, c: [cx + ux * lx, H / 2 + 0.01 + ly, cz + uz * lx] as Vec3, h: [sw, sl, T / 2] as Vec3, yaw, rot: quat.mul(quat.axisAngle([ux, 0, uz], fly * lerp(K.tilt[0], K.tilt[1], r3)), quat.yaw(yaw)), marks: undefined };
       const v: Vec3 = [dx * sp + ux * sd, lerp(K.up[0], K.up[1], r3), dz * sp + uz * sd], w: Vec3 = [(r1 - 0.5) * K.spin + ux * top, (r2 - 0.5) * 0.6 * K.spin, (r3 - 0.5) * K.spin + uz * top];
-      const got = left-- > 0 ? g.destr?.debris.spawn('chunk', f, v, w, who) ?? null : null;
+      const got = left-- > 0 ? g.destr?.debris.spawn('chunk', f, v, w, who, land.level) ?? null : null;
       if (got) { DOORSHOT_STATS.chunks++; got.level = land.level; got.sfx = land.sfx; g.destr.breaks.retag(got, 'wood'); g.destr.breaks.dress(got); }   // (wood whatever its paint: a snapped end, not a clean rectangle)
       else { DOORSHOT_STATS.demoted++; if (P) P.emit('debris', f.c, v3.normalize([v[0], Math.max(0.3, v[1]), v[2]]), 14, { speed: 2.4, speedJit: 0.7, spread: 1.1, life: 18, lifeJit: 0.3, size: 0.006, sizeJit: 0.6, aspect: 3, color: v3.copy(albedo), owner: who }); }
     }
@@ -378,7 +381,7 @@ function pushOut(g: Game, d: Door, S: DoorSlab) {
 export function poseSlab(d: Door) {
   const S = d.slab; if (!S) return; const b = d.box, W = d.def.width, T = d.thick;
   const ux = Math.cos(S.a), uz = Math.sin(S.a), lx = (W - 0.14) - (W * 0.5 + 0.01), ly = 1.0 - (d.height / 2 + 0.01), lz = T / 2 + 0.03;
-  b.flags &= ~BoxFlag.SoundSeal; b.yaw = -S.a;
+  b.flags &= ~BoxFlag.SoundSeal; b.yaw = -S.a; leafWrote();   // (a leaf is written from here down: scene/boxMirror.ts)
   if (S.landed) {   // (flat — sliding out or at rest)
     const hw = S.bits ? S.bits[0] : d.leafH[0], hl = S.bits ? S.bits[1] : d.height / 2;   // (bits: the lock rail of a leaf gunfire splintered — DOORSHOT)
     b.rot = undefined; b.marks = undefined; b.h = [hw, T / 2, hl]; b.c = [S.p[0], T / 2 + LIFT, S.p[2]];

@@ -1535,6 +1535,18 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   levels/compound.json` pair part, seed 1 — the PAIR's last man never takes the shed's last defender and the run stops at the cap (240 s, and at 480 s the same);
   on the build's file that seed was a wipe at 74 s. The four's part is green. The file's checkpoint fingerprint did NOT move (boxes, doors, routes, lights and
   props are as they were): an old checkpoint loads, an old tape's re-run will not match (the marks moved). Page: rebuild/authored-levels/loud-levels.md.
+- **The ground outside the compound's wall is no longer bare** (dress every level, 11-03; no switch: level data under `LIVED`, room `lived.outside`). Both
+  ways in start on the strip between the perimeter wall and the map's edge, which had nothing on it. `tools/levels/compound.ts` lays the look's kit there
+  (`gwotKit(gwotOfOffice(K))`: three wood piles, field stones in four places, two stacks of block, two tyres), every piece at the wall's foot or out at the
+  edge so that the walk to each gate and the ground the four stand on stay clear; the twin treads the two walks darker (`M.path`). A lying drum and bushes
+  were tried and taken out: from the play camera at night they read as an orange crate and dark boxes. The generator's own octagon is the lived kit's
+  `round` (a pot of 0.2 m and over too): 8 rounds where 3 were. The taxi wears `genYellow` (a paint; it wore a jerry can's plastic yellow, drawn flat). A
+  TALLY MOVES: the pieces at the wall's foot take 23 of the wall's 891 places for a wall charge (`TPS_PROFILE=shipped bun run tools/qa/wallfurn-check.ts
+  --levels compound.json`: 868 places, all pass, the rule's 45 added places unchanged). Base: `tools/qa/fixtures/level-base/compound-gwot.txt`; round counts
+  0 and 8, both files. Measured: the 21 missions' play-throughs on two seeds against step 1239: frozen 42 of 42 digests the same, shipped with `TPS_LIVED=0`
+  42 of 42; shipped, compound-four's two runs move and no other level's. Their endings do not: seed 1 is taken with 3 of 4 up at 198.8 s (198.9 before, the
+  same man down at 39.7 s, 18 orders, 6 entries), seed 2 is wiped at 33.6 s as before, the same four down at the same seconds. Two seeds is a look, not a
+  count. Drawn on the software adapter only: never seen on a GPU, never played by a person.
 - **Mousehole's defenders are placed by hand** (`tools/levels/mousehole.ts`, the `post` room's marks carry the comment; no switch: the level's data, and the
   page opens on it under `SAMESTART`). Placed: ward 1, exam 3, store 2, with the three marks by the blank north wall moved to 2.7 m off it (a wall charge knocks
   down inside 2 m: a north hole used to take the man with it); the duty room's three in file order = the HATCH GUN behind the desk, the DEEP MAN in the dark
@@ -1546,6 +1558,30 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   start 24 · 80/96. On the tree with the build merged (10-13) A's seeds 1-12: 12 · 31/48 against 11 · 30/48. A scripted commander, the one floor (placement 0),
   never seen on a GPU, never played by a person; "all four holes north" never played (the wall commander takes the nearest wall). The checkpoint fingerprint did
   NOT move (marks and one lamp's switch): old checkpoints load, an old tape's re-run will not match. Page: rebuild/authored-levels/loud-levels.md.
+- **Mousehole is dressed: its outside is a place, and its look twin says what things are made of** (11-03; `tools/levels/mousehole.ts`,
+  `mousehole-gwot.ts`; no switch of its own: the lived things ride the lived switch, `?lived=0` on the page and off on the frozen stand, and the
+  paint is the look twin's). The level had no lived tier. It has one now and it is the clinic's OUTSIDE (`lived.yard`, `lived.side`,
+  `lived.lot`): the burn drums, their wood and the washing in the back yard, the generator's fuel and what a clinic throws out on the
+  side, the pump, a rope bed, a bike and a cart on the lot. Every piece is a piece of `src/scene/gwotKit.ts` laid by name through
+  `gwotOfKit`; nine of them are round things the round rule finds (with the lived switch on; none with it off). THE RULE IT KEEPS, WHICH NO
+  CHECK HOLDS: every outer wall of the clinic takes a wall charge wherever it is asked, and the setter's spot and the stand-off posts
+  are the ground at the wall's foot, so no lived solid stands within 2 m of an outer wall's face (stones a foot steps over may). The
+  rooms keep the furniture the level had. THE TWIN: `MOUSEHOLE_PAINT` names the generator's own colours and the twin's `own` gives each
+  its palette row (the exam room's sheet is slab, where the shared rule laid block courses; the car on the lot and the tank are
+  painted steel; the kerbs precast concrete); its `pick` makes the cots, lockers, fridge and the nurse's table white enamel and the
+  mattresses and the screen cloth (all were moulded plastic, which has no material); its `dress` lays the ground as it is used, in
+  the ground's own paint darker. Left flat: the clinic's white car (no palette row is pale enough to stand for it), car glass,
+  tyres, cartons, the kit's scrub. The Team & kit set (`kitView`) still names the old paints: it is the level's own part.
+  CHECKED (no GPU: counted and drawn on the software adapter, never seen on one, never played): `lived-check` green on both files
+  (the twin by its base file, `tools/qa/fixtures/level-base/mousehole-gwot.txt`); `level-needs mousehole --run` no FAIL on both
+  stands, and the twin's `ground` note is gone (three bare stretches of 235, 156 and 68 m² before); play-through digests, 21
+  missions on seeds 1 and 2: frozen 42 of 42 as before, shipped with the lived switch off 42 of 42, shipped as it ships only
+  Mousehole's two runs move (taken in 133 s and 117 s before, 133 s and 118 s after, the same men standing). Two seeds say it
+  reaches an end, not how it plays: nobody has measured the wall route with the yard furnished. The look page's audit: 3.2 % of the
+  picture with no material before, 2.9 % after (the kit's scrub has no material row and gives back part of what the repaint took).
+  THE FINGERPRINT MOVED on the shipped stand (lived boxes and props): a checkpoint or a recording made on Mousehole there parts from
+  this step; none was re-recorded. `round-check` holds the nine round things by the level's own count files,
+  `tools/qa/fixtures/round/mousehole.txt` and `mousehole-gwot.txt` (0 bare, 9 lived).
 - **The warehouse's defenders are placed by hand** (`tools/levels/warehouse.ts`, `WAREHOUSE_SQUADS` and each room's 'placed' marks; no switch: the level's data,
   and the page opens on it under `SAMESTART`). Placed: front office 2 (one a door, the second half turned to the west window), manager's 1, HALL 3 (was 4: a pair
   on `h_sw`, one on `h_n` under the lit panel), DOCK 3 (was 2: a man a yard door where the doorway shows him, one on `d_n`), shipping office 1, tool cage 1. A
@@ -2572,7 +2608,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
     the front door; walk round behind the hall, where the gunner's back and the back door are on the picture (a step's eye shows him); Shift + the
     key on the back door; the word. The script holds the gun on the front door until a door moves: with a stack on each it is on the wrong one
     (`levels/tut-queue.script.ts`, beat `gun`). (3) TWO GATES: the key on himself calls all four back (fall in ends every goal: men he has called
-    are on nothing, so the next goal is everybody's); walk out to the yard; `gateA` Shift + the key on a spot by the road gate turns all four
+    are on nothing, so the next goal is half the squad's since `CMDRING.goalHalf`, squad.md; everybody's with `?goalhalf=0`); walk out to the yard; `gateA` Shift + the key on a spot by the road gate turns one pair (all four with `?goalhalf=0`)
     to watch it from where they stand; `gateB` THE WHEEL FOR A PART: Shift and the key KEPT DOWN by the back gate open the ring for the pair a tap
     would have sent, and its second wedge (`cover`) turns that pair to the back gate while the other stays on the road gate; then men come by
     both gates at once (beat `gates`) and each pair has its gate first. Five cards, each on the step that needs it.
@@ -2634,8 +2670,16 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
     sends all four. (g) A Shift tap on each gate in turn leaves a pair on each and `gateB` is then done as it comes up, its card shown and the
     wheel never opened. (h) Four Shift taps on four different things leave four men on four goals with nobody to give: the yard's lines then ask
     for a pair nobody has, and only the key on himself (line 9 of the mission) frees them. NOBODY HAS played it; no picture was looked at; never seen on a GPU.
+  - **No interaction row is drawn on the relay post (2026-10-29).** Its lesson never gives the interaction key, and it had no `rails.rows` list, so a
+    row was offered beside every thing a hand can work for a key the frame takes out of the tick. Seen headless as the page ships, Sam stood in reach of
+    the breaker box: the row `breakerOff` ("throw it — kill the lights"). `WORK.samFace` (the breaker's row whichever way its panel faces) made that one
+    reachable on more floors. The lesson now carries `rails.rows: ['push', 'pull']`, as the tunnel's does: with a list no row is drawn while that key is
+    locked (`rails.offers`). Level data, no switch; the level's base in `lived-check` moved to the commit that carries it (the frame's `rows` is a held
+    key there). The same stand on `tut-road`, `tut-team` and `tut-kit`: no row, each has its list. RUN: `tutqueue-check` on both stands, `lesson-gate
+    tut-queue`, `lesson-check`, `lived-check`, the export's `--check`. Not run: its page run. Never seen on a GPU.
 - **The tutorial's kit mission, `tut-kit` 'The fuel stop'** (2026-10-26; row `tut-kit` in `TUTORIAL_MISSIONS` directly after `tut-sky`, `kind: 'roomclear'`,
-  `squad: 4`, night, clear; `tools/levels/tut-kit.ts` → `levels/tut-kit.json`, the fights in `levels/tut-kit.script.ts` (program `tutorial`, a beat a
+  `squad: 4`, night, clear, `defenders: 6`: the men on the floor as it opens, which is what `probes.ts missions-start` counts against the sheet; the
+  script stands five more up later (the row said 11 at first and that probe was red from its join until 2026-10-27); `tools/levels/tut-kit.ts` → `levels/tut-kit.json`, the fights in `levels/tut-kit.script.ts` (program `tutorial`, a beat a
   `lesson:<cue>`; the machine gunner is stood up half a second into the program, not on its first frame: `map-check` counts the men a frame after the staging), the scripted player `tools/qa/lessons/tut-kit.ts`, the check `tools/qa/tut-kit-check.ts`. It takes the place of `tut-solo`, whose row
   is `offList: true` where it stands and whose files are untouched). The maintainer's order for the third tutorial: "then we introduce equipment, show
   how to use it with just the player (tap E and then long press E) and then show how to tell the squad to use it with long press Q". ONE LEVEL, THE

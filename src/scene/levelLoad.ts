@@ -7,7 +7,7 @@
 // switchable's boxes, the breaker's pair, a beacon's dome) id ⇄ index. Nothing here is procedural: the one computed thing is a prop's collision footprint
 // fitted from its parts (fitPropFootprint, the generator's own rule), and a file may pin that too (PropData.half / height).
 import type { Vec3 } from '../math/vec';
-import { Box, BoxFlag, makeBox, ROUGH_DEFAULT, type BoxStuff } from './boxes';
+import { Box, BoxFlag, makeBox, ROUGH_DEFAULT } from './boxes';
 import type { Level, LightDef, PropDef, PropPart, LevelDoorDef, PatrolRoute, Chokepoint, RoomClearPlan, BreachPlan, DaylightDef, DeviceDef, CivilianDef, VentDef, VolumeDef } from './level';
 import { withScript } from './level';
 import { LEVEL_SCRIPTS } from './levelScripts';
@@ -22,7 +22,7 @@ const VV = (a: readonly (readonly number[])[]): Vec3[] => a.map(V);
 /** per loaded level (the runtime object): the FILE's own records as this stand loaded them — the boxes (index for index `level.boxes`: ids, groups and flags
  *  as written, which a runtime box does not carry), the doors, the lamps and the loose props (index for index `level.props`, with their ids) — and `left`: the NAMES of what this stand left out of the
  *  file (lived-in rooms or the dressing switched off: each such box's id and group, each such prop's id), so that a name written for them is known for one. What src/host/kitViewPlan.ts measures a way in from (src/host/kitView.ts) */
-export const levelFileOf = new WeakMap<object, { boxes: readonly BoxData[]; doors: readonly DoorData[]; lights: readonly LightData[]; props: readonly PropData[]; left: readonly string[]; /** the file's paints by name (the look asks what each is made of: scene/stuff.ts) */ materials: Readonly<Record<string, MaterialData>> }>();
+export const levelFileOf = new WeakMap<object, { boxes: readonly BoxData[]; doors: readonly DoorData[]; lights: readonly LightData[]; props: readonly PropData[]; left: readonly string[] }>();
 function clone<T>(v: T): T { if (Array.isArray(v)) return v.map(clone) as unknown as T; if (v && typeof v === 'object') { const o: any = {}; for (const k of Object.keys(v)) { const x = (v as any)[k]; if (x !== undefined) o[k] = clone(x); } return o; } return v; }
 
 /** The collision footprint the physics layer wants for a loose prop, fitted from its parts exactly as the generator's fitProp measured it: the bounding
@@ -70,7 +70,6 @@ export function loadLevel(data: LevelData, opts: { validate?: boolean; dressing?
     if (b.rot) p.rot = [b.rot[0], b.rot[1], b.rot[2], b.rot[3]];
     if (b.name !== undefined) p.name = b.name;
     if (b.cutHeight !== undefined) p.cutHeight = b.cutHeight;
-    if (b.stuff !== undefined) p.stuff = b.stuff as BoxStuff;   // (what the box says it is made of, where its paint's name does not: scene/stuff.ts — validate has refused every other word)
     const marks = copyMarkings(b.markings); if (marks) p.marks = marks;   // (through markings.ts marking(): the same structure the generator builds)
     // the finish (Box.rough / metal): the box's own, else its material's; absent both = matte dielectric — nothing written, so a file without finishes loads to
     // the very Level it always did (`metal` is only ever carried as true: false is the default and stays unwritten, as levelToData writes it)
@@ -83,7 +82,7 @@ export function loadLevel(data: LevelData, opts: { validate?: boolean; dressing?
   const bx = (id: string) => { const i = boxIndex.get(id); if (i === undefined) throw new Error(`level '${data.name}': unknown box '${id}'`); return i; };
   // loose props
   const props: PropDef[] = fileProps.map(p => {
-    const parts: PropPart[] = p.parts.map(q => { const part: PropPart = { off: V(q.off), h: V(q.h), yaw: q.yaw ?? 0, albedo: albedoOf(q) }; const marks = copyMarkings(q.markings); if (marks) part.marks = marks; if (q.stuff !== undefined) part.stuff = q.stuff as BoxStuff; return part; });
+    const parts: PropPart[] = p.parts.map(q => { const part: PropPart = { off: V(q.off), h: V(q.h), yaw: q.yaw ?? 0, albedo: albedoOf(q) }; const marks = copyMarkings(q.markings); if (marks) part.marks = marks; return part; });
     const fit = fitPropFootprint(parts);
     return { kind: p.kind, name: p.name ?? p.id, x: p.x, z: p.z, yaw: p.yaw ?? 0, parts, half: p.half ? [p.half[0], p.half[1]] : fit.half, height: p.height ?? fit.height, mass: p.mass };
   });
@@ -144,7 +143,7 @@ export function loadLevel(data: LevelData, opts: { validate?: boolean; dressing?
   if (data.surfaces) Object.defineProperty(level, 'surfaces', { value: clone(data.surfaces), enumerable: false, writable: true, configurable: true });
   { const script = LEVEL_SCRIPTS[data.name]; if (script) withScript(level, script); }   // (a level that carries a script: scene/levelScripts.ts)
   levelNames.set(level, data.name); const inB = new Set(fileBoxes), inP = new Set(fileProps), left = [...new Set([...data.boxes.filter(b => !inB.has(b)).flatMap(b => b.group !== undefined ? [b.id, b.group] : [b.id]), ...data.props.filter(p => !inP.has(p)).map(p => p.id)])];
-  levelFileOf.set(level, { boxes: fileBoxes, doors: data.doors, lights: fileLights, props: fileProps, left, materials: data.materials });
+  levelFileOf.set(level, { boxes: fileBoxes, doors: data.doors, lights: fileLights, props: fileProps, left });
   return level;
 }
 /** one device record → its runtime def (id → name, floor / notes dropped like a door's, every vector copied, optional fields written iff present) */
@@ -224,12 +223,11 @@ export function levelToData(level: Level, opts: LevelToDataOpts): LevelData {
     if (b.emissive[0] !== 0 || b.emissive[1] !== 0 || b.emissive[2] !== 0) d.emissive = V(b.emissive);
     const flags = bitsToFlags(b.flags & ~DERIVED); if (flags.length) d.flags = flags;
     if (b.cutHeight !== 1e6) d.cutHeight = b.cutHeight;
-    if (b.stuff !== undefined) d.stuff = b.stuff;
     const marks = copyMarkings(b.marks); if (marks) d.markings = marks;
     return d;
   });
   const props: PropData[] = level.props.map(p => {
-    const parts = p.parts.map(q => { const marks = copyMarkings(q.marks); return { off: V(q.off), h: V(q.h), ...(q.yaw !== 0 ? { yaw: q.yaw } : {}), ...paint(q.albedo), ...(q.stuff !== undefined ? { stuff: q.stuff } : {}), ...(marks ? { markings: marks } : {}) }; });
+    const parts = p.parts.map(q => { const marks = copyMarkings(q.marks); return { off: V(q.off), h: V(q.h), ...(q.yaw !== 0 ? { yaw: q.yaw } : {}), ...paint(q.albedo), ...(marks ? { markings: marks } : {}) }; });
     const d: PropData = { id: p.name, kind: p.kind, x: p.x, z: p.z, ...(p.yaw !== 0 ? { yaw: p.yaw } : {}), mass: p.mass, parts };
     const fit = fitPropFootprint(p.parts);   // pin the footprint only where the fit would not give the authored numbers back bit for bit (plants override theirs)
     if (fit.half[0] !== p.half[0] || fit.half[1] !== p.half[1]) d.half = [p.half[0], p.half[1]];

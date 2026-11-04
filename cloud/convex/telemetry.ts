@@ -4,6 +4,9 @@ import { v } from "convex/values";
 import { internalQuery, mutation } from "./_generated/server";
 import { LIMITS, bad, pidOk, plain, sidOk, word } from "./limits";
 
+/** a value's text with every object's keys in order: two records that say the same read the same, however their keys were written */
+const canon = (x: unknown): string => JSON.stringify(x, (_k, o) => o && typeof o === "object" && !Array.isArray(o) ? Object.fromEntries(Object.keys(o).sort().map(k => [k, o[k]])) : o);
+
 export const put = mutation({
   args: {
     pid: v.string(),
@@ -19,15 +22,22 @@ export const put = mutation({
     // (a visit is its browser's: where its tape is here under another id, records under its name are refused too)
     const visit = await ctx.db.query("visits").withIndex("by_sid", q => q.eq("sid", sid)).unique();
     if (visit && visit.pid !== pid) bad("sid: another browser's visit");
+    let kept = 0;
     for (const e of events) {
       word(e.kind, "kind");
       if (e.scenario !== undefined) word(e.scenario, "scenario");
       if (!Number.isFinite(e.at)) bad("at: not a number");
       plain(e.data ?? null, "data");
       if (JSON.stringify(e.data ?? null).length > LIMITS.eventMax) bad(`data: larger than ${LIMITS.eventMax}`);
+      // (THE SAME RECORD TWICE IS KEPT ONCE: a call that did not come back to a leaving page may still have got here — the browser finishes it without
+      // the page — and the page, which cannot know, sends its records again. A real visit's last `end` and `perf` were here twice. Same visit, same moment
+      // on the page's clock, same kind, same words = the record already held)
+      const had = await ctx.db.query("telemetry").withIndex("by_sid", q => q.eq("sid", sid).eq("at", e.at)).collect(), text = canon(e.data ?? null);
+      if (had.some(r => r.kind === e.kind && canon(r.data ?? null) === text)) continue;
       await ctx.db.insert("telemetry", { sid, pid, at: e.at, kind: e.kind, ...(build !== undefined ? { build } : {}), ...(e.scenario !== undefined ? { scenario: e.scenario } : {}), data: e.data ?? null });
+      kept++;
     }
-    return { kept: events.length };
+    return { kept };
   },
 });
 

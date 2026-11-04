@@ -24,6 +24,7 @@
 //                the page's URL and is not in these runs (picks-boot holds it on); the solo night has no scripted player (picks-boot holds its boot)
 import { resolve } from 'node:path';
 import { readFileSync, rmSync } from 'node:fs';
+import { groupsFit } from './listed.ts';
 
 const ROOT = resolve(import.meta.dir, '../..');
 const TAG = 'PICKS-BOOT ';
@@ -137,7 +138,7 @@ export async function picksList(): Promise<boolean> {
   { const SP = await import(`${ROOT}/src/ui/startpage.ts`), all = MS.missionList(), { list, first: n } = SP.startPageList(), top = [...new Set(L.map(p => p.mission))];
     const groups = [...new Set(all.map((m: any) => m.group))], want = groups.flatMap(g => { const of = all.filter((m: any) => m.group === g); return [...top.flatMap(id => of.filter((m: any) => m.id === id)), ...of.filter((m: any) => !top.includes(m.id))]; });
     F.verdict(SP.START_PAGE.on === false && SP.startPageWanted('') === false && n === 0 && list.length === all.length && new Set(list.map((m: any) => m.id)).size === all.length && want.every((m: any, i: number) => list[i].id === m.id && list[i].group === m.group)
-      && top.every(id => SP.pickOfMission(id)?.mission === id) && list.filter((m: any) => !top.includes(m.id)).every((m: any) => SP.pickOfMission(m.id) === null) && groups.every(g => list.filter((m: any) => m.group === g).length <= 8),
+      && top.every(id => SP.pickOfMission(id)?.mission === id) && list.filter((m: any) => !top.includes(m.id)).every((m: any) => SP.pickOfMission(m.id) === null) && groupsFit(MS, list, groups as string[]),   // (listed.ts: no group draws more than eight; a row cut from the list is not counted)
       "the one starting page is off in a harness; its rows as data: the list's groups in their order, inside a group the short list's missions first in play order, then the rest in the list's own, each mission exactly once and no row outside a group",
       `on ${SP.START_PAGE.on} · ${list.length} of ${all.length}:\n    ${groups.map(g => `${g}: ${list.filter((m: any) => m.group === g).map((m: any) => (top.includes(m.id) ? '*' : '') + m.id).join(', ')}`).join('\n    ')}`);
     MS.GROUPS_UI.on = false; let flat: any, allFlat: any[]; try { allFlat = MS.missionList(); flat = SP.startPageList(); } finally { MS.GROUPS_UI.on = true; }

@@ -31,6 +31,7 @@
 //   token went null mid-hold, a synthetic context nothing fits. lintDialogue() holds every speaker to the same rules: ≤ MAX_CHARS (aim ≤ AIM_CHARS) after the
 //   longest token expansion, Sam ≤ SAM_MAX_CHARS, tokens only from TOKENS, needs only from NEEDS, and not one phrase off the ORIGINALITY_BLOCKLIST.
 // ============================================================================================================================================================
+import { men } from './seats';
 import { SideMap } from '../math/side';
 import { v3, approachAngle } from '../math/vec';
 import type { Vec3 } from '../math/vec';
@@ -1999,7 +2000,7 @@ export function snatchLines(): string[] { return Object.values(SNATCH_LINES).fla
 interface AmbientState { next: number; run: AmbientRun | null; played: Map<string, number>; count: number; }
 const ambientByGame = new SideMap<object, AmbientState>('dialogue.ambientByGame');
 export function ambientState(g: Game): AmbientState { let S = ambientByGame.get(g); if (!S) { S = { next: -1, run: null, played: new Map(), count: 0 }; ambientByGame.set(g, S); } return S; }
-function ambientLive(g: Game): boolean { return g.aiEnabled && !g.quietUtility && !g.puppet && !g.touring && escalationOf(g) === 0 && !g.alarm.episode && !g.blackout.active && !g.player.holding && !g.player.down; }
+function ambientLive(g: Game): boolean { return g.aiEnabled && !g.quietUtility && !g.puppet && !g.touring && escalationOf(g) === 0 && !g.alarm.episode && !g.blackout.active && !men(g).some(pl => pl.holding || pl.down); }
 /** a calm patrolling staff man with nothing on his hands or his mind, not already talking, not held still by anybody's script */
 function chatty(g: Game, x: Guard): boolean { return x.team === 'guard' && !x.unit && x.state === 'patrol' && !x.held && !x.script && !x.task && !x.bodyDuty && !x.pinned && !x.hold && !x.leader && !x.post && x.awareness < 0.15 && !(x.bubble && g.time - x.bubble.t < x.bubble.dur + 1) && !needsBusy(x) && g.guards.includes(x); }   // (needsBusy: a man telling the floor he is off for a coffee, or away on one — game/needs.ts — is not stopping to chat)
 /** still fit to keep talking (the hold flag is ours by now) */

@@ -348,7 +348,7 @@ export class WallBreak {
     return true;
   }
   /** the picture's static tables are stale (BoxWorld re-packs by itself on the page; the native host's static serial reads this) */
-  private bump() { const w = this.g.engine.world as { geomSerial?: number }; w.geomSerial = (w.geomSerial ?? 0) + 1; }
+  private bump() { const w = this.g.engine.world as { geomSerial?: number }; w.geomSerial = (w.geomSerial ?? 0) + 1; this.g.col.wrote(); }
 
   // ---------------------------------------------------------------- opening cells
   /** Open `cells` of B (already-open ones ignored). Returns the change row, or null when nothing opened / the piece cap refused it. */
@@ -630,7 +630,8 @@ export class WallBreak {
     if (!hung.length) return this.planOf(at, opts, R);
     // (the boards the charge is set on stand in no line of the plan: hidden as the engine hides a static — the flags every ray reads when it is asked — and put back)
     const boxes = this.g.col.boxes, was = hung.map(j => boxes[j].flags); for (const j of hung) boxes[j].flags |= HIDE;
-    try { return this.planOf(at, opts, R); } finally { hung.forEach((j, k) => { boxes[j].flags = was[k]; }); }
+    this.g.col.wrote();
+    try { return this.planOf(at, opts, R); } finally { hung.forEach((j, k) => { boxes[j].flags = was[k]; }); this.g.col.wrote(); }
   }
   private planOf(at: Vec3, opts: BlastOpts, R: number): { B: Breakable; cells: number[]; d: number }[] {
     const g = this.g; const K = WALLS.blast;

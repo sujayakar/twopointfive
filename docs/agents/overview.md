@@ -73,6 +73,40 @@ Every line checked against the code at 527a92a. The build is THE PAGE IN THE BRO
 src/main.ts          boot, frame loop, HUD, hotkeys, automation hooks      src/engine.ts   device, settings, frame orchestration
 src/cloud/           the hosted page's side of its backend (cloud.ts boot + who the browser is, wire.ts, tapes.ts, telemetry.ts, prefs.ts): nothing of it exists on a build given no
                      address. cloud/ (top level) = the backend itself, a package of its own. docs/agents/workflow.md, "The hosted build and its backend"
+src/gpu/adapter.ts    ASKING THE BROWSER FOR A GPU (2026-10-27; `GPU_ASK`, `?gpuask=0` = one ask as it was): `pickAdapter` asks for the fast card, then with no
+                     preference (never taking the browser's software adapter from that second ask), and on nothing throws `NoGpuError` whose `facts` (plain JSON)
+                     hold each ask's answer, the card WebGL names, the browser and the system; `noGpuWords` is the red card's text, `showFatalError`
+                     (gpu/device.ts) draws it with a Copy button, and every red card tells `FATAL.tell` (nobody sets it yet). A start the second ask gave says so
+                     after the adapter's name. Imports nothing. `docs/agents/qa.md`.
+src/host/savefile.ts  THE ONE DOOR A FILE LEAVES THE PAGE BY (2026-10-27): `saveFile(kind, name, blob, { meta, holdMs, done })` hands the file to `SAVED.sink`,
+                     the listener main.ts sets beside `cloudBoot` on a build with a backend (`cloud.save`, src/cloud/files.ts: the journal as 'journal',
+                     a benchmark's take as 'benchperf'), and ANSWERS WHAT BECAME OF IT (`{ went, local }`: `went` 'sent' = going up now, 'held' = kept
+                     in memory until the notice has been read, false = going nowhere: nobody listens, sharing off, over the backend's bound; `local` =
+                     the browser was handed it as a download). `done(arrived)` is told once, later, of a file that was taken: it is on the backend, or
+                     it was let go. NO DOWNLOAD (the maintainer, the same day: "we should get rid of local downloads entirely"; his pick for a file that
+                     cannot go: no download, the page says it was not sent, the editor keeps saving its level files) for a kind that has given its
+                     download up: a recorder's take ('perf'; `meta.of = 'bench'` on a benchmark's), a benchmark's RESULT ('bench', the BenchResult as
+                     JSON, `tellSaved`), the session journal and an exported checkpoint (the debug panel's 'export chosen', `ui/bindings.ts`; its
+                     kind came off `SAVE_UP.local` the same day). Whoever saved it says where it went (`savedWords`: "is being sent to the developer" /
+                     "will be sent" / "wasn't sent" / "was sent"): the F9 and F8 notes, the F10 note and the checkpoint export's line (each followed by a second one when the file has arrived or
+                     could not be sent), the benchmark card's line (qa.md). STILL DOWNLOADED (`SAVE_UP.local`, and told to the listener after the
+                     click as before; THROWS where the download could not be asked for): the editor's level alone, which stays. A REPLAY IS NO KIND OF
+                     THIS DOOR'S (since the replay pages gave their downloads up, the same day) and nothing downloads one: F7 and the engine
+                     replay's Save hand theirs to the backend with `cloud.ts cloudFile`, the map viewer's goes up with its notes, a kept visit by
+                     the tape sync (replays.md). The door has no kind to save one under, and `savefile-check` pins that no file with replay in
+                     its name imports the door (a replay saved under another kind from elsewhere is not caught). `?downloads=1`
+                     (`SAVE_UP.on = false`, carried along a benchmark's scenes) = the door as it was, every file downloaded: a developer's way to a
+                     file. `wanted(kind)`: somebody would take a file, so a take of tens of MB is not put together for nobody. No knob table and no
+                     row on the frozen stand: a page-only table like `GPU_ASK`, no game state reads it. With no listener (the one-file build, the
+                     harness, a dev page whose server runs no backend) a take or a journal goes nowhere but the shot server of a page on this machine
+                     (`onThisMachine`), and the note then says where it landed (`REC → …`) or that it wasn't saved. WHAT NO DOWNLOAD COSTS, read in the code: with sharing off or no backend a take or a journal cannot be kept at
+                     all (a developer: `?downloads=1`, or after the fact `__saveUp.on = false` in the console and `__journal.save()` /
+                     `__perfrec.deliver(__lastPerfDump)`); a page left while a large file is going up loses it (the benchmark card's Close waits up
+                     to `BENCH_SEND_MS` for `cloud.filesIdle`, and its line turns to "were sent"); a file HELD on a page that never shows the
+                     notice (F9 on a mission opened by its link, first visit) is lost with the page. A long take fits: the backend packs text. A page is one bundle: the workbench has no listener, and the replay pages carry no door.
+                     `bun run tools/qa/savefile-check.ts` (`SAVEFILE_BREAK=1` must fail; it also drives the door over the
+                     real `FileSync` and reads main.ts's mapping) is red on a `.download =` or createObjectURL of its own in src/. Checked 2026-10-27:
+                     that check and bench-check on both stands; on a page, see qa.md. Never seen on a GPU.
 src/render/          passes.ts (pass graph + target lifecycles), frame.ts (uniforms/flags — THE flag table + Frame byte table + the scene prelude incl. TRACE_VARIANT), lights.ts (+ identity
                      maps for the reservoirs), rc.ts (cascades), probe.ts (the light meter / smoke probe queries), gbuffer.ts, texpool.ts (pooled targets + history resampling),
                      denoise.ts (the shared denoiser's pipelines), froxels.ts, particles.ts (GPU pool + impulses + wind records), decals.ts, reach.ts (per-light reach masks), wear.ts (traffic
@@ -158,7 +192,7 @@ the round-cone proxies; `engine.meshShadowsAvailable` false when the adapter's s
 (informational: the pass graph, not a shader, reads it), the perf lane's `BounceCards` 33554432 / `DirectSeedHold` 67108864 / `GiAdaptiveHist` 134217728,
 `Glass` 268435456 (`settings.glass`), `FroxelVol` 536870912 (`settings.froxelVol`, see the froxel bullet), `Restir` 1073741824 (`settings.restir`, the ReSTIR bullet) — bit 31 (the sign bit: compare with `>>> 0` / `!== 0` on the CPU) and bit 15 (32768, freed 2026-10) are the two left. **`frame.ts FrameFlags` is the one table** (common.wgsl's `FLAG_*` consts must
 carry the same values under the same names) and the `Frame` uniform's tail is laid out cards @416 · cardSlots @432 · weatherA/B/C @464/480/496 · glassCfg
-@512 · weatherD @528 · volCfg @544 · froxelA/B/C @560/576/592 · prevCam @608 · rtCfg @624 · matCfg @640 · p5Cfg @656 · jitter @672 · markCfg @688 · sharpCfg @704 · sharpCfgB @720 · sharpCfgC @736 · rigCfg @752 · rigCfgB @768 · giCfg @784 · weatherE @800 · weatherF @816 (the particle rain's two rows) · shadeCfg @832 (the look prototype's shade row, zeros anywhere else) · `FRAME_BYTES` 848 (byte table at the top of frame.ts); `bun run tools/qa/frame-layout.ts` (also `probes.ts frame-layout`, and under
+@512 · weatherD @528 · volCfg @544 · froxelA/B/C @560/576/592 · prevCam @608 · rtCfg @624 · matCfg @640 · p5Cfg @656 · jitter @672 · markCfg @688 · sharpCfg @704 · sharpCfgB @720 · sharpCfgC @736 · rigCfg @752 · rigCfgB @768 · giCfg @784 · weatherE @800 · weatherF @816 (the particle rain's two rows) · `FRAME_BYTES` 832 (byte table at the top of frame.ts); `bun run tools/qa/frame-layout.ts` (also `probes.ts frame-layout`, and under
 `perf`) recomputes the struct's WGSL layout and fails on any offset / size / bit that disagrees — run it whenever you touch either side. Box flags in `scene/boxes.ts`
 (`NoShadow` = invisible to every ray, `NoPrimary` = not rasterised, `Cutaway` (viewer stage only), `Dynamic`,
 `Emissive` (auto), `AreaLit`, `Rot`, `Gloss` = 128 (polished floor finish: lobby stone, corridor / break-room lino — the last bit of the
@@ -175,6 +209,51 @@ Wherever this file still says 'the native host / overlay / engine', '.metal' or 
 
 ## Systems worth knowing before touching them
 
+- **One layout for every box (2026-11-02, `scene/boxes.ts boxOf` / `makeBox`).** A box is made with EVERY field of the `Box` interface in place, in one order (the ones
+  it does not use hold `undefined`), and a field is never `delete`d (set it to `undefined`: `scene/round.ts` did delete). Why: the line tests, the rays, the pack and
+  the fog's list read boxes in hot loops, and an engine reads a field in one load only while every object the loop meets has the same hidden layout. The statics came
+  in 14 layouts and a tick's dynamic boxes in 17 (a spread of whatever keys a caller gave, six literals in `rigProps.ts`, one each in `throwables.ts` and
+  `destruction.ts`), so those loops ran on the slow lookup. Make a box with `makeBox({...})` (any keys) or, where it is made every tick, `boxOf(c, h, yaw, albedo,
+  emissive, flags, owner, rot?, name?)`; never with a bare literal, and a COPY to change with `copyBox(b)` then assignments, never a spread (`{ ...b, h }` is a
+  layout of its own: the drawn twin of a box, the fog's kept boxes, a thin line's copy, a grown hull were). A new `Box` field goes into `boxOf`'s literal and
+  `copyBox`'s: both are typed to hold every key of the interface, so leaving one out does not typecheck. The weather drying the ground (`weather.ts`, `lookTidy.ts`)
+  deleted `wetK` / `rough` / `aniso` as `round.ts` did; all set `undefined` now. No switch: nothing reads whether a key is PRESENT
+  (a missing field and an `undefined` one read alike everywhere; JSON drops both), and the run is the same to the bit (`tools/qa/tickcost.ts --compare`, all five runs,
+  under bun and under node). Measured, 38 634 ticks: 3.48 → 3.18 ms a tick under bun (−9 %, every run between −7 and −10 %), the pack 0.22 → 0.15 ms; under node the
+  tick is within the noise (three rounds each way), so the page gains little and a bun server gains the 9 %. Check: `bun run tools/qa/boxshape-check.ts` counts the
+  layouts of the statics, the door leaves and the tick's dynamic list once a second of a run (bun: the structure id; node with `--allow-natives-syntax`: the map) and is
+  red on a second one; `BOXSHAPE_BREAK=1` makes one bare literal a second and must fail. The rollback snapshot copies 26 slots a box where it copied 8 to 12 (not
+  measured apart). Never seen on a GPU (the pack writes the same floats: `packBox` reads the same fields).
+- **The list and the pack (2026-11-02, `scene/boxes.ts BoxWorld.list` / `relist` / `upload` / `ensurePacked`).** The box world is made twice over, for two readers.
+  THE LIST (`list()`, private) is what the GAME reads: `all`, the glass statics' list, the raycast's grid over the statics. THE PACK is the picture's: every box into
+  rows for the GPU, the visible and cut lists, the trace grid, every `writeBuffer`. `upload()` = the list, then the pack; `relist()` = the list alone, for a tick that
+  is NOT DRAWN; `ensurePacked()` = the pack if a relist has left the device behind the list, for a GPU pass that reads the rows with no draw before it. Who lists: the
+  page between the ticks of one frame and on a burst's undrawn steps (`main.ts`), the engine replay between the ticks of a seek or a fast frame
+  (`replay/engineplay.ts between`), `Game.fogBack` handing the step's list back after a draw that lifted the fog, and a game server on every tick (it never draws).
+  Who packs: `engine.ts` before every draw. Who asks `ensurePacked()`: the smoke solver stepped alone by a tool (`smoke/smoke.ts stepAlone` / `profileStep`: its
+  obstacle bake reads the rows; `tools/qa/fire-page.cjs` steps the page undrawn and then the solver) and `__wgslRun` with the scene bound. A NEW draw-less reader of
+  the rows does the same. No switch (nothing the game reads moves; the picture is sent the same bytes). Check: `bun run tools/qa/relist-check.ts` plays a run twice,
+  the whole pack between ticks against the list alone, and compares the raw bits of the game and, after every drawn tick, the bytes on the device a shader can read
+  (the rows of the boxes there are, the tables behind them, the cut rows of the boxes that are cut or round, the visible words, every other buffer as far as it was
+  last written); `RELIST_BREAK=1` hands every 7th drawn tick the list alone and must fail. ALL PASS on `mousehole-four`, `hostage-rescue`, `block-squads`, `compound-four`,
+  `pass-four` (seed 1 each) on the shipped stand and on the first two on the frozen one; the red path fails both of its runs. The checks that model the page's loop
+  (`fixedstep-check`, `tween-check`, `autocam-check`, `findme-check`, `tabback`) list between ticks as the page does and pass; `replayfog-check` passes on the fog's
+  hand-back.
+  Measured at a net tick's cadence (`tickcost.ts --each`, the list made after EVERY update; with `--list`, by relist), 38 634 ticks, each pair the same run to the
+  bit, against the build before any of it: under bun the list 0.68 → 0.03 ms and the whole tick (update + list) 4.05 → 3.31 ms
+  (−18 %); under node, two cores a side, 0.93 → 0.05 ms and 5.89 → 4.83 ms (−18 %). The update alone is 3 to 4 % less in both (the one layout; run to run it varies by
+  as much). Never seen on a GPU: the proof is of bytes sent to the headless device; on the page it was stepped and drawn
+  on the software adapter (a squad mission, undrawn bursts then a draw; the page's own loop under `tools/qa/tween-page.cjs`), not timed in a browser.
+- **The raycast's grid is rebuilt when a static's SHAPE moved (2026-11-02, `scene/boxes.ts list`, `rgShape`).** `buildRayGrid` registers each static's padded
+  footprint in cells: it reads the centre, the half-sizes and the turn, nothing else. It was rebuilt whenever ANY pack input of ANY static moved (the pack's shadow:
+  colour times wetness, emissive, marks, flags …), which on a level with weather or a fire is nearly every tick (The pass: 5 540 rebuilds in 5 616 ticks, about
+  0.1 ms each; the compound: 429 in 8 060). The list keeps its own shadow of the statics' shapes (12 doubles each: centre, yaw, half-sizes, the rotation) and
+  rebuilds the grid when one differs or the count did; the pack's shadow is the pack's alone again (which static's rows and which half of the trace grid go up).
+  The same run to the bit (a grid built from the same footprints is the same grid). Check: `bun run tools/cpu-frame/raycast-diff.ts` ends by re-shaping four statics
+  in place (moved, resized, turned, rotated; the count unchanged, as `wallbreak.ts` holing a holed wall does), asks that `relist()` rebuilt the grid once, compares
+  rays aimed at the four with the brute force, then changes only their look and asks that nothing was rebuilt; `RAYGRID_BREAK=1` keeps the rebuild from happening and
+  must exit 1. NOT DONE: the trace grid's static half and the statics' rows for the GPU still go up whole on any static's change, so on such a level every drawn
+  frame re-sends them (the pack's side; not measured in a browser).
 - **One model for presentation and AI.** Guards' vision uses the player's GPU light-meter irradiance and marches
   sight lines through the smoke density field; hearing uses the same propagation (`collision.ts` SoundPaths) the
   audio mixer uses. Don't add AI-only shortcuts that the picture doesn't show. Since 08-12 BODIES are found by the same rule (`guards.ts bodyLit / bodyVisibility`, `tune.bodyLight`

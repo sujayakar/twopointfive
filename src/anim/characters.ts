@@ -103,6 +103,8 @@ export class CharacterRenderer implements SkinnedDrawable {
   readonly jointFloats = JOINT_STRIDE * 16;
   ownerOf(i: number): number { return this.instU32[i * INST_F32 + 7]; }
   drawJoints(data: Float32Array, count: number) { if (count > 0) this.device.queue.writeBuffer(this.jointMats, 0, data.buffer, data.byteOffset, count * JOINT_STRIDE * 64); }
+  /** one man's palette alone (instance `i`; `data` = his joint matrices, from its start): host/ahead.ts moves one man for a draw and hands the GPU no more than him */
+  drawJointsOf(i: number, data: Float32Array) { if (i >= 0) this.device.queue.writeBuffer(this.jointMats, i * JOINT_STRIDE * 64, data.buffer, data.byteOffset, JOINT_STRIDE * 64); }
   finish(count: number) {
     this.instanceCount = count;
     if (this.matDirty) { this.device.queue.writeBuffer(this.charMats, 0, this.matData.buffer, 0, MAX_CHARS * CHAR_MAT_BYTES); this.matDirty = false; }

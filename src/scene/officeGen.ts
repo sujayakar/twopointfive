@@ -70,20 +70,6 @@ export type Opening = { a: number; b: number; y0?: number; y1?: number; mullions
  *  props, ceiling panels) over one fresh set of lists — what buildOfficeProcedural below lays the office out with, statement for statement as they were inside it,
  *  and what a generator for ANOTHER level builds with (tools/levels/: the scenario levels — same boxes, same palette, same finishes, same markings; no new art).
  *  Every call appends to the kit's own `boxes` / `props` / `lights` / `switchables`; `grp(name)` names the editor group of what follows (trace.groups). */
-/** THE TWO VENDING MACHINES' LIT BODIES, for whoever stands one up (the office's break room; the smoke lab's yard): the upper body's half size and paint, and its
- *  markings with the emissive field's radiances scaled so the ONE light game.ts registers for it has the LUMINOUS intensity of the slab it replaced (luminance of
- *  its mean radiance × its area = luminance of the old slab's radiance × the old slab's area; luminance, not the peak channel the light's intensity keys on: the
- *  field's light is whiter than the pure red or blue slab, and matched on the peak channel the meter read a third more in front of the machines). `red` is the
- *  drinks machine (a painted red body, satin), `blue` the near-black navy one. colW = the half width of the control column, which stands on a flush block; the
- *  rest of the front stands on a plinth set 6 cm back, the dispenser's recess. fluxK × the old slabs' intensity. */
-export function vendingSpec(kind: 'red' | 'blue', TX: number, fluxK = 1): { h: Vec3; body: Vec3; marks: MarkingDef[]; colW: number; plinth: Vec3 } {
-  const lum = (c: readonly number[]) => 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2];
-  const red = kind === 'red', h: Vec3 = red ? [0.5, 0.775, 0.45] : [0.42, 0.775, 0.45], body: Vec3 = red ? [0.42, 0.05, 0.045] : [0.02, 0.03, 0.085];
-  const e: Vec3 = red ? [2.6, 0.5, 0.35] : [0.4, 0.9, 2.8], L = lum(e) * (red ? 0.84 * 1.3 : 0.72 * 1.1) * fluxK, make = red ? MD.vendingRedMarks : MD.vendingBlueMarks;
-  let marks = make(h, 1, TX);
-  { const st = markStats(marks[0], body, TX); const k = L / Math.max(lum(st.meanL) * st.area, 1e-6); marks = make(h, k, TX); }
-  return { h, body, marks, colW: red ? 0.15 : 0.135, plinth: [0.02, 0.02, 0.024] };
-}
 export function officeKit(trace?: GeneratorTrace, opts: GeneratorOpts = {}) {
   const MARKS = opts.markings ?? true, DEMOTE = opts.demote ?? true, TX = opts.texel ?? MARKING_TEXEL;
   /** the box's markings, if the lane's markings are on (spread into an add() / a prop part) */
@@ -148,10 +134,10 @@ export function officeKit(trace?: GeneratorTrace, opts: GeneratorOpts = {}) {
   function desk(x: number, z: number, w: number, d: number, yaw = 0, albedo = C.wood) {
     // top + two side panels (as yawed boxes around center)
     const at = frameAt(x, z, yaw);
-    add({ c: at(0, 0.735, 0), h: [w / 2, 0.025, d / 2], yaw, albedo, stuff: 'veneer' });
-    add({ c: at(-w / 2 + 0.03, 0.36, 0), h: [0.025, 0.36, d / 2 - 0.02], yaw, albedo, stuff: 'veneer' });
-    add({ c: at(w / 2 - 0.03, 0.36, 0), h: [0.025, 0.36, d / 2 - 0.02], yaw, albedo, stuff: 'veneer' });
-    add({ c: at(0, 0.45, -d / 2 + 0.03), h: [w / 2 - 0.05, 0.25, 0.012], yaw, albedo, stuff: 'veneer' }); // modesty panel
+    add({ c: at(0, 0.735, 0), h: [w / 2, 0.025, d / 2], yaw, albedo });
+    add({ c: at(-w / 2 + 0.03, 0.36, 0), h: [0.025, 0.36, d / 2 - 0.02], yaw, albedo });
+    add({ c: at(w / 2 - 0.03, 0.36, 0), h: [0.025, 0.36, d / 2 - 0.02], yaw, albedo });
+    add({ c: at(0, 0.45, -d / 2 + 0.03), h: [w / 2 - 0.05, 0.25, 0.012], yaw, albedo }); // modesty panel
   }
   function monitor(x: number, z: number, yaw: number, on: boolean, baseY = 0.76, keyboard = true, standby = false) {   // baseY = the surface it stands on (desk 0.76, reception counter 1.15); keyboard: false for a second screen; standby (with `on` false): a working screen switched OFF — a switchable built dark, its picture there for when somebody switches it on
     const at = frameAt(x, z, yaw);
@@ -198,7 +184,7 @@ export function officeKit(trace?: GeneratorTrace, opts: GeneratorOpts = {}) {
     prop('cardboard', x, z, yaw, 1 + 22 * Math.pow(s, 3), [{ off: [0, y + s / 2, 0], h: [s / 2, s / 2, s / 2], yaw: 0, albedo: C.cardboard, ...mk(MD.cartonMarks([s / 2, s / 2, s / 2], TX)) }]);   // half-full moving carton: ~5 kg at 55 cm (markings: tape over the top and down the sides, the print, a label)
   }
   // --- set dressing helpers (all boxes, all diffuse) ---
-  const rug = (x: number, z: number, w: number, d: number, albedo: Vec3, yaw = 0) => add({ c: [x, 0.018, z], h: [w / 2, 0.006, d / 2], yaw, albedo, stuff: 'cloth', flags: BoxFlag.NoShadow });
+  const rug = (x: number, z: number, w: number, d: number, albedo: Vec3, yaw = 0) => add({ c: [x, 0.018, z], h: [w / 2, 0.006, d / 2], yaw, albedo, flags: BoxFlag.NoShadow });
   function plant(x: number, z: number, s = 1) {   // pot + two rotated foliage masses as one rigid group; footprint = the foliage's flat sides, not its rotated corners
     prop('plant', x, z, 0, 14 * Math.pow(s, 3), [
       { off: [0, 0.22 * s, 0], h: [0.2 * s, 0.22 * s, 0.2 * s], yaw: 0, albedo: [0.36, 0.3, 0.26] },
@@ -209,7 +195,7 @@ export function officeKit(trace?: GeneratorTrace, opts: GeneratorOpts = {}) {
   const bin = (x: number, z: number) => prop('bin', x, z, 0.3, 2.5, [{ off: [0, 0.2, 0], h: [0.13, 0.2, 0.13], yaw: 0, albedo: [0.12, 0.12, 0.13] }]);
   function cabinet(x: number, z: number, yaw: number) {   // filing cabinet, drawer fronts on local -Z
     const at = frameAt(x, z, yaw);
-    add({ c: [x, 0.66, z], h: [0.23, 0.66, 0.3], yaw, albedo: [0.58, 0.58, 0.56], stuff: 'steel', ...mk(MD.cabinetMarks([0.23, 0.66, 0.3], TX)) });   // (markings: drawer seams + pulls)
+    add({ c: [x, 0.66, z], h: [0.23, 0.66, 0.3], yaw, albedo: [0.58, 0.58, 0.56], ...mk(MD.cabinetMarks([0.23, 0.66, 0.3], TX)) });   // (markings: drawer seams + pulls)
     if (!DEMOTE) for (let k = 0; k < 3; k++) add({ c: at(0, 0.3 + k * 0.4, -0.305), h: [0.19, 0.012, 0.006], yaw, albedo: [0.25, 0.25, 0.26], flags: BoxFlag.NoShadow });   // (relief: the pull strips as boxes)
   }
   let paperSeed = 0;
@@ -248,13 +234,13 @@ export function officeKit(trace?: GeneratorTrace, opts: GeneratorOpts = {}) {
     const t = d.exterior ? 0.24 : 0.12; const gap = d.width + 2 * JAMB_FACE; const alongX = Math.abs(Math.sin(d.closedDir)) < 0.5;
     const fwd = (alongX ? Math.cos(d.closedDir) : Math.sin(d.closedDir)) > 0, hl = alongX ? d.hinge[0] : d.hinge[1];
     const a = fwd ? hl - JAMB_FACE : hl + JAMB_FACE - gap; const w = alongX ? d.hinge[1] : d.hinge[0];   // gap start along the wall, wall line coordinate
-    const frameCol: Vec3 = d.exterior ? [0.2, 0.21, 0.23] : [0.3, 0.24, 0.17], frameStuff = d.exterior ? 'steel' as const : 'veneer' as const; const hy = DOOR_HEAD / 2;   // (a paint written as numbers says what it is: scene/stuff.ts)
-    const jamb = (u: number) => alongX ? add({ c: [u, hy, w], h: [0.03, hy, t / 2 + 0.012], albedo: frameCol, stuff: frameStuff }) : add({ c: [w, hy, u], h: [t / 2 + 0.012, hy, 0.03], albedo: frameCol, stuff: frameStuff });
+    const frameCol: Vec3 = d.exterior ? [0.2, 0.21, 0.23] : [0.3, 0.24, 0.17]; const hy = DOOR_HEAD / 2;
+    const jamb = (u: number) => alongX ? add({ c: [u, hy, w], h: [0.03, hy, t / 2 + 0.012], albedo: frameCol }) : add({ c: [w, hy, u], h: [t / 2 + 0.012, hy, 0.03], albedo: frameCol });
     jamb(a - 0.01); jamb(a + gap + 0.01);
     const hb = LEAF_H + 0.005, hc = (hb + DOOR_HEAD + 0.065) / 2, hh = (DOOR_HEAD + 0.065 - hb) / 2;   // the HEAD comes down past the top of the shut leaf (the leaf stands 1 cm off the floor: its top is LEAF_H + 0.01) — no slot over a shut door for light to pass through
-  if (alongX) add({ c: [a + gap / 2, hc, w], h: [gap / 2 + 0.04, hh, t / 2 + 0.012], albedo: frameCol, stuff: frameStuff }); else add({ c: [w, hc, a + gap / 2], h: [t / 2 + 0.012, hh, gap / 2 + 0.04], albedo: frameCol, stuff: frameStuff });
+  if (alongX) add({ c: [a + gap / 2, hc, w], h: [gap / 2 + 0.04, hh, t / 2 + 0.012], albedo: frameCol }); else add({ c: [w, hc, a + gap / 2], h: [t / 2 + 0.012, hh, gap / 2 + 0.04], albedo: frameCol });
     const sg = fwd ? 1 : -1;
-    const stop = (u0: number, u1: number) => { const m = sg * (u0 + u1) / 2, hu = (u1 - u0) / 2; return alongX ? add({ c: [d.hinge[0] + m, hy, w], h: [hu, hy, 0.02], albedo: frameCol, stuff: frameStuff }) : add({ c: [w, hy, d.hinge[1] + m], h: [0.02, hy, hu], albedo: frameCol, stuff: frameStuff }); };   // (u along the closed leaf from the hinge line)
+    const stop = (u0: number, u1: number) => { const m = sg * (u0 + u1) / 2, hu = (u1 - u0) / 2; return alongX ? add({ c: [d.hinge[0] + m, hy, w], h: [hu, hy, 0.02], albedo: frameCol }) : add({ c: [w, hy, d.hinge[1] + m], h: [0.02, hy, hu], albedo: frameCol }); };   // (u along the closed leaf from the hinge line)
     stop(-0.012, 0.024); stop(d.width - 0.004, d.width + 0.012);
   }
   return { MARKS, DEMOTE, TX, mk, boxes, lights, switchables, props, grp, add, slab, paneX, paneZ, wallX, wallZ, frameAt, desk, monitor, fitProp, prop, chair, cardboardBox, rug, plant, bin, cabinet, papers, wallArt, bench, car, shelf, ceilingPanel, doorFrame };
@@ -331,11 +317,11 @@ export function buildOfficeProcedural(trace?: GeneratorTrace, opts: GeneratorOpt
   // ---------------- lobby (x4..12, z12.2..24) ----------------
   grp('lobby');
   // reception desk (L-shape), couch, low table, plants
-  add({ c: [8.2, 0.55, 15.2], h: [1.6, 0.55, 0.35], albedo: C.woodDark, stuff: 'veneer' }); add({ c: [8.2, 1.12, 15.0], h: [1.7, 0.03, 0.45], albedo: C.stone });
-  add({ c: [9.95, 0.55, 16.1], h: [0.35, 0.55, 0.6], albedo: C.woodDark, stuff: 'veneer' });
+  add({ c: [8.2, 0.55, 15.2], h: [1.6, 0.55, 0.35], albedo: C.woodDark }); add({ c: [8.2, 1.12, 15.0], h: [1.7, 0.03, 0.45], albedo: C.stone });
+  add({ c: [9.95, 0.55, 16.1], h: [0.35, 0.55, 0.6], albedo: C.woodDark });
   monitor(7.6, 15.1, Math.PI, true, 1.15); chair(8.0, 14.2, Math.PI);   // monitor on the counter top (not in it), chair facing it
-  add({ c: [6.0, 0.22, 21.5], h: [1.1, 0.22, 0.45], albedo: [0.3, 0.12, 0.1], stuff: 'fabric' }); add({ c: [6.0, 0.6, 21.9], h: [1.1, 0.35, 0.12], albedo: [0.3, 0.12, 0.1], stuff: 'fabric' }); // couch
-  add({ c: [6.0, 0.2, 20.2], h: [0.6, 0.2, 0.35], albedo: C.woodDark, stuff: 'veneer' }); // low table
+  add({ c: [6.0, 0.22, 21.5], h: [1.1, 0.22, 0.45], albedo: [0.3, 0.12, 0.1] }); add({ c: [6.0, 0.6, 21.9], h: [1.1, 0.35, 0.12], albedo: [0.3, 0.12, 0.1] }); // couch
+  add({ c: [6.0, 0.2, 20.2], h: [0.6, 0.2, 0.35], albedo: C.woodDark }); // low table
   add({ c: [10.8, 0.3, 22.8], h: [0.3, 0.3, 0.3], albedo: C.stone }); add({ c: [10.8, 0.95, 22.8], h: [0.35, 0.4, 0.35], albedo: C.plant });
   add({ c: [4.9, 0.3, 13.3], h: [0.3, 0.3, 0.3], albedo: C.stone }); add({ c: [4.9, 0.95, 13.3], h: [0.3, 0.4, 0.3], albedo: C.plant });
   rug(6.2, 20.9, 3.4, 2.6, [0.34, 0.1, 0.09]);                                     // lounge rug under couch + table
@@ -377,10 +363,10 @@ export function buildOfficeProcedural(trace?: GeneratorTrace, opts: GeneratorOpt
   // clusters of 4 desks with 1.4 m partitions
   function cubicleCluster(cx: number, cz: number, colorA: Vec3, colorB: Vec3, seed: number) {
     // central spine partition along X and cross partition along Z
-    add({ c: [cx, 0.7, cz], h: [2.4, 0.7, 0.04], albedo: colorA, stuff: 'fabric' });   // (a partition is cloth over a board: its paint's name is a car's body and a hut's stucco as well, so it says so itself)
-    add({ c: [cx, 0.7, cz], h: [0.04, 0.7, 1.6], albedo: colorB, stuff: 'fabric' });
+    add({ c: [cx, 0.7, cz], h: [2.4, 0.7, 0.04], albedo: colorA });
+    add({ c: [cx, 0.7, cz], h: [0.04, 0.7, 1.6], albedo: colorB });
     // end caps
-    add({ c: [cx - 2.4, 0.7, cz], h: [0.04, 0.7, 0.9], albedo: colorA, stuff: 'fabric' }); add({ c: [cx + 2.4, 0.7, cz], h: [0.04, 0.7, 0.9], albedo: colorA, stuff: 'fabric' });
+    add({ c: [cx - 2.4, 0.7, cz], h: [0.04, 0.7, 0.9], albedo: colorA }); add({ c: [cx + 2.4, 0.7, cz], h: [0.04, 0.7, 0.9], albedo: colorA });
     // conventional cubicle cells: the desk runs along the spine partition with the screen against it, the worker faces the
     // partition and the chair sits behind them toward the cell's open (aisle) side — flipped from the first layout, which
     // parked the chairs in the spine and read as desks facing into the aisle
@@ -470,7 +456,7 @@ export function buildOfficeProcedural(trace?: GeneratorTrace, opts: GeneratorOpt
 
   // ---------------- conference room (x4..14, z4..10) ----------------
   grp('conference');
-  add({ c: [9.0, 0.72, 7.0], h: [2.2, 0.04, 0.8], albedo: C.woodDark, stuff: 'veneer' }); add({ c: [8.0, 0.35, 7.0], h: [0.25, 0.35, 0.3], albedo: C.black }); add({ c: [10.0, 0.35, 7.0], h: [0.25, 0.35, 0.3], albedo: C.black });
+  add({ c: [9.0, 0.72, 7.0], h: [2.2, 0.04, 0.8], albedo: C.woodDark }); add({ c: [8.0, 0.35, 7.0], h: [0.25, 0.35, 0.3], albedo: C.black }); add({ c: [10.0, 0.35, 7.0], h: [0.25, 0.35, 0.3], albedo: C.black });
   for (let i = 0; i < 4; i++) { chair(7.2 + i * 1.2, 5.75, Math.PI + (i - 1.5) * 0.1); chair(7.2 + i * 1.2, 8.25, (i * 0.13) % 0.4 - 0.2); }
   chair(6.2, 7.0, Math.PI / 2); chair(11.8, 7.0, -Math.PI / 2);
   // wall TV (east wall x=14) — standby: dim; UI can set "presentation" bright
@@ -574,7 +560,7 @@ export function buildOfficeProcedural(trace?: GeneratorTrace, opts: GeneratorOpt
   add({ c: [23.0, 0.35, 5.0], h: [0.4, 0.35, 0.4], albedo: [0.35, 0.25, 0.15] }); add({ c: [23.0, 1.0, 5.0], h: [0.3, 0.35, 0.3], albedo: C.plant });
   rug(26.3, 6.9, 3.4, 2.6, [0.28, 0.14, 0.1]); papers(26.0, 0.76, 6.4, 0.2); bin(27.7, 6.9);
   wallArt(22.09, 1.6, 6.6, 1.2, 0.8, [0.6, 0.55, 0.4], false); plant(29.4, 9.4, 0.9);
-  add({ c: [24.7, 0.3, 4.75], h: [0.9, 0.3, 0.45], albedo: [0.22, 0.2, 0.19], stuff: 'fabric' }); add({ c: [24.7, 0.62, 4.3], h: [0.9, 0.32, 0.12], albedo: [0.22, 0.2, 0.19], stuff: 'fabric' });   // low sofa under the north window (keeps the side door to the server room clear)
+  add({ c: [24.7, 0.3, 4.75], h: [0.9, 0.3, 0.45], albedo: [0.22, 0.2, 0.19] }); add({ c: [24.7, 0.62, 4.3], h: [0.9, 0.32, 0.12], albedo: [0.22, 0.2, 0.19] });   // low sofa under the north window (keeps the side door to the server room clear)
   // desk lamp: small fixture boxes + warm spot light
   add({ c: [27.2, 0.78, 6.0], h: [0.08, 0.02, 0.08], albedo: C.black }); add({ c: [27.2, 0.98, 6.0], h: [0.015, 0.2, 0.015], albedo: C.black });
   const lampHead = add({ c: [27.12, 1.2, 6.08], h: [0.07, 0.05, 0.07], albedo: C.black, emissive: [0, 0, 0] });
@@ -584,7 +570,7 @@ export function buildOfficeProcedural(trace?: GeneratorTrace, opts: GeneratorOpt
   // the sofa, the coat stand in the corner behind his chair (#1's light finds it from the far end of his search leg, 0.7 m short of the credenza); books among the
   // cartons on the east shelves, his certificate beside them, a briefcase against the desk's end panel, the phone. New solids only line the north wall and the
   // desk's east end: the door side, the kneehole #2 lights and every mark keep their room.
-  add({ c: [28.1, 0.375, 4.36], h: [0.9, 0.375, 0.22], albedo: C.woodDark, stuff: 'veneer' });                                  // credenza (x 27.2‥29.0, out to z 4.58)…
+  add({ c: [28.1, 0.375, 4.36], h: [0.9, 0.375, 0.22], albedo: C.woodDark });                                  // credenza (x 27.2‥29.0, out to z 4.58)…
   add({ c: [27.62, 0.87, 4.3], h: [0.09, 0.12, 0.02], albedo: [0.66, 0.56, 0.3] });                              // …a framed something on it…
   add({ c: [28.72, 0.83, 4.36], h: [0.08, 0.08, 0.08], albedo: [0.36, 0.3, 0.26] }); add({ c: [28.72, 1.03, 4.36], h: [0.13, 0.12, 0.13], yaw: 0.5, albedo: C.plant });   // …and a pot plant
   wallArt(27.55, 1.5, 4.135, 0.62, 0.82, [0.2, 0.28, 0.42], true); wallArt(28.5, 1.55, 4.135, 0.8, 0.6, [0.62, 0.5, 0.3], true);   // prints over the credenza (under the clerestory sill at 2.05)…
@@ -650,17 +636,24 @@ export function buildOfficeProcedural(trace?: GeneratorTrace, opts: GeneratorOpt
     // Calibration: the window's LUMINOUS intensity (luminance of its mean radiance × its area) = the old slab's (luminance of its radiance × its area). Luminance, not the peak
     // channel game.ts keys the light's intensity on: the window's light is whiter than the pure red / blue slab, and it is luminous flux that the light meter and the eye
     // integrate — matched on the peak channel the meter read a third more in front of the machines.
+    const lum = (c: readonly number[]) => 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2];
     const VENDING_FLUX_K = 1.0;   // TASTE: × the old slabs' luminous intensity. 1 = the break room lit exactly as before (and the fields as pale on screen as the old slabs: AgX desaturates radiance ≈ 2.3 at this exposure); ~0.5 reads a saturated red / blue front in a room half as bright
+    const eA: Vec3 = [2.6, 0.5, 0.35], eB: Vec3 = [0.4, 0.9, 2.8]; const LA = lum(eA) * (0.84 * 1.3) * VENDING_FLUX_K, LB = lum(eB) * (0.72 * 1.1) * VENDING_FLUX_K;
     // Each machine = an UPPER body (the marked front: field + control column) standing on a black PLINTH set 6 cm back over its left two-thirds — the dispenser
     // opening, a real recess with a real shadow, its back wall marked black with the flap bar — and a flush block under the control column. (+3 boxes a machine
-    // over the single body; footprint and height unchanged, so the nav grid and the collision are what they were.) The body, its paint and its calibrated marks are
-    // vendingSpec's (below: the smoke lab's floor stands the same two machines in its yard).
-    const A = vendingSpec('red', TX, VENDING_FLUX_K), B = vendingSpec('blue', TX, VENDING_FLUX_K), plinth = A.plinth;
-    const vendA = add({ c: [28.62, 1.125, 12.9], h: A.h, albedo: A.body, rough: 0.5, ...mk(A.marks) });
+    // over the single body; footprint and height unchanged, so the nav grid and the collision are what they were.)
+    const plinth: Vec3 = [0.02, 0.02, 0.024];
+    const bodyA: Vec3 = [0.42, 0.05, 0.045], hA: Vec3 = [0.5, 0.775, 0.45];       // the red machine: painted red body (satin: rough 0.5 — just over high's traced range)
+    let marksA = MD.vendingRedMarks(hA, 1, TX);
+    { const st = markStats(marksA[0], bodyA, TX); const k = LA / Math.max(lum(st.meanL) * st.area, 1e-6); marksA = MD.vendingRedMarks(hA, k, TX); }
+    const vendA = add({ c: [28.62, 1.125, 12.9], h: hA, albedo: bodyA, rough: 0.5, ...mk(marksA) });
     add({ c: [28.47, 0.175, 12.87], h: [0.35, 0.175, 0.42], albedo: plinth, ...mk(MD.dispenserMarks([0.35, 0.175, 0.42], TX)) });   // A's dispenser recess (x 28.12‥28.82, 6 cm back)
     add({ c: [28.97, 0.175, 12.9], h: [0.15, 0.175, 0.45], albedo: plinth });                                                          // flush block under A's column
     switchables.push({ name: 'vending', boxes: [vendA], group: 'breakroom', on: true, baseEmissive: [0, 0, 0] });
-    const vendBBody = add({ c: [29.55, 1.125, 12.9], h: B.h, albedo: B.body, rough: 0.5, ...mk(B.marks) });
+    const bodyB: Vec3 = [0.02, 0.03, 0.085], hB: Vec3 = [0.42, 0.775, 0.45];       // the blue machine: near-black navy body (its field's cap and frame)
+    let marksB = MD.vendingBlueMarks(hB, 1, TX);
+    { const st = markStats(marksB[0], bodyB, TX); const k = LB / Math.max(lum(st.meanL) * st.area, 1e-6); marksB = MD.vendingBlueMarks(hB, k, TX); }
+    const vendBBody = add({ c: [29.55, 1.125, 12.9], h: hB, albedo: bodyB, rough: 0.5, ...mk(marksB) });
     add({ c: [29.415, 0.175, 12.87], h: [0.285, 0.175, 0.42], albedo: plinth, ...mk(MD.dispenserMarks([0.285, 0.175, 0.42], TX)) });   // B's dispenser recess (x 29.13‥29.70)
     add({ c: [29.835, 0.175, 12.9], h: [0.135, 0.175, 0.45], albedo: plinth });                                                          // flush block under B's column
     switchables.push({ name: 'vending2', boxes: [vendBBody], group: 'breakroom', on: true, baseEmissive: [0, 0, 0] });

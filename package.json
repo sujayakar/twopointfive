@@ -4,11 +4,11 @@
   "version": "0.1.0",
   "type": "module",
   "scripts": {
-    "dev": "bun run tools/serve.ts",
+    "dev": "TPS_LOCAL_CLOUD=1 bun run tools/serve.ts",
     "build": "bun run tools/build.ts",
     "build:one": "bun run tools/build-one.ts",
     "typecheck": "node vendor/typescript/bin/tsc --noEmit -p tsconfig.json",
-    "typecheck:qa": "node vendor/typescript/bin/tsc --noEmit -p tools/qa/tsconfig.json",
+    "typecheck:qa": "node --max-old-space-size=8192 vendor/typescript/bin/tsc --noEmit -p tools/qa/tsconfig.json",
     "map:export": "bun run tools/levels/export.ts",
     "map:check": "bun run tools/qa/map-check.ts",
     "map:plan": "bun run tools/qa/map-plan.ts",
