@@ -1834,6 +1834,26 @@ interleaved and filtered to their quiet minimum, and a row whose p75 sits far ab
   one blot; it is the whole number now (91 places; two unkeyed movers of one size still share one: `gbuffer.ts lookWordOf`). `lookmaps-check.ts` holds the
   tile (the widest bare patch reaches 12 cm at most, 0.2 to 2 % bare; the old tile fails that line). Not changed: what is under the paint is still a
   multiplier of the paint (dark and warm), so it cannot be rust on blue. Seen as a tile and in a software still; never seen on a GPU.
+- **FOUR OFFICE STUFFS, ROOM FOR 31, AND A LEVEL HAS THE MAPS IT DRAWS AND NO OTHERS** (11-04; `render/lookTex.ts`, `render/gbuffer.ts`, `shaders/look.wgsl`; the
+  look's page only). The maintainer, of a desk and a swivel chair in a dressed office at midday: "nicer materials on the chair and table". The look had one
+  wood (weathered planks with gaps), one cloth (a sack's weave) and one metal (iron gone to rust), so a desk drew as a pallet, a chair as a sandbag and steel
+  shelving as a wreck. NEW LAYERS, things made in a factory and kept indoors: `veneer` (leaves 40 cm wide, fine straight grain, pores, flush joints, no gaps or
+  knots; laid the long way like boards), `plastic` (one colour, a pebbled skin, hairline scratches, rubbed smooth where it is handled), `fabric` (a tight
+  two-yarn melange with a faint twill and pills where it is sat on), `steel` (a baked coat with the spray's orange peel, fine scratches, no rust and no chips:
+  `paint` is the coat left out). They take no damp foot and no bleached head (`kept` in `lookSurface`), and a third of the slow blotches. NO PALETTE ROW NAMES
+  THEM on this branch: a level's own table of paint names does (the dress goal's `scene/stuff.ts`), asking `lookStuffOf(name)` for the number. A STUFF'S
+  NUMBER is its place in `LOOK_NAMES` and one; new stuffs go in FRONT of the two masonry layers, whose places the shader is told (`LOOK_L_STONE`, `LOOK_L_BRICK`
+  in the prelude `gbuffer.ts lookWgsl` writes, with each layer's base roughness as a const array: the block's rows c, d, e.xyz are no longer read). THE WORD
+  (`lookWordOf`, `LOOK_WORD`; `common.wgsl boxStuff`): five bits of stuff, one of moving, then the box's own number, now 0 to 44 (it was four bits and 0 to
+  90): the word rides one float above the finish and the float had no bit to spare, so 31 stuffs are paid for by the number's range alone. THE MAPS: a layer
+  is 2.8 MB and about half a second of arithmetic, so a layer is made the first time a box IS that stuff (`lookWordOf` notes it; `main.ts` asks every static and
+  door leaf its word and names the props' paints before the first frame, and waits: `needLook`), with the layers its drawing reads (`LOOK_WITH`: a mud wall's stone and brick, earth's
+  gravel), into the next SLOT of arrays that are only as long as the slots in use (grown by a copy on the GPU). The block carries the table from layer to
+  slot (`LookCfg.s`, 272 bytes now); a stuff with no slot draws plain. The boot makes the men's cloth alone. A layer is made in SLICES (`lookLayerSliced`:
+  30 ms at the boot, 3 ms in play, the event loop between; one body with `lookLayer`, the same bytes), so a thing that first appears in play as a stuff no
+  static, door or prop was (a held thing, a thrown one) costs no frame: it draws plain for the second or so its map takes. The `even` row is read once, at the
+  making of the arrays. They take the `kept` rule BY NAME: a stuff added later says in `look.wgsl` how it is laid and whether the weather touches it. `lookmaps-check.ts` holds the names against the
+  shader's, the float, the slots and the block. Drawn as tiles (rebuild pictures); a software boot; never seen on a GPU.
 - **A WET COAT DOES NOT MIRROR A LIGHT IT CANNOT SEE** (11-01; `composite.wgsl wetCoatSpec`, `WET_HIDDEN` 8). The maintainer: "still lots of fireflies/sparkles
   in that room", "some on the shadowed side too", "lots of temporal instability on the guy's back too". The sheen scaled every light's lobe by its class's shadowed
   over unshadowed light; in a shut room by day the hidden sun is the whole unshadowed sum, so its lobe was drawn at the bulb's strength. A light whose
