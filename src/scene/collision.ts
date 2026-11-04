@@ -385,10 +385,13 @@ export class StaticCollision {
     }
     return hit;
   }
+  /** IS THE LINE TEST THIS CLASS'S OWN: a check that puts its own `segmentBlocked` or `solidBlocked` over one instance is asking for ITS lines, which the
+   *  module does not walk — so a whole question of the game's that the module would answer from its own lines (the fog's pass, a sense) is not asked there */
+  private get ownLines(): boolean { return this.segmentBlocked === StaticCollision.prototype.segmentBlocked && this.solidBlocked === StaticCollision.prototype.solidBlocked; }
   /** RUST.fog — A SIGHT PASS OPENS (game/fogofwar.ts update): may its questions go to the module (rust/sim/src/fog.rs)? Inside a tick with the row on, where
    *  the game's own maths stand in Math's place (the module works the lengths out itself, and they are those: under an engine's maths the TypeScript's lengths
-   *  are that engine's), and with no more eyes than a question names. True = the caller writes its eyes (`sightEye`) and asks with `eyesSee`. */
-  sightOpen(n: number): boolean { const M = this.mirror; if (M.owes) M.again(this.boxes, this.glassWalkable); return M.sight && EXACT.on && n <= SIGHT_EYES; }
+   *  are that engine's), with no more eyes than a question names, and the line test this class's own (`ownLines`). True = the caller writes its eyes (`sightEye`) and asks with `eyesSee`. */
+  sightOpen(n: number): boolean { const M = this.mirror; if (M.owes) M.again(this.boxes, this.glassWalkable); return M.sight && EXACT.on && n <= SIGHT_EYES && this.ownLines; }
   /** eye `k` of the pass: where it is, where it looks in plan and that look's length (or 1), the cosine of half its field, its near field, and whether it sees all round */
   sightEye(k: number, pos: Vec3, look: Vec3, lookLen: number, cosHalf: number, near: number, full: boolean): void {
     const m = f64(), o = this.mirror.eyes + k * 9;
@@ -408,9 +411,8 @@ export class StaticCollision {
   // question of the game's (an eye on a man, the lamps on a point, the smoke along a line, a sound's way, a way across the floor) asked once where the
   // TypeScript asked its lines one by one; each answers null / a number below zero where the module does not, and the caller's own statements then do.
   /** MAY ROW `bit` (boxMirror.ts SENSES) BE ASKED THERE NOW: inside a tick with the row on, the copy standing, and the game's own maths in Math's place (the
-   *  module works its lengths out itself, and they are those), and the line test this class's own (a check that puts its own over one instance is asking
-   *  for ITS lines, which the module does not walk). → which of the module's lists holds the leaves to ask with (−1 = there are none), or −2 = no. */
-  senseSet(bit: number): number { const M = this.mirror; if (M.owes) M.again(this.boxes, this.glassWalkable); return (M.senses & bit) !== 0 && EXACT.on && this.segmentBlocked === StaticCollision.prototype.segmentBlocked && this.solidBlocked === StaticCollision.prototype.solidBlocked ? M.leaves(this.dynamicBoxes) : -2; }
+   *  module works its lengths out itself, and they are those), and the line test this class's own (`ownLines`). → which of the module's lists holds the leaves to ask with (−1 = there are none), or −2 = no. */
+  senseSet(bit: number): number { const M = this.mirror; if (M.owes) M.again(this.boxes, this.glassWalkable); return (M.senses & bit) !== 0 && EXACT.on && this.ownLines ? M.leaves(this.dynamicBoxes) : -2; }
   /** the check's line for a sense's question answered both ways (BOTH): were the two answers one, and is the copy its boxes */
   senseCompared(set: number, ok: boolean, what: string, a: Vec3, b: Vec3): void { this.compared(this.mirror, set, ok, what, a, b, 0, 0); }
   /** RUST.sight — game/guards.ts eyeContact as one question: the eye `E` on a man's `chest` and `head`. `unseen` = nothing is seen whatever the lines say (he

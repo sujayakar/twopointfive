@@ -1,0 +1,2 @@
+# the cut rock is the palette's slab darkened (tools/levels/snowRock.ts), and the slope below the road is scree
+de76b236d2cf5c22a43144b89d88703da80aa9aa
