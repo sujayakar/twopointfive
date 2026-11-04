@@ -157,13 +157,16 @@ async function mateSeen() {
     if (g.col.nav.isBlocked(q[0], q[2]) || g.col.segmentBlocked([lp[0], 1.5, lp[2]], [q[0], 1.2, q[2]]) || dist(q, g.player.char.pos) < 1.5) continue;
     const was = [...h.char.pos]; h.char.pos[0] = q[0]; h.char.pos[2] = q[2]; h.char.update(0); if (g.fight.sightOn(lead, h).visible) { at = q; break find; } h.char.pos[0] = was[0]; h.char.pos[2] = was[2]; h.char.update(0); }
   if (!at) return out; out.at = dist(at, lp);
-  const n0 = D.charges, t0 = g.time; let last = lead.weapon.roundsReady;
+  const n0 = D.charges, t0 = g.time, hung0 = WORKSTOW_STATS.mateFired; let last = lead.weapon.roundsReady;
   R.post = () => { if (h.state !== 'dead') { h.char.pos[0] = at![0]; h.char.pos[2] = at![2]; h.path = []; h.pathGoal = null; h.speed = 0; h.hold = true; h.pinned = true; h.dazzledUntil = g.time + 5; h.weapon.mag = 0; h.weapon.chamber = 0; h.fireCd = 9; }
     lead.staggerUntil = -1; lead.dazzledUntil = -1; let k = 0; for (const m of g.guards) if (m.team === 'operative' && m !== lead) { m.weapon.mag = 0; m.weapon.chamber = 0; m.dazzledUntil = g.time + 5; m.char.pos[0] = 15 - k++; m.char.pos[2] = 17.6; m.path = []; m.pathGoal = null; m.speed = 0; } };
-  for (let i = 0; i < 60 * 12 && D.ops.includes(op) && op.phase === 'place'; i++) { const had = !!lead.workStow; R.step();
-    const now = lead.weapon.roundsReady; if (now < last) { out.shots += last - now; if (had) out.stowedShots += last - now; } last = now;
+  // (a round out of a hung gun is the GAME'S count — workstow.ts stowFired, asked where the round leaves. 'Was it hung on the frame before the round?' called a
+  //  gun that came back up and fired inside one tick a hung one: red on the page's stand with the squad's kit and its pace, where the two land on one frame)
+  for (let i = 0; i < 60 * 12 && D.ops.includes(op) && op.phase === 'place'; i++) { R.step();
+    const now = lead.weapon.roundsReady; if (now < last) out.shots += last - now; last = now;
     if (lead.script?.over) out.over = true; if (isNaN(op.setT) && !out.dropped) { out.dropped = true; out.spentAtDrop = n0 - D.charges; }
     if (isNaN(out.setAt) && D.set.length) out.setAt = g.time - t0; }
+  out.stowedShots = WORKSTOW_STATS.mateFired - hung0;
   out.set = D.set.length; out.spent = n0 - D.charges; out.dead = h.state === 'dead'; out.by = g.guards.find((k: any) => k.char.id === h.killerId)?.callsign ?? ''; R.post = null;
   return out;
 }

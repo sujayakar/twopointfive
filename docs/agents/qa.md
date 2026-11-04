@@ -400,8 +400,10 @@ but synthetic writes still work.
   doors stay as they are left) or a fault the rule brought (its owner's). Found with it on 11-04: `kickrubble-pool` (`CUTBOXES=1`: a blast breaks the piece),
   `orders-cover` and `orders-stack` (`TPS_WORDS=1 TPS_DOORNAMES=1`: the HUD's name of a door), `teams-dark` (`TPS_IRLIGHT=1` flips both its lines: a teammate's
   tube sees a dark man), `devices` (e) (`TPS_HANDS=1`), `controls-behind` (d) and (f) (`TPS_KITANIM=1`), `selector-rows` (`TPS_CLOSE=1`, `TPS_HANDSLOT=1`,
-  `TPS_LIGHTSWITCH=1`, a line each), `workstow-mate` (`TPS_SQUADDEAL=1 TPS_TEAMPACE=1 TPS_PACING=1`, all three: a round leaves a teammate's hung gun as he is
-  taken off a charge). A line no set of words flips is not a held row's doing: the tool says so, and what the shipped stand itself makes of it.
+  `TPS_LIGHTSWITCH=1`, a line each), `workstow-mate` (`TPS_SQUADDEAL=1 TPS_TEAMPACE=1 TPS_PACING=1`, all three, and
+  there the answer was the CHECK'S fault: it asked "was his gun hung on the frame before the round left", and with the squad's kit and its pace the gun comes
+  back up and fires inside one tick. The game's own count of rounds out of a hung gun, `WORKSTOW_STATS.mateFired`, stayed at the one the check forces; the
+  line reads that count now). So a named rule is where to look, not the verdict: trap the thing the line is about before calling it a fault. A line no set of words flips is not a held row's doing: the tool says so, and what the shipped stand itself makes of it.
 - **Retiring a switch: `bun run tools/retire/retire.ts ROW=value … | --rows rows.json [--write]`** (2026-11-04; the maintainer: "can you look for switches we
   haven't flipped in at least 3 days and clean all of those up?"). A settled rule's switch is a second way through the code that nobody takes. The tool takes
   rows with the value each has IN THE PAGE and leaves one way: every read becomes the value and the code is folded round it; the page's address word, the
