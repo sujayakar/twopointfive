@@ -13,12 +13,13 @@ import { LightSet, cardSlotsFor, type RtLight } from './render/lights';
 import { emissiveDayK } from './render/photometry';
 import { lookVeilFrame } from './render/lookveil';
 import { PowderField, powderDrawWord } from './render/powderField';
-import { PlaceField, PlaceMap } from './render/placeField';
+import { PlaceField } from './render/placeField';
+import { PlaceMap } from './scene/placePlan';
 import { WallSides } from './render/wallSides';
 import { lookEyeFrame, type LookEye } from './render/lookeye';
 import { lookGrade, lookGradeFrame } from './render/lookgrade';
 import { lookExpoFrame } from './render/lookexpo';
-import { planOpenings, openAreas, openingRadiance, openingsKey, leavesKey, LOOK_OPENINGS, type Opening } from './render/openings';
+import { planOpenings, openAreas, openingRadiance, openingsKey, leavesKey, LOOK_OPENINGS, type Opening } from './scene/openings';
 import { buildWallRaster, wallRasterDiff, reachMaskSome, REACH_WORK, REACH_PACE, type ReachJob } from './render/reach';
 import { MeshShadows, MESH_MAX_CHARS } from './render/meshShadows';
 import { RigFit, RIG_KPAD } from './render/sdfrig';
@@ -135,7 +136,7 @@ export class Engine {
   /** this frame's shadeCfg and eyeCfg as the frame was handed them (a tool's and the debugger's: tools/qa/look-sheet.cjs prints them beside each still) */
   lookShadeCfg: [number, number, number, number] | undefined = undefined; lookEyeCfg: [number, number, number, number] | undefined = undefined;
   private lookGradeCfg: [number, number, number, number] | null = null;   // (this frame's gradeCfg, render/lookgrade.ts: the day's contrast undone under a roof)
-  /** THE LOOK PROTOTYPE's daylight at openings (render/openings.ts; the panel's "Daylight at openings" row): one area light just inside each place the level
+  /** THE LOOK PROTOTYPE's daylight at openings (scene/openings.ts; the panel's "Daylight at openings" row): one area light just inside each place the level
    *  is open to the sky by (a window, an open door, a blown hole, a passage's mouth). THE PICTURE'S ALONE: the lights are this engine's (`dayLights`, written
    *  here every frame from this method's own records and handed to the upload), never in the light set the game reads and a checkpoint holds, and their
    *  masks leave no note in reach.ts's side tables: nothing in the update, a checkpoint or a recording can tell the row is on. The openings are found again when the level's boxes have changed and then stood still for a few frames, what
@@ -597,7 +598,7 @@ export class Engine {
       if (n > 0 && this.cutSeen > 0 && (whole > 0) !== (this.cutWhole > 0)) { if (taauOn) this.resetTaa('cut pieces change shape'); else this.passes.dropRestirBeliefs(); }
       this.cutWhole = whole; this.cutSeen = n;
     }
-    this.lookOpeningLights();   // (THE LOOK PROTOTYPE: by day each opening to the sky is a light of its own, render/openings.ts)
+    this.lookOpeningLights();   // (THE LOOK PROTOTYPE: by day each opening to the sky is a light of its own, scene/openings.ts)
     { const P = this.passes, on = lookConfig.on; P.gradeH = on ? lookConfig.gradeH : 0; P.gradeS = on ? lookConfig.gradeS : 0; P.gradeSat = on ? lookConfig.gradeSat : 1; P.gradeC = 1; this.lookGradeCfg = null;   // (THE LOOK PROTOTYPE's grading rows, post.wgsl agx)
       if (on && lookConfig.gradeC !== 1) { const zen = this.settings.skyZenith, hor = this.settings.skyHorizon, g = lookGrade(lookConfig.sky * lookSkyLum(zen, hor, 0.8), Math.PI * lookConfig.sky * lookSkyLum(zen, hor, 0.947), this.lights.lights, this.settings.exposure * lookConfig.gradeExp, lookConfig.gradeC); P.gradeC = g[0]; P.gradeP = g[1]; this.lookGradeCfg = lookGradeFrame(g, this.settings.exposure * lookConfig.gradeExp); } }
     this.glassLightMasks();   // (glass: which listed panes each light can reach at all → RtLight.glassMask, packed by the upload below; all 0 with the experiment off)

@@ -12,7 +12,7 @@ import { readFileSync } from 'node:fs';
 import { standUp, ROOT } from './headless.ts';
 const { parseLevelData } = await import(`${ROOT}/src/scene/levelData.ts`);
 const { loadLevel } = await import(`${ROOT}/src/scene/levelLoad.ts`);
-const { placeMask, PLACE_W, PLACE_H, PLACE_RES } = await import(`${ROOT}/src/render/placeField.ts`);
+const { placeMask, PLACE_W, PLACE_H, PLACE_RES } = await import(`${ROOT}/src/scene/placePlan.ts`);
 const { WORLD } = await import(`${ROOT}/src/scene/world.ts`);
 const BRK = process.env.SMOKELAB_BREAK === '1'; let red = false;
 const check = (ok: boolean, what: string, detail = '') => { red ||= !ok; console.log(`- ${ok ? 'PASS' : 'FAIL'} — ${what}${detail ? `\n    ${detail}` : ''}`); };
