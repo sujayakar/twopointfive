@@ -30,7 +30,7 @@ import { buildSnowField, snowCfgRows, type SnowField } from '../render/snowField
 import { groundRayConfig, packGroundField } from '../scene/groundField';
 import { makeSnowTracks, updateSnowTracks, clearSnowTracks, formSnowTracks, TRACK_RES, type SnowTracks } from './snowTracks';
 import { updateSnowMarks, clearSnowMarks } from './snowMarks';
-import { snowBogAt, snowBogMay } from './snowBog';
+import { snowBogAt } from './snowBog';
 import { attachSnowBlast, clearSnowBlast, stepSnowDigs } from './snowBlast';
 import { SNOW_LOOK, snowLevel, WEATHER_PRESETS } from './weatherKinds';
 import { levelNameOf } from '../scene/levelLoad';
@@ -1225,7 +1225,7 @@ export class Game {
     // loose furniture: simulated on the CPU, emitted as dynamic boxes every frame (rendered + traced like everything else), deliberately never registered as
     // collision occluders — a chair must not hide the player, muffle a shot or dent the nav grid; guards path through props and shove them aside
     this.props = new PropSystem(level.props, this.col, (e) => this.onPropEvent(e));
-    this.items = new Throwables(this.col, this.props); this.items.bog = { may: () => snowBogMay(this), at: (x, y, z) => snowBogAt(this, x, y, z) };   // (… and bog down where they land in lying snow: snowBog.ts, 0 everywhere with its switch off)
+    this.items = new Throwables(this.col, this.props); this.items.bog = (x, y, z) => snowBogAt(this, x, y, z);   // (… and bog down where they land in lying snow: snowBog.ts, 0 everywhere with its switch off)
       // canisters and dropped magazines bounce off (and nudge) the furniture
     this.tracers = new Tracers(engine.lights, sparkSink(this)); this.tracers.fog = { begin: who => this.fogOfWar.begin(who), done: was => this.fogOfWar.done(was), lightBy: (l, who) => this.fogOfWar.lightBy(l, who) };   // tracer streaks: their head lights live in the engine's LightSet (transient), their embers are sparks — GPU sparks while that path is on, the CPU pool's otherwise (particleFx.ts sparkSink)
     this.decals = new Decals(engine.device); engine.setDecals?.(this.decals);   // (the QA harness's engine stand-in has no renderer to hand it to: the list still fills, nothing draws)
@@ -1435,13 +1435,13 @@ export class Game {
   private onPropEvent(e: PropEvent) {
     // a castor chair coasting (props.ts CASTOR) is voiced by rollTick, not from here: nobody hears it and no die is drawn — the game is the same game with or without
     if (e.sound === 'roll') {
-      if (e.roll === 'start' && !this.rolls.some(r => r.p === e.prop)) this.rolls.push({ p: e.prop, x: e.pos[0], z: e.pos[2], k: 0, moveT: -1e9, voice: 0 });   // (where it was AS IT STARTED, which the event says: the step that made the noise may have moved it on before this is heard)
+      if (e.roll === 'start' && !this.rolls.some(r => r.p === e.prop)) this.rolls.push({ p: e.prop, x: e.prop.x, z: e.prop.z, k: 0, moveT: -1e9, voice: 0 });
       return;
     }
     { const pl = e.who === undefined ? null : manById(this, e.who); if (pl) pl.noise = Math.max(pl.noise, e.level); }
     const t = e.prop.tune; const jitter = 0.95 + simRandom() * 0.1;
     if (e.sound === 'thud') { this.audio.play('propThud', e.pos, clamp(0.35 + 0.15 * e.speed, 0.3, 1), { rate: t.thudRate * jitter }); this.destr?.thud(e.pos, 0.4 + 0.3 * e.speed, e.who); }   // (…and the litter round its feet twitching with the knock: destruction.ts impulses, behind chaos)
-    else if (!e.rolling) this.audio.play('propScrape', e.pos, clamp(0.25 + 0.18 * e.speed, 0.25, 1), { rate: t.scrapeRate * jitter });   // (a chair already rolling on its castors is heard rolling: no scrape voiced over it — its event, below, is filed all the same)
+    else if (!e.prop.rolling) this.audio.play('propScrape', e.pos, clamp(0.25 + 0.18 * e.speed, 0.25, 1), { rate: t.scrapeRate * jitter });   // (a chair already rolling on its castors is heard rolling: no scrape voiced over it — its event, below, is filed all the same)
     this.events.push({ kind: 'prop', pos: v3.copy(e.pos), time: this.time, loud: e.level > 0.7, level: e.level, who: e.who });
   }
 

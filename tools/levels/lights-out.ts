@@ -249,7 +249,7 @@ function furnish(T: ReturnType<typeof trainGround>) {
   G.rubble(29.95, 6.75, 0.4, 5);
 
   L.room('cookfire');
-  G.stain(24.9, 20.35, 1.7, 1.0, 'dirt', 0.15, 0.7, G.flatAt(G.lie.patch));                                          // ash raked out of the oven
+  G.stain(24.9, 20.35, 1.7, 1.0, 'dirt', 0.15, 0.7);                                          // ash raked out of the oven
   G.rubble(22.5, 20.55, 0.35, 5, 'poplar');                                                   // chips where the wood is split
 
   L.room('backstrip');

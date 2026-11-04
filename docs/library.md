@@ -34,33 +34,22 @@ The same word in more than one kit: each is built its own way, in its own paint.
 |---|---|---|
 | bench | officeKit, livedQuiet | 1.4 × 0.4 × 0.45 · 1.3 × 0.32 × 0.44 |
 | bucket | livedKit, livedPieces, livedTrain | 0.28 × 0.28 × 0.3 · 0.3 × 0.26 × 0.3 · 0.26 × 0.26 × 0.29 |
-| carton | livedKit (officeKit.cardboardBox), livedQuiet | 0.45 × 0.45 × 0.45 · 0.5 × 0.36 × 0.31 |
+| carton | livedKit, livedQuiet | 0.45 × 0.45 × 0.45 · 0.5 × 0.36 × 0.31 |
+| chair | officeKit, livedKit | 0.5 × 0.5 × 1.1 · 0.5 × 0.5 × 1.1 |
 | chest | livedPieces, livedTrain | 1.06 × 0.66 × 0.9 · 0.58 × 0.38 × 0.32 |
 | cone | livedKit, livedPieces | 0.34 × 0.34 × 0.56 · 0.3 × 0.3 × 0.49 |
 | crate | livedKit, livedPieces | 0.8 × 0.5 × 0.47 · 0.5 × 0.5 × 0.42 |
 | drum | gwotKit, livedKit | 0.56 × 0.56 × 0.88 · 0.56 × 0.56 × 0.89 |
 | mat | livedKit, livedQuiet | 1.4 × 1 × 0.02 · 1.6 × 0.9 × 0.01 |
 | mug | livedKit, livedQuiet | 0.07 × 0.07 × 0.09 · 0.08 × 0.08 × 0.1 |
+| papers | officeKit, livedKit | 0.32 × 0.27 × 0.06 · 0.32 × 0.27 × 0.06 |
 | rug | gwotKit, officeKit | 3.2 × 3 × 0.01 · 2.4 × 1.6 × 0.01 |
 | shelf | officeKit, livedQuiet | 1.6 × 0.4 × 1.9 · 2 × 0.36 × 1.5 |
 | stool | livedKit, livedPieces, livedQuiet, livedTrain | 0.34 × 0.34 × 0.47 · 0.36 × 0.36 × 0.48 · 0.34 × 0.34 × 0.34 · 0.34 × 0.34 × 0.42 |
 | table | gwotKit, livedKit, livedPieces, livedTrain | 1.6 × 0.75 × 0.75 · 1.8 × 0.7 × 0.74 · 2 × 0.9 × 0.74 · 1.8 × 0.8 × 0.75 |
 | tyres | gwotKit, livedKit | 0.68 × 0.64 × 0.6 · 0.68 × 0.68 × 0.6 |
-
-## One piece, handed out by more than one kit
-
-A piece that lays nothing of its own, only one piece of another kit: the same piece, taken into that kit (a lived kit names it as one of a room's lived things).
-It is no second way of building the name.
-
-| Piece | Is |
-|---|---|
-| gwotKit.wallX | officeKit.wallX |
-| gwotKit.wallZ | officeKit.wallZ |
-| gwotKit.partX | officeKit.wallX |
-| gwotKit.partZ | officeKit.wallZ |
-| livedKit.papers | officeKit.papers |
-| livedKit.chair | officeKit.chair |
-| livedKit.carton | officeKit.cardboardBox |
+| wallX | gwotKit, officeKit | 10.24 × 0.24 × 3 · 7.24 × 0.24 × 3 |
+| wallZ | gwotKit, officeKit | 5.76 × 0.24 × 3 · 4.76 × 0.24 × 3 |
 
 ## gwotKit
 
@@ -70,10 +59,10 @@ It is no second way of building the name.
 
 | Piece | What it is | To a man | Size | Boxes | Paints | Stands in |
 |---|---|---|---|---|---|---|
-| **wallX**(z, x0, x1, kind = 'mud', openings = [], height = H) | a SHELL wall along X at fixed z (0.24 thick: mud-brick, render, whitewash, bare block); openings as the kits' own (doors 0‥2.2, windows 0.9‥2.4) *(is `officeKit.wallX`)* | solid to 3 | 10.24 × 0.24 × 3 | 1 solid | mud | gwot-yard |
-| **wallZ**(x, z0, z1, kind = 'mud', openings = [], height = H) | a SHELL wall along X at fixed z (0.24 thick: mud-brick, render, whitewash, bare block); openings as the kits' own (doors 0‥2.2, windows 0.9‥2.4) *(is `officeKit.wallZ`)* | solid to 3 | 5.76 × 0.24 × 3 | 1 solid | mud | gwot-yard |
-| **partX**(z, x0, x1, kind = 'mudLight', openings = [], height = H) | an interior PARTITION (0.12 thick) *(is `officeKit.wallX`)* | solid to 3 | 4 × 0.12 × 3 | 1 solid | whitewash | library-hall |
-| **partZ**(x, z0, z1, kind = 'mudLight', openings = [], height = H) | an interior PARTITION (0.12 thick) *(is `officeKit.wallZ`)* | solid to 3 | 5.76 × 0.12 × 3 | 3 solid | mudLight | gwot-yard |
+| **wallX**(z, x0, x1, kind = 'mud', openings = [], height = H) | a SHELL wall along X at fixed z (0.24 thick: mud-brick, render, whitewash, bare block); openings as the kits' own (doors 0‥2.2, windows 0.9‥2.4) | solid to 3 | 10.24 × 0.24 × 3 | 1 solid | mud | gwot-yard |
+| **wallZ**(x, z0, z1, kind = 'mud', openings = [], height = H) | a SHELL wall along X at fixed z (0.24 thick: mud-brick, render, whitewash, bare block); openings as the kits' own (doors 0‥2.2, windows 0.9‥2.4) | solid to 3 | 5.76 × 0.24 × 3 | 1 solid | mud | gwot-yard |
+| **partX**(z, x0, x1, kind = 'mudLight', openings = [], height = H) | an interior PARTITION (0.12 thick) | solid to 3 | 4 × 0.12 × 3 | 1 solid | whitewash | library-hall |
+| **partZ**(x, z0, z1, kind = 'mudLight', openings = [], height = H) | an interior PARTITION (0.12 thick) | solid to 3 | 5.76 × 0.12 × 3 | 3 solid | mudLight | gwot-yard |
 | **yardWallX**(z, x0, x1, kind = 'mud', openings = [], height = 2.4) | a COMPOUND (yard) wall along X: the shell wall to `height` (2.4: over a man, under the roofs) with a paler coping course overhanging it, open to the sky | solid to 2.4 | 2 × 0.3 × 2.47 | 2 solid | mud, mudLight | gwot-yard |
 | **yardWallZ**(x, z0, z1, kind = 'mud', openings = [], height = 2.4) | a COMPOUND (yard) wall along Z at fixed x: as yardWallX | solid to 2.4 | 16 × 0.3 × 2.47 | 4 solid | mud, mudLight | gwot-yard |
 | **pier**(x, z, height = 2.4, kind = 'mud') | a buttress PIER on a wall line (0.44 square, capped) — the rhythm of a long mud wall, and a corner to stand behind | solid to 2.44 | 0.52 × 0.52 × 2.52 | 2 solid | mud, mudLight | gwot-yard |
@@ -86,16 +75,16 @@ It is no second way of building the name.
 
 | Piece | What it is | To a man | Size | Boxes | Paints | Stands in |
 |---|---|---|---|---|---|---|
-| **ground**(x0, z0, x1, z1, mat = 'dust', y = lie.finish) | a GROUND finish over a rectangle (a thin solid slab like the kits' floor finishes: feet, rounds and light land on it): dust \| dirt \| gravel \| mudFloor \| slab | walked over | 24 × 16 × 0 | 1 solid | dirt | gwot-yard, library-hall |
-| **patch**(x, z, w, d, mat = 'damp', yaw = 0, y = flatAt(lie.patch)) | DECAL: a patch on the ground — a damp spot, an oil stain, a drift of dust, a scatter of gravel (w × d, any yaw). ANOTHER row's stuff lying on the ground; for the same ground darker (wet, worn) use `stain` | drawn only | 3.6 × 2.6 × 0.01 | 1 drawn | gravel | gwot-yard |
+| **ground**(x0, z0, x1, z1, mat = 'dust', y = 0.004) | a GROUND finish over a rectangle (a thin solid slab like the kits' floor finishes: feet, rounds and light land on it): dust \| dirt \| gravel \| mudFloor \| slab | walked over | 24 × 16 × 0 | 1 solid | dirt | gwot-yard, library-hall |
+| **patch**(x, z, w, d, mat = 'damp', yaw = 0, y = 0.012) | DECAL: a patch on the ground — a damp spot, an oil stain, a drift of dust, a scatter of gravel (w × d, any yaw). ANOTHER row's stuff lying on the ground; for the same ground darker (wet, worn) use `stain` | drawn only | 3.6 × 2.6 × 0.01 | 1 drawn | gravel | gwot-yard |
 | **ruts**(x0, z0, x1, z1, mat = 'dirt') | DECAL: a vehicle's two wheel RUTS from (x0, z0) to (x1, z1), 1.5 m apart | drawn only | 6.6 × 1.82 × 0.01 | 2 drawn | dirt | gwot-yard |
-| **rubble**(x, z, r = 0.8, n = 7, mat = 'mud') | WALK-OVER: a scatter of rubble / field stones within r of (x, z) — n small blocks under 0.19 m (lit and shadowed; nobody trips on them). ALL OF IT IS `mat`: three stones in ten are its darker row where the palette holds one (gwotPalette.ts GWOT_DARKER: mud's is mudDark), standing for what `mat` is to a round, so a scatter is one thing in two tones and never a second paint; a stone has the row's whole finish (bits of tin sheet are metal). (Those three were mudDark whatever was asked: pale clods among dark gravel, mud among offcuts of poplar.) | walked over | 1.54 × 1.41 × 0.17 | 9 solid | mud, mudDark | gwot-yard |
-| **stain**(x, z, w, d, ground, yaw = 0, k = 0.66, y = flatAt(lie.stain)) | DECAL: a STAIN that is its ground's own paint darker — wet concrete under a tap, a floor walked dark under a bench. `ground` = the finish it lies on, `k` of it (STYLE.md: a patch is darker than its ground and never under a third of it; see `toned`). Wet reads smoother than dry. IT LIES UNDER A VEHICLE'S RUTS AND UNDER A PATCH (`lie`: a stain is the ground, and what was driven or laid over the ground shows over it; at the patch's height it painted the ruts out where they crossed). `y` = its centre, for the one that is meant to lie on something: `flatAt(lie.patch)` is soot over a damp spot | drawn only | 1.8 × 1.2 × 0.01 | 1 drawn | dust × 0.66 | library-hall |
+| **rubble**(x, z, r = 0.8, n = 7, mat = 'mud') | WALK-OVER: a scatter of rubble / field stones within r of (x, z) — n small blocks under 0.19 m (lit and shadowed; nobody trips on them) | walked over | 1.54 × 1.41 × 0.17 | 9 solid | mud, mudDark | gwot-yard |
+| **stain**(x, z, w, d, ground, yaw = 0, k = 0.66, y = 0.012) | DECAL: a STAIN that is its ground's own paint darker — wet concrete under a tap, a floor walked dark under a bench. `ground` = the finish it lies on, `k` of it (STYLE.md: a patch is darker than its ground and never under a third of it; see `toned`). Wet reads smoother than dry | drawn only | 1.8 × 1.2 × 0.01 | 1 drawn | dust × 0.66 | library-hall |
 | **seep**(x0, z0, x1, z1, mat = 'dirt') | DECAL: a SEEP — where water runs out under a wall and stands: darker earth from (x0, z0) to (x1, z1), in lengths that overlap and wander. The line is the stain's MIDDLE and a length is up to 1.15 m across: lay it 0.6 m out from the wall's face, not on the wall's own line. `mat` is darker than the ground it lies on (dirt on dust, damp on dirt) | drawn only | 3.12 × 1.15 × 0.01 | 2 drawn | dirt | library-hall |
 | **kerbStones**(x0, z0, x1, z1, paint = 'whitewash', pitch = 1.15) | WALK-OVER: KERB STONES — painted stones from (x0, z0) to (x1, z1), `pitch` metres from one to the next (a stride by default; 0.3 = stone against stone): the edge of a government yard, the side of a track (each 0.26 long, under 0.14 m high) | walked over | 3.65 × 0.44 × 0.11 | 4 solid | whitewash | library-hall |
 | **kerb**(x0, z0, x1, z1, mat = 'block', gaps = [], len = 1.9) | WALK-OVER: a KERB from (x0, z0) to (x1, z1) — precast stones about `len` long, 0.3 wide and 0.14 high, laid end to end a finger apart and none quite in line (lit and shadowed; stepped over). The run is cut into round(length / len) stones, at least one; `gaps` = the stones left out, counted from the first end (a broken one, a dropped kerb where wheels cross). A run under 0.3 m, or a `len` under 0.3, throws: that is no kerb | walked over | 1.83 × 0.3 × 0.14 | 1 solid | block | library-hall |
 | **plantBed**(x, z, len = 4.4, wid = 1.3, yaw = 0, rows = 3) | WALK-OVER: a PLANT BED, `len` along local x by `wid`: a kerb of blocks round turned earth, `rows` of seedlings with a gap in each where some failed (all of it under 0.19 m) — a household's vegetables, a station's trial plot | walked over | 4.4 × 1.3 × 0.16 | 11 solid | prodGreen, block, dirt | library-hall |
-| **hearth**(x, z, yaw = 0, ground = groundAt(x, z)) | WALK-OVER: a cold HEARTH — a ring of stones, two charred lengths, the ash trodden round it: where a watch sat last night. The trodden ash is a `stain`: the ground's own paint, darker. `ground` = the finish the fire was lit on: what the kit laid there (`groundAt`). Where the kit laid none (a level's own slab) the caller names it, and a hearth that is told nothing there THROWS: it does not guess. (It was a patch of `damp` whatever it lay on: a black square on moonlit dust.) | walked over | 1.5 × 1.3 × 0.15 | 9 solid, 1 drawn | mudDark, woodGrey, dust × 0.66 | library-hall |
+| **hearth**(x, z, yaw = 0, ash = 'damp') | WALK-OVER: a cold HEARTH — a ring of stones, two charred lengths, the ash trodden round it: where a watch sat last night. `ash` is the patch's paint: damp reads on earth (dust, dirt, gravel); on a paler floor name one that is not under a third of it | walked over | 1.5 × 1.3 × 0.15 | 9 solid, 1 drawn | mudDark, woodGrey, damp | library-hall |
 
 ### gwotKit: cloth
 
@@ -250,7 +239,7 @@ It is no second way of building the name.
 | Piece | What it is | To a man | Size | Boxes | Paints | Stands in |
 |---|---|---|---|---|---|---|
 | **mug**(x, y, z, albedo = C.white) | a MUG on a surface at y (clutter: a firefight knocks it off) | off the floor | 0.07 × 0.07 × 0.09 | 1 solid | white | library-hall |
-| **papers**(x, y, z, yaw = 0) | the office kit's pile of PAPERS on a surface at y *(is `officeKit.papers`)* | drawn only | 0.32 × 0.27 × 0.06 | 2 drawn, 2 markings | LIVED_PAINT.paper, (0.9, 0.88, 0.8) | library-hall |
+| **papers**(x, y, z, yaw = 0) | the office kit's pile of PAPERS on a surface at y | drawn only | 0.32 × 0.27 × 0.06 | 2 drawn, 2 markings | LIVED_PAINT.paper, (0.9, 0.88, 0.8) | library-hall |
 | **sheet**(x, y, z, w = 0.21, d = 0.3, yaw = 0, albedo = LIVED_PAINT.paper) | one loose sheet (a card, a form, a map corner) | drawn only | 0.3 × 0.21 × 0.01 | 1 drawn | LIVED_PAINT.paper | library-hall |
 
 ### livedKit: loose things
@@ -258,11 +247,11 @@ It is no second way of building the name.
 | Piece | What it is | To a man | Size | Boxes | Paints | Stands in |
 |---|---|---|---|---|---|---|
 | **stool**(x, z, albedo = C.woodDark) | PROP (chair): a STOOL, a seat on a post | loose | 0.34 × 0.34 × 0.47 | 1 loose (2 parts) | metal, woodDark | library-hall |
-| **chair**(x, z, yaw, albedo = C.chair) | PROP (chair): the office CHAIR, as one of this room's lived things *(is `officeKit.chair`)* | loose | 0.5 × 0.5 × 1.1 | 1 loose (5 parts) | black, chair | library-hall |
+| **chair**(x, z, yaw, albedo = C.chair) | PROP (chair): the office CHAIR, as one of this room's lived things | loose | 0.5 × 0.5 × 1.1 | 1 loose (5 parts) | black, chair | library-hall |
 | **drum**(x, z, albedo = LIVED_PAINT.oxide, mass = 22) | PROP (bin): an oil DRUM a man can shove, 0.56 across and 0.88 high (`drumFixed` is the one that stands where it is) | loose | 0.56 × 0.56 × 0.89 | 1 loose (2 parts) | oxide, oxide × 0.60 | library-hall |
 | **bucket**(x, z, albedo = C.metal) | PROP (bin): a BUCKET | loose | 0.28 × 0.28 × 0.3 | 1 loose (1 part) | metal | library-hall |
 | **cone**(x, z) | PROP (cardboard): a traffic CONE | loose | 0.34 × 0.34 × 0.56 | 1 loose (3 parts) | black, hiVis, white | library-hall |
-| **carton**(x, z, s, yaw) | PROP (cardboard): the office kit's CARTON of side s, as one of this room's lived things *(is `officeKit.cardboardBox`)* | loose | 0.45 × 0.45 × 0.45 | 1 loose (1 part), 4 markings | cardboard | library-hall |
+| **carton**(x, z, s, yaw) | PROP (cardboard): the office kit's CARTON of side s, as one of this room's lived things | loose | 0.45 × 0.45 × 0.45 | 1 loose (1 part), 4 markings | cardboard | library-hall |
 | **looseCrate**(x, z, w, d, h, yaw = 0, albedo = C.wood) | a small wooden box a man can shove (ammunition, spares, fruit) | loose | 0.5 × 0.36 × 0.32 | 1 loose (2 parts) | wood, woodDark | library-hall |
 
 ## livedPieces
@@ -397,8 +386,8 @@ It is no second way of building the name.
 | Piece | What it is | To a man | Size | Boxes | Paints | Stands in |
 |---|---|---|---|---|---|---|
 | **hoist**(x, z, turn = 0) | MOTOR POOL: an engine hoist, the engine hanging on its chain over a drip tray (beam along the frame's x) | solid to 2.3 | 1.6 × 0.96 × 2.42 | 11 solid, 3 drawn | rust, GWOT_PALETTE.iron, galv, genYellow, GWOT_PALETTE.tin, oil | library-hall |
-| **cauldrons**(x, z, turn, n) | KITCHEN COURT: n black cauldrons in a row on a mud hearth | solid to 0.72 | 2.34 × 0.88 × 0.77 | 13 solid, 7 drawn, 3 round | GWOT_PALETTE.iron, GWOT_PALETTE.rubber, GWOT_PALETTE.tin, mud | library-hall |
-| **spools**(x, z, turn = 0) | GENERATOR YARD: a cable spool stood on its rim and one laid flat | solid to 1.2 | 2.58 × 1.18 × 1.2 | 15 solid, 3 round | woodGrey, plasticBlack | library-hall |
+| **cauldrons**(x, z, turn, n) | KITCHEN COURT: n black cauldrons in a row on a mud hearth | solid to 0.72 | 2.34 × 0.89 × 0.77 | 7 solid, 7 drawn | GWOT_PALETTE.iron, GWOT_PALETTE.rubber, GWOT_PALETTE.tin, mud | library-hall |
+| **spools**(x, z, turn = 0) | GENERATOR YARD: a cable spool stood on its rim and one laid flat | solid to 1.2 | 2.75 × 1.4 × 1.2 | 9 solid | woodGrey, plasticBlack | library-hall |
 | **flag**(x, z) | THE RANGE: the red flag on its pole, a red and white square painted round the foot | solid to 3.5 | 1.5 × 1 × 3.5 | 2 solid, 3 drawn | truckRed, block, galv, whitewash | library-hall |
 | **basins**(x, z, turn = 0) | QUARTERS: the wash bench — tin basins in a row, towels on a rail behind | solid to 1.3 | 2 × 0.55 × 1.3 | 8 solid, 6 drawn | GWOT_PALETTE.tin, plasticBlue, woodGrey, block, blanketGrey, poplar, rugCream | library-hall |
 | **loft**(x, z) | THE WHITE HOUSE: the headman's pigeon loft — a white box with a green roof up a pole (not blue: BLUE is a pair in the lesson it stands in) | solid to 1.9 | 1.34 × 1.08 × 2.51 | 3 solid, 5 drawn | GWOT_PALETTE.rubber, woodGrey, paintGreen, straw, whitewash | library-hall |
@@ -426,12 +415,12 @@ Pieces counts the catalogue's pieces that wear the row, darkened or not, as laid
 | paintGreen | 0.08, 0.24, 0.16 | rough 0.6 | metal |  | 4 |
 | paintRust | 0.3, 0.075, 0.04 | rough 0.65 | metal |  | 1 |
 | paintCream | 0.66, 0.6, 0.44 | rough 0.7 | wall |  | 0 |
-| dust | 0.205, 0.145, 0.085 | rough 1 | asphalt | asphalt | 2 |
+| dust | 0.205, 0.145, 0.085 | rough 1 | asphalt | asphalt | 1 |
 | dirt | 0.135, 0.09, 0.05 | rough 1 | asphalt | asphalt | 5 |
 | gravel | 0.15, 0.135, 0.115 | rough 1 | asphalt | asphalt | 1 |
 | mudFloor | 0.17, 0.115, 0.07 | rough 0.97 | stone | stone | 0 |
 | slab | 0.3, 0.285, 0.26 | rough 0.9 | concrete | stone | 0 |
-| damp | 0.075, 0.052, 0.034 | rough 0.7 | asphalt |  | 2 |
+| damp | 0.075, 0.052, 0.034 | rough 0.7 | asphalt |  | 3 |
 | oil | 0.11, 0.095, 0.08 | rough 0.35 | asphalt |  | 1 |
 | rugRed | 0.3, 0.052, 0.04 | rough 0.95 | carpetRed | carpet | 3 |
 | rugNavy | 0.04, 0.06, 0.15 | rough 0.95 | carpetBlue | carpet | 1 |

@@ -544,7 +544,7 @@ function roundCtx(g: Game, T: Room, known: Known[], theirs: Door[]): RoundCtx {
  *  good if it still crosses one. Every spot outside a door is tried. `back` > 0 (the room is lost: he is to hold the door, not go in by it): where his way
  *  would cross open ground in a doorway's lane he stops short of it, with a line on the door. The length limits are wayRound's, against the plain way's
  *  length. The way itself comes back as marks a few metres apart: he is walked along it. */
-function wayRound2(g: Game, D: Def, at: Vec3, known: Known[], theirs: Door[], taken: Door[], used: Vec3[], back = 0, /** (squadWaysRound, a check's ask) filled with the length limit and the shortest way found, inside it or not */ says?: { limit?: number; best?: number }): Way | null {
+function wayRound2(g: Game, D: Def, at: Vec3, known: Known[], theirs: Door[], taken: Door[], used: Vec3[], back = 0): Way | null {
   const nav = g.col.nav, c = D.gd.char, K = PRESSURE;
   const T = g.fight.roomAt(at) as Room | null, cell = (p: Vec3) => nav.idx(Math.floor(p[0] / nav.cell), Math.floor(p[2] / nav.cell));
   if (!(T && T !== D.room && T.cells.size <= 500 && T.entries.length > 1)) return wayRound(g, D, at, known.map(k => k.p), taken, used);   // (open floor: as it was)
@@ -585,7 +585,6 @@ function wayRound2(g: Game, D: Def, at: Vec3, known: Known[], theirs: Door[], ta
     }
   }
   ways.sort((a, b) => a.L - b.L);
-  if (says) { says.limit = Math.min(K.flankMaxM, Math.max(K.flankK * L0, L0 + K.flankSlackM)); says.best = ways[0]?.L; }
   return ways.find(w => !taken.includes(w.door!) && within(w.L, L0)) ?? ways.find(w => within(w.L, L0)) ?? null;
 }
 
@@ -1526,38 +1525,3 @@ export function squadsSummary(g: Game): string {
 }
 /** a squad's men by its name, the fallen among them (cues.ts: who speaks for it on the net) */
 export function squadMen(g: Game, name: string): Guard[] { return STATES.get(g)?.squads.find(Q => Q.name === name)?.men ?? []; }
-/** A STATIC ASK FOR A CHECK (tools/qa/wayround-check.ts), read only: for every man at home of every squad that may leave its rooms, every OTHER squad's room
- *  and every door of that room taken as the team's, would he find a way round, the question decide() asks through pair(). Asked twice: with nobody of the
- *  team known (`team` false), and with THE TEAM IN THE ROOM (`team` true): a man in the team's doorway and one three metres inside it are firm places, as
- *  the squad's own eyes and the net give them in a fight, so the ground they have a line on is shut to the way as it is then.
- *  `hold` = the room counted lost (he holds its other door from outside) against going in by it. `L` = the way's length, `limit` = what it may be, `best` =
- *  the shortest way found whether inside the limit or not (undefined: no standing place at all). Nothing is written: the search's memo is put back. */
-export function squadWaysRound(g: Game): { squad: string; man: string; from: string; room: string; door: string; hold: boolean; team: boolean; way: string | null; L: number; limit?: number; best?: number }[] {
-  const st = STATES.get(g), K = SQUADS, out: ReturnType<typeof squadWaysRound> = [], keep = CTX, r3 = (x: number | undefined) => x === undefined || !Number.isFinite(x) ? undefined : Math.round(x * 1000) / 1000;
-  if (!st) return out;
-  try {
-    // the team heard through the walls anywhere in the room it has taken: a place every two metres of its floor, each a soft one as a noise is
-    const nav = g.col.nav, heardOf = new Map<Room, Known[]>(), heard = (T: Room): Known[] => { let h = heardOf.get(T); if (!h) { h = []; const step = Math.max(1, Math.round(2 / nav.cell));
-      for (const i of T.cells) { const ix = i % nav.W, iz = (i - ix) / nav.W; if (ix % step === 0 && iz % step === 0) h.push({ p: [(ix + 0.5) * nav.cell, 0, (iz + 0.5) * nav.cell], firm: false }); } heardOf.set(T, h); } return h; };
-    for (const Q of st.squads) if (Q.def.mayLeave !== false) for (const D of home(g, Q)) {
-      // where he asks from: his post, and a stride inside each door of the room he holds (a man who has heard the fight is at his door when the word comes)
-      const pos = D.gd.char.pos, post: Vec3 = [pos[0], pos[1], pos[2]], from: { name: string; p: Vec3 }[] = [{ name: 'his post', p: post }];
-      for (const en of (D.room as Room | null)?.entries ?? []) { const q: Vec3 = [en.at[0] - en.out[0], 0, en.at[2] - en.out[1]]; if (!g.col.nav.isBlocked(q[0], q[2])) from.push({ name: en.door.def.name, p: q }); }
-      try {
-        for (const F of from) { pos[0] = F.p[0]; pos[2] = F.p[2];
-          for (const X of st.squads) if (X !== Q) for (const room of X.rooms) {
-            const at: Vec3 = [(room.bounds.x0 + room.bounds.x1) / 2, 0, (room.bounds.z0 + room.bounds.z1) / 2], T = g.fight.roomAt(at) as Room | null;
-            for (const e of T?.entries ?? []) for (const team of K.goRound ? [false, true] : [false]) for (const hold of [false, true]) {
-              const says: { limit?: number; best?: number } = {};
-              const known: Known[] = team ? [{ p: [e.at[0] + e.out[0], 0, e.at[2] + e.out[1]], firm: true }, { p: [e.at[0] - e.out[0] * 3, 0, e.at[2] - e.out[1] * 3], firm: true }, ...heard(T!)] : [];
-              CTX = null;   // (the memo's key counts the known places, it does not tell them apart)
-              const w = K.goRound ? wayRound2(g, D, at, known, [e.door], [], [], hold ? K.holdBackM : 0, says) : wayRound(g, D, at, [], [], []);
-              out.push({ squad: Q.name, man: D.gd.callsign, from: F.name, room: room.name, door: e.door.def.name, hold, team, way: w ? w.door?.def.name ?? 'open floor' : null, L: w ? r3(w.L)! : 0, limit: r3(says.limit), best: r3(says.best) });
-            }
-          }
-        }
-      } finally { pos[0] = post[0]; pos[2] = post[2]; }
-    }
-  } finally { CTX = keep; }
-  return out;
-}

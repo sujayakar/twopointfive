@@ -40,7 +40,7 @@
 //   TWO FLIGHTS, ON PURPOSE: with this rule off the round flies glasspen.ts roundPath, untouched — the frozen stand's digests are that code's. `thinPath` is
 //   the same loop with thin things added; over glass alone the two answer alike (the check sweeps it), and a mend to one is a mend to the other.
 import { Vec3, v3, clamp } from '../math/vec';
-import { Box, BoxFlag, shapeCut } from '../scene/boxes';
+import { Box, BoxFlag } from '../scene/boxes';
 import { lineBox } from '../scene/collision';
 import { cutConfig } from '../scene/cut';
 import { WORLD } from '../scene/world';
@@ -141,7 +141,7 @@ export interface ThinToll { stuff: ThinStuff; take: number; eOut: number; /** me
  *  path through, too little left). Pure: fireWeapon's path and the line-of-fire question read this one function. */
 export function thinToll(g: Game, index: number, at: Vec3, d: Vec3, e: number): ThinToll | null {
   const T = thingAt(g, index); if (!T) return null; const b = T.b;
-  if (Math.min(b.h[0], b.h[2]) * 2 > WALLPEN.thinMax[T.stuff] || (b.cut !== undefined && cutConfig.on && b.cut.length > 0 && !shapeCut(b))) return null;   // (a piece broken off a wall is no thin thing; a box that says its SHAPE is the thing it was, and lineBox below gives the round its way through the shaped solid)
+  if (Math.min(b.h[0], b.h[2]) * 2 > WALLPEN.thinMax[T.stuff] || (b.cut !== undefined && cutConfig.on && b.cut.length > 0)) return null;
   const s = lineBox(at, d, b); if (!s || s.t1 <= 0) return null;
   const thru = s.t1; if (thru > WALLPEN.maxThru[T.stuff]) return null;
   const take = WALLPEN.base[T.stuff] + WALLPEN.perM[T.stuff] * thru, eOut = e - take; if (eOut < WALLPEN.minEnergy) return null;

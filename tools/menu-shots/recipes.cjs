@@ -59,7 +59,7 @@ R['night-breach'] = {    // the group's tile. The F drill run to its end: boot, 
   cam: { look: [31, 1, 18.6], yaw: 0.9, pitch: 0.5, dist: 6.3 } };
 R['room-clear-pair'] = { // the game's own view: the server room's lock booted, a can, the first man in and firing by the racks, his mate at the door, Sam on the corridor
   query: 'roomclear' + Q, quality: 'medium', frames: 8,
-  play: `ms.approach('server', 3.2, 40); const t0 = g.time; ms.must(ms.orderUntil('bangClear', 'server', () => ${bang('server')}), 'the can');   // (the server room is locked: the men test it and hold for the call, and the order again is the call)
+  play: `ms.approach('server', 3.2, 40); ms.order('bangClear', 'server'); const t0 = g.time; ms.must(ms.sim(60, () => ${bang('server')}), 'the can');
          return ms.sim(10, () => ms.shooters().some(x => x.team === 'operative'));`,
   cam: { look: [16.6, 1, 9.65], yaw: 0.25, pitch: 1.12, dist: 9.5 } };
 R['room-clear-four'] = { // the game's own view, wide: the break room taken and held, a man firing from its west door, Sam among the cubicles as the floor's other men come round by the corridor
@@ -114,7 +114,6 @@ R['hostage-rescue'] = { // the group's tile. The charge on the manager's office 
 R['rescue-registry'] = { // the game's own view, after the charge: the pair in the registrar's office with their lights on, its door flat on the rug, a hostage alive in the corner
   query: 'levelFile=registry.json&rescue' + Q, quality: 'medium', frames: 8,
   play: `ms.order('fallIn', ms.sam()); ms.go([26.6, 0, 8.6]); ms.sim(24, () => ms.arrived() || ms.sam()[0] > 25.5);
-         ms.must(ms.putDown('Roamer 1'), 'the man at their back');   // (the corridor's man is alert three metres behind where the pair will stand off: Sam drops him first, as a person would)
          ms.order('charge', 'office'); ms.must(ms.sim(30, () => g.doorTools.ops.some(o => o.phase === 'armed')), 'the charge');
          ms.tap('KeyF'); await ms.lead(2);
          ms.must(ms.sim(15, () => ms.ops().filter(x => x.char.pos[0] > 29.3 && x.char.pos[2] < 12.6).length >= 2), 'two men in the office'); return ms.sim(11);`,

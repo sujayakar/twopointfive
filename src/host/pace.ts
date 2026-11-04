@@ -60,7 +60,7 @@
 // the GPU idle until the display's next tick. A window nobody is at keeps to one, as above. The even pace stays under it: it says WHICH display frames are
 // asked for, this says whether the GPU has room for the one asked. With work inside the paced frame nothing is ever held and the pace is the even one;
 // with work over it, frames come as the GPU finishes them, one or two display frames apart, never back to back. A frame held for this is the machine's own
-// pace, so the ladder reads its gap as it reads any other. A benchmark and a sweep wait too, and only the boot's calibration does not (pageRoom below).
+// pace, so the ladder reads its gap as it reads any other. Not while the page measures the machine, as above: a benchmark's frames are as they always were.
 // And not under ?kitview: the kit picture's pacer reads how late its own frames come and steps down to an even pace by that; a frame held here after that
 // pacer had taken it would hide the lateness from it. The queue is asked once for every frame that DREW (a card that hides the picture draws nothing and
 // asks nothing). A FRAME THE QUEUE NEVER ANSWERS FOR is given up after `lost` ms and the page goes on without it: a window held at its limit for good by
@@ -108,19 +108,10 @@ export function periodOf(G: readonly number[]): number {
   return NaN;
 }
 
-/** HOW MANY FRAMES MAY BE WITH THE GPU WHEN THE PAGE BEGINS ONE (Pacer.skip's `room`; 0 = any number), in one place for the frame loop and the readout.
- *  `flight` for a player's page, and for a BENCHMARK and a SWEEP (`measuring`): a page that flips a setting and reads the passes' stamps must be no
- *  further ahead of the GPU than a player's page is. Where nothing else holds its frames back (a headless browser has no display to wait on) a scene the
- *  card cannot draw at the display's rate queued frames without end: a flipped row's stamps came back seconds late, in another row's turn, and the frame
- *  rate read the display's whatever the card did. 0 only for the boot's CALIBRATION by itself (a second and a half that counts its frames as they come:
- *  on an adapter that takes seconds a frame the wait would stretch it without end; under a benchmark it waits like the rest, so a run opens with no
- *  pile behind it) and under ?kitview, whose own pacer reads how late its frames come. */
-export const pageRoom = (p: { calibrating: boolean; measuring: boolean; kitView: boolean }): number => p.kitView || (p.calibrating && !p.measuring) ? 0 : EVENPACE.flight;
-
 export interface Pacer {
   /** a frame callback stamped `ts` (ms), with the rate being held (0 = none: every frame is worked, and the period is still read). `away` = nobody is at this
-   *  window (it gives way, under `giveway`). `room` = how many frames may be with the GPU when this one is begun (0 = any number: the boot's
-   *  calibration, and ?kitview; left out = `flight`). true = pass this display frame over whole (touch nothing: the next worked frame takes the real time). */
+   *  window (it gives way, under `giveway`). `room` = how many frames may be with the GPU when this one is begun (0 = any number: the page is measuring the
+   *  machine; left out = `flight`). true = pass this display frame over whole (touch nothing: the next worked frame takes the real time). */
   skip(ts: number | undefined, target: number, away?: boolean, room?: number): boolean;
   /** a worked frame has handed its work to the GPU, at `now` (ms): the word to give `done` back when the queue says that frame is finished, at `now`, with
    *  the GPU's own timing of a frame's passes where the page has one (`own`, ms; 0 = none). An answer for a frame already given up as lost changes nothing */

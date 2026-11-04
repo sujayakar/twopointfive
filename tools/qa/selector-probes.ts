@@ -283,10 +283,10 @@ export async function selectorSustained() {
     if (doneAt < 0) fails.push('never finished in 5 s'); else { if (Math.abs(Math.abs(d.angle) - EASE_MAX) > OLD_CRACK.perFrame + 1e-6 && Math.abs(d.angle) < EASE_MAX) fails.push(`stood at ${f3(Math.abs(d.angle))} (want EASE_MAX ${EASE_MAX})`); if (Math.abs(doneAt - EASE_MAX / EASE_RATE) > 3 * DT) fails.push(`done at +${f2(doneAt)} s (want ${f2(EASE_MAX / EASE_RATE)})`); }
     if (mine(ev).length) fails.push(`noise while easing: [${evS(ev)}]`);
     if (verbsOf(game).join() !== 'door:pull') fails.push(`rows after it stood open: [${verbsOf(game).join(', ')}] (want [pull])`);
-    const angleDone = d.angle; for (let i = 0; i < 60 * 5; i++) W.step(DT); const closing = Math.abs(d.angle) < Math.abs(angleDone) - 0.05, stays = !!game.doors.stay;   // (doors.ts DOORSTAY: where leaves stay as they are left there is no closer to wake)
-    if (stays ? Math.abs(d.angle - angleDone) > 1e-6 : !closing) fails.push(stays ? `the leaf did not stay where it was eased to: ${f3(angleDone)} → ${f3(d.angle)} 5 s after` : `the closer never woke: still ${f2(d.angle)} 5 s after (crack leaves quietT at −1.5: it should take it ~3.5 s on)`);
+    const angleDone = d.angle; for (let i = 0; i < 60 * 5; i++) W.step(DT); const closing = Math.abs(d.angle) < Math.abs(angleDone) - 0.05;
+    if (!closing) fails.push(`the closer never woke: still ${f2(d.angle)} 5 s after (crack leaves quietT at −1.5: it should take it ~3.5 s on)`);
     notes.push(`step ${meanStep.toFixed(5)} rad/frame (old ${OLD_CRACK.perFrame.toFixed(5)}), crossed 0.6 at frame ${crossOld} (old cap ${OLD_CRACK.cap} reached at frame ${wantCross} of work), done +${f2(doneAt)} s at ${f3(Math.abs(angleDone))} rad; 5 s on: ${f2(d.angle)}`);
-    verdict(fails.length === 0, 'ease: from the tap the leaf comes round at exactly the old crack rate, through the old 0.6 stop, and stands at EASE_MAX on its own in EASE_MAX / EASE_RATE s, silent; it stays there where doors stay as they are left, and the closer takes it back later where they do not', notes.join(' · '), fails);
+    verdict(fails.length === 0, 'ease: from the tap the leaf comes round at exactly the old crack rate, through the old 0.6 stop, and stands at EASE_MAX on its own in EASE_MAX / EASE_RATE s, silent; the closer takes it back later', notes.join(' · '), fails);
   }
   {   // ease stopped: a step (W pressed into it) mid-way holds the leaf where it is; a second Space tap likewise; Esc likewise; walking out of reach drops it
     const fails: string[] = []; const notes: string[] = [];

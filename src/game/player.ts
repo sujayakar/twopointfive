@@ -51,7 +51,7 @@ import { SPRINTDOOR, SPRINTDOOR_STATS, sprintDoorPace, sprintDoorLean, sprintDoo
 import { tearOff } from './doorblast';
 import { aimWeighBegin, aimWeighTurn, aimWeighShot, aimWeighLaunch, aimWeighLaunchKeep } from './aimweight';
 import { THROW_RELEASE, HOLD, RUNREADY } from './character';
-import { WALLSNAP, wsTakeSecs, wsEase, wsHit, wsCornerAngle, wsSeenDeg, wsPressNear } from './wallsnap';
+import { WALLSNAP, wsTakeSecs, wsEase, wsHit, wsCornerAngle, wsSeenDeg } from './wallsnap';
 import { HANDSLOT, HANDSLOT_KEY } from './handslot';
 import { THROWBACK } from './throwback';
 import type { HoldPhase, HoldVariant, LongStance } from './character';
@@ -569,7 +569,7 @@ export function updatePlayer(g: Game, dt: number, input: Input, cam: FollowCamer
   nvKey(g, input, dt);
   const sprintKey = !isHurt(g, pl) && (input.down('ShiftLeft') || input.down('ShiftRight')) && (input.down('KeyW') || input.down('KeyA') || input.down('KeyS') || input.down('KeyD'));
   // R, or the gun in his hands run dry with a magazine left (autoreload.ts: asked every frame, so a reload a sprint took out of his hands starts again) — one way in either way
-  if (input.hit('KeyR') || (pl.pistolUp && autoReloadDue(g, pl, gun)) || (pl.rifleUp && autoReloadDue(g, pl, pl.rifle))) reloadInHand(g, sprintKey && !wallRanOn(pl, input) && !(CROUCHRUN.on && pl.crouch && !g.puppet && !g.touring));   // (CROUCHRUN: Shift in a crouch is no sprint — his hands are his own, the gun's change with them)
+  if (input.hit('KeyR') || (pl.pistolUp && autoReloadDue(g, pl, gun)) || (pl.rifleUp && autoReloadDue(g, pl, pl.rifle))) reloadInHand(g, sprintKey && !(CROUCHRUN.on && pl.crouch && !g.puppet && !g.touring));   // (CROUCHRUN: Shift in a crouch is no sprint — his hands are his own, the gun's change with them)
   // movement input — none while the selector is open (Space held past a tap: he is choosing what to do, feet still; interact.ts)
   const { fwd, right } = cam.planarBasis();
   let mx = 0, mz = 0;
@@ -597,8 +597,7 @@ export function updatePlayer(g: Game, dt: number, input: Input, cam: FollowCamer
   else if (input.hit('KeyQ')) { if (pl.wall) wallStepOff(g, mx, mz, ml, 'q'); else if (!wantSprint) { const why = { blocked: false }; if (!wallSnap(g, cam, why) && !wallSnapLater(g, ml, why)) g.msg(pl.dragging ? 'hands full' : why.blocked ? "can't get to the wall here" : 'nothing to put your back to here'); } }   // (at a run there is no taking hold: Shift is one of the ways off it; blocked: a face in reach but furniture standing against it where he would go)
   else if (WALLSNAP.on) wallSnapPending(g, dt, cam, wantSprint);   // (Q a moment before the face came into reach: taken as it does)
   if (WALLSNAP.on && WALLSNAP.press && !rooted && !stalk && !g.rails?.locksWall()) wallPress(g, dt, input, cam, mx, mz, ml, wantSprint);   // (…and with no Q at all: a move key held into the wall he is up against)
-  const ranOn = wallRanOn(pl, input);   // (WALLSNAP.pressRun: the run that put him on this wall, still held as it was, is not the run that takes him off it)
-  if (pl.wall && wantSprint && !ranOn) wallStepOff(g, mx, mz, ml, 'run');
+  if (pl.wall && wantSprint) wallStepOff(g, mx, mz, ml, 'run');
   const onWall = !!pl.wall && moveOnWall(g, dt, cam, mx, mz, ml);   // false: free (or let go this very frame — then he walks on from where he stands, below)
   if (!onWall) {
     if (wantSprint && pl.dragging) g.toggleDrag();          // breaking into a sprint lets go of the body
@@ -945,10 +944,6 @@ export interface WallHold {
    *  its clocks, leanOff = the metres along the wall he actually stands past his station for it this frame — the read-back takes them off), flipT = the
    *  cursor-behind-him clock, sayT = when the 'wall in the way' line was last said. */
   kind?: 'stack'; up?: number; lean?: number; leanWant?: boolean; leanDir?: -1 | 1; leanDwell?: number; leanOutT?: number; leanOff?: number; leanMore?: number; flipT?: number; sayT?: number; rise?: number; owed?: number; camAlong?: number; cam?: FollowCamera;
-  /** WALLSNAP.pressRun: the hold was taken AT A RUN and that run is still held — the move keys that were down as he landed (moveKeysDown's bits). While
-   *  Shift stays down and those keys stand as they were the run is not a way off this wall (wallRanOn); gone, for the rest of the hold, the first frame
-   *  either changes. Absent on every other hold. */
-  ran?: number;
 }
 
 /** The static face lying in the plane (n, d) at station u along t — if there is one there fit to lean on: from a point 0.3 m out in the room, a knee-height ray
@@ -1147,7 +1142,7 @@ function wallSnapPending(g: Game, dt: number, cam: FollowCamera, wantSprint: boo
 /** WALLSNAP.press: the wall taken WITHOUT the key. A move key held INTO a face (pressFace: the stick within pressDeg of square to it, the face within pressNear
  *  of his body) for pressSecs takes it exactly as Q would — wallSnap, kept to that face: the same faces, the same refusals, and nothing said where there is
  *  none. The clock runs on the walk up, so a man who walks squarely at a wall has it from pressFlow short of touching and his back comes round as he arrives;
- *  one who turns into a wall he stands against waits the whole of it there. At a run only with WALLSNAP.pressRun (below). NEVER with his hands on anything, a list or an order menu up, a mouse
+ *  one who turns into a wall he stands against waits the whole of it there. NEVER at a run, with his hands on anything, a list or an order menu up, a mouse
  *  button held (he is shooting, or about to), the gun in his hand reloading or still coming out, or inside pressAfterShot of a round of his own. With a
  *  sidearm or a can in the hand, which the hold puts away, only while no enemy is alert (pressCalm: in a fight the pistol stays up; the rifle stacks in his
  *  hands either way). Where the face he walks into has a thing to use on it or beside it (pressThingAt: a door, a switch, the breaker, the mission's thing,
@@ -1155,33 +1150,18 @@ function wallSnapPending(g: Game, dt: number, cam: FollowCamera, wantSprint: boo
  *  THE LATCH (`n`, `dx dz`, `until`): when a hold ends, or the wall refuses a take, the stick as it then stands is remembered with that wall. Until the stick
  *  rests or turns (pressTurn), a wall facing as that one does is not taken at all — Q, Shift or a step away is not undone by the key still held, and a
  *  refusal is not asked again every frame — and any other wall not for pressAgain: stepping off does not throw him onto the far side of a narrow passage,
- *  while a walk straight across a corridor has the far wall as he arrives.
- *  AT A RUN (WALLSNAP.pressRun): Shift held changes nothing above — the same stick, clock, faces, refusals and latch — but where the clock starts: as far out
- *  as his pace into the face needs for the wait to be done pressFlow short of it (wsPressNear), so a sprint has the wall as it arrives, as a walk does. (A
- *  thing on the face is read as at a walk, off the rows in reach: a door's, the breaker's and the mission's thing are out of a sprinting man's reach, so
- *  there the wall is his as he arrives and the row is there from the hold; a body's row, and any row in the crouched dash, is in reach and has the long
- *  wait.) The hold it takes carries the keys of that run (WallHold.ran): while they are held as they were, Shift is not a way off it (wallRanOn). */
+ *  while a walk straight across a corridor has the far wall as he arrives. */
 const wsPress = new SideMap<Player, { t: number; at: number; n: Vec3 | null; dx: number; dz: number; held: boolean; until: number }>('player.wsPress');
 /** the face a ray from his knee along the stick meets: its level normal, where the ray meets it, and what is left between his body and it (the measure
  *  findWall takes of a face: BODY_R off the plane is touching) — null on open floor, a door's leaf, or a face the stick is more along than at */
 function pressFace(g: Game, mx: number, mz: number): { n: Vec3; at: Vec3; off: number } | null {
-  const W = WALLSNAP, p = g.player.char.pos, v = g.player.char.vel, cosMin = Math.cos(W.pressDeg * DEG);
-  const hit = g.col.raycast([p[0], KNEE_Y, p[2]], [mx, 0, mz], (BODY_R + wsPressNear(Math.hypot(v[0], v[2]))) / cosMin);   // (no face can be closed on faster than he is moving)
+  const W = WALLSNAP, p = g.player.char.pos, cosMin = Math.cos(W.pressDeg * DEG);
+  const hit = g.col.raycast([p[0], KNEE_Y, p[2]], [mx, 0, mz], (BODY_R + W.pressNear) / cosMin);
   if (!hit || hit.index >= 1e6 || Math.abs(hit.n[1]) > 0.2) return null;
   const n = v3.normalize([hit.n[0], 0, hit.n[2]]), into = -(mx * n[0] + mz * n[2]);
   if (into <= cosMin) return null;
   const off = hit.t * into - BODY_R;
-  return off > wsPressNear(-(v[0] * n[0] + v[2] * n[2])) ? null : { n, at: [p[0] + mx * hit.t, KNEE_Y, p[2] + mz * hit.t], off };
-}
-/** the move keys that are down, as bits (W 1 · A 2 · S 4 · D 8) */
-function moveKeysDown(input: Input): number { return (input.down('KeyW') ? 1 : 0) | (input.down('KeyA') ? 2 : 0) | (input.down('KeyS') ? 4 : 0) | (input.down('KeyD') ? 8 : 0); }
-/** WALLSNAP.pressRun: is the run that put him on the wall he is on still held — Shift never let go since, the same move keys down? It is read off THE KEYS,
- *  not off what they come to this frame: a blast that roots him, a list held open or the view turned changes his stick and not his hands, and none of them
- *  is his letting go. The first frame the keys differ ends it for this hold (WallHold.ran), and Shift is a way off the wall as ever. */
-function wallRanOn(pl: Player, input: Input): boolean {
-  const w = pl.wall; if (!w?.ran) return false;
-  if ((input.down('ShiftLeft') || input.down('ShiftRight')) && moveKeysDown(input) === w.ran) return true;
-  delete w.ran; return false;
+  return off > W.pressNear ? null : { n, at: [p[0] + mx * hit.t, KNEE_Y, p[2] + mz * hit.t], off };
 }
 function wallPress(g: Game, dt: number, input: Input, cam: FollowCamera, mx: number, mz: number, ml: number, wantSprint: boolean) {
   const pl = g.player, W = WALLSNAP; let P = wsPress.get(pl);
@@ -1191,7 +1171,7 @@ function wallPress(g: Game, dt: number, input: Input, cam: FollowCamera, mx: num
   if (pl.wall) { P.t = 0; P.n = [pl.wall.n[0], 0, pl.wall.n[2]]; P.held = false; return; }
   if (P.n && !P.held) { P.held = true; P.dx = mx; P.dz = mz; P.until = g.time + W.pressAgain; }   // the hold has just ended: the stick as it stands
   if (P.n && (ml <= 0 || mx * P.dx + mz * P.dz < Math.cos(W.pressTurn * DEG))) P.n = null;         // the stick has rested or turned: the latch is gone
-  const face = ml > 0 && (!wantSprint || W.pressRun) && !g.puppet && !g.touring ? pressFace(g, mx, mz) : null;
+  const face = ml > 0 && !wantSprint && !g.puppet && !g.touring ? pressFace(g, mx, mz) : null;
   if (!face || (P.n && (face.n[0] * P.n[0] + face.n[2] * P.n[2] > 0.9 || g.time < P.until))) { P.t = 0; return; }
   const inHand = pl.holstered ? null : pl.rifleUp ? pl.rifle : pl.pistol, gunAway = !pl.holstered && !(W.stack && pl.rifleUp);   // (gunAway: what the back hold takes out of his hand)
   const busy = pl.dragging || !!pl.haul || !!pl.doorMove || !!pl.easing || !!pl.charging || pl.choosing || pl.sel.downT >= 0 || pl.throwHeld || !!g.orders.menu
@@ -1203,7 +1183,6 @@ function wallPress(g: Game, dt: number, input: Input, cam: FollowCamera, mx: num
   if (P.t < (thing ? W.pressThing : W.pressSecs) - 1e-6 || face.off > (thing ? W.pressTouch : Math.max(W.pressTouch, W.pressFlow))) return;
   P.t = 0;
   if (!wallSnap(g, cam, undefined, face.n)) { P.n = face.n; P.held = true; P.dx = mx; P.dz = mz; P.until = g.time + W.pressAgain; }
-  else if (wantSprint) { const w = g.player.wall, keys = moveKeysDown(input); if (w && keys) w.ran = keys; }   // (taken at a run, on these keys: wallRanOn)
 }
 /** the things that stand where they are and are worked by hand (the wall press's touch; interact.ts emptyThing: what an empty tap can be beside) */
 export const PRESS_THINGS: ReadonlySet<string> = new Set(['door', 'switch', 'breaker', 'objective', 'cam', 'body']);
@@ -1216,7 +1195,7 @@ type WhKind = 'vec' | 'num' | 'unit' | 'opt' | 'bool' | 'optbool' | 'sign' | 'si
 const WH = {
   n: 'vec', along: 'derived', from: 'vec', d: 'num', lo: 'num', hi: 'num', u: 'num', v: 'num', off: 'num', awayT: 'num', blockT: 'num', settle: 'unit', peek: 'unit',
   openLo: 'bool', openHi: 'bool', seated: 'bool', drawn: 'bool', crouched: 'bool', side: 'sign', peekDir: 'sign', blockDir: 'sign0', atEdge: 'sign0',
-  takeT: 'opt', yaw0: 'opt', yawD: 'opt', hitT: 'opt', ran: 'opt', up: 'opt', lean: 'opt', leanDwell: 'opt', leanOutT: 'opt', leanOff: 'opt', leanMore: 'opt', flipT: 'opt', sayT: 'opt', rise: 'opt', owed: 'opt', camAlong: 'opt',
+  takeT: 'opt', yaw0: 'opt', yawD: 'opt', hitT: 'opt', up: 'opt', lean: 'opt', leanDwell: 'opt', leanOutT: 'opt', leanOff: 'opt', leanMore: 'opt', flipT: 'opt', sayT: 'opt', rise: 'opt', owed: 'opt', camAlong: 'opt',
   leanWant: 'optbool', leanDir: 'optsign', kind: 'stack',
 } as const satisfies Record<keyof Omit<WallHold, 'cam'>, WhKind>;
 export type WallSnap = { hold?: Record<string, unknown>; press?: { t: number; at: number; n: number[] | null; dx: number; dz: number; held: boolean; until: number } };

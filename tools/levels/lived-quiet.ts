@@ -10,7 +10,7 @@ import type { Vec3 } from '../../src/math/vec';
 import type { Box } from '../../src/scene/boxes';
 import { BoxFlag } from '../../src/scene/boxes';
 import type { PropDef, PropKind, PropPart } from '../../src/scene/level';
-import { roundSlabs, type GwotMat } from '../../src/scene/gwotKit';
+import type { GwotMat } from '../../src/scene/gwotKit';
 import { pieces } from '../../src/scene/library';
 
 type Mat = { albedo: Vec3; rough: number; metal?: boolean };
@@ -47,10 +47,11 @@ export function livedQuiet(K: LivedHost, M: Record<GwotMat, Mat>) {
   const line = (x0: number, z0: number, x1: number, z1: number, wid: number, m: GwotMat, y = 0.03) => {
     const L = Math.hypot(x1 - x0, z1 - z0) || 0.01; return put((x0 + x1) / 2, (z0 + z1) / 2, y, y + 0.004, L / 2, wid / 2, m, Math.atan2(-(z1 - z0), x1 - x0), NS);
   };
-  /** a ROUND thing standing from y0 to y1, radius r: the kits' one way of writing a round (src/scene/gwotKit.ts roundSlabs). From 0.2 m an octagon of four
-   *  slabs, which the round rule (src/scene/round.ts) finds and makes one round box of; smaller, two squares 45° apart, the second a hair lower so the tops
-   *  never fight. Only for a round standing on a FLOOR or a table: a disc on a wall's face is one flat `d()`. `solid` false = drawn only */
-  const round = (x: number, z: number, y0: number, y1: number, r: number, m: GwotMat, solid = true) => { const f = solid ? s : d; for (const o of roundSlabs(r)) f(x, z, y0, y1 - o.drop, o.hx, o.hz, m, o.yaw); };
+  /** a SMALL round thing (r under 0.2) as two squares 45° apart (the second a hair lower so the tops never fight). From 0.2 up use `oct`: seen from above two squares
+   *  read as a cog. Only for a round standing on a FLOOR or a table — a disc on a wall's face is one flat `d()` */
+  const rnd = (x: number, z: number, y0: number, y1: number, r: number, m: GwotMat, solid = true) => { const q = r * 0.93, f = solid ? s : d; f(x, z, y0, y1, q, q, m); f(x, z, y0, y1 - 0.004, q, q, m, Q); };
+  /** a larger ROUND thing as an octagon (four slabs through the centre) */
+  const oct = (x: number, z: number, y0: number, y1: number, r: number, m: GwotMat, solid = true) => { const a = r * 0.96, t = a * 0.4142, f = solid ? s : d; for (let k = 0; k < 4; k++) f(x, z, y0, y1 - 0.002 * k, a, t, m, k * Q); };
   /** PAPER lying on a surface whose top is at y */
   const paper = (x: number, z: number, y: number, yaw = 0, w = 0.3, dd = 0.21, m: GwotMat = 'whitewash') => d(x, z, y, y + 0.008, w / 2, dd / 2, m, yaw);
   /** a loose PROP of this room: named `lived.<room>.<what>` */
@@ -82,7 +83,7 @@ export function livedQuiet(K: LivedHost, M: Record<GwotMat, Mat>) {
   return {
     /** everything that follows belongs to this place */
     room(id: string) { room = id; K.grp(`lived.${id}`); },
-    s, on, d, round, prop, part, own, ...pieces('livedQuiet', {
+    s, on, d, rnd, oct, prop, part, own, ...pieces('livedQuiet', {
     mat, line, paper, pail, carton, stool, chock, tyre,
     /** a mug / glass / tin standing on a surface at y */
     mug: (x: number, z: number, y: number, m: GwotMat = 'whitewash', r = 0.04, h = 0.1) => s(x, z, y, y + h, r, r, m),

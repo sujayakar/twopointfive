@@ -201,7 +201,7 @@ function furnish(T: ReturnType<typeof trainGround>) {
   L.loose('bin', 12.9, 7.2, 0.3, 1, [{ off: [0, 0.06, 0], h: [0.1, 0.06, 0.08], m: 'tin' }, { off: [0, 0.125, 0], h: [0.07, 0.005, 0.05], m: 'rubber' }]);   // the open tin of dubbin
   bx(8.9, 17.37, 8.96, 17.43, 0, 1.9, 'woodGrey'); bx(12.6, 17.37, 12.66, 17.43, 0, 1.9, 'woodGrey'); bx(8.96, 17.39, 12.6, 17.41, 1.86, 1.88, 'rubber', L.NS);   // the wash line
   L.row(9.4, 17.39, 'x', 5, 0.5, 0.02, 0.15, 1.2, 1.86, ['olive', 'blanketGrey', 'whitewash', 'coyote', 'rugOchre'], L.NS);
-  rd(29.8, 17.4, 0.42, 0, 0.08, 'block'); flat(29.53, 17.13, 30.07, 17.67, 'rubber', 0.083); flat(29.53, 17.13, 30.07, 17.67, 'rubber', 0.082, Math.PI / 4); rd(29.8, 17.4, 0.1, 0.086, 0.18, 'iron', L.NS);   // the fire ring and two logs to sit on
+  rd(29.8, 17.4, 0.42, 0, 0.08, 'block'); rd(29.8, 17.4, 0.3, 0.08, 0.086, 'rubber', L.NS); rd(29.8, 17.4, 0.1, 0.086, 0.18, 'iron', L.NS);   // the fire ring and two logs to sit on
   bx(28.9, 17.0, 29.15, 17.9, 0, 0.18, 'woodGrey'); bx(30.5, 17.0, 30.75, 17.9, 0, 0.18, 'woodGrey');
 
   L.place('beyond');

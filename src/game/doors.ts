@@ -12,7 +12,6 @@ import { WORLD } from '../scene/world';
 import { EXACT } from '../math/exact';
 import { RUST } from '../sim/sim';
 import { DoorStore, DC, DD, DO, DK, KF, DE, DOOR_EV, DP, DF, MAN_UNASKED, DOOR_CAP, DOOR_COLS, DOOR_OUTS, DOOR_CONS, DOOR_PARS, DRIVE_KINDS, DOOR_SOUNDS, STRIKE_TIERS, DOORS_STEPPED, doorIo, doorMem } from '../sim/doorshome';
-import { SlabStore, SLF, type SLAB_F64, type SlabNow } from '../sim/slabshome';
 
 /** ONE-WAY LEAVES (the maintainer, 10-08: "doors could use some work too. only open one direction"). Every door has a hinge jamb, a handle jamb and ONE side it opens
  *  into (Door.swing): its leaf turns through angles of that sign only, 0 (shut, hard on its frame) to its open stop — whoever opens it, from whichever face.
@@ -244,32 +243,7 @@ export interface DoorEvent { door: Door; sound: DoorSound; pos: Vec3; who: numbe
 /** A leaf OFF ITS HINGES (doorblast.ts — a blast tore it out of its frame, or gunfire took it apart: DOORSHOT): the loose slab. `p` its centre, `v` its velocity, `a` the world angle of its width axis
  *  (what closedDir + angle was when it went, turned since by `spin`), `tip` 0 (upright) ‥ π/2 (flat on the floor) with its top fallen toward `side` of that axis
  *  (+1 = the CCW normal (−sin a, cos a)), `rest` once it lies still — from then on its box is an ordinary flat yaw-only box and nothing steps it. */
-export type DoorSlab = SlabNow;   // (sim/slabshome.ts: its numbers are a row of the slabs' columns; this is the row read out, and what is written into one)
-/** …as `Door.slab` hands it out: read-only by its type. A slab is changed by setting `Door.slab` whole (doorblast.ts, which also steps the ones in
- *  the air over the columns). */
-export interface SlabSeen { readonly p: readonly [number, number, number]; readonly v: readonly [number, number, number]; readonly a: number; readonly spin: number; readonly tip: number; readonly tipV: number; readonly side: 1 | -1; readonly rest: boolean; readonly landed: boolean; readonly who: number; readonly t: number; /** the angle the door READS as while off (±π/2: wide open, the way the leaf left) */ readonly ang: number; /** doorblast.ts DOORSHOT: gunfire took the leaf apart and this is its lock rail, lying — half width, half length, and where on it the handles are (absent: the whole leaf) */ readonly bits?: readonly [number, number, number, number]; readonly wedged?: number }
-/** a door's slab as its row holds it (Door.slab while there is one): every field read from the row as it stands NOW, so one of these held across a
- *  step is the slab after the step. Good only while the door has a slab (`Door.slab` answers null when it has none). `p`, `v` and `bits` are made anew
- *  at each read: take them once. */
-class SlabRow implements SlabSeen {
-  constructor(private readonly T: SlabStore, private readonly door: number) {}
-  private g(k: (typeof SLAB_F64)[number]): number { const T = this.T; return T.d[T.b8 + T.O[k] + T.rowOf(this.door)]; }
-  private f(): number { const T = this.T; return T.u[T.b4 + T.O.flags + T.rowOf(this.door)]; }
-  get p(): [number, number, number] { return [this.g('px'), this.g('py'), this.g('pz')]; }
-  get v(): [number, number, number] { return [this.g('vx'), this.g('vy'), this.g('vz')]; }
-  get a(): number { return this.g('a'); }
-  get spin(): number { return this.g('spin'); }
-  get tip(): number { return this.g('tip'); }
-  get tipV(): number { return this.g('tipV'); }
-  get t(): number { return this.g('t'); }
-  get ang(): number { return this.g('ang'); }
-  get wedged(): number { return this.g('wedged'); }
-  get side(): 1 | -1 { return this.f() & SLF.back ? -1 : 1; }
-  get rest(): boolean { return (this.f() & SLF.rest) !== 0; }
-  get landed(): boolean { return (this.f() & SLF.landed) !== 0; }
-  get who(): number { const T = this.T; return T.u[T.b4 + T.O.who + T.rowOf(this.door)] | 0; }
-  get bits(): [number, number, number, number] | undefined { return this.f() & SLF.bits ? [this.g('bw'), this.g('bl'), this.g('bx'), this.g('by')] : undefined; }
-}
+export interface DoorSlab { p: Vec3; v: Vec3; a: number; spin: number; tip: number; tipV: number; side: 1 | -1; rest: boolean; landed: boolean; who: number; t: number; /** the angle the door READS as while off (±π/2: wide open, the way the leaf left) */ ang: number; /** doorblast.ts DOORSHOT: gunfire took the leaf apart and this is its lock rail, lying — half width, half length, and where on it the handles are (absent: the whole leaf) */ bits?: [number, number, number, number]; }
 
 /** a door's drive as its columns hold it (Door.drive while there is one): the DoorDrive the rules read and write, field for field */
 class DriveCols implements DoorDrive {
@@ -377,22 +351,14 @@ export class Door {
    *  of sight, sound, shot or smoke bake meets), update() leaves it alone, no verb moves it, and to everything that reads a door's state it is one standing wide
    *  open with its lock gone (`angle` ±OFF_ANGLE, unlatched, lockBroken): an open doorway. reset() hangs it again. */
   get off(): boolean { return this.g(DC.off) !== 0; } set off(v: boolean) { this.p(DC.off, v ? 1 : 0); }
-  /** the loose slab while the leaf is off (null: it hangs). Its numbers are a row of the level's slab columns (`slabs`, sim/slabshome.ts): this reads
-   *  the row (SlabRow), setting it writes a row whole (or, with null, gives the row up). Setting a door's slab to what `slab` just answered is nothing. */
-  get slab(): SlabSeen | null { return this.slabs.rowOf(this.i) < 0 ? null : this.slabRow; }
-  set slab(s: SlabSeen | null) {
-    const T = this.slabs; if (s === null) { T.leave(this.i); return; } if (s === this.slabRow) return;
-    const now: DoorSlab = { p: [s.p[0], s.p[1], s.p[2]], v: [s.v[0], s.v[1], s.v[2]], a: s.a, spin: s.spin, tip: s.tip, tipV: s.tipV, side: s.side, rest: s.rest, landed: s.landed, who: s.who, t: s.t, ang: s.ang, wedged: s.wedged, bits: s.bits ? [s.bits[0], s.bits[1], s.bits[2], s.bits[3]] : undefined };   // (read whole before a row moves: `s` may be another door's row)
-    T.save(T.enter(this.i, !now.rest), now);
-  }
-  readonly slabs: SlabStore; private readonly slabRow: SlabRow;
+  slab: DoorSlab | null = null;
   /** doorblast.ts DOORSHOT: the rounds' work this leaf has taken, in the wall engine's unit (with DOORSHOT.flat: rifle rounds, whatever the destruction scale) — one count for the whole leaf. reset() clears it. */
   get shot(): number { return this.g(DC.shot); } set shot(v: number) { this.p(DC.shot, v); }
   /** the hung leaf's half extents and markings (the slab at rest lies under other ones — doorblast.ts; reset() and the fog's remembered leaf put these back) */
   readonly leafH: Vec3; readonly leafMarks: Box['marks'];
   get creakArmed(): boolean { return this.g(DC.creakArmed) !== 0; } set creakArmed(v: boolean) { this.p(DC.creakArmed, v ? 1 : 0); }
-  constructor(readonly def: DoorDef, store?: DoorStore, index = 0, slabs?: SlabStore) {
-    this.S = store ?? new DoorStore(1); this.i = index; this.slabs = slabs ?? new SlabStore(index + 1); this.slabRow = new SlabRow(this.slabs, index); this.driveCols = new DriveCols(this.S, index);
+  constructor(readonly def: DoorDef, store?: DoorStore, index = 0) {
+    this.S = store ?? new DoorStore(1); this.i = index; this.driveCols = new DriveCols(this.S, index);
     // (what the fields' own initialisers were)
     this.vel = 0; this.quietT = 10; this.lastWho = -1; this.sinceBash = 10; this.closing = false; this.lockBroken = false; this.noticed = false; this.noticedT = -1000; this.pick = 0; this.picking = false;
     this.pickIdle = 0; this.pickClock = 0; this.pickN = 0; this.rattleT = 0; this.guardT = -100; this.passers = 0; this.outward = 0; this.clearway = 0; this.pullT = 0; this.p(DC.velSeen, 0); this.swept = false;
@@ -527,11 +493,9 @@ export class Doors {
   list: Door[];
   /** the leaves' own numbers, a column each (sim/doorshome.ts): in this array, or at home in the Rust module's block while RUST.doors is on */
   readonly store: DoorStore;
-  /** the leaves off their hinges, a row each (sim/slabshome.ts): in its own array, or at home in the module's block while RUST.slabs is on */
-  readonly slabs: SlabStore;
   /** the Game's hand-over for the step in the module (null: no game — the step is this file's) */
   host: DoorsHost | null = null;
-  constructor(defs: DoorDef[], private emit: (e: DoorEvent) => void) { this.store = new DoorStore(defs.length); this.slabs = new SlabStore(defs.length); this.list = defs.map((d, i) => new Door(d, this.store, i, this.slabs)); this.list.forEach((d, i) => { d.box.mkey = MKEY.door + i * 4; d.handleBoxes[0].mkey = MKEY.door + i * 4 + 1; d.handleBoxes[1].mkey = MKEY.door + i * 4 + 2; }); }   // motion identity for the leaf and its handles (scene/boxes.ts MKEY)
+  constructor(defs: DoorDef[], private emit: (e: DoorEvent) => void) { this.store = new DoorStore(defs.length); this.list = defs.map((d, i) => new Door(d, this.store, i)); this.list.forEach((d, i) => { d.box.mkey = MKEY.door + i * 4; d.handleBoxes[0].mkey = MKEY.door + i * 4 + 1; d.handleBoxes[1].mkey = MKEY.door + i * 4 + 2; }); }   // motion identity for the leaf and its handles (scene/boxes.ts MKEY)
 
   byName(n: string) { return this.list.find(d => d.def.name === n); }
 
@@ -756,7 +720,7 @@ export class Doors {
     for (const c of contacts) { c.blockedBy = null; if (c.run) { c.bashed = null; c.ripped = null; } if (c.struck) c.struck = null; if (c.moved) c.moved = false; if (c.man !== undefined) c.man = undefined; }
     const T = DOORTHROW, thr = this.throws;
     for (const d of this.list) {
-      if (d.off) { d.vel = 0; d.latched = false; d.closing = false; const S = d.slab; if (S) d.angle = S.ang; continue; }   // off its hinges: no leaf in the frame to swing, latch, close or be walked into — and whatever wrote a swing onto it this frame (a drill's shove, a script) wrote onto nothing
+      if (d.off) { d.vel = 0; d.latched = false; d.closing = false; if (d.slab) d.angle = d.slab.ang; continue; }   // off its hinges: no leaf in the frame to swing, latch, close or be walked into — and whatever wrote a swing onto it this frame (a drill's shove, a script) wrote onto nothing
       const [hx, hz] = d.def.hinge; const W = d.def.width; const ht = d.thick / 2;
       const ow = DOORWAY.oneWay, S = d.swing;
       if (d.swept && (d.vel !== d.seenVel || d.angle !== d.seenAngle)) d.swept = false;   // (something has moved it since the last update — a hand, a boot, a blast, a script: no longer a body's sweep)

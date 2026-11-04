@@ -11,12 +11,10 @@ import * as J from '../game/journal';
 import * as K from '../game/knobs';
 import * as Kt from '../game/kit';
 import { EXACT } from '../math/exact';
-import { POSEMATH } from '../anim/skeleton';
 import { SENSE } from '../game/sense';
 import { CMDCHECK } from '../game/cmd';
 import { carLampsTape } from '../game/carlamps';
 import { roundTape } from '../scene/round';
-import { shapesTape } from '../scene/shapes';
 import { rowsetTape } from '../game/rowset';
 import { memoryStore } from '../game/savestate';
 import { resetCivilians } from '../game/civilians';
@@ -39,11 +37,9 @@ export class RecipeStand {
     const kn = rc.knobs as { tables?: Plain } | null, src: Plain = { ...(kn?.tables ?? {}), ...(rc.tables ?? {}) }, into = (rc.tables ? K.knobsPlayed() : J.knobTables()) as Record<string, Plain>;
     for (const [name, Tb] of Object.entries(into)) { const t = src[name]; if (plain(t)) { if (rc.tables) put(Tb, t); else K.assignDeep(Tb, t); } }
     if (!plain(src.EXACT)) EXACT.on = false;   // (a tape from before the game's own maths was recorded on the engine's functions: said here, BEFORE the level and the game are built on them — math/exact.ts)
-    if (!plain(src.POSEMATH)) POSEMATH.singles = false;   // (… and one from before a pose's arithmetic could be in singles was recorded in doubles: said BEFORE the game is built, whose animators measure their clips as they are made)
     if (!plain(src.SENSE)) SENSE.cpu = false;  // (… and one from before these keys was played on the renderer's senses, its records believed as they came)
     if (!plain(src.CMDCHECK)) CMDCHECK.on = false;
     rowsetTape(src);   // (… and one from before a row had an hour and weather of its own: main.ts lays them on its query before the game exists — game/rowset.ts)
-    shapesTape(src);   // (… and one from before a box could say its shape: read as the level is stood up, too — scene/shapes.ts)
     roundTape(src);   // (… and one from before round things were round: the level's boxes are read as it is stood up — scene/round.ts)
     carLampsTape(src);   // (… and one from before a vehicle's lamps were light targets: the Game reads that switch as it is built — game/carlamps.ts)
     this.kit(rc.kit);

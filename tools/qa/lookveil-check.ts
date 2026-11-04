@@ -42,13 +42,4 @@ check(frame(1, [bulb, sun], null) === null && frame(0) === null && lookVeilFrame
   const D = POWDER_DRAW as Record<string, number>, was = { ...D }; D.gain = 4.5; D.thin = 0; D.grain = 0.1;
   const w = powderDrawWord(); Object.assign(D, was);
   check((w & 255) === 90 && ((w >>> 8) & 255) === 1 && ((w >>> 16) & 255) === 0 && (w >>> 24) === 100 && powderDrawWord() === 0, `a moved row goes as its nearest step, a row put to nothing as one step (0 is the shader's own), an unmoved one as 0 (0x${w.toString(16)})`); }
-{ // THE STEP'S PROGRAM IS COMPILED ONCE A DEVICE: a field made again (both snow rows put to nothing and back) asks for no second compile
-  const G = globalThis as any; G.GPUTextureUsage ??= { TEXTURE_BINDING: 4, COPY_DST: 2, COPY_SRC: 1, STORAGE_BINDING: 8 }; G.GPUBufferUsage ??= { UNIFORM: 64, COPY_DST: 8 }; G.GPUShaderStage ??= { COMPUTE: 4 };
-  const { PowderField } = await import('../../src/render/powderField');
-  const fake = () => { let made = 0; const thing: any = new Proxy(function () { }, { get: (_t, k) => k === 'then' ? undefined : thing, apply: () => thing });
-    const dev: any = new Proxy({}, { get: (_t, k) => k === 'createComputePipelineAsync' ? () => { made++; return Promise.resolve(thing); } : k === 'createShaderModule' ? () => ({ getCompilationInfo: () => Promise.resolve({ messages: [] }) }) : thing });
-    return { dev, made: () => made }; };
-  const A = fake(), B = fake(), air = { w: 200, h: 140, view: {} as any, cells: {} as any };
-  const f1 = new PowderField(A.dev, air); await f1.whenReady; f1.destroy(); const f2 = new PowderField(A.dev, air); await f2.whenReady; const f3 = new PowderField(B.dev, air); await f3.whenReady;
-  check(A.made() === 1 && B.made() === 1 && f2.ready && f3.ready, `a second field on one device compiles nothing more, another device compiles its own (${A.made()} and ${B.made()})`); }
 process.exit(red ? 1 : 0);

@@ -55,15 +55,14 @@ const plain = (search: string): string => { const keep = search.replace(/^\?/, '
  *  until 2026-10-27 it was dropped at the first scene, so the numbers were the plain build's. (One of them is not wholly outside the fight: while the wall-cut
  *  row's set is building, broken pieces are traced whole and the light the guards are seen by can differ, render/cutSwap.ts; a page's fight was never
  *  promised to be the set's to the frame, and the report's `floors` line says which fight it saw.) A word that is NOT kept is named in the report (`left`) */
-const CARRIED = new RegExp(`^(mute|nomusic|quality|adapt|pipequeue|shadertrim|shaderfold|framecap|gentle|plainair|savepic|pace|giveway|flight|downloads|cloud|cloudfiles|cloudstats|cloudtapes|cloudprefs|${SHADER_ROW_WORDS.join('|')})(=|$)`);
+const CARRIED = new RegExp(`^(mute|nomusic|quality|pipequeue|shadertrim|shaderfold|framecap|gentle|plainair|savepic|pace|giveway|flight|downloads|cloud|cloudfiles|cloudstats|cloudtapes|cloudprefs|${SHADER_ROW_WORDS.join('|')})(=|$)`);
 /** …AND THE LOOK PROTOTYPE'S WORDS, where the run is asked for on its page (scene/look.ts: its rows, its boot words). That page reads them once, at boot, into
  *  its shader text and its level, so a run is with the look or without it from its first scene to its last: a run that dropped them timed the plain build on
  *  every scene and said nothing. A trial this machine's look panel keeps off goes on the address as its own word, so the run times the look the page it was
  *  asked on shows and the report's address says which. These words DO change the fight (the look's geometry is part of the level it plays): the first scene's
  *  page says so in the report's notes (main.ts), and what that page gives a visitor (its kit, its fog put down, its panel) stands down on a scene's address.
  *  A word is judged decoded, as the page reads it, and carried as it was written */
-/** a word of the look page's own, as an address wrote it (scene/look.ts lookPageWord): the benchmark's scenes and a pricing run's pages (ui/pricerun.ts) carry the same */
-export const lookWord = (p: string): boolean => { const kv = [...new URLSearchParams(p)][0]; return !!kv && lookPageWord(kv[0], kv[1]); };
+const lookWord = (p: string): boolean => { const kv = [...new URLSearchParams(p)][0]; return !!kv && lookPageWord(kv[0], kv[1]); };
 /** the visitor's flags of an address that ride along a run's pages, as they were written: the benchmark's scenes carry them, and so does a run of any other
  *  kind (ui/pricerun.ts) — ONE list, so a flag that changes how the page is built or where its file goes is the same on both */
 export const carriedWords = (search: string): string[] => search.replace(/^\?/, '').split('&').filter(p => CARRIED.test(p));

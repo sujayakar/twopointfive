@@ -1,8 +1,7 @@
 // GPU pass timing via timestamp queries (falls back to no-op when unsupported).
 /** THE RENDER PASSES, by the names the page stamps them under. The GPU's busy span (GpuTimer.unionMs) is taken over the OTHERS wherever the page states a
- *  GPU time, because a render pass that draws to the display has stamps that span the wait for it. The ladder's and the backend's GPU ms (main.ts
- *  GPU_RENDER_PASSES), the pricing run (ui/pricerun.ts) and the level table read this list. The read-out's own union (main.ts) and a recording's (ui/perfrec.ts)
- *  still spell theirs, without `present`: not changed here */
+ *  GPU time, because a render pass that draws to the display has stamps that span the wait for it. ONE list: the page's totals, its records and the pricing
+ *  run (ui/pricerun.ts) read this one */
 export const RENDER_PASSES: readonly string[] = ['composite', 'post', 'fxaa', 'gbuffer', 'pdraw', 'present'];
 /** … the one of them that draws into the page's own textures, so its stamp follows its own work (read on an M4 Max under Metal against 50,000 recorded frames,
  *  2026-11-04) · and the rest, which draw to the display or after it: THEIR stamps are the ones that hold the wait */

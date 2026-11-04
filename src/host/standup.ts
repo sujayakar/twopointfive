@@ -11,7 +11,6 @@ import type { GameAudioLike } from '../game/audio_iface';
 import { buildLevel } from '../scene/level';
 import { UNDERFOOT } from '../scene/collision';
 import { ROUND, roundLevel } from '../scene/round';
-import { SHAPES, shapeLevel, plainLevel } from '../scene/shapes';
 import { thinClear, thinLevel } from '../scene/thin';
 import { barClear, barLevel } from '../scene/bars';
 import { lightFromDef } from '../render/lights';
@@ -125,7 +124,6 @@ import { RESCUEEND } from '../game/rescueend';
 import { SNATCHOUT } from '../game/snatchout';
 import { RESCUEFLUSH } from '../game/rescueflush';
 import { EXACT } from '../math/exact';
-import { POSEMATH } from '../anim/skeleton';
 import { rustRows, rustRow } from '../sim/sim';
 import { SENSE } from '../game/sense';
 import { CMDCHECK } from '../game/cmd';
@@ -218,10 +216,8 @@ export function nullSmoke(): SmokeSystemLike & { params?: Record<string, unknown
 export function populateHost(host: HostApi, level: Level): void {
   thinClear(level.boxes); barClear(level.boxes);   // (a level stood up a second time: last time's thin marks off before the round things are looked for)
   roundLevel(level.boxes, ROUND.on, level.markTexel);   // ROUND THINGS (scene/round.ts): the kit's octagons as one round box each, or every box put back as its file has it — before a box goes to the world and before the Game's collision is built from the list
-  plainLevel(level.boxes);   // A BOX SAYS ITS SHAPE (scene/shapes.ts): what an earlier stand-up of this level gave is taken back first, so that the two rules below read the level's plain boxes whatever shapes say
   thinLevel(level.boxes, level.doors);   // THIN THINGS THAT STAND FREE (scene/thin.ts): marked for the fog of war's own eyes (FOG.thin) and a teammate's (FOG.mates), on the list as it now is
   barLevel(level.boxes);   // A WINDOW'S BARS (scene/bars.ts): marked for the one rule that reads them (game/winbars.ts WINBARS)
-  shapeLevel(level.boxes, SHAPES.on);   // …and given: each box that says a shape has its record and its pieces follow the level's last box — before a box goes to the world and before the Game's collision is built from the list
   for (const b of level.boxes) host.world.addStatic(b);
   for (const ld of level.lights) host.lights.add(lightFromDef(ld));
 }
@@ -230,9 +226,6 @@ export function populateHost(host: HostApi, level: Level): void {
  *  on (TPS_EXACT=1 raises it); the shipped stand keeps the page's (on), and TPS_EXACT=0 there is the page's ?noexact. Written BEFORE anything is built — a level's
  *  boxes and a Game's constructor keep what they work out — so a tool that builds a level itself calls this first. */
 export function pinMaths(): void { if (pinned('TPS_EXACT')) EXACT.on = String((globalThis as any).process?.env?.TPS_EXACT ?? '') === '1'; }
-/** A POSE'S BULK ARITHMETIC IN SINGLES (src/anim/skeleton.ts POSEMATH) on the harness: off on the frozen stand (TPS_POSESINGLES=1 raises it); the shipped stand
- *  keeps the page's (on), and TPS_POSESINGLES=0 there is the page's ?posesingles=0. Written BEFORE the game is built: an animator measures its clips as it is made. */
-export function pinPoseMath(): void { if (pinned('TPS_POSESINGLES')) POSEMATH.singles = String((globalThis as any).process?.env?.TPS_POSESINGLES ?? '') === '1'; }
 /** THE RUST MODULE'S ROWS (src/sim/sim.ts RUST) on the harness: every row off on the frozen stand (TPS_RUST<ROW>=1 raises one — TPS_RUSTMATHS, TPS_RUSTLINES — the
  *  page's ?rust<row>); the shipped stand keeps the page's (RUST_ON: lines, circles and fog on), and TPS_RUST<ROW>=0 there is the page's ?rust<row>=0. A row is never
  *  a rule of play: the same game to the bit on or off. */
@@ -240,19 +233,17 @@ export function pinRust(): void { for (const r of rustRows()) { const w = 'TPS_R
 /** THE SENSES ON THE CPU (src/game/sense.ts) on the harness: off on both stands, as the page (TPS_CPUSENSE=1 raises it, the page's ?cpusense) */
 export function pinSenses(): void { if (pinned('TPS_CPUSENSE')) SENSE.cpu = String((globalThis as any).process?.env?.TPS_CPUSENSE ?? '') === '1';
   if (pinned('TPS_SMOKEGRID')) SENSE.grid = String((globalThis as any).process?.env?.TPS_SMOKEGRID ?? '') === '1';   // (…and their smoke on the coarse grid: off on both stands, TPS_SMOKEGRID=1 raises it, the page's ?smokegrid)
-  if (pinned('TPS_CPULIGHT')) SENSE.bounce = String((globalThis as any).process?.env?.TPS_CPULIGHT ?? '') === '1';   // (…and the light model on that grid: off on both stands, TPS_CPULIGHT=1 raises it, the page's ?cpulight)
-  if (pinned('TPS_MOONLIGHT')) SENSE.moon = String((globalThis as any).process?.env?.TPS_MOONLIGHT ?? '') === '1'; }   // (…and the night's light from the sky in the estimate: off on both stands, TPS_MOONLIGHT=1 raises it, the page's ?moonlight)
+  if (pinned('TPS_CPULIGHT')) SENSE.bounce = String((globalThis as any).process?.env?.TPS_CPULIGHT ?? '') === '1'; }   // (…and the light model on that grid: off on both stands, TPS_CPULIGHT=1 raises it, the page's ?cpulight)
 /** A RECORD FROM ANYONE (src/game/cmd.ts checkCmd) on the harness: off on the frozen stand (TPS_CMDCHECK=1 raises it); the shipped stand keeps the page's (on) */
 export function pinCmdCheck(): void { if (pinned('TPS_CMDCHECK')) CMDCHECK.on = String((globalThis as any).process?.env?.TPS_CMDCHECK ?? '') === '1'; }
 
 export async function standGame(host: HostApi, opts: StandOpts = {}): Promise<Stood> {
-  if (opts.harness) { pinMaths(); pinPoseMath(); pinRust(); pinSenses(); pinCmdCheck(); }   // (first: the level and the Game's constructor work out sines and cosines)
+  if (opts.harness) { pinMaths(); pinRust(); pinSenses(); pinCmdCheck(); }   // (first: the level and the Game's constructor work out sines and cosines)
   const level = opts.level ?? buildLevel();
   let ch = opts.ch;
   if (!ch) { if (!opts.gltfUrl) throw new Error('standGame: neither ch nor gltfUrl given'); ch = await loadGltfCharacter(opts.gltfUrl); }
   const smoke = opts.smoke ?? nullSmoke();
   if (opts.harness && pinned('TPS_ROUND')) ROUND.on = String((globalThis as any).process?.env?.TPS_ROUND ?? '') === '1';   // round things are round (src/scene/round.ts; read as the level's boxes go to the world, so written before that): off, so a drum is the kit's octagon of four slabs to every ray and every foot, as when every frozen digest and tally was recorded
-  if (opts.harness && pinned('TPS_SHAPES')) SHAPES.on = String((globalThis as any).process?.env?.TPS_SHAPES ?? '') === '1';   // a box says its shape (src/scene/shapes.ts; read as the level's boxes go to the world, so written before that): off, so every box of a level is the plain box its file has, as when every frozen digest was recorded
   if (opts.populate !== false) populateHost(host, level);
   if (opts.harness && pinned('TPS_OPENING')) OPENING.on = String((globalThis as any).process?.env?.TPS_OPENING ?? '') === '1';   // THE NIGHT'S OPENING (src/game/opening.ts): off, so every man of the shift starts on his route's first waypoint as when every frozen digest, tally and session fixture was recorded — set before the Game exists (its constructor places them); `TPS_OPENING=1` runs any harness tool with it on, tools/qa/solo-night.ts raises it for its as-shipped stand (the shipped default is ON)
   if (opts.harness && pinned('TPS_GEAR')) GEAR.on = String((globalThis as any).process?.env?.TPS_GEAR ?? '') === '1';   // the 2010s issue kit (src/game/gear.ts): off, so the kit's names in every frozen probe's HUD, message and debrief text are the ones they were written against, and Sam's pistol holds the ten it held; `TPS_GEAR=1` turns it on (the shipped default). Words, drawn boxes and the Glock's fifteen-round magazines — set before the Game exists (its constructor loads Sam's pistol)
@@ -308,7 +299,6 @@ export async function standGame(host: HostApi, opts: StandOpts = {}): Promise<St
     if (pinned('TPS_SQUADFIRE')) FOG.squadFire = String((globalThis as any).process?.env?.TPS_SQUADFIRE ?? '') === '1';   // a man the squad is shooting at is in the picture (src/game/fogofwar.ts firedOn): off, so the reticle takes only the men every stored run had in the picture
     if (pinned('TPS_WALLSNAP')) WALLSNAP.on = String((globalThis as any).process?.env?.TPS_WALLSNAP ?? '') === '1';   // back to the wall, the feel pass (src/game/wallsnap.ts): off, so Q takes the wall on the old clock and slings the rifle, as every frozen probe and digest has it; `TPS_WALLSNAP=1` turns it on (the shipped default)
     if (pinned('TPS_WALLPRESS')) WALLSNAP.press = String((globalThis as any).process?.env?.TPS_WALLPRESS ?? '') === '1';   // the wall taken without the key (src/game/wallsnap.ts `press`): off, so only Q takes a wall, as every frozen probe and digest has it; `TPS_WALLPRESS=1` turns it on (the shipped default; it acts only with the feel pass on)
-    if (pinned('TPS_WALLRUN')) WALLSNAP.pressRun = String((globalThis as any).process?.env?.TPS_WALLRUN ?? '') === '1';   // …at a run too (wallsnap.ts `pressRun`): off, so a sprint into a wall stops against it and Shift is always a way off one, as every frozen probe and digest has it; `TPS_WALLRUN=1` turns it on (the shipped default; it acts only with `press`)
     if (pinned('TPS_WALLVOICE')) WALLSNAP.voice = String((globalThis as any).process?.env?.TPS_WALLVOICE ?? '') === '1';   // the hold's two sounds (wallsnap.ts `voice`): off on the frozen stand, where only the old scuff is asked for; `TPS_WALLVOICE=1` turns them on (the shipped default)
     if (pinned('TPS_LEANGUN')) WALLSNAP.leanGun = String((globalThis as any).process?.env?.TPS_LEANGUN ?? '') === '1' ? LEAN_GUN_M : 0;   // the step-out's share for the rifle (wallsnap.ts `leanGun`): 0, so a step-out is 0.6 m whichever side the end is on, as every frozen probe has it; `TPS_LEANGUN=1` turns it on (the shipped default)
     if (pinned('TPS_WALLSLOW')) WALLSNAP.slow = String((globalThis as any).process?.env?.TPS_WALLSLOW ?? '') === '1';   // the unhurried take (wallsnap.ts `slow`): off, so every frozen probe and digest has the take's seconds as they were; `TPS_WALLSLOW=1` turns it on (the shipped default)

@@ -78,10 +78,9 @@ export function meterAt(g: any, P: Vec3, o: MeterOpts): number {
 export function selfCheck(g: any, pts: Vec3[]): [number, number] {
   let bad = 0;
   for (const p of pts) {
-    // (the estimate asked with no moon in it, whatever sense.ts SENSE.moon says: `sky: false` is the lamps alone)
-    if (meterAt(g, p, { sky: false }) !== GU.lightEstimateAt(g, p, undefined, false, undefined, false)) bad++;
-    if (meterAt(g, p, { sky: false, placeOnly: true }) !== GU.lightEstimateAt(g, p, () => true, false, undefined, false)) bad++;
-    if (meterAt(g, p, { sky: false, placeOnly: true, steady: true }) !== GU.lightEstimateAt(g, p, () => true, true, undefined, false)) bad++;
+    if (meterAt(g, p, { sky: false }) !== GU.lightEstimateAt(g, p)) bad++;
+    if (meterAt(g, p, { sky: false, placeOnly: true }) !== GU.lightEstimateAt(g, p, () => true)) bad++;
+    if (meterAt(g, p, { sky: false, placeOnly: true, steady: true }) !== GU.lightEstimateAt(g, p, () => true, true)) bad++;
   }
   return [pts.length * 3, bad];
 }

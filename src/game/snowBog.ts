@@ -51,8 +51,6 @@ function ground(g: Game): Ground {
   return G;
 }
 const over = (b: Box, x: number, z: number) => { const cs = Math.cos(b.yaw ?? 0), sn = Math.sin(b.yaw ?? 0), px = x - b.c[0], pz = z - b.c[2]; return Math.abs(cs * px - sn * pz) <= b.h[0] && Math.abs(sn * px + cs * pz) <= b.h[2]; };
-/** may the ground bog anything in this game now (false: snowBogAt answers 0 for every point — the switch off, or a level with no lying snow) */
-export function snowBogMay(g: Game): boolean { return SNOWBOG.on && snowLevel(levelNameOf(g.level)); }
 /** how boggy the ground is where a thing touched down at (x, y, z), 0‥1 (0 = a floor: the bounce as it was). 0 with the switch off. */
 export function snowBogAt(g: Game, x: number, y: number, z: number): number {
   const K = SNOWBOG; if (!K.on || !snowLevel(levelNameOf(g.level))) return 0;

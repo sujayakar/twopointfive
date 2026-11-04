@@ -1,3 +1,2 @@
 # the hall as meant: the showroom of the older kits, as tools/levels/library-hall.ts gives it (git hash-object -w levels/library-hall.json)
-# its hearth's ash is the ground's own paint darker and its stain lies under ruts (gwotKit.ts hearth, stain)
-753d8ad1112589f70b213359d82e725abf208f3a
+88a1f41f5a3637afd616b993a418fd443ed79815

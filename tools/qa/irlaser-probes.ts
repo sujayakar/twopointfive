@@ -1,10 +1,20 @@
 // The 'irlaser' family: THE TEAM'S LASERS ARE INFRARED BEHIND GOGGLES (the maintainer, 10-06: "and then we could also model IR lasers (assuming enemies don't
 // have night vision)" · "ready or not is a good base case here"). The rule is game/irlaser.ts; this family is its check. Run through probes.ts:
-//   bun run tools/qa/probes.ts irlaser | ir-sam | ir-unseen | ir-off
+//   bun run tools/qa/probes.ts irlaser | ir-draw | ir-sam | ir-unseen | ir-off
 // PASS / FAIL each, all headless (the Game of headless.ts stood up on each scenario's own level, started as a click on its row starts it — bang-tally.ts
 // stage()). What is asked is WHICH BOXES the lasers' draw hands the renderer and whether anything in the game goes differently for them. Nothing is drawn: how
 // an infrared line LOOKS through the tube is not judged here, and the GPU's light meter is not run (headless it is the CPU stand-in) — what is held instead is
 // the mechanism the meter rests on: a laser is boxes flagged NoShadow (in no ray's grid) and never a light (the light list is hashed frame for frame).
+//   ir-draw    A TEAMMATE'S LASER FOLLOWS HIS GOGGLES, AND THE PICTURE'S: every scenario, every teammate, his laser laid eight ways.
+//                · goggles down: not one box for a bare-eyed picture; for the tube's, the line and dot the red laser had — same place, same size, to the
+//                  field — in the infrared tint, every box NoShadow;
+//                · the line between the two pictures is the shader's (Player.nvAmount past 0.5), not the N key;
+//                · goggles up (a lit place, or behind his white light): the red laser of the build before, field for field, in either picture;
+//                · through Game.update, a lit walk: every man's band is his own goggles' every frame, both bands seen, and what his draw gives a bare-eyed
+//                  picture is nothing when down and the red line when up;
+//                · WHEN IT IS ON: Sam's goggles down and the team standing easy, every frame's boxes hold a goggled man's infrared line on his bore exactly
+//                  while his gun is at his shoulder (never with the muzzle lowered for a colleague); IR.carry off: none (nobody is hunting);
+//                · an enemy handed his laser back (LASER.enemy) is never infrared, whoever looks.
 //   ir-sam     SAM'S OWN: a scenario's team on the floor and the gun in his hands — a line and a dot on his bore in the infrared with his goggles down, in step
 //              with the picture's swap to the tube frame for frame, both ways; nothing with goggles up, holstered, sprinting, down, with IR.sam or IR.on off,
 //              or in a game with no team (the office at night, alone).
@@ -22,6 +32,7 @@
 //              do, Sam with none; flipped in play it takes hold inside a frame; the Team feel rows are kept by teamfeel.ts. (The frame-for-frame identity
 //              against the merged base is `bun run tools/qa/irlaser-probes.ts digest`: one hash per scenario of a scripted minute with the switch off, the
 //              frames' boxes included; the same file copied into a checkout of the base must print the same lines.)
+// The family's own red path: IR_BREAK=1 bun run tools/qa/probes.ts ir-draw must FAIL (a bare-eyed picture told it is the tube's).
 import { ROOT } from './headless.ts';
 import { stage } from './bang-tally.ts';
 const { SCENARIOS } = await import(`${ROOT}/src/scene/scenarioList.ts`);
@@ -75,11 +86,14 @@ const onBore = (c: any, b: any) => { const m = c.muzzle, d = c.gunDir, r = v3.su
 const draw = (g: any, gd: any) => { const out: any[] = []; CBM.laserBoxes(g, gd, out); return out; };
 const drawOld = (g: any, gd: any) => { const out: any[] = []; laserBoxesOld(g, gd, out); return out; };
 const same = (a: any, b: any) => JSON.stringify(a) === JSON.stringify(b);
+/** the same boxes but for their colour: place, size, turn, flags */
+const sameShape = (a: any[], b: any[]) => a.length === b.length && a.every((x, i) => same([x.c, x.h, x.yaw, x.rot, x.flags], [b[i].c, b[i].h, b[i].yaw, b[i].rot, b[i].flags]));
 /** lay a man's laser by hand: a muzzle half a metre off his chest and a unit bore (what the draw reads; nothing is stepped in between) */
 const WAYS: number[][] = []; for (let k = 0; k < 8; k++) WAYS.push([Math.sin(k * Math.PI / 4 + 0.2), 0, Math.cos(k * Math.PI / 4 + 0.2)]);
 const lay = (gd: any, dir: number[]) => { const c = gd.char, ch = c.bones.chest ?? [c.pos[0], 1.2, c.pos[2]]; c.muzzle = [ch[0] + dir[0] * 0.5, ch[1], ch[2] + dir[2] * 0.5]; c.gunDir = [...dir]; };
 /** the picture: the tube's (as the shader has it once the goggles are down) or the bare eye's — written straight, for a draw asked between frames */
 const picture = (g: any, tube: boolean) => { g.player.nv = tube; g.player.nvAmount = BREAK ? 1 : tube ? 1 : 0; };
+const samLight = (g: any, on: boolean) => { const pl = g.player; if (on) { pl.slot = 'pistol'; pl.holstered = false; } pl.pistol.lightOn = on; };
 const mates = (g: any): any[] => g.orders.squad().filter((x: any) => x.state !== 'dead');
 const doorsOf = (S: any): any[] => { const sam = S.g.player.char.pos; const c: { ent: any; dist: number }[] = []; for (const d of S.defs) for (const e of d.room.entries) if (!c.some(q => q.ent === e)) c.push({ ent: e, dist: flat(sam, e.at) }); c.sort((a, b) => a.dist - b.dist); return c.map(q => q.ent); };
 /** a scenario as its row starts it, the team fallen in on Sam and four seconds on: every man's goggles are where his place puts them */
@@ -89,6 +103,88 @@ async function settled(id: string) {
   return S;
 }
 function fnv() { let h = 0x811c9dc5 >>> 0; return { eat: (s: string) => { for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 0x01000193) >>> 0; } }, hex: () => (h >>> 0).toString(16).padStart(8, '0') }; }
+
+// ---------------------------------------------------------------- ir-draw
+export const irDraw = guarded(async () => {
+  const F = family('ir-draw: a teammate\'s laser is infrared behind his goggles — in the tube\'s picture only — and the red one it was with them up');
+  let downMen = 0, upMen = 0;
+  for (const id of IDS) {
+    const S = await settled(id); const { g } = S; const team = mates(g);
+    // ---- every man where his goggles are, his laser laid eight ways, both pictures
+    let bare = 0, tubeBad = 0, tubeBoxes = 0, upBad = 0, upBoxes = 0, upOff = 0, down = 0, up = 0, shadowed = 0, ownOff = 0;
+    for (const x of team) {
+      const isDown = NVM.nvgDown(g, x); if (isDown) down++; else up++;
+      for (const d of WAYS) { lay(x, d); const old = drawOld(g, x);
+        picture(g, false); const a = draw(g, x); picture(g, true); const b = draw(g, x); picture(g, false);
+        if (isDown) { bare += a.length; tubeBoxes += b.length; shadowed += b.filter(q => !noShadow(q)).length;
+          const R = CBM.laserReach(g, x.char, x, true), own = !!R && !!R.on && IRM.paintsOwn(g, x, R.on), civ = !!R && !!R.on && !own && !g.guards.some((o: any) => o.char === R.on);   // (laid onto Sam or a teammate: thumb off the switch; onto a hostage: it ends there, where the red one went on)
+          if (own) { ownOff++; if (b.length) tubeBad++; } else if (civ) { if (!b.every(isIr) || b.length === 0) tubeBad++; } else if (!sameShape(b, old) || !b.every(isIr) || b.length === 0) tubeBad++; }
+        else { upBoxes += a.length; if (!same(a, old) || !same(b, old) || a.length === 0) upBad++; }
+      } }
+    downMen += down; upMen += up;
+    F.verdict(bare === 0 && tubeBad === 0 && upBad === 0 && upOff === 0 && shadowed === 0 && down + up === team.length && team.length > 0, `${id}: ${down} of ${team.length} on goggles — each man's laser laid eight ways`,
+      `goggles down: boxes in a bare-eyed picture ${bare} (want 0) · in the tube's: ${tubeBoxes}, stagings not the old line and dot in the infrared tint ${tubeBad} (want 0; ${ownOff} laid onto Sam or a teammate: no line, as wanted), boxes not NoShadow ${shadowed} · goggles up: ${upBoxes} boxes, stagings not the old red draw field for field in either picture ${upBad} (want 0)`);
+  }
+  F.verdict(downMen >= 4 && upMen >= 1, 'not vacuous: men with goggles down and men with them up were both read', `${downMen} man-stagings goggles down, ${upMen} goggles up, over ${IDS.length} scenarios`);
+  // ---- the line between the two pictures is the shader's, not the key's
+  { const S = await settled(IDS[0]); const { g } = S; const x = mates(g).find((m: any) => NVM.nvgDown(g, m)); let detail = 'no goggled man';
+    let ok = !!x; if (x) { const way = WAYS.find(w => { lay(x, w); const R = CBM.laserReach(g, x.char, x, true); return !!R && !(R.on && IRM.paintsOwn(g, x, R.on)); }) ?? WAYS[0]; lay(x, way);   // (a way his bore lies on none of his own: laid onto Sam or a teammate the infrared line is off whatever the picture)
+      const at = (nv: boolean, amt: number) => { g.player.nv = nv; g.player.nvAmount = BREAK ? 1 : amt; return draw(g, x).length; };
+      const r = [at(true, 0), at(true, 0.49), at(true, 0.51), at(false, 0.51), at(false, 0.49), at(false, 0)]; picture(g, false);
+      ok = r[0] === 0 && r[1] === 0 && r[2] > 0 && r[3] > 0 && r[4] === 0 && r[5] === 0;
+      detail = `${x.callsign} goggled, his laser's boxes at N on + tube 0 / 0.49 / 0.51: ${r[0]} / ${r[1]} / ${r[2]} · N off + tube 0.51 / 0.49 / 0: ${r[3]} / ${r[4]} / ${r[5]} (the picture is the tube's past 0.5: post.wgsl)`; }
+    F.verdict(ok, 'shown exactly while the picture is the tube\'s: the goggles coming down show nothing infrared to the bare-eyed frames before the swap', detail); }
+  // ---- through Game.update: a lit walk, every man's band his own goggles' every frame
+  for (const id of [IDS[0], IDS[IDS.length - 1]]) {
+    const S = await settled(id); const { g, step } = S; const team = mates(g); const O = g.orders;
+    let frames = 0, bandBad = 0, drawBad = 0, irMan = 0, redMan = 0, flips = 0; const last = new Map<any, boolean>();
+    const watch = () => { frames++; for (const x of team) { if (x.state === 'dead') continue; const isDown = NVM.nvgDown(g, x), band = IRM.laserBand(g, x);
+        if (band !== (isDown ? 'ir' : 'visible')) bandBad++; if (isDown) irMan++; else redMan++;
+        if (last.has(x) && last.get(x) !== isDown) flips++; last.set(x, isDown);
+        const b = draw(g, x), old = drawOld(g, x); if (isDown ? b.length !== 0 : !same(b, old)) drawBad++; } };   // (Sam's goggles are up the whole walk: a bare-eyed picture)
+    for (let f = 0; f < 60; f++) { step(); watch(); }
+    samLight(g, true); step(30);
+    for (const e of doorsOf(S)) if (!(await quiet(() => O.give('stack', O.targetAt(e.door.frameCentre), 'all')))) break;
+    for (let f = 0; f < 60 * 12; f++) { step(); watch(); }
+    samLight(g, false);
+    for (let f = 0; f < 60 * 6; f++) { step(); watch(); }
+    F.verdict(bandBad === 0 && drawBad === 0 && irMan > 0 && redMan > 0 && flips >= 2, `${id}: a walk with Sam's light switched on and off again, Sam bare-eyed`,
+      `${frames} frames · man-frames goggles down ${irMan}, up ${redMan}, goggles flipped ${flips} times · frames a man's band was not his own goggles' ${bandBad} (want 0) · frames his draw was not 'nothing when down, the old red line when up' ${drawBad} (want 0)`);
+  }
+  // ---- when it is on: the gun at his shoulder, through Game.update, Sam's goggles down
+  for (const id of [IDS[0], IDS[2]]) {
+    const S = await settled(id); const { g, step } = S; const team = mates(g); g.player.nv = true; step(30);
+    let up = 0, upShown = 0, lowered = 0, loweredShown = 0, bad = 0, frames = 0;
+    const O = g.orders; for (const e of doorsOf(S)) if (!(await quiet(() => O.give('stack', O.targetAt(e.door.frameCentre), 'all')))) break;
+    // (Sam's own line is told from a man's by BEING Sam's — the boxes irlaser.ts draws for him this frame — not by lying near Sam's bore: a teammate's 0.6 m
+    //  line onto a wall beside him had both its boxes within 5 cm of Sam's bore for one frame of a walk, and read as not shown with the line there)
+    const watch = (count: boolean) => { let shownAny = 0; const samB: any[] = []; IRM.samLaserBoxes(g, samB); const sams = (b: any) => samB.some((q: any) => q.c[0] === b.c[0] && q.c[1] === b.c[1] && q.c[2] === b.c[2]);
+      for (const x of team) { if (x.state === 'dead') continue; const reach = CBM.laserReach(g, x.char, x, true), own = !!reach && !!reach.on && IRM.paintsOwn(g, x, reach.on), on = IRM.laserOn(g, x) && !own, shown = g.dynBoxes.some((b: any) => isIr(b) && onBore(x.char, b) && !sams(b));
+        if (shown) shownAny++; if (!count) continue;
+        if (on) { up++; if (shown) upShown++; else if (reach) bad++; } else { lowered++; if (shown) { loweredShown++; bad++; } } } return shownAny; };
+    for (let f = 0; f < 60 * 12; f++) { step(); frames++; watch(true); }
+    IR.carry = false; let carryOff = 0; for (let f = 0; f < 60; f++) { step(); carryOff += watch(false); } IR.carry = true;
+    const st = team.map((x: any) => x.state).filter((s: string, i: number, a: string[]) => a.indexOf(s) === i).join(', ');
+    F.verdict(bad === 0 && upShown > 0 && lowered > 0 && carryOff === 0, `${id}: when a goggled man's laser is on — a walk to a stack, Sam's goggles down`,
+      `${frames} frames, the team in state ${st} throughout · man-frames with the gun at the shoulder ${up}: his infrared line in that frame's boxes ${upShown} · man-frames with it lowered or off the shoulder ${lowered}: shown ${loweredShown} (want 0) · mismatches ${bad} (want 0) · IR.carry off, the next second: ${carryOff} teammates' lines (want 0 — nobody hunting, as before the file)`);
+  }
+  // ---- an enemy handed his laser back is never infrared
+  { const S = await settled(IDS[0]); const { g } = S; const foe = g.guards.find((x: any) => x.team === 'hostile' && x.state !== 'dead'); let ir = 0, red = 0, off = 0;
+    if (foe) { foe.state = 'alert'; for (const d of WAYS) { lay(foe, d); for (const tube of [false, true]) { picture(g, tube); off += draw(g, foe).length; LASER.enemy = true; const b = draw(g, foe); LASER.enemy = false; ir += b.filter(isIr).length; red += b.filter(isRed).length; } } picture(g, false); }
+    F.verdict(!!foe && ir === 0 && off === 0 && (red > 0 || !g.fogOfWar.seen(foe)), `${IDS[0]}: an enemy (${foe?.callsign ?? 'none'}) has no goggles and no infrared`, `his laser eight ways in both pictures: ${off} boxes as shipped (want 0) · with LASER.enemy on: ${red} red, ${ir} infrared (want 0)`); }
+  // ---- a hostage stops an infrared line (the red one never stopped on a civilian and is left alone)
+  { const id = IDS.find(i => /rescue/.test(i)) ?? IDS[0]; const S = await settled(id); const { g } = S; const x = mates(g)[0];
+    const hs: any[] = (g.civilians ?? []).filter((c: any) => c.state !== 'dead' && c.char.alive); let stopped = 0, through = 0, tried = 0, note = 'no hostage standing';
+    if (x && hs.length) { const h = hs[0], hc = h.char.bones.chest ?? [h.char.pos[0], 0.9, h.char.pos[2]], keep = [x.char.muzzle, x.char.gunDir];
+      for (const d of WAYS) { x.char.muzzle = [hc[0] - d[0] * 1.2, hc[1], hc[2] - d[2] * 1.2]; x.char.gunDir = [...d];
+        const body = h.char.rayHit(v3.mad(x.char.muzzle, d, 0.02), d, 30); if (body < 0) continue;
+        const ir = CBM.laserReach(g, x.char, x, true), red = CBM.laserReach(g, x.char, x, false);
+        if (!red || red.L < body - 1e-6) continue;   // (a wall or a man between this muzzle and the body: not a line onto it)
+        tried++; if (ir && Math.abs(ir.L - body) < 1e-6 && ir.dot) stopped++; if (red.L > body + 0.05) through++; }
+      [x.char.muzzle, x.char.gunDir] = keep; note = `${h.callsign ?? 'a hostage'}, ${tried} lines laid onto the body from 1.2 m: the infrared one ends on it in ${stopped}, the red one's reach went on past it in ${through}`; }
+    F.verdict(tried > 0 && stopped === tried, `${id}: an infrared line ends on a hostage in its way`, note); }
+  return F.done();
+});
 
 // ---------------------------------------------------------------- ir-sam
 /** Sam's laser among a frame's boxes: infrared boxes on his own bore */
