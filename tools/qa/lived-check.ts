@@ -80,11 +80,6 @@ const LEVEL_BASE: Record<string, string> = {
   // the pair mission's gate yard re-laid with ruts and stones, the partner's ways out of every line
   'tut-pair.json': '9048a2e01',
 
-  // the plan mission has nobody of the player's on the floor: its frame gives `plan` and a sky seat that holds the mode up, the step that opened the
-  // mode, the three walk steps and the step that called the squad back are out (17 steps), and the gates' view point is back where it was. No box,
-  // door, light or prop moved
-  'tut-plan.json': '1955e5c1e',
-
   // the tutorial's fourth mission: the plan mission's floor with the player on it and the four behind him, its own lesson (13 steps) and script
   'tut-queue.json': 'cebc22694',   // (the frame's rows list)
 
