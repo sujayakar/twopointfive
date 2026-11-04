@@ -1228,3 +1228,44 @@ interleaved and filtered to their quiet minimum, and a row whose p75 sits far ab
   `?sharpcap=0` in the page (`render/frame.ts sharpCapConfig`, the scene prelude's `const SHARP_CAP`, read once at boot; both writings of the kernel keep the
   bound behind it) = a class takes the ratio its taps carry with no bound, as it was. `tools/qa/sharpcap-check.ts` holds the texts, the prelude under each
   setting and the page's line (`SHARPCAP_BREAK=1` must fail). The word never seen on a GPU.
+- **A CAPTURE IS EVERY TARGET OF A FEW FRAMES, AND THE TRACE OF WHAT THE RENDERER CHANGED** (11-02; `src/render/framecap.ts`, wired in `main.ts`; every
+  page, nothing read by the game. The maintainer: "any telemetry or like tracing we can add to the graphic system to make it easier to debug the drops …
+  being able to get all the frame buffers … in a recording mode or something so we can debug stuff together and maybe also even try to optimize"; before
+  it, a flash at midday "as if it's throwing away the temporal buffer every so often" that showed in no debug view). HOW TO TAKE ONE: **F6** = THE WHOLE PICTURE over 2 frames, from the frame
+  after the key (since 11-03; the maintainer, of the window at the cursor it was: "can you make the captures for the entire frame? i don't want to have to
+  think about the cursor. and you can make it just start recording when we start it, it doesn't need to go back in history"; his first two captures had the
+  cursor on bare ground and not on the man he meant); **Shift+F6** = a window of the picture, 256 output pixels square at the cursor, over 8 frames (a tenth
+  the size: for a thing that flickers in one place); the look panel's Quality section
+  has both and "at next change"; by console `__framecap.start({ frames, px, whole, at: [u, v] })` (`whole: false` = the window), `__framecap.arm({…}, kinds?)` (waits and starts on
+  the frame the renderer next changes something, or only on the named kinds, e.g. `['long']` for a long frame, `['targets']`, `['scale']`),
+  `__framecap.stop()`, `__framecap.trace()`. The game's message line and the HUD's first lines say what it is doing and where the file went: `captures/<name>.tpscap.gz` under the dev server's checkout
+  (`tools/serve.ts` POST `/capture`, asked only by a page on a loopback host and answered only to this server's own page with the capture's header, as
+  the level API is; never over a file of the same name; the folder is gitignored) or a download anywhere else. A CAPTURE OVER 24 MB IS ALSO WRITTEN
+  IN PIECES beside it, `<name>.part1of6.tpscap.gz` … (11-03: his first whole-picture capture was 137 MB and could not be handed on in one file; the
+  message line says how many; `tools/qa/capture-pieces.ts`: a piece is a plain cut of the gzipped file, the reader takes any one piece with the others
+  beside it and joins them, and names a piece that is missing or cut short; `bun run tools/qa/capture-pieces.ts captures/<name>.tpscap.gz` cuts one
+  that is already on disk; `framecap-check` holds all of it). HOW TO READ ONE: `bun run
+  tools/qa/capture-read.ts captures/<name>.tpscap.gz` writes beside it `report.txt` (the trace; each frame's length and state; for every target and
+  frame the share of texels that moved, by how much, the share that are zero, mean and max, NaN count; the frames that stand out), `strips/<target>.png`
+  (the target's window over the frames, left to right, one exposure for the run) and `index.html`. NO LISTS: `watchTextures` wraps the device's
+  `createTexture` once, so a capture takes every live 2D texture that may be copied from, named by its label (a pooled target is relabelled when it is
+  taken: `passes.ts take`, `gbuffer.ts`; parked ones are left out, `TexturePool.isParked`), and names what it did not take and why. The render targets
+  ask for COPY_SRC where they are made (`passes.ts SU` already did; `RT` and the g-buffer do now). `?framecap=0` (`framecap.ts FRAMECAP`, lowered in
+  `main.ts` before the Engine is built) = the targets made without that bit, as they were, no texture watched and the key dead: a usage is a texture's
+  from the moment it is made, so the capture cannot ask for it at the key, and the word is how a machine is held against the bit (a replay and a
+  benchmark carry it; `framecap-check` holds the switch). The trace has no list either: the page hands
+  `state()`, a flat record (internal and output size, scale, quality and the ladder's last line, taau, sharp, the debug view, the targets' re-make count
+  and line, hidden), and a change of ANY key is an event with its frame; a frame over 50 ms and 2.5 times the running length is a `long` event; the
+  last 900 frames' lengths and CPU milliseconds ride in every capture, with the passes' GPU timings. A new target or a new key of state is in the next
+  capture with nothing written for it. A window is the same part of the picture in a target of any size (`cropRect`); a depth target is copied whole
+  and cut on the CPU (WebGPU's rule). The copies are made after the frame is submitted. BESIDE THE F9 RECORDER (`ui/perfrec.ts`, the performance
+  thread's): that one is timings over minutes, with `scale`, `ladder` and `targets` events of its own; this one is the picture's numbers over frames.
+  CHECKS: `bun run tools/qa/framecap-check.ts` (the window, the file there and back, the reader naming the one history that restarts in a made-up
+  capture and the one re-made at another size, the trace, an armed start, a stop; `FRAMECAP_BREAK=1` fails 3) and, in the page on the software adapter, `PORT=<port> node
+  tools/qa/framecap-page.cjs` (the look page on the pass at midday, high: 91 targets over 3 frames in 4.8 MB, the whole picture once in 14.6 MB at
+  640 x 400, no GPU error, both read back; strips of the g-buffer, each light class, the histories and the picture looked at and right). NOT TAKEN
+  YET: volumes and layer stacks (the radiance cache, the smoke atlas, the look's maps) and seven small maps made without COPY_SRC (wear, snow, air
+  cells, place map, `hdrCopy`). ON A GPU (11-03, an M4 Max in Chrome, 1654 x 1000, high at x 0.70): the first two, windows of 8 frames, were 34 MB
+  each with 91 targets and read back whole; F6 reaches the page. A frame's targets there are 286 MB whole and 13 MB as a window, and gzip took a window
+  to about a third, so the whole picture over 2 frames should be near 190 MB (NOT RUN: that size, what it costs while it is taken, whether a file that
+  big is easy to hand over; `whole: false` and Shift+F6 are the small ones).
