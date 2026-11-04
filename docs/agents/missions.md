@@ -2144,6 +2144,27 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   IT ON A GPU. The maintainer's to judge: the shot is taken from the doorway's light and not from the dark; whether the beam reads as "right behind
   him" from the store; whether a first-time player fires the one grenade once the right button opens (he cannot before the swap; after it he can swap
   back); the card's words; five sponge rounds.
+- **The ledger's town has an east side** (2026-11-03; the tail of `tools/levels/tut-quiet.ts` under LIVED IN, `levels/tut-quiet.json`; level data only, under
+  the lived switch — `LIVED.on`: ON in the page, `?lived=0` = the level as it was; OFF on the frozen stand, `TPS_LIVED=1` raises it; no switch of its own).
+  The level had no lived tier. It has one, of two groups, and BOTH ARE PAST THE YARD'S WALL: `lived.neighbour`, the yard east of the back court (a rope bed
+  left out under the snow, a water butt at the house's corner, a dish on its pole, snow blown against the two walls nobody walks by), and `lived.lot`, the
+  corner behind the neighbour's house (his water tank on its plinth, split wood, the builder's left-over block, the deep snow of a corner). 35 boxes, 21 of
+  them solid, no loose prop, NO LAMP; every piece is the look's kit's by name (`charpoy`, `drum`, `satDish`, `waterTank`, `woodPile`, `blocks`) with the
+  generator's own snow on it (`cap`, `drift`, `bank`), laid through `livedKit.ts livedTail`. WHY THERE: the shop's yard is the lesson's light and sight,
+  every lamp pool and wall of it placed for one beat, and it was already furnished; what was bare was the town round it (`level-needs` `ground`: 126 m² of
+  snow in one sheet, now none over 40 m²). The yard's wall stands 2.47 m with no gate on that side: no man of the shop has a line to a new thing and no way
+  leads from one into the yard. A PLAYER CAN WALK THERE (out by the street gate and round the back of the town); no line of the lesson sends him, and the
+  ways round the neighbour's house stay open (`lived-check`'s one-floor line was red on the first lay: a butt and a tank had shut them). NO TRODDEN PATH
+  IS LAID, though the first lay had three: the paint of one is play (`snowBog.ts`: a thrown thing bogs less on packed snow) and its footsteps are the
+  footstep map's (`surfaces.zones`), which is the level's own part and has no lived half, so a lived path would look hard and sound soft. Wanted, the
+  loader's and `lived-check`'s: a footstep zone that goes with the switch. Round things 14 to 16 with the lived things in
+  (`tools/qa/fixtures/round/tut-quiet.txt`). MEASURED (headless, no GPU): `lesson-run tut-quiet --digest`, seeds 1 and 2, is the SAME RUN AS THE STEP
+  BEFORE on all three stands (frozen with `TPS_RAILS=1`, shipped with `TPS_LIVED=0`, shipped): 24 of 24 steps, the same digest word each; so no guard saw
+  or heard anything he had not. `lesson-gate tut-quiet` (four dice on the shipped stand, two at a reader's pace), `lesson-check`, `rails-check`,
+  `quiet-check`, `smokebreak-check`, `level-needs tut-quiet --run`, `lived-check`, `map-check`, `level-lint` (no warning) green on both stands. NOT
+  MEASURED: how lit a man reads beside a new thing on the page's meter (it has bounce; the headless one has none), and what a man who has gone looking
+  does among them: the scripted player never leaves the yard. Never seen on a GPU, never played by a person: at the mission's own hour the new things
+  lie in the moon's dark and show as shapes.
 - **A man told to have a smoke lights one** (2026-10-22; `src/game/smokebreak.ts SMOKEBREAK` / `updateSmokeBreak`, called from `game.ts` beside the
   breath in the cold; the order is `director.ts OrderPatch.smoke` → `GuardScript.smoke`; the arm is `character.ts smokeLayer`, its numbers `SMOKEARM`
   in that file). The maintainer: "cigarette break animation (with real smoke!) would be sick". THE SWITCH: `SMOKEBREAK.on`, ON in the page
