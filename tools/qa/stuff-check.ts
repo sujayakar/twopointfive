@@ -80,7 +80,7 @@ const wanted = (name: string, albedo: readonly number[]) => { const s = stuffOfN
   const text = serializeLevelData(D), back = parseLevelData(text) as any, errs = validateLevelData(back), L = loadLevel(back), word = wordWith(M), off = lookWordOf(undefined, null);
   const car = word(L.boxes[bi], false) & 15, desk = word(L.boxes[wi], false) & 15, carOff = off(L.boxes[bi], false) & 15, part = L.props[pi].parts[0];
   const seat = word(makeBox({ c: [0, 0, 0], h: part.h, albedo: part.albedo, flags: BoxFlag.Dynamic, ...(part.stuff !== undefined ? { stuff: part.stuff } : {}) }), true) & 15;
-  const again = levelToData(L, { materials: M }) as any, kept = again.boxes[bi].stuff === 'paint' && again.boxes[wi].stuff === 'plain' && again.props[pi].parts[0].stuff === 'plaster' && again.boxes.filter((b: any) => b.stuff !== undefined).length === 2;
+  const again = levelToData(L, { materials: M }) as any, kept = again.boxes[bi].stuff === 'paint' && again.boxes[wi].stuff === 'plain' && again.props[pi].parts[0].stuff === 'plaster' && again.boxes.every((b: any, i: number) => b.stuff === D.boxes[i].stuff) && again.boxes.some((b: any) => b.stuff === undefined);
   const line = text.split('\n').find((l: string) => l.includes('"stuff"') && l.includes('"partBlue"')) ?? '', placed = /"material":\s*"partBlue".*"stuff":\s*"paint"/.test(line) && !/"stuff".*"(material|albedo|rough|metal)"/.test(line);
   const refuse = (w: string) => { const X = dataOf('library-hall.json') as any; X.boxes[0].stuff = w; return validateLevelData(X).some((e: string) => e.includes('stuff')); };
   const propSrc = readFileSync(`${ROOT}/src/game/props.ts`, 'utf8').includes('...(p.stuff !== undefined ? { stuff: p.stuff } : {})');
