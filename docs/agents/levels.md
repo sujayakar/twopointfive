@@ -174,6 +174,26 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   man wins by a tenth of a second the exchange at the post's door that he lost before. ON 24 SEEDS, as it was against dressed: taken 11 → 11, men
   standing 20 → 19 of 96, mean 88.5 s → 88.7 s. Count files (`fixtures/round/hall.txt`, `hall-gwot.txt`: `0 10`) and the look file's base ride here.
   NOT SEEN ON A GPU; nobody has played it.
+- **Furniture does not take a defender's way round** (a LEVEL RULE with a check, 11-03; no switch). A squad whose neighbour has lost a room sends a
+  pair ROUND to its other door (`enemysquads.ts` decide → `wayRound2`): each man needs a standing place outside that door and a path to it no longer
+  than `pressure.ts flankMaxM` (46 m) and its two fellows. Lived things are real, so they can take the place or lengthen the path, and then the
+  defenders go straight through the house instead: nothing fails, they are only less clever. FOUND ON THE TWO CHARGES: the way round the outside of the
+  house is 45.5 to 45.9 m as built. Dressed, the pair went round on 46 runs in 100 where it had on 60 (19 seeds lost the move, 5 gained it), the
+  sweep-and-hunt endings fell 33 → 20, and that was the whole of the run ending 9.7 s sooner. The search's own answer at the decision, same state to the
+  centimetre: 45.90 m bare, 46.88 m dressed. What did it was FIREWOOD behind the house: with the team HEARD in the hall the search prices the ground
+  near it and the way bows out to about 2 m off the back wall, onto the pile; with nobody known it hugs the wall and misses it.
+  THE CHECK: `tools/qa/wayround-check.ts` (shipped stand, and frozen; seeds 1-3). Each mission (every row of `ALL_MISSIONS`) with defender squads is
+  stood up with `TPS_LIVED=0` and `1`, and the game's own search is asked through `squadWaysRound` (a read-only export of `enemysquads.ts`): for every
+  man at home, from his post and from a stride inside each door of his room; to every other squad's room, every door of it as the team's; with nobody
+  of the team known AND with the team in the room (in its doorway, 3 m inside, and heard on every 2 m of its floor); going in or holding.
+  RED: a way LOST with lived rooms on, or SQUEEZED (made longer by more than the search's grain and a fifth of the room it had, and under 2 m from its
+  limit). `WAYROUND_BREAK=1` must fail. It leaves out the team's guns and men off their posts. What a mission already owed the day it was written is a
+  HELD BAR in a file of its own, `tools/qa/fixtures/wayround/<mission>.txt` (`<lost> <squeezed>`): warehouse-four 58 lost and 28 squeezed,
+  compound-four 21 and 107, barracks-four 22 and 20, defuse-four 23 squeezed (shipped), pass-four 9 squeezed (frozen). A mission is red when it has
+  more than its file; a mend takes its file out in its own commit. `tight as built` on a line is the level's own edge with no furniture at all: the
+  two charges have 89 ways in 902 within 2 m of the cap, so a man a stride off his mark already loses some. That is the cap's, for whoever owns squad
+  sense.
+  NOT YET a line of `level-needs.ts` or of a gate family: run it by name after furnishing a level with squads. NOT SEEN ON A GPU.
 - **A roof over walkable floor is the kit's ceiling** (a LEVEL RULE, no switch): `K.ceiling` (levelKit.ts `ceiling()`: a slab flagged `NoPrimary`, so the camera sees the floor under it) or a slab
   flagged `NoPrimary` by hand — and, if rain should stop at it, inside `weather.ts roofsOf`'s height band: underside at `WORLD.ceilingY` − 0.25 (2.75 m) or over, top no higher than + 0.45, at
   least 0.9 m across both ways (`roofsOf` asks only height and size, never the flag: a DRAWN slab there stops the rain and hides the room). Floodlit's generator shed had the one drawn roof
