@@ -93,7 +93,7 @@ export interface BoxData {
   markings?: MarkingDef[];
   /** A SHAPE (scene/shapes.ts — read its head): how this box stands when shapes are on, said in the box's OWN frame so that it moves, turns and copies with
    *  the box. `round` 1 | 3 = a twelve-sided prism about the box's own x or z; `arc` { axis, rise } = its top a round about its own x or z; `cut` = planes
-   *  [nx, ny, nz, d], each keeping n · p ≤ d (8 at most, 1 beside an arc); `old` = not a fresh break (the picture's word: the cut faces take the box's own
+   *  [nx, ny, nz, d], each keeping n · p ≤ d (8 at most, 5 beside an arc, whose own facets give way to them); `old` = not a fresh break (the picture's word: the cut faces take the box's own
    *  paint and lying snow); `with` = pieces of trim that are there only when shapes are on, drawn and nothing else. The box keeps its centre and half size: a shape is cut FROM the plain
    *  box. With shapes off the box is the plain box above and nothing here is read. Not on a box with `rot`; no form on a box with `markings` or the Glass
    *  flag (their readers — the mark painter, the pane engine — read the whole box). */
@@ -103,7 +103,7 @@ export interface BoxData {
 export type PropKindName = 'chair' | 'cardboard' | 'bin' | 'plant';
 /** one piece of a shape (BoxData.shape.with): TRIM, drawn and nothing else — `off` (its centre from the box's, in the box's own frame), half size, yaw from
  *  the box's own, paint (exactly one of material / albedo), finish — and a form. It says no flags: a piece always stands NoShadow */
-export interface ShapePieceData extends ShapeForm { off: Vec3; h: Vec3; yaw?: number; material?: string; albedo?: Vec3; rough?: number; metal?: boolean }
+export interface ShapePieceData extends ShapeForm { off: Vec3; h: Vec3; yaw?: number; /** at most one of material / albedo; neither = the box's own paint and finish */ material?: string; albedo?: Vec3; rough?: number; metal?: boolean }
 export interface ShapeData extends ShapeForm { with?: ShapePieceData[] }
 export interface PropPartData { off: Vec3; h: Vec3; /** relative to the prop's heading; absent = 0 */ yaw?: number; material?: string; albedo?: Vec3; /** markings on the part's faces (as BoxData.markings) */ markings?: MarkingDef[]; }
 /** Loose furniture (game/props.ts): a rigid group of parts standing on the floor at (x, z). `half` / `height` are normally FITTED from the parts by the loader
@@ -359,7 +359,8 @@ export function validateLevelData(d: LevelData): string[] {
       }
       if (isVec(b.h)) for (const e of shapeErrors(b.shape, b.h, PIECE_KEYS)) err(`${w}.shape`, e);
       const ws: any[] = isObj(b.shape) && Array.isArray((b.shape as any).with) ? (b.shape as any).with : [];
-      ws.forEach((q, j) => { if (isObj(q)) { const wq = `${w}.shape.with[${j}]`; paintOk(wq, q); finishOk(wq, q); } });
+      ws.forEach((q, j) => { if (isObj(q)) { const wq = `${w}.shape.with[${j}]`;   // (a piece's paint as a box's, or none: it then wears its box's, and says no finish of its own)
+        if (q.material !== undefined || q.albedo !== undefined) { paintOk(wq, q); finishOk(wq, q); } else if (q.rough !== undefined || q.metal !== undefined) err(wq, 'a piece that says no paint wears its box\'s finish too: no rough / metal'); } });
     }
   };
   boxes.forEach((b, i) => { if (isObj(b)) boxRule(`boxes[${i}] '${show(b.id)}'`, b); });

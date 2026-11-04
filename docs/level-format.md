@@ -77,7 +77,7 @@ its centre and half size, so to the simulation a shaped level is the plain level
 
 | key | what it says |
 |---|---|
-| `round` | `1` or `3`: the box is a twelve-sided prism about its own x or z (a wheel on its axle, a tank lying down). The box is square across that axis, or within a fifth of it. A cylinder standing on its end is not said here: that is the kit's round thing (`scene/round.ts`). |
+| `round` | `1` or `3`: the box is a twelve-sided prism about its own x or z (a wheel on its axle, a tank lying down). The box is square across that axis, or within 15 hundredths of it. A cylinder standing on its end is not said here: that is the kit's round thing (`scene/round.ts`). |
 | `arc` | `{ axis: 1 \| 3, rise }`: the box's top is a round about its own x or z that rises `rise` metres from its sides to its middle (a bowed roof, a bonnet, an arch). `rise` is at most the box's height and at most half its width across the axis. |
 | `cut` | planes `[nx, ny, nz, d]` in the box's own frame, each keeping `n · p ≤ d` (a corner rounded in plan, a pane that leans). 8 at most; 5 beside an `arc` (whose own facets give way to them: six with one plane, four with up to three, two with up to five); none beside a `round`. A plane that cuts nothing, or planes that leave nothing, are refused. |
 | `old` | `true`: not a fresh break. The picture's word (the cut faces take the box's own paint and lying snow: a pressed panel, not a snapped end); nothing reads it until the look's cut pass is in the build. |

@@ -42,6 +42,7 @@
 // the shutters. ON THEIR OWN FUEL: the brazier in the yard, two stoves, the bread oven, the lanterns, the gun truck's head lamps. ON A BATTERY, and only when
 // the mains are out: five red beacons (the yard wall, the bunkhouse, the gate, the tea room, the tunnel's mouth).
 import type { Vec3 } from '../../src/math/vec';
+import { pickupLens } from '../../src/scene/carShapes';
 import type { Level, LevelDoorDef } from '../../src/scene/level';
 import type { LessonData, LevelScenarios, Rect, StructureData } from '../../src/scene/scenarios';
 import type { SurfacesData } from '../../src/scene/levelData';
@@ -364,7 +365,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
   // its two head lamps, lit: the road between the two parties is theirs (its own battery: the mains box does not reach them; a round puts one out)
   grp('road.lamps');
   for (const [k, lz] of [[0, -0.66], [1, 0.66]] as const) {
-    const lens = add({ c: at(GUN_TRUCK, 2.49, 0.69, lz), h: [0.02, 0.06, 0.13], yaw: GUN_TRUCK.yaw, ...M.plasticWhite, emissive: [26, 24, 20], flags: BoxFlag.NoShadow });
+    const lens = add({ c: at(GUN_TRUCK, 2.49, 0.69, lz), h: [0.02, 0.06, 0.13], yaw: GUN_TRUCK.yaw, ...M.plasticWhite, emissive: [26, 24, 20], flags: BoxFlag.NoShadow, shape: pickupLens([0.02, 0.06, 0.13], [2.49, 0, lz]) });
     const d = at({ x: 0, z: 0, yaw: GUN_TRUCK.yaw }, 1, 0, 0);
     lights.push({ kind: 'spot', pos: at(GUN_TRUCK, 2.6, 0.69, lz), dir: norm([d[0], -0.035, d[2]]), color: [1.0, 0.93, 0.8], intensity: 120, range: 26, innerDeg: 9, outerDeg: 24,
       name: `gun_truck_lamp_${k}`, group: 'exterior', enabled: true, volumetric: 0.35, fixtureBox: lens, radius: 0.07, mains: false });

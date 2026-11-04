@@ -304,7 +304,7 @@ export function build(extra: PassExtra = {}): { level: Level; scenarios: LevelSc
   LS.load.with!.push(LS.snowSheet(S.snow));                                                 // the sheet of snow on the tilt's bow (trim of the load's box: there only when shapes are on)
   grp('snow.lorry');
   L(-1.15, 0, 1.95, 2.05, 1.84, 0.96, S.snow, { flags: DECAL, shape: LS.snowTilt([1.84, 0.05, 0.96]) });                              // CAPS: the tilt (deep: it has stood for days),
-  L(-1.15, 0, 2.05, 2.11, 1.84, 0.96, S.snow, { flags: DECAL, shape: LS.snowTilt([1.84, 0.03, 0.96]) });                              //   a second fall over the first, the whole tilt (one outline: two nested ones read as slabs)
+  L(-1.15, 0, 2.05, 2.11, 1.84, 0.96, S.snow, { flags: DECAL, shape: LS.snowTilt([1.84, 0.03, 0.96], true) });                              //   a second fall over the first, the whole tilt (one outline: two nested ones read as slabs)
   L(1.5, 0, 2.2, 2.27, 0.55, 1.02, S.snow, { flags: DECAL, shape: LS.snowRoof([0.55, 0.035, 1.02]) });                                 //   the cab's roof
   L(2.8, 0, 1.5, 1.555, 0.52, 0.9, S.snow, { flags: DECAL, shape: LS.snowBonnet([0.52, 0.0275, 0.9]) });                                 //   the bonnet
   L(3.72, 0, 0, 0.44, 0.25, 1.0, S.snow);                                                     // BANK (stops feet): the nose stands into the wind; snow is banked on the bumper,

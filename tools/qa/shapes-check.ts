@@ -54,7 +54,7 @@ function shapedYard(): { d: any; tub: number; wheel: number; bonnet: number; cra
   const wheel = by([1.52, 0.37, 0.78], [0.37, 0.37, 0.13]), bonnet = by([1.75, 0.9, 0], [0.7, 0.1, 0.84]); if (wheel < 0 || bonnet < 0) throw new Error('shapes-check: the yard\'s pickup has no front wheel or bonnet where the kit writes them');
   T.shape = { cut: nose(T.h), old: true, with: [
     { off: [1.52, -0.18, 0.914], h: [0.2, 0.2, 0.004], albedo: [0.3, 0.31, 0.32], rough: 0.45, metal: true, round: 3 },   // (a hub, proud of the tyre and of the body's side)
-    { off: [0.38, 0.74, 0.78], h: [0.5, 0.21, 0.03], material: T.material, arc: { axis: 3, rise: 0.3 } }] };                           // (an arch over the wheel)
+    { off: [0.38, 0.74, 0.78], h: [0.5, 0.21, 0.03], arc: { axis: 3, rise: 0.3 } }] };                           // (an arch over the wheel)
   B[wheel].shape = { round: 3 };
   delete B[bonnet].markings; B[bonnet].shape = { arc: { axis: 1, rise: 0.2 }, cut: [fall(B[bonnet].h)] };
   // the crate: wood, a metre long, on the yard's ground three metres off the pickup's side; two corners cut, and a plate hung on its long face
@@ -90,7 +90,7 @@ export async function shapesCheck(): Promise<boolean> {
         ['an arc that rises more than its half width', errs(d => { d.boxes[Y.tub].shape.with[1].arc = { axis: 1, rise: 0.2 }; }), 'half round'],
         ['a round and an arc at once', errs(d => { d.boxes[Y.wheel].shape.arc = { axis: 3, rise: 0.1 }; }), 'one or the other'],
         ['a shape on a tilted box', errs(d => { d.boxes[Y.wheel].rot = [0, 0, 0, 1]; }), 'rot'],
-        ['a piece with no paint', errs(d => { delete d.boxes[Y.tub].shape.with[0].albedo; }), 'material / albedo'],
+        ['a piece with a finish and no paint', errs(d => { delete d.boxes[Y.tub].shape.with[0].albedo; }), 'wears its box'],
         ['a piece with pieces', errs(d => { d.boxes[Y.tub].shape.with[1].with = []; }), 'unknown key'],
         ['a shape that says nothing', errs(d => { d.boxes[Y.wheel].shape = {}; }), 'says nothing'],
         ['a cut that leaves nothing', errs(d => { d.boxes[Y.tub].shape.cut = [[1, 0, 0, -5]]; }), 'leaves nothing'],
@@ -119,7 +119,8 @@ export async function shapesCheck(): Promise<boolean> {
     const made = shapeLevel(L.boxes, !BREAK), up = flat(L.boxes), nUp = L.boxes.length;
     { const B = L.boxes, tub = B[Y.tub], wheel = B[Y.wheel], bonnet = B[Y.bonnet], crate = B[Y.crate], tail = B.slice(n0);
       const same = first.every((b: any, i: number) => B[i] === b && b.c === places[i][0] && b.h === places[i][1]), twice = (shapeLevel(B, !BREAK), flat(B) === up && B.length === nUp);
-      const recs = tub.cut?.length === 6 && wheel.cut?.length === 8 && bonnet.cut?.length === 7 && crate.cut?.length === 2 && tail.length === 3 && tail.every((p: any) => p.piece === true && p.flags === BoxFlag.NoShadow) && tail[0].cut?.length > 0 && tail[1].cut?.length > 0;
+      const recs = tub.cut?.length === 6 && wheel.cut?.length === 8 && bonnet.cut?.length === 7 && crate.cut?.length === 2 && tail.length === 3 && tail.every((p: any) => p.piece === true && p.flags === BoxFlag.NoShadow) && tail[0].cut?.length > 0 && tail[1].cut?.length > 0
+        && tail[1].albedo.join() === tub.albedo.join() && tail[1].rough === tub.rough && tail[0].albedo.join() !== tub.albedo.join();   // (a piece that says no paint wears its box's; one that says its own keeps it)
       const mine = withPieces(B, [Y.tub, Y.wheel]) as number[], tied = JSON.stringify(mine) === JSON.stringify(BREAK ? [Y.tub, Y.wheel] : [Y.tub, Y.wheel, n0, n0 + 1]) && tail.every((p: any) => typeof p.of === 'number' && B[p.of].shaped === true);
       // the number the level's fingerprint takes in: these shapes', another for a plane moved a centimetre, the same for a piece repainted, none when none stands
       const stampUp = shapeStamp(B) as number, stampOf = (f: (d: any) => void) => { const d = JSON.parse(JSON.stringify(Y.d)); f(d); const X = levelOf(d); shapeLevel(X.boxes, true); return shapeStamp(X.boxes) as number; };
@@ -132,7 +133,7 @@ export async function shapesCheck(): Promise<boolean> {
       const Q = levelOf(Y.d); Q.boxes[Y.wheel].flags |= BoxFlag.Bar; const barOk = shapeLevel(Q.boxes, true) === 3 && !Q.boxes[Y.wheel].shaped && !Q.boxes[Y.wheel].cut;
       shapeLevel(B, !BREAK);
       line(made === 4 && recs && same && twice && stamps && down && carried && barOk && tied,
-        '2 the yard stood up with the switch: the body has its six corner planes, the wheel is a round, the bonnet an arc with its plane, the crate its two corners, and the three pieces follow the level\'s last box, each trim (NoShadow and no other flag); every box of the level is the box it was, at the place and of the size it was, and a second stand-up changes nothing; the number of the shapes that stand is another for a plane or a piece moved a centimetre and the same for a piece repainted; put back, the list is the file\'s again, no box keeps a record or a piece and the number is none; a body moved three metres and turned takes its hub with it; a window\'s bar that says a form is left plain; and a box\'s pieces are found by its number',
+        '2 the yard stood up with the switch: the body has its six corner planes, the wheel is a round, the bonnet an arc with its plane, the crate its two corners, and the three pieces follow the level\'s last box, each trim (NoShadow and no other flag), the one that says no paint in its box\'s; every box of the level is the box it was, at the place and of the size it was, and a second stand-up changes nothing; the number of the shapes that stand is another for a plane or a piece moved a centimetre and the same for a piece repainted; put back, the list is the file\'s again, no box keeps a record or a piece and the number is none; a body moved three metres and turned takes its hub with it; a window\'s bar that says a form is left plain; and a box\'s pieces are found by its number',
         `${made} boxes shaped of 4 · ${n0} boxes, ${nUp} stood up · records ${tub.cut?.length ?? 0}/${wheel.cut?.length ?? 0}/${bonnet.cut?.length ?? 0}/${crate.cut?.length ?? 0} planes, ${tail.length} pieces · same boxes ${same} · twice the same ${twice} · the number ${stamps} · put back ${down} · carried ${carried} · a bar left plain ${barOk} · pieces by their box ${tied}`); }
 
     // (3) the shape, by references written here — with the cut-pieces switch up, and down (the shape is the game's: a picture setting does not move it)
