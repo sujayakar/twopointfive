@@ -2,8 +2,8 @@
 // has a paint and a material; the material is maps the page makes itself). On that page only until it is landed on the game's. This file is in the g-buffer module ONLY on that page (render/gbuffer.ts lookWgsl); every other page gets a stub.
 //
 // What it does to a box pixel, in the g-buffer and nowhere else:
-//   MAPS      tiling materials (and two of masonry), each made by the page the first time a box is that stuff (render/gbuffer.ts needLook; render/lookTex.ts: paint, height, normal, roughness, cavity), picked by the box's paint class
-//             (lookClass, written out by render/gbuffer.ts from the palette) and laid in metres: along a wall and up it, world x z on the ground, along the long
+//   MAPS      tiling materials (and two of masonry), each made by the page the first time a box is that stuff (render/gbuffer.ts needLook; render/lookTex.ts: paint, height, normal, roughness, cavity), picked by what the box SAYS it is made of
+//             (its word in its own record: common.wgsl boxStuff, scene/stuff.ts; no colour is asked) and laid in metres: along a wall and up it, world x z on the ground, along the long
 //             side of a board or a sheet, and in the box's own frame for cloth, bare metal and old paint (a sack carries its weave with it) AND FOR ANYTHING THAT
 //             MOVES, whatever it is made of (a box past the level's statics: a door's leaf, a shoved crate, a jar; common.wgsl boxLook). A layer varies a box's
 //             paint and never moves its value: its multiplier and its hollows each average to 1 over a tile (lookTex.ts lookLayer).
