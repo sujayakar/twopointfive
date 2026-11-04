@@ -14,7 +14,7 @@
 //   3. weight it by the VNDF estimator F(v·h) · G2/G1 (Schlick on F0 = 0.04, or the albedo for a metal — mixed by metalness; height-correlated Smith), average;
 //   4. add the ANALYTIC image of the emitters (rtGlints) — the primary-hit specular response to the level's lights through the same GGX D · Smith G · Schlick F:
 //      every steady point / spot light's lens (no ray can find those: NoShadow glow cards or no geometry) and, on finishes too rough to trace it cleanly, each
-//      area-lit panel's kind-3 light, all widened by the emitter's angular size, the four strongest shadow-rayed (+ smoke) — noise-free, so a walking guard's
+//      area-lit panel's kind-3 light, all widened by the emitter's angular size, the four strongest shadow-rayed (+ smoke) — noise-free (but under GLINT_PICK, rtGlints' head), so a walking guard's
 //      torch glides in the lino as an elongated highlight and the sodium lamp stands in the wet asphalt as a still streak;
 // and store outgoing radiance (BRDF applied) + the first ray's hit distance in alpha (RT_TMAX on a miss, the strongest highlight's distance with no rays,
 // −1 = no reflection at this texel: matte, character, sky), which the shared denoiser's specular client (denoise.wgsl, per-pixel roughness) reprojects the
@@ -39,8 +39,8 @@ const RT_HIT_EMAX: f32 = 20000.0;    // irradiance bound before the f16 pack (a 
 
 const RT_TMAX: f32 = 48.0;
 const RT_SPILL: f32 = 0.005;        // a spot's lens seen from outside its beam still shows this fraction of its on-axis intensity (reflector scatter): a level torch is a dot in the floor
-const RT_GLINT_MAX: f32 = 160.0;    // luminance bound on the analytic glints (stable, so allowed to read as white — a torch lens is thousands)
-const RT_GLINT_RAYS: u32 = 4u;      // shadow rays for the strongest glint candidates; the rest are credited at half, unshadowed (off the lobe by construction: D has made them small)
+const RT_GLINT_MAX: f32 = 160.0;    // luminance bound on the analytic glints (stable, so allowed to read as white — a torch lens is thousands; under GLINT_PICK it bounds a frame's sample)
+const RT_GLINT_RAYS: u32 = 4u;      // shadow rays for the lamps' highlights: the four strongest, the rest credited at half, unshadowed (off the lobe by construction: D has made them small); with GLINT_PICK the three strongest and ONE picked by its weight from all the rest, which stands for them (rtGlints' head)
 const PI: f32 = 3.14159265;
 
 fn pow5(x: f32) -> f32 { let x2 = x * x; return x2 * x2 * x; }
@@ -197,11 +197,22 @@ const RT_SUN_ALPHA: f32 = 0.07;
 // them: the light's owner byte in the skip word) and the smoke on the segment, the rest — off the lobe, where D has already made them small, and reach-masked
 // — are credited at half, unshadowed (the dust glow's rule). The sun and the moon: the head above (without its word they stay the sky's). Returns radiance in .xyz and the strongest highlight's distance in .w
 // (0 = none) — the virtual depth the denoiser reprojects a highlight by when no ray was traced.
+// NO LAMP IS CREDITED UNSEEN (the scene prelude's `const GLINT_PICK`, render/frame.ts glintPickConfig; false = the lines above, as they were). A fifth lamp
+// behind a wall glinted at half strength, and a fifth in plain sight was drawn at half. With the word the three strongest keep their rays and the fourth ray
+// goes to ONE lamp picked from all the rest by its weight (`pick` = the caller's number for this pixel and frame; one number, handed on down the walk), and
+// what is drawn for the rest is THE REST'S OWN SUM, seen or not as that one lamp is, through the smoke on its segment. So with the rest all in sight and
+// no smoke between every frame is the frame before, colours and all, and the old sum whole (through smoke the frames differ by the picked lamp's own); with some hidden the frames differ and their mean is the seen share of the rest's
+// light (in the rest's mean colour, not the seen ones' own). A pixel four lamps or fewer reach draws what it drew: the pick of one from one, which is
+// taken without asking the number, and no division is made. The caller's number is the pixel's own (the same every frame, whatever the jitter does to
+// the point) stepped by 0.7548777 each frame (not the golden ratio: eight steps of that come back to within a twentieth, and eight is the jitter's
+// cycle), so a still pixel walks through its lamps; it is no new draw of the kernel's stream. No ray more than
+// before. NOT NOISE-FREE with the word: the lamps past the third are one sample a frame, and the bound below is then on a sample, not on the sum.
 struct Glint { L: vec3f, spec: vec3f, dist: f32, w: f32, i: i32 };
-fn rtGlints(P: vec3f, Po: vec3f, N: vec3f, V: vec3f, T: vec3f, B: vec3f, ax: f32, ay: f32, F0: vec3f, owner: u32, kAna: f32) -> vec4f {
+fn rtGlints(P: vec3f, Po: vec3f, N: vec3f, V: vec3f, T: vec3f, B: vec3f, ax: f32, ay: f32, F0: vec3f, owner: u32, kAna: f32, pick: f32) -> vec4f {
   var g0: Glint; var g1: Glint; var g2: Glint; var g3: Glint; g0.w = 0.0; g1.w = 0.0; g2.w = 0.0; g3.w = 0.0; g0.i = -1; g1.i = -1; g2.i = -1; g3.i = -1;
   var gs: Glint; gs.w = 0.0; gs.i = -1;                                    // the sun's (or a moon's): the fifth candidate, outside the lamps' contest
   var rest = vec3f(0.0);
+  var poolW = 0.0; var pu = pick;                                        // the rest's whole weight, and the pick's one number (GLINT_PICK, the head above; unread without it)
   let Ve = vec3f(dot(V, T), dot(V, B), dot(V, N));
   let NdotV = max(Ve.z, 0.05);
   let lamV = smithLambda(vec3f(Ve.x, Ve.y, NdotV), ax, ay);
@@ -253,8 +264,15 @@ fn rtGlints(P: vec3f, Po: vec3f, N: vec3f, V: vec3f, T: vec3f, B: vec3f, ax: f32
       if (g.w > gs.w) { gs = g; }
       continue;
     }
+    if (GLINT_PICK) {                                                     // three by strength; what leaves the three, or never joined them, is the rest: one of it is kept, each by its weight (one number, handed on)
+      var c = g;
+      if (w > g0.w) { c = g2; g2 = g1; g1 = g0; g0 = g; } else if (w > g1.w) { c = g2; g2 = g1; g1 = g; } else if (w > g2.w) { c = g2; g2 = g; }
+      if (c.w > 0.0) { rest += c.spec; let first = poolW == 0.0; poolW += c.w; if (first) { g3 = c; } else { let p = c.w / poolW; if (pu < p) { g3 = c; pu = pu / p; } else { pu = (pu - p) / (1.0 - p); } } }
+      continue;
+    }
     if (w > g0.w) { rest += g3.spec; g3 = g2; g2 = g1; g1 = g0; g0 = g; } else if (w > g1.w) { rest += g3.spec; g3 = g2; g2 = g1; g1 = g; } else if (w > g2.w) { rest += g3.spec; g3 = g2; g2 = g; } else if (w > g3.w) { rest += g3.spec; g3 = g; } else { rest += spec; }
   }
+  if (GLINT_PICK) { g3.spec = rest; rest = vec3f(0.0); }                 // the one's ray answers for the rest's whole sum (its own weight stays its own: what the denoiser's distance is chosen by)
   var G = rest * 0.5;
   var sunW = 0.0; var lampW = 0.0;                                         // the sun's glint and the strongest lamp's AS DRAWN (0 in shadow): whose distance the denoiser is handed
   for (var k = 0u; k < RT_GLINT_RAYS + 1u; k++) {                           // (the last turn is the sun's: gs, empty without the word)
@@ -443,7 +461,7 @@ fn main(@builtin(global_invocation_id) gid: vec3u, @builtin(local_invocation_ind
   if (reuse) { textureStore(hitOut, gid.xy, outRec); }
   var Lspec = Lsum / f32(max(rays, 1u));
   if ((frame.flags & FLAG_DIRECT) != 0u && frame.matCfg.x > 0.0) {
-    let g = rtGlints(P, Po, N, V, T, B, ax, ay, F0, owner, select(1.0 - kEmit, 1.0, rays == 0u));   // (no rays: every panel comes through its analytic light)
+    let g = rtGlints(P, Po, N, V, T, B, ax, ay, F0, owner, select(1.0 - kEmit, 1.0, rays == 0u), fract(cpx + f32(frame.frameIdx % 4096u) * 0.7548777));   // (no rays: every panel comes through its analytic light)
     Lspec += g.xyz * frame.matCfg.x;
     if (rays == 0u) { hitT0 = select(RT_TMAX, g.w, g.w > 0.0); }          // highlights only: the strongest one's distance places the image for the denoiser
   }
