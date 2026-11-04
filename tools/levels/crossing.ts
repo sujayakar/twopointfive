@@ -507,10 +507,7 @@ function furnish(K: ReturnType<typeof officeKit>, G: ReturnType<typeof gwotKit>)
   // ---- THE GENERATOR SHED = the lamp store: a ladder, a reel of orange cable, a row of spare lamp heads on a shelf, a duckboard at the breaker ----
   L.room('shed');
   L.d(32.6, 19.82, 0, 0.06, 1.4, 0.02, 'poplar'); L.d(32.6, 20.12, 0, 0.06, 1.4, 0.02, 'poplar'); for (let i = 0; i < 4; i++) L.d(31.55 + i * 0.7, 19.97, 0.01, 0.05, 0.02, 0.15, 'poplar');
-  // the reel: the top flange is what is seen (an octagon, clear of both walls); the foot and the drum are under it. (The drum is two squares at 0.26 m, as the
-  // level file holds it: `L.round` would write an octagon there and move the file. It becomes L.round in the step that does)
-  const reel = 0.26 * 0.93;
-  L.s(35.2, 23.2, 0, 0.06, 0.36, 0.36, 'ply'); L.s(35.2, 23.2, 0.06, 0.5, reel, reel, 'prodOrange'); L.s(35.2, 23.2, 0.06, 0.496, reel, reel, 'prodOrange', Math.PI / 4); L.round(35.2, 23.2, 0.5, 0.56, 0.5, 'ply');
+  L.s(35.2, 23.2, 0, 0.06, 0.36, 0.36, 'ply'); L.round(35.2, 23.2, 0.06, 0.5, 0.26, 'prodOrange'); L.round(35.2, 23.2, 0.5, 0.56, 0.5, 'ply');   // the reel: the top flange is what is seen (an octagon, clear of both walls); the foot and the drum are under it
   const sy = L.shelf(35.66, 20.45, 1.1, 0.4, 1.3, false, 3)[2];
   L.s(35.66, 20.15, sy, sy + 0.12, 0.17, 0.13, 'iron'); L.d(35.66, 20.15, sy + 0.12, sy + 0.125, 0.13, 0.1, 'plasticWhite'); L.s(35.66, 20.5, sy, sy + 0.14, 0.14, 0.1, 'paintCream'); L.round(35.66, 20.8, sy, sy + 0.07, 0.13, 'prodOrange');
   for (let i = 0; i < 3; i++) { L.s(35.66, 20.13 + i * 0.32, 0.8, 1.0, 0.13, 0.11, 'galv'); L.d(35.526, 20.13 + i * 0.32, 0.83, 0.97, 0.004, 0.085, 'glassDark'); }   // three lamp heads in a row, dark glass to the room

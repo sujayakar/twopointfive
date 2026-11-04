@@ -397,8 +397,8 @@ It is no second way of building the name.
 | Piece | What it is | To a man | Size | Boxes | Paints | Stands in |
 |---|---|---|---|---|---|---|
 | **hoist**(x, z, turn = 0) | MOTOR POOL: an engine hoist, the engine hanging on its chain over a drip tray (beam along the frame's x) | solid to 2.3 | 1.6 × 0.96 × 2.42 | 11 solid, 3 drawn | rust, GWOT_PALETTE.iron, galv, genYellow, GWOT_PALETTE.tin, oil | library-hall |
-| **cauldrons**(x, z, turn, n) | KITCHEN COURT: n black cauldrons in a row on a mud hearth | solid to 0.72 | 2.34 × 0.89 × 0.77 | 7 solid, 7 drawn | GWOT_PALETTE.iron, GWOT_PALETTE.rubber, GWOT_PALETTE.tin, mud | library-hall |
-| **spools**(x, z, turn = 0) | GENERATOR YARD: a cable spool stood on its rim and one laid flat | solid to 1.2 | 2.75 × 1.4 × 1.2 | 9 solid | woodGrey, plasticBlack | library-hall |
+| **cauldrons**(x, z, turn, n) | KITCHEN COURT: n black cauldrons in a row on a mud hearth | solid to 0.72 | 2.34 × 0.88 × 0.77 | 13 solid, 7 drawn, 3 round | GWOT_PALETTE.iron, GWOT_PALETTE.rubber, GWOT_PALETTE.tin, mud | library-hall |
+| **spools**(x, z, turn = 0) | GENERATOR YARD: a cable spool stood on its rim and one laid flat | solid to 1.2 | 2.58 × 1.18 × 1.2 | 15 solid, 3 round | woodGrey, plasticBlack | library-hall |
 | **flag**(x, z) | THE RANGE: the red flag on its pole, a red and white square painted round the foot | solid to 3.5 | 1.5 × 1 × 3.5 | 2 solid, 3 drawn | truckRed, block, galv, whitewash | library-hall |
 | **basins**(x, z, turn = 0) | QUARTERS: the wash bench — tin basins in a row, towels on a rail behind | solid to 1.3 | 2 × 0.55 × 1.3 | 8 solid, 6 drawn | GWOT_PALETTE.tin, plasticBlue, woodGrey, block, blanketGrey, poplar, rugCream | library-hall |
 | **loft**(x, z) | THE WHITE HOUSE: the headman's pigeon loft — a white box with a green roof up a pole (not blue: BLUE is a pair in the lesson it stands in) | solid to 1.9 | 1.34 × 1.08 × 2.51 | 3 solid, 5 drawn | GWOT_PALETTE.rubber, woodGrey, paintGreen, straw, whitewash | library-hall |
