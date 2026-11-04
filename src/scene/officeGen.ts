@@ -7,6 +7,7 @@
 // the output) and the exported palette. Units: meters. +X east, +Z south, +Y up. Floor top at y=0.
 import { Vec3, DEG, quat } from '../math/vec';
 import { Box, BoxFlag, makeBox } from './boxes';
+import { saidFor, type BoxStuff } from './stuff';
 import { WORLD } from './world';
 import type { Level, LightDef, PatrolRoute, Chokepoint, RoomClearPlan, BreachPlan, DaylightDef, LevelDoorDef, PropKind, PropPart, PropDef, DeviceDef, CivilianDef, VentDef } from './level';
 import { MarkingDef, MARKING_TEXEL, markStats } from './markings';
@@ -152,11 +153,11 @@ export function officeKit(trace?: GeneratorTrace, opts: GeneratorOpts = {}) {
   /** COVER: a DESK w × d, its top at 0.76 m on panel ends */
   function desk(x: number, z: number, w: number, d: number, yaw = 0, albedo = C.wood) {
     // top + two side panels (as yawed boxes around center)
-    const at = frameAt(x, z, yaw);
-    add({ c: at(0, 0.735, 0), h: [w / 2, 0.025, d / 2], yaw, albedo, stuff: 'veneer' });
-    add({ c: at(-w / 2 + 0.03, 0.36, 0), h: [0.025, 0.36, d / 2 - 0.02], yaw, albedo, stuff: 'veneer' });
-    add({ c: at(w / 2 - 0.03, 0.36, 0), h: [0.025, 0.36, d / 2 - 0.02], yaw, albedo, stuff: 'veneer' });
-    add({ c: at(0, 0.45, -d / 2 + 0.03), h: [w / 2 - 0.05, 0.25, 0.012], yaw, albedo, stuff: 'veneer' }); // modesty panel
+    const at = frameAt(x, z, yaw), made = saidFor('veneer', albedo, C.wood, C.woodDark);   // (a desk in the kit's wood is veneer; in another paint it is what that paint is: a steel bench, a white table)
+    add({ c: at(0, 0.735, 0), h: [w / 2, 0.025, d / 2], yaw, albedo, ...made });
+    add({ c: at(-w / 2 + 0.03, 0.36, 0), h: [0.025, 0.36, d / 2 - 0.02], yaw, albedo, ...made });
+    add({ c: at(w / 2 - 0.03, 0.36, 0), h: [0.025, 0.36, d / 2 - 0.02], yaw, albedo, ...made });
+    add({ c: at(0, 0.45, -d / 2 + 0.03), h: [w / 2 - 0.05, 0.25, 0.012], yaw, albedo, ...made }); // modesty panel
   }
   /** a MONITOR on a surface at baseY (a desk 0.76, a counter 1.15), lit when `on`, its keyboard in front of it */
   function monitor(x: number, z: number, yaw: number, on: boolean, baseY = 0.76, keyboard = true, standby = false) {   // baseY = the surface it stands on (desk 0.76, reception counter 1.15); keyboard: false for a second screen; standby (with `on` false): a working screen switched OFF — a switchable built dark, its picture there for when somebody switches it on
@@ -187,9 +188,10 @@ export function officeKit(trace?: GeneratorTrace, opts: GeneratorOpts = {}) {
     fitProp(p); if (half) p.half = half; props.push(p); return p;
   }
   /** PROP (chair): an office CHAIR on casters: seat, back, gas lift, star base */
-  function chair(x: number, z: number, yaw: number, albedo = C.chair) {   // office chair on casters: seat, back, gas lift, star base
+  function chair(x: number, z: number, yaw: number, albedo = C.chair, made?: BoxStuff) {   // office chair on casters: seat, back, gas lift, star base. `made` = what the seat and back are, said by a caller that hands a paint of its own (the kit's chair paint says fabric by its name)
+    const says = made !== undefined ? { stuff: made } : {};
     prop('chair', x, z, yaw, 12, [
-      { off: [0, 0.46, 0], h: [0.24, 0.04, 0.24], yaw: 0, albedo }, { off: [0, 0.8, 0.22], h: [0.23, 0.3, 0.035], yaw: 0, albedo },
+      { off: [0, 0.46, 0], h: [0.24, 0.04, 0.24], yaw: 0, albedo, ...says }, { off: [0, 0.8, 0.22], h: [0.23, 0.3, 0.035], yaw: 0, albedo, ...says },
       { off: [0, 0.22, 0], h: [0.04, 0.22, 0.04], yaw: 0, albedo: C.black }, { off: [0, 0.03, 0], h: [0.25, 0.03, 0.05], yaw: 0, albedo: C.black }, { off: [0, 0.03, 0], h: [0.05, 0.03, 0.25], yaw: 0, albedo: C.black },
     ]);
   }
@@ -206,7 +208,7 @@ export function officeKit(trace?: GeneratorTrace, opts: GeneratorOpts = {}) {
     prop('cardboard', x, z, yaw, 1 + 22 * Math.pow(s, 3), [{ off: [0, y + s / 2, 0], h: [s / 2, s / 2, s / 2], yaw: 0, albedo: C.cardboard, ...mk(MD.cartonMarks([s / 2, s / 2, s / 2], TX)) }]);   // half-full moving carton: ~5 kg at 55 cm (markings: tape over the top and down the sides, the print, a label)
   }
   // --- set dressing helpers (all boxes, all diffuse) ---
-  /** DECAL: a plain RUG w × d in the colour given */
+  /** DECAL: a plain RUG w × d in the colour given: cloth. Floor paint and a dirt track are no rugs and are laid as their own flat boxes */
   const rug = (x: number, z: number, w: number, d: number, albedo: Vec3, yaw = 0) => add({ c: [x, 0.018, z], h: [w / 2, 0.006, d / 2], yaw, albedo, stuff: 'cloth', flags: BoxFlag.NoShadow });
   /** PROP (plant): a potted PLANT, scale s: a pot and two masses of leaves */
   function plant(x: number, z: number, s = 1) {   // pot + two rotated foliage masses as one rigid group; footprint = the foliage's flat sides, not its rotated corners
@@ -268,13 +270,13 @@ export function officeKit(trace?: GeneratorTrace, opts: GeneratorOpts = {}) {
     const t = d.exterior ? 0.24 : 0.12; const gap = d.width + 2 * JAMB_FACE; const alongX = Math.abs(Math.sin(d.closedDir)) < 0.5;
     const fwd = (alongX ? Math.cos(d.closedDir) : Math.sin(d.closedDir)) > 0, hl = alongX ? d.hinge[0] : d.hinge[1];
     const a = fwd ? hl - JAMB_FACE : hl + JAMB_FACE - gap; const w = alongX ? d.hinge[1] : d.hinge[0];   // gap start along the wall, wall line coordinate
-    const frameCol: Vec3 = d.exterior ? [0.2, 0.21, 0.23] : [0.3, 0.24, 0.17], frameStuff = d.exterior ? 'steel' as const : 'veneer' as const; const hy = DOOR_HEAD / 2;   // (a paint written as numbers says what it is: scene/stuff.ts)
-    const jamb = (u: number) => alongX ? add({ c: [u, hy, w], h: [0.03, hy, t / 2 + 0.012], albedo: frameCol, stuff: frameStuff }) : add({ c: [w, hy, u], h: [t / 2 + 0.012, hy, 0.03], albedo: frameCol, stuff: frameStuff });
+    const frameCol: Vec3 = d.exterior ? [0.2, 0.21, 0.23] : [0.3, 0.24, 0.17]; const hy = DOOR_HEAD / 2;
+    const jamb = (u: number) => alongX ? add({ c: [u, hy, w], h: [0.03, hy, t / 2 + 0.012], albedo: frameCol }) : add({ c: [w, hy, u], h: [t / 2 + 0.012, hy, 0.03], albedo: frameCol });
     jamb(a - 0.01); jamb(a + gap + 0.01);
     const hb = LEAF_H + 0.005, hc = (hb + DOOR_HEAD + 0.065) / 2, hh = (DOOR_HEAD + 0.065 - hb) / 2;   // the HEAD comes down past the top of the shut leaf (the leaf stands 1 cm off the floor: its top is LEAF_H + 0.01) — no slot over a shut door for light to pass through
-  if (alongX) add({ c: [a + gap / 2, hc, w], h: [gap / 2 + 0.04, hh, t / 2 + 0.012], albedo: frameCol, stuff: frameStuff }); else add({ c: [w, hc, a + gap / 2], h: [t / 2 + 0.012, hh, gap / 2 + 0.04], albedo: frameCol, stuff: frameStuff });
+  if (alongX) add({ c: [a + gap / 2, hc, w], h: [gap / 2 + 0.04, hh, t / 2 + 0.012], albedo: frameCol }); else add({ c: [w, hc, a + gap / 2], h: [t / 2 + 0.012, hh, gap / 2 + 0.04], albedo: frameCol });
     const sg = fwd ? 1 : -1;
-    const stop = (u0: number, u1: number) => { const m = sg * (u0 + u1) / 2, hu = (u1 - u0) / 2; return alongX ? add({ c: [d.hinge[0] + m, hy, w], h: [hu, hy, 0.02], albedo: frameCol, stuff: frameStuff }) : add({ c: [w, hy, d.hinge[1] + m], h: [0.02, hy, hu], albedo: frameCol, stuff: frameStuff }); };   // (u along the closed leaf from the hinge line)
+    const stop = (u0: number, u1: number) => { const m = sg * (u0 + u1) / 2, hu = (u1 - u0) / 2; return alongX ? add({ c: [d.hinge[0] + m, hy, w], h: [hu, hy, 0.02], albedo: frameCol }) : add({ c: [w, hy, d.hinge[1] + m], h: [0.02, hy, hu], albedo: frameCol }); };   // (u along the closed leaf from the hinge line)
     stop(-0.012, 0.024); stop(d.width - 0.004, d.width + 0.012);
   }
   // the kit's lists and TOOLS, then its PIECES by name (scene/library.ts)
@@ -284,6 +286,8 @@ export function officeKit(trace?: GeneratorTrace, opts: GeneratorOpts = {}) {
 
 export function buildOfficeProcedural(trace?: GeneratorTrace, opts: GeneratorOpts = {}): Level {
   const { DEMOTE, TX, mk, boxes, lights, switchables, props, grp, add, slab, paneX, wallX, wallZ, desk, monitor, fitProp, prop, chair, cardboardBox, rug, plant, bin, cabinet, papers, wallArt, bench, car, shelf, ceilingPanel, doorFrame } = officeKit(trace, opts);
+  /** paint on the floor, or a rubber mat: the flat box a rug is, but no rug, so it says no cloth and its colour speaks */
+  const floorPaint = (x: number, z: number, w: number, d: number, albedo: Vec3) => add({ c: [x, 0.018, z], h: [w / 2, 0.006, d / 2], yaw: 0, albedo, flags: BoxFlag.NoShadow });
 
   // ---------------- ground & structure ----------------
   grp('ground');
@@ -590,7 +594,7 @@ export function buildOfficeProcedural(trace?: GeneratorTrace, opts: GeneratorOpt
 
   // ---------------- manager office (x22..30, z4..10) ----------------
   grp('manager');
-  desk(26.5, 6.3, 1.8, 0.9, 0, C.woodDark); monitor(26.5, 6.1, 0, false); chair(26.5, 5.3, Math.PI * 0.95, [0.1, 0.1, 0.11]);
+  desk(26.5, 6.3, 1.8, 0.9, 0, C.woodDark); monitor(26.5, 6.1, 0, false); chair(26.5, 5.3, Math.PI * 0.95, [0.1, 0.1, 0.11], 'fabric');
   chair(25.7, 7.6, 0.3); chair(27.4, 7.7, -0.25);
   shelf(29.6, 6.5, 1.6, 0.35, Math.PI / 2, 5, 2.1);
   add({ c: [23.0, 0.35, 5.0], h: [0.4, 0.35, 0.4], albedo: [0.35, 0.25, 0.15] }); add({ c: [23.0, 1.0, 5.0], h: [0.3, 0.35, 0.3], albedo: C.plant });
@@ -651,7 +655,7 @@ export function buildOfficeProcedural(trace?: GeneratorTrace, opts: GeneratorOpt
     add({ c: [30.42, 0.2, 9.5], h: [0.2, 0.2, 0.15], yaw: 0.15, albedo: [0.55, 0.45, 0.1] });                 // mop bucket, wringer, and the mop stood in it (south-west pocket, well outside the leaf's arc)
     add({ c: [30.49, 0.47, 9.5], h: [0.1, 0.07, 0.14], yaw: 0.15, albedo: [0.4, 0.32, 0.08] });
     add({ c: [30.31, 0.86, 9.43], h: [0.014, 0.62, 0.014], albedo: C.wood });
-    rug(34.3, 9.5, 0.84, 0.8, [0.68, 0.55, 0.08]);                                                             // keep-clear square under the breaker panel…
+    floorPaint(34.3, 9.5, 0.84, 0.8, [0.68, 0.55, 0.08]);                                                            // keep-clear square under the breaker panel…
     for (const dx of [-0.18, 0, 0.18]) add({ c: [34.3 + dx, 0.027, 9.5], h: [0.035, 0.003, 0.3], yaw: Math.PI / 4, albedo: C.black, flags: BoxFlag.NoShadow });   // …hatched
   }
 
@@ -723,7 +727,7 @@ export function buildOfficeProcedural(trace?: GeneratorTrace, opts: GeneratorOpt
       add({ c: [x, y, 12.343], h: [w / 2, h / 2, 0.002], albedo: alb, flags: BoxFlag.NoShadow, ...mk(MD.sheetMarks([w / 2, h / 2, 0.002], '+z', 61 + Math.round(x * 10), MD.MK.textGrey, TX)) });                  // sheets pinned to the notice board (they stay boxes; text bars ON them)
     add({ c: [35.0, 2.15, 12.295], h: [0.42, 0.25, 0.035], albedo: C.black, ...mk(DEMOTE ? MD.plateMark('+z', [-0.39, -0.22, 0.39, 0.22], { albedo: C.screenOff, rough: 0.08 }, 'base', TX) : []) }); if (!DEMOTE) add({ c: [35.0, 2.15, 12.332], h: [0.39, 0.22, 0.002], albedo: C.screenOff, flags: BoxFlag.NoShadow });   // bracket TV high in the north-east corner, off (its screen a glossy marking, or the sheet box)
     add({ c: [32.2, 1.45, 12.295], h: [0.13, 0.11, 0.035], albedo: C.white, ...mk(DEMOTE ? MD.firstAidMarks('+z', TX) : []) }); if (!DEMOTE) add({ c: [32.2, 1.45, 12.332], h: [0.05, 0.05, 0.002], albedo: [0.1, 0.45, 0.2], flags: BoxFlag.NoShadow });   // first-aid box (the green cross a fine glyph, or a square box)
-    rug(34.75, 15.0, 0.7, 2.4, [0.1, 0.1, 0.11]);                                                                 // anti-fatigue mat along the counter
+    floorPaint(34.75, 15.0, 0.7, 2.4, [0.1, 0.1, 0.11]);                                                                // anti-fatigue mat along the counter
     papers(31.15, 0.75, 19.85, 0.5); add({ c: [31.95, 0.79, 19.15], h: [0.035, 0.04, 0.035], albedo: C.white });  // magazines and a mug on the table
     bin(35.45, 17.5);                                                                                              // second bin, in the gap between the counter's end and the fridge
   }

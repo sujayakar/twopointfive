@@ -304,7 +304,8 @@ export async function livedCheck(argv: string[]): Promise<boolean | null> {
             if (rs !== undefined) (was.scenarios ??= {}).response = JSON.parse(JSON.stringify(rs)); else { delete was.scenarios.response; if (!Object.keys(was.scenarios).length && data.scenarios === undefined) delete was.scenarios; } } }
         // (WHAT A BOX SAYS IT IS MADE OF — a box's or a prop part's `stuff`, src/scene/stuff.ts. Picture only: the look's word reads it and no rule of the game does,
         //  and furniture cannot change it. A kit piece given its word re-writes every level that lays it, so a word takes no new base revision: the base's box
-        //  is read with today's word and said so. Every other key of the box is still held, and tools/qa/stuff-check.ts holds the words themselves)
+        //  is read with today's word and said so, in either direction. Every other key of the box is still held. What holds a file's words is its generator
+        //  (export --check, the level probes: the file is what the generator writes); a word typed into a file by hand is held by nothing but the reader's list)
         { let said = 0; const give = (w: any, t: any) => { if (!w || !t || w.stuff === t.stuff) return; said++; if (t.stuff !== undefined) w.stuff = t.stuff; else delete w.stuff; };
           bare.boxes.forEach((b: any, i: number) => give(was.boxes?.[i], b)); bare.props.forEach((q: any, i: number) => (q.parts ?? []).forEach((part: any, k: number) => give(was.props?.[i]?.parts?.[k], part)));
           if (said) console.log(`  (${said} of its boxes say what they are made of and ${base}'s do not, or say another word: picture only, not held to the base)`); }

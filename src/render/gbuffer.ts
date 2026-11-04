@@ -100,9 +100,10 @@ export function lookNeedPaints(paints: Iterable<Readonly<ArrayLike<number>>>) { 
  *  `dry` = the paint a box had before the weather darkened it in place, if it did (game/weather.ts dryPaint): what a slab is made of is not changed by rain.
  *  `rows` = the paint rows of the level file the game stands on (levelLoad.ts levelFileOf): a paint one of them names is what its NAME says it is made of
  *  (lookNamed above), asked before any colour is weighed. None = by colour alone, as the look began. A box that says what it is made of itself (Box.stuff)
- *  is that, before either: `rows` null puts the names off and the boxes' own words with them (`own` false). */
-export function lookWordOf(dry?: (b: Box) => Readonly<ArrayLike<number>> | undefined, rows?: PaintRows | null): (b: Box, moves: boolean) => number {
-  const named = lookNamed(rows), own = rows !== null;
+ *  is that, before either, unless `own` is false (the page's `?words=0`: the names alone, the build as it was before a box could say; `?names=0` puts
+ *  both off). */
+export function lookWordOf(dry?: (b: Box) => Readonly<ArrayLike<number>> | undefined, rows?: PaintRows | null, own = true): (b: Box, moves: boolean) => number {
+  const named = lookNamed(rows);
   return (b, moves) => {
     const paint = (b.aniso === true && dry?.(b)) || b.albedo;   // (aniso is the weather's mark: nothing is authored with it)
     let h: number;

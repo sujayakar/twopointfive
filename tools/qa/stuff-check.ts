@@ -5,14 +5,17 @@
 // like on a desk is a page's still and then a GPU's. The same on both stands: nothing here is a rule of play and no stand's word reaches it.
 import { readFileSync, readdirSync } from 'node:fs';
 import { ROOT } from './headless.ts';
-const { PAINT_STUFF, stuffOfName, BOX_STUFFS } = await import(`${ROOT}/src/scene/stuff.ts`);
+const { PAINT_STUFF, stuffOfName, BOX_STUFFS, saidFor } = await import(`${ROOT}/src/scene/stuff.ts`);
 const { LOOK_NAMES, LOOK_PAINTED, lookStuffOf } = await import(`${ROOT}/src/render/lookTex.ts`);
 const { LOOK_OF, LOOK_BY_NAME, lookNamed, lookStuff, lookWordOf } = await import(`${ROOT}/src/render/gbuffer.ts`);
 const { GWOT_PALETTE } = await import(`${ROOT}/src/scene/gwotPalette.ts`);
-const { parseLevelData, serializeLevelData, validateLevelData } = await import(`${ROOT}/src/scene/levelData.ts`);
+const { parseLevelData, serializeLevelData, validateLevelData, KEYS } = await import(`${ROOT}/src/scene/levelData.ts`);
 const { loadLevel, levelToData, levelFileOf } = await import(`${ROOT}/src/scene/levelLoad.ts`);
 const { lookPageWord } = await import(`${ROOT}/src/scene/look.ts`);
 const { makeBox, BoxFlag } = await import(`${ROOT}/src/scene/boxes.ts`);
+const { PropSystem } = await import(`${ROOT}/src/game/props.ts`), { StaticCollision } = await import(`${ROOT}/src/scene/collision.ts`);
+const KD = await import(`${ROOT}/src/scene/levelKit.ts`), { newKit, KIT_PALETTE } = KD;
+const { Editor } = await import(`${ROOT}/src/editor/editor.ts`), { boxPaint } = await import(`${ROOT}/src/editor/paint.ts`);
 
 const BRK = process.env.STUFF_BREAK === '1';
 let red = false;
@@ -69,25 +72,54 @@ const wanted = (name: string, albedo: readonly number[]) => { const s = stuffOfN
     `car body ${car.map(said).join(', ')} · outside leaf ${said(leaf)} · iron fitting ${said(iron)} · stucco ${said(stucco)} · unnamed first, wood second: ${said(trim)} · a row called constructor in mud's colour: ${said(proto)} · carpet first, tWall second: ${said(firstWins)} · ${taken} colour taken by name of the three`); }
 
 // 6. the page: the rows of the level it stands on go into the look's word, a word puts it off and a benchmark carries that word
-{ const main = readFileSync(`${ROOT}/src/main.ts`, 'utf8'), wired = main.includes("engine.world.setStuffOf(lookWordOf(b => game.weather.dryPaint(b), q.get('names') === '0' ? null : levelFileOf.get(game.level)?.materials))");
+{ const main = readFileSync(`${ROOT}/src/main.ts`, 'utf8'), wired = main.includes("engine.world.setStuffOf(lookWordOf(b => game.weather.dryPaint(b), q.get('names') === '0' ? null : levelFileOf.get(game.level)?.materials, q.get('names') !== '0' && q.get('words') !== '0'))");
   const L = loadLevel(dataOf('library-hall.json')), kept = levelFileOf.get(L)?.materials, mixedOut = Object.keys(LOOK_BY_NAME).every(n => PAINT_STUFF[n] !== 'mixed') && Object.keys(LOOK_BY_NAME).length < Object.keys(PAINT_STUFF).length;
-  check(wired && !!kept && Object.hasOwn(kept, 'wood') && lookPageWord('names', '0') && mixedOut, '6 the page makes the look\'s word for a box with the paint rows of the level file it stood up (kept beside the level by the loader), `?names=0` hands it none, and the word is one of the look page\'s own, so a benchmark asked for with it carries it; the table the audit reads has no mixed name in it',
-    `wired ${wired} · ${kept ? Object.keys(kept).length : 0} rows kept for library-hall · names is a look page word: ${lookPageWord('names', '0')} · ${Object.keys(LOOK_BY_NAME).length} names for the audit of ${Object.keys(PAINT_STUFF).length}`); }
+  check(wired && !!kept && Object.hasOwn(kept, 'wood') && lookPageWord('names', '0') && lookPageWord('words', '0') && mixedOut, '6 the page makes the look\'s word for a box with the paint rows of the level file it stood up (kept beside the level by the loader); `?names=0` hands it none and puts the boxes\' own words off with them, `?words=0` puts the boxes\' own words off alone; both are words of the look page\'s own, so a benchmark asked for with one carries it; the table the audit reads has no mixed name in it',
+    `wired ${wired} · ${kept ? Object.keys(kept).length : 0} rows kept for library-hall · look page words: names ${lookPageWord('names', '0')}, words ${lookPageWord('words', '0')} · ${Object.keys(LOOK_BY_NAME).length} names for the audit of ${Object.keys(PAINT_STUFF).length}`); }
 
 // 7. a box says its own word: over its paint's name and its colour, through the level file and back, on a loose prop's part too
-{ const D = dataOf('library-hall.json') as any, M = D.materials, bi = D.boxes.findIndex((b: any) => b.group === 'yard.office' && b.material === 'partBlue'), wi = D.boxes.findIndex((b: any) => b.material === 'wood'), pi = D.props.findIndex((p: any) => p.kind === 'chair');
-  D.boxes[bi].stuff = 'paint'; D.boxes[wi].stuff = 'plain'; D.props[pi].parts[0].stuff = 'plaster';
-  const text = serializeLevelData(D), back = parseLevelData(text) as any, errs = validateLevelData(back), L = loadLevel(back), word = wordWith(M), off = lookWordOf(undefined, null);
-  const car = word(L.boxes[bi], false) & 15, desk = word(L.boxes[wi], false) & 15, carOff = off(L.boxes[bi], false) & 15, part = L.props[pi].parts[0];
-  const seat = word(makeBox({ c: [0, 0, 0], h: part.h, albedo: part.albedo, flags: BoxFlag.Dynamic, ...(part.stuff !== undefined ? { stuff: part.stuff } : {}) }), true) & 15;
-  const again = levelToData(L, { materials: M }) as any, kept = again.boxes[bi].stuff === 'paint' && again.boxes[wi].stuff === 'plain' && again.props[pi].parts[0].stuff === 'plaster' && again.boxes.every((b: any, i: number) => b.stuff === D.boxes[i].stuff) && again.boxes.some((b: any) => b.stuff === undefined);
-  const line = text.split('\n').find((l: string) => l.includes('"stuff"') && l.includes('"partBlue"')) ?? '', placed = /"material":\s*"partBlue".*"stuff":\s*"paint"/.test(line) && !/"stuff".*"(material|albedo|rough|metal)"/.test(line);
-  const refuse = (w: string) => { const X = dataOf('library-hall.json') as any; X.boxes[0].stuff = w; return validateLevelData(X).some((e: string) => e.includes('stuff')); };
-  const propAsk = readFileSync(`${ROOT}/src/main.ts`, 'utf8').includes('word(makeBox({ c: [0, 0, 0], h: part.h, albedo: part.albedo, ...(part.stuff !== undefined ? { stuff: part.stuff } : {}) }), true)');
-  const propSrc = readFileSync(`${ROOT}/src/game/props.ts`, 'utf8').includes('...(p.stuff !== undefined ? { stuff: p.stuff } : {})');
-  check(errs.length === 0 && car === lookStuffOf('paint') && desk === 0 && carOff === lookStuff(M.partBlue.albedo) && seat === lookStuffOf('plaster') && kept && placed && refuse('mixed') && refuse('banana') && !refuse('waits') && propSrc && BOX_STUFFS.length === LOOK_PAINTED + 2 && refuse('mud brick') && refuse('field stone') && lookStuffOf('mud brick') === 0 && propAsk,
-    '7 a box says its own word: the showroom\'s car body, written in the partition\'s blue, says paint and is paint; a wooden box that says plain is plain; a chair\'s part says its own and the box the game makes of it carries it; the words go through the level file and back and are written only where they were said, after the finish and before the flags; a word the look has no material for is refused when the file is read, the stone and brick under a mud wall among them; the page asks a loose prop\'s part its own word before the first frame, so its map is made; with names off a box\'s own word is off too',
-    `car body ${said(car)} (names off: ${said(carOff)}) · the wooden box ${said(desk)} · the chair's part ${said(seat)} · kept through the file ${kept} · placed ${placed} · refused: mixed ${refuse('mixed')}, banana ${refuse('banana')}, mud brick ${refuse('mud brick')}, waits ${refuse('waits')} · a prop's part asked its word at boot: ${propAsk} · ${errs.length} errors reading it back${errs.length ? `: ${errs.slice(0, 2).join(' | ')}` : ''}`); }
+{ const D = dataOf('library-hall.json') as any, M = D.materials, bi = D.boxes.findIndex((b: any) => b.group === 'yard.office' && b.material === 'partBlue'), wi = D.boxes.findIndex((b: any) => b.material === 'wood' && b.flags === undefined), fi = D.boxes.findIndex((b: any) => b.material !== undefined && b.flags !== undefined), pi = D.props.findIndex((p: any) => p.kind === 'chair');
+  if (bi < 0 || wi < 0 || fi < 0 || pi < 0) check(false, '7 a box says its own word', `the showroom has no car body in the partition's blue, wooden box, flagged box or chair to ask (${bi}, ${wi}, ${fi}, ${pi})`);
+  else {
+    D.boxes[bi].stuff = 'paint'; D.boxes[wi].stuff = 'plain'; D.boxes[fi].stuff = 'slab'; D.props[pi].parts[0].stuff = 'plaster';
+    const text = serializeLevelData(D), back = parseLevelData(text) as any, errs = validateLevelData(back), L = loadLevel(back), word = wordWith(M), namesOff = lookWordOf(undefined, null, false), wordsOff = lookWordOf(undefined, BRK ? null : M, false);
+    const car = word(L.boxes[bi], false) & 31, desk = word(L.boxes[wi], false) & 31, carOff = namesOff(L.boxes[bi], false) & 31, deskNamed = wordsOff(L.boxes[wi], false) & 31;
+    // the box the GAME makes of a prop's part (game/props.ts Prop), which is also the box the page asks before the first frame
+    const seat = word(new PropSystem([L.props[pi]], new StaticCollision(L.boxes), () => {}).all[0].boxes[0], true) & 31;
+    const again = levelToData(L, { materials: M }) as any, kept = again.boxes[bi].stuff === 'paint' && again.boxes[wi].stuff === 'plain' && again.props[pi].parts[0].stuff === 'plaster' && again.boxes.every((b: any, i: number) => b.stuff === D.boxes[i].stuff) && again.boxes.some((b: any) => b.stuff === undefined);
+    // where it is written: after the finish, before the flags, on a box that has flags; and in the format's own key lists
+    const line = text.split('\n').find((l: string) => l.includes(`"id": "${D.boxes[fi].id}"`) || l.includes(`"id":"${D.boxes[fi].id}"`)) ?? '', kb = KEYS.box.indexOf('stuff'), kp = KEYS.part.indexOf('stuff');
+    const placed = /"stuff":\s*"slab".*"flags"/.test(line) && !/"stuff".*"(material|albedo|rough|metal)"/.test(line) && KEYS.box[kb - 1] === 'metal' && KEYS.box[kb + 1] === 'flags' && KEYS.part[kp - 1] === 'albedo';
+    // refused: on a box, on a prop's part, and on a box of a gear screen's set (a picture's box is the format's own record)
+    const KV = FILES.find(f => Object.values((dataOf(f) as any).scenarios?.kitView?.sets ?? {}).some((x: any) => x.boxes?.length));
+    const refuse = (w: string, where: 'box' | 'part' | 'set' = 'box') => { const X = dataOf(where === 'set' ? KV! : 'library-hall.json') as any;
+      if (where === 'box') X.boxes[0].stuff = w; else if (where === 'part') X.props[0].parts[0].stuff = w; else (Object.values(X.scenarios.kitView.sets).find((x: any) => x.boxes?.length) as any).boxes[0].stuff = w;
+      return validateLevelData(X).some((e: string) => e.includes('stuff')); };
+    const masonry = (LOOK_NAMES as readonly string[]).slice(LOOK_PAINTED).join(', ');
+    check(errs.length === 0 && car === lookStuffOf('paint') && desk === 0 && carOff === lookStuff(M.partBlue.albedo) && deskNamed === lookStuffOf('wood') && seat === lookStuffOf('plaster') && kept && placed
+      && refuse('mixed') && refuse('banana') && !refuse('waits') && !refuse('veneer') && refuse('banana', 'part') && !refuse('fabric', 'part') && !!KV && refuse('banana', 'set') && !refuse('steel', 'set')
+      && BOX_STUFFS.length === LOOK_PAINTED + 2 && masonry === 'field stone, mud brick' && refuse('mud brick') && refuse('field stone') && lookStuffOf('mud brick') === 0,
+      '7 a box says its own word: the showroom\'s car body, written in the partition\'s blue, says paint and is paint; a wooden box that says plain is plain; a chair\'s part says its own and the box the game makes of it (the box the page asks before the first frame) carries it; the words go through the level file and back and are written only where they were said, after the finish and before the flags; a word the look has no material for is refused when the file is read, on a box, a part and a gear screen\'s box, the stone and brick under a mud wall among them; with the words off a box is its name\'s again, and with names off its colour\'s',
+      `car body ${said(car)} (names off: ${said(carOff)}) · the wooden box ${said(desk)} (words off: ${said(deskNamed)}) · the chair's part ${said(seat)} · kept through the file ${kept} · placed ${placed} · refused: mixed ${refuse('mixed')}, banana ${refuse('banana')}, mud brick ${refuse('mud brick')}, a part's ${refuse('banana', 'part')}, a set's ${KV ? refuse('banana', 'set') : 'no file'} (${KV}); waits ${refuse('waits')} · ${errs.length} errors reading it back${errs.length ? `: ${errs.slice(0, 2).join(' | ')}` : ''}`); } }
+
+// 8. a word belongs to the paint it was said with: a piece says it for its own paints, and whoever repaints a box drops it
+{ const k = newKit(), n0 = k.boxes.length; KD.desk(k, 2, 2, 1.6, 0.8); const own = k.boxes.slice(n0), n1 = k.boxes.length; KD.desk(k, 6, 2, 1.6, 0.8, 0, KIT_PALETTE.woodDark); const dark = k.boxes.slice(n1), n2 = k.boxes.length;
+  KD.desk(k, 2, 6, 1.6, 0.8, 0, KIT_PALETTE.metal); const steel = k.boxes.slice(n2), n3 = k.boxes.length; KD.desk(k, 6, 6, 1.6, 0.8, 0, KIT_PALETTE.white); const white = k.boxes.slice(n3), n4 = k.boxes.length;
+  KD.rug(k, 4, 4, 2, 1, [0.3, 0.1, 0.09]); const rug = k.boxes.slice(n4);
+  const says = (l: any[], w?: string) => l.length > 0 && l.every((b: any) => b.stuff === w), word = wordWith(Object.fromEntries(Object.entries(KIT_PALETTE).map(([n, a]) => [n, { albedo: a }]))), cls = (b: any) => word(b, false) & 31;
+  // the levels as written: no door frame says a word (a frame goes with its leaf, and both wait); in a look's file no box the skin repainted keeps the plain file's word
+  let frames = 0, kept = 0, twins = 0, twinWords = 0;
+  for (const f of FILES) { const D = dataOf(f) as any; for (const b of D.boxes) if (b.stuff !== undefined && /^doorframe\./.test(b.group ?? '')) frames++;
+    if (!f.endsWith('-gwot.json') || !FILES.includes(f.replace('-gwot.json', '.json'))) continue; twins++;
+    const P = dataOf(f.replace('-gwot.json', '.json')) as any; D.boxes.forEach((b: any, i: number) => { if (b.stuff === undefined) return; twinWords++; const a = P.boxes[i]; if (a && (a.material !== b.material || JSON.stringify(a.albedo) !== JSON.stringify(b.albedo))) kept++; }); }
+  // the editor: painting a box with another paint drops the word, in one command that undoes
+  const ED = dataOf('library-hall.json') as any, eb = ED.boxes.find((b: any) => b.material === 'wood'); eb.stuff = 'veneer'; const ed = new Editor(ED, {}); boxPaint(ed, [eb.id], 'concrete');
+  const painted = ed.data.boxes.find((b: any) => b.id === eb.id), dropped = painted.material === 'concrete' && painted.stuff === undefined;
+  const skin = readFileSync(`${ROOT}/tools/levels/gwotSkin.ts`, 'utf8').includes('b.albedo = gwotAs(m, sim); b.rough = GWOT_FINISH[m]?.rough ?? ROUGH_CLOTH; delete b.stuff;');
+  check(says(own, 'veneer') && says(dark, 'veneer') && says(steel) && says(white) && says(rug, 'cloth') && steel.every((b: any) => cls(b) === lookStuffOf('steel')) && own.every((b: any) => cls(b) === lookStuffOf('veneer'))
+    && JSON.stringify(saidFor('veneer', [0.3, 0.31, 0.33], KIT_PALETTE.wood, KIT_PALETTE.woodDark)) === '{}' && frames === 0 && kept === 0 && twins > 10 && dropped && skin,
+    '8 a word belongs to the paint it was said with: the kit\'s desk says veneer in its own wood paints and nothing as a steel bench or a white table (the paint\'s name speaks: the bench is steel); a rug is cloth in any colour; no door frame says a word; in a look\'s file no box the skin repainted keeps the plain file\'s word, and the skin drops it where it repaints; the editor\'s paint drops it',
+    `desk ${own[0]?.stuff}, dark ${dark[0]?.stuff}, as a steel bench ${steel[0]?.stuff ?? 'no word'} (drawn ${said(cls(steel[0]))}), white ${white[0]?.stuff ?? 'no word'} · rug ${rug[0]?.stuff} · ${frames} door frame boxes with a word · ${twins} look files with ${twinWords} words, ${kept} on a repainted box · the editor drops it: ${dropped}`); }
 
 console.log(`=== stuff: ${red ? 'FAILURES above' : 'ALL PASS'} ===`);
 process.exit(red ? 1 : 0);
