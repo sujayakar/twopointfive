@@ -3,11 +3,19 @@
 //   A (rgba8): rgb = what the box's paint is multiplied by, ÷ 2 (128 = the paint as it is; so a map can also turn a hue), a = the height, 0‥1 of the layer's range
 //   B (rgba8): rg = the tangent-space normal's xy (½ + ½·n), b = roughness, a = the hollows: ½ of how open the texel is (1 = not in a hollow) + what puts the tile's paint-weighed mean at ½ (lookLayer)
 // Everything is periodic over the tile, so a layer repeats without a seam; the shader breaks the repeat up. Pure arithmetic on typed arrays: runs the same in a browser and under bun.
-export const LOOK_N = 512, LOOK_TILE = 2.0, LOOK_LAYERS = 13;
-/** the layers, in surface.wgsl's class order less one (SURF_MUD 1 → layer 0 …); the last three are the look's own (look.wgsl LOOK_CLOTH, LOOK_METAL, LOOK_PAINT) */
-export const LOOK_NAMES = ['mud wall', 'plaster', 'block', 'earth', 'gravel', 'slab', 'wood', 'sheet', 'cloth', 'metal', 'paint', 'field stone', 'mud brick'] as const;
+export const LOOK_N = 512, LOOK_TILE = 2.0, LOOK_LAYERS = 17;
+/** the layers. A STUFF is a layer a box's paint can be drawn as, and its number is its place here and one (0 = plain): surface.wgsl's eight in its class order
+ *  (SURF_MUD 1 → layer 0 …), then the look's own (look.wgsl LOOK_CLOTH 9 … LOOK_STEEL 15). After the stuffs, the two layers of what a mud wall is made of under
+ *  its paint, which no box is: NEW STUFFS GO IN FRONT OF THOSE TWO and nothing else moves (the shader is told where they are: gbuffer.ts lookWgsl). A box's
+ *  word has room for 31 stuffs (gbuffer.ts lookWordOf). Ask lookStuffOf for a name's number; never count places. A new stuff says in look.wgsl, by name, how
+ *  it is laid (a box's own frame or the world's) and whether the weather touches it: nothing there is "every stuff from here up". */
+export const LOOK_NAMES = ['mud wall', 'plaster', 'block', 'earth', 'gravel', 'slab', 'wood', 'sheet', 'cloth', 'metal', 'paint', 'veneer', 'plastic', 'fabric', 'steel', 'field stone', 'mud brick'] as const;
+export type LookName = typeof LOOK_NAMES[number];
 /** the roughness each layer is written around (the shader adds a texel's difference from it to the box's own finish) */
-export const LOOK_ROUGH = [0.95, 0.86, 0.93, 0.94, 0.88, 0.82, 0.84, 0.5, 0.96, 0.75, 0.5, 0.8, 0.95];
+export const LOOK_ROUGH = [0.95, 0.86, 0.93, 0.94, 0.88, 0.82, 0.84, 0.5, 0.96, 0.75, 0.5, 0.4, 0.5, 0.95, 0.42, 0.8, 0.95];
+/** the layers a layer's own drawing reads beside its own (look.wgsl): a mud wall shows its stone and its brick, and stones come up through earth at a wall's foot.
+ *  Whoever makes a layer makes these with it (gbuffer.ts needLook). */
+export const LOOK_WITH: Readonly<Partial<Record<LookName, readonly LookName[]>>> = { 'mud wall': ['field stone', 'mud brick'], earth: ['gravel'] };
 
 const TAU = Math.PI * 2;
 function hash(ix: number, iy: number, seed: number): number {
@@ -319,12 +327,71 @@ const brick: Mat = (u, v, t) => {
   if (s.id < 0.16 && !gone) { const a = s.id * 97, ca = Math.cos(a), sa = Math.sin(a), f = smooth(0.07, 0.03, Math.abs(-s.dx * sa + s.dy * ca)) * smooth(0.4, 0.28, Math.abs(s.dx * ca + s.dy * sa)) * (1 - joint); t.h += 0.0015 * f; hue(t, 1.3, 1.24, 1.02, f); }
   t.rough = 0.94 + 0.04 * joint;
 };
-const MATS: Mat[] = [mud, plaster, block, earth, gravel, slab, wood, sheet, cloth, metal, paint, stone, brick];
+// ==== THE FOUR OFFICE STUFFS (11-04; the maintainer, of a desk and a swivel chair in a dressed office: "nicer materials on the chair and table"). Until them the
+// look had one wood (weathered planks with gaps), one cloth (a sack's weave) and one metal (iron gone to rust): a desk drew as a pallet, a chair as a sandbag
+// and steel shelving as a wreck. These four are things made in a factory and kept indoors: even, clean, and what little they show is how they were made.
+/** a few thin scratches, each a short straight line through a cell's own point at its own angle; `p` cells a tile, `share` of the cells have one. 0‥1.
+ *  `wide` = its half width in texels of the full map, never under one: a line thinner than a texel is drawn as a row of beads */
+function scratches(u: number, v: number, p: number, seed: number, share: number, wide: number): number {
+  const c = cells(u, v, p, seed, 1.0); if (c.id >= share) return 0;
+  const half = Math.max(1, wide) * p / LOOK_N;   // (in cells)
+  const a = TAU * ((c.id * 53.7) % 1), ca = Math.cos(a), sa = Math.sin(a), across = Math.abs(c.dx * sa - c.dy * ca), along = Math.abs(c.dx * ca + c.dy * sa), len = 0.12 + 0.3 * ((c.id * 17.3) % 1);
+  return smooth(half, 0, across) * smooth(len, len * 0.6, along);
+}
+// ---- veneer: a desk's top, a cabinet's door. A sawn leaf of wood glued flat and lacquered: no boards, no gaps, no knots. Leaves 40 cm wide laid side by side,
+// each its own tone and each turned end for end from the last, the grain running the long way in fine straight lines that swell into a slow arch here and
+// there, the pores short dark ticks along it. Smooth enough to show a lamp.
+const veneer: Mat = (u, v, t) => {
+  const leaf = Math.floor(v * 5), fv = v * 5 - leaf, id = hash(leaf, 0, 211), flip = leaf & 1 ? -1 : 1;
+  const uu = flip * u + id * 13, arch = 0.035 * (vn(uu, v, 2, 5, 212) - 0.5) + 0.01 * (vn(uu, v, 7, 5, 213) - 0.5);       // the grain's slow wander across the leaf (tiles)
+  const ring = Math.sin((fv + arch * 5) * TAU * (9 + 5 * id)), band = 0.5 + 0.5 * ring;                                       // the growth rings, cut along: bands a few centimetres wide
+  const line = vn(uu, v, 6, 260, 214), fib = vn(uu, v, 40, 512, 215), pore = smooth(0.78, 0.9, vn(uu, v, 90, 256, 216)) * (0.4 + 0.6 * band);
+  const joint = smooth(0.012, 0.004, Math.min(fv, 1 - fv));                                                                   // where two leaves meet: a hair's line, flush
+  t.h = 0.00012 * (band - 0.5) - 0.00018 * pore - 0.00025 * joint;
+  tint(t, (0.94 + 0.12 * id) * (1 + 0.1 * (band - 0.5) + 0.1 * (line - 0.5) + 0.05 * (fib - 0.5)) * (1 - 0.14 * pore) * (1 - 0.12 * joint));
+  hue(t, 1.04, 1.0, 0.93, band * 0.6);                                                                                       // the late wood is the warmer
+  t.rough = 0.36 + 0.07 * (line - 0.5) + 0.12 * pore + 0.1 * joint;
+};
+// ---- moulded plastic: a chair's shell, a bin, a monitor's back. One colour through and through, a fine pebbled skin off the mould that kills a mirror but
+// leaves a soft sheen, flow lines so faint they are only a change of sheen, and the marks of use: a few pale hairline scratches and the places hands and
+// backs have rubbed smooth.
+const plastic: Mat = (u, v, t) => {
+  const peb = vn(u, v, 256, 256, 221), peb2 = vn(u, v, 128, 128, 222), flow = fbm(u, v, 2, 2, 223), rub = smooth(0.55, 0.8, fbm(u, v, 3, 3, 224));
+  const scr = Math.max(scratches(u, v, 9, 225, 0.3, 1), scratches(u, v, 17, 227, 0.2, 1));
+  t.h = 0.00016 * (peb - 0.5) * (1 - 0.7 * rub) + 0.00008 * (peb2 - 0.5) - 0.00012 * scr;
+  tint(t, 0.985 + 0.03 * (flow - 0.5) + 0.02 * (peb - 0.5) + 0.1 * scr);
+  t.rough = 0.5 + 0.06 * (peb - 0.5) - 0.14 * rub + 0.05 * (flow - 0.5) + 0.2 * scr;
+};
+// ---- office fabric: a chair's seat and back, a partition's face. A tight flat weave of two yarns a shade apart (a melange: no thread to count from across a
+// room, a grain up close), a faint twill running up it, lint and pilling where it is sat on, and no sheen at all.
+const fabric: Mat = (u, v, t) => {
+  const N = 256, x = u * N, y = v * N, ix = wrap(Math.floor(x), N), iy = wrap(Math.floor(y), N);       // (a yarn is two texels of the full map: its relief is which yarn is on top, not a round back)
+  const over = ((ix + iy) & 1) === 0, warp = hash(ix, 0, 231), weft = hash(0, iy, 232);                // a yarn keeps its shade along its whole length
+  const shade = over ? warp : weft, up = over ? 1 : 0;
+  const twill = 0.5 + 0.5 * Math.sin((x + y) * TAU / 4), heather = vn(u, v, 90, 90, 233), worn = smooth(0.5, 0.8, fbm(u, v, 3, 3, 234));
+  const pc = cells(u, v, 60, 235, 1.0), pill = pc.id < 0.1 + 0.25 * worn ? smooth(0.3, 0.1, pc.f1) : 0;   // pills gather where it is sat on
+  t.h = 0.00022 * (up - 0.5) + 0.00012 * (twill - 0.5) + 0.0005 * pill;
+  tint(t, (0.9 + 0.2 * shade) * (1 + 0.04 * (up - 0.5)) * (1 + 0.05 * (twill - 0.5) + 0.08 * (heather - 0.5)) * (1 + 0.12 * pill) * (1 + 0.04 * worn));
+  t.rough = 0.95 + 0.02 * (up - 0.5) - 0.03 * worn;
+};
+// ---- painted steel, kept: a filing cabinet, shelving, a window's frame, a locker. A baked coat, even to the eye, with the faint orange peel of the spray and
+// a satin sheen; pressed flat, so the only relief is the peel. Use shows as a few fine scratches and scuffs paler than the coat and a soft dulling where
+// hands go. No rust and no chips: old paint (above) is the coat that has been left out.
+const steel: Mat = (u, v, t) => {
+  const peel = fbm(u, v, 70, 2, 241), slow = fbm(u, v, 2, 3, 242), dull = smooth(0.55, 0.85, fbm(u, v, 3, 2, 243));
+  const scr = Math.max(scratches(u, v, 7, 244, 0.35, 1), scratches(u, v, 13, 246, 0.2, 1)), scuff = smooth(0.86, 0.97, vn(u, v, 3, 60, 248)) * 0.5;
+  t.h = 0.00014 * (peel - 0.5) - 0.0001 * scr;
+  tint(t, 0.985 + 0.04 * (slow - 0.5) + 0.015 * (peel - 0.5) + 0.12 * scr + 0.06 * scuff);
+  t.rough = 0.4 + 0.05 * (peel - 0.5) + 0.1 * dull + 0.2 * scr + 0.12 * scuff;
+};
+const MATS: Mat[] = [mud, plaster, block, earth, gravel, slab, wood, sheet, cloth, metal, paint, veneer, plastic, fabric, steel, stone, brick];
 /** how much the relief is stood up when the normal is taken off the height (1 = true to the metres above; a map read from twenty metres wants more) */
-const RELIEF = [1.6, 1.8, 1.5, 1.6, 1.3, 1.8, 1.6, 1.0, 1.6, 1.6, 1.6, 1.0, 1.2];
+const RELIEF = [1.6, 1.8, 1.5, 1.6, 1.3, 1.8, 1.6, 1.0, 1.6, 1.6, 1.6, 1.4, 1.4, 1.6, 1.4, 1.0, 1.2];
 
 /** the layers a box's own paint is drawn as (a class of look.wgsl); the rest are what a wall is made of UNDER its paint (the plinth's stone, the brick behind fallen render) */
-export const LOOK_PAINTED = 11;
+export const LOOK_PAINTED = LOOK_NAMES.indexOf('field stone');
+/** A STUFF'S NUMBER BY ITS NAME (look.wgsl's classes; the box's word carries it): 0 for a name that is no stuff (and for the two masonry layers, which no box is) */
+export function lookStuffOf(name: string | undefined): number { const i = (LOOK_NAMES as readonly string[]).indexOf(name ?? ''); return i >= 0 && i < LOOK_PAINTED ? i + 1 : 0; }
 /** how a colour's value is weighed (linear rgb) */
 const lum = (r: number, g: number, b: number) => 0.2126 * r + 0.7152 * g + 0.0722 * b;
 /** one layer's two maps at full size (N² × 4 bytes each).
@@ -341,17 +408,27 @@ const lum = (r: number, g: number, b: number) => 0.2126 * r + 0.7152 * g + 0.072
  *  the same sack. `even` false = the layer as its material wrote it, the picture as it was before 11-01 (`?look=even:0`, read when the page boots).
  *  `tone` = the multiplier's mean value before it was evened (1 when it was not), `hollow` = what was added to the hollows: who was tuned against the layer as it
  *  fell (the men's cloth, look.wgsl lookMan) takes both back out. */
-export function lookLayer(layer: number, N = LOOK_N, even = true): { a: Uint8Array; b: Uint8Array; tone: number; hollow: number } {
+export interface LookMaps { a: Uint8Array; b: Uint8Array; tone: number; hollow: number }
+export function lookLayer(layer: number, N = LOOK_N, even = true): LookMaps { const it = lookLayerSteps(layer, N, even); for (;;) { const r = it.next(); if (r.done) return r.value; } }
+/** the same maps, made `sliceMs` at a time with `breath` awaited between the pieces (a turn of the event loop: a frame is drawn, a pipeline lands). The arithmetic
+ *  and its order are lookLayer's own (one body, below): the maps are the same to the byte however they were cut up. */
+export async function lookLayerSliced(layer: number, N: number, even: boolean, sliceMs: number, breath: () => Promise<void>): Promise<LookMaps> {
+  const it = lookLayerSteps(layer, N, even), now = () => typeof performance !== 'undefined' ? performance.now() : 0; let t0 = now();
+  for (;;) { const r = it.next(); if (r.done) return r.value; if (now() - t0 >= sliceMs) { await breath(); t0 = now(); } }
+}
+/** lookLayer's body, stopping after every row of the material's own arithmetic (the long part) and between the passes after it */
+function* lookLayerSteps(layer: number, N: number, even: boolean): Generator<void, LookMaps, void> {
   const mat = MATS[layer], H = new Float32Array(N * N), a = new Uint8Array(N * N * 4), b = new Uint8Array(N * N * 4), R = new Float32Array(N * N), P = new Float32Array(N * N * 3);
   const t: Tex = { h: 0, r: 1, g: 1, b: 1, rough: 1 };
   let lo = 1e9, hi = -1e9, sum = 0;
-  for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) {
+  for (let y = 0; y < N; y++) { if (y) yield; for (let x = 0; x < N; x++) {
     t.h = 0; t.r = t.g = t.b = 1; t.rough = LOOK_ROUGH[layer];
     mat((x + 0.5) / N, (y + 0.5) / N, t);
     const i = y * N + x; H[i] = t.h; R[i] = t.rough; if (t.h < lo) lo = t.h; if (t.h > hi) hi = t.h;
     const r = Math.min(2, Math.max(0, t.r)), g = Math.min(2, Math.max(0, t.g)), bl = Math.min(2, Math.max(0, t.b));   // (what the map can hold: paint × 0‥2)
     P[i * 3] = r; P[i * 3 + 1] = g; P[i * 3 + 2] = bl; sum += lum(r, g, bl);
-  }
+  } }
+  yield;
   const mean = sum / (N * N), tone = even && layer < LOOK_PAINTED && mean > 0 ? mean : 1, kv = 1 / tone;
   for (let i = 0; i < N * N * 3; i++) a[(i / 3 | 0) * 4 + i % 3] = Math.round(255 * clamp01(P[i] * kv * 0.5));
   // cavity: how far a texel sits under the mean of its neighbourhood (a box blur of ±R texels, periodic, two passes)
@@ -361,6 +438,7 @@ export function lookLayer(layer: number, N = LOOK_N, even = true): { a: Uint8Arr
   const open = blur; let openSum = 0;   // (in place: how open each texel is, 0‥1, 1 = not in a hollow)
   for (let i = 0; i < N * N; i++) { open[i] = clamp01(1 - (blur[i] - H[i]) * 160); openSum += open[i] * lum(P[i * 3], P[i * 3 + 1], P[i * 3 + 2]); }
   const hollow = even && sum > 0 ? 0.5 - 0.5 * openSum / sum : 0;   // (weighed by the paint: where a material's high places are also its pale ones, as on worn wood, an even count of texels left the two together 3 % bright)
+  yield;
   const texel = LOOK_TILE / N, k = RELIEF[layer] / (2 * texel), span = Math.max(hi - lo, 1e-6);
   for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) {
     const i = y * N + x;
