@@ -587,7 +587,6 @@ export function shippedBoot(): void {
  *  frozen run where there is one. `probes.ts shipped` stands the game up both ways and is red when this list and the measured difference are not the same list. */
 export const FROZEN_HOLDS: Record<string, string> = {
   // standGame's harness block (src/host/standup.ts)
-  ...Object.fromEntries(RUST_ON.map(r => ['RUST.' + r, 'TPS_RUST' + r.toUpperCase() + '=1'])),   // the rows of the Rust module that are on in the page (src/sim/sim.ts RUST_ON: RUST.lines TPS_RUSTLINES=1, RUST.circles, RUST.fog) — sim.ts imports no game module, so its list is whole when this table is built
   'OPENING.on': 'TPS_OPENING=1',
   'tune.qrfSilent': 'TPS_QRFSILENT=1',
   'tune.qrfSquad': 'TPS_QRFSQUAD=1',
@@ -760,7 +759,6 @@ export const FROZEN_HOLDS: Record<string, string> = {
   'RESCUEEND.on': 'TPS_RESCUEEND=1',
   'SNATCHOUT.on': 'TPS_SNATCHOUT=1',
   'RESCUEFLUSH.on': 'TPS_RESCUEFLUSH=1',
-  'EXACT.on': 'TPS_EXACT=1',
   'POSEMATH.singles': 'TPS_POSESINGLES=1',
   'CMDCHECK.on': 'TPS_CMDCHECK=1',
   'DOZE.on': 'TPS_DOZE=1',
