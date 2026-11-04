@@ -199,7 +199,7 @@ if (!flag('--twins')) { for (const r of rows) if (RUST_KNOBS.includes(`"${r.row}
   for (const u of uses) { if (u.def || twinWhy.has(u.row.row)) continue; const f = rel(u.sf.fileName); if (TWIN_FILES.has(f) || twinFn(u.node)) twinWhy.set(u.row.row, `${at(u.sf, u.node.getStart(u.sf))}: read in code that has a Rust twin`); } }
 
 // ---- 2. sort the uses: a read to fold, a write to take out, the row's own line — or a reason to refuse the row
-const refuse = new Map<string, string>(); const droppedLines: string[] = [];
+const refuse = new Map<string, string>(); const droppedLines: string[] = [], dropMissed: string[] = [];
 type Act = { use: Use; kind: 'read' | 'delStmt' | 'delProp' | 'delMember' | 'unassign' | 'const' | 'setInit'; node: any };
 /** is this row read anywhere inside the node? */
 const readIn = (n: any, row: string) => uses.some(x => x.row.row === row && !x.write && x.node.getSourceFile() === n.getSourceFile() && x.node.getStart() >= n.getStart() && x.node.end <= n.end);
@@ -330,13 +330,17 @@ for (const spec of DROPS) { const [f, name] = spec.split(':'), file = join(ROOT,
     let st: any = tok; while (st.parent && !(st.parent.kind === SK.SourceFile || st.parent.kind === SK.Block || st.parent.kind === SK.ModuleBlock || st.parent.kind === SK.CaseClause || st.parent.kind === SK.DefaultClause)) st = st.parent;
     plan(e.fileName).del.add(st); note(`${at(rsf, st.getStart(rsf))}: called ${name}, so it goes: ${st.getText().slice(0, 110)}`); } }
 
-// ---- --drop-at file.ts:line[:words] …: a check's line to take out (the innermost statement on that line, holding those words): the off arm of a retired switch,
-// found by running the check before and after. What only it used goes by step 4.
+// ---- --drop-at file.ts:line[:words | :column] …: a check's line to take out (the innermost statement on that line holding those words, or the statement the
+// call at that column is in — a stack frame's place): the off arm of a retired switch, found by running the check before and after. What only it used goes by step 4.
 for (const spec of DROP_AT) { const m = /^([^:]+):(\d+)(?::(.*))?$/.exec(spec); if (!m) { console.error(`--drop-at ${spec}: file:line[:words]`); process.exit(2); }
   const file = join(ROOT, m[1]), sf = sfOf(file), line = +m[2] - 1, words = m[3]; if (!sf) { console.error(`--drop-at ${spec}: no such file`); process.exit(2); }
-  let best: any = null; const visit = (n: any) => { const a = sf.getLineAndCharacterOfPosition(n.getStart(sf)).line, b = sf.getLineAndCharacterOfPosition(n.end).line; if (a > line || b < line) return;
-      if (n.kind === SK.ExpressionStatement && (!words || (n.getText() as string).includes(words))) best = n; n.forEachChild(visit); }; visit(sf);
-  if (!best) { note(`--drop-at ${spec}: no statement there holds those words`); continue; }
+  let best: any = null;
+  if (words && /^\d+$/.test(words)) {   // file:line:column — the place a stack frame gives for the call that printed the line: the statement that call is in
+    const tok = ts.getTokenAtPosition(sf, sf.getPositionOfLineAndCharacter(line, Math.max(0, +words - 1))); best = ts.findAncestor(tok, (x: any) => x.kind === SK.ExpressionStatement) ?? null;
+    if (best && sf.getLineAndCharacterOfPosition(best.getStart(sf)).line > line) best = null; }
+  else { const visit = (n: any) => { const a = sf.getLineAndCharacterOfPosition(n.getStart(sf)).line, b = sf.getLineAndCharacterOfPosition(n.end).line; if (a > line || b < line) return;
+      if (n.kind === SK.ExpressionStatement && (!words || (n.getText() as string).includes(words))) best = n; n.forEachChild(visit); }; visit(sf); }
+  if (!best) { note(`--drop-at ${spec}: no statement there (a line that is returned or kept in a name wants a hand)`); dropMissed.push(spec); continue; }
   plan(file).del.add(best); droppedLines.push(`${m[1]}:${m[2]} ${(best.getText() as string).slice(0, 120)}`); }
 
 // ---- 3. fold. `konst` = the value an expression is known to have once the rows are their values; `render` = its text after the fold.
@@ -577,14 +581,14 @@ console.log(`  address words gone: ${report.words.join(' ') || '(none)'}`);
 console.log(`  stand words gone: ${report.standWords.join(' ') || '(none)'}`);
 console.log(`  a tool set the row to the value it now always has (taken out): ${byKind('same').length} · put it back from a kept copy or a parameter (taken out; read the check): ${byKind('other').length} · ASKED FOR THE RETIRED PATH (the arm that follows wants a hand): ${byKind('opposite').length}`);
 if (leftovers.length) console.log(`  a constant left in a condition beside a call (wants a hand): ${leftovers.length}${VERBOSE ? ' · ' + leftovers.join(' ') : ''}`);
-if (droppedLines.length) console.log(`  check lines taken out by name: ${droppedLines.length}`);
+if (droppedLines.length || dropMissed.length) console.log(`  check lines taken out by name: ${droppedLines.length}${dropMissed.length ? ` · NOT FOUND (want a hand): ${dropMissed.length} · ${dropMissed.slice(0, 12).join(' ')}` : ''}`);
 if (report.hooks.length) console.log(`  debug hooks that lose a getter and a setter (a page tool may use them): ${report.hooks.length}`);
 { const live2 = new Set(report.retired), n = namedAt.filter(l => live2.has(l.split(' ')[1].replace(/:$/, ''))); if (n.length) console.log(`  rows named as data beside their table's name (a panel's list, what a machine keeps: taken out): ${n.length}${VERBOSE ? '\n    ' + n.join('\n    ') : ''}`); }
 if (unread.size) console.log(`  a value nothing reads any more whose making still happens (the name went, the call stays: read each): ${unread.size}${VERBOSE ? '\n    ' + [...unread.values()].join('\n    ') : ''}`);
 if (emptied.size) console.log(`  a loop left with nothing in it (kept, for its head: wants a hand): ${emptied.size}${VERBOSE ? ' · ' + [...emptied].join(' ') : ''}`);
 console.log(`  a check's line that only read the switch (taken out; the lines that fed it want a hand): ${constLines.length}`);
 if (VERBOSE) { for (const h of report.hooks) console.log(`    hook ${h}`); for (const c of constLines) console.log(`    line ${c}`); for (const w of byKind('opposite')) console.log(`    opposite ${w.at} ${w.row}: ${w.text}`); for (const w of byKind('other')) console.log(`    other ${w.at} ${w.row}: ${w.text}`); for (const d of report.dead) console.log(`    dead ${d}`); for (const n of report.notes) console.log(`    note ${n}`); }
-{ const out = arg('--report'); if (out) writeFileSync(out, JSON.stringify({ ...report, constLines, leftovers, droppedLines, named: namedAt.filter(l => report.retired.includes(l.split(' ')[1].replace(/:$/, ''))), unread: [...unread.values()], emptied: [...emptied] }, null, 1)); }
+{ const out = arg('--report'); if (out) writeFileSync(out, JSON.stringify({ ...report, constLines, leftovers, droppedLines, dropMissed, named: namedAt.filter(l => report.retired.includes(l.split(' ')[1].replace(/:$/, ''))), unread: [...unread.values()], emptied: [...emptied] }, null, 1)); }
 if (flag('--list')) for (const r of report.retired) console.log(`- \`${r}\``);
 if (WRITE) { for (const [f, t] of finalText) writeFileSync(f, t); console.log(`  written: ${finalText.size} files`); } else console.log('  (a dry run: --write writes it)');
 process.exit(report.refused.length ? 3 : 0);   // (3 = some rows were refused and the rest done: a script that asked for all of them should not read that as done)

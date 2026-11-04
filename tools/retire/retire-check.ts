@@ -6,7 +6,7 @@
 //   - each thing that names a retired row is gone (its line of the table, its address word, its hold, its stand word, its panel row, its kept row), and what
 //     only looks like one is not (the same word in another list),
 //   - each row that is not a switch is refused, for its own reason, and the run says so by its exit code,
-//   - `--drop` takes a declaration out with the statements that call it, in whatever file they are,
+//   - `--drop` takes a declaration out with the statements that call it, in whatever file they are, and `--drop-at` one line of a check,
 //   - a value that is not true, false, a number or a quoted word stops the tool.
 //   bun run tools/retire/retire-check.ts            (TypeScript from vendor/typescript, or TS_LIB=<path to typescript.js>)
 //   RETIRE_BREAK=1 bun run tools/retire/retire-check.ts    the red path: one row is folded at the WRONG value, and the cases must say so (the check must fail)
@@ -86,6 +86,10 @@ try {
   const rb = retire(e, ['--drop', 'src/game/zcheck.ts:zCheck', '--write']); const caller = readFileSync(join(e, 'src/game/caller.ts'), 'utf8'), eb = errors(e);
   line(rb.code === 0 && eb.length === 0 && !/zCheck/.test(caller) && !/function zCheck/.test(readFileSync(join(e, 'src/game/zcheck.ts'), 'utf8')) && /default: return 3;/.test(caller) && /LIST = \[zKeep\]/.test(caller) && /case 1: return zKeep\(\)/.test(caller),
     '--drop takes a function out with the statements that call it in another file (at the same offsets, and under a `default:`), and out of a list', `exit ${rb.code} · ${eb.length} errors${eb.length ? ': ' + eb.slice(0, 3).join(' | ') : ''} · ${caller.split('\n').filter(l => /switch|run2|LIST/.test(l)).map(l => l.trim()).join(' · ').slice(0, 200)}`);
+
+  // ---- --drop-at: one line of a check out, by the place a stack frame gives for the call that printed it
+  const f = fresh(); made.push(f); const rd = retire(f, ['--drop-at', 'tools/qa/t-check.ts:11:3', '--write']); const tc = readFileSync(join(f, 'tools/qa/t-check.ts'), 'utf8');
+  line(rd.code === 0 && !/the rule off: the old answer|function offArm/.test(tc) && /the stand: on, as the page opens/.test(tc) && /KK\.on = false/.test(tc), '--drop-at file:line:column takes one line of a check out with what only it used, and nothing else', `exit ${rd.code} · ${tc.split('\n').filter(l => /line\(|offArm/.test(l)).length} lines left that print or are the off arm's`);
 
   // ---- C. a value that is none of true, false, a number, a quoted word stops the tool before it reads anything
   const rc = retire(fresh(), ['K.on=False']); line(rc.code === 2 && /a value is true, false, a number/.test(rc.out), 'a value that is not true, false, a number or a quoted word stops the tool (a typo is not folded to a branch)', `exit ${rc.code}`);
