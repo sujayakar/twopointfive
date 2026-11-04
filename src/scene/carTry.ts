@@ -210,7 +210,7 @@ export function dressCars(level: { boxes: Box[] }): Record<string, number> {
         const made = K.shape({ x, z, yaw }, i => B[idx[i]]), old = idx.filter((_, i) => !K.lamps.includes(i));
         for (const li of K.lamps) { const l = B[idx[li]], s = K.sig[li], t = K.sig[K.anchor]; lens(l, Math.min(l.h[1], l.h[2]) * 0.8, made[K.body], s.c[0] - t.c[0], s.c[2] - t.c[2]); }   // (the body's box stands where the stack's anchor stood)
         // a made box takes the place of a box of the stack while there is one (indices hold: nothing that names a box by number moves); the rest are added
-        made.forEach((m, i) => { if (i < old.length) { const o = B[old[i]]; m.owner = o.owner; m.cutHeight = o.cutHeight; delete o.marks; delete o.cut; delete o.cutRound; delete o.cutArc; delete o.cutOld; delete o.metal; Object.assign(o, m); } else add.push(m); });
+        made.forEach((m, i) => { if (i < old.length) { const o = B[old[i]]; m.owner = o.owner; m.cutHeight = o.cutHeight; delete o.marks; delete o.cut; delete o.cutRound; delete o.cutArc; delete o.cutOld; delete o.metal; delete o.stuff; Object.assign(o, m); } else add.push(m); });
         for (let i = made.length; i < old.length; i++) { const o = B[old[i]]; o.flags |= BoxFlag.NoPrimary | BoxFlag.NoShadow; o.c = [x, 0.5, z]; o.h = [0.01, 0.01, 0.01]; delete o.marks; }
         found[K.name] = (found[K.name] ?? 0) + 1;
         break;

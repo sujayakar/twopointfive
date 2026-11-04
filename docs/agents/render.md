@@ -2265,15 +2265,24 @@ interleaved and filtered to their quiet minimum, and a row whose p75 sits far ab
   bench (both `wood`) or a car body from a partition (a level file names a box by its colour), so the PIECE says it: `lookWordOf` asks the box's
   own word first, then its paint's name, then its colour. One of the look's materials that has a number (`lookStuffOf`: the stone and brick
   under a mud wall are refused), `plain`, or `waits`. PICTURE ONLY: no rule of the game reads it, a level's fingerprint does not, and
-  `lived-check` reads a base's boxes with today's words; `?names=0` puts it off with the names. Written in the file only where it was said
-  (after `metal`, before `flags`). A loose prop's part carries it to the box the game makes (`props.ts`), and the page asks each part its word
-  before the first frame so its map is made (`main.ts`). SAID SO FAR, by the office kit (`officeGen.ts`, `levelKit.ts`): a desk, counter, low
-  table, conference table and credenza veneer; cubicle partitions, couch and sofa fabric; cabinets steel; a rug cloth; an outside door's frame
-  steel, an inside one's veneer. The level files of the generators that lay them are re-written by words alone. CHECK: `stuff-check` line 7
-  (`STUFF_BREAK=1` red): a word over a name and a colour, through the file and back, on a prop's part, refused words, the page's ask;
-  `lookmaps-check` asks a box that says a word for that word. NOT YET: a broken piece and a cut core inherit the word; the lived kit, the
-  compound's stucco and door leaves say theirs; a row on the look panel. Seen on the software adapter (the showroom); never on a GPU by us:
-  the maintainer has it on the preview.
+  `lived-check` reads a base's boxes with today's words. `?words=0` = the boxes' own words off and the names on (the picture before this
+  slice); `?names=0` puts both off. Written in the file only where it was said (after `metal`, before `flags`).
+  THE RULE: A WORD BELONGS TO THE PAINT IT WAS SAID WITH (`stuff.ts saidFor`). (1) A piece says a word for its OWN paints only: the kit's desk
+  is veneer in the kit's two wood paints and says nothing when a caller hands it steel or white (a steel bench, a white table: that paint's
+  name speaks); a chair says nothing itself (the kit's chair paint is fabric by name) and a caller that hands it a paint of its own says
+  what that is (the manager's dark chair). A piece that is one thing in any colour says so always (a rug is cloth; floor paint and a dirt
+  track are NOT rugs and are laid as their own flat boxes). (2) Whoever REPAINTS a box drops its word: the look's skin
+  (`tools/levels/gwotSkin.ts`, boxes and prop parts; `look-check` counts `stuff` as paint), the editor's paint commands, the cars trial.
+  (3) Whoever COPIES a box's paint copies its word: a holed wall's standing and fallen pieces (`wallbreak.ts`). A loose prop's part carries
+  it to the box the game makes (`props.ts`), and the page asks those boxes their word before the first frame so the map is made (`main.ts`).
+  SAID SO FAR, by the office kit (`officeGen.ts`, `levelKit.ts`): desks, the reception counter, low table, conference table and credenza
+  veneer; cubicle partitions, couch and sofa fabric; cabinets steel; rugs cloth. NO DOOR FRAME says a word: a frame goes with its leaf, and
+  both wait for the doors' own slice. The level files of the generators in step with their files are re-written by words alone.
+  CHECK: `stuff-check` lines 7 and 8 (`STUFF_BREAK=1` red on 7): a word over a name and a colour, through the file and back, on the box the
+  game makes of a prop's part, refused on a box, a part and a gear screen's box; the desk as itself, as a steel bench and as a white table;
+  no frame with a word in any level file; no word kept on a box a look's file repainted; the editor's paint drops it. NOT YET: a cut core
+  takes its box's word; the lived kit, the compound's stucco and door leaves and frames say theirs; a row on the look panel; the editor
+  shows no word. Seen on the software adapter (the showroom and the office); never on a GPU by us: the maintainer has it on the preview.
 - **MARKS AS PAINT, A FIRST TRY** (`shaders/markings.wgsl markSoft`, behind `lookMarkSoft()` = `lookCfg.g.x`, 0 off the look page by gbuffer.ts's
   stub; the maintainer, 10-23: "we also need to get away from the pixel art textures"). A marking is still the level's 2-bit cell bitmap (2.5 cm
   cells), but on the look page it is not drawn as squares: the coverage is read over a one-cell footprint, cut back at half cover along a ragged line

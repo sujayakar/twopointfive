@@ -93,6 +93,6 @@ export function lookTrialsKept(q: URLSearchParams): string[] { const off = (Obje
   let cut: string | null = null; try { cut = localStorage.getItem('twopointsix.cutboxes'); } catch { /* no store: on */ }   // (…and the cut boxes' own switch, which four of the five stand on: scene/cut.ts initCutSwitch)
   return cut === '0' && !q.has('cutboxes') && !q.has('nocutboxes') ? [...off, 'cutboxes=0'] : off; }
 /** the other words the page reads once, at boot, into its shader text and its level (main.ts, scene/cut.ts: the look's geometry is cut boxes) */
-const LOOK_PAGE_WORDS: ReadonlySet<string> = new Set([...Object.keys(LOOK_TRIALS), 'roll', 'lorrykit', 'seat', 'firefit', 'longfoot', 'firesnow', 'firesoot', 'footing', 'emberfog', 'cutboxes', 'nocutboxes', 'smokelook', 'names']);
+const LOOK_PAGE_WORDS: ReadonlySet<string> = new Set([...Object.keys(LOOK_TRIALS), 'roll', 'lorrykit', 'seat', 'firefit', 'longfoot', 'firesnow', 'firesoot', 'footing', 'emberfog', 'cutboxes', 'nocutboxes', 'smokelook', 'names', 'words']);
 /** a word of an address, decoded, is the look page's own */
 export function lookPageWord(k: string, v: string): boolean { return k === 'look' ? !dressOff(v) : k === 'round' ? v === '1' : LOOK_PAGE_WORDS.has(k); }   // (`round=1` is the page's: its round test compiled beside a trial's cut boxes; `round=0` is a rule's off switch, another fight)

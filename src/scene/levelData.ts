@@ -297,6 +297,8 @@ export function validateLevelData(d: LevelData): string[] {
   /** the finish fields, wherever they sit (a material or a box): rough a number in [0, 1], metal a boolean */
   const finishOk = (where: string, o: { rough?: unknown; metal?: unknown }) => { if (o.rough !== undefined && !(isNum(o.rough) && o.rough >= 0 && o.rough <= 1)) err(where, 'rough must be a number in [0, 1]'); if (o.metal !== undefined && typeof o.metal !== 'boolean') err(where, 'metal must be a boolean'); };
   for (const [k, m] of Object.entries(mats)) { if (!isObj(m) || !isVec(m.albedo) || m.albedo.some(x => x < 0)) err(`materials.${k}`, 'albedo must be a Vec3 ≥ 0'); else { known(`materials.${k}`, m, KEYS.material); finishOk(`materials.${k}`, m); if (m.notes !== undefined && typeof m.notes !== 'string') err(`materials.${k}.notes`, 'string'); } }
+  /** what a box, a prop's part or a picture's box says it is made of is a word a box may say (scene/stuff.ts BOX_STUFFS) */
+  const stuffOk = (where: string, o: { stuff?: unknown }) => { if (o.stuff !== undefined && !boxStuffOk(o.stuff)) err(where, `stuff '${show(o.stuff)}' is not a thing a box can be made of (${BOX_STUFFS.join(', ')})`); };
   const paintOk = (where: string, o: { material?: string; albedo?: Vec3 }) => {
     const hasM = o.material !== undefined, hasA = o.albedo !== undefined;
     if (hasM === hasA) err(where, 'exactly one of material / albedo');
@@ -335,7 +337,7 @@ export function validateLevelData(d: LevelData): string[] {
     paintOk(w, b); finishOk(w, b);
     if (b.emissive !== undefined && !(isVec(b.emissive) && b.emissive.every(x => x >= 0))) err(w, 'emissive must be Vec3 ≥ 0');
     if (b.flags !== undefined) { if (!Array.isArray(b.flags)) err(w, 'flags must be an array of names'); else for (const f of b.flags) if (!(AUTHORED_FLAGS as readonly string[]).includes(f)) err(w, `unknown / runtime-only flag '${show(f)}' (authored: ${AUTHORED_FLAGS.join(', ')})`); }
-    if (b.stuff !== undefined && !boxStuffOk(b.stuff)) err(w, `stuff '${show(b.stuff)}' is not a thing a box can be made of (${BOX_STUFFS.join(', ')})`);
+    stuffOk(w, b);
     if (b.cutHeight !== undefined && !isNum(b.cutHeight)) err(w, 'cutHeight must be a number');
     if (b.name !== undefined && !isStr(b.name)) err(w, 'name must be a non-empty string'); if (b.group !== undefined && !isStr(b.group)) err(w, 'group must be a non-empty string');
     marksOk(w, b.markings, b.h, b.rot !== undefined);
@@ -350,7 +352,7 @@ export function validateLevelData(d: LevelData): string[] {
     for (const k of ['x', 'z', 'mass'] as const) if (!isNum(p[k])) err(w, `${k} must be a number`); if (p.yaw !== undefined && !isNum(p.yaw)) err(w, 'yaw must be a number'); if (isNum(p.mass) && p.mass <= 0) err(w, 'mass > 0');
     if (p.half !== undefined && !(isVec(p.half, 2) && p.half[0] > 0 && p.half[1] > 0)) err(w, 'half must be [hx, hz] > 0'); if (p.height !== undefined && !(isNum(p.height) && p.height > 0)) err(w, 'height > 0');
     const parts = recs(`${w}.parts`, p.parts); if (!parts.length) err(w, 'at least one part');
-    parts.forEach((q, j) => { if (!isObj(q)) return; const wq = `${w}.parts[${j}]`; known(wq, q, KEYS.part); if (q.stuff !== undefined && !boxStuffOk(q.stuff)) err(wq, `stuff '${show(q.stuff)}' is not a thing a part can be made of (${BOX_STUFFS.join(', ')})`); if (!isVec(q.off)) err(wq, 'off Vec3'); if (!(isVec(q.h) && q.h.every(x => x >= 0))) err(wq, 'h Vec3 ≥ 0'); if (q.yaw !== undefined && !isNum(q.yaw)) err(wq, 'yaw number'); paintOk(wq, q); marksOk(wq, q.markings, q.h, false); });
+    parts.forEach((q, j) => { if (!isObj(q)) return; const wq = `${w}.parts[${j}]`; known(wq, q, KEYS.part); stuffOk(wq, q); if (!isVec(q.off)) err(wq, 'off Vec3'); if (!(isVec(q.h) && q.h.every(x => x >= 0))) err(wq, 'h Vec3 ≥ 0'); if (q.yaw !== undefined && !isNum(q.yaw)) err(wq, 'yaw number'); paintOk(wq, q); marksOk(wq, q.markings, q.h, false); });
   });
   // lights
   const lightOk = (w: string, l: LightData, moreBoxes?: ReadonlySet<string>) => {   // (`moreBoxes`: ids a fixture may also name — the boxes a Team & kit way adds beside its lamps)
@@ -727,7 +729,7 @@ export function validateLevelData(d: LevelData): string[] {
           // (A PICTURE'S BOX — a set's, a way's `add`: the level format's own record. LOOK TWINS: one block serves the plain file and its look file — the box's
           //  `material` may be alternatives 'a|b', the first the file's palette holds: src/host/kitViewSet.ts kitSetPaint)
           const kvPaint = (b: any) => { const alt = isStr(b.material) && b.material.includes('|') ? b.material.split('|').find((m: string) => Object.prototype.hasOwnProperty.call(mats, m)) : undefined; return alt !== undefined ? { ...b, material: alt } : b; };
-          const kvBox = (bw: string, b: any) => { if (!isObj(b) || !isStr(b.id) || !isVec(b.c) || !isVec(b.h)) { err(bw, 'a box: id, c, h'); return; } known(bw, b, KEYS.box); paintOk(bw, kvPaint(b)); };
+          const kvBox = (bw: string, b: any) => { if (!isObj(b) || !isStr(b.id) || !isVec(b.c) || !isVec(b.h)) { err(bw, 'a box: id, c, h'); return; } known(bw, b, KEYS.box); paintOk(bw, kvPaint(b)); stuffOk(bw, b); };
           // (BESPOKE SETS — scenarios.ts KitViewSet: the shapes only; what stands where is src/host/kitViewPlan.ts's to measure, tools/qa/kitview-plan.ts)
           const sets: Record<string, any> = isObj(K.sets) ? K.sets : {}; if (K.sets !== undefined && !isObj(K.sets)) err(`${w}.sets`, 'must be an object of sets by name');
           for (const [name, T] of Object.entries(sets)) { const tw = `${w}.sets.${name}`; if (!isObj(T)) { err(tw, 'must be an object'); continue; }
