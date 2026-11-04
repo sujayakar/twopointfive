@@ -337,10 +337,21 @@ struct Step {
     ev: usize,
 }
 
+/// the drive's own columns (doors.ts DRIVE_COLS: DriveCols' fields, each one)
+const DRIVE_COLS: [usize; 11] = [DRIVE_WHO, DRIVE_DIR, DRIVE_KIND, DRIVE_T, DRIVE_FROM, DRIVE_QUIET, DRIVE_SIDE, DRIVE_RATE, DRIVE_PX, DRIVE_PZ, DRIVE_HIT];
+
 impl Step {
     #[inline(always)]
     fn on(&self, k: usize, i: usize) -> bool {
         self.s.c[k][i] != 0.0
+    }
+    /// `d.drive = null` (doors.ts Door's setter): the drive is over and leaves nothing — its flag down and every column of its record zero
+    #[inline]
+    fn drive_off(&mut self, i: usize) {
+        self.s.c[DRIVE][i] = 0.0;
+        for k in DRIVE_COLS {
+            self.s.c[k][i] = 0.0;
+        }
     }
     /// Door.swing
     #[inline]
@@ -774,7 +785,7 @@ impl Step {
             let pulled = ow && self.s.c[PULL_T][i] > 0.0;
             let rate = js_abs(da) / js_max(dt, 1e-3);
             if pulled && self.on(DRIVE, i) {
-                self.s.c[DRIVE][i] = 0.0;
+                self.drive_off(i);
             }
             let vel = self.s.c[VEL][i];
             let free = !self.on(CLOSING, i) && !self.on(LATCHED, i) && !pulled;
@@ -793,7 +804,7 @@ impl Step {
                 self.driven(i, self.s.c[LAST_WHO][i], da, HAND, false, rate, m);
             }
         } else if self.on(DRIVE, i) {
-            self.s.c[DRIVE][i] = 0.0;
+            self.drive_off(i);
         }
         let kicked = self.s.c[SINCE_BASH][i] < 0.6;
         if kicked && !self.on(LATCHED, i) {
