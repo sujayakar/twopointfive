@@ -34,22 +34,33 @@ The same word in more than one kit: each is built its own way, in its own paint.
 |---|---|---|
 | bench | officeKit, livedQuiet | 1.4 × 0.4 × 0.45 · 1.3 × 0.32 × 0.44 |
 | bucket | livedKit, livedPieces, livedTrain | 0.28 × 0.28 × 0.3 · 0.3 × 0.26 × 0.3 · 0.26 × 0.26 × 0.29 |
-| carton | livedKit, livedQuiet | 0.45 × 0.45 × 0.45 · 0.5 × 0.36 × 0.31 |
-| chair | officeKit, livedKit | 0.5 × 0.5 × 1.1 · 0.5 × 0.5 × 1.1 |
+| carton | livedKit (officeKit.cardboardBox), livedQuiet | 0.45 × 0.45 × 0.45 · 0.5 × 0.36 × 0.31 |
 | chest | livedPieces, livedTrain | 1.06 × 0.66 × 0.9 · 0.58 × 0.38 × 0.32 |
 | cone | livedKit, livedPieces | 0.34 × 0.34 × 0.56 · 0.3 × 0.3 × 0.49 |
 | crate | livedKit, livedPieces | 0.8 × 0.5 × 0.47 · 0.5 × 0.5 × 0.42 |
 | drum | gwotKit, livedKit | 0.56 × 0.56 × 0.88 · 0.56 × 0.56 × 0.89 |
 | mat | livedKit, livedQuiet | 1.4 × 1 × 0.02 · 1.6 × 0.9 × 0.01 |
 | mug | livedKit, livedQuiet | 0.07 × 0.07 × 0.09 · 0.08 × 0.08 × 0.1 |
-| papers | officeKit, livedKit | 0.32 × 0.27 × 0.06 · 0.32 × 0.27 × 0.06 |
 | rug | gwotKit, officeKit | 3.2 × 3 × 0.01 · 2.4 × 1.6 × 0.01 |
 | shelf | officeKit, livedQuiet | 1.6 × 0.4 × 1.9 · 2 × 0.36 × 1.5 |
 | stool | livedKit, livedPieces, livedQuiet, livedTrain | 0.34 × 0.34 × 0.47 · 0.36 × 0.36 × 0.48 · 0.34 × 0.34 × 0.34 · 0.34 × 0.34 × 0.42 |
 | table | gwotKit, livedKit, livedPieces, livedTrain | 1.6 × 0.75 × 0.75 · 1.8 × 0.7 × 0.74 · 2 × 0.9 × 0.74 · 1.8 × 0.8 × 0.75 |
 | tyres | gwotKit, livedKit | 0.68 × 0.64 × 0.6 · 0.68 × 0.68 × 0.6 |
-| wallX | gwotKit, officeKit | 10.24 × 0.24 × 3 · 7.24 × 0.24 × 3 |
-| wallZ | gwotKit, officeKit | 5.76 × 0.24 × 3 · 4.76 × 0.24 × 3 |
+
+## One piece, handed out by more than one kit
+
+A piece that lays nothing of its own, only one piece of another kit: the same piece, taken into that kit (a lived kit names it as one of a room's lived things).
+It is no second way of building the name.
+
+| Piece | Is |
+|---|---|
+| gwotKit.wallX | officeKit.wallX |
+| gwotKit.wallZ | officeKit.wallZ |
+| gwotKit.partX | officeKit.wallX |
+| gwotKit.partZ | officeKit.wallZ |
+| livedKit.papers | officeKit.papers |
+| livedKit.chair | officeKit.chair |
+| livedKit.carton | officeKit.cardboardBox |
 
 ## gwotKit
 
@@ -59,10 +70,10 @@ The same word in more than one kit: each is built its own way, in its own paint.
 
 | Piece | What it is | To a man | Size | Boxes | Paints | Stands in |
 |---|---|---|---|---|---|---|
-| **wallX**(z, x0, x1, kind = 'mud', openings = [], height = H) | a SHELL wall along X at fixed z (0.24 thick: mud-brick, render, whitewash, bare block); openings as the kits' own (doors 0‥2.2, windows 0.9‥2.4) | solid to 3 | 10.24 × 0.24 × 3 | 1 solid | mud | gwot-yard |
-| **wallZ**(x, z0, z1, kind = 'mud', openings = [], height = H) | a SHELL wall along X at fixed z (0.24 thick: mud-brick, render, whitewash, bare block); openings as the kits' own (doors 0‥2.2, windows 0.9‥2.4) | solid to 3 | 5.76 × 0.24 × 3 | 1 solid | mud | gwot-yard |
-| **partX**(z, x0, x1, kind = 'mudLight', openings = [], height = H) | an interior PARTITION (0.12 thick) | solid to 3 | 4 × 0.12 × 3 | 1 solid | whitewash | library-hall |
-| **partZ**(x, z0, z1, kind = 'mudLight', openings = [], height = H) | an interior PARTITION (0.12 thick) | solid to 3 | 5.76 × 0.12 × 3 | 3 solid | mudLight | gwot-yard |
+| **wallX**(z, x0, x1, kind = 'mud', openings = [], height = H) | a SHELL wall along X at fixed z (0.24 thick: mud-brick, render, whitewash, bare block); openings as the kits' own (doors 0‥2.2, windows 0.9‥2.4) *(is `officeKit.wallX`)* | solid to 3 | 10.24 × 0.24 × 3 | 1 solid | mud | gwot-yard |
+| **wallZ**(x, z0, z1, kind = 'mud', openings = [], height = H) | a SHELL wall along X at fixed z (0.24 thick: mud-brick, render, whitewash, bare block); openings as the kits' own (doors 0‥2.2, windows 0.9‥2.4) *(is `officeKit.wallZ`)* | solid to 3 | 5.76 × 0.24 × 3 | 1 solid | mud | gwot-yard |
+| **partX**(z, x0, x1, kind = 'mudLight', openings = [], height = H) | an interior PARTITION (0.12 thick) *(is `officeKit.wallX`)* | solid to 3 | 4 × 0.12 × 3 | 1 solid | whitewash | library-hall |
+| **partZ**(x, z0, z1, kind = 'mudLight', openings = [], height = H) | an interior PARTITION (0.12 thick) *(is `officeKit.wallZ`)* | solid to 3 | 5.76 × 0.12 × 3 | 3 solid | mudLight | gwot-yard |
 | **yardWallX**(z, x0, x1, kind = 'mud', openings = [], height = 2.4) | a COMPOUND (yard) wall along X: the shell wall to `height` (2.4: over a man, under the roofs) with a paler coping course overhanging it, open to the sky | solid to 2.4 | 2 × 0.3 × 2.47 | 2 solid | mud, mudLight | gwot-yard |
 | **yardWallZ**(x, z0, z1, kind = 'mud', openings = [], height = 2.4) | a COMPOUND (yard) wall along Z at fixed x: as yardWallX | solid to 2.4 | 16 × 0.3 × 2.47 | 4 solid | mud, mudLight | gwot-yard |
 | **pier**(x, z, height = 2.4, kind = 'mud') | a buttress PIER on a wall line (0.44 square, capped) — the rhythm of a long mud wall, and a corner to stand behind | solid to 2.44 | 0.52 × 0.52 × 2.52 | 2 solid | mud, mudLight | gwot-yard |
@@ -239,7 +250,7 @@ The same word in more than one kit: each is built its own way, in its own paint.
 | Piece | What it is | To a man | Size | Boxes | Paints | Stands in |
 |---|---|---|---|---|---|---|
 | **mug**(x, y, z, albedo = C.white) | a MUG on a surface at y (clutter: a firefight knocks it off) | off the floor | 0.07 × 0.07 × 0.09 | 1 solid | white | library-hall |
-| **papers**(x, y, z, yaw = 0) | the office kit's pile of PAPERS on a surface at y | drawn only | 0.32 × 0.27 × 0.06 | 2 drawn, 2 markings | LIVED_PAINT.paper, (0.9, 0.88, 0.8) | library-hall |
+| **papers**(x, y, z, yaw = 0) | the office kit's pile of PAPERS on a surface at y *(is `officeKit.papers`)* | drawn only | 0.32 × 0.27 × 0.06 | 2 drawn, 2 markings | LIVED_PAINT.paper, (0.9, 0.88, 0.8) | library-hall |
 | **sheet**(x, y, z, w = 0.21, d = 0.3, yaw = 0, albedo = LIVED_PAINT.paper) | one loose sheet (a card, a form, a map corner) | drawn only | 0.3 × 0.21 × 0.01 | 1 drawn | LIVED_PAINT.paper | library-hall |
 
 ### livedKit: loose things
@@ -247,11 +258,11 @@ The same word in more than one kit: each is built its own way, in its own paint.
 | Piece | What it is | To a man | Size | Boxes | Paints | Stands in |
 |---|---|---|---|---|---|---|
 | **stool**(x, z, albedo = C.woodDark) | PROP (chair): a STOOL, a seat on a post | loose | 0.34 × 0.34 × 0.47 | 1 loose (2 parts) | metal, woodDark | library-hall |
-| **chair**(x, z, yaw, albedo = C.chair) | PROP (chair): the office CHAIR, as one of this room's lived things | loose | 0.5 × 0.5 × 1.1 | 1 loose (5 parts) | black, chair | library-hall |
+| **chair**(x, z, yaw, albedo = C.chair) | PROP (chair): the office CHAIR, as one of this room's lived things *(is `officeKit.chair`)* | loose | 0.5 × 0.5 × 1.1 | 1 loose (5 parts) | black, chair | library-hall |
 | **drum**(x, z, albedo = LIVED_PAINT.oxide, mass = 22) | PROP (bin): an oil DRUM a man can shove, 0.56 across and 0.88 high (`drumFixed` is the one that stands where it is) | loose | 0.56 × 0.56 × 0.89 | 1 loose (2 parts) | oxide, oxide × 0.60 | library-hall |
 | **bucket**(x, z, albedo = C.metal) | PROP (bin): a BUCKET | loose | 0.28 × 0.28 × 0.3 | 1 loose (1 part) | metal | library-hall |
 | **cone**(x, z) | PROP (cardboard): a traffic CONE | loose | 0.34 × 0.34 × 0.56 | 1 loose (3 parts) | black, hiVis, white | library-hall |
-| **carton**(x, z, s, yaw) | PROP (cardboard): the office kit's CARTON of side s, as one of this room's lived things | loose | 0.45 × 0.45 × 0.45 | 1 loose (1 part), 4 markings | cardboard | library-hall |
+| **carton**(x, z, s, yaw) | PROP (cardboard): the office kit's CARTON of side s, as one of this room's lived things *(is `officeKit.cardboardBox`)* | loose | 0.45 × 0.45 × 0.45 | 1 loose (1 part), 4 markings | cardboard | library-hall |
 | **looseCrate**(x, z, w, d, h, yaw = 0, albedo = C.wood) | a small wooden box a man can shove (ammunition, spares, fruit) | loose | 0.5 × 0.36 × 0.32 | 1 loose (2 parts) | wood, woodDark | library-hall |
 
 ## livedPieces
@@ -386,8 +397,8 @@ The same word in more than one kit: each is built its own way, in its own paint.
 | Piece | What it is | To a man | Size | Boxes | Paints | Stands in |
 |---|---|---|---|---|---|---|
 | **hoist**(x, z, turn = 0) | MOTOR POOL: an engine hoist, the engine hanging on its chain over a drip tray (beam along the frame's x) | solid to 2.3 | 1.6 × 0.96 × 2.42 | 11 solid, 3 drawn | rust, GWOT_PALETTE.iron, galv, genYellow, GWOT_PALETTE.tin, oil | library-hall |
-| **cauldrons**(x, z, turn, n) | KITCHEN COURT: n black cauldrons in a row on a mud hearth | solid to 0.72 | 2.34 × 0.89 × 0.77 | 7 solid, 7 drawn | GWOT_PALETTE.iron, GWOT_PALETTE.rubber, GWOT_PALETTE.tin, mud | library-hall |
-| **spools**(x, z, turn = 0) | GENERATOR YARD: a cable spool stood on its rim and one laid flat | solid to 1.2 | 2.75 × 1.4 × 1.2 | 9 solid | woodGrey, plasticBlack | library-hall |
+| **cauldrons**(x, z, turn, n) | KITCHEN COURT: n black cauldrons in a row on a mud hearth | solid to 0.72 | 2.34 × 0.88 × 0.77 | 13 solid, 7 drawn, 3 round | GWOT_PALETTE.iron, GWOT_PALETTE.rubber, GWOT_PALETTE.tin, mud | library-hall |
+| **spools**(x, z, turn = 0) | GENERATOR YARD: a cable spool stood on its rim and one laid flat | solid to 1.2 | 2.58 × 1.18 × 1.2 | 15 solid, 3 round | woodGrey, plasticBlack | library-hall |
 | **flag**(x, z) | THE RANGE: the red flag on its pole, a red and white square painted round the foot | solid to 3.5 | 1.5 × 1 × 3.5 | 2 solid, 3 drawn | truckRed, block, galv, whitewash | library-hall |
 | **basins**(x, z, turn = 0) | QUARTERS: the wash bench — tin basins in a row, towels on a rail behind | solid to 1.3 | 2 × 0.55 × 1.3 | 8 solid, 6 drawn | GWOT_PALETTE.tin, plasticBlue, woodGrey, block, blanketGrey, poplar, rugCream | library-hall |
 | **loft**(x, z) | THE WHITE HOUSE: the headman's pigeon loft — a white box with a green roof up a pole (not blue: BLUE is a pair in the lesson it stands in) | solid to 1.9 | 1.34 × 1.08 × 2.51 | 3 solid, 5 drawn | GWOT_PALETTE.rubber, woodGrey, paintGreen, straw, whitewash | library-hall |

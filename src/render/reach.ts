@@ -79,9 +79,6 @@ export function buildWallRaster(statics: Box[], doors: ReachDoor[] = []): Uint8A
 const JUMPS = new SideMap<Uint8Array, Uint8Array>('reach.JUMPS');
 function jumpsOf(solid: Uint8Array): Uint8Array {
   let j = JUMPS.get(solid); if (j) return j;
-  j = jumpsFor(solid); JUMPS.set(solid, j); return j;
-}
-function jumpsFor(solid: Uint8Array): Uint8Array {
   const d = new Uint8Array(FW * FH); const CAP = 200;
   for (let z = 0; z < FH; z++) for (let x = 0, i = z * FW; x < FW; x++, i++) {
     if (solid[i]) { d[i] = 0; continue; }
@@ -96,8 +93,8 @@ function jumpsFor(solid: Uint8Array): Uint8Array {
     if (z < FH - 1) { if (d[i + FW] + 1 < m) m = d[i + FW] + 1; if (x < FW - 1 && d[i + FW + 1] + 1 < m) m = d[i + FW + 1] + 1; if (x > 0 && d[i + FW - 1] + 1 < m) m = d[i + FW - 1] + 1; }
     d[i] = m;
   }
-  const j = d; for (let i = 0; i < j.length; i++) j[i] = d[i] >= 2 ? Math.ceil(1.25 * (d[i] - 1)) : 1;   // (in place: 200 sub-cells → 249 samples, inside a byte)
-  REACH_WORK.fields++; return j;
+  j = d; for (let i = 0; i < j.length; i++) j[i] = d[i] >= 2 ? Math.ceil(1.25 * (d[i] - 1)) : 1;   // (in place: 200 sub-cells → 249 samples, inside a byte)
+  JUMPS.set(solid, j); REACH_WORK.fields++; return j;
 }
 /** What differs between two wall rasters: the box of sub-cells that changed (null = none), for ReachOnly.boxes. Where walls only OPENED, the old raster's jumps
  *  are still safe on the new one (every distance only grew), so they are handed over instead of being worked out again. */
@@ -200,11 +197,7 @@ const SOURCES = new SideMap<Uint32Array, string>('reach.SOURCES');
 export function reachOneSource(mask: Uint32Array): boolean { return SOURCES.has(mask); }
 /** A mask decided over several calls (reachMaskSome): cells until `budget` sight-line steps are spent each call, where it stood kept in `st` — its source points too, so a light that turns
  *  between calls is still one mask from one set. The caller drops `st` if the raster or the ReachOnly changes under it. */
-export interface ReachJob { budget: number;
-  /** A MASK THAT IS NOBODY'S STATE (the look page's daylight at openings, engine.ts: a picture's own light, which no checkpoint may hold): the caller keeps the
-   *  raster's jump field here, one object a raster, and no note of the mask's sources is kept. Neither side table of this file is written. */
-  own?: { jumps?: Uint8Array };
-  st?: { ci: number; src: [number, number][]; seen: Uint8Array; door: Uint8Array; tried: Uint8Array; centre: Uint8Array; keep: Uint8Array | null } }
+export interface ReachJob { budget: number; st?: { ci: number; src: [number, number][]; seen: Uint8Array; door: Uint8Array; tried: Uint8Array; centre: Uint8Array; keep: Uint8Array | null } }
 export function reachMaskFor(solid: Uint8Array, pos: Vec3, dir: Vec3, radius = 0, interior: Uint8Array | null = null, only?: ReachOnly): Uint32Array {
   return derive(solid, pos, dir, radius, interior, only, null)!;
 }
@@ -252,7 +245,7 @@ function derive(solid: Uint8Array, pos: Vec3, dir: Vec3, radius: number, interio
   const srcKey = srcCells.join(';') + (aboveRoof ? '^' : ''); const lineByLine = !!only && !!only.boxes && SOURCES.get(only.prev) === srcKey;
   const W = WORLD.gridW, H = WORLD.gridH;
   // per cell: how many of its looked-at sub-cells see any source (0..SUBS.length) — the reach bit AND a coarse 'how much of the cell'
-  const jump = job?.own ? (job.own.jumps ??= jumpsFor(solid)) : jumpsOf(solid);
+  const jump = jumpsOf(solid);
   const st = job?.st ?? { ci: 0, src: srcCells, seen: new Uint8Array(W * H), door: new Uint8Array(W * H), tried: new Uint8Array(W * H), centre: new Uint8Array(W * H), keep: only ? new Uint8Array(W * H) : null };
   const { seen, door, tried, centre, keep } = st; const work0 = REACH_WORK.steps;   // per cell: looks in the clear / only via a doorway / looks attempted at all (sub-cells inside a wall are not attempted) / the CENTRE look sees the light's own point in the clear
   for (let ci = st.ci; ci < W * H; ci++) {
@@ -285,7 +278,7 @@ function derive(solid: Uint8Array, pos: Vec3, dir: Vec3, radius: number, interio
     if (keep && keep[cz * W + cx]) lv = (only!.prev[(cz * W + cx) >> 4] >>> (((cz * W + cx) & 15) * 2)) & 3;
     if (lv) { const ci = cz * W + cx; mask[ci >> 4] |= lv << ((ci & 15) * 2); }
   }
-  if ((!only || lineByLine) && !job?.own) SOURCES.set(mask, srcKey);
+  if (!only || lineByLine) SOURCES.set(mask, srcKey);
   if (job) job.st = undefined;
   return mask;
 }

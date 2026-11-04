@@ -12,8 +12,6 @@ const res = await Bun.build({ entrypoints: ["./index.html", "./workbench.html", 
 if (!res.success) { for (const m of res.logs) console.error(m); process.exit(1); }
 await $`cp -R public/. dist/`;
 await $`mkdir -p dist/levels`; await $`cp ${(await Array.fromAsync(new Bun.Glob("levels/*.json").scan())).sort()} dist/levels/`;   // (every mission's level file, fetched as /levels/<file>: without them a mission with a level of its own fell back to the office on a static host)
-await Bun.write("dist/look.html", `<!doctype html><meta charset="utf-8"><title>twopointsix — materials prototype</title>
-<script>location.replace('index.html?look&' + (new URLSearchParams(location.search).has('levelFile') ? '' : 'roomclear&squad4&levelFile=pass.json&hud&') + location.search.slice(1))</script>`);   // THE LOOK PROTOTYPE: the game's page with ?look (tools/serve.ts /look)
 await Bun.write("dist/gaitlab.html", `<!doctype html><meta charset="utf-8"><title>twopointsix — gait lab → workbench</title>
 <meta http-equiv="refresh" content="0; url=workbench.html#mode=chars&scene=sam/walk">
 <script>location.replace('workbench.html' + location.search + '#mode=chars&scene=sam/walk')</script>

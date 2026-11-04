@@ -48,7 +48,7 @@ Pick a mission, pick who comes and what they carry, deploy. Every key is also li
 - **A squad.** Stack on a door, bang and clear, breach with a charge, hold, cover, go silent. Teammates fight on their own judgement.
 - **Doors, glass and walls.** Doors swing one way, lock, get picked, kicked or blown. Glass cracks and falls. Walls and furniture come apart.
 - **Levels are data.** JSON files under `levels/`, with an editor to make more.
-- **A look.** Plain boxes under real light: [STYLE.md](STYLE.md).
+- **A look.** Flat-coloured boxes under real light: [STYLE.md](STYLE.md).
 
 ## Tools
 

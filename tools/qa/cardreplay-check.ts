@@ -54,13 +54,6 @@ export async function cardReplayCheck(): Promise<boolean> {
       // the visit's own words ride along (replaykey.ts VISIT_FLAGS): a run played at a chosen quality, or muted, replays the same way; the run's words and the harness's `paused` do not
       search = '?levelFile=pass.json&quality=low&mute&paused&squad4'; const vOnce = engineUrl(7, once), vOld = engineUrl(7, old); search = '';
       verdict(vOnce === 'http://localhost/index.html?playtape=7&mute=&quality=low' && vOld === `${want}${N1 + 1}&mute=&quality=low`, "the replay's address keeps the game page's quality and mute, and nothing else of it", `one try: ${vOnce} · after a restart: ${vOld}`); }
-      // `look` is two things under one word (replaykey.ts visitWord): the dress's `look=plain` is the level the run was played on and stays the tape's; a row of
-      // the look prototype's page is the visit's, this page's own and never the tape's
-      { const rec = { ticks: 1, recipe: { search: '?roomclear&look=plain&look=roomc:0.6', seed: 7 } }, BRK = process.env.LOOKWORD_BREAK === '1';
-        const plain = new URLSearchParams(tapeSearch(rec, new URLSearchParams('?playtape=7'), '7')), onLook = new URLSearchParams(tapeSearch(rec, new URLSearchParams('?playtape=7&look&look=expo:0'), '7'));
-        const { visitWord } = await import(`${ROOT}/src/ui/replaykey.ts`);
-        verdict(!BRK && plain.getAll('look').join('|') === 'plain' && onLook.getAll('look').join('|') === 'plain||expo:0' && visitWord('look', 'roomc:0.6') && visitWord('look', '') && !visitWord('look', 'plain') && !visitWord('look', '0') && !visitWord('look', 'off'),
-          "a tape recorded on the plain dress replays on the plain dress, on a plain page and on a look page; the tape's own look row is dropped and the visit's rides", `plain page: look=${plain.getAll('look').join('|')} · look page: look=${onLook.getAll('look').join('|')}`); }
       // …and on the page that replays it (engineplay.ts tapeSearch): the run's words are the tape's, every visit word is THIS visit's — one the tape was recorded
       // under (a picture word of that day's address) does not come back with it, whichever goal put it on VISIT_FLAGS
       { const words = (VISIT_FLAGS as string[]).filter(k => k !== 'paused'), rec = { ticks: 1, recipe: { search: `?roomclear&squad4&${words.map(k => `${k}=tape`).join('&')}`, seed: 7 } };
