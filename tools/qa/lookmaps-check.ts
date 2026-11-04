@@ -6,7 +6,7 @@
 // here (a software page and then a GPU do that); these are the rules a picture cannot show you are broken until a level is lit by them.
 import { readFileSync } from 'node:fs';
 import { ROOT } from './headless.ts';
-const { lookLayer, lookLayerSliced, lookMip, lookStuffOf, LOOK_LAYERS, LOOK_PAINTED, LOOK_NAMES, LOOK_N, LOOK_ROUGH, LOOK_TILE, LOOK_WITH, LOOK_BUILT, LOOK_FADES, LOOK_SOAKS, LOOK_WORN, LOOK_UNIT } = await import(`${ROOT}/src/render/lookTex.ts`);
+const { lookLayer, lookLayerSliced, lookMip, lookStuffOf, LOOK_LAYERS, LOOK_PAINTED, LOOK_NAMES, LOOK_N, LOOK_ROUGH, LOOK_TILE, LOOK_WITH, LOOK_BUILT, LOOK_FADES, LOOK_SOAKS, LOOK_WORN, LOOK_UNIT, LOOK_LAY } = await import(`${ROOT}/src/render/lookTex.ts`);
 const { GBuffer, LOOK_OF, LOOK_MATCH, LOOK_DEFAULTS, LOOK_WORD, lookStuff, lookWordOf, lookAmounts, lookNeedPaints, lookForget } = await import(`${ROOT}/src/render/gbuffer.ts`);
 const { GWOT_PALETTE } = await import(`${ROOT}/src/scene/gwotPalette.ts`);
 
@@ -197,10 +197,13 @@ const hollowsOf = (b: Uint8Array) => { let s = 0; for (let i = 3; i < b.length; 
 //     said (the first six laid by the world, the five kept ones blotched a third as far and never soaked, boards never soaked); a stuff that soaks also fades
 //     (the shader asks the one before the other); a piece's size divides the tile and its map's joint IS where the row says; and a stuff somebody keeps holds
 //     no tone between a hand and a door wide (a tile's mean over 12.5 cm and over 25 cm squares stays within a hundredth and a half of its paint)
-{ const rowsOk = [LOOK_ROUGH, LOOK_BUILT, LOOK_FADES, LOOK_SOAKS, LOOK_WORN, LOOK_UNIT].every((a: readonly unknown[]) => a.length === LOOK_LAYERS);
+{ const rowsOk = [LOOK_ROUGH, LOOK_BUILT, LOOK_FADES, LOOK_SOAKS, LOOK_WORN, LOOK_UNIT, LOOK_LAY].every((a: readonly unknown[]) => a.length === LOOK_LAYERS);
   const old = LOOK_NAMES.slice(0, 16).map((_: string, l: number) => `${LOOK_BUILT[l]}${LOOK_FADES[l]}${LOOK_SOAKS[l]}`).join(' ');
   const oldOk = old === '111 111 111 111 111 111 010 011 011 011 011 00.30 00.30 00.30 00.30 00.30';
   const dry = LOOK_NAMES.filter((_: string, l: number) => LOOK_SOAKS[l] > 0 && !(LOOK_FADES[l] > 0));
+  // how a stuff is laid over more than a piece: the four the shader used to name still untile and no other of the sixteen older does; nothing made of pieces
+  // untiles (it deals its pieces); a bay is of whole pieces; a bonded stuff has an even count of courses a map (the deal keeps a course's parity) and no bay along
+  const untileOld = LOOK_NAMES.slice(0, 16).filter((_: string, l: number) => LOOK_LAY[l][0] > 0).join(' '), layBad = LOOK_NAMES.filter((_: string, l: number) => { const U = LOOK_UNIT[l], L = LOOK_LAY[l]; return (U[0] > 0 && L[0] > 0) || (U[0] === 0 && (L[1] > 0 || L[2] > 0)) || !Number.isInteger(L[1]) || !Number.isInteger(L[2]) || (U[2] > 0 && (L[1] > 0 || Math.round(LOOK_TILE / U[1]) % 2 !== 0)); });
   const wornWild = LOOK_NAMES.filter((_: string, l: number) => LOOK_WORN[l] > 0 && (LOOK_FADES[l] > 0 || l < 16));   // use shows only on a stuff somebody keeps, and on none of the sixteen older ones (their picture is as it was)
   const bad: string[] = [], slow: string[] = []; let worst = 0, worstName = '';
   for (let l = 0; l < LOOK_PAINTED; l++) { const U = LOOK_UNIT[l], H = layers[l].a;
@@ -215,8 +218,8 @@ const hollowsOf = (b: Uint8Array) => { let s = 0; for (let i = 3; i < b.length; 
       const sd = (a: Uint8Array, n: number) => { let q = 0, q2 = 0; for (let i = 0; i < n * n; i++) { const v = lum(a[i * 4], a[i * 4 + 1], a[i * 4 + 2]) / 127.5; q += v; q2 += v * v; } const mu = q / n / n; return Math.sqrt(Math.max(0, q2 / n / n - mu * mu)); };
       while (n > 8) { m = lookMip(m, n, false); n >>= 1; if (n === 16 || n === 8) { const v = sd(m, n); if (U[0] === 0 && v > worst) { worst = v; worstName = `${LOOK_NAMES[l]} over ${(LOOK_TILE / n * 100).toFixed(1)} cm`; } if (U[0] === 0 && v > 0.015) slow.push(`${LOOK_NAMES[l]} ${v.toFixed(3)} over ${(LOOK_TILE / n * 100).toFixed(1)} cm`); } } }
   }
-  check(rowsOk && oldOk && dry.length === 0 && wornWild.length === 0 && bad.length === 0 && slow.length === 0,
+  check(rowsOk && oldOk && dry.length === 0 && wornWild.length === 0 && untileOld === 'mud wall plaster earth gravel' && layBad.length === 0 && bad.length === 0 && slow.length === 0,
     'a stuff says its own row: one a layer; the sixteen older stuffs are laid, blotched and soaked as the shader\'s own lists had them; whatever soaks also fades; use shows on kept stuffs only and on none of the older sixteen; a piece\'s size divides the tile and the map\'s joint is where the row says; and a kept stuff that is not made of pieces holds no tone between a hand and a door wide',
-    `${LOOK_UNIT.filter((u: readonly number[]) => u[0] > 0).length} stuffs made of pieces, ${LOOK_FADES.filter((f: number, l: number) => l < LOOK_PAINTED && !(f > 0)).length} kept; the widest slow tone ${worst.toFixed(4)} (${worstName})${oldOk ? '' : '; the older rows read ' + old}${dry.length ? '; soaks and does not fade: ' + dry.join(', ') : ''}${wornWild.length ? '; worn and not kept, or an older stuff: ' + wornWild.join(', ') : ''}${bad.length ? '; ' + bad.join('; ') : ''}${slow.length ? '; slow tone: ' + slow.join(', ') : ''}`); }
+    `${LOOK_UNIT.filter((u: readonly number[]) => u[0] > 0).length} stuffs made of pieces, ${LOOK_FADES.filter((f: number, l: number) => l < LOOK_PAINTED && !(f > 0)).length} kept; the widest slow tone ${worst.toFixed(4)} (${worstName})${oldOk ? '' : '; the older rows read ' + old}${dry.length ? '; soaks and does not fade: ' + dry.join(', ') : ''}${wornWild.length ? '; worn and not kept, or an older stuff: ' + wornWild.join(', ') : ''}${untileOld === 'mud wall plaster earth gravel' ? '' : '; of the older stuffs these untile: ' + untileOld}${layBad.length ? '; laid wrongly: ' + layBad.join(', ') : ''}${bad.length ? '; ' + bad.join('; ') : ''}${slow.length ? '; slow tone: ' + slow.join(', ') : ''}`); }
 console.log(red ? '\nlookmaps: RED' : '\nlookmaps: all pass');
 process.exit(red ? 1 : 0);
