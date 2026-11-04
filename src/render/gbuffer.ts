@@ -101,16 +101,18 @@ export function lookNeedPaints(paints: Iterable<Readonly<ArrayLike<number>>>) { 
  *  number of the device boxes after it; and two unkeyed movers of one size share a number.)
  *  `dry` = the paint a box had before the weather darkened it in place, if it did (game/weather.ts dryPaint): what a slab is made of is not changed by rain.
  *  `rows` = the paint rows of the level file the game stands on (levelLoad.ts levelFileOf): a paint one of them names is what its NAME says it is made of
- *  (lookNamed above), asked before any colour is weighed. None = by colour alone, as the look began. */
+ *  (lookNamed above), asked before any colour is weighed. None = by colour alone, as the look began. A box that says what it is made of itself (Box.stuff)
+ *  is that, before either: `rows` null puts the names off and the boxes' own words with them (`own` false). */
 export function lookWordOf(dry?: (b: Box) => Readonly<ArrayLike<number>> | undefined, rows?: PaintRows | null): (b: Box, moves: boolean) => number {
-  const named = lookNamed(rows);
+  const named = lookNamed(rows), own = rows !== null;
   return (b, moves) => {
     const paint = (b.aniso === true && dry?.(b)) || b.albedo;   // (aniso is the weather's mark: nothing is authored with it)
     let h: number;
     if (moves) h = b.mkey !== undefined ? Math.imul(b.mkey | 0, 0x9e3779b1) : Math.imul(Math.round(b.h[0] * 1000) + 131 * Math.round(b.h[1] * 1000) + 17161 * Math.round(b.h[2] * 1000), 0x9e3779b1);
     else h = Math.imul(Math.round(b.c[0] * 100) + 7919 * Math.round(b.c[1] * 100) + 104729 * Math.round(b.c[2] * 100), 0x9e3779b1);
     h ^= h >>> 15; h = Math.imul(h, 0x85ebca6b); h ^= h >>> 13;
-    const stuff = named.size ? named.get(paintKey(paint)) ?? lookStuff(paint) : lookStuff(paint); lookSeen(stuff); if (b.cutOld && b.cutCore) lookSeen(lookStuff(b.cutCore));   // (an OLD break's core is drawn as its own colour's stuff, gbuffer_cut.wgsl; a fresh break's core is a colour and no stuff)
+    const stuff = own && b.stuff !== undefined ? lookClassOf(b.stuff) : named.size ? named.get(paintKey(paint)) ?? lookStuff(paint) : lookStuff(paint);   // (the box's own word, then its paint's name, then its colour)
+    lookSeen(stuff); if (b.cutOld && b.cutCore) lookSeen(lookStuff(b.cutCore));   // (an OLD break's core is drawn as its own colour's stuff, gbuffer_cut.wgsl; a fresh break's core is a colour and no stuff)
     return stuff + (moves ? LOOK_WORD.moves : 0) + LOOK_WORD.own * ((h >>> 0) % LOOK_WORD.owns);
   };
 }

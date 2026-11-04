@@ -7,7 +7,7 @@
 // switchable's boxes, the breaker's pair, a beacon's dome) id ⇄ index. Nothing here is procedural: the one computed thing is a prop's collision footprint
 // fitted from its parts (fitPropFootprint, the generator's own rule), and a file may pin that too (PropData.half / height).
 import type { Vec3 } from '../math/vec';
-import { Box, BoxFlag, makeBox, ROUGH_DEFAULT } from './boxes';
+import { Box, BoxFlag, makeBox, ROUGH_DEFAULT, type BoxStuff } from './boxes';
 import type { Level, LightDef, PropDef, PropPart, LevelDoorDef, PatrolRoute, Chokepoint, RoomClearPlan, BreachPlan, DaylightDef, DeviceDef, CivilianDef, VentDef, VolumeDef } from './level';
 import { withScript } from './level';
 import { LEVEL_SCRIPTS } from './levelScripts';
@@ -77,6 +77,7 @@ export function loadLevel(data: LevelData, opts: { validate?: boolean; dressing?
     if (b.rot) p.rot = [b.rot[0], b.rot[1], b.rot[2], b.rot[3]];
     if (b.name !== undefined) p.name = b.name;
     if (b.cutHeight !== undefined) p.cutHeight = b.cutHeight;
+    if (b.stuff !== undefined) p.stuff = b.stuff as BoxStuff;   // (what the box says it is made of, where its paint's name does not: scene/stuff.ts — validate has refused every other word)
     const marks = copyMarkings(b.markings); if (marks) p.marks = marks;   // (through markings.ts marking(): the same structure the generator builds)
     // the finish (Box.rough / metal): the box's own, else its material's; absent both = matte dielectric — nothing written, so a file without finishes loads to
     // the very Level it always did (`metal` is only ever carried as true: false is the default and stays unwritten, as levelToData writes it)
@@ -91,7 +92,7 @@ export function loadLevel(data: LevelData, opts: { validate?: boolean; dressing?
   const bx = (id: string) => { const i = boxIndex.get(id); if (i === undefined) throw new Error(`level '${data.name}': unknown box '${id}'`); return i; };
   // loose props
   const props: PropDef[] = fileProps.map(p => {
-    const parts: PropPart[] = p.parts.map(q => { const part: PropPart = { off: V(q.off), h: V(q.h), yaw: q.yaw ?? 0, albedo: albedoOf(q) }; const marks = copyMarkings(q.markings); if (marks) part.marks = marks; return part; });
+    const parts: PropPart[] = p.parts.map(q => { const part: PropPart = { off: V(q.off), h: V(q.h), yaw: q.yaw ?? 0, albedo: albedoOf(q) }; const marks = copyMarkings(q.markings); if (marks) part.marks = marks; if (q.stuff !== undefined) part.stuff = q.stuff as BoxStuff; return part; });
     const fit = fitPropFootprint(parts);
     return { kind: p.kind, name: p.name ?? p.id, x: p.x, z: p.z, yaw: p.yaw ?? 0, parts, half: p.half ? [p.half[0], p.half[1]] : fit.half, height: p.height ?? fit.height, mass: p.mass };
   });
@@ -232,6 +233,7 @@ export function levelToData(level: Level, opts: LevelToDataOpts): LevelData {
     if (b.emissive[0] !== 0 || b.emissive[1] !== 0 || b.emissive[2] !== 0) d.emissive = V(b.emissive);
     const flags = bitsToFlags(fl & ~DERIVED); if (flags.length) d.flags = flags;
     if (b.cutHeight !== 1e6) d.cutHeight = b.cutHeight;
+    if (b.stuff !== undefined) d.stuff = b.stuff;
     const marks = copyMarkings(mk); if (marks) d.markings = marks;
     if (b.shape) {   // A SHAPE (scene/shapes.ts), as it was read: a piece's paint by name where the level has one, its finish only where it is not the material's
       const s = b.shape, sd: ShapeData = { ...formOf(s) };
@@ -241,7 +243,7 @@ export function levelToData(level: Level, opts: LevelToDataOpts): LevelData {
     return d;
   });
   const props: PropData[] = level.props.map(p => {
-    const parts = p.parts.map(q => { const marks = copyMarkings(q.marks); return { off: V(q.off), h: V(q.h), ...(q.yaw !== 0 ? { yaw: q.yaw } : {}), ...paint(q.albedo), ...(marks ? { markings: marks } : {}) }; });
+    const parts = p.parts.map(q => { const marks = copyMarkings(q.marks); return { off: V(q.off), h: V(q.h), ...(q.yaw !== 0 ? { yaw: q.yaw } : {}), ...paint(q.albedo), ...(q.stuff !== undefined ? { stuff: q.stuff } : {}), ...(marks ? { markings: marks } : {}) }; });
     const d: PropData = { id: p.name, kind: p.kind, x: p.x, z: p.z, ...(p.yaw !== 0 ? { yaw: p.yaw } : {}), mass: p.mass, parts };
     const fit = fitPropFootprint(p.parts);   // pin the footprint only where the fit would not give the authored numbers back bit for bit (plants override theirs)
     if (fit.half[0] !== p.half[0] || fit.half[1] !== p.half[1]) d.half = [p.half[0], p.half[1]];
