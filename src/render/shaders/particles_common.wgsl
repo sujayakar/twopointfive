@@ -169,7 +169,7 @@ struct ImpulseRec {
 // numWinds) — as ImpulseRec read another way (render/shaders/wind_field.wgsl is the field; particles.wgsl windAir sums it): a JET (iflags bits 2‥3 = 0): pos = the
 // diffuser's face centre, radius = reach (where it has halved), bias = unit axis, strength = m/s at the face this frame, eye = (tanSpread, r0, dMax), up = the
 // floor a down-jet turns along (≤ −100 = none); the STORM (bits 2‥3 = 1): pos.xyz + radius = the interior footprint x0 z0 x1 z1 it does not blow inside, eye + up
-// = the annex's, bias × strength = the wind; iflags bit 4 = the wisps read the field, bit 5 = ROOF BY ROOF: the two rectangles are the level's first two roofs and
+// = the annex's, bias × strength = the wind; iflags bit 6 = (look page only) a fire's hot air, read by the falling snow alone (particles.wgsl heatAir) and skipped by the wind's own sum; iflags bit 4 = the wisps read the field, bit 5 = ROOF BY ROOF: the two rectangles are the level's first two roofs and
 // its third / fourth are the Frame's (frame.cardCfg.y / .z — particles.wgsl windStormOf; game/wind.ts WX_OWN.wind). kinds = which kinds answer to it. Every wind record also carries the four live wind knobs (the same on each; read off
 // the first): seed = pack2x16float(sheet wake speed m/s, sheet kick ×), spare = pack2x16float(debris coupling 0‥1, spare). No wind record ever wakes,
 // gates or kicks by itself: the update kernel takes the summed AIR VELOCITY as what drag is measured against (dust follows it, chips a share of it, a sheet's

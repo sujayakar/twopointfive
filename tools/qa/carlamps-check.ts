@@ -31,25 +31,22 @@ async function stand(file: string, on: boolean): Promise<any> {
     return await hushed(() => standUp({ level: levelOf(file), seed: 1 }));
   } finally { if (word === undefined) delete process.env.TPS_CARLAMPS; else process.env.TPS_CARLAMPS = word; }
 }
-/** head and tail lamps each level file is known to hold ([head, tail, of them glowing], one count the file may give a row). THE ROWS ARE FILES, one a level
- *  file: `tools/qa/fixtures/carlamps/<name>.txt` is the row of `levels/<name>.json`, one count a line as `head tail glowing` (three whole numbers, a space
- *  between); a line that starts with `#` is a note. A level whose vehicle stands in a lived-in room has two lines, because a stand may leave that room out:
- *  the count without it, then with it (`0 0 0` first where the level's ONLY vehicle is a lived thing: line 1 does not count that file among the files with
- *  vehicles on a stand that leaves the room out). A LEVEL WITH NO FILE HOLDS NO LAMP. A look twin has its own file. There is no table in this check: a
- *  level that gains a vehicle, loses one or moves a lamp writes its file in its own commit, so two branches that each dress a level do not meet at one
- *  place (tools/qa/fixtures/level-base/ and round/ are the same mend). RED on line 1, never 'nothing to compare': a file with no count or with a line that
- *  is not three counts, and a file for a level that is not under levels/. */
-const KNOWN_DIR = 'tools/qa/fixtures/carlamps';
-const KNOWN: Record<string, [number, number, number][]> = {}, knownBad: string[] = [];
-{ let names: string[] = []; try { names = readdirSync(`${ROOT}/${KNOWN_DIR}`).filter(t => t.endsWith('.txt')).sort(); } catch { knownBad.push(`${KNOWN_DIR}/ is not there: no level's lamps are known`); }
-  const levels = new Set(readdirSync(`${ROOT}/levels`));
-  for (const t of names) {
-    const level = t.replace(/\.txt$/, '.json');
-    if (!levels.has(level)) { knownBad.push(`${KNOWN_DIR}/${t} is the count of no file under levels/`); continue; }
-    const body = readFileSync(`${ROOT}/${KNOWN_DIR}/${t}`, 'utf8').split('\n').map(l => l.trim()).filter(l => l && !l.startsWith('#')), counts = body.map(r => /^(\d+) (\d+) (\d+)$/.exec(r));
-    if (!body.length || counts.some(m => !m)) { knownBad.push(`${KNOWN_DIR}/${t} is not a level's lamps (a line a count the file may give: head lamps, tail lamps and how many of them glow, three whole numbers with a space between; a line that starts with # is a note)`); continue; }
-    KNOWN[level] = counts.map(m => [Number(m![1]), Number(m![2]), Number(m![3])]);
-  } }
+/** head and tail lamps each level file is known to hold ([head, tail, of them glowing]); the pass's pickup stands in a lived-in bay, which a stand may leave out.
+ *  A row that allows [0, 0, 0] is a level whose ONLY vehicle is a lived thing (the warehouse's impounded pickup): with lived-in rooms left out its file holds no
+ *  lamp, and line 1 does not count it among the files with vehicles then */
+const KNOWN: Record<string, [number, number, number][]> = {
+  'warehouse.json': [[0, 0, 0], [2, 2, 0]], 'warehouse-gwot.json': [[0, 0, 0], [2, 2, 0]],   // (the impounded pickup is a lived thing: none with lived-in rooms left out)
+  'barracks.json': [[2, 2, 2]], 'barracks-gwot.json': [[2, 2, 2]], 'bazaar.json': [[4, 4, 0]], 'compound.json': [[4, 4, 4]], 'compound-gwot.json': [[4, 4, 4]],
+  'crossing.json': [[6, 6, 0]], 'defuse.json': [[4, 4, 4]], 'defuse-gwot.json': [[4, 4, 4]], 'depot.json': [[4, 4, 4]], 'depot-gwot.json': [[4, 4, 4]],
+  'floodlit.json': [[2, 2, 2]], 'floodlit-gwot.json': [[2, 2, 2]], 'glasshouse.json': [[2, 2, 0]], 'gwot-yard.json': [[4, 4, 0]], 'library-hall.json': [[4, 4, 2]], 'mousehole.json': [[4, 4, 4]],
+  'mousehole-gwot.json': [[4, 4, 4]], 'office.json': [[4, 4, 4]], 'office-relief.json': [[4, 4, 4]], 'pass.json': [[2, 0, 0], [4, 2, 0]], 'police-post.json': [[6, 6, 0]],
+  'quiet-relay.json': [[6, 6, 0]], 'records.json': [[4, 4, 4]], 'records-gwot.json': [[4, 4, 4]], 'snatch.json': [[4, 4, 0]],
+  'train-move.json': [[6, 6, 0]], 'train-silent.json': [[2, 2, 0]], 'tut-sky.json': [[8, 6, 0], [10, 8, 0]],   // (the squad's two pickups and the roadblock's gun truck)
+  'tut-team.json': [[8, 6, 0], [10, 8, 0]],   // (the same station, box for box)
+  'tut-road.json': [[6, 6, 0]],   // (the convoy's last truck, its burning escort and the roadblock's pickup)
+  'tut-solo.json': [[4, 4, 0]], 'tut-kit.json': [[6, 6, 0]],
+  'tut-squad.json': [[4, 4, 0]], 'tut-quiet.json': [[2, 2, 0]], 'tut-plan.json': [[2, 2, 0]], 'tut-queue.json': [[2, 2, 0]], 'tut-pair.json': [[14, 14, 0]],
+};
 
 export async function carlampsCheck(): Promise<boolean> {
   let all = true;
@@ -65,8 +62,8 @@ export async function carlampsCheck(): Promise<boolean> {
         if (!known.some(k => k[0] === h && k[1] === t && k[2] === g)) wrong.push(`${f}: ${h} head ${t} tail ${g} glowing, known ${known.map(k => k.join('/')).join(' or ')}`);
         if (l.length) files++; else if (KNOWN[f]?.some(k => k[0] + k[1] === 0)) bare++; head += h; tail += t; lit += g;
       }
-      line(wrong.length === 0 && knownBad.length === 0 && files + bare === Object.keys(KNOWN).length, '1 every level file gives the lamps it is known to hold: each vehicle\'s head and tail lamps, in twos, and nothing else taken for one',
-        `${files} files with vehicles${bare ? ` (${bare} more whose only vehicle is in a lived-in room this stand leaves out)` : ''} · ${head} head lamps, ${tail} tail lamps, ${lit} of them glowing${[...knownBad, ...wrong].length ? ` · ${[...knownBad, ...wrong.slice(0, 6)].join(' · ')}` : ''}`); }
+      line(wrong.length === 0 && files + bare === Object.keys(KNOWN).length, '1 every level file gives the lamps it is known to hold: each vehicle\'s head and tail lamps, in twos, and nothing else taken for one',
+        `${files} files with vehicles${bare ? ` (${bare} more whose only vehicle is in a lived-in room this stand leaves out)` : ''} · ${head} head lamps, ${tail} tail lamps, ${lit} of them glowing${wrong.length ? ` · ${wrong.slice(0, 6).join(' · ')}` : ''}`); }
 
     // (2) the office: the lamps as targets beside the level's own
     const off: any = await stand('office.json', false); const offNames: string[] = off.game.targets.map((t: any) => t.name);
