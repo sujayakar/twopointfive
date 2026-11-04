@@ -15,19 +15,21 @@ import { BoxFlag, type Box } from './boxes';
 import { cutPlane, cutRecord, type CutPlane } from './cut';
 import type { Vec3 } from '../math/vec';
 import { GWOT_PALETTE, gwotAs } from './gwotPalette';
+import { toned, worded } from './stuff';
 
 const D = Math.PI / 180;
 type More = Partial<Box>;
 // where the pass's lorry stands (tools/levels/pass.ts LORRY): its nose toward local +x, local z across it
 const LX = 17.1, LZ = 17.0, YAW = Math.PI * 0.75, CS = Math.cos(YAW), SN = Math.sin(YAW);
 const at = (lx: number, y: number, lz: number): Vec3 => [LX + lx * CS + lz * SN, y, LZ - lx * SN + lz * CS];
-// the level palette's rows it is made of (scene/gwotPalette.ts): a piece's colour is a row, or a row darkened in one piece, so the look gives it its map
+// the level palette's rows it is made of (scene/gwotPalette.ts): a piece's paint is a row, or a row toned (scene/stuff.ts toned: the row's stuff), and each
+// box made here says what its paint is made of (worded), which is all the look reads
 const RED = GWOT_PALETTE.truckRed, CANVAS = GWOT_PALETTE.canvas, IRON = GWOT_PALETTE.iron, GALV = GWOT_PALETTE.galv;
 const RUST = GWOT_PALETTE.rust, RUBBER = GWOT_PALETTE.rubber, JERRY = GWOT_PALETTE.jerryYellow, POPLAR = GWOT_PALETTE.poplar, WHITE = GWOT_PALETTE.plasticWhite, ORANGE = gwotAs('prodOrange', 'metal'), GLASS = GWOT_PALETTE.glassDark;
-const of = (row: Vec3, k: number): Vec3 => [row[0] * k, row[1] * k, row[2] * k];
+const of = (row: Vec3, k: number): Vec3 => toned(row, k);
 const gwotOlive = gwotAs('olive', 'metal');
 const box = (lx: number, lz: number, y0: number, y1: number, hx: number, hz: number, albedo: Vec3, o: More = {}): Box =>
-  ({ c: at(lx, (y0 + y1) / 2, lz), h: [hx, (y1 - y0) / 2, hz], yaw: YAW, albedo, emissive: [0, 0, 0], flags: 0, owner: 0, cutHeight: 1000000, rough: 0.5, ...o });
+  worded({ c: at(lx, (y0 + y1) / 2, lz), h: [hx, (y1 - y0) / 2, hz], yaw: YAW, albedo, emissive: [0, 0, 0], flags: 0, owner: 0, cutHeight: 1000000, rough: 0.5, ...o });
 /** the eight planes that make a box of square section a twelve-sided prism of radius r about its own x (1) or z (3) */
 export const ring = (r: number, axis: 1 | 2 | 3): CutPlane[] => [30, 60, 120, 150, 210, 240, 300, 330].map(d => cutPlane(axis === 1 ? [0, Math.sin(d * D), Math.cos(d * D)] : axis === 2 ? [Math.cos(d * D), 0, Math.sin(d * D)] : [Math.cos(d * D), Math.sin(d * D), 0], r));
 /** make `b` AN ARC: its top a round of radius R about its own x (1) or z (3), the round's highest line the box's top face, six more facets `step` degrees apart */

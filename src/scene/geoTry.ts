@@ -115,7 +115,7 @@ export function breakWallTops(boxes: Box[], lights: readonly { pos: Vec3 }[], op
       if (!bad && !lamp && yard()) { s0 = a; cp = top; }
     }
     if (isNaN(s0)) continue;
-    const s1 = s0 + W, u0 = w.c[A] - L, u1 = w.c[A] + L, flip = h01(seed, 3) < 0.5, core = (cp ?? w).albedo;   // (the break shows the coping's stuff where there is one: the wall's own core. A wall with none is its own stuff through)
+    const s1 = s0 + W, u0 = w.c[A] - L, u1 = w.c[A] + L, flip = h01(seed, 3) < 0.5, core = (cp ?? w).albedo, coreSays = cp && cp.stuff !== w.stuff ? { cutCoreStuff: cp.stuff ?? 'plain' as const } : {};   // (the break shows the coping's stuff where there is one: the wall's own core. A wall with none is its own stuff through)
     const span = (b: Box, a: number, z: number): Box => { const c: Vec3 = [b.c[0], b.c[1], b.c[2]], h: Vec3 = [b.h[0], b.h[1], b.h[2]]; c[A] = (a + z) / 2; h[A] = (z - a) / 2; return { ...b, c, h }; };
     // the wall and its coping, either side of the bite (the first stretch keeps the box's place in the list)
     boxes.push(span(w, s1, u1)); if (cp) boxes.push(span(cp, s1, cp.c[A] + cp.h[A]));
@@ -128,7 +128,7 @@ export function breakWallTops(boxes: Box[], lights: readonly { pos: Vec3 }[], op
     const piece = (ta: number, tb: number, ya: number, yb: number, tz: number) => {
       const ua = at(ta), ub = at(tb), c: Vec3 = [w.c[0], H / 2, w.c[2]], h: Vec3 = [T, H / 2, T]; c[A] = (ua + ub) / 2; h[A] = Math.abs(ub - ua) / 2;
       const n: Vec3 = [0, 1, 0]; n[A] = -(yb - ya) / (ub - ua); n[X] = tz;                    // the top: y = ya + (yb − ya)(u − ua) / (ub − ua) − tz · across
-      const b: Box = { ...w, c, h, cut: [cutPlane(n, n[A] * (ua - c[A]) + (ya - c[1]))], cutCore: [core[0], core[1], core[2]], cutOld: true };
+      const b: Box = { ...w, c, h, cut: [cutPlane(n, n[A] * (ua - c[A]) + (ya - c[1]))], cutCore: [core[0], core[1], core[2]], cutOld: true, ...coreSays };
       if (fitCutBox(b)) boxes.push(b);
     };
     const line = BITE_LINE[Math.max(3, Math.min(5, Math.floor(W / PIECE_MIN))) - 3];
@@ -147,7 +147,7 @@ export function breakWallTops(boxes: Box[], lights: readonly { pos: Vec3 }[], op
       const side = h01(seed, 10, k) < 0.6 ? 1 : -1, hx = 0.05 + 0.07 * h01(seed, 11, k), hy = 0.03 + 0.04 * h01(seed, 12, k), hz = 0.04 + 0.05 * h01(seed, 13, k);
       const c: Vec3 = [w.c[0], hy * 0.5, w.c[2]]; c[A] = s0 + W * (0.1 + 0.8 * h01(seed, 14, k)); c[X] += side * (T + 0.1 + 0.4 * h01(seed, 15, k));
       const b: Box = { ...w, c, h: [hx, hy, hz], yaw: h01(seed, 16, k) * Math.PI, flags: BoxFlag.NoShadow,
-        cut: [cutPlane([h01(seed, 17, k) - 0.5, 1, h01(seed, 18, k) - 0.5], hy * 0.35), cutPlane([1, 0.3, h01(seed, 19, k) - 0.5], hx * 0.6)], cutCore: [core[0], core[1], core[2]], cutOld: true };
+        cut: [cutPlane([h01(seed, 17, k) - 0.5, 1, h01(seed, 18, k) - 0.5], hy * 0.35), cutPlane([1, 0.3, h01(seed, 19, k) - 0.5], hx * 0.6)], cutCore: [core[0], core[1], core[2]], cutOld: true, ...coreSays };
       if (fitCutBox(b)) boxes.push(b);
     }
     made.push({ x: A === 0 ? (s0 + s1) / 2 : w.c[0], z: A === 0 ? w.c[2] : (s0 + s1) / 2, alongX: A === 0, s0, s1, T, H, D });

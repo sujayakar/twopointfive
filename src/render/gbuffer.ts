@@ -15,71 +15,10 @@ import snowSrc from './shaders/snow.wgsl' with { type: 'text' };   // THE SNOW'S
 import { SNOW_CFG_FLOATS } from './snowField';
 import gdownSrc from './shaders/gdown.wgsl' with { type: 'text' };     // SHARP DIRECT: the internal-size view of an output-size raster (encodeDown)
 import { LOOK_WITH, LOOK_PAINTED, lookLayerSliced, lookStuffOf, type LookName } from './lookTex';
-import surfaceSrc from './shaders/surface.wgsl' with { type: 'text' };   // SURFACES, A TRY (render/frame.ts surfTryConfig): fsBox's materials — dead code unless the prelude's SURF_TRY is up
+import surfaceSrc from './shaders/surface.wgsl' with { type: 'text' };   // the first eight stuffs' numbers by the names look.wgsl calls them (what is left of the surfaces try)
 import lookSrc from './shaders/look.wgsl' with { type: 'text' };         // THE LOOK PROTOTYPE (render/frame.ts lookConfig): fsBox's materials off real maps — in the module only on that page
 import { LOOK_NAMES, LOOK_N, LOOK_LAYERS, LOOK_ROUGH, LOOK_BUILT, LOOK_FADES, LOOK_SOAKS, LOOK_WORN, LOOK_UNIT, LOOK_LAY, lookLayer, lookMip } from './lookTex';
-import { GWOT_PALETTE, type GwotMat } from '../scene/gwotPalette';
-import { PAINT_STUFF, BY_COLOUR, stuffOfName, type PaintRows } from '../scene/stuff';
 
-/** which stuff each paint of the 2010s palette is drawn as under the try (shaders/surface.wgsl's classes, by number); a paint with no row draws plain */
-const SURF_OF: Readonly<Partial<Record<GwotMat, number>>> = {
-  mud: 1, mudDark: 1, mudLight: 1, render: 2, whitewash: 2, paintCream: 2, block: 3, tWall: 3,
-  dust: 4, dirt: 4, mudFloor: 4, damp: 4, gravel: 5, slab: 6, poplar: 7, woodGrey: 7, ply: 7, galv: 8, tin: 8,
-};
-/** surface.wgsl behind its `surfClass`: the palette's colours written out as the shader's tests. A paint as the palette has it first (a stand-in, scene/gwotPalette.ts
- *  gwotAs, is at most 0.0024 off a channel), every paint of the palette, so that one with no row is plain whatever it is near; then a classed paint DARKENED in one
- *  piece, which is how a level writes wear and shade (a worn patch is its ground × 0.7) */
-/** the two numbers of the tests below: how near a paint is its palette row, and how far a classed paint may be darkened in one piece and still be that stuff */
-export const LOOK_MATCH = { near: 0.006, darkLo: 0.55, darkHi: 0.99 };
-function classWgsl(name: string, of: Readonly<Partial<Record<GwotMat, number>>>): string {
-  const v = (m: GwotMat) => `vec3f(${GWOT_PALETTE[m].join(', ')})`;
-  const exact = (Object.keys(GWOT_PALETTE) as GwotMat[]).map(m => `  if (all(abs(a - ${v(m)}) < vec3f(${LOOK_MATCH.near}))) { return ${of[m] ?? 0}u; }   // ${m}`);
-  const dark = (Object.keys(of) as GwotMat[]).map(m => `  { let p = ${v(m)}; let k = dot(a, p) / dot(p, p); if (k > ${LOOK_MATCH.darkLo} && k < ${LOOK_MATCH.darkHi} && all(abs(a - k * p) < vec3f(${LOOK_MATCH.near}))) { return ${of[m]}u; } }   // ${m}, darkened`);
-  return `fn ${name}(a: vec3f) -> u32 {\n${exact.join('\n')}\n${dark.join('\n')}\n  return 0u;\n}\n`;
-}
-function surfaceWgsl(): string { return classWgsl('surfClass', SURF_OF) + surfaceSrc; }
-/** WHAT A PAINT NAME IS DRAWN AS: scene/stuff.ts PAINT_STUFF as the look's class numbers, less the names that are mixed (those have no class of their own:
- *  the colour decides). The audit of a level reads this to tell a paint that is meant from one that got a material by the chance of its colour. */
-export const LOOK_BY_NAME: Readonly<Record<string, number>> = Object.fromEntries(Object.entries(PAINT_STUFF).filter(([, stuff]) => stuff !== 'mixed').map(([name, stuff]) => [name, lookStuffOf(stuff)]));
-/** THE LOOK PROTOTYPE's classes of the palette's rows: surface.wgsl's eight and three of its own (look.wgsl LOOK_CLOTH 9, LOOK_METAL 10, LOOK_PAINT 11), read
- *  off the table of names in its order (the shader's text below is written in this order, and a darkened paint is the first row it fits) */
-export const LOOK_OF: Readonly<Partial<Record<GwotMat, number>>> = Object.fromEntries(Object.entries(PAINT_STUFF).filter(([name, stuff]) => BY_COLOUR.has(stuff) && name in GWOT_PALETTE).map(([name, stuff]) => [name, lookStuffOf(stuff)]));   // (a palette row of a stuff added since the eleven is found by its name only: scene/stuff.ts BY_COLOUR)
-
-/** WHAT A PAINT IS DRAWN AS (look.wgsl's classes; 0 = plain), by the rule lookClass writes out for the shader and with its numbers: the palette's own row first (a
- *  stand-in is that row), then a classed paint darkened in one piece (a worn patch is its ground × 0.7). The engine asks it of each box's AUTHORED paint and the
- *  answer goes to the GPU in the box's own record (scene/boxes.ts BoxWorld.stuffOf): the shader used to ask the same of the colour it was HANDED, which is the paint
- *  times the rain's darkening (× 0.5, under the rule's 0.55): a gravel yard and a concrete slab in the rain were a colour that is nobody's and were drawn flat, and
- *  dust kept its earth only because half of dust happens to be dirt × 0.76. */
-export function lookStuff(a: Readonly<ArrayLike<number>>): number {
-  const q = (v: number) => Math.round(v * 8192);
-  const r = q(a[0]), g = q(a[1]), b = q(a[2]), keyed = r >= 0 && r < 16384 && g >= 0 && g < 16384 && b >= 0 && b < 16384, key = r + 16384 * (g + 16384 * b);
-  if (keyed) { const hit = STUFF.get(key); if (hit !== undefined) return hit; }
-  const P = GWOT_PALETTE as Readonly<Record<string, readonly number[]>>, of = LOOK_OF as Readonly<Record<string, number>>, e = LOOK_MATCH.near;
-  const near = (p: readonly number[], k: number) => Math.abs(a[0] - k * p[0]) < e && Math.abs(a[1] - k * p[1]) < e && Math.abs(a[2] - k * p[2]) < e;
-  let cls = -1;
-  for (const m in P) if (near(P[m], 1)) { cls = of[m] ?? 0; break; }
-  if (cls < 0) for (const m in of) { const p = P[m], k = (a[0] * p[0] + a[1] * p[1] + a[2] * p[2]) / (p[0] * p[0] + p[1] * p[1] + p[2] * p[2]); if (k > LOOK_MATCH.darkLo && k < LOOK_MATCH.darkHi && near(p, k)) { cls = of[m]; break; } }
-  if (cls < 0) cls = 0;
-  if (keyed) { if (STUFF.size >= 8192) STUFF.clear(); STUFF.set(key, cls); }   // (a level has a few hundred paints; a thing that animates its paint must not fill the table and then pay the whole search every frame)
-  return cls;
-}
-/** … what it said of a colour before (a level has a few dozen paints; a colour is asked about for every box that moves, every frame) */
-const STUFF = new Map<number, number>();
-/** the key a colour is kept under (13 bits a channel), or -1 for one out of range */
-const paintKey = (a: Readonly<ArrayLike<number>>): number => { const r = Math.round(a[0] * 8192), g = Math.round(a[1] * 8192), b = Math.round(a[2] * 8192); return r >= 0 && r < 16384 && g >= 0 && g < 16384 && b >= 0 && b < 16384 ? r + 16384 * (g + 16384 * b) : -1; };
-/** A LEVEL'S PAINTS BY NAME (scene/stuff.ts): each colour a row of the level file names, with the class of what the table says that name is made of. A box
- *  is written into a level file under the FIRST row that has its colour exactly (levelLoad.ts levelToData), and a loose prop's part wears a row's colour too, so
- *  a row is found by the colour and no box carries a word of its own. So the first row of a colour speaks for that colour, and where it has no row in the
- *  table, or the table says the name is mixed, the colour is left to the colour rule whatever later rows say. Paints written as numbers (a door's leaf, the
- *  lived kit's toned paints) are the colour rule's too, unless their numbers happen to be a row's: that chance is what 'mixed' is for. */
-export function lookNamed(rows: PaintRows | null | undefined): Map<number, number> {
-  const named = new Map<number, number>(), seen = new Set<number>();
-  for (const [name, row] of Object.entries(rows ?? {})) {
-    const key = paintKey(row.albedo); if (key < 0 || seen.has(key)) continue; seen.add(key);
-    const stuff = stuffOfName(name); if (stuff !== undefined && stuff !== 'mixed') named.set(key, lookStuffOf(stuff));
-  }
-  return named;
-}
 /** the word's fields (common.wgsl boxStuff, look.wgsl lookSurface read the same): the stuff below `moves`, the box's own number × `own`, `owns` of them */
 export const LOOK_WORD = { stuffs: 32, moves: 32, own: 64, owns: 45 } as const;
 /** THE STUFFS SOME BOX HAS BEEN (bits by stuff number), and how many times that grew: the g-buffer makes a stuff's map the first time a box is one (needLook) */
@@ -87,32 +26,33 @@ const SEEN = { bits: 0, grew: 0 };
 function lookSeen(stuff: number) { const bit = 1 << stuff; if (stuff > 0 && !(SEEN.bits & bit)) { SEEN.bits |= bit; SEEN.grew++; } }
 /** nothing has been any stuff yet (a check starts from here; the page never does: one level a page) */
 export function lookForget() { SEEN.bits = 0; SEEN.grew++; }
-/** say by colour what is about to be drawn: every paint handed here has its stuff's map made by the next needLook() (a check; the page asks its boxes their words: main.ts) */
-export function lookNeedPaints(paints: Iterable<Readonly<ArrayLike<number>>>) { for (const a of paints) lookSeen(lookStuff(a)); }
-/** THE LOOK'S WORD FOR A BOX (scene/boxes.ts BoxWorld.stuffOf; common.wgsl boxLook): what it is made of (lookStuff, 5 bits), whether it MOVES (a box past the
+/** say what is about to be drawn: every stuff named here has its map made by the next needLook() (a check; the page asks its boxes their words: main.ts) */
+export function lookNeed(stuffs: Iterable<string>) { for (const w of stuffs) lookSeen(lookStuffOf(w)); }
+/** THE LOOK'S WORD FOR A BOX (scene/boxes.ts BoxWorld.stuffOf; common.wgsl boxLook): what it is made of (5 bits), whether it MOVES (a box past the
  *  level's statics, rebuilt every frame, which carries its map with it: 32), and a number of its own, 0‥44 (× 64), that shifts its map so two crates are not one crate
  *  twice. FIVE BITS OF STUFF, one of moving, then the number (11-04: it was four bits and 0‥90; the word rides one float above the finish, which is read to a
  *  500th, and the float has no bit to spare, so the room for 31 stuffs is paid for by the number's range and nothing else). The number is the box's and not its place in the list: a breach appends statics and every later box's index moves, and by the index every door's boards
  *  jumped in the frame a wall went. A thing that moves is told by its motion key, or by its size; a thing that stands, by where it stands.
  *  (Known, left: a device's boxes are keyed by their order among the devices' boxes (game/devices.ts), so a tripwire's beam coming or going still moves the
  *  number of the device boxes after it; and two unkeyed movers of one size share a number.)
- *  `dry` = the paint a box had before the weather darkened it in place, if it did (game/weather.ts dryPaint): what a slab is made of is not changed by rain.
- *  `rows` = the paint rows of the level file the game stands on (levelLoad.ts levelFileOf): a paint one of them names is what its NAME says it is made of
- *  (lookNamed above), asked before any colour is weighed. None = by colour alone, as the look began. A box that says what it is made of itself (Box.stuff)
- *  is that, before either, unless `own` is false (the page's `?words=0`: the names alone, the build as it was before a box could say; `?names=0` puts
- *  both off). */
-export function lookWordOf(dry?: (b: Box) => Readonly<ArrayLike<number>> | undefined, rows?: PaintRows | null, own = true): (b: Box, moves: boolean) => number {
-  const named = lookNamed(rows);
+ *  WHAT IT IS MADE OF IS WHAT THE BOX SAYS (Box.stuff: its own word or its material row's, put there when the level was loaded or the box was made:
+ *  scene/stuff.ts) and nothing else: a box that says nothing is plain. No colour is asked, so rain that darkens a slab, a repaint or a tone of wear cannot
+ *  change what a thing is made of, and nobody has to be told the paint a box had before. */
+export function lookWordOf(): (b: Box, moves: boolean) => number {
   return (b, moves) => {
-    const paint = (b.aniso === true && dry?.(b)) || b.albedo;   // (aniso is the weather's mark: nothing is authored with it)
     let h: number;
     if (moves) h = b.mkey !== undefined ? Math.imul(b.mkey | 0, 0x9e3779b1) : Math.imul(Math.round(b.h[0] * 1000) + 131 * Math.round(b.h[1] * 1000) + 17161 * Math.round(b.h[2] * 1000), 0x9e3779b1);
     else h = Math.imul(Math.round(b.c[0] * 100) + 7919 * Math.round(b.c[1] * 100) + 104729 * Math.round(b.c[2] * 100), 0x9e3779b1);
     h ^= h >>> 15; h = Math.imul(h, 0x85ebca6b); h ^= h >>> 13;
-    const stuff = own && b.stuff !== undefined ? lookStuffOf(b.stuff) : named.size ? named.get(paintKey(paint)) ?? lookStuff(paint) : lookStuff(paint);   // (the box's own word, then its paint's name, then its colour)
-    lookSeen(stuff); if (b.cutOld && b.cutCore) lookSeen(lookStuff(b.cutCore));   // (an OLD break's core is drawn as its own colour's stuff, gbuffer_cut.wgsl; a fresh break's core is a colour and no stuff)
+    const stuff = b.stuff !== undefined ? lookStuffOf(b.stuff) : 0;
+    lookSeen(stuff);
     return stuff + (moves ? LOOK_WORD.moves : 0) + LOOK_WORD.own * ((h >>> 0) % LOOK_WORD.owns);
   };
+}
+/** … AND FOR AN OLD BREAK'S CUT FACES (Box.cutOld; BoxWorld.coreStuffOf, packed with the cut's record: scene/cut.ts packCut, gbuffer_cut.wgsl): the stuff its
+ *  core is made of where the box says one (Box.cutCoreStuff: a wall broken under a coping shows the coping's), else the box's own */
+export function lookCoreOf(): (b: Box) => number {
+  return b => { const w = b.cutCoreStuff ?? b.stuff, stuff = w !== undefined ? lookStuffOf(w) : 0; lookSeen(stuff); return stuff; };
 }
 /** one turn of the event loop (a message, not a timer: a timer in a tab nobody is looking at is held to one a second) */
 function nextTask(): Promise<void> {
@@ -120,9 +60,8 @@ function nextTask(): Promise<void> {
 }
 /** look.wgsl on the look page; on every other, the few names fsBox's dead calls need and nothing else (no binding: the bind group is the page's as it was) */
 function lookWgsl(): string {
-  return lookConfig.on ? classWgsl('lookClass', LOOK_OF) + `const LOOK_L_STONE: i32 = ${LOOK_NAMES.indexOf('field stone')}; const LOOK_L_BRICK: i32 = ${LOOK_NAMES.indexOf('mud brick')}; const LOOK_L_GRAVEL: i32 = ${LOOK_NAMES.indexOf('gravel')}; const LOOK_L_CLOTH: i32 = ${LOOK_NAMES.indexOf('cloth')};\nconst LOOK_LAYERS: i32 = ${LOOK_LAYERS};\nconst LOOK_BASE = array<f32, ${LOOK_LAYERS}>(${LOOK_ROUGH.map(v => v.toFixed(3)).join(', ')});   // lookTex.ts LOOK_ROUGH: the roughness each layer is written around\nconst LOOK_KEEP = array<vec4f, ${LOOK_LAYERS}>(${LOOK_NAMES.map((_, l) => `vec4f(${wgslNum(LOOK_BUILT[l])}, ${wgslNum(LOOK_FADES[l])}, ${wgslNum(LOOK_SOAKS[l])}, ${wgslNum(LOOK_WORN[l])})`).join(', ')});   // lookTex.ts STUFFS: a stuff laid in place, how far it blotches (0 = a place somebody keeps), whether it takes damp, how hard use shows on it\nconst LOOK_UNIT = array<vec4f, ${LOOK_LAYERS}>(${LOOK_UNIT.map(r => `vec4f(${r.map(wgslNum).join(', ')})`).join(', ')});   // lookTex.ts STUFFS' unit: a stuff made of pieces: one piece's size in the map (m), its bond, how far a piece's shade may sit from the next's\nconst LOOK_LAY = array<vec4f, ${LOOK_LAYERS}>(${LOOK_LAY.map(r => `vec4f(${r.map(wgslNum).join(', ')})`).join(', ')});   // lookTex.ts STUFFS' untiles and bay: it is read twice and cross-faded; pieces a bay along and up\n` + lookSrc : `struct LookOut { albedo: vec3f, n: vec3f, rough: f32, tilted: bool };
+  return lookConfig.on ? `const LOOK_L_STONE: i32 = ${LOOK_NAMES.indexOf('field stone')}; const LOOK_L_BRICK: i32 = ${LOOK_NAMES.indexOf('mud brick')}; const LOOK_L_GRAVEL: i32 = ${LOOK_NAMES.indexOf('gravel')}; const LOOK_L_CLOTH: i32 = ${LOOK_NAMES.indexOf('cloth')};\nconst LOOK_LAYERS: i32 = ${LOOK_LAYERS};\nconst LOOK_BASE = array<f32, ${LOOK_LAYERS}>(${LOOK_ROUGH.map(v => v.toFixed(3)).join(', ')});   // lookTex.ts LOOK_ROUGH: the roughness each layer is written around\nconst LOOK_KEEP = array<vec4f, ${LOOK_LAYERS}>(${LOOK_NAMES.map((_, l) => `vec4f(${wgslNum(LOOK_BUILT[l])}, ${wgslNum(LOOK_FADES[l])}, ${wgslNum(LOOK_SOAKS[l])}, ${wgslNum(LOOK_WORN[l])})`).join(', ')});   // lookTex.ts STUFFS: a stuff laid in place, how far it blotches (0 = a place somebody keeps), whether it takes damp, how hard use shows on it\nconst LOOK_UNIT = array<vec4f, ${LOOK_LAYERS}>(${LOOK_UNIT.map(r => `vec4f(${r.map(wgslNum).join(', ')})`).join(', ')});   // lookTex.ts STUFFS' unit: a stuff made of pieces: one piece's size in the map (m), its bond, how far a piece's shade may sit from the next's\nconst LOOK_LAY = array<vec4f, ${LOOK_LAYERS}>(${LOOK_LAY.map(r => `vec4f(${r.map(wgslNum).join(', ')})`).join(', ')});   // lookTex.ts STUFFS' untiles and bay: it is read twice and cross-faded; pieces a bay along and up\n` + lookSrc : `struct LookOut { albedo: vec3f, n: vec3f, rough: f32, tilted: bool };
 fn lookSurface(cls: u32, wp: vec3f, n: vec3f, bi: u32, lc: vec3f, hf: vec4f, albedoIn: vec3f, roughIn: f32, dwx: vec3f, dwy: vec3f, fp: f32, wears: bool) -> LookOut { return LookOut(albedoIn, n, roughIn, false); }
-fn lookClass(a: vec3f) -> u32 { return 0u; }
 struct LookSnow { albedo: vec3f, n: vec3f, rough: f32, amt: f32, bank: bool };
 struct LookGround { n: vec3f, rough: f32 };
 fn lookGround(wp: vec3f, nIn: vec3f, roughIn: f32, fp: f32) -> LookGround { return LookGround(nIn, roughIn); }
@@ -195,7 +134,7 @@ export class GBuffer {
 
   constructor(private device: GPUDevice, private sceneLayout: GPUBindGroupLayout, readonly pool: TexturePool = new TexturePool(device), maxBoxes = 4096) {
     this.geoBytes = maxBoxes * GEO_STRIDE * 4;
-    const mod = makeShader(device, scenePrelude() + `const PREV_MAT_BASE: u32 = ${maxBoxes * GEO_STRIDE / 4}u;   // prevBoxes: vec4 index where the mat rows start (after maxBoxes geo rows of 2 vec4 each)\n` + decalWgslConsts(3) + decalsSrc + detailSrc + surfaceWgsl() + lookWgsl() + snowSrc + markingsSrc + gbufSrc, 'gbuffer');   // decals.wgsl: the experiment's per-pixel marks (group 1 binding 3), read by fsBox under FrameFlags.Decals
+    const mod = makeShader(device, scenePrelude() + `const PREV_MAT_BASE: u32 = ${maxBoxes * GEO_STRIDE / 4}u;   // prevBoxes: vec4 index where the mat rows start (after maxBoxes geo rows of 2 vec4 each)\n` + decalWgslConsts(3) + decalsSrc + detailSrc + surfaceSrc + lookWgsl() + snowSrc + markingsSrc + gbufSrc, 'gbuffer');   // decals.wgsl: the experiment's per-pixel marks (group 1 binding 3), read by fsBox under FrameFlags.Decals
     this.objLayout = device.createBindGroupLayout({ label: 'gbufObj', entries: [
       { binding: 0, visibility: GPUShaderStage.VERTEX, buffer: { type: 'read-only-storage' } },
       { binding: 1, visibility: GPUShaderStage.VERTEX, buffer: { type: 'read-only-storage' } },
@@ -220,7 +159,7 @@ export class GBuffer {
     this.depthStencil = { format: 'depth32float', depthWriteEnabled: true, depthCompare: 'less' };
     this.mod = mod;   // (the box pipeline: init(), awaited by the engine before the first frame)
     // CUT BOXES: the same text + gbuffer_cut.wgsl as a second module, made only in a build with the switch — the module above and its pipelines are the build's without it
-    if (cutConfig.on) this.cutMod = makeShader(device, scenePrelude(true) + `const PREV_MAT_BASE: u32 = ${maxBoxes * GEO_STRIDE / 4}u;\n` + decalWgslConsts(3) + decalsSrc + detailSrc + surfaceWgsl() + lookWgsl() + snowSrc + markingsSrc + gbufSrc + gbufCutSrc, 'gbufferCut');
+    if (cutConfig.on) this.cutMod = makeShader(device, scenePrelude(true) + `const PREV_MAT_BASE: u32 = ${maxBoxes * GEO_STRIDE / 4}u;\n` + decalWgslConsts(3) + decalsSrc + detailSrc + surfaceSrc + lookWgsl() + snowSrc + markingsSrc + gbufSrc + gbufCutSrc, 'gbufferCut');
     const S = GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST;
     this.prevBoxes = makeBuffer(device, maxBoxes * (GEO_STRIDE + MAT_STRIDE) * 4, S, 'prevBoxes');
     this.prevJoints = makeBuffer(device, 256, S, 'prevJointsDummy');   // (replaced by one the size of the skin's palette the first time a skin is drawn)

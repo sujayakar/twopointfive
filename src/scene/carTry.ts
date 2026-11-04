@@ -15,7 +15,8 @@
 // met). A ray meets less: the body's corners (0.22 m of the nose, 0.1 m of the tail), the bonnet's shoulders (it falls 0.2 m from its middle to its sides)
 // and the glass above the waist, which leans in by up to 0.42 m at the roof of a car. A lamp keeps its place, half size and paint (game/carlamps.ts finds
 // it by those). Never seen on a GPU.
-import { BoxFlag, type Box, type BoxStuff } from './boxes';
+import { BoxFlag, wordOf, type Box, type BoxStuff } from './boxes';
+import { toned, wordFor } from './stuff';
 import { cutPlane, cutRecord, cutFit, type CutPlane } from './cut';
 import type { Vec3 } from '../math/vec';
 import { GWOT_PALETTE } from './gwotPalette';
@@ -134,7 +135,7 @@ function wheels(put: Put, xs: number[], out: number, r: number, wide: number, ty
 }
 
 export interface CarPaints { body: CarMat; tyre: CarMat; glass: CarMat; trim: CarMat; hub: CarMat }
-const HUB = (): CarMat => ({ albedo: [GWOT_PALETTE.galv[0] * 0.6, GWOT_PALETTE.galv[1] * 0.6, GWOT_PALETTE.galv[2] * 0.6], rough: 0.45, metal: true });
+const HUB = (): CarMat => ({ albedo: toned(GWOT_PALETTE.galv, 0.6), rough: 0.45, metal: true, ...wordFor(GWOT_PALETTE.galv) });
 
 /** A PICKUP, 5.0 × 1.8, nose toward local +x (scene/gwotKit.ts pickup, with curves): everything but its four lamps and what rides in its bed */
 export function pickupShape(F: CarFrame, P: CarPaints): Box[] {
@@ -208,7 +209,7 @@ const CAR_SIG = (): SigBox[] => [{ c: [0, 0.62, 0], h: [2.2, 0.34, 0.86] }, { c:
   ...([[1.35, 0.8], [1.35, -0.8], [-1.4, 0.8], [-1.4, -0.8]] as const).map(([x, z]): SigBox => ({ c: [x, 0.3, z], h: [0.32, 0.3, 0.12] })),
   ...[0.62, -0.62].flatMap((z): SigBox[] => [{ c: [2.2, 0.7, z], h: [0.02, 0.07, 0.14] }, { c: [-2.2, 0.75, z], h: [0.02, 0.06, 0.16] }])];
 interface Kind { name: string; sig: SigBox[]; anchor: number; /** which made box is the body the lamps sit on */ body: number; lamps: number[]; shape: (F: CarFrame, at: (i: number) => Box) => Box[] }
-const matOf = (b: Box): CarMat => ({ albedo: b.albedo, rough: b.rough, ...(b.metal ? { metal: true } : {}) });
+const matOf = (b: Box): CarMat => ({ albedo: b.albedo, rough: b.rough, ...(b.metal ? { metal: true } : {}), ...wordOf(b) });   // (a box's paint taken for a part takes its word with it)
 function kinds(): Kind[] {
   return [
     { name: 'pickup', sig: record(G => G.pickup(0, 0, 0)), anchor: 4, body: 12, lamps: [16, 17, 18, 19], shape: (F, at) => pickupShape(F, { body: MADE.body(matOf(at(4))), tyre: MADE.tyre(matOf(at(0))), glass: MADE.glass(matOf(at(9))), trim: MADE.trim(matOf(at(5))), hub: MADE.hub(HUB()) }) },

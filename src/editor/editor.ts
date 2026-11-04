@@ -5,6 +5,7 @@
 // (main.ts) and the headless probes both construct it. Everything addressed by REF strings: 'box:<id>' 'prop:<id>' 'light:<id>' 'sw:<id>'
 // 'door:<id>' 'route:<id>' 'route:<id>#<i>' (a waypoint) 'volume:<id>' 'chokepoint:<id>' 'device:<id>' 'floor:<id>' 'mark:spawn' 'mark:<objective id>'.
 import type { Vec3 } from '../math/vec';
+import { rowWord } from '../scene/stuff';
 import { FlagName, AUTHORED_FLAGS, LevelData, BoxData, LightData, DoorData, RouteData, VolumeData, SwitchableData, PropData, ObjectiveData, FloorData, MaterialData, DeviceData, CameraData, KeypadData, LaserData, DEVICE_DEFAULTS, parseLevelData, parseLevelDataLenient, floorUsers, serializeLevelData, structuralDiff, canonicalLevelData, LEVEL_DATA_VERSION } from '../scene/levelData';
 import { Doc, Collection, clonePlain } from './doc';
 import { lintLevel, idsInMessage, LintOpts, LintReport } from './lint';
@@ -693,12 +694,13 @@ export class Editor {
   roundTripDiffs(): { n: number; first: string[] } { const out: string[] = []; const n = structuralDiff(canonicalLevelData(this.data), canonicalLevelData(parseLevelData(this.serialize())), out, 10); return { n, first: out }; }
   /** an empty level on one floor with the office's palette, sky, a ground slab and the mission marks parked in a corner (v1 needs one of each) */
   static blank(name = 'untitled', palette?: Record<string, MaterialData>): LevelData {
-    const materials = palette ? clonePlain(palette) : { concrete: { albedo: [0.42, 0.41, 0.4] as Vec3 }, wall: { albedo: [0.66, 0.64, 0.6] as Vec3 }, carpet: { albedo: [0.13, 0.14, 0.17] as Vec3 }, lino: { albedo: [0.33, 0.33, 0.31] as Vec3 }, wood: { albedo: [0.52, 0.4, 0.27] as Vec3 }, woodDark: { albedo: [0.25, 0.18, 0.12] as Vec3 }, metal: { albedo: [0.3, 0.31, 0.33] as Vec3 }, white: { albedo: [0.8, 0.8, 0.78] as Vec3 }, black: { albedo: [0.04, 0.04, 0.045] as Vec3 }, cardboard: { albedo: [0.58, 0.44, 0.26] as Vec3 }, partTan: { albedo: [0.55, 0.47, 0.35] as Vec3 }, ceiling: { albedo: [0.72, 0.72, 0.7] as Vec3 }, screenOff: { albedo: [0.02, 0.02, 0.025] as Vec3 }, asphalt: { albedo: [0.09, 0.09, 0.1] as Vec3 } };
+    const own: Record<string, MaterialData> = { concrete: { albedo: [0.42, 0.41, 0.4] as Vec3 }, wall: { albedo: [0.66, 0.64, 0.6] as Vec3 }, carpet: { albedo: [0.13, 0.14, 0.17] as Vec3 }, lino: { albedo: [0.33, 0.33, 0.31] as Vec3 }, wood: { albedo: [0.52, 0.4, 0.27] as Vec3 }, woodDark: { albedo: [0.25, 0.18, 0.12] as Vec3 }, metal: { albedo: [0.3, 0.31, 0.33] as Vec3 }, white: { albedo: [0.8, 0.8, 0.78] as Vec3 }, black: { albedo: [0.04, 0.04, 0.045] as Vec3 }, cardboard: { albedo: [0.58, 0.44, 0.26] as Vec3 }, partTan: { albedo: [0.55, 0.47, 0.35] as Vec3 }, ceiling: { albedo: [0.72, 0.72, 0.7] as Vec3 }, screenOff: { albedo: [0.02, 0.02, 0.025] as Vec3 }, asphalt: { albedo: [0.09, 0.09, 0.1] as Vec3 } };
+    const materials = palette ? clonePlain(palette) : Object.fromEntries(Object.entries(own).map(([k, m]) => [k, { ...m, ...rowWord(k) }]));   // (each of the built-in paints says what its name is made of: scene/stuff.ts)
     return {
       version: LEVEL_DATA_VERSION, name, meta: { grid: 0.25, bounds: { min: [0, -0.25, 0], max: [40, 8, 28] }, notes: 'created in the editor' },
       floors: [{ id: 'f0', name: 'ground floor', y: 0, ceiling: 3 }], materials,
       surfaces: { building: { x0: 4, x1: 36, z0: 4, z1: 24 }, grassEdge: 0, inside: 'carpet', outside: 'asphalt', verge: 'asphalt', zones: [] },
-      boxes: [{ id: 'ground', floor: 'f0', group: 'ground', c: [20, -0.125, 14], h: [20, 0.125, 14], material: 'asphalt' in materials ? 'asphalt' : Object.keys(materials)[0] },
+      boxes: [{ id: 'ground', floor: 'f0', group: 'ground', c: [20, -0.125, 14], h: [20, 0.125, 14], material: 'asphalt' in materials ? 'asphalt' : Object.keys(materials)[0], ...('asphalt' in materials && materials.asphalt.stuff !== undefined ? { stuff: 'plain' } : {}) },   // (the lot says nothing over its paint's row, as the kits' lots do: scene/levelKit.ts LOT)
               { id: 'breaker_panel', floor: 'f0', group: 'breaker', c: [4.3, 1.4, 4.3], h: [0.02, 0.3, 0.2], albedo: [0.3, 0.31, 0.33] }, { id: 'breaker_led', floor: 'f0', group: 'breaker', c: [4.33, 1.55, 4.3], h: [0.005, 0.01, 0.01], albedo: [0.04, 0.04, 0.045], emissive: [0.3, 4, 0.6], flags: ['NoShadow'] }],
       props: [], lights: [{ id: 'moon', kind: 'dir', pos: [0, 0, 0], dir: [0.45, -0.5, -0.74], color: [0.55, 0.7, 1], intensity: 0.9, range: 1e6, innerDeg: 0, outerDeg: 0, group: 'exterior', enabled: true, volumetric: 0, radius: 0.009, mains: false }],
       switchables: [], doors: [{ id: 'door_0', floor: 'f0', hinge: [10, 10], closedDir: 0, width: LEAF_W }], routes: [], chokepoints: [], volumes: [], devices: [], connectors: [],
