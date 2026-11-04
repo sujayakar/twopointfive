@@ -733,26 +733,21 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
     L.chair(17.7, 19.6, -Math.PI / 2, C.white);                                                                  // the second seat, drawn up to the pipe
     { K.prop('cardboard', 19.4, 21.6, 0, 0.4, [{ off: [0, 0.1, 0], h: [0.1, 0.1, 0.1], yaw: 0.6, albedo: C.red }]); L.own('ball'); }
     // ---- OUTSIDE THE WALLS — the field's edge, where the squad comes from: both ways in start out here, and the ground was bare from the wall's foot to the
-    // map's edge. What a farm leaves outside its own wall, every piece of it the look's kit (src/scene/gwotKit.ts through the office kit's own add; the twin
-    // keeps a palette paint as it is) and EVERY PIECE OUT AT THE STRIP'S OUTER EDGE, none at the wall's foot. Two things live at that foot and a pile there
-    // takes them away: a place to set a wall charge (the squad breaches this wall from its starts: two piles on the north wall took 17 of its 891 places,
-    // tools/qa/wallfurn-check.ts) and the defenders' way round, which hugs the wall (below). The middle of each strip is the walk to a gate and stays bare,
-    // and so does the ground the four stand on. Only things that stand square or round: a drum on its side and a bush were tried and read, from
+    // map's edge. What a farm leaves against the outside of its own wall, every piece of it the look's kit (src/scene/gwotKit.ts through the office kit's own
+    // add; the twin keeps a palette paint as it is) and every piece against the wall's foot or out at the edge: the middle of each strip is the walk to a gate
+    // and stays bare, and so does the ground the four stand on. Only things that stand square or round: a drum on its side and a bush were tried and read, from
     // the opening frame, as an orange crate and a dark box (the kit's lying and leafy pieces are boxes still). Colour: none of its own — wood, stone, rubber
     L.room('outside');
     { const G = gwotKit(gwotOfOffice(K));
-      // north, east of the back way's start: the winter's wood, the stones thrown out of the plot, two worn tyres off the taxi
-      G.woodPile(33.4, 0.55, 0, 1.6); G.rubble(36.6, 0.9, 0.7, 6); G.tyres(38.7, 0.8, 2);
-      // north, west of the back gate: blocks left over from the wall, field stones
-      G.blocks(20.4, 0.5, 0, 2); G.rubble(11.6, 0.9, 0.8, 7);
-      // west, the walk to the side gate: more wood north of it, field stones
-      G.woodPile(0.55, 8.6, Math.PI / 2, 1.4); G.rubble(0.9, 11.4, 0.7, 6);
-      // west, the south end of the strip: stones behind where the four stand, and blocks and the rest of the wood well south of them. TWO THINGS decide this
-      // corner. THE DEFENDERS' WAY ROUND to the guard hut comes down this strip hugging the wall and round the corner, 45.2 m of the 46 a way round may be: a
-      // block stack and a wood pile at the wall's foot here made it 46.1 (tools/qa/wayround-check.ts: 21 ways lost and 107 squeezed, where the level had 9 and
-      // 23). And the same two pieces out at the edge but 2 m behind the rear man's start mark changed how the four step off (the scripted runs' endings moved);
-      // from 5 m behind him they do not
-      G.rubble(0.9, 22.8, 0.7, 5); G.blocks(0.6, 24.4, Math.PI / 2, 2); G.woodPile(0.55, 26.4, Math.PI / 2, 1.6); }
+      // north, east of the back way's start: the winter's wood stacked against the wall, the stones thrown out of the plot, two worn tyres off the taxi
+      G.woodPile(33.4, 3.5, 0, 1.6); G.rubble(36.6, 2.9, 0.7, 6); G.tyres(38.4, 3.2, 2);
+      // north, west of the back gate: blocks left over from the wall, field stones at the edge
+      G.blocks(20.4, 3.45, 0, 2); G.rubble(11.6, 0.9, 0.8, 7);
+      // west, the walk to the side gate: more wood against the wall north of it, field stones at the edge
+      G.woodPile(3.5, 8.6, Math.PI / 2, 1.4); G.rubble(0.9, 11.4, 0.7, 6);
+      // west, behind where the four stand (the south end of the strip, the lower half of the opening frame): blocks and the rest of the wood against the wall,
+      // stones at the edge
+      G.blocks(3.6, 21.6, Math.PI / 2, 2); G.woodPile(3.5, 23.8, Math.PI / 2, 1.6); G.rubble(0.9, 22.8, 0.7, 5); }
 
   }
 
