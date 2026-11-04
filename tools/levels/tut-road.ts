@@ -38,6 +38,7 @@ import { officeKit, normalize3 as norm, type GeneratorTrace } from '../../src/sc
 import { gwotKit, gwotOfOffice, GWOT_PALETTE, GWOT_MATERIALS, GW_SHELL } from '../../src/scene/gwotKit';
 import { SNOW_PALETTE, SNOW_FINISH, SNOW_MATERIALS, type SnowMat } from '../../src/scene/gwotPalette';
 import { WORLD } from '../../src/scene/world';
+import { rockOf, SCREE_PAINT } from './snowRock';
 import { BoxFlag } from '../../src/scene/boxes';
 import { findCarLamps } from '../../src/game/carlamps';
 import { LAST_OUT, LAST_MEN, HUT_NOOK, HUT_MARK, TRUCK_FLANK, HUT_WALL, HUT_END, BAGS_TOP, WALL_FACE } from '../../levels/tut-road.script';
@@ -178,13 +179,8 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
     const lens = [2.6, 1.4, 3.1, 1.8, 2.2, 1.2]; let u = a + 0.06, k = Math.round(a * 5 + line) % lens.length;
     while (u < b - 0.4) { const l = Math.min(lens[k++ % lens.length], b - 0.06 - u), m = u + l / 2; if (axis === 'x') cap(m, line, l, 0.2, 2.47, 0, 0.05 + (k % 3) * 0.012); else cap(line, m, 0.2, l, 2.47, 0, 0.05 + (k % 3) * 0.012); u += l + 0.16 + (k % 2) * 0.12; }
   };
-  /** THE MOUNTAIN: a block of the cut rock, `h` tall, snow lying on its top (set in from its edges: the rock shows as a dark rim) */
-  const rock = (x0: number, z0: number, w: number, d: number, h: number, yaw = 0) => {
-    const ex = (Math.abs(w * Math.cos(yaw)) + Math.abs(d * Math.sin(yaw))) / 2 + 0.03, ez = (Math.abs(w * Math.sin(yaw)) + Math.abs(d * Math.cos(yaw))) / 2 + 0.03;
-    const x = Math.min(WORLD.max[0] - ex, Math.max(WORLD.min[0] + ex, x0)), z = Math.min(WORLD.max[2] - ez, Math.max(WORLD.min[2] + ez, z0));
-    add({ c: [x, h / 2, z], h: [w / 2, h / 2, d / 2], yaw, ...M.block, albedo: [0.2, 0.21, 0.24] });
-    cap(x - 0.04, z - 0.03, Math.max(0.2, w - 0.3), Math.max(0.2, d - 0.26), h, yaw, 0.07);
-  };
+  /** THE MOUNTAIN: a block of the cut rock, `h` tall, snow lying on its top (tools/levels/snowRock.ts: one piece and one paint for every road under a mountain) */
+  const rock = rockOf(add, cap, M.block.rough);
   /** a PINE on the slope below the road: a trunk and three tiers, each two boards crossed (from over it, where the camera is, a tier is a star and not a
    *  box), a dab of snow where each tier meets the trunk: the boughs' ends stay dark */
   const pine = (x: number, z: number, h: number, turn = 0) => {
@@ -199,7 +195,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
   grp('ground');
   slab(0, -0.25, 0, 40, 0, 28, S.snow.albedo, { rough: S.snow.rough });
   lay(0, ROAD.z0 + 1.0, 40, ROAD.z1 - 0.9, S.snowPacked);                                      // the road, as the plough and the convoy left it
-  lay(0, 21.3, 40, 28, { albedo: [0.035, 0.045, 0.06], rough: 1 }, 0.003);                     // the slope below the road, in the mountain's own shadow
+  lay(0, 21.3, 40, 28, { albedo: SCREE_PAINT, rough: 1 }, 0.003);                              // the slope below the road: scree, dark under the mountain's own shadow
   grp('floors');
   G.ground(HUT.x0, HUT.z0, HUT.x1, HUT.z1, 'slab', 0.006);
   zones.push({ id: 'hut', mat: 'stone', x0: HUT.x0, z0: HUT.z0, x1: HUT.x1, z1: HUT.z1 });
