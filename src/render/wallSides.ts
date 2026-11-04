@@ -8,14 +8,14 @@
 // place, and one rule after another was written for the cases that showed (a carton's back, a man by a wall, a boot print's lip). By day the far side of
 // an outer wall is the open air, thousands of times brighter than a room shown that many times up: the floor behind a row of drums glowed white.
 // THE RULE. The level says where its walls are, so every read asks: the place the read point is in is the only place whose probes it may blend. A
-// PLACE is what walls and shut doors enclose (render/placeField.ts placeMask, the map the exposure is by). This file turns that map into one small word a
+// PLACE is what walls and shut doors enclose (scene/placePlan.ts placeMask, the map the exposure is by). This file turns that map into one small word a
 // cell that the frame carries to every shader: a free cell's place; a wall cell's two places and the line between them (the wall's own centre line, to
 // 2.5 cm), so a point a finger off a wall's face is known to be on its side though the map's cell is 0.4 m. A doorway's cell is every place's (light
 // does cross a threshold). Where two walls meet in one cell, or a wall is turned, the cell says nothing and the read is as it was.
 // Pure: the check's too (tools/qa/wallsides-check.ts). No GPU thing is made here.
 import { Box } from '../scene/boxes';
 import { WORLD } from '../scene/world';
-import { PLACE, PLACE_W, PLACE_H, PLACE_RES, PlaceGap, placeMask, placeWall, stampCells, placeKey } from './placeField';
+import { PLACE, PLACE_W, PLACE_H, PLACE_RES, PlaceGap, placeMask, placeWall, stampCells, placeKey } from '../scene/placePlan';
 
 /** a place's number is 0‥13 (two places a read could blend never share one; places far apart may); 14 = nothing known here; 15 = a doorway's cell */
 export const SIDE_UNKNOWN = 14, SIDE_DOOR = 15, SIDE_WORDS = PLACE_W * PLACE_H;

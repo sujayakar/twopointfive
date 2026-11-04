@@ -54,7 +54,7 @@ const VEHICLE = /^(van|gun_truck|truck|pickup|lorry|jeep|car)\w*_lamp/;
 /** what a light is, for the rule. NONE (drawn as authored at every hour): the sun and the moon (the hour's own), the sky at a window (the look page's), a lightning stroke (the sky's), a device's
  *  sight cone (a tell, not a lamp) and the Team & kit figure's staging. */
 export function lightClass(l: LightLike): LightClass {
-  if (l.kind === 2 || l.transient || l.group === 'devices' || l.group === 'sky' || l.name.startsWith('kitview')) return 'none';   // (sky: the look page's opening lights, render/openings.ts: the hour's own light, come in at a window)
+  if (l.kind === 2 || l.transient || l.group === 'devices' || l.group === 'sky' || l.name.startsWith('kitview')) return 'none';   // (sky: the look page's opening lights, scene/openings.ts: the hour's own light, come in at a window)
   // A LIGHT THAT STANDS FOR A GLOWING FACE (kind 3, the one-sided panel: a ceiling panel's, a screen's, a lit sign's marking; game.ts makes each as the face's
   // radiance × its area) IS A CLASS OF ITS OWN: the night holds it down like a torch, about FACE_TRUE under the real thing. As a 'fixture' (authored = real) a
   // vending machine's front was drawn in full at dusk and lit nothing, 1/69 of 7 candela: no light on the ground before it and none in smoke crossing it.
