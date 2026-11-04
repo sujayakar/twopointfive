@@ -105,7 +105,7 @@ fn abs(x: f64) -> f64 {
 
 /// how many doubles a question's own numbers may be (the IK's eleven; a layer's numbers, the state it keeps between ticks, the hand pass's columns and a
 /// path of keys handed to it: layers.rs)
-pub const ARGS: usize = 600;
+pub const ARGS: usize = 1024;
 
 /// A RIG AS A FUNCTION SEES IT
 pub struct Rig<'a> {

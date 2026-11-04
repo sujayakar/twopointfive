@@ -47,7 +47,7 @@ pub const SCRATCH_LEN: usize = 1024;
 static mut SCRATCH: [f64; SCRATCH_LEN] = [0.0; SCRATCH_LEN];
 
 /// The version of the exports: src/sim/sim.ts names the one it was written against, and a page that loaded another says so instead of calling into it.
-pub const ABI: u32 = 16;
+pub const ABI: u32 = 17;
 
 // ---- the C face (wasm32: these are the module's exports)
 #[no_mangle]
@@ -425,6 +425,31 @@ pub extern "C" fn layer_door_layer(g: usize, at: usize, at_b: usize, at_rest: us
 #[no_mangle]
 pub extern "C" fn layer_work_layer(g: usize, at: usize, at_b: usize, at_rest: usize) -> u32 {
     layers::work_layer(g, at, at_b, at_rest)
+}
+/// CharacterAnimator.holdLayer
+#[no_mangle]
+pub extern "C" fn layer_hold_layer(g: usize, at: usize, at_b: usize, at_c: usize, at_aim: usize, at_rest: usize) -> u32 {
+    layers::hold_layer(g, at, at_b, at_c, at_aim, at_rest)
+}
+/// CharacterAnimator.heldLayer
+#[no_mangle]
+pub extern "C" fn layer_held_layer(g: usize, at: usize, at_b: usize, at_rest: usize) -> u32 {
+    layers::held_layer(g, at, at_b, at_rest)
+}
+/// CharacterAnimator.catchArm
+#[no_mangle]
+pub extern "C" fn layer_catch_arm(g: usize, at: usize) -> u32 {
+    layers::catch_arm(g, at)
+}
+/// CharacterAnimator.bigLayer
+#[no_mangle]
+pub extern "C" fn layer_big_layer(g: usize, at: usize, at_b: usize, at_buf: usize, at_rest: usize) -> u32 {
+    layers::big_layer(g, at, at_b, at_buf, at_rest)
+}
+/// CharacterAnimator.throwLayer
+#[no_mangle]
+pub extern "C" fn layer_throw_layer(g: usize, at: usize, at_b: usize, at_rest: usize) -> u32 {
+    layers::throw_layer(g, at, at_b, at_rest)
 }
 /// CharacterAnimator.handsPass
 #[no_mangle]

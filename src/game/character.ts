@@ -762,7 +762,7 @@ function longTuck(t: number[], gunWall: number): void {
 export const LONG_STEADY = { tau: 0.5, runYaw: 0.85 };
 /** THE ANIMATOR'S TABLES OF NUMBERS THAT ARE NOT KNOBS, by the name Rust code reads them under (rust/sim/src/knobs.rs `ANIM.<name>.…`; game/rustknobs.ts
  *  looks a path up here or in the knob registry): authored constants no panel tunes and no recording carries, read by the module from this one copy. Made when asked. */
-export function animTables(): Record<string, object | number> { return { LONG_STEADY, LIFE, FEET, MV2, BOB, SPRINT_WARP, SOFT_KNEE, RUN_LINGER, TOE_FLOOR_Y, SNEAK, CREEP, KICK_IMPACT, KICK_PLANT, WALL_POSE, WALL_ROOT_OFF, WALL_GAIT_REST, MV_FLINCH_ENV, MV_HIT_ENV, MV_STARTLE, TOSS_AFTER, LEAN_POSE, GAZE_EL, GAZE, WOUND_AT, LONG_PIVOT, LONG_PULL_MAX, LONG_ANCHOR_SIDE_MAX, LONG_KICK_BACK, RIG, REACH, HAND, SMOKEARM, STEALTH, BLOW, TAKEN, KNIFE_BLOW, READY_RATE, READY_REACH, READY_AZ, READY_UP, READY_BARE, WORK }; }
+export function animTables(): Record<string, object | number> { return { LONG_STEADY, LIFE, FEET, MV2, BOB, SPRINT_WARP, SOFT_KNEE, RUN_LINGER, TOE_FLOOR_Y, SNEAK, CREEP, KICK_IMPACT, KICK_PLANT, WALL_POSE, WALL_ROOT_OFF, WALL_GAIT_REST, MV_FLINCH_ENV, MV_HIT_ENV, MV_STARTLE, TOSS_AFTER, LEAN_POSE, GAZE_EL, GAZE, WOUND_AT, LONG_PIVOT, LONG_PULL_MAX, LONG_ANCHOR_SIDE_MAX, LONG_KICK_BACK, RIG, REACH, HAND, SMOKEARM, STEALTH, BLOW, TAKEN, KNIFE_BLOW, READY_RATE, READY_REACH, READY_AZ, READY_UP, READY_BARE, WORK, BIGMOVE, BIGRIG, THROW_DUR, THROW_RELEASE, TOSS_TOP, TOSS_LOW, TOSS_HANG, SWIV_REF_R, SWIV_REF_L }; }
 /** the trigger hand's pull back along the bore while a shot plays (m; ~35 ms up, 0.2 s down — the drawn weapon rides the hand, so this is what the carbine's recoil shows) */
 const LONG_KICK_BACK = 0.03;
 /** THE LOUD DEMO'S MOTION PASS (MOVES) — what a firefight shows that the stealth game never had to: a rifle that RECOILS (the gun driven back into the shoulder, the
@@ -1162,12 +1162,17 @@ const BLOW = {
   tail: 1.0, sink: { chop: 0.8, palm: 0.6, mouth: 1, sweep: 0.75, slash: 0.75 } as Record<BlowStyle, number>, walk: [0.4, 1.5],
 };
 const TAKEN = { sag: { arch: 0.1, hunch: 0.65, snap: 0.15 } as Record<TakenStyle, number>, secs: 1.0 };
-/** the most keys of a knife blow the module's layer is handed (rust/sim/src/layers.rs knife_pose: `nk > 4` there is this number) */
+/** the most keys of a knife blow the module's layer is handed (rust/sim/src/layers.rs KNIFE_KEYS; layer-ident's `caps` holds the two to each other) */
 const KNIFE_KEYS_MAX = 4;
 /** a blow's style as the module is handed it (rust/sim/src/layers.rs blow_trunk, blow_arms) */
 const BLOW_NO: Record<BlowStyle, number> = { chop: 0, palm: 1, mouth: 2, slash: 3, sweep: 4 };
-/** a thing of the kit as the module is handed it (rust/sim/src/layers.rs kit_layer; 0 = nothing), and back */
+/** a hold's phase as the module is handed it (rust/sim/src/layers.rs hold_layer and held_layer read these numbers as they stand here) */
+const HOLD_PH: Record<HoldPhase, number> = { grab: 0, held: 1, choke: 2, whip: 3, kill: 4 };
+/** how many blows of one beat the module's big tool layer is handed, and how many keys a table of the throw (rust/sim/src/layers.rs BIG_BLOWS_MAX,
+ *  THROW_KEYS; layer-ident's `caps` holds each pair to each other): a longer record or table is posed by the TypeScript */
+const BIG_BLOWS_MAX = 64, THROW_KEYS_MAX = 16;
 const WORK_NO: Record<WorkKind, number> = { keys: 0, charge: 1, lever: 2, take: 3 };
+/** a thing of the kit as the module is handed it (rust/sim/src/layers.rs kit_layer; 0 = nothing), and back */
 const KIT_NO: Record<KitItem, number> = { pistol: 1, rifle: 2, can: 3, knife: 4 }, KIT_OF: (KitItem | null)[] = [null, 'pistol', 'rifle', 'can', 'knife'];
 /** live = where the hands go NOW (takedown.ts marks(), asked every frame until contact: the attacker is still closing to his station when the move begins) */
 interface BlowRun { style: BlowStyle; t: number; hit: number; end: number; tail: number; rise: boolean; at: Vec3; at2: Vec3 | null; live: (() => [Vec3, Vec3 | null]) | null }
@@ -5293,11 +5298,26 @@ export class CharacterAnimator {
    *  way out) move his trunk under an arm already solved — the hand came round 10 cm under its keys. So the left hand is put ON the hold's target here, after
    *  them, coming over from wherever they left it in the grab's first frames; and while the reach is up with no hold, where it has the hand is noted — the
    *  grab's path starts there (holdLayer: hdFrom). Nothing runs with HOLD.catchShape down, or with a knife or a gun in the hold. */
+  private catchArm(X: NonNullable<CharacterAnimator['hdFix']>) {
+    const g = layerSlot(this.ch, this.pA, this.cast);   // (RUST.walk: rust/sim/src/layers.rs catch_arm)
+    if (g < 0) this.catchArmOwn(X);
+    else if (!LAYERS.both) this.catchArmAsk(g, X);
+    else layerBoth('catchArm', this.pA, this.fk, () => this.catchArmAsk(g, X), () => this.catchArmOwn(X));
+  }
+  private catchArmAsk(g: number, X: NonNullable<CharacterAnimator['hdFix']>) {
+    const a = f64(), o = POSE_BENCH.args;
+    a[o] = X.w; a[o + 7] = X.poleW; a[o + 12] = X.rw; for (let i = 0; i < 3; i++) { a[o + 1 + i] = X.tgt[i]; a[o + 4 + i] = X.pole[i]; } for (let i = 0; i < 4; i++) a[o + 8 + i] = X.rot[i];
+    layerRan(POSE_BENCH.x!.layer_catch_arm(g, this.pA.at), this.fk);
+  }
+  private catchArmOwn(X: NonNullable<CharacterAnimator['hdFix']>) {
+    const pA = this.pA, nd = this.nodes, fk = this.fk;
+    fk.run(pA); const r0 = [...fk.rot[nd.handL]] as Quat; twoBoneIK(fk, pA, nd.upperArmL, nd.forearmL, nd.handL, v3.lerp(fk.pos[nd.handL], X.tgt, X.w), X.pole, X.poleW, quat.nlerp(r0, X.rot, X.rw));
+  }
   private catchFix() {
     const X = this.hdFix; this.hdFix = null;
     if (!HOLD.catchShape || !this.noKnife) { this.rdHandL = null; return; }
     const pA = this.pA, nd = this.nodes, fk = this.fk;
-    if (X) { fk.run(pA); const r0 = [...fk.rot[nd.handL]] as Quat; twoBoneIK(fk, pA, nd.upperArmL, nd.forearmL, nd.handL, v3.lerp(fk.pos[nd.handL], X.tgt, X.w), X.pole, X.poleW, quat.nlerp(r0, X.rot, X.rw)); }
+    if (X) this.catchArm(X);
     else if (!this.holdPose) { if (this.readyW > 0.003 && this.readyK === 'grab') { fk.run(pA); this.rdHandL = v3.copy(fk.pos[nd.handL]); } else this.rdHandL = null; }
   }
   private readyLayer(w: number, kind: ReadyKind, live: boolean, dt: number, twY: number, twP: number) {
@@ -6102,6 +6122,32 @@ export class CharacterAnimator {
    *  station, the pistol muzzle-high on the way as in its grab; through the middle the two arm solves cross-fade in joint space, both all but at that point,
    *  so the turn of the wrist from one grip to the other never pops. */
   private holdLayer(w: number, dt: number) {
+    const g = layerSlot(this.ch, this.pA, this.cast);   // (RUST.walk: rust/sim/src/layers.rs hold_layer)
+    if (g < 0) this.holdLayerOwn(w, dt);
+    else if (!LAYERS.both) this.holdLayerAsk(g, w, dt);
+    else layerBoth('holdLayer', this.pA, this.fk, () => this.holdLayerAsk(g, w, dt), () => this.holdLayerOwn(w, dt), this.withHands(CharacterAnimator.holdCols), [this.pB, this.pC]);
+  }
+  /** the hold's columns: five springs (the knife off him, the kill's clock, the choke's eased clock, the lowering, the haul), the sway, where the catch took
+   *  the hand from, whether the catch has him, and the catch's mend for catchFix */
+  private static readonly holdCols: LayerCols<CharacterAnimator> = { n: 30,
+    get(c, o) { const S = [this.hdKn, this.hdKc, this.hdCk, this.hdLo, this.hdHu], F = this.hdFrom, X = this.hdFix; for (let i = 0; i < 5; i++) { c[o + i * 2] = S[i].x; c[o + i * 2 + 1] = S[i].v; }
+      c[o + 10] = this.hdSw; c[o + 11] = F ? 1 : 0; for (let i = 0; i < 3; i++) c[o + 12 + i] = F ? F[i] : 0; c[o + 15] = this.hdCaught ? 1 : 0;
+      c[o + 16] = X ? 1 : 0; for (let i = 0; i < 3; i++) { c[o + 17 + i] = X ? X.tgt[i] : 0; c[o + 20 + i] = X ? X.pole[i] : 0; } c[o + 23] = X ? X.poleW : 0; for (let i = 0; i < 4; i++) c[o + 24 + i] = X ? X.rot[i] : 0; c[o + 28] = X ? X.w : 0; c[o + 29] = X ? X.rw : 0; },
+    put(c, o) { const S = [this.hdKn, this.hdKc, this.hdCk, this.hdLo, this.hdHu]; for (let i = 0; i < 5; i++) { S[i].x = c[o + i * 2]; S[i].v = c[o + i * 2 + 1]; }
+      this.hdSw = c[o + 10]; this.hdFrom = c[o + 11] ? [c[o + 12], c[o + 13], c[o + 14]] : null; this.hdCaught = c[o + 15] !== 0;
+      this.hdFix = c[o + 16] ? { tgt: [c[o + 17], c[o + 18], c[o + 19]], pole: [c[o + 20], c[o + 21], c[o + 22]], poleW: c[o + 23], rot: [c[o + 24], c[o + 25], c[o + 26], c[o + 27]], w: c[o + 28], rw: c[o + 29] } : null; } };
+  private holdLayerAsk(g: number, w: number, dt: number) {
+    const H = this.holdPose ?? this.hdLast, a = f64(), o = POSE_BENCH.args, SP = this.holdPose?.strip ?? null, F = this.handFix, U = this.gripUp;
+    const m = H.man ? this.toModelP(H.man) : null, sa = SP && SP.at ? this.toModelP(SP.at) : null, rd = this.rdHandL;
+    a[o] = w; a[o + 1] = dt; a[o + 2] = HOLD_PH[H.phase]; a[o + 3] = H.t; a[o + 4] = H.variant === 'gun' ? 1 : 0; a[o + 5] = this.hdGv.x; a[o + 6] = this.noKnife ? 1 : 0; a[o + 7] = this.holdPose ? 1 : 0;
+    a[o + 8] = (H.kill ?? HOLD_SHOW.kill) ? 1 : 0; a[o + 9] = (H.beats ?? HOLD_SHOW.beats) ? 1 : 0; a[o + 10] = H.low ?? 0; a[o + 11] = H.haul ? 1 : 0;
+    a[o + 12] = H.yank !== undefined ? 1 : 0; a[o + 13] = H.yank ?? 0; a[o + 14] = H.step !== undefined ? 1 : 0; a[o + 15] = H.step ?? 0; a[o + 16] = m ? 1 : 0; a[o + 20] = H.pull !== undefined ? 1 : 0; a[o + 21] = H.pull ?? 0; a[o + 22] = this.idleT;
+    a[o + 23] = SP ? 1 : 0; a[o + 24] = SP ? SP.t : 0; a[o + 25] = sa ? 1 : 0; a[o + 29] = this.aimYawOffset; a[o + 30] = -this.aimPitch * this.upperW.aim * 0.35;
+    a[o + 31] = H.gunOut ?? 0; a[o + 32] = H.gunPitch ?? 0; a[o + 33] = this.shootT; a[o + 34] = rd ? 1 : 0;
+    for (let i = 0; i < 3; i++) { a[o + 17 + i] = m ? m[i] : 0; a[o + 26 + i] = sa ? sa[i] : 0; a[o + 35 + i] = rd ? rd[i] : 0; a[o + 46 + i] = U[i]; } for (let i = 0; i < 4; i++) { a[o + 38 + i] = F[0][i]; a[o + 42 + i] = F[1][i]; }
+    colsToBench(CharacterAnimator.holdCols, this); this.handsAsk(() => POSE_BENCH.x!.layer_hold_layer(g, this.pA.at, this.pB.at, this.pC.at, this.pAim.at, this.rest.at)); colsFromBench(CharacterAnimator.holdCols, this);
+  }
+  private holdLayerOwn(w: number, dt: number) {
     const H = this.holdPose ?? this.hdLast, K = HOLD; const pA = this.pA, pB = this.pB, nd = this.nodes, fk = this.fk;
     const ph = H.phase, t = H.t, gunV = H.variant === 'gun', G = K.gun, N = K.knife, F = K.struggle;   // gunV: the variant proper — what the choke, the whip and the flinch key off; gv below is its eased share of the POSE
     const gv = clamp(this.hdGv.x, 0, 1);
@@ -6271,6 +6317,27 @@ export class CharacterAnimator {
    *  come up from wherever they were. A change of variant mid-hold (Sam draws / holsters, E) rides heGv, the eased share of it: the numbers that differ and the
    *  arm targets are blended by it, so his hands re-settle over the beat instead of popping. */
   private heldLayer(w: number, dt: number) {
+    const g = layerSlot(this.ch, this.pA, this.cast);   // (RUST.walk: rust/sim/src/layers.rs held_layer)
+    if (g < 0) this.heldLayerOwn(w, dt);
+    else if (!LAYERS.both) this.heldLayerAsk(g, w, dt);
+    else layerBoth('heldLayer', this.pA, this.fk, () => this.heldLayerAsk(g, w, dt), () => this.heldLayerOwn(w, dt), this.withHands(CharacterAnimator.heldCols), [this.pB]);
+  }
+  /** the held man's columns: seven springs (the choke's eased clock, the kill's, the haul, the lowering's clock, the lowering, the hands off the arm, the
+   *  head to the side), the sway, his neck's height over his hips, and each hand's turn as it hung on the frame before */
+  private static readonly heldCols: LayerCols<CharacterAnimator> = { n: 26,
+    get(c, o) { const S = [this.heCk, this.heKc, this.heHu, this.heLk, this.heLo, this.heBo, this.heBc]; for (let i = 0; i < 7; i++) { c[o + i * 2] = S[i].x; c[o + i * 2 + 1] = S[i].v; }
+      c[o + 14] = this.heSw; c[o + 15] = this.heSpan; for (let s = 0; s < 2; s++) { const q = this.heHr[s]; c[o + 16 + s * 5] = q ? 1 : 0; for (let i = 0; i < 4; i++) c[o + 17 + s * 5 + i] = q ? q[i] : 0; } },
+    put(c, o) { const S = [this.heCk, this.heKc, this.heHu, this.heLk, this.heLo, this.heBo, this.heBc]; for (let i = 0; i < 7; i++) { S[i].x = c[o + i * 2]; S[i].v = c[o + i * 2 + 1]; }
+      this.heSw = c[o + 14]; this.heSpan = c[o + 15]; for (let s = 0; s < 2; s++) { const k = o + 16 + s * 5; this.heHr[s] = c[k] ? [c[k + 1], c[k + 2], c[k + 3], c[k + 4]] : null; } } };
+  private heldLayerAsk(g: number, w: number, dt: number) {
+    const H = this.heldPose ?? this.heLast, a = f64(), o = POSE_BENCH.args, SP = this.heldPose?.strip ?? null, F = this.handFix;
+    a[o] = w; a[o + 1] = dt; a[o + 2] = HOLD_PH[H.phase]; a[o + 3] = H.t; a[o + 4] = H.agitation; a[o + 5] = H.variant === 'gun' ? 1 : 0; a[o + 6] = this.heGv.x; a[o + 7] = H.bare ? 1 : 0; a[o + 8] = this.heldPose ? 1 : 0;
+    a[o + 9] = (H.kill ?? HOLD_SHOW.kill) ? 1 : 0; a[o + 10] = (H.beats ?? HOLD_SHOW.beats) ? 1 : 0; a[o + 11] = H.low ?? 0; a[o + 12] = H.haul ? 1 : 0; a[o + 13] = H.yank !== undefined ? 1 : 0; a[o + 14] = H.yank ?? 0; a[o + 15] = H.pull ?? 0;
+    a[o + 16] = H.shot !== undefined && H.shot >= 0 ? 1 : 0; a[o + 17] = H.shot ?? 0; a[o + 18] = H.armed ? 1 : 0; a[o + 19] = this.idleT; a[o + 20] = SP ? 1 : 0; a[o + 21] = SP ? SP.t : 0;
+    for (let i = 0; i < 4; i++) { a[o + 22 + i] = F[0][i]; a[o + 26 + i] = F[1][i]; }
+    colsToBench(CharacterAnimator.heldCols, this); this.handsAsk(() => POSE_BENCH.x!.layer_held_layer(g, this.pA.at, this.pB.at, this.rest.at)); colsFromBench(CharacterAnimator.heldCols, this);
+  }
+  private heldLayerOwn(w: number, dt: number) {
     const H = this.heldPose ?? this.heLast, K = HOLD; const pA = this.pA, pB = this.pB, nd = this.nodes, fk = this.fk, tt = this.idleT;
     const ph = H.phase, t = H.t, ag = clamp(H.agitation, 0, 1), G = K.gun, F = K.struggle, TAU = 2 * Math.PI;
     const gv = clamp(this.heGv.x, 0, 1);   // 0 = the arm at his throat ↔ 1 = the gun at his head (eased across a mid-hold change)
@@ -6470,10 +6537,36 @@ export class CharacterAnimator {
    *  on the point, the support hand on the handguard point off the trigger wrist as it got to (rigProps carbineGrip). The point is a WORLD point: in through
    *  posIn / bodyYawIn and the inverse of the chest twist still to come (untwist). Sets bigK and bigUnder. */
   private bigLayer(B: NonNullable<CharacterAnimator['bigTool']>, twY: number, twP: number) {
+    // (the way out that poses nothing, and the pose kept under the hammer, before either language is asked: the pose is made on the same frame both ways)
+    const stowing = B.end >= 0 && B.t >= B.end, us = stowing ? clamp((B.t - B.end) / Math.max(1e-3, B.stow), 0, 1) : 0, ham = B.kind === 'hammer';
+    if (!(B.t >= 0) || us >= 1) { this.bigUnder = false; this.bigK = 0; return; }
+    if (ham) this.bigBuf ??= this.poses.make(this.pA.numNodes);
+    const g = B.blows.length > BIG_BLOWS_MAX ? -1 : layerSlot(this.ch, this.pA, this.cast);   // (RUST.walk: rust/sim/src/layers.rs big_layer)
+    if (g < 0) this.bigLayerOwn(B, twY, twP);
+    else if (!LAYERS.both) this.bigLayerAsk(g, B, twY, twP);
+    else layerBoth('bigLayer', this.pA, this.fk, () => this.bigLayerAsk(g, B, twY, twP), () => this.bigLayerOwn(B, twY, twP), this.withHands(CharacterAnimator.bigCols), ham ? [this.pB, this.bigBuf!] : [this.pB]);
+  }
+  /** the big tool's columns: how far it is in the fist, whether the pose under the layer is kept, how much of the fist's place is the tool's on his back and
+   *  how far up the handle the fist holds it there */
+  private static readonly bigCols: LayerCols<CharacterAnimator> = { n: 4,
+    get(c, o) { c[o] = this.bigK; c[o + 1] = this.bigUnder ? 1 : 0; c[o + 2] = this.bigAtBack; c[o + 3] = this.bigGrab; },
+    put(c, o) { this.bigK = c[o]; this.bigUnder = c[o + 1] !== 0; this.bigAtBack = c[o + 2]; this.bigGrab = c[o + 3]; } };
+  private bigLayerAsk(g: number, B: NonNullable<CharacterAnimator['bigTool']>, twY: number, twP: number) {
+    const a = f64(), o = POSE_BENCH.args, ham = B.kind === 'hammer', F = this.handFix, gl = this.gazeLocal;
+    const p = Number.isFinite(B.at[0] + B.at[1] + B.at[2]) ? this.toModelP(B.at) : [0, 1, 0.8];
+    a[o] = ham ? 1 : 0; a[o + 1] = B.t; a[o + 2] = B.equip; a[o + 3] = B.stow; a[o + 4] = B.end; a[o + 5] = B.snug ? 1 : 0; a[o + 6] = B.windup; a[o + 7] = B.blows.length;
+    a[o + 11] = twY; a[o + 12] = twP; a[o + 13] = this.speed; a[o + 14] = this.bigClear;
+    for (let i = 0; i < 3; i++) { a[o + 8 + i] = p[i]; a[o + 36 + i] = gl[i]; } for (let i = 0; i < 4; i++) { a[o + 15 + i] = F[0][i]; a[o + 19 + i] = F[1][i]; }
+    // (the shotgun is drawn as the carbine it is: its support grip, its group's offset and its stock's rear end, as rigProps has them now)
+    if (ham) for (let i = 23; i < 36; i++) a[o + i] = 0;
+    else { const C = RIG.carbine, adj = C.adj?.off ?? [0, 0, 0], LG = carbineGrip(); for (let i = 0; i < 3; i++) { a[o + 23 + i] = LG.wrist[i]; a[o + 26 + i] = LG.fingers[i]; a[o + 29 + i] = LG.back[i]; a[o + 32 + i] = adj[i]; } a[o + 35] = C.stockTop.l0; }
+    for (let i = 0; i < B.blows.length; i++) a[o + LAYER_KEYS_AT + i] = B.blows[i];
+    colsToBench(CharacterAnimator.bigCols, this); this.handsAsk(() => POSE_BENCH.x!.layer_big_layer(g, this.pA.at, this.pB.at, ham ? this.bigBuf!.at : 0, this.rest.at)); colsFromBench(CharacterAnimator.bigCols, this);
+  }
+  private bigLayerOwn(B: NonNullable<CharacterAnimator['bigTool']>, twY: number, twP: number) {
     const M = BIGMOVE, pA = this.pA, pB = this.pB, nd = this.nodes, fk = this.fk, ham = B.kind === 'hammer';
     const t = B.t, stowing = B.end >= 0 && t >= B.end, us = stowing ? clamp((t - B.end) / Math.max(1e-3, B.stow), 0, 1) : 0;
-    this.bigUnder = false;
-    if (!(t >= 0) || us >= 1) { this.bigK = 0; return; }
+    this.bigUnder = false;   // (a tool not out, or put away, never comes here: bigLayer takes that way out)
     const e3 = (u: number) => { u = clamp(u, 0, 1); return u * u * (3 - 2 * u); };
     // ---- the beat as shares: the blow being wound up (wind, then its swing 0‥1), the one that has just landed (hit, falling off over the rebound), a shell's
     //      kick, and how far his feet are planted for it (held between two blows of one beat)
@@ -6593,6 +6686,30 @@ export class CharacterAnimator {
    *  and end on the live hand positions of the pose underneath, so the layer needs no cross-fade to get in or out (the arm weights only soften the elbow
    *  hand-over at each end). */
   private throwLayer(t: number) {
+    const g = layerSlot(this.ch, this.pA, this.cast);   // (RUST.walk: rust/sim/src/layers.rs throw_layer)
+    if (g < 0) { this.throwLayerOwn(t); return; }
+    // (the swing's tables in the module's order, layers.rs TH_*; one of a size the module does not take is posed here)
+    const T = this.thrLow >= 0 ? THR_LOW : THR, K1 = [T.chestYaw, T.pelvisYaw, T.pitch, T.roll, T.pelX, T.pelY, T.pelZ, T.clavUp, T.clavFwd, T.swivR, THR.swivL], K3 = [T.handR, T.fingR, T.backR, THR.handL, THR.fingL, THR.backL];
+    const fits = (k: readonly unknown[]) => k.length >= 2 && k.length <= THROW_KEYS_MAX;
+    if (!K1.every(fits) || !K3.every(fits)) this.throwLayerOwn(t);
+    else if (!LAYERS.both) this.throwLayerAsk(g, t, K1, K3);
+    else layerBoth('throwLayer', this.pA, this.fk, () => this.throwLayerAsk(g, t, K1, K3), () => this.throwLayerOwn(t), this.withHands(CharacterAnimator.throwCols), [this.pB]);
+  }
+  /** the throw's columns: how far a toss lets the other hand down (−1 = not read yet), and where the swing left each hand off its shoulder */
+  private static readonly throwCols: LayerCols<CharacterAnimator> = { n: 8,
+    get(c, o) { const L = this.thrLast; c[o] = this.thrHang; c[o + 1] = L ? 1 : 0; for (let i = 0; i < 3; i++) { c[o + 2 + i] = L ? L.r[i] : 0; c[o + 5 + i] = L ? L.l[i] : 0; } },
+    put(c, o) { this.thrHang = c[o]; this.thrLast = c[o + 1] ? { r: [c[o + 2], c[o + 3], c[o + 4]], l: [c[o + 5], c[o + 6], c[o + 7]] } : null; } };
+  /** the swing's tables as the module reads them (layers.rs ThrowTables): seventeen counts, then eleven tables of (time, value) keys and six of (time,
+   *  vector) keys, one after another */
+  private throwLayerAsk(g: number, t: number, K1: readonly Keys[], K3: readonly Keys3[]) {
+    const a = f64(), o = POSE_BENCH.args, F = this.handFix, cin = this.thrCarry; let q = o + LAYER_KEYS_AT + 17;
+    for (let i = 0; i < 11; i++) { a[o + LAYER_KEYS_AT + i] = K1[i].length; for (const k of K1[i]) { a[q] = k[0]; a[q + 1] = k[1]; q += 2; } }
+    for (let i = 0; i < 6; i++) { a[o + LAYER_KEYS_AT + 11 + i] = K3[i].length; for (const k of K3[i]) { a[q] = k[0]; a[q + 1] = k[1][0]; a[q + 2] = k[1][1]; a[q + 3] = k[1][2]; q += 4; } }
+    a[o] = t; a[o + 1] = this.thrLow; a[o + 2] = this.thrFar; a[o + 3] = this.thrOff ? 1 : 0; a[o + 4] = this.mvs.cf.x; a[o + 5] = this.mvs.dz.x; a[o + 6] = this.thrHit0; a[o + 7] = this.crouch; a[o + 8] = this.speed; a[o + 9] = cin ? 1 : 0;
+    for (let i = 0; i < 3; i++) { a[o + 10 + i] = cin ? cin.r[i] : 0; a[o + 13 + i] = cin ? cin.l[i] : 0; } for (let i = 0; i < 4; i++) { a[o + 16 + i] = F[0][i]; a[o + 20 + i] = F[1][i]; }
+    colsToBench(CharacterAnimator.throwCols, this); this.handsAsk(() => POSE_BENCH.x!.layer_throw_layer(g, this.pA.at, this.pB.at, this.rest.at)); colsFromBench(CharacterAnimator.throwCols, this);
+  }
+  private throwLayerOwn(t: number) {
     const pA = this.pA, pB = this.pB, nd = this.nodes, fk = this.fk, BY = THROW_BY;
     // which swing (throwItem): the underhand toss, or the overhand at its size — `full` = as authored, every number below untouched
     const low = this.thrLow >= 0, full = !low && this.thrFar >= 1, T = low ? THR_LOW : THR;
