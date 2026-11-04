@@ -22,7 +22,7 @@ const VV = (a: readonly (readonly number[])[]): Vec3[] => a.map(V);
 /** per loaded level (the runtime object): the FILE's own records as this stand loaded them — the boxes (index for index `level.boxes`: ids, groups and flags
  *  as written, which a runtime box does not carry), the doors, the lamps and the loose props (index for index `level.props`, with their ids) — and `left`: the NAMES of what this stand left out of the
  *  file (lived-in rooms or the dressing switched off: each such box's id and group, each such prop's id), so that a name written for them is known for one. What src/host/kitViewPlan.ts measures a way in from (src/host/kitView.ts) */
-export const levelFileOf = new WeakMap<object, { boxes: readonly BoxData[]; doors: readonly DoorData[]; lights: readonly LightData[]; props: readonly PropData[]; left: readonly string[] }>();
+export const levelFileOf = new WeakMap<object, { boxes: readonly BoxData[]; doors: readonly DoorData[]; lights: readonly LightData[]; props: readonly PropData[]; left: readonly string[]; /** the file's paints by name (the look asks what each is made of: scene/stuff.ts) */ materials: Readonly<Record<string, MaterialData>> }>();
 function clone<T>(v: T): T { if (Array.isArray(v)) return v.map(clone) as unknown as T; if (v && typeof v === 'object') { const o: any = {}; for (const k of Object.keys(v)) { const x = (v as any)[k]; if (x !== undefined) o[k] = clone(x); } return o; } return v; }
 
 /** The collision footprint the physics layer wants for a loose prop, fitted from its parts exactly as the generator's fitProp measured it: the bounding
@@ -143,7 +143,7 @@ export function loadLevel(data: LevelData, opts: { validate?: boolean; dressing?
   if (data.surfaces) Object.defineProperty(level, 'surfaces', { value: clone(data.surfaces), enumerable: false, writable: true, configurable: true });
   { const script = LEVEL_SCRIPTS[data.name]; if (script) withScript(level, script); }   // (a level that carries a script: scene/levelScripts.ts)
   levelNames.set(level, data.name); const inB = new Set(fileBoxes), inP = new Set(fileProps), left = [...new Set([...data.boxes.filter(b => !inB.has(b)).flatMap(b => b.group !== undefined ? [b.id, b.group] : [b.id]), ...data.props.filter(p => !inP.has(p)).map(p => p.id)])];
-  levelFileOf.set(level, { boxes: fileBoxes, doors: data.doors, lights: fileLights, props: fileProps, left });
+  levelFileOf.set(level, { boxes: fileBoxes, doors: data.doors, lights: fileLights, props: fileProps, left, materials: data.materials });
   return level;
 }
 /** one device record → its runtime def (id → name, floor / notes dropped like a door's, every vector copied, optional fields written iff present) */

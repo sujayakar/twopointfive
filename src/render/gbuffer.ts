@@ -18,6 +18,7 @@ import surfaceSrc from './shaders/surface.wgsl' with { type: 'text' };   // SURF
 import lookSrc from './shaders/look.wgsl' with { type: 'text' };         // THE LOOK PROTOTYPE (render/frame.ts lookConfig): fsBox's materials off real maps — in the module only on that page
 import { LOOK_NAMES, LOOK_N, LOOK_LAYERS, LOOK_ROUGH, lookLayer, lookMip } from './lookTex';
 import { GWOT_PALETTE, type GwotMat } from '../scene/gwotPalette';
+import { PAINT_STUFF, type PaintRows } from '../scene/stuff';
 
 /** which stuff each paint of the 2010s palette is drawn as under the try (shaders/surface.wgsl's classes, by number); a paint with no row draws plain */
 const SURF_OF: Readonly<Partial<Record<GwotMat, number>>> = {
@@ -36,12 +37,14 @@ function classWgsl(name: string, of: Readonly<Partial<Record<GwotMat, number>>>)
   return `fn ${name}(a: vec3f) -> u32 {\n${exact.join('\n')}\n${dark.join('\n')}\n  return 0u;\n}\n`;
 }
 function surfaceWgsl(): string { return classWgsl('surfClass', SURF_OF) + surfaceSrc; }
-/** THE LOOK PROTOTYPE's classes: surface.wgsl's eight and three of its own (look.wgsl LOOK_CLOTH 9, LOOK_METAL 10, LOOK_PAINT 11) */
-export const LOOK_OF: Readonly<Partial<Record<GwotMat, number>>> = { ...SURF_OF,
-  sack: 9, sandbag: 9, hesco: 9, canvas: 9, tarpBlue: 9, blanketGrey: 9, blanketBrown: 9, rugRed: 9, rugNavy: 9, rugCream: 9, rugOchre: 9, rugGreen: 9, rugMadder: 9, coyote: 9,
-  rust: 10, iron: 10,
-  paintBlue: 11, paintGreen: 11, paintRust: 11, drumBlue: 11, drumRed: 11, genYellow: 11, truckWhite: 11, truckTan: 11, truckRed: 11, olive: 11,
-};
+/** the look's class number of a stuff (look.wgsl: a layer of lookTex.ts LOOK_NAMES and one; 0 = drawn plain, which 'plain' and 'waits' both are) */
+export const lookClassOf = (stuff: string | undefined): number => stuff === undefined ? 0 : (LOOK_NAMES as readonly string[]).indexOf(stuff) + 1;
+/** WHAT A PAINT NAME IS DRAWN AS: scene/stuff.ts PAINT_STUFF as the look's class numbers (the audit of a level reads this to tell a paint that is meant from
+ *  one that got a material by the chance of its colour) */
+export const LOOK_BY_NAME: Readonly<Record<string, number>> = Object.fromEntries(Object.entries(PAINT_STUFF).map(([name, stuff]) => [name, lookClassOf(stuff)]));
+/** THE LOOK PROTOTYPE's classes of the palette's rows: surface.wgsl's eight and three of its own (look.wgsl LOOK_CLOTH 9, LOOK_METAL 10, LOOK_PAINT 11), read
+ *  off the table of names in its order (the shader's text below is written in this order, and a darkened paint is the first row it fits) */
+export const LOOK_OF: Readonly<Partial<Record<GwotMat, number>>> = Object.fromEntries(Object.entries(LOOK_BY_NAME).filter(([name, cls]) => cls > 0 && name in GWOT_PALETTE));
 
 /** WHAT A PAINT IS DRAWN AS (look.wgsl's classes; 0 = plain), by the rule lookClass writes out for the shader and with its numbers: the palette's own row first (a
  *  stand-in is that row), then a classed paint darkened in one piece (a worn patch is its ground × 0.7). The engine asks it of each box's AUTHORED paint and the
@@ -51,7 +54,7 @@ export const LOOK_OF: Readonly<Partial<Record<GwotMat, number>>> = { ...SURF_OF,
 export function lookStuff(a: Readonly<ArrayLike<number>>): number {
   const q = (v: number) => Math.round(v * 8192);
   const r = q(a[0]), g = q(a[1]), b = q(a[2]), keyed = r >= 0 && r < 16384 && g >= 0 && g < 16384 && b >= 0 && b < 16384, key = r + 16384 * (g + 16384 * b);
-  if (keyed) { const hit = STUFF.get(key); if (hit !== undefined) return hit; }
+  if (keyed) { const hit = STUFF.get(key); if (hit !== undefined) return hit; const named = NAMED.get(key); if (named !== undefined) return named; }   // (a paint the level's rows name is what its name says, before any colour is weighed)
   const P = GWOT_PALETTE as Readonly<Record<string, readonly number[]>>, of = LOOK_OF as Readonly<Record<string, number>>, e = LOOK_MATCH.near;
   const near = (p: readonly number[], k: number) => Math.abs(a[0] - k * p[0]) < e && Math.abs(a[1] - k * p[1]) < e && Math.abs(a[2] - k * p[2]) < e;
   let cls = -1;
@@ -63,6 +66,22 @@ export function lookStuff(a: Readonly<ArrayLike<number>>): number {
 }
 /** … what it said of a colour before (a level has a few dozen paints; a colour is asked about for every box that moves, every frame) */
 const STUFF = new Map<number, number>();
+/** A LEVEL'S PAINTS BY NAME (scene/stuff.ts; main.ts hands the rows of the level file it stood up, scene/levelLoad.ts levelFileOf): each row's colour is drawn
+ *  as what the row says it is made of, or as what the table says of its name. A box is written into a level file with its row's colour exactly, and a loose
+ *  prop's part and a door's leaf wear a row's colour too, so the row is found by the colour and no box carries a word of its own. Where two rows of one file
+ *  have one colour the first is taken, as the file's writer takes it (levelLoad.ts levelToData). A row with no stuff of its own and no row in the table is
+ *  left to the colour rule, as is every paint written as numbers. `rows` null = no names: the colour rule alone, as the look began. Returns how many rows it took. */
+const NAMED = new Map<number, number>();
+export function lookNames(rows: PaintRows | null | undefined): number {
+  NAMED.clear(); STUFF.clear();
+  const q = (v: number) => Math.round(v * 8192);
+  for (const [name, row] of Object.entries(rows ?? {})) {
+    const stuff = row.stuff ?? PAINT_STUFF[name]; if (stuff === undefined) continue;
+    const a = row.albedo, r = q(a[0]), g = q(a[1]), b = q(a[2]); if (!(r >= 0 && r < 16384 && g >= 0 && g < 16384 && b >= 0 && b < 16384)) continue;
+    const key = r + 16384 * (g + 16384 * b); if (!NAMED.has(key)) NAMED.set(key, lookClassOf(stuff));
+  }
+  return NAMED.size;
+}
 /** the cloth layer (lookTex.ts LOOK_NAMES): the one the men's cloth reads too */
 /** THE LOOK'S WORD FOR A BOX (scene/boxes.ts BoxWorld.stuffOf; common.wgsl boxLook): what it is made of (lookStuff, 4 bits), whether it MOVES (16: a box past the
  *  level's statics, rebuilt every frame, which carries its map with it), and a number of its own, 0‥90 (× 32), that shifts its map so two crates are not one crate
