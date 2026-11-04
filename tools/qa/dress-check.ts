@@ -4,10 +4,6 @@
 //   bun run tools/qa/dress-check.ts --runs pass-four:1    other runs (tools/qa/playthrough.ts's scenarios)
 //   bun run tools/qa/dress-check.ts --each                … and each row down alone (which row it is, when the first is red)
 //   bun run tools/qa/dress-check.ts --rows air,moths      only these rows down
-//   bun run tools/qa/dress-check.ts --weather downpour    the runs played in a picked weather (game/weatherKinds.ts): the rows that only work in one (rain, wetGround,
-//                                                         wind) do nothing on a dry night, so a pass there says nothing of them. A line names how many statics
-//                                                         the picture's step held wet (wetGround.ts) with every row up; if that is none on every run the weather
-//                                                         did nothing and the check is RED (a level built for snow refuses a picked rain: pass-four reads 0)
 //   DRESS_BREAK=1 bun run tools/qa/dress-check.ts         THE RED PATH: a gameplay step (the doors) is put down with the rows, and the check must fail
 // Exit 0 = every set is the same game · 1 = a run differs, or left nothing. Under DRESS_BREAK=1 it is the other way about, as every <NAME>_BREAK is: 1 = the
 // red path is red (every pair played and parted), 0 = it is NOT (the check is blind, or a run left nothing).
@@ -26,25 +22,23 @@ if (args[0] === '--run') {
   const { rawBits, rawBitsParts, RAW_BITS_SEED } = await import(`${ROOT}/src/game/digest.ts`);
   const D: any = await import(`${ROOT}/src/game/dress.ts`);
   for (const k of down) { if (!(k in D.DRESS)) { console.error(`no dressing row '${k}'`); process.exit(2); } D.DRESS[k] = false; }
-  let h: number = RAW_BITS_SEED, ticks = 0, held = 0, wet = 0; const WX = process.env.DRESS_WEATHER, ALL = Object.keys(D.DRESS), TRACE = process.env.DRESS_TRACE, trace: Record<string, number>[] = [];
+  let h: number = RAW_BITS_SEED, ticks = 0, held = 0; const ALL = Object.keys(D.DRESS), TRACE = process.env.DRESS_TRACE, trace: Record<string, number>[] = [];
   const update = Game.prototype.update;
   Game.prototype.update = function (this: any, ...a: unknown[]) {
     if (BREAK && down.length) this.doors.update = () => {};   // (the red path: a step that IS gameplay goes down with the rows)
     if (ALL.every(k => D.DRESS[k] === !down.includes(k))) held++;   // (the ticks the table stood as this run was asked to play it: the named rows down, every other up)
-    const r = (update as (...x: unknown[]) => unknown).apply(this, a); h = rawBits(this as never, h); ticks++; if (WX) wet = Math.max(wet, this.wetGround.wet);   // (what the picture's step holds wet: wetGround.ts)
-    if (TRACE) trace.push(rawBitsParts(this as never)); return r;
+    const r = (update as (...x: unknown[]) => unknown).apply(this, a); h = rawBits(this as never, h); ticks++; if (TRACE) trace.push(rawBitsParts(this as never)); return r;
   } as typeof update;
   const t0 = performance.now();
-  const r = await PT.play(scn, Number(seed), 300, false, WX ? { WEATHER: { kind: WX } } : {});
+  const r = await PT.play(scn, Number(seed), 300, false, {});
   if (TRACE) (await import('node:fs')).writeFileSync(TRACE, JSON.stringify(trace));
-  console.log('DRESS-RUN ' + JSON.stringify({ run: args[1], down: down.length, ticks, held, wet, profile: process.env.TPS_PROFILE, cpu: process.env.TPS_CPUSENSE, end: String(r.end), digest: String(r.digest), bits: h.toString(36), secs: Math.round((performance.now() - t0) / 100) / 10 }));
+  console.log('DRESS-RUN ' + JSON.stringify({ run: args[1], down: down.length, ticks, held, profile: process.env.TPS_PROFILE, cpu: process.env.TPS_CPUSENSE, end: String(r.end), digest: String(r.digest), bits: h.toString(36), secs: Math.round((performance.now() - t0) / 100) / 10 }));
   process.exit(0);
 }
 
-interface Run { run: string; down: number; ticks: number; held: number; wet: number; profile: string; cpu: string; end: string; digest: string; bits: string; secs: number }
-const WEATHER = flag('--weather');
+interface Run { run: string; down: number; ticks: number; held: number; profile: string; cpu: string; end: string; digest: string; bits: string; secs: number }
 const one = (run: string, down: string[]): Promise<Run | string> => new Promise(done => {
-  const env = { ...process.env, TPS_PROFILE: process.env.TPS_PROFILE ?? 'shipped', TPS_CPUSENSE: process.env.TPS_CPUSENSE ?? '1', PT_DIGEST: '1', ...(WEATHER ? { DRESS_WEATHER: WEATHER } : {}) } as Record<string, string>;
+  const env = { ...process.env, TPS_PROFILE: process.env.TPS_PROFILE ?? 'shipped', TPS_CPUSENSE: process.env.TPS_CPUSENSE ?? '1', PT_DIGEST: '1' } as Record<string, string>;
   const p = spawn('bun', ['run', 'tools/qa/dress-check.ts', '--run', run, down.join(',')], { cwd: ROOT, env }); let out = '', err = '';
   p.stdout.on('data', (d: unknown) => { out += d; }); p.stderr.on('data', (d: unknown) => { err += d; });
   p.on('close', code => { const l = out.split('\n').find(x => x.startsWith('DRESS-RUN ')); done(l ? JSON.parse(l.slice(10)) as Run : `left nothing (exit ${code}): ${err.trim().split('\n').slice(-3).join(' / ').slice(0, 300)}`); });
@@ -81,8 +75,6 @@ sets.forEach((s, si) => {
 });
 console.log(lines.map(l => `- ${l}`).join('\n'));
 { const a = base.find(x => typeof x !== 'string') as Run | undefined; if (a) console.log(`  stand: ${a.profile}, the senses ${a.cpu === '1' ? 'on the CPU' : 'off the renderer\'s stand-in'}`); }
-if (WEATHER) { const wet = base.map(a => typeof a === 'string' ? 0 : a.wet), blind = wet.every(n => n === 0); if (blind) fails++;
-  console.log(`  in a picked ${WEATHER}, statics the picture's step held wet with every row up · ${runs.map((r, i) => `${r} ${wet[i]}`).join(' · ')}${blind ? ' — NONE ON ANY RUN: the weather did nothing, and the pairs say nothing of the rows that work in one' : ''}`); }
 console.log(`  ${ticks} ticks a set · ${runs.map((r, i) => { const a = base[i]; return typeof a === 'string' ? `${r} —` : `${r} ${a.bits}`; }).join(' · ')}`);
 if (BREAK) { const red = parted === sets.length; console.log(red ? '\nthe red path is red, as it must be: every pair played and parted' : '\nTHE RED PATH IS NOT RED: a pair did not part with a gameplay step down, or a run left nothing (above)'); process.exit(red ? 1 : 0); }
 console.log(fails ? `\n${fails} FAILED` : '\nall pass');

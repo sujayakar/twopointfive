@@ -4,6 +4,7 @@ import { Vec3, Quat, quat } from '../math/vec';
 import { WORLD } from './world';
 import { makeBuffer, writeWordsIfChanged } from '../gpu/device';
 import { CutPlane, CutGlass, cutConfig, cutClip, CUT_CLIP, packCut, CUT_STRIDE, BOX_CUT_BIT, MAX_CUT_PLANES } from './cut';
+import type { BoxShape } from './shapes';
 import { AIR_ROWS } from './airGrid';
 import { roundConfig, packRoundRows, ROUND_CORE_W } from './round';
 import { MarkingDef, MARKING_TEXEL, MAX_MARKS_PER_BOX, MARK_TABLE_ROWS, MARK_SLOT_SHIFT, MARK_SLOT_MAX, markStats, markRecordRows, packMarking, secondaryAlbedo, AREA_LIT_MARKS } from './markings';
@@ -34,9 +35,6 @@ export const BoxFlag = {
   // breaks it and a line of fire passes one while WINBARS.on is up (game/winbars.ts; collision.ts shotBlocked's `firePass`); read by nothing else.
   Bar: 1 << 19,
 } as const;
-/** A DRAWN-ONLY SHEET (a stain, ruts, a painted line, a poster: something the picture shows that no ray and no body meets) is a box whose flags under this
- *  mask are NoShadow alone; a SOLID thing is one with none of them */
-export const SHEET_MASK = BoxFlag.NoPrimary | BoxFlag.NoShadow | BoxFlag.Glass | BoxFlag.Dynamic;
 /** the most panes SceneInfo.glass carries to the GPU (nearest to the camera's look-at first when a level has more) */
 export const MAX_GLASS = 32;
 /** the GPU flag bit of a ROUND box (common.wgsl GEO_ROUND; scene/round.ts). Bit 3 of the geo flags word, which on the CPU is Dynamic: no shader reads that one, and
@@ -107,6 +105,17 @@ export interface Box {
   /** what round.ts roundLevel made this box FROM (the kit's slab as the level file has it): its centre, half extents, flags and marks, put back when the level is
    *  stood up with the switch down, and what the level's fingerprint is taken over */
   was?: { c: Vec3; h: Vec3; yaw: number; flags: number; marks?: MarkingDef[] };
+  /** A SHAPE (scene/shapes.ts — read its head): how this box of a level stands when shapes are on, as its level file says it (BoxData.shape) or as the kit
+   *  that made it said it. Authored data: nothing but shapes.ts shapeLevel reads it, as the level is stood up. */
+  shape?: BoxShape;
+  /** shapes.ts shapeLevel has stood this box as its shape (its record, if its shape has a form, is the shape's and no break's): taken back when the level is
+   *  stood up with the switch down */
+  shaped?: boolean;
+  /** this static is a PIECE of a shape (BoxShape.with): added after the level's own boxes by shapeLevel, taken away by it; never in a level file's list.
+   *  TRIM: drawn and nothing else (it stands NoShadow, so no ray, eye or body meets it); `of` = the number of the box that says it, which it follows out of
+   *  the picture (shapes.ts withPieces) */
+  piece?: boolean;
+  of?: number;
   /** DRESSING (CPU only): drawn and lit like any box, and PICTURE ONLY for the CPU's world ray, exactly as a look piece is (BoxWorld.raycast) — a cursor, an
    *  order, a laser and a tripwire pass it. The debris pool's chunks carry it while the pool is dressing (game/debris.ts, DEBRIS.dress). */
   dress?: boolean;
@@ -128,7 +137,7 @@ const lookKeyed = (b: Box): boolean => b.dress === true || (b.mkey !== undefined
  *  (tools/qa/boxshape-check.ts counts them). */
 export function boxOf(c: Vec3, h: Vec3, yaw: number, albedo: Vec3, emissive: Vec3, flags: number, owner: number, rot?: Quat, name?: string): Box {
   return { yaw, albedo, emissive, flags, owner, cutHeight: 1e6, c, h, rot, name, mkey: undefined, dc: undefined, dh: undefined, rough: undefined, metal: undefined, aniso: undefined,
-    marks: undefined, markGain: undefined, fogEmit: undefined, fogMark: undefined, wetK: undefined, cut: undefined, cutCore: undefined, cutGlass: undefined, round: undefined, was: undefined, dress: undefined,
+    marks: undefined, markGain: undefined, fogEmit: undefined, fogMark: undefined, wetK: undefined, cut: undefined, cutCore: undefined, cutGlass: undefined, round: undefined, was: undefined, shape: undefined, shaped: undefined, piece: undefined, of: undefined, dress: undefined,
   } satisfies { [K in keyof Required<Box>]: Box[K] };   // (a field added to Box and not here does not typecheck)
 }
 export function makeBox(p: Partial<Box> & { c: Vec3; h: Vec3 }): Box {
@@ -141,7 +150,7 @@ export function makeBox(p: Partial<Box> & { c: Vec3; h: Vec3 }): Box {
 export function copyBox(b: Box): Box {
   return { yaw: b.yaw, albedo: b.albedo, emissive: b.emissive, flags: b.flags, owner: b.owner, cutHeight: b.cutHeight, c: b.c, h: b.h, rot: b.rot, name: b.name, mkey: b.mkey, dc: b.dc, dh: b.dh,
     rough: b.rough, metal: b.metal, aniso: b.aniso, marks: b.marks, markGain: b.markGain, fogEmit: b.fogEmit, fogMark: b.fogMark, wetK: b.wetK, cut: b.cut, cutCore: b.cutCore, cutGlass: b.cutGlass,
-    round: b.round, was: b.was, dress: b.dress,
+    round: b.round, was: b.was, shape: b.shape, shaped: b.shaped, piece: b.piece, of: b.of, dress: b.dress,
   } satisfies { [K in keyof Required<Box>]: Box[K] };
 }
 
@@ -931,9 +940,14 @@ export class BoxWorld {
   }
 }
 
+/** is this box's record a SHAPE's (scene/shapes.ts: the box says it, and stands as it) and no break's? */
+export const shapeCut = (b: Box): boolean => b.shaped === true && b.cut !== undefined;
+/** IS THIS BOX'S CUT RECORD MET by the game's rays and segments? Under the cut-pieces switch every record is (scene/cut.ts); a shape's always: a shape is
+ *  the simulation's, and a picture setting may not move it (as a round thing, scene/round.ts). Ask it only of a box that has a record. */
+export const cutMet = (b: Box): boolean => (cutConfig.on || b.shaped === true) && b.cut!.length > 0;
 export function rayBox(ro: Vec3, rd: Vec3, b: Box, tmax: number): { t: number; n: Vec3 } | null {
   if (b.round === true) return rayBoxRound(ro, rd, b, tmax);   // ROUND THINGS (scene/round.ts): the cylinder (below)
-  if (b.cut !== undefined && cutConfig.on && b.cut.length > 0) return rayBoxCut(ro, rd, b, tmax);   // CUT BOXES: the cut solid (below) — every other box takes the lines it always took
+  if (b.cut !== undefined && cutMet(b)) return rayBoxCut(ro, rd, b, tmax);   // CUT BOXES: the cut solid (below) — every other box takes the lines it always took
   if (b.rot) return rayBoxRot(ro, rd, b, tmax);
   // (the CPU-frame lane: the slab loop written out over the three axes and scalars — the same statements in the same order as the array form it replaces, so t and n are the same bits; the two
   //  scratch arrays a test allocated are gone. rayBox is the game's hottest CPU function: ~1000 calls a frame from the raycasts alone.)

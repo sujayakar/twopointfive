@@ -13,7 +13,6 @@ export const DRESS = {
   moths: true,      // the moths under the lamps (moths.ts): their orbits and their specks
   snow: true,       // lying snow as a surface, the prints and marks pressed into it, a blast's dig (snowField / snowTracks / snowMarks / snowBlast)
   rain: true,       // the near drops, the drips and the stand-back disc (rainFx.ts)
-  wetGround: true,  // the open ground a picked rain wets, as the picture draws it: the slabs and the finishes laid on them, and the sheets on those, darker and glossy for the renderer alone (wetGround.ts; the lot's own soak writes an albedo and is the weather's). The row down, the step DRIES what it wetted
   fires: true,      // the open fires as the picture draws them (fire.ts fireDraws; the lamp's flicker itself is a light, and gameplay)
   wake: true,       // men wading through smoke push the solver's smoke (the picture's smoke; the CPU's own smoke is not pushed)
   men: true,        // the men handed to the renderer: skin instances, materials, shadow proxies (game.ts drawMen; what each WEARS is still dealt: his kit is placed off it)
