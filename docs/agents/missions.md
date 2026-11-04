@@ -1564,7 +1564,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   wears the look's paint in both files): the detained container, the impounded vehicle (the kit's pickup, tan; the library has no saloon), two day
   tanks (the kit's drum), and new lots outside, all free standing and a leaf's length from every door: drums by the apron's pallet, at the container's
   blind end and at the lane's north end, tyres on the verge's far edge and by the lane, a kerb along the lot's south edge (`kerb`, new in the kit with
-  this work), a motorbike two metres off the wall. ROUND THINGS: 0 to 17 by the round rule's finder (`0 17`, lived rooms off then on, in
+  this work), a motorbike at the lot's edge. ROUND THINGS: 0 to 17 by the round rule's finder (`0 17`, lived rooms off then on, in
   `tools/qa/fixtures/round/warehouse.txt` and `warehouse-gwot.txt`). KEPT AS THE LEVEL'S OWN BOXES: the generator set (the kit's is 1.5 × 0.75 against
   1.2 × 0.65: with it `lived-stack-check` deals the fourth man of a stack on `p_s` from inside the loose drum's place, and turned across the room it
   takes the rack's floor), the forklift and the furniture. BOXES: the plain file is 931 against `lived-check`'s warning at about 900 (835 before). THE
@@ -1573,16 +1573,25 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   stencil ochre drew flat (110 decals); sack loads are `sandbag`, and one left out on the apron is under a tarp; three parking bays are painted by the
   staff door. No material, by the level audit: 8.8 % of the picture to 5.5 %; what is left is door leaves (painted at run time), cardboard, paper,
   plastic and rubber (plain by their rows). THE KIT PICTURE's hidden boom is named by its own group (`lived.boom`), not by four typed box numbers a
-  lived thing laid before them would move. THE PICKUP'S LAMPS: the kit's pickup has the head and tail lamps `carlamps.ts` finds, so with lived rooms
-  in (the shipped stand) the warehouse has four vehicle lamps for targets, none glowing; `carlamps-check`'s table has the rows (`[0, 0, 0]` or `[2, 2,
-  0]`: none where lived rooms are left out), and its line 1 does not count such a level among the files with vehicles on a stand that leaves lived
-  rooms out. BASE: the twin's own part moved, so `tools/qa/fixtures/level-base/warehouse-gwot.txt` holds its blob. MEASURED (headless): frozen stand
-  and shipped with `TPS_LIVED=0`, the play-through digests of all 21 missions on seeds 1 and 2 keep their word (42 of 42 each, against the step
-  before); shipped, the warehouse's two runs move their digest and end as before at the same second (taken at 210.2 s with 1 of 4 up, taken at 206.5 s
-  with 2 of 4 up), and every other run keeps its digest. `carlamps-check` on both stands (line 1 green; line 8 red as on the step before),
-  `lived-check`, `lived-stack-check` (no stack moves against the step before), `level-needs --run` on both stands, `export.ts --check`. The
-  fingerprint MOVED on the shipped stand: checkpoints, recordings and kept replays of the warehouse made before this step are refused. Stills on the
-  software adapter only; never seen on a GPU, never played by a person.
+  lived thing laid before them would move. THE IMPOUND BAY STANDS OUT AT THE LOT'S EDGE, its car's side 1.2 m off the south wall (follow-up, 11-04): a
+  defender's way round the building to the offices' other doors runs along that wall's foot (z 24.8) and is 1.3 m inside its 46 m limit with nothing
+  on it; the bay on that line, where the level's older car stood too, sent him a metre further round. `wayround-check warehouse-four` (shipped, seeds
+  1 to 3, 6336 asked): 58 lost and 26 squeezed with the level's older lived rooms, 54 and 28 as first dressed, 54 and 0 now, and its bar says `54 0`;
+  way for way, no way is lost that the older rooms did not lose. STILL OWED, OLDER THAN THE DRESSING AND NOT MENDED HERE (it is a defender's
+  surroundings: squad sense's call): all 54 are a floor-squad man asked from the hall's north door to go round to the dock by its north door. The
+  examining table (27.4, 12.9) lies on the one cheap line to the standing places outside that door, the line that skirts the door's own lane, and the
+  search prices him 38 m round the racks where the bare hall gives 7.4. Tried headless: the table against the north wall at (26.9, 11.65), west of the
+  corner man's mark, and all 4463 ways stand with `lived-check` green. The furniture rule's wall charges gain 6 asks with the bay out (1317 of 1376
+  accepted). THE PICKUP'S LAMPS: the kit's pickup has the head and tail lamps `carlamps.ts` finds, so with lived rooms in (the shipped stand) the
+  warehouse has four vehicle lamps for targets, none glowing; `carlamps-check`'s table has the rows (`[0, 0, 0]` or `[2, 2, 0]`: none where lived
+  rooms are left out), and its line 1 does not count such a level among the files with vehicles on a stand that leaves lived rooms out. BASE: the
+  twin's own part moved, so `tools/qa/fixtures/level-base/warehouse-gwot.txt` holds its blob. MEASURED (headless): frozen stand and shipped with
+  `TPS_LIVED=0`, the play-through digests of all 21 missions on seeds 1 and 2 keep their word (42 of 42 each, against the step before); shipped, the
+  warehouse's two runs move their digest and end as before at the same second (taken at 210.2 s with 1 of 4 up, taken at 206.5 s with 2 of 4 up), and
+  every other run keeps its digest. `carlamps-check` on both stands (line 1 green; line 8 red as on the step before), `lived-check`,
+  `lived-stack-check` (no stack moves against the step before), `level-needs --run` on both stands, `export.ts --check`. The fingerprint MOVED on the
+  shipped stand: checkpoints, recordings and kept replays of the warehouse made before this step are refused. Stills on the software adapter only;
+  never seen on a GPU, never played by a person.
 - **The barracks' defenders are placed by hand** (`tools/levels/barracks.ts`: the hand placement merged over the build's four out-hung doors, both files the
   generator's; no switch: the level's data, and the page opens on it under `SAMESTART`). Placed: a GALLERY POST of two in the north gallery's east bay (`ngal_e`,
   a room in the data, no new geometry) — the arch man (31.0, 8.9) and the door man (32.6, 9.4), BOTH IN THE EAST OPENING — dark, looking across the yard at the lit south gallery; day room
