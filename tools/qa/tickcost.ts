@@ -12,6 +12,7 @@
 //   bun run tools/qa/tickcost.ts --each                       the box list made again after EVERY update, as a networked game's tick does (the play-through's own cadence is every 4th:
 //                                                             another run, so its bits are compared with another --each run's only)
 //   bun run tools/qa/tickcost.ts --list                       … and made by BoxWorld.relist() (the half the game reads) instead of upload(): the same run to the bit as without it
+//   TPS_RUST<ROW>=0|1                                         which systems tick in the Rust module (src/sim/sim.ts RUST; the shipped stand has RUST_ON's on): the first line says which were
 //   TICKCOST_BREAK=1                                          the red path: a run is played with the last bit of one float flipped once, after the warm-up; --compare must then FAIL
 // EXIT 0 = every run left its ticks (and, under --compare, every run's bits agree) · 1 = a run left none / bits differ / a run is in one file only · 2 = unknown flag
 import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
@@ -19,7 +20,7 @@ import { resolve } from 'node:path';
 
 const RUNS = ['compound-four:1', 'warehouse-four:1', 'pass-four:1', 'hostage-rescue:1', 'block-squads:1'];
 const WARM = 120;   // the first two seconds of a run are left out of the times (the JIT warming up, the first paths)
-interface Row { scn: string; seed: number; ticks: number; end: string; digest: string; bits: string; engine: string
+interface Row { scn: string; seed: number; ticks: number; end: string; digest: string; bits: string; engine: string; /** the rows of src/sim/sim.ts RUST that were on while it ticked (the shipped stand has some on by default: two files whose rows differ timed different work for the same bits) */ rust?: string
   update: Stat; step: Stat; over4: number; over8: number; over16: number }
 interface Stat { mean: number; p50: number; p95: number; p99: number; max: number; sum: number }
 const stat = (a: number[]): Stat => { const s = [...a].sort((x, y) => x - y), q = (p: number) => s.length ? s[Math.min(s.length - 1, Math.floor(p * s.length))] : 0;
@@ -32,6 +33,7 @@ async function one(scn: string, seed: number): Promise<Row> {
   const { Game } = await import('../../src/game/game.ts');
   const PT = await import('./playthrough.ts');
   const { rawBits, RAW_BITS_SEED } = await import('../../src/game/digest.ts');
+  const { RUST } = await import('../../src/sim/sim.ts'); let rust = '';
   const BREAK = process.env.TICKCOST_BREAK === '1';
   const LIST = process.env.TICKCOST_LIST === '1', EACH = process.env.TICKCOST_EACH === '1'; let packNow: () => void = () => { };
   let h: number = RAW_BITS_SEED, ticks = 0;
@@ -42,6 +44,7 @@ async function one(scn: string, seed: number): Promise<Row> {
     if (world && wrapped !== world) { wrapped = world; const up = world.upload;
       const timed = function (this: unknown, ...x: unknown[]) { const t0 = performance.now(); const r = LIST ? (this as { relist(): void }).relist() : up.apply(this, x); upMs += performance.now() - t0; return r; };
       world.upload = EACH ? function () { /* the harness's own pack, every 4th tick: this run packs after every update instead (below) */ } : timed; packNow = () => timed.call(world); }
+    if (ticks === WARM) rust = Object.keys(RUST).filter(k => (RUST as Record<string, boolean>)[k]).join(' ') || 'none';   // (read while it runs: the play-through puts every knob table back at its end)
     if (ticks > WARM) { stp.push(upMs); } upMs = 0;   // (the upload that followed the LAST update: the harness packs the box list after the game's step)
     const t0 = performance.now(); const r = (update as (...x: unknown[]) => unknown).apply(this, a); const ms = performance.now() - t0;
     if (BREAK && ticks === WARM) { const f = new Float64Array([this.player.char.pos[0]]); new BigUint64Array(f.buffer)[0] ^= 1n; this.player.char.pos[0] = f[0]; }   // (the red path: one float, its last bit)
@@ -49,7 +52,7 @@ async function one(scn: string, seed: number): Promise<Row> {
     h = rawBits(this as never, h); if (++ticks > WARM) upd.push(ms); return r; } as typeof update;
   const r = await (PT as any).play(scn, seed, 300, false, {}) as any;
   const u = stat(upd), s = stat(stp);
-  return { scn, seed, ticks, end: String(r.end), digest: String(r.digest), bits: h.toString(36), engine: engineName(), update: u, step: s,
+  return { scn, seed, ticks, end: String(r.end), digest: String(r.digest), bits: h.toString(36), engine: engineName(), rust, update: u, step: s,
     over4: upd.filter(x => x > 4).length, over8: upd.filter(x => x > 8).length, over16: upd.filter(x => x > 16.6).length };
 }
 
@@ -71,7 +74,8 @@ if (argv[0] === '--one') {
   console.log(MARK + JSON.stringify(row)); process.exit(0);
 } else if (argv[0] === '--compare') {
   const A = JSON.parse(readFileSync(argv[1], 'utf8')), B = JSON.parse(readFileSync(argv[2], 'utf8')); let bad = false;
-  console.log(`tick cost · before ${A.commit} (${A.engine}) → after ${B.commit} (${B.engine}) · ms a tick, Game.update alone, then the box list's pack (a tick's share: ${A.pack ?? 'every 4th tick, whole'} → ${B.pack ?? 'every 4th tick, whole'})`);
+  const inRust = (F: { rows: Row[] }) => [...new Set(F.rows.map(r => r.rust ?? 'not recorded'))].join(' | ');
+  console.log(`tick cost · before ${A.commit} (${A.engine}; in Rust: ${inRust(A)}) → after ${B.commit} (${B.engine}; in Rust: ${inRust(B)}) · ms a tick, Game.update alone, then the box list's pack (a tick's share: ${A.pack ?? 'every 4th tick, whole'} → ${B.pack ?? 'every 4th tick, whole'})`);
   const pct = (a: number, b: number) => `${b <= a ? '−' : '+'}${Math.abs(100 * (b - a) / (a || 1)).toFixed(0)} %`;
   const lines: string[][] = [['run', 'ticks', 'mean', '', 'p95', '', 'p99', '', 'pack mean', '', 'same run']];
   let ta = 0, tb = 0, sa = 0, sb = 0, n = 0;
@@ -107,7 +111,7 @@ if (argv[0] === '--one') {
     if (best) { rows.push(best); console.error(`  ${run} · ${best.ticks} ticks · update ${f2(best.update.mean)} ms · pack ${f2(best.step.mean)} ms · ${best.bits}`); } }
   const git = (a: string[]) => { try { return new TextDecoder().decode(Bun.spawnSync(['git', ...a], { cwd: resolve(import.meta.dir, '../..') }).stdout).trim(); } catch { return ''; } };
   const out = { tool: 'tickcost', commit: git(['rev-parse', '--short=8', 'HEAD']), dirty: git(['status', '--porcelain', '--', 'src']) !== '', when: new Date().toISOString(), engine: rows[0]?.engine ?? '', rounds, warm: WARM, pack: `${argv.includes('--each') ? 'after every tick' : 'every 4th tick'}, ${argv.includes('--list') ? 'the list alone' : 'whole'}`, rows };
-  console.log(`tick cost · ${out.commit}${out.dirty ? ' + uncommitted src' : ''} · ${out.engine} · rounds ${rounds} (the quietest kept) · first ${WARM} ticks of a run left out · ms`);
+  console.log(`tick cost · ${out.commit}${out.dirty ? ' + uncommitted src' : ''} · ${out.engine} · in Rust: ${[...new Set(rows.map(r => r.rust ?? '?'))].join(' | ')} · rounds ${rounds} (the quietest kept) · first ${WARM} ticks of a run left out · ms`);
   console.log(table(rows));
   const j = flag('--json'); if (j) writeFileSync(j, JSON.stringify(out, null, 1));
   process.exit(failed || !rows.length ? 1 : 0);

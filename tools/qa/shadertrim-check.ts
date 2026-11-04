@@ -12,7 +12,8 @@
 export {};
 const { ROOT, fake } = await import('./headless.ts');
 const { Engine } = await import(`${ROOT}/src/engine.ts`);
-const { SHADER_TRIM, trimWgsl, wgslDecls, trimTotals } = await import(`${ROOT}/src/gpu/wgslTrim.ts`) as typeof import('../../src/gpu/wgslTrim');
+const { SHADER_TRIM, SHADER_FOLD, trimWgsl, wgslDecls, trimTotals } = await import(`${ROOT}/src/gpu/wgslTrim.ts`) as typeof import('../../src/gpu/wgslTrim');
+SHADER_FOLD.on = false;   // (the trim's own rule, a declaration kept as written: the fold of constant switches changes a function's text and has its own check, shaderfold-check.ts)
 const { weatherKindConfig } = await import(`${ROOT}/src/render/frame.ts`);
 
 const BREAK = process.env.SHADERTRIM_BREAK === '1';

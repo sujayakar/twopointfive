@@ -1,0 +1,2 @@
+# the cut rock is the palette's slab darkened (tools/levels/snowRock.ts)
+6768a8541e439f9c36b011fbfc65f6c9d014513d
