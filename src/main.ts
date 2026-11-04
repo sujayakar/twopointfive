@@ -866,8 +866,9 @@ async function main() {
       // (A PRICED PAGE, host/runpage.ts heldPage, is nobody's window to give way with: its frames are what the run times. It still WAITS FOR THE GPU as a
       //  player's page does: with nothing waiting, a level whose frame the GPU cannot finish in a display frame queued hundreds of frames ahead on a rented
       //  card, 11-04, and a switch of the look's layers then showed in the stamps ten seconds late — inside the other state's turn)
+      //  (… and it is paced to no target of the ladder's: asked for with `quality=auto`, its frames would be evened to the ladder's band and read as the band's)
       const measuring = quality.calibrating || bench.active || perfsweep.active, away = EVENPACE.giveway && !measuring && !priced && !perfrec.recording && !attended(), room = measuring || kitView ? 0 : EVENPACE.flight;
-      if (pace.skip(ts, !kitView && !measuring && (quality.adaptive || quality.auto) ? quality.bands.target : 0, away, room)) { requestAnimationFrame(frame); return; }
+      if (pace.skip(ts, !kitView && !measuring && !priced && (quality.adaptive || quality.auto) ? quality.bands.target : 0, away, room)) { requestAnimationFrame(frame); return; }
       const rested = pace.gave !== gaveLast; gaveLast = pace.gave;   // (a display frame was passed over for giving way since the last worked one: this frame's gap is the rule's, not the machine's)
       if (prewarmAt === -3 && frameCount >= 1) (window as any).__prewarm();
       const now = performance.now(); const rawDt = (now - last) / 1000; const dt = Math.min(1 / 20, rawDt) * (window.__timeScale ?? 1); last = now;
