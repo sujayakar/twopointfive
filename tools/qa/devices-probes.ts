@@ -345,10 +345,13 @@ export async function devicesLaser() {
     for (const o of game.guards) o.heardUpTo = 1e12;
     game.teleportPlayer([14.95, 0, 11.1]); game.player.crouch = true; steps(W, 0.5);   // Sam crouched EAST of it, clear of it himself
     if (L.trips) fails.push(`staging: something broke the beam before the haul (trips ${L.trips}, body hips x ${f2((A.char.bones.hips ?? A.char.pos)[0])})`);
+    // (the puppet first: a man walked by a script takes a body by the ankles along the floor, which is what this line is about. Taken hold of BEFORE the
+    //  script has him, where hands pick a body up he lifts it over his shoulder, and a carried body rides over a shin beam)
+    game.puppet = { goal: [17.0, 0, 11.1], aim: null, crouch: true };
     game.toggleDrag(A); const got = game.player.dragging === A;
     if (!got) fails.push('staging: never got hold of the body');
+    if (game.player.haul?.carry) fails.push('staging: he lifted it over his shoulder (this line is the floor haul)');
     const whoBroke: string[] = []; const origTrip = L.lastTripAt;
-    game.puppet = { goal: [17.0, 0, 11.1], aim: null, crouch: true };
     steps(W, 12, () => { if (L.lastTripAt !== origTrip && L.lastTripAt === game.time) { const hitBody = !!DEV.bodyBreaks(A.char, L.def.from, L.def.to), hitSam = !!DEV.bodyBreaks(game.player.char, L.def.from, L.def.to); whoBroke.push(hitSam ? 'player' : hitBody ? 'body' : '?'); } return whoBroke.includes('body') || game.player.char.pos[0] > 16.8; });
     // Sam backs through it first hauling the ankles (a trip of his own); the corpse follows a body-length behind — wait out the cooldown mid-beam if need be and it breaks it too
     if (!whoBroke.includes('body')) { steps(W, 5, () => { if (L.lastTripAt === game.time) whoBroke.push(DEV.bodyBreaks(A.char, L.def.from, L.def.to) ? 'body' : 'player'); return whoBroke.includes('body'); }); }
