@@ -19,13 +19,17 @@ export const PLACE_RES = 2.5;
 export const PLACE_W = Math.round(WORLD.rcSize[0] * PLACE_RES), PLACE_H = Math.round(WORLD.rcSize[2] * PLACE_RES);
 /** the words after the cells: Sam's eye, 1 once the field is live, the open air's low level and its middle (place_field.wgsl placeEye) */
 export const PLACE_WORDS = 4;
-/** the buffer's size in bytes: the cells and the words after them, rounded up to whole vec4f (place_common.wgsl PlaceBuf) */
-export const PLACE_BYTES = Math.ceil((PLACE_W * PLACE_H + PLACE_WORDS) / 4) * 16;
+/** where the field's SECOND BLOCK begins, a number a cell again: the brightest place a stride away (place_field.wgsl hand; PLACE.near) */
+export const PLACE_NEAR = PLACE_W * PLACE_H + PLACE_WORDS;
+/** the buffer's size in bytes: the cells, the words after them and the second block, rounded up to whole vec4f (place_common.wgsl PlaceBuf) */
+export const PLACE_BYTES = Math.ceil((PLACE_NEAR + PLACE_W * PLACE_H) / 4) * 16;
 export const PLACE = {
   reach: 8,        // m: how far a place's light is smoothed (never through a wall): a room this size or smaller has one level
   link: 0.01,      // … and what of that pull crosses a doorway's cells: two rooms through an open door stay two places, with a soft step at the threshold
   doorCells: 4,    // an opening this many cells wide or less (1.6 m) is a doorway …
   doorDepth: 3,    // … when the way through it opens out within this many cells on both sides (a passage that stays narrow is a corridor, one place along its length)
+  near: 0.5,       // stops a cell (1.25 a metre): how fast THE BRIGHTEST PLACE A STRIDE AWAY dims over floor. Slower than a doorway's own light falls off into the room, or the gain would rise inward faster than the light falls and a strip of floor a stride in would be drawn brighter than the threshold (at 1 a software draw had that strip). At a half, a room five stops under its yard is its own again four metres in
+  nearDoor: 0.125, // … and across a doorway's cell: little, but never nothing (place_field.wgsl hand: with no loss there a doorway's two cells keep the brightest answer either ever held)
   omega: 1.93,     // the solve's over-relaxation
   sweeps: 4,       // whole sweeps (both colours) a drawn frame
   settle: 160,     // … and in one go when the eye is told to take its reading outright (a first frame, a restart, a still)
@@ -229,7 +233,7 @@ export class PlaceField {
     for (let k = 0; k < 2; k++) {
       const f = this.uf, u = this.uu; u[0] = k; u[1] = first ? 1 : 0; f[2] = kappa; f[3] = P.omega;
       f[4] = sam ? (sam[0] - WORLD.rcMin[0]) * PLACE_RES : -1; f[5] = sam ? (sam[1] - WORLD.rcMin[2]) * PLACE_RES : -1; f[6] = ease(P.open); f[7] = ease(P.close);
-      f[8] = Math.min(0.95, Math.max(0.05, (P.y - WORLD.rcMin[1]) / WORLD.rcSize[1])); f[9] = P.dark; f[10] = P.link; f[11] = ease(P.skyEase); f[12] = P.skyShare;
+      f[8] = Math.min(0.95, Math.max(0.05, (P.y - WORLD.rcMin[1]) / WORLD.rcSize[1])); f[9] = P.dark; f[10] = P.link; f[11] = ease(P.skyEase); f[12] = P.skyShare; f[13] = P.near; f[14] = P.nearDoor;
       this.device.queue.writeBuffer(this.ubo[k], 0, this.u);
     }
     const n = first ? P.settle : P.sweeps, gx = Math.ceil(PLACE_W / 8), gy = Math.ceil(PLACE_H / 8);
@@ -247,7 +251,7 @@ export class PlaceField {
 
   destroy(): void { if (this.dead) return; this.dead = true; this.buffer.destroy(); this.maskTex.destroy(); for (const b of this.ubo) b.destroy(); }
 
-  /** the field read back (a tool's): PLACE_W × PLACE_H levels, then the eye, the live word and the brightest place */
+  /** the field read back (a tool's): PLACE_W × PLACE_H levels, then the eye, the live word and the open air's two, then from PLACE_NEAR the second block */
   async readBack(): Promise<Float32Array> {
     if (this.dead) return new Float32Array(PLACE_BYTES / 4);
     const buf = this.device.createBuffer({ label: 'place read-back', size: PLACE_BYTES, usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.MAP_READ });
