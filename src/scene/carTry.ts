@@ -16,7 +16,7 @@
 // and the glass above the waist, which leans in by up to 0.42 m at the roof of a car. A lamp keeps its place, half size and paint (game/carlamps.ts finds
 // it by those). Never seen on a GPU.
 import { BoxFlag, type Box } from './boxes';
-import { cutPlane, cutRecord, type CutPlane } from './cut';
+import { cutPlane, cutRecord, cutFit, type CutPlane } from './cut';
 import type { Vec3 } from '../math/vec';
 import { GWOT_PALETTE } from './gwotPalette';
 import { gwotKit, type GwotHost } from './gwotKit';
@@ -64,6 +64,34 @@ function lens(b: Box, r: number, body?: Box, dx = 0, dz = 0, proud = 0.012): Box
   return cutTo(b, [...wrap, ...own], false);
 }
 
+/** the same solid in its tightest box (cut.ts cutFit): the uncut box is what the ray grid lists and what a body meets */
+function fit(b: Box): Box {
+  if (!b.cut) return b;
+  const f = cutFit(b.h, b.cut), cs = Math.cos(b.yaw), sn = Math.sin(b.yaw);
+  b.c = [b.c[0] + cs * f.off[0] + sn * f.off[2], b.c[1] + f.off[1], b.c[2] - sn * f.off[0] + cs * f.off[2]]; b.h = f.h; b.cut = f.cut;
+  return b;
+}
+/** A GREENHOUSE: the glass of a cab, its middle at local x = lx, from y0 to y1, its panes leaning in by `tilt` degrees (front, rear, sides) from the waist; a
+ *  POST in the body's paint down each corner where two panes meet (and none where a pane is upright: `tilt` 0 there means the glass runs into what stands
+ *  behind it), one across each side at every `posts` (local x from the glass's middle), all a centimetre proud of the glass; and, with `rise`, a roof bowed
+ *  from side to side that oversails the glass's top edge by `over`. Seen from above the cab is then windows between posts under a roof, not one dark block. */
+function greenhouse(put: Put, lx: number, y0: number, y1: number, hx: number, hz: number, tilt: { f: number; r: number; s: number }, glass: CarMat, body: CarMat, posts: number[] = [], rise = 0, over = 0.015): void {
+  const g = put(lx, 0, y0, y1, hx, hz, glass), h = g.h, e = 0.012, w = 0.07;
+  const F = lean(h, 1, 0, tilt.f), R = lean(h, -1, 0, tilt.r), S = (s: number) => lean(h, 0, s, tilt.s);
+  cutTo(g, [F, R, S(1), S(-1)], false);
+  const out = (p: CutPlane, by = e): CutPlane => ({ n: p.n, d: p.d + by }), inside = (p: CutPlane, by: number): CutPlane => ({ n: [-p.n[0], -p.n[1], -p.n[2]], d: by - p.d });
+  const post = (planes: CutPlane[]) => fit(cutTo(put(lx, 0, y0, y1, hx + e, hz + e, body), planes));
+  for (const s of [-1, 1]) {
+    if (tilt.f > 0) post([out(F), out(S(s)), inside(F, w), inside(S(s), w)]);
+    if (tilt.r > 0) post([out(R), out(S(s)), inside(R, w), inside(S(s), w)]);
+    for (const x of posts) post([out(S(s)), inside(S(s), 0.03), cutPlane([1, 0, 0], x + 0.045), cutPlane([-1, 0, 0], 0.045 - x)]);
+  }
+  if (rise > 0) {
+    const H = y1 - y0, x1 = hx - H * Math.tan(tilt.f * D) + over, x0 = -hx + H * Math.tan(tilt.r * D) - over, z = hz - H * Math.tan(tilt.s * D) + over;
+    arcTo(put(lx + (x0 + x1) / 2, 0, y1 - 0.02, y1 - 0.02 + rise, (x1 - x0) / 2, z, body), rise, 1);
+  }
+}
+
 /** the wheels of a vehicle: at each lx, a side, a round tyre of radius r whose outer face is `out` from the middle line, its hub, and the arch over it in the
  *  body's paint (an arc about the wheel's own axle that stands `proud` of the tyre's top and 0.02 m inside its outer face) */
 function wheels(put: Put, xs: number[], out: number, r: number, wide: number, tyre: CarMat, hub: CarMat, body: CarMat | null, proud = 0.08) {
@@ -86,8 +114,7 @@ export function pickupShape(F: CarFrame, P: CarPaints): Box[] {
     const r = b(-2.41, 0, 0.36, 0.58, 0.11, 0.88, P.trim); cutTo(r, [...corner(r.h, 0.12, -1, 1, 2), ...corner(r.h, 0.12, -1, -1, 2)]); }
   { const n = b(1.7, 0, 0.8, 1.0, 0.65, 0.84, P.body); arcTo(n, 0.2, 1, [fall(n.h, 1, 0.2, 0.15)]); }                                                       // bonnet: crowned, falling to the nose
   b(0.38, 0, 0.8, 1.08, 0.7, 0.86, P.body);                                                                                                                 // the cab: doors,
-  { const g = b(0.38, 0, 1.08, 1.5, 0.64, 0.8, P.glass); cutTo(g, [lean(g.h, 1, 0, 30), lean(g.h, -1, 0, 12), lean(g.h, 0, 1, 12), lean(g.h, 0, -1, 12)], false); }   // glass,
-  arcTo(b(0.3, 0, 1.49, 1.59, 0.5, 0.72, P.body), 0.1, 1);                                                                                                  // and a bowed roof
+  greenhouse(b, 0.38, 1.08, 1.5, 0.64, 0.8, { f: 30, r: 12, s: 12 }, P.glass, P.body, [], 0.1);                                                           // glass between posts, under a bowed roof
   b(-1.42, 0, 0.8, 0.83, 1.0, 0.76, P.trim);                                                                                                                // the bed liner
   for (const s of [-1, 1]) b(-1.42, s * 0.83, 0.8, 1.18, 1.03, 0.03, P.body);                                                                               // bed sides
   b(-2.42, 0, 0.8, 1.18, 0.03, 0.86, P.body); b(-0.36, 0, 0.8, 1.18, 0.03, 0.86, P.body);                                                                   // tailgate, the bed's front wall
@@ -103,7 +130,7 @@ export function vanShape(F: CarFrame, P: CarPaints): Box[] {
   b(-2.43, 0, 0.3, 0.44, 0.05, 0.9, P.trim);                                                                                                                // the rear step
   { const n = b(1.95, 0, 0.86, 1.06, 0.35, 0.86, P.body); arcTo(n, 0.2, 1, [fall(n.h, 1, 0.18, 0.15)]); }                                                     // a short crowned bonnet
   b(1.3, 0, 0.86, 1.1, 0.4, 0.9, P.body);                                                                                                                   // the cab: doors,
-  { const g = b(1.3, 0, 1.1, 1.62, 0.36, 0.84, P.glass); cutTo(g, [lean(g.h, 1, 0, 28), lean(g.h, 0, 1, 4), lean(g.h, 0, -1, 4)], false); }                  // glass,
+  greenhouse(b, 1.3, 1.1, 1.62, 0.36, 0.84, { f: 28, r: 0, s: 4 }, P.glass, P.body, [-0.3]);                                                                // glass between posts,
   { const w = b(1.1325, 0, 1.62, 1.8, 0.2525, 0.86, P.body); cutTo(w, [lean(w.h, 1, 0, 28)]); }                                                             // the brow over it, on the windscreen's line
   b(-0.5, 0, 0.86, 1.8, 1.4, 0.9, P.body);                                                                                                                  // the load box
   { const r = b(-0.555, 0, 1.8, 1.95, 1.845, 0.9, P.body); arcTo(r, 0.15, 1, [lean(r.h, 1, 0, 40)]); }                                                      // ONE bowed roof, windscreen to back doors
@@ -119,8 +146,7 @@ export function carShape(F: CarFrame, P: CarPaints): Box[] {
   wheels(b, [1.35, -1.4], 0.92, 0.3, 0.24, P.tyre, P.hub, P.body);
   { const t = b(0, 0, 0.28, 0.96, 2.2, 0.86, P.body);                                                                                                       // lower body: round corners, a bonnet and a boot that fall away
     cutTo(t, [...corner(t.h, 0.24, 1, 1, 2), ...corner(t.h, 0.24, 1, -1, 2), ...corner(t.h, 0.16, -1, 1, 1), ...corner(t.h, 0.16, -1, -1, 1), fall(t.h, 1, 0.5, 0.16), fall(t.h, -1, 0.3, 0.1)]); }
-  { const g = b(-0.25, 0, 0.93, 1.47, 1.25, 0.8, P.glass); cutTo(g, [lean(g.h, 1, 0, 38), lean(g.h, -1, 0, 42), lean(g.h, 0, 1, 12), lean(g.h, 0, -1, 12)], false); }   // the greenhouse, leaning in on all four sides
-  arcTo(b(-0.2175, 0, 1.44, 1.52, 0.7825, 0.69, P.body), 0.08, 1);                                                                                         // a bowed roof
+  greenhouse(b, -0.25, 0.93, 1.47, 1.25, 0.8, { f: 38, r: 42, s: 12 }, P.glass, P.body, [0.05], 0.08);                                                     // the greenhouse: four panes leaning in, six posts, a bowed roof
   return out;
 }
 
