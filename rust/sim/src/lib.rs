@@ -33,10 +33,13 @@ pub mod lines;
 pub mod maths;
 pub mod nav;
 pub mod poses;
+pub mod props;
 mod pow10;
 pub mod sight;
 pub mod single;
 pub mod skeleton;
+pub mod items;
+pub mod slabs;
 pub mod smoke;
 pub mod state;
 pub mod world;
@@ -47,7 +50,7 @@ pub const SCRATCH_LEN: usize = 1024;
 static mut SCRATCH: [f64; SCRATCH_LEN] = [0.0; SCRATCH_LEN];
 
 /// The version of the exports: src/sim/sim.ts names the one it was written against, and a page that loaded another says so instead of calling into it.
-pub const ABI: u32 = 17;
+pub const ABI: u32 = 18;
 
 // ---- the C face (wasm32: these are the module's exports)
 #[no_mangle]
@@ -126,6 +129,11 @@ pub extern "C" fn world_leaves(w: usize, set: usize, n: u32) {
         world::world(w).leaves[set] = n;
     }
 }
+/// how many things of furniture stand in world `w` now (their parts are list THING_SET of the leaves: world_leaves says how many)
+#[no_mangle]
+pub extern "C" fn world_things(w: usize, n: u32) {
+    world::world(w).things = if (n as usize) < world::MAX_THINGS { n } else { world::MAX_THINGS as u32 };
+}
 /// collision.ts segmentBlocked: −1 blocked · n ≥ 0 clear with n panes listed · −2 the pane list is full
 #[no_mangle]
 pub extern "C" fn lines_blocked(w: usize, a0: f64, a1: f64, a2: f64, b0: f64, b1: f64, b2: f64, len: f64, shrink: f64, through: u32, set: i32, ask: u32) -> i32 {
@@ -135,6 +143,18 @@ pub extern "C" fn lines_blocked(w: usize, a0: f64, a1: f64, a2: f64, b0: f64, b1
 #[no_mangle]
 pub extern "C" fn lines_leaves(w: usize, a0: f64, a1: f64, a2: f64, b0: f64, b1: f64, b2: f64, len: f64, need: u32, set: i32) -> u32 {
     lines::leaves_blocked(w, a0, a1, a2, b0, b1, b2, len, need, set) as u32
+}
+/// collision.ts raycast with every pane taken as shut: −1 nothing met · −2 the host answers (a ray that is not a number) · else the static's index, or
+/// 1e6 + the leaf's of list `set`; how far along and the face's normal → scratch 0 … 3. A pane met is the host's to judge (open: it walks the ray itself).
+#[no_mangle]
+pub extern "C" fn lines_ray(w: usize, a0: f64, a1: f64, a2: f64, r0: f64, r1: f64, r2: f64, tmax: f64, set: i32) -> i32 {
+    lines::ray(w, a0, a1, a2, r0, r1, r2, tmax, set, &mut scratch()[..4])
+}
+/// props.ts PropSystem.raycast over the furniture's parts as world `w` holds them: −1 nothing met · else which thing of the level's list; how far along,
+/// the face's normal and which part of the parts' list → scratch 0 … 4
+#[no_mangle]
+pub extern "C" fn lines_ray_things(w: usize, a0: f64, a1: f64, a2: f64, r0: f64, r1: f64, r2: f64, tmax: f64) -> i32 {
+    lines::ray_things(w, a0, a1, a2, r0, r1, r2, tmax, &mut scratch()[..5])
 }
 
 // ---- a circle against the box world (collide.rs)
@@ -605,6 +625,61 @@ pub extern "C" fn doors_cap(table: u32) -> usize {
 #[no_mangle]
 pub extern "C" fn doors_update(g: usize, w: usize) -> u32 {
     doors::update(g, w)
+}
+
+// ---- the furniture men shove (props.rs: each thing's state in the game's block, the men, the leaves and the door frames handed in)
+/// where a table of the step's hand-over is: 0 the level's facts of each thing, by row · 2 the men · 3 the leaves · 4 the door frames · 5 the noises ·
+/// 6 the step's numbers
+#[no_mangle]
+pub extern "C" fn props_addr(table: u32) -> usize {
+    props::addr(table)
+}
+/// how many rows a table holds (0, 2 … 6), how wide a row of one is (9 … 12: a thing's facts, a man, a frame, a noise), how long the part is (13), and
+/// where column k of the part starts (100 + k)
+#[no_mangle]
+pub extern "C" fn props_cap(table: u32) -> usize {
+    props::cap(table)
+}
+/// props.ts PropSystem.update for the game in slot `g`, over world `w`: how many noises were listed
+#[no_mangle]
+pub extern "C" fn props_update(g: usize, w: usize) -> u32 {
+    props::update(g, w)
+}
+
+// ---- a leaf off its hinges, in the air (slabs.rs: each slab's state in the game's block, its door's facts handed in)
+/// where the hand-over of one slab's step is (0)
+#[no_mangle]
+pub extern "C" fn slabs_addr(table: u32) -> usize {
+    slabs::addr(table)
+}
+/// how many rows the part holds (0), how long the hand-over is (1), how long the part is (13), and where column k of the part starts (100 + k)
+#[no_mangle]
+pub extern "C" fn slabs_cap(table: u32) -> usize {
+    slabs::cap(table)
+}
+/// doorblast.ts stepSlab for one slab of the game in slot `g`, over world `w`: 0 = stepped · 1 = the host's to take (nothing written) · 2 = no such step
+#[no_mangle]
+pub extern "C" fn slabs_step(g: usize, w: usize) -> u32 {
+    slabs::step(g, w)
+}
+
+// ---- what is thrown or dropped (items.rs: each thing's state in the game's block, the pool walked in one call)
+/// where the hand-over of one walk is (0) and the events it lists (1)
+#[no_mangle]
+pub extern "C" fn items_addr(table: u32) -> usize {
+    items::addr(table)
+}
+/// how many rows the part holds (0), how long the hand-over is (1), how many events the list holds (2) and how wide one is (3), how long the part is
+/// (13), and where column k of the part starts (100 + k)
+#[no_mangle]
+pub extern "C" fn items_cap(table: u32) -> usize {
+    items::cap(table)
+}
+/// throwables.ts Throwables.update for the game in slot `g`, over world `w`, from the row the hand-over names down: 0 = every row taken · 1 = the
+/// hand-over's row is the host's to take (the rows above it were) · 2 = no such walk
+#[no_mangle]
+pub extern "C" fn items_update(g: usize, w: usize) -> u32 {
+    items::update(g, w)
 }
 
 // ---- what falls and what it leaves (falls.rs: the landings the simulation has scheduled, a list a kind of thing, and the glass lying on the floor, in the
