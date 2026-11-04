@@ -17,8 +17,6 @@ interface RunOpts {
    *  leaf swung `swing` rad out of the gap about its hinge */
   door: 'open' | 'shut' | 'wide' | 'ajar';
   swing?: number;
-  /** the map is told the door's line and drawn BY DEGREES (scene/placePlan.ts placeMask): no leaf is a wall, the doorway's cells say how open it is */
-  degrees?: boolean;
   /** room A's wall to the yard has a window in it: a sill, a pane of glass and a lintel, no one of them a wall's height */
   window?: boolean;
   /** the BREAK path: no box is a wall (the map is all clear) */
@@ -69,7 +67,8 @@ async function run(o: RunOpts) {
   fill(1);
   const view = tex.createView(), place = new PlaceField(dev, view); await place.whenReady;
   const { statics, dynamics } = scene(o);
-  const one = (dt: number, sam: [number, number] | null, snap: boolean): void => { place.setBoxes(statics, dynamics, o.degrees ? [[12.5, 14, 13.5, 14]] : [], !!o.degrees); const enc = dev.createCommandEncoder(); place.step(enc, view, dt, sam, snap); dev.queue.submit([enc.finish()]); };
+  // (the map is told the door's line, as the engine tells it every door's: no leaf is a wall in it, scene/placePlan.ts placeMask)
+  const one = (dt: number, sam: [number, number] | null, snap: boolean): void => { place.setBoxes(statics, dynamics, o.door === 'wide' ? [] : [[12.5, 14, 13.5, 14]]); const enc = dev.createCommandEncoder(); place.step(enc, view, dt, sam, snap); dev.queue.submit([enc.finish()]); };
   const DT = 1 / 60, ROOM: [number, number] = [13, 11], OUT: [number, number] = [5, 20], K = PLACE_W * PLACE_H;
   const t0 = performance.now(); one(DT, ROOM, true); await dev.queue.onSubmittedWorkDone(); const msSettle = performance.now() - t0;
   const rest = await place.readBack();

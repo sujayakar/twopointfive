@@ -116,8 +116,10 @@ fn lookShowBy(c: vec3f, gains: vec3f) -> vec3f {
   let full = l * gains.y * lookRoll(l * gains.y, gains.y);
   return c * (max(full * (gains.x / gains.y), l * gains.z) / l);
 }
-/** the level of the place a point of the AIR is in (the volumetric march's steps): its cell's; in a wall's cell (the map's cell takes in the air beside
- *  the wall) the BRIGHTEST free cell within two, so the air at a wall's foot is never shown by the gain of a darker room behind the wall. Under −500 = none. */
+/** the level of the place a point of the AIR is in (the volumetric march's steps): its cell's; in a cell that holds none (a wall's: the map's cell takes
+ *  in the air beside the wall; a doorway's) the BRIGHTEST free cell within two, so the air at a wall's foot and on a threshold is never shown by the gain
+ *  of the darker room. ONE ANSWER A CELL, whatever the point in it: the march keeps a cell's answer for the steps it takes there (volumetrics.wgsl
+ *  airShow), so the plan's lines, which part a cell in two, are not asked here. Under −500 = none. */
 fn placeAir(X: vec3f) -> f32 {
   let q = (X.xz - RC_MIN.xz) / RC_SIZE.xz * vec2f(f32(PLACE_W), f32(PLACE_H)); let c = vec2i(floor(q)); let own = placeCell(c);
   if (own > -500.0) { return own; }

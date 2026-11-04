@@ -40,7 +40,7 @@ const { COMPACT } = await import(`${ROOT}/src/render/kernels.ts`) as typeof impo
 
 /** KB of pasted WGSL a kernel may not pass, by `module / entry` (a cut-set module's `Cut` off its label), the first row that matches; the last is everyone else's */
 const BUDGET_TODAY: [RegExp, number][] = [
-  [/^composite(R|S|SR)? \/ (fs|cs)$/, 1030],   // (1003 + the look prototype's place read on this side of a wall, 15 KB: one more box walk, one call site, composite.wgsl lookPlaceHere; + the one exposure model, 5 KB: the place field's read, one gain a place and its shoulder, lookPlaceField / lookExpoGain / lookRoll, no box walk of their own; the rest is room)
+  [/^composite(R|S|SR)? \/ (fs|cs)$/, 1030],   // (1003 + the one exposure model: the place field's read, one gain a place and its shoulder, lookPlaceLevels / lookExpoGain / lookRoll, no box walk of their own. The 15 KB this row once gave the look's read of the cache on this side of a wall, a second box walk, are not asked for any more: that read is gone since 11-04, composite.wgsl lookPlaceLevels, and the kernel is 18 KB the smaller for it)
   [/^fgatherS? \/ mainGi$/, 870],
   [/^fgatherS? \/ main$/, 805],
   [/^volumetricsDust \/ main$/, 740],
@@ -58,7 +58,7 @@ const BUDGET_TODAY: [RegExp, number][] = [
 /** the same for THE COMPACT SET (the row 'Compact shaders' on: render/kernels.ts, the ten kernels written with one call site per heavy function), its own rows within a
  *  twentieth of what that set is. A second table, never today's rows lowered: both writings are in the tree while the row is on trial, and each is held to its own size */
 const BUDGET_COMPACT: [RegExp, number][] = [
-  [/^composite(R|S|SR)? \/ (fs|cs)$/, 618],   // (593 + the look prototype's blowing snow, 2 KB of its own text with one call site a function: composite.wgsl lookVeil; + the fire's and the lorry's 4 KB that came without a row; + its place read on this side of a wall, 15 KB: one more box walk, one call site, lookPlaceHere; the rest is room. The Room contrast row's 1.5 KB went with the rows the one exposure model replaced)
+  [/^composite(R|S|SR)? \/ (fs|cs)$/, 618],   // (593 + the look prototype's blowing snow, 2 KB of its own text with one call site a function: composite.wgsl lookVeil; + the fire's and the lorry's 4 KB that came without a row; the rest is room (15 KB of it was the look's read of the cache on this side of a wall, a second box walk, gone since 11-04: composite.wgsl lookPlaceLevels). The Room contrast row's 1.5 KB went with the rows the one exposure model replaced)
   [/^volumetricsDust \/ main$/, 520],
   [/^volumetricsF? \/ main$/, 470],
   [/^particles \/ update$/, 373],

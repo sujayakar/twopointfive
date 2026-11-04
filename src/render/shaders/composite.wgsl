@@ -629,36 +629,6 @@ fn lookPowder(P: vec3f, V: vec3f) -> vec3f {
   return vec3f(hide, shade, clamp(1.0 + 0.3 * (c0 - cs) - 0.6 * far, 0.45, 1.35));
 }
 
-/** THE PLACE'S LIGHT IS READ ON THIS SIDE OF THE WALL (frame.gradeCfg.z, render/frame.ts lookConfig.footing; 0 = the five reads as they were, to the bit).
- *  The maintainer, 10-30, a room at midday on a GPU: "very odd pooling of shadow under window". The cache blends a point with the four probes about it in
- *  plan, and the five reads reached 0.6 of a cell further: within a stride of an OUTER wall the open air beyond it was in the read, the floor there was
- *  taken for a place in the day's light, and it was not brought up. Beside a window, where the window's own light does not fall, that was a soft black pool
- *  at the wall's foot with the room's lit floor round it. So the read is the blend of the four probes about the point that the point can SEE (a box ray to
- *  each one's column at the point's height; `skip` = the pixel's own man, whose gun must not hide the air from him; men's bodies are not asked): a probe
- *  beyond a wall or inside a crate is left out and the others share its part. A doorway and a window's opening let the light through, as they do. Where the
- *  four hold about the same (the most under 1.3 times the least: the middle of a room, the open) no ray is asked and the read is the plain one; the walled
- *  answer comes in as they part (in full from twice). It sees none of them (a face in a crack of the lorry): the brightest of the four, so it is not taken for a dark place. The side reads are gone with the row on: they were there for a
- *  probe buried in a container, and that one is not seen. A STEP IS LEFT where a probe comes into sight (a door's jamb): its share is what it weighs there.
- *  Up to four box rays of a cell's length for a pixel by a wall, none elsewhere: never timed on a GPU. */
-fn lookPlaceHere(X: vec3f, skip: u32) -> f32 {
-  if (frame.gradeCfg.z <= 0.0) { let s = c0Spacing() * 0.6; let dx = vec3f(s.x, 0.0, 0.0); let dz = vec3f(0.0, 0.0, s.z); return max(max(luminance(diceMeanRadiancePlain(X)), max(luminance(diceMeanRadiancePlain(X + dx)), luminance(diceMeanRadiancePlain(X - dx)))), max(luminance(diceMeanRadiancePlain(X + dz)), luminance(diceMeanRadiancePlain(X - dz)))); }
-  let sp = c0Spacing(); let plain = luminance(diceMeanRadiancePlain(X));
-  let home = (floor((X - RC_MIN) / sp) + vec3f(0.5)) * sp + RC_MIN; let nb = home + select(vec3f(-1.0), vec3f(1.0), X >= home) * sp;
-  let f = clamp(abs(X - home) / sp, vec3f(0.0), vec3f(0.5));   // (the neighbour's share on each axis)
-  var v: array<f32, 4>; var lo = 1e9; var hi = 0.0;
-  for (var k = 0u; k < 4u; k++) { let c = luminance(diceMeanRadiancePlain(vec3f(select(home.x, nb.x, (k & 1u) != 0u), X.y, select(home.z, nb.z, (k & 2u) != 0u)))); v[k] = c; lo = min(lo, c); hi = max(hi, c); }
-  let t = smoothstep(1.3, 2.0, hi / max(lo, 1e-5));
-  if (t <= 0.0) { return plain; }
-  var sum = 0.0; var ws = 0.0;
-  for (var k = 0u; k < 4u; k++) {
-    let w = select(1.0 - f.x, f.x, (k & 1u) != 0u) * select(1.0 - f.z, f.z, (k & 2u) != 0u);
-    if (w <= 1e-4) { continue; }
-    let d = vec3f(select(home.x, nb.x, (k & 1u) != 0u), X.y, select(home.z, nb.z, (k & 2u) != 0u)) - X; let l = length(d);
-    if (l < 1e-3 || occludedTBoxes(X, d / max(l, 1e-3), l, skip, -1.0) < 0.0) { sum += w * v[k]; ws += w; }
-  }
-  if (ws <= 1e-4) { return mix(plain, hi, t); }   // (it sees none: a point inside a thing, a face in a crack. The brightest of the four, as the five reads would have had it: never a dark place)
-  return mix(plain, sum / ws, t);
-}
 /** THE LOOK PROTOTYPE — ONE EXPOSURE (frame.eyeCfg.w < 0; render/lookexpo.ts lookExpoFrame; it rides on frame.shadeCfg, engine.ts lookShade, the
  *  panel's "Eyes adjust to shade" row: with that at 0 no pixel takes a gain by its place). One exposure for a sunlit yard and the inside of a shed leaves the shed black, as a camera does
  *  and an eye does not, so how many times brighter the light a pixel sends back is shown is said by the PLACE the pixel is in. The maintainer, 10-31, of
@@ -688,61 +658,130 @@ fn lookPlaceHere(X: vec3f, skip: u32) -> f32 {
  *  light than its place where two places meet: lookExpoGain, below), so a shadow's edge, a sun patch and a man's own shading keep
  *  the light's own proportions, the room has the yard's contrast, and the tone map's shoulder takes what is over. */
 // (EXPO_BAND, EXPO_KEY, EXPO_MOST, EXPO_TOP, the place field's cells and words, the shoulder and the gains: place_common.wgsl, pasted in front of this kernel)
-/** the place at X, as (a level, another): the same number twice where the answer is plain; two where X is in a wall's cell with a different place on each
- *  side (the wall's top, and the strip of floor at its foot that the map's cell takes in): the caller says which by what the cache holds at the pixel.
- *  z and w = THE BRIGHTEST PLACE A STRIDE AWAY (the field's second block, place_common.wgsl placeNear) from the place x is and from the place y is: by
- *  the same weights where the answer is plain; in a wall's cell each is its OWN cell's, so the bound a pixel is given is of the side it is put on and
- *  never of the other (a leaf hanging open in a doorway is such a cell with one place round it, and is what the Light in order row is for; a wall between
- *  a yard and a room is one with two, and the room's side must not be handed the yard's).
- *  Under −500 = no field on this page yet, or nothing within two cells. Never read through a wall: in a free cell the neighbours weighed in are the two
- *  beside it (two free cells side by side are one side of any wall) and the diagonal one only past a free one. */
-fn lookPlaceField(X: vec3f) -> vec4f {
-  if (placeWord(1) < 0.5) { return vec4f(-1000.0); }
-  let q = (X.xz - RC_MIN.xz) / RC_SIZE.xz * vec2f(f32(PLACE_W), f32(PLACE_H)); let c = vec2i(floor(q)); let own = placeCell(c);
-  if (own > -500.0) {
-    let f = q - floor(q) - 0.5; let s = vec2i(select(-1, 1, f.x >= 0.0), select(-1, 1, f.y >= 0.0)); let a = abs(f);
-    let vx = placeCell(c + vec2i(s.x, 0)); let vz = placeCell(c + vec2i(0, s.y)); let vd = placeCell(c + s);
-    var ws = (1.0 - a.x) * (1.0 - a.y); var sum = own * ws; var sn = max(placeNear(c), own) * ws;
-    if (vx > -500.0) { let w = a.x * (1.0 - a.y); sum += w * vx; sn += w * max(placeNear(c + vec2i(s.x, 0)), vx); ws += w; }
-    if (vz > -500.0) { let w = (1.0 - a.x) * a.y; sum += w * vz; sn += w * max(placeNear(c + vec2i(0, s.y)), vz); ws += w; }
-    if (vd > -500.0 && (vx > -500.0 || vz > -500.0)) { let w = a.x * a.y; sum += w * vd; sn += w * max(placeNear(c + s), vd); ws += w; }
-    return vec4f(sum / ws, sum / ws, sn / ws, sn / ws);
+/** THE PIXEL'S PLACE IS READ OFF THE FLOOR PLAN, NEVER GUESSED (the maintainer, 11-04, of a door on his GPU: "weird flash on the door when opening", "there's
+ *  a dark band right by the entry of the door threshold and door", and of a depot at midday: "lots of bleeding in that level"; before those, 10-31: "i worry
+ *  that we're finding these cases one by one and not fixing them systematically"). Each was a pixel shown by the gain of a place it is not in, and each came
+ *  from the same step: where the field had no plain answer (a wall's cell, a doorway's, a door mid swing) the place was GUESSED from what the radiance cache
+ *  held near the pixel, five reads of it with a box ray each. That guess is gone, with the kernel's second box walk. What answers now:
+ *    A FREE CELL: its own level, blended with the free cells beside it (placeBlend).
+ *    A WALL'S CELL, the floor at its foot and its faces: the wall's own line says which side the point is on (common.wgsl sideLine, to 2.5 cm), and the
+ *      answer is the first cell out on that side (placeSideCell), blended as any cell of that room is, so the strip at a wall's foot is
+ *      one with the floor beside it.
+ *    A DOORWAY'S CELL: the same, by its door's line, shut or open and at every angle of its leaf. It holds no level of its own (place_field.wgsl
+ *      placeSweep), so a threshold is never a third place with a number between its two rooms'. Each side of the line is its own room to the line, and what
+ *      joins them in the picture is the light itself: the floor a bright room lights inside a dark one's door is shown by the level of the light that falls on
+ *      it (the Light in order row, place_common.wgsl lookGainsOwn), so the edge a doorway shows is the light's own and never the plan's.
+ *    A WALL'S TOP (a face that looks up at a wall's height, within PLACE_WALL of a wall's line): of neither room, so THE BRIGHTER OF THE TWO its line parts. A sunlit top
+ *      between a yard and a dark room is shown as the yard is and never by the gain of the room under it, which was the white lines along the depot's walls.
+ *      The part of a top that overhangs into the free cell beside the wall's is found by the wall's line too (PLACE_WALL).
+ *    A CELL WITH NO LINE (a turned wall, two walls in one cell), or with nothing its walk could reach: the brightest of the nearest cells that hold a level
+ *      (on the point's own side of its cell's lines, where it has any), by the same rule: a point that is of no one room is never shown by the gain of the
+ *      darker.
+ *    NO PLACE WITHIN FOUR CELLS (the middle of a wide mass's top): the light that falls on the pixel is its place's level. The one use of the pixel's own
+ *      light to say a place.
+ *    BEFORE THE FIELD IS LIVE (a device that cannot build it; the engine builds it with the boot's own programs, so the page's first frame has it): every
+ *      place is the open air, and no gain is taken. */
+const PLACE_TOP: f32 = 1.88;     // a face that looks up above this height on a wall's line is the wall's top (scene/placePlan.ts: a wall fills the height to 1.9 m; a man's head is under it)
+const PLACE_WALL: f32 = 0.14;    // m: a top this near a wall's centre line is that wall's, though the plan's cell under it is the room's (a shell wall's half thickness, 0.12, and the 1.25 cm a line's code may sit off the line, with a little over)
+/** ONE PLACE'S ANSWER AT A POINT OF THE PLAN, as (its level, THE BRIGHTEST PLACE A STRIDE AWAY: the field's second block, place_common.wgsl placeNear), both
+ *  log2: cell `c`, which holds `own`, blended with the cells beside it by where `q` (in cells) is in it; a `q` outside the cell is taken at the cell's nearest
+ *  edge. Never read through a wall or across a doorway's line: the neighbours weighed in are the two beside the cell (two cells with a level side by side are
+ *  one side of any wall, and a doorway's cells hold none) and the diagonal one only past one of those. */
+fn placeBlend(q: vec2f, c: vec2i, own: f32) -> vec2f {
+  let f = clamp(q - vec2f(c), vec2f(0.0), vec2f(1.0)) - 0.5; let s = vec2i(select(-1, 1, f.x >= 0.0), select(-1, 1, f.y >= 0.0)); let a = abs(f);
+  let vx = placeCell(c + vec2i(s.x, 0)); let vz = placeCell(c + vec2i(0, s.y)); let vd = placeCell(c + s);
+  var ws = (1.0 - a.x) * (1.0 - a.y); var sum = own * ws; var sn = max(placeNear(c), own) * ws;
+  if (vx > -500.0) { let w = a.x * (1.0 - a.y); sum += w * vx; sn += w * max(placeNear(c + vec2i(s.x, 0)), vx); ws += w; }
+  if (vz > -500.0) { let w = (1.0 - a.x) * a.y; sum += w * vz; sn += w * max(placeNear(c + vec2i(0, s.y)), vz); ws += w; }
+  if (vd > -500.0 && (vx > -500.0 || vz > -500.0)) { let w = a.x * a.y; sum += w * vd; sn += w * max(placeNear(c + s), vd); ws += w; }
+  return vec2f(sum / ws, sn / ws);
+}
+/** THE CELL THAT ANSWERS FOR A POINT IN A CELL WITH NO LEVEL (a wall's, a doorway's), by the plan's own lines (common.wgsl sideLine): from cell `c0` a cell
+ *  at a time toward the point's side `o0` of that cell's line, to the first cell with a level. A DOORWAY'S CELL MET FROM ITS SIDE TURNS THE WALK to the
+ *  point's side of ITS line: the floor at the foot of a wall that ends in a doorway is of the room on its side of the door. A walk along a doorway's own
+ *  way through goes on as it was (the side was said where it began; each cell of a run holds the run's line to its own 2.5 cm, and asking it again cell
+ *  by cell could turn a walk back). ANOTHER WALL'S LINE AHEAD STOPS IT: the pocket between a thing and the wall behind it has no cell of its own, and
+ *  the room past that wall is not its place (the caller's rule for a point with no line answers). The line of the cell it set out from is not another's:
+ *  a wall on a cell's edge is two cells with one line, and a wall's top asks for the far side of its own. `m` = the point, metres from the map's corner.
+ *  → the cell; x under −9000 = none. */
+const PLACE_PAST: f32 = 0.02;    // m: a wall's line this far ahead of the point or more stops a walk …
+const PLACE_SAME: f32 = 0.03;    // … unless it lies within this of the line the walk set out from (the cells of one wall hold its line to 2.5 cm)
+fn placeSideCell(m: vec2f, c0: vec2i, o0: vec2i) -> vec2i {
+  var c = c0; var o = o0; let d0 = sideLine(c0, m);
+  for (var r = 0; r < 6; r++) {
+    c += o; if (placeCell(c) > -500.0) { return c; }
+    let d = sideLine(c, m);
+    if (sideIsDoor(c)) { if (d.x == 0.0 && d.y != 0.0 && o.x != 0) { o = vec2i(0, i32(sign(d.y))); } else if (d.y == 0.0 && d.x != 0.0 && o.y != 0) { o = vec2i(i32(sign(d.x)), 0); } }
+    else if ((d.x * f32(o.x) < -PLACE_PAST && (d0.x == 0.0 || abs(d.x - d0.x) > PLACE_SAME)) || (d.y * f32(o.y) < -PLACE_PAST && (d0.y == 0.0 || abs(d.y - d0.y) > PLACE_SAME))) { return vec2i(-9999); }
   }
-  // (THE WALL'S OWN SIDE, the look page's row `walls`, common.wgsl sideOut: the floor at a wall's foot and the wall's top are in the wall's cell, and which room's
-  // level they are shown by was a guess from what the cache held at the pixel, which is the leak itself by day: a strip of one room's floor was shown by the room
-  // next door's level, white. The cell knows the wall's line to 2.5 cm, so the point's side is known, and the first cell out on that side is its place)
-  if (frame.sideCfg.x != 0u) { let o = sideOut(X.x, X.z); if (o.x != 0 || o.y != 0) { for (var r = 1; r <= 4; r++) { let v = placeCell(c + o * r); if (v > -500.0) { let nv = max(placeNear(c + o * r), v); return vec4f(v, v, nv, nv); } } } }
-  var hi = -1000.0; var lo = 1000.0; var nh = -1000.0; var nl = -1000.0;
-  for (var r = 1; r <= 2 && hi < -500.0; r++) { for (var dy = -r; dy <= r; dy++) { for (var dx = -r; dx <= r; dx++) { let v = placeCell(c + vec2i(dx, dy)); if (v > -500.0) { let nv = placeNear(c + vec2i(dx, dy)); if (v > hi) { hi = v; nh = nv; } if (v < lo) { lo = v; nl = nv; } } } } }
-  if (hi < -500.0) { return vec4f(-1000.0); }
-  return vec4f(hi, lo, max(nh, hi), max(nl, lo));
+  return vec2i(-9999);
+}
+/** the place of the pixel at P with normal N, as (the light its place holds, the brightest place a stride away), both as light and in the field's measure;
+ *  `Eown` = the light that falls on the pixel, in that measure. The rule is the note above. ONE CALL of the walk and one of the blend, in a loop over
+ *  the cells that may answer (a wall's top asks two sides or four, everything else one cell): the kernel's size is counted by its call sites. */
+fn lookPlaceLevels(P: vec3f, N: vec3f, Eown: f32) -> vec2f {
+  if (placeWord(1) < 0.5) { return vec2f(lookOpenAir().x); }
+  let X = P + N * 0.3; let m = X.xz - RC_MIN.xz;
+  let q = m / RC_SIZE.xz * vec2f(f32(PLACE_W), f32(PLACE_H)); let c = vec2i(floor(q)); let own = placeCell(c);
+  let d = sideLine(c, m); let o = vec2i(sign(d));
+  for (var ask = select(1, 0, N.y > 0.7 && P.y > PLACE_TOP); ask < 2; ask++) {
+    var cw = c; var n = 0; var dirs: array<vec2i, 4>;   // (the cells that may answer: `cw` itself for a step of (0, 0), else placeSideCell's from `cw` along the step)
+    if (ask == 0) {
+      // A WALL'S TOP: within PLACE_WALL of a wall's line. The wall is this cell's, or the cell's beside it where the top overhangs its side or its end (the
+      // nearer cell on each axis, by its own lines). A tall thing's top further from any line than that is its room's, by the second asking
+      var dt = d;
+      if (own > -500.0) {
+        let s = vec2i(select(-1, 1, q.x - floor(q.x) >= 0.5), select(-1, 1, q.y - floor(q.y) >= 0.5));
+        let dx = sideLine(c + vec2i(s.x, 0), m); let dz = sideLine(c + vec2i(0, s.y), m);
+        if ((dx.x != 0.0 || dx.y != 0.0) && max(abs(dx.x), abs(dx.y)) <= PLACE_WALL) { cw = c + vec2i(s.x, 0); dt = dx; }
+        else if ((dz.x != 0.0 || dz.y != 0.0) && max(abs(dz.x), abs(dz.y)) <= PLACE_WALL) { cw = c + vec2i(0, s.y); dt = dz; }
+      }
+      // (the side of each line the point is within a wall's half thickness of. Where the cell has two, a corner or a T, and the point is over both, the
+      //  top is of the four places round the corner; over one of them, of the two that line parts, on the point's side of the other: a walk straight
+      //  along a wall's own cells would come out at its far end)
+      let t = vec2i(select(0, i32(sign(dt.x)), dt.x != 0.0 && abs(dt.x) <= PLACE_WALL), select(0, i32(sign(dt.y)), dt.y != 0.0 && abs(dt.y) <= PLACE_WALL));
+      if (t.x != 0 && t.y != 0) { n = 4; dirs[0] = t; dirs[1] = -t; dirs[2] = vec2i(t.x, -t.y); dirs[3] = vec2i(-t.x, t.y); }
+      else if (t.x != 0 || t.y != 0) { let p = vec2i(select(0, i32(sign(dt.x)), t.x == 0), select(0, i32(sign(dt.y)), t.y == 0)); n = 2; dirs[0] = t + p; dirs[1] = -t + p; }
+    }
+    else if (own > -500.0) { n = 1; dirs[0] = vec2i(0); }
+    else if (o.x != 0 || o.y != 0) { n = 1; dirs[0] = o; }
+    var best = vec2f(-1000.0);
+    for (var k = 0; k < n; k++) {
+      var cc = cw; if (dirs[k].x != 0 || dirs[k].y != 0) { cc = placeSideCell(m, cw, dirs[k]); }
+      if (cc.x > -9000) { best = max(best, placeBlend(q, cc, placeCell(cc))); }
+    }
+    if (best.x > -500.0) { return exp2(best); }
+  }
+  // (the nearest cells that hold a level, the brightest of them. A cell with lines whose walk found nothing asks first for cells on the point's own side
+  //  of those lines: the floor in a corner behind a panel is not the room across the corner's own wall)
+  var hi = -1000.0; var nh = -1000.0;
+  for (var ask = 0; ask < 2 && hi < -500.0; ask++) {
+    if (ask == 0 && o.x == 0 && o.y == 0) { continue; }
+    for (var r = 1; r <= 4 && hi < -500.0; r++) { for (var dy = -r; dy <= r; dy++) { for (var dx = -r; dx <= r; dx++) {
+      if (ask == 0 && ((o.x != 0 && dx * o.x < 0) || (o.y != 0 && dy * o.y < 0))) { continue; }
+      hi = max(hi, placeCell(c + vec2i(dx, dy))); nh = max(nh, placeNear(c + vec2i(dx, dy)));
+    } } }
+  }
+  if (hi < -500.0) { return vec2f(max(Eown, 1e-9)); }
+  return exp2(vec2f(hi, max(nh, hi)));
 }
 /** the pixel's place as lookExpoGain found it for this pixel: its three gains (place_common.wgsl lookGains) and 1 once it has (0 = no gain by the place
  *  at this pixel: at night, off the look page, with the shade row at 0, a section cap) */
 var<private> lookNow: vec4f;
-/** `here` = the light the air of the pixel's place holds (the place field's; the cache's at the pixel where the field has no answer: the frames before
- *  its two programs are compiled, a point off its map). Sam's place is the field's own eye, eased on the GPU; until there is one he is taken to stand in
- *  the open. → the gain the place is shown by now; what the place sends the eye then goes through lookShow.
- *  `own` = the light that falls on this pixel in the field's measure, and `near` = the brightest place a stride away (lookPlaceField's z; `here` where
- *  the field did not answer), for the Light in order row (place_common.wgsl lookGainsOwn). */
+/** `here` = the light the pixel's place holds and `near` = the brightest place a stride away (lookPlaceLevels: the place field's, by the floor plan). Sam's
+ *  place is the field's own eye, eased on the GPU; until there is one he is taken to stand in the open. → the gain the place is shown by now; what the
+ *  place sends the eye then goes through lookShow. `own` = the light that falls on this pixel in the field's measure, for the Light in order row
+ *  (place_common.wgsl lookGainsOwn). */
 fn lookExpoGain(here: f32, own: f32, near: f32) -> f32 { let g = lookGainsOwn(here, own, near, frame.placeCfg.x); lookNow = vec4f(g, 1.0); return g.x; }
 /** light `c` of this pixel, before any gain, as its place shows it (place_common.wgsl lookShowBy: THE ONE RULE for the diffuse, the mirrors, the gloss
  *  and the men's finish); `g` = lookShadeGain's gain, which is all there is where the model has not spoken for the pixel */
 fn lookShow(c: vec3f, g: f32) -> vec3f { if (lookNow.w > 0.5) { return lookShowBy(c, lookNow.xyz); } return c * g; }
 /** the gain the pixel's place is shown by now (1 where the model is not on); what the place sends the eye then goes through lookShow.
  *  `Eown` = the light on the pixel at its true strength, as the field holds light (the caller's: what is drawn whole, and the bounce over the scale it is
- *  drawn by), for the Light in order row alone. The place is the field's; where the field has no answer, or two (a wall's own cell), this function's own
- *  read settles it: the one call of it, so the kernel carries one box walk and not two. */
-fn lookShadeGain(P: vec3f, N: vec3f, Eown: f32, skip: u32) -> f32 {
+ *  drawn by): for the Light in order row, and for a pixel that is of no one room (lookPlaceLevels). */
+fn lookShadeGain(P: vec3f, N: vec3f, Eown: f32) -> f32 {
   if (!(frame.eyeCfg.w < 0.0)) { return 1.0; }
-  let pick = lookPlaceField(P + N * 0.3); if (pick.x > -500.0 && pick.x - pick.y < 0.5) { return lookExpoGain(exp2(pick.x), Eown, exp2(pick.z)); }
-  let here = lookPlaceHere(P + N * 0.3, skip);
-  // (in a wall's cell between two places: the one whose level is nearer what the cache holds at this pixel, read on this side of the wall)
-  // (the field's levels are the light falling on the floor and `here` is the mean light in the air: brought to the field's by what each says of the open air)
-  var h = here; let sky = placeWord(2); if (placeWord(1) > 0.5 && sky > -500.0) { h = here * exp2(sky) / max(frame.shadeCfg.y, 1e-9); }
-  var near = h;
-  if (pick.x > -500.0) { let l = log2(max(h, 1e-9)); let up = abs(l - pick.x) <= abs(l - pick.y); h = exp2(select(pick.y, pick.x, up)); near = max(h, exp2(select(pick.w, pick.z, up))); }
-  return lookExpoGain(h, Eown, near);
+  let lv = lookPlaceLevels(P, N, Eown); return lookExpoGain(lv.x, Eown, lv.y);
 }
 fn linearToSrgb(c: vec3f) -> vec3f {
   return select(1.055 * pow(c, vec3f(1.0 / 2.4)) - 0.055, c * 12.92, c <= vec3f(0.0031308));
@@ -1143,7 +1182,7 @@ fn compositePixel(pix0: vec2f) -> vec3f {
       }
     } }
     var shadeG = 1.0;   // (1 anywhere but the look page by day: every × below is then the number it was)
-    if (LOOK) { if (frame.shadeCfg.x > 0.0 && ((id >> 29u) & 1u) == 0u) { shadeG = lookShadeGain(P, N, luminance(Ed) + luminance(Ei) / max(frame.indirectScale, 0.05), (id >> 20u) & 0xffu); dif = lookShow(dif, shadeG); } }   // THE LOOK PROTOTYPE: the place's gain (above) — the surface's reflected light only
+    if (LOOK) { if (frame.shadeCfg.x > 0.0 && ((id >> 29u) & 1u) == 0u) { shadeG = lookShadeGain(P, N, luminance(Ed) + luminance(Ei) / max(frame.indirectScale, 0.05)); dif = lookShow(dif, shadeG); } }   // THE LOOK PROTOTYPE: the place's gain (above) — the surface's reflected light only
     if (metalK > 0.0) { dif *= 1.0 - 0.7 * metalK; }   // metalK: 0 unless the reflections are traced AND this is a metal under the cutoff
     color = (dif + emissive) * glassT + crackL;
     var spec = vec3f(0.0);                      // glossy floors (FLAG_GLOSS) / glass (FLAG_GLASS): the reflection radiance, added as it is — specular is not tinted by the diffuse albedo; both flags off = never read, colour untouched

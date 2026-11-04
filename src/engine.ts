@@ -129,9 +129,6 @@ export class Engine {
   }
   /** … and the one map of the level both read (placeField.ts PlaceMap); which tables each frame block was last sent (WallSides.made; −1 = never) */
   readonly placeMap = new PlaceMap(); private sidesSent = -1; private sidesSentOut = -1;
-  /** … and, while doors open by degrees there (the look panel's row `doors`: no leaf is a wall in that map), the map the wall sides still read: a leaf
-   *  where it hangs, as they were made for */
-  private readonly sidesMap = new PlaceMap();
   place: PlaceField | null = null; private placeWas: PlaceField | null = null; private placeDead = false;
   /** THE LOOK PROTOTYPE's eye (render/placeField.ts: the place field's own, eased on the GPU): `snap` = it takes its next reading outright and the field is solved to rest first (the first frame, a restart: game/airSim.ts says; a still sets it by hand). Picture only. */
   lookEye = { snap: true };
@@ -282,7 +279,10 @@ export class Engine {
     this.pool = new TexturePool(device);
     this.gbuffer = new GBuffer(device, this.sceneLayout, this.pool, this.world.maxBoxes);   // (its previous-transform buffer is sized to the world's box capacity)
     this.passes = new LightingPasses(device, this.sceneLayout, gpu.format, gpu.linearSampler, this.pool);
+    if (lookConfig.on) this.buildPlace();   // (THE LOOK PROTOTYPE: its two small programs are asked for with the boot's own, so the page's first frame has a live field. The page's rows are not read yet here, so a page with the shade row at 0 on its address compiles them unused. Until it is live no place takes a gain, composite.wgsl lookPlaceLevels, and a page that got it late would step)
   }
+  /** THE LOOK PROTOTYPE's place field, made once (render/placeField.ts); a device that cannot make it is asked once and no more */
+  private buildPlace(): void { if (this.place || this.placeDead) return; try { this.place = new PlaceField(this.device, this.rc.diceView); } catch (err) { console.warn('place field: not built on this device', err); this.placeDead = true; } }
 
   /** true once init() has resolved: every boot pipeline exists and render() may run */
   ready = false;
@@ -292,7 +292,7 @@ export class Engine {
    *  prepare the sharp-direct trio + its g-buffer down pass / the GBAA kernel, which are otherwise compiled synchronously on the first frame a preset switches them on. Await it
    *  (or use Engine.create) before the first render(); gpu/device.ts pipelineProgress counts the pipelines in for a progress line. */
   init(opts: { sharp?: boolean; gbaa?: boolean; onGroup?: (name: string) => void } = {}): Promise<void> {
-    return this.initP ??= Promise.all([this.rc.init().then(() => opts.onGroup?.('cascades')), this.gbuffer.init({ sharp: opts.sharp }).then(() => opts.onGroup?.('gbuffer')), this.passes.init(opts), this.gbuffer.fillLook().then(() => { if (lookConfig.on) opts.onGroup?.('materials'); })])   // (fillLook: the look page's material maps, made a layer at a time while the pipelines above compile; nothing on any other page)   // (onGroup: the boot timeline's per-group marks — passes reports froxels / denoiser / targetOps / passes itself)
+    return this.initP ??= Promise.all([this.rc.init().then(() => opts.onGroup?.('cascades')), this.gbuffer.init({ sharp: opts.sharp }).then(() => opts.onGroup?.('gbuffer')), this.passes.init(opts), this.gbuffer.fillLook().then(() => { if (lookConfig.on) opts.onGroup?.('materials'); }), this.place ? this.place.whenReady.catch(() => { }) : null])   // (fillLook: the look page's material maps, made a layer at a time while the pipelines above compile; nothing on any other page)   // (onGroup: the boot timeline's per-group marks — passes reports froxels / denoiser / targetOps / passes itself)
       .then(() => { this.ready = true; });   // (memoised: a second caller awaits the same build)
   }
   private initP: Promise<void> | null = null;
@@ -618,7 +618,7 @@ export class Engine {
     const hourExp = lookConfig.on ? lookExposure(lookConfig.exposure?.() ?? null, this.settings.skyZenith, this.settings.skyHorizon) : 1;   // (THE LOOK PROTOTYPE: the exposure of the hour that is up against the night's, render/photometry.ts)
     const shadeCfg = lookConfig.on && lookConfig.shade > 0 ? lookShade(this.settings.skyZenith, this.settings.skyHorizon, lookConfig.sky, lookConfig.shade) : undefined;   // (THE LOOK PROTOTYPE's shade row, below: the share of a darker place's dark the one exposure model brings up, render/lookexpo.ts; at 0 no place takes a gain)
     const placeOn = !!shadeCfg && shadeCfg[0] > 0;   // (THE LOOK PROTOTYPE's place field, above: wherever the model runs, which is wherever the shade row is up, at every hour)
-    if (placeOn && !this.place && !this.placeDead) { try { this.place = new PlaceField(this.device, this.rc.diceView); } catch (err) { console.warn('place field: not built on this device', err); this.placeDead = true; } }   // (a device that cannot build the field keeps the model on the cache's own read at the pixel, with the eyes taken to stand in the open: what every page shows for the frames before its field is live, composite.wgsl lookShadeGain)
+    if (placeOn) this.buildPlace();   // (a device that cannot build the field shows every place as the open air, with no gain taken: what every page shows for the frames before its field is live, composite.wgsl lookPlaceLevels)
     let eyesWidest: [number, number] | null = null;   // (frame.placeCfg's z and w, render/lookexpo.ts lookExpoBound)
     if (placeOn) { const own = hourExp < 1 ? lookConfig.nightSky?.() ?? null : null;   // (with an hour up, the level's own sky by the page's word: a night's unless the level is its own day, which lookExposure says of it as it does of any sky)
       eyesWidest = lookExpoBound(lookConfig.dark, lookNightSkyE(hourExp, shadeCfg?.[3], own && lookExposure(null, own.zenith, own.horizon) >= 1 ? Math.PI * lookConfig.sky * lookSkyLum(own.zenith, own.horizon, 0.947) : null), this.settings.nvAmount); }
@@ -679,11 +679,9 @@ export class Engine {
     // meter reads the cache, so on the look page the row changes what the meter and the guards read): the cascades' hand-over overlap (render/rc.ts)
     // and the cache rays' bounce read (lighting_common.wgsl hitRadiance, FrameFlags.RcRoom). Both stop the open air's daylight reaching a shut room's probes.
     const lookSides = wallSidesConfig.on, lookGaps = lookSides || placeOn ? lookConfig.doorGaps?.() ?? [] : [];
-    const byDegrees = placeOn && lookConfig.doorsBy > 0 && !!lookConfig.doorGaps;   // (the field's row: with no field the one map is the wall sides', as it was; and only where the doors' lines are told, or a leaf would be nowhere in the map)
-    if (lookSides || placeOn) this.placeMap.update(this.world.statics, this.world.dynamics, lookGaps, byDegrees);   // (the map of the level as it stands, ONE a frame: the wall sides read it here and the place field below)
-    if (lookSides && byDegrees) this.sidesMap.update(this.world.statics, this.world.dynamics, lookGaps);
-    if (lookSides) this.wallSides.update(this.world.statics, this.world.dynamics, lookGaps, this.rc.cfg.nx, this.rc.cfg.nz, (byDegrees ? this.sidesMap : this.placeMap).mask);   // (THE LOOK PROTOTYPE's Walls have two sides row: made again only when a wall, a door's line or a leaf's rest changes)
-    const sidesStamp = lookSides && this.wallSides.fits ? this.wallSides.made : -1;   // (which tables the frame block carries this frame; −1 = none, the flag down)
+    if (lookSides || placeOn) this.placeMap.update(this.world.statics, this.world.dynamics, lookGaps);   // (the map of the level as it stands, ONE a frame and one for both readers: the wall sides here and the place field below. Doors open by degrees in it and no leaf is a wall, scene/placePlan.ts)
+    if (lookSides || placeOn) this.wallSides.update(this.world.statics, lookGaps, this.rc.cfg.nx, this.rc.cfg.nz, this.placeMap);   // (the plan's words: the Walls have two sides row's for the cache reads, and the exposure's for a pixel's place whatever that row says, composite.wgsl lookPlaceLevels. Made again only when the map's shape changes)
+    const sidesStamp = lookSides || placeOn ? this.wallSides.made : -1;   // (which tables the frame block carries this frame; −1 = none)
     const lookRoom = lookConfig.on && lookConfig.rooms > 0; this.rc.setOverlap(lookRoom ? 1 : 0);
     const lampK = lookRoom && this.lights.dayExp < 1 ? Math.pow(this.lights.dayExp, Math.min(1, this.lights.dayAmount)) : 1;   // (× the night's strength a fixture is drawn at this hour, render/photometry.ts lightDayK: 1 at night, with the row down and off the look page. Every FIXED night level a lamp's light is tested against is held at this share below: the cache's shadow-ray threshold, the direct estimators' floor, the dim-pixel rule)
     this.rc.amortize = s.rcAmortize; this.rc.setPeriods(s.rcPeriods); this.rc.setChunks(s.rcChunks);   // amortized cascade upkeep (rc.ts): the settings are the source of truth, mirrored like the other cache options
@@ -706,7 +704,7 @@ export class Engine {
         | (decalsOn ? FrameFlags.Decals : 0) | (partOn ? FrameFlags.Particles : 0) | (s.glass ? FrameFlags.Glass : 0) | (cardSlots.length > 0 ? FrameFlags.BounceCards : 0) | (s.directSeedHold ? FrameFlags.DirectSeedHold : 0) | (s.giAdaptiveHistory ? FrameFlags.GiAdaptiveHist : 0)
         | (froxOn ? FrameFlags.FroxelVol : 0) | (restir ? FrameFlags.Restir : 0) | (lookRoom ? FrameFlags.RcRoom : 0),
       shadeCfg: this.lookShadeCfg = shadeCfg, eyeCfg: this.lookEyeCfg = ((lookConfig.on ? lookExpoFrame(shadeCfg, lookConfig.shade, lookConfig.eyes, lookConfig.glare, hourExp) : null) ?? undefined),   // (the one exposure model, render/lookexpo.ts: w under 0 is composite.wgsl lookShadeGain's word; null = no shade row: no pixel takes a gain by its place)
-      veilA: veil?.[0], veilB: veil?.[1], gradeCfg: lookConfig.on ? [this.lookGradeCfg?.[0] ?? 0, this.lookGradeCfg?.[1] ?? 0, lookConfig.footing, 0] : undefined,   // (z: the place's light is read on this side of the wall, composite.wgsl lookPlaceHere; w: spare since the Room contrast row went with the rows the model replaced)
+      veilA: veil?.[0], veilB: veil?.[1], gradeCfg: lookConfig.on ? [this.lookGradeCfg?.[0] ?? 0, this.lookGradeCfg?.[1] ?? 0, 0, 0] : undefined,   // (z and w: spare. z was the read of the cache on this side of a wall, gone with the guess it served, composite.wgsl lookPlaceLevels; w the Room contrast row's)
       exposure: lookConfig.on ? s.exposure * lookConfig.gradeExp : s.exposure,   // (THE LOOK PROTOTYPE's Exposure row: × the hour's own)   // tileCull / softTileSkip / gridSkip / gridYCull / axisBoxFast / gridSlabs / gloss / meshShadows / decals / gpuParticles / glass / torchBounceCards / directSeedHold / giAdaptiveHistory: the boolean settings are the single source of truth for their bits (frame.ts FrameFlags is the one table; the cards bit only while a card light is actually up, the decals bit only while a mark exists)
       skyZenith: lookConfig.on && lookConfig.sky !== 1 ? [s.skyZenith[0] * lookConfig.sky, s.skyZenith[1] * lookConfig.sky, s.skyZenith[2] * lookConfig.sky] : s.skyZenith, skyHorizon: lookConfig.on && lookConfig.sky !== 1 ? [s.skyHorizon[0] * lookConfig.sky, s.skyHorizon[1] * lookConfig.sky, s.skyHorizon[2] * lookConfig.sky] : s.skyHorizon, hazeDensity: lookConfig.on ? s.hazeDensity * lookConfig.air : s.hazeDensity,
       rcInterval0: this.rc.cfg.interval0, rcC0Dims: [this.rc.cfg.nx, this.rc.cfg.ny, this.rc.cfg.nz], rcNumCascades: this.rc.cfg.cascades, rcD0: this.rc.cfg.d0, rcFrameParity: this.frameIdx & 1,
@@ -717,7 +715,7 @@ export class Engine {
       directAdaptiveMin: s.directAdaptiveMin,
       numTransient: numTransientNow,
       smokeDraw: this.smokeDrawWords(), powderDraw: lookConfig.on ? powderDrawWord() : 0,
-      sides: lookSides && this.wallSides.fits ? this.wallSides.words : null, sideCols: lookSides && this.wallSides.fits ? this.wallSides.cols : null,   // (THE LOOK PROTOTYPE's Walls have two sides row: lighting_common.wgsl diceTaps, diceFacePointBy)
+      sides: lookSides || placeOn ? this.wallSides.words : null, sideCols: lookSides && this.wallSides.fits ? this.wallSides.cols : null,   // (THE LOOK PROTOTYPE's Walls have two sides row: lighting_common.wgsl diceTaps, diceFacePointBy)
       placeCfg: (placeOn && lookConfig.order > 0) || portal0 > 0 || eyesWidest ? [placeOn && lookConfig.order > 0 ? Math.min(lookConfig.order, 1) : 0, portal0, eyesWidest?.[0] ?? 0, eyesWidest?.[1] ?? 0] : undefined,   // (THE LOOK PROTOTYPE, light keeps its order across places: with the place field · z, w: the eyes' widest, render/lookexpo.ts lookExpoBound)
       lampCfg: lampK < 1 ? [lampK, lampK / emissiveDayK(this.lights.dayExp, this.lights.dayAmount), lookConfig.steady > 0 ? 1 : 0, Math.max(lookConfig.roomBright, 0.001)] : undefined,   // (.z: the Steady bounce row is up, lighting_common.wgsl dayBoundK · .w: the Room brightness row, composite.wgsl lookExpoGain)   // (common.wgsl lampFloorK, boxEmissiveRay)
       secMinE: s.secMinE * lampK,   // (by day a fixture is drawn at the hour's exposure × its night strength, render/photometry.ts, so the night's threshold is held at the same share of it: every lamp the night's cache carries, the day's does too)

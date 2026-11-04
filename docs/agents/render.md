@@ -1245,7 +1245,7 @@ interleaved and filtered to their quiet minimum, and a row whose p75 sits far ab
   contrast of the room's own (the day's contrast is undone under a roof), the sun's patch left bright, and a window's and an open door's light as an
   opening that sends sky down and the lit ground up. (11-01: a window, an open door and a blown hole ARE openings now, by one rule, each one light of the
   mean of the two: THE LOOK PANEL'S "DAYLIGHT AT OPENINGS" ROW. The two-tone light is still not built.)
-- **A ROOM'S LIGHT IS READ ON THIS SIDE OF ITS WALLS, AND A SUN PATCH INDOORS KEEPS THE ROOM'S CONTRAST** (THE SUN PATCH HALF IS GONE SINCE 11-04 with the rows the model replaced (below); the read on this side of the walls stands. 10-30; `lookConfig.footing`, 1 on the look
+- **A ROOM'S LIGHT IS READ ON THIS SIDE OF ITS WALLS, AND A SUN PATCH INDOORS KEEPS THE ROOM'S CONTRAST** (BOTH HALVES ARE GONE SINCE 11-04: the sun patch half with the rows the model replaced, and the read on this side of the walls, `lookPlaceHere`, `?footing` and `lookplace-check`, with the guess it served: A PIXEL'S PLACE IS READ OFF THE FLOOR PLAN, below. What follows is the record. 10-30; `lookConfig.footing`, 1 on the look
   page, `?footing=0` = as it was; `frame.gradeCfg.z`, written by `engine.ts` on the look page whatever the Contrast row says; `composite.wgsl
   lookPlaceHere` and the head of `lookShadeGain`, and the compact twin). The maintainer on a GPU: "very odd pooling of shadow under window". THE BULLET
   ABOVE HAD THE CAUSE WRONG. The window lamp's dead ground only says why no direct light falls there. The black was the SHADE ROW not bringing that floor
@@ -1496,7 +1496,7 @@ interleaved and filtered to their quiet minimum, and a row whose p75 sits far ab
   clean. Night, two fresh boots with the row up and down: the same picture (mean difference 0.14 and 0.22 of 255 over two views), so the one rule does at
   night what the four guards did there. A white band on the kitchen's side of the store wall by day is the same before and after: light on that face, not
   this fault. NEVER SEEN ON A GPU.
-- **THE PLACE MAP AT A SHUT DOOR AND AT A WALL'S FOOT** (11-01; `placeField.ts PLACE.shutNear`, `gapNear`; `composite.wgsl lookPlaceField`, `sideOut`). The
+- **THE PLACE MAP AT A SHUT DOOR AND AT A WALL'S FOOT** (SINCE 11-04 a shut door is its line's own wall with no leaf asked, `PLACE.shutNear` is gone, and the composite's side of a wall is `lookPlaceLevels` by `common.wgsl sideLine`: A PIXEL'S PLACE IS READ OFF THE FLOOR PLAN, below. The record: 11-01; `placeField.ts PLACE.shutNear`, `gapNear`; `composite.wgsl lookPlaceField`, `sideOut`). The
   maintainer, the pass's back door in overcast: "weird artifacts to the left of the door in overcast too", "doesn't show up in night but does for dawn and dusk".
   Hard-edged blocks one map cell wide on the wall and the floor beside the door. Two causes. A shut leaf's crack counted as a doorway, so cells at the jamb were
   every place's: a shut door's line is now wall from jamb to jamb (`placedoors-check`, its last line). And a point in a wall's own cell (the floor at a wall's
@@ -1660,8 +1660,11 @@ interleaved and filtered to their quiet minimum, and a row whose p75 sits far ab
   hint for a blocker past the opening is the largest of a pixel's rays' and may smear a contact shadow in the same light; the sharp pass's one ray
   jumps between points along a line on the floor; the soft character path (off) stops a man's shadow at the opening's plane; the night's cost of a
   dozen more lights is not measured; a pixel's place near a door is still the floor plan's guess. Never seen on a GPU.
-- **DOORS OPEN BY DEGREES IN THE FLOOR PLAN** (11-04; the look panel's row `doors` "Doors open by degrees", `&look=doors:1`, 0 in the page until it has
-  been seen on a GPU; `scene/placePlan.ts placeMask` `steps`, `doorSteps`, `doorwayOpen`, `doorJambs`, `placeJamb`, `PlaceMap.update` `byDegrees`;
+- **DOORS OPEN BY DEGREES IN THE FLOOR PLAN** (THE ROW IS GONE SINCE 11-04 15:18Z AND THIS IS THE ONLY MAP: the maintainer played it on his M4 and chose
+  to keep it on a card, so the `doors` row, `lookConfig.doorsBy`, `PlaceMap.update`'s `byDegrees`, the map that stamped a leaf as wall cells and the
+  engine's second map for the wall sides (`sidesMap`, `sidesKey`) are deleted; `&look=doors:...` on an address is ignored. Where this bullet says "with
+  the row up" read "always". `DOORSBY_BREAK=1` now tells the map every door stands wide open and fails 3 lines. The record: 11-04; the look panel's row
+  `doors` "Doors open by degrees", `&look=doors:1`, 0 in the page until it has been seen on a GPU; `scene/placePlan.ts placeMask` `steps`, `doorSteps`, `doorwayOpen`, `doorJambs`, `placeJamb`, `PlaceMap.update` `byDegrees`;
   `scene/wayThrough.ts`; `shaders/place_field.wgsl hand`, `doorShut`). The maintainer, of a door opened on a dark room: "some odd brightness
   swinging". FOUND in frame-by-frame recordings of the page on a real GPU (an NVIDIA card driven headless, the row not yet built) and worked out
   again on the CPU: a leaf was stamped into the map as wall cells wherever it stood, so while a door swung the map's walls moved under the place
@@ -1703,7 +1706,8 @@ interleaved and filtered to their quiet minimum, and a row whose p75 sits far ab
   with the older night bound behind them are deleted in one commit; `&look=hours:...` on an address is now ignored. The `dark` row stays. What
   follows is the bullet as written with the row, for its reasons and its numbers; where it says "with the row up" read "always", and where it
   says "with the row at 0" read "until 11-04". `HOURS_BREAK=1` still leaves the eyes' widest out of the check's model and fails 6 lines. The
-  fold was drawn on the software adapter: see the commit. 11-04; the look panel's rows `hours` "One exposure at every hour" and `dark` "Eyes
+  fold was NOT drawn byte for byte against the row at 1 (a dusk and a night want two boots each): its proof is the check, and the midday boot of
+  the step after it (A PIXEL'S PLACE IS READ OFF THE FLOOR PLAN). 11-04; the look panel's rows `hours` "One exposure at every hour" and `dark` "Eyes
   open in the dark", `&look=hours:1`, `hours` 0 in the page until it has been seen on a GPU; `render/lookexpo.ts lookExpoFrame` `everyHour`, `lookExpoBound`,
   `lookNightSkyE`, `LOOK_EXPO.dim` / `.dimSky` / `.dark` / `.read` / `.lamp`; `engine.ts lookShade` `everyHour`, `eyesWidest`;
   `shaders/place_common.wgsl lookExpoFor`'s last lines, `lookRoll`, `EXPO_READ`, `EXPO_LAMP`; frame.placeCfg z and w; the page's
@@ -1755,6 +1759,73 @@ interleaved and filtered to their quiet minimum, and a row whose p75 sits far ab
   row's light is not a night's (`lampCfg`); lamps are still the game's by night and real by day (`photometry.ts`). (The rows the model
   replaced went in the step after this one: the next bullet.) MEASURED on the software adapter and the CPU only: THE ROWS ON
   HAVE NEVER BEEN SEEN ON A GPU.
+- **A PIXEL'S PLACE IS READ OFF THE FLOOR PLAN, NEVER GUESSED** (11-04; the look page only, no row: it is the only path. `composite.wgsl` and
+  `compact/composite.wgsl lookPlaceLevels`, `placeBlend`, `placeAcross`, `placeSideCell`; `common.wgsl sideLine`, `sideIsDoor`;
+  `place_field.wgsl placeSweep`, `hand`, `placeEye`; `render/wallSides.ts placeSides` kind 3; `scene/placePlan.ts placeMask`,
+  `PlaceMap.shape`). The maintainer on his M4, the white roof at midday: "weird flash on the door when opening", "there's a dark band right by the
+  entry of the door threshold and door", two dark squares on the floor at a door's jambs in a still, and of the depot at midday "lots of bleeding in
+  that level"; before those, 10-31: "i worry that we're finding these cases one by one and not fixing them systematically". ONE CAUSE: each was a pixel
+  shown by the gain of a place it is not in, and each came from the step that ran where the place field had no plain answer. In a wall's cell, a
+  doorway's, and a door mid swing the place was GUESSED from the radiance cache near the pixel (`lookPlaceHere`: five reads, a box ray each, then
+  "whichever of the two levels is nearer"). The flash was a door that had begun to swing: the engine kept two maps, the field's (doors by degrees)
+  and an older one for the wall sides that stamped the turned leaf as wall cells, so for the frames between shut and the first step the door's cells
+  were wall in one and said nothing in the other, and the floor at the door's line went to the guess. The band and the squares were a doorway's cell
+  holding a level of its own, between its two rooms', and the strip of floor at a jamb's foot taking one cell's level unblended beside floor that was
+  blended. The depot's white lines were sunlit wall tops shown by the gain of the dark room under them.
+  THE RULE, as `lookPlaceLevels` asks it: a wall's top (a face that looks up above 1.88 m within 0.14 m of a wall's line, the part that overhangs the
+  room's own cell too; a tall cabinet's top further from any line is its room's) is of neither room and takes THE BRIGHTER of the two its line parts,
+  or of the four places round a corner where it is over both lines of a corner's cell;
+  a free cell answers with its own level, blended with the free cells beside it; a wall's cell and a doorway's answer by the plan's own line through
+  them (the wall's centre line, the door's line shut or open and at every angle of its leaf; to 2.5 cm), with the first cell that holds a level on
+  the point's side, blended as any cell of that room is; a cell with no line, or with nothing its walk could reach, takes the brightest of the nearest cells
+  that hold a level (on the point's own side of its cell's lines first); only the middle of a mass wider than 3 m, with no place in four cells, is shown by its own light. THE WALK to the answering cell
+  (`placeSideCell`) turns at a doorway it meets from the side, to the point's side of that doorway's line, and stops at another wall's line: the
+  floor at the foot of a wall that ends in a doorway is of the room on its side of the door, and the pocket behind a shelf's end panel is never the
+  room across the partition. NOTHING ELSE is by the pixel, no read of the cache says a place, and the composite carries one box walk less
+  (`shaderinline-check`: 1070 to 1052 KB a module, still over its row of 1030 as it was).
+  WHAT ELSE MOVED, all on the look page: (1) A DOORWAY'S CELL HOLDS NO LEVEL in the field, and no level is pulled through a doorway (`PLACE.link`
+  is gone): two rooms through an open door are two places to the door's line, each with the level its own floor holds, and what joins them in the
+  picture is the Light in order row, which shows the floor a bright room lights inside a dark one's door by the level of the light on it. A room's
+  level no longer moves when its door opens unless its light does. (2) ONE MAP for both readers: `PlaceMap` by degrees; `WallSides` is made again
+  when the map's SHAPE changes (which cells are wall, which doorway: `PlaceMap.shape`) and not at each of a swing's 31 steps (49 makings in the
+  check's 28 closings, where keying it by every drawing made 500). THE WORDS RIDE WHENEVER THE PLACE MODEL IS ON, whatever the Walls have two sides
+  row says: with that row at 0 only the cache reads' flag is down (`frame.ts`: `sideCfg.x` is up with the column table, the words are written with
+  either reader). A doorway's word (kind 3) carries its lines and no places. (3) A DOORWAY WITH NO DOOR has ONE LINE A RUN: the line of a door
+  whose cells it touches, else the centre line of the walls that are its jambs, else its middle along the way through, which is the axis whose two
+  hands no wall touches (a line a cell made a doorway two cells deep four bands of its two rooms: 158 runs on 29 levels, found by review before it
+  was drawn). (4) A LINE ON A CELL'S EDGE is written a step outside the cell (it lay between two steps of the 2.5 cm grid and float noise put a
+  hairline of the wrong room along 45 doors). (5) THE AIR (`placeAir`) is as it was, one answer a cell, because the march keeps a cell's answer for
+  its steps there: a doorway's cell, which holds no level now, takes the brightest free cell within two as a wall's cell does, so smoke on a
+  threshold is shown as the brighter room's. (6) THE EYE where Sam's cell holds no level (a threshold, a short passage, against a wall) takes the
+  NEAREST cell that holds one, by where he stands in his cell (it took the brightest beside him, which shut the eye on a dark room he had not
+  left). (7) THE FIELD IS BUILT WITH THE BOOT'S PROGRAMS (`engine.ts buildPlace`, awaited by `init`), since before it is live, and on a device that
+  cannot build it, every place is now the open air and no gain is taken: there is no second model to fall back on. A device with no field shows the
+  look's interiors unexposed, with a console warning.
+  DELETED with it: `lookPlaceHere`, `lookPlaceField`, `sideOut`, `lookConfig.footing` and `?footing`, `frame.gradeCfg.z`'s use, the `doors` row,
+  `PLACE.link`, `PLACE.shutNear`, `PLACE.leafStep`, `lighting_common.wgsl diceMeanRadiancePlain`, `tools/qa/lookplace-check.ts`.
+  CHECKS, no GPU: `wallsides-check` section 8 copies the shader's rule line for line and holds (a) every cell of a door's line knows the line at every
+  angle of its leaf (1,694 cell positions of the pass's seven doors); (b) a walk through an open door a millimetre a step is one room to the line
+  and the other from it, at three angles; (c) 318 points at the foot and on the faces of the store's walls are their own room's; (d) a wall top is
+  the brighter room's from edge to edge, and a cabinet top inside the room or against the wall is the room's; (e) both writings of the kernel carry
+  the same text and no read of the cache; (f) ON ALL 60 LEVELS, doors wide and shut: 2,119 doorway runs change rooms once; of 206,990 points in the
+  cells with lines that their side answers, 80 (0.04 %, the check's bar is 0.05) are answered by a room they cannot see past things a wall's height
+  (corners where masses stand three deep, most in one warehouse), and 1,858 more, in pockets between tall things with nothing on their side, take the
+  brightest cell near them and are not judged; of 362,475 points on the tops of upright walls, a millimetre in from each edge, 0.27 % are shown as
+  one room's (walls beside another tall thing whose line the cell holds; bar 0.5); of 24,884 points on the tops of tall things 0.3 m from every wall
+  box 0.27 % are taken for a wall's top (beside a window wall, which is no one box; bar 0.5). `SIDEDOOR_BREAK=1` (the words made with
+  no door told) fails 4 lines and `WALLSIDES_BREAK=1` 4. `placedoors-check` (6 lines; `DOORSBY_BREAK=1` fails 3, `PLACEDOORS_BREAK=1` 6),
+  `lookexpo-check` (both stands; `HOURS_BREAK=1` 6, `LOOKEXPO_BREAK=1` 13), `openings-check`, `smokelab-check`, `place-field-page.cjs` on the software
+  adapter (19 lines: a doorway's cell holds no level, an open door does not move a room's level by itself, the brightest place a stride away still
+  comes in with the swing), `wgsl-compile` all texts, both typechecks. Two reviews; the second's finds are in the rule above.
+  DRAWN, software adapter only, and thin: the white roof at midday boots on the final tree with all 120 programs (the field's two are in the boot's
+  set now), no page error and no GPU error, and the door between its two rooms swung through five angles draws as it did before, frame for frame by
+  eye. His flash does not show on this adapter before the change either (it is a matter of which frame a map was drawn on), nor do the depot's white
+  wall tops in its opening view, so THIS STEP'S PROOF IS ITS CHECKS, line (a) for the flash and (d) and (f) for the tops, and the picture wants his
+  GPU.
+  NEVER SEEN ON A GPU. Not drawn at all: a doorway with no door; smoke on a threshold; the eye on a threshold; a device with no field; the page with
+  the Walls have two sides row at 0. A wall top between two indoor rooms takes the brighter room's level whatever light is on it: by eye. NOT THIS
+  STEP'S, seen in its stills before and after alike: a cell-sized grey square on the floor at a door's jamb (the maintainer's still of 11-04). It
+  is in the light, not the exposure: the cache's read by place (`lighting_common.wgsl diceTaps`) at the cells beside a doorway. Open.
 - **THE ROWS THE ONE EXPOSURE MODEL REPLACED ARE DELETED, AND ITS OWN ROW WITH THEM** (11-04; `composite.wgsl` and `compact/composite.wgsl
   lookShadeGain`, their caller, `engine.ts`, `ui/lookpanel.ts`; no switch: nothing a page draws with its rows as it opens was touched). The
   maintainer chose the model over mending the rows it replaced (10-31), and ruled every special case of the light fixed (11-04): the first of the
@@ -1770,7 +1841,7 @@ interleaved and filtered to their quiet minimum, and a row whose p75 sits far ab
   this side of the wall. A DEVICE THAT CANNOT BUILD THE FIELD keeps the model on the cache's own read at the pixel, the eyes taken to stand in
   the open: what every page shows for the frames before its field is live, and what a device whose field pipelines came back invalid already
   showed (`engine.ts placeDead`: the constructor is asked once and no more; before, the row was put down and the older rows ran). The engine's
-  `lookEye` is `{ snap }` alone (the stills tools and `game/airSim.ts` set it). STILL TWO, and not this step's: `lookPlaceHere`'s five reads
+  `lookEye` is `{ snap }` alone (the stills tools and `game/airSim.ts` set it). STILL TWO, and not this step's (BOTH GONE the same day: A PIXEL'S PLACE IS READ OFF THE FLOOR PLAN, below): `lookPlaceHere`'s five reads
   behind `?footing=0`; the wall cell's side by what the cache holds where the plan does not say (the floor plan's silent cells, 5.8 % of 48,877
   wall cells over 60 levels with doors shut, most of them on four levels); the corrections on the model named under ONE EXPOSURE AT EVERY HOUR.
   CHECKS: `lookexpo-check` (the kernel's text in both writings, that nothing of the rows is left in either, that the model has no row),
