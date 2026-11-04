@@ -65,7 +65,7 @@ export function glassShape(h: Vec3, tilt: { f: number; r: number; s: number }, b
   const out = (p: ShapePlane): ShapePlane => plane(p[0], p[1], p[2], p[3] + e), inside = (p: ShapePlane, by: number): ShapePlane => plane(-p[0], -p[1], -p[2], by - p[3]);
   // a post's own box: the glass's, 12 mm wider each way and `low` shorter at the top; its planes are the glass's, said from its centre
   const ph: Vec3 = [r6(h[0] + e), r6(h[1] - low / 2), r6(h[2] + e)], pd: Vec3 = [0, -low / 2, 0];
-  const post = (planes: ShapePlane[]): ShapePiece => ({ off: [0, r6(-low / 2), 0], h: ph, ...paintOf(body), cut: planes.map(p => moved(p, pd)), old: true });
+  const post = (planes: ShapePlane[]): ShapePiece => ({ off: [0, r6(-low / 2), 0], h: ph, ...paintOf(body), cut: biting(ph, planes.map(p => moved(p, pd))), old: true });   // (a pane that stands upright lends the post its box's own face: that plane says nothing and is left out)
   const trim: ShapePiece[] = [];
   for (const s of [-1, 1]) {
     if (tilt.f > 0) trim.push(post([out(F), out(S(s)), inside(F, w), inside(S(s), w)]));
@@ -163,5 +163,80 @@ export function bikeShapes(tank: CarPaint) {
     exhaust: { round: 1 } as BoxShape,
   };
 }
+// ---- the lorry ----
+/** the paints a lorry's shapes and trim are said in (the kit's own Mats) */
+export interface LorryPaints { red: CarPaint; canvas: CarPaint; iron: CarPaint; galv: CarPaint; rust: CarPaint; rubber: CarPaint; poplar: CarPaint; white: CarPaint; glass: CarPaint; jerry: CarPaint; olive: CarPaint; orange: CarPaint }
+/** the eight planes that make a box of square plan a twelve-sided prism of radius r about its own y (a piece of trim that stands on its end: a stack, a
+ *  canister, a beacon — a BOX of the level that is round on its end is the kit's round thing, scene/round.ts) */
+const ringY = (r: number): ShapePlane[] => [30, 60, 120, 150, 210, 240, 300, 330].map(d => plane(Math.cos(d * D), 0, Math.sin(d * D), r));
+/** trim said from the vehicle's own frame, for a box of it whose centre is `o` there: (lx, lz, y0, y1, hx, hz, paint, form) as the kits write a box */
+const trimFor = (o: Vec3) => (lx: number, lz: number, y0: number, y1: number, hx: number, hz: number, p: CarPaint, form: Partial<ShapePiece> = {}): ShapePiece =>
+  ({ off: [r6(lx - o[0]), r6((y0 + y1) / 2 - o[1]), r6(lz - o[2])], h: [hx, r6((y1 - y0) / 2), hz], ...paintOf(p), ...form });
+
+/** A TWO-AXLE LORRY with a canvas tilt, 7 m, nose toward local +x (scene/gwotKit.ts lorry; asked 2026-10-24 of the pass's: "some curved surfaces on the
+ *  truck would go a long way", and 10-30, of the first curves: "truck could use some dressing up. but overall the round surfaces look nice"): the shape
+ *  each box of its stack says, and the fittings a lorry of its kind carries as trim.
+ *  · the canvas tilt is BOWED over its hoops; the cab's roof is an arch from the windscreen back, and the windscreen leans;
+ *  · the bonnet is an engine cover that narrows to a rounded top, between two FENDERS that arch over the front wheels; the lamps sit in round pods;
+ *  · the wheels are round, with hubs; a round tank hangs under the bed on each side;
+ *  · an exhaust stack up the cab's back corner, mirrors on arms, a beacon, steps, a door seam and a handle a side, an air cleaner on the cowl, a winch drum,
+ *    hooks and a plate on the bumper, stakes down the sideboards, three jerry cans racked on one of them, mud flaps, tail lamps, the spare on the tailboard.
+ *  WHAT A RAY MEETS LESS OF: the tilt's shoulders (its eaves come down 0.35 m), the bonnet's (it narrows from 0.98 m a side to 0.56 at its top), the cab roof's
+ *  front and back edges, the top of the windscreen. Everything else here is trim: a tank, a fender, a mirror stop nothing. `snow*`: how a cap of snow lies on
+ *  the bowed tilt, the arched roof and the narrowed bonnet (a level that snows it in says them of its own slabs). */
+export function lorryShapes(P: LorryPaints) {
+  const hub = tone(P.galv, 0.6), tank = { ...tone(P.galv, 0.6), rough: 0.45, metal: true }, iron = { ...P.iron, rough: 0.5, metal: true }, galv = { ...P.galv, rough: 0.38, metal: true };
+  const wheelH: Vec3 = [0.48, 0.48, 0.15];
+  // a front wheel's fender: an arc about the wheel's own axle of radius 0.6, 1.08 m long, from the engine cover's side out over the tyre
+  const fender = (s: number): ShapePiece => { const w = 0.54, R = 0.6, rise = r6(R - Math.sqrt(R * R - w * w)); return { off: [0, r6(1.08 - rise / 2 - 0.48), r6(-s * 0.125)], h: [w, r6(rise / 2), 0.295], ...paintOf(P.red), arc: { axis: 3, rise } }; };
+  const wheel = (s: number, front: boolean): BoxShape => { const W = wheelShape(wheelH, s, { ...hub, rough: 0.45, metal: true }, null); if (front) W.with!.push(fender(s)); return W; };
+  // the chassis (its centre (−0.1, 0.62, 0)): a tank under the bed, a step under the door and a mud flap behind the rear wheel, a side
+  const ch = trimFor([-0.1, 0.62, 0]), chassis: BoxShape = { with: [-1, 1].flatMap(s => [
+    ch(0.1, s * 0.82, 0.25, 0.69, 0.5, 0.22, tank, { round: 1 }),
+    ch(1.55, s * 1.2, 0.44, 0.49, 0.42, 0.09, { ...tone(P.galv, 0.6), rough: 0.38, metal: true }),
+    ch(-2.8, s * 0.98, 0.16, 0.72, 0.012, 0.17, { ...P.rubber, rough: 0.9 })]) };
+  // the bumper (3.42, 0.64, 0): the winch's drum between two cheeks, the plate, a hook a side
+  const bu = trimFor([3.42, 0.64, 0]), bumper: BoxShape = { with: [
+    bu(3.56, 0, 0.56, 0.76, 0.1, 0.26, { ...P.rust, rough: 0.85 }, { round: 3 }), ...[-1, 1].map(s => bu(3.56, s * 0.275, 0.53, 0.79, 0.13, 0.012, iron, { round: 3 })),
+    bu(3.486, -0.82, 0.54, 0.72, 0.004, 0.2, { ...P.white, rough: 0.45 }), ...[-1, 1].map(s => bu(3.53, s * 0.62, 0.58, 0.68, 0.05, 0.03, iron))] };
+  // the bonnet (2.75, 1.12, 0): it narrows to a rounded top; the grille, a lamp's pod a side, the air cleaner on the cowl
+  const bonnetH: Vec3 = [0.62, 0.38, 0.98], bo = trimFor([2.75, 1.12, 0]);
+  const bonnet: BoxShape = { arc: { axis: 1, rise: 0.26 }, cut: [leanPlane(bonnetH, 0, 1, 29), leanPlane(bonnetH, 0, -1, 29)], old: true, with: [
+    bo(3.376, 0, 0.8, 1.3, 0.006, 0.4, iron),
+    ...[-1, 1].map(s => bo(3.18, s * 0.68, 0.86, 1.1, 0.14, 0.12, P.red, { round: 1 })),
+    bo(2.3, 0.74, 1.02, 1.44, 0.1, 0.1, { ...tone(P.galv, 0.6), rough: 0.38, metal: true }, { cut: ringY(0.1) }), bo(2.3, 0.74, 1.44, 1.47, 0.115, 0.115, iron, { cut: ringY(0.115) })] };
+  // the cab's doors (1.55, 1.12, 0): the exhaust stack in its heat shield with a rain cap, and a side: a mirror on its arm, the door's seam, its handle
+  const ca = trimFor([1.55, 1.12, 0]), cab: BoxShape = { with: [
+    ca(1.0, 1.2, 0.55, 2.5, 0.045, 0.045, { ...P.rust, rough: 0.85 }, { cut: ringY(0.045) }), ca(1.0, 1.2, 1.05, 1.9, 0.07, 0.07, { ...tone(P.galv, 0.6), rough: 0.38, metal: true }, { cut: ringY(0.07) }), ca(1.03, 1.2, 2.5, 2.515, 0.07, 0.055, { ...P.rust, rough: 0.85 }),
+    ...[-1, 1].flatMap(s => [ca(2.06, s * 1.28, 1.74, 1.77, 0.012, 0.16, iron), ca(2.06, s * 1.43, 1.58, 1.86, 0.015, 0.07, iron), ca(2.043, s * 1.43, 1.6, 1.84, 0.003, 0.06, { ...P.glass, rough: 0.1 }),
+      ca(1.02, s * 1.124, 0.78, 1.5, 0.008, 0.004, iron), ca(1.16, s * 1.132, 1.2, 1.235, 0.06, 0.012, galv)])] };
+  // the glass (its box 0.58 × 0.29 × 1.06): the windscreen leans, a post down each front corner, and it stops 4 mm under the roof
+  const glass = glassShape([0.58, 0.29, 1.06], { f: 14, r: 0, s: 0 }, P.red);
+  // the roof (1.5, 2.14, 0): an arch from the windscreen back; the beacon at its front edge
+  const ro = trimFor([1.5, 2.14, 0]), roof: BoxShape = { arc: { axis: 3, rise: 0.12 }, with: [ro(2.0, 0, 2.17, 2.36, 0.07, 0.07, { ...P.orange, rough: 0.35 }, { cut: ringY(0.07) })] };
+  // the load under its canvas (−1.15, 1.425, 0): bowed over four hoops that show through the canvas
+  const lo = trimFor([-1.15, 1.425, 0]), bow = 0.35;
+  const load: BoxShape = { arc: { axis: 1, rise: bow }, with: [-2.65, -1.65, -0.65, 0.35].map(lx => lo(lx, 0, 1.95 - bow, 1.962, 0.02, 1.066, { ...tone(P.canvas, 0.72), rough: 0.9 }, { arc: { axis: 1, rise: r6(bow + 0.012) } })) };
+  // a sideboard (−1.15, 1.175, ±1.14): four stakes it is let into; on the driver's side three jerry cans in a rack under a strap
+  const side = (s: number): BoxShape => { const sb = trimFor([-1.15, 1.175, s * 1.14]); return { with: [
+    ...[-2.95, -1.75, -0.55, 0.65].map(lx => sb(lx, s * 1.185, 0.76, 1.5, 0.035, 0.015, { ...tone(P.poplar, 0.75), rough: 0.8 })),
+    ...(s > 0 ? [...[0, 1, 2].map(i => sb(-1.42 + i * 0.2, 1.33, 0.98, 1.44, 0.085, 0.13, i === 1 ? { ...tone(P.jerry, 0.9), rough: 0.45 } : { ...P.olive, rough: 0.45 })), sb(-1.22, 1.465, 1.24, 1.27, 0.3, 0.004, iron), sb(-1.22, 1.33, 0.95, 0.98, 0.32, 0.14, iron)] : [])] }; };
+  // the tailboard (−3.17, 1.175, 0): the spare, upright, its hub outward, and a tail lamp a side
+  const ta = trimFor([-3.17, 1.175, 0]), tail: BoxShape = { with: [
+    ta(-3.35, 0, 0.75, 1.71, 0.15, 0.48, { ...P.rubber, rough: 0.9 }, { round: 1 }), ta(-3.504, 0, 1.03, 1.43, 0.004, 0.2, { ...tone(P.galv, 0.6), rough: 0.38, metal: true }, { round: 1 }),
+    ...[-1, 1].map(s => ta(-3.206, s * 0.92, 0.98, 1.1, 0.006, 0.06, { ...P.red, rough: 0.3 }, { round: 1 }))] };
+  // SNOW that lies on it: a cap keeps to the crown of what it lies on (the middle of the tilt's bow, of the roof's arch, of the narrowed bonnet) and thins
+  // to its own edge. `h` = the slab's half size.
+  const capAlong = (h: Vec3, keep: number): BoxShape => ({ arc: { axis: 1, rise: r6(2 * h[1]) }, ...cutOf(h, [plane(0, 0, 1, keep), plane(0, 0, -1, keep)]) });
+  const capAcross = (h: Vec3, keep: number): BoxShape => ({ arc: { axis: 3, rise: r6(2 * h[1]) }, ...cutOf(h, [plane(1, 0, 0, keep), plane(-1, 0, 0, keep)]) });
+  return {
+    wheel, chassis, bumper, bonnet, cab, glass, roof, load, side, tail,
+    lamp: (s: number) => lensShape([0.02, 0.08, 0.1], [], [3.38, 0, s * 0.7]),
+    snowTilt: (h: Vec3) => capAlong(h, 0.35), snowRoof: (h: Vec3) => capAcross(h, 0.36), snowBonnet: (h: Vec3) => capAlong(h, 0.4),
+    /** …and the sheet of it that lies on the tilt's bow, 2 cm over the canvas and slid off its shoulders: trim for the load's box (push it onto `load.with`) */
+    snowSheet: (snow: CarPaint): ShapePiece => { const R = (1.06 * 1.06 + bow * bow) / (2 * bow) + 0.02, w = 0.8, rise = r6(R - Math.sqrt(R * R - w * w)); return lo(-1.15, 0, 1.97 - rise, 1.97, 1.84, w, snow, { arc: { axis: 1, rise } }); },
+  };
+}
+
 /** the hub of every kit's wheel: galvanised steel in a wheel's shadow */
 export const hubPaint = (galv: Vec3): CarPaint => ({ albedo: [r6(galv[0] * 0.6), r6(galv[1] * 0.6), r6(galv[2] * 0.6)], rough: 0.45, metal: true });
