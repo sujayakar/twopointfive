@@ -863,8 +863,10 @@ async function main() {
       // the kit picture is a live window of its own, and its pacer above knows nothing of who is looking. Not while a take is recorded, which is a measure as the three above are. ?giveway=0 = it draws as a focused one.)
       // (…and the page waits for the GPU, host/pace.ts `flight`: a frame is not begun while two are still with it; a frame held for that is the machine's own pace. Not while the page measures the machine, and
       // not under ?kitview, whose own pacer reads how late its frames come. ?flight=0 = nothing waits, ?flight=1 = one frame with the GPU at a time.)
-      const measuring = quality.calibrating || bench.active || perfsweep.active || priced,   // (… and a priced page for its whole life, host/runpage.ts heldPage: its frames are what the run times, so the pacer neither holds one back for the GPU nor gives way to a window out of focus)
-         away = EVENPACE.giveway && !measuring && !perfrec.recording && !attended(), room = measuring || kitView ? 0 : EVENPACE.flight;
+      // (A PRICED PAGE, host/runpage.ts heldPage, is nobody's window to give way with: its frames are what the run times. It still WAITS FOR THE GPU as a
+      //  player's page does: with nothing waiting, a level whose frame the GPU cannot finish in a display frame queued hundreds of frames ahead on a rented
+      //  card, 11-04, and a switch of the look's layers then showed in the stamps ten seconds late — inside the other state's turn)
+      const measuring = quality.calibrating || bench.active || perfsweep.active, away = EVENPACE.giveway && !measuring && !priced && !perfrec.recording && !attended(), room = measuring || kitView ? 0 : EVENPACE.flight;
       if (pace.skip(ts, !kitView && !measuring && (quality.adaptive || quality.auto) ? quality.bands.target : 0, away, room)) { requestAnimationFrame(frame); return; }
       const rested = pace.gave !== gaveLast; gaveLast = pace.gave;   // (a display frame was passed over for giving way since the last worked one: this frame's gap is the rule's, not the machine's)
       if (prewarmAt === -3 && frameCount >= 1) (window as any).__prewarm();

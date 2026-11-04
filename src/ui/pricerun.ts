@@ -35,9 +35,12 @@
 //   every stamped pass, which under Metal read the display's interval, and the run said the surface layers could not be read there at all.)
 //   AND HOW FAR BEHIND THE GPU IS (`lag`): each frame is timed from its start to the moment the GPU has finished everything the frame handed it (`work`: the
 //   queue's own "submitted work done"), in frames. It is NOT a cost: the answer comes back after the next frame has begun even when the GPU keeps up (about
-//   1.2 frames at 60 Hz, measured), and many frames late when it does not. A frame clock that is not the GPU's (a headless browser's) holds its rate
-//   either way, so there the lag is the only sign that sixty a second are not being drawn. (Until 11-04 a frame's "cost" was the lesser of `work` and the
-//   time between frames: wherever the rate is held that read the display's interval in every state and could see no difference.)
+//   1.2 frames at 60 Hz, measured), and later when it does not. AND A FRAME'S TIME IS THE TIME BETWEEN TWO FRAMES THE PAGE DREW (`ms`), by the pacer's own
+//   count of the display frames it worked (host/pace.ts, `window.__pace`): a priced page waits for the GPU as a player's does (main.ts `flight`), so where
+//   the GPU cannot finish a frame in a display frame the page passes display frames over, and the time between two frame CALLBACKS would still read the
+//   display's. (Two older ways and why they went, both 11-04: a frame's "cost" as the lesser of `work` and the time between callbacks read the display's
+//   interval in every state. And a priced page that did not wait for the GPU queued hundreds of frames ahead on a level the card could not hold sixty on:
+//   a switch of the layers then reached the stamps ten seconds late, inside the other state's turn, and the two states read alike.)
 //   The frame's time and the lag are read AGAINST THE BASELINE too: a machine that does not hold sixty at this preset without the look is not the look's doing.
 //   THE WORDS. `?pricelevels` = every level; `?pricelevels=pass,block` = these; `&pricesecs=N` = N seconds measured a turn (default 3); `&quality=<preset>` =
 //   the preset every page stands at (default high: the budget is said for High; `auto` lets each page settle its own, and the row says where it settled);
@@ -92,7 +95,7 @@ export const PRICE = {
 };
 
 /** one state's turns on one page */
-export interface PriceWin { frames: number; ms: number; p95: number; /** the GPU's busy span over the compute passes, ms (null: the browser stamps none) */ gpu: number | null;
+export interface PriceWin { /** frames the page drew in the measured turns · the time between two of them, ms (the header) · the 95th centile of the time between two frame callbacks */ frames: number; ms: number; p95: number; /** the GPU's busy span over the compute passes, ms (null: the browser stamps none) */ gpu: number | null;
   /** EVERY STAMPED PASS, ms: the GPU's busy span with nothing left out (the header; null: no stamps) */ all: number | null;
   /** from a frame's start to the GPU having finished all the frame handed it, ms (null: no device to ask) … */ work: number | null; /** … and that in frames: how far behind the GPU is (the header: not a cost) */ lag: number | null;
   /** each pass's own mean, ms */ passes: Record<string, number> | null }
@@ -193,6 +196,8 @@ interface PageHooks {
   __quality?: { label: string; calibrating: boolean; displayHz?: number; displayHzPin?: number; /** the preset standing · auto: it moves by itself · the ladder's switch (the menu's "Hold frame rate") · a preset's rows put on */ current?: string; auto?: boolean; adaptive?: boolean; apply?: (name: string) => void; /** the ladder's sample of a frame (a method of its class: an own one put over it stands in until it is deleted) */ sample?: (dt: number, gpuMs?: number) => void };
   __perfsweep?: { extra?: { id: string; flip(): string | { apply(): () => void } }[] };
   __boot?: { line?: string }; __cut?: { programs?: { swap?: boolean; ready?: Promise<unknown> } };
+  /** the page's pacer (host/pace.ts): display frames it WORKED since the page began (the others it passed over: no room with the GPU, a rate being held) */
+  __pace?: () => { worked: number; skipped: number };
 }
 const median = (a: number[]): number => { const s = [...a].sort((x, y) => x - y), n = s.length; return n ? (n % 2 ? s[(n - 1) / 2] : (s[n / 2 - 1] + s[n / 2]) / 2) : NaN; };
 const frame = (): Promise<number> => new Promise(res => requestAnimationFrame(res));
@@ -225,25 +230,32 @@ async function turn(w: PageHooks, secs: number, stop: () => boolean): Promise<Ba
   const T = w.__engine?.timer, dev = w.__engine?.device;
   for (let tries = 0; tries <= PRICE.retries; tries++) {
     const ms: number[] = [], gpu: number[] = [], all: number[] = [], work: number[] = [], asked: Promise<void>[] = [], passes = new Map<string, number[]>(); let away = false, last = await frame(), seen = T?.resolved ?? 0;
+    // THE FRAMES THE PAGE DREW, by its pacer's own count: the page waits for the GPU (main.ts `flight`), so on a level the GPU cannot finish in a display
+    // frame it passes display frames over, and the time between this file's own frame callbacks stays the display's. A frame's time is the measured part's
+    // length over the frames worked in it; and the GPU is asked for "done" only on a frame that was worked (a passed-over frame handed it nothing)
+    const worked = () => w.__pace?.().worked; let workedAt = worked(), workedLast = workedAt;
     // THE FRAME WHOLE: asked in a task of its own, which the browser runs after every frame callback of this frame (the page's, which hands the GPU its
     // work, is one of them, before this file's or after it); the queue then answers once the GPU has finished all of it. From the frame's own start
-    const whole = (start: number) => { if (!dev) return; asked.push(new Promise<void>(res => { const ch = new MessageChannel(); ch.port1.onmessage = () => { ch.port1.close(); dev.queue.onSubmittedWorkDone().then(() => { work.push(performance.now() - start); res(); }, () => res()); }; ch.port2.postMessage(0); })); };
+    const whole = (start: number) => { if (!dev) return; asked.push(new Promise<void>(res => { const ch = new MessageChannel(); ch.port1.onmessage = () => { ch.port1.close();
+      const n = worked(); if (n !== undefined && n === workedLast) { res(); return; } workedLast = n;   // (the page passed this display frame over)
+      dev.queue.onSubmittedWorkDone().then(() => { work.push(performance.now() - start); res(); }, () => res()); }; ch.port2.postMessage(0); })); };
     const t0 = last; let kept = -1;   // (the moment the measured part began)
     for (;;) { const now = await frame(), dt = now - last; last = now; if (stop()) return null;
       if (dt > PRICE.awayS * 1000 || document.hidden) { away = true; break; }
-      if (kept < 0) { if ((now - t0 >= PRICE.settleS * 1000 && ms.length >= PRICE.settleFrames) || now - t0 >= PRICE.capS * 1000) { kept = now; ms.length = 0; seen = T?.resolved ?? 0; } else ms.push(dt); continue; }
+      if (kept < 0) { if ((now - t0 >= PRICE.settleS * 1000 && ms.length >= PRICE.settleFrames) || now - t0 >= PRICE.capS * 1000) { kept = now; ms.length = 0; seen = T?.resolved ?? 0; workedAt = worked(); } else ms.push(dt); continue; }
       ms.push(dt); whole(now);
       if (T?.enabled && T.resolved !== seen) { seen = T.resolved; gpu.push(T.unionMs(DRAWN)); all.push(T.unionMs(PRESENTS)); for (const [k, v] of T.lastFrame) { let a = passes.get(k); if (!a) passes.set(k, a = []); a.push(v); } }
-      if ((now - kept >= secs * 1000 && ms.length >= PRICE.measureFrames) || now - kept >= PRICE.capS * 1000) { await Promise.race([Promise.all(asked), new Promise(r => setTimeout(r, PRICE.capS * 1000))]); return { ms, gpu, all, work, passes }; }
+      if ((now - kept >= secs * 1000 && ms.length >= PRICE.measureFrames) || now - kept >= PRICE.capS * 1000) { const n = worked(), drew = n !== undefined && workedAt !== undefined && n > workedAt ? { secs: (now - kept) / 1000, frames: n - workedAt } : null;
+        await Promise.race([Promise.all(asked), new Promise(r => setTimeout(r, PRICE.capS * 1000))]); return { ms, gpu, all, work, passes, drew }; }
     }
     if (away) { while (document.hidden) await new Promise(r => setTimeout(r, 500)); }
   }
   return null;
 }
-type Bag = { ms: number[]; gpu: number[]; all: number[]; work: number[]; passes: Map<string, number[]> };
-const winOf = ({ ms, gpu, all, work, passes }: Bag): PriceWin => { const s = [...ms].sort((a, b) => a - b);
-  return { frames: ms.length, ms: +median(ms).toFixed(2), p95: +(s[Math.min(s.length - 1, Math.floor(s.length * 0.95))] ?? NaN).toFixed(2), gpu: gpu.length ? +median(gpu).toFixed(2) : null, all: all.length ? +median(all).toFixed(2) : null,
-    work: work.length ? +median(work).toFixed(2) : null, lag: work.length && median(ms) > 0 ? +(median(work) / median(ms)).toFixed(2) : null,
+type Bag = { ms: number[]; gpu: number[]; all: number[]; work: number[]; passes: Map<string, number[]>; /** the frames the page worked in the measured part, and its length (null: the page has no pacer to ask) */ drew: { secs: number; frames: number } | null };
+const winOf = ({ ms, gpu, all, work, passes, drew }: Bag): PriceWin => { const s = [...ms].sort((a, b) => a - b), every = drew && drew.frames > 0 ? 1000 * drew.secs / drew.frames : median(ms);   // (the time between two frames the page DREW; between two frame callbacks where it cannot be asked)
+  return { frames: drew ? drew.frames : ms.length, ms: +every.toFixed(2), p95: +(s[Math.min(s.length - 1, Math.floor(s.length * 0.95))] ?? NaN).toFixed(2), gpu: gpu.length ? +median(gpu).toFixed(2) : null, all: all.length ? +median(all).toFixed(2) : null,
+    work: work.length ? +median(work).toFixed(2) : null, lag: work.length && every > 0 ? +(median(work) / every).toFixed(2) : null,
     passes: passes.size ? Object.fromEntries([...passes].map(([k, v]) => [k, +(v.reduce((a, b) => a + b, 0) / v.length).toFixed(3)])) : null }; };
 /** A RENDER PASS'S STAMPS SPAN THE DISPLAY'S WAIT in this state (the header): the compute passes with the g-buffer take about the whole time between frames and far more
  *  than the compute passes alone, so the g-buffer's stamp holds a wait on this machine. Nothing is judged by `all` then */
@@ -291,7 +303,7 @@ async function price(c: Carry, i: number, loc: Location, view: ReturnType<typeof
   const Qh = w.__quality, held = !!Qh && Qh.auto === false && Qh.adaptive === false;
   if (!held) notes.push(!Qh || Qh.auto !== false ? 'the quality is not a pinned preset: its ladder was left to settle by itself, so a level\'s two pages may stand on different rungs' : 'the quality ladder\'s switch was on: it may have cut the scale before the picture was held');
   const E = w.__engine!, size = () => `${E.width}×${E.height}@${E.settings.renderScale.toFixed(3)}${E.settings.sharpDirect ? ' sharp' : ''}`;
-  const bag = (): Bag => ({ ms: [], gpu: [], all: [], work: [], passes: new Map() }), acc = { off: bag(), on: bag() };
+  const bag = (): Bag => ({ ms: [], gpu: [], all: [], work: [], passes: new Map(), drew: null }), acc = { off: bag(), on: bag() };
   if (!failed) {
     say('the mission stands up');
     const G = w.__game, pace = w.__timeScale ?? 1; undo.push(() => { w.__timeScale = pace; });
@@ -315,6 +327,7 @@ async function price(c: Carry, i: number, loc: Location, view: ReturnType<typeof
       if (sw) { offBy = sw.how; undo.push(sw.back); }
       const got = await turn(w, c.secs, () => stopped); if (sw) { undo.pop(); sw.back(); }
       if (!got) { failed = stopped ? 'stopped' : 'the tab was away through every try'; break; }
+      if (got.drew) { const d = acc[state].drew ?? (acc[state].drew = { secs: 0, frames: 0 }); d.secs += got.drew.secs; d.frames += got.drew.frames; }
       acc[state].ms.push(...got.ms); acc[state].gpu.push(...got.gpu); acc[state].all.push(...got.all); acc[state].work.push(...got.work); for (const [k, v] of got.passes) acc[state].passes.set(k, [...(acc[state].passes.get(k) ?? []), ...v]);
       if (size() !== size0 && !apart.length) apart.push(`the size, the scale or the sharp pass moved during the turns (${size0} → ${size()}): the columns are not the same picture`);
     }
@@ -409,9 +422,9 @@ export function priceReport(f: PriceFile): string {
     waits ? '             ON THIS MACHINE the g-buffer\'s stamp spans the wait for the display (the span reads about a whole frame): nothing is judged by it, and what the' : '             (Good where the g-buffer\'s stamp holds no wait for the display, as here. Where it does, the run says so and judges nothing by it.)',
     ...(waits ? ['             look\'s surface layers cost cannot be read here.'] : []),
     'surface ms = the stamp of the g-buffer\'s pass alone, where the surface layers are shaded.',
-    'GPU done   = how many frames after a frame began the GPU said it had finished it. About 1.2 when it keeps up; many when it does not. It is not a cost: where the frame',
-    '             clock is not the GPU\'s own (a headless browser), it is the only sign that sixty a second are not being drawn.',
-    'a frame every = the time between two frames. On a display it holds, that is the display\'s own (16.7 at 60 Hz, 8.3 at 120) and says only that it is held.',
+    'GPU done   = how many frames after a frame began the GPU said it had finished it. About 1.2 when it keeps up, 2 to 3 when the page is waiting for it. Not a cost.',
+    'a frame every = the time between two frames the page DREW (it waits for the GPU, so a frame the GPU cannot finish in time costs display frames). On a display',
+    '             it holds, that is the display\'s own (16.7 at 60 Hz, 8.3 at 120) and says only that it is held.',
     'programs   = shader programs the look page made before it was ready + in the seconds after + by switching the layers (that last should be 0).',
     'NOT JUDGED = the row\'s states or its two pages were not one picture (another size, rung or step of the game\'s clock): said under the table.',
     `OVER       = past the bar (${f.bar.ruled}): with the look on, GPU ms within ${(100 * f.bar.gpuMore).toFixed(0)}% of no look and no more than that added with the g-buffer counted, sixty frames a second held (a frame every ${f.bar.frameMs} ms or less, the GPU done within ${f.bar.lagFrames} frames), no program made by the switch.`,

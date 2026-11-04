@@ -533,7 +533,8 @@ but synthetic writes still work.
   display, whose stamps span the display's wait; the g-buffer's was read against recorded frames on an M4 Max and follows its own work — one chip, so each
   state is still checked, `spansWait`, which wants half a frame of g-buffer before it calls it a wait). EVERY PAGE STANDS ON ITS PRESET'S OWN ROWS with the
   quality ladder's switch off from before its first frame (`heldPage`), ITS LOOP HELD FROM BEFORE ITS BOOT (the mission is played by the page's own scripted
-  step to one step on both pages), and counted as a page that measures (no pacer holds a frame back, no window out of focus halves its rate); a row says
+  step to one step on both pages), and never gives way to a window in focus elsewhere; it still waits for the GPU as a player's page does, and a frame's time is the
+  time between two frames it DREW (`window.__pace`), so a level the GPU cannot hold sixty on reads as that and queues nothing ahead; a row says
   its rung, its size and the step it was held at. IT IS A RUN'S PAGE
   (`host/runpage.ts`: `runPage` stands the load brief, the lost-device reload, the sandbox row and the look page's kit down, as on a benchmark's scene;
   `ownPage` keeps its own page under the kept-page rule, since a run walks by loading its next address). ITS FILE GOES OUT BY THE SAVE DOOR (kind `price`):
