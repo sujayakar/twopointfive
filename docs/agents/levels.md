@@ -788,3 +788,10 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   tables give to different colours (canvas three times); four pieces no level lays (`officeKit.paneZ`, `livedTrain.helmet`, `toolRoll`, `spools`);
   `levelKit.ts`'s copies of the office's pieces are plain functions that take the kit first, so they go through no door and the four levels built on them
   (defuse, floodlit, mousehole, records) show no office pieces. Never seen on a GPU: the catalogue's pictures are drawn by the script.
+- **The library, one name one piece: what the catalogue counts (11-04; tools and docs, no level file moves).** A kit's piece
+  that lays nothing of its own, only ONE piece of another kit, IS that piece: `library.ts` lays each piece alone with the door watched, and when the only
+  thing laid from inside it is one other piece and the box, prop, lamp and fixture lists grew by exactly that piece's, the row says so (`is` in `--json`,
+  *(is `officeKit.chair`)* on the page, and the table "One piece, handed out by more than one kit"). Such a piece is no second way of building its name, so
+  "One name, more than one piece" lists a name only for pieces that are their own: 14 names now (it was 18; `chair` and `papers` in the lived kit are the
+  office's taken into a room, and the look kit's `wallX` / `wallZ` are the host's wall in a palette paint). TO MAKE TWO KITS' PIECES ONE: have the second
+  kit call the first kit's piece and add nothing, as `livedKit.chair` does; the catalogue then counts one.
