@@ -25,6 +25,7 @@ import type { DefuseData, KitViewData, LevelScenarios, StructureData } from '../
 import type { SurfacesData } from '../../src/scene/levelData';
 import * as K from '../../src/scene/levelKit';
 import { livedPieces, INK } from './livedPieces';
+import { gwotKit, gwotOfKit } from '../../src/scene/gwotKit';
 
 export const NAME = 'defuse';
 export const NOTES = 'The two charges: a defuse mission\'s own level. Two wings off one hall, a timed charge on the bench in the far room of each, one clock for both. Kit pieces only. Regenerate: bun run tools/levels/export.ts defuse';
@@ -241,6 +242,15 @@ export function build(opts: K.KitOpts = {}): { level: Level; scenarios: LevelSce
     P.room('hall');
     P.boots(16.4, 16.6, Math.PI, 3); P.crate(7.0, 13.6, 0.5, 0.2); P.crate(33.1, 13.6, 0.5, -0.2);
     P.floor(20.0, 15.0, 24.0, 1.2, [0.3, 0.17, 0.14], 0.006, 0.006);
+    // THE LOT AND THE BACK, from the look's kit (src/scene/gwotKit.ts: a drum and a tyre are round). What a bomb maker's house keeps outside: fertiliser
+    // in sacks against the front wall, two drums east of the door, the spare wheels by the car that has not moved, firewood against the blank back wall,
+    // and the stones nobody has cleared. Nothing stands within 3 m of the front door or under a window, on the walk round either end, or before a back door.
+    P.room('lot');
+    { const G = gwotKit(gwotOfKit(k, K));
+      G.sacks(14.2, 17.5, 0, 2); G.drum(24.6, 17.52, 'drumBlue'); G.drum(25.26, 17.6, 'rust');
+      G.tyres(15.7, 22.3, 2);
+      G.rubble(8.0, 23.6, 0.9, 7); G.rubble(32.2, 23.9, 0.8, 6);
+      K.grp(k, 'lived.back'); G.woodPile(15.0, 4.4, 0, 1.6); G.rubble(26.0, 5.2, 0.9, 6); G.rubble(9.4, 4.6, 0.7, 5); }
   }
 
   const level: Level = K.kitLevel(k, {

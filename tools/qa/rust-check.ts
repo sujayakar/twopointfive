@@ -118,6 +118,8 @@ if (args[0] === '--run') {
   // (the red path of the die: once, fifty binds in, the lowest bit of the word in the game's block is turned — a wrong die that still rolls)
   if (BREAK) { const P = ST.SimState.prototype, bind = P.bind; let n = 0; P.bind = function (this: any) { const slot = bind.call(this); if (++n === 50) this.w[(ST.simPart(ST.P_DICE) + 8) >>> 2] ^= 1; return slot; }; }
   let posed = 0, sets = 0;   // (the ticks that ended with poses of its men in the game's block, and how many men's)
+  // (the red path of the layers: from the fiftieth tick's opening every knob is handed to the module a hundredth large)
+  if (BREAK) { const RK: any = await import(`${ROOT}/src/game/rustknobs.ts`); RK.RUST_KNOBS.hand = (_i: number, v: number) => RK.RUST_KNOBS.written >= 50 ? v * 1.01 : v; }
   let homed = 0, draws = 0;   // (the ticks that ended with the game's own die at home in the module's block, and the draws taken off it by the end)
   let h: number = RAW_BITS_SEED, ticks = 0, broke = false, inRust = 0;   // (inRust: the ticks whose update found the module's sine in Math's place — the play-through puts every knob table back when it ends, so the row is read while it runs)
   const update = Game.prototype.update;
@@ -134,7 +136,7 @@ if (args[0] === '--run') {
   } as typeof update;
   const t0 = performance.now();
   const r = await PT.play(scn, Number(seed), 300, false, {});
-  console.log('RUST-RUN ' + JSON.stringify({ run: args[1], ticks, end: String(r.end), digest: String(r.digest), bits: h.toString(36), rust: inRust, lines: lines.n, circles: lines.circles, fog: lines.fog, sees: lines.sees, sensed: lines.sensed, poses: SK.POSE_BENCH.asked, posesIn: SK.POSE_BENCH.inPlace, posed, sets, dice: homed, draws, doors: DH.DOORS_STEPPED, falls: FH.FALLS, both: C.BOTH, exact: X.EXACT.on, engine, secs: Math.round((performance.now() - t0) / 100) / 10 }));
+  console.log('RUST-RUN ' + JSON.stringify({ run: args[1], ticks, end: String(r.end), digest: String(r.digest), bits: h.toString(36), rust: inRust, lines: lines.n, circles: lines.circles, fog: lines.fog, sees: lines.sees, sensed: lines.sensed, poses: SK.POSE_BENCH.asked, posesIn: SK.POSE_BENCH.inPlace, posed, sets, layers: SK.LAYERS.ran, dice: homed, draws, doors: DH.DOORS_STEPPED, falls: FH.FALLS, both: C.BOTH, exact: X.EXACT.on, engine, secs: Math.round((performance.now() - t0) / 100) / 10 }));
   process.exit(0);
 }
 // ---- `server`, in a child: the game server's stand from a recipe (argv), a seat's hands by the beat, the word after `ticks`
@@ -186,9 +188,9 @@ if (args[0] === '--hash') {   // the child: this engine's word for the Rust func
  *  line here or a line naming a section that did not run. Under RUST_BREAK=1 each row's own answers must have differed; exit 3 names a row that stayed
  *  green. A break word that does not reach a row leaves that row's check proving nothing, and a red neighbour hides it: the circles', the fog's and the
  *  die's did not reach them until 2026-11-03. */
-const HELD: Record<string, string> = { maths: 'maths', lines: 'lines, circles', circles: 'lines, circles', fog: 'senses', poses: 'poses', sight: 'senses', light: 'senses', smoke: 'senses', sound: 'senses', paths: 'senses', dice: 'state, dice', doors: 'doors', falls: 'falls' };
+const HELD: Record<string, string> = { maths: 'maths', lines: 'lines, circles', circles: 'lines, circles', fog: 'senses', poses: 'poses', sight: 'senses', light: 'senses', smoke: 'senses', sound: 'senses', paths: 'senses', dice: 'state, dice', doors: 'doors', falls: 'falls', walk: 'layers' };
 /** …and the sections that must be red on the red path whatever rows they hold (each asks the module's answers; one left green there holds nothing) */
-const RED_SECTIONS = ['maths', 'engines', 'lines, circles', 'senses', 'poses', 'doors', 'falls', 'state, dice', 'server', 'missions', 'both'];
+const RED_SECTIONS = ['maths', 'engines', 'lines, circles', 'senses', 'poses', 'layers', 'doors', 'falls', 'state, dice', 'server', 'missions', 'both'];
 const red: Record<string, boolean> = {}, said: Record<string, boolean> = {};   // (said: every verdict of a section, all of them PASS?)
 let fails = 0;
 const verdict = (ok: boolean, label: string, detail: string) => { if (!ok) fails++; const k = label.split(':')[0]; said[k] = (said[k] ?? true) && ok; console.log(`- ${ok ? 'PASS' : 'FAIL'} — ${label}\n    ${detail}`); };
@@ -275,6 +277,14 @@ let wordOwn = '', wordRust = '';
   verdict(ok, 'poses: every pose the Rust module samples, blends, runs forward, turns and solves is the TypeScript\'s, single for single', row ? row.replace(/^pose-ident: /, '') + (r.status === 3 ? `\n    ${r.out.trim().split('\n').pop()}` : '') : `the differential left nothing (exit ${r.status}): ${(r.err || r.out).trim().split('\n').slice(-2).join(' / ').slice(0, 300)}`);
 }
 
+// ---- layers
+{
+  const r = child(['bun', 'run', 'tools/qa/layer-ident.ts']);
+  const by: Record<string, { asked: number; differ: number }> = marked(r.out, 'LAYER-IDENT ')?.by ?? {}, names = Object.keys(by), row = r.out.split('\n').find(l => /^    \S+:\d+ ends /.test(l));
+  red.walk = names.length > 0 && names.every(n => by[n].differ > 0);   // (every moved layer's own answers, not one red neighbour's)
+  verdict(r.status === 0 && /=== layer-ident: PASS/.test(r.out), 'layers: every call of an animator\'s layer in a mission leaves the same pose run by the Rust module and by the TypeScript, and the knobs and named nodes the module reads are the game\'s',
+    row ? row.trim() + (r.status === 0 ? '' : ` · ${r.out.split('\n').filter(l => /^- FAIL/.test(l)).map(l => l.split(':')[0].replace('- FAIL — ', '')).join(', ')} FAILED`) : `the differential left nothing (exit ${r.status}): ${(r.err || r.out).trim().split('\n').slice(-2).join(' / ').slice(0, 300)}`);
+}
 // ---- doors
 {
   const r = child(['bun', 'run', 'tools/qa/door-ident.ts', '--n', flag('--doorsteps') ?? '6000'], { DOORS_BREAK: BREAK ? '1' : undefined });
@@ -390,7 +400,7 @@ if (args.includes('--missions') || args.includes('--both')) {
   for (const r of up) if (!all.includes(r)) { console.error(`rust-check: no row "${r}" (rows: ${all.join(' ')})`); process.exit(2); }
   interface Doors { there: number; here: number; turned: number; noises: number; both: number; differ: number }
   interface Falls { there: number; here: number; asked: number; differ: number; first: string; dues: number; steps: number; crunches: number }
-  interface Run { falls: Falls; doors: Doors; run: string; ticks: number; end: string; digest: string; bits: string; rust: number; lines: number; circles: number; fog: number; sees: number; sensed: Sensed; poses: number; posesIn: number; posed: number; sets: number; dice: number; draws: number; both: { asked: number; differ: number; stale: number; first: string }; exact: boolean; engine: string; secs: number }
+  interface Run { falls: Falls; doors: Doors; run: string; ticks: number; end: string; digest: string; bits: string; rust: number; lines: number; circles: number; fog: number; sees: number; sensed: Sensed; poses: number; posesIn: number; posed: number; sets: number; layers: number; dice: number; draws: number; both: { asked: number; differ: number; stale: number; first: string }; exact: boolean; engine: string; secs: number }
   const one = (run: string, rustOn: boolean, both = false): Promise<Run | string> => new Promise(done => {
     const cmd = node ? [...NODE, 'tools/qa/rust-check.ts', '--run', run] : ['bun', 'run', 'tools/qa/rust-check.ts', '--run', run];
     const env: Record<string, string | undefined> = { ...process.env, TPS_PROFILE: 'shipped', TPS_CPUSENSE: '1', PT_DIGEST: '1', RUST_BOTH: both ? '1' : '0', ...(node ? { V8_ENTRY: resolve(ROOT, 'tools/qa/rust-check.ts'), FC_NOSTANDIN: '1' } : {}) };
@@ -407,8 +417,11 @@ if (args.includes('--missions') || args.includes('--both')) {
   const SET_FLOOR: Sensed = { sight: 1000, light: 1000, smoke: 1000, sound: 100, paths: 100 };
   /** the senses raised that the runs TOGETHER did not ask the module enough of (a set of runs with no smoke in it proves nothing of the smoke row) */
   const thin = (rs: (Run | string)[]) => SENSES.filter(k => up.includes(k) && rs.reduce((n, r) => n + (typeof r === 'string' ? 0 : r.sensed[k]), 0) <= SET_FLOOR[k]);
+  /** the fewest layers of the animator a tick that a mission runs in the module with the walk's row up (a squad mission runs about sixty and the office night with three guards
+   *  thirty-six; the rule that has no pose alone is about twelve) */
+  const LAYER_FLOOR = 20;
   /** did the run with the rows up really run on them: every tick on the module's maths and with its lines asked there (each where its row was raised), and none in the other */
-  const fair = (ts: Run, rs: Run) => (!up.includes('maths') || rs.rust === rs.ticks) && (!up.includes('lines') || rs.lines === rs.ticks) && (!up.includes('circles') || rs.circles === rs.ticks) && (!up.includes('fog') || (rs.fog === rs.ticks && rs.sees > 100)) && ts.rust === 0 && ts.lines === 0 && ts.circles === 0 && (!up.includes('poses') || (rs.poses > rs.ticks && rs.posed === rs.ticks && rs.sets > 1 && rs.posesIn > rs.poses * 0.9)) && ts.posed === 0 && ts.posesIn === 0 && (!up.includes('dice') || (rs.dice === rs.ticks && rs.draws > 100 && rs.draws === ts.draws)) && ts.dice === 0 && ts.fog === 0 && ts.sees === 0 && ts.poses === 0 && ts.ticks > 600 && ts.falls.there === 0 && ts.doors.there === 0 && (!up.includes('doors') || (rs.doors.there > 0.95 * (rs.doors.there + rs.doors.here) && rs.doors.there > 0.9 * rs.ticks && rs.doors.turned > 100)) && SENSES.every(k => ts.sensed[k] === 0 && (!up.includes(k) || rs.sensed[k] > SENSE_FLOOR[k]));
+  const fair = (ts: Run, rs: Run) => (!up.includes('maths') || rs.rust === rs.ticks) && (!up.includes('lines') || rs.lines === rs.ticks) && (!up.includes('circles') || rs.circles === rs.ticks) && (!up.includes('fog') || (rs.fog === rs.ticks && rs.sees > 100)) && ts.rust === 0 && ts.lines === 0 && ts.circles === 0 && (!up.includes('poses') || (rs.poses > rs.ticks && rs.posed === rs.ticks && rs.sets > 1 && rs.posesIn > rs.poses * 0.9)) && (up.includes('walk') ? rs.layers > LAYER_FLOOR * rs.ticks : rs.layers === 0) && ts.layers === 0 && ts.posed === 0 && ts.posesIn === 0 && (!up.includes('dice') || (rs.dice === rs.ticks && rs.draws > 100 && rs.draws === ts.draws)) && ts.dice === 0 && ts.fog === 0 && ts.sees === 0 && ts.poses === 0 && ts.ticks > 600 && ts.falls.there === 0 && ts.doors.there === 0 && (!up.includes('doors') || (rs.doors.there > 0.95 * (rs.doors.there + rs.doors.here) && rs.doors.there > 0.9 * rs.ticks && rs.doors.turned > 100)) && SENSES.every(k => ts.sensed[k] === 0 && (!up.includes(k) || rs.sensed[k] > SENSE_FLOOR[k]));
   const sensedSay = (r: Run) => SENSES.map(k => `${k} ${r.sensed[k]}`).join(', ');
   if (args.includes('--missions')) {
     let ok = true; const lines: string[] = []; let ticks = 0; const raised: (Run | string)[] = [];
@@ -417,7 +430,7 @@ if (args.includes('--missions') || args.includes('--both')) {
       if (typeof ts === 'string' || typeof rs === 'string') { ok = false; lines.push(`${run}: ${typeof ts === 'string' ? `TypeScript ${ts}` : ''} ${typeof rs === 'string' ? `Rust ${rs}` : ''}`); continue; }
       const same = ts.bits === rs.bits && ts.ticks === rs.ticks && ts.end === rs.end && ts.digest === rs.digest, honest = fair(ts, rs);
       if (!same || !honest) ok = false; ticks += ts.ticks;
-      lines.push(`${run}: ${ts.ticks} ticks, ends ${ts.end} · ${same ? `to the bit (${ts.bits})` : `DIFFERS — TypeScript ${ts.ticks} ticks ${ts.bits} ${ts.digest}, Rust ${rs.ticks} ticks ${rs.bits} ${rs.digest}`}${honest ? '' : ` · NOT A FAIR PAIR (of ${rs.ticks} ticks in the Rust run: ${rs.rust} on its maths, ${rs.lines} with its lines, ${rs.circles} with its circles, ${rs.fog} with its sight pass (${rs.sees} men asked), ${rs.poses} poses asked (${rs.posesIn} of them where they live, ${rs.sets} men's poses in the block for ${rs.posed} ticks), ${rs.dice} with its die at home (${rs.draws} draws, ${ts.draws} in the other), ${rs.doors.there} door steps in the module and ${rs.doors.here} not (${rs.doors.turned} leaf turns), the senses ${sensedSay(rs)}; in the other: ${ts.rust}, ${ts.lines} and ${ts.circles} of ${ts.ticks}, the senses ${sensedSay(ts)})`} · senses asked of the module: ${sensedSay(rs)}${up.includes('doors') ? ` · door steps in the module: ${rs.doors.there} (${rs.doors.turned} leaf turns, ${rs.doors.noises} noises)` : ''}${up.includes('falls') ? ` · rules of the falls in the module: ${rs.falls.there} (${rs.falls.steps} footfalls asked, ${rs.falls.crunches} on glass)` : ''} · ${ts.secs} s / ${rs.secs} s`);
+      lines.push(`${run}: ${ts.ticks} ticks, ends ${ts.end} · ${same ? `to the bit (${ts.bits})` : `DIFFERS — TypeScript ${ts.ticks} ticks ${ts.bits} ${ts.digest}, Rust ${rs.ticks} ticks ${rs.bits} ${rs.digest}`}${honest ? '' : ` · NOT A FAIR PAIR (of ${rs.ticks} ticks in the Rust run: ${rs.rust} on its maths, ${rs.lines} with its lines, ${rs.circles} with its circles, ${rs.fog} with its sight pass (${rs.sees} men asked), ${rs.poses} poses asked (${rs.posesIn} of them where they live, ${rs.sets} men's poses in the block for ${rs.posed} ticks), ${rs.dice} with its die at home (${rs.draws} draws, ${ts.draws} in the other), ${rs.doors.there} door steps in the module and ${rs.doors.here} not (${rs.doors.turned} leaf turns), ${rs.layers} layers of the animator in the module (${ts.layers} in the other), the senses ${sensedSay(rs)}; in the other: ${ts.rust}, ${ts.lines} and ${ts.circles} of ${ts.ticks}, the senses ${sensedSay(ts)})`} · senses asked of the module: ${sensedSay(rs)}${up.includes('doors') ? ` · door steps in the module: ${rs.doors.there} (${rs.doors.turned} leaf turns, ${rs.doors.noises} noises)` : ''}${up.includes('falls') ? ` · rules of the falls in the module: ${rs.falls.there} (${rs.falls.steps} footfalls asked, ${rs.falls.crunches} on glass)` : ''} · ${ts.secs} s / ${rs.secs} s`);
       console.error(`  ${lines[lines.length - 1]}`);
     }
     { const t = thin(raised); if (t.length) { ok = false; lines.push(`NOT A FAIR SET: the runs together asked the module too little of ${t.join(', ')}`); } }
