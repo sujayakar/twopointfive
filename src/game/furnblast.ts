@@ -42,7 +42,7 @@ import { hash01 } from './debris';
 import { NOBODY_ID } from './consts';
 import { cutBoxesOn } from '../scene/cut';
 import { BREAKS } from './breakTable';
-import { FURNBLAST, BLAST_PACE, DESTRUCTION } from './destructionSwitch';   // the knob: FURNBLAST.on (default on; inert unless THE ONE SWITCH of the destruction goal is on too)
+import { FURNBLAST, BLAST_PACE, DESTRUCTION, DEBRIS } from './destructionSwitch';   // the knob: FURNBLAST.on (default on; inert unless THE ONE SWITCH of the destruction goal is on too)
 import { snowPaintOf } from '../render/snowField';
 
 export type BlastSource = 'wall' | 'door' | 'frag';
@@ -390,13 +390,19 @@ export class Furniture {
   private breakStatic(m: Member, at: Vec3, mode: 'shatter' | 'apart', kk: number, who: number, budget: { chunks: number }): boolean {
     const g = this.g, b = g.col.boxes[m.i]; const dir = this.away(at, b.c);
     if (this.destr.itemOf(m.i)) {   // the lane's own destructible (a stack scatters, a screen dies and its housing goes, clutter drops): its road, plus the blast's shove
-      const had = new Set(this.destr.debris.list); this.destr.dropItem(m.i, dir, who); FURN_STATS.items++;
-      const sp = (1 + 3 * kk) * this.fling; for (const c of this.destr.debris.list) if (!had.has(c)) { c.v[0] += dir[0] * sp; c.v[1] += 0.6 + 1.2 * kk; c.v[2] += dir[2] * sp; budget.chunks--; }
+      const sp = (1 + 3 * kk) * this.fling, D = this.destr.debris; FURN_STATS.items++;
+      if (DEBRIS.dress) {   // (the pool is dressing: the blast's shove is said BEFORE the thing is knocked off, so the simulation's landing of it has the shove; and the budget is spent by what was KNOCKED OFF — the lane's own count — not by what the pool had room to show)
+        const knocks = this.destr.knocks; D.fling = [dir[0] * sp, 0.6 + 1.2 * kk, dir[2] * sp];
+        try { this.destr.dropItem(m.i, dir, who); } finally { D.fling = null; }
+        budget.chunks -= this.destr.knocks - knocks; return false;
+      }
+      const had = new Set(D.list); this.destr.dropItem(m.i, dir, who);
+      for (const c of D.list) if (!had.has(c)) { c.v[0] += dir[0] * sp; c.v[1] += 0.6 + 1.2 * kk; c.v[2] += dir[2] * sp; budget.chunks--; }
       return false;
     }
     const br = this.destr.walls.breakableAt(m.i);
     if (br) { if (this.destr.walls.raze(br.id, who, dir, budget)) FURN_STATS.razed++; return false; }   // a cover panel: the wall engine's road (its own pieces, re-bake and feed row)
-    this.hidden.set(m.i, b.flags); b.flags |= HIDE; FURN_STATS.statics++;
+    this.hidden.set(m.i, b.flags); b.flags |= HIDE; this.g.col.wrote(); FURN_STATS.statics++;
     this.destr.breakFixtureBox(m.i);
     if (m.ghost) return false;   // (a drawn-only sheet / placard: it just goes)
     if (FURN.mouth.snow && snowPaintOf(b) !== null) {   // lying snow: a spray from where the blast met it, never rigid pieces (a bank 15 m long cut in a dozen would be slabs metres long, tumbling)
@@ -424,7 +430,7 @@ export class Furniture {
         f.c[1] = Math.max(f.c[1] - f.h[1] + along * Math.sin(th) + f.h[1] * Math.cos(th) + 0.01, 0.02); f.c[0] += fd[0] * f.h[1] * 0.5; f.c[2] += fd[2] * f.h[1] * 0.5;
       }
     }
-    const got = budget.chunks > 0 ? this.destr.debris.spawn('chunk', f, v, w, who) : null; budget.chunks--;
+    const got = budget.chunks > 0 ? this.destr.debris.spawn('chunk', f, v, w, who, row.land.level) : null; budget.chunks--;
     if (got && !steel) { got.level = row.land.level; got.sfx = row.land.sfx; }
     if (got) { FURN_STATS.chunks++;
       if (steel?.open) this.destr.breaks.carcass(got, steel.open.axis, steel.open.sign, steel.seed); else if (steel) this.destr.breaks.sheet(got); else this.destr.breaks.dress(got);
@@ -446,7 +452,7 @@ export class Furniture {
         const sp = lerp(K.through[0], K.through[1], h1), j = (h2 - 0.5) * 1.2; v = [-n[0] * sp + t[0] * j, 0.3 + 0.9 * h3, -n[2] * sp + t[2] * j]; }
       else { const out = lerp(K.back[0], K.back[1], h1), along = Math.sign(s) * K.side * (0.35 + 0.65 * h2); v = [n[0] * out + t[0] * along, lerp(K.up[0], K.up[1], h3), n[2] * out + t[2] * along]; }
       const w: Vec3 = [(h1 - 0.5) * K.spin * base.spin, (h2 - 0.5) * 0.6 * K.spin * base.spin, (h3 - 0.5) * K.spin * base.spin];
-      const got = left-- > 0 ? this.destr.debris.spawn('chunk', f, v, w, who) : null;
+      const got = left-- > 0 ? this.destr.debris.spawn('chunk', f, v, w, who, base.land.level) : null;
       if (got) { FURN_STATS.chunks++; got.level = base.land.level; got.sfx = base.land.sfx; this.destr.breaks.dress(got); } else { FURN_STATS.demoted++; this.chips(f.c, v, b, who, 14); }
     }
     const P = gpuFx(this.g); if (!P) return;
@@ -630,7 +636,7 @@ export class Furniture {
   }
   private away(at: Vec3, p: Vec3): Vec3 { const dx = p[0] - at[0], dz = p[2] - at[2]; const L = Math.hypot(dx, dz); if (L > 0.05) return [dx / L, 0, dz / L]; const a = this.hash() * Math.PI * 2; return [Math.cos(a), 0, Math.sin(a)]; }
   private chips(c: Vec3, v: Vec3, b: Box, who: number, n: number) { const P = gpuFx(this.g); if (!P) return; const wood = surfOf(b.albedo) === 'wood'; P.emit('debris', c, v3.normalize([v[0], Math.max(0.3, v[1]), v[2]]), n, { speed: 2.4, speedJit: 0.7, spread: 1.1, life: 18, lifeJit: 0.3, size: wood ? 0.006 : 0.01, sizeJit: 0.6, aspect: wood ? 3 : 1, color: v3.copy(b.albedo), owner: who }); }
-  private bump() { const w = this.g.engine.world as { geomSerial?: number }; w.geomSerial = (w.geomSerial ?? 0) + 1; }
+  private bump() { const w = this.g.engine.world as { geomSerial?: number }; w.geomSerial = (w.geomSerial ?? 0) + 1; this.g.col.wrote(); }
 
   /** Level reset (Destruction.reset, after the walls'): every static this module hid back as authored and the level's nav / sound / smoke told; nothing at all when it broke nothing. (The props it took out of the list come back with PropSystem.reset.) */
   reset() {

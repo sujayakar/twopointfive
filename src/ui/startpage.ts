@@ -398,14 +398,16 @@ export function startPageList(all: Mission[] = listedMissions(), picks: Pick[] =
 /** the short list's row for a mission (its first, where two rows start the same mission) */
 export function pickOfMission(id: string, picks: Pick[] = PICKS): Pick | null { return PICKS_UI.on ? picks.find(p => p.mission === id) ?? null : null; }
 
-export interface StartPageOpts { /** the row to open on */ select?: string; /** the words on the button back to the card behind (absent: the start card's — its controls and sandbox row) */ backLabel?: string; /** where the keys start */ pane?: Pane; /** the team size the loadout opens on for that row */ squad?: SquadSize; root?: HTMLElement }
+export interface StartPageOpts { /** the row to open on */ select?: string; /** the words on the button back to the card behind (absent: the start card's — its controls and sandbox row) */ backLabel?: string; /** where the keys start */ pane?: Pane;
+  /** THE PAGE IN ITS CO-OP DRESS (ui/coop.ts): only the missions `can` passes, `title` on its head, no kit step (two players play the kit as issued), and the block — worded `words` — hands the mission's address to `deploy` instead of loading it */
+  coop?: { title: string; words: string; can(m: Mission): boolean; deploy(search: string, m: Mission): void }; /** the team size the loadout opens on for that row */ squad?: SquadSize; root?: HTMLElement }
 /** THE PAGE, up (again: the one already up is closed first). Null where the layer is not on the page. */
 export function openStartPage(opts: StartPageOpts = {}): StartPage | null {
   page?.close();
   const root = opts.root ?? document.getElementById('missions'); if (!root) return null;
   styles();
   const search = typeof location !== 'undefined' ? location.search ?? '' : '';
-  const { list, first } = startPageList(listedMissions(undefined, opts.select));   // (a cut row the visit names — ?loadout=<id> — is drawn this once: ui/missions.ts listedMissions)
+  const { list, first } = startPageList(listedMissions(undefined, opts.select).filter(m => !opts.coop || opts.coop.can(m)));   // (a cut row the visit names — ?loadout=<id> — is drawn this once: ui/missions.ts listedMissions)
   const squads = new Map<string, SquadSize>(); if (opts.select && opts.squad !== undefined) squads.set(opts.select, opts.squad);
   let pane: Pane = 'list', L: LoadoutScreen | null = null, mounted = '', shut = false, ready = false;
   let M!: MissionsScreen;   // (set by the call below; nothing here reads it before `ready`)
@@ -432,7 +434,7 @@ export function openStartPage(opts: StartPageOpts = {}): StartPage | null {
   const WHAT: Record<Pane, string> = { list: 'W S mission · Enter team and kit · Esc back', loadout: 'W S A D change · Enter deploy · Esc back' };
   /** THE HIGHLIGHTED MISSION HAS NO KIT STEP (a mission played with the kit as issued): its TEAM & KIT pane has nothing on it to pick, so nothing on the
    *  page leads there — Enter on its row is Deploy, as the block under it says, and the head's second step is not offered (.nokit, below) */
-  const noKit = () => !!L && kitAsIssued(L.entry);
+  const noKit = () => !!L && (!!opts.coop || kitAsIssued(L.entry));
   /** from the rows on to the next step: the kit, or for a mission with none straight in (Enter on a row, the block, the head's step, the rail's team row) */
   const onward = () => { if (noKit()) { L!.deploy(); return; } setPane('loadout'); mount(); };
   // the Mission step's own block, on the loadout's bar after its Deploy: the way the page draws him is mission, then team and kit, then Deploy
@@ -498,8 +500,10 @@ export function openStartPage(opts: StartPageOpts = {}): StartPage | null {
     mounted = key;
     const p = asPick(m), row = pickOfMission(m.id);   // (a short-list row opens at the ROW's team size — 'you + four' — until a size is picked on the page)
     L = openLoadout(entryOfMission(m), { host, embedded: { keys: () => !shut && pane === 'loadout', key: (code, repeat) => !!kbrief?.key(code, repeat), rest: (code, repeat) => !!kguide?.key(code, repeat) }, search: base, squad: squads.get(m.id) ?? (row && pickEntry(row) ? pickSquad(row) as SquadSize : undefined),
-      back: toList, onPaint: s => { paintFigure(s); if (s === L) { say(); kguide?.paint(guideOn()); } },   // (embedded.key: the map's M, and the keys that put it back while it is large; embedded.rest: the walkthrough's Esc and Enter, after the highlighted row has had its say · say: the key line names copy and paste only while there are cards — a mission's own issue takes them away after the screen is up)
-      onDeploy: to => { kguide?.deployed(); kview?.close(); kview = null; try { globalThis.localStorage?.setItem('twopointsix.mission', m.id); } catch { /* no store */ }   // (the row the page opens on next time, however it was deployed)
+      back: toList, ...(opts.coop ? { deployWords: opts.coop.words, deploy: (to: string) => opts.coop!.deploy(to, m) } : {}), onPaint: s => { paintFigure(s); if (s === L) { say(); kguide?.paint(guideOn()); } },   // (embedded.key: the map's M, and the keys that put it back while it is large; embedded.rest: the walkthrough's Esc and Enter, after the highlighted row has had its say · say: the key line names copy and paste only while there are cards — a mission's own issue takes them away after the screen is up)
+      onDeploy: to => { kguide?.deployed(); kview?.close(); kview = null;
+        if (opts.coop) return;   // (a hosted game is not this list's to remember: the row it opens on, the short list's played marks and the count's 'loading…' are the mission LOADED from here, and a game that could not be made loads nothing — ui/coop.ts says what it is doing in its own line)
+        try { globalThis.localStorage?.setItem('twopointsix.mission', m.id); } catch { /* no store */ }   // (the row the page opens on next time, however it was deployed)
         if (p && pickOfQuery(to)) notePicked(p); count.textContent = 'loading…'; } });   // (played = started AS the short list's row: a team size of the player's own is not it)
     say(); paintTeam(); paintFigure(L); kguide?.paint(guideOn());
     if (pane === 'loadout' && noKit()) { setPane('list'); say(); }   // (onto a mission with no kit step from the kit of another: its rows, not an empty pane)
@@ -563,7 +567,7 @@ export function openStartPage(opts: StartPageOpts = {}): StartPage | null {
     kbrief = mountKitBrief(root, sheet);
   }
   sheet?.appendChild(host);
-  if (back) back.textContent = opts.backLabel ?? '‹ Main menu'; if (title) title.textContent = 'Play'; count.textContent = '';
+  if (back) back.textContent = opts.backLabel ?? '‹ Main menu'; if (title) title.textContent = opts.coop?.title ?? 'Play'; count.textContent = '';
   // the two steps, named on the head: where the keys are is the bright one, and a click on the other goes there
   let stepsBar: HTMLElement | null = null;
   if (title?.parentElement) { const bar = stepsBar = el('div', 'msteps');

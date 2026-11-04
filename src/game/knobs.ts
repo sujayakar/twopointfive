@@ -12,7 +12,7 @@
 // under src/game the registry does not hold yet. A few tally tools keep purpose-built --set lists of their own (pairsneak.ts, bang-tally.ts, roomclear-tally.ts).
 // (src/game is one import cycle and the browser bundle hoists module bindings: nothing here is built from another game module's exports at module load — the
 // registry is made on each call. The imports keep journal.ts's old order first, so the modules a recording names evaluate in the order they always did.)
-import { DESTRUCTION, FURNBLAST, RUBBLE, EVICT } from './destructionSwitch';
+import { DESTRUCTION, FURNBLAST, RUBBLE, EVICT, DEBRIS } from './destructionSwitch';
 import { CKPT } from './savestate';
 import { AIM, TRAINED } from './aim';
 import { AI_TUNE, BODY_LIGHT, GUARD_EYE, PACE, LIGHTS } from './guards';
@@ -36,7 +36,7 @@ import { GLASSBREAK, GLASSREAL } from './glassbreak';
 import { GLASSPEN } from './glasspen';
 import { SHARDS } from './shards';
 import { TALK_TUNE } from './dialogue';
-import { HOLD, MOVES, MV, TURN, HARDBREATH, DASH, WATCH, RUNREADY, RUNARMS } from './character';
+import { HOLD, MOVES, MV, TURN, HARDBREATH, DASH, WATCH, RUNREADY } from './character';
 import { SUPPRESSION } from './suppression';
 import { RIFLE_SPREAD, FOOTFALL, TWOGEARS, CROUCHRUN } from './player';
 import { SAMLOOK } from './samlook';
@@ -114,10 +114,15 @@ export const JOURNAL_KNOBS: readonly string[] = ['AIM', 'TAPSTEP', 'TRAINED', 'A
   'ORDERS', 'DOORTOOLS', 'SNEAK', 'COVER', 'STACKLINE', 'REARWATCH', 'ROOMCLEAR', 'HARD', 'TEAMTALLY', 'SPRINTDOOR', 'HAULHOME', 'AUTOPILOT', 'PLANLAY', 'CMDRING', 'SILENT', 'SNOWBOG', 'IRLIGHT', 'CUES', 'CONDITION', 'INHAND', 'GUNHAND', 'PACKSIDE', 'BACKKEY', 'WALLSHOT', 'WALLKILL', 'HARDBREATH', 'WALLPEN', 'PEEKSIGHT', 'SQUADDEAL', 'STAYASK', 'SEENWALK', 'RESCUECHECK', 'UNDERFOOT', 'RESCUEEND', 'RESCUEFLUSH', 'SNATCHOUT', 'KITLOAD', 'SQUAD40',
   // the game's own maths (math/exact.ts): which sin and cos the whole simulation computes on — a recording made on one replays on that one
   'EXACT',
+  // which systems of the update run in the Rust module (src/sim/sim.ts): never a rule of play — a recording replays the same with a row off — but a
+  // recording says which ran, so a difference between the two is one flip to find
+  'RUST',
   // the senses on the CPU (sense.ts): a recording made with it on replays with it on — its sensor stream is the game's own answers
   'SENSE',
   // a record from anyone (cmd.ts): a recording made with the check on replays with it on
   'CMDCHECK', 'GUNSLOTS', 'GUNLOOK', 'GUNROLES', 'KITTREE',
+  // more than one player (seats.ts): how a second man is stood and how long an enemy keeps the one he has in mind — a game of one reads none of it
+  'SEATS',
   // the response team as level design (qrf.ts RESPONSE): a recording made with the level's own team replays with it
   'RESPONSE',
   // gunfire splinters a wooden door leaf apart (doorblast.ts DOORSHOT): a recording made with it on replays its doors going, one from before hangs them
@@ -140,6 +145,11 @@ export const JOURNAL_KNOBS: readonly string[] = ['AIM', 'TAPSTEP', 'TRAINED', 'A
   'CARLAMPS',
   // round things are round (scene/round.ts ROUND): a recording made with it on has its drums and tyres round to every ray and foot, one from before has the kit's octagons
   'ROUND',
+  // a box says its shape (scene/shapes.ts SHAPES): a recording made with it on has its vehicles' corners, bonnets and glass cut to every ray, one from before has the plain boxes
+  'SHAPES',
+  // the debris pool is dressing (debris.ts, destructionSwitch.ts DEBRIS): a recording made with it on replays the simulation's landings of thrown pieces, one from before
+  // the pool's own (and so needs the pool's size it was made at)
+  'DEBRIS',
   // a restart gives a clean level (cleanrestart.ts CLEANRESTART): a recording made with it on replays its restarts clean, one from before as they were
   'CLEANRESTART',
   // the saves roll and one is kept in memory with a team on the floor (savestate.ts SAVETIMELINE): a recording from before it has no such save to go back to
@@ -181,8 +191,6 @@ export const JOURNAL_KNOBS: readonly string[] = ['AIM', 'TAPSTEP', 'TRAINED', 'A
   // the sprint with the pistol in both hands (character.ts RUNREADY): a pose, so a recording made with it on replays his arms and one from before the key
   // replays the pumping fist (journal.ts applyKnobs)
   'RUNREADY',
-  // …and a run's arms carried close (character.ts RUNARMS): a pose too, carried the same way
-  'RUNARMS',
   // …and their poses' numbers (character.ts): DASH's stride sets the crouch cycle's cadence and so when a footfall is filed, WATCH's turn and lean move the
   // head and chest joints the eyes that look for him read. The sneak lab moves both, so a recording carries them
   'DASH', 'WATCH',
@@ -226,6 +234,7 @@ import { FIXEDSTEP } from '../host/loop';
 import { AUTOCAM } from '../host/autocam';
 import { TWEEN } from '../host/tween';
 import { SAVEPIC } from '../host/savepic';
+import { EVENPACE } from '../host/pace';
 import { FINDTUNED, findMeStarts } from '../host/findme';
 import { MORALE } from './morale';
 import { RUNNER } from './runner';
@@ -246,8 +255,10 @@ import { RESCUEEND } from './rescueend';
 import { SNATCHOUT } from './snatchout';
 import { RESCUEFLUSH } from './rescueflush';
 import { EXACT } from '../math/exact';
+import { RUST } from '../sim/sim';
 import { SENSE } from './sense';
 import { CMDCHECK } from './cmd';
+import { SEATS } from './seats';
 import { DOZE } from './doze';
 import { NETQUIET } from './netquiet';
 import { ATTENTION } from './attention';
@@ -289,6 +300,7 @@ import { MUSIC } from '../audio/pieces';   // (the score's pieces switch: not a 
 import { LIVED } from '../scene/lived';
 import { UNDERFOOT } from '../scene/collision';   // (a scene table: no cycle)
 import { ROUND } from '../scene/round';   // (a scene table: no cycle)
+import { SHAPES } from '../scene/shapes';   // (a scene table: no cycle)
 import { CASTOR } from './props';
 
 /** A table's keys that are NOT knobs: data it was loaded with, or what it found at load. knobsCopy leaves them out, so putting a copy back never touches them.
@@ -306,15 +318,16 @@ export const NOT_KNOBS: Record<string, readonly string[]> = { SLOTS: ['ok', 'why
  *  configured for it once, at boot, and a tape that set it would configure a viewer's canvas by the page somebody else recorded on (its address word,
  *  `savepic`, is the visit's for the same reason: ui/replaykey.ts VISIT_FLAGS). FINDTUNED (host/findme.ts) is which starts this machine's own outline rows
  *  and its camera's two (aim pan, turn direction) have: settings of the viewer's own, and a tape that set it would rim a viewer's men and turn a viewer's
- *  view by the page somebody else recorded on (its word, `findtuned`, likewise; the view a tape was made with rides it as data). */
-export const VISIT_OWN: string[] = ['MUSIC', 'FIXEDSTEP', 'TWEEN', 'SAVEPIC', 'FINDTUNED'];
+ *  view by the page somebody else recorded on (its word, `findtuned`, likewise; the view a tape was made with rides it as data). EVENPACE (host/pace.ts) is which
+ *  of a fast display's frames this page draws: the viewer's display and the viewer's loop, as FIXEDSTEP is (its word, `pace`, likewise). */
+export const VISIT_OWN: string[] = ['MUSIC', 'FIXEDSTEP', 'TWEEN', 'SAVEPIC', 'FINDTUNED', 'EVENPACE'];
 
 /** every knob table by name — made on each call (see the head: never at module load) */
 export function knobRegistry(): Record<string, object> {
   const all: Record<string, object | undefined> = {
     // what a recording carries (JOURNAL_KNOBS)
     AIM, TRAINED, AI_TUNE, BODY_LIGHT, GUARD_EYE, NEEDS, WHISTLE, WET, WIND, CIV, CHAOS, RING, LAUNCHER, HE40, LAUNCHER40, FRAG, SHOTGUN, GLASS, GLASSFX, GLASSBREAK, GLASSPEN, SHARDS,
-    TALK_TUNE, HOLD, SUPPRESSION, RIFLE_SPREAD, FOOTFALL, TWOGEARS, CROUCHRUN, RUNREADY, RUNARMS, SAMLOOK, DASH, WATCH, STALK, TAPSTEP, OVERHEAR, SCORE, BADGE, CKPT, FOG, MOVES, MV, TURN, WOUND, DOORPATH, WALLS, WALLCHARGE, WALLSHOT, WALLKILL, HARDBREATH, CASTOR, WALLREACT, COVERFIRE, FURNBLAST, DOORWAY, DOORBLAST, DOORSHOT, DOORTHROW, WINBARS, OPENING,
+    TALK_TUNE, HOLD, SUPPRESSION, RIFLE_SPREAD, FOOTFALL, TWOGEARS, CROUCHRUN, RUNREADY, SAMLOOK, DASH, WATCH, STALK, TAPSTEP, OVERHEAR, SCORE, BADGE, CKPT, FOG, MOVES, MV, TURN, WOUND, DOORPATH, WALLS, WALLCHARGE, WALLSHOT, WALLKILL, HARDBREATH, CASTOR, WALLREACT, COVERFIRE, FURNBLAST, DOORWAY, DOORBLAST, DOORSHOT, DOORTHROW, WINBARS, OPENING,
     DOORSTAY, HANDLE, DOORMANNERS,
     // what breaks into what, by material (breakTable.ts), and how a blast treats furniture (furnblast.ts): the sim reads both, so a recording carries them
     BREAKS, FURN,
@@ -322,6 +335,8 @@ export function knobRegistry(): Record<string, object> {
     SNOWBOG,
     // men kicking rubble aside (debris.ts feet): its switch and numbers — a recording carries them (the pieces a blast then throws lie where boots left them)
     RUBBLE, EVICT,
+    // the debris pool is dressing (debris.ts): its switch decides who tells the floor a thrown piece came down, so a recording carries it
+    DEBRIS,
     // where a carried light is when its lens is through a wall (lighting.ts lensClear): the light estimate and the lamp's glare read that place
     LIGHTWALL,
     // the weather's dust in the rooms (airDust.ts): whether the men's eyes read the field, and how fast it moves — a sight line through a doorway reads them
@@ -404,6 +419,8 @@ export function knobRegistry(): Record<string, object> {
     FIXEDSTEP, TWEEN,
     // how the page takes a save's picture (host/savepic.ts): the page's alone, as the two above are
     SAVEPIC,
+    // which of a fast display's frames the page draws (host/pace.ts): the page's alone, as the frame loop's two are
+    EVENPACE,
     // which starts the outline's rows have on this machine (host/findme.ts): the page's alone, as the three above are
     FINDTUNED,
     // the camera running itself (host/autocam.ts): the switch, what it frames and by how much, when it may turn
@@ -446,10 +463,14 @@ export function knobRegistry(): Record<string, object> {
     SNATCHOUT,
     // the game's own maths (math/exact.ts EXACT.on: a setter — writing it puts the functions in Math's place or takes them out)
     EXACT,
+    // which systems of the update run in the Rust module (src/sim/sim.ts RUST: setters — writing a row moves that system across)
+    RUST,
     // the senses on the CPU (sense.ts SENSE.cpu, and its smoke model's numbers)
     SENSE,
     // a record from anyone (cmd.ts checkCmd: the switch and its bounds)
     CMDCHECK,
+    // more than one player (seats.ts SEATS: the most seats, where a later man stands, an enemy's hold on the player he has in mind)
+    SEATS,
     // dozing in the dark (doze.ts): who sits a long dark wait out asleep in a chair, how dull his ears are and what wakes him — who hears and sees whom reads these
     DOZE,
     // the net goes quiet (netquiet.ts): what an unanswered check, a body found and a mate seen to fall add to a man's dread, the whip to a noise, the last man's spot — read these
@@ -479,6 +500,8 @@ export function knobRegistry(): Record<string, object> {
     UNDERFOOT,
     // round things are round (scene/round.ts): whether a level's octagons are stood up as round boxes; read when a level is stood up
     ROUND,
+    // a box says its shape (scene/shapes.ts): whether a level's boxes that say a shape are stood up as it, with their pieces; read when a level is stood up
+    SHAPES,
     // the squad's feel (teamfeel.ts keeps rows of these per machine; FOG, FRAG and DOORMANNERS are above)
     FLASH, PACE, LIGHTS, NVG, IR, IRLIGHT, WALLPEN, LASER, DOORTOOLS, ROOMFIGHT, ORDERS, COVER, ROOMFIT, ENTRY, REAR, SILENT, PAIR,
     // the scenario's and the defenders' tables (a play-through's --set reaches them)

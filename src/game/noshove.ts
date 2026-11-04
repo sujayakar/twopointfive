@@ -50,22 +50,24 @@ export function noShoveMan(g: Game, gd: Guard): boolean {
   const A = g.orders.of(gd); return !!A && A.post === null && !fragRunning(g, gd);
 }
 
+/** what of a man the rule keeps, an update at a time: the player's own, or a look ahead's copy of him (walkahead.ts) */
+export interface Shoved { char: { pos: ArrayLike<number> }; shoved: [number, number]; shovedT: number; shovedFrom: [number, number] }
 /** player.ts updatePlayer, first thing: nobody has moved him yet this frame, and this is where his own legs start from */
-export function noShoveBegin(g: Game): void {
+export function noShoveBegin(g: Game, pl: Shoved = g.player): void {
   if (!NOSHOVE.on || BREAK) return;
-  const pl = g.player, p = pl.char.pos; pl.shoved[0] = pl.shoved[1] = 0; pl.shovedT = g.time; pl.shovedFrom[0] = p[0]; pl.shovedFrom[1] = p[2];
+  const p = pl.char.pos; pl.shoved[0] = pl.shoved[1] = 0; pl.shovedT = g.time; pl.shovedFrom[0] = p[0]; pl.shovedFrom[1] = p[2];
 }
 /** player.ts keepOffGuards: a man moved him by this much (after the walls had their say) */
-export function noShoveNote(g: Game, dx: number, dz: number): void {
+export function noShoveNote(g: Game, dx: number, dz: number, pl: Shoved = g.player): void {
   if (!NOSHOVE.on || BREAK) return;
-  const pl = g.player; if (pl.shovedT !== g.time) { pl.shoved[0] = pl.shoved[1] = 0; pl.shovedT = g.time; pl.shovedFrom[0] = pl.char.pos[0] - dx; pl.shovedFrom[1] = pl.char.pos[2] - dz; }
+  if (pl.shovedT !== g.time) { pl.shoved[0] = pl.shoved[1] = 0; pl.shovedT = g.time; pl.shovedFrom[0] = pl.char.pos[0] - dx; pl.shovedFrom[1] = pl.char.pos[2] - dz; }
   pl.shoved[0] += dx; pl.shoved[1] += dz;
 }
 /** player.ts keepOffGuards, of a man the rule has who stands at (mx, mz), `l` from the player: how far the player is put back from him — what his OWN legs
  *  closed on the man this update, and no more (0: the man came to him). Measured from where he would stand had his legs not moved, so a walk past a man's
  *  shoulder never works its way inside the keep-off a frame at a time. */
-export function noShoveBack(g: Game, mx: number, mz: number, l: number): number {
-  const pl = g.player; if (pl.shovedT !== g.time) return 0;
+export function noShoveBack(g: Game, mx: number, mz: number, l: number, pl: Shoved = g.player): number {
+  if (pl.shovedT !== g.time) return 0;
   const d0 = Math.hypot(pl.shovedFrom[0] + pl.shoved[0] - mx, pl.shovedFrom[1] + pl.shoved[1] - mz);
   return Math.max(0, Math.min(KEEP_OFF, d0) - l);
 }

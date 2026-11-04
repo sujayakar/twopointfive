@@ -74,6 +74,15 @@ export const loadsOf = (g: Game): number => (g.saves as { stats?: { loads?: numb
 export const recOf = (g: Game): { on: boolean; last: object | null } => { const J = g.journal as { recording?: boolean; last?: object | null } | undefined; return { on: !!J?.recording, last: J?.last ?? null }; };
 const kitNow = (): string => JSON.stringify({ on: KIT.on, members: KIT.members, ...(kitOwn() ? { own: true } : {}), ...(kitStealthCard() ? { stealth: kitStealthCard() } : {}) });   // (`own`: the cards are the player's own layout, worn as written — kit.ts KITDEAL; absent = a tape from before, or cards a team of three or four wears dealt)
 
+/** THE RECIPE OF A GAME AS IT STANDS (format.ts RunTape.recipe, but for the page's address, which its host knows): its die, the scenario that is up, the journal's
+ *  env and knobs snapshots, where it stands, every other registered knob table and the kit cards. A tape's first step files it (RunTapeRec.begin); a game server
+ *  makes one of the game it stood so that every client stands the same one (src/net/). */
+export function recipeOf(g: Game, tables: Record<string, string> = tablesNow(), kit: string = kitNow()): Omit<RunTape['recipe'], 'search' | 'levelFile'> {
+  const seed = (g.dice as { seed?: number } | null | undefined)?.seed, knobs = knobsSnapshot(g);
+  return { seed: typeof seed === 'number' ? seed : null, scenario: activeScenario(g), env: envSnapshot(g), knobs, stand: standNow(), words: wordsNow(),
+    tables: Object.fromEntries(Object.entries(tables).filter(([k]) => !(k in knobs.tables)).map(([k, t]) => [k, JSON.parse(t)])), kit: JSON.parse(kit) };
+}
+
 /** `minutes`: a tape longer than this since the page's game began is dropped (the replay stays a trace). `tuneEvery` / `tablesEvery`: steps between looks at the
  *  game's tune / the knob tables for a change made from the panel. */
 export const RUNTAPE = { minutes: 30, tuneEvery: 30, tablesEvery: 120 };
@@ -159,10 +168,8 @@ export class RunTapeRec {
   private flagsOf(g: Game) { return { godMode: !!g.godMode, aiEnabled: g.aiEnabled !== false, infiniteAmmo: !!g.infiniteAmmo, playerInvisible: !!g.playerInvisible }; }
   private begin(g: Game): boolean {
     if (g.time !== 0) { this.kill(0, 'the tape was not there from the game\'s first step'); return false; }
-    const seed = (g.dice as { seed?: number } | null | undefined)?.seed;
-    const tables = tablesNow(), knobs = knobsSnapshot(g), kit = kitNow();
-    this.recipe = { seed: typeof seed === 'number' ? seed : null, scenario: activeScenario(g), env: envSnapshot(g), knobs, stand: standNow(), words: wordsNow(),
-      tables: Object.fromEntries(Object.entries(tables).filter(([k]) => !(k in knobs.tables)).map(([k, t]) => [k, JSON.parse(t)])), kit: JSON.parse(kit) };
+    const tables = tablesNow(), kit = kitNow();
+    this.recipe = recipeOf(g, tables, kit);
     this.kitKey = kit;
     if (this.playerRef && g.player !== this.playerRef) this.x.push([0, 'restart']);
     this.x.push([0, 'pose', poseOf(g, []).map(enc)]);

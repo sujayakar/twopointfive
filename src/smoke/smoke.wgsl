@@ -15,7 +15,7 @@ struct Emitter {
   pos: vec3f, radius: f32,        // WORLD metres
   dir: vec3f, speed: f32,
   density: f32, temperature: f32, level: u32, mode: f32,
-  push: f32, expand: f32, kind: u32, tall: f32,                   // kind: WHAT it raises, as a cell's K word below (0 = canister smoke) · tall: A BODY's half height (mode 2, emBody below) or A LINE's half length along `dir` (mode 3, emR2 below); 0 on anything else
+  push: f32, expand: f32, kind: u32, epad1: f32,                  // kind: WHAT it raises, as a cell's K word below (0 = canister smoke)
 };
 struct Level { dims: vec3u, pageBase: u32, voxel: f32, texY: u32, tile: u32, tileBase: u32 };   // dims in bricks; texY = this level's first row in the readers' page texture; tile = bricks per bounding tile edge (boxes)
 struct SP {
@@ -23,7 +23,7 @@ struct SP {
   dt: f32, time: f32, buoyancy: f32, weight: f32,
   vortConf: f32, velDamp: f32, densDecay: f32, tempDecay: f32,
   turbulence: f32, omega: f32, flushEps: f32, ring: u32,          // ring: CELLS of air kept round the smoke (1‥8; 8 = every brick that holds smoke has all 26 neighbours)
-  stirConf: f32, show: f32, numDirty: u32, bakeAll: u32,          // stirConf: × MORE vorticity confinement right round a moving body (forces, emBody; 0 = one strength everywhere, as it was) · show: THE SMOKE LAB'S PICTURES (0 anywhere else; smoke.ts `show`): bit 0 the bricks drawn (the readers' business: boxes hands the word on), bit 1 the smoke coloured by its spin (publish), the rest = the spin drawn as full colour, 1/s
+  windX: f32, windZ: f32, numDirty: u32, bakeAll: u32,
   softLo: f32, softHi: f32, softEps: f32, softDecay: f32,         // the pool's soft ceiling: between softLo and softHi of CAP in use the flush threshold rises to softEps and thin smoke decays softDecay/s faster
   thinDecay: f32, thinBelow: f32, readSkip: f32, fresh: f32,       // density under thinBelow decays up to thinDecay/s faster, always (0 = off): how far a plume's faint skirt spreads before it is gone · fresh: WHO GIVES WAY below
   viewX: f32, viewZ: f32, viewR: f32, viewBias: f32,              // where the camera looks (floor plan) and how far round it counts as seen: past viewR, rising to full at 2 viewR, the pool's ceiling comes sooner and harder (farOf); bias 0 = one ceiling for all
@@ -178,40 +178,19 @@ fn wakeBrick(l: u32, b: vec3i) {
   let s = atomicLoad(&A[A_PAGE + pi]);
   if (s != 0u && s != LOCK) { atomicStore(&A[A_WAKE + s - 1u], sp.stepNo); }   // (LOCK: another source's thread is making it, and wakes it)
 }
-/** how far round its centre an emitter is felt (what wakes a brick and what a brick lists): three radii, and a body's half height more. A LINE is not felt round its
- *  centre: emInBox and emHalf below measure it along its stretch. */
-fn emReach(e: Emitter) -> f32 { return 3.0 * e.radius + e.tall; }
-/** DOES AN EMITTER REACH THE BOX lo‥hi (a brick)? Its centre against the box, as it always was. A LINE (mode 3) by the point of its stretch nearest the box's middle,
- *  within three radii and half the box's diagonal: that point can lie half a diagonal from the stretch's truly nearest one, so no brick the shove touches is left
- *  out, and a line 8 m long reaches the bricks along it and not a sphere of them 8 m across. */
-fn emInBox(e: Emitter, lo: vec3f, hi: vec3f) -> bool {
-  var c = e.pos; var R = emReach(e);
-  if (e.mode > 2.5) { c += e.dir * clamp(dot((lo + hi) * 0.5 - e.pos, e.dir), -e.tall, e.tall); R = 3.0 * e.radius + 0.5 * length(hi - lo); }
-  let q = clamp(c, lo, hi) - c;
-  return dot(q, q) <= R * R * 1.02;
-}
-/** half the size of the box of bricks markEmit looks through for it: a line's is its stretch's own box, not a cube of its length */
-fn emHalf(e: Emitter) -> vec3f { if (e.mode > 2.5) { return abs(e.dir) * e.tall + vec3f(3.0 * e.radius); } return vec3f(emReach(e)); }
-/** A MOVING BODY (mode 2: Game.smokeWake with the look page's Stirred smoke row up; types.ts SmokePush.body). A man wading through smoke used to be two soft
- *  shoves along his heading, so the smoke bulged ahead of him and closed behind him with nothing shed. A body is a standing capsule (e.pos its middle, e.tall
- *  its half height, e.radius its radius): the air INSIDE it goes with him, the pull is gone by 1.8 radii, and the pressure step then has to send the air he
- *  displaces round his sides, which is where a wake's two counter-turning eddies come from. Returns the distance from the capsule's axis in radii. */
-fn emBody(e: Emitter, d: vec3f) -> f32 { var q = d; q.y -= clamp(d.y, -e.tall, e.tall); return length(q) / e.radius; }
-/** HOW FAR A CELL IS FROM AN EMITTER, in its radii, squared. A point for every emitter but A LINE (mode 3: what a round does to the air it goes through, smoke.ts
- *  `push` with `line`): a stretch of half length e.tall along e.dir about e.pos, so one emitter is a whole path through a plume and not a row of dots along it. */
-fn emR2(e: Emitter, d: vec3f) -> f32 { var q = d; if (e.mode > 2.5) { q -= e.dir * clamp(dot(d, e.dir), -e.tall, e.tall); } return dot(q, q) / (e.radius * e.radius); }
 // one workgroup per emitter: every brick its splat can deposit in exists from this step on (pushes and spent envelopes deposit nothing and make nothing), and every brick it reaches is awake
 @compute @workgroup_size(64)
 fn markEmit(@builtin(workgroup_id) wid: vec3u, @builtin(local_invocation_index) li: u32) {
   if (wid.x >= sp.numEmitters) { return; }
   let e = sp.emitters[wid.x];
   let deposits = e.density != 0.0 || e.temperature != 0.0;
-  let bs = 8.0 * sp.levels[e.level].voxel; let R = emHalf(e);
+  let bs = 8.0 * sp.levels[e.level].voxel; let R = 3.0 * e.radius;
   let lo = vec3i(floor((e.pos - R) / bs)); let hi = vec3i(floor((e.pos + R) / bs));
-  let n = vec3u(hi - lo + 1); let total = min(n.x * n.y * n.z, 32768u);   // (a line is sent in stretches of 4 m at most, smoke.ts push: its box of bricks stays far under this)
+  let n = vec3u(hi - lo + 1); let total = min(n.x * n.y * n.z, 32768u);
   for (var k = li; k < total; k += 64u) {
     let b = lo + vec3i(i32(k % n.x), i32((k / n.x) % n.y), i32(k / (n.x * n.y)));
-    if (emInBox(e, vec3f(b) * bs, vec3f(b + 1) * bs)) { if (deposits) { ensureBrick(e.level, b, 2.0); } wakeBrick(e.level, b); }
+    let q = clamp(e.pos, vec3f(b) * bs, vec3f(b + 1) * bs) - e.pos;
+    if (dot(q, q) <= R * R * 1.02) { if (deposits) { ensureBrick(e.level, b, 2.0); } wakeBrick(e.level, b); }
   }
 }
 
@@ -421,7 +400,7 @@ fn sourceExpansion(k: Bk, Pw: vec3f) -> f32 {
       let i = countTrailingZeros(em) + 32u * w; em &= em - 1u;
       if (i >= sp.numExpand) { break; }
       let e = sp.emitters[i];
-      let r2 = emR2(e, Pw - e.pos);
+      let d = Pw - e.pos; let r2 = dot(d, d) / (e.radius * e.radius);
       if (r2 > 9.0) { continue; }
       s += e.expand * exp(-r2);
     }
@@ -434,7 +413,7 @@ struct BoxGeoS { c: vec3f, rot: u32, h: vec3f, flags: u32 };
 @group(2) @binding(1) var<storage, read> sboxGeo: array<BoxGeoS>;
 @group(2) @binding(2) var<storage, read> sgridCells: array<u32>;
 @group(2) @binding(3) var<storage, read> sgridItems: array<u32>;
-struct SceneInfoS { numBoxes: u32, numGlobals: u32, gridW: u32, gridH: u32, globals: array<vec4u, 4>, numCapsules: u32, numChars: u32, capsPerChar: u32, pad0: u32, charBounds: array<vec4f, 16>, globalsY: array<vec4f, 8>, grid: vec4f, globalsB: array<vec4f, 32>, glassInfo: vec4u, glass: array<vec4f, 96> };
+struct SceneInfoS { numBoxes: u32, numGlobals: u32, gridW: u32, gridH: u32, globals: array<vec4u, 4>, numCapsules: u32, numChars: u32, capsPerChar: u32, pad0: u32, charBounds: array<vec4f, 8>, globalsY: array<vec4f, 8>, grid: vec4f, globalsB: array<vec4f, 32>, glassInfo: vec4u, glass: array<vec4f, 96> };
 @group(2) @binding(4) var<uniform> sscene: SceneInfoS;
 struct SealS { info: vec4u, boxes: array<vec4f, 64> };   // ≤ 32 sealing door leaves: (c, cos yaw), (h, sin yaw)
 @group(2) @binding(5) var<uniform> sseal: SealS;
@@ -513,7 +492,8 @@ fn link(@builtin(workgroup_id) wid: vec3u, @builtin(local_invocation_index) li: 
     let i = li - 64u;
     if (i < sp.numEmitters) {
       let e = sp.emitters[i];
-      if (e.level == k.l && emInBox(e, lo, hi)) { atomicOr(&wgEm[i >> 5u], 1u << (i & 31u)); if (e.kind != 0u && e.density != 0.0) { atomicOr(&wgKind, 1u); } }
+      let q = clamp(e.pos, lo, hi) - e.pos;
+      if (e.level == k.l && dot(q, q) <= 9.0 * e.radius * e.radius * 1.02) { atomicOr(&wgEm[i >> 5u], 1u << (i & 31u)); if (e.kind != 0u && e.density != 0.0) { atomicOr(&wgKind, 1u); } }
     }
   } else if (li >= 128u && li < 136u) {
     let i = li - 128u;
@@ -606,28 +586,14 @@ fn forces(@builtin(workgroup_id) wid: vec3u, @builtin(local_invocation_id) lid: 
     var u = unV(V[V_VEL1 + i]).xyz;
     let dT = unpack2x16float(S[S_DEN0 + i]);
     u.y += (sp.buoyancy * dT.y - sp.weight * dT.x) * k.dt;
-    let Pw = worldP(k, c);
-    // CURLS WHERE A BODY STIRS (sp.stirConf; 0 = one strength everywhere): the confinement that keeps an eddy turning is stronger right round a moving body, falling
-    // to the plain strength by three of its radii, so what he sheds rolls up while he is there and the smoke the wind pushes along a wall is as smooth as it was
-    var conf = sp.vortConf;
-    if (sp.stirConf > 0.0) {
-      var near = 0.0;
-      for (var w = 0u; w < 2u; w++) {
-        var em = M[k.m + K_EM0 + w];
-        while (em != 0u) {
-          let e = sp.emitters[countTrailingZeros(em) + 32u * w]; em &= em - 1u;
-          if (e.mode < 1.5 || e.mode > 2.5) { continue; }
-          let r = emBody(e, Pw - e.pos) / 1.5; near = max(near, exp(-r * r));
-        }
-      }
-      conf *= 1.0 + sp.stirConf * near;
-    }
+    u += vec3f(sp.windX, 0.0, sp.windZ) * k.dt;
     let wC = unV(V[V_CURL + i]);
     let grad = vec3f(ldVn(V_CURL, k, c + vec3i(1, 0, 0), wC).w - ldVn(V_CURL, k, c - vec3i(1, 0, 0), wC).w,
                      ldVn(V_CURL, k, c + vec3i(0, 1, 0), wC).w - ldVn(V_CURL, k, c - vec3i(0, 1, 0), wC).w,
                      ldVn(V_CURL, k, c + vec3i(0, 0, 1), wC).w - ldVn(V_CURL, k, c - vec3i(0, 0, 1), wC).w);
     let gl = length(grad);
-    if (gl > 1e-5) { u += conf * k.h * cross(grad / gl, wC.xyz) * k.dt; }
+    if (gl > 1e-5) { u += sp.vortConf * k.h * cross(grad / gl, wC.xyz) * k.dt; }
+    let Pw = worldP(k, c);
     if (sp.turbulence > 0.0 && dT.x > 0.01) {
       let q = Pw * 4.7 + vec3f(0.0, -sp.time * 0.9, sp.time * 0.35);
       let n = vec3f(sin(q.y * 1.7 + sin(q.z * 2.3)), sin(q.z * 1.3 + sin(q.x * 2.9)) * 0.5, sin(q.x * 1.9 + sin(q.y * 2.1)));
@@ -638,20 +604,10 @@ fn forces(@builtin(workgroup_id) wid: vec3u, @builtin(local_invocation_id) lid: 
       while (em != 0u) {
         let e = sp.emitters[countTrailingZeros(em) + 32u * w]; em &= em - 1u;
         if (e.push <= 0.0) { continue; }
-        let d = Pw - e.pos;
-        if (e.mode > 1.5 && e.mode < 2.5) {   // (a body: emBody above)
-          let g = 1.0 - smoothstep(1.0, 1.8, emBody(e, d));
-          if (g > 0.0) { u = mix(u, e.dir * e.speed, clamp(g * e.push * sp.dt, 0.0, 1.0)); }
-          continue;
-        }
-        let r2 = emR2(e, d);
+        let d = Pw - e.pos; let r2 = dot(d, d) / (e.radius * e.radius);
         if (r2 > 9.0) { continue; }
-        if (e.mode > 2.5) {   // (A LINE: a round's wake. The air along the path is brought UP to e.speed along it, once: never slowed, never turned, and the same
-          u += e.dir * max(e.speed * clamp(exp(-r2) * e.push, 0.0, 1.0) - dot(u, e.dir), 0.0);   // whatever the frame's length. e.push = how flat the jet's top is: 4 = full out to 1.18 radii)
-          continue;
-        }
         var jet = e.dir * e.speed;
-        if (e.mode > 0.5 && e.mode < 1.5) { jet = normalize(d + e.dir * 0.02 + vec3f(1e-4)) * e.speed; }
+        if (e.mode > 0.5) { jet = normalize(d + e.dir * 0.02 + vec3f(1e-4)) * e.speed; }
         u = mix(u, jet, clamp(exp(-r2) * e.push * sp.dt, 0.0, 1.0));
       }
     }
@@ -795,7 +751,7 @@ fn injectDecay(@builtin(workgroup_id) wid: vec3u, @builtin(local_invocation_id) 
       var em = M[k.m + K_EM0 + w];
       while (em != 0u) {
         let e = sp.emitters[countTrailingZeros(em) + 32u * w]; em &= em - 1u;
-        let r2 = emR2(e, Pw - e.pos);
+        let d = Pw - e.pos; let r2 = dot(d, d) / (e.radius * e.radius);
         if (r2 > 9.0) { continue; }
         let g = exp(-r2);
         let n = fract(sin(dot(vec3f((k.b * 8 + c) & vec3i(63)) + sp.time * 3.1, vec3f(12.9898, 78.233, 37.719))) * 43758.5453);
@@ -885,7 +841,6 @@ fn publish(@builtin(workgroup_id) wid: vec3u, @builtin(local_invocation_index) l
       let at = (r.x - 1u) * 512u + r.y; let dt2 = unpack2x16float(S[S_DEN0 + at]); let d = dt2.x;
       if (kinds) { let kd = unpack4x8unorm(S[S_KIND + at]); o.x = d * mix(sp.scaleCan, sp.scaleFx, kd.x); o = vec4f(o.x, o.x * kd.yzw); } else { o.x = d * plain; }
       if (k.l == 1u) { o.w = dt2.y; }   // (a FINE brick's last channel is its HEAT, as the solver has it: nobody read that channel of a fine brick — smoke_read.wgsl spgFineHot, for a fire's flame)
-      else if ((u32(sp.show) & 2u) != 0u) { o = vec4f(o.x, o.x * clamp(unpack2x16float(V[V_CURL + at].y).y / f32(max(u32(sp.show) >> 2u, 1u)), 0.0, 1.0), 0.0, 0.0); }   // (THE SMOKE LAB, spin: a coarse cell's tint channels carry density × how hard the air in it turns, 0‥1, from the curl the step left: composite.wgsl smokeLabOver draws it; smoke.ts holds the dust twin off meanwhile)
     }
     textureStore(atlasOut, org + c, o);
   }
@@ -922,7 +877,7 @@ fn wipePage(@builtin(global_invocation_id) gid: vec3u) {
 // The marchers, the froxel cull and the shadow rays start from `smoke: array<SmokeBound, 8>` (common.wgsl): boxes to clip against, bounds round wherever renderable bricks are:
 // bricks are binned into plan tiles, each tile keeps the box of its bricks, and the tiles are merged greedily into at most four boxes a level. More plumes than boxes = looser boxes
 // (rays walk some empty page entries), never lost smoke.
-struct DomOut { origin: vec3f, voxel: f32, pad0: vec3u, live: u32, dims: vec3u, pad1: u32, show: f32, readSkip: f32, pad3: f32, pad4: f32 };   // = common.wgsl SmokeBound
+struct DomOut { origin: vec3f, voxel: f32, pad0: vec3u, live: u32, dims: vec3u, pad1: u32, pad2: f32, readSkip: f32, pad3: f32, pad4: f32 };   // = common.wgsl SmokeBound
 @group(2) @binding(9) var<storage, read_write> domOut: array<DomOut, 8>;
 @group(2) @binding(10) var<storage, read_write> statsOut: array<u32>;
 var<workgroup> tl: array<atomic<u32>, NTILES * 6u>;
@@ -966,7 +921,7 @@ fn boxes(@builtin(local_invocation_index) li: u32) {
   for (var q = 0u; q < 8u; q++) {
     let l = q >> 2u; let on = (q & 3u) < cnt[l]; let h = sp.levels[l].voxel;
     var d: DomOut;
-    d.voxel = h; d.live = select(0u, 1u, on); d.readSkip = sp.readSkip; d.show = sp.show;   // (record 0's: the readers' switch for hopping over empty air, smoke_read.wgsl spgSkip)
+    d.voxel = h; d.live = select(0u, 1u, on); d.readSkip = sp.readSkip;   // (record 0's: the readers' switch for hopping over empty air, smoke_read.wgsl spgSkip)
     if (on) { d.origin = vec3f(lo[q]) * (8.0 * h); d.dims = vec3u(hi[q] - lo[q] + 1) * 8u; }
     domOut[q] = d;
     statsOut[16u + q * 2u] = select(0u, u32(lo[q].x) | (u32(lo[q].y) << 10u) | (u32(lo[q].z) << 20u) | 0x80000000u, on);

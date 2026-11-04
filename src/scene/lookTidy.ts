@@ -44,7 +44,7 @@ function wetIs(b: Box): boolean { return b.wetK !== undefined || (!!(b.flags & B
 function wetTidy(statics: Box[], T: Tidy): void {
   for (const r of T.wet) { const d = statics[r.d], g = statics[r.g]; if (!d || !g) continue; const on = wetIs(g); if (on === r.on) continue; r.on = on;
     if (on) { d.wetK = g.wetK ?? 0.5; d.flags = r.flags0 | BoxFlag.Gloss; d.rough = g.rough; d.aniso = true; }
-    else { delete d.wetK; d.flags = r.flags0; if (r.rough0 === undefined) delete d.rough; else d.rough = r.rough0; if (r.aniso0 === undefined) delete d.aniso; else d.aniso = r.aniso0; } }
+    else { d.wetK = undefined; d.flags = r.flags0; d.rough = r.rough0; d.aniso = r.aniso0; } }   // (set, never deleted: a box keeps its one layout — scene/boxes.ts boxOf)
 }
 /** once a frame, from the page: cheap while nothing has broken (one compare of the world's geometry serial) and nothing has got wet or dried (one test a
  *  ground decal). A wall's decals go and come back WHOLE with the wall's box — a hole in one cell bares that wall's foot along its length, and the frame the

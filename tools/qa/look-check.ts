@@ -43,7 +43,7 @@ let ok = true; const check = (pass: boolean, what: string) => { console.log(`- $
 const J = (f: string) => JSON.parse(readFileSync(resolve(ROOT, 'levels', f), 'utf8'));
 const same = (a: unknown, b: unknown) => JSON.stringify(a) === JSON.stringify(b);
 const albedoOf = (b: any, mats: any): number[] => b.albedo ?? mats[b.material]?.albedo;
-const PAINT = new Set(['albedo', 'material', 'rough', 'metal', 'stuff']);   // (what a box says it is made of is part of its paint: the skin drops it with the paint it repaints)
+const PAINT = new Set(['albedo', 'material', 'rough', 'metal']);
 
 // the palette
 { const seen = new Map<string, string>(); let clash = 0, wrong = 0;

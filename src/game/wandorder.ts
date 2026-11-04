@@ -21,6 +21,7 @@
 //
 // Nobody notices a lens; it files no sound; no dice; nothing reads the camera. No state in a checkpoint: an order is not saved (a checkpoint is refused
 // with a squad on the floor), and after a load he simply is not looking.
+import { viewOf } from './seats';
 import { SideMap } from '../math/side';
 import { Vec3, wrapAngle } from '../math/vec';
 import type { Game, Guard } from './game';
@@ -164,6 +165,7 @@ export function wandOrderKey(g: Game, input: Input): boolean {
 /** HIS LENS AS HIS EYE among the fog's (fogofwar.ts), or null while he is not looking: the player's lens by every number, swept over its arc on the
  *  game's clock */
 export function mateWandEye(g: Game, gd: Guard): FogEye | null {
+  g = viewOf(g, gd);   // (his seat's jobs: seats.ts)
   const st = states.get(g); if (!st || !st.jobs.size) return null;
   const J = st.jobs.get(gd); if (!J || !J.live || !live(g)) return null;
   const now = g.time; if (gd.state === 'dead' || now - J.lastT > 0.25 || now < gd.dazzledUntil || gd.script?.over || !wandFits(J.door)) return null;

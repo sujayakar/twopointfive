@@ -59,11 +59,11 @@ export function dazzlePlayer(g: Game, secs: number, at: Vec3): void {
 }
 
 /** is he folded right now (rooted, gun down, no round)? */
-export function samStaggered(g: Game): boolean { return live(g) && g.time < g.player.staggerUntil; }
+export function samStaggered(g: Game, now = g.time): boolean { return live(g) && now < g.player.staggerUntil; }   // (`now`: the clock asked of — a look ahead's own, walkahead.ts)
 /** how blind he is right now: 1 for the body of a dazzle, easing to 0 over its last `fade` seconds */
-export function samBlind(g: Game): number { if (!live(g)) return 0; const left = g.player.dazzledUntil - g.time; return left <= 0 ? 0 : clamp(left / Math.max(0.05, SAMSTUN.fade), 0, 1); }
+export function samBlind(g: Game, now = g.time): number { if (!live(g)) return 0; const left = g.player.dazzledUntil - now; return left <= 0 ? 0 : clamp(left / Math.max(0.05, SAMSTUN.fade), 0, 1); }
 /** may his feet move? (player.ts asks before it reads the walk keys) */
-export function samRooted(g: Game): boolean { return samStaggered(g) || (SAMSTUN.blindRoots && samBlind(g) > 0.5); }
+export function samRooted(g: Game, now = g.time): boolean { return samStaggered(g, now) || (SAMSTUN.blindRoots && samBlind(g, now) > 0.5); }
 
 /** player.ts, once a frame right after the down test, whatever state he is in (free, a man in his arm, a kick, a lock): what the two states show on him and keep true while they run */
 export function samStunPose(g: Game): void {

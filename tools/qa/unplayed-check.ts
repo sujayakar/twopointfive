@@ -16,6 +16,7 @@
 //   UNPLAYED_BREAK=1  the switch is left off where the lines above want it on: the check must FAIL (exit 1) — the proof that it can
 // exit 0 = all hold · 1 = one does not
 import { ROOT } from './headless.ts';
+import { groupsFit } from './listed.ts';
 
 export async function unplayedCheck(): Promise<boolean> {
   const { El, withDom } = await import('./scenario-picker-probes.ts');
@@ -80,8 +81,8 @@ export async function unplayedCheck(): Promise<boolean> {
       'the rule: a row is unplayed when it is untuned and the short list does not name it; no short-list row is unplayed', `${on.filter(m => m.untuned).length} untuned · ${on.filter(rule).length} unplayed · short list: ${top.join(', ')}`);
     for (const [name, L, offL] of [['the list (missionList)', on, off], ['the start page (startPageList)', onStart, offStart]] as [string, Mi[], Mi[]][]) {
       const once = L.length === all && new Set(ids(L)).size === all, moved = ids(L).filter((id, i) => id !== offL[i].id).length;
-      line(once && inRuns(L) && playedFirst(L) && same(ids(L), ids(parted(offL))) && groupsOf(L).every(g => L.filter(m => m.group === g).length <= 8),
-        `on, ${name}: every mission once, each group in one run, in no group a played row after an unplayed one, and the order = the switch-off order after a stable partition of each group`, `${L.length} of ${all} · ${moved} rows stand elsewhere than with the switch off\n    ${lay(L)}`);
+      line(once && inRuns(L) && playedFirst(L) && same(ids(L), ids(parted(offL))) && groupsFit(M, L, groupsOf(L)),
+        `on, ${name}: every mission once, each group in one run, in no group a played row after an unplayed one, the order = the switch-off order after a stable partition of each group, and every group draws a row and no more than eight (listed.ts: a row cut from the list is not counted)`, `${L.length} of ${all} · ${moved} rows stand elsewhere than with the switch off\n    ${lay(L)}`);
     }
     line(groupsOf(onStart).every(g => { const of = onStart.filter(m => m.group === g), n = of.filter(m => top.includes(m.id)).length; return of.slice(0, n).every(m => top.includes(m.id)) && same(of.slice(0, n).map(m => m.id), top.filter(id => of.some(m => m.id === id))); }),
       'on, the start page: the short list\'s rows still stand first in their group, in play order', top.join(', '));

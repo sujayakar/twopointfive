@@ -43,13 +43,13 @@ const URL = extra => `http://localhost:${PORT}/?paused&quality=${QUALITY}&mute&r
       if (ran > best.ran) best = { ran, tops, key, sprinted };
     }
     const r2 = x => +x.toFixed(2);
-    return { on: K.TEAMPACE.on, why, whyIn, walkTop: r2(walkTop), walk: r2(g.tune.playerWalk), k: K.TEAMPACE.k, ran: r2(best.ran), key: best.key, sprinted: best.sprinted, tops: best.tops.map(r2), up: ops.filter(o => o.state !== 'dead').length };
+    return { on: K.TEAMPACE.on, pacing: !!K.TEAMPACE.pacing, why, whyIn, walkTop: r2(walkTop), walk: r2(g.tune.playerWalk), k: K.TEAMPACE.k, ran: r2(best.ran), key: best.key, sprinted: best.sprinted, tops: best.tops.map(r2), up: ops.filter(o => o.state !== 'dead').length };
   };
   const tell = (r, E) => `TEAMPACE.on ${r.on} · ordered: fastest ${r.walkTop} m/s (the player walks ${r.walk}) · behind his sprint (${r.key}, ${r.sprinted} frames, ${r.ran} m): followers' tops ${r.tops.join(' / ')} m/s · ${r.up} up${r.why ? ` · move refused: ${r.why}` : ''}${r.whyIn ? ` · fall in refused: ${r.whyIn}` : ''} · errors ${JSON.stringify(E.slice(0, 3))}`;
   const A = await open('');
   const a = await A.page.evaluate(stage);
-  line(a.on === true && !a.why && !a.whyIn && a.walkTop > 0.8 && a.walkTop <= a.walk * a.k * 1.15 + 0.05 && a.ran > 4 && Math.min(...a.tops) >= 3 && !A.errors.length,
-    'the page opens with the switch on: the ordered four walk under the player\'s own walk, and behind his sprint all four run', tell(a, A.errors));
+  line(a.on === true && !a.why && !a.whyIn && a.walkTop > 0.8 && a.walkTop <= a.walk * (a.pacing ? 1 : a.k) * 1.15 + 0.05 && a.ran > 4 && Math.min(...a.tops) >= 3 && !A.errors.length,
+    'the page opens with the switch on: the ordered four walk no faster than the player\'s own walk (TEAMPACE.pacing on: at it; ?pacing=0: under it), and behind his sprint all four run', tell(a, A.errors));
   await A.page.close();
   const B = await open('&teampace=0');
   const b = await B.page.evaluate(stage);

@@ -4,8 +4,10 @@
 //   1. OFF IS THE LEVEL AS IT WAS: the file with its lived things taken out (boxes in group 'lived' / 'lived.<room>', props / lights / switchables whose id
 //      starts 'lived.') equals the file at <rev> key for key, and loads to the same Level with the switch off (default rev = THE LEVEL'S OWN BASE, its row
 //      in LEVEL_BASE below, the last step that changed that level's own part on purpose; a level with no row: BASE_REVS; `--base <rev>` holds every level
-//      named to that one; `--base none` once no rev speaks for the level; a level its rev does not have is not asked). A lesson's WORDS and LISTS are read
-//      from today's file (LESSON_FREE below says which keys, and why those);
+//      named to that one; `--base none` once no rev speaks for the level; a level its rev does not have is not asked). A LEVEL WITH A BASE FILE
+//      (tools/qa/fixtures/level-base/<name>.txt: the git blob id of the level file as meant — LEVEL_BLOB below) is held to THAT file's bytes instead:
+//      the file wins over the table, and every row of the table still means what it meant. A lesson's WORDS and LISTS are read from today's file
+//      (LESSON_FREE below says which keys, and why those);
 //   2. EVERY AUTHORED POINT STILL STANDS: each floor point the level's scenarios, routes, plans, mission, chokepoints, civilians and marks name (team starts,
 //      defenders' marks, pods, waypoints, deals, lesson spots) is free in the nav grid if it was, and no lived solid or prop is within a body's width of it;
 //   3. NOBODY'S AIM IS WALLED: a mark's `pos` → `aimAt` line that was open is still open;
@@ -84,7 +86,7 @@ const LEVEL_BASE: Record<string, string> = {
   'tut-plan.json': '1955e5c1e',
 
   // the tutorial's fourth mission: the plan mission's floor with the player on it and the four behind him, its own lesson (13 steps) and script
-  'tut-queue.json': '5eae0702d',
+  'tut-queue.json': 'cebc22694',   // (the frame's rows list)
 
   // the ledger's store teaches the rifle's launcher: the chest beam moved to the hall man's back, the hand-to-hand step gone and six in its place (the laser
   // named inside the door, the rifle, the swap's card, a mark to shoot from, the shot, the hands' key), its own card for the player, a sixth checkpoint.
@@ -110,6 +112,26 @@ const LEVEL_BASE: Record<string, string> = {
   // mode is opened and closed (three steps where one was: no box moved); then a cue on the window's step, which the hall's two wait for
   'tut-squad.json': 'd82feec01',
 };
+/** A LEVEL'S BASE AS A FILE OF ITS OWN (the dressing of every level, 11-03): `tools/qa/fixtures/level-base/<name>.txt` for `levels/<name>.json` holds the
+ *  GIT BLOB ID of that level file as meant, and WINS over the level's row in LEVEL_BASE (and over a look twin's fall to the plain level's row, and over
+ *  BASE_REVS). Why a second form: a row names a COMMIT, and a commit's name changes when the step is picked onto another base, so a row written on a branch
+ *  was wrong the moment the build took it; and every branch that added a row added it at one place in one table, so two of them never picked side by side.
+ *  A blob id is the file's own bytes: the same word before and after a pick, written in the very commit that carries the change, in a file no other level
+ *  shares. HOW AN ID IS MADE, so that everybody gets the same word:
+ *      git hash-object -w levels/<name>.json > tools/qa/fixtures/level-base/<name>.txt
+ *  run on the level file as meant (`-w` puts the blob in this clone, so the check holds before the commit too; the commit holds it from then on). A re-export
+ *  that changes one byte is another id ON PURPOSE: write the file again only when the level's own part was changed on purpose — a change to its lived
+ *  things alone needs no new id, since both sides are read with their lived things taken out. The file is one id on a line; a line that starts with `#`
+ *  says what changed, as a row's note does. Red, never 'nothing to compare': an id this clone does not hold, a file that is no id, a file for a level
+ *  that is not under levels/. A look twin has its own file or none: an id names one file's bytes, so the plain level's does not stand for its twin. */
+const LEVEL_BLOB_DIR = resolve(ROOT, 'tools/qa/fixtures/level-base');
+/** the base file of a level file (`block-gwot.json`), read: its id, or what is wrong with it; undefined = the level has none */
+function levelBlob(name: string): { id?: string; bad?: string } | undefined {
+  const f = resolve(LEVEL_BLOB_DIR, name.replace(/\.json$/, '') + '.txt'); if (!existsSync(f)) return undefined;
+  const lines = readFileSync(f, 'utf8').split('\n').map(l => l.trim()).filter(l => l && !l.startsWith('#'));
+  if (lines.length !== 1 || !/^[0-9a-f]{40}$/.test(lines[0])) return { bad: `its base file tools/qa/fixtures/level-base/${basename(f)} is not one git blob id (40 hex digits on one line; \`git hash-object -w levels/${name}\` writes it)` };
+  return { id: lines[0] };
+}
 /** WHAT OF A LESSON ITS OWNER MAY CHANGE WITH NO NEW BASE (scenarios.lesson; scene/scenarios.ts LessonData, LessonStep, RailsData): its WORDS, read from
  *  today's file and never held to the base — the lesson's `title`; a step's `line` and the lines that stand in for it (`setupLine`, `ringLine`, `blowLine`,
  *  `menuLine`, `pageLine`, `planLine`), its `noTap` words, its card (`explain`) and its line once the order is given (`after`: the line, the word's line, and
@@ -163,7 +185,7 @@ export async function livedCheck(argv: string[]): Promise<boolean | null> {
   const hasLived = (d: any) => d.boxes.some((b: any) => isLived(b.group)) || [d.props, d.lights, d.switchables].some((l: any[]) => (l ?? []).some(x => isLived(x.id)));
   let list = files.map(fileOf);
   if (!list.length) list = readdirSync(resolve(ROOT, 'levels')).filter(f => f.endsWith('.json')).map(f => resolve(ROOT, 'levels', f))
-    .filter(f => { try { return !!rowOf(basename(f)) || hasLived(JSON.parse(readFileSync(f, 'utf8'))); } catch { return false; } });   // (…and every level with a row of its own, furniture or none: a row holds a lesson's rules too)
+    .filter(f => { try { return !!rowOf(basename(f)) || !!levelBlob(basename(f)) || hasLived(JSON.parse(readFileSync(f, 'utf8'))); } catch { return false; } });   // (…and every level with a row of its own, furniture or none: a row holds a lesson's rules too)
   if (!list.length) { console.log('lived-check: no level carries a lived thing yet — nothing to check'); return null; }
 
   let ok = true, checks = 0;
@@ -180,12 +202,14 @@ export async function livedCheck(argv: string[]): Promise<boolean | null> {
   if (!files.length) for (const f of readdirSync(resolve(ROOT, 'levels')).filter(f => f.endsWith('.json')).map(f => resolve(ROOT, 'levels', f))) if (!list.includes(f)) {
     try { const d = JSON.parse(readFileSync(f, 'utf8')); if (d.scenarios?.lesson) unsaid(basename(f), d); } catch { /* (not a level file: the level checks' own red) */ } }
   for (const k of Object.keys(LEVEL_BASE)) if (!existsSync(resolve(ROOT, 'levels', k))) fail(`LEVEL_BASE has a row for '${k}', which is no file under levels/ (a level renamed, or a name mistyped: the row holds nothing)`);
+  if (existsSync(LEVEL_BLOB_DIR)) for (const k of readdirSync(LEVEL_BLOB_DIR).filter(f => f.endsWith('.txt'))) if (!existsSync(resolve(ROOT, 'levels', k.replace(/\.txt$/, '.json')))) fail(`tools/qa/fixtures/level-base/${k} is the base of no file under levels/ (a level renamed, or a name mistyped: the file holds nothing)`);
   for (const file of list) {
     const name = basename(file);
     if (!existsSync(file)) { fail(`${name}: no such level file`); continue; }
     const text = readFileSync(file, 'utf8'), data: any = parseLevelData(text);
     // (the level's own base, unless one was named for all)
-    const rowed = !allBase && !!rowOf(name), base = allBase || rowOf(name) || BASE_REV;
+    // (… and of its own bases the FILE wins over the row: LEVEL_BLOB_DIR's head)
+    const blob = allBase ? undefined : levelBlob(name), rowed = !allBase && !blob && !!rowOf(name), base = allBase || (blob ? `the blob ${(blob.id ?? '?').slice(0, 9)} of its base file` : rowOf(name) || BASE_REV);
     if (BREAK) { const L = data.scenarios?.lesson, tail = ' (said another way)';   // (the check's own break path: today's level damaged in memory, as the header says)
       const mut = (v: any): any => typeof v === 'string' ? v + tail : Array.isArray(v) ? (v.length && v.every(x => typeof x === 'number') ? [v[0] + 0.5, ...v.slice(1)] : [...v, 'x'])
         : v && typeof v === 'object' ? { ...v, x: 1 } : typeof v === 'number' ? v + 1 : typeof v === 'boolean' ? !v : tail;
@@ -217,9 +241,14 @@ export async function livedCheck(argv: string[]): Promise<boolean | null> {
     let held = base !== 'none';
     if (held && rowed && spawnSync('git', ['-C', ROOT, 'merge-base', '--is-ancestor', base, 'HEAD']).status !== 0) { held = false;
       fail(`${name}: its row's commit ${base} is not in this checkout's history (LEVEL_BASE names a commit of a branch not joined, or the clone is shallow)`); }
+    // (a BASE FILE's id must be a blob this clone holds: one that is mistyped, or was never added, holds nothing and is red, never 'nothing to compare')
+    if (blob?.bad) { held = false; fail(`${name}: ${blob.bad}`); }
+    else if (blob && spawnSync('git', ['-C', ROOT, 'cat-file', '-e', `${blob.id}^{blob}`]).status !== 0) { held = false;
+      fail(`${name}: its base file names the blob ${blob.id}, which this repository does not hold (mistyped; or made without \`-w\` and the level file as meant is in no commit yet; or the clone is shallow)`); }
     unsaid(name, data);
     if (held) {
-      const g = spawnSync('git', ['-C', ROOT, 'show', `${base}:levels/${name}`], { encoding: 'utf8', maxBuffer: 1 << 28 });
+      const g = blob ? spawnSync('git', ['-C', ROOT, 'cat-file', 'blob', blob.id!], { encoding: 'utf8', maxBuffer: 1 << 28 })
+        : spawnSync('git', ['-C', ROOT, 'show', `${base}:levels/${name}`], { encoding: 'utf8', maxBuffer: 1 << 28 });
       // (a level its base does not carry: a ROW that names such a commit holds nothing and is red; so is a level in HEAD that has furniture and no row — since
       //  BASE_REVS closed no later base will ever take it in. A file not yet in a commit has nothing to be held to, and is told what it will need)
       if (g.status !== 0) { const kept = spawnSync('git', ['-C', ROOT, 'cat-file', '-e', `HEAD:levels/${name}`]).status === 0;
@@ -278,13 +307,6 @@ export async function livedCheck(argv: string[]): Promise<boolean | null> {
         { const rs = data.scenarios?.response, wrs = was.scenarios?.response;
           if (JSON.stringify(rs) !== JSON.stringify(wrs)) { console.log(`  (the response team's block, scenarios.response, is not ${base}'s: ${wrs === undefined ? 'new' : rs === undefined ? 'gone' : 're-tuned'} since — not held to the base)`);
             if (rs !== undefined) (was.scenarios ??= {}).response = JSON.parse(JSON.stringify(rs)); else { delete was.scenarios.response; if (!Object.keys(was.scenarios).length && data.scenarios === undefined) delete was.scenarios; } } }
-        // (WHAT A BOX SAYS IT IS MADE OF — a box's or a prop part's `stuff`, src/scene/stuff.ts. Picture only: the look's word reads it and no rule of the game does,
-        //  and furniture cannot change it. A kit piece given its word re-writes every level that lays it, so a word takes no new base revision: the base's box
-        //  is read with today's word and said so, in either direction. Every other key of the box is still held. What holds a file's words is its generator
-        //  (export --check, the level probes: the file is what the generator writes); a word typed into a file by hand is held by nothing but the reader's list)
-        { let said = 0; const give = (w: any, t: any) => { if (!w || !t || w.stuff === t.stuff) return; said++; if (t.stuff !== undefined) w.stuff = t.stuff; else delete w.stuff; };
-          bare.boxes.forEach((b: any, i: number) => give(was.boxes?.[i], b)); bare.props.forEach((q: any, i: number) => (q.parts ?? []).forEach((part: any, k: number) => give(was.props?.[i]?.parts?.[k], part)));
-          if (said) console.log(`  (${said} of its boxes say what they are made of and ${base}'s do not, or say another word: picture only, not held to the base)`); }
         // (the exporter numbers generated box ids by place in the list, so every box after the lived ones — the dressing, the look's decals — has another NUMBER than it
         //  had; nothing names those boxes — export.ts refuses a kept thing that does — so past the first lived box the ids are not compared)
         const first = data.boxes.findIndex((b: any) => isLived(b.group)), noId = (l: any[]) => first < 0 ? l : l.map((b, i) => i < first ? b : { ...b, id: undefined });

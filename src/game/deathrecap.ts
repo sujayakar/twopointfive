@@ -14,8 +14,9 @@
  *
  *  Seams: combat.ts fireWeapon → `recapRound` (the round that is about to land on a man: one line), game.ts `recapTick` (last in Game.step), ui/debrief.ts
  *  mounts the panel. */
-import { SideMap, SideSet } from '../math/side';
-import type { Game, Guard, GameEvent } from './game';
+import { men, allDown, manOf as playerOf, menUp, playerName } from './seats';
+import { SideMap, SideSet, GameSideMap } from '../math/side';
+import type { Game, Guard, GameEvent, Player } from './game';
 import type { Character } from './character';
 import type { Vec3 } from '../math/vec';
 import type { WeaponDef } from './weapons';
@@ -91,7 +92,7 @@ interface State {
   deaths: RecapDeath[]; due: { death: RecapDeath; at: number }[]; takes: RecapTake[];
   lost: Lost[]; /** the same men as the squad knows them: what lostLive hands out */ lostPub: LostMan[]; lostNext: number;
 }
-const states = new SideMap<Game, State>('deathrecap.states');
+const states = new GameSideMap<Game, State>('deathrecap.states');
 const fresh = (g: Game): State => ({ mission: g.mission, lastT: g.time, next: g.time, primed: false, overAt: Infinity, frames: [], spare: [], shots: [], seen: new SideSet(), down: new Set(), rounds: new Map(), cast: new Map(), deaths: [], due: [], takes: [], lost: [], lostPub: [], lostNext: 0 });
 function stateOf(g: Game): State {
   let S = states.get(g);
@@ -106,12 +107,14 @@ const xz = (p: Vec3): [number, number] => [p[0], p[2]];
 
 /** Every character on the floor: the players first. (One player today; a second is one more line here.) */
 function eachMan(g: Game, fn: (c: Character, down: boolean, gd: Guard | null) => void): void {
-  fn(g.player.char, g.player.down, null);
+  for (const pl of men(g)) fn(pl.char, pl.down, null);
   for (const gd of g.guards) fn(gd.char, gd.state === 'dead', gd);
   for (const gd of civiliansShown(g)) fn(gd.char, gd.state === 'dead', gd);
 }
-function manOf(c: Character, gd: Guard | null): RecapMan {
-  return gd ? { id: c.id, name: gd.callsign, side: sideOf(gd), kind: gd.civ ? 'civ' : 'man' } : { id: c.id, name: 'Player', side: 'player', kind: 'player' };
+function manOf(g: Game, c: Character, gd: Guard | null): RecapMan {
+  if (gd) return { id: c.id, name: gd.callsign, side: sideOf(gd), kind: gd.civ ? 'civ' : 'man' };
+  const pl = playerOf(g, c);   // (which player: seats.ts playerName)
+  return { id: c.id, name: pl ? playerName(g, pl) : 'Player', side: 'player', kind: 'player' };
 }
 
 const live = (g: Game) => RECAP.on && !g.touring && !g.quietUtility && !g.puppet;
@@ -139,7 +142,7 @@ function offLine(p: [number, number], a: [number, number], b: [number, number]):
 }
 
 function explain(g: Game, S: State, c: Character, gd: Guard | null, gaze: number): RecapDeath {
-  const me = S.cast.get(c.id) ?? manOf(c, gd); const at = xz(c.pos); const now = g.time;
+  const me = S.cast.get(c.id) ?? manOf(g, c, gd); const at = xz(c.pos); const now = g.time;
   const d: RecapDeath = { t: now, victim: c.id, name: me.name, side: me.side, player: !gd, at, gaze, cause: 'unknown', by: -1, byName: '', bySide: '', byAt: null, from: null, to: at, weapon: '', dist: 0, off: 0, blind: false, loud: false };
   const r = S.rounds.get(c.id);
   let blast: RecapShot | null = null, through: RecapShot | null = null;
@@ -171,7 +174,7 @@ function sample(g: Game, S: State): void {
   f.t = g.time; f.n = n; let i = 0; const men = f.men;
   eachMan(g, (c, down, gd) => {
     men[i++] = c.id; men[i++] = c.pos[0]; men[i++] = c.pos[2]; men[i++] = c.aimYaw;
-    men[i++] = (down ? 1 : 0) | (gd && (gd.state === 'alert' || gd.state === 'search') ? 2 : 0) | (!gd && g.player.crouch ? 4 : 0);
+    men[i++] = (down ? 1 : 0) | (gd && (gd.state === 'alert' || gd.state === 'search') ? 2 : 0) | (!gd && playerOf(g, c)?.crouch ? 4 : 0);
   });
   for (let k = 0; k < doors.length; k++) { const d = doors[k]; if (d.off) { f.doors[k * 2] = NaN; f.doors[k * 2 + 1] = NaN; } else { const u = d.dir(); f.doors[k * 2] = u[0]; f.doors[k * 2 + 1] = u[1]; } }
   S.frames.push(f);
@@ -217,7 +220,7 @@ export function recapTick(g: Game): void {
   // who is down who was not
   const last = S.frames[S.frames.length - 1];
   eachMan(g, (c, down, gd) => {
-    if (!S.cast.has(c.id)) S.cast.set(c.id, manOf(c, gd));
+    if (!S.cast.has(c.id)) S.cast.set(c.id, manOf(g, c, gd));
     if (!down) { S.down.delete(c.id); return; }
     if (S.down.has(c.id)) return;
     S.down.add(c.id);
@@ -273,25 +276,26 @@ function heard(g: Game, src: Vec3): boolean {
     return L <= reach * (door ? 0.32 : 0.72);
   };
   for (const gd of g.guards) if (squadUp(gd) && ear(gd.char)) return true;
-  return !g.player.down && ear(g.player.char);
+  return menUp(g).some(pl => ear(pl.char));
 }
 /** did the player's own man see him go down: a line, and — where the fog is a cone (hard) — inside the wedge he looks down or at his shoulder */
-function samSees(g: Game, at: [number, number]): boolean {
-  const pl = g.player, c = pl.char; if (pl.down || g.time < pl.dazzledUntil || !lineTo(g, c, at)) return false;
+function samSees(g: Game, at: [number, number]): boolean { for (const pl of men(g)) if (manSees(g, pl, at)) return true; return false; }
+function manSees(g: Game, pl: Player, at: [number, number]): boolean {
+  const c = pl.char; if (pl.down || g.time < pl.dazzledUntil || !lineTo(g, c, at)) return false;
   if (!FOG.cone) return true;
   const dx = at[0] - c.pos[0], dz = at[1] - c.pos[2], d = Math.hypot(dx, dz); if (d <= FOG.coneNearM) return true;
   const u = gazeOf(c); return (dx * u[0] + dz * u[2]) / d >= Math.cos(FOG.coneDeg * Math.PI / 360);
 }
 /** the side of the PLAYER's man a way lies on, in the words of the fog's own calls (fogofwar.ts sideOf, asked of a point a long way off along it) */
-function sideWord(g: Game, u: [number, number]): string {
-  const c = g.player.char, s = g.fogOfWar.sideOf([c.pos[0] + u[0] * 50, 0, c.pos[2] + u[1] * 50]);
+function sideWord(g: Game, pl: Player, u: [number, number]): string {
+  const c = pl.char, s = g.fogOfWar.sideOf([c.pos[0] + u[0] * 50, 0, c.pos[2] + u[1] * 50]);
   return s === 'front' ? 'from the front' : s === 'behind' ? 'from behind us' : `from the ${s}`;
 }
 /** Each man lost and not yet settled: who has a line to him inside his first second down; after the beat, if somebody saw or ears had it, the squad has the
  *  way it came from — and the teammate who saw says which side, when the player did not see it himself and stands near enough for 'left' to mean anything
  *  (cues.ts aside: a bubble of the cues' own — never Guard.bubble, no strip row, no die, nothing a run reads). Nobody saw, nobody heard: he is only down. */
 function witness(g: Game, S: State): void {
-  const pl = g.player;
+  const pl = menUp(g)[0] ?? men(g)[0];   // (the player the side is called to: the first one up)
   for (const L of S.lost) {
     if (L.done) continue;
     const M = L.man, age = g.time - M.t;
@@ -305,7 +309,7 @@ function witness(g: Game, S: State): void {
     L.done = true; M.knownAt = g.time; M.from = L.src; RECAP_STATS.known++;
     if (RECAP.live && L.src && by && !sam && !pl.down && Math.hypot(pl.char.pos[0] - M.at[0], pl.char.pos[2] - M.at[1]) <= RECAP.liveSideM
       && g.cues.bubbleOf(by) === by.bubble   // (no cue of the cues' own is up over him: a contact call outranks this; his own 'man down.' is followed by it)
-      && g.cues.aside(by, `${sideWord(g, L.src)}!`)) RECAP_STATS.calls++;
+      && g.cues.aside(by, `${sideWord(g, pl, L.src)}!`)) RECAP_STATS.calls++;
   }
 }
 const NONE: readonly LostMan[] = [];
@@ -325,7 +329,7 @@ export function lostOf(g: Game, id: number): LostMan | null { for (const L of lo
  *  way; with more it must be EVERY player down or the mission ended. */
 export function recapOver(g: Game): boolean {
   const s = g.mission.stage;
-  return g.player.down || s === 'failed' || s === 'done';
+  return allDown(g) || s === 'failed' || s === 'done';
 }
 
 /** What the end card may show: null while anybody still plays, with the switch off, or when nobody of ours went down. */

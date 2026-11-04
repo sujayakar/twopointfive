@@ -80,8 +80,8 @@ export function findOctagons(boxes: readonly Box[]): number[] {
 export function roundLevel(boxes: Box[], on: boolean, texel = MARKING_TEXEL): number {
   for (const b of boxes) {
     const w = b.was; if (!w) continue;
-    b.c = w.c; b.h = w.h; b.yaw = w.yaw; b.flags = w.flags; if (w.marks) b.marks = w.marks; else delete b.marks;
-    delete b.round; delete b.was;
+    b.c = w.c; b.h = w.h; b.yaw = w.yaw; b.flags = w.flags; b.marks = w.marks;
+    b.round = undefined; b.was = undefined;   // (set, never deleted: a box keeps its one layout — boxes.ts boxOf)
   }
   let made = 0;
   if (on) for (const i of findOctagons(boxes)) {
@@ -94,8 +94,8 @@ export function roundLevel(boxes: Box[], on: boolean, texel = MARKING_TEXEL): nu
     if (band) for (const f of SIDES) if (marks.length < MAX_MARKS_PER_BOX) marks.push({ ...band, face: f });
     for (let k = 0; k < 4; k++) { const b = boxes[i + k]; b.was = { c: b.c, h: b.h, yaw: b.yaw, flags: b.flags, ...(b.marks ? { marks: b.marks } : {}) }; }
     a.h = [R, a.h[1], R]; a.yaw = 0; a.round = true;   // (yaw 0: whoever reads only the box — a blast's footprint, a ragdoll, the replay's map — gets the tightest square round the circle)
-    if (marks.length) a.marks = marks; else delete a.marks;
-    for (let k = 1; k < 4; k++) { const b = boxes[i + k]; b.flags |= BoxFlag.NoPrimary | BoxFlag.NoShadow; b.c = [a.c[0], a.c[1], a.c[2]]; b.h = [0.01, 0.01, 0.01]; delete b.marks; }
+    a.marks = marks.length ? marks : undefined;
+    for (let k = 1; k < 4; k++) { const b = boxes[i + k]; b.flags |= BoxFlag.NoPrimary | BoxFlag.NoShadow; b.c = [a.c[0], a.c[1], a.c[2]]; b.h = [0.01, 0.01, 0.01]; b.marks = undefined; }
     made++;
   }
   ROUND_STATS.made = made; ROUND_STATS.levels++;
