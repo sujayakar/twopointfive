@@ -102,8 +102,11 @@ first system across (the game's own maths). No rule of play has changed and noth
       a door), `takenLayer` (a man taken from behind), the blow (`blowLegs`, `blowTrunk`, `blowArms`, and the knife's `knifePose`),
       `readyLayer` (the ready pose: thirty-nine columns), `kitLayer` (a change of kit, with the spot it goes to), `doorLayer` (a hand on a
       door: six columns), `workLayer` (hands at work on keys, a charge, a lever, a thing taken: nine columns), the hand shape they share
-      (`hand`, below), and `handsPass`, the hand pass itself. STILL TYPESCRIPT ONLY: `holdLayer`, `heldLayer` (with `catchFix`'s arm),
-      `bigLayer`, `throwLayer`, and `update` itself.
+      (`hand`, below), `handsPass`, the hand pass itself, and the last five that posed in TypeScript alone: `holdLayer` (Sam holding a man
+      from behind: thirty columns) with `catchArm` (`catchFix`'s arm), `heldLayer` (the man he holds: twenty-six), `bigLayer` (the big
+      slot's hammer or shotgun: four columns, and the pose kept under the hammer, which the dispatcher makes before either language is
+      asked so that it is made on the same frame both ways) and `throwLayer` (the throw at every size: eight). STILL TYPESCRIPT ONLY:
+      `update` itself, which weighs the layers and calls them.
     - A POSE'S SINGLES ARE READ AND WRITTEN IN ONE PLACE in `layers.rs`: `ch(d, node, channel)` and `set_ch` (0‥2 the origin, 3‥6 the
       rotation, 7‥9 the scale). No layer writes where a single lies; a table handed from TypeScript names a NODE (the jog's seam), never
       a place in a pose. A pose laid out another way is those two lines.
@@ -132,8 +135,11 @@ first system across (the game's own maths). No rule of play has changed and noth
       They belong in a character's columns when those are drawn.
     - A PATH OF KEYS A LAYER IS HANDED (the stations of a magazine change: `gunreload.ts feedPath`, the game's own timing, which the sound
       beats read too and which is not posing) rides the bench after the hand pass's columns: `LAYER_KEYS_AT` 264, `LAYER_KEY` 7 doubles a
-      key, `LAYER_KEYS_MAX` 48 (`skeleton.ts`; `KEYS_AT`, `KEY`, `KEYS_MAX` in `layers.rs`; the bench's `ARGS` is 600). A path longer
-      than the room is the TypeScript's to pose: the dispatcher asks for no slot.
+      key, `LAYER_KEYS_MAX` 48 (`skeleton.ts`; `KEYS_AT`, `KEY`, `KEYS_MAX` in `layers.rs`; the bench's `ARGS` is 1,024). A path longer
+      than the room is the TypeScript's to pose: the dispatcher asks for no slot. Two more things ride the same place: the times of the
+      blows of a big tool's beat (one double each, `BIG_BLOWS_MAX` 64) and the throw's seventeen tables of keys (`throwLayerAsk`:
+      seventeen counts, then eleven tables of two doubles a key and six of four, `THROW_KEYS_MAX` 16 keys a table), which are the
+      TypeScript's own `THR` / `THR_LOW` handed over at each ask, so there is one copy of every key.
     - A CLIP A LAYER NEEDS it samples itself (`sample_on_rest`: the rest pose copied into a scratch pose and the clip over it; `clip_at`: the
       clip into a pose as it stands). The layer is handed the module's NUMBER for the clip with its own numbers (`skeleton.ts clipNo`, which
       writes the clip into the module if it never was), and the host asks such a layer only when the module holds every clip it samples
@@ -154,7 +160,7 @@ first system across (the game's own maths). No rule of play has changed and noth
       its other poses by their places) and whose rig's lists and tables fit there; any other man is posed by the TypeScript, the same
       game. A name the animator lacks is a mistake and throws, before a word of the rig is written. A layer that answers 0 was handed
       something the module does not hold, which the dispatcher's own tests are there to prevent (`reloadArm` and `knifePose` fall back
-      on too many keys): it throws. `layer-ident`'s `whole` line holds the first three.
+      on too many keys, `bigLayer` on a beat of more than 64 blows, `throwLayer` on a table of more than 16 keys): it throws. `layer-ident`'s `whole` line holds the first three.
     - THE CHECK: `bun run tools/qa/layer-ident.ts` (shipped stand; `rust-check`'s `layers` section runs it). `both` plays `warehouse-four:1`
       and then the drives a mission deals too little of: a quiet walk round a guard (80 s, crouch and close-in coming and going, with and without the knife and with the kit's close-in pose
       off for a part), four kicks,
@@ -171,23 +177,42 @@ first system across (the game's own maths). No rule of play has changed and noth
       them; a man taken three ways), the ready pose (a strike and a bare-handed grab, with the knife's hilt and close in), the changes
       of kit (rifle, pistol and empty hands each way), a hand on a door (pushing with either hand or the one the layer picks, and
       reaching), hands at work (a code of one and of four keys, a charge, a lever each way, a thing taken, with the right hand free and
-      not, and put away after) and the wall-pose probe's two drives. Every call both ways from the same start: pose singles, bones, columns, answers and
+      not, and put away after), a man held from behind (Sam's layer and the guard's, each animator's input held as `player.ts` deals it:
+      every phase and out of each (grab, held, choke, whip, kill), the arm and the gun and a change between them, with no knife, with
+      `HOLD.catchShape` up (the yank, the step in, the man's place, the haul, the reach's hand brought up first), lowered, hauled, the
+      kill and its beats shown and not, the knife stripped with and without a place said, a shot, an armed and a restless man), the big
+      slot's tool (the record the game writes, held on Sam's animator and its clock run: the hammer fetched, three blows of a beat, a
+      blow asked for before it is out, a blow past the record's end, the point near, far and not said; the shotgun and its shells;
+      each with `snug` and without, standing and walking, his chest turned and pitched to an aim and not, with and without a rifle
+      under it on his back), the throw (the full overhand, shorter ones, a hard throw two steps off, the toss at several sizes;
+      standing, crouched and walking; a swing begun inside the last; the free hand's throw with a long gun kept in the other; a toss
+      with a hand up on a gun; a blast that folds him mid-swing and a swing begun already folded; `THROW_BY` off) and the wall-pose
+      probe's two drives. Every call both ways from the same start: pose singles, bones, columns, answers and
       the scratch poses compared. A layer asked under 100 times fails the line. Measured 2026-11-03, one seed, bun, 0 differ of:
-      standPose 337,767 · mvPre 337,767 · lifeLayer 337,767 · gazeKeep 337,767 · handsPass 337,767 · turnWeigh 196,573 · longBody
-      84,010 · longArms 83,829 · mvTrunk 83,389 · actPose 58,517 · stealthLayer 55,528 · mvPostBody 48,277 · clutchArm 42,173 ·
-      crouchPose 20,925 · toesUp 20,634 · wallBody 15,591 · wallArms 15,591 · stanceBody 14,752 · sneakBody 12,397 · sneakArms
-      11,945 · watchSlip 9,479 · watchLook 9,479 · runPlant 7,393 · carryArms 6,178 · softKnees 6,172 · steadyLayer 4,696 ·
-      creepBody 3,913 · workLayer 3,595 · doorLayer 3,528 · radioPose 2,827 · readyLayer 1,824 · creepArms 1,725 · reloadArm 1,608 ·
-      watchArm 1,070 · mvPostArms 1,041 · kitLayer 1,026 · lockpickLayer 716 · swapPose 674 · blowLegs 610 · blowTrunk 610 ·
-      blowArms 610 · woundBody 600 · tellLayer 580 · knifePose 556 · haulLayer 540 · woundLimbs 534 · boundArms 522 · signalLayer
-      450 · cablePose 446 · pistolReloadArm 297 · smokePose 271 · kickBody 240 · takenLayer 236 · leanBody 234 · nvPose 216 ·
-      torchUpLayer 174.
+      standPose 496,085 · lifeLayer 496,085 · mvPre 496,085 · handsPass 496,085 · gazeKeep 496,085 · turnWeigh 275,671 ·
+      mvPostBody 102,650 · longBody 87,552 · longArms 87,371 · mvTrunk 86,637 · stealthLayer 82,014 · crouchPose 69,679 · toesUp
+      69,325 · actPose 62,301 · clutchArm 61,073 · watchSlip 33,913 · watchLook 33,913 · stanceBody 23,823 · wallBody 15,591 ·
+      wallArms 15,591 · sneakBody 15,306 · carryArms 15,249 · sneakArms 13,607 · holdLayer 10,044 · heldLayer 9,972 · runPlant
+      9,407 · softKnees 7,767 · creepBody 7,263 · steadyLayer 5,970 · creepArms 3,606 · workLayer 3,595 · doorLayer 3,528 ·
+      readyLayer 3,234 · radioPose 3,229 · bigLayer 2,764 · throwLayer 2,267 · reloadArm 1,608 · mvPostArms 1,076 · watchArm 1,070
+      · kitLayer 1,026 · swapPose 742 · lockpickLayer 716 · blowLegs 610 · blowTrunk 610 · blowArms 610 · woundBody 600 ·
+      tellLayer 580 · knifePose 556 · haulLayer 540 · woundLimbs 534 · boundArms 522 · signalLayer 450 · cablePose 446 · catchArm
+      317 · pistolReloadArm 297 · smokePose 271 · kickBody 240 · takenLayer 236 · leanBody 234 · nvPose 216 · torchUpLayer 174.
       WHAT NO DRIVE REACHES (counted once with a counter on each branch, then taken out): a thing in the right fist during the close-in
       carriage and its wide pose's own pole; a magazine change with the gear rows off (the marks from the hip) and with the hip line off;
       in the hand pass, a layer's note smaller than 0.03; a smoke or a goggle flip with no twist on the head; a haul with no twist.
       For the nine newest layers (the takedowns, the ready pose, the kit change, the door hand, hands at work) the counters were read as
       each was moved and a drive written for what they showed unreached, but the list of what then stayed unreached was not kept: count
       again before trusting a branch of those that a drive above does not name.
+      For the last five (the hold, the held man, the big tool, the throw) the counters named every input the drives above list, by phase
+      and variant, and each was reached with the layer live and easing out; what they did NOT split, and so nobody counted: the hold's
+      inner tests on its own clocks (the sway, a spring's rest), the big tool's point exactly on his pelvis, a chest pitched but not
+      turned, and the two fall-backs to the TypeScript (a beat of more than 64 blows, a throw table of more than 16 keys). A review
+      read two more that the counters had not split, each driven since: the disarm begun WITH the grab (the game begins every one
+      there; the pistol hand's rap on his gun) and a blast's fold with `THROW_BY` off.
+      `caps`: a size both languages write down (the most keys of a knife blow, blows of a beat, keys of a throw table; where the keys
+      ride the bench) is the same number in `character.ts` / `skeleton.ts` and in `layers.rs`, read from the sources; the crate
+      itself refuses to build if the blows or the throw's tables at their caps would not fit the bench's own numbers.
       `RUST_BREAK=1`: every knob handed a hundredth large AND the first of each layer's own numbers bent the same way: every layer differs
       somewhere, `rust-check` wants each to.
       THE MISSIONS, all of the above in: `rust-check --missions --rows poses,walk`, five runs, 38,634 ticks, the same game after every
@@ -200,7 +225,9 @@ first system across (the game's own maths). No rule of play has changed and noth
       bench and back on every ask, and some `put`s make a new array where the TypeScript writes in place; the knob list is written whole as
       every tick opens and at every update outside one; the bench's layout (where columns, the hand pass's columns and a path of keys
       stand, a key's width, each layer's own numbers) is written by hand on both sides, held only by `both` on the branches a drive
-      reaches. `src/sim/built.ts` is 741 KB of text with these layers in (203 KB before them), loaded by every page with the row off.
+      reaches. `src/sim/built.ts` is 917 KB of text with every layer in (203 KB before the first; 741 KB with the first fifty-six), loaded
+      and started by every page with the row off. It is the layers' own arithmetic (the module's code section; some 10 KB a layer), and
+      no build setting takes it back: measured on a scratch copy, the module is 664 KB at opt-level 3, 633 at 2, 601 at s, 595 at z.
     - NOBODY COMPARED: `steadyLayer`'s rise (`MOVES.steady` = 2) is reached by no drive; the wall hold's arms were compared on whichever of
       their two forms (`WALLSNAP.pose` on or off) the shipped stand plays, not both. The layers were never seen on a GPU; a pose is
       compared as numbers, not looked at.
