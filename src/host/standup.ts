@@ -241,7 +241,8 @@ export function pinRust(): void { for (const r of rustRows()) { const w = 'TPS_R
 export function pinSenses(): void { if (pinned('TPS_CPUSENSE')) SENSE.cpu = String((globalThis as any).process?.env?.TPS_CPUSENSE ?? '') === '1';
   if (pinned('TPS_SMOKEGRID')) SENSE.grid = String((globalThis as any).process?.env?.TPS_SMOKEGRID ?? '') === '1';   // (…and their smoke on the coarse grid: off on both stands, TPS_SMOKEGRID=1 raises it, the page's ?smokegrid)
   if (pinned('TPS_CPULIGHT')) SENSE.bounce = String((globalThis as any).process?.env?.TPS_CPULIGHT ?? '') === '1';   // (…and the light model on that grid: off on both stands, TPS_CPULIGHT=1 raises it, the page's ?cpulight)
-  if (pinned('TPS_MOONLIGHT')) SENSE.moon = String((globalThis as any).process?.env?.TPS_MOONLIGHT ?? '') === '1'; }   // (…and the night's light from the sky in the estimate: off on both stands, TPS_MOONLIGHT=1 raises it, the page's ?moonlight)
+  if (pinned('TPS_MOONLIGHT')) SENSE.moon = String((globalThis as any).process?.env?.TPS_MOONLIGHT ?? '') === '1';   // (…and the night's light from the sky in the estimate: off on both stands, TPS_MOONLIGHT=1 raises it, the page's ?moonlight)
+  if (pinned('TPS_SMOKEDRIFT')) SENSE.drift = String((globalThis as any).process?.env?.TPS_SMOKEDRIFT ?? '') === '1'; }   // (…and the grid's smoke drifting with the wind: off on both stands, TPS_SMOKEDRIFT=1 raises it, the page's ?smokedrift)
 /** A RECORD FROM ANYONE (src/game/cmd.ts checkCmd) on the harness: off on the frozen stand (TPS_CMDCHECK=1 raises it); the shipped stand keeps the page's (on) */
 export function pinCmdCheck(): void { if (pinned('TPS_CMDCHECK')) CMDCHECK.on = String((globalThis as any).process?.env?.TPS_CMDCHECK ?? '') === '1'; }
 

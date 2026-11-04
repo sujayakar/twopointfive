@@ -100,7 +100,8 @@ first system across (the game's own maths). No rule of play has changed and noth
       `crouchPose` (the crouch laid over that), `mvPre` (the recoil bled off, the muzzle's dip, the trained glide's pelvis), `mvTrunk` (the
       trunk's share of MOVES), `mvPostBody` (the flinch, the start, the hit, the blinded hunch, the fold, a hurt and a shaken man's carriage,
       the toss's wind-up), `longBody` (the long gun's trunk set), `lifeLayer` (the breath, the body's mass, the weight shift, the standing
-      foot lock), `stanceBody`, `softKnees`, `runPlant`, `steadyLayer` (the crouch walk carried level), `sneakBody`, `creepBody`, `watchSlip`
+      foot lock), `stanceBody`, `runArms` (a run's arms carried close, RUNARMS: `docs/agents/player.md`), `softKnees`,
+      `runPlant`, `steadyLayer` (the crouch walk carried level), `sneakBody`, `creepBody`, `watchSlip`
       and `watchLook`, `kickBody`, `toesUp`, `wallBody` (the wall hold: its feet, its sidle's gait, its peek), `leanBody`, `actPose` (a
       one-shot action's clip over the pose, and the slump), `woundBody` (the wounded man's clip, his head up to the wound), `gazeKeep` (it turns
       nothing: it ANSWERS the yaw the host's twists take out, and an answer is compared like a column), and one RULE OF THE CHARACTER'S THAT
@@ -197,18 +198,21 @@ first system across (the game's own maths). No rule of play has changed and noth
       each with `snug` and without, standing and walking, his chest turned and pitched to an aim and not, with and without a rifle
       under it on his back), the throw (the full overhand, shorter ones, a hard throw two steps off, the toss at several sizes;
       standing, crouched and walking; a swing begun inside the last; the free hand's throw with a long gun kept in the other; a toss
-      with a hand up on a gun; a blast that folds him mid-swing and a swing begun already folded; `THROW_BY` off) and the wall-pose
-      probe's two drives. Every call both ways from the same start: pose singles, bones, columns, answers and
-      the scratch poses compared. A layer asked under 100 times fails the line. Measured 2026-11-03, one seed, bun, 0 differ of:
-      standPose 496,085 · lifeLayer 496,085 · mvPre 496,085 · handsPass 496,085 · gazeKeep 496,085 · turnWeigh 275,671 ·
-      mvPostBody 102,650 · longBody 87,552 · longArms 87,371 · mvTrunk 86,637 · stealthLayer 82,014 · crouchPose 69,679 · toesUp
-      69,325 · actPose 62,301 · clutchArm 61,073 · watchSlip 33,913 · watchLook 33,913 · stanceBody 23,823 · wallBody 15,591 ·
-      wallArms 15,591 · sneakBody 15,306 · carryArms 15,249 · sneakArms 13,607 · holdLayer 10,044 · heldLayer 9,972 · runPlant
-      9,407 · softKnees 7,767 · creepBody 7,263 · steadyLayer 5,970 · creepArms 3,606 · workLayer 3,595 · doorLayer 3,528 ·
-      readyLayer 3,234 · radioPose 3,229 · bigLayer 2,764 · throwLayer 2,267 · reloadArm 1,608 · mvPostArms 1,076 · watchArm 1,070
-      · kitLayer 1,026 · swapPose 742 · lockpickLayer 716 · blowLegs 610 · blowTrunk 610 · blowArms 610 · woundBody 600 ·
-      tellLayer 580 · knifePose 556 · haulLayer 540 · woundLimbs 534 · boundArms 522 · signalLayer 450 · cablePose 446 · catchArm
-      317 · pistolReloadArm 297 · smokePose 271 · kickBody 240 · takenLayer 236 · leanBody 234 · nvPose 216 · torchUpLayer 174.
+      with a hand up on a gun; a blast that folds him mid-swing and a swing begun already folded; `THROW_BY` off), a run with its arms
+      carried close (`RUNARMS` raised for the drive, the animator's ground speed HELD: up from a walk through the jog to a full sprint and
+      back, a jog held, a sprint that comes and goes; nothing drawn, the pistol out, the rifle coming up into both arms and put away
+      mid-run) and the wall-pose probe's two drives. Every call both ways from the same start: pose singles, bones, columns, answers and
+      the scratch poses compared. A layer asked under 100 times fails the line. Measured 2026-11-04, one seed, bun, 0 differ of:
+      standPose 509,533 · lifeLayer 509,533 · mvPre 509,533 · handsPass 509,533 · gazeKeep 509,533 · turnWeigh 282,391 ·
+      mvPostBody 109,378 · longBody 87,904 · longArms 87,739 · mvTrunk 86,989 · stealthLayer 84,262 · crouchPose 74,159 · toesUp
+      73,805 · clutchArm 63,227 · actPose 62,301 · watchSlip 35,967 · watchLook 35,967 · stanceBody 23,823 · wallBody 15,591 ·
+      wallArms 15,591 · sneakBody 15,306 · carryArms 15,249 · sneakArms 13,607 · runPlant 10,376 · holdLayer 10,044 · heldLayer
+      9,972 · softKnees 8,460 · creepBody 8,162 · steadyLayer 5,970 · runArms 4,007 · creepArms 3,606 · workLayer 3,595 ·
+      doorLayer 3,528 · readyLayer 3,234 · radioPose 3,229 · bigLayer 2,764 · throwLayer 2,267 · reloadArm 1,608 · mvPostArms
+      1,076 · watchArm 1,070 · kitLayer 1,026 · swapPose 742 · lockpickLayer 716 · blowLegs 610 · blowTrunk 610 · blowArms 610 ·
+      woundBody 600 · tellLayer 580 · knifePose 556 · haulLayer 540 · woundLimbs 534 · boundArms 522 · signalLayer 450 · cablePose
+      446 · catchArm 317 · pistolReloadArm 297 · smokePose 271 · kickBody 240 · takenLayer 236 · leanBody 234 · nvPose 216 ·
+      torchUpLayer 174.
       WHAT NO DRIVE REACHES (counted once with a counter on each branch, then taken out): a thing in the right fist during the close-in
       carriage and its wide pose's own pole; a magazine change with the gear rows off (the marks from the hip) and with the hip line off;
       in the hand pass, a layer's note smaller than 0.03; a smoke or a goggle flip with no twist on the head; a haul with no twist.
@@ -218,7 +222,9 @@ first system across (the game's own maths). No rule of play has changed and noth
       For the last five (the hold, the held man, the big tool, the throw) the counters named every input the drives above list, by phase
       and variant, and each was reached with the layer live and easing out; what they did NOT split, and so nobody counted: the hold's
       inner tests on its own clocks (the sway, a spring's rest), the big tool's point exactly on his pelvis, a chest pitched but not
-      turned, and the two fall-backs to the TypeScript (a beat of more than 64 blows, a throw table of more than 16 keys). A review
+      turned, and the two fall-backs to the TypeScript (a beat of more than 64 blows, a throw table of more than 16 keys). `runArms`,
+      counted the same way: the jog alone, the sprint's share part and whole, the run's share part and whole, each hand behind, through
+      and past its lift, a long gun part of the way up; unreached, the two shoulder joints on one spot (no rig has them there). A review
       read two more that the counters had not split, each driven since: the disarm begun WITH the grab (the game begins every one
       there; the pistol hand's rap on his gun) and a blast's fold with `THROW_BY` off.
       `caps`: a size both languages write down (the most keys of a knife blow, blows of a beat, keys of a throw table; where the keys
@@ -236,7 +242,7 @@ first system across (the game's own maths). No rule of play has changed and noth
       bench and back on every ask, and some `put`s make a new array where the TypeScript writes in place; the knob list is written whole as
       every tick opens and at every update outside one; the bench's layout (where columns, the hand pass's columns and a path of keys
       stand, a key's width, each layer's own numbers) is written by hand on both sides, held only by `both` on the branches a drive
-      reaches. `src/sim/built.ts` is 917 KB of text with every layer in (203 KB before the first; 741 KB with the first fifty-six), loaded
+      reaches. `src/sim/built.ts` is 920 KB of text with every layer in (203 KB before the first; 741 KB with the first fifty-six), loaded
       and started by every page with the row off. It is the layers' own arithmetic (the module's code section; some 10 KB a layer), and
       no build setting takes it back: measured on a scratch copy, the module is 664 KB at opt-level 3, 633 at 2, 601 at s, 595 at z.
     - NOBODY COMPARED: `steadyLayer`'s rise (`MOVES.steady` = 2) is reached by no drive; the wall hold's arms were compared on whichever of
@@ -1077,6 +1083,71 @@ first system across (the game's own maths). No rule of play has changed and noth
     it: they are to be told the night's sky when the switch comes on. The quiet missions, the lessons and the solo night have NOT been tallied
     with it, and they are where it matters most (Sam in a moonlit yard): that is the tally the switch owes before it comes on. Nobody has
     played it. Never seen on a GPU: the only picture it has been held against is the one kept report.
+- **The coarse grid's smoke drifts with the wind and stays low in it** (`src/game/sense.ts SENSE.drift`; `rust/sim/src/bricks.rs` steps 3b and 4,
+  `K.wind`, the scratch table `WIND`; `src/game/wind.ts stormDrift`; `src/scene/collision.ts gridStep`, `GridWind`). THE SWITCH: OFF everywhere
+  today (the page's `?smokedrift`, the harness's `TPS_SMOKEDRIFT=1`; carried by the knob registry in `SENSE`, a recording from before the key
+  replays with it off; it is the grid's, so it acts only with `?cpusense&smokegrid`). Off, a level with no wind, or under a roof = the step as it
+  was, to the bit. No row of `FROZEN_HOLDS`, as `SENSE.grid`, `bounce` and `moon` have none: both stands have it off and it is to come on with
+  them. A rule NEW in Rust: no TypeScript twin.
+  - WHY. The first run of the error tool on a GPU (the next bullet) read the grid against the picture under the open sky: off by 0.883 of the light
+    at the middle, deciding the other way on 64.8 % of the lines. The picture's solver pulls the smoke's whole velocity toward the storm's flat
+    wind about three times a second (`smoke/wind_force.wgsl windForce`), the rise too: out of doors its smoke blows along and stays under head
+    height (on the page's software adapter a canister's smoke stood 1.3, 1.8 and 2.6 m tall at 1, 3 and 6 s under a roof and 1.3, 1.3 and 1.8 m
+    under the sky). The grid's stood over the canister and rose as it does in a room. THE MAINTAINER'S CALL, 2026-11-04, asked whether smoke out
+    of doors should rise instead: "let's just leave it as is and have a smoke tuning pass before the release". So the grid follows the picture as
+    it is, and if that pass lets outdoor smoke rise, step 4's damping is what to take out again.
+  - WHAT IT IS, two things by one share. THE DRIFT (3b): before the spread, each step carries smoke across the open faces in plan out of the cell
+    upwind (a donor's own density, so nothing is made), at the wind's speed at that height times the share of it the two squares have. IT DOES
+    LITTLE OF ITS OWN (4): a face passes less of the smoke's own spread by that share. Upward, none in the open (the wind is flat), so out of
+    doors the smoke stays in the layers it was let out into; sideways, down to `SENSE.smoke.inWind` of it (0.15), enough to get round what the
+    wind pushes it against, as the picture's does by its pressure. (With the same 0.15 kept upward the grid was off again against the picture:
+    0.213 at the middle and 20.5 % the other way.) THE WIND is the weather's own vector as the game holds it (`weather.ts wind`), wherever `Wind.blows()`
+    says the weather blows at all — the one test the picture's storm uses too — and NONE OF A MACHINE'S OWN WIND SETTINGS (the master,
+    `WIND.storm`, `WIND.stormK`, and the weather's own on / off, `?noweather` and the panel's box, which is the session's and which no snapshot
+    or recording carries: what a player turns down is his picture, and with the storm switched off on his page the game's smoke still drifts),
+    no gust, no vent, no draught at a door. So it reads the hour, the kind and the weather's numbers and nothing else. NOTE: the rest of the
+    weather acts on the simulation only under a picked kind (`weather.ts simLive`); this acts under the office's unpicked night storm too,
+    because that storm moves the picture's smoke and the picture's smoke is what the page's senses read. THE SHARE of a square metre is
+    `stormShare` (0 under a roof, easing to 1 over the lee off it), from the footprints as the weather's roofs and `WX_OWN.wind` give them at the
+    moment of asking, not from the storm's record (which the frame's dressing step keeps fresh, and a host with the wind turned down or no
+    picture does not take). ITS RISE WITH HEIGHT is the storm field's (`WIND_FIELD.stormLow`, `stormGain`, `stormFullAt`: 0.55 of it at the
+    ground, all of it by 2.5 m; `wind-probes.ts` holds the shader's own three numbers to them). A pass carries at most a quarter of a cell across
+    a face, so a faster wind takes more passes of the step (eight at most: 10 m/s along an axis; faster than that it is slowed whole, both axes by
+    one number, never bent). What goes over the plan's edge has left the level and is in the book as given back (`H_GIVEN` now holds both). The
+    host writes the shares, a number a square metre, into the module's scratch table before a step, and only while there is smoke to move
+    (`SmokeGrid.smoky`, read off the game's block).
+  - THE CHECK: `bun run tools/qa/smokedrift-check.ts` on both stands (`SMOKEDRIFT_BREAK=1` tells the game a wind of nothing and must fail `switch`,
+    `drift`, `calm`, `low`, `mass`, `bearing` and `back`). On the office: the switch, the drift downwind, no change in a room or with no wind in the weather, the same
+    drift with the weather switched off in the session, the book with what went over the edge, a put-back and a fresh game handed the snapshot. On `gwot-yard.json`: the dust's wind (past one pass a step)
+    carries the smoke on its own bearing (1.9° off; with each axis capped by itself, as it was first written, it went 20° to the side), of one of
+    the game's canisters in the rain's wind none is above 1.5 m at 8 s where 17 % is in still air, a wind toward −x and −z goes its way and over
+    the near edges, and the bricks are said.
+  - THE BRICKS, SAID. In still air one of the game's canisters takes about 15 bricks. In the rain's wind (1.1, 0.45 m/s) on the yard it takes 62
+    and three take 92 of the 160, because a plume is long; nothing was refused in 45 s. A level with more open ground or more canisters can still
+    take them all: the grid then says it cannot answer and the blobs do (`smokegrid-check.ts full`), which neither drift nor stay low nor know
+    walls, so a line's answer would jump between two smokes: this is not to come on before there are bricks enough that it does not happen. More
+    bricks (the index is a byte: 255 at most without widening it) is a change to the state's layout and the Rust goal's to place.
+  - AGAINST THE PICTURE (the kept report; `adrift` in the tool's rows, `adrift:roof` and `adrift:sky` in `BUDGET`): under the open sky 0.000 at the
+    middle, 0.250 at the 95th and 2.7 % deciding the other way on 443 lines, where the grid in still air has 0.883, 1.000 and 64.8 %; under a
+    roof the two are one smoke (0.019, 0.526, 10.3 %). WHAT THAT DOES NOT SAY: every line of the plan runs at eye height, and out of doors the
+    picture's smoke stays under it, so the agreement is that neither hides a standing man, and smoke gone
+    altogether or blown the wrong way would read as well (the check above is what holds those). What a line at a crouching man's height reads through
+    the plume, on either, nobody has measured: the plan wants lines at more than one height before this comes on. The report is one machine's
+    (Apple Metal), made before the walk waited for its last reading.
+  - MEASURED (2026-11-04, a 4-core cloud box, headless). THE SWITCH DOWN IS THE BUILD AS IT WAS: `tickcost.ts --each --list` over five missions,
+    36,859 ticks, every run to the bit against the tree before, and the same 80 games by digest on the server's stand (below). WITH IT UP, the
+    server's stand with the grid and the light model (`TPS_PROFILE=shipped TPS_CPUSENSE=1 TPS_SMOKEGRID=1 TPS_CPULIGHT=1`), compound-four,
+    warehouse-four, pass-four, hostage-rescue and block-squads, 16 seeds each: 76 of the 80 games are the same game; won 57 → 56, men lost 154 →
+    156 of 288. The four that moved are two on the compound and two on the pass, where smoke is thrown out of doors in a wind (one squad that
+    lost three came through whole, one that came through whole was wiped): too few to say it helps or hurts. `rollback-check` whole with the
+    switch up on both stands: all pass. `smokegrid-check`, `cpulight-check`, `modelerr.ts`, `rust-check`, `simstate-check`, `knobs-check`,
+    `dice-check`, `rollback-check --static` on the tree: pass; `probes.ts wind` is red on `wind-identity` on both stands, as on the tree before.
+    THE PAGE, headless Chromium on the software adapter, frames not drawn: it boots plain, with the grid, and with the switch up, with no page
+    error, and six seconds after one of the game's canisters is let out in the office's north strip the grid's smoke has its middle 0.25 m from
+    the canister with the switch down and 2.0 m downwind with it up; `modelerr-page.cjs` walks its smallest plan with the new row in the report.
+    NOT MEASURED: the quiet missions and the lessons with it up; a level under the dust or the downpour in play; what a step costs with a long
+    plume standing; smoke meeting a wall in the wind (it has a sideways spread to get round by, and nobody has looked at what it does there).
+    Nobody has played it. Never seen on a GPU: the only picture it has been held against is the one kept report.
 - **The model against the picture** (`src/host/modelerr.ts`; the page's `?modelerr`, `tools/qa/modelerr.ts`, `tools/qa/modelerr-page.cjs`; the
   maintainer, 2026-11-02: "we'd want some way during development of bounding the error between the two but then just let them proceed independently
   when actually running the game"). A DEVELOPMENT TOOL: nothing of it is made without the word and the game never reads it. The senses' CPU models
@@ -1158,17 +1229,21 @@ first system across (the game's own maths). No rule of play has changed and noth
   what's just client side only dressing (debris, smoke details) and uses relaxed simd and/or gpu"). THE RULE: a step of the tick is DRESSING only if the game
   is the same game to the bit without it. Everything else is GAMEPLAY: it runs on the server and on every client, in one arithmetic. Dressing only makes the
   picture; the server need not run it, two machines need not agree on it, and it can read the game and never write it.
-  - **The list is a table, `src/game/dress.ts DRESS`**: a row per picture-only step of the tick, and `game.ts` takes the step only with its row up. Every row
+  - **The list is a table, `src/game/dress.ts DRESS`**: a row per picture-only step of the tick, and `game.ts` takes the step only with its row up (ONE EXCEPTION: `wetGround`'s step is always taken and
+    reads its row itself, because with the row down it must put back what it wrote on the statics: `wetGround.ts follow`). Every row
     is up in the page and on both stands. It is not a rule of play: no `FROZEN_HOLDS` line, not a knob table, no recording carries it. The rows: `air`
-    (airSim), `moths`, `snow` (the lying snow's surface, prints, marks, a blast's dig), `rain` (rainFx), `fires` (fireDraws; the lamp's flicker is a light and
+    (airSim), `moths`, `snow` (the lying snow's surface, prints, marks, a blast's dig), `rain` (rainFx), `wetGround` (the open ground a rain wets, as the renderer's words of the statics: `docs/agents/weather.md`), `fires` (fireDraws; the lamp's flicker is a light and
     is gameplay), `wake` (men pushing the solver's smoke), `men` (skin instances, materials, shadow proxies), `cues`, `recap`, `blastFeel`, `fixtures`, `fx`,
     `stature`, `cases`, `net`, `wind`, and `debris` (the pool of rigid pieces: dressing only under `DEBRIS.dress`, `docs/agents/destruction.md`; without
-    that switch the pool is the game's and is kept whatever the row says): seventeen. `dressAll(false)` puts them all down: a host that draws nothing may. NOBODY
+    that switch the pool is the game's and is kept whatever the row says): eighteen. `dressAll(false)` puts them all down: a host that draws nothing may. NOBODY
     DOES YET: the game server still takes every step (measured below; its owner's call).
   - **`tools/qa/dress-check.ts` holds it**: the five comparison missions of `rust-check --missions` (the server's stand: shipped, the senses on the CPU), each
     played with every row down and with every row up, and the chained raw bits after EVERY update (`game/digest.ts rawBits`), the end and the run digest are
     the same. `--each` plays a row at a time (which row, when the set is red); `--rows a,b`; `DRESS_TRACE=<file>` in front of `--run` writes each tick's bits
     by part (`rawBitsParts`), which says what a step touched. `DRESS_BREAK=1` puts a gameplay step down with the rows (the doors) and must fail.
+    A ROW THAT WORKS ONLY IN A WEATHER (`rain`, `wetGround`, `wind`) does nothing on a dry night, and the plain run says nothing of it: it is held by
+    `--weather <kind>` (the missions played in that picked weather; RED when no run had anything wet with the rows up). The check is in no gate or
+    probe family: it is run by hand.
     Measured 2026-11-02: 38,634 ticks, the same bits with the sixteen rows down, and the five end words are `rust-check --missions`' own; on the frozen
     stand (`TPS_PROFILE=frozen` in front) two of the missions, 6,080 ticks, the same; the red path parts on both of its runs, and a red path whose runs leave
     nothing is said to be NOT red. What putting the rows down saves a headless host: compound-four played alone, twice each way, 35.1 and 35.0 s with the rows

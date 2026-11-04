@@ -2675,8 +2675,12 @@ interleaved and filtered to their quiet minimum, and a row whose p75 sits far ab
   masonry. By the box's place in the list (as the shift was, `bi % 7`) every door's boards jumped in the frame a breach appended a static. Known, left: a device's
   boxes are keyed by their order among the devices' boxes, so a tripwire's beam coming or going still moves the number of the device boxes after it (most carry a
   turn and take no map); two unkeyed movers of one size share a number.
-  CHECK: `bun run tools/qa/lookmaps-check.ts`, 14 lines, the same on both stands (it stands no rule up); `LOOKMAPS_BREAK=1` = the row at 0 and three lines
-  fail (the value, paint × hollows, the masonry's hollows). The lines: the value by one number with the hue kept; paint × hollows at three Cavities settings;
+  CHECK: `bun run tools/qa/lookmaps-check.ts`, 14 lines, the same on both stands (it stands no rule up); `LOOKMAPS_BREAK=1` = the row at 0 and four lines
+  fail (the value, paint × hollows, the masonry's hollows, and the rain's line, which under the word asks a wet thing's stuff of the colour it is handed).
+  THE RAIN'S LINE AND WHAT IS WET (11-04): since everything flat under open sky is wet in rain (`game/wetGround.ts`), a wet thing may be plain paint laid on the
+  ground (a weed, a rug, a mat, a stain: 36 of the compound's 177 wet things, 41 of 186 on the page's stand), of no stuff dry or wet. The level is
+  packed dry and each thing's word kept, then the rain is picked and it is packed again: every wet thing carries the word it carried dry, its paint's;
+  some of them are of a stuff, and the ground's own slabs always; a wet metal thing is handed its own colour. The lines: the value by one number with the hue kept; paint × hollows at three Cavities settings;
   the masonry's hollows; the row's off word and the men's cloth handed back to a texel's rounding; the masonry's own colour; no seam; normals, finishes and far
   copies; every palette paint its own row's stuff; worn paints and the counted collisions; the word through the real pack on the smoke lab's floor (stuff, the
   moves bit on dynamics only, no mover's word changed by an appended static); the rain through the game's own weather on consulate-gwot's gravel lot; the

@@ -391,6 +391,60 @@ but synthetic writes still work.
   put back off, silently. A check's own pin goes AFTER each stand-up (each one: a second stand-up in the same process undoes it again), or the run uses the word (`TPS_X=1`),
   which every stand-up then honours. By design: one stand-up = one known stand. On the shipped stand a table is written only where its word is given (`pinned(env)`), so nothing
   is claimed here about a pin made before a stand-up there. Read in `standup.ts` on the rows around the opening, the kit and the dust; not every row was read, nothing run.
+- **Which rule turns a line red: `bun run tools/qa/stand-bisect.ts [--line REGEX] [--green] -- <command …>`** (2026-11-04). A check that is green on the frozen
+  stand and red on the page's is red because of a row the frozen stand holds off, usually one or two. The tool raises subsets of `FROZEN_HOLDS`' words on
+  the frozen stand until the fewest that flip the line are left (delta debugging: about a dozen runs of the check for one word, some eighty for three) and
+  prints them with the rows each raises. `--line` makes the verdict one line's (a check with several red lines has a rule for each); `--green` asks the other
+  way round, of a line that is red on the plain frozen stand: which rule of the page's mends it. READ THE ANSWER THIS WAY: the row's own check says what the
+  rule does, and the line is then a promise the rule ended (mend the line to read the rule, as `selector-sustained` and `devices` (d) now ask "stays" where
+  doors stay as they are left) or a fault the rule brought (its owner's). Found with it on 11-04: `kickrubble-pool` (`CUTBOXES=1`: a blast breaks the piece),
+  `orders-cover` and `orders-stack` (`TPS_WORDS=1 TPS_DOORNAMES=1`: the HUD's name of a door), `teams-dark` (`TPS_IRLIGHT=1` flips both its lines: a teammate's
+  tube sees a dark man), `devices` (e) (`TPS_HANDS=1`), `controls-behind` (d) and (f) (`TPS_KITANIM=1`), `selector-rows` (`TPS_CLOSE=1`, `TPS_HANDSLOT=1`,
+  `TPS_LIGHTSWITCH=1`, a line each), `workstow-mate` (`TPS_SQUADDEAL=1 TPS_TEAMPACE=1 TPS_PACING=1`, all three, and
+  there the answer was the CHECK'S fault: it asked "was his gun hung on the frame before the round left", and with the squad's kit and its pace the gun comes
+  back up and fires inside one tick. The game's own count of rounds out of a hung gun, `WORKSTOW_STATS.mateFired`, stayed at the one the check forces; the
+  line reads that count now). So a named rule is where to look, not the verdict: trap the thing the line is about before calling it a fault. A line no set of words flips is not a held row's doing: the tool says so, and what the shipped stand itself makes of it.
+- **Retiring a switch: `bun run tools/retire/retire.ts ROW=value … | --rows rows.json [--write]`** (2026-11-04; the maintainer: "can you look for switches we
+  haven't flipped in at least 3 days and clean all of those up?"). A settled rule's switch is a second way through the code that nobody takes. The tool takes
+  rows with the value each has IN THE PAGE and leaves one way: every read becomes the value and the code is folded round it; the page's address word, the
+  stand's hold, the journal's line for an old file, the debugger's toggle and a tool's own raise or put-back go; the row goes from its table, from
+  `FROZEN_HOLDS`, its stand word from `STAND_ENV`, its address word from the lists of address words, its name from a panel's list of rows and from what a
+  machine keeps; and what only the dropped branch used goes with it, to a fixed point. It reads the tree with TypeScript's own language service
+  (`vendor/typescript`, or `TS_LIB=<path to typescript.js>` in a cloud checkout) and is a dry run without `--write`. IT REFUSES, with the place: a row the game
+  writes as it runs (state, not a switch), a row Options writes (the player's), a getter and setter, a row an object literal or a map of tables' rows holds
+  at another value, a row the game reads through a list of keys (or writes through a list something else reads too), a row read as its module loads where
+  its own value is not the page's (the page has written nothing yet: at a file's top level, or in anything a file's top level calls, makes, reads through a getter or
+  hands to a function of the game's own, followed to the end by the declaration each name leads to; what is handed to a listener, a timer or a promise
+  waits, and the file a page's script tag names is the program that boots the game after the switches, not walked), a row that is the subject of a `switch`, the same key read on another thing of the table's type (a parameter, a kept copy that
+  is not taken at load: a copy taken at load, `X_DEFAULTS`, is read as the row's OWN value), a row read through a list of keys handed to a call with the table, a row the game writes through a list of keys or
+  through a pattern, a held number whose old value something read as its module loaded, a table typed by an index, a value that is not of the row's
+  kind, and the rows of the Rust module's twins. AND A VALUE THAT IS NOT THE PAGE'S, where the page itself says what that is: `--page page.json` is every
+  table as a stand-up of the page left it (`TPS_PROFILE=shipped bun run tools/qa/stand-dump.ts --out page.json`, on the tree about to be folded), and a row
+  the dump gives another value, or does not hold, is refused; so is a row whose write in the page rides a row that stays (`A = B && !q.has('noa')`: with
+  B's word on the address A was off too). `--trust ROW,ROW` takes the caller's word for those. `--late ROW,ROW` takes it for a row the walk of load-time calls reached (the refusal names every such read and the chain of calls to each from the top-level statement: the walk follows every call a function could make, not the ones it does make), never for a read at a file's own top level; each read it was taken for is printed. THE JOURNAL'S LINE for a recording from before a row, `if (the recording has no word for ROW) ROW = off`, goes whole with the row, and only where everything under that `if` is the write of a row retiring in the same run: once the row is gone no recording has its word, so anything else under it would run for every recording made from then on, and the row is refused (as it is where the word is read into a name first). A row read on an untyped thing under the table's name anywhere else in the game is refused too: that may be a recording's words or the table itself. (Reading the page's writes off the code was tried first and
+  dropped: their order, an early return and a helper are the code's to run.) Exit 3 = some rows were refused and the rest done. A CALL IS NEVER FOLDED AWAY FOR ITS NAME: `x.get(k) && ROW` loses the call only where `get` is the language's own
+  (a Map's), the function's body only reads, or the caller vouches for it (`--pure name,name`; the command line is then the record of what was vouched for).
+  A game object's `get`, a getter (also under a type that calls it plain data, or reached by a key), a method some other class overrides, a function a `let`
+  holds and a default worked out at the call all stay. A method of the language's own that is not a reading one (`sort`, a Map's `delete`) is never asked of the game's same-named bodies. An import whose last use as a value went stays as a bare import, where it was: its module still loads
+  (asked twice: of what the run dropped as it rendered the file, and once more of the finished text by its words alone). A number of a knob table whose last reader went stays where its name is still a quoted word somewhere (a panel's list of rows). IT SAYS, for a hand: a constant left in a
+  condition beside a call it cannot see to the bottom of, a value nothing reads any more whose making still happens (a die drawn, a call made: the name
+  goes, the call stays), a loop left with nothing in it, and every place a CHECK asked for the retired path. `--drop file.ts:name` takes a declaration out
+  with the statements that call it; `--drop-at file.ts:line[:words | :column]` one statement of a check, and only a statement that is nothing but the call
+  (a verdict kept in a name, returned, passed on by a helper, or a call that prints a line a case is said as NOT FOUND; `lines.ts diff` does not place a
+  line whose place printed other lines of the run too). THE PROOF OF A RUN is not the tool's: both
+  typechecks; the page's stand run for run the same before and after (`TPS_PROFILE=shipped PT_DIGEST=1 bun run tools/qa/playthrough.ts --seeds 1-2 --json f`:
+  42 digests); the frozen stand after = the frozen stand before with the retired rows' words raised; and the family's checks run before and after on the
+  page's stand, line by line, where a line that went from PASS to FAIL is an arm of the retired path and is taken out by the place it was printed from:
+  `bun run tools/retire/lines.ts run <dir> [--tree <the tree before>] <the check files the fold's report names>` before and after, `lines.ts diff <before>
+  <after> --drop places.json`, `retire.ts --drop-lines places.json --write`, and `run` once more. (`diff` also says a check that DIED after the fold, one
+  that throws exits 1 as a red check does, and does not count a line that was red before under other words.) After a fold that took a row with a slider
+  out: `bun run tools/gen-scene-notes.ts` (the scene panel's notes are keyed by row). WHAT GOES THAT WAY, by kind: the stand's and the journal's
+  lines, the off arm, the on arm measured against the off arm ("a quarter of those metres"), and the lines of a check that held a newer rule off for its
+  length; in the first fifteen checks of the squad's family that was 65 of 147 lines. A check left saying nothing goes whole (`--drop`). THE TOOL'S OWN CHECK:
+  `bun run tools/retire/retire-check.ts` runs it on a small tree of its own (`tools/retire/fixture`) and holds that each of its cases there (110 today) answers the same,
+  draws the same dice and makes the same calls after the fold as before it, that the folded tree compiles, and that what names a retired row is gone while
+  what only looks like it is not; `RETIRE_BREAK=1` folds one row at the wrong value and must fail. A shape the tool folds wrongly goes into the fixture as a
+  case first. Memory: a hundred rows at once is about a minute and 4 GB; all of a family's rows go in one run, not all families in one.
 - **Not every `FROZEN_HOLDS` word is a `TPS_` word** (10-13, read off `src/host/profile.ts`; the knob registry's owner's note). Raised by a word of their own: the door rules
   (`ONEWAY=1`, `QA_FRAMEHOLDS=1`, `QA_DOORMANNERS=1`, `QA_DOORBLAST=1`, `QA_DOORSTAY=1`), `SLOTS=on`, `CUTBOXES=1`, `GLASSFX=on` (three rows), `SQUADS=radiocheck-call` (three
   rows). No word under probes.ts at all: `DESTRUCTION.on`, `RUBBLE.on`, `EVICT.on` (`PT_DESTR` / `PT_KICK` / `PT_POP`, playthrough.ts alone), `FRAG.defenders` (`--set`),
@@ -518,8 +572,8 @@ but synthetic writes still work.
   The visitor's sending words (`cloud`, `cloudfiles`, `cloudstats`, `cloudtapes`, `cloudprefs`) and `downloads` ride along the scenes' addresses: before,
   a run opened under `?cloud=0` lost the word at the first scene. `tools/qa/savedoor-page.cjs` (a stand-in backend, `npm ci` in `cloud/` first) holds on
   a real page: a take with no download that the backend has, the notes, the card's lines, Close's wait, `?downloads=1`, and a page with nobody
-  listening. `tools/qa/bench-page.cjs` expects no download and reads the take off `__lastPerfDump` (NOT RUN since the change: a whole `?bench` run on
-  the software adapter was not driven). A DEVELOPER'S WAY TO A FILE: `?downloads=1`, or after the fact `__saveUp.on = false` in the console, then
+  listening. `tools/qa/bench-page.cjs` expects no download and reads the take off `__lastPerfDump` (run whole on the software adapter 2026-11-04 with the
+  benchmark's wait in: 28 lines, all pass). A DEVELOPER'S WAY TO A FILE: `?downloads=1`, or after the fact `__saveUp.on = false` in the console, then
   `__journal.save()` or `__perfrec.deliver(__lastPerfDump)`. Never seen on a GPU. Esc stops a run and puts everything back. HANDS OFF: the page's Esc and hotkeys stand down while a run is on, no attract
   reel starts. `?bench=N` = N seconds a window; `?benchcap=N` = N seconds a scene (the page check's). A tab hidden during a run starts that window over, or
   leaves that frame out of the scene's line. While a window is timed on a held picture the page's quality model does not run. A scene that will not start is
@@ -540,7 +594,7 @@ but synthetic writes still work.
   back, then the row's run start to finish over three pages with the hands-off player seen giving its orders on each and walking on the first, keys
   pressed into a scene, the game's clock read every frame, the card and its line, no download, Close (opened under `cloud=0`, which rides along the scenes: nobody listens at the door); the page's own frames play each scene under the fixed step,
   a frame there taking seconds and the wall's cut put out of reach, so a scene ends by the player's own cut after `CAP` game seconds and the last page's
-  tail is the fake page's to prove; `STEP=script` has the check step the scenes with `__runFrames` instead; about 80 minutes at 320x180). NEVER RUN ON A GPU: no number of its report has been read on a real machine, the seven
+  tail is the fake page's to prove; `STEP=script` has the check step the scenes with `__runFrames` instead; 154 minutes at 320x180 on a four-core box on 2026-11-04, so its `DEADLINE` allows 240 by default). NEVER RUN ON A GPU: no number of its report has been read on a real machine, the seven
   minutes are an estimate, and nobody has watched a scene played or looked at the card.
 - **A picture fault is debugged from a frame capture** (F6 on the page: every render target over 8 frames and the trace of what the renderer changed;
   `tools/qa/capture-read.ts` reads it; `docs/agents/render.md`, "A CAPTURE IS EVERY TARGET OF A FEW FRAMES").
