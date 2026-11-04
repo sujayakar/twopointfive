@@ -582,4 +582,35 @@ function furnish(K: ReturnType<typeof officeKit>, G: ReturnType<typeof gwotKit>)
   L.s(2.95, 17.45, 0, 0.5, 0.2, 0.2, 'block'); L.rnd(2.95, 17.45, 0.5, 0.95, 0.13, 'galv'); L.s(2.95, 17.45, 0.95, 1.15, 0.04, 0.04, 'iron');
   L.s(19.0, 26.9, 0, 0.4, 0.07, 0.07, 'whitewash'); L.s(19.0, 26.9, 0.4, 0.8, 0.07, 0.07, 'paintRust'); L.s(19.0, 26.9, 0.8, 1.2, 0.07, 0.07, 'whitewash');
   L.own(G.plasticChair(3.2, 19.75, 0.6, 'plasticGreen'), 'chair');
+
+  // ---- THE LORRY PARK = the queue outside the south gate, where the pair starts and the camera first rests: the track the lorries have worn along the wall
+  //      (from the west it ends at the border's striped post, where they are halted; the rust box came in from the east and stands on its own wheel lines,
+  //      the pallet was dumped between them), the ground dark where the box's tractor idled and where feet go to and from the gate, the drivers' cold fire
+  //      under the wall, a wheel changed and left behind the box's tail, stones the mud wall has shed at its foot. Paint and walk-over stones but for the
+  //      wheel, which stands between the wheel lines two metres and more off the wall: no cover, and no stone within two metres of where the Team & kit
+  //      picture stands its file (x 12.7 to 17.7 along the wall). A STAIN IS THE GROUND'S OWN DUST DARKER, a smaller and darker one turned inside it (a patch of
+  //      another paint on bare dust reads as a mat from above at night), and it lies UNDER the wheel ruts (tops under 8 mm), which are darker than it. ----
+  L.room('park');
+  G.ruts(0, 26.5, 18.3, 26.5); G.ruts(27.9, 26.5, 40, 26.5);
+  G.stain(19.8, 26.5, 1.6, 1.0, 'dust', 0.15, 0.78, 0.0035); G.stain(20.05, 26.4, 0.9, 0.6, 'dust', -0.5, 0.62, 0.0045);            // where the box's tractor stood
+  G.stain(7.4, 26.6, 1.3, 0.9, 'dust', -0.25, 0.78, 0.0035); G.stain(7.6, 26.7, 0.7, 0.5, 'dust', 0.4, 0.62, 0.0045);
+  G.stain(32.0, 26.4, 1.7, 1.1, 'dust', 0.2, 0.78, 0.0035); G.stain(31.8, 26.55, 0.9, 0.7, 'dust', -0.4, 0.62, 0.0045);
+  G.stain(15.9, 24.95, 2.2, 1.4, 'dust', 0.06, 0.78, 0.0035); G.stain(16.1, 25.2, 1.2, 0.9, 'dust', -0.35, 0.62, 0.0045);          // feet, to and from the gate
+  G.hearth(8.6, 25.0, 0.4, 'dirt');                                                                                               // the drivers' cold fire (its ash the next earth down from the dust: the kit's damp ash read as a black mat here)
+  G.rubble(5.2, 24.8, 0.6, 6); G.rubble(20.0, 24.75, 0.5, 6); G.rubble(28.8, 24.75, 0.5, 6);                                       // (pale mud stones only where the mud wall sheds them and the camera sees its foot: out on the open dust a scatter read as a pile of cartons)
+  G.tyres(29.3, 26.5, 2); L.tyre('spare', 30.25, 26.42, 0.3); L.chock('chock', 29.9, 26.05, 1.4);                                  // the wheel that came off the box's lorry
+  G.stain(29.8, 26.5, 1.4, 0.9, 'dust', 0.3, 0.78, 0.0035);
+
+  // ---- THE VERGE = what lies outside the other four gates, each a start, a way out or the duty section's way in: the hollow the ditch wicket is named
+  //      for, the ground beaten dark before the tea stall and what its samovar spills, the dust dark where boots come and go at the customs yard gate and
+  //      at the impound yard gate. Paint and walk-over stones only, the stones the road's dark gravel (a quarter of each scatter is the kit's own darker
+  //      mud) and none where a wall hides the ground from the camera ----
+  L.room('verge');
+  G.stain(39.0, 21.8, 1.3, 3.8, 'dust', 0.08, 0.78, 0.0035); G.stain(39.05, 22.4, 0.8, 2.0, 'dust', -0.1, 0.62, 0.0045);
+  G.rubble(38.2, 23.4, 0.6, 7, 'gravel'); G.rubble(39.4, 20.4, 0.4, 5, 'gravel'); G.rubble(38.4, 24.6, 0.4, 5, 'gravel'); G.rubble(38.6, 9.6, 0.6, 6, 'gravel');
+  G.stain(37.5, 7.2, 2.4, 1.5, 'dust', 0.1, 0.78, 0.0035); G.stain(37.2, 7.1, 1.3, 0.9, 'dust', -0.3, 0.62, 0.0045);
+  G.stain(2.6, 18.7, 1.5, 2.6, 'dust', 0.05, 0.78, 0.0035); G.stain(2.8, 19.2, 0.9, 1.4, 'dust', -0.3, 0.62, 0.0045); G.stain(2.7, 17.5, 0.8, 0.6, 'dust', 0.4, 0.62, 0.0055);
+  G.rubble(0.8, 20.9, 0.5, 5, 'gravel'); G.rubble(1.3, 9.6, 0.6, 6, 'gravel');
+  G.stain(7.9, 2.5, 1.2, 2.9, 'dust', 0.04, 0.78, 0.0035); G.stain(8.05, 1.3, 0.8, 1.6, 'dust', -0.2, 0.62, 0.0045);
+  G.rubble(11.6, 1.5, 0.7, 6, 'gravel'); G.rubble(4.9, 1.7, 0.6, 6, 'gravel');
 }
