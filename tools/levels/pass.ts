@@ -300,13 +300,13 @@ export function build(extra: PassExtra = {}): { level: Level; scenarios: LevelSc
   // ---- THE LORRY: a two-axle lorry with a canvas tilt, where it stopped when the pass shut (KEPT: it is the yard's one piece of cover, what screens
   // the gateway from the tea room's windows and what the ruts are laid to). Nose toward local +X ----
   grp('lorry');
-  const LS = G.lorry(LORRY.x, LORRY.z, LORRY.yaw), L = G.piece(LORRY.x, LORRY.z, LORRY.yaw);   // (the kit's lorry, box for box what stood here; LS = the shapes it says, and how snow lies on them)
-  LS.load.with!.push(LS.snowSheet(S.snow));                                                 // the sheet of snow on the tilt's bow (trim of the load's box: there only when shapes are on)
+  const LS = G.lorry(LORRY.x, LORRY.z, LORRY.yaw), L = G.piece(LORRY.x, LORRY.z, LORRY.yaw);   // (the kit's lorry, box for box what stood here; LS = the shapes it says)
   grp('snow.lorry');
-  L(-1.15, 0, 1.95, 2.05, 1.84, 0.96, S.snow, { flags: DECAL, shape: LS.snowTilt([1.84, 0.05, 0.96]) });                              // CAPS: the tilt (deep: it has stood for days),
-  L(-1.15, 0, 2.05, 2.11, 1.84, 0.96, S.snow, { flags: DECAL, shape: LS.snowTilt([1.84, 0.03, 0.96], true) });                              //   a second fall over the first, the whole tilt (one outline: two nested ones read as slabs)
-  L(1.5, 0, 2.2, 2.27, 0.55, 1.02, S.snow, { flags: DECAL, shape: LS.snowRoof([0.55, 0.035, 1.02]) });                                 //   the cab's roof
-  L(2.8, 0, 1.5, 1.555, 0.52, 0.9, S.snow, { flags: DECAL, shape: LS.snowBonnet([0.52, 0.0275, 0.9]) });                                 //   the bonnet
+  // CAPS, laid on the lorry's bowed tops by the kit's one rule (G.lay: each slab keeps to the crown, and a sheet of snow follows the bow under it — trim, there
+  // only when shapes are on): the tilt (deep: it has stood for days), a second fall over the first (one outline: two nested ones read as slabs), the cab's
+  // roof, the bonnet
+  { const lay = (t: typeof LS.tops.load, lx: number, y0: number, y1: number, hx: number, hz: number, nth = 0) => G.lay(LORRY.x, LORRY.z, LORRY.yaw, t, lx, 0, y0, y1, hx, hz, S.snow, nth);
+    lay(LS.tops.load, -1.15, 1.95, 2.05, 1.84, 0.96); lay(LS.tops.load, -1.15, 2.05, 2.11, 1.84, 0.96, 1); lay(LS.tops.roof, 1.5, 2.2, 2.27, 0.55, 1.02); lay(LS.tops.bonnet, 2.8, 1.5, 1.555, 0.52, 0.9); }
   L(3.72, 0, 0, 0.44, 0.25, 1.0, S.snow);                                                     // BANK (stops feet): the nose stands into the wind; snow is banked on the bumper,
   L(4.12, 0, 0, 0.3, 0.2, 0.9, S.snow);                                                       //   stepping down
   L(4.47, 0, 0, 0.17, 0.2, 0.75, S.snow);                                                     //   to a lip a man wades

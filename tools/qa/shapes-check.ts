@@ -14,13 +14,13 @@ import { readFileSync, readdirSync } from 'node:fs';
 import { standUp, ROOT } from './headless.ts';
 const { parseLevelData, validateLevelData, canonicalLevelData } = await import(`${ROOT}/src/scene/levelData.ts`);
 const { loadLevel, levelToData } = await import(`${ROOT}/src/scene/levelLoad.ts`);
-const { SHAPES, SHAPES_STATS, shapeLevel, shapesTape, shapeStamp, withPieces } = await import(`${ROOT}/src/scene/shapes.ts`);
+const { SHAPES, SHAPES_STATS, shapeLevel, shapesTape, shapeStamp, withPieces, arcFacets } = await import(`${ROOT}/src/scene/shapes.ts`);
 const { digestGame, hashDigest } = await import(`${ROOT}/src/game/digest.ts`);
 const { levelFingerprint, canLoad } = await import(`${ROOT}/src/game/savestate.ts`);
 const { PLAYER_ID } = await import(`${ROOT}/src/game/consts.ts`);
-const { rayBox, BoxFlag } = await import(`${ROOT}/src/scene/boxes.ts`);
+const { rayBox, BoxFlag, makeBox } = await import(`${ROOT}/src/scene/boxes.ts`);
 const { StaticCollision, NavGrid, lineBox, FEET_Y } = await import(`${ROOT}/src/scene/collision.ts`);
-const { cutConfig } = await import(`${ROOT}/src/scene/cut.ts`);
+const { cutConfig, cutContains, cutVerts } = await import(`${ROOT}/src/scene/cut.ts`);
 
 type Vec3 = [number, number, number];
 type Plane = [number, number, number, number];
@@ -242,6 +242,38 @@ export async function shapesCheck(): Promise<boolean> {
       line(!!plate && stoodBefore && cells === 1 && gone(crate) && gone(plate) && saved === '',
         '9 a blast beside the wooden crate that says a shape: the crate is one cell to the wall engine and goes whole, the plate hung on its side goes with it, and a checkpoint taken afterwards opens in that game',
         `the crate: ${br ? `${cells} cell${cells === 1 ? '' : 's'}` : 'NOT the wall engine\'s'} · stood before ${stoodBefore} · the blast took ${res?.cover ?? '?'} of cover · after: the crate ${gone(crate) ? 'gone' : 'STANDS'}, its plate ${gone(plate) ? 'gone' : 'STANDS'} · the checkpoint: ${saved || 'opens'}`); }
+
+    // (10) an arc beside its box's own planes, and trim that hangs on nothing
+    { const R = seeded(11), h: Vec3 = [0.6, 0.3, 0.9], rise = 0.2, w = h[2], RR = (w * w + rise * rise) / (2 * rise), yAxis = h[1] - RR, said: string[] = []; let arcs = true;
+      // an arc over the box's z (about its own x) and n planes of the box's own: four corners in plan and a fall at one end, none of which reaches the middle
+      // of the box's length, where the rays come down. The top lies on the round, never under it, and no farther over it than its facets stand off: each
+      // facet is a tangent, and two tangents `step` apart meet R · (1 ÷ cos(step ÷ 2) − 1) over the round. Fewer facets stand farther off, which tells them apart.
+      const corner = (sx: number, sz: number): Plane => [sx * Math.SQRT1_2, 0, sz * Math.SQRT1_2, Math.SQRT1_2 * (h[0] + h[2] - 0.12)];
+      const own: Plane[] = [corner(1, 1), corner(1, -1), corner(-1, 1), corner(-1, -1), [1, 0.3, 0, h[0] + 0.3 * h[1] - 0.05]];
+      const stand = (n: number) => { const facets = n / 2, step = Math.asin(w / RR) / (facets + 0.5); return RR * (1 / Math.cos(step / 2) - 1); };
+      for (let n = 0; n <= own.length; n++) { const f = arcFacets(n), b: any = makeBox({ c: [3, 0.3, -2], h: [h[0], h[1], h[2]], yaw: 0.4, albedo: [0.5, 0.5, 0.5] });
+        b.shape = { arc: { axis: 1, rise }, ...(n ? { cut: own.slice(0, n) } : {}) }; const one = [b]; shapeLevel(one, !BREAK);
+        let under = 0, over = 0, sunk = 0, far = 0;
+        for (let k = 0; k < 600; k++) { const l: Vec3 = [(R() - 0.5) * 0.3, 2, (R() - 0.5) * 1.98 * w], o = worldOf(b.c, b.yaw, l), hit = rayBox(o, [0, -1, 0], b, 5); if (!hit) { sunk++; continue; }
+          const q = localOf(b, at(o, [0, -1, 0], hit.t)), off = Math.hypot(q[1] - yAxis, q[2]) - RR; if (off < -1e-7) under++; if (off > stand(f) + 1e-7) over++; far = Math.max(far, off); }
+        const finer = f === 2 ? stand(4) : f === 4 ? stand(6) : 0, good = sunk === 0 && under === 0 && over === 0 && far > finer + 1e-5 && far > stand(f) * 0.6;
+        arcs &&= good; said.push(`${n} plane${n === 1 ? '' : 's'}: ${f} facets, at most ${(far * 1000).toFixed(1)} mm over the round (${f} stand ${(stand(f) * 1000).toFixed(1)} off)${good ? '' : ` — ${sunk} fell through, ${under} under, ${over} over`}`); }
+      // trim hangs on something: over every level file that says a shape, stood up shaped, each piece touches (3 cm of slack) its own box's shaped solid, a box
+      // of the level beside it, or a piece of its box that does. Touch = a corner or a point of a 7 × 7 × 7 lattice of the one solid inside the other.
+      type S = { b: any; pts: Vec3[] }; const EPS = 0.03, N = 7; let files = 0, pieces = 0; const floats: string[] = [];
+      const pts = (b: any): Vec3[] => { const out: Vec3[] = (cutVerts(b.h, b.cut) as Vec3[]).map(v => worldOf(b.c, b.yaw, v));
+        for (let i = 0; i < N; i++) for (let j = 0; j < N; j++) for (let k = 0; k < N; k++) { const l: Vec3 = [b.h[0] * (2 * i / (N - 1) - 1), b.h[1] * (2 * j / (N - 1) - 1), b.h[2] * (2 * k / (N - 1) - 1)]; if (cutContains(b.h, b.cut, l, 1e-9)) out.push(worldOf(b.c, b.yaw, l)); }
+        return out; };
+      const touch = (a: S, c: S) => a.pts.some(p => cutContains(c.b.h, c.b.cut, localOf(c.b, p), EPS)) || c.pts.some(p => cutContains(a.b.h, a.b.cut, localOf(a.b, p), EPS));
+      for (const f of LEVEL_FILES) { const d = dataOf(f); if (!d.boxes?.some((b: any) => b.shape)) continue; const B: any[] = loadLevel(parseLevelData(JSON.stringify(d)), { lived: true, dressing: true }).boxes; shapeLevel(B, !BREAK); files++;   // (with the lived things and the dressing in: a roof rack is one)
+        const memo = new Map<any, S>(), sol = (b: any): S => { let s = memo.get(b); if (!s) memo.set(b, s = { b, pts: pts(b) }); return s; }, by = new Map<number, any[]>();
+        for (const b of B) if (b.piece === true) { pieces++; const l = by.get(b.of); if (l) l.push(b); else by.set(b.of, [b]); }
+        for (const [of, ps] of by) { const box = B[of], held: S[] = [sol(box), ...B.filter(b => b.piece !== true && b !== box && !b.rot && Math.hypot(b.c[0] - box.c[0], b.c[2] - box.c[2]) < 6 && Math.max(b.h[0], b.h[2]) < 4).map(sol)], left = new Set(ps); let grew = true;
+          while (grew) { grew = false; for (const p of left) if (held.some(s => touch(sol(p), s))) { held.push(sol(p)); left.delete(p); grew = true; } }
+          for (const p of left) { const l = localOf(box, p.c); floats.push(`${f}: a piece of box ${of} (half size ${box.h.map((x: number) => x.toFixed(2)).join(' × ')}) at [${l.map(x => x.toFixed(2)).join(', ')}] from it`); } } }
+      line(arcs && files > 0 && pieces > 0 && floats.length === 0,
+        '10 an arc beside its box\'s own planes is cut to fewer facets and is still the round (rays down its middle land on it, never under it and no farther over it than that many facets stand off, and farther than the next count would); and no trim hangs in the air: in every level file that says a shape each piece touches its box\'s shaped solid, a box beside it, or a piece that does',
+        `${said.join(' · ')}\n    ${files} level files, ${pieces} pieces, ${floats.length} hang on nothing${floats.length ? `:\n    ${floats.slice(0, 10).join('\n    ')}` : ''}`); }
   } finally { Object.assign(SHAPES, was); cutConfig.on = cutWas; Object.assign(SHAPES_STATS, stats0); Math.random = rnd; }
   console.log(`=== shapes: ${all ? 'ALL PASS' : 'FAILURES above'} ===`);
   return all;

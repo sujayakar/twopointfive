@@ -197,8 +197,8 @@ export function bench(k: LevelKit, x: number, z: number, yaw: number): void {
   add(k, { c: [x, 0.42, z], h: [0.7, 0.03, 0.2], yaw, albedo: C.woodDark });
   for (const sx of [-0.6, 0.6]) add(k, { c: at(sx, 0.2, 0), h: [0.03, 0.2, 0.18], yaw, albedo: C.metal });
 }
-/** a parked car, 4.4 × 1.7 m, local +X forward */
-export function car(k: LevelKit, x: number, z: number, yaw: number, body: Vec3): void {
+/** a parked car, 4.4 × 1.7 m, local +X forward. Hands back the shapes its boxes say */
+export function car(k: LevelKit, x: number, z: number, yaw: number, body: Vec3) {
   const at = frameAt(x, z, yaw);
   const S = carShapes({ hub: hubPaint([0.5, 0.52, 0.53]) });   // (S: the shape each box says — scene/carShapes.ts)
   add(k, { c: [x, 0.62, z], h: [2.2, 0.34, 0.86], yaw, albedo: body, shape: S.body });
@@ -206,6 +206,7 @@ export function car(k: LevelKit, x: number, z: number, yaw: number, body: Vec3):
   add(k, { c: at(-0.25, 1.49, 0), h: [1.15, 0.03, 0.76], yaw, albedo: body, shape: S.roof });
   for (const [lx, lz] of [[1.35, 0.8], [1.35, -0.8], [-1.4, 0.8], [-1.4, -0.8]]) add(k, { c: at(lx, 0.3, lz), h: [0.32, 0.3, 0.12], yaw, albedo: [0.04, 0.04, 0.045], shape: S.wheel(Math.sign(lz)) });
   for (const lz of [0.62, -0.62]) { add(k, { c: at(2.2, 0.7, lz), h: [0.02, 0.07, 0.14], yaw, albedo: [0.8, 0.8, 0.75], flags: BoxFlag.NoShadow, shape: S.head(Math.sign(lz)) }); add(k, { c: at(-2.2, 0.75, lz), h: [0.02, 0.06, 0.16], yaw, albedo: [0.3, 0.02, 0.02], emissive: [0.5, 0.03, 0.02], flags: BoxFlag.NoShadow, shape: S.tail(Math.sign(lz)) }); }
+  return S;   // (the shapes it says, its `tops` among them: what a level stands on its roof is fitted by carShapes.ts feetOn / layOn)
 }
 /** open steel shelving w × d, `levels` shelves up to `hgt`, cartons on most of them (see-through between the cartons: it is NOT a wall to eyes or rounds) */
 export function shelf(k: LevelKit, x: number, z: number, w: number, d: number, yaw: number, levels = 4, hgt = 2.0): void {

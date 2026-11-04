@@ -124,6 +124,44 @@ export function onCorners(h: Vec3, bodyCut: readonly ShapePlane[], d: Vec3, prou
 /** the four long edges of a box that lies along its own x, taken off to radius r (a tank that is not square across) */
 const edgesOff = (h: Vec3, r: number): ShapePlane[] => { const k = Math.SQRT1_2; return [-1, 1].flatMap(sy => [-1, 1].map(sz => plane(0, sy * k, sz * k, k * ((h[1] - r) + (h[2] - r)) + r))); };
 
+// ---- what lies or stands on a bowed top ----
+/** A BOWED TOP of a vehicle: the box that says the arc — its centre in the vehicle's own frame, its half size, and its shape (which takes the trim laid
+ *  on it). Every vehicle here hands out its own (`tops`), so what a level lays or stands on a roof is fitted to the roof by ONE rule, below. */
+export interface BowedTop { c: Vec3; h: Vec3; shape: BoxShape }
+/** the round a bowed top lies on: the index of the axis ACROSS the bow (0 = x, 2 = z), the top's half width there, and the round's radius */
+const bowOf = (t: BowedTop) => { const a = t.shape.arc!, x: 0 | 2 = a.axis === 1 ? 2 : 0, w = t.h[x]; return { x, w, R: (w * w + a.rise * a.rise) / (2 * a.rise) }; };
+/** how far a bowed top has fallen `s` metres to the side of its crown */
+export const fallOf = (t: BowedTop, s: number): number => { const { R } = bowOf(t); return R - Math.sqrt(Math.max(0, R * R - s * s)); };
+/** SNOW OR DUST LAID ON A BOWED TOP, as a level lays it: a thin flat slab (its centre `c` in the vehicle's frame, its half size h, lying along the vehicle).
+ *  A slab cannot bend, and a shape only takes away, so the slab KEEPS TO THE CROWN: it is flat as far as half of where the top has dropped `gap` (2 cm)
+ *  under it and falls to nothing there, and it is cut back with the top's own planes (a roof's ends, a bonnet's fall); and a SHEET of the same paint
+ *  follows the bow from there, 2 cm over it, as wide as the slab or three quarters of the top (it has slid off the shoulders) — trim of the top's own box,
+ *  pushed onto its shape, so it is there only when shapes are on. `nth`: the slab lies on `nth` earlier falls (a second fall is a ridge half as wide, and
+ *  lays no sheet). Returns the slab's own shape, or nothing where it need say none. */
+export function layOn(t: BowedTop, c: Vec3, h: Vec3, paint: CarPaint, o: { nth?: number; gap?: number } = {}): BoxShape | undefined {
+  const { x, w, R } = bowOf(t), nth = o.nth ?? 0, gap = o.gap ?? 0.02, lift = 0.02, d: Vec3 = sub(c, t.c), len: 0 | 2 = x === 2 ? 0 : 2;
+  const keep = Math.sqrt(2 * R * gap - gap * gap) / 2 ** nth, flat = keep / 2;
+  // the slab: from (flat, its top) down to (keep, its underside) each side of the crown, which lies −d[x] from the slab's own middle
+  const a = keep - flat, b = 2 * h[1], k = b * flat + a * h[1], side = (sg: number): ShapePlane => x === 2 ? plane(0, a, sg * b, k - sg * b * d[2]) : plane(sg * b, a, 0, k - sg * b * d[0]);
+  const own = (t.shape.cut ?? []).map(p => moved(p, d, gap));
+  if (nth === 0 && h[x] - Math.abs(d[x]) > keep) {   // the sheet: concentric with the bow, said from the top's own centre
+    const wide = Math.min(h[x] - Math.abs(d[x]), 0.75 * w), R2 = R + lift, rise = r6(R2 - Math.sqrt(R2 * R2 - wide * wide)), off: Vec3 = x === 2 ? [d[0], r6(t.h[1] + lift - rise / 2), 0] : [0, r6(t.h[1] + lift - rise / 2), d[2]];
+    const sh: Vec3 = x === 2 ? [h[0], r6(rise / 2), r6(wide)] : [r6(wide), r6(rise / 2), h[2]], cut = biting(sh, (t.shape.cut ?? []).map(p => moved(p, off, lift)));
+    (t.shape.with ??= []).push({ off, h: sh, ...paintOf(paint), arc: { axis: t.shape.arc!.axis, rise }, ...(cut.length ? { cut } : {}), old: true });
+  }
+  return said({ ...cutOf(h, [side(1), side(-1), ...own]) });
+}
+/** FEET under a thing that stands on a bowed top (a rack's rail, a ladder's stile: its centre `c` in the vehicle's frame, its half size h, lying along the
+ *  vehicle): one at each of `at` (metres along the thing from its middle) that is over the top, from the thing's underside down to the bow — trim of the
+ *  THING's own box, in its paint */
+export function feetOn(t: BowedTop, c: Vec3, h: Vec3, at: readonly number[], foot = 0.02): ShapePiece[] {
+  const { x } = bowOf(t), d = sub(c, t.c), len: 0 | 2 = x === 2 ? 0 : 2, drop = r6(d[1] - h[1] - t.h[1] + fallOf(t, Math.abs(d[x]) + Math.min(h[x], foot)));
+  if (drop < 0.004) return [];
+  const ends = (t.shape.cut ?? []).filter(p => Math.abs(p[1]) < 1e-6), fh: Vec3 = len === 0 ? [foot, r6(drop / 2), Math.min(h[2], foot)] : [Math.min(h[0], foot), r6(drop / 2), foot];
+  return at.filter(u => { const q: Vec3 = len === 0 ? [d[0] + u, 0, d[2]] : [d[0], 0, d[2] + u]; return Math.abs(q[len]) < t.h[len] && ends.every(p => p[0] * q[0] + p[2] * q[2] <= p[3]); })
+    .map((u): ShapePiece => ({ off: len === 0 ? [r6(u), r6(-h[1] - drop / 2), 0] : [0, r6(-h[1] - drop / 2), r6(u)], h: fh }));
+}
+
 export interface CarPaints { hub: CarPaint }
 
 /** A PICKUP, 5.0 × 1.8, nose toward local +x (scene/gwotKit.ts pickup): the shape each box of its stack says */
@@ -132,15 +170,18 @@ export function pickupShapes(P: CarPaints) {
   const glassC: Vec3 = [0.38, 1.29, 0], glassH: Vec3 = [0.64, 0.21, 0.8], tilt = { f: 30, r: 12, s: 12 }, top = glassTop(glassH, tilt), G = greenhouse(glassH, tilt);
   const doorsC: Vec3 = [0.38, 0.94, 0], wheelH: Vec3 = [0.37, 0.37, 0.13], bonnetH: Vec3 = [0.7, 0.1, 0.84];
   const arches = [-1.5, 1.52].flatMap(lx => [-1, 1].map(s => archPiece([lx, 0.37, s * 0.78], wheelH, s, tubC)));
+  const roof = roofShape([0.6, 0.04, 0.78], 0.36 - 0.38, 0.08, top);
+  // (the bonnet: crowned, falling to the nose, its two nose corners taken back with the body's — and no panel lines: a mark is laid out on a whole face)
+  const bonnet: BoxShape = { arc: { axis: 1, rise: 0.2 }, ...cutOf(bonnetH, [fallPlane(bonnetH, 1, 0.2, 0.15), ...withCorners([cornerPlanes(tubH, 0.22, 1, 1, 3)[1], cornerPlanes(tubH, 0.22, 1, -1, 3)[1]], [1.75, 0, 0])]), old: true };
   return {
+    tops: { roof: { c: [0.36, 1.54, 0], h: [0.6, 0.04, 0.78], shape: roof } as BowedTop, bonnet: { c: [1.75, 0.9, 0], h: bonnetH, shape: bonnet } as BowedTop },
     wheel: (s: number) => wheelShape(wheelH, s, P.hub),
     tub: { cut: tubCut, old: true, with: arches } as BoxShape,
     bumperFront: onCorners([0.05, 0.11, 0.88], tubCut, [2.47, 0, 0], 0.09), bumperRear: onCorners([0.05, 0.11, 0.88], tubCut, [-2.47, 0, 0], 0.09),
-    // (the bonnet: crowned, falling to the nose, its two nose corners taken back with the body's — and no panel lines: a mark is laid out on a whole face)
-    bonnet: { arc: { axis: 1, rise: 0.2 }, ...cutOf(bonnetH, [fallPlane(bonnetH, 1, 0.2, 0.15), ...withCorners([cornerPlanes(tubH, 0.22, 1, 1, 3)[1], cornerPlanes(tubH, 0.22, 1, -1, 3)[1]], [1.75, 0, 0])]), old: true } as BoxShape,
+    bonnet,
     doors: { with: rehome(G.posts, sub(doorsC, glassC)) } as BoxShape,
     glass: G.glass,
-    roof: roofShape([0.6, 0.04, 0.78], 0.36 - 0.38, 0.08, top),
+    roof,
     bedSide: (s: number) => onCorners([1.03, 0.19, 0.03], tubCut, [-1.42, 0, s * 0.83]), tailgate: onCorners([0.03, 0.19, 0.86], tubCut, [-2.42, 0, 0]),
     head: (s: number) => lensShape([0.03, 0.07, 0.16], tubCut, [2.43, 0, s * 0.66]), tail: (s: number) => lensShape([0.03, 0.08, 0.1], tubCut, [-2.43, 0, s * 0.72]),
   };
@@ -158,7 +199,9 @@ export function vanShapes(P: CarPaints) {
   const glassC: Vec3 = [1.3, 1.36, 0], glassH: Vec3 = [0.36, 0.26, 0.84], tilt = { f: 28, r: 0, s: 4 }, bow = 0.06, G = greenhouse(glassH, tilt, [-0.3], 0);   // (the brow stands on the glass, flat underneath: nothing to stop short of)
   const doorsC: Vec3 = [1.3, 0.98, 0], wheelH: Vec3 = [0.37, 0.37, 0.13], bonnetH: Vec3 = [0.4, 0.1, 0.86], browC: Vec3 = [1.22, 1.785, 0], browH: Vec3 = [0.34, 0.165, 0.86], sideH: Vec3 = [0.25, 0.545, 0.03];
   const arches = [-1.45, 1.5].flatMap(lx => [-1, 1].map(s => archPiece([lx, 0.37, s * 0.8], wheelH, s, bodyC)));
+  const load: BoxShape = { arc: { axis: 1, rise: bow }, old: true };
   return {
+    tops: { load: { c: [-0.5, 1.405, 0], h: [1.4, 0.545, 0.9], shape: load } as BowedTop },
     wheel: (s: number) => wheelShape(wheelH, s, P.hub),
     body: { cut: bodyCut, old: true, with: arches } as BoxShape,
     bumper: onCorners([0.05, 0.11, 0.9], bodyCut, [2.43, 0, 0], 0.09), step: onCorners([0.05, 0.07, 0.9], bodyCut, [-2.43, 0, 0], 0.09),
@@ -167,8 +210,7 @@ export function vanShapes(P: CarPaints) {
     glass: G.glass,
     // (the brow: its face is the windscreen's own plane carried up — the glass's, said from the brow's centre)
     brow: { arc: { axis: 1, rise: bow }, ...cutOf(browH, [moved(leanPlane(glassH, 1, 0, tilt.f), sub(browC, glassC))]), old: true } as BoxShape,
-    load: { arc: { axis: 1, rise: bow }, old: true } as BoxShape,
-    bayRoof: { arc: { axis: 1, rise: bow }, old: true } as BoxShape,
+    load, bayRoof: { arc: { axis: 1, rise: bow }, old: true } as BoxShape,
     baySide: (s: number) => onCorners(sideH, bodyCut, [-2.15, 0, s * 0.87], 0, [plane(0, 1, 0, sideH[1] - bow)]),   // (its top comes down to the roof's edge, its tail corner goes with the body's)
     head: (s: number) => lensShape([0.03, 0.07, 0.16], bodyCut, [2.43, 0, s * 0.66]), tail: (s: number) => lensShape([0.02, 0.15, 0.04], bodyCut, [-2.41, 0, s * 0.86]),
   };
@@ -180,11 +222,13 @@ export function carShapes(P: CarPaints) {
   const glassC: Vec3 = [-0.25, 1.2, 0], glassH: Vec3 = [1.25, 0.27, 0.8], tilt = { f: 38, r: 42, s: 12 }, top = glassTop(glassH, tilt), wheelH: Vec3 = [0.32, 0.3, 0.12];
   const G = greenhouse(glassH, tilt, [0.05], 0.014);   // (the kit's roof slab begins a centimetre under the glass box's top: the glass stops under the slab)
   const arches = [1.35, -1.4].flatMap(lx => [-1, 1].map(s => archPiece([lx, 0.3, s * 0.8], wheelH, s, bodyC)));
+  const roof = roofShape([1.15, 0.03, 0.76], 0, 0.06, top);
   return {
+    tops: { roof: { c: [-0.25, 1.49, 0], h: [1.15, 0.03, 0.76], shape: roof } as BowedTop },
     wheel: (s: number) => wheelShape(wheelH, s, P.hub),
     body: { cut: bodyCut, old: true, with: [...arches, ...rehome(G.posts, sub(bodyC, glassC))] } as BoxShape,
     glass: G.glass,
-    roof: roofShape([1.15, 0.03, 0.76], 0, 0.06, top),
+    roof,
     head: (s: number) => lensShape([0.02, 0.07, 0.14], bodyCut, [2.2, 0, s * 0.62]), tail: (s: number) => lensShape([0.02, 0.06, 0.16], bodyCut, [-2.2, 0, s * 0.62]),
   };
 }
@@ -194,10 +238,12 @@ export function carShapes(P: CarPaints) {
 export function bikeShapes() {
   const tankC: Vec3 = [0.18, 0.7, 0], tankH: Vec3 = [0.24, 0.14, 0.12];
   const guard = (lx: number): ShapePiece => ({ off: sub([lx, 0.4625, 0], tankC), h: [0.325, 0.1625, 0.04], arc: { axis: 3, rise: 0.325 }, old: true });
+  const seat: BoxShape = { arc: { axis: 1, rise: 0.07 }, old: true };
   return {
+    tops: { seat: { c: [-0.36, 0.71, 0], h: [0.34, 0.09, 0.11], shape: seat } as BowedTop },
     wheel: { round: 3 } as BoxShape,
     tank: { cut: edgesOff(tankH, 0.05), old: true, with: [guard(0.66), guard(-0.62)] } as BoxShape,   // (not square across: its four long edges taken off)
-    seat: { arc: { axis: 1, rise: 0.07 }, old: true } as BoxShape,
+    seat,
     bars: { round: 3 } as BoxShape,
     lamp: { round: 1 } as BoxShape,
     exhaust: { round: 1 } as BoxShape,
@@ -213,13 +259,6 @@ const ringY = (r: number): { cut: ShapePlane[]; old: true } => ({ cut: [30, 60, 
 /** trim said from the vehicle's own frame, for a box of it whose centre is `o` there: (lx, lz, y0, y1, hx, hz, paint | null = the box's own, form) */
 const trimFor = (o: Vec3) => (lx: number, lz: number, y0: number, y1: number, hx: number, hz: number, p: CarPaint | null, form: Partial<ShapePiece> = {}): ShapePiece =>
   ({ off: sub([lx, (y0 + y1) / 2, lz], o), h: [hx, r6((y1 - y0) / 2), hz], ...(p ? paintOf(p) : {}), ...form });
-/** SNOW that lies on a thing whose top is now bowed (the slab's half size h; the bow runs along the slab's own x, or with `across` along its z): a cap keeps
- *  to the crown — flat for `flat` either side of the middle, then falling to nothing at `keep` — so its flat underside is never far over what it lies on */
-function capShape(h: Vec3, keep: number, flat: number, across = false): BoxShape {
-  const a = keep - flat, b = 2 * h[1], d = b * flat + a * h[1];   // the slope from (flat, top) to (keep, bottom)
-  return { cut: across ? [plane(b, a, 0, d), plane(-b, a, 0, d)] : [plane(0, a, b, d), plane(0, a, -b, d)], old: true };
-}
-
 /** A TWO-AXLE LORRY with a canvas tilt, 7 m, nose toward local +x (scene/gwotKit.ts lorry; asked 2026-10-24 of the pass's: "some curved surfaces on the
  *  truck would go a long way", and 10-30, of the first curves: "truck could use some dressing up. but overall the round surfaces look nice"): the shape
  *  each box of its stack says, and the fittings a lorry of its kind carries as trim.
@@ -230,15 +269,14 @@ function capShape(h: Vec3, keep: number, flat: number, across = false): BoxShape
  *  · an exhaust stack up the cab's back corner, mirrors on arms, a beacon, steps, a door seam and a handle a side, an air cleaner on the cowl, a winch drum,
  *    hooks and a plate on the bumper, stakes down the sideboards, three jerry cans racked on one of them, mud flaps, tail lamps, the spare on the tailboard.
  *  WHAT A RAY MEETS LESS OF: the tilt's shoulders above 1.8 m, the bonnet's (it narrows from 0.98 m a side to 0.56 at its top, 1.5 m up), the cab roof's front
- *  and back edges, the top of the windscreen. Everything else here is trim: a tank, a fender, a mirror stop nothing. `snow*`: how a cap of snow lies on the
- *  bowed tilt, the arched roof and the narrowed bonnet (a level that snows it in says them of its own slabs). */
+ *  and back edges, the top of the windscreen. Everything else here is trim: a tank, a fender, a mirror stop nothing. A level that snows it in lays its caps on `tops` (layOn). */
 export function lorryShapes(P: LorryPaints) {
   const hub = { ...tone(P.galv, 0.6), rough: 0.45, metal: true }, zinc = { ...tone(P.galv, 0.6), rough: 0.38, metal: true }, iron = { ...P.iron, rough: 0.5, metal: true }, galv = { ...P.galv, rough: 0.38, metal: true };
   const wheelH: Vec3 = [0.48, 0.48, 0.15], bonnetC: Vec3 = [2.75, 1.12, 0], bonnetH: Vec3 = [0.62, 0.38, 0.98], doorsC: Vec3 = [1.55, 1.12, 0], glassC: Vec3 = [1.55, 1.79, 0];
   // the chassis (its centre (−0.1, 0.62, 0)): a tank under the bed, a step under the door (behind the front wheel) and a mud flap behind the rear wheel, a side
   const ch = trimFor([-0.1, 0.62, 0]), chassis: BoxShape = { with: [-1, 1].flatMap(s => [
     ch(0.1, s * 0.82, 0.25, 0.69, 0.5, 0.22, hub, { round: 1 }),
-    ch(1.36, s * 1.2, 0.44, 0.49, 0.3, 0.09, zinc),
+    ch(1.36, s * 1.16, 0.44, 0.49, 0.3, 0.09, zinc), ...[-1, 1].map(e => ch(1.36 + e * 0.24, s * 1.1, 0.49, 0.74, 0.012, 0.02, null)),   // (the step hangs from the cab's floor on two straps, in the chassis' iron)
     ch(-2.8, s * 0.98, 0.16, 0.72, 0.012, 0.17, { ...P.rubber, rough: 0.9 })]) };
   // the bumper (3.42, 0.64, 0): the winch's drum between two cheeks, the plate, a hook a side
   const bu = trimFor([3.42, 0.64, 0]), bumper: BoxShape = { with: [
@@ -276,13 +314,10 @@ export function lorryShapes(P: LorryPaints) {
     ...[-1, 1].map(s => ta(-3.206, s * 0.92, 0.98, 1.1, 0.006, 0.06, { ...P.red, rough: 0.3 }, { round: 1 }))] };
   return {
     wheel: (s: number): BoxShape => wheelShape(wheelH, s, hub),
+    /** where snow lies on it: the tilt, the cab's roof, the engine cover (layOn) */
+    tops: { load: { c: [-1.15, 1.425, 0], h: [1.95, 0.525, 1.06], shape: load } as BowedTop, roof: { c: [1.5, 2.14, 0], h: [0.62, 0.06, 1.1], shape: roof } as BowedTop, bonnet: { c: bonnetC, h: bonnetH, shape: bonnet } as BowedTop },
     chassis, bumper, bonnet, cab, glass: G.glass, roof, load, side, tail,
     lamp: (s: number) => lensShape([0.02, 0.08, 0.1], [], [3.38, 0, s * 0.7]),
-    /** a cap of snow on the tilt: the lower one flat across its middle (the upper one lies on that), the upper one a ridge */
-    snowTilt: (h: Vec3, upper = false) => upper ? capShape(h, 0.18, 0.04) : capShape(h, 0.38, 0.2),
-    snowRoof: (h: Vec3) => capShape(h, 0.25, 0.08, true), snowBonnet: (h: Vec3) => capShape(h, 0.25, 0.08),
-    /** …and the sheet of it that lies on the tilt's bow, 2 cm over the canvas and slid off its shoulders: trim for the load's box (push it onto `load.with`) */
-    snowSheet: (snow: CarPaint): ShapePiece => { const R = (1.06 * 1.06 + bow * bow) / (2 * bow) + 0.02, w = 0.8, rise = r6(R - Math.sqrt(R * R - w * w)); return lo(-1.15, 0, 1.97 - rise, 1.97, 1.84, w, snow, { arc: { axis: 1, rise }, old: true }); },
   };
 }
 

@@ -215,6 +215,7 @@ export function officeKit(trace?: GeneratorTrace, opts: GeneratorOpts = {}) {
     add({ c: at(-0.25, 1.49, 0), h: [1.15, 0.03, 0.76], yaw, albedo: body, shape: S.roof });                             // roof
     for (const [lx, lz] of [[1.35, 0.8], [1.35, -0.8], [-1.4, 0.8], [-1.4, -0.8]]) add({ c: at(lx, 0.3, lz), h: [0.32, 0.3, 0.12], yaw, albedo: [0.04, 0.04, 0.045], shape: S.wheel(Math.sign(lz)) });   // wheels
     for (const lz of [0.62, -0.62]) { add({ c: at(2.2, 0.7, lz), h: [0.02, 0.07, 0.14], yaw, albedo: [0.8, 0.8, 0.75], flags: BoxFlag.NoShadow, shape: S.head(Math.sign(lz)) }); add({ c: at(-2.2, 0.75, lz), h: [0.02, 0.06, 0.16], yaw, albedo: [0.3, 0.02, 0.02], emissive: [0.5, 0.03, 0.02], flags: BoxFlag.NoShadow, shape: S.tail(Math.sign(lz)) }); }   // head / tail lights
+    return S;   // (the shapes it says, its `tops` among them: what a level stands on its roof is fitted by carShapes.ts feetOn / layOn)
   }
 
   function shelf(x: number, z: number, w: number, d: number, yaw: number, levels = 4, hgt = 2.0) {
