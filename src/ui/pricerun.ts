@@ -280,7 +280,8 @@ async function price(c: Carry, i: number, loc: Location, view: ReturnType<typeof
     const G = w.__game, pace = w.__timeScale ?? 1; undo.push(() => { w.__timeScale = pace; });
     if (G && w.__runFrames) {   // (the page's loop has been paused since it came ready: only the steps asked for here run the mission)
       const most = 2 * Math.round(PRICE.playS * 60); let done = 0;
-      while (!stopped && G.time < PRICE.playS - 1e-6 && done < most) { const n = Math.max(1, Math.min(PRICE.stepsAFrame, most - done)); w.__runFrames(n, 1 / 60, [], true); done += n; await frame(); }
+      // (as many steps as are left and no more: a page whose own loop ran a frame before it was paused starts a step in, and must not be carried a step past)
+      while (!stopped && G.time < PRICE.playS - 1e-6 && done < most) { const left = Math.max(1, Math.round((PRICE.playS - G.time) * 60)), n = Math.min(PRICE.stepsAFrame, left, most - done); w.__runFrames(n, 1 / 60, [], true); done += n; await frame(); }
       if (G.time < PRICE.playS - 1e-6) notes.push(`the game's clock stood at ${G.time.toFixed(2)} s after ${done} steps: held there, not at ${PRICE.playS} s`); }
     else notes.push('this page has no scripted step: the picture was held where the mission stood when the page came ready');
     w.__timeScale = 0; w.__pauseLoop = loopWas; heldAt = G ? +G.time.toFixed(4) : null;   // the world holds still and the page's own loop draws it again: one picture, every state
