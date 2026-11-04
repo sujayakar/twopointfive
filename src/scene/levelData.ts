@@ -58,8 +58,10 @@ export type Rect = { x0: number; x1: number; z0: number; z1: number };
 export interface FloorData { id: string; name?: string; /** world Y of the walkable surface */ y: number; /** ceiling height above y (WORLD.ceilingY today) */ ceiling: number; }
 /** A named paint: linear diffuse albedo. Boxes and prop parts reference materials by key OR carry an inline albedo (one-offs). `rough` / `metal` = the FINISH the
  *  ray-traced reflection pass reads (boxes.ts Box.rough / metal; docs/internal/claude-md-renderer-systems.md): GGX roughness 0‥1 (absent = matte, ROUGH_DEFAULT: no ray is
- *  spent) and bare metal (F0 = albedo). A box may override either (BoxData.rough / metal). Old files carry neither and load exactly as before. */
-export interface MaterialData { albedo: Vec3; rough?: number; metal?: boolean; notes?: string; }
+ *  spent) and bare metal (F0 = albedo). A box may override either (BoxData.rough / metal). Old files carry neither and load exactly as before.
+ *  `stuff` = WHAT THE PAINT IS MADE OF (scene/stuff.ts: a material of the look, 'plain' or 'waits'): every box and prop's part that wears the row is that,
+ *  unless it says its own (BoxData.stuff). Absent = plain. The look's alone: no rule of the game reads it. */
+export interface MaterialData { albedo: Vec3; rough?: number; metal?: boolean; stuff?: string; notes?: string; }
 /** What is underfoot for everyone who listens to a footstep (game/floor.ts: the mixer, the guards' ears and the SOUND meter read ONE map). Zones are floor
  *  rectangles over the interior's default; outside the building it is `outside` except where x or z < grassEdge. TODAY floor.ts still owns its copy of these
  *  numbers (FINISHES / BUILDING / GRASS_EDGE) — level-probes.ts 'level-validate' asserts the two agree; wiring floor.ts to read this is a follow-up. */
@@ -86,8 +88,9 @@ export interface BoxData {
   emissive?: Vec3;
   /** the finish (see MaterialData): overrides the material's / gives an inline-albedo one-off one; absent = the material's, else matte / dielectric */
   rough?: number; metal?: boolean;
-  /** Box.stuff: what the box is made of, where its paint's name does not say it (scene/stuff.ts: a material of the look, 'plain', 'waits', 'glass' or 'rubber'); absent = the
-   *  paint's name, then its colour. The picture's alone (the look, and what a round's hit looks like: game/particleFx.ts HITSTUFF): no rule of the game reads it. */
+  /** Box.stuff: what the box is made of, where its material's row does not say it (scene/stuff.ts: a material of the look, 'plain', 'waits', 'glass' or
+   *  'rubber'); absent = what its material's row says, and plain for a box with an inline albedo. Nothing is read off the colour. The picture's alone (the
+   *  look, and what a round's hit looks like: game/particleFx.ts HITSTUFF): no rule of the game reads it. */
   stuff?: string;
   flags?: FlagName[];
   /** Box.cutHeight (viewer stage back wall only); absent = never cut */
@@ -107,7 +110,7 @@ export interface BoxData {
 export type PropKindName = 'chair' | 'cardboard' | 'bin' | 'plant';
 /** one piece of a shape (BoxData.shape.with): TRIM, drawn and nothing else — `off` (its centre from the box's, in the box's own frame), half size, yaw from
  *  the box's own, paint (exactly one of material / albedo), finish — and a form. It says no flags: a piece always stands NoShadow */
-export interface ShapePieceData extends ShapeForm { off: Vec3; h: Vec3; yaw?: number; material?: string; albedo?: Vec3; rough?: number; metal?: boolean }
+export interface ShapePieceData extends ShapeForm { off: Vec3; h: Vec3; yaw?: number; material?: string; albedo?: Vec3; rough?: number; metal?: boolean; /** as BoxData.stuff: what the piece is made of where its paint's row does not say it */ stuff?: string }
 export interface ShapeData extends ShapeForm { with?: ShapePieceData[] }
 export interface PropPartData { off: Vec3; h: Vec3; /** relative to the prop's heading; absent = 0 */ yaw?: number; material?: string; albedo?: Vec3; /** as BoxData.stuff */ stuff?: string; /** markings on the part's faces (as BoxData.markings) */ markings?: MarkingDef[]; }
 /** Loose furniture (game/props.ts): a rigid group of parts standing on the floor at (x, z). `half` / `height` are normally FITTED from the parts by the loader
@@ -240,7 +243,7 @@ export interface LevelData {
 export const KEYS = {
   top: ['version', 'name', 'meta', 'floors', 'materials', 'surfaces', 'boxes', 'props', 'lights', 'switchables', 'doors', 'routes', 'chokepoints', 'civilians', 'volumes', 'devices', 'vents', 'connectors', 'mission', 'breaker', 'beacons', 'sky', 'daylight', 'plans', 'scenarios'],
   meta: ['grid', 'bounds', 'generator', 'notes', 'markTexel'], bounds: ['min', 'max'], rect: ['x0', 'x1', 'z0', 'z1'],
-  floor: ['id', 'name', 'y', 'ceiling'], material: ['albedo', 'rough', 'metal', 'notes'],
+  floor: ['id', 'name', 'y', 'ceiling'], material: ['albedo', 'rough', 'metal', 'stuff', 'notes'],
   surfaces: ['building', 'grassEdge', 'inside', 'outside', 'verge', 'zones'], zone: ['id', 'mat', 'x0', 'z0', 'x1', 'z1', 'notes'],
   box: ['id', 'floor', 'group', 'name', 'c', 'h', 'yaw', 'rot', 'material', 'albedo', 'emissive', 'rough', 'metal', 'stuff', 'flags', 'cutHeight', 'markings', 'shape'],
   prop: ['id', 'kind', 'name', 'floor', 'x', 'z', 'yaw', 'mass', 'parts', 'half', 'height'], part: ['off', 'h', 'yaw', 'material', 'albedo', 'stuff', 'markings'],
@@ -260,7 +263,7 @@ export const KEYS = {
 /** the keys a shape's piece (BoxData.shape.with) may carry beside its form, in the order they are written. ITS OWN LIST, read by hand in three places
  *  (levelLoad.ts loadLevel and levelToData, canonShape below): a key a box gains for its paint is added here and there together, or a piece would be allowed
  *  a word nobody reads */
-export const PIECE_KEYS: readonly string[] = ['off', 'h', 'yaw', 'material', 'albedo', 'rough', 'metal'];
+export const PIECE_KEYS: readonly string[] = ['off', 'h', 'yaw', 'material', 'albedo', 'rough', 'metal', 'stuff'];
 
 // ------------------------------------------------------------------------------------------------------------------------------------------------ validation
 const isNum = (v: unknown): v is number => typeof v === 'number' && Number.isFinite(v);
@@ -313,9 +316,9 @@ export function validateLevelData(d: LevelData): string[] {
   const mats: Record<string, MaterialData> = isObj(d.materials) ? d.materials : (err('materials', 'must be an object (name → { albedo })'), {});
   /** the finish fields, wherever they sit (a material or a box): rough a number in [0, 1], metal a boolean */
   const finishOk = (where: string, o: { rough?: unknown; metal?: unknown }) => { if (o.rough !== undefined && !(isNum(o.rough) && o.rough >= 0 && o.rough <= 1)) err(where, 'rough must be a number in [0, 1]'); if (o.metal !== undefined && typeof o.metal !== 'boolean') err(where, 'metal must be a boolean'); };
-  for (const [k, m] of Object.entries(mats)) { if (!isObj(m) || !isVec(m.albedo) || m.albedo.some(x => x < 0)) err(`materials.${k}`, 'albedo must be a Vec3 ≥ 0'); else { known(`materials.${k}`, m, KEYS.material); finishOk(`materials.${k}`, m); if (m.notes !== undefined && typeof m.notes !== 'string') err(`materials.${k}.notes`, 'string'); } }
-  /** what a box, a prop's part or a picture's box says it is made of is a word a box may say (scene/stuff.ts BOX_STUFFS) */
+  /** what a material's row, a box, a prop's part or a picture's box says it is made of is a word a box may say (scene/stuff.ts BOX_STUFFS) */
   const stuffOk = (where: string, o: { stuff?: unknown }) => { if (o.stuff !== undefined && !boxStuffOk(o.stuff)) err(where, `stuff '${show(o.stuff)}' is not a thing a box can be made of (${BOX_STUFFS.join(', ')})`); };
+  for (const [k, m] of Object.entries(mats)) { if (!isObj(m) || !isVec(m.albedo) || m.albedo.some(x => x < 0)) err(`materials.${k}`, 'albedo must be a Vec3 ≥ 0'); else { known(`materials.${k}`, m, KEYS.material); finishOk(`materials.${k}`, m); stuffOk(`materials.${k}`, m); if (m.notes !== undefined && typeof m.notes !== 'string') err(`materials.${k}.notes`, 'string'); } }
   const paintOk = (where: string, o: { material?: string; albedo?: Vec3 }) => {
     const hasM = o.material !== undefined, hasA = o.albedo !== undefined;
     if (hasM === hasA) err(where, 'exactly one of material / albedo');
@@ -366,7 +369,7 @@ export function validateLevelData(d: LevelData): string[] {
       }
       if (isVec(b.h)) for (const e of shapeErrors(b.shape, b.h, PIECE_KEYS)) err(`${w}.shape`, e);
       const ws: any[] = isObj(b.shape) && Array.isArray((b.shape as any).with) ? (b.shape as any).with : [];
-      ws.forEach((q, j) => { if (isObj(q)) { const wq = `${w}.shape.with[${j}]`; paintOk(wq, q); finishOk(wq, q); } });
+      ws.forEach((q, j) => { if (isObj(q)) { const wq = `${w}.shape.with[${j}]`; paintOk(wq, q); finishOk(wq, q); stuffOk(wq, q); } });   // (a piece's paint, finish and word, as a box's)
     }
   };
   boxes.forEach((b, i) => { if (isObj(b)) boxRule(`boxes[${i}] '${show(b.id)}'`, b); });

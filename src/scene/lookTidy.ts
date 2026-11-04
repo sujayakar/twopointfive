@@ -5,6 +5,8 @@
 // Called by the PAGE once a frame (main.ts); it reads and writes the flags of drawn-only boxes and nothing else — the game cannot tell it ran.
 import { BoxFlag, SHEET_MASK as DECAL_MASK, type Box } from './boxes';
 import { GWOT_PALETTE, gwotSimOf } from './gwotPalette';
+import { paintOf } from './stuff';
+import type { LookDoorStuff } from './look';
 import type { Vec3 } from '../math/vec';
 import { hashStr } from '../math/dice';
 
@@ -48,16 +50,21 @@ export function lookTidy(world: { statics: Box[]; geomSerial: number }): void {
 
 const ACCENTS = ['paintBlue', 'paintGreen', 'paintRust'] as const;
 const near = (a: Vec3, b: Vec3): boolean => Math.abs(a[0] - b[0]) < 0.004 && Math.abs(a[1] - b[1]) < 0.004 && Math.abs(a[2] - b[2]) < 0.004;   // (a paint or one of its stand-ins: gwotAs shifts by ≤ 0.0024)
-/** the page calls it once the game stands, with the switch on (main.ts); returns how many leaves it painted */
-export function lookDoors(doors: readonly { def: { name: string; exterior?: boolean; steel?: boolean }; box: Box }[], statics: readonly Box[], paint?: { out: readonly [number, number, number]; in?: readonly [number, number, number]; stuff?: Box['stuff'] }): number {
+/** the page calls it once the game stands, with the switch on (main.ts); returns how many leaves it painted.
+ *  WHAT A LEAF IS MADE OF GOES WITH ITS PAINT (scene/stuff.ts): a row's own word for that side of the house, else what the paint handed here is made of (the
+ *  palette's accent rows are paint, its grey wood is wood); a leaf painted in a row's bare numbers with no word, and one with old paint faded on it, is plain.
+ *  A leaf's own shade is a tone of its paint, so every leaf in one paint is one stuff. */
+export function lookDoors(doors: readonly { def: { name: string; exterior?: boolean; steel?: boolean }; box: Box }[], statics: readonly Box[], paint?: { out: readonly [number, number, number]; in?: readonly [number, number, number]; stuff?: LookDoorStuff }): number {
   const count = [0, 0, 0]; let wears = false;
   for (const b of statics) { if (gwotSimOf(b.albedo) === undefined) continue; wears = true; ACCENTS.forEach((a, i) => { if (near(b.albedo, GWOT_PALETTE[a])) count[i]++; }); }
   if (!wears) return 0;
   const top = Math.max(...count), accent: Vec3 = paint ? [paint.out[0], paint.out[1], paint.out[2]] : GWOT_PALETTE[top > 0 ? ACCENTS[count.indexOf(top)] : 'paintGreen'];   // (a level with a row in look.ts LOOK_DOORS wears that row; else the paint counted off its boxes)
   let n = 0;
   const wood: Vec3 = paint?.in ? [paint.in[0], paint.in[1], paint.in[2]] : GWOT_PALETTE.woodGrey, faded: Vec3 = [accent[0] * 0.7 + wood[0] * 0.3, accent[1] * 0.7 + wood[1] * 0.3, accent[2] * 0.7 + wood[2] * 0.3];
+  const said = (side: 'out' | 'in') => typeof paint?.stuff === 'string' ? paint.stuff : paint?.stuff?.[side];
   for (const d of doors) { if (d.def.steel) continue;
     const h = hashStr(d.def.name), k = 0.9 + (h % 1000) / 1000 * 0.2, a = d.def.exterior ? accent : (h >>> 10) % 4 === 0 ? faded : wood;   // (one inside door in four keeps some old paint)
-    d.box.albedo = [a[0] * k, a[1] * k, a[2] * k]; if (paint?.stuff) d.box.stuff = paint.stuff; n++; }   // (a row that says what its leaves are made of: the colour rule is not asked)
+    const w = typeof paint?.stuff === 'string' ? paint.stuff : a === faded ? undefined : said(d.def.exterior ? 'out' : 'in') ?? paintOf(a)?.stuff;
+    d.box.albedo = [a[0] * k, a[1] * k, a[2] * k]; if (w !== undefined && w !== 'plain') d.box.stuff = w; else delete d.box.stuff; n++; }
   return n;
 }
