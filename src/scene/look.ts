@@ -6,6 +6,7 @@
 // ONE SWITCH (and under it `suit`, the sneaking suit: on whenever the look is, looks only). OFF in this module, so everything headless (every probe, frozen digest and level load) stands as it was; the PAGE turns it on at boot before the
 // level and the cast are fetched (host/profile.ts pageSwitches: on unless the URL carries ?look=plain), a harness run under TPS_LOOK=1.
 // No imports here: scene/, game/ and the tools all read it.
+import type { BoxStuff } from './boxes';
 export const LOOK = {
   on: false,
   /** THE SNEAKING SUIT (the maintainer, 10-10: "sam should also be in a black sneaking suit in stealth missions (probs not loud ones)"): with the look on, Sam —
@@ -57,7 +58,8 @@ export const LOOK_LEVELS: Readonly<Record<string, string>> = {
 /** DOOR LEAVES per level (picture only; scene/lookTidy.ts lookDoors): the paint of the outside leaves and, where a level has its own, of the inside ones — for
  *  the levels whose accent is not one of the three paints lookDoors counts off a level's boxes (the compound's blue, the barracks' green, the depot's oxide
  *  red). Without a row here every such level got the barracks' green doors. Keyed by the level's own file, colours as plain numbers (no imports here). */
-export const LOOK_DOORS: Readonly<Record<string, { out: readonly [number, number, number]; in?: readonly [number, number, number] }>> = {
+export const LOOK_DOORS: Readonly<Record<string, { out: readonly [number, number, number]; in?: readonly [number, number, number]; /** what the leaves are made of (Box.stuff), where the colour rule would say something else */ stuff?: BoxStuff }>> = {
+  'white-roof.json': { out: [0.88, 0.24, 0.03], in: [0.74, 0.74, 0.73], stuff: 'enamel' },   // the look study's roof: orange gloss outside, white inside, kept
   'block.json': { out: [0.22, 0.4, 0.1] }, 'block-squads.json': { out: [0.22, 0.4, 0.1] },   // the telephone exchange: pistachio gloss
   'warehouse.json': { out: [0.6, 0.42, 0.04] },                                  // the customs shed: safety yellow
   'registry.json': { out: [0.1, 0.1, 0.105] },                                   // the records office: black lacquer

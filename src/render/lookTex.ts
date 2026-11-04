@@ -1,18 +1,49 @@
-// THE MATERIAL MAPS (STYLE.md, Surfaces; the page /look, render/frame.ts lookConfig; shaders/look.wgsl reads them): eleven tiling materials and two of masonry made HERE, by the page,
+// THE MATERIAL MAPS (STYLE.md, Surfaces; the page /look, render/frame.ts lookConfig; shaders/look.wgsl reads them): the tiling materials (LOOK_NAMES) and two of masonry made HERE, by the page,
 // at boot — no image file, nothing fetched, nothing licensed. Each layer is LOOK_N × LOOK_N texels over LOOK_TILE metres, two maps a layer:
 //   A (rgba8): rgb = what the box's paint is multiplied by, ÷ 2 (128 = the paint as it is; so a map can also turn a hue), a = the height, 0‥1 of the layer's range
 //   B (rgba8): rg = the tangent-space normal's xy (½ + ½·n), b = roughness, a = the hollows: ½ of how open the texel is (1 = not in a hollow) + what puts the tile's paint-weighed mean at ½ (lookLayer)
 // Everything is periodic over the tile, so a layer repeats without a seam; the shader breaks the repeat up. Pure arithmetic on typed arrays: runs the same in a browser and under bun.
-export const LOOK_N = 512, LOOK_TILE = 2.0, LOOK_LAYERS = 18;
+export const LOOK_N = 512, LOOK_TILE = 2.0, LOOK_LAYERS = 28;
 /** the layers. A STUFF is a layer a box's paint can be drawn as, and its number is its place here and one (0 = plain): surface.wgsl's eight in its class order
  *  (SURF_MUD 1 → layer 0 …), then the look's own (look.wgsl LOOK_CLOTH 9 … LOOK_CARPAINT 16). After the stuffs, the two layers of what a mud wall is made of under
  *  its paint, which no box is: NEW STUFFS GO IN FRONT OF THOSE TWO and nothing else moves (the shader is told where they are: gbuffer.ts lookWgsl). A box's
- *  word has room for 31 stuffs (gbuffer.ts lookWordOf). Ask lookStuffOf for a name's number; never count places. A new stuff says in look.wgsl, by name, how
- *  it is laid (a box's own frame or the world's) and whether the weather touches it: nothing there is "every stuff from here up". */
-export const LOOK_NAMES = ['mud wall', 'plaster', 'block', 'earth', 'gravel', 'slab', 'wood', 'sheet', 'cloth', 'metal', 'paint', 'veneer', 'plastic', 'fabric', 'steel', 'carpaint', 'field stone', 'mud brick'] as const;
+ *  word has room for 31 stuffs (gbuffer.ts lookWordOf). Ask lookStuffOf for a name's number; never count places. A new stuff says how it is laid and what
+ *  the weather does to it in ITS ROW below (STUFFS): the shader reads the rows and names no stuff for either. */
+export const LOOK_NAMES = ['mud wall', 'plaster', 'block', 'earth', 'gravel', 'slab', 'wood', 'sheet', 'cloth', 'metal', 'paint', 'veneer', 'plastic', 'fabric', 'steel', 'carpaint', 'stucco', 'skim', 'gloss block', 'board concrete', 'cast panel', 'paver', 'brushed', 'louvre', 'enamel', 'carpet', 'field stone', 'mud brick'] as const;
 export type LookName = typeof LOOK_NAMES[number];
-/** the roughness each layer is written around (the shader adds a texel's difference from it to the box's own finish) */
-export const LOOK_ROUGH = [0.95, 0.86, 0.93, 0.94, 0.88, 0.82, 0.84, 0.5, 0.96, 0.75, 0.5, 0.4, 0.5, 0.95, 0.42, 0.26, 0.8, 0.95];
+/** WHAT A STUFF IS, one row a name (a name with no row does not compile). The maps below and the shader (look.wgsl lookSurface, through the prelude:
+ *  gbuffer.ts lookWgsl) both read these, and the shader names no stuff for any of them.
+ *  rough   the roughness the layer is written around (the shader adds a texel's difference from it to the box's own finish)
+ *  relief  how much the relief is stood up when the normal is taken off the height (1 = true to the metres drawn; a map read from twenty metres wants more)
+ *  built   laid or cast IN PLACE (a rendered wall, laid blocks, a poured floor, pavers): its map lies by the world, so courses and seams run on from one box
+ *          of a wall to the next. Absent = the thing's own (boards, cloth, what a factory made): its map lies in the box's frame and goes where the box goes
+ *  fades   how far sun and years blotch it (1; 0.3 = made in a factory and kept indoors, or washed). ABSENT = a place somebody keeps: no blotch, no drift
+ *          of hue, none of the traffic's dirt on it
+ *  soaks   standing on the ground it takes a damp foot, and its head bleaches and sheds dark runs
+ *  unit    a stuff MADE OF PIECES: one piece's size, metres along and up (each divides LOOK_TILE), whether every other course is laid half a piece along,
+ *          and how far one piece's shade may sit from the next's (± × the paint). The map draws the pieces' joints at these sizes (`piece`) and gives them no
+ *          shade of their own; the shader gives each piece of the WORLD its shade by where it is, so a wall of eighty panels is not a tile's eight repeated */
+interface Stuff { rough: number; relief: number; built?: true; fades?: number; soaks?: true; unit?: readonly [u: number, v: number, bond: boolean, shade: number] }
+const STUFFS: Readonly<Record<LookName, Stuff>> = {
+  'mud wall': { rough: 0.95, relief: 1.6, built: true, fades: 1, soaks: true }, plaster: { rough: 0.86, relief: 1.8, built: true, fades: 1, soaks: true },
+  block: { rough: 0.93, relief: 1.5, built: true, fades: 1, soaks: true }, earth: { rough: 0.94, relief: 1.6, built: true, fades: 1, soaks: true },
+  gravel: { rough: 0.88, relief: 1.3, built: true, fades: 1, soaks: true }, slab: { rough: 0.82, relief: 1.8, built: true, fades: 1, soaks: true },
+  wood: { rough: 0.84, relief: 1.6, fades: 1 }, sheet: { rough: 0.5, relief: 1.0, fades: 1, soaks: true }, cloth: { rough: 0.96, relief: 1.6, fades: 1, soaks: true },
+  metal: { rough: 0.75, relief: 1.6, fades: 1, soaks: true }, paint: { rough: 0.5, relief: 1.6, fades: 1, soaks: true },
+  veneer: { rough: 0.4, relief: 1.4, fades: 0.3 }, plastic: { rough: 0.5, relief: 1.4, fades: 0.3 }, fabric: { rough: 0.95, relief: 1.6, fades: 0.3 },
+  steel: { rough: 0.42, relief: 1.4, fades: 0.3 }, carpaint: { rough: 0.26, relief: 1.2, fades: 0.3 },
+  stucco: { rough: 0.42, relief: 1.5, built: true }, skim: { rough: 0.55, relief: 1.6, built: true },
+  'gloss block': { rough: 0.4, relief: 1.4, built: true, unit: [0.4, 0.2, true, 0.02] }, 'board concrete': { rough: 0.42, relief: 1.6, built: true },
+  'cast panel': { rough: 0.68, relief: 1.4, built: true, unit: [1.0, 0.5, true, 0.07] }, paver: { rough: 0.5, relief: 1.4, built: true, unit: [0.5, 0.5, false, 0.018] },
+  brushed: { rough: 0.32, relief: 1.2 }, louvre: { rough: 0.45, relief: 1.0 }, enamel: { rough: 0.3, relief: 1.2 }, carpet: { rough: 0.95, relief: 1.4 },
+  'field stone': { rough: 0.8, relief: 1.0, fades: 1, soaks: true }, 'mud brick': { rough: 0.95, relief: 1.2, fades: 1, soaks: true },
+};
+/** the rows as the prelude and the checks read them, in LOOK_NAMES' order */
+export const LOOK_ROUGH: readonly number[] = LOOK_NAMES.map(n => STUFFS[n].rough);
+export const LOOK_BUILT: readonly number[] = LOOK_NAMES.map(n => STUFFS[n].built ? 1 : 0);
+export const LOOK_FADES: readonly number[] = LOOK_NAMES.map(n => STUFFS[n].fades ?? 0);
+export const LOOK_SOAKS: readonly number[] = LOOK_NAMES.map(n => STUFFS[n].soaks ? 1 : 0);
+export const LOOK_UNIT: readonly (readonly [number, number, number, number])[] = LOOK_NAMES.map(n => { const u = STUFFS[n].unit; return u ? [u[0], u[1], u[2] ? 1 : 0, u[3]] : [0, 0, 0, 0]; });
 /** the layers a layer's own drawing reads beside its own (look.wgsl): a mud wall shows its stone and its brick, and stones come up through earth at a wall's foot.
  *  Whoever makes a layer makes these with it (gbuffer.ts needLook). */
 export const LOOK_WITH: Readonly<Partial<Record<LookName, readonly LookName[]>>> = { 'mud wall': ['field stone', 'mud brick'], earth: ['gravel'] };
@@ -397,9 +428,147 @@ const carpaint: Mat = (u, v, t) => {
   tint(t, (0.99 + 0.012 * (peel - 0.5) + 0.05 * dust * (1 - 0.7 * run) + 0.04 * scr) * (1 - 0.45 * chip));
   t.rough = 0.17 + 0.04 * (peel - 0.5) + 0.26 * dust * (1 - 0.8 * run) + 0.12 * scr + 0.5 * chip;
 };
-const MATS: Mat[] = [mud, plaster, block, earth, gravel, slab, wood, sheet, cloth, metal, paint, veneer, plastic, fabric, steel, carpaint, stone, brick];
-/** how much the relief is stood up when the normal is taken off the height (1 = true to the metres above; a map read from twenty metres wants more) */
-const RELIEF = [1.6, 1.8, 1.5, 1.6, 1.3, 1.8, 1.6, 1.0, 1.6, 1.6, 1.6, 1.4, 1.4, 1.6, 1.4, 1.2, 1.0, 1.2];
+// ---- THE KEPT CITY'S SURFACES (11-04; the maintainer, of a game whose walls he sent pictures of: "it has some very tastefully done high frequency detail but
+// overall quite flat", "it's all quite intentionally dressed", "i'm referring specifically to the texture work"). Ten stuffs drawn the way those surfaces are
+// made, each ONE colour (the box's) with next to nothing added to it, and all of what it is in its relief, its finish and its PIECES: a coat of gloss paint over
+// something rough shows every lump as a glint; a thing cast or laid in pieces shows its seams, the holes its formwork left, and a little dirt where a seam
+// holds it. Nothing here is weathered: these are places somebody keeps (no `fades`, no `soaks`). And NOTHING IN A MAP IS BETWEEN A HAND AND A DOOR WIDE BUT
+// ITS OWN PIECES: soft tone or sheen inside the two-metre tile is seen to repeat at the game's size.
+/** m from a point to the nearest edge of the piece of `name` it is in (the stuff's own `unit`); `pieceOut` holds which piece (its column and course, wrapped)
+ *  and where in it (0‥1) */
+const pieceOut = { col: 0, row: 0, fx: 0, fy: 0 };
+function piece(name: LookName, u: number, v: number): number {
+  const U = STUFFS[name].unit!, pu = Math.round(LOOK_TILE / U[0]), pv = Math.round(LOOK_TILE / U[1]);
+  const y = v * pv, row = Math.floor(y), x = u * pu + (U[2] && (row & 1) ? 0.5 : 0), col = Math.floor(x);
+  pieceOut.col = wrap(col, pu); pieceOut.row = wrap(row, pv); pieceOut.fx = x - col; pieceOut.fy = y - row;
+  return Math.min(Math.min(pieceOut.fx, 1 - pieceOut.fx) * U[0], Math.min(pieceOut.fy, 1 - pieceOut.fy) * U[1]);
+}
+/** soft lumps on a jittered lattice of `p` × `q` cells, a share of the cells holding one: how high the highest lump that reaches this point stands here, 0‥1.
+ *  Each lump is asked of its own cell AND the eight round it, so a lump is whole across its cell's edge and two that landed close run together */
+function lumps(u: number, v: number, p: number, q: number, seed: number, share: number): number {
+  const x = u * p, y = v * q, ix = Math.floor(x), iy = Math.floor(y); let best = 0;
+  for (let j = -1; j <= 1; j++) for (let i = -1; i <= 1; i++) {
+    const cx = wrap(ix + i, p), cy = wrap(iy + j, q); if (hash(cx, cy, seed + 2) > share) continue;
+    const dx = x - (ix + i + hash(cx, cy, seed)), dy = y - (iy + j + hash(cx, cy, seed + 1)), a = TAU * hash(cx, cy, seed + 3), ca = Math.cos(a), sa = Math.sin(a);
+    const size = 0.4 + 0.3 * hash(cx, cy, seed + 4), d = Math.hypot((dx * ca + dy * sa) * 0.72, (-dx * sa + dy * ca) * 1.25);   // (longer the way it was dragged; never past a cell and a tenth)
+    const t = clamp01(1 - d / size), dome = Math.min(1, 1.5 * t * t * (3 - 2 * t));                                                // a rounded shoulder up to a top pressed nearly flat
+    best = Math.max(best, dome * (0.65 + 0.35 * hash(cx, cy, seed + 5)));
+  }
+  return best;
+}
+// ---- stucco under gloss paint: a wall, a pillar, a stairwell in one strong colour. Thrown on and pressed back with the flat of a trowel: soft lumps three to
+// nine centimetres across, each dragged a little one way, no two alike and none in rows, run together where they landed close; between them the float coat.
+// The paint lies thick and smooth on the lumps and thin between them, so every lump carries a glint and the colour itself never changes.
+const stucco: Mat = (u, v, t) => {
+  const big = lumps(u, v, 22, 22, 301, 0.74), small = lumps(u + 0.013, v, 40, 46, 306, 0.8), top = Math.max(big, small);
+  const grit = cells(u, v, 120, 311, 1.0), fine = vn(u, v, 210, 210, 321), drag = vn(u, v, 20, 160, 322);   // (the trowel's drag lines across the pressed tops)
+  t.h = 0.0044 * big + 0.0021 * small + 0.0005 * smooth(0.4, 0.15, grit.f1) + 0.00012 * (fine - 0.5) + 0.0002 * top * (drag - 0.5);
+  tint(t, 0.98 + 0.035 * top);                                    // (the hollows a breath darker: paint lies thin there. Their shadow is the cavity map's)
+  t.rough = 0.6 - 0.26 * top + 0.04 * (fine - 0.5);
+};
+// ---- a skim of plaster, floated and rolled with white paint: a corridor's walls, its ceiling, a poured floor, a painted pad. Flat to the eye and alive under
+// a lamp: the roller's stipple, a grain of soft peaks a few millimetres apart; a swell a hand wide, seen only when a light rakes it; pinholes where air came
+// out of the skim. No strokes to count and nothing a tile could be seen to repeat.
+const skim: Mat = (u, v, t) => {
+  const stip = 0.6 * vn(u, v, 150, 150, 331) + 0.4 * vn(u, v, 290, 290, 332), nap = cells(u, v, 170, 333, 1.0), peak = smooth(0.5, 0.1, nap.f1);
+  const swell = 0.6 * vn(u, v, 17, 17, 334) + 0.4 * vn(u, v, 31, 31, 335), pin = cells(u, v, 96, 336, 1.0), hole = pin.id < 0.035 ? smooth(0.22, 0.08, pin.f1) : 0;
+  t.h = 0.0005 * (swell - 0.5) + 0.00042 * (stip - 0.5) + 0.00022 * peak - 0.0011 * hole;
+  tint(t, (1 + 0.012 * (stip - 0.5)) * (1 - 0.3 * hole));
+  t.rough = 0.55 + 0.08 * (stip - 0.5) - 0.05 * peak + 0.3 * hole;
+};
+// ---- concrete block under gloss paint, laid in courses (40 by 20 cm, every other course half a block along): a service corridor. The block's open face is
+// still there under the coats, softened: pores the paint bridged and pores it fell into. The joints are struck back a finger's width and the paint has
+// rounded their shoulders, so each course has a line of light along its lower edge and a line of shade above it. One colour, joints and all.
+const glossBlock: Mat = (u, v, t) => {
+  const d = piece('gloss block', u, v), col = pieceOut.col, row = pieceOut.row;
+  const joint = smooth(0.006, 0.0035, d), shoulder = smooth(0.012, 0.006, d) * (1 - joint);
+  const pore = cells(u, v, 120, 341, 1.0), open = pore.id < 0.45 ? smooth(0.45, 0.15, pore.f1) * (0.3 + 1.5 * pore.id) : 0, grit = vn(u, v, 200, 200, 342), lump = vn(u, v, 70, 70, 345), peel = fbm(u, v, 60, 2, 343);
+  const sit = hash(col, row, 344) - 0.5;                                                     // no two blocks quite flush
+  t.h = (1 - joint) * (0.0007 * sit + 0.0004 * (grit - 0.5) + 0.0005 * (lump - 0.5) + 0.00012 * (peel - 0.5) - 0.0008 * open - 0.0016 * shoulder) - 0.0055 * joint;
+  tint(t, (1 - 0.16 * joint) * (1 - 0.06 * open) * (0.995 + 0.012 * (peel - 0.5)));
+  t.rough = mix(0.36 + 0.08 * (grit - 0.5) + 0.14 * open, 0.6, joint);
+};
+// ---- concrete cast against boards, painted: a plant room's wall. Every board of the formwork is still there in the wall: twelve and a half centimetres
+// high, a metre and more long, butted end to end at no two places alike; each left its grain, each sat a hair proud of or behind its neighbour, and the
+// grout that ran between two boards stands as a fine fin. Air caught against the wood left holes, the size of a pea to the size of a thumbnail.
+const boardConcrete: Mat = (u, v, t) => {
+  const NB = 16, y = v * NB, row = wrap(Math.floor(y), NB), fy = y - Math.floor(y);
+  const b0 = 0.15 + 0.7 * hash(row, 0, 351), b1 = (b0 + 0.36 + 0.3 * hash(row, 1, 351)) % 1;   // two butt joints a course, in tiles
+  const lo = Math.min(b0, b1), hi = Math.max(b0, b1), seg = u >= lo && u < hi ? 1 : 0;
+  let du = Math.min(Math.abs(u - b0), Math.abs(u - b1)); du = Math.min(du, 1 - du);
+  const butt = smooth(0.0026, 0.001, du), dv = Math.min(fy, 1 - fy) * LOOK_TILE / NB, fin = smooth(0.004, 0.0012, dv) * (0.4 + 0.6 * vn(u, v, 24, NB, 360));
+  const id = hash(row, seg, 352), id2 = hash(row, seg, 353), id3 = hash(row, seg, 349);
+  const wav = 0.02 * Math.sin(u * TAU * 2 + id * 40) + 0.012 * Math.sin(u * TAU * 5 + id2 * 30), g = fy + wav * 5;         // the grain wanders along the board
+  const ring = 0.5 + 0.5 * Math.cos((g + 0.3 * id3) * TAU * (2.5 + 2 * id3)), grain = 0.45 * Math.pow(ring, 2.5) + 0.35 * vn(u + id, g, 3, 190, 355) + 0.2 * vn(u + id2, g, 12, 380, 356);   // (whole periods along the tile: a board that crosses its edge has no seam there)
+  const saw = id3 > 0.6 ? 0.5 + 0.5 * Math.sin(u * TAU * 91 + 14 * fy) : 0.5;                                              // some boards came off the saw rough: its strokes across them, a couple of centimetres apart
+  const bug = cells(u, v, 52, 358, 1.0), near = smooth(0.35, 0.05, Math.min(fy, 1 - fy)), hole = bug.id < 0.03 + 0.05 * near ? smooth(0.07 + 1.6 * bug.id, 0.025, bug.f1) : 0, fine = vn(u, v, 230, 230, 359);
+  t.h = 0.0018 * (id - 0.5) + 0.0007 * (grain - 0.5) + 0.00035 * (saw - 0.5) + 0.00009 * (fine - 0.5) + 0.0009 * fin * (1 - butt) - 0.0014 * butt - 0.0024 * hole;
+  tint(t, (1 + 0.03 * (id2 - 0.5) + 0.03 * (grain - 0.5)) * (1 - 0.08 * butt) * (1 - 0.45 * hole));
+  t.rough = 0.42 + 0.14 * (grain - 0.5) + 0.06 * (id - 0.5) + 0.35 * hole;
+};
+// ---- concrete cast in panels, a metre by half a metre, every other course half a panel along: the white walls of a big hall, the plant on a roof. Each panel
+// was poured on another day and is a shade its own (the shader's: `unit`); its edges are a struck joint with a small chamfer; four holes near its corners are
+// where it was lifted and fixed. The face is fine and close, with a few air holes. What dirt there is has a reason: it sits in the joints, a little creeps
+// onto the face from them, and the rain has drawn faint lines down from a joint's lower lip.
+const castPanel: Mat = (u, v, t) => {
+  const d = piece('cast panel', u, v), col = pieceOut.col, row = pieceOut.row, fx = pieceOut.fx, fy = pieceOut.fy;
+  const joint = smooth(0.006, 0.002, d), cham = smooth(0.014, 0.006, d) * (1 - joint);
+  const hx = Math.min(fx, 1 - fx) * 1.0 - 0.09, hy = Math.min(fy, 1 - fy) * 0.5 - 0.075, hd = Math.hypot(hx, hy), lift = smooth(0.012, 0.006, hd), lip = smooth(0.017, 0.012, hd) * (1 - lift);
+  const sit = hash(col, row, 361), agg = vn(u, v, 200, 200, 363), agg2 = vn(u, v, 90, 90, 364);
+  const bug = cells(u, v, 46, 365, 1.0), hole = bug.id < 0.05 ? smooth(0.08 + 2.4 * bug.id, 0.025, bug.f1) : 0;
+  const creep = smooth(0.06, 0.0, d) * (0.5 + 0.5 * vn(u, v, 40, 40, 366)), streak = smooth(0.25, 0.0, 1 - fy) * smooth(0.55, 0.85, vn(u, v, 70, 4, 367)) * (1 - joint);   // under a joint's lower lip (fy near 1 = the top of a panel)
+  t.h = (1 - joint) * (0.0005 * (sit - 0.5) + 0.00016 * (agg - 0.5) - 0.0012 * cham - 0.0016 * hole + 0.0004 * lip) - 0.004 * joint - 0.005 * lift;
+  tint(t, (1 + 0.03 * (agg - 0.5) + 0.02 * (agg2 - 0.5)) * (1 - 0.34 * joint) * (1 - 0.6 * lift) * (1 - 0.3 * hole) * (1 - 0.07 * creep) * (1 - 0.045 * streak));
+  t.rough = mix(0.68 + 0.08 * (agg - 0.5), 0.92, Math.max(joint, lift));
+};
+// ---- pavers on a roof, a floor of tiles: half a metre square, laid straight. Pale cast stone with its aggregate ground flat and showing as fine specks; a
+// narrow dark joint; edges eased so each tile is outlined by a hairline of light; no two tiles quite level (their shade is the shader's: `unit`), and a
+// little dust swept into the joints and onto the tile's rim.
+const paver: Mat = (u, v, t) => {
+  const d = piece('paver', u, v), col = pieceOut.col, row = pieceOut.row, fx = pieceOut.fx, fy = pieceOut.fy;
+  const joint = smooth(0.0045, 0.0015, d), ease = smooth(0.012, 0.0045, d) * (1 - joint);
+  const sit = hash(col, row, 371), tx = hash(col, row, 372) - 0.5, ty = hash(col, row, 373) - 0.5;
+  const sp = cells(u, v, 128, 374, 1.0), speck = sp.id < 0.5 ? smooth(0.42, 0.2, sp.f1) * (sp.id < 0.22 ? -1 : 0.7) : 0, fine = vn(u, v, 256, 256, 375), dust = smooth(0.05, 0.0, d) * (0.4 + 0.6 * vn(u, v, 50, 50, 376));
+  t.h = (1 - joint) * (0.0005 * (sit - 0.5) + 0.0009 * (tx * (fx - 0.5) + ty * (fy - 0.5)) + 0.00006 * (fine - 0.5) - 0.0011 * ease) - 0.0028 * joint;
+  tint(t, (1 + 0.06 * speck + 0.015 * (fine - 0.5)) * (1 - 0.42 * joint) * (1 - 0.06 * dust));
+  t.rough = mix(0.46 + 0.1 * Math.abs(speck) + 0.05 * (fine - 0.5) + 0.12 * dust, 0.9, joint);
+};
+// ---- brushed steel: a door's kick plate, a cabinet, a hatch. Bare, bright, and brushed one way (along u): a grain of lines too fine to count that turns a
+// lamp into a streak across it. It is touched and kicked, so the brushing is crossed by a few longer scratches and dulled in smears a hand wide where hands
+// and boots go. No rust, no paint.
+const brushed: Mat = (u, v, t) => {
+  const g = 0.55 * vn(u, v, 5, 256, 381) + 0.3 * vn(u + 0.3, v, 11, 512, 382) + 0.15 * vn(u, v, 40, 512, 383), smear = smooth(0.55, 0.85, vn(u, v, 23, 9, 384)), smear2 = smooth(0.6, 0.9, vn(u, v, 31, 14, 385));   // (smears a hand wide and no wider: anything broader would be seen to repeat)
+  const scr = Math.max(scratches(u, v, 6, 386, 0.45, 1), scratches(u, v, 13, 388, 0.3, 1));
+  t.h = 0.00011 * (g - 0.5) - 0.00016 * scr;
+  tint(t, 0.99 + 0.05 * (g - 0.5) - 0.015 * smear + 0.08 * scr);
+  t.rough = 0.3 + 0.12 * (g - 0.5) + 0.1 * smear + 0.06 * smear2 + 0.15 * scr;
+};
+// ---- a louvre: the grille of an air handler, the vent in a door. Pressed blades six centimetres apart running along u (thirty-two to the tile: sixteen
+// texels each, so no blade's gap falls between texels), each sloping out and down to a rolled lip, the gap under it black.
+const louvre: Mat = (u, v, t) => {
+  const NS = 32, y = v * NS, fy = y - Math.floor(y), peel = fbm(u, v, 60, 2, 391);
+  const blade = smooth(0.0, 0.2, fy) * (1 - smooth(0.2, 1.0, fy) * 0.9), gap = smooth(0.2, 0.1, fy), lip = smooth(0.14, 0.22, fy) * smooth(0.34, 0.24, fy);
+  t.h = 0.012 * blade + 0.0015 * lip - 0.004 * gap + 0.0001 * (peel - 0.5);
+  tint(t, (1 - 0.72 * gap) * (0.99 + 0.02 * (peel - 0.5)));
+  t.rough = mix(0.42 + 0.05 * (peel - 0.5), 0.9, gap);
+};
+// ---- enamel: gloss paint on something smooth and kept. A pipe, a rail, a line painted on a floor, a machine's case, a door. One colour and the spray's or
+// the brush's orange peel as a wobble of the shine. Nothing else: no dust, no chips, no rust (old `paint` is the coat left out; `carpaint` the one the road dusts).
+const enamel: Mat = (u, v, t) => {
+  const peel = fbm(u, v, 70, 2, 395), fine = vn(u, v, 256, 256, 396);
+  t.h = 0.00012 * (peel - 0.5) + 0.00003 * (fine - 0.5);
+  tint(t, 0.995 + 0.01 * (peel - 0.5));
+  t.rough = 0.3 + 0.05 * (peel - 0.5) + 0.02 * (fine - 0.5);
+};
+// ---- carpet: a kept floor's loop pile, one dye. Tufts a centimetre across in close rows, each a soft round back, a yarn or two a shade off the rest.
+const carpet: Mat = (u, v, t) => {
+  const c = cells2(u, v, 170, 170, 398, 0.5), tuft = smooth(0.62, 0.1, c.f1), fine = vn(u, v, 256, 256, 399);
+  t.h = 0.0007 * tuft + 0.00008 * (fine - 0.5);
+  tint(t, (0.93 + 0.14 * c.id) * (0.9 + 0.1 * tuft));
+  t.rough = 0.95 + 0.03 * (fine - 0.5);
+};
+const MATS: Mat[] = [mud, plaster, block, earth, gravel, slab, wood, sheet, cloth, metal, paint, veneer, plastic, fabric, steel, carpaint, stucco, skim, glossBlock, boardConcrete, castPanel, paver, brushed, louvre, enamel, carpet, stone, brick];
+const RELIEF: readonly number[] = LOOK_NAMES.map(n => STUFFS[n].relief);
 
 /** the layers a box's own paint is drawn as (a class of look.wgsl); the rest are what a wall is made of UNDER its paint (the plinth's stone, the brick behind fallen render) */
 export const LOOK_PAINTED = LOOK_NAMES.indexOf('field stone');

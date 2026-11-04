@@ -1864,6 +1864,29 @@ interleaved and filtered to their quiet minimum, and a row whose p75 sits far ab
   (a cost to measure before a car park of them is a default). Agreed words, proposed to the cars part: body `carpaint`, roughness about 0.2, not metal (a
   metallic paint: metal, 0.3); glass plain, 0.05 to 0.1; bumpers and arch trim `plastic`, 0.5; chrome and hubcaps `steel` with metal, 0.25; tyres plain, 0.9.
   It takes the `kept` rule (no damp foot, no bleached head). Drawn as a tile; never seen on a page or a GPU.
+- **TEN KEPT STUFFS, AND A STUFF SAYS ITS OWN ROW** (11-04; `render/lookTex.ts` stucco, skim, gloss block, board concrete, cast panel, paver, brushed,
+  louvre, enamel, carpet; the level `white-roof`, `docs/agents/levels.md`). The maintainer, of a game whose pictures he sent: "it has some very
+  tastefully done high frequency detail but overall quite flat", "an antidote to our repeating textures that look generated", and, after trying the
+  Paint row down on a GPU, "it all still just looks pretty flat and \"slop\" ... it's all quite intentionally dressed", "i'm referring specifically to
+  the texture work". So these are drawn the way such surfaces are MADE: one colour (the box's) with next to nothing added, and everything in the
+  relief, the finish and the pieces. Soft lumps of stucco under gloss paint; a rolled skim; painted block in courses; concrete that kept its form
+  boards, their grain and its air holes; concrete cast in metre panels with a struck joint, four fixing holes and a little dirt in the joints and
+  under their lower lip; half-metre pavers; brushed steel; a louvre; plain gloss enamel; a loop-pile carpet. THREE RULES CAME WITH THEM.
+  (1) A MAP HOLDS NOTHING BETWEEN A HAND AND A DOOR WIDE BUT ITS OWN PIECES: soft tone or sheen inside the two-metre tile is seen to repeat at the
+  game's size (brushed steel's first smears and the skim's first shiny patches did). (2) A STUFF MADE OF PIECES says so (`unit`: a piece's size, its
+  bond, how far a piece's shade may sit from the next's). The map draws the joints at that size (`piece`) and gives the pieces no shade; `look.wgsl
+  lookPieceTone` gives each piece of the WORLD its shade by where it is and which face it is on, so a wall of eighty panels is not a tile's eight
+  over and over and two walls that look the same way are not one pattern twice. (3) WHAT A STUFF IS TO THE SHADER IS ITS ROW, by name, in
+  `lookTex.ts STUFFS` (a name without a row does not compile): `rough`, `relief`, `built` (laid in place: the map lies by the world, so courses run on
+  from one box of a wall to the next), `fades` (how far the weather blotches it; absent = a place somebody keeps: no blotch, no drift of hue, none of
+  the traffic's dirt), `soaks` (a damp foot, a bleached head), `unit`. The shader's lists of stuffs by name for these are gone (`kept`, the classes
+  laid in a box's frame); the sixteen older stuffs' rows give the statements they had (× 1, or the same 0.3). Lumps and joints are drawn larger than
+  life: at the game's zoom a pixel is about 1.5 cm, and relief finer than 3 cm reads only as finish. A level's door row (`scene/look.ts LOOK_DOORS`)
+  may say what its leaves are made of (`stuff`). NOT DONE: a piece is not fitted to a box's face (the level stands on a half-metre grid instead; a
+  40 cm block does not divide it), the older `block` keeps its tile's own shades, and by day NO SMOOTH FINISH HAS A SUN GLINT (`reflect.wgsl
+  rtGlints` skips the sun), which is most of what a gloss coat over lumps is for. CHECK `tools/qa/lookmaps-check.ts` (every layer: no seam, as bright
+  as its paint, the word's room; the rows: line 11). The tiles were judged as software pictures under one raking light and the level as software
+  stills. Never seen on a GPU.
 - **A WET COAT DOES NOT MIRROR A LIGHT IT CANNOT SEE** (11-01; `composite.wgsl wetCoatSpec`, `WET_HIDDEN` 8). The maintainer: "still lots of fireflies/sparkles
   in that room", "some on the shadowed side too", "lots of temporal instability on the guy's back too". The sheen scaled every light's lobe by its class's shadowed
   over unshadowed light; in a shut room by day the hidden sun is the whole unshadowed sum, so its lobe was drawn at the bulb's strength. A light whose
