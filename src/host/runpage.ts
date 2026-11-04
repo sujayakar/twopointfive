@@ -7,3 +7,7 @@
 export const BENCH_RUN_WORD = 'benchrun', PRICE_RUN_WORD = 'pricerun';
 export const RUN_PAGE_WORDS: readonly string[] = [BENCH_RUN_WORD, PRICE_RUN_WORD];
 export const runPage = (q: URLSearchParams): boolean => RUN_PAGE_WORDS.some(w => q.has(w));
+/** … and A PAGE WHOSE PICTURE IS PRICED: a level of the pricing run. Its preset is pinned by its address, and the quality ladder's own switch is off from before
+ *  its first frame (main.ts), so nothing of the picture moves with this machine's frame rate and a level's two pages stand on the same rows (ui/pricerun.ts ONE
+ *  RUNG). Not the benchmark's scene: what its ladder does with the scene is part of what it reports. */
+export const heldPage = (q: URLSearchParams): boolean => q.has(PRICE_RUN_WORD);

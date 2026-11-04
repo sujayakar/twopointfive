@@ -93,7 +93,7 @@ import { PerfSweep } from './ui/perfsweep';
 import { Bench, benchView, machineFacts, type BenchScene } from './ui/bench';
 import { benchBegin, benchLegOfPage, BENCH_RUN_KEY } from './ui/benchrun';
 import { priceLevelsPage } from './ui/pricerun';
-import { runPage } from './host/runpage';
+import { heldPage, runPage } from './host/runpage';
 import { BENCH_SCENES } from './host/benchScenes';
 import { HandsOff } from './host/handsoff';
 import { oneAirFlip, wispMotesFlip } from './ui/sweepSnow';
@@ -418,6 +418,7 @@ async function main() {
   { const fs = new URLSearchParams(location.search).get('fireshed'); if (fs !== null) engine.settings.fireSmokeShed = !(fs === '0' || fs === 'off' || fs === 'false'); }   // ?fireshed=0: verylow keeps an open fire's smoke, as every other preset does (ui/quality.ts FIRE SMOKE SHED) — before the Quality below applies its first preset
   const quality = new Quality(engine, smoke); window.__quality = quality;
   { const qp = new URLSearchParams(location.search).get('quality'); if (qp && (QUALITY_NAMES as string[]).includes(qp)) { quality.auto = false; quality.climbAllowed = false; quality.apply(qp as QualityName); } }   // ?quality= pins for this visit without touching the remembered choice
+  if (heldPage(new URLSearchParams(location.search))) quality.adaptive = false;   // a priced page (host/runpage.ts): the ladder's switch off before any frame is sampled, so the preset's own scale and rows stand (with a pinned preset its sample() then does nothing at all)
   { const ap = new URLSearchParams(location.search).get('aim'); const aim = ap === null ? null : ladderAimOf(ap); if (aim !== null) engine.settings.ladderAim = aim; else if (ap !== null) console.warn(`?aim=${ap}: not one of asnow | 0 | 60 | 90 | 120 | display — the ladder keeps its default (${engine.settings.ladderAim === 60 ? 'hold 60' : 'settings.ladderAim ' + engine.settings.ladderAim})`); if (engine.settings.ladderAim) quality.watchDisplay(); }   // the frame rate the ladder works to (ui/quality.ts HOLD): settings.ladderAim's default is HOLD 60; ?aim= sets it for this visit, ?aim=asnow (or ?aim=0) = the ladder as it was before the aim
   { const lh = new URLSearchParams(location.search).get('ladderheld'); if (lh !== null) engine.settings.ladderHeld = !(lh === '0' || lh === 'off' || lh === 'false'); }   // ?ladderheld=0: the paced check off under an aim (ui/quality.ts, under PACED) = hold 60 cuts a held page on the union's size alone, as before
   { const ls = new URLSearchParams(location.search).get('laddershed'); if (ls !== null) engine.settings.ladderShed = !(ls === '0' || ls === 'off' || ls === 'false'); }   // ?laddershed=0: auto cuts resolution with sharp direct left on (ui/quality.ts SHED), as before
