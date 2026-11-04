@@ -5,7 +5,7 @@
 // here (a software page and then a GPU do that); these are the rules a picture cannot show you are broken until a level is lit by them.
 import { readFileSync } from 'node:fs';
 import { ROOT } from './headless.ts';
-const { lookLayer, lookLayerSliced, lookMip, lookStuffOf, LOOK_LAYERS, LOOK_PAINTED, LOOK_NAMES, LOOK_N, LOOK_ROUGH, LOOK_TILE, LOOK_WITH } = await import(`${ROOT}/src/render/lookTex.ts`);
+const { lookLayer, lookLayerSliced, lookMip, lookStuffOf, LOOK_LAYERS, LOOK_PAINTED, LOOK_NAMES, LOOK_N, LOOK_ROUGH, LOOK_TILE, LOOK_WITH, LOOK_BUILT, LOOK_FADES, LOOK_SOAKS, LOOK_UNIT } = await import(`${ROOT}/src/render/lookTex.ts`);
 const { GBuffer, LOOK_OF, LOOK_MATCH, LOOK_DEFAULTS, LOOK_WORD, lookStuff, lookWordOf, lookAmounts, lookNeedPaints, lookForget } = await import(`${ROOT}/src/render/gbuffer.ts`);
 const { GWOT_PALETTE } = await import(`${ROOT}/src/scene/gwotPalette.ts`);
 
@@ -182,5 +182,29 @@ const hollowsOf = (b: Uint8Array) => { let s = 0; for (let i = 3; i < b.length; 
     'the block is the shader\'s struct to the byte: its eighth row begins with the cloth layer\'s tone and hollow (1 and 0 until that layer is made, then what the fill found), and after it the table of slots, every one −1 at the making',
     `block ${cfgSize} bytes, ${rows} rows in the shader, ${block} numbers written, ${bufs.length} writes; the eighth row ${first ? [...first].join(' ') : '?'} at the making, ${last ? [...last].map(v => v.toFixed(3)).join(' ') : '?'} after the fill`);
 }
+// 11. A STUFF SAYS ITS OWN ROW (lookTex.ts STUFFS, as the prelude hands it to look.wgsl): a row a layer; the older stuffs' rows are what the shader's own lists
+//     said (the first six laid by the world, the five kept ones blotched a third as far and never soaked, boards never soaked); a stuff that soaks also fades
+//     (the shader asks the one before the other); a piece's size divides the tile and its map's joint IS where the row says; and a stuff somebody keeps holds
+//     no tone between a hand and a door wide (a tile's mean over 12.5 cm and over 25 cm squares stays within a hundredth and a half of its paint)
+{ const rowsOk = [LOOK_ROUGH, LOOK_BUILT, LOOK_FADES, LOOK_SOAKS, LOOK_UNIT].every((a: readonly unknown[]) => a.length === LOOK_LAYERS);
+  const old = LOOK_NAMES.slice(0, 16).map((_: string, l: number) => `${LOOK_BUILT[l]}${LOOK_FADES[l]}${LOOK_SOAKS[l]}`).join(' ');
+  const oldOk = old === '111 111 111 111 111 111 010 011 011 011 011 00.30 00.30 00.30 00.30 00.30';
+  const dry = LOOK_NAMES.filter((_: string, l: number) => LOOK_SOAKS[l] > 0 && !(LOOK_FADES[l] > 0));
+  const bad: string[] = [], slow: string[] = []; let worst = 0, worstName = '';
+  for (let l = 0; l < LOOK_PAINTED; l++) { const U = LOOK_UNIT[l], H = layers[l].a;
+    if (U[3] > 0 || U[0] > 0) {
+      const pu = LOOK_TILE / U[0], pv = LOOK_TILE / U[1];
+      if (Math.abs(pu - Math.round(pu)) > 1e-9 || Math.abs(pv - Math.round(pv)) > 1e-9 || !(U[3] > 0 && U[3] <= 0.1) || (U[2] !== 0 && U[2] !== 1)) { bad.push(`${LOOK_NAMES[l]}: a piece of ${U[0]} by ${U[1]} m`); continue; }
+      const rowPx = N / pv; let joint = 0, mid = 0;   // the height along a course's edge against the height along its middle
+      for (let x = 0; x < N; x++) { joint += H[(0 * N + x) * 4 + 3]; mid += H[(Math.round(rowPx / 2) * N + x) * 4 + 3]; }
+      if (!(joint < mid - N * 20)) bad.push(`${LOOK_NAMES[l]}: no joint along a course's edge (${(joint / N).toFixed(0)} against ${(mid / N).toFixed(0)} of 255)`);
+    }
+    if (!(LOOK_FADES[l] > 0)) { let m: Uint8Array = layers[l].a, n = N;
+      const sd = (a: Uint8Array, n: number) => { let q = 0, q2 = 0; for (let i = 0; i < n * n; i++) { const v = lum(a[i * 4], a[i * 4 + 1], a[i * 4 + 2]) / 127.5; q += v; q2 += v * v; } const mu = q / n / n; return Math.sqrt(Math.max(0, q2 / n / n - mu * mu)); };
+      while (n > 8) { m = lookMip(m, n, false); n >>= 1; if (n === 16 || n === 8) { const v = sd(m, n); if (U[0] === 0 && v > worst) { worst = v; worstName = `${LOOK_NAMES[l]} over ${(LOOK_TILE / n * 100).toFixed(1)} cm`; } if (U[0] === 0 && v > 0.015) slow.push(`${LOOK_NAMES[l]} ${v.toFixed(3)} over ${(LOOK_TILE / n * 100).toFixed(1)} cm`); } } }
+  }
+  check(rowsOk && oldOk && dry.length === 0 && bad.length === 0 && slow.length === 0,
+    'a stuff says its own row: one a layer; the sixteen older stuffs are laid, blotched and soaked as the shader\'s own lists had them; whatever soaks also fades; a piece\'s size divides the tile and the map\'s joint is where the row says; and a kept stuff that is not made of pieces holds no tone between a hand and a door wide',
+    `${LOOK_UNIT.filter((u: readonly number[]) => u[0] > 0).length} stuffs made of pieces, ${LOOK_FADES.filter((f: number, l: number) => l < LOOK_PAINTED && !(f > 0)).length} kept; the widest slow tone ${worst.toFixed(4)} (${worstName})${oldOk ? '' : '; the older rows read ' + old}${dry.length ? '; soaks and does not fade: ' + dry.join(', ') : ''}${bad.length ? '; ' + bad.join('; ') : ''}${slow.length ? '; slow tone: ' + slow.join(', ') : ''}`); }
 console.log(red ? '\nlookmaps: RED' : '\nlookmaps: all pass');
 process.exit(red ? 1 : 0);

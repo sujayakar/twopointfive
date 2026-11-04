@@ -47,6 +47,17 @@ fn lookFin(v: vec2f) -> vec2f { return select(vec2f(0.0), clamp(v, vec2f(-4096.0
 /** a layer's slot in the arrays, −1 = that layer is not made (or one its drawing reads is not) */
 fn lookSlot(layer0: i32) -> i32 { let layer = clamp(layer0, 0, LOOK_LAYERS - 1); return i32(lookCfg.s[layer / 4][layer % 4]); }
 fn lookBase(layer: i32) -> f32 { return LOOK_BASE[clamp(layer, 0, LOOK_LAYERS - 1)]; }
+/** a stuff's own row (the prelude's LOOK_KEEP: lookTex.ts STUFFS): x = laid in place, its map lies by the world; y = how far sun and years blotch it
+ *  (0 = a place somebody keeps: no blotch, no drift of hue, none of the traffic's dirt); z = it takes a damp foot and a bleached head */
+fn lookKeep(layer: i32) -> vec3f { return LOOK_KEEP[clamp(layer, 0, LOOK_LAYERS - 1)]; }
+/** A STUFF MADE OF PIECES (the prelude's LOOK_UNIT; lookTex.ts STUFFS' unit): what a piece of the WORLD at map place `uvm` (metres) on face `face` multiplies its
+ *  paint by, so a wall of eighty panels is not a tile's eight shades over and over, and two walls that look the same way are not one pattern twice. 1 for a
+ *  stuff that is not made of pieces */
+fn lookPieceTone(layer: i32, uvm: vec2f, face: i32) -> f32 {
+  let un = LOOK_UNIT[clamp(layer, 0, LOOK_LAYERS - 1)]; if (un.w <= 0.0) { return 1.0; }
+  let row = i32(floor(uvm.y / un.y)); let col = i32(floor(uvm.x / un.x + select(0.0, 0.5, un.z > 0.5 && (row & 1) != 0)));
+  return 1.0 + un.w * (2.0 * snowHash(vec2i(col + 131 * face, row - 57 * face), u32(layer) + 77u) - 1.0);
+}
 fn lookTap(layer: i32, st0: vec2f, dx0: vec2f, dy0: vec2f) -> LookTap {
   let slot = lookSlot(layer); let st = lookFin(st0); let dx = lookFin(dx0); let dy = lookFin(dy0);
   var t: LookTap;
@@ -68,7 +79,7 @@ fn lookClots(p: vec2f, fp: f32, dens: f32, salt0: u32) -> f32 {
 }
 fn lookSurface(cls0: u32, wp: vec3f, n: vec3f, bi: u32, lc: vec3f, hf: vec4f, albedoIn: vec3f, roughIn: f32, dwx: vec3f, dwy: vec3f, fp: f32) -> LookOut {
   let cls = select(cls0, 0u, cls0 != 0u && lookSlot(i32(max(cls0, 1u)) - 1) < 0);   // (a stuff whose map is not made yet is drawn plain)
-  let kept = (cls >= LOOK_VENEER && cls <= LOOK_STEEL) || cls == LOOK_CARPAINT;   // made in a factory and kept (indoors, or washed): no damp foot, no bleached head (BY NAME: a stuff added after these says here what it is)
+  let keep = lookKeep(i32(max(cls, 1u)) - 1); let wild = step(0.001, keep.y);   // (the stuff's own row, lookTex.ts: nothing below names a stuff to say whether weather touches it. wild 0 = a place somebody keeps)
   var o: LookOut; o.albedo = albedoIn; o.n = n; o.rough = roughIn; o.tilted = false;
   if (hf.w < 0.0 || (all(lookCfg.a == vec4f(0.0)) && all(lookCfg.b.xyz == vec3f(0.0)))) { return o; }   // (every amount at 0: the box as the game draws it, and none of the reads below)
   let b = boxGeo[bi];
@@ -86,7 +97,7 @@ fn lookSurface(cls0: u32, wp: vec3f, n: vec3f, bi: u32, lc: vec3f, hf: vec4f, al
   let word = boxLook(bi); let moves = (word & 32u) != 0u;        // not one of the level's statics: rebuilt every frame, wherever the game has it now
   let salt = word >> 6u;                                          // the box's own number (0‥44; render/gbuffer.ts lookWordOf): never its place in the list, which moves when a wall is breached
   if (cls != 0u) {
-    if (cls == SURF_WOOD || cls == SURF_SHEET || cls >= LOOK_CLOTH || moves) {   // the box's own: a door carries its boards round with it, and ANYTHING THAT MOVES carries its map (a cream leaf, a clay jar: laid by the world, the plaster stood still while the door swung through it)
+    if (keep.x < 0.5 || moves) {   // (keep.x, the stuff's own row: built in place = by the world. Boards, sheet, cloth and what a factory made are the box's own)   // the box's own: a door carries its boards round with it, and ANYTHING THAT MOVES carries its map (a cream leaf, a clay jar: laid by the world, the plaster stood still while the door swung through it)
       if ((cls < LOOK_CLOTH || cls == LOOK_VENEER) && dot(abs(eb), hf.xyz) > dot(abs(ea), hf.xyz) && (lying || cls == SURF_WOOD || cls == LOOK_VENEER)) { let t = ea; ea = eb; eb = t; }   // boards run the long way; a standing sheet's ribs run up
       if (cls == SURF_SHEET && min(dot(abs(eb), hf.xyz), dot(abs(ea), hf.xyz)) < 0.2) { return o; }                       // a bucket is not a roof sheet
       uv = vec2f(dot(lc, ea), dot(lc, eb)) + vec2f(0.37, 0.61) * f32(salt);   // (every one of the box's 91 numbers its own place on the map: at seven places, two lids in a yard wore one chip; 45 since the word made room for 31 stuffs)
@@ -108,7 +119,7 @@ fn lookSurface(cls0: u32, wp: vec3f, n: vec3f, bi: u32, lc: vec3f, hf: vec4f, al
       tn = mix(tn, vec2f(c * g2.x + s * g2.y, -s * g2.x + c * g2.y), w);
       tp.a = mix(tp.a, t2.a, w); tp.b = mix(tp.b, t2.b, w);
     }
-    var mult = tp.a.rgb * 2.0; var cav = tp.b.a; var dr = tp.b.z - lookBase(layer);
+    var mult = tp.a.rgb * 2.0 * lookPieceTone(layer, uv / max(k2.w, 0.1), select(i32(floor(dot(wp, n) * 100.0 + 0.31)) + 4096 * i32(ax), i32(salt), keep.x < 0.5 || moves)); var cav = tp.b.a; var dr = tp.b.z - lookBase(layer);   // (which face: the plane it lies in, to the centimetre, for what stands still; the box's own number for what moves)
     // ---- MASONRY: what the wall is MADE of, laid by the wall's own height and length and never by a tile's repeat. A mud wall that stands on the ground has a
     // plinth of field stone (lookTex.ts 'field stone', in the wall's metres from the ground up) to a line that wanders along it, the render lapping down over the
     // stones' heads with a rounded lip; and where the render has let go, in patches that gather above the plinth, the mud brick under it ('mud brick'), a
@@ -138,7 +149,7 @@ fn lookSurface(cls0: u32, wp: vec3f, n: vec3f, bi: u32, lc: vec3f, hf: vec4f, al
       }
     }
     // ---- WEATHER on the ground: the level's traffic map (r = walked, g = close to a wall)
-    if (k.w > 0.0 && lying && n.y > 0.0 && wp.y < 0.25) {
+    if (k.w > 0.0 && wild > 0.0 && lying && n.y > 0.0 && wp.y < 0.25) {   // (wild: not on a floor somebody keeps)
       let wuv = (wp.xz - WORLD_MIN.xz) / (vec2f(f32(GRID_W), f32(GRID_H)) * GRID_CELL);
       let wm = textureSampleLevel(wearTex, linSamp, wuv, 0.0);
       let rag = lookSlow(uv * 0.9);
@@ -173,11 +184,11 @@ fn lookSurface(cls0: u32, wp: vec3f, n: vec3f, bi: u32, lc: vec3f, hf: vec4f, al
     T = quatRotate(q, ea); B = quatRotate(q, eb); uv = vec2f(dot(wp, T), dot(wp, B));
   }
   // ---- WEATHER on anything that stands on the ground or lies in the open: slow blotches; a wall's foot and head
-  if (k.w > 0.0 && cls != 0u) {
+  if (k.w > 0.0 && cls != 0u && wild > 0.0) {   // (wild: none of it on what somebody keeps. Every stuff that soaks also fades: lookTex.ts STUFFS)
     let slow = lookSlow(uv * 0.33 + vec2f(5.0, 2.0)); let slower = detailNoise(uv * 0.09 + vec2f(1.3, 8.1));
-    alb *= 1.0 + k.w * select(1.0, 1.7, lying) * select(1.0, 0.3, kept) * (0.3 * (slow - 0.5) + 0.2 * (slower - 0.5));   // (the ground most of all: forty metres of one paint)
+    alb *= 1.0 + k.w * select(1.0, 1.7, lying) * keep.y * (0.3 * (slow - 0.5) + 0.2 * (slower - 0.5));   // (the ground most of all: forty metres of one paint)
     alb *= mix(vec3f(1.0), mix(vec3f(1.05, 1.0, 0.93), vec3f(0.95, 1.0, 1.06), smoothstep(0.3, 0.7, detailNoise(uv * 0.13 + vec2f(9.7, 4.2)))), 0.6 * k.w);   // … and no two stretches quite one hue
-    if (!lying && cls != SURF_WOOD && !kept) {
+    if (!lying && keep.z > 0.5) {   // (lookTex.ts LOOK_SOAKS: not boards, not what a factory made, not a place somebody keeps)
       let foot0 = b.c.y - b.h.y;
       if (foot0 < 0.12) {                                                       // the wall stands on the ground: splash, damp and the dirt the rain throws up, to a ragged line
         let line = 0.18 + 0.55 * detailNoise(vec2f(uv.x * 0.7, 3.3)) + 0.16 * detailNoise(vec2f(uv.x * 6.0, 9.1)) + 0.05 * detailNoise(uv * vec2f(23.0, 9.0));
