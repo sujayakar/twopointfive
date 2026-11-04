@@ -18,7 +18,7 @@
 // piece with a front faces local −Z unless its line says otherwise; vehicles point +X.
 import type { Vec3 } from '../math/vec';
 import { Box, BoxFlag } from './boxes';
-import { pickupShapes, vanShapes, bikeShapes, hubPaint } from './carShapes';
+import { pickupShapes, vanShapes, bikeShapes, lorryShapes, hubPaint } from './carShapes';
 import { WORLD } from './world';
 import type { Level, LightDef, PropKind, PropPart, PropDef } from './level';
 import { MarkingDef, MarkFace, MarkRes, MarkPal, MARKING_TEXEL, RES_K, CellCanvas, marking, mkHash, faceHalf, faceIndex } from './markings';
@@ -541,6 +541,24 @@ export function gwotKit(host: GwotHost) {
     for (const sz of [-1, 1]) b(-2.77, sz * 1.1, 0.5, 1.9, 0.42, 0.025, P, {}, sz * 0.5);   // the two back doors, swung out
     for (const sz of [-1, 1]) { b(2.43, sz * 0.66, 0.62, 0.76, 0.03, 0.16, M.plasticWhite, { shape: S.head(sz) }); b(-2.41, sz * 0.86, 0.9, 1.2, 0.02, 0.04, M.truckRed, { shape: S.tail(sz) }); }
   };
+  /** COVER (full height): a TWO-AXLE LORRY with a canvas tilt, 7 m, nose toward local +X (the pass's, where it stopped when the road shut). Returns the
+   *  shapes its boxes say (scene/carShapes.ts lorryShapes): a level that snows it in says `snow*` of its own caps */
+  const lorry = (x: number, z: number, yaw = 0) => {
+    const L = piece(x, z, yaw), S = lorryShapes({ red: M.truckRed, canvas: M.canvas, iron: M.iron, galv: M.galv, rust: M.rust, rubber: M.rubber, poplar: M.poplar, white: M.plasticWhite, glass: M.glassDark, jerry: M.jerryYellow, olive: M.olive, orange: M.prodOrange });
+    for (const lx of [2.2, -1.2, -2.25]) for (const s of [-1, 1]) L(lx, s * 0.98, 0, 0.96, 0.48, 0.15, M.rubber, { shape: S.wheel(s, lx > 0) });
+    L(-0.1, 0, 0.5, 0.74, 3.1, 0.42, M.iron, { shape: S.chassis });                            // the chassis
+    L(3.42, 0, 0.5, 0.78, 0.06, 1.12, M.iron, { shape: S.bumper });                            // bumper
+    L(2.75, 0, 0.74, 1.5, 0.62, 0.98, M.truckRed, { shape: S.bonnet });                        // bonnet
+    L(1.55, 0, 0.74, 1.5, 0.62, 1.12, M.truckRed, { shape: S.cab });                           // the cab: doors
+    L(1.55, 0, 1.5, 2.08, 0.58, 1.06, M.glassDark, { shape: S.glass });                        // … glass
+    L(1.5, 0, 2.08, 2.2, 0.62, 1.1, M.truckRed, { shape: S.roof });                            // … roof
+    for (const s of [-1, 1]) L(3.38, s * 0.7, 0.86, 1.02, 0.02, 0.1, M.plasticWhite, { shape: S.lamp(s) });   // headlamps
+    L(-1.15, 0, 0.74, 0.9, 2.05, 1.16, M.woodGrey);                                            // the bed
+    for (const s of [-1, 1]) L(-1.15, s * 1.14, 0.9, 1.45, 2.05, 0.03, M.poplar, { shape: S.side(s) });   // sideboards
+    L(-3.17, 0, 0.9, 1.45, 0.03, 1.16, M.poplar, { shape: S.tail }); L(0.87, 0, 0.9, 1.7, 0.03, 1.16, M.poplar);   // tailboard, headboard
+    L(-1.15, 0, 0.9, 1.95, 1.95, 1.06, M.canvas, { shape: S.load });                           // the load under its canvas
+    return S;
+  };
   /** COVER (waist, thin): a small MOTORBIKE on its stand, nose toward local +X */
   const motorbike = (x: number, z: number, yaw = 0, tank: GwotMat = 'truckRed') => {
     const b = piece(x, z, yaw), S = bikeShapes(M[tank]);   // (S: the shape each box says — scene/carShapes.ts)
@@ -624,7 +642,7 @@ export function gwotKit(host: GwotHost) {
     // stores & cover
     drum, drums, drumDown, jerryCan, gasBottle, crates, sacks, sandbags, hesco, jersey, tWall, tyres, blocks, woodPile,
     // machines & vehicles
-    generator, waterTank, pump, pickup, van, motorbike, handcart, stall, container, satDish, bush,
+    generator, waterTank, pump, pickup, van, lorry, motorbike, handcart, stall, container, satDish, bush,
     // lights
     wire, bulb, lantern, tube, floodLight,
   };
