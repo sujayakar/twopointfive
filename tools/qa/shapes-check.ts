@@ -47,6 +47,7 @@ const fall = (h: Vec3): Plane => { const L = Math.hypot(0.15, 0.2), n = [0.15 / 
  *  a box that says a form may not carry). Returns the data and the boxes' places in the list. */
 function shapedYard(): { d: any; tub: number; wheel: number; bonnet: number; crate: number } {
   const d = dataOf('gwot-yard.json'), B: any[] = d.boxes, near = (a: number, b: number) => Math.abs(a - b) < 1e-6;
+  for (const b of B) delete b.shape;   // (the yard's own vehicles say shapes of their own: this yard says only the ones written here)
   const tub = B.findIndex(b => near(b.h[0], 2.45) && near(b.h[1], 0.25) && near(b.h[2], 0.86)); if (tub < 0) throw new Error('shapes-check: the yard has no pickup body (2.45 × 0.25 × 0.86)');
   const T = B[tub], yaw = T.yaw ?? 0;
   const by = (l: Vec3, h: Vec3) => { const c = worldOf(T.c, yaw, [l[0], l[1] - T.c[1], l[2]]); return B.findIndex(b => Math.hypot(b.c[0] - c[0], b.c[1] - c[1], b.c[2] - c[2]) < 1e-3 && near(b.h[0], h[0]) && near(b.h[1], h[1]) && near(b.h[2], h[2])); };
@@ -83,8 +84,8 @@ export async function shapesCheck(): Promise<boolean> {
       const has = (e: string[], w: string) => e.length > 0 && e.every(x => x.includes('shape')) && e.some(x => x.includes(w));
       const cases: [string, string[], string][] = [
         ['nine planes', errs(d => { d.boxes[Y.tub].shape.cut.push([0.6, 0.8, 0, 2], [-0.6, 0.8, 0, 2], [0, 0.8, 0.6, 0.7]); }), 'at most 8'],
-        ['a second plane beside an arc', errs(d => { d.boxes[Y.bonnet].shape.cut.push([0, 1, 0, 0.05]); }), 'room for 1'],
-        ['a round on a box not square across its axis', errs(d => { d.boxes[Y.wheel].h = [0.37, 0.3, 0.13]; }), 'square'],
+        ['six planes beside an arc', errs(d => { for (const dd of [0.05, 0.06, 0.07, 0.08, 0.09]) d.boxes[Y.bonnet].shape.cut.push([0, 1, 0, dd]); }), 'room for 5'],
+        ['a round on a box not square across its axis', errs(d => { d.boxes[Y.wheel].h = [0.37, 0.29, 0.13]; }), 'square'],
         ['an arc higher than its box', errs(d => { d.boxes[Y.bonnet].shape.arc.rise = 0.5; }), 'high'],
         ['an arc that rises more than its half width', errs(d => { d.boxes[Y.tub].shape.with[1].arc = { axis: 1, rise: 0.2 }; }), 'half round'],
         ['a round and an arc at once', errs(d => { d.boxes[Y.wheel].shape.arc = { axis: 3, rise: 0.1 }; }), 'one or the other'],
@@ -100,7 +101,7 @@ export async function shapesCheck(): Promise<boolean> {
         ['a shape on a slab of a kit octagon', errs(d => { const T = d.boxes[Y.tub], r = 0.3, t8 = Math.tan(Math.PI / 8);   // (four slabs as the kit writes a drum: one paint, turned 45° each, their tops stepped down 2 mm)
           for (let k = 0; k < 4; k++) { const top = 1 - 0.002 * k; d.boxes.push({ id: `shapes_check_drum_${k}`, floor: T.floor, c: [T.c[0], top / 2, T.c[2] + 6], h: [r, top / 2, r * t8], yaw: k * Math.PI / 4, material: T.material }); }
           d.boxes[d.boxes.length - 2].shape = { with: [{ off: [0, 0.6, 0], h: [0.05, 0.05, 0.05], albedo: [1, 1, 1] }] }; }), 'octagon'],
-        ['a form on a box with markings', errs(d => { d.boxes[Y.bonnet].markings = dataOf('gwot-yard.json').boxes[Y.bonnet].markings; }), 'markings'],
+        ['a form on a box with markings', errs(d => { const m = d.boxes.find((b: any) => b.markings && !b.rot && !b.shape); m.shape = { cut: [[1, 0, 0, 0]] }; }), 'markings'],
         ['a form on a pane of glass', errs(d => { d.boxes[Y.wheel].flags = ['Glass']; }), 'Glass'],
       ];
       const good = errs(() => { }), kept = cases.filter(c => has(c[1], c[2]));
