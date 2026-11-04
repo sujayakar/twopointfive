@@ -26,6 +26,7 @@ const H = WORLD.ceilingY;
 
 import { GWOT_PALETTE, GWOT_FINISH, GWOT_SIM, GWOT_DARKER, ROUGH_CLOTH, gwotAs, type GwotMat, type GwotSim } from './gwotPalette';
 import { pieces } from './library';
+import { tonedAs } from './stuff';
 export { GWOT_PALETTE, GWOT_FINISH, GWOT_MATERIALS, GWOT_SURFACE, GWOT_SIM, gwotAs, gwotSimOf, type GwotMat, type GwotSim } from './gwotPalette';
 
 /** one opening in a wall (officeGen.ts / levelKit.ts Opening, field for field) */
@@ -117,13 +118,13 @@ export function gwotKit(host: GwotHost) {
   /** the paint `m` standing for something else to rounds and blasts (gwotPalette.ts gwotAs): `b(…, G.as('mud', 'wall'))` */
   const as = (m: GwotMat, sim: GwotSim): Mat => ({ ...M[m], albedo: gwotAs(m, sim) });
   /** the paint `m` DARKER IN ONE PIECE, k of it (TONE: 0.55‥0.99): how wear, wet and shade are written — the ground's own paint, never a colour laid on it.
-   *  The look draws a row times k in that band as that row's stuff. For DRAWN-ONLY things: to a round a toned row is no palette colour (gwotPalette.ts
+   *  A tone is made of what its row is made of: it keeps the row's word (scene/stuff.ts tonedAs). For DRAWN-ONLY things: to a round a toned row is no palette colour (gwotPalette.ts
    *  gwotSimOf knows a paint by its exact colour). Throws when the tone is ANOTHER row's colour (gravel × 0.7 is `oil`), which would be drawn as that row; a tone still near its own row is that row. */
   const toned = (m: GwotMat, k: number): Vec3 => {
     if (!(k > TONE.lo && k < TONE.hi)) throw new Error(`gwotKit: a tone of ${m} at ${k} is outside ${TONE.lo}‥${TONE.hi}`);
     const p = GWOT_PALETTE[m], a: Vec3 = [Math.round(p[0] * k * 1e4) / 1e4, Math.round(p[1] * k * 1e4) / 1e4, Math.round(p[2] * k * 1e4) / 1e4];
     for (const n of Object.keys(GWOT_PALETTE) as GwotMat[]) { const q = GWOT_PALETTE[n]; if (n !== m && Math.abs(a[0] - q[0]) < TONE.near && Math.abs(a[1] - q[1]) < TONE.near && Math.abs(a[2] - q[2]) < TONE.near) throw new Error(`gwotKit: ${m} × ${k} is the colour of ${n}: pick another k`); }
-    return a;
+    return tonedAs(p, a);
   };
   type CellFn = (i: number, j: number, W: number, Hc: number) => number;
   /** one face's markings, not yet cut to a box: resolved against the box's own half extents when the box is added (so a bitmap can never leave its face) */

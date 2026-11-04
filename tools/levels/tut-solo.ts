@@ -32,6 +32,7 @@ import { WORLD } from '../../src/scene/world';
 import { BoxFlag } from '../../src/scene/boxes';
 import { findCarLamps } from '../../src/game/carlamps';
 import { LAST_IN, LAST_MEN } from '../../levels/tut-solo.script';
+import { PANEL_GREY } from '../../src/scene/stuff';
 
 export const NAME = 'tut-solo';
 export const NOTES = 'The tutorial\'s solo loud mission: a walled fuel halt on a road, walked along one line (road, gate, truck court, arch, gun court, shop, store) and back out. Its fights are staged by levels/tut-solo.script.ts. Regenerate: bun run tools/levels/export.ts tut-solo';
@@ -339,7 +340,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
 
   // ---- the breaker and the beacon every level carries (the generator's lot, behind the shop: nobody is sent there) ----
   grp('breaker');
-  const brk = add({ c: [28.0, 1.35, 10.34], h: [0.28, 0.36, 0.04], albedo: [0.42, 0.44, 0.45], name: 'breaker_panel' });
+  const brk = add({ c: [28.0, 1.35, 10.34], h: [0.28, 0.36, 0.04], albedo: PANEL_GREY, name: 'breaker_panel' });
   const led = add({ c: [27.82, 1.62, 10.29], h: [0.015, 0.015, 0.015], albedo: P.plasticBlack, rough: 0.5, emissive: [0.3, 4, 0.6], flags: BoxFlag.NoShadow });
   grp('beacons');
   add({ c: [20.5, 2.28, 5.18], h: [0.07, 0.06, 0.07], albedo: [0.2, 0.2, 0.22], flags: BoxFlag.NoShadow });

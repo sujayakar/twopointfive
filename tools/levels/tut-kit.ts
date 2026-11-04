@@ -34,6 +34,7 @@ import { WORLD } from '../../src/scene/world';
 import { BoxFlag } from '../../src/scene/boxes';
 import { findCarLamps } from '../../src/game/carlamps';
 import { LAST_IN, LAST_MEN, YARD_IN, YARD_MEN } from '../../levels/tut-kit.script';
+import { PANEL_GREY } from '../../src/scene/stuff';
 
 export const NAME = 'tut-kit';
 export const NOTES = 'The tutorial\'s third mission: a walled fuel halt on a road at night. He goes in alone with his own kit (gate, truck court, arch, gun court, shop, store), then calls his four up and has them use theirs (the breaker box, the bunk room, the fuel room, the wash yard). Its fights are staged by levels/tut-kit.script.ts. Regenerate: bun run tools/levels/export.ts tut-kit';
@@ -392,7 +393,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
 
   // ---- the breaker box, on the gun court's north wall where the view sees it, and the beacon every level carries ----
   grp('breaker');
-  const brk = add({ c: [BREAKER[0], BREAKER[1], BREAKER[2]], h: [0.28, 0.36, 0.045], albedo: [0.42, 0.44, 0.45], name: 'mains_box' });
+  const brk = add({ c: [BREAKER[0], BREAKER[1], BREAKER[2]], h: [0.28, 0.36, 0.045], albedo: PANEL_GREY, name: 'mains_box' });
   const led = add({ c: [BREAKER[0] - 0.18, 1.62, BREAKER[2] + 0.05], h: [0.015, 0.015, 0.01], albedo: P.plasticBlack, rough: 0.5, emissive: [0.3, 4, 0.6], flags: BoxFlag.NoShadow });
   add({ c: [BREAKER[0] + 0.2, 2.05, BREAKER[2] - 0.03], h: [0.015, 0.36, 0.012], ...M.plasticBlack });   // its cable, up the wall and over
   grp('beacons');
