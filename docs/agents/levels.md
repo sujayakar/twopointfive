@@ -1002,6 +1002,16 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   ends are names, so the roof now NAMES THREE PLACES (`scenarios.places`: stair landing, plant pad, service room). Those are words the game may say
   of this level (`game/dialogue.ts placeName`) and middles a response sweep may walk to (`game/qrf.ts`); no mission is staged on the roof, so
   nothing says them today and nobody has heard them. The level's fingerprint does not move (words and a picture's list).
+  ITS ROOMS AT NIGHT (11-05; level data, no switch). The two rooms had a point lamp of 60 over 9 m hung between each pair of ceiling tubes, on top
+  of the tubes, which are lights of their own as in every level of the kit (3.7 each). In rooms that are white on every face the bounce is
+  several times the lamp, and a night shows a lit room at the night's own exposure, which never comes down: seen on a cloud NVIDIA card, both
+  rooms drew burnt white (the floor 245 of 255, a black suit 113 in the glare, the meter at 99). The same view with the lamp at 30, 18 and 6: floor
+  235, 225 and about 205, the suit still grey. At 0, the tubes alone: floor about 160, the suit black, a shadow at the man's feet, the meter at
+  59, the picture the room is at dusk. The two lamps are out of the generator; the level's fingerprint moves (a checkpoint or a recording of it
+  from before is refused), its file has two lights where it had four. Nothing by day moves by eye: a fixture by day is drawn at its night
+  strength times the hour's exposure. `level-needs white-roof --run` on both stands: no FAIL. WHAT IT SAYS OF THE MODEL, left as it is: a room
+  lit far over the night's white has nothing to bring it down (the one exposure model brings a dark place up and no bright place down), so a
+  lit room's lamps are authored to the room's own paint: a white room wants a fraction of the kit's bulb.
 - **The kits' vehicles say their shapes** (`src/scene/carShapes.ts`, 2026-11-04; the maintainer from the library's showroom: "could we make it so the cars
   have rounded surfaces? look really blocky right now"; of the trial that drew them, "Yes, build these in" and "geometry looks pretty good"; of the pass's
   lorry before, "some curved surfaces on the truck would go a long way"). Every pickup, van, car, motorbike and lorry a kit builds (`gwotKit.ts pickup /

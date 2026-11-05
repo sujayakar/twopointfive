@@ -230,8 +230,8 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
   // ---- lights: tubes in the rooms, a floodlight for a night, the moon (the hour's sun goes in at its place)
   grp('lights');
   G.tube(8.8, 11.0, false, 'service'); G.tube(8.8, 13.4, false, 'service'); G.tube(14.2, 11.0, false, 'lounge'); G.tube(14.2, 13.4, false, 'lounge');
-  for (const [x, z, name, group] of [[8.8, 12.2, 'lamp_service', 'service'], [14.2, 12.2, 'lamp_lounge', 'lounge']] as const)
-    lights.push({ kind: 'point', pos: [x, H - 0.25, z], dir: [0, -1, 0], color: [1.0, 0.98, 0.95], intensity: 60, range: 9, innerDeg: 0, outerDeg: 180, name, group, enabled: true, volumetric: 0.1, radius: 0.3 });
+  // (THE TUBES ARE THE ROOMS' LIGHT, each a light of its own, as in every level of the kit. A point lamp of 60 hung between each pair as well until 11-05: over twice the
+  // kit's bulb, it put 1.75 times the night's white on the floor under it before any bounce, and a night shows a lit room at the night's own exposure. docs/agents/levels.md)
   grp('exterior.lamps');
   G.floodLight(18.5, 22.8, [0.3, -1], 'flood_deck', true);
   lights.push({ kind: 'dir', pos: [0, 0, 0], dir: norm([0.5, -0.5, -0.7]), color: [0.55, 0.7, 1.0], intensity: 0.9, range: 1e6, innerDeg: 0, outerDeg: 0, name: 'moon', group: 'exterior', enabled: true, volumetric: 0, radius: 0.009, mains: false });
