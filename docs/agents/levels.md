@@ -1251,3 +1251,31 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   in their lived things only and keep theirs.
   SEEN on the software adapter only (Chromium 141, midday): the pass's fuel pocket on the look page, before and after, two views. NEVER SEEN ON A
   GPU, and nobody has played any of these levels since.
+- **FOUR WALL FITTINGS OF A KEPT BUILDING ARE KIT PIECES, AND SO ARE THE TOOLS FOR PAINT ON WHAT IS THERE** (11-05; `src/scene/officeGen.ts`
+  `officeKit`: pieces `band`, `vent`, `conduit`, `pipe`; tools `boxOn`, `paintOn`, `onS`, `onTop`, `rectTop`, `wallRuns`; the painter's tins `TIN` in
+  `src/scene/markingDefaults.ts`; catalogue `docs/library.md`; the pieces stand on the showroom hut's south face, `tools/levels/library-hall.ts`). They
+  were the white roof's own helpers and are MOVED, not copied: `tools/levels/white-roof.ts` keeps four one-line adapters for its own coordinates (a face
+  at a given z), takes its paint tools and its ink, chalk and signal yellow from the kit, and `levels/white-roof.json` is byte for byte the file it was.
+  ARGUMENTS as the look kit's wall-face pieces have them: `axis` (`'x'` = the wall runs along X at `line`), `a`‥`b` along it (the same stretch
+  whichever way the wall faces), `side` ±1 (the face toward +z / +x is +1), then heights, then the paint; `t` is the wall's thickness (0 = `line` is the
+  face itself). `band(axis, line, a, b, side, y0, y1, paint)` is a band 8 mm proud (the look kit's dado's figure: under a door frame's 12, so a band
+  laid door to door ends beneath the jambs): a painted dado or plinth, a plate, a door's skin. For PAINT hand it the wall's own stuff in the new colour
+  (`saidAs(<the wall's word>, colour)`: the wall's joints run on under the colour's edge), never a second stuff. `vent` is the same box two fingers
+  proud for a paint that says `louvre`. `conduit(axis, line, a, b, side, y, paint, clip, drop?)` is a run with a clip every metre and a half and, with
+  `drop`, a branch down into a box at b (the box stands 11 cm past b, as the white roof's did). `pipe(x, z, y0, y1, r, paint, rings)` is a round riser
+  written as the white roof wrote one (four slabs an eighth of a turn apart), with `rings` for a flange at its foot and a collar. EACH TAKES A PAINT
+  ROW and says the row's word. EACH IS DRAWN ONLY unless its last argument `solid` is true: a fitting is dressing, so by default no foot, round or sight
+  line meets it and no place for a wall charge is lost to it; the white roof passes `solid` and keeps its traced plinths and pipes. Two things `solid`
+  does not do: a conduit's run, clips and branch are drawn only either way (its box alone stands), and only a SOLID pipe is stood up as one round by
+  the round rule (drawn only, it stays the eight-sided post its four slabs make). THE PAINT TOOLS: `boxOn(face, x, y, z)` is the box whose face holds
+  that point (a box is found by where its face is, never by its number), `paintOn(box, …markings)` adds to what it carries and throws past four,
+  `onS` / `onTop` / `rectTop` turn a place of the world into a face's own metres, `wallRuns(z, t, x0, x1, minTop)` is every piece of a wall between
+  two points, door to door, cut to that stretch. WHEN A WALL IS BREACHED (`game/wallbreak.ts` `hangers`, not changed): a drawn-only thing a quarter of
+  a metre or more off the floor goes once half the wall behind it is open, so a long run of conduit is laid in lengths; a band from the floor STAYS
+  across the hole, as the look kit's painted dado and skirt do on every level that has one. That is one gap for the whole game and is not mended here.
+  CHECKS on the step: `export.ts --check` for all 55 generators that have a file and both office files (none moves but the showroom), `library.ts
+  --check`, `lived-check library-hall white-roof office` (the showroom's base file restamped: the four fittings are its own part), `round-check`,
+  `stuff-check`, `floor-order-check`, both type checks. Two reds stand on the showroom exactly as on the step before: `probes.ts glassreal` line 9
+  (the showroom's row of the table) and `wallfurn-check --levels library-hall.json` (it has no count file; 86 places before and after on both stands).
+  No mission's level file moves, so no play-through was run for this step alone. NEVER SEEN on any adapter as laid on the showroom; on the white roof
+  they draw as they did.
