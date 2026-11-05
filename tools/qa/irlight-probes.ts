@@ -50,6 +50,7 @@ const { digestGame } = await import(`${ROOT}/src/game/digest.ts`);
 const NVM: any = await import(`${ROOT}/src/game/nvg.ts`);
 const GDM: any = await import(`${ROOT}/src/game/guards.ts`);
 const ILM: any = await import(`${ROOT}/src/game/irlight.ts`);
+const HRM: any = await import(`${ROOT}/src/game/hours.ts`), ENVM: any = await import(`${ROOT}/src/game/env.ts`);   // (the game's own exposure for the hour and tube gain: what irlight.ts works a flood out at, never the picture's settings)
 const LTM: any = await import(`${ROOT}/src/render/lights.ts`);
 const TFM: any = await import(`${ROOT}/src/game/teamfeel.ts`);
 const IRLIGHT = ILM.IRLIGHT;
@@ -88,7 +89,7 @@ export const irlList = guarded(async () => {
   let menDown = 0;
   for (const id of IDS) {
     const S = await settled(id, true, true, true); const { g, step } = S; const L = g.engine.lights, pl = g.player, team = mates(g), fails: string[] = [];
-    const X = g.engine.settings.exposure > 0 ? g.engine.settings.exposure : 1;
+    const X = HRM.exposureOf(g);
     const sam = L.ir.find((l: any) => l.owner === pl.char.id);
     if (!(pl.nvAmount > 0.9)) fails.push(`Sam's goggles never came down (nvAmount ${f2(pl.nvAmount)})`);
     if (!sam) fails.push('Sam\'s goggles are down and he burns none');
@@ -289,7 +290,7 @@ export const irlAuto = guarded(async () => {
         said.push(`light at ${lit[0].toFixed(1)},${lit[2].toFixed(1)} (tube ≥ ${f2(leastSeen(g, pl.char.pos))}): out · rule off: ${ruleOff ? 'burning' : 'OUT'}`); } }
     if (dark) { await stand(dark, 6); }
     if (dark && blackNow()) { darkAsked++;
-      const X = g.engine.settings.exposure > 0 ? g.engine.settings.exposure : 1;
+      const X = HRM.exposureOf(g);
       const E0 = NVM.nvgPlaceLight(g, [dark[0], 1.2, dark[2]]);
       const l1 = samLit(), quick = !!l1; step(24); const l2 = samLit(), full = !!l2 && Math.abs(l2.intensity * X - IRLIGHT.power) < 1e-6;
       const E1 = NVM.nvgPlaceLight(g, [dark[0], 1.2, dark[2]]), listed = L.lights.some((l: any) => L.ir.includes(l));
@@ -297,7 +298,7 @@ export const irlAuto = guarded(async () => {
       if (!full) fails.push(`on black floor: not at full 0.5 s on (${l2 ? f2(l2.intensity * X) : 'none'} of ${IRLIGHT.power})`);
       if (E0 !== E1 || listed) fails.push(`his own light answers the rule's question: the place's light ${E0.toFixed(4)} before, ${E1.toFixed(4)} with it burning${listed ? '; an infrared light in the list every reader sums' : ''}`);
       // (one light on open floor: the tube's signal on a floor of reflectance 0.4 from arm's length out — post.wgsl's curve; its hot add starts at 0.75)
-      { const c = pl.char, gain = Math.max(g.engine.settings.nvGain, 1), sig = (E: number) => Math.log(1 + E * X * 0.4 / Math.PI * gain) / Math.log(1 + gain); const all = [...L.ir]; let most = 0, at = 0;
+      { const c = pl.char, gain = ENVM.tubeGain(), sig = (E: number) => Math.log(1 + E * X * 0.4 / Math.PI * gain) / Math.log(1 + gain); const all = [...L.ir]; let most = 0, at = 0;
         if (l2) { L.ir.length = 0; L.ir.push(l2);
           for (let a = 0; a < 16; a++) { const fx = Math.sin(a * Math.PI / 8), fz = Math.cos(a * Math.PI / 8);
             for (let r = 1.5; r <= 10; r += 0.5) { const Q = [c.pos[0] + fx * r, 0.05, c.pos[2] + fz * r]; if (g.col.segmentBlocked([c.pos[0], 1.5, c.pos[2]], [Q[0], 1.2, Q[2]])) break; const v = sig(ILM.irLightAt(g, Q) * 1); if (v > most) { most = v; at = r; } } }
@@ -333,7 +334,7 @@ export const irlMeter = guarded(async () => {
   try {
   for (const id of IDS) {
     const S = await settled(id, true, true, true, true); const { g, step } = S; const L = g.engine.lights, pl = g.player, fails: string[] = [], said: string[] = [];
-    g.godMode = true; const X = g.engine.settings.exposure > 0 ? g.engine.settings.exposure : 1, scale0 = g.engine.settings.indirectScale;
+    g.godMode = true; const X = HRM.exposureOf(g), scale0 = g.engine.settings.indirectScale;
     const samLit = () => L.ir.find((l: any) => l.owner === pl.char.id);
     const cands: number[][] = [[...pl.char.pos], ...doorsOf(S).map((e: any) => [e.at[0], 0, e.at[2]]), ...g.guards.filter((x: any) => x.team === 'hostile').map((x: any) => [x.char.pos[0], 0, x.char.pos[2]])];
     const dark = cands.find(P => tubeAt(g, P[0], P[2]) < D * 0.8), lit = cands.find(P => leastSeen(g, P, D * 1.2) >= D * 1.2);
@@ -426,7 +427,7 @@ export const irlNear = guarded(async () => {
   const F = family('irl-near: the infrared light turns itself down for what stands close in front of it');
   let stoodOn = false; { await quiet(() => stage(IDS[0], 1)); stoodOn = !!IRLIGHT.near; reset(); }
   const S = await settled(IDS[0], true, false, true); const { g, step } = S; const L = g.engine.lights, pl = g.player, c = pl.char, col = g.col;
-  g.godMode = true; g.aiEnabled = false; const X = g.engine.settings.exposure > 0 ? g.engine.settings.exposure : 1, M: number = IRLIGHT.nearM, full = IRLIGHT.power / X;
+  g.godMode = true; g.aiEnabled = false; const X = HRM.exposureOf(g), M: number = IRLIGHT.nearM, full = IRLIGHT.power / X;
   const samLit = () => L.ir.find((l: any) => l.owner === c.id);
   const w2 = (d: number, r: number) => { const x = d / r, w = Math.max(0, 1 - x * x * x * x); return w * w; };
   /** the most any point the middle of the flood lands on takes, in units of what a point nearM off takes at full strength — and how near the nearest is */

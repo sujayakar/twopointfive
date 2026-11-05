@@ -111,7 +111,9 @@ function drive(W: any, f: number): void {
   if (f === at) { g.godMode = true; const gd = g.guards[0], yaw = gd.char.bodyYaw; g.teleportPlayer([gd.char.pos[0] + Math.sin(yaw) * 3.5, 0, gd.char.pos[2] + Math.cos(yaw) * 3.5]); W.input.pressed.add('KeyE'); }
   const on = f >= at + 60; if (on && (f - at) % 10 === 0) W.input.clicked |= 1; W.input.buttons = on ? W.input.buttons | 1 : W.input.buttons & ~1;
 }
-/** every row whose system keeps state in the block (the die, the poses), up or down together */
+/** the die's row and the poses', up or down together: the die's home in the block goes with its row; the poses' row chooses who answers a pose's
+ *  QUESTIONS, and where a man's poses live is not a row: they stand in the block whatever it says (game/posehome.ts), because his layers are written
+ *  once, in Rust, and are asked there */
 const rows = (on: boolean): void => { S.RUST.dice = on; S.RUST.poses = on; };
 async function play(row: (f: number) => boolean): Promise<{ words: number[]; homed: number; posed: number; s: number; n: number; W: any }> {
   rows(false); const W: any = await standUp({ seed: 7 }), g = W.game; let word = DG.RAW_BITS_SEED, at = 0, posed = 0; const words: number[] = [];
@@ -123,8 +125,8 @@ async function play(row: (f: number) => boolean): Promise<{ words: number[]; hom
 const firstOff = (a: number[], b: number[]): number => { for (let i = 0; i < a.length; i++) if (a[i] !== b[i]) return i; return -1; };
 { const off = await play(() => false), on = await play(() => true), flip = await play(f => (f / 40 | 0) % 2 === 0);
   const a = firstOff(off.words, on.words), b = firstOff(off.words, flip.words);
-  verdict(a < 0 && b < 0 && on.homed === TICKS && off.homed === 0 && flip.homed > 0 && flip.homed < TICKS && on.posed === TICKS && off.posed === 0 && flip.posed === flip.homed && on.s === off.s && flip.s === off.s && on.n === off.n && flip.n === off.n && off.n > 0,
-    'row: a seeded game with its die and its men\'s poses in the module is the game without, after every tick — and with the rows raised and dropped under it as it runs',
+  verdict(a < 0 && b < 0 && on.homed === TICKS && off.homed === 0 && flip.homed > 0 && flip.homed < TICKS && on.posed === TICKS && off.posed === TICKS && flip.posed === TICKS && on.s === off.s && flip.s === off.s && on.n === off.n && flip.n === off.n && off.n > 0,
+    'row: a seeded game with its die in the module is the game without, after every tick, and with the row raised and dropped under it as it runs; its men\'s poses stand in the module throughout, whatever the rows say',
     `${TICKS} ticks, ${off.n} draws · on: ${a < 0 ? 'the same bits' : 'parts at tick ' + a}, the die at home for ${on.homed} ticks and the poses for ${on.posed} (off: ${off.homed}, ${off.posed}) · flipped every 40: ${b < 0 ? 'the same bits' : 'parts at tick ' + b}, at home for ${flip.homed} · the die ends on ${on.s} / ${off.s} / ${flip.s}`); }
 
 // ---- snapshot, another game, no views
@@ -151,11 +153,11 @@ const firstOff = (a: number[], b: number[]): number => { for (let i = 0; i < a.l
   { rows(false); const W3: any = await standUp({ seed: 7 }), g3 = W3.game; let f3 = 0; const go = (n: number): string[] => { const ws: string[] = []; for (let k = 0; k < n; k++) { drive(W3, f3++); W3.step(DT); ws.push(RB.stateHash(g3)); } return ws; };
     go(150); const out = RB.takeSnapshot(g3), fOut = f3, kOut = W3.input.buttons, sOut = g3.dice.s; const refOut = go(40);
     rows(true); go(40); const inn = RB.takeSnapshot(g3), fIn = f3, kIn = W3.input.buttons, sIn = g3.dice.s; const refIn = go(40), homeIn = !!g3.dice.home;
-    RB.restoreSnapshot(out); f3 = fOut; W3.input.buttons = kOut; rows(false); const a = !g3.dice.home && (g3.sim.w[1] & 1) === 0 && g3.dice.s === sOut && g3.player.char.anim.pose.home === null && g3.poseSets.length === 0, againOut = go(40);   // (word 1 of a block is its head's homes, bit 1 the die's: sim/state.ts)
+    RB.restoreSnapshot(out); f3 = fOut; W3.input.buttons = kOut; rows(false); const a = !g3.dice.home && (g3.sim.w[1] & 1) === 0 && g3.dice.s === sOut && g3.player.char.anim.pose.home === g3.sim && g3.poseSets.length > 1, againOut = go(40);   // (word 1 of a block is its head's homes, bit 1 the die's: sim/state.ts)
     RB.restoreSnapshot(inn); f3 = fIn; W3.input.buttons = kIn; rows(true); const b = !!g3.dice.home && g3.dice.home.st === g3.sim && g3.dice.s === sIn && g3.player.char.anim.pose.home === g3.sim, againIn = go(40);
     const same = (x: string[], y: string[]) => x.every((w, i) => w === y[i]);
     verdict(a && b && homeIn && same(refOut, againOut) && same(refIn, againIn), 'across a row change: a snapshot from before the die moved in, and one from after, each put back under the row it was taken under, play as they did',
-      `taken before the die moved in, put back over a game whose die is in the block: the die in its fields, its bit in the block's head down: ${a}, 40 ticks the same word: ${same(refOut, againOut)} · taken in the block, put back over a game whose die is not: at home again: ${b}, 40 ticks the same word: ${same(refIn, againIn)}`); }
+      `taken before the die moved in, put back over a game whose die is in the block: the die in its fields, its bit in the block's head down, the poses still at home: ${a}, 40 ticks the same word: ${same(refOut, againOut)} · taken in the block, put back over a game whose die is not: at home again: ${b}, 40 ticks the same word: ${same(refIn, againIn)}`); }
   // a view over the module's memory kept in the state
   g.strayView = new Uint32Array(x.memory.buffer, x.state_addr(0), 4); const s3 = RB.takeSnapshot(g), s4 = RB.takeSnapshot(g, s3); delete g.strayView;
   let refused = false; try { RB.restoreSnapshot(s3); } catch { refused = true; }
@@ -184,7 +186,7 @@ const firstOff = (a: number[], b: number[]): number => { for (let i = 0; i < a.l
 
 // ---- two pools at home: a take since a take shares every piece that has not changed, part by part, though a part before has grown by a piece
 { const SK: any = await import(`${ROOT}/src/anim/skeleton.ts`), st = new ST.SimState(); st.bind();
-  const set = new SK.PoseSet(); SK.poseSetIn(set, st); for (let i = 0; i < 20; i++) { const p = set.make(55); for (let j = 0; j < 550; j++) p.cols[j] = i + j * 0.5; }   // (44 KB of poses: eleven pieces)
+  const set = new SK.PoseSet(20); SK.poseSetIn(set, st); for (let i = 0; i < 20; i++) { const p = set.make(55); for (let j = 0; j < 550; j++) p.cols[j] = i + j * 0.5; }   // (44 KB of poses: eleven pieces)
   S.sim().grid_reset(st.bind(), 1);                                                                   // (…and an empty smoke grid, the part BEFORE the poses: 72 KB of it in use)
   const sm = ST.simPart(ST.P_SMOKE) >>> 2, ps = ST.simPart(ST.P_POSES) >>> 2, pieces = (bytes: number) => Math.ceil(((bytes + 3) >>> 2) / 1024);
   const t1 = st.take(), nPose = pieces(st.w[ps]), nSmoke = pieces(st.w[sm]), part = (((st.w[sm] + 3) >>> 2) % 1024) !== 0 ? 1 : 0;   // (`part`: the smoke's last piece was not a whole one, so it is another piece once the part has grown)
@@ -200,7 +202,7 @@ const firstOff = (a: number[], b: number[]): number => { for (let i = 0; i < a.l
 // ---- a parked block with poses in it: read and written where it stands, never moved by a read, as long as what is in use and no longer, and a longer take fits
 const FIXED: number = ST.simLayout().parts.reduce((n: number, q: any) => n + (q.pool ? 0 : q.len), 0);   // (the parts that are not pools are carried whole: the doors' columns and the falls' store among them; what a parked block saves is the pool's unused room)
 { const SK: any = await import(`${ROOT}/src/anim/skeleton.ts`), st = new ST.SimState(); st.bind();
-  const set = new SK.PoseSet(); SK.poseSetIn(set, st); const a = set.make(55), b = set.make(55);
+  const set = new SK.PoseSet(4); SK.poseSetIn(set, st); const a = set.make(55), b = set.make(55);
   const AT = ST.simPart(ST.P_POSES), BEFORE = AT - FIXED;   // (the pose pool is the block's LAST part, so a parked block is the parts before it, whole, and what is in use of the pool: under 16 KB here. Of the parts before it the fixed ones follow the layout (FIXED); a POOL standing before the last is carried whole by a parked block, in use or not, and is a budget of its own, a quarter megabyte: the smoke grid's 236 KB is nearly all of it, and the next pool to stand there is red)
   for (let i = 0; i < 550; i++) { a.cols[i] = i + 0.5; b.cols[i] = -i; }
   const small = st.take(), crowd = () => Array.from({ length: L.games }, () => { const o = new ST.SimState(); o.bind(); return o; }), gone = (os: any[]) => { for (const o of os) o.put([]); };

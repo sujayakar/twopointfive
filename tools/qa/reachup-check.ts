@@ -12,6 +12,7 @@
 // REACHUP_BREAK=1 = the key left down where `up` asks for it up: up must FAIL.   exit 0 = all hold · 1 = one does not
 // THE HARNESS HAS NO GPU: nothing here is a picture (tools/qa/close-stills.ts + pose-mesh-raster.py draw the same staging on the worn mesh).
 import { standUp, ROOT } from './headless.ts';
+import { asProbe } from './holds.ts';   // (run alone, each part runs as the probe the runner calls it by: one stand both ways)
 
 const { CLOSE } = await import(`${ROOT}/src/game/close.ts`);
 const PR = await import(`${ROOT}/src/host/profile.ts`);
@@ -97,4 +98,4 @@ export async function reachUpCheck(): Promise<boolean> {
   finally { Object.assign(CLOSE, was); Math.random = rnd; }
   console.log(`\n=== reachup: ${allPass ? 'ALL PASS' : 'FAILURES above'} ===`); return allPass;
 }
-if (import.meta.main) process.exit(await reachUpCheck() ? 0 : 1);
+if (import.meta.main) process.exit(await asProbe('reachup', reachUpCheck) ? 0 : 1);

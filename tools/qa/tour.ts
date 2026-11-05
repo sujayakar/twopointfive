@@ -94,7 +94,7 @@ async function runOnce(seed: number, runIdx: number): Promise<RunReport> {
   const refDoors = new Map<string, { angle: number; latched: boolean; locked: boolean }>();
   for (const d of game.doors.list) refDoors.set(d.def.name, { angle: d.angle, latched: d.latched, locked: d.locked });
   const refLights = new Map<any, boolean>(); for (const t of game.targets) refLights.set(t, t.on);
-  for (const [t, on] of game.initialOn as Map<any, boolean>) if (refLights.get(t) !== on) fail('reference', `restartEncounter() left ${t.name} on=${refLights.get(t)} but the level authors it on=${on}`);
+  for (const t of game.targets) if (refLights.get(t) !== t.authored) fail('reference', `restartEncounter() left ${t.name} on=${refLights.get(t)} but the level authors it on=${t.authored}`);
   const rackTargets: any[] = game.rackTargets;
   const confDoor = doorByName('conference'); const confAuth = refDoors.get('conference');
   const fireExit = doorByName('fire_exit');

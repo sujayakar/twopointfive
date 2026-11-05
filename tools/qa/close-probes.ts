@@ -47,6 +47,7 @@
 // THE HARNESS HAS NO GPU AND NO DOM: the picture (the sheathed knife, the stance as drawn, the floor marks) is not measured here — what is measured is what close.ts tells the
 // animator, what the animator reports back (creepShown / reachShown / knifeShown, the bones), and the game's own books.
 import { standUp, ROOT } from './headless.ts';
+import { asProbes, exitCode, wanted } from './holds.ts';   // (run alone, each part runs as the probe the runner calls it by: one stand both ways)
 import { tapVerb } from './verbs.ts';
 const IK = 'Space';
 const { v3, wrapAngle } = await import(`${ROOT}/src/math/vec.ts`);
@@ -872,10 +873,9 @@ export async function closeDuo(): Promise<boolean> { return keepClose(async () =
 
 /** the whole card (`bun run tools/qa/close-probes.ts`): true = every probe passed */
 export const CLOSE_PROBES = [['close-mode', closeModeProbe], ['close-tell', closeTell], ['close-melee', closeMelee], ['close-grab', closeGrab], ['close-held', closeHeld], ['close-dark', closeDark], ['close-windows', closeWindowsProbe], ['close-offer', closeOffer], ['close-rows', closeRowsProbe], ['close-marks', closeMarksProbe], ['close-seat', closeSeatProbe], ['close-harness', closeHarness], ['close-off', closeOff], ['close-duo', closeDuo]] as const;
-export async function closeAll(only?: string[]): Promise<boolean> {
-  let ok = true; const t0 = performance.now();
-  for (const [name, fn] of CLOSE_PROBES) { if (only?.length && !only.includes(name)) continue;
-    const t = performance.now(); let r = false; try { r = await fn(); } catch (e: any) { console.log(`error: probe '${name}' threw — ${e?.stack ?? e}`); } ok &&= r; if (VERBOSE) console.log(`  (${name}: ${((performance.now() - t) / 1000).toFixed(1)} s)`); }
-  console.log(`\n=== close: ${ok ? 'ALL PASS' : 'FAILURES above'} === (${((performance.now() - t0) / 1000).toFixed(1)} s)`); return ok;
+async function closeAll(want: readonly string[]): Promise<boolean | null> {
+  const t0 = performance.now(), timed = Object.fromEntries(CLOSE_PROBES.map(([name, fn]) => [name, async (): Promise<boolean> => { const t = performance.now(); try { return await fn(); } finally { if (VERBOSE) console.log(`  (${name}: ${((performance.now() - t) / 1000).toFixed(1)} s)`); } }]));
+  const ok = await asProbes(timed, want);
+  console.log(`\n=== close: ${ok === null ? 'NOTHING RAN' : ok ? 'ALL PASS' : 'FAILURES above'} === (${((performance.now() - t0) / 1000).toFixed(1)} s)`); return ok;
 }
-if (import.meta.main) process.exit((await closeAll(process.argv.slice(2).filter(a => a.startsWith('close-')))) ? 0 : 1);
+if (import.meta.main) process.exit(exitCode(await closeAll(wanted())));

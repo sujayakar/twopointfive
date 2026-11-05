@@ -61,6 +61,7 @@ import { ORDERS } from './orders';
 import { COVER, REAR } from './cover';
 import { ROOMFIT } from './roomfit';
 import { NVG } from './nvg';
+import { ENV } from './env';
 import { IR } from './irlaser';
 import { IRLIGHT } from './irlight';
 import { WALLPEN } from './wallpen';
@@ -144,6 +145,10 @@ export const JOURNAL_KNOBS: readonly string[] = ['AIM', 'TAPSTEP', 'TRAINED', 'A
   'MARKCUT',
   // a blast's marks sit in the surface (render/decals.ts MARKSIT; a picture only): a recording made with it on draws its scorches and films of dust that way, one with no table for it as they were drawn before the rule
   'MARKSIT',
+  // the picture's planners are made a little a frame (render/planPace.ts PLAN_PACE; a picture only): a recording made with it on says so, one with no table for it had each plan whole on its frame
+  'PLAN_PACE',
+  // the pace the lamps' reach masks are decided at after a wall changes (render/reach.ts REACH_PACE; the game's tick reads it, the masks are the picture's): a recording says which, one with no table for it had the shares
+  'REACH_PACE',
   // a named coat's finish goes wherever its word goes (scene/stuff.ts COATFINISH; a picture only): a recording made with it on draws its vehicles' bodies as a clear coat, one with no table for it with the finish their files give them
   'COATFINISH',
   // a thing of solid glass is dark and smooth (scene/stuff.ts SOLIDGLASS; a picture only): a recording made with it on draws its vehicles' windows near black and polished, one with no table for it in the grey their files give them
@@ -210,7 +215,10 @@ export const JOURNAL_KNOBS: readonly string[] = ['AIM', 'TAPSTEP', 'TRAINED', 'A
   'WINBARS',
   // a pose's bulk arithmetic in singles (anim/skeleton.ts POSEMATH): the last place of every blended and sampled pose turns on it, so a recording made with
   // it on replays with it on, and one from before the table replays in doubles
-  'POSEMATH'];
+  'POSEMATH',
+  // the game's own numbers of the picture (env.ts ENV): the night's exposure and the tube's gain its men's goggles are worked out at. A recording made
+  // with the table replays on its numbers; one from before replays on the build's (it was made on the picture's, which no file ever carried)
+  'ENV'];
 import { GUNWALL } from './gunwall';
 import { CLOSE } from './close';
 import { PLAN } from './floorplan';
@@ -283,6 +291,8 @@ import { LIGHTSWITCH } from './lightswitch';
 import { CARLAMPS } from './carlamps';
 import { HITSTUFF } from './particleFx';
 import { MARKCUT, MARKSIT } from '../render/decals';
+import { PLAN_PACE } from '../render/planPace';
+import { REACH_PACE } from '../render/reach';
 import { COATFINISH, SOLIDGLASS } from '../scene/stuff';
 import { CLEANRESTART } from './cleanrestart';
 import { FIRELINE } from './fireline';
@@ -373,6 +383,10 @@ export function knobRegistry(): Record<string, object> {
     // a mark on a cut or a round face lies where the round met it (render/decals.ts): where a mark is drawn, never whether one is laid
     MARKCUT,
     MARKSIT,
+    // the picture's planners at a pace (render/planPace.ts): when a plan of the picture's lands, never what a run does
+    PLAN_PACE,
+    // … and the reach masks' (render/reach.ts): which tick a lamp's mask is decided on, never what a run does (no sense, rule or digest reads a mask)
+    REACH_PACE,
     COATFINISH,
     SOLIDGLASS,
     CLEANRESTART,
@@ -522,6 +536,8 @@ export function knobRegistry(): Record<string, object> {
     UNDERFOOT,
     // round things are round (scene/round.ts): whether a level's octagons are stood up as round boxes; read when a level is stood up
     ROUND,
+    // the game's own numbers of the picture (env.ts): the night's exposure and the tube's gain, which no player's Brightness moves
+    ENV,
     // a box says its shape (scene/shapes.ts): whether a level's boxes that say a shape are stood up as it, with their pieces; read when a level is stood up
     SHAPES,
     // the squad's feel (teamfeel.ts keeps rows of these per machine; FOG, FRAG and DOORMANNERS are above)

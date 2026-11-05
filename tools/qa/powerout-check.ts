@@ -149,7 +149,7 @@ export async function poweroutCheck(): Promise<boolean> {
     else line(true, 'the breaker in a defender\'s own room: no level of the list has one today (not asked)', tried.join(' · '));
 
     // (i) no bulb in anybody's view, a lit floor in somebody's: the glasshouse with its one bare bulb put out first (its yard lamps hang where no man inside has a line to them)
-    { const S = await stand('glasshouse.json', 11), g = S.g; const bulb = g.targets.find((t: any) => t.name === 'bulb_store'); if (bulb) bulb.on = false; await step(S.W, 30);
+    { const S = await stand('glasshouse.json', 11), g = S.g; const bulb = g.targets.find((t: any) => t.name === 'bulb_store'); if (bulb) g.lightHome.stage(bulb, false, null); await step(S.W, 30);
       g.setBlackout(86400, 'hand'); const t0 = g.time; await runFor(S, 12, undefined, () => TL(g).some(e => e.what === 'said' || e.what === 'stay' || e.what === 'nobody'));
       const saw = TL(g).find(e => e.what === 'noticed'), word = TL(g).find(e => e.what === 'said' || e.what === 'stay');
       line(!!bulb && !!saw && /floor/.test(saw.why) && saw.t - t0 >= POWEROUT.darkAfter - 1e-6 && saw.t - t0 <= POWEROUT.darkAfter + 0.1 && !!word && ours(S).length === 1,
@@ -157,7 +157,7 @@ export async function poweroutCheck(): Promise<boolean> {
         `${saw ? `${saw.who} at ${(saw.t - t0).toFixed(2)} s: ${saw.why}` : `nobody noticed (${TL(g).at(-1)?.why ?? 'no timeline'})`} · lines ${ours(S).length}`); }
 
     // (j) nothing of the mains burning anywhere: there is nothing to miss
-    { const S = await stand(pick.file, pick.seed), g = S.g, men = S.men; for (const t of g.targets) if (t.mains && t.kind !== 'breaker') t.on = false; await step(S.W, 30);
+    { const S = await stand(pick.file, pick.seed), g = S.g, men = S.men; for (const t of g.targets) if (t.mains && t.kind !== 'breaker') g.lightHome.stage(t, false, null); await step(S.W, 30);
       g.setBlackout(86400, 'hand'); let moved = 0; await runFor(S, 12, () => { for (const gd of men) if (off(S, gd) > 0.6) moved++; });
       line(TL(g).some(e => e.what === 'nobody') && ours(S).length === 0 && moved === 0, 'every mains-fed light already out: nobody knows the power went, nothing is said and nobody leaves his post',
         `${TL(g).map(e => e.what).join(', ') || 'no timeline'} · lines ${ours(S).length} · frames a man was off his post ${moved}`); }

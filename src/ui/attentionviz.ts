@@ -13,10 +13,10 @@ const NS = 'http://www.w3.org/2000/svg';
 const SEG = 28, FLOOR = 0.05, AMBER = '#ffd866';
 type Part = 'thread' | 'track' | 'arc';
 interface Els { g: SVGGElement; p: Record<Part, SVGPathElement>; d: Record<Part, string>; op: string }
-/** each man's kept way and the tables the grid is searched on (attention.ts attentionWay): the PICTURE'S own — a game drawn and the same game not drawn hold
+/** each man's kept way (attention.ts attentionWay): the PICTURE'S own — a game drawn and the same game not drawn hold
  *  the same state */
 const keptWays = new WeakMap<Guard, AttentionWayKept>();
-const ways: AttentionWayStore = { get: gd => keptWays.get(gd), set: (gd, w) => keptWays.set(gd, w), nav: {} };
+const ways: AttentionWayStore = { get: gd => keptWays.get(gd), set: (gd, w) => keptWays.set(gd, w) };
 
 /** the thread along `way` (game/attention.ts attentionWay: straight for a man who only looks, the way he will walk for one going over), from `head` m along
  *  it to `tail` m short of its end, in half-metre pieces — so the part of it in the view is drawn when an end is out of it. Empty for a man all but at the ring. */

@@ -36,7 +36,9 @@ import type { RtLight } from '../render/lights';
 import { rayBox, BoxFlag, type Box } from '../scene/boxes';
 import type { WeatherSnap } from './weather';
 import { isDaylight } from './lighting';
+import { ENV } from './env';
 import { SENSE } from './sense';
+import { LIGHT_IN } from '../sim/lightshome';
 
 export type HourId = 'night' | 'dawn' | 'midday' | 'overcast' | 'dusk';
 /** the order of a day, the authored night last — and the order the sheet's row and the keys walk */
@@ -143,6 +145,13 @@ const nights = new GameSideMap<Game, SkyState>('hours.nights');
 export const SUN_NAME = 'sun', SUN_GROUP = 'hour';
 /** the hour this game stands at ('night' = the level as authored) */
 export function hourOf(g: Game): HourId { return states.get(g)?.def.id ?? 'night'; }
+/** THE EXPOSURE THE GAME'S SCENE IS TAKEN AT NOW (env.ts): the show's day's while it is in (lighting.ts setDaylight), else the hour's own, else the level's
+ *  night's (ENV.exposure) — the numbers putIn and setDaylight write to the picture, read here from what the game keeps and never from the picture's
+ *  settings, which a player's Brightness turns. Never 0: a sum divides by it. */
+export function exposureOf(g: Game): number {
+  const e = isDaylight(g) ? g.level.daylight?.exposure ?? ENV.exposure : states.get(g)?.def.exposure ?? ENV.exposure;
+  return e > 0 ? e : 1;
+}
 /** the hour's sun in this game's light set (null at night) */
 export function hourSun(g: Game): RtLight | null { return states.get(g)?.sun ?? null; }
 export function isHourSun(g: Game, l: RtLight): boolean { return states.get(g)?.sun === l; }
@@ -269,7 +278,7 @@ function putIn(g: Game, def: HourDef, from?: HourState) {
 }
 function takeOut(g: Game, st: HourState) {
   const S = g.engine.settings;
-  for (const [t, was] of st.lamps) if (!t.on) t.on = was;   // (a lamp somebody switched ON under the hour — the perimeter's call for the lot lights — stays as they left it)
+  for (const [t, was] of st.lamps) if (!t.on) g.lightHome.in(LIGHT_IN.on, t, was ? 1 : 0);   // (a lamp somebody switched ON under the hour — the perimeter's call for the lot lights — stays as they left it)
   for (const l of st.moons) l.enabled = true;
   g.engine.lights.remove(st.sun);
   S.skyZenith = v3.copy(st.sky.zenith); S.skyHorizon = v3.copy(st.sky.horizon); S.hazeDensity = st.haze;
@@ -291,7 +300,7 @@ function sunReach(g: Game, sun: RtLight, radius: number) {
 /** the photocell: with the lamps out for the hour, every outside fixture's switch recorded as it stands and opened */
 function lampsOut(g: Game, st: HourState) {
   if (st.def.lamps) return;
-  for (const t of g.targets) if (t.group === 'exterior' && t.kind !== 'breaker') { st.lamps.set(t, t.on); t.on = false; }
+  for (const t of g.targets) if (t.group === 'exterior' && t.kind !== 'breaker') { st.lamps.set(t, t.on); g.lightHome.in(LIGHT_IN.on, t, 0); }
 }
 /** game.ts resetLevelState, last: the level's switches are back as authored — the hour's are made again over them, and what the sky reaches is asked afresh
  *  (the destruction's hidden statics are back) */
@@ -303,7 +312,7 @@ export function hourWorldChanged(g: Game) { nights.delete(g); const st = states.
 function castersOf(g: Game): number { const S = g.engine.world.statics; let h = S.length * 7919; for (let i = 0; i < S.length; i++) if (S[i].flags & BoxFlag.NoShadow) h = (h + (i + 1) * 31) | 0; return h; }
 
 // ================================================================================================================================ the meter's stand-in
-const N6: Vec3[] = [[1, 0, 0], [-1, 0, 0], [0, 1, 0], [0, -1, 0], [0, 0, 1], [0, 0, -1]];   // guards.ts METER_NORMALS (probe.wgsl's six)
+const N6: Vec3[] = [[1, 0, 0], [-1, 0, 0], [0, 1, 0], [0, -1, 0], [0, 0, 1], [0, 0, -1]];   // (probe.wgsl's six: the faces the lamps' sum is on too, rust/sim/src/light.rs)
 /** the sample directions of the ambient: the sky's dome in three bands (zenith cap above 70°, six at 50°, eight at 16° — each weighted by its band's solid
  *  angle) and eight just under the horizon, which end on the floor some six metres out: the ground's one bounce (a sunlit yard through a doorway) */
 const SKY: Ray[] = [], GND: Ray[] = [];

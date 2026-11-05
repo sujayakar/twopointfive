@@ -30,6 +30,7 @@ pub mod hear;
 pub mod knobs;
 pub mod layers;
 pub mod light;
+pub mod lights;
 pub mod lines;
 pub mod maths;
 pub mod men;
@@ -52,7 +53,7 @@ pub const SCRATCH_LEN: usize = 1024;
 static mut SCRATCH: [f64; SCRATCH_LEN] = [0.0; SCRATCH_LEN];
 
 /// The version of the exports: src/sim/sim.ts names the one it was written against, and a page that loaded another says so instead of calling into it.
-pub const ABI: u32 = 28;
+pub const ABI: u32 = 30;
 
 // ---- the C face (wasm32: these are the module's exports)
 #[no_mangle]
@@ -637,6 +638,53 @@ pub extern "C" fn dice_roll(g: usize) -> f64 {
     dice::roll_of(g)
 }
 
+// ---- the level's lights (lights.rs: fixtures, the mains, the lamps they feed, a camera's and a tripwire's machine, in the game's block)
+/// how many a part holds, how long it is, where a column is (lights.rs cap)
+#[no_mangle]
+pub extern "C" fn lights_cap(table: u32) -> usize {
+    lights::cap(table)
+}
+/// where the fixtures a wall switch works are written for `lights_flip` (a byte address)
+#[no_mangle]
+pub extern "C" fn lights_ids() -> usize {
+    lights::ids_addr()
+}
+/// every event from outside: a kind and a fixture, and the kind's numbers (lights.rs input)
+#[no_mangle]
+pub extern "C" fn lights_in(g: usize, kind: u32, t: usize, a: f64, b: f64, c: f64, d: f64) -> u32 {
+    lights::input(g, kind, t, a, b, c, d)
+}
+/// a wall switch's circuit, the first `n` of `lights_ids` (lightswitch.ts flipSwitch)
+#[no_mangle]
+pub extern "C" fn lights_flip(g: usize, on: u32, time: f64, strike: u32, n: usize) {
+    lights::flip(g, on != 0, time, strike != 0, n)
+}
+/// lighting.ts updateTargets: what happened, as lights.rs EV_ bits
+#[no_mangle]
+pub extern "C" fn lights_step(g: usize, time: f64, dt: f64, near: u32, fumble: f64, es: f64) -> u32 {
+    lights::step(g, time, dt, near != 0, fumble, es)
+}
+/// a camera before its picture (lights.rs CAM_ bits)
+#[no_mangle]
+pub extern "C" fn camera_pan(g: usize, i: usize, dt: f64, live: u32, cones: u32) -> u32 {
+    lights::camera_pan(g, i, dt, live != 0, cones != 0)
+}
+/// …and after it
+#[no_mangle]
+pub extern "C" fn camera_see(g: usize, i: usize, time: f64, dt: f64, visible: u32, gain: f64, x: f64, y: f64, z: f64, suspicion: f64, alarm: f64) -> u32 {
+    lights::camera_see(g, i, time, dt, visible != 0, gain, [x, y, z], suspicion, alarm)
+}
+/// a tripwire before what is in its beam (lights.rs LASER_ bits)
+#[no_mangle]
+pub extern "C" fn laser_open(g: usize, i: usize) -> u32 {
+    lights::laser_open(g, i)
+}
+/// …and after it
+#[no_mangle]
+pub extern "C" fn laser_close(g: usize, i: usize, time: f64, live: u32, cut: f64, sense: f64, held: u32) -> u32 {
+    lights::laser_close(g, i, time, live != 0, cut, sense, held != 0)
+}
+
 // ---- the doors' step (doors.rs: the leaves' state in the game's block, the men near them handed in, each leaf's row of the box world written)
 /// where a table of the step's hand-over is: 0 the level's doors · 1 what comes back of each · 2 the contacts · 3 the noises · 4 the step's numbers
 #[no_mangle]
@@ -828,10 +876,12 @@ pub extern "C" fn nav_addr(table: u32) -> usize {
         _ => 0,
     }
 }
+/// what a search holds: 0 the cells of the largest floor it can be asked over (nav::MAX_FLOOR: on such a floor no table of a search is outgrown) ·
+/// 1 a way's waypoints
 #[no_mangle]
 pub extern "C" fn nav_cap(table: u32) -> usize {
     match table {
-        0 => nav::MAX_NAV,
+        0 => nav::MAX_FLOOR,
         1 => nav::MAX_WAY,
         _ => 0,
     }

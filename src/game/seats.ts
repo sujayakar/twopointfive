@@ -108,7 +108,7 @@ export const seatManId = (i: number): number => i === 0 ? PLAYER_ID : NOBODY_ID 
 /** is `id` a player's man's (whoever's, whether or not that seat is in this game) */
 export const isManId = (id: number): boolean => id === PLAYER_ID || (id > NOBODY_ID && id < NOBODY_ID + SEATS.max);
 /** every seat's man, in seat order */
-export function men(g: Game): Player[] { const S = g.seats; if (S.length === 1) return [g.player]; const out: Player[] = []; for (const s of S) out.push(s.view.player); return out; }
+export function men(g: Pick<Game, 'seats' | 'player'>): Player[] { const S = g.seats; if (S.length === 1) return [g.player]; const out: Player[] = []; for (const s of S) out.push(s.view.player); return out; }
 /** the men still up */
 export function menUp(g: Game): Player[] { return men(g).filter(p => !p.down); }
 /** is every player down (a game of one: its player is) */

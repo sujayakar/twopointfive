@@ -33,6 +33,8 @@ import { beamBoxes } from './combat';
 import { chronicle, chronicleN, roomOf } from './chronicle';
 import { civilianBodies } from './civilians';
 import { hearPath, airTrans } from './weather';
+import { CameraMachine, LaserMachine, CAM, LASER } from '../sim/lightshome';
+import type { SimState } from '../sim/state';
 import { word } from './belief';
 
 type CameraDef = Extract<DeviceDef, { kind: 'camera' }>;
@@ -40,18 +42,10 @@ type KeypadDef = Extract<DeviceDef, { kind: 'keypad' }>;
 type LaserDef = Extract<DeviceDef, { kind: 'laser' }>;
 
 // ---------------------------------------------------------------- knobs (the four on Game.tune are the panel's; these are the model's own)
-/** lit-seconds drain out of a camera's integrator this fast once Sam is out of its picture (a glimpse and gone is forgotten in a couple of seconds; ducking behind the
- *  desk for a beat does not reset a camera that has been watching you walk toward it) */
-const CAMERA_DECAY = 0.5;
-/** a camera that has reported him goes quiet for this long before it will report again (control does not narrate every second of the picture), and re-arms once
- *  the integrator has drained AND this has passed */
-const CAMERA_REARM_SECS = 20;
 /** the LED: dim red idle, bright while the integrator holds anything, blinking fast once it has called him in; dark dead / blind / unpowered */
 const LED_IDLE: Vec3 = [1.6, 0.08, 0.05], LED_HOT: Vec3 = [14, 0.7, 0.3];
 /** the cone thrown into the haze by a live camera (tune.deviceCones): a faint red spot down its axis — a light slot apiece, no more */
-const CONE = { intensity: 1.1, color: [1, 0.12, 0.07] as Vec3, rangeK: 0.7, volumetric: 1.0, outerMaxDeg: 24, radius: 0.12, ahead: 0.1 };   // (radius: a sized emitter — clamps 1/d² so the haze shows a beam leaving the lens, not a hot bead in front of it; ahead: the beam starts at the lens face)   // (a tell, not a floodlight: at 3+ it painted the whole end of the corridor orange — 08-09 page check)
-/** a tripwire, once broken, cannot be broken again for this long (one crossing is one report, not sixty) */
-const LASER_COOLDOWN = 4;
+const CONE = { intensity: 1.1, color: [1, 0.12, 0.07] as Vec3, rangeK: 0.7, volumetric: 1.0, outerMaxDeg: 24, radius: 0.12 };   // (radius: a sized emitter — clamps 1/d² so the haze shows a beam leaving the lens, not a hot bead in front of it. Where it starts: rust/sim/src/lights.rs CONE_AHEAD)   // (a tell, not a floodlight: at 3+ it painted the whole end of the corridor orange — 08-09 page check)
 /** how near the beam's line a body's capsule surface / an item must come to break it (the beam is a few millimetres; the margin is the frame's stride at a sprint) */
 const BEAM_MARGIN = 0.02;
 /** the keypad: seconds to key the code in (four keys, evenly), how close he must stand to the door to be at its pad, the deny beep's worth to the hearing model */
@@ -64,31 +58,15 @@ export const OVERHEAR = { pathM: 9, carry: 0.5 };
 const ERRAND = { awareness: 0.42, reactT: 1.0 };
 
 // ---------------------------------------------------------------- runtime records
-export interface CameraRt {
-  def: CameraDef; index: number; target: LightTarget; cone: RtLight | null;
-  /** the lens's yaw this frame (pans between def.sweep) and the pan's phase 0‥1 */
-  yaw: number; phase: number;
-  /** the integrator: lit-seconds of Sam in the picture (lensGain × dt in, CAMERA_DECAY out) */
-  seen: number;
-  /** idle → suspect (control has radioed, a man is on his way) → alarm (the floor went up); back to idle once drained and re-armed */
-  state: 'idle' | 'suspect' | 'alarm'; reportedAt: number;
-  /** where the picture last had him (the errand's goal, the alarm's fix) */
-  lastSeen: Vec3 | null; sawThisFrame: boolean;
-  /** the probe's smoke transmittance lens → Sam's chest (1 headless / until the renderer answers), and the key it is asked under */
-  smokeTrans: number; smokeKey: string;
-  /** a dead camera has been called in (once per death) */
-  deadCalled: boolean;
+/** A CAMERA OF THE LEVEL: its own machine is in the module (sim/lightshome.ts CameraMachine, rust/sim/src/lights.rs camera_pan, camera_see: the pan, the integrator, the state, the last sighting), and these are the level's facts of it */
+export class CameraRt extends CameraMachine {
+  /** the probe's smoke transmittance lens → Sam's chest (1 headless / until the renderer answers: a sensor's last answer, an input), and the key it is asked under */
+  smokeTrans = 1;
+  constructor(slot: number, st: SimState, readonly def: CameraDef, readonly index: number, readonly target: LightTarget, readonly cone: RtLight | null, readonly smokeKey: string) { super(slot, st); }
 }
-export interface LaserRt {
-  def: LaserDef; index: number; target: LightTarget;
-  dir: Vec3; len: number;
-  /** drawn length this frame (a leaf, a body, a chair in the beam cuts the picture of it short) */
-  cut: number;
-  /** how far the SENSOR's beam reaches this frame: the drawn reach — but, while the fog of war is up, the floor as it stands (below) */
-  sense: number;
-  lastTripAt: number; trips: number; deadCalled: boolean;
-  /** something is breaking it right now (the trip fires on the edge: a man standing in a beam is one report, not one every cooldown) */
-  held: boolean;
+/** A TRIPWIRE OF THE LEVEL: its own machine is in the module (sim/lightshome.ts LaserMachine, rust/sim/src/lights.rs laser_open, laser_close) */
+export class LaserRt extends LaserMachine {
+  constructor(slot: number, st: SimState, readonly def: LaserDef, readonly index: number, readonly target: LightTarget, readonly dir: Vec3, readonly len: number) { super(slot, st); }
 }
 export interface KeypadRt { def: KeypadDef; door: Door; /** the pad's outward normal (plate faces it) */ n: Vec3; }
 /** what the QA probes and the panel read: every report a device has made this encounter, newest last */
@@ -109,16 +87,17 @@ export class Devices {
     let ci = 0, li = 0;
     for (const d of defs) {
       if (d.kind === 'camera') {
-        const target: LightTarget = { name: d.name, group: d.group ?? DEVICE_DEFAULTS.group, kind: 'device', pos: v3.copy(d.pos), boxes: [], baseEmissive: [0, 0, 0], baseIntensity: 0, on: true, broken: false, disabledUntil: -1, fluorescentFlicker: false, factor: 1, mains: d.mains !== false, interactive: true, stagger: 1.4 + 0.3 * ci };
+        const target = g.lightHome.add({ name: d.name, group: d.group ?? DEVICE_DEFAULTS.group, kind: 'device', pos: v3.copy(d.pos), boxes: [], baseEmissive: [0, 0, 0], baseIntensity: 0, on: true, broken: false, disabledUntil: -1, fluorescentFlicker: false, factor: 1, mains: d.mains !== false, interactive: true, stagger: 1.4 + 0.3 * ci });
         g.targets.push(target);
         const half = (d.fovDeg ?? DEVICE_DEFAULTS.fovDeg) / 2;
         const cone = g.engine.lights.add({ name: `${d.name}_cone`, group: 'devices', kind: 1, pos: v3.copy(d.pos), dir: [0, -1, 0], color: v3.copy(CONE.color), intensity: CONE.intensity, range: (d.range ?? DEVICE_DEFAULTS.range) * CONE.rangeK, innerDeg: Math.max(1, Math.min(half, CONE.outerMaxDeg) - 6), outerDeg: Math.min(half, CONE.outerMaxDeg), radius: CONE.radius, volumetric: CONE.volumetric, owner: 0, enabled: false, fixtureBox: -1, flicker: 0, ttl: -1, age: 0, peakIntensity: CONE.intensity });
-        this.cameras.push({ def: d, index: ++ci, target, cone, yaw: d.yaw, phase: 0, seen: 0, state: 'idle', reportedAt: -100, lastSeen: null, sawThisFrame: false, smokeTrans: 1, smokeKey: `smokeCam${ci}`, deadCalled: false });
+        const slot = g.lightHome.camera(target, d.yaw, d.sweep, d.sweepPeriod ?? DEVICE_DEFAULTS.sweepPeriod, d.pitch ?? DEVICE_DEFAULTS.pitch, d.pos); ci++;
+        this.cameras.push(new CameraRt(slot, g.sim, d, ci, target, cone, `smokeCam${ci}`));
       } else if (d.kind === 'laser') {
-        const target: LightTarget = { name: d.name, group: d.group ?? DEVICE_DEFAULTS.group, kind: 'device', pos: v3.copy(d.from), boxes: [], baseEmissive: [0, 0, 0], baseIntensity: 0, on: true, broken: false, disabledUntil: -1, fluorescentFlicker: false, factor: 1, mains: d.mains !== false, interactive: true, stagger: 1.1 + 0.3 * li };
+        const target = g.lightHome.add({ name: d.name, group: d.group ?? DEVICE_DEFAULTS.group, kind: 'device', pos: v3.copy(d.from), boxes: [], baseEmissive: [0, 0, 0], baseIntensity: 0, on: true, broken: false, disabledUntil: -1, fluorescentFlicker: false, factor: 1, mains: d.mains !== false, interactive: true, stagger: 1.1 + 0.3 * li });
         g.targets.push(target);
         const seg = v3.sub(d.to, d.from); const len = v3.len(seg);
-        this.lasers.push({ def: d, index: ++li, target, dir: v3.scale(seg, 1 / Math.max(len, 1e-6)), len, cut: len, sense: len, lastTripAt: -100, trips: 0, deadCalled: false, held: false });
+        this.lasers.push(new LaserRt(g.lightHome.laser(target, len), g.sim, d, ++li, target, v3.scale(seg, 1 / Math.max(len, 1e-6)), len));
       } else {
         const door = g.doors.byName(d.door);
         if (!door) throw new Error(`keypad '${d.name}': no door '${d.door}'`);   // (the validator has already refused a file where this could happen)
@@ -143,14 +122,14 @@ export class Devices {
   restore(g: Game, s: DevicesSnap) {
     this.reset();
     const f = (x: number, d = 0) => Number.isFinite(x) ? x : d;
-    s.cameras?.forEach((C, i) => { const c = this.cameras[i]; if (!c || !C) return; c.yaw = f(C.yaw, c.def.yaw); c.phase = f(C.phase); c.seen = Math.max(0, f(C.seen)); c.state = C.state === 'suspect' || C.state === 'alarm' ? C.state : 'idle'; c.reportedAt = f(C.reportedAt, -100); c.lastSeen = C.lastSeen ? v3.copy(C.lastSeen) : null; c.deadCalled = !!C.deadCalled; });
-    s.lasers?.forEach((L, i) => { const l = this.lasers[i]; if (!l || !L) return; l.lastTripAt = f(L.lastTripAt, -100); l.trips = L.trips | 0; l.deadCalled = !!L.deadCalled; l.held = !!L.held; });
+    s.cameras?.forEach((C, i) => { const c = this.cameras[i]; if (!c || !C) return; c.put(f(C.yaw, c.def.yaw), f(C.phase), Math.max(0, f(C.seen)), C.state === 'suspect' || C.state === 'alarm' ? C.state : 'idle', f(C.reportedAt, -100), C.lastSeen ? v3.copy(C.lastSeen) : null, !!C.deadCalled); });
+    s.lasers?.forEach((L, i) => { const l = this.lasers[i]; if (!l || !L) return; l.put(f(L.lastTripAt, -100), L.trips | 0, !!L.deadCalled, !!L.held); });
     this.log = (s.log ?? []).slice(-48).map(r => ({ ...r })); this.radioCount = s.radioCount | 0; this.seq = Math.max(this.seq, s.seq | 0);
     if (g.player.coding) stopCoding(g);
   }
   reset() {
-    for (const c of this.cameras) { c.seen = 0; c.state = 'idle'; c.reportedAt = -100; c.lastSeen = null; c.sawThisFrame = false; c.deadCalled = false; c.phase = 0; c.yaw = c.def.yaw; }
-    for (const l of this.lasers) { l.lastTripAt = -100; l.trips = 0; l.deadCalled = false; l.held = false; }
+    for (const c of this.cameras) c.put(c.def.yaw, 0, 0, 'idle', -100, null, false);
+    for (const l of this.lasers) l.put(-100, 0, false, false);
     this.log.length = 0; this.radioCount = 0;   // (seq runs on: it is what the soak counts by)
   }
   /** panel / console: one line — every camera's state and integrator, every beam's trips, the codes Sam knows */
@@ -190,42 +169,31 @@ export function updateDevices(g: Game, dt: number) {
 }
 
 function updateCamera(g: Game, c: CameraRt, dt: number, live: boolean) {
-  const d = c.def; const ok = alive(c.target);
-  // the pan runs while it has power (a blinded / dead camera stops where it was; the restrike picks the sweep up again)
-  if (ok && d.sweep) { c.phase = (c.phase + dt / Math.max(0.5, d.sweepPeriod ?? DEVICE_DEFAULTS.sweepPeriod)) % 1; c.yaw = sweepYaw(d, c.phase); } else if (!d.sweep) c.yaw = d.yaw;
-  const pitch = d.pitch ?? DEVICE_DEFAULTS.pitch; const look = lensDir(c.yaw, pitch);
-  if (c.cone) { c.cone.enabled = ok && g.tune.deviceCones; c.cone.pos = v3.mad(d.pos, look, CONE.ahead); c.cone.dir = look; }
+  const d = c.def, H = g.lightHome, m = H.cameraPan(c.slot, c.cone, dt, live, g.tune.deviceCones);   // (rust/sim/src/lights.rs: the pan, the cone, the feed dropping once, the picture emptying when it cannot see)
   // dead: control notices the feed drop once, and somebody is sent to look at it
-  if (c.target.broken && !c.deadCalled) { c.deadCalled = true; c.seen = 0; c.state = 'idle'; if (live) deviceDown(g, d.name, `camera ${c.index}`, d.pos); }
-  else if (!c.target.broken) c.deadCalled = false;   // (mended — the panel's repair, a restart — it can die and be called in again)
-  c.sawThisFrame = false;
-  if (!ok || !live) { c.seen = ok ? Math.max(0, c.seen - CAMERA_DECAY * dt) : 0; if (!ok) c.state = 'idle'; return; }   // blind (the OCP) or unpowered: the integrator empties and it forgets it had reported — it comes back fresh
+  if ((m & CAM.down) && live) deviceDown(g, d.name, `camera ${c.index}`, d.pos);
+  if (!(m & CAM.ok) || !live) return;   // blind (the OCP) or unpowered: the integrator empties and it forgets it had reported — it comes back fresh
   // the picture: the guards' eye test from the lens, then Sam's meter for how fast it fills
   const pc = (g.seats.length === 1 ? g.player : nearestMan(g, d.pos) ?? men(g)[0]).char; const range = d.range ?? DEVICE_DEFAULTS.range; const half = (d.fovDeg ?? DEVICE_DEFAULTS.fovDeg) / 2;   // (the player in its picture: with two, the nearer one up — one at a time, as a guard has it)
+  const look = lensDir(c.yaw, d.pitch ?? DEVICE_DEFAULTS.pitch);
   const E: Eye = { pos: d.pos, look, range, halfDeg: half, nearM: 0, nearDeg: half, vHalfDeg: half };
   const tr = g.sensors.read(c.smokeKey); if (tr !== undefined) c.smokeTrans = tr;   // (sensors.ts — last answer for the lens → chest segment; headless it never answers and stays what it was — 1, or what a probe set)
   const air = c.smokeTrans * airTrans(g, d.pos, pc.bones.chest ?? v3.add(pc.pos, [0, 1.1, 0]));   // (+ a picked weather's fog along the same line: weather.ts — × 1 exactly with none)
   const vis = eyeContact(g, E, pc, true, false, air);
   if (vis.inCone) g.sensors.askSegment(c.smokeKey, d.pos, pc.bones.chest ?? v3.add(pc.pos, [0, 1.1, 0]));   // asked only while the cone has him: the probe's 32 slots a frame are Sam's own meter's too (a level of many cameras must not starve it)
-  if (vis.visible) {
-    const gain = lensGain(g, vis.dist, range, air);
-    if (gain > 0.02) { c.seen = Math.min(g.tune.cameraAlarmSecs + 1, c.seen + gain * dt); c.lastSeen = v3.copy(pc.pos); c.sawThisFrame = true; }
-    else c.seen = Math.max(0, c.seen - CAMERA_DECAY * dt);
-  } else c.seen = Math.max(0, c.seen - CAMERA_DECAY * dt);
-  // what it does about it
-  if (c.state === 'idle' && c.seen >= g.tune.cameraSuspicionSecs && c.lastSeen) cameraSuspect(g, c);
-  if (c.state !== 'alarm' && c.seen >= g.tune.cameraAlarmSecs && c.lastSeen && c.sawThisFrame) cameraAlarm(g, c);
-  if (c.state !== 'idle' && c.seen <= 0 && g.time - c.reportedAt > CAMERA_REARM_SECS) c.state = 'idle';   // drained and quiet a while: it will call him in afresh
+  const gain = vis.visible ? lensGain(g, vis.dist, range, air) : 0;
+  // what it does about it: the module's, and the words on what it says
+  const r = H.cameraSee(c.slot, g.time, dt, vis.visible, gain, pc.pos, g.tune.cameraSuspicionSecs, g.tune.cameraAlarmSecs);
+  if (r & CAM.suspect) cameraSuspect(g, c);
+  if (r & CAM.alarm) cameraAlarm(g, c);
 }
 function cameraSuspect(g: Game, c: CameraRt) {
-  c.state = 'suspect'; c.reportedAt = g.time;
   const where = roomOf(c.lastSeen!, g.level); const sent = sendToLook(g, c.lastSeen!, `camera ${c.index}`);
   control(g, `camera ${c.index} has movement in the ${where}${sent ? ` — ${sent.callsign}, go and look` : ''}`);
   chronDevice(g, 'cameraSpotted', { camera: c.def.name, n: c.index, sent: sent?.callsign }, c.lastSeen!);
   g.devices.note(g, { device: c.def.name, what: 'suspicion', where, sent: sent?.callsign ?? null });
 }
 function cameraAlarm(g: Game, c: CameraRt) {
-  c.state = 'alarm'; c.reportedAt = g.time;
   const p = c.lastSeen!; const where = roomOf(p, g.level);
   control(g, `camera ${c.index}: that's him — the ${where}. all posts, the ${where}`);
   g.alarm.pos[0] = p[0]; g.alarm.pos[1] = 0; g.alarm.pos[2] = p[2]; g.alarm.placed = true;   // the floor's fix is the picture's (the spokesman nearest it answers, the lockdown posts by it)
@@ -236,10 +204,9 @@ function cameraAlarm(g: Game, c: CameraRt) {
 }
 
 function updateLaser(g: Game, l: LaserRt, dt: number, live: boolean) {
-  const d = l.def; const ok = alive(l.target);
-  if (l.target.broken && !l.deadCalled) { l.deadCalled = true; if (sensing(g)) deviceDown(g, d.name, `the ${roomOf(d.from, g.level)} beam`, d.from); }
-  else if (!l.target.broken) l.deadCalled = false;
-  if (!ok) { l.cut = 0; l.sense = 0; l.held = false; return; }
+  const d = l.def, H = g.lightHome, m = H.laserOpen(l.slot);   // (rust/sim/src/lights.rs: the feed dropping once, and no beam at all with no power)
+  if ((m & LASER.down) && sensing(g)) deviceDown(g, d.name, `the ${roomOf(d.from, g.level)} beam`, d.from);
+  if (!(m & LASER.ok)) return;
   // where the beam actually ENDS this frame: the first solid thing in it — a static, a leaf swung through it, a chair shoved into it (none of which are intruders).
   // Beyond that point there is no beam: nothing past it can break it and nothing past it is drawn (one model — the picture and the sensor agree).
   let reach = l.len; const wh = g.engine.world.raycast(v3.mad(d.from, l.dir, 0.03), l.dir, reach, BoxFlag.NoShadow); if (wh) reach = Math.min(reach, wh.t + 0.03);
@@ -252,7 +219,6 @@ function updateLaser(g: Game, l: LaserRt, dt: number, live: boolean) {
   let sense = reach;
   if (live && g.fogOfWar.active) { sense = l.len; const sh = g.col.raycast(v3.mad(d.from, l.dir, 0.03), l.dir, sense); if (sh) sense = Math.min(sense, sh.t + 0.03);
     const sp = g.props.raycast(d.from, l.dir, sense); if (sp) sense = Math.min(sense, sp.t); }
-  l.sense = sense;
   const end: Vec3 = v3.mad(d.from, l.dir, sense);
   // what breaks it: Sam's body (any capsule — a shin beam meets his shins, a chest beam his chest unless he is under it), the body he is hauling, a canister he has
   // thrown still in the air. Staff walk through their own beams (the system knows the shift); a dying man's gun clattering through it is nobody breaking in.
@@ -264,11 +230,8 @@ function updateLaser(g: Game, l: LaserRt, dt: number, live: boolean) {
   if (at) cut = Math.min(cut, v3.dist(d.from, at));
   for (const o of g.guards) { if (o.state === 'dead') continue; const t = o.char.rayHit(d.from, l.dir, cut); if (t >= 0) cut = Math.min(cut, t); }   // (a man standing in it cuts the picture of it, without a word)
   for (const o of civilianBodies(g)) { const t = o.char.rayHit(d.from, l.dir, cut); if (t >= 0) cut = Math.min(cut, t); }                             // (…and so does the cleaner crossing it: staff, to the system — no trip, but no beam drawn through her either; review G3.6)
-  l.cut = cut;
-  // the trip: on the EDGE — something breaks it that was not breaking it last frame — and not again inside the cooldown; a man standing in a beam is one report
-  const held = !!who; const edge = held && !l.held; l.held = held;
-  if (!live || !edge || g.time - l.lastTripAt < LASER_COOLDOWN) return;
-  laserTrip(g, l, who!, at!);
+  // the trip: on the EDGE — something breaks it that was not breaking it last frame — and not again inside the cooldown; a man standing in a beam is one report (the module's)
+  if (H.laserClose(l.slot, g.time, live, cut, sense, !!who) & LASER.trip) laserTrip(g, l, who!, at!);
 }
 /** does any capsule of `c` cross the beam a→b: the point on the beam where it does, else null */
 export function bodyBreaks(c: Character, a: Vec3, b: Vec3): Vec3 | null {
@@ -278,7 +241,6 @@ export function bodyBreaks(c: Character, a: Vec3, b: Vec3): Vec3 | null {
   return null;
 }
 function laserTrip(g: Game, l: LaserRt, who: string, at: Vec3) {
-  l.lastTripAt = g.time; l.trips++;
   const d = l.def; const where = roomOf(at, g.level); const level = d.alarm ?? DEVICE_DEFAULTS.alarm;
   g.audio.play('alarmChirp', d.from, 0.7);
   if (who === 'player') g.player.noise = Math.max(g.player.noise, 0.3);   // (the meter shows him he did something — the chirp at the emitter is small, the radio is the noise that matters)
