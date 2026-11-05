@@ -59,7 +59,6 @@ import { PAIRUP, keptOn } from './pairup';
 import { killGuard } from './combat';
 import { sneakComing } from './sneak';
 import { partnerBegin, partnerCancel, partnerFall } from './takedown';   // the partner's takedown as a move, and the man it lands on (takedown.ts): poses only
-import { roundHoldRule } from './roundheld';
 
 export const SPOTTED = {
   /** THE switch (off = the build as it was; ?spotted on the URL, SPOTTED=1 in the harness's environment, Tab ▸ Sandbox ▸ Spotted) */
@@ -144,8 +143,7 @@ export function spottedMode(g: Game, gd: Guard): SpottedMode { return live(g, gd
 /** the alert man who has them, while this teammate is caught (pairorders.ts: where his gun goes when a take job ends on it) — null: not caught, or nobody in particular */
 export function spottedBy(g: Game, gd: Guard): Guard | null { const M = men.get(gd); return live(g, gd) && M && M.mode === 'caught' && M.by && M.by.state !== 'dead' ? M.by : null; }
 /** roomfight.ts's fire gate, beside silent.ts's own: this round is held */
-roundHoldRule('spotted', spottedHolds);
-function spottedHolds(g: Game, gd: Guard, h: Guard): boolean {
+export function spottedHoldsRound(g: Game, gd: Guard, h: Guard): boolean {
   if (!SPOTTED.on || !underSilence(g, gd) || silentReached(g, gd) || quietGun(gd) || silentUrgent(g)) return false;
   if (men.get(gd)?.take?.foe === h) return true;   // (his hands are going onto this man: no round)
   if (h.state === 'suspicious') { if (!SPOTTED.hold) return false; SPOTTED_STATS.held++; return true; }

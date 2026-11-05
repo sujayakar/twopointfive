@@ -3197,7 +3197,7 @@ if (on('silent-hush', 'silent', 'all')) await run('silent-hush', async () => (aw
 if (on('silent-start', 'silent', 'all')) await run('silent-start', async () => (await import('./silent-probes.ts')).silentStart());
 if (on('silent-off', 'silent', 'all')) await run('silent-off', async () => (await import('./silent-probes.ts')).silentOff());
 if (on('silent-set', 'silent', 'all')) await run('silent-set', async () => (await import('./silent-probes.ts')).silentSet());   // a silent man on his stack mark with his round held on a man is stacked (SILENT.stackSet / ?nosilentset / TPS_SILENTSET=1; SILENTSET_BREAK=1 must fail)
-// ---------------------------------------------------------------- a silent squad and standing glass: fire held until the man is alert (holdglass-probes.ts; game/silent.ts silentGlassHolds)
+// ---------------------------------------------------------------- a silent squad and standing glass: fire held until the man is alert (holdglass-probes.ts; game/silent.ts silentHoldsGlass)
 if (on('holdglass-loud', 'holdglass', 'silent', 'all')) await run('holdglass-loud', async () => (await import('./holdglass-probes.ts')).holdglassLoud());
 if (on('holdglass-quiet', 'holdglass', 'silent', 'all')) await run('holdglass-quiet', async () => (await import('./holdglass-probes.ts')).holdglassQuiet());
 if (on('holdglass-release', 'holdglass', 'silent', 'all')) await run('holdglass-release', async () => (await import('./holdglass-probes.ts')).holdglassRelease());

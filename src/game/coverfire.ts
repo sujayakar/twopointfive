@@ -47,7 +47,7 @@ import { roundEnergy, shotEnergy } from './glasspen';
 import { sideLocked } from './gunslots';   // (called inside the trigger only)
 import { gunString, gunStringGap } from './gunroles';   // (called inside the trigger only)
 import { simRandom } from '../math/dice';   // the simulation's die (math/dice.ts): the Game's own when it has one, Math.random otherwise
-import { roundHeld, roundHeldGlass } from './roundheld';
+import { silentHoldsGlass, roundHeld } from './silent';
 
 export const COVERFIRE = {
   on: true,
@@ -296,7 +296,7 @@ export function coverOp(g: Game, O: OpLike, dt: number, speed: number, point: (t
   if (!Cw || !who) return false;
   const to = Cw.to, P = AIM.guard, Sk = FIGHT_SKILL.operative; const dist = flat(c.pos, to);
   if (!coverLane(g, gd, c.muzzle, to)) { bump(S, 'heldFriend'); return false; }   // (not his round: his order's own watch goes on)
-  if (who !== 'player' && roundHeldGlass(g, gd, who, c, to)) { bump(S, 'heldSilent'); return false; }   // (silent.ts: standing glass on the way to that cover and the man has raised no alarm — a silent squad breaks no pane for it)
+  if (who !== 'player' && silentHoldsGlass(g, gd, who, c, to)) { bump(S, 'heldSilent'); return false; }   // (silent.ts: standing glass on the way to that cover and the man has raised no alarm — a silent squad breaks no pane for it)
   const brg = point(to);
   const on = Math.abs(wrapAngle(brg - c.aimYaw)) < P.onDeg * DEG + Math.atan2(0.35, Math.max(dist, 0.3)) && v3.dist(O.aim, to) < 0.3 && !gd.muzzleDown;
   const settle = Math.max(P.settleSecs, 1e-3) * clamp(dist / Math.max(P.rangeRef, 0.1), P.nearK, 1) * Sk.settleK;
