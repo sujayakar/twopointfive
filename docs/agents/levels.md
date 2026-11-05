@@ -962,13 +962,14 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   PIECE_KEYS`), read by hand in `loadLevel`, `levelToData` and `canonShape`, so a key a box gains for its paint (a `stuff`) is added in those four
   places together. THE PICTURE in this build draws a round and an arc as the flat facets they are cut to and
   a cut face bare; `shapes.ts formBox` is the one place a shaped box is told more (one turning face, its own paint on an `old` cut) once the look's cut
-  pass is in the build. NO LEVEL SAYS A SHAPE YET: the vehicles are the first to (the kits' pickup, van, car and motorbike).
-  CHECK: `bun run tools/qa/shapes-check.ts` (`probes.ts shapes`; `SHAPES_BREAK=1` must fail), both stands, nine lines: the lint (eighteen refusals),
+  pass is in the build. WHO SAYS A SHAPE: the kits' vehicles (the bullet at the foot of this file).
+  CHECK: `bun run tools/qa/shapes-check.ts` (`probes.ts shapes`; `SHAPES_BREAK=1` must fail), both stands, eleven lines: the lint (eighteen refusals),
   the trip to data and back and the canonical bytes; a yard whose pickup is given a shape of each kind stood up, put back and moved, and the number of its shapes; rayBox
   and lineBox against references written in the check, with cut pieces up and down; the same walk grid and the same pushes up as down, on that yard and
   on every level file that says a shape, and every said shape standing; five seconds with the switch down the same run by digest as the same level saying none; the fingerprint, the
   stands' rows and a tape from before the table; a checkpoint refused across the switch both ways and opening in its own game; lines and circles
-  asked of the module inside a tick; and a blast that takes a shaped crate and the plate hung on it. MEASURED: with no level saying a shape, the 42
+  asked of the module inside a tick; a blast that takes a shaped crate and the plate hung on it; and (line 10) an arc beside its box's own planes is cut to fewer facets and is still
+  the round, and no trim hangs in the air in any level file, lived things in. MEASURED: with no level saying a shape, the 42
   play-through runs (21 scenarios, seeds 1 and 2) have the build's digests on the frozen stand and on the shipped one. NOT DONE: nothing here has been
   seen on a GPU or played; on the plain page a level with shapes keeps the cut ray programs live from boot, and what that costs (and whether a shaped
   box shows plain for a moment before they compile) wants a number from a GPU before a level file says a shape; with `?nocutboxes` the page draws a
@@ -1001,3 +1002,66 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   ends are names, so the roof now NAMES THREE PLACES (`scenarios.places`: stair landing, plant pad, service room). Those are words the game may say
   of this level (`game/dialogue.ts placeName`) and middles a response sweep may walk to (`game/qrf.ts`); no mission is staged on the roof, so
   nothing says them today and nobody has heard them. The level's fingerprint does not move (words and a picture's list).
+- **The kits' vehicles say their shapes** (`src/scene/carShapes.ts`, 2026-11-04; the maintainer from the library's showroom: "could we make it so the cars
+  have rounded surfaces? look really blocky right now"; of the trial that drew them, "Yes, build these in" and "geometry looks pretty good"; of the pass's
+  lorry before, "some curved surfaces on the truck would go a long way"). Every pickup, van, car, motorbike and lorry a kit builds (`gwotKit.ts pickup /
+  van / lorry / motorbike`, `levelKit.ts car`, `officeGen.ts car`) is the stack of plain boxes it was, and each box of the stack SAYS A SHAPE (`shapes.ts`,
+  the bullet "A box says its shape" above; the switch is that rule's `SHAPES`, `?shapes=0`, `TPS_SHAPES=1`, and there is no other): corners rounded in
+  plan, a crowned bonnet that falls to the nose, glass that leans between posts under a bowed roof cut back to the glass's top edge, round wheels with
+  hubs under arches, a lorry's tilt bowed over its hoops with its fittings. WHAT A RAY MEETS LESS OF: a body's corners (to 0.24 m at a car's nose), a bonnet's
+  shoulders, the glass above the waist (it leans in by up to 0.42 m at a car's roof), a roof's overhang; A LORRY'S TILT BOWS 0.15 m AND NO MORE, so its
+  eaves stay over a man's head (the pass's yard is laid out on what the lorry hides: `pass-check` is green on both stands with it). WHAT WALKS meets the
+  plain boxes. EVERYTHING ADDED IS TRIM (hubs, arches, posts, mirrors, tanks, a step on its straps): drawn only.
+  THREE THINGS THE RULE GAINED FOR THEM: a piece of trim that says NO PAINT wears its box's paint, finish and word (a post, an arch, a fender follows the
+  body whoever repaints it; one that says a finish or a word and no paint is refused); a `round` takes a box within 15 hundredths of square across its axis; an `arc`'s
+  facets give way to its box's own planes (`arcFacets`: six beside one plane, four beside three, two beside five). EVERY FORM IS `old`.
+  ONE RULE FOR WHAT LIES OR STANDS ON A BOWED TOP (`carShapes.ts layOn / feetOn`; a kit's vehicle hands back its shapes, `tops` among them; the kit's
+  `lay(x, z, yaw, top, …)` is how a level calls it): a flat slab of snow or dust keeps to the crown (flat to half of where the top has dropped 2 cm,
+  gone there, and cut back with the top's own planes) and a sheet of the same paint follows the bow as trim of the top's box; feet stand under a rack's
+  rail or a ladder's stile down to the bow. The pass's lorry, the snowed pickups, van and motorbike of `tut-sky / tut-team / tut-road / tut-quiet`, the
+  compound's roof rack (its front cross bar reaches the roof sign, which stands out over the windscreen) and the records level's ladder go by it. A LEVEL THAT STANDS
+  SOMETHING ON A VEHICLE'S ROOF CALLS THESE; `shapes-check` line 10 is red on trim that touches nothing.
+  A VAN'S TAIL IS SQUARE (its tail lamps stand on its back corners; a corner taken off there cut the lamp through its middle), and its head lamp lies
+  as proud of the corner as it stands of the body's face (6 cm). A LIT LAMP A LEVEL HANGS ON A KIT'S LENS takes the outline of the lens's lit face,
+  carried straight out (`glowShape`, `pickupLens`): the light ends where the lens's face does (a van's head glow keeps three quarters of its width, a
+  pickup's lit lens six tenths, a tail all of it), and is not cut again by the corner it stands in front of.
+  TRIM IS DRAWN WHILE ITS BOX IS, AND TO EVERY ENGINE IT IS NOT THERE (`scene/boxes.ts trimDrawn`, asked where the world lists what it draws; the rule's
+  bullet above said trim "follows its box out", each engine hiding it for itself: that is gone). Nothing hides, files or restores a piece: its own flags
+  never change. And an engine that sweeps the level's things skips `piece`: the destruction lane's items, a blast's furniture and its mouth rule
+  (`game/furnblast.ts`), what hangs on a wall (`game/wallbreak.ts` ghosts). TWO REVIEWS FOUND WHY: a drawn-only wheel arch joined a pickup's wheel to its
+  bed in the furniture's index (one blast took the bed, the tailgate and the tail lamps with the wheel); lying 6 cm off a wall's face it was thrown by a
+  charge on that wall; and hidden, it stood "in the mouth" of the hole, so the bed liner and the crates that rested on it went too. `shapes-check` line
+  11 stands four levels on their shapes and plain with the lived things in, holds every engine's list clear of pieces and the furniture box for box to
+  the plain level's, and sets a burst and (on the page's stand) a wall charge off each side of every box that says trim: the same boxes go, the same
+  walls open. It is red with any one of the three skips taken out (run).
+  THE LORRY IS A PIECE OF THE KIT (`gwotKit.lorry`, box for box what the pass's generator wrote) and so stands in a showroom: on the road of
+  `gwot-yard` (its lamp count file says six head lamps; `docs/library.md` has its row). Its tanks hang from the bed in two bands.
+  THE LOOK PAGE'S LORRY TRIAL STANDS DOWN on a level whose lorry says its own shapes (`scene/lorryTry.ts dressLorry`: the trial was their first drawing;
+  gone over by hand as well the lorry would be shaped twice), and `stuff-check` line 12 counts the house front's and the yard's pieces without it.
+  THE PLAIN BOXES ARE UNCHANGED in every level file (compared box for box against the step before, 39 files), but for a pickup's bonnet, which gave up
+  its two painted panel lines ON EVERY STAND (a box that says a form carries no markings; the run digest does not see a marking). Each of the 39 files
+  has its base file (`tools/qa/fixtures/level-base/`). `levels/office-relief.json` holds vehicles and says no shape (it has no generator).
+  KNOWN AND KEPT: the lorry's fittings are trim that stands up to 0.33 m proud of what stops a man or a round (the jerry cans' rack 0.3 m off the
+  sideboard, the mirrors 0.33 m off the cab at head height, the spare 0.3 m behind the tailboard): a man pressed to the lorry stands in them. Making the
+  big ones boxes of the level changes the plain level and is a step of its own.
+  MEASURED 2026-11-05 on the merge's joined stack over step 1333 (the materials train in), 21 scenarios x seeds 1 and 2: the frozen stand 42 of 42 runs
+  the same digest; the shipped stand with `TPS_SHAPES=0` 42 of 42; the shipped stand 32 of 42. THE TEN THAT MOVE, by the whole digest at the half
+  second each first parts from shapes down (read on step 1321's tree; the stack parts at the same half seconds): compound-four 1 and 2 and snatch-four
+  1 and 2, one man's weapon light is on a half second otherwise at 23 s and the runs agree again after (one to three half seconds differ in all);
+  pass-four 1 and 2, the player's heading differs by 0.01 to 0.04 rad for two or three half seconds from 13.5 s and 18.5 s; depot-four 1 and 2, one man
+  faces another way at 23 s and the runs stay apart (seed 1 taken at 46 s, was 75 s; seed 2 wiped at 127 s both ways); records-pair 1 and 2, a man by the
+  lot's car is 13 cm elsewhere at 2.5 s and the runs stay apart (wiped at 98 s, was 100 s; taken at 26 s, was 27 s). No ending changes. WHY A FIGHT
+  PARTS: sight lines the plain car stopped pass the shaped one, over its nose at waist height (it falls 16 cm over its last half metre) and over the
+  bowed roof's shoulders at a standing eye (1.46 m where the slab's top was 1.52). NOT EASIER, NOT HARDER over paired seeds, shapes up against down
+  (step 1321's tree): depot-four taken 53 and 52 of 100 (15 seeds flip to taken, 14 away); records-pair 228 and 226 of 300 (49 and 47). A LEVEL STOOD
+  ON ITS SHAPES IS ANOTHER LEVEL: a checkpoint or a recording made on the shipped stand on any of the 39 files before this is refused there after it
+  ("made on another level").
+  THE PICTURE'S WORDS (the library's four lines in `shapes.ts formBox`): a round and an arc are shaded as one turning face and an `old` cut takes the
+  box's paint (`Box.cutRound / cutArc / cutOld`, read by the g-buffer's cut pass alone). The same 42 digests on three stands with and without them.
+  THE CUT RAY PROGRAMS are live all session in every level with a vehicle (a standing shape is a traced cut box). On Metal that costs nothing (the
+  maintainer's M4 Max, 2026-11-04: the cut set against the boot set pinned on the tunnel, fog 2.753 / 2.753 ms, frame 1.01 x). On the cloud's NVIDIA card
+  under Linux the set of programs costs the fog pass in proportion to its march (the tunnel, 51 cut boxes traced: 15.36 to 18.99 ms of compute passes;
+  the depot, 14: 11.49 to 12.98; a frame with no march: nothing), and the boxes themselves add about 0.1 ms. NOT MEASURED: NVIDIA under Windows.
+  NOT DONE: nothing here has been seen on a GPU in this form, the round shading among it, and that shading is not timed (a trial on the look page drew
+  the same shapes); the car of `levelKit` / `officeGen`,
+  painted in plain numbers, does not yet say carpaint, glass and rubber, and trim in numbers says nothing (a follow-up, with the hit picture's rule).
