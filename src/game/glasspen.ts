@@ -43,13 +43,13 @@
 //   have) — so a man fires through a pane exactly when his round would get through it, and one whose 9 mm dies in the manager's laminated sidelight still goes
 //   round by the door. Eyes always passed glass (segmentBlocked); feet and sound still do not (solidBlocked).
 import { manOf } from './seats';
-import { SideMap, GameSideMap } from '../math/side';
+import { GameSideMap } from '../math/side';
 import { Vec3, v3, clamp } from '../math/vec';
-import { Box, BoxFlag } from '../scene/boxes';
+import { Box } from '../scene/boxes';
 import { lineBox } from '../scene/collision';
-import { isSheet, glassImpact, hitSeedOwn, glassPanes, GLASSFX } from './glass';
-import { f64, sim as simX, type SimExports } from '../sim/sim';
-import { glassBreakLive, PANES } from './glassbreak';
+import { isSheet, glassImpact, glassPanes, GLASSFX } from './glass';
+import { f64, sim as simX } from '../sim/sim';
+import { glassBreakLive } from './glassbreak';
 import { isHostile, teamOfChar } from './teams';
 import type { Team } from './teams';
 import type { Game } from './game';
@@ -146,43 +146,17 @@ export function shotEnergy(g: Game, c: Character, def?: WeaponDef): number | und
 
 /** the pane's type — the FRACTURE model's own word for it (glassbreak.ts typeOf), so what a round pays and how the pane fails are one typing */
 export function paneType(g: Game, b: Box, bi = g.level.boxes.indexOf(b)): PaneType { const gb = g.glassBreak; return (gb ? gb.typeOfPane(bi) ?? gb.typeOf(b) : null) ?? 'annealed'; }   // (bi: the caller's index of b when it has one — the toll does — so nothing is searched per pane per question)
-/** unit normal of a sheet (its thin axis in the world; sign arbitrary) */
-function paneN(b: Box): Vec3 { const cs = Math.cos(b.yaw), sn = Math.sin(b.yaw); return b.h[0] < b.h[2] ? [cs, 0, -sn] : [sn, 0, cs]; }
-/** the next leg is born this far past the face the round left the glass by: clear of the sheet, and deep enough in anything standing flush against it to be found */
-const EXIT_EPS = 1e-3;
-const embedScratch = new Int32Array(64);
-/** What a round leaving the glass at `p` along `d` is born INSIDE (collision.ts lineBox: the origin on or within the box, the line going on through it) — a ray
- *  cast from there would never see that box (rayBox answers null from inside), so it has to be asked: −1 = open air, −2 = a static a round stops in (the frame the
- *  pane's edge is let into, the lintel over it, a cabinet flush against its far face), else the index of ANOTHER sheet of glass (a pane abutting this one). */
-function bornIn(g: Game, p: Vec3, d: Vec3, self: number): number {
-  const n = g.col.gather(p[0] - 0.02, p[2] - 0.02, p[0] + 0.02, p[2] + 0.02, p[1] - 0.02, p[1] + 0.02, embedScratch); let sheet = -1;
-  for (let i = 0; i < n; i++) {
-    const bi = embedScratch[i]; if (bi === self) continue; const b: Box = g.col.boxes[bi]; if (b.flags & BoxFlag.NoShadow) continue;
-    const s = lineBox(p, d, b); if (!s || s.depth < 0 || s.t1 <= 0) continue;
-    if (isSheet(b) as boolean) { if (!(g.col.glassOpen && g.col.glassOpen(bi, p))) sheet = bi; } else return -2;
-  }
-  return sheet;
-}
 
 // ---------------------------------------------------------------- holes: where rounds have already gone through each pane (per Game; gone with the encounter)
-interface PenState { holes: Map<number, number[]>; log: string[]; /** counts every change to the holes (one made, all cleared, a file's put back) */ rev: number }
+interface PenState { log: string[]; /** counts every change to the holes (one made, all cleared, a file's put back) */ rev: number }
 const states = new GameSideMap<Game, PenState>('glasspen.states');
-function stateOf(g: Game): PenState { let s = states.get(g); if (!s) { s = { holes: new Map(), log: [], rev: 0 }; states.set(g, s); } return s; }
+function stateOf(g: Game): PenState { let s = states.get(g); if (!s) { s = { log: [], rev: 0 }; states.set(g, s); } return s; }
 /** Game.resetLevelState, beside resetGlass: the holes go with the stars */
-export function resetGlassPen(g: Game) { const s = states.get(g); if (s) { s.holes.clear(); s.log.length = 0; s.rev++; } if (g.sim.open) simX().pen_clear_holes(g.sim.bind()); }
+export function resetGlassPen(g: Game) { const s = states.get(g); if (s) { s.log.length = 0; s.rev++; } if (g.sim.open) simX().pen_clear_holes(g.sim.bind()); }
 /** A number that moves whenever what a round has to pay at ANY pane may have moved: a through-hole made or cleared here, a piece out of a pane / a pane gone /
  *  every pane whole again in the fracture model. For whoever keeps an answer that was worked out through the toll (orders.ts behindGlass). */
 export function glassTollSig(g: Game): number { return (states.get(g)?.rev ?? 0) * 65537 + (g.glassBreak ? g.glassBreak.openSig() : 0); }
-function nearHole(g: Game, bi: number, p: Vec3): boolean {
-  const h = states.get(g)?.holes.get(bi); if (!h) return false; const r2 = GLASSPEN.holeR * GLASSPEN.holeR;
-  for (let i = 0; i < h.length; i += 3) { const dx = h[i] - p[0], dy = h[i + 1] - p[1], dz = h[i + 2] - p[2]; if (dx * dx + dy * dy + dz * dz < r2) return true; }
-  return false;
-}
-function addHole(g: Game, bi: number, p: Vec3) {
-  const S = stateOf(g); let h = S.holes.get(bi); if (!h) S.holes.set(bi, h = []);   // (the twin's: compared by the both-ways check, read by nothing else)
-  h.push(p[0], p[1], p[2]); if (h.length > GLASSPEN.holes * 3) h.splice(0, 3); S.rev++;
-  g.glassBreak.asking((x, s) => x.pen_add_hole(s, bi, p[0], p[1], p[2]));
-}
+function addHole(g: Game, bi: number, p: Vec3) { stateOf(g).rev++; g.glassBreak.asking((x, s) => x.pen_add_hole(s, bi, p[0], p[1], p[2])); }
 /** savestate.ts: the holes (pane → its crossings' points), or undefined when there are none — a file written with the switch off carries no such key, as before */
 export type GlassPenSnap = [number, number[]][];
 export function glassPenSnapshot(g: Game): GlassPenSnap | undefined {
@@ -194,8 +168,8 @@ export function glassPenSnapshot(g: Game): GlassPenSnap | undefined {
  *  NOT while the fracture model is live: a load leaves every pane WHOLE there (glassbreak.ts keeps nothing in a checkpoint, and on the page a cracking round files
  *  no star), so a hole put back would be a cheap way through glass that shows no mark. Both come back or neither: with the fracture live, neither. */
 export function glassPenRestore(g: Game, s: GlassPenSnap | undefined | null) {
-  if (!Array.isArray(s) || glassBreakLive(g)) return; const S = stateOf(g); S.rev++;
-  for (const row of s) { if (!Array.isArray(row) || !isSheet(g.level.boxes[row[0]]) || !Array.isArray(row[1])) continue; const p = row[1].filter(x => Number.isFinite(x)), kept = p.slice(0, Math.min(p.length - p.length % 3, GLASSPEN.holes * 3)); S.holes.set(row[0], kept);
+  if (!Array.isArray(s) || glassBreakLive(g)) return; stateOf(g).rev++;
+  for (const row of s) { if (!Array.isArray(row) || !isSheet(g.level.boxes[row[0]]) || !Array.isArray(row[1])) continue; const p = row[1].filter(x => Number.isFinite(x)), kept = p.slice(0, Math.min(p.length - p.length % 3, GLASSPEN.holes * 3));
     g.glassBreak.asking((x, b) => { for (let i = 0; i < kept.length; i += 3) x.pen_add_hole(b, row[0], kept[i], kept[i + 1], kept[i + 2]); }); }
 }
 /** how many through-holes pane bi carries (QA) */
@@ -207,26 +181,14 @@ export interface PaneToll { type: PaneType; n: Vec3; cos: number; take: number; 
  *  spent in it (not a sheet, a graze, too little left, one pane too many). Pure: fireWeapon's path and every line-of-fire question read this one function. */
 export function paneToll(g: Game, bi: number, at: Vec3, d: Vec3, e: number, nth = 0): PaneToll | null {
   const r = g.glassBreak.asking((x): PaneToll | null => { if (!x.pen_toll(bi, at[0], at[1], at[2], d[0], d[1], d[2], e, nth)) return null; const m = f64(), o = x.sim_scratch() / 8; return { type: PANE_TYPES[m[o]], n: [m[o + 1], m[o + 2], m[o + 3]], cos: m[o + 4], take: m[o + 5], eOut: m[o + 6], hole: m[o + 7] !== 0 }; });
-  if (PANES.both) both(g, 'toll', paneTollOwn(g, bi, at, d, e, nth), r);
   return r;
 }
 const PANE_TYPES: readonly PaneType[] = ['annealed', 'tempered', 'laminated'];
-/** the check's: what a call answered both ways */
-function both(g: Game, what: string, own: unknown, mine: unknown): void { PANES.both!(what, g.glassBreak.twin, [own, mine], [], []); }
 /** a crossing as the module lists it (rust/sim/src/pen.rs write_cross) */
 function crossAt(m: Float64Array, o: number, into: number): PaneCross {
   return { type: PANE_TYPES[m[o]], n: [m[o + 1], m[o + 2], m[o + 3]], cos: m[o + 4], take: m[o + 5], eOut: m[o + 6], hole: m[o + 7] !== 0, bi: m[o + 8], t: m[o + 9], at: [m[o + 10], m[o + 11], m[o + 12]], exit: [m[o + 13], m[o + 14], m[o + 15]], dirIn: [m[o + 16], m[o + 17], m[o + 18]], dirOut: [m[o + 19], m[o + 20], m[o + 21]], eIn: m[o + 22], turnDeg: m[o + 23], thru: m[o + 24], into };
 }
 const CROSS = 25, LEG = 9, MAX_CROSS = 16;
-function paneTollOwn(g: Game, bi: number, at: Vec3, d: Vec3, e: number, nth = 0): PaneToll | null {
-  const b = g.level.boxes[bi]; if (!isSheet(b) || nth >= GLASSPEN.maxPanes) return null;
-  let n = paneN(b), cos = v3.dot(n, d); if (cos < 0) { n = v3.scale(n, -1); cos = -cos; }   // n along the round's travel
-  if (cos < GLASSPEN.grazeCos) return null;
-  const hole = nearHole(g, bi, at), type = paneType(g, b, bi);
-  const take = GLASSPEN.cost[type] * (2 * Math.min(b.h[0], b.h[2]) / GLASSPEN.refThick) * Math.min(GLASSPEN.obliqueMax, 1 / cos) * (hole ? GLASSPEN.holeK : 1);
-  const eOut = e - take; if (eOut < GLASSPEN.minEnergy) return null;
-  return { type, n, cos, take, eOut, hole };
-}
 
 /** one pane a round went through */
 export interface PaneCross extends PaneToll {
@@ -240,31 +202,10 @@ export interface PaneCross extends PaneToll {
   /** the sheet the round is INSIDE as it leaves this one (a pane abutting it), or −1 */
   into: number;
 }
-/** the turn: toward the normal by the slant's share, plus the hashed scatter — unit vector out */
-function deflect(b: Box, at: Vec3, d: Vec3, T: PaneToll, eIn: number): Vec3 {
-  const A = GLASSPEN.deflectDeg * Math.PI / 180 * clamp(T.take / Math.max(eIn, 1e-6), 0, 1);   // (a round through a hole: its toll is already the quarter)
-  if (A < 1e-6) return d;
-  let s = hitSeedOwn(b, at); s = (Math.imul(s ^ (s >>> 15), 0x2C1B3C6D) + 0x297A2D39) >>> 0;   // (one step off the seed the star's look is drawn from: the turn is not the star's twin)
-  const u1 = (s & 0xffff) / 65535, u2 = (s >>> 16) / 65535;
-  const up: Vec3 = Math.abs(d[1]) < 0.95 ? [0, 1, 0] : [1, 0, 0]; const e1 = v3.normalize(v3.cross(up, d)), e2 = v3.cross(d, e1);
-  const r = Math.tan(A * Math.sqrt(u1)), phi = u2 * Math.PI * 2;   // uniform over the cone's disc
-  let out: Vec3 = [d[0] + (e1[0] * Math.cos(phi) + e2[0] * Math.sin(phi)) * r, d[1] + (e1[1] * Math.cos(phi) + e2[1] * Math.sin(phi)) * r, d[2] + (e1[2] * Math.cos(phi) + e2[2] * Math.sin(phi)) * r];
-  const sin = Math.sqrt(Math.max(0, 1 - T.cos * T.cos));
-  if (sin > 1e-4) { const k = Math.tan(A * GLASSPEN.bendK * sin) / sin; const px = T.n[0] - d[0] * T.cos, py = T.n[1] - d[1] * T.cos, pz = T.n[2] - d[2] * T.cos; out = [out[0] + px * k, out[1] + py * k, out[2] + pz * k]; }   // (p = the normal's part across the flight, length sin θ)
-  return v3.normalize(out);
-}
 /** one pane on a round's flight: what it takes and where the round leaves it — or null: spent in it (roundPath below; wallpen.ts thinPath, the flight over panes and thin walls alike) */
 export function paneCrossing(g: Game, bi: number, o: Vec3, d: Vec3, t: number, e: number, nth: number): PaneCross | null {
   const r = g.glassBreak.asking((x): PaneCross | null => { if (!x.pen_cross(bi, o[0], o[1], o[2], d[0], d[1], d[2], t, e, nth)) return null; const m = f64(), a = x.sim_scratch() / 8; return crossAt(m, a, m[a + CROSS]); });
-  if (PANES.both) both(g, 'cross', paneCrossingOwn(g, bi, o, d, t, e, nth), r);
   return r;
-}
-function paneCrossingOwn(g: Game, bi: number, o: Vec3, d: Vec3, t: number, e: number, nth: number): PaneCross | null {
-  const at = v3.mad(o, d, t); const T = paneTollOwn(g, bi, at, d, e, nth); if (!T) return null;
-  const b = g.level.boxes[bi]; const te = lineBox(at, d, b)?.t1 ?? -1; const thru = (te > 0 ? te : 2 * Math.min(b.h[0], b.h[2]) / T.cos) + EXIT_EPS;   // (the far end of the sheet's slab along the flight, + a hair)
-  const exit = v3.mad(at, d, thru); const into = bornIn(g, exit, d, bi); if (into === -2) return null;   // out of the glass and into the frame it sits in: spent there
-  const dirOut = into >= 0 ? d : deflect(b, at, d, T, e);   // (straight on into a pane abutting this one: that pane does the turning)
-  return { ...T, bi, t, at, exit, dirIn: d, dirOut, eIn: e, turnDeg: Math.acos(clamp(v3.dot(d, dirOut), -1, 1)) * 180 / Math.PI, thru, into };
 }
 
 // ---------------------------------------------------------------- the round's flight
@@ -292,22 +233,7 @@ export function roundPath(g: Game, from: Vec3, dir: Vec3, range: number, energy:
     for (let i = 0, n = m[h + 1], c0 = a + (MAX_CROSS + 1) * LEG; i < n; i++) cross.push(crossAt(m, c0 + i * CROSS, m[h + 8 + i]));
     return { segs, cross, st: m[h + 3] < 0 ? null : { t: m[h + 4], index: m[h + 3], n: [m[h + 5], m[h + 6], m[h + 7]] }, len: m[h + 2] };
   });
-  if (PANES.both) both(g, 'path', roundPathOwn(g, from, dir, range, energy, hit, nth0), r);
   return r;
-}
-function roundPathOwn(g: Game, from: Vec3, dir: Vec3, range: number, energy: number, first: StaticHit, nth0 = 0): RoundPath | null {
-  let hit: StaticHit = first;
-  const segs: RoundSeg[] = [], cross: PaneCross[] = []; let o = from, d = dir, t0 = 0, e = energy;
-  for (;;) {
-    if (!hit) { segs.push({ o, d, t0, len: range - t0, e }); return cross.length ? { segs, cross, st: null, len: range } : null; }
-    const x: PaneCross | null = hit.index < 1e6 ? paneCrossingOwn(g, hit.index, o, d, hit.t, e, nth0 + cross.length) : null;
-    segs.push({ o, d, t0, len: hit.t, e });
-    if (!x) return cross.length ? { segs, cross, st: { t: t0 + hit.t, index: hit.index, n: hit.n }, len: t0 + hit.t } : null;
-    x.t = t0 + hit.t; cross.push(x);
-    t0 = x.t + x.thru; o = x.exit; d = x.dirOut; e = x.eOut;
-    if (t0 >= range) return { segs, cross, st: null, len: range };
-    hit = x.into >= 0 ? { t: 0, index: x.into, n: v3.scale(d, -1) } : g.col.raycast(o, d, range - t0);   // (born inside an abutting pane — a ray from there would not see it: it is met where the round stands)
-  }
 }
 /** the leg holding path distance T (a T inside a pane's thickness belongs to the leg before it) */
 export function segAt(P: RoundPath, T: number): RoundSeg { let s = P.segs[0]; for (const k of P.segs) { if (k.t0 > T) break; s = k; } return s; }
@@ -359,16 +285,6 @@ export function spentInPane(g: Game, bi: number, at: Vec3, dir: Vec3, energy: nu
   paneImpact(g, bi, at, dir, energy, who, false, mark === 'more');
 }
 
-/** the arm's line (from, rd, L metres) met nothing — is that because every sheet of glass across it has fallen where the line crosses it (and there is one)? */
-function armInHole(g: Game, from: Vec3, rd: Vec3, L: number): boolean {
-  if (!g.col.glassOpen) return false; let any = false;
-  for (const bi of glassPanes(g)) {
-    const s = lineBox(from, rd, g.level.boxes[bi]); if (!s || s.t1 < 0 || s.t0 > L) continue;
-    if (!g.col.glassOpen(bi, v3.mad(from, rd, Math.max(0, s.t0)))) return false;
-    any = true;
-  }
-  return any;
-}
 /** THE MUZZLE ALREADY PAST THE GLASS (combat.ts armThrough: gun shoulder and muzzle on opposite sides of a panel — a man pressed to the glazing): if every panel
  *  across the arm is a sheet a round of `energy` gets through, the round is NOT put into the panel at the muzzle — it leaves the muzzle with what the glass left
  *  it, and the pane is filed at the arm's crossing. Returns the energy left and the panes that took (they count toward maxPanes on the flight from the muzzle),
@@ -381,24 +297,10 @@ export function armThroughGlass(g: Game, c: Character, dir: Vec3, energy: number
   if (!glassPenLive(g)) return null;
   const from = c.bones.upperArmR ?? v3.add(c.pos, [0, 1.4, 0]), mz = c.muzzle, L = v3.len(v3.sub(mz, from));
   const w = g.glassBreak.asking((x): { e: number; cross: PaneCross[] } | null => { const n = x.pen_arm(from[0], from[1], from[2], mz[0], mz[1], mz[2], dir[0], dir[1], dir[2], energy); if (n < 0) return null; const m = f64(), a = x.sim_scratch() / 8, cross: PaneCross[] = []; for (let i = 0; i < n; i++) cross.push(crossAt(m, a + i * CROSS, -1)); return { e: m[a + x.sim_scratch_len() - 1], cross }; });
-  if (PANES.both) both(g, 'arm', armWalkOwn(g, c, dir, energy), w);
   if (!w) return null;
   if (!w.cross.length) return { e: energy, panes: 0 };
   commitCrossings(g, w.cross, L, c.id, shell); GLASSPEN_STATS.viaArm++;   // (a shell: its nine pellets cross at the one arm point — the first files it, the rest join it)
   return { e: w.e, panes: w.cross.length };
-}
-function armWalkOwn(g: Game, c: Character, dir: Vec3, energy: number): { e: number; cross: PaneCross[] } | null {
-  const from = c.bones.upperArmR ?? v3.add(c.pos, [0, 1.4, 0]); const dd = v3.sub(c.muzzle, from); const L = v3.len(dd); if (L < 1e-3) return null;
-  const rd = v3.scale(dd, 1 / L); const cross: PaneCross[] = []; let o = from, t0 = 0, e = energy;
-  for (let k = 0; k < 8 && t0 < L; k++) {   // WHERE the glass is: along the arm. What it takes: by the BORE's line through it (the round's, not the forearm's) — a muzzle laid along the sheet is a graze
-    const h = g.col.raycast(o, rd, L - t0); if (!h) break; if (h.index >= 1e6) return null;
-    const at = v3.mad(o, rd, h.t); const T = paneTollOwn(g, h.index, at, dir, e, cross.length); if (!T) return null;   // (a partition, a jamb, the bottle, or a sheet this round has not the energy for: the old rule)
-    const b = g.level.boxes[h.index]; const thru = (lineBox(at, rd, b)?.t1 ?? 0) + EXIT_EPS;
-    cross.push({ ...T, bi: h.index, t: t0 + h.t, at, exit: v3.mad(at, rd, thru), dirIn: dir, dirOut: dir, eIn: e, turnDeg: 0, thru, into: -1 });
-    e = T.eOut; t0 += h.t + thru; o = v3.mad(at, rd, thru);
-  }
-  if (!cross.length) return armInHole(g, from, rd, L) ? { e: energy, cross: [] } : null;
-  return { e, cross };
 }
 
 /** StaticCollision.glassPen.passes — the line of FIRE across the panes a segment meets (in order, nothing else in the way): does a round of `energy` get
@@ -406,7 +308,6 @@ function armWalkOwn(g: Game, c: Character, dir: Vec3, energy: number): { e: numb
 export function shotPasses(g: Game, a: Vec3, rd: Vec3, panes: { bi: number; t: number }[], energy = GLASSPEN.defaultEnergy): boolean {
   GLASSPEN_STATS.shotAsked++;
   const ok = g.glassBreak.asking((x) => { const m = f64(), o = x.sim_scratch() / 8; for (let k = 0; k < panes.length; k++) { m[o + 2 * k] = panes[k].bi; m[o + 2 * k + 1] = panes[k].t; } return x.pen_passes(a[0], a[1], a[2], rd[0], rd[1], rd[2], panes.length, energy) === 1; });
-  if (PANES.both) { let e = energy, own = true; for (let k = 0; k < panes.length; k++) { const T = paneTollOwn(g, panes[k].bi, v3.mad(a, rd, panes[k].t), rd, e, k); if (!T) { own = false; break; } e = T.eOut; } both(g, ok ? 'shotAllowed' : 'shotRefused', own, ok); }
   if (ok) GLASSPEN_STATS.shotThrough++; else GLASSPEN_STATS.shotRefused++;
   return ok;
 }

@@ -4,7 +4,7 @@
   "frozen": {
    "run": "office.json,glasshouse.json,barracks.json,consulate.json n 300 seed 1",
    "end": "5447 calls",
-   "tree": "b42d0aa6 WIP: the docs say where the level's sheets stand, with changes not committed",
+   "tree": "the port, the last tree where the TypeScript twin stood",
    "words": {
     "annealed": {
      "asked": 328,
@@ -107,8 +107,8 @@
      "word": "250c7adb0c687fdb"
     },
     "runByFire": {
-     "asked": 818,
-     "word": "4cd783c43ce4df3f"
+     "asked": 270,
+     "word": "8fc4b66312000687"
     },
     "runByOne": {
      "asked": 46,

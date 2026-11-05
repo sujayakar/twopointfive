@@ -25,7 +25,7 @@
 // (Game.resetLevelState → resetBars: every bar stands again). CHECKPOINTS carry which bars are gone (savestate.ts files the slice `bars` beside the walls'
 // and re-applies it after the restart, silently; the pieces on the floor are not filed — no debris is); nothing broken = no slice, the file byte for byte
 // what it was. The switch rides in session journals (knobs.ts JOURNAL_KNOBS; a recording from before the table replays with it off — journal.ts applyKnobs).
-import { SideMap, GameSideMap } from '../math/side';
+import { GameSideMap } from '../math/side';
 import { Vec3, v3, lerp, clamp } from '../math/vec';
 import { Box, BoxFlag, copyBox } from '../scene/boxes';
 import { gpuFx } from './particleFx';
@@ -34,7 +34,6 @@ import { boxSeed } from './glass';   // (read inside breakBar only)
 import { FURN_BREAK, breakClassOf } from './furnblast';   // (read inside breakBar only: src/game is one import cycle)
 import { NOBODY_ID } from './consts';
 import { f64, sim as simX } from '../sim/sim';
-import { PANES } from './glassbreak';
 import type { Game } from './game';
 import type { BlastEvent } from './wallbreak';
 
@@ -150,27 +149,7 @@ export function barsBlast(g: Game, ev: BlastEvent) {
   if (!barsLive(g) || WINBARS.blastK <= 0) return;
   const R = ev.radius * WINBARS.blastK, from: Vec3 = [ev.at[0], Math.max(0.3, ev.at[1]), ev.at[2]], B = g.col.boxes;
   const took = g.glassBreak.asking((x) => { const n = x.bars_blast(from[0], from[1], from[2], R, Math.min(B.length, g.level.boxes.length)), m = f64(), o = x.sim_scratch() / 8, out: { i: number; at: Vec3 }[] = []; for (let k = 0; k < n; k++) out.push({ i: m[o + 4 * k], at: [m[o + 4 * k + 1], m[o + 4 * k + 2], m[o + 4 * k + 3]] }); return out; });
-  if (PANES.both) PANES.both('barsBlast', g.glassBreak.twin, [barsBlastOwn(g, from, R), took], [], []);
   for (const t of took) { const b = B[t.i], dx = b.c[0] - from[0], dz = b.c[2] - from[2], l = Math.hypot(dx, dz); breakBar(g, t.i, t.at, l > 1e-3 ? [dx / l, 0, dz / l] : [0, 0, 0], ev.who || NOBODY_ID, 'blast'); }
-}
-// (the judgement's TypeScript, the check's)
-function barsBlastOwn(g: Game, from: Vec3, R: number): { i: number; at: Vec3 }[] {
-  const B = g.col.boxes, took: { i: number; at: Vec3 }[] = [];
-  const near = barsStanding(g).filter(i => { const b = B[i]; return Math.hypot(b.c[0] - from[0], b.c[2] - from[2]) <= R + Math.max(b.h[0], b.h[2]); });
-  if (!near.length) return took;
-  const was = near.map(i => B[i].flags);
-  for (const i of near) B[i].flags |= HIDE;
-  g.col.wrote();
-  for (const i of near) {
-    const b = B[i];
-    for (const u of [0, 0.6, -0.6]) {
-      const q: Vec3 = [b.c[0], b.c[1] + u * b.h[1], b.c[2]]; if (v3.dist(from, q) > R + Math.max(b.h[0], b.h[2])) continue;
-      if (g.col.solidBlocked(from, q)) continue;
-      took.push({ i, at: q }); break;
-    }
-  }
-  near.forEach((i, k) => { B[i].flags = was[k]; }); g.col.wrote();
-  return took;
 }
 
 // ---------------------------------------------------------------- reset, checkpoints

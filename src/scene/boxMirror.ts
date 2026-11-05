@@ -48,8 +48,6 @@ const OWE_BOXES = 1, OWE_GLASS = 2, OWE_VIEW = 4;
 /** SHEETS OF GLASS A LEVEL MAY HAVE (rust/sim/src/world.rs MAX_GLASS and MAX_VIEW: a row a pane that is no longer whole, a row a pane a burst's view names
  *  — so no level that loads can break more than the copy holds; game/levelfit.ts says so as the level loads, and `boot` holds the number to the module's) */
 export const PANE_CAP = 256;
-/** where a broken pane's row keeps what, for a check that must spoil one by name (tools/qa/glass-ident.ts's red path) */
-export const GLASS_AT = { doubles: T_GLASS, words: T_GLASS_W, GD, GW, flags: GW_FLAGS, run: G_RUN, lastKey: G_DICE_AT + 4 } as const;
 const PLANE = 4, CUT_ROW = MAX_CUT_PLANES * PLANE;
 
 /** who holds each of the module's worlds, and a count that says who stepped last (the host's: which game has which table is no part of any game) */
@@ -82,7 +80,7 @@ export const VIEW_NONE = 0, VIEW_BLOWN = 1, VIEW_GIVES = 2;
 export interface PaneView { readonly kind: number; readonly bi: readonly number[]; readonly at: readonly number[] }
 /** THE GAME'S GLASS, for the copy (game/glassbreak.ts GlassBreak): every pane that is no longer whole, handed over one by one, and the view in hand (read
  *  only when a question is about to be asked of the module under it: the game may work its rows out then and not before) */
-export interface PaneSource { each(to: (p: PaneRow) => void): void; readonly view: PaneView | null;
+export interface PaneSource { /** (a tool's made-up glass, a world with no game behind it: tools/qa/item-ident.ts, slab-ident.ts) */ each?(to: (p: PaneRow) => void): void; readonly view: PaneView | null;
   /** …or the game's block, where the rule is the module's own (rust/sim/src/panes.rs): a line or a ray there reads each pane's row where it stands, nothing is copied, and a view is its numbers (`at`: the burst's point, reach, power, whether a man counts on it) */
   readonly home?: SimState | null;
   /** …and the level's sheets of glass, three numbers each (a static, how far it stands from a door's opening, which face has the sky: rust/sim/src/world.rs Sheet) */
@@ -357,7 +355,7 @@ export class BoxMirror extends HostOwned {
       this.viewIn(); return; }   // (the rows stand in the game's block: the rule's own)
     this.x.panes_world(this.slot, -1);
     let n = 0;
-    if (G !== null) { const m = f64(), cap = this.caps.glass; G.each(p => { if (n < cap) this.pane(m, w, this.glassD + n * GD, this.glassW + n * GW, p); n++; }); }
+    if (G !== null && G.each) { const m = f64(), cap = this.caps.glass; G.each(p => { if (n < cap) this.pane(m, w, this.glassD + n * GD, this.glassW + n * GW, p); n++; }); }
     if (n > this.caps.glass) this.outgrown('panes of glass no longer whole', n, this.caps.glass);
     this.glassAngles = false; for (let r = 0, o = this.glassW + GW_FLAGS; r < n; r++, o += GW) if (!(w[o] & G_GONE)) { this.glassAngles = true; break; }   // (a pane that is gone is open everywhere: no piece to find)
     was.length = n; for (let r = 0, o = this.glassW; r < n; r++, o += GW) w[of + (was[r] = w[o])] = r + 1;
@@ -405,7 +403,7 @@ export class BoxMirror extends HostOwned {
   /** THE CHECK'S QUESTION of the panes' copy (collision.ts BOTH): how many of its rows are not the game's glass now. 0, or a write of the glass went unsaid. */
   stalePanes(): number {
     const G = this.glass; if (G === null) return this.glassN;
-    if (G.home) return 0;   // (no copy: the row is the state)
+    if (G.home || !G.each) return 0;   // (no copy: the row is the state)
     const w = u32(), m = f64(), keepW = w.slice(this.glassW, this.glassW + this.glassN * GW), keepD = m.slice(this.glassD, this.glassD + this.glassN * GD), wasN = this.glassN;
     let n = 0, bad = 0; const tw = new Uint32Array(GW), td = new Float64Array(GD);
     G.each(p => { const r = n++; if (r >= wasN) { bad++; return; }

@@ -36,7 +36,7 @@
 //     whole (resetLevelState; a checkpoint load is a restart, so holes are never saved — and no static is appended, so savestate's levelFingerprint is untouched).
 import { Vec3, v3 } from '../math/vec';
 import { Box, BoxFlag, makeBox } from '../scene/boxes';
-import { VIEW_BLOWN, VIEW_GIVES, type PaneRow, type PaneView } from '../scene/boxMirror';
+import { VIEW_BLOWN, VIEW_GIVES, type PaneView } from '../scene/boxMirror';
 import type { Game } from './game';
 import { men } from './seats';
 import { glassImpact, glassEvent, GLASSFX, glassPanes, isSheet } from './glass';
@@ -45,8 +45,7 @@ import { chaosOf } from './destruction';
 import { gpuFx } from './particleFx';
 import { WIND, WIND_FIELD, type WindSource } from './wind';
 import { segSegClosest } from './devices';
-import { GP_MAX_SITES, GP_FRAGS_PER_SITE, GP_MAX_SECTORS, GP_BANDS, type GpSite, type GpFrag, type GpDice, type Pt, gpPolyArea, gpDiceCentre, gpDiceKey, gpFragments } from './glassPattern';
-import { GlassBreakTwin } from './glassbreakTwin';
+import { GP_MAX_SITES, GP_FRAGS_PER_SITE, GP_MAX_SECTORS, GP_BANDS, type GpSite, type GpFrag, type GpDice, type Pt, gpPolyArea, gpDiceKey, gpFragments } from './glassPattern';
 import { sim as simX, f64, u32, type SimExports } from '../sim/sim';
 import type { SimState } from '../sim/state';
 import { knobsToRust, RUST_KNOBS } from './rustknobs';
@@ -191,18 +190,15 @@ export interface PaneState {
   /** every piece reaching below walkClearH has fallen: movement passes */ walkable: boolean;
   log: string[];
 }
-export const GB_TWIN = { panes: 0, impacts: 0, sites: 0, runs: 0, dropped: 0, shards: 0, chips: 0, refused: 0, diced: 0, clumps: 0, sheets: 0, blasts: 0, thinks: 0, hooked: 0, raked: 0 };
+export const GB_HOST = { panes: 0, impacts: 0, sites: 0, runs: 0, dropped: 0, shards: 0, chips: 0, refused: 0, diced: 0, clumps: 0, sheets: 0, blasts: 0, thinks: 0, hooked: 0, raked: 0 };
 /** where the module counts what panes.rs Tally counts, by the same order */
-const TALLY_AT: Partial<Record<keyof typeof GB_TWIN, number>> = { panes: 0, impacts: 1, sites: 2, runs: 3, dropped: 4, diced: 5, clumps: 6, sheets: 7, blasts: 8, thinks: 9, raked: 10 };
+const TALLY_AT: Partial<Record<keyof typeof GB_HOST, number>> = { panes: 0, impacts: 1, sites: 2, runs: 3, dropped: 4, diced: 5, clumps: 6, sheets: 7, blasts: 8, thinks: 9, raked: 10 };
 const tally = (i: number | undefined): number => { if (i === undefined) return 0; const x = simX(); return f64()[x.panes_tally() / 8 + i]; };
-/** the counts for a tool or a panel: the twin's own, and what the module has counted (no rule reads them back) */
-export const GB_STATS = new Proxy(GB_TWIN, { get: (t, k: string) => (t as Record<string, number>)[k] + tally(TALLY_AT[k as keyof typeof GB_TWIN]), set: (t, k: string, v: number) => { (t as Record<string, number>)[k] = v - tally(TALLY_AT[k as keyof typeof GB_TWIN]); return true; } });   // (a count set, a tool's reset: from here it counts on from that)
+/** the counts for a tool or a panel: what the host counts of what a fragment becomes, and what the module has counted (no rule reads them back) */
+export const GB_STATS = new Proxy(GB_HOST, { get: (t, k: string) => (t as Record<string, number>)[k] + tally(TALLY_AT[k as keyof typeof GB_HOST]), set: (t, k: string, v: number) => { (t as Record<string, number>)[k] = v - tally(TALLY_AT[k as keyof typeof GB_HOST]); return true; } });   // (a count set, a tool's reset: from here it counts on from that)
 /** rows of the GPU record per pane (scene/boxes.ts GB_STRIDE must equal it; common.wgsl reads the same layout) */
 export const GB_HEADER_ROWS = 4, GB_SITE_ROWS = 4, GB_RECORD_ROWS = GB_HEADER_ROWS + GP_MAX_SITES * GB_SITE_ROWS;
 
-/** BOTH WAYS (tools/qa/pane-ident.ts hangs itself here): every call of the rule run by the twin first and by the module after, each from the state the other had, and
- *  what each answered, what each let go and each pane's state handed over to be compared. Null everywhere a game is played. */
-export const PANES: { both: null | ((what: string, twin: GlassBreakTwin, answers: [unknown, unknown], twinFrags: (GlassFragment & { key: number; heard: boolean })[], frags: (GlassFragment & { key: number; heard: boolean })[]) => void) } = { both: null };
 const TYPES: readonly GlassType[] = ['annealed', 'tempered', 'laminated'];
 const CAUSES: readonly GlassFragment['cause'][] = ['hit', 'support', 'blast', 'dice', 'rake'];
 const KINDS: readonly GlassFragment['kind'][] = ['piece', 'dagger', 'clump', 'sheet'];
@@ -221,16 +217,11 @@ const GW_COLS = 2, GW_ROWS = 3, GW_DSEED = 4, GW_N = 5, GW_SEED = 13, GW_OPEN = 
 type Ask<T> = (x: SimExports, g: number, w: number) => T;
 
 export class GlassBreak {
-  /** the rule's twin (glassbreakTwin.ts): run beside the module by the both-ways check, and by nothing else */
-  readonly twin: GlassBreakTwin;
   /** THE RELEASE HOOK: set by the shards part; null = the stand-in below spawns the base's Debris shards + chips */
-  get onRelease(): ((f: GlassFragment) => void) | null { return this.hook; }
-  set onRelease(f: ((f: GlassFragment) => void) | null) { this.hook = f; this.twin.onRelease = f; }
-  private hook: ((f: GlassFragment) => void) | null = null;
-  /** dev's log (the twin's: the rule keeps no text) */
-  get log(): string[] { return this.twin.log; }
+  onRelease: ((f: GlassFragment) => void) | null = null;
+  /** dev's log (the rule keeps no text) */
+  readonly log: string[] = [];
   constructor(private g: Game) {
-    this.twin = new GlassBreakTwin(g);
     g.engine.world.glassCellFill = (bi, dst, off) => this.fill(bi, dst, off);
     // (also: a burst's own view of the glass, for the length of one judgment — seeThrough below. And `this`: where the lines and rays of the module read the rule)
     g.col.glassRule((bi, p) => this.ruleOpen(bi, p), () => this);
@@ -253,7 +244,7 @@ export class GlassBreak {
       if (!RUST_KNOBS.tick) knobsToRust();
       const set = M.leaves(c.dynamicBoxes); if (set === -2) throw new Error('glass: more leaves than a list of the module holds');
       const x = M.x, s = g.sim.bind();
-      x.panes_ctx(s, M.slot, set, g.time, this.hook !== null && (g.tune as { glassShards?: boolean }).glassShards !== false && glassBreakLive(g) ? 1 : 0, SHARD.gravity);
+      x.panes_ctx(s, M.slot, set, g.time, this.onRelease !== null && (g.tune as { glassShards?: boolean }).glassShards !== false && glassBreakLive(g) ? 1 : 0, SHARD.gravity);
       const r = fn(x, s, M.slot);
       if (x.panes_take_wrote()) c.wrote();
       return r;
@@ -280,7 +271,7 @@ export class GlassBreak {
     return d;
   }
   /** what the last call let go: its fragments handed on in the order they went (the module has them listed; none has been told to anybody yet). The caller stands in `ask`'s window: a fragment's handling may ask lines of its own. */
-  private drain(x: SimExports, keep?: (GlassFragment & { key: number; heard: boolean })[]): void {
+  private drain(x: SimExports): void {
     const n = x.panes_out_n(); if (n === 0) return;
     const m = f64(), o0 = x.panes_out_addr() / 8, p0 = x.panes_out_pts_addr() / 8;
     // (the list is read whole first: what is told of a fragment may ask the module anything)
@@ -294,7 +285,6 @@ export class GlassBreak {
         key: m[o + O_KEY], heard: m[o + O_HEARD] !== 0, landed: m[o + O_LANDED] !== 0, fall: m[o + O_FALL_T] < 0 ? undefined : { t: m[o + O_FALL_T], pos: [m[o + O_FALL_X], m[o + O_FALL_X + 1], m[o + O_FALL_X + 2]] } });
     }
     x.panes_out_clear();
-    if (keep) keep.push(...list);
     for (const f of list) this.letGo(f, x);
   }
   /** a fragment the rule let go, told to the game: its one way out */
@@ -306,7 +296,7 @@ export class GlassBreak {
         this.g.audio.play('glassCrack', f.centre, dicing ? 1.0 : 0.75, { rate: dicing ? 0.7 : 1.25 + 0.3 * hash01(key + V.key) });
         glassEvent(this.g, this.g.level.boxes[f.bi], f.centre, 1.0, f.who);
       }
-      if (this.hook) { GB_TWIN.hooked++; this.hook(f); return; }
+      if (this.onRelease) { GB_HOST.hooked++; this.onRelease(f); return; }
       this.standIn(V, f, key);
     }
   }
@@ -339,14 +329,10 @@ export class GlassBreak {
       const hh: Vec3 = V.uAxis === 0 ? [su / 2, sv / 2, Math.max(0.006, V.ht)] : [Math.max(0.006, V.ht), sv / 2, su / 2];
       const box = makeBox({ c: this.world(V, pu, pv, outSign * 0.02), h: hh, yaw: b.yaw, albedo: v3.copy(GLASSBREAK.shardAlbedo), flags: BoxFlag.Dynamic });
       const ch = g.destr.debris.spawn('shard', box, v3.copy(f.velocity), v3.copy(f.spin), f.who);
-      if (ch) { ch.box.rough = 0.05; GB_TWIN.shards++; } else GB_TWIN.refused++;
+      if (ch) { ch.box.rough = 0.05; GB_HOST.shards++; } else GB_HOST.refused++;
     }
     const P = gpuFx(g);   // chips: pale specks thrown out and down from across the fragment (GPU particles; nothing with them off / headless)
-    if (P) { const nChips = Math.round(Math.max(grains ? 3 : GLASSBREAK.chipsMin, f.area * (grains ? GLASSBREAK.diceChipsPerM2 : GLASSBREAK.chipsPerM2))); P.emit('debris', f.centre, f.normal, nChips, { shape: 'cone', speed: 1.1, speedJit: 0.8, spread: 1.2, life: 30, lifeJit: 0.4, size: grains ? 0.012 : 0.008, sizeJit: 0.6, aspect: 1.4, posJit: Math.sqrt(f.area) * 0.45, color: v3.copy(GLASSBREAK.chipColor) }); GB_TWIN.chips += nChips; }
-  }
-  /** run the twin's half of a call for the check (it goes first: what it asks of the world finds the state the call began from), and → what it did */
-  private shade<T>(fn: () => T): { a: T; fr: (GlassFragment & { key: number; heard: boolean })[] } {
-    const t = this.twin; t.shadow = []; try { const a = fn(); return { a, fr: t.shadow }; } finally { t.shadow = null; }
+    if (P) { const nChips = Math.round(Math.max(grains ? 3 : GLASSBREAK.chipsMin, f.area * (grains ? GLASSBREAK.diceChipsPerM2 : GLASSBREAK.chipsPerM2))); P.emit('debris', f.centre, f.normal, nChips, { shape: 'cone', speed: 1.1, speedJit: 0.8, spread: 1.2, life: 30, lifeJit: 0.4, size: grains ? 0.012 : 0.008, sizeJit: 0.6, aspect: 1.4, posJit: Math.sqrt(f.area) * 0.45, color: v3.copy(GLASSBREAK.chipColor) }); GB_HOST.chips += nChips; }
   }
 
   // ---------------------------------------------------------------- which glass
@@ -361,7 +347,6 @@ export class GlassBreak {
   /** make pane bi break as `type` from here on (tuning, probes, a level's own table); the pane is made whole first. null = back to typeOf. An override is the level's word on the pane: reset() keeps it */
   setType(bi: number, type: GlassType | null) {
     const gusts = (): void => { const src = this.gusts.get(bi); if (src) { const i = this.g.wind.all.indexOf(src); if (i >= 0) this.g.wind.all.splice(i, 1); this.gusts.delete(bi); } };
-    if (PANES.both) this.twin.setType(bi, type);
     this.ask((x, s) => { x.panes_set_type(s, bi, type ? TYPES.indexOf(type) : NO_OVER); }); this.g.col.wrote(); gusts();
   }
 
@@ -373,10 +358,8 @@ export class GlassBreak {
     const res: GlassImpact = { pane: isGlass, live: false, type: 'annealed', thickness: isGlass ? 2 * Math.min(b.h[0], b.h[2]) : 0, wasOpen: false, punched: false, diced: false, released: 0, cracked: false };
     if (!isGlass) return res;
     if (!glassBreakLive(g)) { res.type = this.typeOfPane(bi) ?? 'laminated'; return res; }   // the switch off, chaos 0, or the tour = the game byte for byte: glass.ts's star and noise are all that happens
-    const sh = PANES.both ? this.shade(() => this.twin.impact(bi, X, dir, energy, who, through)) : null, kept: (GlassFragment & { key: number; heard: boolean })[] | undefined = sh ? [] : undefined;
-    const v = this.ask((x) => { const r = dir ? x.panes_impact(bi, X[0], X[1], X[2], 1, dir[0], dir[1], dir[2], energy, who, through === undefined ? -1 : through ? 1 : 0) : x.panes_impact(bi, X[0], X[1], X[2], 0, 0, 0, 0, energy, who, through === undefined ? -1 : through ? 1 : 0); this.drain(x, kept); return r; });
+    const v = this.ask((x) => { const r = dir ? x.panes_impact(bi, X[0], X[1], X[2], 1, dir[0], dir[1], dir[2], energy, who, through === undefined ? -1 : through ? 1 : 0) : x.panes_impact(bi, X[0], X[1], X[2], 0, 0, 0, 0, energy, who, through === undefined ? -1 : through ? 1 : 0); this.drain(x); return r; });
     res.live = (v & 1) !== 0; res.wasOpen = (v & 2) !== 0; res.punched = (v & 4) !== 0; res.diced = (v & 8) !== 0; res.cracked = (v & 16) !== 0; res.type = TYPES[(v >>> 5) & 7] ?? 'laminated'; res.released = v >>> 8;
-    if (sh) PANES.both!('impact', this.twin, [sh.a, res], sh.fr, kept!);
     return res;
   }
   /** the base's name for a round's impact at energy 1 (probes, the console) */
@@ -384,22 +367,18 @@ export class GlassBreak {
   /** A PELLET THROUGH GLASS ITS OWN SHELL HAS JUST BROKEN (glasspen.ts, the shell rule): no blow is filed, but if a piece of an annealed pane still stands where it passed, that piece goes with it. Returns fragments let go. */
   widen(bi: number, X: Vec3): number {
     if (!glassBreakLive(this.g)) return 0;
-    const sh = PANES.both ? this.shade(() => this.twin.widen(bi, X)) : null, kept: (GlassFragment & { key: number; heard: boolean })[] | undefined = sh ? [] : undefined;
-    const n = this.ask((x) => { const r = x.panes_widen(bi, X[0], X[1], X[2]); this.drain(x, kept); return r; });
-    if (sh) PANES.both!('widen', this.twin, [sh.a, n], sh.fr, kept!);
+    const n = this.ask((x) => { const r = x.panes_widen(bi, X[0], X[1], X[2]); this.drain(x); return r; });
     return n;
   }
   /** A BLAST at `at` (destruction's blast entry point calls this; a stun charge's 'bang' comes through glass.ts at bangPower): every sheet whose nearest point is within the radius takes it by type and by k = power × (1 − d / radius). Returns the panes it changed. */
   blast(at: Vec3, opts: GlassBlastOpts = {}): number {
     if (!glassBreakLive(this.g)) return 0;
     const radius = opts.radius ?? GLASSBREAK.blastM, power = opts.power ?? 1, who = opts.who ?? 0;
-    const sh = PANES.both ? this.shade(() => this.twin.blast(at, opts)) : null, kept: (GlassFragment & { key: number; heard: boolean })[] | undefined = sh ? [] : undefined;
     let changed = 0;
     if (radius > 0 && power > 0) this.ask((x, s) => {
       x.panes_blast_begin(at[0], at[1], at[2]);
-      for (let i = 0, n = x.panes_sheets(); i < n; i++) { if (x.panes_blast_sheet(i, at[0], at[1], at[2], radius, power, who)) changed++; if (x.panes_take_wrote()) this.g.col.wrote(); this.drain(x, kept); }
+      for (let i = 0, n = x.panes_sheets(); i < n; i++) { if (x.panes_blast_sheet(i, at[0], at[1], at[2], radius, power, who)) changed++; if (x.panes_take_wrote()) this.g.col.wrote(); this.drain(x); }
     });
-    if (sh) PANES.both!('blast', this.twin, [sh.a, changed], sh.fr, kept!);
     return changed;
   }
   /** a stun charge went off at `at` (glass.ts updateGlass, off the 'bang' event): a blast at bangPower */
@@ -407,15 +386,12 @@ export class GlassBreak {
 
   // ---------------------------------------------------------------- a burst's view of the glass (frag.ts: fragments are stopped by glass that stands, and by none that the blast took)
   private viewOf: { kind: 'blown' | 'wary' | 'counted'; from: Vec3; size: GlassBlastOpts } | null = null;
-  /** THE PANES THAT ARE NO LONGER WHOLE for the box world's copy, while the rule is the twin's (scene/boxMirror.ts PaneSource) */
-  each(to: (p: PaneRow) => void): void { this.twin.each(to); }
   /** where the rule's state stands, while it is the module's: the copy reads it there and copies nothing (boxMirror.ts panes) */
   get home(): SimState | null { return this.g.sim; }
   /** For the length of `fn`, every solid walk and every ray ALSO passes a pane where a burst at `from` of this size sees no glass, by the `view` the burst's judgment is made in (frag.ts GlassView: 'blown' = goingAt, 'wary' = wouldGive of the whole pane, 'counted' = wouldGive at the point met). Nothing is filed and nothing is kept: the view is gone when fn returns (or throws). */
   seeThrough<T>(view: 'blown' | 'wary' | 'counted', from: Vec3, size: GlassBlastOpts, fn: () => T): T {
     const was = this.viewOf; this.viewOf = { kind: view, from, size }; this.g.col.glassViewed();
-    const on = () => { try { return fn(); } finally { this.viewOf = was; this.g.col.glassViewed(); } };
-    return PANES.both ? this.twin.seeThrough(view, from, size, on) : on();
+    try { return fn(); } finally { this.viewOf = was; this.g.col.glassViewed(); }
   }
   /** the view in hand as numbers (scene/boxMirror.ts PaneSource): which view, the burst's point, reach and power, whether a man counts on it */
   get view(): PaneView | null {
@@ -434,7 +410,6 @@ export class GlassBreak {
     if (sim.panes_take_gust(s)) this.gustDirty = true;
     if (this.gusts.size || this.gustDirty) { this.updateGusts(); this.gustDirty = this.gusts.size > 0; }
     if (!glassBreakLive(g)) return;   // (as impact / blast: a pane still shedding when the tour starts, the switch goes off or chaos drops to 0 sheds nothing more and files no noise)
-    const sh = PANES.both ? this.shade(() => this.twin.update(dt)) : null, kept: (GlassFragment & { key: number; heard: boolean })[] | undefined = sh ? [] : undefined;
     const n = sim.panes_row_n(s);
     if (n > 0) this.ask((x, gs) => {
       x.panes_frame_begin(gs);
@@ -442,9 +417,8 @@ export class GlassBreak {
       const M = f64(), at = x.panes_men_addr() / 8; let k = 0;
       for (const pl of men(g)) { if (!pl || pl.down || pl.holding || pl.dragging || pl.wall) continue; const c = pl.char, o = at + 7 * k++; M[o] = c.pos[0]; M[o + 1] = c.pos[1]; M[o + 2] = c.pos[2]; M[o + 3] = c.vel[0]; M[o + 4] = c.vel[1]; M[o + 5] = c.vel[2]; M[o + 6] = c.id; }
       x.panes_men(k);
-      for (let r = 0; r < n; r++) { x.panes_step(r); if (x.panes_take_wrote()) g.col.wrote(); this.drain(x, kept); }
+      for (let r = 0; r < n; r++) { x.panes_step(r); if (x.panes_take_wrote()) g.col.wrote(); this.drain(x); }
     });
-    if (sh) PANES.both!('update', this.twin, [sh.a, undefined], sh.fr, kept!);
   }
   /** a pane on an outside wall has changed: the gusts ask again */
   gustDirty = false;
@@ -527,9 +501,18 @@ export class GlassBreak {
     return out;
   }
   /** pane-local helpers a tool reads with (the frame of a pane in hand) */
-  toUV(st: PaneState, X: Vec3): Pt { return this.twin.toUV(st, X); }
-  toWorld(st: PaneState, u: number, v: number, w = 0): Vec3 { return this.twin.toWorld(st, u, v, w); }
-  normalOf(st: PaneState): Vec3 { return this.twin.normalOf(st); }
+  toUV(st: PaneState, X: Vec3): Pt {
+    const b = st.box; const cs = Math.cos(b.yaw), sn = Math.sin(b.yaw); const px = X[0] - b.c[0], pz = X[2] - b.c[2];
+    const lx = cs * px - sn * pz, lz = sn * px + cs * pz;
+    return [st.uAxis === 0 ? lx : lz, X[1] - b.c[1]];
+  }
+  toWorld(st: PaneState, u: number, v: number, w = 0): Vec3 {
+    const b = st.box; const cs = Math.cos(b.yaw), sn = Math.sin(b.yaw);
+    const lx = st.uAxis === 0 ? u : w, lz = st.uAxis === 0 ? w : u;
+    return [b.c[0] + cs * lx + sn * lz, b.c[1] + v, b.c[2] - sn * lx + cs * lz];
+  }
+  /** the pane's unit normal = the direction of pane-local +w */
+  normalOf(st: PaneState): Vec3 { const b = st.box; const cs = Math.cos(b.yaw), sn = Math.sin(b.yaw); return st.uAxis === 0 ? [sn, 0, cs] : [cs, 0, -sn]; }
   /** a burst's reckoning, for a tool: glassbreak's rule through the view */
   goingAt(bi: number, X: Vec3): boolean { return this.seeThrough('blown', [0, 0, 0], {}, () => this.ruleOpen(bi, X)); }
   wouldGive(bi: number, at: Vec3, opts: GlassBlastOpts = {}, X?: Vec3): boolean {
@@ -579,12 +562,11 @@ export class GlassBreak {
   }
   summary(): string {
     const T = this.g.tune as GbTune;
-    let s = `glass breaking ${T.glassBreak ? (glassBreakLive(this.g) ? 'ON' : 'on — but inert (chaos 0 / the tour)') : 'off'} ▸ ${this.panes.size} panes touched · ${GB_STATS.impacts} impacts · ${GB_STATS.sites} stars · ${GB_STATS.runs} run · ${GB_STATS.dropped} fragments out (${GB_STATS.clumps} clumps) · diced ${GB_STATS.diced}${this.hook ? ` · ${GB_STATS.hooked} to the shards hook` : ` · stand-in: ${GB_STATS.shards} shards (${GB_STATS.refused} refused), ${GB_STATS.chips} chips`}`;
+    let s = `glass breaking ${T.glassBreak ? (glassBreakLive(this.g) ? 'ON' : 'on — but inert (chaos 0 / the tour)') : 'off'} ▸ ${this.panes.size} panes touched · ${GB_STATS.impacts} impacts · ${GB_STATS.sites} stars · ${GB_STATS.runs} run · ${GB_STATS.dropped} fragments out (${GB_STATS.clumps} clumps) · diced ${GB_STATS.diced}${this.onRelease ? ` · ${GB_STATS.hooked} to the shards hook` : ` · stand-in: ${GB_STATS.shards} shards (${GB_STATS.refused} refused), ${GB_STATS.chips} chips`}`;
     for (const st of this.panes.values()) if (st.nOpen || st.dice || st.gone) s += ` | pane ${st.bi} ${st.type} ${Math.round(100 * this.openFraction(st.bi))}% open${st.run ? ' run' : ''}${st.walkable ? ' (walkable)' : ''}`;
     return s;
   }
   reset() {
-    if (PANES.both) this.twin.reset();
     const s = this.g.sim; if (s.open) simX().panes_reset(s.bind());
     this.g.col.wrote();
     for (const src of this.gusts.values()) { const i = this.g.wind.all.indexOf(src); if (i >= 0) this.g.wind.all.splice(i, 1); } this.gusts.clear(); this.gustDirty = false;

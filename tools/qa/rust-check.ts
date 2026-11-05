@@ -29,7 +29,7 @@
 //             over whole levels (door leaves swung, walls broken into pieces and re-shaped, tilted and cut boxes, panes with holes) answered by the module,
 //             by the TypeScript walk as it is and by the walk as it first was: every answer and every pane's place the same bits
 //   glass     where a pane of glass is open (rust/sim/src/glass.rs over the copy of every pane that is no longer whole; src/game/glassbreak.ts openAt, goingAt
-//             and a burst's reckoning of glass it has not broken; glassPattern.ts's pieces and clumps): tools/qa/glass-ident.ts — the glass of four levels broken
+//             and a burst's reckoning of glass it has not broken; glassPattern.ts's pieces and clumps): tools/qa/pane-ident.ts — the glass of four levels broken
 //             by the game's own rule (rounds, pellets, blasts, the glass's step, panes made another glass and made whole), and points on and off every pane
 //             asked of the rule and of the module under each view a burst judges by, with a solid line and a ray through each asked of both walks. It is no row of
 //             RUST: the lines' and the ray's rows answer by it wherever they meet a pane. The shared numbers are read out of both sources.
@@ -299,10 +299,10 @@ let wordOwn = '', wordRust = '';
 // ---- glass
 {
   // (on both stands: toughened glass comes down in a wave on the frozen one and drops after a beat on the page's)
-  const on = (stand: string) => child(['bun', 'run', 'tools/qa/glass-ident.ts', '--n', flag('--glassrounds') ?? '1000'], { TPS_PROFILE: stand, GLASS_BREAK: BREAK ? '1' : undefined }), both = [on('shipped'), on('frozen')];
+  const on = (stand: string) => child(['bun', 'run', 'tools/qa/pane-ident.ts'], { TPS_PROFILE: stand, PANES_BREAK: BREAK ? '1' : undefined }), both = [on('shipped'), on('frozen')];
   const r = { status: both.every(x => x.status === 0) ? 0 : 1, out: both.map(x => x.out).join('\n'), err: both.map(x => x.err).join('\n') };
-  const rows = r.out.split('\n').filter(l => / (PASS|FAIL) — \d+ sheets/.test(l)), sum = r.out.split('\n').filter(l => /^glass-ident: /.test(l)).join('\n    ');
-  const fs = await import('node:fs'), rd = (f: string) => fs.readFileSync(resolve(ROOT, f), 'utf8'), rs = rd('rust/sim/src/glass.rs') + rd('rust/sim/src/world.rs'), mirror = rd('src/scene/boxMirror.ts'), pattern = rd('src/game/glassPattern.ts');
+  const rows = r.out.split('\n').filter(l => /\d+ sheets, /.test(l)), sum = r.out.split('\n').filter(l => /^pane-ident: /.test(l)).join('\n    ');
+  const fs = await import('node:fs'), rd = (f: string) => fs.readFileSync(resolve(ROOT, f), 'utf8'), rs = rd('rust/sim/src/glass.rs') + rd('rust/sim/src/world.rs') + rd('rust/sim/src/pattern.rs'), mirror = rd('src/scene/boxMirror.ts'), pattern = rd('src/game/glassPattern.ts');
   const there = (name: string): number => { const m = new RegExp(`(?:pub )?const ${name}: \\w+ = ([^;]+);`).exec(rs); return m ? Number(eval(m[1].replace(/_/g, ''))) : NaN; };
   const inTs = (src: string, name: string): number => Number(new RegExp(`\\b${name} = (-?[\\d.]+)`).exec(src)?.[1] ?? NaN), off: string[] = []; let shared = 0;
   // the row's places and the tables' numbers as boxMirror.ts writes them, and the pattern's own numbers, each against the Rust source
@@ -313,8 +313,8 @@ let wordOwn = '', wordRust = '';
   { shared++; const sites = inTs(pattern, 'GP_MAX_SITES'), bands = inTs(pattern, 'GP_BANDS'), gs = inTs(mirror, 'G_SITES'), bits = inTs(mirror, 'GW_BITS');   // (a row holds every site a pane can have, and a bit a piece of each)
     if (gs !== sites || bands * there('MAX_SECTORS') !== there('FRAGS_PER_SITE') || bits * 32 !== sites * there('FRAGS_PER_SITE') || there('G_DICE_AT') !== sites * there('G_SITE') || there('GW_OPEN') - there('GW_SEED') !== sites) off.push(`a row's room: ${sites} sites of ${bands} bands, ${gs} in a row, ${bits} words of bits`); }
   for (const k of ['VIEW_NONE', 'VIEW_BLOWN', 'VIEW_GIVES']) { shared++; if (!(there(k) >= 0) || there(k) !== inTs(mirror, k)) off.push(`${k} ${inTs(mirror, k)} in boxMirror.ts, ${there(k)} there`); }
-  const ok = r.status === 0 && rows.length >= 8 && rows.every(l => / PASS /.test(l)) && (r.out.match(/=== glass-ident \(the (page's|frozen) stand\): PASS/g) ?? []).length === 2 && off.length === 0 && shared > 30;
-  verdict(ok, 'glass: every point of every pane is open or shut in the Rust module as the game\'s rule says, under every view a burst judges by, and a line and a ray through it end the same — and the two sides name their numbers alike',
+  const ok = r.status === 0 && rows.length >= 8 && (r.out.match(/=== pane-ident \(the (page's|frozen) stand\): PASS/g) ?? []).length === 2 && off.length === 0 && shared > 30;
+  verdict(ok, 'glass: what a pane is to play answers as it was recorded, every name reached — and the two sides name their numbers alike',
     (rows.length ? rows.map(l => l.replace(/\s+/g, ' ').trim()).join('\n    ') + '\n    ' + sum.slice(0, 1800) : `the differential left nothing (exit ${r.status}): ${(r.err || r.out).trim().split('\n').slice(-2).join(' / ').slice(0, 300)}`)
     + `\n    ${shared} numbers shared with the Rust source (boxMirror.ts, glassPattern.ts)${off.length ? ` — NOT THE SAME: ${off.slice(0, 8).join(', ')}` : ', each the same'}`);
 }
