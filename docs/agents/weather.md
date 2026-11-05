@@ -935,8 +935,9 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   COUNTED IN TWO (2026-11-05): that line had gone red as levels gained shelters (59 levels, 35.4 m², sneak-lab 4.52 against a bar of 4), and every
   square metre over the bar was the rim of a roof on no wall, which the lines below already call known. So the check now parts the ground by what
   stands at the roof's edge there: floor AT A WALL (a ceiling-high box within half a metre: a threshold, the strip past a packed roof's wall) keeps
-  the two bars (15.5 m² over 59 levels, most on quiet-relay 1.56 m²); ground under an OPEN EDGE is said and not barred (19.9 m², most on sneak-lab
-  3.82 m², never deeper than the rule's 0.2 m). The rule and the picture are as they were; the break now fails 3. KNOWN LEFT: a third or
+  the two bars (15.5 m² over 59 levels, most on quiet-relay 1.56 m²); ground under an OPEN EDGE is barred by its DEPTH and not its amount (19.9 m², most on sneak-lab
+  3.82 m²; the ground counted over the metres of edge with no wall and no other roof, less a tenth of a square metre for corners, may not pass the rule's
+  0.2 m and a tenth: a rule that reached further in under a shelter fails here, a level that gains a shelter does not). The rule and the picture are as they were; the break now fails 3. KNOWN LEFT: a third or
   fourth roof is packed to 0.2 m rounded outward, so some of its walls' faces stay hidden (the barracks: 3 of 33) and a strip of yard up to 0.2 m at
   such a wall's foot is as it was; the rim of a roof that stands on no wall (quiet-relay's shelter) shows streaks 0.2 m in; a ray that ends on a far
   wall's top over the building shows only the rain it met before the roofs' columns; `snow-check walls` still reads the rain's old line in
