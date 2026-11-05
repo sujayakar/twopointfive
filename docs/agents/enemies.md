@@ -822,7 +822,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   moved round until every door is inside his eyes (`eyeDeg` 58 = GUARD_EYE.halfDeg, `eyeSlack` 4): his gun rests off the middle. A man the room fight or
   morale crouches right down has the same blind aim — not this file's to fix. A man `OWN.morale` is morale's. IMPORT CYCLE: enemysquads.ts must not
   import netquiet.ts (it pulls morale.ts forward and the headless boot throws in wind.ts) — its three seams go through the leaf `netquietfeed.ts`, read by
-  netquiet's tick. UNSEEN / SILENT (unseen.ts `found`, silent.ts `the silent hold (roundheld.ts)` read a defender 'alert' or 'search'): the last man is 'alert' from the frame
+  netquiet's tick. UNSEEN / SILENT (unseen.ts `found`, silent.ts `silentHoldsRound` read a defender 'alert' or 'search'): the last man is 'alert' from the frame
   he is low until `alertSecs` of quiet, never 'search'. Measured on the shipped stand, ten men dropped quietly: rule on he is alert at 13.4 s for 15 s; rule
   off his squad has him alert at about 31 s (one run, by hand, not a check line) — so the team's modes end sooner with the rule on (by 18 s there), and can come back.
   With the squads off an ordinary last man is never alert on his own: there the rule ends those modes where nothing did. An ordinary planted man with the
@@ -1518,7 +1518,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   modules setting one deciding field of one man to different values in a tick is red until someone says who has him or why it is meant; the pairs known today are listed in it with their reason.
   THE OTHERS OF THE FORTY: of the questions the review counted (40 names by its count, 125 question and asker pairs), 15 were who has him and are the record's now (`OWN.runner`, `.morale`, `.stand`,
   `.squad`, `.squadLeg`, `.squadWord`, `.lastMan`, `.lane`, `.press`, `.walk`, `.breaker`, `.buddy`, `.needs`, with `.frag` and `.startle` added for `updateGuard`'s order). 3 are fields of the man
-  (`gd.fled`, `gd.staysInRooms`, `gd.handleGateT`). 6 are about a round at a target and are one read (`roundheld.ts`). The rest answer something else and are named for it (`laneBars`, `laneKnownAt`,
+  (`gd.fled`, `gd.staysInRooms`, `gd.handleGateT`). 6 are about a round at a target (`roundHeld` in silent.ts is the room fight's one question; `silentHoldsRound`, `pairHoldsRound`, `spottedHoldsRound`, `silentHoldsGlass`, `silentHoldsTarget`, `holdFireHoldsTarget` are named for it). The rest answer something else and are named for it (`laneBars`, `laneKnownAt`,
   `inSquadRooms`, `powerOutRules`, `underSilence`, `underUnseen`, `standoffFixKept`, `standoffOnFeet`, `carriesDarkLamp`, `fallingInYields`, `gunOnLitMan`, `inSeat`, `handsAtWork`, `doorGateStopped`,
   `handleGateStopped`, `startleGunDown`, `rearWatcherWaits`, `giveStartle`). Of the 77 side tables keyed by a man, 2 held nothing but "mine" and are gone (`netquietfeed.holding`, `handleside.feet`); the
   other 75 hold a rule's state, for each port to say what becomes of.
@@ -1529,7 +1529,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   startle (`updateGuard`'s order says the other way, `startleScript` stops itself), script and dig-in (`tickDef` runs dig-in before it looks at the script), and the rally's own order, which is play
   because its first three excuses leave the clock running.
   OWNERSHIP STILL HIDDEN IN A VALUE: `D.rallyAt === Infinity` (the mission's man) and `D.lostAt` ahead of the clock. Not in the record yet; look at them when the rescue ports. A QUESTION THAT WRITES,
-  KEPT: `pressStopsClock`, called where `pressOwns` used to stop a man's rally clock as it answered. THE LAST MAN'S TWO ANSWERS WERE ONE TICK APART in one run of the 42 with switches up; they agree now.
+  KEPT: `pressKeepsHome` stops a man's rally clock as it answers, as `pressOwns` did (`stopClock` false for the two askers who only want the word). The press and the buddy pair say in the word only what their lists say; what moves between their ticks is theirs to answer as asked. THE LAST MAN'S TWO ANSWERS WERE ONE TICK APART in one run of the 42 with switches up; they agree now.
   WHAT THE 42 DO NOT SHOW: nobody is ever walking for a silent mate, out for the breaker or off for a coffee in them, even with switches up, nor is a squad silent or unseen, so `owner-check` also runs the
   rules' own families under the same audit.
   NOT SEEN: nothing here changes what is on screen but the debugger's line. Never seen on a GPU.

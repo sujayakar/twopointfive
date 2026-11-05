@@ -227,6 +227,7 @@ export const ROLLBACK_EXEMPT: Record<string, string> = {
   'src/game/moths.ts MOTH_STATS': 'TALLY · counted in moths.ts; no read in src/game, src/scene or src/anim; shown by main.ts',
   'src/game/needs.ts NEEDS_STATS': 'TALLY · counted in needs.ts; no read in src/game, src/scene or src/anim; shown by main.ts',
   'src/game/netquiet.ts NETQUIET_STATS': 'TALLY · counted in netquiet.ts; no read in src/game, src/scene or src/anim',
+  'src/game/owner.ts WITNESSES': 'CONSTANT · one line from the file of each rule as the module loads: what its own state says, for tools/qa/owner-check.ts. Nothing in a run writes it',
   'src/game/netquietfeed.ts NETFEED': 'CACHE · NETFEED.live = NETQUIET.on && MORALE.on, written at the top of every netQuietTick (netquiet.ts:324) and on a load (508): two switches\' AND, the same value every tick of a run',
   'src/game/nvg.ts NVG_LOG': 'TALLY · counted in nvg.ts; no read in src/game, src/scene or src/anim',
   'src/game/opening.ts urlRead': 'CONFIG · once-only latch of readUrl (?fairstart=0, opening.ts:32): the page\'s URL read once per process',
