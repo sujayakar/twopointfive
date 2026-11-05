@@ -4,7 +4,7 @@
 // across the hole. `lookTidy(world)` hides each such decal while its wall is hidden and puts it back with it (a restart restores the wall: the decal follows).
 // Called by the PAGE once a frame (main.ts); it reads and writes the flags of drawn-only boxes and nothing else — the game cannot tell it ran.
 import { BoxFlag, SHEET_MASK as DECAL_MASK, type Box } from './boxes';
-import { GWOT_PALETTE, gwotSimOf } from './gwotPalette';
+import { GWOT_PALETTE, lookPaintOf } from './gwotPalette';
 import { paintOf } from './stuff';
 import type { LookDoorStuff } from './look';
 import type { Vec3 } from '../math/vec';
@@ -18,7 +18,7 @@ const HIDE = BoxFlag.NoPrimary | BoxFlag.NoShadow;
  *  the end face of a wall that meets its plane at a corner); a hand-laid sheet may run along several wall boxes. (A sheet on the GROUND is not this file's: what lies flat follows its ground wet and dry in
  *  game/wetGround.ts, the picture's own step.) */
 function find(statics: Box[]): Tidy | null {
-  if (!statics.some(b => gwotSimOf(b.albedo) !== undefined)) return null;   // (a level that wears none of the look's paints is left exactly as it is: the office's own painted lines and notices are not the look's)
+  if (!statics.some(b => lookPaintOf(b.albedo, 0.004) !== undefined)) return null;   // (a level that wears none of the look's paints is left exactly as it is: the office's own painted lines and notices are not the look's)
   const pairs: [number, number[]][] = [], flags0: number[] = [];
   const walls: number[] = []; statics.forEach((b, i) => { if (!(b.flags & DECAL_MASK) && !b.yaw && b.c[1] - b.h[1] <= 0.1 && b.c[1] + b.h[1] >= 0.85 && Math.min(b.h[0], b.h[2]) <= 0.3) walls.push(i); });
   statics.forEach((d, i) => {
@@ -49,14 +49,14 @@ export function lookTidy(world: { statics: Box[]; geomSerial: number }): void {
 // paints — the office under the switch — is not touched.
 
 const ACCENTS = ['paintBlue', 'paintGreen', 'paintRust'] as const;
-const near = (a: Vec3, b: Vec3): boolean => Math.abs(a[0] - b[0]) < 0.004 && Math.abs(a[1] - b[1]) < 0.004 && Math.abs(a[2] - b[2]) < 0.004;   // (a paint or one of its stand-ins: gwotAs shifts by ≤ 0.0024)
+const near = (a: Vec3, b: Vec3): boolean => Math.abs(a[0] - b[0]) < 0.004 && Math.abs(a[1] - b[1]) < 0.004 && Math.abs(a[2] - b[2]) < 0.004;   // (a paint, or one of the stand-ins a file written before 2026-11-05 carries: up to 0.0024 off its row)
 /** the page calls it once the game stands, with the switch on (main.ts); returns how many leaves it painted.
  *  WHAT A LEAF IS MADE OF GOES WITH ITS PAINT (scene/stuff.ts): a row's own word for that side of the house, else what the paint handed here is made of (the
  *  palette's accent rows are paint, its grey wood is wood); a leaf painted in a row's bare numbers with no word, and one with old paint faded on it, is plain.
  *  A leaf's own shade is a tone of its paint, so every leaf in one paint is one stuff. */
 export function lookDoors(doors: readonly { def: { name: string; exterior?: boolean; steel?: boolean }; box: Box }[], statics: readonly Box[], paint?: { out: readonly [number, number, number]; in?: readonly [number, number, number]; stuff?: LookDoorStuff }): number {
   const count = [0, 0, 0]; let wears = false;
-  for (const b of statics) { if (gwotSimOf(b.albedo) === undefined) continue; wears = true; ACCENTS.forEach((a, i) => { if (near(b.albedo, GWOT_PALETTE[a])) count[i]++; }); }
+  for (const b of statics) { if (lookPaintOf(b.albedo, 0.004) === undefined) continue; wears = true; ACCENTS.forEach((a, i) => { if (near(b.albedo, GWOT_PALETTE[a])) count[i]++; }); }
   if (!wears) return 0;
   const top = Math.max(...count), accent: Vec3 = paint ? [paint.out[0], paint.out[1], paint.out[2]] : GWOT_PALETTE[top > 0 ? ACCENTS[count.indexOf(top)] : 'paintGreen'];   // (a level with a row in look.ts LOOK_DOORS wears that row; else the paint counted off its boxes)
   let n = 0;

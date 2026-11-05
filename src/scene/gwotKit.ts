@@ -26,10 +26,11 @@ import { MarkingDef, MarkFace, MarkRes, MarkPal, MARKING_TEXEL, RES_K, CellCanva
 
 const H = WORLD.ceilingY;
 
-import { GWOT_PALETTE, GWOT_FINISH, GWOT_SIM, GWOT_DARKER, ROUGH_CLOTH, gwotAs, type GwotMat, type GwotSim } from './gwotPalette';
+import { GWOT_PALETTE, GWOT_FINISH, GWOT_DARKER, ROUGH_CLOTH, gwotAs, type GwotMat } from './gwotPalette';
+import type { DoesWord } from './materials';
 import { pieces } from './library';
-import { tonedAs, wordFor, saidAs, stuffOfName } from './stuff';
-export { GWOT_PALETTE, GWOT_FINISH, GWOT_MATERIALS, GWOT_SURFACE, GWOT_SIM, gwotAs, gwotSimOf, type GwotMat, type GwotSim } from './gwotPalette';
+import { tonedAs, wordFor, saidAs, stuffOfName, doesOfName } from './stuff';
+export { GWOT_PALETTE, GWOT_FINISH, GWOT_MATERIALS, GWOT_SURFACE, gwotAs, lookPaintOf, type GwotMat } from './gwotPalette';
 
 /** one opening in a wall (officeGen.ts / levelKit.ts Opening, field for field) */
 export type GwotOpening = { a: number; b: number; y0?: number; y1?: number; mullions?: number; glass?: 'bay' | 'whole'; tint?: Vec3 };
@@ -120,11 +121,11 @@ export function gwotKit(host: GwotHost) {
   const TX = host.texel;
   const M = Object.fromEntries((Object.keys(GWOT_PALETTE) as GwotMat[]).map(n => [n, matOf(n)])) as Record<GwotMat, Mat>;
   const coat = (m: Mat): Mat => coated(m);   // (a vehicle's body says it is a car's coat itself: scene/carShapes.ts carCoat)
-  /** the paint `m` standing for something else to rounds and blasts (gwotPalette.ts gwotAs): `b(…, G.as('mud', 'wall'))` */
-  const as = (m: GwotMat, sim: GwotSim): Mat => ({ ...M[m], albedo: gwotAs(m, sim) });
+  /** the paint `m` on a thing that does something else to rounds and blasts (gwotPalette.ts gwotAs; a word of scene/materials.ts): `b(…, G.as('mud', 'plasterboard'))` */
+  const as = (m: GwotMat, does: DoesWord): Mat => ({ ...M[m], albedo: gwotAs(m, does) });
   /** the paint `m` DARKER IN ONE PIECE, k of it (TONE: 0.55‥0.99): how wear, wet and shade are written — the ground's own paint, never a colour laid on it.
-   *  A tone is made of what its row is made of: it keeps the row's word (scene/stuff.ts tonedAs). For DRAWN-ONLY things: to a round a toned row is no palette colour (gwotPalette.ts
-   *  gwotSimOf knows a paint by its exact colour). Throws when the tone is ANOTHER row's colour (gravel × 0.7 is `oil`), which would be drawn as that row; a tone still near its own row is that row. */
+   *  A tone is made of what its row is made of: it keeps the row's word (scene/stuff.ts tonedAs). For DRAWN-ONLY things: a tone says nothing of what it does (stuff.ts tonedAs: to a round a toned row
+   *  was never its row). Throws when the tone is ANOTHER row's colour (gravel × 0.7 is `oil`), which would be drawn as that row; a tone still near its own row is that row. */
   const toned = (m: GwotMat, k: number): Vec3 => {
     if (!(k > TONE.lo && k < TONE.hi)) throw new Error(`gwotKit: a tone of ${m} at ${k} is outside ${TONE.lo}‥${TONE.hi}`);
     const a = toneOf(m, k), clash = (Object.keys(GWOT_PALETTE) as GwotMat[]).find(n => { const q = GWOT_PALETTE[n]; return n !== m && Math.abs(a[0] - q[0]) < TONE.near && Math.abs(a[1] - q[1]) < TONE.near && Math.abs(a[2] - q[2]) < TONE.near; });
@@ -133,8 +134,8 @@ export function gwotKit(host: GwotHost) {
   };
   const toneOf = (m: GwotMat, k: number): Vec3 => { const p = GWOT_PALETTE[m]; return [Math.round(p[0] * k * 1e4) / 1e4, Math.round(p[1] * k * 1e4) / 1e4, Math.round(p[2] * k * 1e4) / 1e4]; };
   /** … and the same FOR A SHAPE'S TRIM, in any paint a caller hands the piece (a drum's ribs in the drum's paint): k of the paint, the row's word kept.
-   *  `toned` refuses a tone that is another row's colour because a round reads a BOX by its colour; a trim is drawn only and says its own word, so no
-   *  round, blast or reader of colours meets it, and the piece need not send its caller back for another k */
+   *  `toned` refuses a tone that is another row's colour because a box of it would be taken for that row (a file's writer names a row by its numbers); a trim
+   *  is drawn only and says its own word, and the piece need not send its caller back for another k */
   const trimTone = (m: GwotMat, k: number): Vec3 => tonedAs(GWOT_PALETTE[m], toneOf(m, k));
   type CellFn = (i: number, j: number, W: number, Hc: number) => number;
   /** one face's markings, not yet cut to a box: resolved against the box's own half extents when the box is added (so a bitmap can never leave its face) */
@@ -186,8 +187,8 @@ export function gwotKit(host: GwotHost) {
   const wallX = (z: number, x0: number, x1: number, kind: WallKind = 'mud', openings: GwotOpening[] = [], height = H) => host.wallX(z, x0, x1, GW_SHELL, gwotAs(kind, 'concrete'), openings, { rough: M[kind].rough }, height);
   const wallZ = (x: number, z0: number, z1: number, kind: WallKind = 'mud', openings: GwotOpening[] = [], height = H) => host.wallZ(x, z0, z1, GW_SHELL, gwotAs(kind, 'concrete'), openings, { rough: M[kind].rough }, height);
   /** an interior PARTITION (0.12 thick) */
-  const partX = (z: number, x0: number, x1: number, kind: WallKind = 'mudLight', openings: GwotOpening[] = [], height = H) => host.wallX(z, x0, x1, GW_PART, gwotAs(kind, 'wall'), openings, { rough: M[kind].rough }, height);
-  const partZ = (x: number, z0: number, z1: number, kind: WallKind = 'mudLight', openings: GwotOpening[] = [], height = H) => host.wallZ(x, z0, z1, GW_PART, gwotAs(kind, 'wall'), openings, { rough: M[kind].rough }, height);
+  const partX = (z: number, x0: number, x1: number, kind: WallKind = 'mudLight', openings: GwotOpening[] = [], height = H) => host.wallX(z, x0, x1, GW_PART, gwotAs(kind, 'plasterboard'), openings, { rough: M[kind].rough }, height);
+  const partZ = (x: number, z0: number, z1: number, kind: WallKind = 'mudLight', openings: GwotOpening[] = [], height = H) => host.wallZ(x, z0, z1, GW_PART, gwotAs(kind, 'plasterboard'), openings, { rough: M[kind].rough }, height);
   /** the solid runs of a wall between the openings that reach its top */
   const runs = (a: number, b: number, openings: GwotOpening[], height: number): [number, number][] => {
     const out: [number, number][] = []; let cur = a;
@@ -385,7 +386,7 @@ export function gwotKit(host: GwotHost) {
    *  a round, so a scatter is one thing in two tones and never a second paint; a stone has the row's whole finish (bits of tin sheet are metal). (Those
    *  three were mudDark whatever was asked: pale clods among dark gravel, mud among offcuts of poplar.) */
   const rubble = (x: number, z: number, r = 0.8, n = 7, mat: GwotMat = 'mud') => {
-    const s = seedOf(x, z), darker = GWOT_DARKER[mat], second = darker ? as(darker, GWOT_SIM[mat]) : M[mat];
+    const s = seedOf(x, z), darker = GWOT_DARKER[mat], second = darker ? as(darker, doesOfName(mat)!) : M[mat];   // (the darker stones do what the row's do)
     for (let k = 0; k < n; k++) {
       const a = h01(s, k, 1) * Math.PI * 2, d = Math.sqrt(h01(s, k, 2)) * r, w = 0.07 + h01(s, k, 3) * 0.13, hgt = 0.05 + h01(s, k, 4) * 0.12, m = h01(s, k, 5) < 0.3 ? second : M[mat];
       host.add({ c: [x + Math.cos(a) * d, hgt / 2, z + Math.sin(a) * d], h: [w, hgt / 2, w * (0.6 + h01(s, k, 6) * 0.6)], yaw: h01(s, k, 7) * Math.PI, albedo: m.albedo, rough: m.rough, ...(m.metal ? { metal: true } : {}) });
@@ -549,8 +550,8 @@ export function gwotKit(host: GwotHost) {
    *  a wood) it is that colour as a coat of enamel: `paint`, with a drum enamel's finish, never the row's stuff. So no level picks a drum's colour for
    *  what a round does at it or how a hit on it looks */
   const steelIn = (colour: GwotMat): Mat => {
-    const P = as(colour, 'metal'), word = stuffOfName(colour);
-    if (word === 'paint' || word === 'enamel' || GWOT_SIM[colour] === 'metal') return P;
+    const P = as(colour, 'steel'), word = stuffOfName(colour);
+    if (word === 'paint' || word === 'enamel' || doesOfName(colour) === 'steel') return P;
     const enamel = { rough: M.drumBlue.rough }; return { albedo: saidAs('paint', P.albedo, enamel), ...enamel };
   };
   /** COVER: an OIL DRUM (0.58 across, 0.88 high) standing; ribs round it, a bung on the lid. Steel in any paint (`steelIn`) */

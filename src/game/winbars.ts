@@ -113,7 +113,7 @@ function breakBar(g: Game, index: number, at: Vec3, dir: Vec3, who: number, caus
   changed(g, b);
   WINBARS_STATS.broken++; if (cause === 'round') WINBARS_STATS.byRound++; else WINBARS_STATS.byBlast++;
   // the pieces: the bar cut across into uneven lengths, the struck one thrown hardest
-  const K = WINBARS, n = Math.max(1, Math.round(K.pieces)), y0 = b.c[1] - b.h[1], H = 2 * b.h[1], cls = breakClassOf(b.albedo), land = FURN_BREAK[cls].land;
+  const K = WINBARS, n = Math.max(1, Math.round(K.pieces)), y0 = b.c[1] - b.h[1], H = 2 * b.h[1], cls = breakClassOf(b), land = FURN_BREAK[cls].land;
   const seed = (boxSeed(b) + 131 + Math.floor(clamp((at[1] - y0) / H, 0, 1) * 16) * 31) >>> 0, R = (k: number) => hash01(Math.imul(seed + k, 2654435761));   // (the bar's own word, not its place in the level's list: glass.ts boxSeed)
   const cuts = [0]; for (let j = 1; j < n; j++) cuts.push((j + (R(10 + j) - 0.5) * K.uneven) / n); cuts.push(1);
   let dx = dir[0], dz = dir[2]; { const l = Math.hypot(dx, dz); if (l < 0.2) { const c = Math.cos(b.yaw), s = Math.sin(b.yaw); [dx, dz] = b.h[0] > b.h[2] ? [c, -s] : [s, c]; } else { dx /= l; dz /= l; } }   // (a round straight down a bar still sends it out through its wall)
