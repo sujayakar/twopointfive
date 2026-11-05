@@ -133,7 +133,7 @@ const DOOR_NAMES = [{ door: 'breakroom_n', name: 'corridor-side break room door'
  *  play reads one: a mark is found by name, the Director alone does that, and the office has no script. They are the ends of the ways below. Each is on
  *  free floor a step off the thing it names. The sixteen desks are the four clusters of four (scene/officeGen.ts cubicleCluster: a cluster's middle,
  *  the desks 1.2 m either side of it, the chair 1.33 m out from its spine): the mark is the cell's mouth, a stride behind the chair. */
-const DESK_CLUSTERS: [number, number][] = [[16.5, 15.2], [23.0, 15.2], [16.5, 20.6], [23.0, 20.6]];
+export const DESK_CLUSTERS: [number, number][] = [[16.5, 15.2], [23.0, 15.2], [16.5, 20.6], [23.0, 20.6]];   // (the one writing of where the clusters stand: the generator builds them from this list)
 const DESKS: MarkDef[] = DESK_CLUSTERS.flatMap(([cx, cz], c) => ([[-1.2, -1], [1.2, -1], [-1.2, 1], [1.2, 1]] as const).map(([dx, out], i): MarkDef => ({ name: `desk ${c * 4 + i + 1}`, pos: [cx + dx, 0, cz + out * 1.95] })));
 export const OFFICE_MARKS: MarkDef[] = [
   { name: 'reception', pos: [9.0, 0, 13.6] },           // the visitors' side of the reception counter, on its mat
@@ -144,6 +144,7 @@ export const OFFICE_MARKS: MarkDef[] = [
   { name: 'coffee', pos: [34.6, 0, 15.0] },             // the break room's counter, on the mat along it
   { name: 'vending', pos: [29.0, 0, 13.9] },            // in front of the two machines
   { name: 'break table', pos: [30.2, 0, 18.2] },        // the break room's table, at its corner between two chairs
+  { name: 'racks', pos: [19.55, 0, 7.8] },              // the server room: in front of the east bank, at the rack the plain night's drive is pulled from
   { name: 'storage shelves', pos: [33.0, 0, 8.6] },     // the stores, a step inside the door (the cleaner's round starts here: 'storage' alone is its door and its room)
   ...DESKS,
   { name: 'bins', pos: [37.9, 0, 16.2] },               // outside: the dumpster on the east side
@@ -160,18 +161,18 @@ export const OFFICE_MARKS: MarkDef[] = [
  *  stair, goes for coffee and to the printer (a quarter and less each, so a cell's mouth is faintly trodden and the aisles they share are worn); the manager and the
  *  conference room go for coffee and to each other; the cleaner's round runs from storage to the printer, the counter and out to the bins; the break room's
  *  south door is how the car park comes in (no way is written to the pay machine at the walkway's west end: the red car's nose and a bollard shut the walkway
- *  there, and the walk grid's way to it runs round the north of the building, which nobody walks). THE PLAIN NIGHT: from where Sam starts into the server room (its room's name: the middle of its floor, between the racks) and from there to the fire exit. */
+ *  there, and the walk grid's way to it runs round the north of the building, which nobody walks). THE PLAIN NIGHT: from where Sam starts to the racks (a mark at the drive's rack: the server room's own name would be the middle of its floor, which a bank of racks stands on) and from there to the fire exit. */
 const DAY_DESK: WayHint[] = DESKS.flatMap((d): WayHint[] => [{ from: 'stairwell', to: d.name, weight: 0.25 }, { from: d.name, to: 'coffee', weight: 0.25 }, { from: d.name, to: 'printer', weight: 0.15 }]);
 const WALKED: WayHint[] = [
   { from: 'stairwell', to: 'reception', weight: 2 }, { from: 'reception', to: 'couch', weight: 0.5 }, { from: 'reception', to: 'coffee', weight: 0.5 }, { from: 'reception', to: 'printer', weight: 0.3 },
   ...DAY_DESK,
   { from: 'stairwell', to: 'conference table', weight: 0.5 }, { from: 'conference table', to: 'coffee', weight: 0.5 },
   { from: 'stairwell', to: "manager's office", weight: 0.5 }, { from: "manager's office", to: 'coffee', weight: 0.5 }, { from: "manager's office", to: 'conference table', weight: 0.5 }, { from: "manager's office", to: 'printer', weight: 0.3 },
-  { from: 'server room', to: 'desk 6', weight: 0.3 },
+  { from: 'racks', to: 'desk 6', weight: 0.3 },
   { from: 'storage shelves', to: 'printer', weight: 0.3 }, { from: 'storage shelves', to: 'coffee', weight: 0.3 }, { from: 'storage shelves', to: 'bins', weight: 0.5 }, { from: 'coffee', to: 'bins', weight: 0.5 },
   { from: 'coffee', to: 'break table', weight: 2 }, { from: 'vending', to: 'break table', weight: 1 }, { from: 'cooler', to: 'desk 12', weight: 0.5 }, { from: 'cooler', to: 'desk 15', weight: 0.5 },
   { from: 'breakroom_ext', to: 'coffee', weight: 1 }, { from: 'breakroom_ext', to: 'breakroom_n', weight: 2 },
   { from: 'breakroom_ext', to: 'red car', weight: 0.5 }, { from: 'breakroom_ext', to: 'grey car', weight: 0.5 }, { from: 'breakroom_ext', to: 'van', weight: 0.5 }, { from: 'breakroom_ext', to: 'bikes', weight: 0.5 },
-  { from: 'spawn', to: 'server room', weight: 0.45 }, { from: 'server room', to: 'fire_exit', weight: 0.45 },
+  { from: 'spawn', to: 'racks', weight: 0.45 }, { from: 'racks', to: 'fire_exit', weight: 0.45 },
 ];
 export const OFFICE_SCENARIOS: LevelScenarios & { nightBreach: NightBreachData; roomClear: StructureData; rescue: RescueData } = { nightBreach: NIGHT_BREACH, roomClear: STRUCTURE, rescue: RESCUE, kitView: KIT_VIEW, response: RESPONSE, doorNames: DOOR_NAMES, walked: WALKED };

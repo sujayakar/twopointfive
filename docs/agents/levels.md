@@ -865,6 +865,20 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   closes, 2.4 m tall: pass, gwot-yard, police-post, tut-sky, tut-pair) and from two cloths hung in one thin plane (bazaar, tut-squad). The mend is the
   level's own numbers (sink one face a few millimetres, or end one box at the other); none was made here, and the check is in no gate and no
   level-needs row yet. Nobody has watched any of the 289 on a GPU but the pass's gate.
+  THREE PIECES' OWN PATCHES ARE MENDED IN THE KIT (11-05; the first of two steps: this one moves nothing a body, a round or a sight line meets). Of 334
+  seen on 59 files, 113 were four pieces of `gwotKit.ts`, found by building every generator with the library's door watched and tagging each box with the
+  piece that laid it. Mended here: the HANDCART (34: each shaft's top lay in the bed's top and lapped it; the shafts now END at the bed), the VAN'S BUMPER
+  AND STEP (they ran two centimetres into the body with their sides in its sides; each now BEGINS at the body's end; `carShapes.ts vanShapes` says the
+  same two sizes) and the WASH LINE (20: cloths are sheets in one plane and some lines dealt two that lapped; two that would lap are cut back to 2 cm short
+  of where they would meet, a cloth nothing reaches keeps its own numbers, there are never fewer cloths than asked, and a line too short for its cloths
+  THROWS). The cloths are drawn only. The shafts, bumper and step are solid, and each gives up only the part of itself that lay INSIDE another solid of
+  its own piece: no solid thing is anywhere it was not, and none has left a place (asked of all 50 such boxes, point by point). 20 level files
+  re-exported; in each only boxes' `c` / `h` (and the van's two shapes) moved, 70 boxes, none added or removed, no light moved; 248 seen after. LEFT FOR THE SECOND STEP,
+  because a solid box has to move: a van's bay sides round its tail lamps, and a gate's posts in the end of the wall they close (the patch the maintainer
+  saw on the pass).
+  A LOOSE THING'S OWN PATCH (11-05, with the first step: it moves nothing either). `livedPieces.armchair`'s arms ran three centimetres into its back with
+  their outer faces in the back's sides. An arm now ENDS at the back's front; it gives up only what lay inside the back, so the chair fills the space it
+  filled. Seven files re-exported (consulate, defuse, registry, their looks, the showroom): 13 chairs, a line each, nothing added or removed.
 - **THE SMOKE LAB'S FLOOR** (11-01; `levels/smoke-lab.json` from `tools/levels/smoke-lab.ts`, the GWOT kit; opened by the dev server's `/smokelab`, in no
   mission list, nobody on it but Sam; the lab's panel is `docs/agents/render.md`, THE SMOKE LAB). The maintainer asked for "a separate smoke lab that's more
   suited to playing with it". Each place shows one thing smoke does and is there for nothing else: the YARD (open ground under the sky and a low wall of
@@ -1354,7 +1368,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   clear turns at the side door between the server room and the manager's office (thirteen of thirty-one men fell within two and a half metres of it) and
   nothing in the picture said that door was there; the defenders come out of the break room by two doors; nobody, either side, enters the conference room;
   and the day's people (sixteen desks, a printer, a counter) had no way written to anything. THREE KINDS OF THING, each through the system that owns it.
-  WORN PATHS are data: 30 named marks where a person stands to use a thing (`Level.marks`, attached at load beside the scenarios by `withOfficeScript`, a
+  WORN PATHS are data: 31 named marks where a person stands to use a thing (`Level.marks`, attached at load beside the scenarios by `withOfficeScript`, a
   copy a Level: the level file has no slot for a mark yet) and 75 `walked` rows between them, each name one thing (a mark, a door's id, or a room's name that no door
   shares); the look's page wears the floor by the ways field (`?walked=0` = the lanes as they were). Nothing in play reads a mark: `ways.ts` and the
   Director's lookup by a script's own id are the only readers, and the office has no script. The walked check's two count files for the office are gone:
@@ -1398,6 +1412,22 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   rows). An outside review of those stills said the same and its ideas are held for the next pass. The first cut was priced twice before and twice
   after on rented boxes: no cost that shows over what two boxes differ by. The maintainer played the first cut and his word on it is above. Never
   seen on an Apple or an AMD GPU.
+- **FOUR MENDS TO THE OFFICE'S HAND PASS, FROM A REVIEW** (11-05; no level file moves, no box, no rule of play). (1) THE WAYS THROUGH THE SERVER
+  ROOM END AT A MARK. Three `walked` rows named the room, and a room's name is the middle of its floor, which a bank of racks stands on: the walk
+  grid stepped each way aside to the racks' near face, and the row's comment said "between the racks". They now name a mark, `racks`, on free floor
+  at the rack the plain night's drive is pulled from (31 marks). A ROOM'S NAME IS A FAIR END ONLY WHERE THE ROOM'S MIDDLE IS FLOOR. (2) THE FOUR
+  DESK CLUSTERS STAND WHERE ONE LIST SAYS: `levels/office.scenarios.ts DESK_CLUSTERS`, read by the desks' marks and by the generator, which had
+  the same four places written again. Left: the offsets of a desk and its chair inside a cluster are still said twice (the generator's
+  `cubicleCluster` and the marks' arithmetic); they are one writing when a mark is the level file's own and the cluster lays its desks' marks.
+  (3) THE CATALOGUE COUNTS THE OFFICE AS ITS FILE HAS IT: `tools/levels/library.ts` builds the office with its lived tier (the exporter's word),
+  and the kit's two tools, `bandRuns` and `conduitRuns`, lay through the kit's door (`pieces`), so a band or a length of conduit a tool lays is
+  counted as the piece it is. The uses page (`library.ts --uses`) had the office at 193 pieces with no band, vent, conduit or pipe of the hand
+  pass; it is 228 with 19 bands, 11 lengths of conduit, 3 vents and 2 pipes. The catalogue in the repo does not move. (4) ONE FLOOR FOR THE
+  RULE THAT EVERY WAY HAS A PATH: `ways-check`'s sweep over every level now opens each as the page walks it (`walked-check.ts pageWays`, the lived
+  rooms and the dressing in), where it opened each as the caller's stand does. NOT A FAULT, read and left: the kit view's set path loads a level
+  without the office's marks, but that level is a SET (its own boxes and doors, its scenarios the kit view's, the room clear's and the issue's
+  only): it carries no `walked` row, and the office's block has no set. CHECKS, both stands: `ways-check` (and its break path), `walked-check`,
+  `probes.ts level`, both export checks, `library.ts --check`, the exporter's check on the white roof and the showroom, both type checks.
 - **THE OFFICE SAYS IT IS KEPT** (11-05; the builder's `kept: 1` in `src/scene/officeGen.ts`, so `meta.kept` in `levels/office.json` and
   `levels/office-relief.json`; the rule is the look's, `docs/agents/render.md` A LEVEL SAYS HOW KEPT IT IS). The first level to say the word. WHY 1 AND
   NOT PART WAY: it is a let office with a cleaner on contract, and the paint its hand pass laid (door numbers and bay numbers a hand high) was drawn as

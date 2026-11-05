@@ -203,6 +203,8 @@ level that already has its rooms, and moves nobody's fight. The office was the f
   where men fall. **seen** on the office thirteen of thirty-one fell at one side door that nothing in the picture said was there.
 - **Worn paths are data.** `scenarios.walked` rows between names (a door, a route, a room, a named mark), each with a weight beside one lap of a
   patrol. Use a name that is one thing: **seen** `storage` was a door and a room, so the row took the door; a mark inside the room says which.
+  A room's name is the middle of its floor: **seen** the server room's middle is a bank of racks, so three rows ended at the racks' near face
+  and not where anyone stands; a mark on free floor at the thing says where.
   Draw the ways after and look: **seen** a row to a machine at the end of a walkway ran right round the building, because a parked car and a
   bollard shut the walkway on the walk grid. **check** `bun run tools/qa/ways-check.ts`, then `bun run tools/qa/walked-check.ts <level>`: a
   start or a door your rows now reach leaves its count file with `--write`, and the hand-over says which names left.

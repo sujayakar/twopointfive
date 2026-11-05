@@ -17,6 +17,7 @@ import * as MD from './markingDefaults';
 import { fitOpenings, fitDoorDef, exitThrough, JAMB_FACE, DOOR_HEAD, LEAF_H } from './doorSize';
 import { fitPropFootprint } from './levelLoad';
 import { pieces } from './library';
+import { DESK_CLUSTERS } from '../../levels/office.scenarios';
 
 /** what the exporter asks the generator to record on the side: the editor group of every box, in box order */
 export interface GeneratorTrace { groups: string[]; }
@@ -359,18 +360,21 @@ export function officeKit(trace?: GeneratorTrace, opts: GeneratorOpts = {}) {
    *  `z` between x0 and x1, one box a piece, with `names` stencilled on it in `ink` (each [text, its middle x, its foot y, scale, res], on the piece that
    *  holds it whole: a name no piece holds throws). Drawn only */
   type BandName = readonly [text: string, x: number, y: number, scale: number, res: 'base' | 'coarse'];
+  // the kit's PIECES by name (scene/library.ts). The two tools below lay a band and conduit THROUGH this door, so a level's bands and conduit are counted as
+  // the pieces they are (laid by the bare functions they were in no count: the catalogue's uses page had the office with no band and no conduit)
+  const P = pieces('officeKit', { paneX, paneZ, wallX, wallZ, desk, monitor, chair, cardboardBox, rug, plant, bin, cabinet, papers, wallArt, bench, car, shelf, ceilingPanel, doorFrame, band, vent, conduit, pipe });
   const bandRuns = (z: number, t: number, x0: number, x1: number, y1: number, paint: Vec3, minTop = y1, names: readonly BandName[] = [], ink: MarkPal = MD.TIN.chalk) => {
-    const runs = wallRuns(z, t, x0, x1, minTop, paint).map(([, a, b, top]) => [band('x', z, a, b, 1, 0, Math.min(y1, top), paint, t), a, b] as const);
+    const runs = wallRuns(z, t, x0, x1, minTop, paint).map(([, a, b, top]) => [P.band('x', z, a, b, 1, 0, Math.min(y1, top), paint, t), a, b] as const);
     for (const [text, x, y, scale, res] of names) { const half = wordWide(text, scale, res) / 2, r = runs.find(([, a, b]) => x - half >= a && x + half <= b);
       if (!r) throw new Error(`officeKit bandRuns: no piece of the wall at z ${z} holds '${text}' at x ${x}`); stencilS(r[0], text, x, y, ink, scale, res); }
     return runs; };
   /** CONDUIT IN LENGTHS along a wall's south face from a to b: equal lengths of `len` at most, the branch and its box at the far end of the last. A breach
    *  takes the lengths that hang over the hole and leaves the rest (the note at the head of the fittings) */
   const conduitRuns = (z: number, a: number, b: number, y: number, paint: Vec3, clip: Vec3, t = 0.24, drop?: number, len = 1.8) => { const n = Math.max(1, Math.ceil((b - a) / len - 1e-9));
-    for (let j = 0; j < n; j++) conduit('x', z, a + (b - a) * j / n, a + (b - a) * (j + 1) / n, 1, y, paint, clip, j === n - 1 ? drop : undefined, t); };
-  // the kit's lists and TOOLS, then its PIECES by name (scene/library.ts)
+    for (let j = 0; j < n; j++) P.conduit('x', z, a + (b - a) * j / n, a + (b - a) * (j + 1) / n, 1, y, paint, clip, j === n - 1 ? drop : undefined, t); };
+  // the kit's lists and TOOLS, then its pieces
   return { MARKS, DEMOTE, TX, mk, boxes, lights, switchables, props, grp, add, slab, frameAt, fitProp, prop, boxOn, paintOn, onS, onTop, rectTop, wallRuns, wordWide, stencilS, stencilTop, keepClear, bandRuns, conduitRuns,
-    ...pieces('officeKit', { paneX, paneZ, wallX, wallZ, desk, monitor, chair, cardboardBox, rug, plant, bin, cabinet, papers, wallArt, bench, car, shelf, ceilingPanel, doorFrame, band, vent, conduit, pipe }) };
+    ...P };
 }
 
 export function buildOfficeProcedural(trace?: GeneratorTrace, opts: GeneratorOpts = {}): Level {
@@ -520,10 +524,8 @@ export function buildOfficeProcedural(trace?: GeneratorTrace, opts: GeneratorOpt
       if ((seed + i) % 4 === 1) add({ c: [cx + dx + 0.5, 0.98, cz + dz + out * 0.1], h: [0.12, 0.25, 0.15], yaw: 0.2, albedo: C.cardboard }); // box on desk
     });
   }
-  cubicleCluster(16.5, 15.2, C.partRed, C.partTan, 1);
-  cubicleCluster(23.0, 15.2, C.partBlue, C.partTan, 2);
-  cubicleCluster(16.5, 20.6, C.partTan, C.partRed, 3);
-  cubicleCluster(23.0, 20.6, C.partRed, C.partBlue, 4);
+  // (where the four stand is the office's own data, beside the marks of the desks they hold: levels/office.scenarios.ts DESK_CLUSTERS)
+  ([[C.partRed, C.partTan], [C.partBlue, C.partTan], [C.partTan, C.partRed], [C.partRed, C.partBlue]] as const).forEach(([a, b], i) => cubicleCluster(DESK_CLUSTERS[i][0], DESK_CLUSTERS[i][1], a, b, i + 1));
   // scattered moving boxes (like reference #3)
   cardboardBox(12.45, 13.4, 0.55, 0.3); cardboardBox(12.5, 14.1, 0.45, -0.4); cardboardBox(12.48, 13.6, 0.4, 0.9, 0.55);   // against the partition wall so the NW aisle stays a guard-width clear
   cardboardBox(19.8, 17.9, 0.6, 0.1); cardboardBox(20.5, 22.3, 0.5, 0.7); cardboardBox(26.9, 13.0, 0.6, -0.2); cardboardBox(26.8, 13.1, 0.42, 0.5, 0.6);
