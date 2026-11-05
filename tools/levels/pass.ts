@@ -359,10 +359,9 @@ export function build(extra: PassExtra = {}): { level: Level; scenarios: LevelSc
   G.handcart(13.8, 20.9, 0.0, 'sacks');
   G.tyres(12.7, 21.2, 3);
   G.tyres(15.3, 20.75, 1);                                                                    // a loose tyre by the cart, flat in the snow
-  // steel pipes left in the yard's far corner, south of the bunk room: two on the ground and one in the notch. (The trial laid them along the bunk room's
-  // wall beside its yard door, on the three places a stack takes on that jamb; and against a room's wall they would take its places for a wall charge.
-  // Out in the corner they take neither: the stack's marks on every door face are the level's as it was.)
-  const PIPES = { x: 31.0, z: 20.0, yaw: 0.2, len: 1.8 }, pipeTops = G.pipes(PIPES.x, PIPES.z, PIPES.yaw, 3, PIPES.len);
+  // (No steel pipes in this yard. They lay in the corner south of the bunk room, 'out of every stack mark and charge place': that corner is the pocket
+  // the squad bunches in to breach the bunk room's south wall, and the pile stood two metres straight behind the man who sets the charge, on the floor
+  // his men step back over. One stayed in the blast: tools/qa/menclear-check.ts. The piece is the kit's and stands in the showroom.)
   // fuel drums in the pocket of yard between the lean-to and the bay: three standing, one on its side
   G.drum(7.7, 9.85, 'rust'); G.drum(8.36, 9.72, 'drumBlue'); G.drum(8.02, 10.4, 'olive', 0.3);
   const DRUM_DOWN = { x: 9.15, z: 10.75, yaw: 0.5 }, drumTop = G.drumDown(DRUM_DOWN.x, DRUM_DOWN.z, DRUM_DOWN.yaw, 'drumRed');
@@ -420,7 +419,6 @@ export function build(extra: PassExtra = {}): { level: Level; scenarios: LevelSc
   cap(15.3, 20.75, 0.44, 0.44, 0.27, 0.2, 0.04);                                              // the loose tyre
   for (const [x, z] of [[7.7, 9.85], [8.36, 9.72], [8.02, 10.4]]) { cap(x, z, 0.36, 0.36, 0.88, 0, 0.05); cap(x, z, 0.36, 0.36, 0.878, Math.PI / 4, 0.05); }   // the fuel drums' lids
   // snow ALONG a round that lies, by the kit's one rule for a bowed top (G.lay): a ridge kept to the crown, and a sheet that follows the round under it
-  pipeTops.forEach((t, k) => G.lay(PIPES.x, PIPES.z, PIPES.yaw, t, t.c[0], t.c[2], t.c[1] + t.h[1], t.c[1] + t.h[1] + (k === 2 ? 0.05 : 0.03), PIPES.len / 2 - (k === 2 ? 0.03 : 0.05), t.h[2] * (k === 2 ? 0.72 : 0.45), S.snow));
   G.lay(DRUM_DOWN.x, DRUM_DOWN.z, DRUM_DOWN.yaw, drumTop, 0, 0, drumTop.c[1] + drumTop.h[1], drumTop.c[1] + drumTop.h[1] + 0.04, 0.37, drumTop.h[2] * 0.6, S.snow);   // the drum on its side
   G.lay(23.76, 12.39, 0.05, logOn, 0, 0, logOn.c[1] + logOn.h[1], logOn.c[1] + logOn.h[1] + 0.03, 0.385, logOn.h[2] * 0.55, S.snow);   // the log thrown across the others
   cap(27.5, 24.1, 1.86, 0.2, 0.81, 0.22, 0.05); cap(31.2, 25.9, 1.86, 0.2, 0.81, -0.18, 0.05);   // the barriers
