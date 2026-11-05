@@ -1739,7 +1739,13 @@ first system across (the game's own maths). No rule of play has changed and noth
     it is made (the paths' bake), before `stoodOver` reads the count, and a box world with no game has no other refusal; after one it is "has
     outgrown the copy in play", a mistake said by name. `BoxMirror.fit` and the copy's "tried again next tick" are gone, and a tick that opens
     has a copy that stands.
-    HELD BY `copyfit-check` on both stands (57 levels: `pieces` 512 of 1,024 at the tightest, which is the cut rows; that the wall breaker's
+    THE LEVEL IS NAMED IN EVERY ONE OF THEM where whoever says it knows its name: "the level 'office' is too big to load: …" (one sentence,
+    `boxMirror.ts tooBig`, and `isTooBig` for a reader; said by `levelfit.ts levelOver` and `stoodOver`, by `civilians.ts join`, and by the copy,
+    which a game hands the name as it stands its box world up: `StaticCollision`'s second argument). A level loaded from a file has a name
+    (`levelLoad.ts levelNameOf`); a level nobody loaded and a box world stood up bare have none and are "this level". `copyfit-check` holds
+    all four cases.
+    HELD BY `copyfit-check` on both stands (59 levels: `pieces` at the tightest 512 of 1,024 on the frozen stand and 512 of 807 on the page's — tut-pair.json, which the page's stand
+    loads with 217 statics that carry a cut record — each of them the cut rows; that the wall breaker's
     sure number is the one its breakables and adoptable walls give; that the room was taken at load; a game one static over a table is refused
     as it is made; a box world of one static too many is too big to load from the copy itself at its first question; one grown past the copy
     behind the breaker's back in play throws by name as the next tick opens; `COPYFIT_BREAK=1` red), and by

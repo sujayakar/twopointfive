@@ -26,7 +26,9 @@ const NOSHADOW = 2, GLASS = 1 << 17, solids: any[] = [...g.engine.world.statics.
 const inSolid = (P: number[], near: any[]) => near.some((b: any) => { const cs = Math.cos(b.yaw), sn = Math.sin(b.yaw), px = P[0] - b.c[0], pz = P[2] - b.c[2]; return Math.abs(P[1] - b.c[1]) < b.h[1] && Math.abs(cs * px - sn * pz) < b.h[0] && Math.abs(sn * px + cs * pz) < b.h[2]; });
 let skipped = 0;
 let red = 0, rows = 0;
-for (const d of g.doors.list) {
+// ONE WINDOW ROUND EVERY QUESTION (scene/collision.ts window): nothing below writes the box world, so the module's copy is proven once for the lot. Asked
+// one by one each line proved the copy for itself, and the check took half an hour of a core.
+g.col.window(() => { for (const d of g.doors.list) {
   const f = d.def; if (Math.abs(d.angle) > 1e-3 || d.slab) { if (ALL) log(`${f.name}: not home (angle ${d.angle.toFixed(2)}), skipped`); continue; }
   const u = [Math.cos(f.closedDir), Math.sin(f.closedDir)], w = f.width, top = d.height + 0.01;
   // the band: every point of the door's plane within BAND of the leaf's outline (inside or outside it)
@@ -57,6 +59,6 @@ for (const d of g.doors.list) {
       if (n && f.exterior && S.name.startsWith('sun')) red++; }
   }
   if (!any && ALL) log(`${f.name}: light-tight (${pts.length} band points × ${srcs.length} sources)`);
-}
+} });
 log(red ? `FAIL — the sun crosses ${red} shut exterior door × hour pairs` : `  PASS  no sun crosses a shut exterior door (${g.doors.list.length} doors, ${suns.length} hours; ${skipped} ray starts inside a solid skipped)`);
 process.exit(red ? 1 : 0);

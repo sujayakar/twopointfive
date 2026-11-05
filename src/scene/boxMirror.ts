@@ -78,6 +78,11 @@ export interface PaneRow { readonly bi: number; readonly gone: boolean; readonly
  *  burst would break are counted out — which statics, and four doubles each: the pane's nearest point to the burst and how far round it the glass gives
  *  (below nought: the whole pane) */
 export const VIEW_NONE = 0, VIEW_BLOWN = 1, VIEW_GIVES = 2;
+/** THE ONE SENTENCE FOR A LEVEL THE GAME WILL NOT LOAD, wherever it is said (here; game/levelfit.ts levelOver and stoodOver; game/civilians.ts join): with the
+ *  level's name where whoever says it knows one — a level loaded from a file has one (scene/levelLoad.ts levelNameOf), a generator's and a bare box world none. */
+export const tooBig = (name: string | null | undefined, why: string): string => `${name ? `the level '${name}'` : 'this level'} is too big to load: ${why}`;
+/** …and how a reader knows it (tools/qa/copyfit-check.ts) */
+export const isTooBig = (said: string): boolean => /^(this level|the level '.*?') is too big to load: /.test(said);
 export interface PaneView { readonly kind: number; readonly bi: readonly number[]; readonly at: readonly number[] }
 /** THE GAME'S GLASS, for the copy (game/glassbreak.ts GlassBreak): every pane that is no longer whole, handed over one by one, and the view in hand (read
  *  only when a question is about to be asked of the module under it: the game may work its rows out then and not before) */
@@ -253,9 +258,11 @@ export class BoxMirror extends HostOwned {
    *  somebody who grew the box world behind it, and is said by name. */
   private outgrown(what: string, has: number, cap: number): never {
     throw new Error(this.played
-      ? `the box world has outgrown the Rust module's copy of it in play: ${has} ${what}, and the copy holds ${cap} (game/wallbreak.ts refuses a piece over the room the level left: something else grew it)`
-      : `this level is too big to load: ${has} ${what} (${cap}: what the Rust module's copy of the box world holds — scene/boxMirror.ts, game/levelfit.ts)`);
+      ? `the box world${this.of ? ` of the level '${this.of}'` : ''} has outgrown the Rust module's copy of it in play: ${has} ${what}, and the copy holds ${cap} (game/wallbreak.ts refuses a piece over the room the level left: something else grew it)`
+      : tooBig(this.of, `${has} ${what} (${cap}: what the Rust module's copy of the box world holds — scene/boxMirror.ts, game/levelfit.ts)`));
   }
+  /** the name of the level this box world is, where whoever stood it up knew one (a game does: StaticCollision's second argument; a box world stood up bare has none) */
+  of: string | null = null;
   /** the grid: cell c's statics in the order they were filed, one run after another; and the tilted statics' own list */
   private grid(cells: number[][], tiltedAt: number[], W: number, H: number, boxes: number): void {
     const n = W * H, c = this.caps; if (n > c.cells) this.outgrown('cells of the floor grid', n, c.cells); if (tiltedAt.length > c.tilted * 5) this.outgrown('tilted statics', tiltedAt.length / 5, c.tilted);
