@@ -20,6 +20,8 @@ export type LookName = typeof LOOK_NAMES[number];
  *  fades   how far sun and years blotch it (1; 0.3 = made in a factory and kept indoors, or washed). ABSENT = a place somebody keeps: no blotch, no drift
  *          of hue, none of the traffic's dirt on it
  *  soaks   standing on the ground it takes a damp foot, and its head bleaches and sheds dark runs
+ *          (HOW FAR `fades` and `soaks` SHOW IN A PLACE is the place's word, not the stuff's: a level says how kept it is, look.wgsl lookKept; these two
+ *          say what the stuff does where nobody keeps it)
  *  unit    a stuff MADE OF PIECES: one piece's size, metres along and up (each divides LOOK_TILE), whether every other course is laid half a piece along,
  *          and how far one piece's shade may sit from the next's (± × the paint). The map draws the pieces' joints at these sizes (`piece`) and gives them no
  *          shade of their own; the shader gives each piece of the WORLD its shade by where it is, so a wall of eighty panels is not a tile's eight repeated
@@ -28,8 +30,9 @@ export type LookName = typeof LOOK_NAMES[number];
  *  bay     a stuff made of pieces is LAID IN BAYS: so many pieces along and up to a movement joint, wider and darker than a piece's own, and each bay a
  *          shade its own (pavers laid a day's work at a time, a wall cast in lifts). 0 = none that way. A bonded stuff has none along: its courses
  *          are half a piece out of step and the joint would zigzag. The shader draws both by where the piece is in the WORLD
- *  worn    how hard USE shows on it in a place somebody keeps (0 or absent = not at all: steel, enamel, a carpet; only a stuff with no `fades` may say
- *          it). Not weather: what boots, a trolley and a mason called back leave. The shader gives it two things by where it is in the WORLD, never in
+ *  worn    how hard USE shows on it in a place somebody keeps (0 or absent = not at all: steel, enamel, a carpet). A stuff that also `fades` shows
+ *          it by how far the place it stands in is kept (a level's word, look.wgsl lookKept): plaster in a kept office has a knocked foot as skim
+ *          has, and none in a ruin, where the weather has it. Not weather: what boots, a trolley and a mason called back leave. The shader gives it two things by where it is in the WORLD, never in
  *          the map: a piece in four is stained, chipped at a corner or was changed for a new one (look.wgsl lookPiece: a stuff made of pieces), and a
  *          wall's foot has its coat knocked off in stretches to a hand's height
  *  runs    which way its grain or its ribs run on a thing of its own (one not built in place, or one that moves): 'long' = along the long side of every
@@ -44,9 +47,9 @@ export type LookName = typeof LOOK_NAMES[number];
 interface Stuff { rough: number; relief: number; built?: true; fades?: number; soaks?: true; worn?: number; untiles?: true; unit?: readonly [u: number, v: number, bond: boolean, shade: number]; bay?: readonly [along: number, up: number];
   runs?: 'long' | 'flat'; least?: number; under?: { readonly plinth: LookName; readonly core: LookName; readonly long: number; readonly tall: number }; foot?: LookName; ground?: true; sheds?: true }
 const STUFFS: Readonly<Record<LookName, Stuff>> = {
-  'mud wall': { rough: 0.95, relief: 1.6, built: true, fades: 1, soaks: true, untiles: true, runs: 'flat', under: { plinth: 'field stone', core: 'mud brick', long: 0.6, tall: 0.24 } }, plaster: { rough: 0.86, relief: 1.8, built: true, fades: 1, soaks: true, untiles: true, runs: 'flat' },
-  block: { rough: 0.93, relief: 1.5, built: true, fades: 1, soaks: true, runs: 'flat' }, earth: { rough: 0.94, relief: 1.6, built: true, fades: 1, soaks: true, untiles: true, runs: 'flat', foot: 'gravel', ground: true },
-  gravel: { rough: 0.88, relief: 1.3, built: true, fades: 1, soaks: true, untiles: true, runs: 'flat', ground: true }, slab: { rough: 0.82, relief: 1.8, built: true, fades: 1, soaks: true, runs: 'flat' },
+  'mud wall': { rough: 0.95, relief: 1.6, built: true, fades: 1, soaks: true, untiles: true, runs: 'flat', under: { plinth: 'field stone', core: 'mud brick', long: 0.6, tall: 0.24 } }, plaster: { rough: 0.86, relief: 1.8, built: true, fades: 1, soaks: true, worn: 1, untiles: true, runs: 'flat' },
+  block: { rough: 0.93, relief: 1.5, built: true, fades: 1, soaks: true, worn: 0.8, runs: 'flat' }, earth: { rough: 0.94, relief: 1.6, built: true, fades: 1, soaks: true, untiles: true, runs: 'flat', foot: 'gravel', ground: true },
+  gravel: { rough: 0.88, relief: 1.3, built: true, fades: 1, soaks: true, untiles: true, runs: 'flat', ground: true }, slab: { rough: 0.82, relief: 1.8, built: true, fades: 1, soaks: true, worn: 1, runs: 'flat' },   // (plaster, block and slab say `worn` as their kept cousins do — skim, cast panel, paver: it shows only in a place a level calls kept)
   wood: { rough: 0.84, relief: 1.6, fades: 1, runs: 'long' }, sheet: { rough: 0.5, relief: 1.0, fades: 1, soaks: true, runs: 'flat', least: 0.2 }, cloth: { rough: 0.96, relief: 1.6, fades: 1, soaks: true },
   metal: { rough: 0.75, relief: 1.6, fades: 1, soaks: true, sheds: true }, paint: { rough: 0.5, relief: 1.6, fades: 1, soaks: true },
   veneer: { rough: 0.4, relief: 1.4, fades: 0.3, runs: 'long' }, plastic: { rough: 0.5, relief: 1.4, fades: 0.3 }, fabric: { rough: 0.95, relief: 1.6, fades: 0.3 },

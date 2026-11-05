@@ -14,9 +14,7 @@ export async function waysCheck(): Promise<boolean> {
   console.log(`\n=== ways: how a level is walked${BRK ? ' (the reader takes none: must fail)' : ''} ===`);
   const { loadLevel } = await import(`${ROOT}/src/scene/levelLoad.ts`), { StaticCollision, NavGrid } = await import(`${ROOT}/src/scene/collision.ts`);
   const { levelWays } = await import(`${ROOT}/src/scene/ways.ts`), { buildWearMap, WEAR_RES } = await import(`${ROOT}/src/render/wear.ts`), { WORLD } = await import(`${ROOT}/src/scene/world.ts`);
-  const { withOfficeScript, isOfficeFamily } = await import(`${ROOT}/src/scene/level.ts`);
-  // (the office's missions and its ways are code beside it, attached as the game attaches them: a level opened without them would be checked with no ways of its own)
-  const open = (f: string) => { const data = JSON.parse(readFileSync(resolve(ROOT, 'levels', f), 'utf8')), level = isOfficeFamily(data) ? withOfficeScript(loadLevel(data)) : loadLevel(data), nav = new NavGrid(new StaticCollision(level.boxes)); return { level, nav }; };
+  const open = (f: string) => { const level = loadLevel(JSON.parse(readFileSync(resolve(ROOT, 'levels', f), 'utf8'))), nav = new NavGrid(new StaticCollision(level.boxes)); return { level, nav }; };
   const sumOf = (a: Float32Array) => { let n = 0, most = 0; for (const v of a) { if (v > 0) n++; most = Math.max(most, v); } return { n, most }; };
   // 1. a level of the game with no routes: a team's start has a way to every room, through doors, on free floor only; the same twice; the grid's own search
   //    tables are not this function's
@@ -61,7 +59,7 @@ export async function waysCheck(): Promise<boolean> {
       && [gb, gc].every(t => /detailSurface\([^;]*frame\.matCfg\.w, lookW\);/.test(t) && /lookSurface\([^;]*frame\.invScreen\.y, lookW\);/.test(t) && (t.match(/lookMarkSoft\(\), lookTrod\(\)\)/g) ?? []).length >= 1)
       && look.includes('fn lookWears(n: vec3f, bi: u32, hf: vec4f) -> bool { return lookCfg.a.w > 0.0 && lookDresses(n, bi, hf); }') && body.includes('if (!lookDresses(n, bi, hf) || (all(lookCfg.a == vec4f(0.0))') && body.includes('  if (wears) {');
     const once = (body.match(/lookWayAt\(/g) ?? []).length === 2 && (body.match(/textureSampleLevel\(wearTex/g) ?? []).length === 0 && body.includes('let wm = lookWay;');
-    const use = look.includes('worn *= 1.0 + 0.8 * lookWayAt(') && body.includes('smoothstep(0.44 - 0.22 * beside, 0.6 - 0.22 * beside,') && mk.includes('- (0.72 - 0.12 * age - 0.16 * trod));');
+    const use = look.includes('worn *= 1.0 + 0.8 * lookWayAt(') && body.includes('smoothstep(0.44 - 0.22 * beside, 0.6 - 0.22 * beside,') && mk.includes('- (0.72 - 0.12 * age * soft2.y - 0.16 * trod));') && mk.includes('* worn * max(soft2.y, min(trod, 1.0));');   // (… in a place kept like new too: the years' share of a mark's wear asks how kept the place is, feet's does not — kept-check.ts)
     const game = readdirSync(resolve(ROOT, 'src/game')).filter(f => f.endsWith('.ts') && /scene\/ways/.test(readFileSync(resolve(ROOT, 'src/game', f), 'utf8')));
     const main = readFileSync(resolve(ROOT, 'src/main.ts'), 'utf8'), gm = readFileSync(resolve(ROOT, 'src/game/game.ts'), 'utf8');
     verdict(one && once && use && game.length === 0 && main.includes("if (q.get('walked') === '0') lookConfig.walked = 0;") && gm.includes('lookConfig.on && lookConfig.walked > 0);'),

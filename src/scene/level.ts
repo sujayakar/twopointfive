@@ -13,7 +13,7 @@ import officeReliefData from '../../levels/office-relief.json' with { type: 'jso
 import type { WeaponId } from '../game/weapons';   // (type only: what a route may hand its man — erased at runtime, so the scene layer still loads below the game's)
 import type { LevelScriptFn } from '../game/director';   // (type only, likewise: the level's script is a plain function handed to game/director.ts)
 import type { LevelScenarios } from './scenarios';
-import { OFFICE_SCENARIOS, OFFICE_MARKS } from '../../levels/office.scenarios';   // the office's scenario data (plain literals, type-only imports): what the night breach / room clear / rescue take from this level
+import { OFFICE_SCENARIOS } from '../../levels/office.scenarios';   // the office's scenario data (plain literals, type-only imports): what the night breach / room clear / rescue take from this level
 
 export interface LightDef {
   kind: 'point' | 'spot' | 'dir';
@@ -189,6 +189,8 @@ export interface Level {
   breach?: BreachPlan;
   /** the base texel (m) the level's marking bitmaps were generated for (scene/markings.ts; absent = MARKING_TEXEL 0.025) — main.ts hands it to the engine */
   markTexel?: number;
+  /** how kept the place is, 0‥1 (the file's meta.kept; absent = 0): main.ts hands it to the look (scene/look.ts lookKeptOf) */
+  kept?: number;
   /** The one mission thread's geometry (game.ts Mission): the room to reach (floor rectangle) and the door the HUD points at for it, the rack whose drive
    *  gets pulled (its index n names the switchables `rack${n}_leds` / `rack${n}_glow` that go dark; `front` is the marker point on its LED face), the door
    *  to leave by and the x past which you are outside it. */
@@ -221,12 +223,9 @@ export function buildBundledLevel(): Level {
   return withOfficeScript(loadLevel(OFFICE_DATA));
 }
 /** attach what the office keeps OUTSIDE its level file to a Level of the office family (the bundled file, relief, a texel variant off the dev server, the editor's document) —
- *  loadLevel itself stays pure data → Level. Today that is its scenario data and its named marks: the office's level script (the night and day showcases) was removed, so the office has no
+ *  loadLevel itself stays pure data → Level. Today that is its scenario data alone: the office's level script (the night and day showcases) was removed, so the office has no
  *  script and the Director no program (the name stays: every tool that loads a level file calls this). */
-export function withOfficeScript(level: Level): Level { return withMarks(withScenarios(level, OFFICE_SCENARIOS), OFFICE_MARKS); }
-/** … and the office's named marks (levels/office.scenarios.ts OFFICE_MARKS: where a person stands to use each thing, the ends of its `walked` ways), unless the
- *  Level came with marks of its own. The level file has no slot for a mark yet, so they ride as the scenarios do: non-enumerable, for the same reason. */
-export function withMarks(level: Level, marks: MarkDef[]): Level { if (!level.marks) Object.defineProperty(level, 'marks', { value: marks.map(m => ({ ...m, pos: [m.pos[0], m.pos[1], m.pos[2]] as Vec3 })), enumerable: false, writable: true, configurable: true }); return level; }   // (a copy a Level: two boots share no array)
+export function withOfficeScript(level: Level): Level { return withScenarios(level, OFFICE_SCENARIOS); }
 /** attach a level SCRIPT to a Level. The script is CODE, not level data: it rides on the Level as a non-enumerable property, so everything that walks the Level's keys as data
  *  (tools/qa level-identity's generator ≡ JSON diff and key order, levelToData, structuralDiff) sees the level exactly as before, while game/director.ts reads level.script like any field. */
 export function withScript(level: Level, script: LevelScriptFn): Level { Object.defineProperty(level, 'script', { value: script, enumerable: false, writable: true, configurable: true }); return level; }
