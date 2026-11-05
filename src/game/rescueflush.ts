@@ -32,11 +32,11 @@ import type { Game, Guard } from './game';
 import type { Rescue } from './rescue';
 import { endGuardScript, inBounds } from './squad';
 import { resetChase } from './guards';
-import { runnerFled, runnerOwns } from './runner';
 import { moraleOwns } from './morale';
 import { laneCovers, laneHolds, laneWarns } from './lanes';
 import { rescueCheckOwns } from './rescuecheck';
 import { w, wg } from './words';
+import { hasHim, OWN } from './owner';
 
 export const RESCUEFLUSH = {
   on: false,
@@ -92,7 +92,7 @@ export class RescueFlush {
     if (!this.live || isNaN(this.fellAt)) return null;   // (while the room's own men stand, the clock is theirs as it always was)
     const g = this.g, alive = this.alive(); if (!alive.length) return null;
     const has = (h: Guard): number => {
-      if (h.state === 'dead' || h.held || g.time < h.dazzledUntil || runnerOwns(h) || moraleOwns(h)) return Infinity;
+      if (h.state === 'dead' || h.held || g.time < h.dazzledUntil || hasHim(h, OWN.runner) || moraleOwns(h)) return Infinity;
       let best = Infinity; for (const v of alive) best = Math.min(best, this.line(h, v));
       return best;
     };
@@ -114,7 +114,7 @@ export class RescueFlush {
     const g = this.g, R = this.R, K = RESCUEFLUSH, B = R.bounds, alive = this.alive();
     if (!alive.length || !R.noiseAt) return;   // nothing loud yet: nobody has been told anything
     if (isNaN(this.fellAt)) {
-      if (R.cast().some(c => c.inRoom && c.gd.state !== 'dead' && !c.gd.held && !runnerFled(c.gd))) return;   // a man posted with them still stands: the clock is his, and the others have their own jobs
+      if (R.cast().some(c => c.inRoom && c.gd.state !== 'dead' && !c.gd.held && !c.gd.fled)) return;   // a man posted with them still stands: the clock is his, and the others have their own jobs
       this.fellAt = g.time; this.nextAt = g.time + K.afterSecs; R.note('flush:fell');
     }
     const inRoom = alive.some(h => inBounds(h.char.pos, B));
@@ -134,7 +134,7 @@ export class RescueFlush {
     if (g.time < this.nextAt) return;
     // the next man: never sent before the men who have been, then the nearest to where he would go
     const free = (h: Guard): boolean => {
-      if (h.state === 'dead' || h.held || g.time < h.dazzledUntil || g.time < h.staggerUntil || runnerOwns(h) || moraleOwns(h) || rescueCheckOwns(g, h)) return false;
+      if (h.state === 'dead' || h.held || g.time < h.dazzledUntil || g.time < h.staggerUntil || hasHim(h, OWN.runner) || moraleOwns(h) || rescueCheckOwns(g, h)) return false;
       if (inBounds(h.char.pos, B) && inRoom) return false;   // in with them: he has them (captor())
       if (g.time - h.lastSeenT < K.busySecs || h.sawFoeThisFrame) return false;   // one of the team in his sights: he is fighting
       const F = g.fight.defs.find(d => d.gd === h); if (F && F.mode === 'move') return false;   // on somebody's errand (the room fight's fall-back, Hard's crew on its way): that first

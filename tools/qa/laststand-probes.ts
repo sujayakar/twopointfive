@@ -26,7 +26,7 @@ const { stripRows } = await import(`${ROOT}/src/game/cues.ts`);
 const { placeIn } = await import(`${ROOT}/src/game/dialogue.ts`);
 const { digestGame, hashDigest } = await import(`${ROOT}/src/game/digest.ts`);
 const { NETQUIET } = await import(`${ROOT}/src/game/netquiet.ts`);
-const { RUNNER, runnerBreak, runnerFled, runnerOf } = await import(`${ROOT}/src/game/runner.ts`);
+const { RUNNER, runnerBreak, runnerOf } = await import(`${ROOT}/src/game/runner.ts`);
 const { MORALE } = await import(`${ROOT}/src/game/morale.ts`);
 
 const DT = 1 / 60;
@@ -201,7 +201,7 @@ export async function lastStandFled(): Promise<boolean> {
     const ran = up(g).find((h: any) => runnerBreak(g, h)) ?? null; steps(W, 40);
     const R = lastStandReport(g), lines = said(g), name = ran?.callsign ?? '?', counts = lines.flatMap(l => [...l.text.matchAll(/(\d+) of us/g)].map(m => Number(m[1])));
     const his = lines.filter(l => l.who === name), named = lines.filter(l => l.who !== name && l.text.includes(name));
-    F.verdict(!!ran && runnerFled(ran) && ran.state !== 'dead' && before === 0, 'three up and nothing said; one of them is made to run: his gun is out of his hand and he is not dead', `${name}: ${ran ? `phase ${runnerOf(ran)?.phase}, fled ${runnerFled(ran)}, ${ran.state}` : 'nobody would run'} · ${before} lines or checks before`);
+    F.verdict(!!ran && ran.fled && ran.state !== 'dead' && before === 0, 'three up and nothing said; one of them is made to run: his gun is out of his hand and he is not dead', `${name}: ${ran ? `phase ${runnerOf(ran)?.phase}, fled ${ran.fled}, ${ran.state}` : 'nobody would run'} · ${before} lines or checks before`);
     F.verdict(R.stats.checks >= 1 && R.stats.up0 === 2 && lines[0]?.kind === 'check1' && lines[0].who !== name, 'the two who still fight are the last few: the check goes out, called by one of them', `checks ${R.stats.checks}, up at the start ${R.stats.up0} · ${lines.slice(0, 2).map(l => `${l.who}: ${l.text}`).join(' · ')}`);
     F.verdict(his.length === 0 && named.length === 0 && !R.known.includes(name), 'the man who ran says nothing on the net, is not asked for by name and is not among the men known up', `his lines ${his.length}${his[0] ? ` ("${his[0].text}")` : ''} · lines naming him ${named.length}${named[0] ? ` ("${named[0].text}")` : ''} · known up: ${R.known.join(', ') || 'nobody'}`);
     F.verdict(counts.every(n => n <= 2), 'no count spoken is more than the two who fight', counts.length ? `counts spoken: ${counts.join(', ')}` : 'no count was spoken in the forty seconds (nothing to hold)');
