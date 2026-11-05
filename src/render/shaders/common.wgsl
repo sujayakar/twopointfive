@@ -1262,6 +1262,7 @@ fn portalOutside(L: vec3f, ground: vec3f) -> vec3f { if (L.y > 0.0) { return sky
 /// hides it. Looking down: until it is PORTAL_OUT clear of the opening's plane, a leaf's length, or at the ground if that comes first (the ground is
 /// what it looks out on, not a thing in its way)
 fn portalPast(li: Light, Po: vec3f, dir: vec3f, dist: f32) -> f32 {
+  if (frame.shadeCfg.z >= 9.5) { return 0.0; }   // DIAGNOSTIC: the ray stops at the opening
   if (dir.y > 0.0) { return PORTAL_SKY; }
   return min(PORTAL_OUT / max(-dot(dir, li.dir), 0.25), max((Po.y - 0.02) / max(-dir.y, 1e-4) - dist, 0.0));
 }
@@ -1570,8 +1571,9 @@ fn evalLightDirect(li: Light, P: vec3f, N: vec3f) -> LightEval {
   let d = li.pos - P; let dist = length(d);
   if (dist > li.range) { return r; }
   r.L = d / max(dist, 1e-4); r.dist = vec3f(dist, 0.0, 0.0);
-  if (frame.shadeCfg.z >= 2.5) { return r; }   // DIAGNOSTIC: listed, never scored
-  if (frame.shadeCfg.z >= 0.5) {               // DIAGNOSTIC: the middle of what shows, one point
+  let tryZ = frame.shadeCfg.z - select(0.0, 10.0, frame.shadeCfg.z >= 9.5);
+  if (tryZ >= 2.5) { return r; }   // DIAGNOSTIC: listed, never scored
+  if (tryZ >= 0.5) {               // DIAGNOSTIC: the middle of what shows, one point
     let hh = portalHigh(li); let see = portalSeen(li, d, hh);
     if (!(see.z * see.w > 0.0)) { return r; }
     let up = vec3f(0.0, 1.0, 0.0); let T = vec3f(li.dir.z, 0.0, -li.dir.x);
