@@ -1,9 +1,10 @@
 // WHAT A PANE IS TO PLAY, THE MODULE AGAINST ITS OWN EARLIER ANSWERS — every call of the glass rule (rust/sim/src/panes.rs, pen.rs) folded into a word a name (tools/qa/ident-pin.ts): what each answered, what each let go, and every pane's whole state after it, to the bit.
-//   [TPS_PROFILE=shipped] bun run tools/qa/pane-ident.ts [--n 300] [--levels office.json,glasshouse.json] [--seed 1] [--missions room-clear-four:1,...]
+//   bun run tools/qa/pane-ident.ts [--n 300] [--levels office.json,glasshouse.json] [--seed 1] [--missions room-clear-four:1,...]
 // No game tick in the hand: between questions the tool does to the level's glass what a game does — rounds of every energy with and without the caller's word on them, a shell's pellets
 // that widen, blasts at every strength near every kind, the glass's own step, walkers into what is left, a pane made another glass, every pane whole. Glass breaking and rounds through glass are made live here whatever the stand holds, and the three newer
 // rules (toughened glass that drops, the pane's place, the fall's seam) are held the other way from the stand's on every other level, so both stands reach the rule either way.
-// A run is FAIR only if it reached every name below (MET). THE WORDS: held to tools/qa/fixtures/pane-words.json on the frozen stand (--record writes it; the first recording was taken on the last tree where the TypeScript twin stood, with every call of this same run asked of both and none differing).
+// A run is FAIR only if it reached every name below (MET). THE WORDS: held to tools/qa/fixtures/pane-words.json, the recording of the page's stand (--record writes it, there only). The file also keeps the old stand's recording, the first, taken on the last tree where the TypeScript twin stood
+// with every call of this same run asked of both and none differing: a run on the old stand (TPS_PROFILE=frozen) is held to that one. A run of another length or seed (--n, --seed) has no recording and says so (UNPINNED); a plain run that is held to nothing FAILS.
 // PANES_BREAK=1 is the red path: what the module says is bent at every name, and every name's word must move against the same run played plain by a child (exit 1 = red, as it must be).
 process.env.TPS_CPUSENSE ??= '1';
 import { resolve } from 'path';
@@ -136,7 +137,7 @@ let failed = differ > 0; const verdict = (ok: boolean, label: string, detail: st
 if (!BREAK) { log(`pane-ident: ${calls} calls, ${differ} went wrong · met: ${Object.keys(NAMES).map(k => `${k} ${NAMES[k]}`).join(', ')}`); if (!played) verdict(thin.length === 0 || !!flag('--levels'), 'reach: the run reaches every name', thin.length ? `NOT REACHED: ${thin.join(', ')}` : `${Object.keys(NAMES).length} names`); }
 const pinned = !flag('--levels') && !flag('--missions');
 if (pinned) {
-  const words = F.words(), H = hold({ root: ROOT, tool: 'tools/qa/pane-ident.ts', fixture: 'pane-words.json', run: `${files.join(',')} n ${N} seed ${SEED}`, runArgs: [...(flag('--n') ? ['--n', String(N)] : []), ...(flag('--seed') ? ['--seed', String(SEED)] : [])], end: `${calls} calls`, words, breakWord: 'PANES_BREAK', unfit: differ ? 'calls went wrong' : thin.length ? `the run does not reach ${thin.join(', ')}` : '', verdict: BREAK ? (ok, label, detail) => { log(`- ${ok ? 'NOT RED' : 'RED'} — ${label} · ${detail.slice(0, 400)}`); if (!ok) failed = true; } : verdict, say: log });
+  const words = F.words(), H = hold({ root: ROOT, tool: 'tools/qa/pane-ident.ts', fixture: 'pane-words.json', stand: 'shipped', unpinned: N !== 300 || SEED !== 1 ? 'a run of another length or seed than the one recorded (300 rounds, seed 1)' : undefined, run: `${files.join(',')} n ${N} seed ${SEED}`, runArgs: [...(flag('--n') ? ['--n', String(N)] : []), ...(flag('--seed') ? ['--seed', String(SEED)] : [])], end: `${calls} calls`, words, breakWord: 'PANES_BREAK', unfit: differ ? 'calls went wrong' : thin.length ? `the run does not reach ${thin.join(', ')}` : '', verdict: BREAK ? (ok, label, detail) => { log(`- ${ok ? 'NOT RED' : 'RED'} — ${label} · ${detail.slice(0, 400)}`); if (!ok) failed = true; } : verdict, say: log });
   if (args0('--words')) process.exit(0);
   if (H.record && !failed) H.record();
 }
