@@ -1607,3 +1607,28 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   NOT SEEN: nothing here draws, and the 0.0024 the twins' colours moved has not been looked at on any adapter. Nobody has played it.
 
 
+- **A thing of solid glass is dark and smooth** (`scene/stuff.ts SOLIDGLASS`; read by `scene/boxes.ts glassDark`, `sentAlbedo` and `matWord`; 11-05,
+  from the renderer's review of the vehicles on a GPU: "near-black panes, finish 0.05": glass is what mirrors most on a car, and the kits' dark glass
+  was a mid grey at 0.1, a plain car's and the office van's a grey with no finish at all). THE RULE: a box that says `glass` and is NO PANE
+  (`solidGlassBox`, the one test, which the hit picture's `solidGlass` asks too: a vehicle's window, a display case's top, a handset's screen; 100
+  boxes in 39 level files; a pane, `BoxFlag.Glass`, is the glass engine's and is not touched) is SENT to the GPU as a NEUTRAL dark of luminance 0.02
+  and no rougher than 0.05. Darker and smoother stay as they are; a wet one is that dark times its wetness; a face that carries MARKINGS keeps its
+  colour (2 boxes: a solar panel's grid, a shop's case), because a mark is laid out in its own colours on the colour under it. Neutral and not the
+  row's hue scaled down: under about 0.03 a hue does not survive the 8-bit albedo target. THE COLOUR IS NOT REPAINTED: a rule of
+  the PICTURE at the pack, keyed on the word a box is DRAWN as (`Box.stuff`). What a box DOES is its other word (`Box.does`, `scene/materials.ts`: a kit
+  vehicle's window does what 'dark glass' does) and is neither asked nor touched; the step was cut again over the materials rewrite, which took the
+  rules off colours the same day. So it goes wherever the word goes, whoever painted the box (the kits' dark glass, a plain car's own grey), and the
+  game still finds the box's own colour where it takes one (what a piece broken off it is painted, a chip's tint, a lamp known by its tone).
+  `Box.albedo` and `Box.rough` stay the file's and the pack sends the colour in the one place it already sends a wet box darker (`sentAlbedo`, beside
+  `Box.wetK`: the packed albedo, the secondary albedo's base and the static slice's compare). NO LEVEL FILE CHANGES. THE SWITCH: ON in the page (`?solidglass=0` = as its file gives it), OFF in the module and on
+  the frozen stand (`TPS_SOLIDGLASS=1`), a `FROZEN_HOLDS` row, `STAND_ENV`, pinned in `standup.ts`, in the registry and the journal; its two numbers
+  ride in the table (`SOLIDGLASS.lum`, `.rough`), so the page's knobs and a recording carry them. A PICTURE ONLY ON THE HARNESS: on a GPU page the
+  light meter's bounce reads the packed colour, so a man beside a vehicle is metered a hair darker, as beside wet ground (`wetK` is the same).
+  THE CHECK: `tools/qa/coatfinish-check.ts` lines 6 and 7 (`probes.ts coatfinish`), both stands: the cases by hand (a window, one with no finish, a
+  pane, a plain paint of the same grey, a darker glass, a wet one, a marked one), every level file, THE WORDS THE WORLD SENDS for the yard's own
+  window (up, down, and up again on the same stood world: the static slice packs again), the same seeded run by digest up as down, a stand given the
+  word, the rows and an old recording; `SOLIDGLASS_BREAK=1` fails both lines. NOT DONE, and known: a window DRAWN AS A MARK on a body (the police
+  post's taxi, the bazaar's workshop set) is a mark and stays its grey beside a boxed window gone dark; a MIRROR that says glass is the same dark
+  glass with a 4 % mirror (it wants a mirror's own word); the workbench does not raise this or any page switch, so the editor shows the file's grey;
+  the renderer has no layer for glass. SEEN ON A CLOUD NVIDIA CARD in the renderer's study build, stills only (the yard at midday, a red pickup at the
+  crossing, the showroom; no fog of war, nobody shot a window): it reads as glass and not as a hole, and no glint showed at 0.05. Nobody has played it.

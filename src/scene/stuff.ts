@@ -189,8 +189,8 @@ export const namedCoat = (word: BoxStuff | undefined): NamedCoat | undefined => 
 /** A NAMED COAT'S FINISH GOES WHEREVER ITS WORD GOES: a box that says a named coat is drawn no rougher than that coat, whatever row painted it and
  *  whatever number a kit, a skin or a hand wrote beside the word (a vehicle's body took a truck enamel's satin, a cot's and a locker's too, or nothing at
  *  all: it showed next to nothing of what stands round it). The word decides; a thing that should not shine like a car does not say it is car paint.
- *  Smoother stays smoother (a body wet with rain). ROUGHNESS ONLY: whether a thing is bare metal stays its paint's (the game reads that flag —
- *  game/wallpen.ts, wallcharge.ts — and reads no roughness).
+ *  Smoother stays smoother (a body wet with rain). ROUGHNESS ONLY: whether a thing is bare metal stays its paint's (a piece the game breaks off a thing
+ *  is given the thing's own finish and flag, game/breakTable.ts; what a thing DOES is its other word, scene/materials.ts, and reads neither).
  *  WHERE: read by the one function that hands a box's finish to the GPU (scene/boxes.ts matWord), so it holds for a level's statics, a shape's pieces, a
  *  piece blown off a car and anything made later that says the word. No box is changed and no level file carries the number: `Box.rough` is what the file
  *  gave, always.
@@ -200,6 +200,23 @@ export const namedCoat = (word: BoxStuff | undefined): NamedCoat | undefined => 
 export const COATFINISH = { on: false };
 /** the roughness a named coat lends the thing that says `word`, or nothing (the rule down, no word, a word that is no named coat) */
 export const coatRough = (word: BoxStuff | undefined): number | undefined => COATFINISH.on && word !== undefined ? namedCoat(word)?.rough : undefined;
+/** A THING OF SOLID GLASS IS DARK AND SMOOTH: a box that says 'glass' and is no pane (a vehicle's window, a display case's top, a handset's screen:
+ *  nothing is modelled behind them) is sent to the GPU as a neutral near black and polished, whatever grey its row or its maker gave it — glass is dark
+ *  because what is seen through it is an unlit inside, and it is what mirrors most on a car. A PANE (BoxFlag.Glass) is the glass engine's and is not
+ *  touched; nor is a face that carries MARKINGS (a mark is laid out in its own colours on the colour under it: a panel's grid, a screen's picture).
+ *  THE COLOUR IS NOT REPAINTED: `Box.albedo` stays the file's. This is a rule of the PICTURE, keyed on the word a box is DRAWN as (Box.stuff): what a
+ *  box DOES is its other word (Box.does, scene/materials.ts: a kit vehicle's window does what 'dark glass' does) and is neither asked nor touched. So it
+ *  goes wherever the word goes, whoever painted the box (the kits' dark glass, a plain car's own grey), and the game still finds the box's own colour
+ *  where it takes one (what a piece broken off it is painted, a chip's tint, a lamp known by its tone). The pack sends it dark, in the one place it
+ *  sends a wet box darker (scene/boxes.ts sentAlbedo), and no rougher than `rough` (matWord). Darker and smoother stay as they are. NEUTRAL, not the
+ *  row's hue scaled down: under about 0.03 a hue does not survive the 8-bit albedo target (render/shaders/gbuffer.wgsl), and a channel on a rounding
+ *  edge would flicker.
+ *  `lum` and `rough` ride in the table, so the page's knobs and a recording carry them.
+ *  THE SWITCH: SOLIDGLASS.on — ON in the page (`?solidglass=0` = every such box as its file gives it, as it was), OFF in the module and on the frozen
+ *  stand (FROZEN_HOLDS; TPS_SOLIDGLASS=1 raises it there); in the registry (game/knobs.ts) and the journal. A picture only on the harness; on a GPU page
+ *  the light meter's bounce sees the darker glass, as it sees a wet box's darker ground (Box.wetK).
+ *  CHECK: tools/qa/coatfinish-check.ts lines 6 and 7 (SOLIDGLASS_BREAK=1 fails both), on both stands. */
+export const SOLIDGLASS = { on: false, lum: 0.02, rough: 0.05 };
 /** the word of a thing that said `was` and is painted again with a paint that says `now`: the new paint's (whoever repaints a thing does not keep the
  *  old paint's word) — but A NAMED COAT STAYS UNDER A PLAIN ONE, whichever plain coat the look has: a car's body given another paint or another enamel is
  *  still a car's body. */
