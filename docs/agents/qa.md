@@ -630,6 +630,15 @@ but synthetic writes still work.
   `node tools/qa/pricerun-page.cjs [level …]` (the real page on the software adapter, as a person's page runs it: the chain, one rung, one step, the file
   down; no number there is a price, and its frames are seconds long, so it proves nothing of the pacing) and with `--real` on a machine with a GPU (`--look "<words>" --look-only` prices a look page under other words). Run on
   a rented NVIDIA card through Vulkan only (11-04); NEVER RUN ON METAL OR ON A DISPLAY (a headless card has none, so nothing of a 120 Hz display's frames has been seen), and nobody has read a row of it against the bar. The level tools below read its file.
+  A LONG WALK TIRES (11-05, the rented card, 29 levels in one browser): from about the 15th level the GPU's answer came later and later (to 57 ms for 10 ms
+  of passes) while the pages' boots kept their time, and the last seven rows read the look page CHEAPER than the page without it with every check green;
+  the same seven alone read sane. Why it tires is NOT known. Two mends. The driver walks in even parts on one dev server, a fresh browser every ten levels
+  (`--each N`; files under `<out>/part-<k>`, every part's price file copied to `<out>`). And the run sets a row apart whose answer came late against the
+  run's own least (`PRICE.lateMs`, `lateRows`, asked once when the file is made: a state's `work` over the frames of its own passes the page keeps with
+  the GPU plus the least any state of the run took beyond its passes, by more than 12 ms; the number is set by that one walk, where it sets apart exactly
+  the seven; 0 = not asked, as on the software page). Checked on made-up rows with that walk's numbers by `pricerun-check` (`PRICERUN_BREAK=late` must fail
+  on those cases alone). THE RULE HAS NEVER RUN IN A PAGE ON A GPU, and a walk in parts has not run on one either: the rule was read against that walk's
+  file after the fact. A person's run is one tab and cannot start a browser: its late rows are what this rule is for.
 - **THE LEVEL TOOLS (2026-11-04; files only, no GPU, no page of the game's changed).** `bun run tools/qa/level-audit.ts [level …]` counts every level the mission
   list draws as the look page draws it (boxes, cut planes, round things, lamps burning at its hour, how much of the picture is each material and how much
   has none: a box is made of what it says, `Box.stuff`, read as the renderer reads it), about a second a level; `--check <level>` holds the engine's caps and the PROPOSED bars of `level-count.ts` (`LEVELAUDIT_BREAK=1` must fail),
