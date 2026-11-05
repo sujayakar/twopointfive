@@ -30,10 +30,10 @@ import { Vec3, v3 } from '../math/vec';
 import type { Game, Guard } from './game';
 import type { RoomFight } from './roomfight';
 import { run, boots, pressOwns } from './pressure';
-import { squadOwns, squadStaysIn, squadDefers } from './enemysquads';
 import { DIGIN, digInSet } from './digin';
 import { lastStandMan } from './laststand';
 import { simRandom } from '../math/dice';   // the simulation's die (math/dice.ts): the Game's own when it has one, Math.random otherwise
+import { hasHim, OWN } from './owner';
 
 export const BUDDY = {
   /** the switch: off = none of this file runs. SHIPPED OFF, the maintainer's call: on, a scripted team keeps clearly MORE men on the compound and the barracks
@@ -128,13 +128,13 @@ function free(g: Game, F: RoomFight, st: State, X: Def, mine: Errand | null = nu
   const gd = X.gd;
   if (!own(g, X) || g.time - gd.lastSeenT < BUDDY.quiet || st.errands.some(e => e !== mine && (e.buddy === X || e.caller === X))) return false;
   if (g.time - (st.men.get(X)?.doneT ?? -100) < BUDDY.again) return false;   // (he has only just come to somebody: not off again on the next call)
-  if (pressOwns(g, X) || squadStaysIn(g, gd) || squadDefers(g, gd) || lastStandMan(g, gd)) return false;   // (laststand.ts, default off: a man of the last stand answers nobody's call)
+  if (pressOwns(g, X) || gd.staysInRooms || hasHim(gd, OWN.squadWord) || lastStandMan(g, gd)) return false;   // (laststand.ts, default off: a man of the last stand answers nobody's call)
   const set = digInSet(g, gd);
   if (set && (DIGIN.stay || DIGIN.reachM > 0)) return false;                  // (digin.ts's own rules for who holds his room, when they are on, keep him)
   const all = mates(F, X), firm = all.filter(m => m.mode === 'hold' && !st.errands.some(e => e.buddy === m)).length;
   if (firm >= 2) return true;
   if (all.length) return BUDDY.fromPair && firm >= 1;
-  return BUDDY.loners && (BUDDY.emptyRoom || (!squadOwns(g, gd) && !set));   // (alone himself: the two pair up in the caller's room; with `emptyRoom` off a squad's last man in a room does not leave it empty, nor does a man set on a wedged door)
+  return BUDDY.loners && (BUDDY.emptyRoom || (!hasHim(gd, OWN.squad) && !set));   // (alone himself: the two pair up in the caller's room; with `emptyRoom` off a squad's last man in a room does not leave it empty, nor does a man set on a wedged door)
 }
 /** the nearest free colleague with a way to the caller */
 function answerer(g: Game, F: RoomFight, st: State, C: Def): { X: Def; spot: Vec3; L: number } | null {
