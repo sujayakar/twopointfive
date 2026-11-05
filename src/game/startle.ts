@@ -30,7 +30,7 @@ import { isHostile } from './teams';
 import { MORALE, trainingOf, hasMate } from './morale';
 import { coverFrom, endDisplace } from './suppression';
 import { handCarry } from './guards';
-import { hasHim, OWN } from './owner';
+import { claimMan, releaseMan, hasHim, ownerWitness, OWN } from './owner';
 
 /** the switch and its numbers: off in the module, raised by the page (host/profile.ts pageSwitches; ?startle=0 = a man who sees you goes for his gun at once,
  *  as he did). `beat` s of the start; `draw` s after it for the gun to come up before a round can leave it (a man who draws: his feet still, his gun rising); `fresh` s since he last stood calm inside which a sighting still catches him unaware; `late` s past the end of a beat
@@ -62,6 +62,7 @@ interface St {
   run: Vec3 | null; runAt: number; ref: Vec3 | null; refT: number; script: GuardScript | null;
 }
 const stateOf = new SideMap<Guard, St>('startle.stateOf');
+ownerWitness('startle', gd => !!stateOf.get(gd)?.run);
 const blank = (): St => ({ calmT: -100, calmTorch: false, bySight: false, at: -1, until: -1, toward: [0, 0, 0], pre: false, torch: false, choose: false, call: false, drawUntil: -1, run: null, runAt: -1, ref: null, refT: -1, script: null });
 
 /** THE START, for any caller: he jolts toward `at`, and for `secs` his gun stays down and — a man looking or fighting — his feet are still and no round
@@ -125,7 +126,7 @@ export function startleRunning(gd: Guard): boolean { return !!stateOf.get(gd)?.r
  *  shifted under fire holds his (suppression.ts endDisplace) */
 export function startleScript(g: Game, gd: Guard): GuardScript | null {
   const S = stateOf.get(gd); if (!S || !S.run) return null;
-  const K = STARTLE, c = gd.char, stop = (hold: boolean) => { S.run = null; S.ref = null; S.script = null; if (hold) endDisplace(g, gd, 'ran for it'); return null; };
+  const K = STARTLE, c = gd.char, stop = (hold: boolean) => { S.run = null; releaseMan(gd, OWN.startle, g.time); S.ref = null; S.script = null; if (hold) endDisplace(g, gd, 'ran for it'); return null; };
   if (!K.on || !g.aiEnabled || g.touring || g.quietUtility || gd.state !== 'alert' || gd.held || gd.script || g.time < gd.dazzledUntil || g.time < gd.staggerUntil) return stop(false);
   if (!S.ref) { S.ref = v3.copy(c.pos); S.refT = g.time; }
   else if (g.time - S.refT >= K.stuckSecs) { if (v3.distXZ(c.pos, S.ref) < K.stuckM) return stop(true); S.ref = v3.copy(c.pos); S.refT = g.time; }
@@ -146,7 +147,7 @@ function runs(g: Game, gd: Guard, S: St): boolean {
   const post = g.fight.bolt(gd, K.clearSecs); if (post !== null) return post;   // a post of the room fight's: its own way out, or none
   if (gd.pinned || gd.standoff || !g.tune.suppression) return false;
   const p = coverFrom(g, gd, threat); if (!p || !g.col.nav.findPath(c.pos, p)?.length) return false;
-  S.run = p; S.runAt = g.time; S.ref = null; S.script = null;
+  S.run = p; claimMan(gd, OWN.startle, g.time); S.runAt = g.time; S.ref = null; S.script = null;
   gd.path = []; gd.pathGoal = null; gd.stallRef = null;
   return true;
 }
@@ -164,7 +165,8 @@ export function startleSnapshot(g: Game): StartleSnap | undefined {
 export function startleRestore(g: Game, s: StartleSnap | null | undefined) {
   const f = (x: unknown, d = 0) => typeof x === 'number' && Number.isFinite(x) ? x : d;
   g.guards.forEach((gd, i) => { const M = s?.men?.[i];
-    if (!M) { stateOf.delete(gd); return; }
+    releaseMan(gd, OWN.startle, g.time); if (!M) { stateOf.delete(gd); return; }
+    if (M.length >= 15) claimMan(gd, OWN.startle, g.time);
     stateOf.set(gd, { ...blank(), calmT: f(M[0], -100), calmTorch: !!M[1], bySight: !!M[2], at: f(M[3], -1), until: f(M[4], -1), toward: [f(M[5]), 0, f(M[6])], pre: !!M[7], torch: !!M[8], choose: !!M[9], call: !!M[10], drawUntil: f(M[11], -1),
       ...(M.length >= 15 ? { run: [f(M[12]), 0, f(M[13])] as Vec3, runAt: f(M[14], -1) } : null) }); });
 }
