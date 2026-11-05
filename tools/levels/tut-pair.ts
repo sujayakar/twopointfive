@@ -148,14 +148,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
 
   /** A yard LAMP: a pole with a shaded head throwing a pool straight down (about 7 m across) and little past it: a thing to walk round. Every one here is on
    *  the mains. The pole stands 0.6 m north of the head, so the light has nothing solid round it. */
-  const lamp = (x: number, z: number, name: string, outerDeg = 52) => {
-    const h = 3.4, ARM = 0.6;
-    add({ c: [x, (h + 0.11) / 2, z - ARM], h: [0.04, (h + 0.11) / 2, 0.04], ...GWOT_MATERIALS.galv });
-    add({ c: [x, h + 0.085, z - ARM / 2], h: [0.025, 0.025, ARM / 2 - 0.04], ...GWOT_MATERIALS.galv });
-    add({ c: [x, h + 0.06, z], h: [0.2, 0.05, 0.2], ...GWOT_MATERIALS.plasticBlack });
-    const fb = add({ c: [x, h, z], h: [0.12, 0.012, 0.12], ...GWOT_MATERIALS.plasticWhite, emissive: [40, 34, 22], flags: BoxFlag.NoShadow });
-    lights.push({ kind: 'spot', pos: [x, h - 0.03, z], dir: [0, -1, 0], color: [1.0, 0.86, 0.6], intensity: 90, range: 9, innerDeg: outerDeg - 22, outerDeg, name, group: 'exterior', enabled: true, volumetric: 0.2, fixtureBox: fb, radius: 0.1, mains: true });
-  };
+  const lamp = (x: number, z: number, name: string, outerDeg = 52) => { G.yardLamp(x, z, name, { outerDeg, mains: true }); };
   /** an emergency BEACON on a wall face (the red lamp that turns when the mains are down): `out` = the way off the wall, into the yard */
   const beacons: Level['beacons'] = [];
   const beacon = (x: number, z: number, out: [number, number]) => {

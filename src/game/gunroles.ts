@@ -21,7 +21,7 @@
 //     (cover.ts) the FAR one is his before it is another man's; in a room fight he fires single aimed rounds, not pairs.
 //   · THE BELT-FED MAN HOLDS A LANE AND FIRES LONGER STRINGS: as the Mk 12 man on the stack and in the cover's deal (the rear man of a stack is the one who
 //     keeps the way behind it: rearwatch.ts), his room-fight trigger is a string of the row's burst length where another man's is a pair — and a DEFENDER
-//     with one keeps the post he was dealt: no rally, press, errand or dark-room move takes him off it (lanes.ts laneHolds asks gunKeepsPost).
+//     with one keeps the post he was dealt: no rally, press, errand or dark-room move takes him off it (lanes.ts laneBars, and whoever asks of the post, ask gunKeepsPost).
 //   · A MAN WITH ONLY A PISTOL DOES NOT TAKE THE FAR LANE: in the cover's deal the far opening is another man's before it is his (and a defender is only
 //     dealt a pistol on a near post — the deal above).
 // A man's gun here is his PRIMARY: the long gun on his sling while his sidearm is out, his own while the big slot's shotgun is in his hands.
@@ -118,7 +118,7 @@ export function gunDeal(g: Game, men: DealMan[]): { gd: Guard; gun: WeaponId; li
   g.note(`guns ▸ ${out.map(o => `${o.gd.callsign} ${WEAPONS[o.gun].short.replace(/ /g, '-')} (${Math.round(o.line)} m)`).join(' · ')}`);
   return out;
 }
-/** lanes.ts laneHolds: a defender with the belt-fed gun keeps the post he was dealt — no rally, press, errand or dark-room move takes him off it */
+/** lanes.ts laneBars, darkfoe.ts, powerout.ts: a defender with the belt-fed gun keeps the post he was dealt — no rally, press, errand or dark-room move takes him off it */
 export function gunKeepsPost(gd: Guard): boolean {
   if (!useOn('post') || gd.team !== 'hostile' || gd.state === 'dead' || gunRole(gd) !== 'belt') return false;
   GUNROLES_STATS.posts++; return true;

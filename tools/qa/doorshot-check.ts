@@ -20,6 +20,7 @@
 //   journal     a recording from before the table replays with the rule off; one that carries it keeps its own word; one from before the toll's key
 //               replays with the toll at 1, one from before flat's with the count riding the scale
 // DOORSHOT_BREAK=1: the rule is left off where the lines want it on — red. DOORCOST_BREAK=1: the count as it was (toll 1, riding the scale) — red.
+import './stand.ts';   // (the stand's word, written down before this file reads it)
 type Vec3 = [number, number, number];
 const BREAK = process.env.DOORSHOT_BREAK === '1', COST_BREAK = process.env.DOORCOST_BREAK === '1';
 

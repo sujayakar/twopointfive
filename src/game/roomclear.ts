@@ -38,7 +38,6 @@ import type { StructureRoom, StructureData, TeamStart, SquadData } from '../scen
 import { SQUAD_MAX_MEN } from '../scene/scenarios';
 import type { Door } from './doors';
 import { frameOf } from './guards';
-import { runnerFled } from './runner';   // (asked inside tick only)
 import { responseUp, responseTeam } from './qrf';   // (asked inside tick only: a raid's team still up)
 import { OFFICE_SCENARIOS } from '../../levels/office.scenarios';   // (plain literals with type-only imports: safe at the top of the game's import cycle)
 import { inBounds } from './squad';
@@ -333,9 +332,9 @@ export class RoomClearScenario {
     const g = this.g, nb = g.nightBreach, K = ROOMCLEAR;
     if (!this.rooms.length || nb.hostiles.length !== this.placement.length) return;   // (between a despawn and the restage that answers it)
     squadsTick(g);   // enemysquads.ts: each squad's contact, news, choice and men on the move (a return on its first line with none staged)
-    const live = nb.hostiles.filter(h => h.state !== 'dead' && !runnerFled(h));   // (runner.ts, false with its switch off: a man who dropped it and ran holds nothing and is nobody left to take)
+    const live = nb.hostiles.filter(h => h.state !== 'dead' && !h.fled);   // (runner.ts, false with its switch off: a man who dropped it and ran holds nothing and is nobody left to take)
     for (const R of this.rooms) {   // (kept after an end as well — the log stays true — but nothing more is said)
-      const c = !R.defenders.some(h => h.state !== 'dead' && !runnerFled(h)) && !live.some(h => !h.held && inBounds(h.char.pos, R.def.bounds));
+      const c = !R.defenders.some(h => h.state !== 'dead' && !h.fled) && !live.some(h => !h.held && inBounds(h.char.pos, R.def.bounds));
       if (c === R.cleared) continue;
       R.cleared = c; R.clearedAt = c ? g.time : NaN; this.obj = null; this.note(`${c ? 'cleared' : 'lost'}:${R.def.id}`);
       const left = this.rooms.filter(r => !r.cleared).length;

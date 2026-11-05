@@ -15,6 +15,7 @@
 // Then THE SHOP'S LAMP: the ground beside the shop's door is lit by that lamp and dark without it (the line that has him shoot it out says the dark hides him).
 // Last, THE WALL: the wall the squad's charge is asked for is one a charge cuts (built at the shell's thickness it was refused as concrete).
 // Headless: no GPU, no smoke sight lines, nothing here saw a picture or heard a round.
+import './stand.ts';   // (the stand's word, written down before this file reads it)
 import { runLesson } from './lesson-run';
 
 process.env.TPS_RAILS ??= '1';   // (the level has a lesson only on the frame: off on the frozen stand unless raised. The scripted player's own `raises` bring the rest)
@@ -62,7 +63,7 @@ delete process.env.TUT_KIT_ARM;
     // the shop's lamp, by the CPU's estimate (no moon, no bounce: the page's meter reads higher both times)
     const { lightEstimateAt } = await import(`${ROOT}/src/game/guards.ts`);
     const meter = () => Math.round(g.visibilityOf(Math.max(lightEstimateAt(g, [BACK[0], 1.2, BACK[2]]), lightEstimateAt(g, [BACK[0], 1.6, BACK[2]]))) * 100);
-    const lamp = g.engine.lights.lights.find((l: any) => l.name === 'lamp_shop'); lampLit = meter(); if (lamp) { const was = lamp.intensity; lamp.intensity = 0; lampOut = meter(); lamp.intensity = was; }
+    const lamp = g.engine.lights.lights.find((l: any) => l.name === 'lamp_shop'); lampLit = meter(); if (lamp) { const was = lamp.intensity; lamp.intensity = 0; g.lightHome.feed(lamp); lampOut = meter(); lamp.intensity = was; g.lightHome.feed(lamp); }   // (a lamp written by hand is fed to its row: a light question reads the rows)
     // the wall between the bunk room and the fuel room takes a charge
     const spot = wallAt(g, WALL_MARK, [28.4, 0, 6.6]); wall = spot ? (spot.ok ? 'takes a charge' : spot.why) : 'no wall found there';
   } catch (x) { why = String((x as Error).message); } finally { for (const k of up) delete process.env[k]; K.kitIssuedPage(false); RAILS.on = rails; DESTRUCTION.on = destr; console.log = log; console.warn = warn; console.error = err; }

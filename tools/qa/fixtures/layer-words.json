@@ -1,0 +1,253 @@
+{
+ "what": "tools/qa/layer-ident.ts: every name's count of calls and word over its run on the frozen stand (tools/qa/ident-pin.ts; --record writes it)",
+ "stands": {
+  "frozen": {
+   "run": "warehouse-four:1",
+   "end": "wiped",
+   "tree": "94514c7d (step 1515), both languages standing: every call was run both ways in this same run and none differed",
+   "stood": "TPS_CPUSENSE=1 TPS_GUNHAND=1 TPS_KITANIM=1 TPS_MOVES=1 TPS_SAMLOOK=1 TPS_SAMSLIP=1 TPS_TURN=1",
+   "words": {
+    "actPose": {
+     "asked": 29434,
+     "word": "37cad2d12f9ba439"
+    },
+    "bigLayer": {
+     "asked": 3412,
+     "word": "f1e6cbdb5fa5d5bf"
+    },
+    "blowArms": {
+     "asked": 610,
+     "word": "0a6667c946f5f159"
+    },
+    "blowLegs": {
+     "asked": 610,
+     "word": "986733c00ee0a415"
+    },
+    "blowTrunk": {
+     "asked": 610,
+     "word": "d57a7e39f4ab18fd"
+    },
+    "boundArms": {
+     "asked": 522,
+     "word": "757d16e371fd776e"
+    },
+    "cablePose": {
+     "asked": 446,
+     "word": "b886e9e050bc1b48"
+    },
+    "carryArms": {
+     "asked": 13921,
+     "word": "1eb98a91c0a4a6d3"
+    },
+    "catchArm": {
+     "asked": 317,
+     "word": "aa0f46e8460cfe2e"
+    },
+    "clutchArm": {
+     "asked": 182,
+     "word": "4249e700f0ee904a"
+    },
+    "creepArms": {
+     "asked": 6553,
+     "word": "5e8778fce7a60186"
+    },
+    "creepBody": {
+     "asked": 6571,
+     "word": "9a5cec1b8fb23f89"
+    },
+    "crouchPose": {
+     "asked": 119884,
+     "word": "6d8dbe152734cdc8"
+    },
+    "doorLayer": {
+     "asked": 989,
+     "word": "b5ba64e968056f59"
+    },
+    "gazeKeep": {
+     "asked": 508168,
+     "word": "33ccd6c92cd056e9"
+    },
+    "handsPass": {
+     "asked": 508168,
+     "word": "ad741add58dc3c08"
+    },
+    "haulLayer": {
+     "asked": 540,
+     "word": "a2b987ad719f3ab3"
+    },
+    "heldLayer": {
+     "asked": 9972,
+     "word": "f87504e48f1bf1ee"
+    },
+    "holdLayer": {
+     "asked": 10044,
+     "word": "fb11e5cf63f86d3e"
+    },
+    "kickBody": {
+     "asked": 240,
+     "word": "73be7677d040c206"
+    },
+    "kitLayer": {
+     "asked": 233,
+     "word": "6e37f74855974625"
+    },
+    "knifePose": {
+     "asked": 556,
+     "word": "8923c0ee55ccd370"
+    },
+    "leanBody": {
+     "asked": 234,
+     "word": "5a1d0aa6693d2428"
+    },
+    "lifeLayer": {
+     "asked": 508168,
+     "word": "223ae226f5df855e"
+    },
+    "lockpickLayer": {
+     "asked": 716,
+     "word": "389e68ff74f8c006"
+    },
+    "longArms": {
+     "asked": 89438,
+     "word": "f6f2ed298e7c14b5"
+    },
+    "longBody": {
+     "asked": 89622,
+     "word": "62a2ba446999fa99"
+    },
+    "mvPostArms": {
+     "asked": 893,
+     "word": "8f3f9f6ea9e033fe"
+    },
+    "mvPostBody": {
+     "asked": 50558,
+     "word": "b046ea7e0b6d5c49"
+    },
+    "mvPre": {
+     "asked": 508168,
+     "word": "b6703b508526f93c"
+    },
+    "mvTrunk": {
+     "asked": 88722,
+     "word": "39dabe73e987887c"
+    },
+    "pistolReloadArm": {
+     "asked": 297,
+     "word": "0f7e8349d29cfc19"
+    },
+    "radioPose": {
+     "asked": 31,
+     "word": "cbfc5ba2ec8e997a"
+    },
+    "readyLayer": {
+     "asked": 2194,
+     "word": "c68c24a4f8af45d4"
+    },
+    "reloadArm": {
+     "asked": 1204,
+     "word": "c81a5541484efb9d"
+    },
+    "runArms": {
+     "asked": 1531,
+     "word": "fb35ccf23db581c1"
+    },
+    "runPlant": {
+     "asked": 10956,
+     "word": "7dacfb0d7e579674"
+    },
+    "signalLayer": {
+     "asked": 381,
+     "word": "f566dc197de30d90"
+    },
+    "smokePose": {
+     "asked": 28,
+     "word": "fdd28da32d906fec"
+    },
+    "sneakArms": {
+     "asked": 5305,
+     "word": "545eada0712f502e"
+    },
+    "sneakBody": {
+     "asked": 6322,
+     "word": "b63b7f9800b817bc"
+    },
+    "softKnees": {
+     "asked": 9253,
+     "word": "5c45a6758fb5665b"
+    },
+    "stanceBody": {
+     "asked": 26935,
+     "word": "6ed599967b738b31"
+    },
+    "standPose": {
+     "asked": 508168,
+     "word": "0bd64df76fcb8c76"
+    },
+    "steadyLayer": {
+     "asked": 5622,
+     "word": "ed0b6e1362174d20"
+    },
+    "stealthLayer": {
+     "asked": 43364,
+     "word": "5fb20ef0de58a8fa"
+    },
+    "takenLayer": {
+     "asked": 236,
+     "word": "914f94dc126e8ca6"
+    },
+    "tellLayer": {
+     "asked": 22,
+     "word": "798fabf56cb13e4f"
+    },
+    "throwLayer": {
+     "asked": 2222,
+     "word": "f10141b66fe5ded3"
+    },
+    "toesUp": {
+     "asked": 119530,
+     "word": "b12cee6ad3afd4b9"
+    },
+    "torchUpLayer": {
+     "asked": 174,
+     "word": "bace77181e7d0b3f"
+    },
+    "turnWeigh": {
+     "asked": 283717,
+     "word": "e2d0b10b2d38f04a"
+    },
+    "wallArms": {
+     "asked": 12682,
+     "word": "fe7c6479f07fd45e"
+    },
+    "wallBody": {
+     "asked": 12682,
+     "word": "20012d0ccfa7bc2a"
+    },
+    "watchArm": {
+     "asked": 1169,
+     "word": "2822c1c29866231a"
+    },
+    "watchLook": {
+     "asked": 55408,
+     "word": "ba2158817c83a5f4"
+    },
+    "watchSlip": {
+     "asked": 55408,
+     "word": "9f54f86a0c429855"
+    },
+    "workLayer": {
+     "asked": 651,
+     "word": "b99540556c89931e"
+    },
+    "woundBody": {
+     "asked": 600,
+     "word": "c50a6d9649662af9"
+    },
+    "woundLimbs": {
+     "asked": 534,
+     "word": "d8cea4596d843b8f"
+    }
+   }
+  }
+ }
+}

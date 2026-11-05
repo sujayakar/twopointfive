@@ -7,7 +7,7 @@
 // (where a place is open to the sky), scene/geoTry.ts by main.ts (a yard wall has the sky on both hands), and the checks of each.
 // PLACE holds the plan's numbers AND the field's solve numbers in one table, as it always did (a tool hands one table of both: tools/qa/place-field-page.cjs
 // --place); the solve's are read by render/placeField.ts alone.
-import { Box, BoxFlag } from './boxes';
+import { Box, BoxFlag, type PlanBox } from './boxes';
 import { WORLD } from './world';
 import { type Pt, apart, narrowest, footprint, WAY } from './wayThrough';
 
@@ -40,14 +40,14 @@ const HIDDEN = BoxFlag.NoPrimary | BoxFlag.NoShadow;
 const SLICES = 8, FULL = (1 << SLICES) - 1;
 /** is a box of the level one a plan of its walls counts at all, whatever its height: upright, drawn or shadowing, long enough one way (not a post, a pipe or a
  *  mullion), and not a decal or a glow card. Glass counts. placeWall's own test, and scene/openings.ts's plan from the floor to the ceiling. */
-export function placeSolid(b: Box): boolean {
+export function placeSolid(b: PlanBox): boolean {
   return !b.rot && (b.flags & HIDDEN) !== HIDDEN && Math.max(b.h[0], b.h[2]) >= PLACE.minWide && !((b.flags & BoxFlag.NoShadow) !== 0 && (b.flags & BoxFlag.Glass) === 0);
 }
 /** which slices of the height between PLACE.maxFoot and PLACE.minTop a box fills, as bits (0 = it is no part of a wall). A wall fills them all; a window is
  *  a sill, a pane and a lintel that fill them between them, so the map adds boxes up cell by cell. Glass counts (a window is a wall to the light of a
  *  place, whole or shot out: the light that comes through it is the room's own reading). Not a tilted box, not one a blast has hidden, not a decal or a
  *  glow card, not a post. A door's leaf is the one dynamic box that counts as a whole wall's height (thin, wide and a door's height: a man is none of the three): it is never drawn into the map where it hangs, and it is what says how far its door's line stands open (doorSteps). */
-export function placeWall(b: Box): number {
+export function placeWall(b: PlanBox): number {
   if (b.rot || (b.flags & HIDDEN) === HIDDEN) return 0;
   const y0 = b.c[1] - b.h[1], y1 = b.c[1] + b.h[1], wide = Math.max(b.h[0], b.h[2]);
   if ((b.flags & BoxFlag.Dynamic) !== 0) return y1 >= PLACE.minTop && y0 <= PLACE.maxFoot && y1 - y0 >= 1.7 && Math.min(b.h[0], b.h[2]) <= 0.08 && wide >= 0.3 ? FULL : 0;
@@ -71,7 +71,7 @@ export function stampCells(cx: number, cz: number, hx: number, hz: number, yaw: 
 function stamp(m: Uint8Array, bits: number, cx: number, cz: number, hx: number, hz: number, yaw: number): void { stampCells(cx, cz, hx, hz, yaw, k => { m[k] |= bits; }); }
 /** is this box a roof over the cells it covers: a slab over head height, wide both ways, not tilted, not one a blast has hidden (a roof the camera cuts away
  *  is still a roof: it is hidden from the eye alone) */
-export function placeRoof(b: Box): boolean {
+export function placeRoof(b: PlanBox): boolean {
   return !b.rot && (b.flags & HIDDEN) !== HIDDEN && (b.flags & BoxFlag.Dynamic) === 0 && b.c[1] - b.h[1] >= PLACE.minTop && Math.min(b.h[0], b.h[2]) >= PLACE.roofWide;
 }
 /** a leaf as the plan asks after it: where it is, how far it reaches, its footprint */
@@ -197,6 +197,10 @@ export class PlaceMap {
   /** times its SHAPE changed: which cells are a wall's and which a doorway's (the walls, the doors' lines, and which doors stand open at all; not how
    *  far). What a reader that asks no more than that is keyed by (render/wallSides.ts WallSides). */
   shape = 0;
+  /** times a draw CLOSED a cell: one that was free or a doorway's is a wall's now (a door's line shut, a wall put back, a box set down). A reader that
+   *  may lag the map only where it opened is keyed by this too (render/wallSides.ts: what it knows of a cell that has become a wall is nothing) */
+  closed = 0;
+  private was = new Uint8Array(PLACE_W * PLACE_H);
   private key = NaN; private shapeKey = NaN;
   private wallKey = NaN; private jambs: Pt[][][] = []; private leafKey = NaN; private steps: number[] = [];
   /** No leaf is a wall and each door's line says how open it is (placeMask `steps`). The map is its walls, its doors' lines and their steps, so it is
@@ -208,7 +212,9 @@ export class PlaceMap {
     const lk = leafKey(dynamics); if (lk !== this.leafKey) { this.leafKey = lk; this.steps = doorSteps(statics, dynamics, gaps, this.jambs); }
     const steps = this.steps; key = (Math.imul(key, 33) + 7) | 0; for (const st of steps) key = (Math.imul(key, 33) + st) | 0;
     if (key === this.key) return false;
-    this.key = key; placeMask(statics, dynamics, this.mask, gaps, steps); this.drawn++;
+    const first = Number.isNaN(this.key), was = this.was, mask = this.mask; was.set(mask);
+    this.key = key; placeMask(statics, dynamics, mask, gaps, steps); this.drawn++;
+    if (first) this.closed++; else for (let k = 0; k < mask.length; k++) if (mask[k] === 255 && was[k] !== 255) { this.closed++; break; }
     let sk = (Math.imul(this.wallKey, 33) + 5) | 0; for (const st of steps) sk = (Math.imul(sk, 33) + (st ? 1 : 0)) | 0; if (sk !== this.shapeKey) { this.shapeKey = sk; this.shape++; }
     return true;
   }

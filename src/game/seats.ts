@@ -108,7 +108,7 @@ export const seatManId = (i: number): number => i === 0 ? PLAYER_ID : NOBODY_ID 
 /** is `id` a player's man's (whoever's, whether or not that seat is in this game) */
 export const isManId = (id: number): boolean => id === PLAYER_ID || (id > NOBODY_ID && id < NOBODY_ID + SEATS.max);
 /** every seat's man, in seat order */
-export function men(g: Game): Player[] { const S = g.seats; if (S.length === 1) return [g.player]; const out: Player[] = []; for (const s of S) out.push(s.view.player); return out; }
+export function men(g: Pick<Game, 'seats' | 'player'>): Player[] { const S = g.seats; if (S.length === 1) return [g.player]; const out: Player[] = []; for (const s of S) out.push(s.view.player); return out; }
 /** the men still up */
 export function menUp(g: Game): Player[] { return men(g).filter(p => !p.down); }
 /** is every player down (a game of one: its player is) */
@@ -234,7 +234,7 @@ export function dealSeats(g: Game): boolean {
 /** the seat a teammate takes his orders from (the first seat's, for a man nobody was dealt: a game of one, a man of another cast) */
 export function seatOf(g: Game, gd: Guard): Seat { return g.seats[gd.unit?.seat ?? 0] ?? g.seats[0]; }
 /** is this teammate `s`'s to order */
-export function seatHas(s: Seat, gd: Guard): boolean { return (gd.unit?.seat ?? 0) === s.index; }
+export function inSeat(s: Seat, gd: Guard): boolean { return (gd.unit?.seat ?? 0) === s.index; }
 /** ONE BOOK: the game handed in has one squad's orders and they are `g.orders` — a game of one seat, or another cast's view of any game (squadcast.ts: the
  *  response team run through the squad's code). Otherwise the team's orders are in a book a seat, and the functions below read across them. */
 const oneBook = (g: Game): boolean => g.seats.length === 1 || (g as unknown as { [CAST_VIEW]?: boolean })[CAST_VIEW] === true;

@@ -128,7 +128,7 @@ const clearEyed = (R: RRun) => R.ops.every((x: any) => !(x.dazzledUntil > R.g.ti
  *  fight drawn out at a door is what brings the other rooms to it) */
 function holdOutside(R: RRun, room: string) { const t0 = R.t; R.until(() => R.cleared(room) || (R.t - t0 >= 2 && quietFor(R, 2)), 8); }
 /** the street lamp off the east wall, shot out (LightTarget.broken — combat.ts's fixture rule — and the light event the floor may notice) */
-function lampOut(R: RRun) { const g = R.g, t = g.targets.find((x: any) => x.name === 'street_lamp_east'); if (!t) throw new Error('no street_lamp_east target'); if (t.broken) return; t.broken = true; g.lightEvent(t); R.say('· Sam shoots out the east street lamp'); R.wait(1); }
+function lampOut(R: RRun) { const g = R.g, t = g.targets.find((x: any) => x.name === 'street_lamp_east'); if (!t) throw new Error('no street_lamp_east target'); if (t.broken) return; g.lightHome.stage(t, null, true); g.lightEvent(t); R.say('· Sam shoots out the east street lamp'); R.wait(1); }
 /** the rooms still held when the script has run out: each again by its plan's door, plain, then walked; six laps (no second can: Sam threw his) */
 function hunt(R: RRun, plan: Take[]) { for (let lap = 0; lap < 6; lap++) for (const T of plan) if (!R.cleared(T.room)) take(R, { ...T, tool: 'open', cover: undefined, noise: undefined }); }
 

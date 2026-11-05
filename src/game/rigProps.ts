@@ -531,14 +531,6 @@ function mixAdj(a: Adj | undefined, b: Adj | undefined, k: number): Adj | undefi
   return { off: [l(0, 'off'), l(1, 'off'), l(2, 'off')], rot: [l(0, 'rot'), l(1, 'rot'), l(2, 'rot')] };
 }
 const ADJ_NONE: Adj = { off: [0, 0, 0], rot: [0, 0, 0] };
-/** applyAdj backwards: the PARENT frame whose child by `adj` is g (where a wrist must be, and how its hand must lie, for the gun group it carries to stand at g) */
-export function unAdj(g: Frame, adj?: Adj): Frame {
-  if (!adj) return { o: v3.copy(g.o), x: g.x, y: g.y, z: g.z };
-  const I = applyAdj({ o: [0, 0, 0], x: [1, 0, 0], y: [0, 1, 0], z: [0, 0, 1] }, { off: [0, 0, 0], rot: adj.rot });   // the child's axes in the parent's own coordinates
-  const ax = (k: number): Vec3 => [g.x[0] * I.x[k] + g.y[0] * I.y[k] + g.z[0] * I.z[k], g.x[1] * I.x[k] + g.y[1] * I.y[k] + g.z[1] * I.z[k], g.x[2] * I.x[k] + g.y[2] * I.y[k] + g.z[2] * I.z[k]];
-  const x = ax(0), y = ax(1), z = ax(2), a = adj.off;
-  return { o: [g.o[0] - x[0] * a[0] - y[0] * a[1] - z[0] * a[2], g.o[1] - x[1] * a[0] - y[1] * a[1] - z[1] * a[2], g.o[2] - x[2] * a[0] - y[2] * a[1] - z[2] * a[2]], x, y, z };
-}
 /** The thigh holster's group frame off three joints and the body's forward, in whatever ONE space they are given in (holsterBoxes' own construction: the world for
  *  the drawer, the animator's model space for the hand that goes to it) */
 export function holsterFrameOf(th: Vec3, kn: Vec3, hp: Vec3, fwd: Vec3, H: Rig['holster'] = RIG.holster): Frame {

@@ -30,6 +30,7 @@ pub mod hear;
 pub mod knobs;
 pub mod layers;
 pub mod light;
+pub mod lights;
 pub mod lines;
 pub mod maths;
 pub mod men;
@@ -52,7 +53,7 @@ pub const SCRATCH_LEN: usize = 1024;
 static mut SCRATCH: [f64; SCRATCH_LEN] = [0.0; SCRATCH_LEN];
 
 /// The version of the exports: src/sim/sim.ts names the one it was written against, and a page that loaded another says so instead of calling into it.
-pub const ABI: u32 = 28;
+pub const ABI: u32 = 32;
 
 // ---- the C face (wasm32: these are the module's exports)
 #[no_mangle]
@@ -637,6 +638,53 @@ pub extern "C" fn dice_roll(g: usize) -> f64 {
     dice::roll_of(g)
 }
 
+// ---- the level's lights (lights.rs: fixtures, the mains, the lamps they feed, a camera's and a tripwire's machine, in the game's block)
+/// how many a part holds, how long it is, where a column is (lights.rs cap)
+#[no_mangle]
+pub extern "C" fn lights_cap(table: u32) -> usize {
+    lights::cap(table)
+}
+/// where the fixtures a wall switch works are written for `lights_flip` (a byte address)
+#[no_mangle]
+pub extern "C" fn lights_ids() -> usize {
+    lights::ids_addr()
+}
+/// every event from outside: a kind and a fixture, and the kind's numbers (lights.rs input)
+#[no_mangle]
+pub extern "C" fn lights_in(g: usize, kind: u32, t: usize, a: f64, b: f64, c: f64, d: f64) -> u32 {
+    lights::input(g, kind, t, a, b, c, d)
+}
+/// a wall switch's circuit, the first `n` of `lights_ids` (lightswitch.ts flipSwitch)
+#[no_mangle]
+pub extern "C" fn lights_flip(g: usize, on: u32, time: f64, strike: u32, n: usize) {
+    lights::flip(g, on != 0, time, strike != 0, n)
+}
+/// lighting.ts updateTargets: what happened, as lights.rs EV_ bits
+#[no_mangle]
+pub extern "C" fn lights_step(g: usize, time: f64, dt: f64, near: u32, fumble: f64, es: f64) -> u32 {
+    lights::step(g, time, dt, near != 0, fumble, es)
+}
+/// a camera before its picture (lights.rs CAM_ bits)
+#[no_mangle]
+pub extern "C" fn camera_pan(g: usize, i: usize, dt: f64, live: u32, cones: u32) -> u32 {
+    lights::camera_pan(g, i, dt, live != 0, cones != 0)
+}
+/// …and after it
+#[no_mangle]
+pub extern "C" fn camera_see(g: usize, i: usize, time: f64, dt: f64, visible: u32, gain: f64, x: f64, y: f64, z: f64, suspicion: f64, alarm: f64) -> u32 {
+    lights::camera_see(g, i, time, dt, visible != 0, gain, [x, y, z], suspicion, alarm)
+}
+/// a tripwire before what is in its beam (lights.rs LASER_ bits)
+#[no_mangle]
+pub extern "C" fn laser_open(g: usize, i: usize) -> u32 {
+    lights::laser_open(g, i)
+}
+/// …and after it
+#[no_mangle]
+pub extern "C" fn laser_close(g: usize, i: usize, time: f64, live: u32, cut: f64, sense: f64, held: u32) -> u32 {
+    lights::laser_close(g, i, time, live != 0, cut, sense, held != 0)
+}
+
 // ---- the doors' step (doors.rs: the leaves' state in the game's block, the men near them handed in, each leaf's row of the box world written)
 /// where a table of the step's hand-over is: 0 the level's doors · 1 what comes back of each · 2 the contacts · 3 the noises · 4 the step's numbers
 #[no_mangle]
@@ -793,14 +841,26 @@ pub extern "C" fn light_lamps() -> usize {
 pub extern "C" fn light_cap() -> usize {
     light::MAX_LAMPS
 }
-/// guards.ts lightEstimateAt's loop over the first `n` lamps written: the six faces → scratch 0‥5 · 0xffffffff = ask the TypeScript. `more` ≠ 0: a later
-/// PART of the question the call before began (the faces are kept in light.rs SUM from part to part and summed on, not begun again).
+/// what a question says of the level's rows (light.rs Rows), from the three numbers the host hands over: the slot of the block whose lights' part
+/// holds them, the bits it leaves out (lights.rs R_*), and `how` (1: the rows are read at all · 2: a row's steady self is taken · 4: this is the
+/// question's last part)
+fn light_rows(lg: usize, leave: u32, how: u32) -> Option<light::Rows> {
+    if how & 1 != 0 && lg < state::GAMES {
+        Some(light::Rows { g: lg, leave, steady: how & 2 != 0 })
+    } else {
+        None
+    }
+}
+/// guards.ts lightEstimateAt's lamps: the first `n` written and the level's rows (`lg`, `leave`, `how`: light_rows), as one list in the engine's order:
+/// the six faces → scratch 0‥5 · 0xffffffff = ask the TypeScript. `more` ≠ 0: a later PART of the question the call before began (the faces and the
+/// place among the rows are kept in light.rs from part to part and gone on from, not begun again).
 /// `sigma` > 0: each lamp is dimmed by the smoke of the coarse grid of the game in slot `g`, whose block's stamp is `stamp` (bricks.rs; `stands` = 0:
 /// no grid stands there), and where the grid cannot answer by the first `nb` blobs written (smoke.rs) under `spread`, `widest`, `rise`, `rise_rate`;
 /// 0: none of those is read
 #[no_mangle]
-pub extern "C" fn light_estimate(w: usize, set: i32, n: usize, p0: f64, p1: f64, p2: f64, sigma: f64, g: usize, stamp: f64, stands: u32, more: u32, nb: usize, spread: f64, widest: f64, rise: f64, rise_rate: f64) -> u32 {
-    light::asked(w, set, n, [p0, p1, p2], sigma, g, stamp, stands != 0, more != 0, nb, [spread, widest, rise, rise_rate], &mut scratch()[..6])
+pub extern "C" fn light_estimate(w: usize, set: i32, n: usize, p0: f64, p1: f64, p2: f64, sigma: f64, g: usize, stamp: f64, stands: u32, more: u32, nb: usize, spread: f64, widest: f64, rise: f64, rise_rate: f64, lg: usize, leave: u32, how: u32) -> u32 {
+    let shade = light::Shade { sigma, g, stamp, stands: stands != 0, nb, k: [spread, widest, rise, rise_rate] };
+    light::asked(w, set, n, [p0, p1, p2], &shade, more != 0, light_rows(lg, leave, how), how & 4 != 0, &mut scratch()[..6])
 }
 /// where a question's blobs are written (smoke::BLOB doubles a blob), and how many it can carry
 #[no_mangle]
@@ -828,10 +888,12 @@ pub extern "C" fn nav_addr(table: u32) -> usize {
         _ => 0,
     }
 }
+/// what a search holds: 0 the cells of the largest floor it can be asked over (nav::MAX_FLOOR: on such a floor no table of a search is outgrown) ·
+/// 1 a way's waypoints
 #[no_mangle]
 pub extern "C" fn nav_cap(table: u32) -> usize {
     match table {
-        0 => nav::MAX_NAV,
+        0 => nav::MAX_FLOOR,
         1 => nav::MAX_WAY,
         _ => 0,
     }
@@ -894,11 +956,11 @@ pub extern "C" fn grid_dirty(w: usize, x0: f64, z0: f64, x1: f64, z1: f64) {
 /// `n` steps of a tenth of a second under the model's numbers, over the copy as it stands and the leaves of list `set`: 0 · 0xffffffff = no grid stands
 /// on this level, and nothing was done. `emits`: that many emitters join the list first, written in the scratch from its start, six doubles each
 /// (where, how wide in metres, what it lets out a second in unit·m³, for how long). `lamps` ≥ 0 = the light that comes round is stepped too (glow.rs),
-/// from that many lamps written as for a question about the light. `wind_x`, `wind_z` not both 0 = the smoke under the open sky drifts by that
+/// from the level's rows (`lg`, `leave`, `how`: light_rows) and that many lamps written beside them as for a question about the light. `wind_x`, `wind_z` not both 0 = the smoke under the open sky drifts by that
 /// vector (m/s), by the shares of it written at `grid_wind` and its rise with height (`wind_low` of it at the ground, `wind_gain` more by
 /// `wind_full_at` metres up); there the smoke keeps `wind_keep` of its own spread
 #[no_mangle]
-pub extern "C" fn grid_step(g: usize, stamp: f64, w: usize, copy: f64, set: i32, n: u32, emits: usize, decay: f64, spread: f64, rise: f64, rise_rate: f64, gone: f64, lamps: i32, albedo: f64, share: f64, passes: u32, sweep: f64, wind_x: f64, wind_z: f64, wind_low: f64, wind_gain: f64, wind_full_at: f64, wind_keep: f64) -> u32 {
+pub extern "C" fn grid_step(g: usize, stamp: f64, w: usize, copy: f64, set: i32, n: u32, emits: usize, decay: f64, spread: f64, rise: f64, rise_rate: f64, gone: f64, lamps: i32, albedo: f64, share: f64, passes: u32, sweep: f64, wind_x: f64, wind_z: f64, wind_low: f64, wind_gain: f64, wind_full_at: f64, wind_keep: f64, lg: usize, leave: u32, how: u32) -> u32 {
     // (a wind that is no number, or whose rise with height is none, is still air: the block is the game's state, and what is no number spreads)
     let real = |v: f64| v - v == 0.0;
     let windy = real(wind_x) && real(wind_z) && real(wind_low) && real(wind_gain) && real(wind_full_at) && real(wind_keep) && wind_low >= 0.0 && wind_gain >= 0.0 && wind_full_at > 0.0;
@@ -908,7 +970,7 @@ pub extern "C" fn grid_step(g: usize, stamp: f64, w: usize, copy: f64, set: i32,
     if lamps < 0 {
         bricks::step(g, stamp, w, copy, set, n, emits, &k, None)
     } else {
-        bricks::step(g, stamp, w, copy, set, n, emits, &k, Some(&glow::K { albedo, share, passes, sweep, lamps: lamps as usize }))
+        bricks::step(g, stamp, w, copy, set, n, emits, &k, Some(&glow::K { albedo, share, passes, sweep, lamps: lamps as usize, rows: light_rows(lg, leave, how) }))
     }
 }
 /// where the host writes the wind's share of each square metre of the plan before a step that has wind (bricks.rs WIND: `grid_wind_cap` doubles, row

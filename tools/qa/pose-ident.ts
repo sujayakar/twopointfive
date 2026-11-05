@@ -97,7 +97,7 @@ const lines = (what: string, clip: any, t: number, loop: boolean, from: any, got
 const both = (ask: (p: any, fk: any, a: any, b: any) => void, pT: any, fT: any, pR: any, fR: any) => { S.RUST.poses = false; ask(pT, fT, A, Bp); S.RUST.poses = true; ask(pR, fR, AR, BR); S.RUST.poses = false; asked++; };
 // EVERY OTHER ROUND the module's side of a question is asked of poses that LIVE IN A GAME'S BLOCK (src/sim/state.ts; anim/skeleton.ts PoseSet): no copy onto
 // the bench, the pose read and written where it is. Four poses of a set at home, used again each such round.
-const home = new PoseSet(), block = new ST.SimState(); block.bind(); poseSetIn(home, block); const hA = home.make(n), hB = home.make(n), hO = home.make(n), hI = home.make(n);
+const home = new PoseSet(4), block = new ST.SimState(); block.bind(); poseSetIn(home, block); const hA = home.make(n), hB = home.make(n), hO = home.make(n), hI = home.make(n);
 let A: any, Bp: any, AR: any, BR: any;
 S.RUST.poses = true; if (!S.RUST.poses) { console.log('pose-ident: RUST.poses does not come on'); process.exit(1); } S.RUST.poses = false;
 const t0 = performance.now(); let inModule = 0;

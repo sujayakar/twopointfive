@@ -458,7 +458,7 @@ export function doorwayInWay(g: Game, p: Vec3): boolean {
 /** who the PASS gate has `gd` held for this frame: 'Player', a man's callsign, or null when he is not held short of a man */
 export function doorwayHeldBy(g: Game, gd: Guard): string | null { const st = states.get(gd); return st && g.time - st.t <= 0.25 && g.time >= st.t && st.heldT > 0 ? st.by ?? null : null; }
 /** REST: the PASS gate has `gd` held this frame — short of a frame for a man in it, or stepped off to a jamb */
-export function doorwayHeld(g: Game, gd: Guard): boolean { const st = states.get(gd); return !!st && g.time - st.t <= 0.25 && g.time >= st.t && (st.heldT > 0 || !!st.spot); }
+export function doorGateStopped(g: Game, gd: Guard): boolean { const st = states.get(gd); return !!st && g.time - st.t <= 0.25 && g.time >= st.t && (st.heldT > 0 || !!st.spot); }
 /** REST / MARKS: the nearest floor to `p`, within `clearM`, that is not `bad` — floor a man can stand on and walk straight to from `p`, never through a
  *  frame to its other face, `apart` clear of every `taken`; of the nearest ring that has any, the spot farthest from the doors by it. null: none */
 export function doorwayClearNear(g: Game, p: Vec3, bad: (q: Vec3) => boolean, taken: Vec3[] = [], apart = DOORMANNERS.apart, face: Vec3 | null = null): Vec3 | null {

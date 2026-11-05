@@ -1,7 +1,7 @@
 // A POSE'S BULK ARITHMETIC IN SINGLES (src/anim/skeleton.ts POSEMATH.singles) — the switch's own check. With it on, blendPose and the step sampleClip takes
 // between two keys are worked in singles, a rotation's length a plain root, in the TypeScript (Math.fround at every step) and in the Rust module (singles to
 // begin with, four nodes a step: rust/sim/src/single.rs). Off = the build as it was.
-//   bun run tools/qa/posemath-check.ts                 this stand (frozen by default; TPS_PROFILE=shipped = the page's). RUN IT ON BOTH.
+//   bun run tools/qa/posemath-check.ts                 the page's stand (TPS_PROFILE=frozen in front = the old one, where the rule is held off).
 //   POSEMATH_BREAK=1 bun run tools/qa/posemath-check.ts   the red path, must exit 1: the module is asked every blend and sample WITHOUT the rule's bit while the
 //                                                      TypeScript twin works in singles — the two sides of one rule apart
 // lines
@@ -10,15 +10,16 @@
 //   old      a recipe with no such table (a tape from before the rule) puts it OFF before a game is built; one that carries it puts it as carried
 //   twin     tools/qa/pose-ident.ts with the rule on: every sample and every blend the same bits three ways (the TypeScript twin, the module's lanes, and the
 //            plain definition kept in that tool), and with the rule off, as ever
-//   layers   tools/qa/layer-ident.ts with the rule on: the module's layers (which read the tick's knob) and the TypeScript's (which read the switch) leave the
-//            same pose
-//   game     (the shipped stand, where the rows answer) a mission with the rule on, played with the poses' and the walk's rows up and with every row off: every pose of every man after
+//   layers   tools/qa/layer-ident.ts with the rule on: the module's layers, which read the tick's knob, pass their own check (a layer is written once, in
+//            Rust: there is no second language to hold them to here)
+//   game     (the shipped stand, where the rows answer) a mission with the rule on, played with the poses' row up and with it held down (a pose's questions answered by the TypeScript; the layers are the module's either way): every pose of every man after
 //            every tick folds to one word (tools/qa/pose-fold.ts) — the twin and the module are one game
 //   rule     …and with the rule off the word is another: the switch reaches the game
 //   late     a game stood with the rule on and put off before its first tick (pose-fold's POSEMATH_LATE=0) is the game stood with it off, and one stood
 //            with it off and put on (POSEMATH_LATE=1) is the game stood with it on: nothing kept from the build stands on the other arithmetic. That is
 //            what lets a recording's rule be written by journal.ts applyKnobs alone, after the game is stood (tools/qa/replay.ts says no word for it)
 // exit 0 = every line · 1 = a line failed. Nothing here has been seen on a GPU: it is arithmetic, and the picture's skinning reads the same poses.
+import './stand.ts';   // (the stand's word, written down before this file reads it)
 import { spawnSync } from 'node:child_process';
 import { resolve } from 'node:path';
 const ROOT = resolve(import.meta.dir, '../..'), BREAK = process.env.POSEMATH_BREAK === '1', STAND = process.env.TPS_PROFILE === 'shipped' ? 'shipped' : 'frozen';
@@ -73,15 +74,15 @@ console.log(`a pose's arithmetic in singles · the ${STAND} stand${BREAK ? ' · 
 //      the layers for the check to call itself fair — its own verdict there is "asked too little", with or without this rule and whatever answers)
 if (STAND === 'shipped') {
   const r = child(['bun', 'run', 'tools/qa/layer-ident.ts'], { [WORD]: '1', RUST_BREAK: undefined, TPS_PROFILE: 'shipped' });
-  line(r.status === 0 && /layer-ident: PASS/.test(r.out), 'layers: with the rule on the module\'s layers and the TypeScript\'s leave the same pose', last(r.out));
+  line(r.status === 0 && /layer-ident: PASS/.test(r.out), 'layers: with the rule on the module\'s layers pass their own check', last(r.out));
 } else console.log('- (layers: not asked on the frozen stand, where the layers\' check calls its own mission unfair: too few layers asked)');
 // ---- game, rule
 {
-  const fold = (env: Record<string, string | undefined>) => { const r = child(['bun', 'run', 'tools/qa/pose-fold.ts', RUN], { TPS_PROFILE: STAND, QA_HOLD: 'poses=0,walk=0', ...env }); return /word ([0-9a-f]{1,8})\b/.exec(r.out)?.[1] ?? `none (${last(r.out)})`; };
+  const fold = (env: Record<string, string | undefined>) => { const r = child(['bun', 'run', 'tools/qa/pose-fold.ts', RUN], { TPS_PROFILE: STAND, QA_HOLD: 'poses=0', ...env }); return /word ([0-9a-f]{1,8})\b/.exec(r.out)?.[1] ?? `none (${last(r.out)})`; };
   const word = (w: string) => /^[0-9a-f]{1,8}$/.test(w);
   const on = fold({ [WORD]: '1' }), off = fold({ [WORD]: '0' });
   { const onRows = fold({ [WORD]: '1', QA_HOLD: undefined });
-    line(word(on) && on === onRows, `game: ${RUN} with the rule on folds every pose of every man to one word with the poses' and the walk's rows up and with them held down`, `rows held down ${on} · rows up ${onRows}`); }
+    line(word(on) && on === onRows, `game: ${RUN} with the rule on folds every pose of every man to one word with the poses' row up and with it held down`, `row held down ${on} · row up ${onRows}`); }
   line(word(off) && word(on) && off !== on, 'rule: with the rule off the word is another: the switch reaches the game', `rule on ${on} · rule off ${off}`);
   // (the rule written on a game that is already standing: the animator's kept tables are measured in doubles under either rule — skeleton.ts inDoubles — so
   //  a game built with the rule on and then put off before its first tick is the game built with it off)

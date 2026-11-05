@@ -24,6 +24,7 @@
 // each with a lead of `LEAD_S` or more. A level with ONE defended room has no front and back to choose between (a loud way in there is the room's own
 // fight): it is printed ONE ROOM, held to the lights plan alone, and counted apart from the levels that hold.
 // THE HARNESS HAS NO GPU: a lamp is a flag, a line is a string, a boot is an event. Nobody has seen or heard any of this in play.
+import './stand.ts';   // (the stand's word, written down before this file reads it)
 import { resolve } from 'node:path';
 import { readFileSync, writeFileSync } from 'node:fs';
 const ROOT = resolve(import.meta.dir, '../..');

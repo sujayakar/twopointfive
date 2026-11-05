@@ -6,7 +6,7 @@
 //   --unseen (below) · --query '?hour=midday&weather=rain' = the page's own hour / weather keys laid on the plain night (his meter's stand-in counts no sun:
 //   a daylight arm is for 'does it run', with --unseen, not for what the shift sees)
 // THE STAND: the game as the PAGE stands it, not as the harness does (tools/qa/ships.ts's own list: GLASSFX=on, TPS_MOVES=1, TPS_TURN=1, TPS_CAST=1, chaos
-// 0.5) — `--base` is the harness's own stand. The shift, the civilians, the devices and the needs are whatever the plain boot gives.
+// 0.5) — `--base` is the old frozen stand (TPS_PROFILE=frozen, which it says itself). The shift, the civilians, the devices and the needs are whatever the plain boot gives.
 // THE SCRIPTED PLAYER (one man, his own feet and keys: WASD along the nav grid's path, Shift, C, Space on a row, the pistol's right button). He is MORTAL AND
 // SEEN: no god mode, and his light meter is fed every frame from the CPU's estimate of the direct light on him (guards.ts lightEstimateAt, his own lights
 // skipped — no bounce, no moon), through the game's own curve. He never fires a round, never throws, never grabs anybody. Three plans:
@@ -44,6 +44,7 @@ const BASE = has('--base'), UNSEEN = has('--unseen'), GOD = has('--god'), GHOST 
 // --squad 1: with the one partner (the pair rules on, silent from the first frame; he follows by himself). The same scripted Sam, the mission's places read from the deal.
 const EXIT = flag('--exit') ?? '';   // (--quiet only) leave by the way out whose name holds this, or whose door is named this; absent = the nearest on foot
 const QUIET = has('--quiet'), QUIET_PIN = QUIET && /^\d+$/.test(flag('--quiet') ?? '') ? Number(flag('--quiet')) : null, MATE = QUIET && flag('--squad') === '1';
+if (BASE) process.env.TPS_PROFILE ??= 'frozen';   // (--base is the old stand, said by name since 2026-11-05: no word is the page's)
 if (!BASE) for (const [k, v] of [['GLASSFX', 'on'], ['TPS_MOVES', '1'], ['TPS_TURN', '1'], ['TPS_CAST', '1'], ['TPS_OPENING', '1'], ['TPS_QRFSILENT', '1'], ['TPS_QRFSQUAD', '1']]) process.env[k] ??= v;   // (before any game module loads: they read these once)
 const PLANS = ['walk', 'sneak', 'careful', 'rush', 'loud'] as const; type Plan = typeof PLANS[number];
 const DT = 1 / 60;

@@ -13,6 +13,7 @@ import { RoomClear, endGuardScript } from './squad';
 import type { RoomClearPlan } from './squad';
 import { cancelActions, startGrab } from './player';
 import { INTERACT_KEY } from './consts';
+import { LIGHT_IN } from '../sim/lightshome';
 
 /** door 'who' id for scripted use: ≥ 10 reads as a guard to the hearing model, so the tour's own door noises don't alarm anyone */
 const DEMO_HAND = 10;
@@ -147,7 +148,7 @@ export class Demo {
         title: 'The hold', caption: 'Space behind him takes him instead of dropping him: an arm round his throat — a shield, and a man to lean on.', sub: SUB_A,
         enter: () => { phase = 0; tapped = -1; taps = 0; tTap = tHeld = tSeen = -1; shoved = false; shield = null;
           g.clearAftermath(); g.resetGuards(); this.rearm(); this.smoke.clearAll?.(); g.playerInvisible = true; g.godMode = true;   // fresh men (the takedown left one on the floor); unseen for the creep, as the takedown is — Kowalski's eyes open at beat C
-          lit = g.targets.filter(t => t.group === 'lobby').map(t => ({ t, on: t.on })); for (const l of lit) if (l.t.name.startsWith('panel_')) l.t.on = false;   // the lobby by moonlight, the reception screen and their torches (the first stop lit its two panels; put back at exit)
+          lit = g.targets.filter(t => t.group === 'lobby').map(t => ({ t, on: t.on })); for (const l of lit) if (l.t.name.startsWith('panel_')) g.lightHome.in(LIGHT_IN.on, l.t, 0);   // the lobby by moonlight, the reception screen and their torches (the first stop lit its two panels; put back at exit)
           saved = g.mission; g.mission = { ...saved, stats: { ...saved.stats } };   // scratch copy for the live half (see above); the player's run goes back at exit untouched
           const v = victim(), k = colleague();
           g.guards.forEach(o => { o.hold = true; if (o !== v && o !== k) { o.pinned = true; o.char.pos = v3.copy(PARK); } });   // (pinned: the hostage call takes a parked man to alert on his mark and no further)
@@ -186,7 +187,7 @@ export class Demo {
             else for (const o of g.guards) if (o.state !== 'dead') o.reactT = Math.max(o.reactT, 3.0);   // he has folded: everybody takes a long beat at the body dropping (scripted) — the shield is gone and the cut lands before the first round could
           } },
         exit: () => { this.release(); g.quietUtility = true; g.playerInvisible = true;   // the tour's flag back up before anything is reset (the resets log nothing under it), Sam unseen (and, by release(), his pistol to hand again for the firefight)
-          if (saved) { g.mission = saved; saved = null; } for (const l of lit) l.t.on = l.on; lit = [];
+          if (saved) { g.mission = saved; saved = null; } for (const l of lit) g.lightHome.in(LIGHT_IN.on, l.t, l.on ? 1 : 0); lit = [];
           g.clearAftermath(); g.resetGuards(); } };   // calm floor (alarm level, episode, the lockdown pairing all live on the men: resetGuards zeroes the lot), nothing in the sound queue — the firefight stages from scratch
         })(),
       (() => { let phase = 0, nextShot = 0, shots = 0, reloaded = false, burst = 0, wp = 0; let burstAt: typeof g.guards[0] | null = null;
@@ -273,7 +274,7 @@ export class Demo {
           const d = clear?.door; if (d) { d.reset(); d.angle = 0; d.vel = 0; d.latched = true; d.closing = false; }   // pulled to and latched (it is authored standing open, no closer): something to breach
           clear?.start(); },
         tick: (t, dt) => { if (!clear) return; clear.tick(t, dt); if (isFinite(clear.tEnter)) tIn = clear.tEnter; if (isFinite(clear.tKick)) tOpen = clear.tKick; },
-        exit: () => { clear?.end('patrol'); clear?.door?.reset(); clear = this.drill = null; for (const l of lit) l.t.on = l.on; lit = []; this.release(); g.clearAftermath(); g.resetGuards(); } };   // leaf back at its authored angle, the room's lights as they were, calm patrols on their routes for whatever follows
+        exit: () => { clear?.end('patrol'); clear?.door?.reset(); clear = this.drill = null; for (const l of lit) g.lightHome.in(LIGHT_IN.on, l.t, l.on ? 1 : 0); lit = []; this.release(); g.clearAftermath(); g.resetGuards(); } };   // leaf back at its authored angle, the room's lights as they were, calm patrols on their routes for whatever follows
         })(),
       (() => { let phase = 0; const HIDE: Vec3 = [26.6, 0, 19.7], LAND: Vec3 = [27.6, 0.05, 18.4], ACROSS: Vec3 = [26.3, 0, 14.9];   // LAND is a metre short of the threshold: the can lands this side and rolls on through the opening, coming to rest about on the sill
         // start SOUTH of the doorway (the leaf hangs off the north jamb and swings this side, so from the south the opening is clear), roll the can onto the threshold so the plume fills the opening itself, then cross northward
@@ -310,7 +311,7 @@ export class Demo {
         enter: () => { tF = tOut = -1; sent = false; g.clearAftermath(); g.resetGuards(); this.rearm(); g.playerInvisible = true; g.godMode = true;
           g.setGroup('server', false);   // the room's own cold panel off: lit by the racks' green wash and whatever the door lets in — so one rack dying and one torch arriving both read
           saved = g.mission; g.mission = { ...saved, stage: 'infiltrate', driveT: -1, pulled: false, sweepAt: -1, alarmOn: false, debrief: false, stats: { ...saved.stats } };   // a scratch copy for the beat: whatever it accrues (elapsed, the sandbox flag) is thrown away at exit with the player's own run put back; 'infiltrate' so the room announces its rack in the log the way it does for a player
-          for (const t of g.rackTargets) t.on = true; g.missionInTour = true;   // (relit in case an earlier pull — the player's, or a previous lap of the tour — left it dark)
+          for (const t of g.rackTargets) g.lightHome.in(LIGHT_IN.on, t, 1); g.missionInTour = true;   // (relit in case an earlier pull — the player's, or a previous lap of the tour — left it dark)
           const d = door('server'); if (d) { d.angle = 0; d.vel = 0; d.latched = true; d.closing = false; }   // shut, as authored: his push swings it and the corridor light sweeps in across the floor
           g.teleportPlayer(SPAWN); g.player.slot = 'pistol'; g.player.pistol.lightOn = false; g.player.crouch = true; g.player.char.bodyYaw = Math.PI / 2;
           g.guards.forEach((o, i) => { o.hold = true; if (i === 0) { o.char.pos = v3.copy(POST); o.char.bodyYaw = -Math.PI / 2; o.char.aimYaw = -Math.PI / 2; } });   // the corridor man idles east of the door facing down the hallway; the other two hold their route starts, out of shot — held men are never candidates for the errand, so it is always him
@@ -327,7 +328,7 @@ export class Demo {
             if (t > tOut + 0.4) { const there = Math.hypot(me[0] - HIDE[0], me[2] - HIDE[2]) < 0.3; g.puppet.goal = there ? null : HIDE; g.puppet.walk = 1.1;   // back off west along the rack fronts (there by ≈ 9.7 s, before the door opens at his shoulder)…
               g.puppet.aim = cg && cg.state !== 'dead' ? v3.add(cg.char.pos, [0, 1.62, 0]) : [18.0, 1.62, 9.0]; }   // …backpedalling with his eyes on the man coming in (through the wall, then through the doorway) — at head height, which also keeps the cursor off the door's own marker as he passes it
           } },
-        exit: () => { this.release(); g.setGroup('server', true); if (saved) { g.mission = saved; for (const t of g.rackTargets) t.on = !saved.pulled; saved = null; } g.clearAftermath(); g.resetGuards(); } }; })(),   // panel back on, the player's own mission back exactly as it was (rack lit or dark to match), and calm patrols on their routes for the blackout
+        exit: () => { this.release(); g.setGroup('server', true); if (saved) { g.mission = saved; for (const t of g.rackTargets) g.lightHome.in(LIGHT_IN.on, t, saved.pulled ? 0 : 1); saved = null; } g.clearAftermath(); g.resetGuards(); } }; })(),   // panel back on, the player's own mission back exactly as it was (rack lit or dark to match), and calm patrols on their routes for the blackout
       { dur: 13, pos: [19.5, 0, 12.4], yaw: -22, yawTo: -46, dist: 24, title: 'Blackout', caption: 'OCP the breaker: the mains drop.', sub: 'Exit signs and the UPS-fed rack LEDs stay up (their green wash is a real light per rack), five ceiling beacons sweep red through the haze, and your light meter now pulses with the sweep.',
         at: [{ t: 1.0, run: () => g.setBlackout(9.5, 'debug') }] },
       { dur: 7, pos: [19.5, 0, 12.4], yaw: -22, dist: 24, title: 'Restrike', caption: 'Fluorescents restrike one contactor group at a time.', sub: '' },

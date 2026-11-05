@@ -321,7 +321,7 @@ const NO_JETS: readonly WindGpuSource[] = [];   // (never written: the list a fi
 export function updateFire(g: Game, dt: number) {
   const E = g.engine;
   if (!FIRE.on) {
-    if (states.get(g)) { for (const t of g.targets) if (isFire(t)) plain(t); states.delete(g); if (E.fires?.length) E.fires = []; if (E.hostBooks?.fire?.kept) g.smoke.keepHot?.(0); if (E.hostBooks) E.hostBooks.fire = undefined; if (lookConfig.on) gpuFx(g)?.setHeat(NO_JETS); }   // (put off in a running page: the lamp back where the level hung it, its strength is updateTargets' again)
+    if (states.get(g)) { for (const t of g.targets) if (isFire(t)) { plain(t); g.lightHome.feedBurning(t.light!); } states.delete(g); if (E.fires?.length) E.fires = []; if (E.hostBooks?.fire?.kept) g.smoke.keepHot?.(0); if (E.hostBooks) E.hostBooks.fire = undefined; if (lookConfig.on) gpuFx(g)?.setHeat(NO_JETS); }   // (put off in a running page: the lamp back where the level hung it, its strength is updateTargets' again)
     return;
   }
   let any = false; for (const t of g.targets) if (isFire(t)) { any = true; break; }
@@ -340,6 +340,7 @@ export function updateFire(g: Game, dt: number) {
     if (!burns(t)) {   // (out: while the fog's picture has it lit it is held as a fire's lamp, and for the one frame before the fog has had its say)
       const ghost = (l.fogGhost ?? 0) > 0, first = !!l.steady && !l.steady.out;
       if (K.fog && (ghost || first)) { held(g, t); l.steady!.out = true; } else plain(t);
+      g.lightHome.feedBurning(l);
       continue; }
     lit++;
     const seed = fireSeed(t), fl = fireFlicker(seed, time), M = mouthOf(g, t), si = Math.floor(seed * 65535);
@@ -353,6 +354,7 @@ export function updateFire(g: Game, dt: number) {
     l.pos[0] = t.pos[0] + K.wander * Math.sin(TAU * (0.83 * time + h01(si + 5))) * Math.sin(TAU * (2.9 * time + h01(si + 6)));
     l.pos[2] = t.pos[2] + K.wander * Math.sin(TAU * (0.71 * time + h01(si + 7))) * Math.sin(TAU * (3.3 * time + h01(si + 8)));
     l.pos[1] = t.pos[1] + K.lift + K.wanderUp * Math.max(-1, Math.min(1, (fl - 1) / Math.max(K.depth, 1e-6)));   // (up with the flicker, by no more than the table says: a crack's kick is past the swing and would snap the lamp half as far again in a frame)
+    g.lightHome.feed(l);   // (the lamp as this file has just left it, to its row: the two selves a light question reads. A fire's flicker is an input of the lights' state until this file moves)
     { const ck = t.factor * K.coals * (1 + K.coalSwing * (fl - 1)); for (const bi of t.boxes) { const bx = g.engine.world.statics[bi]; if (bx) bx.emissive = [t.baseEmissive[0] * ck, t.baseEmissive[1] * ck, t.baseEmissive[2] * ck]; } }   // (updateTargets painted it at its authored glow a moment ago, and does again the frame the switch goes off)
     if (moved) { T.lo = Math.min(T.lo, fl); T.hi = Math.max(T.hi, fl); T.sum += fl; T.n++; }
     const { wv, wl, wind } = windAt(g, M.pos), d = Math.hypot(M.pos[0] - focus[0], M.pos[2] - focus[2]), fit = fits();

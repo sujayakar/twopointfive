@@ -25,6 +25,7 @@
 //   bun run tools/qa/gunhand-throw-check.ts [--verbose]     (both stands: it raises the switch itself)
 //   GUNHAND_BREAK=1 …                                       (the key left off for the 'on' lines: (3), (4), (5) and (9) must fail)
 // Headless: poses and boxes are measured, nothing here is a picture. Never seen on a GPU or in play.
+import './stand.ts';   // (the stand's word, written down before this file reads it)
 import { resolve } from 'node:path';
 const ROOT = resolve(import.meta.dir, '../..');
 

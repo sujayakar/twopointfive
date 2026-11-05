@@ -82,16 +82,16 @@ const FOLD = async (brk) => {
     await page.goto(`${BASE}?${ADDR}${process.env.ALONE_WHO === '1' ? '&fell=who' : '&fell'}`); const r = await ready(page); if (r !== 'ok') throw new Error(r);
     const s = await page.evaluate(SEEN); log(` ${name}: ${s.say}`);
     if (s.why || !rowsAsPlayed(s)) throw new Error(`the page does not stand on the rows the game is played on: ${JSON.stringify(s)}`);
-    await page.evaluate(() => { const P = Object.getPrototypeOf(window.__game.col), open = P.tickOpen, see = P.eyesSee, k = window.__asked = { lines: 0, circles: 0, fog: 0, sees: 0 };
-      P.tickOpen = function () { open.call(this); if (this.mirror.lines) k.lines++; if (this.mirror.circles) k.circles++; if (this.mirror.sight) k.fog++; };
-      P.eyesSee = function (...a) { const r = see.apply(this, a); if (r >= 0) k.sees++; return r; }; });
+    await page.evaluate(() => { const P = Object.getPrototypeOf(window.__game.col), open = P.tickOpen, see = P.eyesSee, k = window.__asked = { lines: 0, circles: 0, fog: 0, sees: 0 }; let asked = true;   // (`fog`: the ticks in which the fog's pass asked the module a man — the pass is no row, and is the module's whenever it runs)
+      P.tickOpen = function () { open.call(this); if (this.mirror.lines) k.lines++; if (this.mirror.circles) k.circles++; asked = false; };
+      P.eyesSee = function (...a) { const r = see.apply(this, a); k.sees++; if (!asked) { asked = true; k.fog++; } return r; }; });
     // (the red path: the module's answer to every line through the statics replaced by "clear" — a wrong walk that still plays)
     if (BREAK) await page.evaluate(() => { const M = window.__game.col.mirror, P = Object.getPrototypeOf(M), open = P.open; P.open = function (...a) { open.apply(this, a); if (!this.broke) { this.broke = true; this.x = Object.assign({}, this.x, { lines_blocked: () => 0 }); } }; });
     const d = await page.evaluate(PLAY, FRAMES), t = await page.evaluate(SEEN), k = await page.evaluate(() => window.__asked);
     if (errs.length) throw new Error(`the page complained: ${errs.slice(0, 3).join(' | ')}`);
     if (!(t.copy >= 0)) throw new Error(`no tick opened the module's copy of the box world (its world: ${t.copy})`);
-    for (const row of ['lines', 'circles', 'fog']) if (!(k[row] > 0)) throw new Error(`no tick opened the module's copy with the row ${row} (${JSON.stringify(k)})`);
-    if (!(k.sees > 0)) throw new Error(`the fog's pass asked no man of the module in ${FRAMES} frames (${JSON.stringify(k)})`);
+    for (const row of ['lines', 'circles']) if (!(k[row] > 0)) throw new Error(`no tick opened the module's copy with the row ${row} (${JSON.stringify(k)})`);
+    if (!(k.sees > 0 && k.fog > 0)) throw new Error(`the fog's pass asked no man of the module in ${FRAMES} frames (${JSON.stringify(k)})`);
     if (d.digest !== played.digest || d.bits !== played.bits) throw new Error(`two loads of the page are two games: digest ${d.digest} · ${played.digest}, bits ${d.bits} · ${played.bits}`);
     // (ONE WAY IN: with ?fell on the address the page counts every question its TypeScript answered while the row was up, from the level's building on — src/sim/sim.ts FELL.
     //  A count on a row of SEALED is a way back into TypeScript that a boot or a tick of the real page still takes)

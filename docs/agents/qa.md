@@ -5,7 +5,26 @@ One of the area files CLAUDE.md indexes. Everything below was moved here word fo
 title may now live in another file of this folder: `grep -l '<title>' docs/agents/*.md`. New bullets for this area go at the foot of this file.
 
 <!-- was CLAUDE.md lines 244–260 -->
-- **THE HARNESS HAS TWO STANDS, AND ONE LIST OF WHAT SEPARATES THEM** (`src/host/profile.ts`). FROZEN (the default) = the stand every frozen digest, tally, probe bound and session
+- **THE HARNESS STANDS THE GAME AS THE PAGE OPENS IT (2026-11-05; the maintainer ruled that the frozen stand may be retired).** With no word in front a
+  headless tool is on what the bullet below calls the SHIPPED stand. THE RULE IS ONE FUNCTION, `standOf` in the import-free `src/host/standEnv.ts`: no
+  word or `TPS_PROFILE=shipped` = the page's stand, `TPS_PROFILE=frozen` = the old one, any other word stops the tool. `harnessProfile()`
+  (`src/host/profile.ts`) is that function over the environment, and `tools/qa/stand.ts` writes the word down as it loads, for the tools that read it
+  themselves and for a child. A TOOL THAT READS `process.env.TPS_PROFILE` IMPORTS `stand.ts` STATICALLY (or `headless.ts`, which does): a static import
+  loads before the file's own lines, so no tool reads "no word" and calls the page's stand frozen; `shipped-check.ts` is red on one that does not
+  (`STAND_BREAK=1` is its red path; it reads text, so a tool that CLEARS the word for a child is not seen by it). A check is run ONCE.
+  THE OLD STAND is one word, `TPS_PROFILE=frozen`: every newer rule held off as below, kept reachable for the switch cleanup until the off paths are gone
+  (the retire tool's proofs, `stand-bisect.ts`); the process the word is given to says so once on stderr. A TOOL THAT WANTS THE OLD STAND OF A CHILD SAYS
+  THE WORD: giving a child no word asks for the page's (`rerun.ts` for a tape made on the old stand, `rust-check.ts`'s old-stand arms, `lesson-gate.ts`'s
+  frozen runs, `ships.ts` / `kit-cells.ts` / `solo-night.ts` `--base`, `blast-frame.ts --arm round1` all say it). NO NEW FIXTURE IS RECORDED ON IT. What
+  that leaves: (1) the recordings that were made on it stand until each one's owner records it again on the page's stand: `layer-words.json` and
+  `sense-words.json` are still asked, by `rust-check.ts`, of a child it stands on the old stand by name, and `ident-pin.ts` still refuses `--record` on any
+  other stand (the owners lift that as they record); `threshold-identity` and `shotgun-identity`'s two frozen words are asked on the old stand only and
+  hold nothing on a run with no word, and say so; (2) a check that was green on the old stand and red on the page's is red in a plain run now:
+  `tools/qa/expected-red.ts` is where each is named with its cause and whose it is (its page-stand rows are a plain run's rows now); (3) headers that say
+  "frozen by default" or "run it on BOTH stands" are older than this: once, with no word. Proof of the flip itself: `stand-dump.ts` with no word after =
+  with `TPS_PROFILE=shipped` before, and with `TPS_PROFILE=frozen` after = with no word before, byte for byte. The rest of this file, and the area files,
+  still say "the frozen stand" and "the shipped stand" of what was measured where: read "shipped" as "a plain run".
+- **THE HARNESS HAS TWO STANDS, AND ONE LIST OF WHAT SEPARATES THEM** (`src/host/profile.ts`; since 2026-11-05 the default is the SHIPPED one: the bullet above). FROZEN (the default until then) = the stand every frozen digest, tally, probe bound and session
   fixture was recorded on: `src/host/standup.ts standGame({harness})` and `tools/qa/headless.ts` hold the newer rules off, each line behind `pinned('<its env word>')`. SHIPPED
   (`TPS_PROFILE=shipped` in front of any headless tool) = the page as it opens with no URL flag on a machine that has kept nothing: none of those lines runs, `shippedBoot()` calls
   `pageSwitches('')` — THE function `src/main.ts` calls with the page's own query for the switches its boot writes (destruction, furniture, wall reactions, wall charge, the door
@@ -463,6 +482,24 @@ but synthetic writes still work.
   draws the same dice and makes the same calls after the fold as before it, that the folded tree compiles, and that what names a retired row is gone while
   what only looks like it is not; `RETIRE_BREAK=1` folds one row at the wrong value and must fail. A shape the tool folds wrongly goes into the fixture as a
   case first. Memory: a hundred rows at once is about a minute and 4 GB; all of a family's rows go in one run, not all families in one.
+- **A switch that only moves WHEN something lands is still a switch** (11-05; the planners' pace, after the multiplayer goal's read). `PLAN_PACE`
+  (`src/render/planPace.ts`, the page's `?planpace=old`) was first read by `main.ts` alone and kept out of the registry as a picture's pace. That is a
+  special case with a cost: a word `main.ts` reads by itself is in no recipe and no recording, and a server's stand (`tools/mp/stand.ts`:
+  `shippedBoot` and `pageSwitches`) never reads it, so a host's page and its server can stand differently. So it is registered like any other: read in
+  `pageSwitches`, a `FROZEN_HOLDS` row (`TPS_PLANPACE=1 (a picture only)`), `STAND_ENV`, the knob registry, `JOURNAL_KNOBS`, and `applyKnobs` puts it
+  down for a file with no table for it; `openings-check` holds all of that on both stands. THE RULE FOR THE NEXT ONE: any word that moves when
+  something runs or lands, in the tick or in the picture, goes through `pageSwitches` and the registry; `main.ts` reads no such word by itself.
+  `REACH_PACE` (`src/render/reach.ts`, `?reachpace=old`) was the same case and is registered the same way, in a commit of its own: the game's tick
+  reads it (to pace the lamps' reach masks, which are the picture's: no sense, rule or run digest reads them, and the 42 play-through digests are the
+  same with it forced either way on both stands), so a host's page and its server paced that bookkeeping differently. It is the same on both stands
+  with no word (the shares), so it has no `FROZEN_HOLDS` row. SINCE THE MASKS LEFT THE TICK (11-05, `render/reachKeep.ts`; `docs/agents/render.md`)
+  NEITHER `?reachpace` NOR `?planpace` DECIDES ANYTHING INSIDE THE TICK: the picture's keeper paces the masks on drawn frames, and a stand with no
+  picture (the harness, a server) makes no mask and never reads `REACH_PACE`. Both stay registered: a recording still says which pace its page drew at.
+  `?planpace=old` is also the masks' step on the count of sight-line steps (`ReachKeep.tick`, `REACH_PACE.steps`) and not on the clock (`tickTimed`, `KEEP_MS`): a
+  page rig that must land masks on fixed frames asks for it, as it does for the planners. A PAGE RIG RUNS THE PAGE, where the planners' pace is on and its allowance is the
+  clock's: after the first six drawn frames a plan lands when the clock lets it. A rig that reads a frame a fixed number of frames after a door or a
+  wall changes puts `planpace=old` on its address (`tools/qa/draw-equal.cjs` does). Neither word is a visit's flag: a joiner's page takes the
+  recipe's. `docs/agents/render.md` has both rules.
 - **Not every `FROZEN_HOLDS` word is a `TPS_` word** (10-13, read off `src/host/profile.ts`; the knob registry's owner's note). Raised by a word of their own: the door rules
   (`ONEWAY=1`, `QA_FRAMEHOLDS=1`, `QA_DOORMANNERS=1`, `QA_DOORBLAST=1`, `QA_DOORSTAY=1`), `SLOTS=on`, `CUTBOXES=1`, `GLASSFX=on` (three rows), `SQUADS=radiocheck-call` (three
   rows). No word under probes.ts at all: `DESTRUCTION.on`, `RUBBLE.on`, `EVICT.on` (`PT_DESTR` / `PT_KICK` / `PT_POP`, playthrough.ts alone), `FRAG.defenders` (`--set`),
@@ -998,6 +1035,11 @@ but synthetic writes still work.
   restart in place, keeps nothing (one game restarted thirty times with four seconds of play between: 116 MB to 121 after a full collection, the
   page's stand). Nobody has watched a browser's heap through a long session; nothing here says it grows. A TOOL THAT KEEPS GAMES ALIVE ON PURPOSE
   (two stood side by side, a list of them) is not helped by this and is as big as its games.
+- **`tools/qa/settings-check.ts`: THE PICTURE'S SETTINGS ARE NOT THE GAME'S** (2026-11-05; the rule and its first two numbers: `docs/agents/net.md`, "A
+  player's Brightness is his picture's alone"). A read of a setting of the engine's by a file under `src/game` is red unless it has a row saying why
+  (the picture's own, carried by a recording, or to move, with a date). Its static lines run as `probes.ts settings-reads` (family journal, so every gate
+  that runs journal runs them); run the whole check after adding a setting a player can move. `QA_PICTURE='{"key":value}'` in front of any headless
+  tool plays it with a player's settings laid over the stand-in engine's (a key the engine has no setting for is refused by name).
 - **A check run as a file and run by the runner stand on one stand: `tools/qa/holds.ts`** (2026-11-05; tools only, no rule of play). Some probes were written
   against a rule's build before it (a card's one gun row, the grab on its key, the knife) and run with the newer rule held off on EVERY stand. The runner
   (`probes.ts run`) held those rows by the probe's NAME, in fifteen lists of its own; a check file's own main held nothing. So on the page's stand a check was
@@ -1030,3 +1072,10 @@ but synthetic writes still work.
   ways on the page's stand, old and not this change's: `gunhold-cover` (its round line) and `noshove` (the room keeper). Also mended on the way:
   `shotgun-probes.ts --identity` printed its word without the staging the probe reads it under (`COVER.backKeep` held off on the frozen stand), and
   `doortools-probes.ts tally` printed "room's men down N/0" (the count's statement had been swallowed by a comment on its line).
+- **Every GPU pass has a timer, or a row that says why not (2026-11-05).** `bun run tools/qa/passtimer-check.ts` (`probes.ts passtimer`, families `perf`
+  and `render`, a process of its own, under a second; the same on both stands: it reads text). It reads every `beginComputePass(` and
+  `beginRenderPass(` under `src/` (notes blanked as a compiler meets them, strings stepped over), and each must carry `timestampWrites` in its own descriptor or have its file
+  and label in `tools/qa/passtimer-exempt.ts` with a reason of some length; a row no pass uses is red too. Both the reader and the judge are tried on
+  lines of the check's own first. `PASSTIMER_BREAK=1` (the table read as empty) must fail. ADDING A PASS: hand its descriptor
+  `timestampWrites: ts?.('name')`, the engine's `ts` handed in (`docs/agents/render.md`, GPU timing), and say `timer.idle('name')` on a frame it rests; or add the row. Why it exists, and what was measured:
+  that same section.

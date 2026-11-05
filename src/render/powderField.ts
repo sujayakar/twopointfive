@@ -129,7 +129,7 @@ export class PowderField {
    *  handed this frame (m/s); `time` = the caller's clock; `pickK` = × what the wind picks up (0 = kicks only); `airLive` false = the air field is not being stepped this
    *  frame, so what its texture still holds is a moment that is gone: the powder takes the air for still (nothing is carried, and it drops out as in a lee).
    *  dt ≤ 0 encodes nothing; dt is clamped to 1/30. ONE step per submitted encoder (the uniforms are a queue write). */
-  step(enc: GPUCommandEncoder, dt: number, time: number, ambient: number, pickK = 1, airLive = true): void {
+  step(enc: GPUCommandEncoder, dt: number, time: number, ambient: number, pickK = 1, airLive = true, ts?: (name: string) => GPUComputePassTimestampWrites | undefined): void {
     if (this.dead || !this.pipe || !(dt > 0)) return;
     dt = Math.min(dt, 1 / 30);
     const P = POWDER, f = this.uf, u = this.uu, keep = (life: number) => Math.exp(-dt / Math.max(life, 1e-3));
@@ -151,7 +151,7 @@ export class PowderField {
     for (let i = this.kicks.length - 1; i >= 0; i--) if (this.kicks[i].age >= T) this.kicks.splice(i, 1);
     u[24] = n; u[25] = 0; u[26] = 0; u[27] = 0;
     this.device.queue.writeBuffer(this.ubo, 0, this.u, 0, (U_HEAD + n * 8) * 4);
-    const pass = enc.beginComputePass({ label: 'powder' }); pass.setBindGroup(0, this.bind); pass.setPipeline(this.pipe);
+    const pass = enc.beginComputePass({ label: 'powder', timestampWrites: ts?.('powder') }); pass.setBindGroup(0, this.bind); pass.setPipeline(this.pipe);
     pass.dispatchWorkgroups(Math.ceil(this.w / 8), Math.ceil(this.h / 8)); pass.end();
     enc.copyTextureToTexture({ texture: this.nxt }, { texture: this.cur }, [this.w, this.h]);
   }

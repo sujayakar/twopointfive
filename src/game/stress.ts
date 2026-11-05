@@ -23,7 +23,6 @@ import type { Game, Guard } from './game';
 import { spawnUnit, type UnitOpts } from './guards';
 import { NIGHTBREACH } from './nightbreach';
 import { propGap, wallBetween } from './roomclear';
-import { runnerFled } from './runner';   // (asked inside the top-up only: false with its switch off)
 
 /** the count asked for (0 = off: stressTick returns on its first line), the men standing for it, and the last standing in words */
 export const STRESS = { want: 0, men: [] as Guard[], last: 'off', why: '' };   // (why = what the last staging was refused for, by itself: the panel's second line)
@@ -96,7 +95,7 @@ export function stressTick(g: Game) {
   if (STRESS.men.some(m => g.guards.includes(m))) return;
   if (g.touring || g.puppet || g.player.down || (g.director?.run && !g.director.run.ended)) return;
   const nb = g.nightBreach, rs = g.rescue;   // (a scenario mid-staging: its own cast first — a man stood ahead of it would be counted against its budget)
-  if (nb?.active && !(nb.hostiles.length && nb.hostiles.every(h => g.guards.includes(h) || runnerFled(h)))) return;
+  if (nb?.active && !(nb.hostiles.length && nb.hostiles.every(h => g.guards.includes(h) || h.fled))) return;
   if (rs?.active && !(rs.hostiles.length && rs.hostiles.every(h => g.guards.includes(h)))) return;
   const want = STRESS.want; STRESS.men = [];
   const r = standExtra(g, want);

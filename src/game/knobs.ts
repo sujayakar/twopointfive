@@ -61,6 +61,7 @@ import { ORDERS } from './orders';
 import { COVER, REAR } from './cover';
 import { ROOMFIT } from './roomfit';
 import { NVG } from './nvg';
+import { ENV } from './env';
 import { IR } from './irlaser';
 import { IRLIGHT } from './irlight';
 import { WALLPEN } from './wallpen';
@@ -144,10 +145,16 @@ export const JOURNAL_KNOBS: readonly string[] = ['AIM', 'TAPSTEP', 'TRAINED', 'A
   'MARKCUT',
   // a blast's marks sit in the surface (render/decals.ts MARKSIT; a picture only): a recording made with it on draws its scorches and films of dust that way, one with no table for it as they were drawn before the rule
   'MARKSIT',
+  // the picture's planners are made a little a frame (render/planPace.ts PLAN_PACE; a picture only): a recording made with it on says so, one with no table for it had each plan whole on its frame
+  'PLAN_PACE',
+  // the pace the lamps' reach masks are decided at after a wall changes (render/reach.ts REACH_PACE; the picture's keeper reads it on drawn frames, render/reachKeep.ts: nothing in the tick does): a recording says which, one with no table for it had the shares
+  'REACH_PACE',
   // a named coat's finish goes wherever its word goes (scene/stuff.ts COATFINISH; a picture only): a recording made with it on draws its vehicles' bodies as a clear coat, one with no table for it with the finish their files give them
   'COATFINISH',
   // a thing of solid glass is dark and smooth (scene/stuff.ts SOLIDGLASS; a picture only): a recording made with it on draws its vehicles' windows near black and polished, one with no table for it in the grey their files give them
   'SOLIDGLASS',
+  // the paint on a wall goes with the wall (wallskin.ts WALLSKIN): picture only — a recording made with it on shows its holed walls' bands cut, one from before shows them whole
+  'WALLSKIN',
   // round things are round (scene/round.ts ROUND): a recording made with it on has its drums and tyres round to every ray and foot, one from before has the kit's octagons
   'ROUND',
   // a box says its shape (scene/shapes.ts SHAPES): a recording made with it on has its vehicles' corners, bonnets and glass cut to every ray, one from before has the plain boxes
@@ -180,6 +187,8 @@ export const JOURNAL_KNOBS: readonly string[] = ['AIM', 'TAPSTEP', 'TRAINED', 'A
   'NOSHOVE',
   // a tutorial mission's frame (rails.ts RAILS): a recording made with it on replays its locked keys dropped and its spared teammates up again, one from before as a plain lesson
   'RAILS',
+  // what a man believes and what he covers are two things (belief.ts BELIEF): a recording made with it on replays its men on a post keeping what they saw and heard, one from before has the door they watch written over it every tick
+  'BELIEF',
   // an alerted man does not wait at a shut door (doorforce.ts DOORFORCE): a recording made with it on replays its defenders firing through a leaf and booting it in, one from before has them wait or use the handle
   'DOORFORCE',
   // the slot in hand pressed again opens its setup (slotsetup.ts SLOTSETUP): a recording made with it on replays its second press of a gun's digit as the setup, one from before as the launcher's next load
@@ -208,7 +217,10 @@ export const JOURNAL_KNOBS: readonly string[] = ['AIM', 'TAPSTEP', 'TRAINED', 'A
   'WINBARS',
   // a pose's bulk arithmetic in singles (anim/skeleton.ts POSEMATH): the last place of every blended and sampled pose turns on it, so a recording made with
   // it on replays with it on, and one from before the table replays in doubles
-  'POSEMATH'];
+  'POSEMATH',
+  // the game's own numbers of the picture (env.ts ENV): the night's exposure and the tube's gain its men's goggles are worked out at. A recording made
+  // with the table replays on its numbers; one from before replays on the build's (it was made on the picture's, which no file ever carried)
+  'ENV'];
 import { GUNWALL } from './gunwall';
 import { CLOSE } from './close';
 import { PLAN } from './floorplan';
@@ -281,7 +293,10 @@ import { LIGHTSWITCH } from './lightswitch';
 import { CARLAMPS } from './carlamps';
 import { HITSTUFF } from './particleFx';
 import { MARKCUT, MARKSIT } from '../render/decals';
+import { PLAN_PACE } from '../render/planPace';
+import { REACH_PACE } from '../render/reach';
 import { COATFINISH, SOLIDGLASS } from '../scene/stuff';
+import { WALLSKIN } from './wallskin';
 import { CLEANRESTART } from './cleanrestart';
 import { FIRELINE } from './fireline';
 import { SAVETIMELINE } from './savestate';
@@ -298,6 +313,7 @@ import { TEAMPACE } from './teampace';
 import { NOSHOVE } from './noshove';
 import { RAILS } from './rails';
 import { DOORFORCE } from './doorforce';
+import { BELIEF } from './belief';
 import { SLOTSETUP } from './slotsetup';
 import { AIMCOST } from './aimcost';
 import { HANDWORK } from './handwork';
@@ -370,8 +386,14 @@ export function knobRegistry(): Record<string, object> {
     // a mark on a cut or a round face lies where the round met it (render/decals.ts): where a mark is drawn, never whether one is laid
     MARKCUT,
     MARKSIT,
+    // the picture's planners at a pace (render/planPace.ts): when a plan of the picture's lands, never what a run does
+    PLAN_PACE,
+    // … and the reach masks' (render/reach.ts): which tick a lamp's mask is decided on, never what a run does (no sense, rule or digest reads a mask)
+    REACH_PACE,
     COATFINISH,
     SOLIDGLASS,
+    // the paint on a wall goes with the wall (wallskin.ts): the switch, what counts as a skin (how thick, how far off the face) and the caps on its standing pieces
+    WALLSKIN,
     CLEANRESTART,
     // off the line of his fire (fireline.ts): whether a teammate on an order waits short of the lane the player is firing down, how long, and the way round — where every ordered man walks reads them
     FIRELINE,
@@ -391,6 +413,8 @@ export function knobRegistry(): Record<string, object> {
     NOSHOVE,
     // a tutorial mission's frame (rails.ts): the switch, the sky seat's pan and how long a spared teammate is on his knee — what the tick's input and a teammate's fall read
     RAILS,
+    // what a man believes and what he covers (belief.ts): the switch
+    BELIEF,
     // an alerted man does not wait at a shut door (doorforce.ts): the switch, its two halves, how sure he must be and how long before the boot — when a defender's rounds go through a leaf and when it is kicked in reads them
     DOORFORCE,
     // the slot in hand pressed again opens its setup (slotsetup.ts): the switch, how long it stays up unused, and whether a pick shuts it — what a digit pressed with a gun in the hands does reads them
@@ -517,6 +541,8 @@ export function knobRegistry(): Record<string, object> {
     UNDERFOOT,
     // round things are round (scene/round.ts): whether a level's octagons are stood up as round boxes; read when a level is stood up
     ROUND,
+    // the game's own numbers of the picture (env.ts): the night's exposure and the tube's gain, which no player's Brightness moves
+    ENV,
     // a box says its shape (scene/shapes.ts): whether a level's boxes that say a shape are stood up as it, with their pieces; read when a level is stood up
     SHAPES,
     // the squad's feel (teamfeel.ts keeps rows of these per machine; FOG, FRAG and DOORMANNERS are above)

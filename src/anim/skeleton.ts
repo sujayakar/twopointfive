@@ -4,31 +4,36 @@ import { Clip, GltfCharacter } from './gltf';
 import { hyp3, hyp4 } from '../math/vec';
 import { RUST, sim, f32, f64, i32, u32, u8, type SimExports, FELL, fell } from '../sim/sim';
 import { EXACT } from '../math/exact';
-import { simPart, P_POSES, SimState } from '../sim/state';
+import { simPart, simPartLen, P_POSES, SimState } from '../sim/state';
 import { SideMap } from '../math/side';
 
 // ---- RUST.poses (src/sim/sim.ts): the functions of this file asked of the module (rust/sim/src/skeleton.rs: each of them statement for statement).
-// A question says where its pose is. A pose a character keeps lives, under the row, in its game's block of the module's memory (Pose.home) and is asked
-// about THERE; any other (a function's scratch, a pose whose block is parked) is written onto the module's BENCH, asked about, and read back. The layers
-// that ask are still TypeScript, so a question is a call, dearer than the question itself: the row is a PROOF that the two are one arithmetic in a whole
-// game, and off everywhere (docs/agents/rust.md). The layers that move to Rust call the same functions there with no crossing and find the poses where
-// they run. Only where the game's own maths stand (EXACT.on): the module's lengths and angles are those, and under an engine's maths this file's are that
-// engine's.
+// A question says where its pose is. A pose a character keeps lives in its game's block of the module's memory (Pose.home; whatever the row says:
+// game/posehome.ts) and is asked about THERE; any other (a function's scratch, a pose whose block is parked) is written onto the module's BENCH, asked
+// about, and read back. The row chooses who answers a QUESTION asked from this side, where a question is a call, dearer than the question itself. THE
+// ANIMATOR'S LAYERS ARE WRITTEN ONCE, IN RUST (rust/sim/src/layers.rs): they call the same functions there with no crossing, find the poses where they
+// run, and are no row's choice (docs/agents/rust.md). A question is the module's only where the game's own maths stand (EXACT.on): the module's lengths
+// and angles are those, and under an engine's maths this file's are that engine's.
 const BENCH_NODES = 128, BENCH_SLOT = BENCH_NODES * 10;
 /** where the bench's tables are in the module's memory, the rig that is on it, how many questions it has answered and how many of those of a pose where it
- *  lives, in its game's block, with no copy (a tool's counts) */
-export const POSE_BENCH = { x: null as SimExports | null, rot: 0, pos: 0, args: 0, pose: 0, mask: 0, parent: 0, order: 0, rig: null as GltfCharacter | null, asked: 0, inPlace: 0 };
-/** the module, if it answers a question about a pose of `n` nodes now */
-function benchFor(n: number): SimExports | null {
-  if (!RUST.poses || !EXACT.on || n > BENCH_NODES) { if (FELL.on && RUST.poses) fell('poses', !EXACT.on ? 'the engine\'s maths' : 'a pose of more nodes than the bench holds'); return null; }
+ *  lives, in its game's block, with no copy (a tool's counts). `owed` = how many of both counts were a layer's way in (layerSlot), which no row chooses:
+ *  with the row down the two counts are `owed` and no more */
+export const POSE_BENCH = { x: null as SimExports | null, rot: 0, pos: 0, args: 0, pose: 0, mask: 0, parent: 0, order: 0, rig: null as GltfCharacter | null, asked: 0, inPlace: 0, owed: 0 };
+/** the module, if it answers a question about a pose of `n` nodes now. `owed` = asked by a layer, which is written once, in Rust: the row and the maths
+ *  choose who answers a pose's QUESTIONS (sample, blend, run, turn, solve) and are not asked for a layer */
+function benchFor(n: number, owed = false): SimExports | null {
+  if ((!owed && (!RUST.poses || !EXACT.on)) || n > BENCH_NODES) { if (FELL.on && RUST.poses) fell('poses', owed || EXACT.on ? 'a pose of more nodes than the bench holds' : 'the engine\'s maths'); return null; }
   if (!POSE_BENCH.x) { const x = POSE_BENCH.x = sim(); POSE_BENCH.rot = x.pose_addr(0) / 8; POSE_BENCH.pos = x.pose_addr(1) / 8; POSE_BENCH.args = x.pose_addr(2) / 8; POSE_BENCH.pose = x.pose_addr(3) / 4; POSE_BENCH.mask = x.pose_addr(4) / 4; POSE_BENCH.parent = x.pose_addr(5) / 4; POSE_BENCH.order = x.pose_addr(6) / 4; }
   POSE_BENCH.asked++; return POSE_BENCH.x;
 }
-/** A LAYER OF THE ANIMATOR IN THE MODULE (rust/sim/src/layers.rs; the row RUST.walk; game/character.ts asks). `ran` = layers the module ran. `both`: every
- *  layer is run BOTH ways on the same pose and the two results compared single for single (`layerBoth`: what tools/qa/layer-ident.ts and a mission
- *  under RUST_BOTH read: `by[name]` = asked and differing, `first` = the first difference). `knobs` = what hands the module the knobs its layers read when
- *  an animator is updated outside a tick (game/rustknobs.ts knobsNow, set as that module loads; the animator calls it as its update opens) */
-export const LAYERS = { knobs: null as (() => void) | null, ran: 0, both: false, by: {} as Record<string, { asked: number; differ: number }>, first: '', roles: null as GltfCharacter | null, names: null as { roles: string[]; lists: string[]; nums: string[] } | null, lists: [] as Int32Array[] };
+/** A LAYER OF THE ANIMATOR (rust/sim/src/layers.rs; game/character.ts asks, and there is no other way a layer is posed). `ran` = layers the module ran.
+ *  `watch`: null in play; a tool's eye on every layer as the module leaves it (tools/qa/layer-ident.ts folds each call into its layer's word and holds
+ *  the words to a recording). `knobs` = what hands the module the knobs its layers read when an animator is updated outside a tick (game/rustknobs.ts
+ *  knobsNow, set as that module loads; the animator calls it as its update opens) */
+export const LAYERS = { knobs: null as (() => void) | null, ran: 0, watch: null as LayerWatch | null, roles: null as GltfCharacter | null, names: null as { roles: string[]; lists: string[]; nums: string[] } | null, lists: [] as Int32Array[] };
+/** what a watcher is shown of a layer the module has just run: its name, the pose it works on, the run-forward bones, the state it keeps between ticks
+ *  (`cols`), the scratch poses it leaves for the next layer to read (`also`) and the numbers it answered */
+export type LayerWatch = (name: string, pose: Pose, fk: PoseFK, cols?: ColsOf | null, also?: readonly Pose[], out?: readonly number[]) => void;
 /** what the animator says of its rig for the module's two lists of names (rust/sim/src/knobs.rs): which node plays each role, and its lists of nodes to run forward */
 export interface LayerCast { nodes: Readonly<Record<string, number>>; lists: Readonly<Record<string, Int32Array>>; nums: Readonly<Record<string, ArrayLike<number>>>; poses: PoseSet }
 /** A SIZE A LAYER OF THE MODULE IS HANDED AT MOST (a list of the rig's nodes, a table of its numbers, the keys of a blow or a swing, the blows of a beat):
@@ -38,18 +43,15 @@ export function layerFits(what: string, n: number, max: number, min = 0): void {
   if (!(n >= min && n <= max)) throw new Error(`posing: ${what} has ${n} entries and a layer of the Rust module takes ${min > 0 ? `${min} to ${max}` : `at most ${max}`} (rust/sim/src/layers.rs and knobs.rs hold the lengths)`);
 }
 const benchNames = (x: SimExports, table: number): string[] => { const at = x.knob_addr(table), n = x.knob_len(table), b = u8(); let s = ''; for (let i = 0; i < n; i++) s += String.fromCharCode(b[at + i]); return s.split('\n').filter(l => l.length > 0); };
-/** THE SLOT TO ASK A LAYER OF `pose` IN, or −1 = the TypeScript runs it: the row is on, the pose lives in a block that stands in the module now AND SO DOES
- *  EVERY OTHER POSE OF ITS ANIMATOR (`cast.poses`: a layer is handed its other poses by their places, so one the pool had no room for is a man the
- *  TypeScript poses), the module answers posing questions (benchFor: the game's own maths), and `ch`'s rig, its named nodes and its lists (`cast`) are on
- *  the bench — a list or a table longer than the module holds is a mistake, said by name (layerFits). A layer's own numbers then go on the bench's `args`
- *  (POSE_BENCH.args, doubles) in the order its Rust comment gives. */
+/** THE SLOT TO ASK A LAYER OF `pose` IN: the pose lives in a block that stands in the module now and so does every other pose of its animator
+ *  (`cast.poses`: a layer is handed its other poses by their places), and the module's bench holds `ch`'s rig (benchRig) with its named nodes, its
+ *  lists and its tables (`cast`). A layer is written once, in Rust, so each of these is owed by whoever asks and is a
+ *  mistake said by name where it is not so; a list or a table longer than the module holds is one too (layerFits). A layer's own numbers then go on the
+ *  bench's `args` (POSE_BENCH.args, doubles) in the order its Rust comment gives. */
 export function layerSlot(ch: GltfCharacter, pose: Pose, cast: LayerCast): number {
-  if (!RUST.walk) return -1;
-  // (what is counted is a question the module could have been asked: with the poses' row put down by its own word every layer is the TypeScript's by that
-  //  word, which is no way back in)
-  if (cast.poses.stray !== 0) { if (FELL.on && RUST.poses) fell('walk', 'a man with a pose the pool had no room for'); return -1; }
-  const g = slotOf(pose); if (g < 0) { if (FELL.on && RUST.poses) fell('walk', 'a pose that is not at home in a block (no game\'s tick has opened over it)'); return -1; }
-  const x = benchRig(ch); if (!x) { if (FELL.on && RUST.poses) fell('walk', 'the module does not answer posing questions now, or the rig is not on the bench'); return -1; }
+  if (cast.poses.stray !== 0) throw new Error(`posing: a man has ${cast.poses.stray} pose(s) the pose pool had no room for, and a layer is posed only where all of his stand in the module (game/posehome.ts holds the pool's size)`);
+  const g = slotOf(pose); if (g < 0) throw new Error('posing: a layer was asked of a pose that is not at home in a block of the module (an animator is updated inside its game\'s tick or on the stage: anim/skeleton.ts stageOpen)');
+  const x = benchRig(ch, true); if (!x) throw new Error('posing: a layer was asked of a rig the module\'s bench does not hold (anim/skeleton.ts benchRig: the rig\'s nodes or its order are more than the bench has room for)');
   if (LAYERS.roles !== ch) {   // (the roles and the lists go with the rig: rust/sim/src/knobs.rs names them, the animator says which nodes each is)
     const names = LAYERS.names ?? (LAYERS.names = { roles: benchNames(x, 3), lists: benchNames(x, 5), nums: benchNames(x, 8) });
     const w = u32(), at = x.knob_addr(2) / 4, la = x.knob_addr(4) / 4, ln = x.knob_addr(6) / 4, max = x.knob_len(4) / Math.max(1, x.knob_len(6)), nmax = x.knob_len(7) / Math.max(1, x.knob_len(9));
@@ -72,7 +74,7 @@ export function layerSlot(ch: GltfCharacter, pose: Pose, cast: LayerCast): numbe
       } }
     LAYERS.roles = ch;
   }
-  POSE_BENCH.inPlace++; return g;
+  POSE_BENCH.inPlace++; POSE_BENCH.owed++; return g;
 }
 /** what a layer's export answered (rust/sim/src/layers.rs): 0 = it could not run (a pose, a node, a clip or a table the module does not hold: `layerSlot`
  *  and the dispatcher's own tests keep every such case from being asked, so this is a mistake and it throws) · else it ran, with bit 1 = all of the
@@ -93,7 +95,7 @@ export function layerRan(code: number, fk: PoseFK): void {
 export interface LayerCols<T = unknown> { n: number; get(this: T, out: { [i: number]: number }, o: number): void; put(this: T, from: { readonly [i: number]: number }, o: number): void }
 /** A TABLE OF COLUMNS IS ITS CLASS'S, NOT A MAN'S: `get` and `put` are called ON the one whose columns they are (`this`), so no function that has caught a
  *  man stands in the game's state (game/rollback.ts: what a closure has caught is in no snapshot, and a man another game has no counterpart for would be
- *  handed the first game's). `colsOf` is a table with its man, made for one comparison and never kept. */
+ *  handed the first game's). `colsOf` is a table with its man, made for a watcher's one look and never kept. */
 export interface ColsOf { n: number; get(out: { [i: number]: number }, o: number): void; put(from: { readonly [i: number]: number }, o: number): void }
 export function colsOf<T>(c: LayerCols<T>, self: T): ColsOf { return { n: c.n, get: (out, o) => c.get.call(self, out, o), put: (from, o) => c.put.call(self, from, o) }; }
 /** a layer's own numbers are the first sixty-four doubles of the bench's `args`; its columns follow */
@@ -105,29 +107,11 @@ export const LAYER_KEYS_AT = 264, LAYER_KEY = 7, LAYER_KEYS_MAX = 48;
 /** hand the columns over (before the ask) / take them back (after it) */
 export function colsToBench<T>(c: LayerCols<T>, self: T, at = LAYER_COLS_AT): void { c.get.call(self, f64(), POSE_BENCH.args + at); }
 export function colsFromBench<T>(c: LayerCols<T>, self: T, at = LAYER_COLS_AT): void { c.put.call(self, f64(), POSE_BENCH.args + at); }
-/** two sets of columns as one, for the comparison (layerBoth): a layer's own, then the hand pass's */
+/** two sets of columns as one, for a watcher (LAYERS.watch): a layer's own, then the hand pass's */
 export function colsJoin<T>(a: LayerCols<T>, b: LayerCols<T>): LayerCols<T> { return { n: a.n + b.n, get(c, o) { a.get.call(this, c, o); b.get.call(this, c, o + a.n); }, put(c, o) { a.put.call(this, c, o); b.put.call(this, c, o + a.n); } }; }
-/** `ask` (the module's layer) and `own` (the TypeScript's) on the same `pose`, one after the other from the same start, compared single for single, and the
- *  run-forward bones each leaves (`fk`), the state each leaves (`cols`) and what each answers (the numbers it hands the next layer, if any) double for
- *  double; pose, bones and state are left as the TypeScript made them */
-export function layerBoth(name: string, pose: Pose, fk: PoseFK, ask: () => readonly number[] | void, own: () => readonly number[] | void, cols: ColsOf | null = null, also: readonly Pose[] = []): void {
-  const flat = (): number[] => { const o: number[] = []; for (const q of fk.rot) o.push(q[0], q[1], q[2], q[3]); for (const v of fk.pos) o.push(v[0], v[1], v[2]); return o; };
-  const put = (o: number[]): void => { let k = 0; for (const q of fk.rot) { q[0] = o[k++]; q[1] = o[k++]; q[2] = o[k++]; q[3] = o[k++]; } for (const v of fk.pos) { v[0] = o[k++]; v[1] = o[k++]; v[2] = o[k++]; } };
-  const st = (): number[] => { const o: number[] = new Array(cols ? cols.n : 0).fill(0); if (cols) cols.get(o, 0); return o; };
-  const alsoWas = also.map(p => p.cols.slice());   // (`also`: the scratch poses the layer leaves for the next one to read — each starts both runs the same and is compared like the pose)
-  const was = pose.cols.slice(), fkWas = flat(), stWas = st(); const outGot = ask() ?? []; const got = pose.cols.slice(), fkGot = flat(), stGot = st(), alsoGot = also.map(p => p.cols.slice()); pose.cols.set(was); also.forEach((p, i) => p.cols.set(alsoWas[i])); put(fkWas); if (cols) cols.put(stWas, 0); const outNow = own() ?? [];
-  const now = pose.cols, fkNow = flat(), stNow = st(), by = LAYERS.by[name] ?? (LAYERS.by[name] = { asked: 0, differ: 0 }); by.asked++;
-  let bad = '';
-  for (let i = 0; i < now.length && !bad; i++) if (!Object.is(now[i], got[i])) bad = `single ${i} (node ${i % pose.rows}, column ${Math.floor(i / pose.rows)}) the TypeScript ${now[i]}, the module ${got[i]}`;
-  for (let i = 0; i < fkNow.length && !bad; i++) if (!Object.is(fkNow[i], fkGot[i])) bad = `run-forward double ${i} the TypeScript ${fkNow[i]}, the module ${fkGot[i]}`;
-  for (let i = 0; i < stNow.length && !bad; i++) if (!Object.is(stNow[i], stGot[i])) bad = `column ${i} the TypeScript ${stNow[i]}, the module ${stGot[i]}`;
-  for (let i = 0; i < Math.max(outNow.length, outGot.length) && !bad; i++) if (!Object.is(outNow[i], outGot[i])) bad = `answer ${i} the TypeScript ${outNow[i]}, the module ${outGot[i]}`;
-  for (let p = 0; p < also.length && !bad; p++) { const a = also[p].cols, b = alsoGot[p]; for (let i = 0; i < a.length && !bad; i++) if (!Object.is(a[i], b[i])) bad = `scratch pose ${p}, single ${i} (node ${i % also[p].rows}, column ${Math.floor(i / also[p].rows)}) the TypeScript ${a[i]}, the module ${b[i]}`; }
-  if (bad) { by.differ++; if (!LAYERS.first) LAYERS.first = `${name}: ${bad}`; }
-}
 /** …and with `ch`'s rig on the bench (written when another was there; a rig the bench cannot hold is nobody's question) */
-function benchRig(ch: GltfCharacter): SimExports | null {
-  const n = ch.nodes.length, x = benchFor(n); if (!x) return null;
+function benchRig(ch: GltfCharacter, owed = false): SimExports | null {
+  const n = ch.nodes.length, x = benchFor(n, owed); if (!x) return null;
   if (POSE_BENCH.rig !== ch) {
     POSE_BENCH.rig = null; if (ch.order.length > n) { POSE_BENCH.asked--; if (FELL.on) fell('poses', 'a rig whose order is longer than its nodes'); return null; }
     const w = i32(); for (let i = 0; i < n; i++) w[POSE_BENCH.parent + i] = ch.nodes[i].parent; for (let i = 0; i < ch.order.length; i++) w[POSE_BENCH.order + i] = ch.order[i];
@@ -175,11 +159,20 @@ export class Pose {
  *  is at home is made there. A pose that is one function's scratch is a plain `new Pose` and never moves. */
 export class PoseSet {
   readonly list: Pose[] = [];
+  /** `most`: how many poses this set will ever make. A level's men are held to the pool by it as the level loads (game/levelfit.ts fitRows), so it is
+   *  kept: a set that makes one more is stopped here, by name, and never finds the pool full in the middle of a mission. */
+  constructor(readonly most: number) {}
   home: SimState | null = null;
   /** poses of this set that are NOT in the block though the set is at home: the pool had no room, or the block stood parked as the pose was made */
   stray = 0;
-  make(n: number): Pose { const p = new Pose(n); this.list.push(p); const h = this.home; if (h !== null && !(h.where >= 0 && poseIn(p, h))) this.stray++; return p; }
+  make(n: number): Pose {
+    if (this.list.length >= this.most) throw new Error(`posing: a set of ${this.most} poses at most is asked for one more (the owner says how many it keeps as it makes the set, and a level is held to the pose pool by that number: game/levelfit.ts fitRows)`);
+    const p = new Pose(n); this.list.push(p); const h = this.home; if (h !== null && !(h.where >= 0 && poseIn(p, h))) this.stray++; return p; }
 }
+/** singles a game's pool holds (rust/sim/src/poses.rs POOL: the part, less the sixteen bytes of its head) */
+export function posePoolRoom(): number { return (simPartLen(P_POSES) - 16) >> 2; }
+/** singles of the pool this set fills when it has made every pose it can (a set that has made none yet fills none: it has no rig to count by) */
+export function poseSetMost(s: PoseSet): number { return s.list.length ? s.most * s.list[0].rows * 10 : 0; }
 /** `p`'s floats into the block of `st` (false: its pool is full, and the pose stays its own array, which is the same game) */
 function poseIn(p: Pose, st: SimState): boolean {
   if (p.home !== null) return true;
@@ -191,7 +184,7 @@ function poseOut(p: Pose): void { if (p.home === null) return; const own = new F
 export function poseSetIn(s: PoseSet, st: SimState): boolean { s.home = st; let stray = 0; for (const p of s.list) if (!poseIn(p, st)) stray++; s.stray = stray; return stray === 0; }
 /** …and out again, each into an array of its own */
 export function poseSetOut(s: PoseSet): void { s.home = null; s.stray = 0; for (const p of s.list) poseOut(p); }
-/** THE STAGE — an animator's update runs over poses that STAND IN A BLOCK OF THE MODULE (RUST.walk: its layers are handed their poses by their places in
+/** THE STAGE — an animator's update runs over poses that STAND IN A BLOCK OF THE MODULE (its layers are handed their poses by their places in
  *  one pool). A character of a ticking game has his in the game's block (game/posehome.ts moves them as a tick opens). Every other update has none: a man
  *  posed as he is spawned, before any tick has opened over him; a figure of a menu, who is in no game; a game whose block another game's tick has parked.
  *  So an update OPENS by seeing to it: a set at home has its block bound (and a pose made while it stood parked is put in); a set with no home is lent the
@@ -200,15 +193,15 @@ export function poseSetOut(s: PoseSet): void { s.home = null; s.stray = 0; for (
  *  `stageOpen` answers whether the stage was lent (the caller then owes `stageShut`); an update inside an update (a character's, then his animator's)
  *  finds the set standing and lends nothing. The stage holds one animator, so its pool with no room is a mistake and loud; a GAME's pool with no room
  *  (some seventy to a hundred and thirty men, by how many poses each has made) is the case rust/sim/src/poses.rs and game/posehome.ts name: the pose stays
- *  the host's own array, the man's layers are the TypeScript's and counted, and it is tried again at every update. */
+ *  the host's own array and it is tried again at every update, but a layer is written once, in Rust, so a man with such a pose cannot be posed and
+ *  layerSlot says so by name. A level's men are held to the pool as it loads (game/levelfit.ts fitRows), so no mission meets it. */
 const STAGE = { st: null as SimState | null, lent: 0 };
 export function stageOpen(s: PoseSet): boolean {
-  if (!RUST.walk || !RUST.poses || !EXACT.on) return false;   // (what a layer in the module wants, layerSlot and benchFor: without it no update is the module's and nothing is lent)
-  const h = s.home;
+  const h = s.home;   // (whatever row or maths stand: a layer is written once, in Rust, so every update is one the module runs)
   if (h !== null) {
     if (h === STAGE.st) return false;
     if (h.where < 0) h.bind();
-    if (s.stray !== 0) poseSetIn(s, h);   // (a pose made while the block stood parked, or one the pool had no room for: tried again. One that still has no room stays an array of its own and this man's layers are the TypeScript's, the same game, counted by layerSlot under `walk`)
+    if (s.stray !== 0) poseSetIn(s, h);   // (a pose made while the block stood parked, or one the pool had no room for: tried again. One that still has no room is a mistake layerSlot says by name: a level's men are held to the pool as it loads, game/levelfit.ts)
     return false;
   }
   const st = STAGE.st ?? (STAGE.st = new SimState());
@@ -266,11 +259,22 @@ function clipIn(x: SimExports, clip: Clip): ClipSide {
 /** THE NUMBER A LAYER OF THE MODULE SAMPLES `clip` BY (rust/sim/src/layers.rs sample_on_rest: a layer that samples for itself is handed it with its own
  *  numbers), the clip written into the module now if it never was. A clip the module does not hold (its store has no room, or a track is of a shape it
  *  cannot take), or one that writes a node its pose does not have, is a mistake in the character file or the store's size, said by name: no second way
- *  samples it for a layer. −1 only with the bench down (asked after `layerSlot`, it is up). */
+ *  samples it for a layer. A CHARACTER FILE'S CLIPS ARE HELD TO THIS AS AN ANIMATOR IS MADE (layerClipsFit), so for the game's own data the mistake is
+ *  found as it loads and an update only looks a number up. −1 only with the bench down (asked after `layerSlot`, it is up). */
 export function clipNo(clip: Clip, nodes: number): number {
   const x = POSE_BENCH.x; if (!x) return -1; const c = clipIn(x, clip); if (c.at >= 0 && c.need <= nodes) return c.at;
   throw new Error(c.at < 0 ? `posing: a layer samples the clip "${clip.name}" and the Rust module does not hold it (rust/sim/src/clips.rs: no room in the store, or a track it cannot take)`
     : `posing: a layer samples the clip "${clip.name}", which writes node ${c.need - 1}, over a pose of ${nodes} nodes`);
+}
+/** A CHARACTER FILE'S CLIPS AGAINST WHAT THE MODULE HOLDS, read as an animator is made (game/character.ts, beside layerTablesFit: the sizes the game's
+ *  own data can have are checked once, as it loads, by name). Each clip is written into the module here, so a layer's ask never writes one in while its
+ *  own numbers lie on the bench, and a clip the store has no room for, a track it cannot take, or a clip that writes a node past a pose of `nodes` is
+ *  refused before the first tick. Whatever row or maths stand (the bench is owed, as layerSlot's is), and a rig of more nodes than the bench holds is
+ *  refused here too: nothing else would pose it. */
+export function layerClipsFit(clips: Iterable<Clip>, nodes: number): void {
+  if (nodes > BENCH_NODES) throw new Error(`posing: a rig of ${nodes} nodes is more than the Rust module's bench holds (${BENCH_NODES}: anim/skeleton.ts BENCH_NODES with rust/sim/src/skeleton.rs), and a layer is posed nowhere else`);
+  if (!POSE_BENCH.x && benchFor(nodes, true)) POSE_BENCH.asked--;   // (the bench stood up for this, and it is not a question)
+  for (const c of clips) clipNo(c, nodes);
 }
 /** where the module keeps `clip` (−1 = it does not), for the check that reads the copy back; a clip never sampled with the row up is not asked for here */
 export function clipHeld(clip: Clip): number { return Math.max(-1, CLIP_SIDE.get(clip)?.at ?? -1); }

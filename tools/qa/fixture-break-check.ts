@@ -80,12 +80,12 @@ ok(lookBoxes(A.game).length === st.boxes, 'the box count holds');
 DESTRUCTION.on = false; A.step(2); ok(lookBoxes(A.game).length === 0 && fixtureLookState(A.game).recs === 0, 'the destruction switch down: nothing drawn, nothing kept'); DESTRUCTION.on = true;
 A.step(2); ok(fixtureLookState(A.game).hanging === 1 && lookBoxes(A.game).every((b: any) => b.c[1] < 1.4) && FIXLOOK_STATS.beats === 1, 'switch back up: the broken panel is found broken and drawn fallen, with no second beat');
 A.game.restartEncounter(); A.step(3); ok(!A.t.broken && lookBoxes(A.game).length === 0 && fixtureLookState(A.game).recs === 0, 'restartEncounter: the light is whole and the look is gone');
-A.t.broken = true; A.game.time += 5; A.step(2); ok(fixtureLookState(A.game).hanging === 1 && fixtureLookState(A.game).moving === 0 && lookBoxes(A.game).every((b: any) => b.c[1] < 1.4) && FIXLOOK_STATS.beats === 1, 'a panel found broken after the clock jumped (a load): fallen, at rest, no beat');
+A.game.lightHome.stage(A.t, null, true); A.game.time += 5; A.step(2); ok(fixtureLookState(A.game).hanging === 1 && fixtureLookState(A.game).moving === 0 && lookBoxes(A.game).every((b: any) => b.c[1] < 1.4) && FIXLOOK_STATS.beats === 1, 'a panel found broken after the clock jumped (a load): fallen, at rest, no beat');
 // ---------------------------------------------------------------- every panel of every level, found broken: where it lies
 { const { readdirSync } = await import('node:fs'); let panels = 0, through = 0, high = 0, levels = 0, across = 0; const bad: string[] = []; const cap = FIXLOOK.maxPanels; FIXLOOK.maxPanels = 9999;
   for (const f of readdirSync(`${ROOT}/levels`).filter(x => x.endsWith('.json')).sort()) {
     let W: any; try { Math.random = seeded(5); W = await standUp({ level: loadLevel(parseLevelData(readFileSync(`${ROOT}/levels/${f}`, 'utf8'))) }); } catch { continue; }
-    const g = W.game; g.godMode = true; g.aiEnabled = false; W.step(DT); for (const t of g.targets) if (t.interactive && t.kind === 'emissive') t.broken = true; g.time += 5; W.step(DT); W.step(DT);
+    const g = W.game; g.godMode = true; g.aiEnabled = false; W.step(DT); for (const t of g.targets) if (t.interactive && t.kind === 'emissive') g.lightHome.stage(t, null, true); g.time += 5; W.step(DT); W.step(DT);
     const st = fixtureLookState(g); if (!st.trays.length) continue; levels++;
     for (const t of st.trays) { panels++; if (t.y > t.from[1] - 0.25) { high++; bad.push(`${f} (${t.from[0].toFixed(1)}, ${t.from[2].toFixed(1)}) y ${t.y.toFixed(2)}`); }
       const cut = (y: number) => t.corners.some((c: any) => g.col.solidBlocked([t.from[0], y, t.from[2]], [c[0], y, c[2]]));   // (a wall = what stands to the ceiling; a partition under the panel itself it simply lies across)

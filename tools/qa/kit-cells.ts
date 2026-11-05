@@ -7,7 +7,7 @@
 //                   shells suit trim) and its value one the row offers — set through kitSet, the card's own click, so nothing a card cannot do can be asked.
 //                   "all" = every teammate (1‥4): --kit '{"all":{"bangs":3}}'. No --kit = every card as issued = ships.ts, run for run.
 //     --name cell   the cell's name (goes in the JSON and the total line)
-//     --hard · --weather rain|downpour|fog|dust · --callout · --regroup · --base (the harness's own stand) · --set '{…}'      exactly ships.ts's
+//     --hard · --weather rain|downpour|fog|dust · --callout · --regroup · --base (the old frozen stand, by name) · --set '{…}'      exactly ships.ts's
 //     --scn --seeds --jobs --cap --json --md                                                                              exactly playthrough.ts's
 //     --trace scn:seed   one run with its timeline (the kit applied)
 //     env passes through (PT_HOUR, PT_SEARCH, PT_SQUAD, PT_WEDGED=charge … — playthrough.ts's head lists them)
@@ -152,8 +152,8 @@ if (!base) merge('FRAG', { defenders: true });
 if (has('--hard')) merge('DIFFICULTY', { level: 'hard' });
 if (val('--weather')) merge('WEATHER', { kind: val('--weather') });
 if (has('--callout')) last.push('callout'); if (has('--regroup')) last.push('regroup');
-const env: Record<string, string | undefined> = { ...process.env, ...(base ? {} : { GLASSFX: 'on', TPS_MOVES: '1', TPS_TURN: '1', TPS_CAST: '1' }), ...(last.length ? { LASTSTAND: last.join(',') } : {}) };
-const stand = `${base ? 'the harness\'s own stand (--base)' : 'as shipped (ships.ts: glass parts, moves, turn, cast, defenders\' frags)'}${has('--hard') ? ' · Hard' : ' · Standard'}${val('--weather') ? ` · ${val('--weather')}` : ''}${process.env.PT_HOUR ? ` · ${process.env.PT_HOUR}` : ' · night'}${last.length ? ` · ${last.join(' + ')}` : ''}`;
+const env: Record<string, string | undefined> = { ...process.env, ...(base ? { TPS_PROFILE: 'frozen' } : { GLASSFX: 'on', TPS_MOVES: '1', TPS_TURN: '1', TPS_CAST: '1' }), ...(last.length ? { LASTSTAND: last.join(',') } : {}) };
+const stand = `${base ? 'the old frozen stand (--base)' : 'as shipped (ships.ts: glass parts, moves, turn, cast, defenders\' frags)'}${has('--hard') ? ' · Hard' : ' · Standard'}${val('--weather') ? ` · ${val('--weather')}` : ''}${process.env.PT_HOUR ? ` · ${process.env.PT_HOUR}` : ' · night'}${last.length ? ` · ${last.join(' + ')}` : ''}`;
 const one = (job: string, extra: string[], io: 'inherit' | 'ignore') => Bun.spawn(['bun', 'run', import.meta.path, '--one', job, '--cap', String(cap), '--set', JSON.stringify(set), '--kit', JSON.stringify(spec), ...extra], { stdout: io, stderr: io === 'inherit' ? 'inherit' : 'pipe', env });
 
 if (val('--trace')) { if (!entryOf(val('--trace')!.split(':')[0])) bad(`no scenario '${val('--trace')!.split(':')[0]}'`); const [scn, seed] = val('--trace')!.split(':'); process.exit(await one(`${scn}:${seed ?? 1}`, ['--verbose'], 'inherit').exited); }

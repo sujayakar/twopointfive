@@ -2,7 +2,7 @@
 //! its own frame or about the model's axes, and the two-bone solve the animator's layers are built from. Each is the TypeScript's, statement for statement:
 //! the same operands in the same order, so the same doubles, and every pose value stored as the single the TypeScript's Float32Array stores (single.rs).
 //!
-//! What a function works on is handed to it as slices. The animator's layers are still TypeScript; under the row `poses` (src/sim/sim.ts) a character's
+//! What a function works on is handed to it as slices. The animator's layers are layers.rs and ask here; under the row `poses` (src/sim/sim.ts) a character's
 //! poses live in its game's block (poses.rs) and a question is asked of them THERE, with no copy; a pose that is an array of the host's (a function's
 //! scratch) is written onto the BENCH below, asked about, and read back. A call a question still costs more than it saves, so the row is a proof and
 //! not a speed-up: the layers that move here next call these with no crossing at all.

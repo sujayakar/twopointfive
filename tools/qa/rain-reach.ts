@@ -12,7 +12,7 @@ const l0 = console.log; console.log = () => {}; console.warn = () => {}; console
 const { loadLevel } = await import(`${ROOT}/src/scene/levelLoad.ts`); const { parseLevelData } = await import(`${ROOT}/src/scene/levelData.ts`);
 const { readFileSync } = await import('node:fs');
 const FILE = process.argv.find(a => a.endsWith('.json')) ?? 'glasshouse.json';
-const W: any = await standUp({ level: loadLevel(parseLevelData(readFileSync(`${ROOT}/levels/${FILE}`, 'utf8'))) });
+const W: any = await standUp({ level: loadLevel(parseLevelData(readFileSync(`${ROOT}/levels/${FILE}`, 'utf8'))), reach: true });
 console.log = l0;
 const g = W.game ?? W.g; const eng = g.engine;
 const lights = (eng.lights?.lights ?? eng.lights?.list ?? []) as any[];
@@ -20,11 +20,11 @@ console.log('lights', lights.length, 'ceilingY', WORLD.ceilingY);
 const GW = WORLD.gridW, GH = WORLD.gridH;
 const up = (x: number, z: number) => g.col.solidBlocked([x, 0.3, z], [x, 9, z]);
 for (const [i, l] of lights.entries()) {
-  if (!l.reach) { console.log(i, 'kind', l.kind, 'pos', l.pos?.map((v: number) => +v.toFixed(2)), 'NO MASK', l.transient ? 'transient' : ''); continue; }
+  const lm = eng.reach.of(l); if (!lm) { console.log(i, 'kind', l.kind, 'pos', l.pos?.map((v: number) => +v.toFixed(2)), 'NO MASK', l.transient ? 'transient' : ''); continue; }
   let out = 0, tot = 0, outBlocked = 0;
   const rows: string[] = [];
   for (let z = 0; z < GH; z++) { let s = '';
-    for (let x = 0; x < GW; x++) { const lv = reachLevel(l.reach, z * GW + x); const sky = !up(x + 0.5, z + 0.5);
+    for (let x = 0; x < GW; x++) { const lv = reachLevel(lm, z * GW + x); const sky = !up(x + 0.5, z + 0.5);
       if (lv) { tot++; if (sky) { out++; if (g.col.segmentBlocked(l.pos, [x + 0.5, 1.5, z + 0.5]) && g.col.segmentBlocked(l.pos, [x + 0.5, 3.5, z + 0.5]) && g.col.segmentBlocked(l.pos, [x + 0.5, 0.2, z + 0.5])) outBlocked++; } }
       s += lv ? (sky ? String(lv) : '+') : (sky ? '.' : ' '); }
     rows.push(s); }

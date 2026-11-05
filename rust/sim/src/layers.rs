@@ -1,10 +1,10 @@
-//! THE ANIMATOR'S LAYERS (src/game/character.ts CharacterAnimator) — the steps of a character's update that pose him, moved here one at a time behind the
-//! row RUST.walk. A layer is the TypeScript method of the same name, statement for statement and operand for operand: it reads and writes the pose WHERE IT
+//! THE ANIMATOR'S LAYERS (src/game/character.ts CharacterAnimator) — the steps of a character's update that pose him. A layer is written once, here.
+//! (Sixty-two came over from TypeScript methods of the same name, statement for statement; that TypeScript is gone.) It reads and writes the pose WHERE IT
 //! LIVES (the game's pool, poses.rs; the questions of skeleton.rs are plain calls here, with no crossing), reads its knobs and the rig's named nodes from
 //! knobs.rs, and is handed the numbers of the animator it needs on the bench's `args`, in the order its comment gives. What a layer keeps from one tick to
 //! the next goes into the game's block with the layer that owns it; a layer that owns nothing (the trunk) only needs the pose.
 //!
-//! A layer answers 0 = not a pose of this pool, or a role with no node (nothing written: the host then runs its own) · else RAN, with a bit for each list of
+//! A layer answers 0 = not a pose of this pool, or a role with no node (nothing written: the host throws, by name) · else RAN, with a bit for each list of
 //! nodes it ran forward on the bench (`ran_list`): those nodes' rotations and origins are the host's to read back, since the TypeScript that follows may
 //! read the run-forward bones a layer left (PoseFK is kept from one layer to the next).
 //!
@@ -5282,7 +5282,7 @@ fn apply_adj(f: &Frame, adj: &Adj) -> Frame {
     }
     Frame { o, x, y, z }
 }
-/// rigProps.ts unAdj: applyAdj backwards — the parent frame whose child by `adj` is g
+/// rigProps.ts applyAdj backwards — the parent frame whose child by `adj` is g
 fn un_adj(g: &Frame, adj: &Adj) -> Frame {
     if !adj.0 {
         return *g;
@@ -6062,7 +6062,7 @@ fn opt(flag: f64, v: f64) -> Option<f64> {
         None
     }
 }
-// (character.ts: the pistol whip's beats, s, and the rates the kill's eased clock follows and falls back at)
+// (the pistol whip's beats, s, and the rates the kill's eased clock follows and falls back at. character.ts keeps WHIP_THRU too, for the whip's own clock: tools/qa/layer-ident.ts `caps` holds the two to each other)
 const WHIP_WIND: f64 = 0.36;
 const WHIP_STRIKE: f64 = 0.42;
 const WHIP_THRU: f64 = 0.14;
@@ -7004,9 +7004,9 @@ fn big_back_of(hips: [f64; 3], mid: [f64; 3], th_l: [f64; 3], th_r: [f64; 3], ua
     let (off, bore) = (kv(&[BR_HAMMER_BACK_OFF_0, BR_HAMMER_BACK_OFF_1, BR_HAMMER_BACK_OFF_2]), kv(&[BR_HAMMER_BACK_BORE_0, BR_HAMMER_BACK_BORE_1, BR_HAMMER_BACK_BORE_2]));
     (add3(mid, in_c([off[0], off[1], off[2] - clear])), normalize(in_c(bore)))
 }
-/// how many keys of a knife blow a call may hand over (character.ts KNIFE_KEYS_MAX: a longer blow is posed by the TypeScript)
+/// how many keys of a knife blow a call may hand over (character.ts KNIFE_KEYS_MAX: a longer blow is refused by name as the game loads)
 const KNIFE_KEYS: usize = 4;
-/// how many blows of a beat a call may hand over (character.ts BIG_BLOWS_MAX: a longer record is posed by the TypeScript)
+/// how many blows of a beat a call may hand over (the room on the bench: the layer is handed the two blows it reads, character.ts blowsNear)
 const BIG_BLOWS_MAX: usize = 64;
 const _: () = assert!(KEYS_AT + BIG_BLOWS_MAX <= crate::skeleton::ARGS);
 /// CharacterAnimator.bigLayer — the big slot's tool in his hands (the hammer or the breaching shotgun): the trunk and the feet for the blow or the shot
@@ -7322,7 +7322,7 @@ fn swivel_pole(h: [f64; 3], rf: [f64; 3], psi: f64) -> [f64; 3] {
     let b2 = cross3(&hn, &b1);
     mad3(scale3(b1, cos(psi)), b2, sin(psi))
 }
-/// how many keys a table of the throw may have (character.ts THROW_KEYS_MAX: a longer one is posed by the TypeScript)
+/// how many keys a table of the throw may have (character.ts THROW_KEYS_MAX: a longer one is refused by name as the game loads)
 const THROW_KEYS: usize = 16;
 /// (seventeen counts, eleven tables of two numbers a key and six of four: the whole of it fits the bench's own numbers)
 const _: () = assert!(KEYS_AT + 17 + 11 * THROW_KEYS * 2 + 6 * THROW_KEYS * 4 <= crate::skeleton::ARGS);
