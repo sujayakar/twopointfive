@@ -158,7 +158,6 @@ import { FRIENDS } from './friends';
 import { FRIENDLYFIRE } from './friendlyfire';
 import { LIGHTSWITCH } from './lightswitch';
 import { CARLAMPS } from './carlamps';
-import { HITSTUFF } from './particleFx';
 import { CLEANRESTART } from './cleanrestart';
 import { FIRELINE } from './fireline';
 import { SAVETIMELINE } from './savestate';
@@ -474,7 +473,6 @@ export function applyKnobs(g: Game, k: KnobsSnap): void {
   if (!k.tables.QUICKTHROW) QUICKTHROW.on = true;   // (a file from before the G quick throw left the page: its G presses threw)
   if (!k.tables.LIGHTSWITCH) LIGHTSWITCH.on = false;   // (a file from before a room's lights had a switch on the wall: no plates, no row, nobody at one)
   if (!k.tables.CARLAMPS) CARLAMPS.on = false;   // (a file from before a vehicle's lamps were light targets: its floor has none)
-  if (!k.tables.HITSTUFF) HITSTUFF.on = false;   // (a file from before a round read what a thing says it is made of: every hit in it was read by the paint's colour)
   if (!k.tables.CLEANRESTART) CLEANRESTART.on = false;   // (a file from before a restart gave a clean level: its restarts mended the mains by the breaker's own road and kept the last try's lines and clocks)
   if (!k.tables.THROWBACK) THROWBACK.on = false;   // (a file from before a can in the wind-up went back on the belt: its cans froze through a kick or a pick and left his hand after)
   if ((k.tables.THROWBACK as Partial<typeof THROWBACK> | undefined)?.reach === undefined) THROWBACK.reach = false;   // (…and a file from before the throw preview showed what the thing would reach: its arcs had the small ring alone)

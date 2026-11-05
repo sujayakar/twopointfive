@@ -42,7 +42,7 @@ import type { Game, LightTarget } from './game';
 import type { WeaponDef } from './weapons';
 import type { Prop } from './props';
 import type { Character } from './character';
-import { gpuFx, emitDust, paletteName, surfOf, hitLook, saidSurf, HITSTUFF, SOLID_GLASS_CRACK, fixtureShatterFx, lensShatterFx, type Surf } from './particleFx';
+import { gpuFx, emitDust, paletteName, surfOf, fixtureShatterFx, lensShatterFx, type Surf } from './particleFx';
 import { lampGlass } from './carlamps';
 import { fireHolds, fireStir, fireStruck } from './fire';   // a blast does not put a fire out (FIRE.hardy)
 import { Debris, hash01, type ChunkKind } from './debris';
@@ -183,9 +183,6 @@ const indoors = (p: Vec3) => p[0] > 4.3 && p[0] < 35.7 && p[2] > 4.3 && p[2] < 2
 const topOf = (b: Box): Vec3 => [b.c[0], b.c[1] + b.h[1] + 0.05, b.c[2]];
 
 /** QA / panel counters (module totals; the probes diff them) */
-/** the marks the chaos lane draws where it lays one (decals.wgsl damageMark's looks): the radius and the strength for a pistol's round and a rifle's */
-interface LaneMark { look: number; r: readonly [number, number]; s: readonly [number, number] }
-const LANE_MARK: Record<'dent' | 'shred' | 'crack', LaneMark> = { dent: { look: 0, r: [0.036, 0.045], s: [0.7, 0.9] }, shred: { look: 1, r: [0.06, 0.075], s: [0.85, 0.85] }, crack: { look: 2, r: [0.085, 0.11], s: [0.9, 0.9] } };
 export const DESTR_STATS = { rounds: 0, bangs: 0, decals: 0, papers: 0, sheets: 0, puffs: 0, puffsRefused: 0, bursts: 0, knocks: 0, knocksDemoted: 0, screens: 0, tiles: 0, tilesRefused: 0, chairSpins: 0, impBang: 0, impImpact: 0, impThud: 0, impThudDropped: 0, debrisKicked: 0, fixtures: 0, fixturesRefused: 0 };
 export const DESTR_LOG: string[] = [];
 function dlog(g: Game, s: string) { DESTR_LOG.push(`${g.time.toFixed(2)} ${s}`); if (DESTR_LOG.length > 200) DESTR_LOG.splice(0, 100); }
@@ -409,7 +406,7 @@ export class Destruction {
     // (3) paper near the hit (or whose air the round crossed) flies
     if (E >= CHAOS.tPaper) this.papersNear(hitP, dir, E, chaos, k, v3.dist(shooter.muzzle, hitP));
     // (4) bigger material bursts + (5) dust into the smoke solver
-    if (E >= CHAOS.tBurst) this.burst(hitP, dir, n, surf, albedo, E, k, shooter.id, hit);
+    if (E >= CHAOS.tBurst) this.burst(hitP, dir, n, surf, albedo, E, k, shooter.id);
     if (E >= CHAOS.tPuff && (surf === 'drywall' || surf === 'concrete' || surf === 'wood' || surf === 'cardboard' || surf === 'fabric')) this.dustPuff(v3.mad(hitP, n, 0.05), n, Math.min(2, 0.7 + 0.2 * E), surf);
     // (6) knock-offs: the housing on a direct hit, clutter near the hit; a chair a round finds is spun
     const who = shooter.id;   // whose doing every knock this round causes is (debris.ts Chunk.who: heard and chronicled as Sam's only if it was)
@@ -588,22 +585,16 @@ export class Destruction {
   // ---------------------------------------------------------------- pieces
   private damageDecal(p: Vec3, n: Vec3, surf: Surf, box: Box, dynamic: boolean, rifle: boolean, item?: Destructible) {
     const g = this.g;
-    let m: LaneMark | undefined = item && (item.kind === 'screen' || item.kind === 'tv') ? LANE_MARK.crack : surf === 'metal' ? LANE_MARK.dent : surf === 'fabric' ? LANE_MARK.shred : undefined;
-    if (!m) return;
-    if (box.flags & (BoxFlag.NoPrimary | BoxFlag.NoShadow) && m !== LANE_MARK.crack) return;
+    let look = -1, r = 0.04, s = 0.75;
+    if (item && (item.kind === 'screen' || item.kind === 'tv')) { look = 2; r = rifle ? 0.11 : 0.085; s = 0.9; }
+    else if (surf === 'metal') { look = 0; r = rifle ? 0.045 : 0.036; s = rifle ? 0.9 : 0.7; }
+    else if (surf === 'fabric') { look = 1; r = rifle ? 0.075 : 0.06; s = 0.85; }
+    if (look < 0) return;
+    if (box.flags & (BoxFlag.NoPrimary | BoxFlag.NoShadow) && look !== 2) return;
     const rj = this.hash(); if (!this.take('decal')) return;   // (the counter and the bucket move the same whether decals are drawn or not: a fight with decals off is the same fight — the identity probes)
     DESTR_STATS.decals++;
     if (!g.decals.enabled) return;
-    // (THE MARK THAT IS DRAWN goes by the picture's reading of the box — particleFx.ts HITSTUFF: a box that says what it is made of is drawn that stuff's
-    //  mark, at that mark's size, not the dent its dark paint was taken for: metal the dent, cloth the shred, solid glass the crack, anything else a chip. ONE mark
-    //  is laid either way — the run's digest counts them — and the dice and the bucket above have moved as they always did)
-    const said = m !== LANE_MARK.crack ? saidSurf(box) : undefined;
-    if (said === 'metal') m = LANE_MARK.dent;
-    else if (said === 'fabric' || said === 'carpet') m = LANE_MARK.shred;
-    else if (said === 'glass') m = { look: SOLID_GLASS_CRACK.look, r: [SOLID_GLASS_CRACK.pistol, SOLID_GLASS_CRACK.rifle], s: [SOLID_GLASS_CRACK.strength, SOLID_GLASS_CRACK.strength] };
-    else if (said !== undefined) { g.decals.add('chip', p, n, 0.013, { clampTo: box, attach: dynamic ? box : undefined }); return; }   // (a chip out of the finish — marks.ts chipMark's record; never a second 'bullet': a wall's wear takes the newest hole for the round's own, wallwear.ts)
-    const i = rifle ? 1 : 0;
-    g.decals.add('damage', p, n, m.r[i] * (0.85 + 0.3 * rj), { param: m.look + Math.min(0.999, m.s[i]), clampTo: box, attach: dynamic ? box : undefined });
+    g.decals.add('damage', p, n, r * (0.85 + 0.3 * rj), { param: look + Math.min(0.999, s), clampTo: box, attach: dynamic ? box : undefined });
   }
 
   /** a lit screen's light target out (the OCP / round rule's own bit: updateTargets takes its emissive and its markings' gain to 0 the same frame), remembered for reset() */
@@ -661,14 +652,8 @@ export class Destruction {
    *  a bigger spark shower off metal, grit off concrete — scaled by E, × the rifle factor */
   /** the escalated burst by hand at a point on an up-facing surface (Tab ▸ Effects ▸ Dust puffs 'drywall burst': what sustained fire into that material throws, at tier +1.5) — effects only, no heat, no marks */
   testBurst(at: Vec3, surf: Surf = 'drywall', albedo: Vec3 = [0.82, 0.8, 0.76]) { this.burst(at, [0, -1, 0], [0, 1, 0], surf, albedo, CHAOS.tBurst + 1.5, 1, 0); }
-  private burst(hitP: Vec3, dir: Vec3, n: Vec3, surf: Surf, albedo: Vec3, E: number, k: number, owner: number, hit?: { index?: number; prop?: Prop; box?: Box }) {
+  private burst(hitP: Vec3, dir: Vec3, n: Vec3, surf: Surf, albedo: Vec3, E: number, k: number, owner: number) {
     const P = gpuFx(this.g); DESTR_STATS.bursts++; if (!P) return;
-    // (particles only from here on, so the PICTURE's reading of what was hit: a box that says what it is made of is that — particleFx.ts HITSTUFF. Solid glass
-    //  that only cracks throws no burst; the lane's own surf, which every number above went by, is not touched.
-    //  A SOFT THING THAT SAYS SO — a sandbag, a rug, a tarpaulin: 'carpet' to a round — bursts as cloth does, fluff of its own colour: by their paint those
-    //  were concrete or a seat's cloth and burst as that, and the soft surface has no burst of its own. What says plastic or rubber has none, as a thing
-    //  painted so never had.)
-    if (HITSTUFF.on && hit) { const see = hitLook(this.g, hit); if (see.solid) return; if (see.said) { surf = see.surf === 'carpet' ? 'fabric' : see.surf; albedo = see.albedo; } }
     const s = Math.min(3, 0.5 + 0.5 * (E - CHAOS.tBurst)) * k;
     const at = v3.mad(hitP, n, 0.015); const dn = v3.dot(dir, n); const refl = v3.normalize(v3.sub(dir, v3.scale(n, 2 * dn)));
     const out = v3.normalize(v3.add(n, v3.scale(refl, 0.35)));
