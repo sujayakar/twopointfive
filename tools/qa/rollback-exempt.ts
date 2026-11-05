@@ -29,6 +29,8 @@ export const ROLLBACK_EXEMPT: Record<string, string> = {
   'src/game/ragdoll.ts HIP_CONE_COS': 'CONFIG · a constant made in onExact (cos 75°), as DAMP',
   'src/game/ragdoll.ts NECK_CONE_COS': 'CONFIG · a constant made in onExact (cos 55°), as DAMP',
   'src/scene/round.ts TAN8': 'CONFIG · a constant made in onExact (tan 22.5°), as ragdoll.ts DAMP',
+  'src/scene/lorryTry.ts CS': 'CONFIG · a constant made in onExact (the cosine of the pass lorry\'s yaw), as ragdoll.ts DAMP',
+  'src/scene/lorryTry.ts SN': 'CONFIG · a constant made in onExact (the sine of the pass lorry\'s yaw), as ragdoll.ts DAMP',
   'src/scene/markings.ts numeral': 'CONFIG · the figures a sign painter draws, made in onExact (their arcs take a cos and a sin), as ragdoll.ts DAMP; read through NUMERAL, never written after',
   'src/math/exact.ts F': 'SCRATCH · one number set and its two words read inside one call',
   'src/math/exact.ts U': 'SCRATCH · the two words of F, read inside the call that set it',
