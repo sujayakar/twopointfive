@@ -12,7 +12,7 @@
 //   roused     a man taken to alert by a shot he heard, who then sees Sam: no start
 //   blind      a man blinded by a stun charge when his eyes find Sam: no start
 //   side       one of the player's own men who sees an enemy: no start
-//   given      startleMan, the start alone, with the rule OFF: the jolt and the beat, nothing chosen after it, and not a second one inside the first
+//   given      giveStartle, the start alone, with the rule OFF: the jolt and the beat, nothing chosen after it, and not a second one inside the first
 //   runs       a squad map (the compound's room clear), every defender green: the one caught alone with Sam close starts, then RUNS — off his spot, no round
 //              from him meanwhile; the same man trained: he starts, and draws where he stands; the same green man with a mate beside him: he draws
 //   checkpoint a man saved inside his beat and loaded into a fresh game is still held to the same clock, and draws after it
@@ -25,7 +25,7 @@ const BREAK = process.env.STARTLE_BREAK === '1';
 
 export async function startleCheck(): Promise<boolean> {
   const { standUp, ROOT } = await import('./headless.ts');
-  const { STARTLE, STARTLE_STATS, startled, startleMan, startleHolds, startleSight, startleRunning } = await import(`${ROOT}/src/game/startle.ts`);
+  const { STARTLE, STARTLE_STATS, startled, giveStartle, startleGunDown, startleSight, startleRunning } = await import(`${ROOT}/src/game/startle.ts`);
   const { handCarry } = await import(`${ROOT}/src/game/guards.ts`);
   const { MOVES } = await import(`${ROOT}/src/game/character.ts`);
   const { MORALE } = await import(`${ROOT}/src/game/morale.ts`);
@@ -62,7 +62,7 @@ export async function startleCheck(): Promise<boolean> {
       const t = g.time - t0, st = startled(g, A);
       if (isNaN(r.alertAt) && A.state === 'alert') r.alertAt = t;
       if (isNaN(r.alertAt) && c.anim.upper === 'aim') r.raisedEarly = true;
-      if (st) { if (isNaN(r.startAt)) r.startAt = t; r.held += DT; if (handCarry(A) !== 'torch' || c.anim.upper !== 'none' || !startleHolds(g, A)) r.torchHeld = false; r.movedInBeat = Math.max(r.movedInBeat, flat(c.pos, p0)); r.shown = Math.max(r.shown, c.anim.startleShown); }
+      if (st) { if (isNaN(r.startAt)) r.startAt = t; r.held += DT; if (handCarry(A) !== 'torch' || c.anim.upper !== 'none' || !startleGunDown(g, A)) r.torchHeld = false; r.movedInBeat = Math.max(r.movedInBeat, flat(c.pos, p0)); r.shown = Math.max(r.shown, c.anim.startleShown); }
       const call = A.bubble?.text === 'CONTACT!'; if (call && st) r.saidIn = true; if (call && isNaN(r.saidAt)) r.saidAt = t;
       if (isNaN(r.upAt) && !isNaN(r.alertAt) && c.anim.upper === 'aim') r.upAt = t;
       if (isNaN(r.roundAt) && A.weapon.shotsFired > n0) r.roundAt = t;
@@ -105,10 +105,10 @@ export async function startleCheck(): Promise<boolean> {
       line(!own && foe && STARTLE_STATS.given === 1, `the same first sight handed to one of the player's own men and to an enemy: the enemy starts (${foe}), the player's man does not (${!own})`); }
 
     // ------------------------------------------------------------ the start alone, for another rule to give
-    { const s = await world(false), { g, A } = s, c = A.char; T.on = false; const at = s.ahead(2); const took = BREAK ? false : startleMan(g, A, at, 1.0), twice = startleMan(g, A, at, 1.0);
+    { const s = await world(false), { g, A } = s, c = A.char; T.on = false; const at = s.ahead(2); const took = BREAK ? false : giveStartle(g, A, at, 1.0), twice = giveStartle(g, A, at, 1.0);
       let held = 0, down = true; s.step(90, () => { if (startled(g, A)) { held += DT; if (c.anim.upper === 'aim') down = false; } });
       line(took && !twice && Math.abs(held - 1.0) < 0.04 && down && STARTLE_STATS.given === 1 && STARTLE_STATS.drew + STARTLE_STATS.ran + STARTLE_STATS.seen === 0 && A.state === 'patrol',
-        `startleMan with the rule off: given ${took}, not a second inside it (${!twice}); held ${f2(held)} s of the 1.00 asked, nothing raised (${down}); nothing chosen after it (drew ${STARTLE_STATS.drew}, ran ${STARTLE_STATS.ran}) and he is still ${A.state}`); }
+        `giveStartle with the rule off: given ${took}, not a second inside it (${!twice}); held ${f2(held)} s of the 1.00 asked, nothing raised (${down}); nothing chosen after it (drew ${STARTLE_STATS.drew}, ran ${STARTLE_STATS.ran}) and he is still ${A.state}`); }
 
     // ------------------------------------------------------------ draws, or runs: a squad map
     { const stage = async (training: string, mate: boolean) => {

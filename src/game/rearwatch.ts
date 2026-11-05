@@ -334,7 +334,7 @@ export function rearPin(g: Game, gd: Guard): RearPin | null { return books.get(g
 
 /** doortools.ts, the entry's queue (REARWATCH.hold): is this man held back on the way behind — pinned under this order, and somebody else of it still to come
  *  through the frame (never past REARWATCH.holdSecs from 'go') */
-export function rearHolds(g: Game, op: DoorOp, gd: Guard): boolean {
+export function rearWatcherWaits(g: Game, op: DoorOp, gd: Guard): boolean {
   const K = REARWATCH; if (!K.on || !K.through || !K.hold) return false;
   if (rearWatcher(g, op) !== gd) return false;   // (the same entries rearLast re-orders: three or more, not worked from the threshold)
   const P = books.get(g)!.pins.get(gd)!;
