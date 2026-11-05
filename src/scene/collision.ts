@@ -91,6 +91,12 @@ const shotPanes: { bi: number; t: number }[] = [];   // shotBlocked's scratch (t
 /** THE CHECK'S SWITCH OVER THE RUST ROWS OF THIS FILE (tools/qa/rust-check.ts raises it; nothing else does): on = every question a row sends to the module is
  *  ALSO answered here, the two compared, and every row of the module's copy compared with its box (boxMirror.ts stale) — `asked` questions, `differ` of them
  *  answered differently, `stale` rows that were not their box, and the first of either in words. The game plays on the TypeScript's answer while it is on. */
+/** A RAY THAT IS NO NUMBER (where it starts, the way it goes, or a length that is not finite): there is no answer to give — the walk of the cells reads a
+ *  cell that is no cell — so it is the caller's mistake, said by name wherever the module reports one (a level ray: raycast; a rule's ray: a slab's step,
+ *  a thrown thing's walk). Nothing of play asks one. */
+export function noNumber(ro?: Vec3, rd?: Vec3, tmax?: number): Error {
+  return new Error(`a ray that is no number${ro && rd ? `: from [${ro.join(', ')}] along [${rd.join(', ')}] for ${tmax}` : ''} — where it starts, the way it goes and how far are numbers, and how far is finite (a way worked out of two points that are one point is none)`);
+}
 export const BOTH = { on: false, asked: 0, differ: 0, stale: 0, first: '', things: 0 };
 /** A QUESTION ASKED OUTSIDE A TICK IS ASKED OF THE MODULE TOO (the window below): `on` = it is (off = outside a tick this file's own walk answers, as it
  *  did while a row could only be asked inside a tick); `proofs` = how many times a question outside every window had the copy proven for itself alone,
@@ -795,14 +801,14 @@ export class StaticCollision {
   }
   private raycastAsk(ro: Vec3, rd: Vec3, tmax: number): { t: number; index: number; n: Vec3 } | null {
     const M = this.ready();
-    if (!M.rays || !(tmax < 1e6)) { if (FELL.on && RUST.rays) fell('rays', M.rays ? 'a ray a thousand kilometres long or longer' : this.fellWhy()); return this.raycastHere(ro, rd, tmax); }
+    if (!M.rays) { if (FELL.on && RUST.rays) fell('rays', this.fellWhy()); return this.raycastHere(ro, rd, tmax); }
     // RUST.rays, inside a tick (rust/sim/src/lines.rs ray: the walk below, statement for statement, over the module's copy of the boxes and of whichever
     // leaves stand in dynamicBoxes now). A pane met where it is open is passed there (glass.rs, the game's own rule over the copy's panes), and the ray
     // flies on to what stands beyond, as the walk below does.
     const ask = this.paneAsk; if (ask < 0) { this.paneFell('rays', ask); return this.raycastHere(ro, rd, tmax); }
     const set = M.leaves(this.dynamicBoxes); if (set === -2) { if (FELL.on) fell('rays', 'the leaves do not fit a list'); return this.raycastHere(ro, rd, tmax); }
     const k = M.x.lines_ray(M.slot, ro[0], ro[1], ro[2], rd[0], rd[1], rd[2], tmax, set, ask);
-    if (k === -2) { RAYS.host++; if (FELL.on) fell('rays', 'the module handed the ray back'); return this.raycastHere(ro, rd, tmax); }
+    if (k === -2) throw noNumber(ro, rd, tmax);   // (the walk below has no answer to it either: it reads a cell that is no cell, and fails there)
     let hit: { t: number; index: number; n: Vec3 } | null = null;
     if (k >= 0) { const m = f64(), at = M.scratch; hit = { t: m[at], index: k, n: [m[at + 1], m[at + 2], m[at + 3]] }; }
     RAYS.n++;
@@ -818,6 +824,11 @@ export class StaticCollision {
     for (let i = 0; i <= steps; i++) {
       const t = (i / steps) * tmax; if (t > best + 1.5) break;
       const x = Math.floor((ro[0] + rd[0] * t) / this.cs), z = Math.floor((ro[2] + rd[2] * t) / this.cs);
+      // THE RAY HAS LEFT THE LEVEL FOR GOOD (so no length is too long): the cells round this sample lie off the grid on the side the ray is going, or it
+      // does not go that way at all, and so does every later sample's — a sample's cell moves one way only along a ray. Nothing more can be met.
+      // …OR IT GOES NOWHERE IN PLAN (straight up or down): every later sample's cells are the first's, whose statics have each been asked the whole ray.
+      // (A ray that crawls in plan is walked until it has left, a sample every half metre of its length: long, never wrong.)
+      if ((rd[0] >= 0 && x - 1 >= this.W) || (rd[0] <= 0 && x + 1 < 0) || (rd[2] >= 0 && z - 1 >= this.H) || (rd[2] <= 0 && z + 1 < 0) || (i > 0 && rd[0] === 0 && rd[2] === 0)) break;
       for (let dz = -1; dz <= 1; dz++) for (let dx = -1; dx <= 1; dx++) {
         const cx = x + dx, cz = z + dz; if (cx < 0 || cz < 0 || cx >= this.W || cz >= this.H) continue;
         const cell = this.cells[cz * this.W + cx];
