@@ -84,6 +84,21 @@ function fieldPng(file, f, mask, w, h, K = 6) {
     check(hole === 0 && Math.abs(awn.mean - as.mean) < 0.05 && awn.span < 0.4, `a window in room A's wall (a sill, a pane and a lintel, none a wall's height) leaves no hole in the map, and the room keeps its level: ${n(awn.mean)} against ${n(as.mean)} without it`);
     let sky = 0, roofed = 0; for (let i = 0; i < open.w * open.h; i++) { if (open.m[i] === 255) continue; if (open.m[i] & 4) sky++; else roofed++; }
     check(sky > 4000 && roofed > 300 && roofed < 500 && Math.abs(open.sky - YARD) < 0.05 && Math.abs(open.mid - YARD) < 0.05 && open.mid >= open.sky - 1e-6 && Math.abs(shut.sky - YARD) < 0.05 && Math.abs(wide.sky - YARD) < 0.3, `the two rooms are under a roof (${roofed} cells) and the field's word for the open air is what the cells under the sky hold: ${n(open.sky)} against the yard's ${n(YARD)} (${n(wide.sky)} with the wide opening letting the room's dark out into the yard)`); }
+  { // THE OPEN AIR IS COUNTED BY EVERY CELL AT ONCE (shaders/place_field.wgsl placeSky: a count and a whole-number sum a bin, and the brightest place, which the
+    // eye's one invocation reads): its two words against a plain walk of the same field, cell by cell, as the eye itself once walked it. On the yard at one
+    // level, on a yard whose light falls six stops across the map (many bins, and a low word well under the middle), and under one roof (no cell under the sky).
+    const fr = Math.fround, walk = r => { const hist = Array(64).fill(0), sum = Array(64).fill(0); let nSky = 0, top = -1000;
+      for (let i = 0; i < r.w * r.h; i++) { const m = r.m[i], l = r.f[i]; if (m === 255 || l < -500) continue; if ((m & 3) === 2) top = Math.max(top, l);
+        if (m & 4) { const b = Math.min(63, Math.max(0, Math.floor((l + 12) * 4))); hist[b]++; sum[b] += l; nSky++; } }
+      let lo = top, mid = top;
+      if (nSky) { const want = Math.max(Math.ceil(fr(fr(nSky) * fr(r.place.skyShare))), 1), half = Math.max(Math.ceil(nSky * 0.5), 1); let acc = 0, b0 = -1, b1 = -1;
+        for (let b = 0; b < 64; b++) { acc += hist[b]; if (b0 < 0 && acc >= want) b0 = b; if (b1 < 0 && acc >= half) b1 = b; } lo = sum[b0] / hist[b0]; mid = sum[b1] / hist[b1]; }
+      return { lo, mid, nSky, bins: hist.filter(c => c > 0).length }; };
+    const fall = await run({ door: 'open', yardFall: 6 }), roof = await run({ door: 'open', roofAll: true }); let worst = 0;
+    for (const r of [open, shut, wide, win, fall]) { const w = walk(r); worst = Math.max(worst, Math.abs(r.sky - w.lo), Math.abs(r.mid - w.mid)); }
+    const wf = walk(fall), wr = walk(roof), K = roof.w * roof.h;
+    check(worst < 1e-4 && wf.bins > 12 && fall.mid - fall.sky > 1 && fall.g[K + 3] >= fall.g[K + 2] && Math.abs(fall.g[K + 2] - fall.sky) < 1e-3 && wr.nSky === 0 && roof.sky === wr.lo && roof.mid === wr.lo && roof.f[K + 1] === 1,
+      `the open air's two words are what a plain walk of the field gives, to ${worst.toExponential(1)} of a stop over five scenes (under 1e-4): a yard whose light falls six stops across the map fills ${wf.bins} bins and holds ${n(fall.sky)} at its low word and ${n(fall.mid)} at its middle, the same after 240 more frames (the table is left empty each frame); under one roof no cell is under the sky and both words are the brightest place's, ${n(roof.sky)}`); }
   { // THE SECOND BLOCK, the brightest place a stride away (PLACE.near, PLACE.nearDoor; shaders/place_field.wgsl hand; what the Light in order row bounds a
     // pixel's own light by): after the cells and their four words, a number a cell again
     const N2 = open.w * open.h + 4, cellOf = (r, x, z) => Math.floor((z - r.min[1]) * r.res) * r.w + Math.floor((x - r.min[0]) * r.res), lv = (r, x, z) => r.f[cellOf(r, x, z)], nr = (r, x, z) => r.f[N2 + cellOf(r, x, z)];

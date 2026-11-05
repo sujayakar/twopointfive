@@ -3838,3 +3838,24 @@ interleaved and filtered to their quiet minimum, and a row whose p75 sits far ab
   look branch's: the maintainer had said of it "&pace looks good, let's make it the default", and its rule (a display frame passed over while two are
   still with the GPU) goes into the build's own pacer as one path (`src/host/pace.ts`, by its owner's change), not as a second pacer beside it. What
   this bullet measured stands; `src/host/gpuPace.ts` and the HUD row described above are not in the build.
+- **THE OPEN AIR IS COUNTED BY EVERY CELL AT ONCE, NOT WALKED BY ONE GPU THREAD** (11-05; `shaders/place_field.wgsl placeSky` and `placeEye`,
+  `render/placeField.ts step` and `SKY_WORDS`). The maintainer's own sweep of the look's rows in the tunnel put 2.03 ms of the look's 2.53 ms in one
+  row, "Eyes adjust to shade". The performance goal found the cause on a rented card by putting a timer on the `place` compute pass (it had none): 1.70
+  to 1.78 ms, of which the frame's eight sweeps of the field are 0.09 ms and THE EYE 1.66 ms. The eye was one invocation (`@workgroup_size(1)` under
+  `dispatchWorkgroups(1)`) that walked all 7,000 cells of the plan twice a frame, a texture read a cell: the histogram of the cells under the sky, then
+  the means of the two bins it chose. A loop in a one-invocation entry is a loop on ONE GPU THREAD, the slowest core in the machine. With the walk left
+  out a frame was 1.4 to 1.6 ms shorter on every box there, and two of four went from 33 ms frames to 17. WHAT IT IS NOW: `placeSky`, a dispatch over
+  the map at 8 × 8 after the sweeps, in which each cell under the sky adds itself to a table of atomics (a count a bin, the sum of the levels in the
+  bin, and the brightest place by `atomicMax`), and the eye reads the 64 bins, takes the two means and leaves the table empty for the next frame. The
+  sums are whole numbers, so the order the cells add themselves in changes nothing: a level is kept as its height over −24 stops in steps of 1 ∕ 8192
+  of a stop (a `const_assert` holds every cell in one bin inside a word), and a mean comes back within half a step, 0.00006 of a stop. The brightest
+  place is kept as the float's own bits turned so that they order as the float does, so it comes back exact. The middle is held at or over the low
+  word (two means a step apart at a bin's edge). NO SWITCH: it is the same rule and the same two words, with nothing to put off; the old walk is in
+  the history. HELD BY a new line of `node tools/qa/place-field-page.cjs` (20 lines now): the two words against a plain walk of the read-back field
+  in five scenes (the worst 0.000003 of a stop), on a yard whose light falls six stops across the map (16 bins, the low word 1.5 stops under the
+  middle), the same after 240 more frames, and under one roof (no cell under the sky: both words are the brightest place's); with the table's emptying
+  taken out the line fails. IN THE GAME (the pass at midday under the look, twelve frames on the software adapter, this build and the one before it):
+  122 pipelines where there were 121, none failed, no error; the eye's word and every cell the same, the low word 0.000003 of a stop apart and the
+  middle 0.000001. SOFTWARE ADAPTER ONLY as this is written: NOT YET TIMED ON A GPU. THE RULE TO TAKE FROM IT: anything that reads every
+  cell of a map belongs in a dispatch over the cells; a one-invocation entry is for what is O(1) or a few dozen reads. LEFT: no other per-frame pass
+  was read for the same fault here (the performance goal is putting a timer on each that lacks one).

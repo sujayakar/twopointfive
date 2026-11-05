@@ -102,12 +102,37 @@ fn placeSweep(@builtin(global_invocation_id) gid: vec3u) {
   field[PLACE_NEAR + i] = max(lv, max(max(h0.z, h1.z), max(h2.z, h3.z)));
 }
 
-/** THE EYE: the level of the place Sam stands in, eased as an eye is (opening slower than it closes), kept in the word after the last cell; the word after
- *  that says the field is live, and the one after that is THE OPEN AIR's level. One invocation a frame.
- *  THE OPEN AIR is what the cells with no roof over them hold (the map's bit 4): the level a tenth of them are darker than (PLACE.skyShare, U.skyShare), so it is
+/** THE OPEN AIR is what the cells with no roof over them hold (the map's bit 4): the level a tenth of them are darker than (PLACE.skyShare, U.skyShare), so it is
  *  the walled yard's and not the snow field's past the wall, and one dark nook does not move it. A map with no cell under the sky (a level all indoors)
- *  takes its brightest place. It is eased, so the picture is never handed a step. */
+ *  takes its brightest place.
+ *  COUNTED BY EVERY CELL AT ONCE (placeSky, a dispatch over the map after the sweeps), into a table the eye then reads: a count a bin, the sum of the levels in
+ *  it, and the brightest place. (Until 11-05 the eye's one invocation walked every cell of the map twice a frame, a texture read a cell: 1.7 ms of a GPU's
+ *  frame on one of its threads, where a sweep of the same cells by all of them is a hundredth of that.) The sums are whole numbers so that the order the
+ *  cells add themselves in changes nothing: a level is kept as its height over SKY_BASE in steps of 1 ∕ SKY_FIX of a stop, and a bin's mean comes back
+ *  within half a step. */
 const SKY_BINS: i32 = 64;        // a quarter of a stop each, from 12 stops under 1 to 4 over it (open ground at noon holds 1 to 8; a level off either end counts in the end bin)
+const SKY_TOP: i32 = 2 * SKY_BINS;   // the table: SKY_BINS counts, SKY_BINS sums, then the brightest place (render/placeField.ts SKY_WORDS)
+const SKY_BASE: f32 = -24.0;     // under any level a cell can hold (reading: log2 of 1e-6 at the least)
+const SKY_SPAN: f32 = 48.0;
+const SKY_FIX: f32 = 8192.0;
+const_assert f32(PLACE_W * PLACE_H) * SKY_SPAN * SKY_FIX < 4294967296.0;   // (every cell in one bin at the top of the span still fits a sum's word)
+@group(0) @binding(5) var<storage, read_write> sky: array<atomic<u32>, 129>;
+fn skyBin(l: f32) -> i32 { return clamp(i32(floor((l + 12.0) * 4.0)), 0, SKY_BINS - 1); }
+/** a level as a word that orders as the level does (atomicMax has no float): 0 is under every level */
+fn skyWord(l: f32) -> u32 { let b = bitcast<u32>(l); return select(b | 0x80000000u, ~b, (b & 0x80000000u) != 0u); }
+fn skyLevel(w: u32) -> f32 { return bitcast<f32>(select(~w, w & 0x7fffffffu, (w & 0x80000000u) != 0u)); }
+@compute @workgroup_size(8, 8)
+fn placeSky(@builtin(global_invocation_id) gid: vec3u) {
+  let c = vec2i(gid.xy); if (c.x >= PLACE_W || c.y >= PLACE_H) { return; }
+  let m = textureLoad(maskTex, c, 0).r; if (m == 255u) { return; }
+  let l = field[c.y * PLACE_W + c.x]; if (l < -500.0) { return; }
+  if ((m & 3u) == 2u) { atomicMax(&sky[SKY_TOP], skyWord(l)); }
+  if ((m & 4u) != 0u) { let b = skyBin(l); atomicAdd(&sky[b], 1u); atomicAdd(&sky[SKY_BINS + b], u32(clamp(l - SKY_BASE, 0.0, SKY_SPAN) * SKY_FIX + 0.5)); }
+}
+
+/** THE EYE: the level of the place Sam stands in, eased as an eye is (opening slower than it closes), kept in the word after the last cell; the word after
+ *  that says the field is live, and the two after that are THE OPEN AIR's levels, read off placeSky's table (which it leaves empty for the next frame's count)
+ *  and eased, so the picture is never handed a step. One invocation a frame. */
 @compute @workgroup_size(1)
 fn placeEye() {
   let c = clamp(vec2i(floor(U.sam)), vec2i(0), vec2i(PLACE_W - 1, PLACE_H - 1));
@@ -117,30 +142,20 @@ fn placeEye() {
   //  wall it is his own side's. The brightest beside him, as it was, shut the eye on a dark room he had not yet left)
   if (v < -500.0) { var best = 1e9; for (var dy = -3; dy <= 3; dy++) { for (var dx = -3; dx <= 3; dx++) { let cc = c + vec2i(dx, dy); let l = cellAt(cc); if (l > -500.0) { let dd = distance(vec2f(cc) + 0.5, U.sam); if (dd < best) { best = dd; v = l; } } } } }
   let k = PLACE_W * PLACE_H; field[k + 1] = 1.0;
-  var hist: array<u32, 64>; var nSky = 0u; var top = -1000.0;
-  for (var j = 0; j < PLACE_H; j++) { for (var i = 0; i < PLACE_W; i++) {
-    let m = textureLoad(maskTex, vec2i(i, j), 0).r; if (m == 255u) { continue; }
-    let l = field[j * PLACE_W + i]; if (l < -500.0) { continue; }
-    if ((m & 3u) == 2u) { top = max(top, l); }
-    if ((m & 4u) != 0u) { hist[clamp(i32(floor((l + 12.0) * 4.0)), 0, SKY_BINS - 1)]++; nSky++; }
-  } }
+  var hist: array<u32, 64>; var nSky = 0u;
+  for (var b = 0; b < SKY_BINS; b++) { hist[b] = atomicLoad(&sky[b]); nSky += hist[b]; }
+  let tw = atomicLoad(&sky[SKY_TOP]); let top = select(-1000.0, skyLevel(tw), tw != 0u);
   // the open air's two words: its LOW level (the level a `skyShare` of the cells under the sky are darker than: where "as bright as the open air" starts) and
   // its MIDDLE (the level half of them are darker than: how bright the open air is, which a room Sam stands in is shown as)
   var open = top; var mid = top;
   if (nSky > 0u) {
     let want = max(u32(ceil(f32(nSky) * U.skyShare)), 1u); let half = max(u32(ceil(f32(nSky) * 0.5)), 1u); var acc = 0u; var bin = -1; var binM = -1;
     for (var b = 0; b < SKY_BINS; b++) { acc += hist[b]; if (bin < 0 && acc >= want) { bin = b; } if (binM < 0 && acc >= half) { binM = b; } }
-    var s = 0.0; var n = 0.0; var sM = 0.0; var nM = 0.0;   // (the mean of a bin's own cells: a yard at one level answers with it exactly, not with a bin's edge)
-    for (var j = 0; j < PLACE_H; j++) { for (var i = 0; i < PLACE_W; i++) {
-      let m = textureLoad(maskTex, vec2i(i, j), 0).r; if (m == 255u || (m & 4u) == 0u) { continue; }
-      let l = field[j * PLACE_W + i]; if (l < -500.0) { continue; }
-      let b = clamp(i32(floor((l + 12.0) * 4.0)), 0, SKY_BINS - 1);
-      if (b == bin) { s += l; n += 1.0; }
-      if (b == binM) { sM += l; nM += 1.0; }
-    } }
-    if (n > 0.0) { open = s / n; }
-    if (nM > 0.0) { mid = sM / nM; }
+    // (the mean of a bin's own cells: a yard at one level answers with it, not with a bin's edge)
+    if (bin >= 0) { open = SKY_BASE + f32(atomicLoad(&sky[SKY_BINS + bin])) / (SKY_FIX * f32(hist[bin])); }
+    if (binM >= 0) { mid = max(open, SKY_BASE + f32(atomicLoad(&sky[SKY_BINS + binM])) / (SKY_FIX * f32(hist[binM]))); }   // (the middle is never under the low word: two means a step apart at a bin's edge are held in order)
   }
+  for (var i = 0; i <= SKY_TOP; i++) { atomicStore(&sky[i], 0u); }
   let was = field[k + 2]; let wasM = field[k + 3];
   field[k + 2] = select(was + (open - was) * U.skyEase, open, U.snap != 0u || was < -500.0 || open < -500.0);
   field[k + 3] = select(wasM + (mid - wasM) * U.skyEase, mid, U.snap != 0u || wasM < -500.0 || mid < -500.0);
