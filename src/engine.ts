@@ -5,7 +5,7 @@ import { GpuTimer } from './gpu/timer';
 import { BoxWorld, BoxFlag, type Box } from './scene/boxes';
 import { thinIs, thinAirOf } from './game/thinline';   // (a leaf: types only — which dynamic boxes are a laser's beam / a tracer's streak, for the reflections)
 import { FRAME_BYTES, FRAME_HEAD_BYTES, MAX_CARDS, FrameFlags, FrameParams, wallSidesConfig, createSceneBindGroup, createSceneLayout, writeFrame, writeFrameOut, reachBinding, meshBinding, WeatherFrame, noWeather, glassBreakConfig, lookConfig } from './render/frame';
-import { GBuffer, SkinnedDrawable, lookAmounts, lookWordOf, lookCoreOf } from './render/gbuffer';
+import { GBuffer, SkinnedDrawable, lookAmounts, lookWordOf } from './render/gbuffer';
 import { RadianceCascades, RcConfig, defaultRcConfig } from './render/rc';
 import { DiceRing, ringPoints, ringSlot } from './render/diceRing';
 import { LightingPasses, type FireRecord } from './render/passes';
@@ -13,13 +13,12 @@ import { LightSet, cardSlotsFor, type RtLight } from './render/lights';
 import { emissiveDayK } from './render/photometry';
 import { lookVeilFrame } from './render/lookveil';
 import { PowderField, powderDrawWord } from './render/powderField';
-import { PlaceField } from './render/placeField';
-import { PlaceMap } from './scene/placePlan';
+import { PlaceField, PlaceMap } from './render/placeField';
 import { WallSides } from './render/wallSides';
 import { lookEyeFrame, type LookEye } from './render/lookeye';
 import { lookGrade, lookGradeFrame } from './render/lookgrade';
 import { lookExpoFrame } from './render/lookexpo';
-import { planOpenings, openAreas, openingRadiance, openingsKey, leavesKey, LOOK_OPENINGS, type Opening } from './scene/openings';
+import { planOpenings, openAreas, openingRadiance, openingsKey, leavesKey, LOOK_OPENINGS, type Opening } from './render/openings';
 import { buildWallRaster, wallRasterDiff, reachMaskSome, REACH_WORK, REACH_PACE, type ReachJob } from './render/reach';
 import { MeshShadows, MESH_MAX_CHARS } from './render/meshShadows';
 import { RigFit, RIG_KPAD } from './render/sdfrig';
@@ -136,7 +135,7 @@ export class Engine {
   /** this frame's shadeCfg and eyeCfg as the frame was handed them (a tool's and the debugger's: tools/qa/look-sheet.cjs prints them beside each still) */
   lookShadeCfg: [number, number, number, number] | undefined = undefined; lookEyeCfg: [number, number, number, number] | undefined = undefined;
   private lookGradeCfg: [number, number, number, number] | null = null;   // (this frame's gradeCfg, render/lookgrade.ts: the day's contrast undone under a roof)
-  /** THE LOOK PROTOTYPE's daylight at openings (scene/openings.ts; the panel's "Daylight at openings" row): one area light just inside each place the level
+  /** THE LOOK PROTOTYPE's daylight at openings (render/openings.ts; the panel's "Daylight at openings" row): one area light just inside each place the level
    *  is open to the sky by (a window, an open door, a blown hole, a passage's mouth). THE PICTURE'S ALONE: the lights are this engine's (`dayLights`, written
    *  here every frame from this method's own records and handed to the upload), never in the light set the game reads and a checkpoint holds, and their
    *  masks leave no note in reach.ts's side tables: nothing in the update, a checkpoint or a recording can tell the row is on. The openings are found again when the level's boxes have changed and then stood still for a few frames, what
@@ -252,7 +251,7 @@ export class Engine {
     this.fogSightStand = device.createBuffer({ label: 'fogSightStand', size: FOG_SIGHT_BYTES, usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST });   // (zeros: 'no table written' — but for the list of thin statics, which the sight table's own pass reads here: render/fogofwar.ts FogSight.stand)
     this.fogSight.stand = this.fogSightStand;
     this.world = new BoxWorld(device); this.fogSight.world = this.world;
-    if (lookConfig.on) this.world.setStuffOf(lookWordOf(), lookCoreOf());   // (THE LOOK's material maps: a box is drawn as what it SAYS it is made of, its own word or its material row's, put on it when the level was loaded or the box was made: scene/stuff.ts. No colour is asked, so rain on a slab changes nothing here. Set here and nowhere else)
+    if (lookConfig.on) this.world.setStuffOf(lookWordOf());   // (THE LOOK PROTOTYPE's material maps: what each box is made of, by its own paint, rides in the box's own record; the page hands over one that knows the weather, main.ts)
     this.lights = new LightSet(device);
     this.frameBuf = makeBuffer(device, FRAME_BYTES, GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST, 'frame');
     this.frameBufOut = makeBuffer(device, FRAME_BYTES, GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST, 'frameOut');
@@ -598,7 +597,7 @@ export class Engine {
       if (n > 0 && this.cutSeen > 0 && (whole > 0) !== (this.cutWhole > 0)) { if (taauOn) this.resetTaa('cut pieces change shape'); else this.passes.dropRestirBeliefs(); }
       this.cutWhole = whole; this.cutSeen = n;
     }
-    this.lookOpeningLights();   // (THE LOOK PROTOTYPE: by day each opening to the sky is a light of its own, scene/openings.ts)
+    this.lookOpeningLights();   // (THE LOOK PROTOTYPE: by day each opening to the sky is a light of its own, render/openings.ts)
     { const P = this.passes, on = lookConfig.on; P.gradeH = on ? lookConfig.gradeH : 0; P.gradeS = on ? lookConfig.gradeS : 0; P.gradeSat = on ? lookConfig.gradeSat : 1; P.gradeC = 1; this.lookGradeCfg = null;   // (THE LOOK PROTOTYPE's grading rows, post.wgsl agx)
       if (on && lookConfig.gradeC !== 1) { const zen = this.settings.skyZenith, hor = this.settings.skyHorizon, g = lookGrade(lookConfig.sky * lookSkyLum(zen, hor, 0.8), Math.PI * lookConfig.sky * lookSkyLum(zen, hor, 0.947), this.lights.lights, this.settings.exposure * lookConfig.gradeExp, lookConfig.gradeC); P.gradeC = g[0]; P.gradeP = g[1]; this.lookGradeCfg = lookGradeFrame(g, this.settings.exposure * lookConfig.gradeExp); } }
     this.glassLightMasks();   // (glass: which listed panes each light can reach at all → RtLight.glassMask, packed by the upload below; all 0 with the experiment off)
@@ -693,7 +692,6 @@ export class Engine {
       numTransient: numTransientNow,
       smokeDraw: this.smokeDrawWords(), powderDraw: lookConfig.on ? powderDrawWord() : 0,
       sides: lookSides && this.wallSides.fits ? this.wallSides.words : null, sideCols: lookSides && this.wallSides.fits ? this.wallSides.cols : null,   // (THE LOOK PROTOTYPE's Walls have two sides row: lighting_common.wgsl diceTaps, diceFacePointBy)
-      placeCfg: placeOn && lookConfig.order > 0 ? [Math.min(lookConfig.order, 1), 0, 0, 0] : undefined,   // (THE LOOK PROTOTYPE, light keeps its order across places: with the place field, by day)
       lampCfg: lampK < 1 ? [lampK, lampK / emissiveDayK(this.lights.dayExp, this.lights.dayAmount), lookConfig.steady > 0 ? 1 : 0, Math.max(lookConfig.roomBright, 0.001)] : undefined,   // (.z: the Steady bounce row is up, lighting_common.wgsl dayBoundK · .w: the Room brightness row, composite.wgsl lookExpoGain)   // (common.wgsl lampFloorK, boxEmissiveRay)
       secMinE: s.secMinE * lampK,   // (by day a fixture is drawn at the hour's exposure × its night strength, render/photometry.ts, so the night's threshold is held at the same share of it: every lamp the night's cache carries, the day's does too)
       //   // R2 sequence over the octahedral texel: cascade direction aliasing becomes noise for the indirect temporal filter

@@ -29,7 +29,6 @@ import { livedKit, LIVED_PAINT } from './livedKit';
 import { livedPieces, INK } from './livedPieces';
 import { livedQuiet } from './lived-quiet';
 import { livedTrain } from './lived-train';
-import { PANEL_GREY } from '../../src/scene/stuff';
 
 export const NAME = 'library-hall';
 export const NOTES = 'The showroom of the older kits: one of every piece of the office kit, livedKit, livedPieces, lived-quiet and lived-train on an open floor. Regenerate: bun run tools/levels/export.ts library-hall';
@@ -100,7 +99,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
   lights.push({ kind: 'dir', pos: [0, 0, 0], dir: norm([0.45, -0.5, -0.74]), color: [0.55, 0.7, 1.0], intensity: 0.9, range: 1e6, innerDeg: 0, outerDeg: 0, name: 'moon', group: 'exterior', enabled: true, volumetric: 0, radius: 0.009, mains: false });
   // the breaker and one emergency beacon: the game's blackout wants both
   grp('breaker');
-  const brk = add({ c: [9.4, 1.35, 1.16], h: [0.28, 0.36, 0.04], albedo: PANEL_GREY, name: 'breaker_panel' });
+  const brk = add({ c: [9.4, 1.35, 1.16], h: [0.28, 0.36, 0.04], albedo: [0.42, 0.44, 0.45], name: 'breaker_panel' });
   const brkLed = add({ c: [9.22, 1.62, 1.21], h: [0.015, 0.015, 0.01], albedo: C.black, rough: 0.5, emissive: [0.3, 4, 0.6], flags: BoxFlag.NoShadow });
   grp('beacons');
   add({ c: [5.0, H - 0.06, 5.2], h: [0.07, 0.06, 0.07], albedo: [0.2, 0.2, 0.22], flags: BoxFlag.NoShadow | BoxFlag.NoPrimary });

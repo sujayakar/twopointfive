@@ -35,13 +35,9 @@ const faults: string[] = [];
 const line = (ok: boolean, say: string, got: string) => { console.log(`  ${ok ? 'PASS' : 'FAIL'}  ${say}: ${got}`); if (!ok) faults.push(`${say} (${got})`); };
 
 // 1 ---- its own generator
-// A sibling of tools/levels/ is a level's generator when the exporter can stand a level from it: it exports `build` (export.ts calls nothing else). A sibling
-// that does not is a piece or a paint for every generator (the mountain's rock, the lived-in kits), and importing one is not dressing as another level.
-{ const src = readFileSync(resolve(ROOT, 'tools/levels/tut-sky.ts'), 'utf8') + (BROKEN ? "\nimport { build as road } from './tut-road';" : '');   // (the break: it borrows the pass road's generator)
-  const local = [...src.matchAll(/(?:from|import|require)\s*\(?\s*['"`]\.\/([\w.-]+)['"`]/g)].map(m => m[1].replace(/\.ts$/, ''));
-  const builds = (n: string) => n === 'export' || /^export\s+(?:async\s+)?function\s+build\b|^export\s+const\s+build\b|^export\s*\{[^}]*\bbuild\b/m.test(readFileSync(resolve(ROOT, `tools/levels/${n}.ts`), 'utf8'));
-  const others = local.filter(builds), pieces = local.filter(n => !others.includes(n));
-  line(others.length === 0 && !/DRESS_AS|kitView\(/.test(src), 'the generator imports no other level\'s generator and dresses as nothing else', (others.length ? `imports the generator ./${others.join(', ./')}` : 'none') + (pieces.length ? ` · pieces every generator may use: ./${pieces.join(', ./')}` : '')); }
+{ const src = readFileSync(resolve(ROOT, 'tools/levels/tut-sky.ts'), 'utf8');
+  const local = [...src.matchAll(/(?:from|import|require)\s*\(?\s*['"`]\.\/([\w.-]+)['"`]/g)].map(m => m[1]);   // (any sibling of tools/levels/ is another level's generator or the exporter)
+  line(local.length === 0 && !/DRESS_AS|kitView\(/.test(src), 'the generator imports no other level\'s generator and dresses as nothing else', local.length ? `imports ./${local.join(', ./')}` : 'none'); }
 
 // 2, 3 ---- the file
 const L = JSON.parse(readFileSync(resolve(ROOT, 'levels/tut-sky.json'), 'utf8'));

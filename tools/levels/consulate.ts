@@ -47,7 +47,6 @@ import * as MD from '../../src/scene/markingDefaults';
 import { WORLD } from '../../src/scene/world';
 import { BoxFlag } from '../../src/scene/boxes';
 import { livedPieces, INK } from './livedPieces';
-import { drawnAs, PANEL_GREY } from '../../src/scene/stuff';
 
 export const NAME = 'consulate';
 export const NOTES = 'The consulate: a lobby, a 3 m corridor past four rooms (a glass front, an open arch, two shut doors) to a hall, and the consul\'s office in two halves with a door on each. The four-person hostage rescue\'s level, built from the office kit. Regenerate: bun run tools/levels/export.ts consulate';
@@ -241,7 +240,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
   shelf(32.0, 23.5, 2.6, 0.5, 0, 4, 2.0);
   cardboardBox(35.3, 20.6, 0.6, 0.2); cardboardBox(34.5, 20.55, 0.5, -0.2);
   // mains breaker panel on the east wall (OCP it for a temporary blackout, shoot it for a permanent one)
-  const brk = add({ c: [35.84, 1.35, 23.2], h: [0.04, 0.36, 0.28], albedo: PANEL_GREY, name: 'breaker_panel' });
+  const brk = add({ c: [35.84, 1.35, 23.2], h: [0.04, 0.36, 0.28], albedo: [0.42, 0.44, 0.45], name: 'breaker_panel' });
   const brkLed = add({ c: [35.79, 1.62, 23.02], h: [0.01, 0.015, 0.015], albedo: C.black, emissive: [0.3, 4, 0.6], flags: BoxFlag.NoShadow });
   add({ c: [35.84, 2.3, 23.2], h: [0.03, 0.6, 0.03], albedo: [0.3, 0.3, 0.32], flags: BoxFlag.NoShadow });
   ceilingPanel(32.5, 22.0, false, 'store');
@@ -401,7 +400,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
 
     // THE TYPISTS' OFFICE — one long bench down the west wall under blue blotters, three machines, the copy basket, balls of paper on the floor (the east wall stays bare)
     P.room('back');
-    P.floor(26.5, 18.57, 4.78, 10.52, drawnAs('paint', [0.42, 0.35, 0.24]), 0.003, 0.006);
+    P.floor(26.5, 18.57, 4.78, 10.52, [0.42, 0.35, 0.24], 0.003, 0.006);
     P.counter(24.42, 16.7, 3.6, 0.66, Math.PI / 2, 0.74, C.woodDark, INK.blueprint);
     P.typewriter(24.42, 0.74, 15.5, Math.PI / 2); P.typewriter(24.42, 0.74, 16.7, Math.PI / 2); P.typewriter(24.42, 0.74, 17.9, Math.PI / 2);
     P.sheets(24.42, 0.745, 16.1, 0.2, 2); P.tray(24.42, 0.74, 17.3, Math.PI / 2);

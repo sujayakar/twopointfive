@@ -7,7 +7,7 @@ import { readFileSync } from 'node:fs';
 import { standUp, ROOT } from './headless.ts';
 const { parseLevelData } = await import(`${ROOT}/src/scene/levelData.ts`);
 const { loadLevel } = await import(`${ROOT}/src/scene/levelLoad.ts`);
-const { placeMask, PLACE_W, PLACE_H, PLACE_RES } = await import(`${ROOT}/src/scene/placePlan.ts`);
+const { placeMask, PLACE_W, PLACE_H, PLACE_RES } = await import(`${ROOT}/src/render/placeField.ts`);
 const { placeSides, sideAt, sideClear, diceTapsOf, diceFacePointOf, WallSides, SIDE_UNKNOWN, SIDE_DOOR } = await import(`${ROOT}/src/render/wallSides.ts`);
 const { WORLD } = await import(`${ROOT}/src/scene/world.ts`);
 const BRK = process.env.WALLSIDES_BREAK === '1'; let red = false;
@@ -106,7 +106,7 @@ const ROOMS: Record<string, [number, number]> = { tea: [17, 8], kitchen: [25, 8]
 { const c = readFileSync(`${ROOT}/src/render/shaders/common.wgsl`, 'utf8'), num = (n: string) => +(c.match(new RegExp(`const ${n}: \\w+ = ([0-9.]+)u?;`))?.[1] ?? NaN);
   const frameTs = readFileSync(`${ROOT}/src/render/frame.ts`, 'utf8'), words = +(c.match(/sides: array<vec4u, (\d+)>/)?.[1] ?? NaN) * 4, cols = +(c.match(/sideCols: array<vec4u, (\d+)>/)?.[1] ?? NaN) * 4;
   const { SIDE_COL_WORDS, SIDE_WORDS } = await import(`${ROOT}/src/render/wallSides.ts`);
-  check(num('SIDE_W') === PLACE_W && num('SIDE_H') === PLACE_H && num('SIDE_RES') === PLACE_RES && num('SIDE_UNKNOWN') === SIDE_UNKNOWN && num('SIDE_DOOR') === SIDE_DOOR && words === SIDE_WORDS && cols === SIDE_COL_WORDS && frameTs.includes('u.set(sc, 7240)'),
+  check(num('SIDE_W') === PLACE_W && num('SIDE_H') === PLACE_H && num('SIDE_RES') === PLACE_RES && num('SIDE_UNKNOWN') === SIDE_UNKNOWN && num('SIDE_DOOR') === SIDE_DOOR && words === SIDE_WORDS && cols === SIDE_COL_WORDS && frameTs.includes('u.set(sc, 7236)'),
     'the shader reads the plan at the map\'s own size and the frame holds as many words as the tables have', `common.wgsl ${num('SIDE_W')} × ${num('SIDE_H')} at ${num('SIDE_RES')} a metre, ${words} + ${cols} words · the map ${PLACE_W} × ${PLACE_H} at ${PLACE_RES}, ${SIDE_WORDS} + ${SIDE_COL_WORDS}`); }
 
 console.log(`\n=== wallsides: ${red ? 'FAILED' : 'ALL PASS'} ===`);

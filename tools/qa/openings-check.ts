@@ -1,4 +1,4 @@
-// DAYLIGHT AT OPENINGS (the look page's row "Daylight at openings", lookConfig.windows; src/scene/openings.ts; engine.ts lookOpeningLights keeps the lights,
+// DAYLIGHT AT OPENINGS (the look page's row "Daylight at openings", lookConfig.windows; src/render/openings.ts; engine.ts lookOpeningLights keeps the lights,
 // in a list of its own that the game never reads and no checkpoint holds: engine.ts dayLights, handed to the light upload).
 // One rule finds every place a level is open to the sky by, from its boxes as they stand: where floor under a roof meets floor under the sky with no wall
 // between, and wall on both hands. Held here to a room built by hand (a wide window, high glass, a porch; an awning, a canopy, glass between two rooms and glass
@@ -11,8 +11,8 @@ import { readFileSync } from 'node:fs';
 import { standUp, ROOT } from './headless.ts';
 const { parseLevelData } = await import(`${ROOT}/src/scene/levelData.ts`);
 const { loadLevel } = await import(`${ROOT}/src/scene/levelLoad.ts`);
-const { placeMask, PLACE_W, PLACE_RES } = await import(`${ROOT}/src/scene/placePlan.ts`);
-const { planOpenings, openAreas, openingRadiance, LOOK_OPENINGS } = await import(`${ROOT}/src/scene/openings.ts`);
+const { placeMask, PLACE_W, PLACE_RES } = await import(`${ROOT}/src/render/placeField.ts`);
+const { planOpenings, openAreas, openingRadiance, LOOK_OPENINGS } = await import(`${ROOT}/src/render/openings.ts`);
 const { lookConfig } = await import(`${ROOT}/src/render/frame.ts`);
 const { lightClass, lightDayK } = await import(`${ROOT}/src/render/photometry.ts`);
 const { reachMaskFor } = await import(`${ROOT}/src/render/reach.ts`);

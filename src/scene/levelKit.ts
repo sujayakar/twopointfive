@@ -4,8 +4,6 @@
 // footprint is fitted by levelLoad.ts fitPropFootprint, as officeKit's are; officeGen.ts does not import this file. Units: metres. +X east, +Z south, +Y up. Floor top y = 0.
 import { Vec3 } from '../math/vec';
 import { Box, BoxFlag, makeBox } from './boxes';
-import { saidFor, namePaints, paintOf, worded, type BoxStuff, drawnAs, PANEL_GREY, madeOf } from './stuff';
-import { carShapes, hubPaint } from './carShapes';
 import { WORLD } from './world';
 import type { Level, LightDef, LevelDoorDef, PropKind, PropPart, PropDef } from './level';
 import { MarkingDef, MARKING_TEXEL } from './markings';
@@ -42,7 +40,8 @@ export const KIT_FINISH: Readonly<Record<string, { rough: number; metal?: boolea
   black: { rough: 0.6 }, cardboard: { rough: 0.9 }, chair: { rough: 0.9 }, plant: { rough: 0.9 }, grass: { rough: 1.0 },
   partRed: { rough: 0.9 }, partBlue: { rough: 0.9 }, partTan: { rough: 0.9 }, red: { rough: 0.45 },
 };
-namePaints(KIT_PALETTE, KIT_FINISH);   // (the kit's paints are known by the row handed over: add() below gives a box its paint's finish and what it is made of. scene/stuff.ts)
+const FINISH_BY_ALBEDO = new Map<string, { rough: number; metal?: boolean }>();
+{ const seen = new Set<string>(); for (const [name, alb] of Object.entries(C)) { const k = alb.join(','); if (seen.has(k)) continue; seen.add(k); const f = KIT_FINISH[name]; if (f) FINISH_BY_ALBEDO.set(k, f); } }   // first palette name per albedo, as levelToData's matByAlbedo
 export interface KitOpts { /** the objects carry their pixel-art markings (keyboards, cartons, cabinets, papers, racks); default on */ markings?: boolean; /** the base texel the bitmaps are generated for */ texel?: number; }
 /** What a generator accumulates: the Level's lists in add() order (box indices held by switchables / fixtures / beacons / the breaker all come from this one
  *  sequence), + the editor group of every box (`groups[i]` ≡ `boxes[i]`, for the level file). */
@@ -58,13 +57,10 @@ export function grp(k: LevelKit, name: string): void { k.section = name; }
 /** a box's markings, if the kit's markings are on (spread into an add() / a prop part) */
 const mk = (k: LevelKit, ms: MarkingDef[]): { marks?: MarkingDef[] } => k.marks && ms.length ? { marks: ms } : {};
 
-/** one box. A box made with one of a kit's paints (`albedo: C.wood`: the palette's own row handed over, scene/stuff.ts paintOf) takes that paint's finish,
- *  unless the call names its own rough / metal, and is made of what the paint is, unless the call says its own `stuff`. A colour written as numbers is
- *  nobody's paint: matte and plain unless the call says. Returns its index. */
+/** one box; the palette's finish is stamped on by colour unless the call names its own rough / metal. Returns its index. */
 export function add(k: LevelKit, b: Partial<Box> & { c: Vec3; h: Vec3 }): number {
-  const box = makeBox(b), paint = paintOf(b.albedo);
-  if (b.rough === undefined && b.metal === undefined && paint?.rough !== undefined) { box.rough = paint.rough; if (paint.metal) box.metal = true; }
-  worded(box);
+  const box = makeBox(b);
+  if (b.rough === undefined && b.metal === undefined) { const f = FINISH_BY_ALBEDO.get(box.albedo.join(',')); if (f) { box.rough = f.rough; if (f.metal) box.metal = true; } }
   k.boxes.push(box); k.groups.push(k.section); return k.boxes.length - 1;
 }
 /** axis-aligned box from min/max corners */
@@ -156,19 +152,19 @@ export const floorFinish = (k: LevelKit, x0: number, z0: number, x1: number, z1:
 export const POLISHED: Partial<Box> = { flags: BoxFlag.Gloss };
 /** the ceiling over a footprint: light-only (NoPrimary — the top-down camera looks through it) */
 export const ceiling = (k: LevelKit, x0: number, z0: number, x1: number, z1: number) => slab(k, x0, KIT_H, z0, x1, KIT_H + 0.2, z1, C.ceiling, { flags: BoxFlag.NoPrimary });
-/** a rug / mat: a decal (no rays, no footstep material), and cloth in whatever colour (floor paint is no rug: lay it as its own flat box) */
-export const rug = (k: LevelKit, x: number, z: number, w: number, d: number, albedo: Vec3, yaw = 0) => add(k, { c: [x, 0.018, z], h: [w / 2, 0.006, d / 2], yaw, albedo, stuff: 'cloth', flags: BoxFlag.NoShadow });
+/** a rug / mat: a decal (no rays, no footstep material) */
+export const rug = (k: LevelKit, x: number, z: number, w: number, d: number, albedo: Vec3, yaw = 0) => add(k, { c: [x, 0.018, z], h: [w / 2, 0.006, d / 2], yaw, albedo, flags: BoxFlag.NoShadow });
 
 // ---- fixed furniture ----
 /** Local→world frame of a yawed piece at (x, z): local +X → world (cos yaw, −sin yaw), local +Z → (sin yaw, cos yaw). */
 export const frameAt = (x: number, z: number, yaw: number) => { const cs = Math.cos(yaw), sn = Math.sin(yaw); return (lx: number, ly: number, lz: number): Vec3 => [x + cs * lx + sn * lz, ly, z - sn * lx + cs * lz]; };
 /** a desk: top (0.76 m), two side panels, a modesty panel on local −Z (the sitter is on +Z) */
 export function desk(k: LevelKit, x: number, z: number, w: number, d: number, yaw = 0, albedo: Vec3 = C.wood): void {
-  const at = frameAt(x, z, yaw), made = saidFor('veneer', albedo, C.wood, C.woodDark);   // (a desk in the kit's wood is veneer; in another paint it is what that paint is: a steel bench, a white table)
-  add(k, { c: at(0, 0.735, 0), h: [w / 2, 0.025, d / 2], yaw, albedo, ...made });
-  add(k, { c: at(-w / 2 + 0.03, 0.36, 0), h: [0.025, 0.36, d / 2 - 0.02], yaw, albedo, ...made });
-  add(k, { c: at(w / 2 - 0.03, 0.36, 0), h: [0.025, 0.36, d / 2 - 0.02], yaw, albedo, ...made });
-  add(k, { c: at(0, 0.45, -d / 2 + 0.03), h: [w / 2 - 0.05, 0.25, 0.012], yaw, albedo, ...made });
+  const at = frameAt(x, z, yaw);
+  add(k, { c: at(0, 0.735, 0), h: [w / 2, 0.025, d / 2], yaw, albedo });
+  add(k, { c: at(-w / 2 + 0.03, 0.36, 0), h: [0.025, 0.36, d / 2 - 0.02], yaw, albedo });
+  add(k, { c: at(w / 2 - 0.03, 0.36, 0), h: [0.025, 0.36, d / 2 - 0.02], yaw, albedo });
+  add(k, { c: at(0, 0.45, -d / 2 + 0.03), h: [w / 2 - 0.05, 0.25, 0.012], yaw, albedo });
 }
 /** a monitor (screen faces local +Z) on a surface at `baseY` (a desk 0.76) + its keyboard; `on` = a lit screen, a switchable in group 'monitors'. Returns the screen's box. */
 export function monitor(k: LevelKit, x: number, z: number, yaw: number, on: boolean, baseY = 0.76, keyboard = true): number {
@@ -178,12 +174,12 @@ export function monitor(k: LevelKit, x: number, z: number, yaw: number, on: bool
   add(k, { c: at(0, baseY + 0.32, 0), h: [0.27, 0.17, 0.02], yaw, albedo: C.black });
   const scr = add(k, { c: at(0, baseY + 0.32, 0.022), h: [0.25, 0.15, 0.004], yaw, albedo: C.screenOff, emissive: on ? [0.9, 1.3, 2.2] : [0, 0, 0], ...mk(k, MD.monitorMarks([0.25, 0.15, 0.004], on, k.texel)) });
   if (on) k.switchables.push({ name: `monitor${k.switchables.length}`, boxes: [scr], group: 'monitors', on: true, baseEmissive: [0.9, 1.3, 2.2] });
-  if (keyboard) add(k, { c: at(0, baseY + 0.01, 0.28), h: [0.2, 0.012, 0.07], yaw, albedo: drawnAs('metal', [0.08, 0.08, 0.09]), ...mk(k, MD.keyboardMarks([0.2, 0.012, 0.07], k.texel)) });
+  if (keyboard) add(k, { c: at(0, baseY + 0.01, 0.28), h: [0.2, 0.012, 0.07], yaw, albedo: [0.08, 0.08, 0.09], ...mk(k, MD.keyboardMarks([0.2, 0.012, 0.07], k.texel)) });
   return scr;
 }
 /** a filing cabinet (0.46 × 1.32 × 0.6), drawer fronts on local −Z */
 export function cabinet(k: LevelKit, x: number, z: number, yaw: number): number {
-  return add(k, { c: [x, 0.66, z], h: [0.23, 0.66, 0.3], yaw, albedo: [0.58, 0.58, 0.56], stuff: 'steel', ...mk(k, MD.cabinetMarks([0.23, 0.66, 0.3], k.texel)) });
+  return add(k, { c: [x, 0.66, z], h: [0.23, 0.66, 0.3], yaw, albedo: [0.58, 0.58, 0.56], ...mk(k, MD.cabinetMarks([0.23, 0.66, 0.3], k.texel)) });
 }
 /** two sheets of paper on a surface at height y */
 export function papers(k: LevelKit, x: number, y: number, z: number, yaw = 0, scribble = false): void {
@@ -200,16 +196,14 @@ export function bench(k: LevelKit, x: number, z: number, yaw: number): void {
   add(k, { c: [x, 0.42, z], h: [0.7, 0.03, 0.2], yaw, albedo: C.woodDark });
   for (const sx of [-0.6, 0.6]) add(k, { c: at(sx, 0.2, 0), h: [0.03, 0.2, 0.18], yaw, albedo: C.metal });
 }
-/** a parked car, 4.4 × 1.7 m, local +X forward. Hands back the shapes its boxes say */
-export function car(k: LevelKit, x: number, z: number, yaw: number, body: Vec3) {
+/** a parked car, 4.4 × 1.7 m, local +X forward */
+export function car(k: LevelKit, x: number, z: number, yaw: number, body: Vec3): void {
   const at = frameAt(x, z, yaw);
-  const S = carShapes({ hub: hubPaint([0.5, 0.52, 0.53]) });   // (S: the shape each box says — scene/carShapes.ts)
-  add(k, { c: [x, 0.62, z], h: [2.2, 0.34, 0.86], yaw, albedo: body, shape: S.body });
-  add(k, { c: at(-0.25, 1.2, 0), h: [1.25, 0.27, 0.8], yaw, albedo: [0.07, 0.08, 0.1], shape: S.glass });
-  add(k, { c: at(-0.25, 1.49, 0), h: [1.15, 0.03, 0.76], yaw, albedo: body, shape: S.roof });
-  for (const [lx, lz] of [[1.35, 0.8], [1.35, -0.8], [-1.4, 0.8], [-1.4, -0.8]]) add(k, { c: at(lx, 0.3, lz), h: [0.32, 0.3, 0.12], yaw, albedo: C.black, shape: S.wheel(Math.sign(lz)) });
-  for (const lz of [0.62, -0.62]) { add(k, { c: at(2.2, 0.7, lz), h: [0.02, 0.07, 0.14], yaw, albedo: [0.8, 0.8, 0.75], flags: BoxFlag.NoShadow, shape: S.head(Math.sign(lz)) }); add(k, { c: at(-2.2, 0.75, lz), h: [0.02, 0.06, 0.16], yaw, albedo: [0.3, 0.02, 0.02], emissive: [0.5, 0.03, 0.02], flags: BoxFlag.NoShadow, shape: S.tail(Math.sign(lz)) }); }
-  return S;   // (the shapes it says, its `tops` among them: what a level stands on its roof is fitted by carShapes.ts feetOn / layOn)
+  add(k, { c: [x, 0.62, z], h: [2.2, 0.34, 0.86], yaw, albedo: body });
+  add(k, { c: at(-0.25, 1.2, 0), h: [1.25, 0.27, 0.8], yaw, albedo: [0.07, 0.08, 0.1] });
+  add(k, { c: at(-0.25, 1.49, 0), h: [1.15, 0.03, 0.76], yaw, albedo: body });
+  for (const [lx, lz] of [[1.35, 0.8], [1.35, -0.8], [-1.4, 0.8], [-1.4, -0.8]]) add(k, { c: at(lx, 0.3, lz), h: [0.32, 0.3, 0.12], yaw, albedo: [0.04, 0.04, 0.045] });
+  for (const lz of [0.62, -0.62]) { add(k, { c: at(2.2, 0.7, lz), h: [0.02, 0.07, 0.14], yaw, albedo: [0.8, 0.8, 0.75], flags: BoxFlag.NoShadow }); add(k, { c: at(-2.2, 0.75, lz), h: [0.02, 0.06, 0.16], yaw, albedo: [0.3, 0.02, 0.02], emissive: [0.5, 0.03, 0.02], flags: BoxFlag.NoShadow }); }
 }
 /** open steel shelving w × d, `levels` shelves up to `hgt`, cartons on most of them (see-through between the cartons: it is NOT a wall to eyes or rounds) */
 export function shelf(k: LevelKit, x: number, z: number, w: number, d: number, yaw: number, levels = 4, hgt = 2.0): void {
@@ -222,7 +216,7 @@ export function shelf(k: LevelKit, x: number, z: number, w: number, d: number, y
   }
 }
 /** a low sofa (the manager's office's): seat 1.8 × 0.9 with the back along local −Z */
-export function sofa(k: LevelKit, x: number, z: number, yaw: number, albedo: Vec3 = madeOf('fabric', [0.22, 0.2, 0.19])): void {
+export function sofa(k: LevelKit, x: number, z: number, yaw: number, albedo: Vec3 = [0.22, 0.2, 0.19]): void {
   const at = frameAt(x, z, yaw);
   add(k, { c: at(0, 0.3, 0), h: [0.9, 0.3, 0.45], yaw, albedo }); add(k, { c: at(0, 0.62, -0.45), h: [0.9, 0.32, 0.12], yaw, albedo });
 }
@@ -232,7 +226,7 @@ export function sofa(k: LevelKit, x: number, z: number, yaw: number, albedo: Vec
 export function rack(k: LevelKit, x: number, z: number, index: number, flicker = false): Vec3 {
   const slots: { u: number; y: number; amber: boolean }[] = [];
   for (let u = 0; u < 10; u++) { if (((u * 7 + index * 3) % 5) > 1) continue; slots.push({ u, y: 0.32 + u * 0.178, amber: (u + index) % 7 === 3 }); }
-  const body = add(k, { c: [x, 1.05, z], h: [0.33, 1.05, 0.5], albedo: drawnAs('metal', [0.06, 0.06, 0.07]), rough: 0.3, ...mk(k, MD.rackMarks([0.33, 1.05, 0.5], slots.map(sl => ({ v: sl.y - 1.05, amber: sl.amber })), k.texel)) });
+  const body = add(k, { c: [x, 1.05, z], h: [0.33, 1.05, 0.5], albedo: [0.06, 0.06, 0.07], rough: 0.3, ...mk(k, MD.rackMarks([0.33, 1.05, 0.5], slots.map(sl => ({ v: sl.y - 1.05, amber: sl.amber })), k.texel)) });
   let lo = 10, hi = -10; for (const sl of slots) { lo = Math.min(lo, sl.y); hi = Math.max(hi, sl.y); }
   if (slots.length) {
     k.switchables.push({ name: `rack${index}_leds`, boxes: [body], group: 'server_leds', on: true, baseEmissive: [0, 0, 0], flicker, mains: false });
@@ -249,15 +243,13 @@ const fitProp = (p: PropDef) => {   // the footprint (bounding rectangle of the 
   p.half = fit.half; p.height = fit.height;
 };
 export function prop(k: LevelKit, kind: PropKind, x: number, z: number, yaw: number, mass: number, parts: PropPart[], half?: [number, number]): PropDef {
-  const p: PropDef = { kind, name: `${kind}${k.props.length}`, x, z, yaw, parts: parts.map(worded), half: [0, 0], height: 0, mass };   // (each part is made of what it says, else what its paint is: scene/stuff.ts)
+  const p: PropDef = { kind, name: `${kind}${k.props.length}`, x, z, yaw, parts, half: [0, 0], height: 0, mass };
   fitProp(p); if (half) p.half = half; k.props.push(p); return p;
 }
 /** an office chair on casters; the sitter faces local −Z (the back is on +Z) */
-/** `made` = what the seat and back are, said by a caller that hands a paint of its own (the kit's chair paint says fabric by its name) */
-export function chair(k: LevelKit, x: number, z: number, yaw: number, albedo: Vec3 = C.chair, made?: BoxStuff): void {
-  const says = made !== undefined ? { stuff: made } : {};
+export function chair(k: LevelKit, x: number, z: number, yaw: number, albedo: Vec3 = C.chair): void {
   prop(k, 'chair', x, z, yaw, 12, [
-    { off: [0, 0.46, 0], h: [0.24, 0.04, 0.24], yaw: 0, albedo, ...says }, { off: [0, 0.8, 0.22], h: [0.23, 0.3, 0.035], yaw: 0, albedo, ...says },
+    { off: [0, 0.46, 0], h: [0.24, 0.04, 0.24], yaw: 0, albedo }, { off: [0, 0.8, 0.22], h: [0.23, 0.3, 0.035], yaw: 0, albedo },
     { off: [0, 0.22, 0], h: [0.04, 0.22, 0.04], yaw: 0, albedo: C.black }, { off: [0, 0.03, 0], h: [0.25, 0.03, 0.05], yaw: 0, albedo: C.black }, { off: [0, 0.03, 0], h: [0.05, 0.03, 0.25], yaw: 0, albedo: C.black },
   ]);
 }
@@ -268,7 +260,7 @@ export function cardboardBox(k: LevelKit, x: number, z: number, s: number, yaw: 
       const p = k.props[i]; if (p.kind !== 'cardboard') continue;
       const cs = Math.cos(p.yaw), sn = Math.sin(p.yaw), dx = x - p.x, dz = z - p.z; const lx = cs * dx - sn * dz, lz = sn * dx + cs * dz;
       if (Math.abs(lx) > p.half[0] || Math.abs(lz) > p.half[1]) continue;
-      p.parts.push(worded({ off: [lx, y + s / 2, lz], h: [s / 2, s / 2, s / 2], yaw: yaw - p.yaw, albedo: C.cardboard, ...mk(k, MD.cartonMarks([s / 2, s / 2, s / 2], k.texel)) })); p.mass += 1 + 22 * Math.pow(s, 3); fitProp(p); return;
+      p.parts.push({ off: [lx, y + s / 2, lz], h: [s / 2, s / 2, s / 2], yaw: yaw - p.yaw, albedo: C.cardboard, ...mk(k, MD.cartonMarks([s / 2, s / 2, s / 2], k.texel)) }); p.mass += 1 + 22 * Math.pow(s, 3); fitProp(p); return;
     }
   }
   prop(k, 'cardboard', x, z, yaw, 1 + 22 * Math.pow(s, 3), [{ off: [0, y + s / 2, 0], h: [s / 2, s / 2, s / 2], yaw: 0, albedo: C.cardboard, ...mk(k, MD.cartonMarks([s / 2, s / 2, s / 2], k.texel)) }]);
@@ -335,7 +327,7 @@ export function breakerPanel(k: LevelKit, pos: Vec3, out: [number, number]): Lev
   const alongX = Math.abs(out[1]) > 0.5;   // the wall runs along X when its normal is ±Z
   const at = (o: number, s: number, y: number): Vec3 => alongX ? [pos[0] + s, y, pos[2] + out[1] * o] : [pos[0] + out[0] * o, y, pos[2] + s];
   const hx = (w: number, t: number): [number, number] => alongX ? [w, t] : [t, w];
-  const [pw, pt] = hx(0.28, 0.04); const brk = add(k, { c: at(0.04, 0, pos[1]), h: [pw, 0.36, pt], albedo: PANEL_GREY, name: 'breaker_panel' });
+  const [pw, pt] = hx(0.28, 0.04); const brk = add(k, { c: at(0.04, 0, pos[1]), h: [pw, 0.36, pt], albedo: [0.42, 0.44, 0.45], name: 'breaker_panel' });
   const [lw, lt] = hx(0.015, 0.01); const led = add(k, { c: at(0.09, -0.18, pos[1] + 0.27), h: [lw, 0.015, lt], albedo: C.black, emissive: [0.3, 4, 0.6], flags: BoxFlag.NoShadow });
   add(k, { c: at(0.04, 0, pos[1] + 0.95), h: [0.03, 0.6, 0.03], albedo: [0.3, 0.3, 0.32], flags: BoxFlag.NoShadow });   // conduit up to the ceiling
   return { pos: at(0.14, 0, pos[1]), boxes: [brk, led] };

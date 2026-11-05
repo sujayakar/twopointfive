@@ -12,20 +12,18 @@
 //                        its side, a few mud bricks at the wall's end
 // ONE MODEL: what closes a window is a real box (a round, a look and the room's lamp stop at a plank, a shutter, the blanket, and pass between the planks), and so is
 // what stands on the ground (none within a stride of a door) and the beam ends over every head. Only what lies flat ON the wall is picture only (NoShadow), as the
-// level's own panels are. Paints are the level palette's rows, toned in one piece, and each box says what its paint is made of (scene/stuff.ts), so the look's
-// maps know mud from wood from paint. KNOWN: a tilted box (Box.rot: the planks, the ladder, the blanket) takes no map and no clinging snow from the look; a wall charge here leaves the
+// level's own panels are. Colours are the level palette's rows, darkened in one piece, so the look's maps know mud from wood from paint (render/gbuffer.ts
+// lookClass). KNOWN: a tilted box (Box.rot: the planks, the ladder, the blanket) takes no map and no clinging snow from the look; a wall charge here leaves the
 // pieces above a hand's height hanging (scene/lookTidy.ts takes a decal with its wall only from the foot).
 import { BoxFlag, type Box } from './boxes';
 import { cutPlane, cutRecord, fitCutBox, type CutPlane } from './cut';
 import { quat, type Quat, type Vec3 } from '../math/vec';
-import { GWOT_PALETTE } from './gwotPalette';
-import { repainted, toned, worded } from './stuff';
 
 const D = Math.PI / 180;
 type More = Partial<Box>;
-const box = (c: Vec3, h: Vec3, albedo: Vec3, o: More = {}): Box => worded({ c, h, yaw: 0, albedo, emissive: [0, 0, 0], flags: 0, owner: 0, cutHeight: 1000000, rough: 0.95, ...o });
-/** a palette row toned in one piece: the row's stuff (scene/stuff.ts toned; 1 = the row itself) */
-const of = (row: Vec3, k = 1): Vec3 => k === 1 ? row : toned(row, k);
+const box = (c: Vec3, h: Vec3, albedo: Vec3, o: More = {}): Box => ({ c, h, yaw: 0, albedo, emissive: [0, 0, 0], flags: 0, owner: 0, cutHeight: 1000000, rough: 0.95, ...o });
+/** a palette row darkened in one piece (0.55 < k < 0.99 keeps the row's class; 1 = the row) */
+const of = (row: Vec3, k = 1): Vec3 => [row[0] * k, row[1] * k, row[2] * k];
 /** the eight planes that make a box of square section a twelve-sided prism about its own y (2) or z (3) */
 const round = (r: number, axis: 2 | 3): CutPlane[] => [30, 60, 120, 150, 210, 240, 300, 330].map(d => cutPlane(axis === 3 ? [Math.cos(d * D), Math.sin(d * D), 0] : [Math.cos(d * D), 0, Math.sin(d * D)], r));
 /** a flat shape on a wall face at z: a thin box about (x, y), w × h half-sizes, its outline cut by planes given as [degrees round the face, share of the way out 0‥1] */
@@ -42,8 +40,8 @@ function log(out: Box[], c: Vec3, r: number, len: number, bark: Vec3, grain: Vec
 }
 
 // the level palette's rows this wall is made of (scene/gwotPalette.ts)
-const P = GWOT_PALETTE, MUD = P.mud, MUD_LIGHT = P.mudLight, MUD_DARK = P.mudDark, POPLAR = P.poplar, WOOD_GREY = P.woodGrey, PLY = P.ply;
-const RUST_PAINT = P.paintRust, GREEN_PAINT = P.paintGreen, BLUE_PAINT = P.paintBlue, BLANKET = P.blanketGrey, IRON = P.iron, OLIVE = P.olive, JERRY = P.jerryYellow;
+const MUD: Vec3 = [0.42, 0.32, 0.21], MUD_LIGHT: Vec3 = [0.56, 0.46, 0.33], MUD_DARK: Vec3 = [0.29, 0.22, 0.15], POPLAR: Vec3 = [0.47, 0.36, 0.22], WOOD_GREY: Vec3 = [0.33, 0.29, 0.23], PLY: Vec3 = [0.55, 0.43, 0.27];
+const RUST_PAINT: Vec3 = [0.3, 0.075, 0.04], GREEN_PAINT: Vec3 = [0.08, 0.24, 0.16], BLUE_PAINT: Vec3 = [0.06, 0.19, 0.32], BLANKET: Vec3 = [0.3, 0.3, 0.31], IRON: Vec3 = [0.098, 0.1, 0.112], OLIVE: Vec3 = [0.15, 0.17, 0.09], JERRY: Vec3 = [0.62, 0.46, 0.05];
 const WOOD_A = of(POPLAR, 0.66), WOOD_B = of(WOOD_GREY, 0.66), WOOD_C = WOOD_GREY, BARK = of(WOOD_GREY, 0.57), BARK_B = of(POPLAR, 0.57), GRAIN = of(PLY, 0.92), GRAIN_B = of(POPLAR, 0.95);
 
 /** the pass's tea house, by the boxes its file gives the wall: the two red panels and the second window's first pane */
@@ -61,11 +59,11 @@ export function dressFront(level: { boxes: Box[] }): number {
   const lean = (yaw: number, back: number): Quat => quat.mul(quat.yaw(yaw), quat.axisAngle([1, 0, 0], -back));   // stood up, its top tipped `back` toward the wall, then turned
 
   // ---- the paint ----
-  const p1 = B[61]; repainted(p1, of(RUST_PAINT, 0.9));   // worn at the top, a bite out of one corner
+  const p1 = B[61]; p1.albedo = of(RUST_PAINT, 0.9);   // worn at the top, a bite out of one corner
   p1.cut = cutRecord(p1.h, [cutPlane([0.16, 1, 0], 0.47), cutPlane([1, 0.9, 0], 0.62), cutPlane([-1, 0.35, 0], 0.6)]).cut; fitCutBox(p1);
-  const p2 = B[62]; p2.c = [18.3, 0.2, p2.c[2]]; p2.h = [0.5, 0.2, p2.h[2]]; repainted(p2, of(RUST_PAINT, 0.8));   // plastered over: a strip is left under the patch
+  const p2 = B[62]; p2.c = [18.3, 0.2, p2.c[2]]; p2.h = [0.5, 0.2, p2.h[2]]; p2.albedo = of(RUST_PAINT, 0.8);   // plastered over: a strip is left under the patch
   add(flat(18.42, 0.82, Z + 0.011, 0.58, 0.5, of(MUD_LIGHT, 0.9), [[18, 0.9], [72, 0.86], [141, 0.8], [203, 0.93], [262, 0.84], [318, 0.8]]));
-  const p4 = B[64]; if (p4 && Math.abs(p4.c[0] - 27.88) < 0.02 && (p4.flags & BoxFlag.NoShadow)) { repainted(p4, of(BLUE_PAINT, 0.75)); p4.c = [p4.c[0], 0.42, p4.c[2]]; p4.h = [p4.h[0], 0.42, p4.h[2]]; }
+  const p4 = B[64]; if (p4 && Math.abs(p4.c[0] - 27.88) < 0.02 && (p4.flags & BoxFlag.NoShadow)) { p4.albedo = of(BLUE_PAINT, 0.75); p4.c = [p4.c[0], 0.42, p4.c[2]]; p4.h = [p4.h[0], 0.42, p4.h[2]]; }
 
   // ---- mended wall ----
   add(flat(23.3, 2.28, Z + 0.003, 0.95, 0.4, of(MUD, 0.8), [[8, 0.94], [64, 0.8], [118, 0.88], [171, 0.9], [236, 0.78], [305, 0.86]]));

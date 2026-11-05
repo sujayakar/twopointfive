@@ -76,7 +76,7 @@ if (STAND === 'shipped') {
 } else console.log('- (layers: not asked on the frozen stand, where the module\'s layers do not answer: the engine\'s maths)');
 // ---- game, rule
 {
-  const fold = (env: Record<string, string | undefined>) => { const r = child(['bun', 'run', 'tools/qa/pose-fold.ts', RUN], { TPS_PROFILE: STAND, TPS_RUSTPOSES: '0', TPS_RUSTWALK: '0', ...env }); return /word ([0-9a-f]{1,8})\b/.exec(r.out)?.[1] ?? `none (${last(r.out)})`; };
+  const fold = (env: Record<string, string | undefined>) => { const r = child(['bun', 'run', 'tools/qa/pose-fold.ts', RUN], { TPS_PROFILE: STAND, TPS_RUSTPOSES: undefined, TPS_RUSTWALK: undefined, ...env }); return /word ([0-9a-f]{1,8})\b/.exec(r.out)?.[1] ?? `none (${last(r.out)})`; };
   const word = (w: string) => /^[0-9a-f]{1,8}$/.test(w);
   const on = fold({ [WORD]: '1' }), off = fold({ [WORD]: '0' });
   // (the rows answer only where the game's own maths stand: on the frozen stand "rows up" would be the TypeScript against itself, so the line is not asked there)

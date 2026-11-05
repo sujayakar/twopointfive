@@ -7,7 +7,7 @@
 // switchable's boxes, the breaker's pair, a beacon's dome) id ⇄ index. Nothing here is procedural: the one computed thing is a prop's collision footprint
 // fitted from its parts (fitPropFootprint, the generator's own rule), and a file may pin that too (PropData.half / height).
 import type { Vec3 } from '../math/vec';
-import { Box, BoxFlag, makeBox, ROUGH_DEFAULT, type BoxStuff } from './boxes';
+import { Box, BoxFlag, makeBox, ROUGH_DEFAULT } from './boxes';
 import type { Level, LightDef, PropDef, PropPart, LevelDoorDef, PatrolRoute, Chokepoint, RoomClearPlan, BreachPlan, DaylightDef, DeviceDef, CivilianDef, VentDef, VolumeDef } from './level';
 import { withScript } from './level';
 import { LEVEL_SCRIPTS } from './levelScripts';
@@ -62,10 +62,6 @@ export function loadLevel(data: LevelData, opts: { validate?: boolean; dressing?
     const m = o.material !== undefined ? mats.get(o.material) : undefined, rough = o.rough ?? m?.rough, metal = o.metal ?? m?.metal;
     return { ...(rough !== undefined ? { rough } : {}), ...(metal ? { metal: true as const } : {}) };
   };
-  /** what a box or a part is made of: its own word, else its material row's; nothing for plain (a box that says nothing is plain) */
-  const stuffOf = (o: { stuff?: string }, m: MaterialData | undefined): BoxStuff | undefined => { const w = o.stuff ?? m?.stuff; return w === undefined || w === 'plain' ? undefined : w as BoxStuff; };
-  /** the same for a box, or a shape's piece, that names its row itself (ONE reader for both, as finishOf is) */
-  const saidOf = (o: { stuff?: string; material?: string }): { stuff?: BoxStuff } => { const w = stuffOf(o, o.material !== undefined ? mats.get(o.material) : undefined); return w !== undefined ? { stuff: w } : {}; };
   // boxes, in file order (index i of the file IS static box i)
   const boxIndex = new Map<string, number>();
   // (the DRESSING — things a level file carries only to be wrecked, appended last by tools/levels/dress.ts — is left out with the destruction switch off: every other
@@ -84,10 +80,10 @@ export function loadLevel(data: LevelData, opts: { validate?: boolean; dressing?
     const marks = copyMarkings(b.markings); if (marks) p.marks = marks;   // (through markings.ts marking(): the same structure the generator builds)
     // the finish (Box.rough / metal): the box's own, else its material's; absent both = matte dielectric — nothing written, so a file without finishes loads to
     // the very Level it always did (`metal` is only ever carried as true: false is the default and stays unwritten, as levelToData writes it)
-    Object.assign(p, finishOf(b), saidOf(b));   // (what it is made of — scene/stuff.ts: the box's own word, else its material's; 'plain' is no word, and validate has refused every word a box cannot be)
-    if (b.shape) {   // A SHAPE (scene/shapes.ts): carried on the box as authored — its planes copied, a piece's paint, finish and word resolved as a box's are; given to the box when the level is stood up
+    Object.assign(p, finishOf(b));
+    if (b.shape) {   // A SHAPE (scene/shapes.ts): carried on the box as authored — its planes copied, a piece's paint and finish resolved as a box's are; given to the box when the level is stood up
       const s = b.shape, sh: BoxShape = { ...formOf(s) };
-      if (s.with) sh.with = s.with.map((w): ShapePiece => ({ off: V(w.off), h: V(w.h), ...(w.yaw ? { yaw: w.yaw } : {}), ...(w.material !== undefined || w.albedo !== undefined ? { albedo: albedoOf(w), ...finishOf(w), ...saidOf(w) } : {}), ...formOf(w) }));   // (no paint: the piece wears its box's paint, finish and word — shapes.ts shapeLevel)
+      if (s.with) sh.with = s.with.map((w): ShapePiece => ({ off: V(w.off), h: V(w.h), ...(w.yaw ? { yaw: w.yaw } : {}), albedo: albedoOf(w), ...finishOf(w), ...formOf(w) }));
       p.shape = sh;
     }
     return makeBox(p);
@@ -95,7 +91,7 @@ export function loadLevel(data: LevelData, opts: { validate?: boolean; dressing?
   const bx = (id: string) => { const i = boxIndex.get(id); if (i === undefined) throw new Error(`level '${data.name}': unknown box '${id}'`); return i; };
   // loose props
   const props: PropDef[] = fileProps.map(p => {
-    const parts: PropPart[] = p.parts.map(q => { const part: PropPart = { off: V(q.off), h: V(q.h), yaw: q.yaw ?? 0, albedo: albedoOf(q) }; const marks = copyMarkings(q.markings); if (marks) part.marks = marks; const stuff = stuffOf(q, q.material !== undefined ? mats.get(q.material) : undefined); if (stuff !== undefined) part.stuff = stuff; return part; });
+    const parts: PropPart[] = p.parts.map(q => { const part: PropPart = { off: V(q.off), h: V(q.h), yaw: q.yaw ?? 0, albedo: albedoOf(q) }; const marks = copyMarkings(q.markings); if (marks) part.marks = marks; return part; });
     const fit = fitPropFootprint(parts);
     return { kind: p.kind, name: p.name ?? p.id, x: p.x, z: p.z, yaw: p.yaw ?? 0, parts, half: p.half ? [p.half[0], p.half[1]] : fit.half, height: p.height ?? fit.height, mass: p.mass };
   });
@@ -202,7 +198,7 @@ export interface LevelToDataOpts {
 export function levelToData(level: Level, opts: LevelToDataOpts): LevelData {
   const floors: FloorData[] = opts.floors?.map(f => ({ ...f })) ?? [{ id: 'f0', name: 'ground floor', y: 0, ceiling: 3 }];
   const F0 = floors[0].id;
-  const materials: Record<string, MaterialData> = {}; for (const [k, m] of Object.entries(opts.materials ?? {})) materials[k] = { albedo: V(m.albedo), ...(m.rough !== undefined ? { rough: m.rough } : {}), ...(m.metal ? { metal: true } : {}), ...(m.stuff !== undefined ? { stuff: m.stuff } : {}), ...(m.notes ? { notes: m.notes } : {}) };
+  const materials: Record<string, MaterialData> = {}; for (const [k, m] of Object.entries(opts.materials ?? {})) materials[k] = { albedo: V(m.albedo), ...(m.rough !== undefined ? { rough: m.rough } : {}), ...(m.metal ? { metal: true } : {}), ...(m.notes ? { notes: m.notes } : {}) };
   const matByAlbedo = new Map<string, string>(); for (const [k, m] of Object.entries(materials)) { const key = m.albedo.join(','); if (!matByAlbedo.has(key)) matByAlbedo.set(key, k); }
   const paint = (albedo: Vec3): { material: string } | { albedo: Vec3 } => { const m = matByAlbedo.get(albedo.join(',')); return m !== undefined ? { material: m } : { albedo: V(albedo) }; };
   /** the finish a box carries beyond what its paint already says: written per box only where it differs from the material's (or, inline, from matte
@@ -213,12 +209,6 @@ export function levelToData(level: Level, opts: LevelToDataOpts): LevelData {
     if (b.rough !== m?.rough) out.rough = b.rough ?? ROUGH_DEFAULT;   // (an explicit matte over a finished material: the default written out — loads back as rough 1, the same finish if not the same key)
     if (!!b.metal !== !!m?.metal) out.metal = !!b.metal;
     return out;
-  };
-  /** what a box says beyond its paint's row (scene/stuff.ts): written per box only where it is another thing than its material says, 'plain' where it is
-   *  nothing over a row that says something; a box with an inline albedo writes its word unless it is plain */
-  const says = (b: { stuff?: string }, p: { material?: string }): { stuff?: string } => {
-    const mine = b.stuff ?? 'plain', rows = (p.material !== undefined ? materials[p.material].stuff : undefined) ?? 'plain';
-    return mine !== rows ? { stuff: mine } : {};
   };
   // box ids: supplied → the box's own name → what references it (breaker, a light's fixture, a switchable) → box_NNNN
   const firstPiece = level.boxes.findIndex(b => b.piece === true), n = firstPiece < 0 ? level.boxes.length : firstPiece; const ids: string[] = new Array(n);   // (the level's own boxes: a stood level's pieces — scene/shapes.ts — follow them and are written inside the shape that says them)
@@ -242,17 +232,16 @@ export function levelToData(level: Level, opts: LevelToDataOpts): LevelData {
     if (b.emissive[0] !== 0 || b.emissive[1] !== 0 || b.emissive[2] !== 0) d.emissive = V(b.emissive);
     const flags = bitsToFlags(fl & ~DERIVED); if (flags.length) d.flags = flags;
     if (b.cutHeight !== 1e6) d.cutHeight = b.cutHeight;
-    const word = says(b, pt as { material?: string }); if (word.stuff !== undefined) d.stuff = word.stuff;
     const marks = copyMarkings(mk); if (marks) d.markings = marks;
-    if (b.shape) {   // A SHAPE (scene/shapes.ts), as it was read: a piece's paint by name where the level has one, its finish and its word only where they are not the material's
+    if (b.shape) {   // A SHAPE (scene/shapes.ts), as it was read: a piece's paint by name where the level has one, its finish only where it is not the material's
       const s = b.shape, sd: ShapeData = { ...formOf(s) };
-      if (s.with) sd.with = s.with.map((w): ShapePieceData => { if (!w.albedo) return { off: V(w.off), h: V(w.h), ...(w.yaw ? { yaw: w.yaw } : {}), ...formOf(w) }; const wp = paint(w.albedo); return { off: V(w.off), h: V(w.h), ...(w.yaw ? { yaw: w.yaw } : {}), ...wp, ...finish(w, wp as { material?: string }), ...says(w, wp as { material?: string }), ...formOf(w) }; });
+      if (s.with) sd.with = s.with.map((w): ShapePieceData => { const wp = paint(w.albedo); return { off: V(w.off), h: V(w.h), ...(w.yaw ? { yaw: w.yaw } : {}), ...wp, ...finish(w, wp as { material?: string }), ...formOf(w) }; });
       d.shape = sd;
     }
     return d;
   });
   const props: PropData[] = level.props.map(p => {
-    const parts = p.parts.map(q => { const marks = copyMarkings(q.marks), pt = paint(q.albedo); return { off: V(q.off), h: V(q.h), ...(q.yaw !== 0 ? { yaw: q.yaw } : {}), ...pt, ...says(q, pt as { material?: string }), ...(marks ? { markings: marks } : {}) }; });
+    const parts = p.parts.map(q => { const marks = copyMarkings(q.marks); return { off: V(q.off), h: V(q.h), ...(q.yaw !== 0 ? { yaw: q.yaw } : {}), ...paint(q.albedo), ...(marks ? { markings: marks } : {}) }; });
     const d: PropData = { id: p.name, kind: p.kind, x: p.x, z: p.z, ...(p.yaw !== 0 ? { yaw: p.yaw } : {}), mass: p.mass, parts };
     const fit = fitPropFootprint(p.parts);   // pin the footprint only where the fit would not give the authored numbers back bit for bit (plants override theirs)
     if (fit.half[0] !== p.half[0] || fit.half[1] !== p.half[1]) d.half = [p.half[0], p.half[1]];

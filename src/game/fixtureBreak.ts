@@ -19,7 +19,6 @@
 import { SideMap } from '../math/side';
 import { Vec3, Quat, v3, quat } from '../math/vec';
 import { Box, BoxFlag, makeBox, MKEY } from '../scene/boxes';
-import { wordFor, madeOf } from '../scene/stuff';   // (no game module: the table of what a paint is made of)
 import { DESTRUCTION } from './destructionSwitch';
 import { gpuFx } from './particleFx';
 import type { Game, LightTarget } from './game';
@@ -47,7 +46,6 @@ export const FIXLOOK = {
   tray: [0.4, 0.41, 0.42] as Vec3, cover: [0.55, 0.55, 0.56] as Vec3, face: [0.78, 0.78, 0.75] as Vec3, tube: [0.8, 0.8, 0.78] as Vec3, soot: [0.06, 0.055, 0.05] as Vec3,
   diffuser: [0.8, 0.83, 0.86] as Vec3, shard: [0.85, 0.9, 0.9] as Vec3,
 };
-madeOf('sheet', FIXLOOK.tray);   // (a fixture's tray is folded sheet: scene/stuff.ts)
 export const FIXLOOK_STATS = { panels: 0, lamps: 0, beats: 0, boxes: 0, sparks: 0 };
 
 interface Piece { box: Box; v: Vec3; axis: Vec3; rate: number; ang: number; q0: Quat; floorY: number; yaw: number; delay: number; rest: boolean; bounced: boolean; glass: boolean; on: Box | null; onX: number; onZ: number }
@@ -136,7 +134,7 @@ function add(S: State, g: Game, t: LightTarget, kind: 1 | 2, born: number): Rec 
   }
   if (beat) { r.th = 0.02; r.om = FIXLOOK.kick * (0.85 + 0.3 * h01(seed + 2)); } else if (isFinite(r.fallAt)) { r.phase = 2; r.th = 0; r.still = true; r.lay = 1; land(r, 1); } else { r.th = r.rest; r.still = true; }
   const key = MKEY.test + 0x5000 + ((S.keys++ & 0xff) << 5); let part = 0;
-  const mk = (h: Vec3, albedo: Vec3, rough?: number): Box => { const x = makeBox({ c: v3.copy(c), h, albedo: v3.copy(albedo), ...wordFor(albedo), flags: LOOK, rot: quat.ident(), name: 'fixtureLook' }); x.mkey = key + part++; if (rough !== undefined) x.rough = rough; return x; };
+  const mk = (h: Vec3, albedo: Vec3, rough?: number): Box => { const x = makeBox({ c: v3.copy(c), h, albedo: v3.copy(albedo), flags: LOOK, rot: quat.ident(), name: 'fixtureLook' }); x.mkey = key + part++; if (rough !== undefined) x.rough = rough; return x; };
   // the fixture hanging: tray, the ballast cover on its back, the white face, a tube slid part way out of its clips past the free end (what says 'light' from above, where only the tray's back shows), the stub of the one that burst, the torn lead at the free end (the glow)
   r.hang = [mk([L / 2, 0.02, W / 2], FIXLOOK.tray), mk([L * 0.15, 0.03, Math.min(0.06, W * 0.22)], FIXLOOK.cover), mk([L / 2 - 0.015, 0.003, W / 2 - 0.02], FIXLOOK.face),
     mk([L / 2 - 0.07, 0.014, 0.014], FIXLOOK.tube), mk([L * 0.15, 0.014, 0.014], FIXLOOK.tube), mk([...FIXLOOK.lead] as Vec3, FIXLOOK.soot)];

@@ -85,7 +85,6 @@ import * as MD from '../../src/scene/markingDefaults';
 import { WORLD } from '../../src/scene/world';
 import { BoxFlag, type Box } from '../../src/scene/boxes';
 import { livedPieces, INK, h01 } from './livedPieces';
-import { drawnAs, PANEL_GREY, madeOf } from '../../src/scene/stuff';
 
 
 export const NAME = 'block';
@@ -255,7 +254,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
     const x = 33.0 + i * 0.75, z = 4.75;
     const slots: { u: number; y: number; amber: boolean }[] = [];
     for (let u = 0; u < 10; u++) { if (((u * 7 + i * 3) % 5) > 1) continue; slots.push({ u, y: 0.32 + u * 0.178, amber: (u + i) % 7 === 3 }); }
-    const rackBody = add({ c: [x, 1.05, z], h: [0.33, 1.05, 0.5], albedo: drawnAs('metal', [0.06, 0.06, 0.07]), rough: 0.3, ...mk(MD.rackMarks([0.33, 1.05, 0.5], slots.map(sl => ({ v: sl.y - 1.05, amber: sl.amber })), TX)) });
+    const rackBody = add({ c: [x, 1.05, z], h: [0.33, 1.05, 0.5], albedo: [0.06, 0.06, 0.07], rough: 0.3, ...mk(MD.rackMarks([0.33, 1.05, 0.5], slots.map(sl => ({ v: sl.y - 1.05, amber: sl.amber })), TX)) });
     if (i === DRIVE_RACK) rackFront = [x, 1.1, z + 0.53];
     let lo = 10, hi = -10; for (const sl of slots) { lo = Math.min(lo, sl.y); hi = Math.max(hi, sl.y); }
     if (slots.length) {
@@ -268,7 +267,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
   // THE MAINS INTAKE: the breaker is in the LOADING HALL, on the wall beside the hall's mouth (the loading hall's face of the mess's west wall), four metres
   // from where the team forms up and in nobody's sight: the floor's lamps can be put out before the first door is touched
   grp('staging');
-  const brk = add({ c: [10.9, 1.35, 10.0], h: [0.04, 0.36, 0.28], albedo: PANEL_GREY, name: 'breaker_panel' });
+  const brk = add({ c: [10.9, 1.35, 10.0], h: [0.04, 0.36, 0.28], albedo: [0.42, 0.44, 0.45], name: 'breaker_panel' });
   const brkLed = add({ c: [10.85, 1.62, 9.82], h: [0.01, 0.015, 0.015], albedo: C.black, emissive: [0.3, 4, 0.6], flags: BoxFlag.NoShadow });
   add({ c: [10.9, 2.3, 10.0], h: [0.03, 0.6, 0.03], albedo: [0.3, 0.3, 0.32], flags: BoxFlag.NoShadow });
   grp('comms');
@@ -392,8 +391,8 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
     for (const z of [16.4, 18.8]) A.box(10.72, 0, z, 0.42, 0.5, 0.08, C.metal);
     A.box(4.16, 1.3, 7.34, 0.06, 0.04, 2.0, C.woodDark);
     for (let i = 0; i < 5; i++) A.box(4.27, 1.34, 6.5 + i * 0.42, 0.26, 0.11, 0.22, INK.yellow);   // five yellow hard hats on their pegs
-    for (let i = 0; i < 4; i++) P.floor(5.5 + i * 0.22, 7.25, 0.14, 3.2, drawnAs('wood', [0.5, 0.4, 0.25]));   // the duckboard the gang stamps its boots on
-    for (const z of [6.0, 8.5]) P.floor(5.83, z, 0.84, 0.1, drawnAs('wood', [0.4, 0.31, 0.19]), 0.014, 0.009);
+    for (let i = 0; i < 4; i++) P.floor(5.5 + i * 0.22, 7.25, 0.14, 3.2, [0.5, 0.4, 0.25]);   // the duckboard the gang stamps its boots on
+    for (const z of [6.0, 8.5]) P.floor(5.83, z, 0.84, 0.1, [0.4, 0.31, 0.19], 0.014, 0.009);
     P.loose('truck', 'cardboard', 8.5, 23.0, 0, 25, [P.part(-0.2, 0, 0.2, 1.0, 0.08, 0.16, INK.yellow), P.part(-0.2, 0, -0.2, 1.0, 0.08, 0.16, INK.yellow), P.part(0.45, 0, 0, 0.3, 0.45, 0.5, INK.yellow), P.part(0.62, 0, 0, 0.06, 1.0, 0.06, INK.iron), P.part(0.62, 1.0, 0, 0.06, 0.04, 0.3, INK.iron)], [0.7, 0.3]);
     drumLoose(5.0, 16.1, C.wood, C.black);
 
@@ -403,7 +402,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
     for (const x of [27.22, 27.58]) A.box(x, 0.95, 12.2, 0.24, 0.26, 0.24, C.red);
     P.bucket(20.4, 12.4, C.metal, 'mop');
     // the trunk's trench: chequer plates down the hall's north side, an orange edge either side
-    for (let i = 0; i < 7; i++) P.floor(13.9 + i * 2.96, 12.62, 2.9, 0.56, i % 2 ? C.metal : [0.24, 0.25, 0.27], 0.004, 0.006);
+    for (let i = 0; i < 7; i++) P.floor(13.9 + i * 2.96, 12.62, 2.9, 0.56, i % 2 ? [0.3, 0.31, 0.33] : [0.24, 0.25, 0.27], 0.004, 0.006);
     for (const z of [12.3, 12.94]) P.floor(22.8, z, 20.8, 0.07, INK.hivis, 0.004, 0.012);
     { const L = P.at(25.2, 15.02, Math.PI);   // the time clock and the gang's cards, on the south wall between the switch room's door and the store's
       L.box(-0.62, 0, 0, 0.4, 1.5, 0.3, C.woodDark); L.box(-0.62, 1.5, 0, 0.26, 0.012, 0.2, INK.cream); L.box(-0.62, 1.512, 0.02, 0.03, 0.006, 0.12, C.black);
@@ -435,7 +434,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
 
     // THE KITCHEN (nobody's): the range, the sink, the door into the back of the mess
     P.room('kitchen');
-    P.floor(17.4, 9.7, 5.8, 4.4, madeOf('slab', [0.5, 0.47, 0.4]), 0.004, 0.006);   // quarry tile
+    P.floor(17.4, 9.7, 5.8, 4.4, [0.5, 0.47, 0.4], 0.004, 0.006);   // quarry tile
     A.box(19.95, 0, 9.6, 0.7, 0.9, 1.6, INK.iron);   // the range on the east wall
     oct(19.95, 0.9, 9.2, 0.3, 0.25, C.metal); A.box(19.95, 0.9, 10.0, 0.34, 0.16, 0.34, INK.brass);
     A.box(14.8, 0, 9.4, 0.6, 0.9, 2.4, C.white); A.box(14.8, 0.9, 9.4, 0.64, 0.03, 2.44, C.metal);   // the sink and drainer on the west wall
@@ -475,7 +474,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
 
     // REPAIR SHOP: six telephones in a row on the bench, a crossarm of white insulators on two sawhorses; round the turn, bare floor
     P.room('shop');
-    P.floor(15.7, 16.93, 9.24, 3.18, drawnAs('mud wall', [0.37, 0.3, 0.21]), 0.004, 0.006); P.floor(18.7, 21.2, 3.24, 5.3, drawnAs('mud wall', [0.37, 0.3, 0.21]), 0.004, 0.006);   // wood-block floor, both legs
+    P.floor(15.7, 16.93, 9.24, 3.18, [0.37, 0.3, 0.21], 0.004, 0.006); P.floor(18.7, 21.2, 3.24, 5.3, [0.37, 0.3, 0.21], 0.004, 0.006);   // wood-block floor, both legs
     P.counter(18.0, 15.72, 2.8, 0.7, 0, 0.9, C.woodDark, C.wood);
     A.sheet(18.35, 0.903, 15.7, 2.0, 0.5, INK.baize);
     { const sets: Vec3[] = [INK.iron, INK.cream, C.red, INK.bottle, INK.cream, INK.iron]; for (let i = 0; i < 6; i++) P.phone(17.6 + i * 0.3, 0.91, 15.7, (h01(i, 21) - 0.5) * 0.5, sets[i]); }
@@ -511,7 +510,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
 
     // THE CABLE STORE: creosoted poles down the near leg's west wall, a drum lying flat; round the turn the racking and a crate of insulators
     P.room('store');
-    P.floor(29.0, 19.6, 3.48, 8.5, drawnAs('slab', [0.17, 0.16, 0.15]), 0.004, 0.006); P.floor(33.31, 22.17, 5.14, 3.42, drawnAs('slab', [0.17, 0.16, 0.15]), 0.004, 0.006);   // oil-dark screed, both legs
+    P.floor(29.0, 19.6, 3.48, 8.5, [0.17, 0.16, 0.15], 0.004, 0.006); P.floor(33.31, 22.17, 5.14, 3.42, [0.17, 0.16, 0.15], 0.004, 0.006);   // oil-dark screed, both legs
     for (let i = 0; i < 3; i++) A.box(27.5 + i * 0.24, 0, 20.0 + (h01(i, 31) - 0.5) * 0.3, 0.2, 0.19, 5.0, i % 2 ? C.wood : C.woodDark);
     A.box(27.62, 0.19, 19.8, 0.2, 0.2, 4.4, C.wood); A.box(27.86, 0.19, 20.2, 0.2, 0.2, 4.6, C.woodDark);
     A.box(28.16, 0, 18.4, 0.14, 0.12, 0.14, C.wood); A.box(28.16, 0, 21.6, 0.14, 0.12, 0.14, C.wood);   // chocks
@@ -532,7 +531,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
     P.room('street');
     A.box(26.5, 0, 26.2, 2.0, 1.25, 1.9, C.red);   // the tent
     for (let i = 0; i < 3; i++) A.box(25.9 + i * 0.6, 1.25, 26.2, 0.3, 0.02, 1.9, C.white);
-    for (let i = 0; i < 4; i++) P.floor(28.3, 25.5, 0.8, 0.8 * T8, drawnAs('metal', [0.07, 0.07, 0.08]), 0.014 + i * Q, 0.0098 + i * 0.0007);   // the lid drawn aside
+    for (let i = 0; i < 4; i++) P.floor(28.3, 25.5, 0.8, 0.8 * T8, [0.07, 0.07, 0.08], 0.014 + i * Q, 0.0098 + i * 0.0007);   // the lid drawn aside
     A.box(28.4, 0, 26.6, 1.3, 0.08, 0.08, C.white); A.box(28.4, 0.5, 26.6, 1.3, 0.14, 0.05, C.red); A.box(28.4, 0.64, 26.6, 0.4, 0.02, 0.05, C.white);   // a trestle barrier
     drumFlat(30.3, 26.4, 0.45, 0.6, C.wood, C.black);
     { const L = P.at(12.0, 26.4, 0);   // the van, nose to the west
