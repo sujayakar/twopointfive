@@ -3,10 +3,10 @@
   "gather_common": "e8372d08e7e1496d",
   "reflect_p5": "70dbef4f27d698d6",
   "volumetrics": "2e97fbf469b3b367",
-  "composite": "fe3e16860f1abacd",
+  "composite": "58d8bc29cfcef88c",
   "particles": "728ed24c0a0c1df2",
   "direct": "1769525321e38e76",
-  "sharp_direct": "c2de129994d36ee7",
+  "sharp_direct": "4fd5e19fc7ecde53",
   "restir": "14e9103b027a8a0c",
   "sdfrig": "a1499cd5277cc040"
 }

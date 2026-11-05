@@ -110,6 +110,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
   G.hesco(16.9, 23.0, 2, 0); G.hesco(23.4, 23.0, 1, 0);
   G.jersey(12.5, 25.9, 1, 0.45); G.jersey(27.5, 24.4, 1, 0.45);
   G.pickup(31.0, 25.6, Math.PI, 'truckTan', { mount: true });
+  G.lorry(21.4, 26.3, 0);                                                                         // the kit's lorry, drawn up on the road past the checkpoint (every piece of the kit stands in a showroom)
   G.stall(10.6, 23.45, Math.PI, 2.2, 'tarpBlue'); G.stall(13.4, 23.45, Math.PI, 1.7, 'rugRed');
   G.tWall(34.4, 13.5, 4, HALF); G.container(4.6, 9.4, HALF, 'paintRust');
   G.bush(5.2, 20.2); G.bush(35.0, 21.6, 1.3); G.bush(3.4, 4.6, 0.9); G.bush(25.0, 3.6, 1.1); G.rubble(34.6, 8.0, 1.0, 8, 'block');

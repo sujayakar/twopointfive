@@ -98,11 +98,9 @@ export function paintStandsFor(albedo: Vec3): Vec3 {
 const PROP_SURF: Record<string, Surf> = { chair: 'fabric', cardboard: 'cardboard', bin: 'metal', plant: 'foliage' };
 
 // ------------------------------------------------------------------ what a hit LOOKS like goes by what the thing says it is made of
-// HITSTUFF. Asked 2026-11-04, of the cars on the look's preview: "shooting metal shouldn't have particle debris, maybe just sparks? shooting glass should make
-// cracks (but maybe not fracture?)", then "for most glass we do want to simulate the fractures -- I think props like cars should be an exception", "since we
-// don't want to model the inside". THE CAUSE WAS NOT THE CARS: what a round has hit is read from the COLOUR of its paint (surfOf above: a palette name where
-// the numbers have one, else how bright it is), so a white car was plasterboard — pale chips and a puff of gypsum — a blue one concrete, its dark glass
-// and its tyres metal. A box can SAY what it is made of (Box.stuff, scene/stuff.ts), and with this on THE PICTURE OF A HIT reads that word first; the colour
+// HITSTUFF (2026-11-04). What a round has hit was read from the COLOUR of its paint (surfOf above: a palette name where the numbers have one, else how
+// bright it is), so a white car was plasterboard — pale chips and a puff of gypsum — a blue one concrete, its dark glass and its tyres metal: a round into a
+// parked car threw rubble. A box can SAY what it is made of (Box.stuff, scene/stuff.ts), and with this on THE PICTURE OF A HIT reads that word first; the colour
 // is asked only of a box that says nothing, or whose word is not one thing to a round (the table below).
 // A RULE OF THE PICTURE, AND OF NOTHING ELSE. The word is the look's: a level's plain file and its look twin say different words of the same box (whoever
 // repaints a box drops its word, stuff.ts), and the two are one simulation. So the word is read only where no number of the game moves:
@@ -146,12 +144,14 @@ export const SOLID_GLASS_CRACK = { look: 9, pistol: 0.085, rifle: 0.11, pellet: 
  *  for a prop's part (`box`: the very part, where the caller knows it), a door's leaf, a static, or nothing but a normal. The box's own word first (the
  *  rule on: `said`), then what the hit has always been read by: a prop's kind, a leaf as wood, a pane as glass, a static's paint. */
 export function hitLook(g: Game, hit: { index?: number; prop?: Prop; box?: Box }): { surf: Surf; albedo: Vec3; solid: boolean; said: boolean } {
-  let albedo: Vec3 = [0.5, 0.5, 0.5], surf: Surf = 'concrete', b: Box | undefined;
-  if (hit.prop) { b = hit.box ?? hit.prop.boxes[0]; surf = PROP_SURF[hit.prop.def.kind] ?? 'plastic'; albedo = hit.prop.boxes[0]?.albedo ?? albedo; }
-  else if (hit.index !== undefined && hit.index >= 1e6) { b = g.col.dynamicBoxes[hit.index - 1e6]; surf = 'wood'; albedo = b?.albedo ?? [0.42, 0.3, 0.19]; }
-  else if (hit.index !== undefined && g.col.boxes[hit.index]) { b = g.col.boxes[hit.index]; albedo = b.albedo; surf = (b.flags & BoxFlag.Glass) ? 'glass' : surfOf(albedo); }   // (a pane / the solid-glass bottle: glass chips, no gypsum puff — review 08-12)
+  const leaf = !hit.prop && hit.index !== undefined && hit.index >= 1e6, st = !hit.prop && !leaf && hit.index !== undefined ? g.col.boxes[hit.index] : undefined;
+  const b: Box | undefined = hit.prop ? hit.box ?? hit.prop.boxes[0] : leaf ? g.col.dynamicBoxes[hit.index! - 1e6] : st;
   const said = saidSurf(b);
-  return said ? { surf: said, albedo: b!.albedo, solid: said === 'glass', said: true } : { surf, albedo, solid: false, said: false };   // (a part that speaks is tinted by its own paint)
+  if (said) return { surf: said, albedo: b!.albedo, solid: said === 'glass', said: true };   // (a part that speaks is tinted by its own paint; the paint is not asked what it is)
+  if (hit.prop) return { surf: PROP_SURF[hit.prop.def.kind] ?? 'plastic', albedo: hit.prop.boxes[0]?.albedo ?? [0.5, 0.5, 0.5], solid: false, said: false };
+  if (leaf) return { surf: 'wood', albedo: b?.albedo ?? [0.42, 0.3, 0.19], solid: false, said: false };
+  if (st) return { surf: (st.flags & BoxFlag.Glass) ? 'glass' : surfOf(st.albedo), albedo: st.albedo, solid: false, said: false };   // (a pane / the solid-glass bottle: glass chips, no gypsum puff — review 08-12)
+  return { surf: 'concrete', albedo: [0.5, 0.5, 0.5], solid: false, said: false };
 }
 
 // ------------------------------------------------------------------ recipes

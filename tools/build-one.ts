@@ -11,7 +11,7 @@
 //   levels/*.json                   every mission's level file (the dev server's /levels/)      gzip
 //   qa/commit                       the commit this was built from (recordings name it)         as it is; left out of a build of uncommitted changes
 // What stays out: the tool pages (workbench, replay viewer, sounds, music) and the replays the sounds page plays. The page carries the
-// `tps-one-page` meta the game already reads (ui/menu.ts lists no tool page; ui/replaykey.ts: F7 hands its file over as a download).
+// `tps-one-page` meta the game already reads (ui/menu.ts lists no tool page; ui/replaykey.ts: F7 sends its file to a backend the address names, never a download).
 // `bun run build` (dist/, the page with its folder) is untouched by this and wipes dist/one with the rest of dist.
 import { $ } from "bun";
 import { readdirSync } from "node:fs";
@@ -52,7 +52,7 @@ const html = await Bun.file("index.html").text();
 const MODULE = /<script type="module"[^>]*\ssrc="\.\/src\/main\.ts"[^>]*><\/script>/;
 if (!MODULE.test(html)) fail("index.html: no module tag for ./src/main.ts");
 const rest = html.replace(MODULE, "");
-if (/<(script|link|img|source|video|audio|iframe)\b[^>]*\s(src|href)=/i.test(rest) || /@import|url\(\s*['"]?(?!data:)/i.test(rest)) fail("index.html names a file beside the page: pack it here first");
+if (/<(script|link|img|source|video|audio|iframe)\b[^>]*\s(src|href)=(?!["']?data:)/i.test(rest) || /@import|url\(\s*(?!['"]?data:)/i.test(rest)) fail("index.html names a file beside the page: pack it here first");
 if (!/<meta name="viewport"[^>]*>/.test(html)) fail("index.html: no viewport meta to put the one-page mark after");
 const page = html
   .replace(/<meta name="viewport"[^>]*>/, m => `${m}\n  <meta name="tps-one-page" content="1">`)

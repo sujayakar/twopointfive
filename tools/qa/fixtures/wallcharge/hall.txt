@@ -1,0 +1,4 @@
+# places for a wall charge on levels/hall.json: on the frozen stand, then on the shipped stand (its lived-in rooms in)
+# given up on purpose (the second count): the places behind the one firewood stack on the outside of the wing's blank south wall (x 12.2 to
+# 15.0, 2.75 m of a wall about 30 m long). Firewood belongs against a wall, and the wall takes a charge on either side of the stack
+420 300

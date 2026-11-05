@@ -15,18 +15,24 @@
 //   stands open  the angle it is authored standing at
 //   floor        the nav grid flooded from either face with every doorway shut: into the SMALLER floor (a room off a hall, a building off its lot)
 //   wider        the side its authored stops let it open further, else +1
+//   leaf room    (DOORWAY.leafWay — the maintainer, 10-27, of his squad on the compound: "feels like squad gets stuck when stacking up or going through doors") a
+//                door whose leaf, standing open on the side the rules above deal it, SHUTS FLOOR OFF FROM ITS OWN DOORWAY for a man — a cot a metre inside the
+//                door, and the open leaf hangs across the one strip that leads past it — opens the OTHER way, where its leaf has room to swing and leaves the way clear. Dealt BESIDE
+//                the rules above like the outside rule (SwingDeal.clear, Door.clearway): the switch picks live. It does not speak against an authored `swing`,
+//                a folding stop, a drill plan's fling or a leaf authored standing open, nor where the other side is no better or the leaf would swing into something there
 // Pure geometry over the Level and the nav grid: no dice, nothing of the Game's state — so the deal is the same on every boot and, with DOORWAY.oneWay off,
 // changes nothing at all (Door.swing is then read by nobody). `dealSwings` returns what it dealt and why (Game.doorSwings: the probes and the notes read it).
 import type { Level } from '../scene/level';
-import type { NavGrid } from '../scene/collision';
+import type { NavGrid, StaticCollision } from '../scene/collision';
 import { BoxFlag } from '../scene/boxes';
 import { DOORWAY, type Doors, type Door } from './doors';
 
-export type SwingWhy = 'authored' | 'folds' | 'outside' | 'plan' | 'room' | 'hostages' | 'mission' | 'lock' | 'stands open' | 'floor' | 'wider';
+export type SwingWhy = 'authored' | 'folds' | 'outside' | 'plan' | 'room' | 'hostages' | 'mission' | 'lock' | 'stands open' | 'floor' | 'wider' | 'leaf room';
 export interface SwingDeal { door: string; swing: 1 | -1; why: SwingWhy; /** the room / floor it opens into, in words, where the rule names one */ into?: string;
-  /** an outside door's deal with DOORWAY.exitsOut on (the 'outside' rule: toward the open air) — the row itself is its deal with the switch off */ out?: SwingDeal }
+  /** an outside door's deal with DOORWAY.exitsOut on (the 'outside' rule: toward the open air) — the row itself is its deal with the switch off */ out?: SwingDeal;
+  /** its deal with DOORWAY.leafWay on, where the dealt side's open leaf shuts floor off from the doorway (the 'leaf room' rule: the other side) */ clear?: SwingDeal }
 /** The deal as the doors stand now: an outside door's `out` row while DOORWAY.exitsOut, every other row as dealt (Game.doorSwings). */
-export const swingsNow = (deals: SwingDeal[]): SwingDeal[] => deals.map(s => s.out && DOORWAY.exitsOut ? s.out : s);
+export const swingsNow = (deals: SwingDeal[]): SwingDeal[] => deals.map(s => s.out && DOORWAY.exitsOut ? s.out : s.clear && DOORWAY.leafWay ? s.clear : s);
 interface Rect { x0: number; x1: number; z0: number; z1: number }
 /** the least a door must be able to open (rad) on a side for that side to be dealt by rule */
 const MIN_OPEN = 0.9;
@@ -95,8 +101,52 @@ function floors(doors: Doors, nav: NavGrid): Map<Door, { plus: number; minus: nu
   return out;
 }
 
-/** Deal every door of the level its side (Door.setSwing) and say why. */
-export function dealSwings(level: Level, doors: Doors, nav: NavGrid | null): SwingDeal[] {
+/** DOORWAY.leafWay — a man's radius (a little under the 0.34 the nav grid is baked with and a door's contact asks: a gap he brushes through, nudging the
+ *  leaf, is a way. At 0.34 the barracks' n3 and the bazaar's pharm_back would turn too) · the floor grid's step and its reach either way from the doorway (m) · the angle a pulled or pushed leaf comes to rest at (it
+ *  coasts past square) · the floor (m²) an open leaf must shut off from its doorway before the door is hung the other way · the band of floor round a standing
+ *  leaf (m) that, all free, is a way round it · how far off the door's own wall that band starts */
+const LEAF_MAN = 0.3, LEAF_STEP = 0.1, LEAF_WIN = 4, LEAF_REST = 1.84, LEAF_CUT = 1.0, LEAF_RING = 0.25, LEAF_WALL = 0.5;
+/** How much floor on face `s` of a door (m², within LEAF_WIN of it) a man can walk to the doorway from with no leaf there and can NOT with the leaf standing open
+ *  on that face: the floor its open leaf shuts off. Asked square to the frame and at the angle a leaf rests at (each no wider than its authored stop) and the
+ *  LESSER taken — a leaf that leaves a way at either is one a man can put where it leaves one. Statics only (the level's boxes, lived things among them),
+ *  between knee and shoulder as the nav grid asks it. Cheap for nearly every door: a leaf with free floor all the way round it shuts nothing off, and only
+ *  one without is flooded. The other doors of the level count as open, so the figure is all the floor that is reached only past this leaf, a next room with no
+ *  other way in among it. −1 = no floor a man can stand on at the doorway on that face. */
+export function leafCut(col: StaticCollision, d: Door, s: 1 | -1): number {
+  const stop = s > 0 ? d.maxAuth : -d.minAuth; if (stop < 0.9) return 0;
+  const c = d.def.closedDir, W = d.def.width, ux = Math.cos(c), uz = Math.sin(c), nx = -uz * s, nz = ux * s, [hx, hz] = d.def.hinge, cx = hx + ux * W / 2, cz = hz + uz * W / 2;
+  const NA = Math.round(2 * LEAF_WIN / LEAF_STEP) + 1, NP = Math.round(LEAF_WIN / LEAF_STEP), N = NA * NP, known = new Int8Array(N).fill(-1), q: [number, number, number] = [0, 0, 0];
+  const alOf = (k: number) => -LEAF_WIN + (k % NA) * LEAF_STEP, peOf = (k: number) => (Math.floor(k / NA) + 0.5) * LEAF_STEP;
+  const free = (k: number): boolean => { if (known[k] < 0) { const al = alOf(k), pe = peOf(k), x = cx + ux * al + nx * pe, z = cz + uz * al + nz * pe; q[0] = x; q[1] = 0; q[2] = z;
+      known[k] = col.collideCircle(q, LEAF_MAN, 0.25, 1.5, 1) && Math.hypot(q[0] - x, q[2] - z) > 0.005 ? 0 : 1; } return known[k] === 1; };
+  let start = -1, near = 1e9;   // the doorway's own floor on this face: the free spot nearest the middle of the frame
+  for (let k = 0; k < NA * Math.min(NP, 9); k++) { const al = Math.abs(alOf(k)), pe = peOf(k); if (al < W / 2 - LEAF_MAN + 0.06 && al + pe < near && free(k)) { near = al + pe; start = k; } }
+  if (start < 0) return -1;
+  const flood = (leaf: Float32Array | null): Uint8Array | null => { const R = LEAF_MAN + d.thick / 2; if (leaf && leaf[start] < R) return null; const seen = new Uint8Array(N), st = [start]; seen[start] = 1;
+    while (st.length) { const k = st.pop()!, i = k % NA;
+      for (const n of [i > 0 ? k - 1 : -1, i < NA - 1 ? k + 1 : -1, k - NA, k + NA]) if (n >= 0 && n < N && !seen[n] && !(leaf && leaf[n] < R) && free(n)) { seen[n] = 1; st.push(n); } }
+    return seen; };
+  let open: Uint8Array | null = null, best = Infinity;
+  for (const th of stop < Math.PI / 2 ? [stop] : [Math.PI / 2, Math.min(stop, LEAF_REST)]) {
+    const lx = Math.cos(th) * ux + Math.sin(th) * nx, lz = Math.cos(th) * uz + Math.sin(th) * nz, leaf = new Float32Array(N), R = LEAF_MAN + d.thick / 2; let round = true;
+    for (let k = 0; k < N; k++) { const al = alOf(k), pe = peOf(k), px = cx + ux * al + nx * pe - hx, pz = cz + uz * al + nz * pe - hz, t = Math.max(0, Math.min(W, px * lx + pz * lz));
+      leaf[k] = Math.hypot(px - lx * t, pz - lz * t); if (round && leaf[k] >= R && leaf[k] < R + LEAF_RING && pe >= LEAF_WALL && !free(k)) round = false; }
+    if (round) return 0;   // free floor all the way round the standing leaf: a man walks round it
+    open ??= flood(null)!; const shut = flood(leaf); let n = 0; for (let k = 0; k < N; k++) if (open[k] && leaf[k] >= R && !(shut && shut[k])) n++;
+    best = Math.min(best, n * LEAF_STEP * LEAF_STEP); if (best === 0) return 0;
+  }
+  return best;
+}
+/** Whether a leaf swung open on face `s`, as far as it rests, meets nothing of the level on its way (the same statics, at three spots along the leaf) */
+export function leafSwings(col: StaticCollision, d: Door, s: 1 | -1): boolean {
+  const stop = Math.min(s > 0 ? d.maxAuth : -d.minAuth, LEAF_REST), c = d.def.closedDir, W = d.def.width, [hx, hz] = d.def.hinge, q: [number, number, number] = [0, 0, 0];
+  for (let a = 0.5; a <= stop + 1e-9; a += 0.1) for (const t of [0.35, 0.7, 1]) { const x = hx + Math.cos(c + s * a) * W * t, z = hz + Math.sin(c + s * a) * W * t; q[0] = x; q[1] = 0; q[2] = z;
+    if (col.collideCircle(q, 0.03, 0.25, 1.5, 1) && Math.hypot(q[0] - x, q[2] - z) > 0.005) return false; }
+  return true;
+}
+
+/** Deal every door of the level its side (Door.setSwing) and say why. `col`: the level's statics, for the 'leaf room' rule (absent: that rule says nothing). */
+export function dealSwings(level: Level, doors: Doors, nav: NavGrid | null, col: StaticCollision | null = null): SwingDeal[] {
   const S = level.scenarios, rooms = S?.roomClear?.rooms ?? [], plans = [...(level.breach ? [level.breach] : []), ...(level.clearPlans ?? [])];
   let fl: ReturnType<typeof floors> | null | undefined;   // (flooded on the first door that gets as far as asking)
   const toward = (d: Door, r: Rect | undefined): 1 | -1 | 0 => r ? sideOf(d, ...mid(r)) : 0;
@@ -120,6 +170,12 @@ export function dealSwings(level: Level, doors: Doors, nav: NavGrid | null): Swi
     got ??= { door: name, swing: d.maxAuth >= -d.minAuth ? 1 : -1, why: 'wider' };
     const out = got.why !== 'authored' && got.why !== 'folds' ? deal(outsideOf(level, d), 'outside', 'the open air') : null;   // (an authored side and a folding stop speak first: for those the switch changes nothing)
     if (out) got.out = out;
-    d.setSwing(got.swing, out ? out.swing : 0); return got;
+    let clear: SwingDeal | null = null;
+    if (col && got.why !== 'authored' && got.why !== 'folds' && got.why !== 'plan' && got.why !== 'stands open' && !d.def.angle && opens(-got.swing)) {
+      const cut = leafCut(col, d, got.swing), other = cut >= LEAF_CUT ? leafCut(col, d, -got.swing as 1 | -1) : -1;   // (other < 0: nowhere to stand in the doorway on that side)
+      if (cut >= LEAF_CUT && other >= 0 && other < LEAF_CUT && other * 2 <= cut && leafSwings(col, d, -got.swing as 1 | -1)) clear = { door: name, swing: -got.swing as 1 | -1, why: 'leaf room', into: `${cut.toFixed(1)} m² of floor shut off by its leaf the other way` };
+    }
+    if (clear) got.clear = clear;
+    d.setSwing(got.swing, out ? out.swing : 0, clear ? clear.swing : 0); return got;
   });
 }

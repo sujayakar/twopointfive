@@ -3,7 +3,7 @@
 // and F tells all of them to go in. shift Q on a spot to watch automatically has them split up angles".
 //   bun run tools/qa/goals-check.ts            (also `probes.ts goals`, in family squadorders)
 //   TPS_PROFILE=shipped bun run tools/qa/goals-check.ts      — the same lines on the page's stand
-// PASS / FAIL each, headless: the relay post (levels/tut-plan.json, a floor kept for the checks: no mission plays it), the room clear with the squad of four under
+// PASS / FAIL each, headless: the relay post (levels/tut-queue.json, the queueing tutorial's floor), the room clear with the squad of four under
 // god mode, ONE deal (seed 1: the rule has no die in it). The check raises the ring and the rule itself, so both stands ask the
 // same lines. The keys are pressed as a hand presses them: Shift down, the squad's key, the cursor on the thing.
 //   1. Shift + the key on a door, nobody on anything: all four stack on that door (the first goal is everyone's).
@@ -40,21 +40,26 @@ const { DOORTOOLS, offOf } = await import(`${ROOT}/src/game/doortools.ts`);
 const { knobsCopy, knobsBack } = await import(`${ROOT}/src/game/knobs.ts`);
 const { applyKnobs, knobsSnapshot } = await import(`${ROOT}/src/game/journal.ts`);
 const { FROZEN_HOLDS } = await import(`${ROOT}/src/host/profile.ts`);
-const VERBOSE = process.argv.includes('--verbose'), BREAK = process.env.GOALS_BREAK === '1', RBREAK = process.env.GOALRING_BREAK === '1', LEVEL = 'tut-plan', DT = 1 / 60, SEED = 1;
+const VERBOSE = process.argv.includes('--verbose'), BREAK = process.env.GOALS_BREAK === '1', RBREAK = process.env.GOALRING_BREAK === '1', LEVEL = 'tut-queue', DT = 1 / 60, SEED = 1;
 type V = number[];
 /** the switch as the stand first stood it up, before the check raises it */
 let stood: boolean | null = null, stoodRing: boolean | null = null;
+/** … and the whole ring table as the stand stood it (halftwice-check.ts reads its own two keys off it) */
+export let stoodCmd: Record<string, unknown> | null = null;
 const flat = (a: V, b: V) => Math.hypot(a[0] - b[0], a[2] - b[2]);
 
-async function rig(on: boolean) {
+/** `more`: later switches of the ring a check of its own raises (halftwice-check.ts); `squad`: the address word for who comes */
+export async function rig(on: boolean, more: Record<string, unknown> = {}, squad = 'squad4') {
   const log = console.log, warn = console.warn, err = console.error; if (!VERBOSE) console.log = console.warn = console.error = () => { };
   let W: any, started: any;
   try {
     const level = loadLevel(parseLevelData(readFileSync(`${ROOT}/levels/${LEVEL}.json`, 'utf8')));
-    W = await standUp({ uploadEvery: 4, level, seed: SEED }); stood ??= !!CMDRING.goals; stoodRing ??= !!CMDRING.goalRing;
+    W = await standUp({ uploadEvery: 4, level, seed: SEED }); stood ??= !!CMDRING.goals; stoodRing ??= !!CMDRING.goalRing; stoodCmd ??= { ...CMDRING };
     // (the ring and its later switches as the page has them)
-    RAILS.on = false; Object.assign(CMDRING, { on: true, tapNow: true, stay: true, wholeSquad: true, goals: on, goalRing: on && !RBREAK }); AUTOPILOT.on = true;
-    started = startFromQuery(W.game, `?levelFile=${LEVEL}.json&roomclear=1&squad4`);
+    // (… and the two after them held off: these lines ask the rule as it was built — with nothing going the first goal is everyone's, and a second tap
+    //  is the key's order again. CMDRING.goalHalf and CMDRING.twice have their own lines in halftwice-check.ts)
+    RAILS.on = false; Object.assign(CMDRING, { on: true, tapNow: true, stay: true, wholeSquad: true, goals: on, goalRing: on && !RBREAK, goalHalf: false, twice: false, ...more }); AUTOPILOT.on = true;
+    started = startFromQuery(W.game, `?levelFile=${LEVEL}.json&roomclear=1&${squad}`);
   } finally { console.log = log; console.warn = warn; console.error = err; }
   const g = W.game, O = g.orders, D = g.doorTools, I = W.input, KEY = CMDRING.key;
   const quiet = <T,>(f: () => T): T => { if (VERBOSE) return f(); const l = console.log, w = console.warn; console.log = console.warn = () => { }; try { return f(); } finally { console.log = l; console.warn = w; } };
@@ -103,7 +108,7 @@ export async function goalsCheck(): Promise<boolean> {
   try {
     const R = await rig(!BREAK), g = R.g, O = R.O, D = R.D, N = O.men('all').length;
     const A = R.door('guard'), B = R.door('guard_side'), names = (l: any[]) => l.map((m: any) => m.callsign).sort().join(', ') || 'nobody';
-    if (R.why || !A || !B || N !== 4) { line(false, 'the room clear on the plan mission\'s level, four men and the guardroom\'s two doors', R.why ?? `${N} men · doors ${A ? 'guard' : '-'} ${B ? 'guard_side' : '-'}`); return false; }
+    if (R.why || !A || !B || N !== 4) { line(false, 'the room clear on the queueing tutorial\'s level, four men and the guardroom\'s two doors', R.why ?? `${N} men · doors ${A ? 'guard' : '-'} ${B ? 'guard_side' : '-'}`); return false; }
 
     // 1
     R.home();

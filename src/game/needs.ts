@@ -16,6 +16,7 @@
 // AI has him. `Game.tune.needs` is the switch (default on; off = the patrol byte for byte as it was — tools/qa needs-identity holds it); NEEDS the numbers, Tab ▸
 // Sandbox, kept per machine. guards.ts calls needsPatrol from the patrol branch (his feet while a trip owns them) and game.ts needsTick once a frame (levels,
 // the deal, the interrupts); character.ts has the two tells (CharacterAnimator.tell); dialogue.ts the lines (NEEDS_LINES); chronicle.ts the 'needBreak' rows.
+import { allDown } from './seats';
 import { SideMap } from '../math/side';
 import { Vec3, v3, clamp, wrapAngle, approachAngle, damp } from '../math/vec';
 import type { Game, Guard } from './game';
@@ -162,7 +163,7 @@ function deal(g: Game, gd: Guard, M: NeedMem) {
 /** the run is one the needs may play in at all: somebody home in their heads, not the tour / the attract loop / a puppet beat, not the breach's daylight, the
  *  response team not on its way or on the floor, Sam on his feet */
 export function needsLive(g: Game): boolean {
-  return g.tune.needs && g.aiEnabled && !g.quietUtility && !g.touring && !g.puppet && !isDaylight(g) && (!g.qrf || g.qrf.state === 'idle') && !g.player.down;
+  return g.tune.needs && g.aiEnabled && !g.quietUtility && !g.touring && !g.puppet && !isDaylight(g) && (!g.qrf || g.qrf.state === 'idle') && !allDown(g);
 }
 /** the floor is one a man would leave his route on: calm (level 0), no alarm episode running, the mains on */
 function floorCalm(g: Game): boolean { return escalationOf(g) === 0 && !g.alarm.episode && !g.blackout.active; }

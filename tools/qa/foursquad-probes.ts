@@ -412,6 +412,9 @@ export const foursquadBudget = guarded(async () => {
     let worst = 0, lines = 0; for (let i = 0; i < 30; i++) { n = 0; keys.length = 0; R.step(); if (n > worst) { worst = n; lines = keys.filter(k => /^smoke\d/.test(k)).length; } }
     P.query = real; P.querySegment = realS;
     verdict(worst > 0 && worst <= MAX_QUERIES && lines === NB.hostiles.length, `the probe's ${MAX_QUERIES} queries a frame: ${worst} asked with all ten up (${MAX_QUERIES - worst} spare) — the smoke sight lines to Sam are asked for the ${lines} defenders only`, `fog of war off in this rig: its smoke lines (up to six more) queue last and are the first dropped`); }
+  // the off word (?allproxies=0 in the page: BoxWorld.castCap down to the mesh trees' eight): the list stops at the first eight, as it did, and goes back to ten
+  { const was = BoxWorld.castCap; BoxWorld.castCap = process.env.ALLPROXIES_BREAK ? was : 8; R.step(2); const eight = capOwners(); BoxWorld.castCap = was; R.step(2); const back = capOwners();
+    verdict(eight.length === 8 && eight.join() === order0.slice(0, 8).join() && back.join() === order0.join(), 'the off word: with the list held to eight the ninth and tenth men have no proxies, as before; put back, all ten have (ALLPROXIES_BREAK=1 must fail this line)', `held: ${eight.join(' ')} · put back: ${back.join(' ')}`); }
   // a teammate down: his place goes to a man standing
   killGuard(g, NB.ops[1], [1, 0, 0], false, 'shot', 'player'); R.step(3); const after = capOwners(), dead = NB.ops[1].char.id;
   const up1 = [g.player.char.id, ...g.guards.filter((x: any) => x.state !== 'dead').map((x: any) => x.char.id)];

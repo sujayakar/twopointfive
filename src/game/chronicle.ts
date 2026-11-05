@@ -7,11 +7,11 @@
 // Read by the debrief card (ui/debrief.ts: the score, the rating word, the badges, the stats grid, the scrollable timeline, the floor map with the path and the
 // pins) and by the QA probes (tools/qa/debrief-probes.ts). Lives on Game.chronicle; restartEncounter() replaces it; the end card and the down card read it as it
 // stood when the run ended, and it survives 'Keep playing' (nothing more is written: the mission is done).
+import { isManId, manHere } from './seats';
 import { SideMap, SideSet } from '../math/side';
 import { Vec3, v3, clamp } from '../math/vec';
 import type { Game, Guard, GameEvent, LightTarget, MissionStats, DownKind } from './game';
 import type { Door } from './doors';
-import { PLAYER_ID } from './consts';
 import { BUILDING } from './floor';   // (a leaf: the office building's footprint — everything outside it is the grounds: the car park south and east, the verge north and west)
 import { gearText, plainShort } from './gear';   // (a leaf: the kit's names as issued, where a row is worded)
 import { missionLive } from './mission';
@@ -160,7 +160,7 @@ export class Chronicle {
 
 // ------------------------------------------------------------ writing (the hooks call these; every one is a no-op outside a live run)
 const nowOf = (g: Game) => g.mission.stats.elapsed;
-const posOf = (g: Game): Vec3 => g.player.char.pos;
+const posOf = (g: Game): Vec3 => manHere(g).char.pos;   // (a writer with no place of its own, asked of the Game: the first player's feet — one handed a seat's view passes that player's)
 /** the generic entry: `kind` at `pos` (Sam's feet by default) with `data` — what a lane with a new verb calls (and what the named helpers below come down to) */
 export function chronicle(g: Game, kind: ChronKind, data: ChronData = {}, pos?: Vec3): ChronEvent | null {
   if (!missionLive(g)) return null;
@@ -199,7 +199,7 @@ export function chronContact(g: Game, gd: Guard) { return chronicleN(g, 'contact
  *  HEARD_MERGE_SECS is one row with a count. `where` = where the man places it (the doorway it came through), else the source. */
 export function chronHeard(g: Game, gd: Guard, ev: GameEvent, where?: Vec3) {
   if (!missionLive(g)) return null;
-  const who = ev.who; if (who !== undefined && who !== PLAYER_ID && who !== 0) return null;   // a colleague's round, a guard's own door: not Sam's doing
+  const who = ev.who; if (who !== undefined && !isManId(who) && who !== 0) return null;   // a colleague's round, a guard's own door: not Sam's doing
   const C = g.chronicle, t = nowOf(g);
   const react = gd.awareness >= 0.85 ? 'alerted' : gd.awareness >= 0.3 ? 'investigates' : 'pricks up';
   let row = C.heardRow(ev);
@@ -298,7 +298,7 @@ export function chronKey(g: Game, gd: Guard) { return chronicle(g, 'keyTaken', {
 /** combat.ts killGuard, by the player's hand: shot dead ('kill', with what) or out cold ('ko': the takedown's cross, the choke, the pistol-whip, a ring to the head —
  *  told apart the way killGuard's own log line is: `how` + the caller's line). */
 export function chronDown(g: Game, gd: Guard, how: DownKind, line?: string) {
-  if (how === 'shot') return chronicle(g, 'kill', { who: gd.callsign, weapon: /^knife/.test(line ?? '') ? 'knife' : /at the charge when it went$/.test(line ?? '') ? 'a wall charge' : (g.player.gunInHand() ? plainShort(g.player.gunInHand()!.def) : 'a round') }, gd.char.pos);   // (the knife: close.ts's lethal blow, told by its line as the ring and the whip are)
+  if (how === 'shot') return chronicle(g, 'kill', { who: gd.callsign, weapon: /^knife/.test(line ?? '') ? 'knife' : /at the charge when it went$/.test(line ?? '') ? 'a wall charge' : (manHere(g).gunInHand() ? plainShort(manHere(g).gunInHand()!.def) : 'a round') }, gd.char.pos);   // (the knife: close.ts's lethal blow, told by its line as the ring and the whip are)
   const method = how === 'wounded' ? 'wounded' : how === 'choked' ? 'choke' : /^ring/.test(line ?? '') ? 'ring' : /whip/.test(line ?? '') ? 'whip' : /behind the wall when it went$/.test(line ?? '') ? 'charge' : 'takedown';   // ('charge': wallcharge.ts's knock through the wall it opened — nobody's hands were on him)
   return chronicle(g, 'ko', { who: gd.callsign, method }, gd.char.pos);
 }

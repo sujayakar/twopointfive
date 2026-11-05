@@ -1019,6 +1019,83 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   NOT SEEN: on a GPU; a save put back or a restart
   in the page with men breathing (the roads are the game's own, run headless over a recording stand-in for the solver); a file's load (by reading:
   it builds the men anew like a restart).
+- **What lies flat under open sky is wet while the ground is** (the library, 11-04; DRESSING, so no switch: `src/game/dress.ts` row `wetGround`,
+  `src/game/wetGround.ts`). The fault it mends: under a picked rain a yard built on the newer kit stayed DRY. `weather.ts openGround` wets a ground slab
+  whose top is within 3 mm of the lot's, and that kit lays a yard, a road and a pad as FINISHES 4 to 12 mm thick over the lot (`gwotKit.ts ground`): the
+  slab under them was wetted where nobody sees it, and the finish and every mark on it stayed dry. Measured headless before: a downpour on the crossing
+  wetted 1 static of 1001 (with the page's tidy step 24 of 41 flat things in the open), and left its four finishes (879 m²) and the 14 sheets on them
+  dry; the police post, the vault, the relay and the bazaar the same.
+  THE RULE IS ONE, in one step, in this order: (1) the open ground SLABS (`openGround`, unchanged, moved here out of `setWet`: sky over SOME of the slab,
+  which is the ground of the yard round a house and of the house too); (2) a FINISH: a solid flat thing whose top is within `WET_OVER` (20 mm) of a wet
+  slab's or the lot's, its middle over that slab, with sky over MOST of it; (3) a drawn-only SHEET on the ground follows the topmost flat under its
+  middle while most of the sheet itself is under the sky. A box is wet whole or not at all (the renderer reads one word a box), so a thing laid for one
+  place asks for most of the sky: the fuel stop's forecourt, four fifths under its canopy, stays dry with the stains on it, and a room's floor that runs
+  under its own walls is never rained on. The sky is one reading, `weather.ts skySpots` (25 spots over the box by the roof rectangles the rain is drawn
+  by): `skyOver` = any spot, reaching a tenth short of the edges; `skyOverMost` = 13 and more of 25 spots each in the middle of an equal share of the
+  area. 20 mm sits in the gap between what LIES on the ground (the kit's table `lie` tops out at 15 mm, 17 with the exporter's steps; the check holds the
+  table under the number) and what STANDS on it (a mat, a rug, a duckboard from 22). (3) was `scene/lookTidy.ts wetTidy`, a step of the PAGE alone, on
+  levels in the look's paints alone, with no sky test of its own (a sheet in a hut with no floor was wet with the lot): it is deleted there (lookTidy
+  keeps its wall decals), so a sheet's wet word has one writer, and the rule now runs off the page and on every level.
+  HOW WET SHOWS IS WHAT THE THING IS MADE OF: what sheds water takes the film (`BoxFlag.Gloss`, `WET_ROUGH`, `aniso`); what SOAKS it up takes none
+  (`wetGround.ts soaks`: cloth, a lawn, card, read from the paint by `particleFx.ts surfOf`, the one word a box has for it today, and asked only of a
+  box whose albedo is as authored: never of the lot, which the weather halves in place); bare METAL takes the film and is NOT darkened (`wetK` 1: its
+  albedo is its mirror, and the packer multiplies albedo by `wetK`). DARKER is what a porous thing does as it drinks; a sealed one (a painted line,
+  plastic, a glazed tile) barely darkens in life. Today `wetK` 0.5 is ONE NUMBER STANDING FOR TWO, on sealed and porous alike (the measured look of the
+  wet lot): how much a thing darkens belongs in its stuff's row beside whether it soaks, when boxes say what they are made of.
+  A KNOWN MISS UNTIL THEN: A DIRT OR GRAVEL STRIP THAT STANDS FOR GRASS READS MATT WHEN WET. `soaks` reads the paint, and a look paint is read as the office paint
+  it stands for (`particleFx.ts surfOf`). So the 18 strips that stand for the office's grass go darker with no film (15 painted dirt, 2 gravel, 207 m² on
+  warehouse-gwot alone, 1 scrub; about 2,470 m² over ten levels), while the same paints laid as ground shed and take it (74 wet gravel boxes, about
+  2,800 m²; 236 wet dirt boxes, about 9,700 m², the compound twin's yard among them). A review's tallies of every level stood in a picked rain on the
+  software stand; not a repo check. The graphics goal's ruling, 11-04 late, once it had those numbers: THE STUFF'S ROW KEEPS TODAY'S RAIN. Dirt laid as ground films when wet, as it does
+  today, and so does gravel; scrub and grass soak. So the 15 dirt strips and the 2 gravel strips that stand for grass are the miss (they will film like
+  the rest of their stuff, about 2,470 m² from matt to filmed), unless a strip is really a verge, whose box then names scrub. No list of paints goes
+  into `soaks` to mend it: it waits for every box naming its material, where `soaks` is a word of the stuff's row. Whether wet earth should be matt
+  at all is a look call for later, with rain drawn on a GPU: one word in that row then.
+  THE LOT stays the weather's: `setWet` soaks its slab in place (the albedo a round's material is read from: gameplay, as measured), and tells the step
+  in that same call (`WetGround.follow`), so the lot and the yard are never one wet and one dry for a frame drawn with no update between (a pause, the
+  start card); the picture's block of `Game.update` asks again every tick, which follows a level whose boxes changed (`wetGround.ts standing`: one
+  word of what the rule reads of the low boxes AS THEY STAND, worked out every update the ground is wet, 4 to 6 µs; the list is built again when it moves.
+  No count of what has happened to the level is kept, the world's `geomSerial` least of all: a level restarted after a fight holds, to the bit, what the
+  same level left alone holds, and `cleanrestart-check` has no row for this step. NOT SEEN: a box swapped for another in the same slot with the same
+  place, size and flags; nothing in the game writes a slot of the statics). The step writes `wetK`, `Gloss`, `rough` and `aniso` of statics and nothing else: no albedo, nothing a footstep, an ear, an
+  eye, a round or the Rust module's copy of the boxes reads. The row put down DRIES what the step wetted (the row is read inside `follow`).
+  WHAT CHANGES IN THE PICTURE: under a picked rain (and a squad level's own storm) every yard, road and pad laid as a finish is wet with its marks; and ON
+  THE PLAIN PAGE, where nothing on a lot followed it before: under the office's own storm (the solo night) its six parking-bay lines take the film with
+  the lot and its two grass strips go darker without one. On a look level two sheets that the old step wetted under a roof are dry now (floodlit-gwot's
+  hut).
+  THE CHECK: `bun run tools/qa/wetground-check.ts` on both stands (`probes.ts wetground`, family `weather`; six lines over nine levels;
+  `WETGROUND_BREAK=1` puts the row down and lines 1 to 3 and 6 fail). It asks the sky apart from the step (81 spots, and a line judges only a box clearly out,
+  six tenths and more, or clearly under, four tenths and less): nothing flat lies dry in the open; on a level in the look's paints every wet sheet is
+  one the old step wetted or lies on a newly wet finish, and each of those left dry has a roof over it (the old rule is kept in the check as it was);
+  soaking things take no film and metal keeps its colour; no albedo but the lot's moves and nothing clearly under a roof is wet but a slab; the rain
+  taken away, the yard is dry in that call and every static is as the level stands unrained, and the row down dries it; a wet thing hidden in place (one
+  flag written, no box added, the world's serial not moved) is dry an update later and wet again once put back. TWO BARS OF `hourwx-storm`
+  MOVED WITH THE RULE, on purpose: "every wet thing is glossy" is "glossy unless it soaks", and "the level's own storm wets the lot alone" is "the lot
+  and the sheets lying on it"; its sky test by collision is asked of the ground (slab and finish) and no longer of a sheet (a stain under a parked lorry
+  is wet with the ground round it: the rain's roofs decide, as they decide where rain is drawn). Its two COUNTS are of ground alone since 11-04 late:
+  with the sheets in them (dozens a level) the count of yards could not fail on either stand, nor the level's own storm against the picked rain on
+  the shipped one (the frozen stand's bar, the lot alone, was sound). Now an open slab is wet beside the lot on the compound and on the barracks, BY
+  NAME (a tightening: it was "two somewhere"); and under the level's own storm the compound has no more wet ground than under a picked rain, slab
+  against slab (1 against 2 frozen, 2 against 2 shipped). The film bar asks a thing's paint as authored (`Weather.dryPaint`), the lot's too. MEASURED
+  11-04 on step 1340's tip, software: `probes.ts hourwx` ALL PASS, 6 probes, both stands. Each count shown red on a step got wrong where the old one
+  was green: a slab asked for five open spots of 25 (the barracks' courtyard has four, and stays dry): red on both stands, old green on both; five
+  room floors wetted under the level's own storm: red on both, old green on the shipped stand. `dress-check.ts --weather <kind>` is new: the five
+  missions played in a picked weather, red if nothing was wet with the rows up (on a dry night the rain's rows do nothing and a pass says nothing of
+  them).
+  MEASURED: 11-04, on step 1310 (and before it on step 1302: the same numbers), software only. `wetground-check` 5 of 5 on both stands (shipped, a downpour picked: the crossing
+  37 wet sheets, 23 the old step wetted + 14 on a newly wet finish; the police post 41 + 16; the vault 4 + 15; the relay 20 + 25; the bazaar 23 + 22;
+  compound-gwot 185 + 0; floodlit-gwot 76 of the old 78, two left dry in the hut; the fuel stop 55; the office under its own storm 6 parking lines with
+  the film, 2 grass strips darker without; 497 with the film, 9 of them metal, and 53 soaked in all); `WETGROUND_BREAK=1` fails lines 1 to 3.
+  `dress-check` (5 missions, every row down against every row up): the same game after every update on a dry night, with `--weather downpour`, and
+  with `wetGround` down alone in the downpour (wet with the rows up: compound-four 186 statics, warehouse-four 101, block-squads 33, hostage-rescue 8;
+  pass-four 0, built for snow). The 42 play-through digests: the same on the frozen stand, on shipped with lived rooms off and on shipped (no rain is
+  picked in those). `probes.ts hourwx` ALL PASS on both stands with the two bars moved; `probes.ts weather` 28 of 29 on both, the one red `rainwalls`,
+  which is red on the base too. `rollback-check --static`, `knobs-check`, `dice-check` pass.
+  NOT DONE, AND WHAT WOULD REMOVE A NUMBER: a slab's "some sky" and a finish's "most" are two answers to one question only because wet is one word a
+  box. The rain is drawn by the roofs' rectangles: were the wet film masked a pixel by those same rectangles, every flat thing could ask for any sky,
+  the picture would be right at a canopy's edge, and the 13 of 25 would go. A renderer follow-up, the graphics goal's to take (its word, 11-04).
+  NOBODY HAS SEEN IT: no GPU has drawn a wet yard; whether a soaked lawn at half albedo with no film reads right beside wet dust, and wet metal at full
+  colour beside it, is for a look.
 - **THE LOOK PROTOTYPE'S TWO SNOW ROWS: LOOSE SNOW IN THE GAME'S OWN AIR (10-28; the maintainer: "prototype getting the wisps of snow from something like the
   fluid sim … I really liked the sand puffs on footsteps … those should all be reactive to the wind, and like, the footsteps should be proportional to the
   amount of force the step is putting down").** On the look page only (`?look`), two rows of the look panel, 1 as the page opens; the build and the game's
@@ -1093,6 +1170,12 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
     A ROW'S NAME FITS THE PANEL'S NAME COLUMN (twenty letters; the first names were cut off and two read the same): the full sentence is the head
     of the row's tip. "copy them" hands back the tables' own keys. Checked on the software adapter: the page boots and a picture of the panel
     shows the section with every name whole. NEVER SEEN ON A GPU; no row has been moved by anybody.
+  - **THE POWDER'S STEP IS COMPILED ONCE A DEVICE** (11-03; `render/powderField.ts programOf`). A field is thrown away when both snow rows are at nothing
+    and made again when one comes back, and each new field compiled "powder step" again: found by a one-boot read of the pass's page (two switches of the
+    look's layers, two more compiles), against his "compile once". The layout and the pipeline are kept by device now; a field is its textures, its
+    uniform buffer and its bind group. `lookveil-check`'s last line counts the compiles on a made-up device (two fields, one compile). The fault was in
+    the tree from the day the field was written (10-28). Not looked for: the same thing in the look's other small programs (the place field's two, the
+    eye's).
   - **A PUFF IS A MOUND** (10-29). White on white, a kick's round was a faint ring in a midday still. The sun's ray is read a second time `POWDER_PUFF`
     0.3 m up, where only a thick column counts (blown powder stands that high too, and shaded from up there the road between its threads went grey): what
     stands there over the pixel's own shades the round's far half (its own light down to 0.45 of the sun's share) and the snow behind it as far as its

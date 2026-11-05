@@ -10,6 +10,8 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   (`TPS_PROFILE=shipped` in front of any headless tool) = the page as it opens with no URL flag on a machine that has kept nothing: none of those lines runs, `shippedBoot()` calls
   `pageSwitches('')` — THE function `src/main.ts` calls with the page's own query for the switches its boot writes (destruction, furniture, wall reactions, wall charge, the door
   walk) — reads the kit from an empty store, takes the squads' page-only `?radiocheck=call`, and the cast is loaded. `FROZEN_HOLDS` there lists every row the two stands differ in (73 when this line was last touched; the table is the count, not this line)
+  — since 2026-11-04 NOT the game's own maths or a row of the Rust module: both are on on both stands (`standup.ts pinMaths`, `pinRust`; `docs/agents/rust.md`, "All on"), and the stand every
+  older digest was recorded on is asked for by `TPS_EXACT=0 TPS_RUST=0` until the TypeScript twins are deleted —
   with the word that raises each on a frozen run (`TPS_MOVES=1`, `GLASSFX=on`, `SLOTS=on`, `SQUADS=radiocheck-call`, …); under shipped a pin's own word still holds
   (`TPS_PROFILE=shipped TPS_MOVES=0`), except that a PLAY-THROUGH writes the door rules and chaos itself on either stand (`--set` there). Held by: `probes.ts shipped`
   (shipped-check.ts: the two stands differ in exactly those rows, plain and with a mission staged; every pin's word is in `src/host/standEnv.ts STAND_ENV`) and
@@ -32,7 +34,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   them the gate holds 'starts and runs to the debrief', not 'as shipped'. `tools/qa/expected-red.ts` = the reds somebody has explained, by probe name; probes.ts prints its reds against it
   after the verdict (EXPECTED RED · NEW RED · GREEN AGAIN) and gate.sh carries the lines — the exit code is unchanged, red is red. `EXPECTED_RED_SHIPPED` in the same file =
   the rows that hold under `TPS_PROFILE=shipped` only (read on that stand alone, so a probe green on the frozen stand never reads GREEN AGAIN there). tools/qa is typechecked by its own
-  `tools/qa/tsconfig.json` (`bun run typecheck:qa`).
+  `tools/qa/tsconfig.json` (`bun run typecheck:qa`). That program (every tool, `tools/mp` and the whole of `src/` behind them) takes about 2.4 GB to check, past node's default heap on a small box, so the script gives node 8 GB (`--max-old-space-size=8192`); with a system `tsc` say `NODE_OPTIONS=--max-old-space-size=8192` in front, or it aborts out of memory with no type error to show.
 
 <!-- was CLAUDE.md lines 398–468 -->
 ## Run · build · check
@@ -63,6 +65,45 @@ own staged families: `review-a` (perception / doors / rings / items — docs/int
 passes 3 / 9); soak `--body-light on|off` A/Bs the bodies-by-light rule. "Verified" still also means driven in the browser (below) with no console/GPU errors and the thing visibly working,
 plus a clean typecheck — the harness cannot see rendering, the light meter, smoke sight-lines or audio.
 
+- **The frame cost tool's marks follow the call (2026-11-03): `tools/qa/framecost.ts --marks`.** `framecost.ts` splits `Game.update` by system with
+  marks that `framecost-hooks.ts` writes into `game.ts` as it loads. A mark was found by how its line STARTED, in the step and the private methods written
+  straight after it; the step's re-write to seats (`this.` to a seat's view, loops over the seats, parts moved below other methods) lost sixteen of them
+  with nobody told but the table's last section, and their time fell on the bucket of the last mark found: a run read 46 to 74 ms worst frames as 'smoke
+  pushes'. Now a mark names the CALL (`updatePlayer(`, `.orders.tick()`), and the statement that holds it is found whatever stands in front
+  (`statementWith`: a loop or a guard and its brace, a `const`, the thing a `.call(` is made on, the guard it is the test of; never an `else` arm, a
+  comment, the middle of an expression, or a line the hooks wrote). Behind a brace or a `;` the mark goes IN the line, so the first call of a loop over
+  the seats is marked inside the loop for every seat. The step's own table (`MARKS`) is in the order the tick runs and each mark is looked for at or
+  below the one before it, so a mark that would land on another call of the same name is reported, not written; the marks inside a method the step calls
+  (`INNER`: tracers, the smoke's wake) are looked for in every method of the class the step reaches by `this.<name>(`, wherever it stands
+  (`stepRanges`). New marks: the senses' step on the CPU, the checkpoints' tick, the journal's close, the death recap. `--marks` plays nothing: it loads
+  the two files under the hooks, prints where each mark went (method, line, in the line or over it; `--gpu` with it = the harness as that mode writes it)
+  and is red (exit 1) when one found no statement; `FC_MARKS_BREAK=1` adds a mark for a call the step does not make and must fail. A RUN with a lost mark
+  is red too now, and says so above its tables. RUN `--marks` AFTER A CHANGE TO THE STEP'S OWN LINES. With the marks back (51 of 51, the harness's 4;
+  `--verify` on five missions: the digests with and without the hooks agree) those worst frames are the CHECKPOINT'S TAKE (`this.saves.tick`): one frame
+  a run, 68 ms on the compound at 163 s, 60 on the warehouse at 188 s, 50 on the pass at 10 s, 51 on the rescue at 4 s (seed 1, this box, bun; under
+  node the same runs' worst frames are 111, 98, 83 and 88 ms with no collector pause in them, by `--v8`, which has no split). Every other frame of that
+  bucket is under 0.03 ms. It is the stall the save's own bullets already name (a whole take of a team on the floor, read as 23 to 26 ms in the
+  maintainer's Chrome), not a new one: the first save in memory of a run is a whole take, and `SAVETIMELINE.since` shortens only the ones after it
+  (since 11-03 that whole take is the run's first tick's and the page runs the take's code behind the brief: `SAVETIMELINE.base`, the checkpoints' bullet).
+  block-squads' worst frame is another thing: 35 ms at 16.4 s, 16 of it path finding and 8 the scenario. The probe's CPU stand-in is spelt two ways
+  and has one site of each today (four sites before the senses had rows of their own): a spelling with no site is what is reported.
+- **What a tick costs (2026-11-02): `tools/qa/tickcost.ts`.** The simulation's own CPU time, tick by tick, on the stand a game server plays (the shipped stand, the senses
+  on the CPU, the game's own maths): the clock is round `Game.update` alone, the box list's pack (`BoxWorld.upload`) is timed apart, the first 120 ticks of a run are left
+  out. Five scripted squad runs by default (`compound-four:1, warehouse-four:1, pass-four:1, hostage-rescue:1, block-squads:1`, 38 634 ticks), each in its own process;
+  `--rounds n` keeps the quietest round, `--node` plays the same under V8 through `framecost-v8.mjs`, `--json` files the numbers and `--compare a.json b.json` prints the
+  before / after table. After every update the raw bits of what moves are chained (`game/digest.ts rawBits`) outside the clock: `--compare` is red (exit 1) when a run's
+  bits, tick count or digest differ, so a speed-up is only ever quoted for THE SAME RUN TO THE BIT, and the bits are the same under bun and under node. Red path:
+  `TICKCOST_BREAK=1` flips the last bit of one float once, after the warm-up, and the comparison must fail (as it does on a run that is in one file only). Take times with nothing else running on the machine and
+  never with `--prof` on (bun's sampling profiler, one `.md` a run, is for reading where the time goes, not how much). Under node two cores are a quarter slower than four
+  (the engine compiles and collects on other threads). At the head it was written on: 3.48 ms a tick under bun 1.4, 4.34 under node 22 (mean of all five; p99 about 10
+  and 12.5 ms); the slowest ticks of a squad run are not the simulation but the save in memory (`savestate.ts writeMem`, 70 to 150 ms headless) written inside the step.
+  THE PACK'S CADENCE is the play-through's by default (every 4th tick, as a page drawing at 15 Hz would); `--each` makes the list after EVERY update, as a networked
+  game's tick does (another run: its bits compare with another `--each` run's only), and `--list` makes it by `BoxWorld.relist()` (the same run to the bit as without
+  it). The json says which (`pack`), and the comparison's header prints both sides'. `bun run tools/qa/relist-check.ts [--runs a:1,b:1]` is the check that relist
+  leaves the game and the device's bytes as the whole pack did (`docs/agents/overview.md`, the list without the pack; `RELIST_BREAK=1` must fail).
+  The machine these numbers were first taken on exports `BUN_OPTIONS=--smol` (a small heap, about 2 % slower): the 3.48 above is with it, the net-cadence numbers in
+  `overview.md` without (`BUN_OPTIONS= bun run …`). Say which when quoting one.
+
 ## Driving the app headlessly (Browser pane / any automation)
 
 `src/main.ts` exposes hooks on `window`: `__game __engine __cam __demo __input __smoke __menu __audio __quality __marks __particles __weather __findme __glass __wet __froxel __rt __gi __mark __save __sharp __civ __sdfrig __wind __qrf __needs __destr __taa __dn __attract __stage __meshTrace __boot __ready __perfrec __journal __replay __prewarm __anim __killGuard __readout`
@@ -77,7 +118,7 @@ editor/domshot.ts and laid over the frame + the overlay's canvases; native slide
 (compile-check WGSL against the live device with the same prelude the scene passes get — 'scene' for direct/softblur/
 temporal, 'lighting' adds lighting_common for gather/rc/probe/volumetrics — `naga` is not installed here, so Chrome/Tint through the page is the WGSL validator; a Linux sandbox could run naga if ever
 needed).
-URL flags: `?paused` (deterministic boot, nothing runs until stepped), `?quality=verylow|low|medium|high|ultra` (pins a preset,
+URL flags: `?keeppage=0` (every load a whole page, as before the kept page — `docs/agents/render.md`, the kept page; a DRIVEN page and a `?paused` one are whole by themselves, so a tool reads `window.__game` as ever, and `?keeppage=1` asks such a page for the shell: the game's hooks are then on `document.getElementById('kept-page').contentWindow`), `?keepdrain=0` (on the tab's first address: a load on the kept page does not wait for the last mission's GPU queue before it takes the device), `?callclock=0` (a load's buffer, texture and submit calls are not timed, and its record has no `calls`), `?playclock=0` (after the load, a frame's time inside the GPU queue's calls is not totalled; `?callclock=0` puts both off), `?paused` (deterministic boot, nothing runs until stepped), `?quality=verylow|low|medium|high|ultra` (pins a preset,
 auto off), (`?demo` and `?breach` started the night and day showcases; both were removed with `__night` / `__breach` — docs/agents/showcases.md — and the flags now do nothing; the old tour is `__demo.start()` only), `?mute` (or `localStorage twopointsix.testMute=1` once in the automation
 profile — **keep test pages silent**, the user listens to their own audio), `?nodecals` / `?noparticles` / `?noweather` / `?noglass` / `?nocivilians` (each merged experiment off from boot — its untouched path), `?nortreflect` (+ `?detail=0‥1`; `?nortreflect&detail=0` = renderer v3 phase 4 off: main's frame bit for bit), `?nomarkings` / `?level=relief` / `?levelFile=<name>.json` (the markings bullet), `?decalStress=N`, `?level=local` (boot on the level EDITOR's current document: the workbench's ▶ *play from here*
 stashes it under localStorage `twopointsix.editorLevel` and opens this — an unreadable stash falls back to the bundled office with a console error), `?nogatherstrata` / `?nomotioncalm` (the two 08-12 defaults off), `?hud` (the debug read-out under the HUD on
@@ -95,9 +136,13 @@ its rAF loop also stops on a hidden pane — dispatch mouse events then `__ed.st
 in the result; null releases it AND puts the free camera's yaw / pitch / zoom back) and stages actors in one call — use it for every capture: the follow
 camera drifts under scripts and framed walls instead of the subject for a whole day of renderer notes. Move the player with `__game.teleportPlayer([x,0,z])`, never by assigning `player.char.pos` (his collision is a sweep from the last settled spot, so a raw
 write becomes a walk that stops at the first wall). **The boot is asynchronous** (every pipeline through `createComputePipelineAsync`, `Engine.init()` awaited
-behind a start card that counts them in): `window.__ready` is a Promise that exists from the first tick and resolves once every hook above is assigned and the
-card is live (rejects if the boot dies) — `await window.__ready` is the one line a script needs; the hooks are ONLY assigned at that moment, so the older loops that
-poll for `__engine && __runFrames` stay correct. `window.__boot` = the boot timeline (`ui/boot.ts`: marks, `pipelines {done,total,failed}`, long tasks, frame gaps,
+behind a start card that counts them in): `window.__ready` is a Promise that exists from the first tick and resolves once every hook above is assigned, the
+card is live AND every kernel is in (rejects if the boot dies) — `await window.__ready` is the one line a script needs. Since 2026-10-27 the start card of a
+PERSON'S browser does not wait for the heaviest kernels (the row Start on first frame shaders starts on there: `docs/agents/render.md`). A browser a script
+drives (`navigator.webdriver`: every page tool) starts with that row OFF, so there the card still waits for everything and `__ready`, the hooks and the first
+picture are as they were. `window.__started` is true from the moment the card is live (on a mission's page a person sits at the brief's block is live later, at `__boot.marks.settled`: `docs/agents/menus.md`, the brief's Start waits for the picture; `?settle=0` off); with the row on (`?firstframe=1` on a tool's address) the later set
+may still be compiling then and its passes drawing stand-ins, the hooks are already assigned, and `__ready` resolves only once the set is in (`gpu/device.ts
+laterIdle`; `__boot.marks.laterReady` is that moment): a tool that asks for the row and compares pictures waits on `__ready`, never on a hook. `window.__boot` = the boot timeline (`ui/boot.ts`: marks, `pipelines {done,total,failed}`, long tasks, frame gaps,
 first-frame GPU) and one `boot … ms to interactive · …` console line prints at GPU-ready. Typical script: navigate with `?paused&quality=medium`, `await __ready`, wait for `#view.clientWidth > 0`
 (a hidden pane gives a 0×0 canvas, rAF stops and timers throttle), `__menu.close()`, then step with `__runFrames`.
 **`__runFrames` draws every frame it steps (unless its fourth argument is false) and does not wait for the GPU** (only the last of a burst is put on the canvas). On a GPU slower than the script the
@@ -165,12 +210,29 @@ but synthetic writes still work.
   `importText`, `ageWords` ('40 s ago' off the mission clock for this run's, wall-clock otherwise), `flash` (overlay.ts: the CHECKPOINT tag top-right, `#checkpoint`),
   `summary/log/stats`, `onSaved` (QA). UI: the DOWN card's default is 'Restart from checkpoint (N s ago)' (menu.ts `checkpointButton`, `MenuDeps.loadCheckpoint` =
   main.ts: show stopped, camera cut), the pause card offers it beside Resume + Settings ▸ Game ▸ Autosave, a bare Enter once down loads this run's newest (player.ts;
-  Shift+Enter restarts as ever), Tab ▸ Checkpoints (save now / force / why not, load newest / chosen, slot list, export .json / import / clear), `__save` {save,
+  Shift+Enter restarts as ever), Tab ▸ Checkpoints (save now / force / why not, load newest / chosen, slot list, export .json / import / clear; THE EXPORT MAKES NO DOWNLOAD since 10-27, see below), `__save` {save,
   load, slots, newest, export, import, clear, auto, summary, canSave, snapshot}. Sizes: ~26 KB fresh, ~30–90 KB in play, ≈ 215 KB only in a synthetic worst case
   (512 marks + 520 rows + every prop moved). QA: `W.snapshot(label, force)` / `W.restore(s)` in headless.ts (start a probe from a staged file), `probes.ts
   checkpoints` (identity — civilians in the digest — / autosave / death / slots / refuse / civilians), `probes.ts review-b` (the deep review's game-systems fixes: run-over
   refusal, tactics reset, the civilians' gate term, laser cut by a civilian, whistle not re-answered, score counters past the timeline cap, rain bed in the annex, glass
   reset), `soak.ts --checkpoint-at MIN` (+ the always-on autosave invariants and the `checkpoints` smell line).
+- **An exported checkpoint is not downloaded** (2026-10-27; the maintainer: "we should get rid of local downloads entirely", and for a file that cannot go his
+  pick "No downloads, editor keeps files"). Tab ▸ Checkpoints ▸ 'export chosen' (`ui/bindings.ts`) saves the slot's text through the one door
+  (`src/host/savefile.ts`, kind 'checkpoint', off `SAVE_UP.local` since this step): the browser is handed nothing, the file goes to the build's backend where
+  there is one and this browser sends (a local build's own deployment under `bun run dev`), and THE ROW'S LINE SAYS WHAT BECAME OF IT in the door's shared
+  words (`savedWords('The checkpoint', …)`): "is being sent to the developer", "will be sent" (held in memory until the sharing notice has been read),
+  "wasn't sent" (no backend, sharing off, `?cloud=0`); a second line follows a file that was taken (`savedEnd`): "was sent", or "couldn't be sent." The
+  file's name and size go to the console. IMPORT STAYS ('import…': a way in, not a download; an old export, or a file written back out by
+  `bun run tools/cloud/pull.ts [--local] --out DIR`), and so does `__save.export()` (it hands the console the text). The F10 journal went the same way
+  in the step before (`ui/sessionrec.ts`; replays.md). SWITCH: the door's own, a page-only table with no row on the frozen stand and no knob:
+  `?downloads=1` (or `__saveUp.on = false` in the console) = the file downloaded and the line the old "exported <name> (N KB)"; no game state reads it,
+  so both stands play the same. CHECKS: `bun run tools/qa/savefile-check.ts` (the kinds that still download; the row read in source;
+  `SAVEFILE_BREAK=1` exit 1), `probes.ts panel-inventory` (two rows reworded in the fixture), and on a real page `tools/qa/savedoor-page.cjs`
+  (Chromium, software adapter, a stand-in backend): with a backend no download, both lines, and the stand-in holds
+  `twopointsix-checkpoint-infiltrate-0s.json` (32,831 bytes); under `?downloads=1&cloud=0` one download and the old line; under `?cloud=0` no download and
+  "The checkpoint wasn't sent." One run of each, 10-27. NOT CHECKED: the 'held' line on a page (the door's answers are driven headless only); a real
+  backend; `SAVEDOOR_BREAK=1` with the export in it; a file past the backend's bound (a checkpoint is 30 to 90 KB). WHAT IT COSTS, by reading: with
+  sharing off or no backend an export is kept nowhere unless the address carries `?downloads=1`. Never seen on a GPU.
 - **Saves keep a timeline** (`SAVETIMELINE`, `src/game/savestate.ts`, 10-19; the maintainer, from a play test: one quick save is awkward, "especially in the tutorial";
   "a rolling buffer"; "maybe we have a screenshot"; "let those have a timeline"). ON in the page (`?savetimeline=0` puts it off), OFF in the module and on the frozen
   stand; the word `TPS_SAVETIMELINE=1`; a `FROZEN_HOLDS` row; in the knob registry and the journal (a recording from before the key replays with it off). OFF = the build
@@ -228,7 +290,7 @@ but synthetic writes still work.
     and how many were taken / lost / are in flight. CHECK: `PORT=5199 node tools/qa/savepic-page.cjs` (headless Chromium, the software adapter): on, the
     picture is not there when the frame's own task ends, is there once the GPU hands it back, is the size asked and the old road's picture of the same
     frame, a second save with the camera turned has its own frame's picture and the first still reads the first's, a pause card laid before a picture arrives
-    shows it on the same tile, and a late picture made to come to nothing (`__save.picLose`) drops the page to the old road with that save's picture the next frame's; off, the old road; `SAVEPIC_BREAK=1` fails. NOT KNOWN: what either road costs on a GPU — the late road has never run on one, and whether a
+    shows it on the same tile, and a late picture made to come to nothing (`__save.picLose`) drops the page to the old road with that save's picture the next frame's; off, the old road; `SAVEPIC_BREAK=1` fails. ON THE KEPT PAGE (10-28; `docs/agents/render.md`, the kept page): `SAVEPIC_KEPT=1` in front of the same check opens `?keeppage=1` and drives the game's FRAME under the shell, in place of the two pages above — the tab's page is a shell with no game, the frame a kept one on lease 1 and every `on` line holds in it; then the frame is loaded again (it must come up on lease 2 with NO program compiled and no shader module made, the small pass's own handed back by the shell) and a save's picture there is still the late road's and the old road's picture of the same frame; `SAVEPIC_BREAK=1` fails under the word too. Software adapter only: a save's picture on a kept page has never been seen on a GPU, and a save taken while a load of the frame is on its way was not tried. NOT KNOWN: what either road costs on a GPU — the late road has never run on one, and whether a
     canvas a pass may sample presents any slower there is not measured (it should not: the usage is a permission, not a copy). A card showing the saves when a picture arrives is handed it for its tile (`menu.ts pictureCame`: the tile's picture alone, nothing laid again). A page
     closed or loaded again inside the few frames between a file save and its picture keeps the save with a plain tile (the old road wrote both in one frame).
     A SQUAD SAVE COPIES ONLY WHAT CHANGED (10-25; `SAVETIMELINE.since`: ON in the page, `?savesince=0`; OFF in the module and on the frozen stand,
@@ -236,11 +298,11 @@ but synthetic writes still work.
     hot frame, what a save with a team up still costs is the whole-game snapshot inside the update — 23 to 26 ms on the maintainer's machine (a take of
     10-25 with the recorder's `save` event beside each of three autosaves, 92 s apart: a frame of about 40 ms where the usual one is 16). NOW `writeMem`
     takes the snapshot SINCE the last one taken or put back (`rollback.ts takeSnapshot(g, since)`: what that one held is gone through and only what changed
-    is copied, the rest shared; the game is not walked). The first save of a run is a whole take, and `rollback.ts` walks the whole game again when the
+    is copied, the rest shared; the game is not walked). The first save of a run is a whole take (the run's first tick's own under `SAVETIMELINE.base`, the next bullet), and `rollback.ts` walks the whole game again when the
     chain has grown stale (`WALK_AGAIN`: a save taken since its base stands on the base's own chain, a whole walk begins a new one). The base is the shelf's `last`, and the shelf is now a `HostOwned`
     class (`savestate.ts MemShelf`; it was closures): a snapshot's walk reads every key the Game reaches, and the first cut of this, a shelf that handed
     the walk a snapshot, put the chain inside the next save and a load rolled the chain itself back — the check threw on exactly that. The base is
-    DROPPED (the next save a whole take) at a new run and at a file's load (`adopt` — a recording begins on one and so does its replay, so the first
+    DROPPED (the next save a whole take) at a new run (whose first tick takes its own under `SAVETIMELINE.base`) and at a file's load (`adopt` — a recording begins on one and so does its replay, so the first
     save in memory of both is whole). WHAT IS NOT THE SAME: a save taken since another also holds,
     and a load writes back, what its base held that the game has since let go of — objects nothing in the game reaches (a closure or the host still holding one would see it
     rewound: none found, not checked). One snapshot holds at most a quarter more than a whole one and 2,048 objects of these before the game is walked
@@ -258,6 +320,52 @@ but synthetic writes still work.
     the save's own snapshot cannot stand beside a whole take, the controller writes its books on both sides of it inside the one call); line (5)
     runs with the stand's own setting, and the whole rollback check's stand-in host puts the shelf's base back with its entries. A take made to throw half way is followed by a whole one on a new chain that is the game as it stands. NOT CHECKED: a save
     after a file's load, and one across a whole walk the chain forced (the quiet yard reaches neither).
+    A RUN'S SAVES STAND ON A BASE TAKEN IN ITS FIRST TICK, AND THE PAGE RUNS THE TAKE'S CODE BEHIND THE BRIEF (11-03; `SAVETIMELINE.base`: ON in the
+    page, `?savebase=0`; OFF in the module and on the frozen stand, `TPS_SAVEBASE=1` beside `TPS_SAVETIMELINE=1 TPS_SAVESINCE=1`, a `FROZEN_HOLDS` row;
+    carried by the journal, a recording from before the key replays with it off). The maintainer dislikes "the autosave stutter"; to the idea of the
+    performance read (the worst frame of a squad run is its FIRST autosave: the framecost bullet above) he said "sure, snapshot behind start card sgtm".
+    WHY THAT FRAME: it held the run's one whole take, AND the take's code had never run. `rollback.ts` has three roads (the whole walk; going through
+    what a snapshot held and finding it unchanged; copying what changed) and each costs two to four times its later self the first time it runs. NOW,
+    two things under the one switch. (1) `Checkpoints.prime` (private; the tick that begins a run, where the shelf is cleared): the whole take, kept as
+    the shelf's `last`, so the first save of play is a take since. Under one gate (`basedNow`: the timeline and `since` on, AUTOSAVE ON — a machine
+    with it off, or the kit picture's window, pays for no take, and a save by hand there is the whole take as it was —, a unit on the floor,
+    `canSnap`): a run whose program is running in its first tick has none (tut-squad, tut-kit; tut-sky, tut-team and tut-queue do get one, their
+    program not yet running then), nor has a run whose team comes up later. (2) `Checkpoints.warm` (the HOST's: main.ts, after the boot's own marks,
+    while the mission's brief is up and not started): a whole take and one since it, kept nowhere (`shelf.warmed` counts it), so the first tick's
+    take is not the page's first. Same gate. Only where a brief is up: a page a script drives, a replay and every headless tool warm nothing, and
+    their first tick's take is a cold one. A walk that throws costs the base or the warm-up, never the frame or the boot (a warning on the console).
+    WHAT IS NOT WARMED: the third road cannot run before the game has changed, so the first save of play is still about a third dearer than a later
+    one. NOT THE END OF WHOLE TAKES IN PLAY: the chain's stale limit is a quarter over the BASE's count, and the first tick is the smallest a run
+    ever is. A run that grows past it walks whole again at the save after: the compound's play-through (seed 1) holds 29,256 objects at its base and
+    43,383 at its own first autosave, 163 s in, so its SECOND save is a whole walk — a warm one, where before the first was the page's first whole
+    walk and the second its first take since. With no base the chain begun at that autosave is good to 52,594. The limit measures growth over the
+    first snapshot, not what the chain holds that the game has dropped: the mend is in `rollback.ts` (a size that follows the game, or the walk taken
+    off a frame of play), not built. THE FIRST CUT TOOK THE BASE AT THE STAGING (Game.restartEncounter's last
+    act) and was wrong twice, both found by review: every tutorial threw on its first tick (the walk met the beat context's showcase-only `view`
+    getter with the program live: the authored gate lets a program by because an authored save STOPS it first) — `TPS_PROFILE=shipped bun run
+    tools/qa/rails-check.ts` and `lesson-run.ts tut-road` are the checks that see it, the save's own did not; and the chain's stale limit
+    (`WALK_AGAIN` × the base's count) counted the game before its first tick (24,058 objects on the compound, 27,875 a tick later), so a fight forced
+    a whole walk in play two saves sooner than no base did. From the first tick: five saves, one every 30 s, over a fight that kills ten men in
+    150 s with him stood still are all takes since (32,452 to 34,653 objects held). MEASURED 11-03, this box (4 cores), one seed, fresh process each, a scratch script (three squad missions,
+    two runs each, saves asked at 10 / 40 / 70 s; not in the repo): the first save of play 30 to 35 ms where it was 74 to 91 under bun, 38 to 45
+    where it was 143 to 148 under node's V8; a later save 21 to 26 (bun), 30 to 36 (V8), as before. WHAT IT COSTS: 115 to 124 ms (bun) / 146 to 158
+    (V8) behind the brief, and the run's first tick 42 to 57 / 66 to 76 ms longer — the frame the brief closes on, which was already the slowest of
+    any run (150 to 166 ms here, everything in it running for the first time). ON THE PAGE (headless Chromium, the software adapter, nothing drawn,
+    the compound with four, two runs each): the first save of play 49 and 57 ms with the switch on against 139 and 132 off, the run's first update
+    336 and 319 ms against 252 and 242. A restart's first tick pays a warm whole take. SAME GAME: four missions' play-throughs (compound, warehouse, pass, rescue; seed 1; shipped
+    stand) digest the same on the build before, with the switch on and with it off (`PT_DIGEST=1`). CHECK: `probes.ts savetimeline` line (5c), both
+    stands (it raises the switches itself; `SAVEBASE_BREAK=1`, the base dropped after the first tick, fails on both): the first tick leaves a base,
+    the first save is a take since it and to the bit a whole take of its moment, it loads and plays on, a restart gives the next run its own, the
+    run and its loads are those of a run with no base, `warm` made before the first tick keeps and changes nothing, and with autosave off no base is
+    taken; (5b) reads the first save's kind from what its run's first tick left on the shelf. The tutorials are NOT in it: run
+    `TPS_PROFILE=shipped bun run tools/qa/rails-check.ts` after a change to when a take is made.
+    `PORT=5199 node tools/qa/savebase-page.cjs` (two boots, about five minutes each; needs no `?mute`: that flag makes the page a script's and the
+    brief goes): behind the brief with the first tick not run the code has been warmed once and nothing kept, Enter, the first tick leaves the base,
+    the first save a take since (one whole walk later is let by); `?savebase=0` = nothing warmed, no base, the first save WHOLE; it prints what each
+    save cost and does not judge it;
+    `SAVEBASE_BREAK=1` fails. NOT KNOWN: anything on a GPU or in the maintainer's Chrome (never seen there; `?savebase=0` is the other arm, and a
+    take with the recorder's `save` event beside an autosave says); more than one seed; whether a warm save (20 to 35 ms here) still shows as a
+    dropped frame on his 120 Hz display — that is the take itself, which this did not touch.
   · **The strip** (`menu.ts saveStrip`, `#menu .saves` in index.html): on the pause card and the DOWN card, this run's saves in time order — picture, age, a small diamond
     on one made by hand, a regretted autosave dimmed, one that is ahead of the mission clock marked. One stop for the keys (Left / Right or A / D walk it, Enter loads),
     or a click. Fewer than two saves = no strip. `Restart from checkpoint`, Enter once down and `newest()` are as they were: the newest sound one.
@@ -285,6 +393,60 @@ but synthetic writes still work.
   put back off, silently. A check's own pin goes AFTER each stand-up (each one: a second stand-up in the same process undoes it again), or the run uses the word (`TPS_X=1`),
   which every stand-up then honours. By design: one stand-up = one known stand. On the shipped stand a table is written only where its word is given (`pinned(env)`), so nothing
   is claimed here about a pin made before a stand-up there. Read in `standup.ts` on the rows around the opening, the kit and the dust; not every row was read, nothing run.
+- **Which rule turns a line red: `bun run tools/qa/stand-bisect.ts [--line REGEX] [--green] -- <command …>`** (2026-11-04). A check that is green on the frozen
+  stand and red on the page's is red because of a row the frozen stand holds off, usually one or two. The tool raises subsets of `FROZEN_HOLDS`' words on
+  the frozen stand until the fewest that flip the line are left (delta debugging: about a dozen runs of the check for one word, some eighty for three) and
+  prints them with the rows each raises. `--line` makes the verdict one line's (a check with several red lines has a rule for each); `--green` asks the other
+  way round, of a line that is red on the plain frozen stand: which rule of the page's mends it. READ THE ANSWER THIS WAY: the row's own check says what the
+  rule does, and the line is then a promise the rule ended (mend the line to read the rule, as `selector-sustained` and `devices` (d) now ask "stays" where
+  doors stay as they are left) or a fault the rule brought (its owner's). Found with it on 11-04: `kickrubble-pool` (`CUTBOXES=1`: a blast breaks the piece),
+  `orders-cover` and `orders-stack` (`TPS_WORDS=1 TPS_DOORNAMES=1`: the HUD's name of a door), `teams-dark` (`TPS_IRLIGHT=1` flips both its lines: a teammate's
+  tube sees a dark man), `devices` (e) (`TPS_HANDS=1`), `controls-behind` (d) and (f) (`TPS_KITANIM=1`), `selector-rows` (`TPS_CLOSE=1`, `TPS_HANDSLOT=1`,
+  `TPS_LIGHTSWITCH=1`, a line each), `workstow-mate` (`TPS_SQUADDEAL=1 TPS_TEAMPACE=1 TPS_PACING=1`, all three, and
+  there the answer was the CHECK'S fault: it asked "was his gun hung on the frame before the round left", and with the squad's kit and its pace the gun comes
+  back up and fires inside one tick. The game's own count of rounds out of a hung gun, `WORKSTOW_STATS.mateFired`, stayed at the one the check forces; the
+  line reads that count now). So a named rule is where to look, not the verdict: trap the thing the line is about before calling it a fault. A line no set of words flips is not a held row's doing: the tool says so, and what the shipped stand itself makes of it.
+- **Retiring a switch: `bun run tools/retire/retire.ts ROW=value … | --rows rows.json [--write]`** (2026-11-04; the maintainer: "can you look for switches we
+  haven't flipped in at least 3 days and clean all of those up?"). A settled rule's switch is a second way through the code that nobody takes. The tool takes
+  rows with the value each has IN THE PAGE and leaves one way: every read becomes the value and the code is folded round it; the page's address word, the
+  stand's hold, the journal's line for an old file, the debugger's toggle and a tool's own raise or put-back go; the row goes from its table, from
+  `FROZEN_HOLDS`, its stand word from `STAND_ENV`, its address word from the lists of address words, its name from a panel's list of rows and from what a
+  machine keeps; and what only the dropped branch used goes with it, to a fixed point. It reads the tree with TypeScript's own language service
+  (`vendor/typescript`, or `TS_LIB=<path to typescript.js>` in a cloud checkout) and is a dry run without `--write`. IT REFUSES, with the place: a row the game
+  writes as it runs (state, not a switch), a row Options writes (the player's), a getter and setter, a row an object literal or a map of tables' rows holds
+  at another value, a row the game reads through a list of keys (or writes through a list something else reads too), a row read as its module loads where
+  its own value is not the page's (the page has written nothing yet: at a file's top level, or in anything a file's top level calls, makes, reads through a getter or
+  hands to a function of the game's own, followed to the end by the declaration each name leads to; what is handed to a listener, a timer or a promise
+  waits, and the file a page's script tag names is the program that boots the game after the switches, not walked), a row that is the subject of a `switch`, the same key read on another thing of the table's type (a parameter, a kept copy that
+  is not taken at load: a copy taken at load, `X_DEFAULTS`, is read as the row's OWN value), a row read through a list of keys handed to a call with the table, a row the game writes through a list of keys or
+  through a pattern, a held number whose old value something read as its module loaded, a table typed by an index, a value that is not of the row's
+  kind, and the rows of the Rust module's twins. AND A VALUE THAT IS NOT THE PAGE'S, where the page itself says what that is: `--page page.json` is every
+  table as a stand-up of the page left it (`TPS_PROFILE=shipped bun run tools/qa/stand-dump.ts --out page.json`, on the tree about to be folded), and a row
+  the dump gives another value, or does not hold, is refused; so is a row whose write in the page rides a row that stays (`A = B && !q.has('noa')`: with
+  B's word on the address A was off too). `--trust ROW,ROW` takes the caller's word for those. `--late ROW,ROW` takes it for a row the walk of load-time calls reached (the refusal names every such read and the chain of calls to each from the top-level statement: the walk follows every call a function could make, not the ones it does make), never for a read at a file's own top level; each read it was taken for is printed. THE JOURNAL'S LINE for a recording from before a row, `if (the recording has no word for ROW) ROW = off`, goes whole with the row, and only where everything under that `if` is the write of a row retiring in the same run: once the row is gone no recording has its word, so anything else under it would run for every recording made from then on, and the row is refused (as it is where the word is read into a name first). A row read on an untyped thing under the table's name anywhere else in the game is refused too: that may be a recording's words or the table itself. (Reading the page's writes off the code was tried first and
+  dropped: their order, an early return and a helper are the code's to run.) Exit 3 = some rows were refused and the rest done. A CALL IS NEVER FOLDED AWAY FOR ITS NAME: `x.get(k) && ROW` loses the call only where `get` is the language's own
+  (a Map's), the function's body only reads, or the caller vouches for it (`--pure name,name`; the command line is then the record of what was vouched for).
+  A game object's `get`, a getter (also under a type that calls it plain data, or reached by a key), a method some other class overrides, a function a `let`
+  holds and a default worked out at the call all stay. A method of the language's own that is not a reading one (`sort`, a Map's `delete`) is never asked of the game's same-named bodies. An import whose last use as a value went stays as a bare import, where it was: its module still loads
+  (asked twice: of what the run dropped as it rendered the file, and once more of the finished text by its words alone). A number of a knob table whose last reader went stays where its name is still a quoted word somewhere (a panel's list of rows). IT SAYS, for a hand: a constant left in a
+  condition beside a call it cannot see to the bottom of, a value nothing reads any more whose making still happens (a die drawn, a call made: the name
+  goes, the call stays), a loop left with nothing in it, and every place a CHECK asked for the retired path. `--drop file.ts:name` takes a declaration out
+  with the statements that call it; `--drop-at file.ts:line[:words | :column]` one statement of a check, and only a statement that is nothing but the call
+  (a verdict kept in a name, returned, passed on by a helper, or a call that prints a line a case is said as NOT FOUND; `lines.ts diff` does not place a
+  line whose place printed other lines of the run too). THE PROOF OF A RUN is not the tool's: both
+  typechecks; the page's stand run for run the same before and after (`TPS_PROFILE=shipped PT_DIGEST=1 bun run tools/qa/playthrough.ts --seeds 1-2 --json f`:
+  42 digests); the frozen stand after = the frozen stand before with the retired rows' words raised; and the family's checks run before and after on the
+  page's stand, line by line, where a line that went from PASS to FAIL is an arm of the retired path and is taken out by the place it was printed from:
+  `bun run tools/retire/lines.ts run <dir> [--tree <the tree before>] <the check files the fold's report names>` before and after, `lines.ts diff <before>
+  <after> --drop places.json`, `retire.ts --drop-lines places.json --write`, and `run` once more. (`diff` also says a check that DIED after the fold, one
+  that throws exits 1 as a red check does, and does not count a line that was red before under other words.) After a fold that took a row with a slider
+  out: `bun run tools/gen-scene-notes.ts` (the scene panel's notes are keyed by row). WHAT GOES THAT WAY, by kind: the stand's and the journal's
+  lines, the off arm, the on arm measured against the off arm ("a quarter of those metres"), and the lines of a check that held a newer rule off for its
+  length; in the first fifteen checks of the squad's family that was 65 of 147 lines. A check left saying nothing goes whole (`--drop`). THE TOOL'S OWN CHECK:
+  `bun run tools/retire/retire-check.ts` runs it on a small tree of its own (`tools/retire/fixture`) and holds that each of its cases there (110 today) answers the same,
+  draws the same dice and makes the same calls after the fold as before it, that the folded tree compiles, and that what names a retired row is gone while
+  what only looks like it is not; `RETIRE_BREAK=1` folds one row at the wrong value and must fail. A shape the tool folds wrongly goes into the fixture as a
+  case first. Memory: a hundred rows at once is about a minute and 4 GB; all of a family's rows go in one run, not all families in one.
 - **Not every `FROZEN_HOLDS` word is a `TPS_` word** (10-13, read off `src/host/profile.ts`; the knob registry's owner's note). Raised by a word of their own: the door rules
   (`ONEWAY=1`, `QA_FRAMEHOLDS=1`, `QA_DOORMANNERS=1`, `QA_DOORBLAST=1`, `QA_DOORSTAY=1`), `SLOTS=on`, `CUTBOXES=1`, `GLASSFX=on` (three rows), `SQUADS=radiocheck-call` (three
   rows). No word under probes.ts at all: `DESTRUCTION.on`, `RUBBLE.on`, `EVICT.on` (`PT_DESTR` / `PT_KICK` / `PT_POP`, playthrough.ts alone), `FRAG.defenders` (`--set`),
@@ -326,8 +488,38 @@ but synthetic writes still work.
   its own deal and die. A LEVEL IS ONLY LOADED AT BOOT, so a run is A PAGE PER SCENE: `benchBegin` writes a small record to the tab's session store and loads
   the first scene's address (the mission's own query with `roomclear=<seed>&seed=<seed>&difficulty=hard&noverdict&nokeep&benchrun=<i>`); each page finds the
   record (`benchLegOfPage`), plays its part (`BenchLeg`) and hands its lines on with the next page's load; the last page shows the card, and Close (or an Esc
-  with nothing to show) loads the address the run was asked on. Of the visitor's flags only `mute`, `nomusic` and `quality` ride along: anything else would
-  make it another fight than the set's. ON THE LOOK PROTOTYPE'S BRANCH (11-02) a run asked for on the look's page keeps the look (`?bench&look`): every
+  with nothing to show) loads the address the run was asked on. Of the visitor's flags only `mute`, `nomusic`, `quality`, `pipequeue`, `shadertrim`, `shaderfold`, `savepic` (2026-11-02: until then
+  `?bench&savepic=0` against `?bench`, the pair the save picture's bullet names, was one run twice), `pace` (11-03: a benchmark draws every display frame whatever the word says, as it
+  always did, so the word only rides along rather than be named as left behind: `docs/agents/render.md`), `adapt` (11-04: `?bench&quality=high&adapt=0`
+  is a run at ONE SIZE: `?adapt=0` opens the visit with nothing adapting, `ui/quality.ts visit`. With the ladder on, a heavier picture is paid for in
+  resolution, so two runs show the same frame rate and the same GPU milliseconds at different sizes; with the word nothing moves, and the lines of two runs
+  are the same pixels. With no tier named the word holds the tier the page stands on (the one this browser's auto last had, High where it never ran), at
+  that tier's start size and unmeasured, since no calibration runs: the row 'Hold frame rate' alone left auto free to shed sharp direct, give the tier up
+  and resume the last visit's size. NAME THE TIER where two machines or two days are to be compared. THE CARD SAYS WHAT ITS OWN LINES SHOW (`ui/bench.ts
+  sizeNote`), not what the switches were: 'held still' where the page's lines (as it opened, each scene, the held picture) were all drawn at one size, and
+  after it 'the address named no tier' where it did not; 'more than one size' where they were not (a window resized, the resolution moved by hand); and
+  where the row was put off BY HAND under auto (Options, not the address) it asks for a pinned tier. With the row on it says nothing. Like every word of the
+  address it is how the visit OPENS: a tier or Auto picked in Options afterwards is the player's, and Reset puts the defaults back under the address's
+  words. With the ladder off the page has no frame rate to hold, so outside a benchmark the even pace has no target and the page draws every display frame
+  (a pinned tier with the row off always did; a benchmark draws every frame anyway). The kit view's frame is opened without the word (it is pinned to a
+  tier and its pacer counts on its ladder), the viewer reads the address by the same reader, and `ladder-replay.ts` replays a take with the row as the take
+  had it. Asked for by the look's join to read 'within a tenth of the GPU time with the look off'; whether a machine HOLDS 60 is still read on a run
+  without the word. `bench-check` has the word on both addresses, the page's wiring (one reader of the two words, before a frame is drawn; Reset and the
+  viewer by the same reader) and the card's lines (a whole run each, the unnamed tier among them); `ladder-replay.ts --selftest` plays a 36 fps fight with
+  the word under hold 60 and as now, through a pinned High and through auto with sharp direct its own to shed and a size left behind, and then the page's
+  own order (a ladder made from what a browser remembers, the address read, a hand's pick, Reset): nothing moves and nothing is written as the machine's
+  choice; `ADAPT_BREAK=1` leaves the word off and the seven lines that play it fail. Run on a cloud NVIDIA card (two benchmark runs, every
+  High line of the three scenes at one size, the notes as said); never on a Mac or a Windows card), the backend's own words and the
+  shader rows' words (`ui/shaderrows.ts SHADER_ROW_WORDS`, e.g. `compactshaders`) ride along: anything else would make it another fight than the set's, and
+  the report has a note naming the words that were not kept. THE ROWS WERE DROPPED UNTIL 2026-10-27, so `?bench&compactshaders=1` measured the plain build
+  on every scene (found by the maintainer, who saw no difference on a second run); a row set in Options always applied. Since then the report has a
+  `shaders` line naming the rows the page was built with as Options names them, or saying none is on (`BenchResult.rows` keeps their URL words;
+  `BenchDeps.rows` = `shaderRowsOn()`: a row can be on from Options with nothing on the address). THE BENCHMARK WAITS FOR SHADERS STILL BUILDING BEHIND THE START
+  (2026-10-27, with the first-frame start on in a person's browser): while `Engine.standsIn` the wait before the run starts over
+  (`Bench.standing`, as for a tab that was away; every page of a set comes through that wait, and main.ts holds auto quality's measure back with it), `standInMs` (180 s) in all on a page, counted from the first look that found one and never started
+  again; past it the lines are timed as they are and the report says so once, however many pages the set has ("some shaders were still building 180 s in …"). bench-check has both cases on its fake page. Not covered: a wall cut before the cut set is in still draws
+  its whole box under a timed line, as it always did (that set is not in `standsIn`). NOT DONE either: the engine replay's address (`ui/replaykey.ts
+  VISIT_FLAGS`) drops the same words. Checked by `bench-check` (the fake page and tab) and once on a page on the software adapter: never run on a GPU. THE LOOK PROTOTYPE (11-02) rides along too: a run asked for on the look's page keeps the look (`?bench&look`): every
   `look=key:value` row and the page's other boot words (`scene/look.ts lookPageWord`: hills, geo, front, lorry, dress, seat, the cut boxes' switch and the
   rest; never the dress's `look=plain|0|off`) ride along, since the page reads them at boot into its shader text and its level. Before, such a run timed
   the plain build on every scene and said nothing. A TRIAL THE LOOK PANEL'S BUTTON KEEPS OFF on the machine goes on the address as its own word
@@ -349,14 +541,15 @@ but synthetic writes still work.
   same box and the same browser (Chromium 141), draws ultra on the plain page with `?cutprograms=boot` with no device loss and no GPU error, where this
   tree's plain page loses the device every time; `&round=0` on this tree changes nothing, so the round test in the cut set's walks is not the whole of
   it. Which of the build's steps since the base mends it was not found (the build's change to how round things are traced in the cut set does not apply
-  to this tree, which has its own), so nothing was ported: it is expected to go at the join, and that is one run to make then. Never tried on a GPU. THE SANDBOX ROW THE MACHINE KEEPS IS NOT LOADED ON A SCENE'S ADDRESS (`main.ts`, the gate on `loadSandbox`; a checkpoint load there still re-applies it, `savestate.ts`): with "no AI" kept the mission was refused at boot, so each scene's line was the note "was not played (the mission did not start)" and only the last page's held picture was timed; unlimited ammunition is another fight. Seen on the software adapter: with `{noAi, ammo}` kept, the first scene's page boots with the AI on and ammunition as dealt, and the run reaches its scene with the hands-off player started. Not mended on the build's branch as of 11-02. `window.__look.parts()` says which trials a look page asked for at boot. NOT CARRIED: the dress's off words beside a look row
+  to this tree, which has its own), so nothing was ported: it is expected to go at the join, and that is one run to make then. Never tried on a GPU. `window.__look.parts()` says which trials a look page asked for at boot. NOT CARRIED: the dress's off words beside a look row
   (`?look=plain&look=…`: the scenes are the set's dressed levels). NEVER PLAYED TO ITS CARD, and never on a GPU. A reload in the middle is a plain mission page (the page marks the record before it plays); `?bench` on the address
   goes to the first scene BEFORE the game boots (`main()`'s first lines, a `replace`: that load is the machine's first and the one the report's `load` line
   times, and Back does not ask again), the row is a second load and the report says so. EACH SCENE IS PLAYED BY THE HANDS-OFF PLAYER (`HandsOff`, the page
   twin of `command-tally.ts`'s hand `b`): W A S D along the nav path, the cursor on a door, the quick key B (stack, then B again when the men have arrived),
   the rifle on whoever the fog shows on a clear line after a rolled beat, then a hunt for whoever is left; all of it written onto the host `Input` in the
   loop's `beforeTick`, before the tick samples the command, so the game is played by its own keys and its own AI on both sides. Sam cannot go down while it
-  plays (`godMode`, put back after; mortal he went down inside half a minute in a quarter of the dark runs), the real keyboard is locked out of the scene
+  plays (`godMode`, put back after; a scene's page does not read the machine's own sandbox row since 2026-11-02 — `benchSceneWaits`, asked before the mission is staged: with
+  `no AI` kept the room clear refused to start and the run ended on 'the mission did not start', and `unlimited ammo` kept was another fight than the set's; mortal he went down inside half a minute in a quarter of the dark runs), the real keyboard is locked out of the scene
   (`input.lockExcept`), and its one direct write is the door verb in the no-teammates-left path (`selectVerb('door','kick')`). A scene plays at most 75 s of
   game time. In order: page one holds the world while auto quality finishes measuring and times that opening picture AS THE PAGE OPENED, then plays its
   scene live with auto quality doing what it does in play; page two its scene; page three its scene until ITS HEAVY MOMENT (a round fired in the last 0.4 s,
@@ -365,9 +558,25 @@ but synthetic writes still work.
   flipped alone (the F8 sweep, one round, `SweepOpts.inside`), then the fight plays out. It ends on a card (the world held under it) with a text report (the
   GPU by name off WebGL's unmasked renderer, the browser, the system, the screen, on battery or not; the first page's BOOT timings; a line per window and per
   scene; `floors`: how each fight ended, so two machines' numbers are known to be of the same fight only where those agree; the ten features that move the
-  frame most) and a Copy button, and the LAST page's take downloads as the F9 recorder's json with one `bench` event carrying all of it (`set`, `scenes[]`
+  frame most) and a Copy button, and the LAST page's take goes out as the F9 recorder's json (no download: the one door, `host/savefile.ts`) with one `bench` event carrying all of it (`set`, `scenes[]`
   with each scene's address, end and boot; the earlier scenes' frames are not in the file, their lines are). `tools/qa/perf-report.ts` prints the report
-  first. NOTHING IS SENT ANYWHERE. Esc stops a run and puts everything back. HANDS OFF: the page's Esc and hotkeys stand down while a run is on, no attract
+  first. THE RUN ITSELF SENDS NOTHING, except to a listener at the door (`host/savefile.ts`, 2026-10-27: on a build with a backend whose browser sends, the
+  result goes as a small file of its own, kind `bench`, and the take as `benchperf`). NO FILE LANDS IN THE DOWNLOADS (the maintainer, 2026-10-27: "we
+  should get rid of local downloads entirely"; `?downloads=1` = as it was), so THE CARD'S LINE SAYS WHERE THE RUN WENT (`benchSaid`, `#bench-said`): "Your
+  results are being sent to the developer." where the listener is sending the result or the take now (the take holds the result), "Your results will be
+  sent to the developer." where it holds them (a browser that would send and has not been shown the notice, a page opened straight onto `?bench`), "Your
+  results weren't sent, so press Copy if you want to share them." where nobody took them (no backend, sharing off), and "The full recording wasn't sent."
+  after the first two where the take alone was refused (too large). THE LINE FOLLOWS THE FILES TO THEIR END (`BenchView.update`, the door's `done`): "Your
+  results were sent to the developer." once what was going has arrived, and the not-sent line where it was let go after all. Unless all of it is already going the card carries the notice's line (`benchNotice`,
+  `cloudNote`, ui/cloudnote.ts): two seconds on screen and a held file goes up, before "back" loads another page and loses it. `tools/qa/bench-check.ts`
+  holds every line and the calls in the source. CLOSE WAITS for a file that is on its way or held (`benchGoing`): the button reads "Sending…" until
+  `cloud.filesIdle(BENCH_SEND_MS)` answers, then leaves, and a second press leaves at once (Close loads another page, which would cut the only copy off).
+  The visitor's sending words (`cloud`, `cloudfiles`, `cloudstats`, `cloudtapes`, `cloudprefs`) and `downloads` ride along the scenes' addresses: before,
+  a run opened under `?cloud=0` lost the word at the first scene. `tools/qa/savedoor-page.cjs` (a stand-in backend, `npm ci` in `cloud/` first) holds on
+  a real page: a take with no download that the backend has, the notes, the card's lines, Close's wait, `?downloads=1`, and a page with nobody
+  listening. `tools/qa/bench-page.cjs` expects no download and reads the take off `__lastPerfDump` (run whole on the software adapter 2026-11-04 with the
+  benchmark's wait in: 28 lines, all pass). A DEVELOPER'S WAY TO A FILE: `?downloads=1`, or after the fact `__saveUp.on = false` in the console, then
+  `__journal.save()` or `__perfrec.deliver(__lastPerfDump)`. Never seen on a GPU. Esc stops a run and puts everything back. HANDS OFF: the page's Esc and hotkeys stand down while a run is on, no attract
   reel starts. `?bench=N` = N seconds a window; `?benchcap=N` = N seconds a scene (the page check's). A tab hidden during a run starts that window over, or
   leaves that frame out of the scene's line. While a window is timed on a held picture the page's quality model does not run. A scene that will not start is
   said in the report and the next page loads all the same. SEEDS: `bun run tools/qa/bench-seeds.ts` plays each scene headless (the shipped stand) over a range
@@ -385,12 +594,76 @@ but synthetic writes still work.
   heavy moment, the addresses, the reload guard, the report's text; `BENCH_BREAK=1` must fail), `tools/qa/perf-sweep-logic.ts` (the sweep inside another
   take), and on a real page `PORT=<port> node tools/qa/bench-page.cjs` (the software adapter, quality pinned: `?bench` goes to the first scene and Esc comes
   back, then the row's run start to finish over three pages with the hands-off player seen giving its orders on each and walking on the first, keys
-  pressed into a scene, the game's clock read every frame, the card, the one download, Close; the page's own frames play each scene under the fixed step,
+  pressed into a scene, the game's clock read every frame, the card and its line, no download, Close (opened under `cloud=0`, which rides along the scenes: nobody listens at the door); the page's own frames play each scene under the fixed step,
   a frame there taking seconds and the wall's cut put out of reach, so a scene ends by the player's own cut after `CAP` game seconds and the last page's
-  tail is the fake page's to prove; `STEP=script` has the check step the scenes with `__runFrames` instead; about 80 minutes at 320x180). NEVER RUN ON A GPU: no number of its report has been read on a real machine, the seven
+  tail is the fake page's to prove; `STEP=script` has the check step the scenes with `__runFrames` instead; 154 minutes at 320x180 on a four-core box on 2026-11-04, so its `DEADLINE` allows 240 by default). NEVER RUN ON A GPU: no number of its report has been read on a real machine, the seven
   minutes are an estimate, and nobody has watched a scene played or looked at the card.
+- **THE PRICING RUN (`src/ui/pricerun.ts`, `src/host/runpage.ts`, 2026-11-04; `localhost:5173/?look&pricelevels&downloads=1`, hands off)** walks every level of the mission list
+  (`=a,b` for some), a page load a state: the look page (played four seconds of the game's clock, the picture held on one step, timed with the look's
+  switchable layers off and on in turn) and then the same mission WITHOUT the look, held on the same step. One file, `price-levels-<date>.json` (version 6),
+  a row a level, each with the run's own verdict against the bar (`priceOver`, the one place a GPU number of it is judged; the file's `bar.ruled` says
+  which rows of the bar the maintainer has ruled on). A ROW THAT IS NOT ONE PICTURE IS NOT JUDGED (`apart`: the picture moved between its turns, its two
+  pages stood at another size, rung or step, or frames were queued ahead of the GPU in a state, `queuedWords`): its numbers stand and no verdict is read off
+  them. The GPU's lag is no line of the verdict (it reads 2 to 3 wherever the page waits for the GPU, more on a 120 Hz display). TWO NUMBERS a state: the
+  compute passes' busy span (the game's own "GPU ms") and that span with the g-buffer's pass in it (`all`: every stamped pass but the ones that draw to the
+  display, whose stamps span the display's wait; the g-buffer's was read against recorded frames on an M4 Max and follows its own work — one chip, so each
+  state is still checked, `spansWait`, which wants half a frame of g-buffer before it calls it a wait). EVERY PAGE STANDS ON ITS PRESET'S OWN ROWS with the
+  quality ladder off from before its first frame and gives way to no window in focus elsewhere, BY ITS ADDRESS'S OWN WORDS (`quality=<preset>&adapt=0`
+  and `giveway=0`, which `priceSearch` writes: no rule of the page knows a priced page; asked with `quality=auto` the ladder and its pace are left to the
+  page and the row says so). It is not counted as measuring: it still waits for the GPU as a player's page does, and a frame's time is the time between two frames it DREW (`window.__pace`; the frames a
+  turn waits for are counted the same way), so a level the GPU cannot hold sixty on reads as that and queues nothing ahead; a row says its rung, its size
+  and the step it was held at. ONE WAY TO PLAY, on every page: the loop is held from before the boot, the run asks for the page's warm-up (`__prewarm`) and
+  lets the page draw with the clock held until the page says the warm-up's clear is over (`window.__prewarmed`), and then the mission is played by the
+  page's scripted step, a step a display frame, every step drawn, with no more frames with the GPU than the page's own pacer keeps there. So a level's two
+  pages have run the same steps, drawn the same frames and stand on the same render clock at any display rate. (Stepped with no warm-up first, a snow
+  level had no snow in its air: the warm-up clears the particles' ring some frames after the page's first frame of its own, which then came after the
+  play. Played by the page's own loop instead, two pages stood on render clocks a few milliseconds apart and a 120 Hz display ran other frames than a
+  60 Hz one.) A PAGE WHOSE PART THROWS, or whose loop has stopped, is one page not priced, with its cause in the file's notes, and the run goes on.
+  The file names the build its pages were (`commit`, the page's own word), and the table merges rows only of one build. IT IS A RUN'S PAGE
+  (`host/runpage.ts`: `runPage` stands the load brief, the lost-device reload, the sandbox row and the look page's kit down, as on a benchmark's scene;
+  `ownPage` keeps its own page under the kept-page rule, since a run walks by loading its next address). ITS FILE GOES OUT BY THE SAVE DOOR (kind `price`):
+  to whoever listens, and to the browser as a download only with `downloads=1`, a flag the run carries with the benchmark's other carried words
+  (`ui/benchrun.ts carriedWords`); where nobody took it the card holds the file's text under the table for Copy. A word of the asking address that no
+  page carries is named in the file's notes. Words: `quality=` (default high), `pricesecs=`, `pricepage=0` (look pages only); a mission's link sheds them
+  all (`PRICE_ASK_WORDS`). Checked by `bun run tools/qa/pricerun-check.ts` (no page: the verdicts, the wait's rule, frames queued ahead, the report, the
+  addresses, on made-up rows; `PRICERUN_BREAK=1` must fail) and by
+  `node tools/qa/pricerun-page.cjs [level …]` (the real page on the software adapter, as a person's page runs it: the chain, one rung, one step, the file
+  down; no number there is a price, and its frames are seconds long, so it proves nothing of the pacing) and with `--real` on a machine with a GPU (`--look "<words>" --look-only` prices a look page under other words). Run on
+  a rented NVIDIA card through Vulkan only (11-04); NEVER RUN ON METAL OR ON A DISPLAY (a headless card has none, so nothing of a 120 Hz display's frames has been seen), and nobody has read a row of it against the bar. The level tools below read its file.
+- **THE LEVEL TOOLS (2026-11-04; files only, no GPU, no page of the game's changed).** `bun run tools/qa/level-audit.ts [level …]` counts every level the mission
+  list draws as the look page draws it (boxes, cut planes, round things, lamps burning at its hour, how much of the picture is each material and how much
+  has none: a box is made of what it says, `Box.stuff`, read as the renderer reads it), about a second a level; `--check <level>` holds the engine's caps and the PROPOSED bars of `level-count.ts` (`LEVELAUDIT_BREAK=1` must fail),
+  `--counts` gives a level's row for its dressing file, `--write-base` the baseline (`fixtures/level-audit-base.json`: the levels before they were
+  dressed). `node tools/qa/level-cost-page.cjs <level>` is one boot of the look page on the software adapter: what it compiled, layers off against on, a
+  still; a relative read, and the GPU's particles are never stepped in it, so a snow or rain level is read without what is in its air.
+  `bun run tools/qa/level-table.ts --dir <folder>` makes one page of every level from those files, a GPU's price file and each dressing row (the folder's `notice.txt` is printed first and marks a level whose price no longer stands). "Which levels
+  the list draws" is one answer (`scene/scenarioList.ts listedLevels`) and the render passes are one list (`gpu/timer.ts RENDER_PASSES`): both tools ask those.
 - **A picture fault is debugged from a frame capture** (F6 on the page: every render target over 8 frames and the trace of what the renderer changed;
   `tools/qa/capture-read.ts` reads it; `docs/agents/render.md`, "A CAPTURE IS EVERY TARGET OF A FEW FRAMES").
+- **What a line of the benchmark's card prices** (2026-11-04, `ui/bench.ts benchStats`). `frame ms` is the gap between frames: wherever the
+  display's pace is held it reads 16.7 whatever the picture cost, so it answers 'is 60 held' and prices nothing. `GPU ms` is the COMPUTE passes'
+  union, the number the quality ladder is fed (`ui/perfrec.ts`); every drawn pass is left out of it, because a drawn pass's stamps are not to be
+  trusted on Metal. So work that lands in the g-buffer (more boxes, a richer material, a layer of the look) was in no number of a line: the first
+  run on a real GPU that priced it (a cloud NVIDIA card, Vulkan) had the look's layers at 3 % by `GPU ms` and 5 to 6 % with the g-buffer counted.
+  `g-buf ms` (`BenchStep.gbuf`) is the g-buffer pass's OWN stamp over the line's frames, in its own column and never folded into `GPU ms`; n/a
+  where no frame carried one, and on a result saved before it was kept. It is the mean of the middle nine tenths, not a median: a browser rounds a
+  stamp to a tenth of a millisecond, and of a pass this small only a mean reads finer than that. HOW FAR TO BELIEVE IT ON METAL: far
+  enough, on one chip. Seven takes of an M4 Max (2026-10-14 and 10-25, about 50,000 frames): in an F8 sweep of the look's prototype, 'every layer off' took the pass's stamp from
+  1.85 to 1.15 ms and 'sharp direct off' to 0.81, the same in each of three rounds, while 'fog of war off' (no g-buffer work in it, the frame
+  2.9 ms shorter) left it at 1.80; on a page held at 30 frames a second, with 21 ms of waiting in every frame, it read 0.33 ms. `post` and
+  `fxaa` followed the frame's length in the same takes: THEY span the wait for the display (`docs/agents/render.md`, timing traps), the
+  g-buffer does not. Not shown: any other Apple chip, or a build newer than those takes. In that sweep the look gave back 0.69 ms in the
+  g-buffer and 0.85 in the compute union, so `GPU ms` alone saw about half of it. HOLDING TWO RUNS AGAINST EACH OTHER: add the two columns, as an ESTIMATE (two separate statistics, and any time a driver ran the g-buffer beside a
+  compute pass is counted twice), and only between lines with the same quality rows: under sharp direct the pass draws at the OUTPUT size and its
+  downsample is not stamped, so it does not follow a line's 'drawn at'. Not changed: the card's 'heaviest GPU passes' still lists every stamped
+  pass, drawn ones too (on Metal `post` and `fxaa` can lead it and mean nothing; on other machines it is the only place `composite` shows), and
+  the sweep's 'GPU ms given back' and the ladder's own number are the compute passes alone, so a feature that moves g-buffer work is under-priced
+  there. `bench-check` has the mean on a rounded clock, a hitch in a long and in a short window, the missing stamp (none, or nothing but the 0
+  the timer gives a pair never written), the column and its line on a whole run's card, a browser with no timings, an old result, and the pass's
+  name against the engine's. Run on a cloud NVIDIA card (the column on every line of four cards, 0.39 to 0.79 ms on the High lines, rising
+  with the size over the presets); never on a Mac or a Windows card with this build. A BENCHMARK WAITS FOR THE GPU as a player's page does
+  (`docs/agents/render.md`, the page waits for the GPU; a result's `wait`): a card from before that, made on a machine with no display, has
+  frame rates and 'one feature changed' rows that are not to be believed on any line over the display's frame.
 - **Stalls: the recorder watches the page's own thread** (`ui/perfrec.ts`, from 10-25). A frame's marks see only inside the frame, and a stall is nearly
   always between two frames. While a take runs ON THE PAGE (never headless: a headless take is the file it was; `perfrec.watch = false` leaves it off on
   a page too) a 4 ms timer answers, and each frame's `beat` is the longest it went silent in the GAP before the frame: from the end of the step before to
@@ -450,6 +723,90 @@ but synthetic writes still work.
   `device.destroy()` puts no card up and prints no error; under `?gpuretry=0` the old one-line card. On the software adapter the loss is told by the browser's GPU side, minutes
   late behind a drawn frame: a check that waits a second for it passes "no card" without the loss ever having arrived). NOT FOUND: why the AMD machine failed. Nothing here has been run on one; the other line in its notes ("invalid: resource doesn't exist")
   is not a string of the page. What would find it: the card's new second line from that machine, its `chrome://gpu` text, and whether the title drew before the card.
+- **A gentle second try: a browser that loses its device while shaders compile compiles them one at a time from then on (2026-10-29, the AMD machine's first records).**
+  `src/gpu/device.ts GENTLE` (ON; `?gentle=0` = no note written or read, as it was; `?gentle=1` = this load is gentle; a `?pipequeue` word wins; the page's own, no stand
+  differs in it). WHAT THE RECORDS SHOWED (a Radeon RX 9070 XT, Windows, Chrome 156, 16 threads, the hosted build): three losses in a minute, all "A valid external Instance
+  reference no longer exists." with reason unknown: one 7.5 s into the boot's compiles with 17 of 105 in, one 8.1 s into a mission's eight with the five heaviest kernels
+  (`vol`, `restir`, `reflect`, `compositeSR`, `gatherTraceS`) and `particlesUpdate` still out, and after the third the browser gave no adapter and no WebGL (which is what
+  the "no webgpu adapter available" of 10-27 on that machine was: the browser's GPU side switched off after its process went down repeatedly). One load in between compiled all
+  105 in 10.2 s, so the same programs come through or do not. In hand each time: the burst the queue allows at the boot or under the rush, the threads less two (fourteen).
+  WHY the process goes is NOT known: its memory under fourteen big compiles, or the driver under several at once, are guesses. THE RULE: `onLost` writes
+  `localStorage['twopointsix.gentle']` ('count:when'; a machine key, on the settings sync's skip list) when a REAL loss comes while shaders compile (the boot's count
+  open, anything in hand or waiting, the later set out) on a page that retries (so never a benchmark, the kit picture or a page a script drives) and whose load was not
+  gentle already. A load that finds the note young enough turns the queue on wherever it is with ONE in flight at the boot, after it and under the rush (`gentleQueue`),
+  says so in a warning record (`gpu.gentle`, with `why`) and on the card of a further loss ("shaders compiled one at a time"). Young enough: ONE day after a first loss
+  (one loss a healthy machine had for its own reasons must not cost it a month of slow loads), THIRTY once the burst has lost the device again within 180 days. So that
+  machine pays one more lost load the day after its first, and is gentle for a month from then. `watchPipes` counts every `…Async` creation of the device as in hand
+  from the browser being given it to its answer (beneath the queue, so at a creation's turn), and the loss's error and fatal records carry `flying` (the labels in hand
+  when the device went, as up to three strings of 80 characters, `flying2` / `flying3`, and `flyingOf` the count; kept from the first rejection of the burst, since a
+  lost device rejects what is in flight before it says it is lost and the queue then hands it what waited) and `gentle`. So a gentle load that dies too names the one
+  program it died on. CHECKS: `tools/qa/gpulost-check.ts` (the note, its count and its age as tables; what a record keeps of the labels), `tools/qa/pipequeue-check.ts`
+  (one in flight in every phase; what a loss had in hand, with the queue draining onto the dead device), `GENTLE_BREAK=1` must fail in both; and
+  `tools/qa/gentle-page.cjs` on the real page (headless Chromium launched so the page sees no driven browser, software adapter: the browser's GPU process is killed
+  through the debugging protocol while the page shows "compiling shaders 3 / 105"; the page is told the loss, notes it, loads itself again, and on that load never has
+  more than one program with the browser while over a hundred wait, prints the warning, shows no card; `GENTLE_WAIT_S=N` also waits for that load to come ready;
+  `GENTLE_BREAK=1` runs it under `?gentle=0` and must fail). `?gentle` rides a replay's and a benchmark's addresses (`VISIT_FLAGS`, `CARRIED`). PRICE: a gentle load
+  waits for the heavy kernels' sum, about a minute on that machine by its own per-kernel times where the burst took ten seconds, and each mission's start waits
+  likewise. KNOWN SEAMS: a benchmark on a noted browser reads the note and times a gentle load (its records hold the `gpu.gentle` warning; nothing on the report says
+  so); a loss told more than ten seconds after the creations failed is not counted as one while compiling unless the boot's count is still open.
+  NOT SEEN: any of it on a GPU. Whether one at a time gets that machine through is what its next visit's records say (a `gpu.gentle` warning and then a boot record, or a
+  loss with `gentle` and one label in `flying`). Still what would settle the cause: that machine's `chrome://gpu` log lines after a loss (the GPU process's exit code).
+- **Plain air: a driver that stops on the volumetric program is not handed it (2026-10-30, the AMD machine's second visit).** `src/gpu/device.ts PLAIN_AIR` (ON;
+  `?plainair=0` = no note written or read and no adapter's row, as it was; `?plainair=1` = this load is in plain air; the page's own, no stand differs in it).
+  WHAT THE RECORDS SHOWED (the same Radeon RX 9070 XT, on the build with the gentle try): the burst lost the device again starting The compound, with `compositeSR
+  restir reflect vol gatherTraceS particlesUpdate` in hand; the load after it was gentle, made `compositeSR`, `particlesEmit`, `particlesUpdate`, `restir` and `reflect`
+  one at a time (4.9, 5.6 and 4.2 s for the three heavy ones) and lost the device 23 s in with ONE program in hand, `vol`. `vol` was in hand at every loss of that machine
+  whose record names anything (four of four), alone at the last. So it is not how many compile at once. NOT known: why the driver's process goes on that program,
+  whether it does every time (one title load of the first visit made all 105, `vol` among them), and whether `vol` is the only one (the two gathers behind it in the
+  gentle order have never been tried by themselves there). THE RULE: a load in plain air gives the volumetric pass `shaders/vol_plain.wgsl` under the pass's own label
+  (`render/passes.ts traceJobs`, so the cut set's build too) and makes none of the real march's twins (`volFroxel`, `volDust`, `volK0`). The plain module has no
+  function in it that walks the boxes, a light, a shadow or the fog of war's sight (11 KB of text where the real march's module is 74): the smoke's density marched
+  across the hull of the live domains and lit by the radiance cache's mean radiance alone, a picked weather's air marched the same way with the open sky's share. Its
+  program draws no beam, so plain air forces the froxel path on every tier as `?froxel` does (`main.ts`; `?nofroxel` still wins, and then there are no beams):
+  the haze's cones are the froxel kernels'. LOST there: the lamp-lit, self-shadowed plume (it is lit by the cache alone, on the froxel tiers too), rain streaks and
+  splashes of this pass, the lit sky under lightning, the sun's shafts in a weather's air; dust is drawn as plain smoke; smoke is drawn under the fog of war whatever
+  `FOG.air` says (the page ships it so). KEPT: smoke and a weather's air stand where the men's eyes are cut by them, and a torch's cone is in the air. A load is in
+  plain air when the page says so, when the browser noted it (`localStorage['twopointsix.plainAir']`, 'count:when' as the gentle note, a machine key on the settings
+  sync's skip list: written by `onLost` for a REAL loss on a page that retries with exactly ONE program in hand, that one of `PLAIN_AIR.labels`, on a load not plain
+  already; it holds ONE day after a first such loss and THIRTY once the real march has lost the device again within 180 days, then the real program is tried
+  again), or when the adapter is one the records name (`PLAIN_AIR.adapters`: a browser on Windows whose adapter's name starts `amd rdna-4`). THE ROW IS A GUESS FROM
+  ONE MACHINE and has no second look of its own: a machine it names is never handed the program, so only a `?plainair=0` load of such a machine can say the row is
+  no longer needed; it spares that machine the lost loads a note costs (two before the note, and its third lost GPU process switches the browser's GPU off). The card
+  of the loss that wrote the note ends "Load the page again and the game will skip the shader your graphics driver stopped on. Smoke and fog will look plainer." (only
+  when the note was written); a plain load says so in a warning record (`gpu.plainair`: `why`, and `row` or `noted` / `hours`), on a further loss's card, in that
+  loss's facts (`plainAir`) and in a benchmark's notes, so a machine that still loses its device names the NEXT program with this one out of the way. CHECKS, each on
+  both stands: `tools/qa/gpulost-check.ts` (the note, the row, the word, the three reasons and the card as tables; `PLAINAIR_BREAK=1` fails seven lines);
+  `tools/qa/plainair-check.ts` (the Engine built on a stand-in device as any load and in plain air: one plain module, no text of the real march, no twin asked for,
+  every other program as ever; the plain module AS CUT declares no walking function and is a third of the real one or less; the numbers it copies from the real march
+  are still the real march's, and on any load the weight of a lamp's glow through smoke (the look's row, `Engine.smokeDraw.ahead`) reaches the frame at 0 with
+  only its two writers naming it, so the real march's cut is the plain one's; `TPS_COMPACTSHADERS=1` in front for the page's writing; `PLAINAIR_BREAK=1` fails five
+  lines, seven with the compact set); and
+  `tools/qa/plainair-page.cjs` on the real page (headless Chromium, software adapter, `?plainair=1`: every program made, 117 where the page makes 118; the browser is
+  handed `volumetricsPlain` and no text of the real march, no twin is asked for, the warning is printed, a canister's plume shows in the picture and in the volumetric
+  pass's own, no GPU error, no card; `PLAINAIR_BREAK=1` runs it under `?plainair=0` and fails four lines; eighteen minutes on this box, most of it the cut set
+  compiling behind the page). `?plainair` rides a replay's and a benchmark's addresses (`VISIT_FLAGS`, `CARRIED`). NOT SEEN: anything on a GPU; the plain plume beside
+  the real one on anything but the software adapter; the froxel path forced on high or ultra together with the plain program; a driver that stops on the real program
+  getting into the game this way (that machine's next visit says: a `gpu.plainair` warning and then a boot record with frames = it was `vol`; a lost device with
+  `plainAir` and other labels in `flying` = it was not only `vol`).
+- **A start with no GPU says what the machine said, and asks twice (2026-10-27; the maintainer: a friend's AMD machine "is still crashing with failed to create WebGPU context
+  provider / no webgpu adapter available", "anything we can collect from his computer?").** `src/gpu/adapter.ts GPU_ASK` (ON; `?gpuask=0` = one ask and the one line "No WebGPU
+  adapter available.", as it was; like `GPU_LOST` it is the page's own, no stand differs in it). `initGpu` asked once, for `powerPreference: 'high-performance'`, and an empty
+  answer was that one line: nothing told a browser with no WebGPU from one that keeps the card back, and nothing was sent, because the backend boots after the GPU. Now an empty
+  (or thrown) first ask is followed by an ask with NO preference, and the game starts on the card that gives, with one `console.info` and " (given to the second ask)" after the adapter's
+  name (`gpuStory.adapter`, so the benchmark's report and a visit's record carry it and such a machine can be found); the browser's software adapter is never taken from that second ask (a browser whose FIRST answer is that adapter starts on it as before: a test box). With no card from either, the
+  software adapter is asked for, for the record only, and the start throws `NoGpuError` whose `facts` are plain JSON: each ask's answer, WebGL's vendor and renderer (the card and
+  driver by name where the browser tells), the user agent, the system and full browser version where the browser tells, secure address or not, threads, memory, screen. The red
+  card (`showFatalError`, gpu/device.ts) says in a sentence what to try (no WebGPU in the browser · WebGL drawn in software: turn graphics acceleration on · else restart the
+  browser and update the driver), lists the facts under it and has a Copy button (the copy is made inside the click; a browser that refuses leaves the lines selected). The second ask gives up
+  after `GPU_ASK.waitMs`, the software ask and the system's name after `softMs`, side by side. EVERY RED CARD now tells a listener (`FATAL.tell` in gpu/device.ts: the plain error,
+  its stack, `stage` 'adapter' or 'device', where the boot stood, the adapter, and for this card the facts) and hands it the card. NOBODY SETS IT in this step: sending is the
+  backend's side (`src/cloud`), which boots after the GPU and so needs its own way in. `tools/qa/nogpu-check.ts` (a stand-in browser that answers each ask as the case says,
+  and the card on a stand-in page; `NOGPU_BREAK=1` = the switch off, must fail) and `tools/qa/nogpu-page.cjs` (the real page with `requestAdapter` stubbed; `NOGPU_BREAK=1`
+  must fail). MEASURED on that page (Chromium 141, the software adapter): the card with its lines, the Copy button on top and its text on the clipboard, `?gpuask=0`
+  the old card after one ask, an empty first ask refused on this box's software adapter, a plain boot with no card and a take made with no download (nobody listens on that page). NOT KNOWN: whether any real machine answers the second ask
+  after an empty first one (nobody here has one; on the friend's machine it may change nothing), what Chrome's "Failed to create WebGPU Context Provider" means there (it is a
+  console line of the browser, not something the page can read), and the card has never been seen on a machine that really has no adapter. The three sentences of advice are
+  guesses from the facts, not a diagnosis.
 - **How much a page compiles: `node tools/qa/shader-count-page.cjs [--port] [--settle S] [--json f] [address …]`** (2026-10-19). Wraps `createShaderModule`, the four pipeline
   makers and `setPipeline` before the page's script runs and prints, per page of a walk (default: the title, a mission's kit picture, the mission, a second mission): modules,
   distinct texts and their size; pipelines asynchronous and synchronous, before and after ready; how many texts and pipelines an EARLIER page of the walk had made character for

@@ -301,24 +301,13 @@ export function build(extra: PassExtra = {}): { level: Level; scenarios: LevelSc
   // ---- THE LORRY: a two-axle lorry with a canvas tilt, where it stopped when the pass shut (KEPT: it is the yard's one piece of cover, what screens
   // the gateway from the tea room's windows and what the ruts are laid to). Nose toward local +X ----
   grp('lorry');
-  const L = G.piece(LORRY.x, LORRY.z, LORRY.yaw);
-  for (const lx of [2.2, -1.2, -2.25]) for (const s of [-1, 1]) L(lx, s * 0.98, 0, 0.96, 0.48, 0.15, M.rubber);
-  L(-0.1, 0, 0.5, 0.74, 3.1, 0.42, M.iron);                                                   // the chassis
-  L(3.42, 0, 0.5, 0.78, 0.06, 1.12, M.iron);                                                  // bumper
-  L(2.75, 0, 0.74, 1.5, 0.62, 0.98, M.truckRed);                                              // bonnet
-  L(1.55, 0, 0.74, 1.5, 0.62, 1.12, M.truckRed);                                              // the cab: doors
-  L(1.55, 0, 1.5, 2.08, 0.58, 1.06, M.glassDark);                                             // … glass
-  L(1.5, 0, 2.08, 2.2, 0.62, 1.1, M.truckRed);                                                // … roof
-  for (const s of [-1, 1]) L(3.38, s * 0.7, 0.86, 1.02, 0.02, 0.1, M.plasticWhite);           // headlamps (dead)
-  L(-1.15, 0, 0.74, 0.9, 2.05, 1.16, M.woodGrey);                                             // the bed
-  for (const s of [-1, 1]) L(-1.15, s * 1.14, 0.9, 1.45, 2.05, 0.03, M.poplar);               // sideboards
-  L(-3.17, 0, 0.9, 1.45, 0.03, 1.16, M.poplar); L(0.87, 0, 0.9, 1.7, 0.03, 1.16, M.poplar);   // tailboard, headboard
-  L(-1.15, 0, 0.9, 1.95, 1.95, 1.06, M.canvas);                                               // the load under its canvas
+  const LS = G.lorry(LORRY.x, LORRY.z, LORRY.yaw), L = G.piece(LORRY.x, LORRY.z, LORRY.yaw);   // (the kit's lorry, box for box what stood here; LS = the shapes it says)
   grp('snow.lorry');
-  L(-1.15, 0, 1.95, 2.05, 1.84, 0.96, S.snow, { flags: DECAL });                              // CAPS: the tilt (deep: it has stood for days),
-  L(-1.15, 0, 2.05, 2.11, 1.84, 0.96, S.snow, { flags: DECAL });                              //   a second fall over the first, the whole tilt (one outline: two nested ones read as slabs)
-  L(1.5, 0, 2.2, 2.27, 0.55, 1.02, S.snow, { flags: DECAL });                                 //   the cab's roof
-  L(2.8, 0, 1.5, 1.555, 0.52, 0.9, S.snow, { flags: DECAL });                                 //   the bonnet
+  // CAPS, laid on the lorry's bowed tops by the kit's one rule (G.lay: each slab keeps to the crown, and a sheet of snow follows the bow under it — trim, there
+  // only when shapes are on): the tilt (deep: it has stood for days), a second fall over the first (one outline: two nested ones read as slabs), the cab's
+  // roof, the bonnet
+  { const lay = (t: typeof LS.tops.load, lx: number, y0: number, y1: number, hx: number, hz: number, nth = 0) => G.lay(LORRY.x, LORRY.z, LORRY.yaw, t, lx, 0, y0, y1, hx, hz, S.snow, nth);
+    lay(LS.tops.load, -1.15, 1.95, 2.05, 1.84, 0.96); lay(LS.tops.load, -1.15, 2.05, 2.11, 1.84, 0.96, 1); lay(LS.tops.roof, 1.5, 2.2, 2.27, 0.55, 1.02); lay(LS.tops.bonnet, 2.8, 1.5, 1.555, 0.52, 0.9); }
   L(3.72, 0, 0, 0.44, 0.25, 1.0, S.snow);                                                     // BANK (stops feet): the nose stands into the wind; snow is banked on the bumper,
   L(4.12, 0, 0, 0.3, 0.2, 0.9, S.snow);                                                       //   stepping down
   L(4.47, 0, 0, 0.17, 0.2, 0.75, S.snow);                                                     //   to a lip a man wades

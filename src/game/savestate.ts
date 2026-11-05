@@ -101,7 +101,7 @@ import { Firearm, Pistol, Rifle, WEAPONS } from './weapons';
 import { aimWeightSnapshot, aimWeightRestore } from './aimweight';
 import type { WeaponId, FireMode } from './weapons';
 import type { Item, ItemKind } from './throwables';
-import { DOORWAY, type DoorDrive } from './doors';
+import { DOORWAY, driveOf, type DoorDrive } from './doors';
 import { slabSnapshot, slabRestore, type SlabSnap } from './doorblast';
 import { RAG_COUNT } from './ragdoll';
 import { Chronicle, chronCheckpoint, roomOf, MAX_EVENTS } from './chronicle';
@@ -157,6 +157,7 @@ import type { DevicesSnap } from './devices';
 import type { DecalKind } from '../render/decals';
 import type { Box } from '../scene/boxes';
 import { authoredC, authoredH } from '../scene/round';   // (leaf helpers: a round thing's boxes as the level file has them)
+import { shapeStamp } from '../scene/shapes';   // (a leaf helper: a number of the shapes a level stands on)
 import { LOOK_DECALS, lookDecal } from './lookDecals';
 import { diceInUse } from '../math/dice';
 import { sprintDoorTurning } from './sprintdoor';
@@ -354,9 +355,20 @@ export const SAVETIMELINE = {
   /** a save in memory (a team on the floor) is taken SINCE the one before it — or the one last put back: rollback.ts `takeSnapshot(g, since)` goes through what
    *  that snapshot held and copies only what has changed, where a whole take walks the game and copies all of it. Less of a stall (headless: about a third
    *  of a whole take with saves a minute and a half apart, less of a gain after a load; not measured in a browser), and a load puts back the same game — plus
-   *  whatever the snapshot it was taken since held that the game has let go of, which nothing in the game reaches. The first save of a run, after a file's load and of a
-   *  recording is a whole take either way. false = every save in memory a whole take, as it was. */
+   *  whatever the snapshot it was taken since held that the game has let go of, which nothing in the game reaches. The first save of a run (unless the run's
+   *  first tick took a base for it: `base`, below), after a file's load and of a recording is a whole take either way, and so is the one after a save
+   *  that has outgrown its chain (rollback.ts WALK_AGAIN). false = every save in memory a whole take, as it was. */
   since: false,
+  /** A RUN'S SAVES IN MEMORY STAND ON A BASE TAKEN IN ITS FIRST TICK (`Checkpoints.prime`): the whole take every such run begins with is made in the frame
+   *  the run starts on — the frame a start card closes on, the slowest of any run as it is — and not in the frame of the first autosave of play, which
+   *  is then a take since it. And the page runs the take's code once behind a mission's start card (`Checkpoints.warm`, main.ts): a take costs several
+   *  times its later self the first time it runs. Nothing of the game is written by a take, so the run is the same run; a load puts back the same game
+   *  (what `since` says of a save taken since another holds of one taken since the base). Only where an autosave would be kept in memory and could be
+   *  made: a team on the floor, autosave on, no show, no level program running. Needs `since` (without it nothing is taken since anything). NOT the end
+   *  of whole takes in play: a run that has grown past its chain's limit since the base (rollback.ts WALK_AGAIN: a quarter more objects) walks whole
+   *  again at the save after — a warm walk, where the first save's was the page's first. false = no base and nothing warmed: the first save in memory
+   *  of a run is the whole take, as it was. */
+  base: false,
   /** the long side of a save's picture in pixels, and its JPEG quality (the host's numbers: main.ts takes the picture) */
   picPx: 256, picQ: 0.6,
 };
@@ -377,17 +389,19 @@ function deepClone<T>(x: T): T { return x === undefined ? x : JSON.parse(JSON.st
 /** the level a checkpoint belongs to: door names + route names + box count hashed (a checkpoint of another level, or of this one re-exported with a door
  *  renamed, is refused rather than poured over the wrong indices) */
 export function levelFingerprint(g: Game): SaveState['level'] {
-  const cached = fpCache.get(g.level); if (cached) return cached;
-  const L = g.level; const nBox = g.destr?.walls?.authored ?? L.boxes.length;   // (the AUTHORED statics only: wall breaking appends pieces to the list at runtime — the level is still the level)
+  // A LEVEL STOOD ON ITS SHAPES IS ANOTHER LEVEL (scene/shapes.ts): the shapes its boxes stand as are part of what it is, so a checkpoint or a recording made on
+  // them is refused by the plain level and the other way about, and by the level once its shapes have changed. 0 = none stands: the fingerprint it always had.
+  const L = g.level, nBox = g.destr?.walls?.authored ?? L.boxes.length, st = shapeStamp(L.boxes, nBox);
+  const cached = fpCache.get(L); if (cached && cached.st === st) return cached.fp;   // (nBox = the AUTHORED statics only: wall breaking appends pieces to the list at runtime — the level is still the level)
   let geo = 0x811c9dc5;   // + every static's centre and half-extents to the centimetre: a re-export that MOVES geometry under the same names and counts is another level to a checkpoint
   for (let i = 0; i < nBox; i++) for (const v of [...authoredC(L.boxes[i]), ...authoredH(L.boxes[i])]) { geo ^= Math.round(v * 100) & 0xffffffff; geo = Math.imul(geo, 0x01000193) >>> 0; }
-  const s = `${nBox}|${L.doors.map(d => d.name).join(',')}|${L.routes.map(r => `${r.name}:${r.points.length}`).join(',')}|${g.targets.reduce((n, t) => n + (lampGlass(t) ? 0 : 1), 0)}|${L.props.length}|${geo.toString(16)}`;
+  const s = `${nBox}|${L.doors.map(d => d.name).join(',')}|${L.routes.map(r => `${r.name}:${r.points.length}`).join(',')}|${g.targets.reduce((n, t) => n + (lampGlass(t) ? 0 : 1), 0)}|${L.props.length}|${geo.toString(16)}${st ? `|shapes:${st.toString(16)}` : ''}`;
   // (the count of light targets is the LEVEL's own: a vehicle's lamps — carlamps.ts — are made of the level's boxes by a rule that can be off, and a target is
   //  poured back by name, so a checkpoint or a recording from before that rule, or from a page with it off, is still this level's)
   const fp = { fp: hashStr(s).toString(16), boxes: nBox, routes: L.routes.length, doors: L.doors.length };
-  fpCache.set(g.level, fp); return fp;
+  fpCache.set(L, { st, fp }); return fp;
 }
-const fpCache = new SideMap<object, SaveState['level']>('savestate.fpCache');
+const fpCache = new SideMap<object, { st: number; fp: SaveState['level'] }>('savestate.fpCache');
 function firearmSnap(w: Firearm): FirearmSnap { return { id: w.def.id, chamber: w.chamber, mag: w.mag, spare: [...w.spare], shotsFired: w.shotsFired, mode: w.mode, bursts: w.bursts, lastBurstT: w.lastBurstT }; }
 /** …and back: a reload half done is simply not (see the head: autosave never catches one; a forced save leaves the well as it stood) */
 function firearmApply(w: Firearm, s: FirearmSnap) {
@@ -407,6 +421,7 @@ function runNo(g: Game, mem: boolean, authored = false): string | null {
   if (g.touring || g.quietUtility || g.puppet) return 'a show is running (tour / attract / breach)';
   if (!authored) { const why = g.director?.blocksSave(); if (why) return why; }   // (an authored checkpoint of a tutorial mission — rails.ts — is taken with its program running: the program is started again when it is put back)   // the level script mid-program (director.ts): its cursor — fired triggers, live beats, units — has no save slice until M3
   if (!mem && isDaylight(g)) return 'daylight is in (the breach variant)';
+  if (g.seats.length > 1) return 'two players (a checkpoint holds one player today)';
   if (g.player.down) return 'the player is down';
   if (g.mission.stage === 'failed' || g.mission.stage === 'done') return `the run is over (${g.mission.stage}) — nothing to come back to`;   // (a civilian killed under tune.civilianKillFails fails the run with Sam on his feet: that file would have loaded as a live one — review G3.2)
   if (mem && g.verdict?.result) return 'the run is over — nothing to come back to';
@@ -553,7 +568,7 @@ export function saveState(g: Game, opts: SaveOpts = {}): SaveState {
     };
   });
   // ---- the level's live state
-  const doors: DoorSnap[] = g.doors.list.map(d => ({ ...(d.drive ? { drive: { ...d.drive } } : {}), name: d.def.name, angle: d.angle, vel: d.vel, quietT: d.quietT, latched: d.latched, lastWho: d.lastWho, sinceBash: d.sinceBash, closing: d.closing, locked: d.locked, lockBroken: d.lockBroken, noticed: d.noticed, noticedT: d.noticedT, pick: d.pick, pickIdle: d.pickIdle, pickClock: d.pickClock, pickN: d.pickN, guardT: d.guardT, creakArmed: d.creakArmed, ...(DOORWAY.oneWay ? { pullT: d.pullT, pressT: d.pressT, ...(d.solidT > 0 ? { solidT: d.solidT } : {}), openT: d.openT } : {}), ...((DOORWAY.oneWay || g.doors.stay) && d.passers ? { passers: d.passers } : {}), ...(d.off ? { off: slabSnapshot(g, d) ?? undefined } : {}), ...(d.shot > 0 ? { shot: d.shot } : {}) }));
+  const doors: DoorSnap[] = g.doors.list.map(d => ({ ...(d.drive ? { drive: driveOf(d)! } : {}), name: d.def.name, angle: d.angle, vel: d.vel, quietT: d.quietT, latched: d.latched, lastWho: d.lastWho, sinceBash: d.sinceBash, closing: d.closing, locked: d.locked, lockBroken: d.lockBroken, noticed: d.noticed, noticedT: d.noticedT, pick: d.pick, pickIdle: d.pickIdle, pickClock: d.pickClock, pickN: d.pickN, guardT: d.guardT, creakArmed: d.creakArmed, ...(DOORWAY.oneWay ? { pullT: d.pullT, pressT: d.pressT, ...(d.solidT > 0 ? { solidT: d.solidT } : {}), openT: d.openT } : {}), ...((DOORWAY.oneWay || g.doors.stay) && d.passers ? { passers: d.passers } : {}), ...(d.off ? { off: slabSnapshot(g, d) ?? undefined } : {}), ...(d.shot > 0 ? { shot: d.shot } : {}) }));
   const props: PropSnap[] = g.props.all.map(p => ({ x: p.x, z: p.z, yaw: p.yaw, vx: p.vx, vz: p.vz, w: p.w, asleep: p.asleep, idle: p.idle, lastWho: p.lastWho, noiseT: p.noiseT, pushT: p.pushT }));
   const targets: TargetSnap[] = g.targets.map(t => ({ name: t.name, on: t.on, broken: t.broken, disabledUntil: t.disabledUntil, ...(t.handOff !== undefined ? { hand: t.handOff } : null) }));
   g.doors.list.forEach((d, i) => { if (d.swept) doors[i].swept = true; });   // (Door.swept, written only when set: a leaf a keyed man's body brought to its frame, resting to unlatched)
@@ -861,6 +876,8 @@ class MemShelf extends HostOwned {
   /** the snapshot nearest the game as it stands — the last one taken, or the one last put back: what the next is taken since (SAVETIMELINE.since). It may have
    *  left its ring: it is kept here until the next one is taken. null = the next save is a whole take (a new run, a file loaded, a recording begun). */
   last: Snapshot | null = null;
+  /** how many times the take's code was run for warmth alone (`Checkpoints.warm`; a page check reads it) */
+  warmed = 0;
   get(key: string): MemSave | null { return this.m.get(key) ?? null; }
   set(key: string, e: MemSave): void { this.m.set(key, e); }
   remove(key: string): void { this.m.delete(key); }
@@ -919,6 +936,27 @@ export class Checkpoints {
     this.lastSaveT = g.time;   // (a load counts as a save for the gap: no autosave on the heels of coming back)
     this.shelf.last = null;   // (a file's load deals the floor again: the next save in memory is a whole take, not one since a snapshot of the floor that is gone — and a recording begins, and its replay, on such a load: the first save in memory of both is whole)
   }
+  /** does this run get a base now (SAVETIMELINE.base)? Only where an autosave made now would be a take since one: the switches up (`since` among them:
+   *  without it nothing is taken since anything), autosave on (a machine with it off, or a host that never saves, pays for no take it may never use: a
+   *  save by hand there is the whole take, as it was), and a save that would be kept in memory and could be made (canSnap: no show, no level program
+   *  running, nobody down, the run live) */
+  private basedNow(g: Game): boolean { return SAVETIMELINE.base && SAVETIMELINE.since && SAVETIMELINE.on && this.enabled && squadUp(g) && !canSnap(g); }
+  /** THE RUN'S BASE (SAVETIMELINE.base): the game as its first tick left it, kept as the snapshot this run's saves in memory are taken since — the run's
+   *  one whole take, made by the tick that begins the run (above) where the first save of play would otherwise make it. Taken under a save's own gate, so
+   *  it meets nothing a save does not; a run that cannot be saved in its first tick (a team that comes up later, a program running) has no base and its
+   *  first save is the whole take, as ever — and so has one whose walk throws: a base is never worth a frame. Reads the game, writes none of it. */
+  private prime(g: Game): void {
+    if (!this.basedNow(g)) return;
+    try { this.shelf.last = takeSnapshot(g); } catch (e) { this.shelf.last = null; console.warn('checkpoints: no base for this run —', e); }
+  }
+  /** THE TAKE'S CODE RUN ONCE, FOR NOTHING BUT HAVING RUN (SAVETIMELINE.base): the whole walk, and a take since it. Keeps nothing and changes nothing.
+   *  The HOST's to call, where it holds a staged run still before its first tick (main.ts: behind a mission's start card): on a page that has never
+   *  taken a snapshot the first one costs three to four times a later one, and that one is otherwise in a frame of play. Under the base's own gate: a
+   *  run that will take no base is warmed for none. */
+  warm(g: Game): void {
+    if (!this.basedNow(g)) return;
+    try { takeSnapshot(g, takeSnapshot(g)); this.shelf.warmed++; } catch (e) { console.warn('checkpoints: the warm-up take threw —', e); }
+  }
   /** raise an autosave request (coalesced: a request already waiting keeps its clock, takes the newer label) */
   request(g: Game, why: string, label: string) {
     if (!this.enabled) return;   // (off: the triggers keep their books — rooms visited, the quiet clock — so switching it on mid-run starts clean, but nothing is asked for)
@@ -936,9 +974,10 @@ export class Checkpoints {
   }
   /** Once a frame at the end of Game.update: the triggers, then the pending request against the gates. */
   tick(g: Game, dt: number) {
+    if (g.seats.length > 1) return;   // (a checkpoint holds one player today: a game of two takes none — runNo says why to whoever asks)
     const pl = g.player, m = g.mission;
     // a fresh run (boot, restartEncounter): fresh memory, a fresh id
-    if (m !== this.missionRef) { this.missionRef = m; this.stageRef = m.stage; this.runId = newRunId(); this.visited = new Set([roomHere(g, pl.char.pos)]); this.roomRef = roomHere(g, pl.char.pos); this.quietT = 0; this.pending = null; this.bodyFrom = null; this.dragRef = null; this.lastSaveT = -1e9; this.shelf.clear(); this.hand = false; this.due = null; }   // (a save in memory is of ONE run: the objects it would be written back into are gone with it)
+    if (m !== this.missionRef) { this.missionRef = m; this.stageRef = m.stage; this.runId = newRunId(); this.visited = new Set([roomHere(g, pl.char.pos)]); this.roomRef = roomHere(g, pl.char.pos); this.quietT = 0; this.pending = null; this.bodyFrom = null; this.dragRef = null; this.lastSaveT = -1e9; this.shelf.clear(); this.prime(g); this.hand = false; this.due = null; }   // (a save in memory is of ONE run: the objects it would be written back into are gone with it; and the run's base is taken — SAVETIMELINE.base)
     // what the keys asked for inside this step, now that the frame is whole: F5's save, and a bare Enter once down onto a save in memory
     if (this.due) { const key = this.due; this.due = null; this.hand = false; const why = this.loadMem(g, key); if (why) g.msg(`checkpoint: ${why}`); return; }
     if (g.rails?.live) {   // a tutorial mission (rails.ts): its checkpoints are authored — the triggers below, the every-step request and the save by hand all stand down

@@ -12,10 +12,11 @@
 //   A RELOAD IN THE MIDDLE DOES NOT START IT AGAIN: a page marks the record as begun on its scene before it plays, and a page that finds its own mark drops the
 //   record and is a plain mission page.
 import { BENCH_SCENES, BENCH_SET, type BenchSceneDef } from '../host/benchScenes';
-import { SCENARIOS } from '../scene/scenarioList';
+import { SCENARIOS, quitSearch } from '../scene/scenarioList';
 import { scenarioQuery } from '../scene/scenarios';
 import { lookPageOn, lookPageWord, lookTrialsKept } from '../scene/look';
 import type { BenchLeg, BenchStep, BenchSceneRun, BenchBoot, BenchOpts } from './bench';
+import { SHADER_ROW_WORDS } from './shaderrows';
 
 const KEY = 'twopointsix.bench';
 /** the word on a scene's address: its place in the set */
@@ -48,30 +49,51 @@ export function benchSceneSearch(S: BenchSceneDef, i: number, keep: string[] = [
 }
 /** the visitor's address with the benchmark's own words off it */
 const plain = (search: string): string => { const keep = search.replace(/^\?/, '').split('&').filter(p => p && !/^(bench|benchcap|benchrun)(=|$)/.test(p)); return keep.length ? '?' + keep.join('&') : ''; };
-/** the visitor's flags that ride along from scene to scene: the ones that change the sound or the picture's quality and nothing of the fight (an hour, a weather,
- *  a difficulty lever, a rule's off switch would make it another fight than the set's) */
-const CARRIED = /^(mute|nomusic|quality)(=|$)/;
+/** the visitor's flags that ride along from scene to scene: the ones that change the sound, the picture's quality or how its shaders are built, and nothing of
+ *  the fight (an hour, a weather, a difficulty lever, a rule's off switch would make it another fight than the set's). The shader rows on trial are here by
+ *  their URL words (ui/shaderrows.ts), with the compile queue's and the shader trim's: a row asked for beside ?bench is what the run was meant to measure, and
+ *  until 2026-10-27 it was dropped at the first scene, so the numbers were the plain build's. (One of them is not wholly outside the fight: while the wall-cut
+ *  row's set is building, broken pieces are traced whole and the light the guards are seen by can differ, render/cutSwap.ts; a page's fight was never
+ *  promised to be the set's to the frame, and the report's `floors` line says which fight it saw.) A word that is NOT kept is named in the report (`left`) */
+const CARRIED = new RegExp(`^(mute|nomusic|quality|adapt|pipequeue|shadertrim|shaderfold|framecap|gentle|plainair|savepic|pace|giveway|flight|downloads|cloud|cloudfiles|cloudstats|cloudtapes|cloudprefs|${SHADER_ROW_WORDS.join('|')})(=|$)`);
 /** …AND THE LOOK PROTOTYPE'S WORDS, where the run is asked for on its page (scene/look.ts: its rows, its boot words). That page reads them once, at boot, into
  *  its shader text and its level, so a run is with the look or without it from its first scene to its last: a run that dropped them timed the plain build on
  *  every scene and said nothing. A trial this machine's look panel keeps off goes on the address as its own word, so the run times the look the page it was
  *  asked on shows and the report's address says which. These words DO change the fight (the look's geometry is part of the level it plays): the first scene's
  *  page says so in the report's notes (main.ts), and what that page gives a visitor (its kit, its fog put down, its panel) stands down on a scene's address.
  *  A word is judged decoded, as the page reads it, and carried as it was written */
+/** a word of the look page's own, as an address wrote it (scene/look.ts lookPageWord): the benchmark's scenes and a pricing run's pages (ui/pricerun.ts) carry the same */
+export const lookWord = (p: string): boolean => { const kv = [...new URLSearchParams(p)][0]; return !!kv && lookPageWord(kv[0], kv[1]); };
+/** the visitor's flags of an address that ride along a run's pages, as they were written: the benchmark's scenes carry them, and so does a run of any other
+ *  kind (ui/pricerun.ts) — ONE list, so a flag that changes how the page is built or where its file goes is the same on both */
+export const carriedWords = (search: string): string[] => search.replace(/^\?/, '').split('&').filter(p => CARRIED.test(p));
 const flags = (search: string): string[] => { const q = new URLSearchParams(search), look = lookPageOn(q);
-  const keep = search.replace(/^\?/, '').split('&').filter(p => { if (CARRIED.test(p)) return true; const kv = look ? [...new URLSearchParams(p)][0] : undefined; return !!kv && lookPageWord(kv[0], kv[1]); });
+  const keep = search.replace(/^\?/, '').split('&').filter(p => CARRIED.test(p) || (look && lookWord(p)));
   return look ? [...keep, ...lookTrialsKept(q)] : keep; };
+/** the report's line for the words of the asked address that no scene was played with (none: no line): the visitor's own flags, so not a mission's words
+ *  (quitSearch takes those and the benchmark's off) nor the ones every scene's address says for itself. The names only, once each, as many as a line holds */
+const left = (search: string): string[] => {
+  const own = new URLSearchParams(benchSceneSearch(BENCH_SCENES[0], 0)), kept = new Set(flags(search).map(p => [...new URLSearchParams(p)][0]?.[0])), w = [...new Set([...new URLSearchParams(quitSearch(search)).keys()])].filter(k => k && !own.has(k) && !CARRIED.test(k) && !kept.has(k));   // (kept: the look page's own words, which ride along from that page alone)
+  let n = w.length; const line = () => `the scenes were played without ${w.slice(0, n).join(', ')}${n < w.length ? ` and ${w.length - n} more` : ''} from the address the run was asked on`;
+  while (n > 1 && line().length > 150) n--;
+  return w.length ? [line()] : []; };
 
 /** start a run from this page: the record, then the first scene's address. `warm`: this page had booted the game (the row on the title), so the first scene's
  *  load is not the machine's first. Returns why not when the tab has no session store (a run could not be carried from page to page) */
 export function benchBegin(warm: boolean, loc: Location = location, opts?: Partial<BenchOpts>): string | null {
   const q = new URLSearchParams(loc.search), cap = parseFloat(q.get('benchcap') ?? '');
-  const c: Carry = { v: 1, set: BENCH_SET, from: loc.pathname + plain(loc.search) + loc.hash, warm, keep: flags(loc.search), i: 0, live: -1, secs: q.get('bench'), cap: isFinite(cap) && cap > 0 ? cap : null, ...(opts ? { opts } : {}), steps: [], notes: [], scenes: [] };
+  const c: Carry = { v: 1, set: BENCH_SET, from: loc.pathname + plain(loc.search) + loc.hash, warm, keep: flags(loc.search), i: 0, live: -1, secs: q.get('bench'), cap: isFinite(cap) && cap > 0 ? cap : null, ...(opts ? { opts } : {}), steps: [], notes: left(loc.search), scenes: [] };
   if (!write(c) || !read()) return 'this tab keeps no session store';
   const to = loc.pathname + benchSceneSearch(BENCH_SCENES[0], 0, c.keep) + loc.hash;
   if (warm) loc.assign(to); else loc.replace(to);   // (asked for on the address: that address is not left in the tab's history, where Back would ask again)
   return null;
 }
 
+/** is this page a scene's page of a run under way, not yet begun? The question benchLegOfPage answers, asked WITHOUT taking the scene (nothing is marked or
+ *  dropped): for what the page must decide before its mission is staged, long before the benchmark's own wiring (main.ts: the machine's sandbox row) */
+export function benchSceneWaits(loc: Location = location): boolean {
+  const at = new URLSearchParams(loc.search).get(BENCH_RUN_KEY); if (at === null) return false;
+  const c = read(), i = Number(at); return !!c && !!BENCH_SCENES[i] && c.i === i && c.live !== i; }
 /** this page's part of a run, where it is a scene's page of one under way: the scene, the window seconds asked, and the leg ui/bench.ts plays. Null = a plain
  *  page (no record, another scene's address, or a reload of a scene already begun: the record is dropped) */
 export function benchLegOfPage(loc: Location = location): { scene: BenchSceneDef; secs: string | null; cap: number; opts: Partial<BenchOpts>; leg: BenchLeg } | null {

@@ -191,7 +191,7 @@ fn main(@builtin(workgroup_id) wid: vec3u, @builtin(local_invocation_index) lidx
       // faces it and its taps face away, their ratio is the room's lamp's, and U × r̂ draws that light at the lamp's visibility. By night it is another lamp
       // behind a wall and the error is a lamp's; by day it is the sun through the roof, thousands of times the lamp. A walled-off light is dark by proof,
       // as the edge rays and the slivers already take it, so the class is bounded by its live lights' unshadowed sum (× the ratio's own most).
-      E0 = min(E0, max(U0 - Uw0, vec3f(0.0)) * hiR); E1 = min(E1, max(U1 - Uw1, vec3f(0.0)) * hiR);
+      if (SHARP_CAP) { E0 = min(E0, max(U0 - Uw0, vec3f(0.0)) * hiR); E1 = min(E1, max(U1 - Uw1, vec3f(0.0)) * hiR); }   // (the prelude's SHARP_CAP: ?sharpcap=0 = no bound, as it was)
       if (sr0.w > 0.0 || sr1.w > 0.0) { code |= 8u; }         // (a class read 'unshadowed' for want of any tap holding its light — counted, not changed)
       // ---- edge rays: a hard shadow edge of a class between the taps → its strongest emitter decided by ONE centre ray from this output pixel ----
       if (EDGE_RAYS && edgeBits != 0u) {

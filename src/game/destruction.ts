@@ -32,8 +32,9 @@
 // Guards HEAR it through the kinds that exist (debris landing = 'prop' at a level per kind; sheets and dust are silent); the dust dims their eyes by being
 // smoke. Deterministic: nothing draws from Math.random — every choice hashes the module's own counter. Reset with the level (resetLevelState → reset():
 // hidden statics restored, pools emptied, heat zeroed); the tour never sees any of it (chaosOf = 0 while touring).
+import { isManId, menUp } from './seats';
 import { Vec3, v3 } from '../math/vec';
-import { Box, BoxFlag } from '../scene/boxes';
+import { Box, BoxFlag, boxOf } from '../scene/boxes';
 import type { Door } from './doors';
 import { doorBlastReach } from './doorblast';   // (called inside doorsFor only: src/game is one import cycle)
 import { WORLD } from '../scene/world';
@@ -45,9 +46,10 @@ import { gpuFx, emitDust, paletteName, surfOf, hitLook, saidSurf, HITSTUFF, SOLI
 import { lampGlass } from './carlamps';
 import { fireHolds, fireStir, fireStruck } from './fire';   // a blast does not put a fire out (FIRE.hardy)
 import { Debris, hash01, type ChunkKind } from './debris';
-import { PLAYER_ID, NOBODY_ID } from './consts';
+import { NOBODY_ID } from './consts';
 import { chronLightShot } from './chronicle';
-import { DESTRUCTION, RUBBLE } from './destructionSwitch';   // THE destruction goal's one switch (off = every line below as it was: the office's rules, the player-only fixture rule)
+import { DESTRUCTION, RUBBLE, DEBRIS } from './destructionSwitch';   // THE destruction goal's one switch (off = every line below as it was: the office's rules, the player-only fixture rule)
+import { FALL_PIECES } from '../sim/fallshome';
 import { WallBreak, WALLS, wallBreakOn, type BlastOpts, type BlastResult, type BlastEvent, type WallOpening } from './wallbreak';
 import { dustTint } from './dustLook';   // look only, and only with the destruction switch on: the dust's colour
 import { EdgeLook, EDGE } from './edgeLook';
@@ -181,6 +183,9 @@ const indoors = (p: Vec3) => p[0] > 4.3 && p[0] < 35.7 && p[2] > 4.3 && p[2] < 2
 const topOf = (b: Box): Vec3 => [b.c[0], b.c[1] + b.h[1] + 0.05, b.c[2]];
 
 /** QA / panel counters (module totals; the probes diff them) */
+/** the marks the chaos lane draws where it lays one (decals.wgsl damageMark's looks): the radius and the strength for a pistol's round and a rifle's */
+interface LaneMark { look: number; r: readonly [number, number]; s: readonly [number, number] }
+const LANE_MARK: Record<'dent' | 'shred' | 'crack', LaneMark> = { dent: { look: 0, r: [0.036, 0.045], s: [0.7, 0.9] }, shred: { look: 1, r: [0.06, 0.075], s: [0.85, 0.85] }, crack: { look: 2, r: [0.085, 0.11], s: [0.9, 0.9] } };
 export const DESTR_STATS = { rounds: 0, bangs: 0, decals: 0, papers: 0, sheets: 0, puffs: 0, puffsRefused: 0, bursts: 0, knocks: 0, knocksDemoted: 0, screens: 0, tiles: 0, tilesRefused: 0, chairSpins: 0, impBang: 0, impImpact: 0, impThud: 0, impThudDropped: 0, debrisKicked: 0, fixtures: 0, fixturesRefused: 0 };
 export const DESTR_LOG: string[] = [];
 function dlog(g: Game, s: string) { DESTR_LOG.push(`${g.time.toFixed(2)} ${s}`); if (DESTR_LOG.length > 200) DESTR_LOG.splice(0, 100); }
@@ -256,7 +261,7 @@ export class Destruction {
     const screens: number[] = [];
     for (let i = 0; i < boxes.length; i++) {
       const b = boxes[i]; const h = b.h; const maxH = Math.max(h[0], h[1], h[2]), minH = Math.min(h[0], h[1], h[2]);
-      if (b.flags & (BoxFlag.Glass | BoxFlag.NoPrimary)) continue;
+      if ((b.flags & (BoxFlag.Glass | BoxFlag.NoPrimary)) || b.piece === true) continue;   // (a shape's piece, scene/shapes.ts: trim of the box that says it, never a thing of its own)
       const bottom = b.c[1] - h[1];
       let kind: DKind | null = null;
       const dark = b.emissive[0] + b.emissive[1] + b.emissive[2] === 0;
@@ -333,12 +338,15 @@ export class Destruction {
   heatAt(p: Vec3): number { return this.heat[this.hidx(p)]; }
   escalationAt(p: Vec3): number { return this.heatAt(p) * 2 * chaosOf(this.g); }
   private hash(): number { return hash01(this.serial++ * 2654435761); }
+  /** things this lane has knocked off (the game's own count, kept with the game: furnblast.ts spends a blast's piece budget by it under DEBRIS.dress) */
+  knocks = 0;
   private take(k: keyof Destruction['caps']): boolean { if (k === 'knock' && this.freeKnocks > 0) { this.freeKnocks--; return true; } return this.caps[k].take(this.g.time); }
 
   // ---------------------------------------------------------------- per frame
   update(dt: number) {
     const g = this.g;
     if (RUBBLE.on && (!g.touring || this.showChaos !== null)) { const men = this.onFoot(); if (this.debris.list.length) this.debris.feet(men, RUBBLE); this.edgeLook.feet(men, RUBBLE, dt); }   // kicked rubble (debris.ts feet; the blown walls' own fragments through edgeLook.ts feet): off = not called; nor under the tour, bar a showcase program running its own chaos (as chaosOf)
+    if (g.falls.waitingIn(FALL_PIECES)) this.debris.landings();   // (DEBRIS.dress: the thrown pieces the simulation has coming down — nothing waits there with the switch off)
     if (this.debris.list.length) this.debris.update(dt);
     this.breaks.tick();
     this.edgeLook.update(dt);
@@ -354,7 +362,7 @@ export class Destruction {
   }
   /** the men on their feet this frame (who shoves the furniture, game.ts updateProps — bar the calm civilian, who is no contact for a chair but does step through rubble) */
   private onFoot(): Character[] {
-    const g = this.g; const men: Character[] = g.player.down ? [] : [g.player.char];
+    const g = this.g; const men: Character[] = menUp(g).map(pl => pl.char);
     for (const gd of g.guards) if (gd.state !== 'dead') men.push(gd.char);
     for (const cv of civiliansShown(g)) if (cv.state !== 'dead' && !civilianSeated(cv)) men.push(cv.char);
     return men;
@@ -366,7 +374,8 @@ export class Destruction {
   /** Level reset (resetLevelState): every hidden static back as authored, the pools emptied, heat and caps and the counter back to the start. */
   reset() {
     for (const [i, f] of this.hidden) this.g.col.boxes[i].flags = f;
-    this.hidden.clear(); this.debris.clear(); this.heat.fill(0); this.anyHeat = false; this.tilesDown.clear(); this.lastTileT = -100; this.tileCount = 0; this.serial = 1;
+    this.g.col.wrote();
+    this.hidden.clear(); this.debris.clear(); this.heat.fill(0); this.anyHeat = false; this.tilesDown.clear(); this.lastTileT = -100; this.tileCount = 0; this.serial = 1; this.knocks = 0;
     for (const c of Object.values(this.caps)) c.reset(); this.freeKnocks = 0;
     for (const t of this.broke) t.broken = false; this.broke.clear();   // (the screens THIS module put out come back with the stacks; a restart repairs every light besides)
     this.fixtureCount = 0; this.lastFixtureT = -100; this.dustQueue.length = 0; this.pallAt.length = 0;
@@ -396,7 +405,7 @@ export class Destruction {
     // (1) damage decals by material
     if (E >= CHAOS.tDecal && box) this.damageDecal(hitP, n, surf, box, !!hit.prop || (hit.index !== undefined && hit.index >= 1e6), rifle, item);
     // (2) a monitor / TV that took the round: dead, cracked, a fizz of sparks (any shooter: the round is in it)
-    if (item && (item.kind === 'screen' || item.kind === 'housing' || item.kind === 'tv')) this.killScreen(item, hitP, n, shooter.id === PLAYER_ID);
+    if (item && (item.kind === 'screen' || item.kind === 'housing' || item.kind === 'tv')) this.killScreen(item, hitP, n, isManId(shooter.id));
     // (3) paper near the hit (or whose air the round crossed) flies
     if (E >= CHAOS.tPaper) this.papersNear(hitP, dir, E, chaos, k, v3.dist(shooter.muzzle, hitP));
     // (4) bigger material bursts + (5) dust into the smoke solver
@@ -475,8 +484,8 @@ export class Destruction {
     if (!walls.length) return fn();
     const col = this.g.col; const keep = col.dynamicBoxes; const was: [Box, number][] = []; const extra: Box[] = [];
     for (const w of walls) { for (const b of w.standing) { was.push([b, b.flags]); b.flags |= BoxFlag.NoShadow; } for (const b of w.left) extra.push(b); }
-    col.dynamicBoxes = extra.length ? keep.concat(extra) : keep;
-    try { return fn(); } finally { col.dynamicBoxes = keep; for (let i = was.length - 1; i >= 0; i--) was[i][0].flags = was[i][1]; }
+    col.dynamicBoxes = extra.length ? keep.concat(extra) : keep; col.wrote();
+    try { return fn(); } finally { col.dynamicBoxes = keep; for (let i = was.length - 1; i >= 0; i--) was[i][0].flags = was[i][1]; col.wrote(); }
   }
   /** FURNITURE UNDER A BLAST for a charge that does not come through blast() (combat.ts detonateStun's BORROWED bang: the door charge — and the wall charge's own,
    *  which lands on the frame blast() already ran and is merged there). Nothing with THE ONE SWITCH off or at chaos 0. */
@@ -579,24 +588,22 @@ export class Destruction {
   // ---------------------------------------------------------------- pieces
   private damageDecal(p: Vec3, n: Vec3, surf: Surf, box: Box, dynamic: boolean, rifle: boolean, item?: Destructible) {
     const g = this.g;
-    let look = -1, r = 0.04, s = 0.75;
-    if (item && (item.kind === 'screen' || item.kind === 'tv')) { look = 2; r = rifle ? 0.11 : 0.085; s = 0.9; }
-    else if (surf === 'metal') { look = 0; r = rifle ? 0.045 : 0.036; s = rifle ? 0.9 : 0.7; }
-    else if (surf === 'fabric') { look = 1; r = rifle ? 0.075 : 0.06; s = 0.85; }
-    if (look < 0) return;
-    if (box.flags & (BoxFlag.NoPrimary | BoxFlag.NoShadow) && look !== 2) return;
+    let m: LaneMark | undefined = item && (item.kind === 'screen' || item.kind === 'tv') ? LANE_MARK.crack : surf === 'metal' ? LANE_MARK.dent : surf === 'fabric' ? LANE_MARK.shred : undefined;
+    if (!m) return;
+    if (box.flags & (BoxFlag.NoPrimary | BoxFlag.NoShadow) && m !== LANE_MARK.crack) return;
     const rj = this.hash(); if (!this.take('decal')) return;   // (the counter and the bucket move the same whether decals are drawn or not: a fight with decals off is the same fight — the identity probes)
     DESTR_STATS.decals++;
     if (!g.decals.enabled) return;
     // (THE MARK THAT IS DRAWN goes by the picture's reading of the box — particleFx.ts HITSTUFF: a box that says what it is made of is drawn that stuff's
     //  mark, at that mark's size, not the dent its dark paint was taken for: metal the dent, cloth the shred, solid glass the crack, anything else a chip. ONE mark
     //  is laid either way — the run's digest counts them — and the dice and the bucket above have moved as they always did)
-    const said = look !== 2 ? saidSurf(box) : undefined;
-    if (said === 'metal') { look = 0; r = rifle ? 0.045 : 0.036; s = rifle ? 0.9 : 0.7; }
-    else if (said === 'fabric' || said === 'carpet') { look = 1; r = rifle ? 0.075 : 0.06; s = 0.85; }
-    else if (said === 'glass') { look = SOLID_GLASS_CRACK.look; r = rifle ? SOLID_GLASS_CRACK.rifle : SOLID_GLASS_CRACK.pistol; s = SOLID_GLASS_CRACK.strength; }
+    const said = m !== LANE_MARK.crack ? saidSurf(box) : undefined;
+    if (said === 'metal') m = LANE_MARK.dent;
+    else if (said === 'fabric' || said === 'carpet') m = LANE_MARK.shred;
+    else if (said === 'glass') m = { look: SOLID_GLASS_CRACK.look, r: [SOLID_GLASS_CRACK.pistol, SOLID_GLASS_CRACK.rifle], s: [SOLID_GLASS_CRACK.strength, SOLID_GLASS_CRACK.strength] };
     else if (said !== undefined) { g.decals.add('chip', p, n, 0.013, { clampTo: box, attach: dynamic ? box : undefined }); return; }   // (a chip out of the finish — marks.ts chipMark's record; never a second 'bullet': a wall's wear takes the newest hole for the round's own, wallwear.ts)
-    g.decals.add('damage', p, n, r * (0.85 + 0.3 * rj), { param: look + Math.min(0.999, s), clampTo: box, attach: dynamic ? box : undefined });
+    const i = rifle ? 1 : 0;
+    g.decals.add('damage', p, n, m.r[i] * (0.85 + 0.3 * rj), { param: m.look + Math.min(0.999, m.s[i]), clampTo: box, attach: dynamic ? box : undefined });
   }
 
   /** a lit screen's light target out (the OCP / round rule's own bit: updateTargets takes its emissive and its markings' gain to 0 the same frame), remembered for reset() */
@@ -646,8 +653,9 @@ export class Destruction {
     emitDust(P, [b.c[0], b.c[1] + 0.08, b.c[2]], [0, 1, 0], 3, { shape: 'puff', speed: 0.6, speedJit: 0.5, lift: 0.2, life: 1.2, lifeJit: 0.3, size: 0.12, sizeJit: 0.3, posJit: 0.1, color: [0.7, 0.68, 0.64] });
     return true;
   }
-  private hide(d: Destructible) { const b = this.g.col.boxes[d.i]; this.hidden.set(d.i, b.flags); b.flags |= BoxFlag.NoPrimary | BoxFlag.NoShadow; if (d.mate !== undefined && d.kind === 'housing') { const s = this.g.col.boxes[d.mate]; if (!this.hidden.has(d.mate)) { this.hidden.set(d.mate, s.flags); s.flags |= BoxFlag.NoPrimary | BoxFlag.NoShadow; } }
-    this.g.smoke.obstaclesChanged?.(b.c, Math.hypot(b.h[0], b.h[1], b.h[2]) + 0.6); }   // the smoke solver's obstacle field round it is stale now (the thing, and a housing's screen 0.3 m off, are no longer solid): live bricks there re-bake (smoke.ts)
+  private hide(d: Destructible) { const b = this.g.col.boxes[d.i]; this.hidden.set(d.i, b.flags); b.flags |= BoxFlag.NoPrimary | BoxFlag.NoShadow;   // (the trim it says is drawn while it is: scene/boxes.ts trimDrawn)
+    if (d.mate !== undefined && d.kind === 'housing') { const s = this.g.col.boxes[d.mate]; if (!this.hidden.has(d.mate)) { this.hidden.set(d.mate, s.flags); s.flags |= BoxFlag.NoPrimary | BoxFlag.NoShadow; } }
+    this.g.col.wrote(); this.g.smoke.obstaclesChanged?.(b.c, Math.hypot(b.h[0], b.h[1], b.h[2]) + 0.6); }   // the smoke solver's obstacle field round it is stale now (the thing, and a housing's screen 0.3 m off, are no longer solid): live bricks there re-bake (smoke.ts)
 
   /** the escalated material burst on top of impactFx's: splinters (long chips) off wood / laminate / cardboard, gypsum dust + chips off plaster, fluff off fabric,
    *  a bigger spark shower off metal, grit off concrete — scaled by E, × the rifle factor */
@@ -656,8 +664,11 @@ export class Destruction {
   private burst(hitP: Vec3, dir: Vec3, n: Vec3, surf: Surf, albedo: Vec3, E: number, k: number, owner: number, hit?: { index?: number; prop?: Prop; box?: Box }) {
     const P = gpuFx(this.g); DESTR_STATS.bursts++; if (!P) return;
     // (particles only from here on, so the PICTURE's reading of what was hit: a box that says what it is made of is that — particleFx.ts HITSTUFF. Solid glass
-    //  that only cracks throws no burst; the lane's own surf, which every number above went by, is not touched)
-    if (HITSTUFF.on && hit) { const see = hitLook(this.g, hit); if (see.solid) return; if (see.said) { surf = see.surf; albedo = see.albedo; } }
+    //  that only cracks throws no burst; the lane's own surf, which every number above went by, is not touched.
+    //  A SOFT THING THAT SAYS SO — a sandbag, a rug, a tarpaulin: 'carpet' to a round — bursts as cloth does, fluff of its own colour: by their paint those
+    //  were concrete or a seat's cloth and burst as that, and the soft surface has no burst of its own. What says plastic or rubber has none, as a thing
+    //  painted so never had.)
+    if (HITSTUFF.on && hit) { const see = hitLook(this.g, hit); if (see.solid) return; if (see.said) { surf = see.surf === 'carpet' ? 'fabric' : see.surf; albedo = see.albedo; } }
     const s = Math.min(3, 0.5 + 0.5 * (E - CHAOS.tBurst)) * k;
     const at = v3.mad(hitP, n, 0.015); const dn = v3.dot(dir, n); const refl = v3.normalize(v3.sub(dir, v3.scale(n, 2 * dn)));
     const out = v3.normalize(v3.add(n, v3.scale(refl, 0.35)));
@@ -802,7 +813,7 @@ export class Destruction {
       const P = gpuFx(g); if (P) P.emit('debris', v3.copy(b.c), v3.normalize([hz[0], 1, hz[2]]), 24, { speed: 2.5, speedJit: 0.7, spread: 1.2, life: 16, lifeJit: 0.3, size: Math.max(0.008, Math.min(b.h[0], b.h[1], b.h[2]) * 0.6), sizeJit: 0.5, aspect: 1.5, posJit: Math.min(b.h[0], b.h[2]), color: v3.copy(b.albedo) });
     }
     if (kind === 'housing' && d.target) this.breakTarget(d.target);   // (chunk or chip burst, the light is off the desk either way)
-    DESTR_STATS.knocks++; dlog(g, `${kind} ${d.i} knocked off${c ? '' : ' (demoted)'}`);
+    DESTR_STATS.knocks++; this.knocks++; dlog(g, `${kind} ${d.i} knocked off${c ? '' : ' (demoted)'}`);
     if (d.group) for (const oi of d.group) { const o = this.items.get(oi); if (o && !this.hidden.has(oi)) { this.freeKnocks++; this.knockOff(o, dirn, chaos, o.kind === 'binder' ? 'binder' : 'clutter', who); } }   // (its group rides on the same slot: a pot and its plant are one thing to the cap)
     return true;
   }
@@ -831,9 +842,9 @@ export class Destruction {
       } }
     if (g.col.solidBlocked([cx, y - 0.05, cz], [cx, y - 0.6, cz])) return false;   // …nor with something standing right under it
     const T = CHAOS.tile;
-    const box: Box = { c: [cx, y, cz], h: v3.copy(T.half), yaw: 0, albedo: v3.copy(T.albedo), stuff: 'paint', emissive: [0, 0, 0], flags: BoxFlag.Dynamic, owner: 0, cutHeight: 1e6 };   // (`stuff`: what the look made of this grey by its COLOUR until 11-04, kept so the picture did not move; nobody chose it. scene/stuff.ts drawnAs)
+    const box: Box = boxOf([cx, y, cz], v3.copy(T.half), 0, v3.copy(T.albedo), [0, 0, 0], BoxFlag.Dynamic, 0); box.stuff = 'paint';   // (`stuff`: what the look made of this grey by its COLOUR until 11-04, kept so the picture did not move; nobody chose it. scene/stuff.ts drawnAs)
     const c = this.debris.spawn('tile', box, [(this.hash() - 0.5) * 0.4, -0.2, (this.hash() - 0.5) * 0.4], [(this.hash() - 0.5) * 3, (this.hash() - 0.5) * 1, (this.hash() - 0.5) * 3], who);
-    if (!c) { DESTR_STATS.tilesRefused++; return false; }
+    if (!c && !DEBRIS.dress) { DESTR_STATS.tilesRefused++; return false; }   // (DEBRIS.dress: the tile is down whether or not the pool had room to show it — what is counted and what can still fall is not the pool's to say)
     this.tilesDown.add(key); this.lastTileT = g.time; this.tileCount++; DESTR_STATS.tiles++; dlog(g, `tile ${key} dropped`);
     const P = gpuFx(g);
     if (P) {

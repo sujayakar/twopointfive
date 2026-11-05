@@ -1,5 +1,5 @@
 // The 'tactics' probe family (run through probes.ts: `bun run tools/qa/probes.ts tactics | tactics-flank | tactics-single | tactics-lone | tactics-door |
-// tactics-rounds | tactics-decay | tactics-identity [--verbose] [--print]`): the pursuit tactics of src/game/tactics.ts — STATUS E12 (a) 'they all just run
+// tactics-rounds | tactics-decay [--verbose]`): the pursuit tactics of src/game/tactics.ts — STATUS E12 (a) 'they all just run
 // straight at sam. instead they should coordinate flanking maneuvers' and (b) 'if they notice their buddies dead by a door, they shouldn't just blindly charge
 // in past them!'. Each stands the full game up headless (headless.ts), stages one situation, steps it, prints what happened, PASS / FAIL.
 //   tactics-flank     two alert men in the corridor with one fix fifteen metres off in the cubicle farm and two ways round to it: roles dealt (a presser on the
@@ -15,10 +15,6 @@
 //   tactics-rounds    Sam's rifle fired out of the break room through its open west door past a man in the cubicles: that door is dangerous for the guards and
 //                     the man's way to Sam's fix re-plans through the north door (his path never touches the west door's gap cells).
 //   tactics-decay     a dangerous door is plain again doorDanger seconds later (and one banged and entered, at once).
-//   tactics-identity  tune.tactics = false: a seeded sixty seconds that would trip every trigger with it on (two men on one fix, a man dropped in a doorway in
-//                     view, rounds through a doorway, a lone man on an armed Sam) digested frame by frame against a FROZEN digest — first cut on the tree before
-//                     tactics.ts existed (the off path is the old code, byte for byte), re-frozen since only on bisected, intended changes to the shared simulation
-//                     (the provenance sits on EXPECT_IDENTITY). `--print` re-measures the literal.
 import { standUp, ROOT } from './headless.ts';
 const { v3, wrapAngle, DEG } = await import(`${ROOT}/src/math/vec.ts`);
 const guardsMod = await import(`${ROOT}/src/game/guards.ts`);
@@ -28,11 +24,9 @@ const { fireWeapon, killGuard } = await import(`${ROOT}/src/game/combat.ts`);
 type Vec3 = [number, number, number];
 const DT = 1 / 60;
 const VERBOSE = process.argv.includes('--verbose');
-const PRINT = process.argv.includes('--print');
 const f1 = (x: number) => x.toFixed(1), f2 = (x: number) => x.toFixed(2);
 const posS = (p: Vec3 | null | undefined) => p ? `(${f1(p[0])}, ${f1(p[2])})` : '—';
 function seeded(a: number) { return () => { a |= 0; a = (a + 0x6D2B79F5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
-function verdict(ok: boolean, label: string, detail: string) { console.log(`- ${ok ? 'PASS' : 'FAIL'} — ${label}: ${detail}`); return ok; }
 /** A guard planted at `p` facing yaw, still, no path, posed twice (bones where the sight tests read them). */
 export function place(gd: any, p: Vec3, yaw: number) { gd.char.pos = v3.copy(p); gd.char.vel = [0, 0, 0]; gd.speed = 0; gd.char.bodyYaw = gd.char.aimYaw = yaw; gd.char.aimPitch = 0; gd.path = []; gd.pathGoal = null; gd.char.update(0); gd.char.update(DT); }
 /** parked out on the lot east of the building — held, pinned, blind and deaf */
@@ -50,90 +44,6 @@ export function tapSay(game: any) {
   return lines;
 }
 
-/** FNV-1a over strings, 32 bits, chained: the digest of a run */
-class Digest {
-  h = 0x811c9dc5 >>> 0; n = 0;
-  add(s: string) { for (let i = 0; i < s.length; i++) { this.h ^= s.charCodeAt(i); this.h = Math.imul(this.h, 0x01000193) >>> 0; } this.n++; }
-  num(x: number | null | undefined) { this.add(x === null || x === undefined ? '~' : String(x)); }
-  vec(p: number[] | null | undefined) { if (!p) { this.add('~'); return; } this.num(p[0]); this.num(p[1]); this.num(p[2]); }
-  get hex() { return this.h.toString(16).padStart(8, '0'); }
-}
-
-// ================================================================ (g) identity: tune.tactics off is the old code path, byte for byte
-/** Sixty seeded seconds that, with the tactics ON, would trip every one of its triggers — and with them OFF must be exactly the game before tactics.ts:
- *    0–22 s  Kowalski and Novak alert in the corridor's west end on ONE fix (a dark, armed Sam crouched in the cubicles' east aisle fifteen metres off, never in
- *            their sight): the flanking approach's trigger. Off: both run at it, pie the doorway, search.
- *    22 s    Novak parked; Reyes stood in the storage doorway and struck down there under Kowalski's eyes four metres up the corridor; Kowalski then given a fix
- *            inside the storage room: the kill-zone doorway's trigger (a man dropping in one, in view) and its gate. Off: he runs in over him.
- *    36 s    Sam teleported into the break room and firing his pistol west out through its open west door past Novak stood in the cubicles' middle aisle with a
- *            fix on him: the rounds-through-a-doorway trigger. Off: Novak comes straight through that door.
- *    46 s    Novak parked, the floor stood down; Kowalski alone, alert on a fix fourteen metres off round the cubicle blocks on a Sam who has just fired: the lone
- *            man's rule. Off: he charges.
- *  Every frame: each man's state, position, body / aim yaw, aim pitch, awareness, fireCd, reloadT, fix, path length, muzzle, speed, crouch; Sam's position; the
- *  event count; the alarm level; every leaf's angle. */
-async function identityRun(): Promise<{ digest: string; frames: number; states: string; marks: string }> {
-  Math.random = seeded(707);
-  const W = await standUp(); const { game } = W; const pl = game.player;
-  game.godMode = true; game.aiEnabled = true;
-  (game.tune as any).tactics = false;   // (a plain property on a tree from before tactics.ts: nothing reads it there)
-  if ((game as any).civilians) { (game.tune as any).civilians = false; (game as any).civilians.length = 0; }   // (the civilians — a later actor on the floor, src/game/civilians.ts — are not part of this card: its digest was frozen on a floor without them, and its claim is about THIS switch; their own identity card is probes.ts civilians-identity. Their construction drew nothing from the dice, so nothing else here moves.)
-  for (let i = 0; i < 5; i++) W.step(DT);
-  const [A, B, C] = game.guards;
-  park(C, 2);
-  game.teleportPlayer([26.5, 0, 20.5]); pl.slot = 'pistol'; pl.holstered = false; pl.crouch = true; pl.pistol.lightOn = false;
-  place(A, [12.0, 0, 11.2], Math.PI / 2); place(B, [10.5, 0, 11.4], Math.PI / 2); W.step(DT);
-  fixAlert(A, game, [26.5, 0, 20.5]); fixAlert(B, game, [26.5, 0, 20.5]);
-  const D = new Digest(); let states = '', marks = '';
-  const FRAMES = 60 * 60;
-  for (let frame = 0; frame < FRAMES; frame++) {
-    if (frame === 60 * 22) {
-      park(B, 1);
-      C.hold = false; C.pinned = false; C.dazzledUntil = -1; C.heardUpTo = game.eventSeq; C.state = 'patrol'; C.awareness = 0; place(C, [32.7, 0, 10.45], Math.PI);
-      fixAlert(A, game, [33.5, 0, 6.5]); place(A, [28.5, 0, 11.2], Math.PI / 2); A.reactT = 0.4;
-      killGuard(game, C, [0, 0, -1], true);   // struck down in the doorway, Kowalski looking straight at him
-      marks += `22s A ${A.state} C ${C.state} · `;
-    }
-    if (frame === 60 * 36) {
-      game.teleportPlayer([29.6, 0, 17.7]); pl.crouch = false;
-      B.hold = false; B.pinned = false; B.dazzledUntil = -1; place(B, [24.5, 0, 18.3], Math.PI / 2); fixAlert(B, game, [29.6, 0, 17.7]); B.reactT = 0.3;
-      marks += `36s B ${B.state} at ${posS(B.char.pos)} · `;
-    }
-    if (frame === 60 * 36 + 2 || frame === 60 * 36 + 26) fireWeapon(game, pl.char, [21.5, 1.15, 17.3], true);   // two rounds west out through the break room's west door, a stride past Novak's shoulder
-    if (frame === 60 * 46) {
-      park(B, 1); game.standDown();
-      game.teleportPlayer([16.0, 0, 22.8]); pl.crouch = true; pl.lastFireT = game.time;
-      place(A, [26.5, 0, 13.0], -Math.PI / 2); fixAlert(A, game, [16.0, 0, 22.8]); A.reactT = 0.3;
-      marks += `46s A ${A.state} · `;
-    }
-    pl.visibility = 0.02; W.step(DT);
-    for (const gd of game.guards) { D.add(gd.state); D.vec(gd.char.pos); D.num(gd.char.bodyYaw); D.num(gd.char.aimYaw); D.num(gd.char.aimPitch); D.num(gd.awareness); D.num(gd.fireCd); D.num(gd.reloadT); D.vec(gd.lastKnown); D.num(gd.path.length); D.num(gd.muzzleDown ? 1 : 0); D.num(gd.speed); D.num(gd.char.anim.crouchTarget); }
-    D.vec(pl.char.pos); D.num(game.events.length); D.num(game.escalation);
-    for (const d of game.doors.list) D.num(d.angle);
-    if (frame % 300 === 0) states += game.guards.map((g: any) => g.state[0]).join('') + ' ';
-    if (VERBOSE && frame % 120 === 0) console.log(`    ${f1(game.time)}s ` + game.guards.map((g: any) => `${g.callsign} ${g.state} ${posS(g.char.pos)} fix ${posS(g.lastKnown)} path ${g.pathI}/${g.path.length}`).join(' | ') + ` · esc ${game.escalation}`);
-  }
-  return { digest: D.hex, frames: FRAMES, states, marks };
-}
-export async function tacticsIdentity() {
-  console.log('\n=== tactics-identity: tune.tactics off — a seeded 60 s that would trip every trigger with it on, digested frame by frame against the frozen digest (first cut before tactics.ts; re-frozen only on bisected, intended changes to the shared simulation — see EXPECT_IDENTITY) ===');
-  const R = await identityRun();
-  if (PRINT) console.log(`\n--- measured (paste over EXPECT_IDENTITY) ---\nconst EXPECT_IDENTITY = ${JSON.stringify({ digest: R.digest, frames: R.frames, states: R.states })};\n`);
-  const E = EXPECT_IDENTITY; let allPass = true;
-  console.log(`    marks: ${R.marks}`);
-  allPass = verdict(R.states === E.states, 'states every 5 s as they were', `${R.states.trim()}${R.states === E.states ? '' : ` — want ${E.states.trim()}`}`) && allPass;
-  allPass = verdict(R.digest === E.digest && R.frames === E.frames, 'the per-frame digest of everybody\'s state / position / aim / awareness / fix / path / feet, Sam, the events, the alarm, the leaves', `${R.digest} over ${R.frames} frames${R.digest === E.digest ? '' : ` — want ${E.digest}`}`) && allPass;
-  console.log(`=== tactics-identity: ${allPass ? 'ALL PASS' : 'FAILURES above'} ===`);
-  return allPass;
-}
-// PROVENANCE of the literal, honestly (review-ledger P3.3): first frozen on the tree before tactics.ts had any behaviour (ea6e22c: main's chase + the unused A* penalty
-// parameter); the staging was re-cut in 1434a0f (4ec26654) and the literal then rewritten to bc835744 INSIDE the merge 78eebd3 with no record of why. Re-frozen 08-12 by the
-// probe-restaging lane (docs/internal/probe-restage.md) to 8e0cb169 after a first-parent BISECTION: bc835744 reproduces on every commit through cb0d87b and first moves at
-// 7fb3061 "The aim ray stops on glass" (BoxWorld.raycast's default no longer skips Glass; its ONLY default-flags caller is player.ts's cursor aim ray) — restoring the old skip
-// flags on that one call at HEAD gives bc835744 back exactly, so the whole drift is Sam's cursor aim point landing on a pane in this staging (his facing → the men's per-frame
-// sight / aim numbers by a hair; the states every 5 s are unchanged): an INTENDED player-side change (the maintainer, 08-11: "pointing at glass should target that point in
-// the glass"), tactics on or off alike — not the alert chase. What the digest holds is unchanged: tune.tactics OFF on today's tree, frame by frame. `tactics-identity --print`
-// regenerates it; re-freeze ONLY with a bisected, named cause like this one.
-const EXPECT_IDENTITY = {"digest":"8e0cb169","frames":3600,"states":"aap aap aap aap aap aad sad sad aad aad aad aad "};
 
 // ================================================================ shared staging for the behaviour probes (tactics.ts imported here, not at the top: the identity run above must load on a tree without it)
 const tac = await import(`${ROOT}/src/game/tactics.ts`);

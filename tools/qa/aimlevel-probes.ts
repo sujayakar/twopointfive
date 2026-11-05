@@ -115,9 +115,10 @@ async function levelScript() {
 }
 
 async function levelHarness() {
-  console.log('\n=== level-harness: the harness stands at 0, the game ships at 1 ===');
+  console.log('\n=== level-harness: the frozen stand stands at 0, the game and the shipped stand at 1 ===');
+  const frozen = !process.env.TPS_PROFILE || process.env.TPS_PROFILE === 'frozen';
   AIM.player.level = 1; await standUp();
-  verdict(AIM.player.level === 0 && AIM_DEFAULTS.player.level === 1, 'standUp() puts the knob at 0 (the gun on the parked cursor\'s point, as every older probe and tally had it); the shipped default is 1', `after standUp ${AIM.player.level} · AIM_DEFAULTS ${AIM_DEFAULTS.player.level}`);
+  verdict(AIM.player.level === (frozen ? 0 : 1) && AIM_DEFAULTS.player.level === 1, frozen ? 'standUp() puts the knob at 0 (the gun on the parked cursor\'s point, as every older probe and tally had it); the shipped default is 1' : 'the shipped stand leaves the knob at the page\'s 1 (the frozen stand alone puts it at 0)', `after standUp ${AIM.player.level} · AIM_DEFAULTS ${AIM_DEFAULTS.player.level}`);
 }
 
 /** the whole card (probes.ts 'aimlevel'): true = every check passed. The knob is put back as it was found. */

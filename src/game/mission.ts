@@ -1,10 +1,11 @@
 // Mission thread: stage machine (infiltrate → drive → exfil), the drive pull, the rack check errand, debrief stats, objective text/marker.
 // (Split out of game.ts mechanically: plain functions taking the Game as their first argument; Game keeps one-line delegators for
 //  anything other files call.)
+import { allDown } from './seats';
 import { SideMap } from '../math/side';
 import { Vec3, v3 } from '../math/vec';
 import { Input } from './input';
-import { PLAYER_ID, DRIVE_REACH, DRIVE_SECS } from './consts';
+import { DRIVE_REACH, DRIVE_SECS } from './consts';
 import { driveHands } from './handwork';
 import type { Game, Guard, MissionStats } from './game';
 import { fmtClock } from './game';
@@ -66,7 +67,7 @@ export function updateMission(g: Game, dt: number, input: Input) {
   if (m.sweepAt > 0 && g.time >= m.sweepAt) { m.sweepAt = -1; sendRackCheck(g); }
   if (m.stage === 'failed' && m.downCardAt > 0 && g.time >= m.downCardAt) { m.downCardAt = -1; m.debrief = true; }   // the down card, a beat after he dropped (main.ts opens whichever card mission.debrief asks for; headless nobody does and the flag just stands)
   if (m.stage === 'done' || m.stage === 'failed') return;
-  if (pl.down) { m.stage = 'failed'; m.driveT = -1; m.downCardAt = g.missionInTour ? -1 : g.time + DOWN_CARD_SECS; return; }      // the existing down / Enter-to-restart flow does the rest (Enter before the card is up restarts as ever)
+  if (allDown(g)) { m.stage = 'failed'; m.driveT = -1; m.downCardAt = g.missionInTour ? -1 : g.time + DOWN_CARD_SECS; return; }      // the existing down / Enter-to-restart flow does the rest (Enter before the card is up restarts as ever)
   m.stats.elapsed += dt;
   if (g.godMode || g.playerInvisible || !g.aiEnabled) m.stats.sandbox = true;   // a run with a cheat on says so on the card
   if (!g.missionInTour) tickChronicle(g);   // the debrief's path sample when it is due (twice a second of the mission clock) — the tour's drive beat is nobody's run
@@ -112,7 +113,7 @@ export function drivePulled(g: Game) {
   m.driveT = -1; m.pulled = true; m.stage = 'exfil'; m.sweepAt = takeTold(g) ? g.time + 7 : -1;   // (takecheck.ts: on a quiet mission a man is sent only to a holder the level says is wired)
   for (const t of g.rackTargets) t.on = false;
   g.audio.play('rack', rf, 0.5, { rate: 0.7 }); g.audio.play('lightOff', rf, 0.7);
-  g.events.push({ kind: 'prop', pos: [rf[0], 0, rf[2]], time: g.time, loud: false, level: 0.35, who: PLAYER_ID }); g.player.noise = Math.max(g.player.noise, 0.35);   // heard like a knocked chair: a look if he is close, no alarm
+  g.events.push({ kind: 'prop', pos: [rf[0], 0, rf[2]], time: g.time, loud: false, level: 0.35, who: g.player.char.id }); g.player.noise = Math.max(g.player.noise, 0.35);   // heard like a knocked chair: a look if he is close, no alarm
   if (W) { g.msg(`${W.bare} out. leave through ${W.outs}`); return; }
   g.msg(`the drive is out and rack ${M.rack.index + 1} is dark. leave through the fire exit`);
   handlerBeat(g, 'drive', 1.5);   // 'drive shows dark on my board' — his knees answer

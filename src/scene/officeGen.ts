@@ -7,13 +7,15 @@
 // the output) and the exported palette. Units: meters. +X east, +Z south, +Y up. Floor top at y=0.
 import { Vec3, DEG, quat } from '../math/vec';
 import { Box, BoxFlag, makeBox } from './boxes';
-import { saidFor, namePaints, paintOf, worded, type BoxStuff, drawnAs, PANEL_GREY, CHAIR_GREY, KERB_GREY, madeOf } from './stuff';
+import { saidFor, namePaints, paintOf, worded, type BoxStuff, drawnAs, PANEL_GREY, CHAIR_GREY, KERB_GREY, madeOf, saidAs } from './stuff';
+import { carShapes, hubPaint } from './carShapes';
 import { WORLD } from './world';
 import type { Level, LightDef, PatrolRoute, Chokepoint, RoomClearPlan, BreachPlan, DaylightDef, LevelDoorDef, PropKind, PropPart, PropDef, DeviceDef, CivilianDef, VentDef } from './level';
 import { MarkingDef, MARKING_TEXEL, markStats } from './markings';
 import * as MD from './markingDefaults';
 import { fitOpenings, fitDoorDef, exitThrough, JAMB_FACE, DOOR_HEAD, LEAF_H } from './doorSize';
 import { fitPropFootprint } from './levelLoad';
+import { pieces } from './library';
 
 /** what the exporter asks the generator to record on the side: the editor group of every box, in box order */
 export interface GeneratorTrace { groups: string[]; }
@@ -108,13 +110,16 @@ export function officeKit(trace?: GeneratorTrace, opts: GeneratorOpts = {}) {
   // it: rays never see the pane, the raster never draws it, and the analytic test finds the mullion's face nearer than the glass wherever they overlap. What the
   // renderer, the AI's eyes and ears, the rounds and the boot make of it: boxes.ts BoxFlag.Glass, collision.ts segmentBlocked, game/glass.ts.
   const PANE_HALF_T = 0.006;
+  /** a GLASS pane in a wall along X at fixed z, x0‥x1 by y0‥y1, in the tint given: sight passes it, feet and sound do not, a round breaks it */
   const paneX = (z: number, x0: number, x1: number, y0: number, y1: number, tint: Vec3) => add({ c: [(x0 + x1) / 2, (y0 + y1) / 2, z], h: [(x1 - x0) / 2, (y1 - y0) / 2, PANE_HALF_T], albedo: tint, flags: BoxFlag.Glass });   // in a wall along X (fixed z)
+  /** a GLASS pane in a wall along Z at fixed x: as paneX */
   const paneZ = (x: number, z0: number, z1: number, y0: number, y1: number, tint: Vec3) => add({ c: [x, (y0 + y1) / 2, (z0 + z1) / 2], h: [PANE_HALF_T, (y1 - y0) / 2, (z1 - z0) / 2], albedo: tint, flags: BoxFlag.Glass });   // in a wall along Z (fixed x)
   const glaze = (o: Opening, pane: (u0: number, u1: number) => void) => {   // the panes of one opening: per bay or whole
     if (!o.glass) return;
     const n = o.glass === 'bay' && o.mullions ? o.mullions : 1;
     for (let i = 0; i < n; i++) pane(o.a + (o.b - o.a) * i / n, o.a + (o.b - o.a) * (i + 1) / n);
   };
+  // ---- walls ----
   /** Wall running along X at fixed z (thickness t), from x0..x1, with openings (doors: y0=0,y1=2.2; windows: y0=0.9,y1=2.4). */
   function wallX(z: number, x0: number, x1: number, t: number, albedo: Vec3, openings: Opening[] = [], extra: Partial<Box> = {}, height = H) {
     const ops = fitOpenings(openings, x0, x1); let cur = x0;
@@ -146,6 +151,7 @@ export function officeKit(trace?: GeneratorTrace, opts: GeneratorOpts = {}) {
   // ---- props ----
   /** Local→world frame of a yawed prop at (x,z): box local +X → world (cos yaw, −sin yaw), local +Z → (sin yaw, cos yaw). */
   const frameAt = (x: number, z: number, yaw: number) => { const cs = Math.cos(yaw), sn = Math.sin(yaw); return (lx: number, ly: number, lz: number): Vec3 => [x + cs * lx + sn * lz, ly, z - sn * lx + cs * lz]; };
+  /** COVER: a DESK w × d, its top at 0.76 m on panel ends */
   function desk(x: number, z: number, w: number, d: number, yaw = 0, albedo = C.wood) {
     // top + two side panels (as yawed boxes around center)
     const at = frameAt(x, z, yaw), made = saidFor('veneer', albedo, C.wood, C.woodDark);   // (a desk in the kit's wood is veneer; in another paint it is what that paint is: a steel bench, a white table)
@@ -154,6 +160,7 @@ export function officeKit(trace?: GeneratorTrace, opts: GeneratorOpts = {}) {
     add({ c: at(w / 2 - 0.03, 0.36, 0), h: [0.025, 0.36, d / 2 - 0.02], yaw, albedo, ...made });
     add({ c: at(0, 0.45, -d / 2 + 0.03), h: [w / 2 - 0.05, 0.25, 0.012], yaw, albedo, ...made }); // modesty panel
   }
+  /** a MONITOR on a surface at baseY (a desk 0.76, a counter 1.15), lit when `on`, its keyboard in front of it */
   function monitor(x: number, z: number, yaw: number, on: boolean, baseY = 0.76, keyboard = true, standby = false) {   // baseY = the surface it stands on (desk 0.76, reception counter 1.15); keyboard: false for a second screen; standby (with `on` false): a working screen switched OFF — a switchable built dark, its picture there for when somebody switches it on
     const at = frameAt(x, z, yaw);
     add({ c: at(0, baseY + 0.03, 0), h: [0.1, 0.03, 0.08], yaw, albedo: C.black });
@@ -181,6 +188,7 @@ export function officeKit(trace?: GeneratorTrace, opts: GeneratorOpts = {}) {
     const p: PropDef = { kind, name: `${kind}${props.length}`, x, z, yaw, parts: parts.map(worded), half: [0, 0], height: 0, mass };   // (each part is made of what it says, else what its paint is: scene/stuff.ts)
     fitProp(p); if (half) p.half = half; props.push(p); return p;
   }
+  /** PROP (chair): an office CHAIR on casters: seat, back, gas lift, star base */
   function chair(x: number, z: number, yaw: number, albedo = C.chair, made?: BoxStuff) {   // office chair on casters: seat, back, gas lift, star base. `made` = what the seat and back are, said by a caller that hands a paint of its own (the kit's chair paint says fabric by its name)
     const says = made !== undefined ? { stuff: made } : {};
     prop('chair', x, z, yaw, 12, [
@@ -188,6 +196,7 @@ export function officeKit(trace?: GeneratorTrace, opts: GeneratorOpts = {}) {
       { off: [0, 0.22, 0], h: [0.04, 0.22, 0.04], yaw: 0, albedo: C.black }, { off: [0, 0.03, 0], h: [0.25, 0.03, 0.05], yaw: 0, albedo: C.black }, { off: [0, 0.03, 0], h: [0.05, 0.03, 0.25], yaw: 0, albedo: C.black },
     ]);
   }
+  /** PROP (cardboard): a CARTON of side s; with y over 0 it is stacked on the carton already standing there and moves with it */
   function cardboardBox(x: number, z: number, s: number, yaw: number, y = 0) {
     if (y > 0) {   // sitting on an earlier floor carton: join that prop's rigid group (expressed in its frame) so the stack moves as one
       for (let i = props.length - 1; i >= 0; i--) {
@@ -200,8 +209,9 @@ export function officeKit(trace?: GeneratorTrace, opts: GeneratorOpts = {}) {
     prop('cardboard', x, z, yaw, 1 + 22 * Math.pow(s, 3), [{ off: [0, y + s / 2, 0], h: [s / 2, s / 2, s / 2], yaw: 0, albedo: C.cardboard, ...mk(MD.cartonMarks([s / 2, s / 2, s / 2], TX)) }]);   // half-full moving carton: ~5 kg at 55 cm (markings: tape over the top and down the sides, the print, a label)
   }
   // --- set dressing helpers (all boxes, all diffuse) ---
-  /** a RUG, in whatever colour: cloth. Floor paint and a dirt track are no rugs and are laid as their own flat boxes */
+  /** DECAL: a plain RUG w × d in the colour given: cloth. Floor paint and a dirt track are no rugs and are laid as their own flat boxes */
   const rug = (x: number, z: number, w: number, d: number, albedo: Vec3, yaw = 0) => add({ c: [x, 0.018, z], h: [w / 2, 0.006, d / 2], yaw, albedo, stuff: 'cloth', flags: BoxFlag.NoShadow });
+  /** PROP (plant): a potted PLANT, scale s: a pot and two masses of leaves */
   function plant(x: number, z: number, s = 1) {   // pot + two rotated foliage masses as one rigid group; footprint = the foliage's flat sides, not its rotated corners
     prop('plant', x, z, 0, 14 * Math.pow(s, 3), [
       { off: [0, 0.22 * s, 0], h: [0.2 * s, 0.22 * s, 0.2 * s], yaw: 0, albedo: [0.36, 0.3, 0.26] },
@@ -209,41 +219,53 @@ export function officeKit(trace?: GeneratorTrace, opts: GeneratorOpts = {}) {
       { off: [0.04 * s, 1.08 * s, -0.03 * s], h: [0.19 * s, 0.18 * s, 0.19 * s], yaw: 0.2, albedo: [C.plant[0] * 1.15, C.plant[1] * 1.15, C.plant[2] * 1.1] },
     ], [0.26 * s, 0.26 * s]);
   }
+  /** PROP (bin): a waste BIN */
   const bin = (x: number, z: number) => prop('bin', x, z, 0.3, 2.5, [{ off: [0, 0.2, 0], h: [0.13, 0.2, 0.13], yaw: 0, albedo: [0.12, 0.12, 0.13] }]);
+  /** COVER: a FILING CABINET 0.46 × 0.6 × 1.32, drawer fronts on local −Z */
   function cabinet(x: number, z: number, yaw: number) {   // filing cabinet, drawer fronts on local -Z
     const at = frameAt(x, z, yaw);
     add({ c: [x, 0.66, z], h: [0.23, 0.66, 0.3], yaw, albedo: [0.58, 0.58, 0.56], stuff: 'steel', ...mk(MD.cabinetMarks([0.23, 0.66, 0.3], TX)) });   // (markings: drawer seams + pulls)
     if (!DEMOTE) for (let k = 0; k < 3; k++) add({ c: at(0, 0.3 + k * 0.4, -0.305), h: [0.19, 0.012, 0.006], yaw, albedo: [0.25, 0.25, 0.26], flags: BoxFlag.NoShadow });   // (relief: the pull strips as boxes)
   }
   let paperSeed = 0;
+  /** DECAL: a small pile of PAPERS on a surface at y */
   const papers = (x: number, y: number, z: number, yaw = 0, scribble = false) => { add({ c: [x, y + 0.02, z], h: [0.11, 0.02, 0.15], yaw, albedo: [0.86, 0.86, 0.82], flags: BoxFlag.NoShadow, ...mk(MD.paperMarks([0.11, 0.02, 0.15], 31 + paperSeed, false, TX)) }); add({ c: [x + 0.03, y + 0.05, z - 0.02], h: [0.1, 0.012, 0.14], yaw: yaw + 0.25, albedo: [0.9, 0.88, 0.8], flags: BoxFlag.NoShadow, ...mk(MD.paperMarks([0.1, 0.012, 0.14], 32 + paperSeed, scribble, TX)) }); paperSeed += 2; };   // (markings: text bars ON the sheets — the sheets stay boxes)
+  /** DECAL: a flat panel on a wall (a picture, a board, a notice) w × h, its centre at y, carrying the markings given */
   const wallArt = (x: number, y: number, z: number, w: number, h: number, albedo: Vec3, alongX: boolean, marks: MarkingDef[] = []) => add({ c: [x, y, z], h: alongX ? [w / 2, h / 2, 0.015] : [0.015, h / 2, w / 2], albedo, flags: BoxFlag.NoShadow, ...mk(marks) });
+  /** COVER (knee high): a BENCH 1.4 long, a plank seat on two steel ends */
   function bench(x: number, z: number, yaw: number) {
     const at = frameAt(x, z, yaw);
     add({ c: [x, 0.42, z], h: [0.7, 0.03, 0.2], yaw, albedo: C.woodDark });
     for (const sx of [-0.6, 0.6]) add({ c: at(sx, 0.2, 0), h: [0.03, 0.2, 0.18], yaw, albedo: C.metal });
   }
+  /** COVER: a parked CAR 4.4 × 1.7, nose toward local +X, in the body colour given */
   function car(x: number, z: number, yaw: number, body: Vec3) {   // local +X forward
     const at = frameAt(x, z, yaw);
-    add({ c: [x, 0.62, z], h: [2.2, 0.34, 0.86], yaw, albedo: body });                                   // lower body
-    add({ c: at(-0.25, 1.2, 0), h: [1.25, 0.27, 0.8], yaw, albedo: [0.07, 0.08, 0.1] });                 // greenhouse (dark glass)
-    add({ c: at(-0.25, 1.49, 0), h: [1.15, 0.03, 0.76], yaw, albedo: body });                             // roof
-    for (const [lx, lz] of [[1.35, 0.8], [1.35, -0.8], [-1.4, 0.8], [-1.4, -0.8]]) add({ c: at(lx, 0.3, lz), h: [0.32, 0.3, 0.12], yaw, albedo: C.black });   // wheels
-    for (const lz of [0.62, -0.62]) { add({ c: at(2.2, 0.7, lz), h: [0.02, 0.07, 0.14], yaw, albedo: [0.8, 0.8, 0.75], flags: BoxFlag.NoShadow }); add({ c: at(-2.2, 0.75, lz), h: [0.02, 0.06, 0.16], yaw, albedo: [0.3, 0.02, 0.02], emissive: [0.5, 0.03, 0.02], flags: BoxFlag.NoShadow }); }   // head / tail lights
+    const S = carShapes({ hub: hubPaint([0.5, 0.52, 0.53]) });   // (S: the shape each box says — scene/carShapes.ts)
+    add({ c: [x, 0.62, z], h: [2.2, 0.34, 0.86], yaw, albedo: body, shape: S.body });                                   // lower body
+    add({ c: at(-0.25, 1.2, 0), h: [1.25, 0.27, 0.8], yaw, albedo: [0.07, 0.08, 0.1], shape: S.glass });                 // greenhouse (dark glass)
+    add({ c: at(-0.25, 1.49, 0), h: [1.15, 0.03, 0.76], yaw, albedo: body, shape: S.roof });                             // roof
+    for (const [lx, lz] of [[1.35, 0.8], [1.35, -0.8], [-1.4, 0.8], [-1.4, -0.8]]) add({ c: at(lx, 0.3, lz), h: [0.32, 0.3, 0.12], yaw, albedo: C.black, shape: S.wheel(Math.sign(lz)) });   // wheels
+    for (const lz of [0.62, -0.62]) { add({ c: at(2.2, 0.7, lz), h: [0.02, 0.07, 0.14], yaw, albedo: [0.8, 0.8, 0.75], flags: BoxFlag.NoShadow, shape: S.head(Math.sign(lz)) }); add({ c: at(-2.2, 0.75, lz), h: [0.02, 0.06, 0.16], yaw, albedo: [0.3, 0.02, 0.02], emissive: [0.5, 0.03, 0.02], flags: BoxFlag.NoShadow, shape: S.tail(Math.sign(lz)) }); }   // head / tail lights
+    return S;   // (the shapes it says, its `tops` among them: what a level stands on its roof is fitted by carShapes.ts feetOn / layOn)
   }
 
+  /** COVER: open SHELVING w × d, `levels` boards up to `hgt` */
   function shelf(x: number, z: number, w: number, d: number, yaw: number, levels = 4, hgt = 2.0) {
     const at = frameAt(x, z, yaw);
     add({ c: at(-w / 2 + 0.02, hgt / 2, 0), h: [0.02, hgt / 2, d / 2], yaw, albedo: C.metal });
     add({ c: at(w / 2 - 0.02, hgt / 2, 0), h: [0.02, hgt / 2, d / 2], yaw, albedo: C.metal });
     for (let i = 0; i < levels; i++) { const y = 0.15 + (hgt - 0.2) * i / (levels - 1); add({ c: at(0, y, 0), h: [w / 2, 0.015, d / 2], yaw, albedo: C.metal }); if (i < levels - 1 && ((i * 7 + Math.floor(x * 3)) % 3 !== 0)) add({ c: at((i % 2 ? -0.15 : 0.12) * w, y + 0.17, 0), h: [w * 0.22, 0.15, d * 0.4], yaw, albedo: C.cardboard, ...mk(MD.shelfCartonMarks([w * 0.22, 0.15, d * 0.4], TX)) }); }
   }
+  // ---- lights ----
+  /** a lit CEILING PANEL w × d (light only: the camera looks through the roof), a switchable in `group` */
   function ceilingPanel(x: number, z: number, on: boolean, group: string, flicker = false, w = 1.2, d = 0.6, radiance: Vec3 = [11, 10.5, 9.5]) {
     const bi = add({ c: [x, H - 0.02, z], h: [w / 2, 0.02, d / 2], albedo: C.white, emissive: on ? radiance : [0, 0, 0], flags: BoxFlag.NoPrimary });
     switchables.push({ name: `panel_${group}_${switchables.length}`, boxes: [bi], group, on, baseEmissive: radiance, flicker });
     return bi;
   }
 
+  // ---- doors ----
   /** the frame round one doorway that gets a leaf: jambs + head slightly proud of the wall, and the frame's stops (the comment at the office's door list says why) */
   function doorFrame(d: LevelDoorDef) {
     fitDoorDef(d);   // (doorSize.ts: a leaf drawn for a 1.2 m slot becomes the real door inside it — the same doorway wallX / wallZ cut for that slot)
@@ -260,13 +282,24 @@ export function officeKit(trace?: GeneratorTrace, opts: GeneratorOpts = {}) {
     const stop = (u0: number, u1: number) => { const m = sg * (u0 + u1) / 2, hu = (u1 - u0) / 2; return alongX ? add({ c: [d.hinge[0] + m, hy, w], h: [hu, hy, 0.02], albedo: frameCol }) : add({ c: [w, hy, d.hinge[1] + m], h: [0.02, hy, hu], albedo: frameCol }); };   // (u along the closed leaf from the hinge line)
     stop(-0.012, 0.024); stop(d.width - 0.004, d.width + 0.012);
   }
-  return { MARKS, DEMOTE, TX, mk, boxes, lights, switchables, props, grp, add, slab, paneX, paneZ, wallX, wallZ, frameAt, desk, monitor, fitProp, prop, chair, cardboardBox, rug, plant, bin, cabinet, papers, wallArt, bench, car, shelf, ceilingPanel, doorFrame };
+  // the kit's lists and TOOLS, then its PIECES by name (scene/library.ts)
+  return { MARKS, DEMOTE, TX, mk, boxes, lights, switchables, props, grp, add, slab, frameAt, fitProp, prop,
+    ...pieces('officeKit', { paneX, paneZ, wallX, wallZ, desk, monitor, chair, cardboardBox, rug, plant, bin, cabinet, papers, wallArt, bench, car, shelf, ceilingPanel, doorFrame }) };
 }
 
 export function buildOfficeProcedural(trace?: GeneratorTrace, opts: GeneratorOpts = {}): Level {
   const { DEMOTE, TX, mk, boxes, lights, switchables, props, grp, add, slab, paneX, wallX, wallZ, desk, monitor, fitProp, prop, chair, cardboardBox, rug, plant, bin, cabinet, papers, wallArt, bench, car, shelf, ceilingPanel, doorFrame } = officeKit(trace, opts);
   /** paint on the floor, or a rubber mat: the flat box a rug is, but no rug, so it says no cloth and its colour speaks */
   const floorPaint = (x: number, z: number, w: number, d: number, albedo: Vec3) => add({ c: [x, 0.018, z], h: [w / 2, 0.006, d / 2], yaw: 0, albedo, flags: BoxFlag.NoShadow });
+  // THE OFFICE IS A PLACE SOMEBODY KEEPS, and its own surfaces say so (scene/stuff.ts saidAs: the kit's paint, its numbers and its finish, said to be another
+  // thing here). The kit's paint names say what a paint is on ANY floor built with the kit, and for most of those that is a house left to the weather: a
+  // rendered wall that blotches and takes a damp foot, a poured slab that cracks, a coarse cloth. Drawn that way the office's partitions peeled at the skirting
+  // and its carpet was stained from wall to wall. Here a partition is skimmed and painted, the shell is cast in panels, the carpet is a loop pile, the lobby's
+  // stone and the server room's raised floor are laid in tiles, the lino is one waxed sheet (the look's plain gloss coat), and what is red is enamel.
+  // NOT SAID: the lot (no stuff the look has is tarmac: gravel drew it as cobbles and a slab as cracked paving, so it stays plain) and the lawn (it waits).
+  const K = { wall: saidAs('skim', C.wall), sill: saidAs('skim', C.wallDark), shell: saidAs('cast panel', C.concrete), landing: saidAs('board concrete', C.concrete),
+    carpet: saidAs('carpet', C.carpet), carpetBlue: saidAs('carpet', C.carpetBlue), carpetRed: saidAs('carpet', C.carpetRed),
+    stone: saidAs('paver', C.stone), lino: saidAs('enamel', C.lino), red: saidAs('enamel', C.red) };
 
   // ---------------- ground & structure ----------------
   grp('ground');
@@ -278,13 +311,13 @@ export function buildOfficeProcedural(trace?: GeneratorTrace, opts: GeneratorOpt
   grp('floors');
   const floor = (x0: number, z0: number, x1: number, z1: number, alb: Vec3, extra: Partial<Box> = {}) => slab(x0, 0, z0, x1, 0.004, z1, alb, extra);   // 3 mm proud of the base: below every shadow-ray origin (1.5 cm), so a finish edge can never draw a hairline shadow under grazing light
   const polished = { flags: BoxFlag.Gloss };  // the hard finishes are polished: with the (default-off) glossy-floors experiment on they mirror bright things — panels, windows, beacons, a torch spot on the wall — toward the camera (fgather.wgsl glossReflection); the carpets never do
-  slab(4, -0.1, 4, 36, 0.001, 24, C.carpet); // whole interior carpet base (thin top at y=0)
-  floor(4, 10, 36, 12.2, C.lino, polished);  // corridor
-  floor(4, 16, 12, 24, C.stone, polished);   // lobby (its north strip z 12.2‥16, reception side, is the carpet base — the stone and its gloss start at z 16)
-  floor(14, 4, 22, 10, [0.2, 0.21, 0.24], { rough: 0.35 });   // server room raised floor (anti-static laminate tiles: a soft sheen under the cold panel — Box.rough, the reflection pass)
-  floor(28, 12.2, 36, 24, C.lino, polished); // break room (the same lino as the corridor, so the same finish: the vending fronts and its beacon get a floor to glint in)
+  slab(4, -0.1, 4, 36, 0.001, 24, K.carpet); // whole interior carpet base (thin top at y=0)
+  floor(4, 10, 36, 12.2, K.lino, polished);  // corridor
+  floor(4, 16, 12, 24, K.stone, polished);   // lobby (its north strip z 12.2‥16, reception side, is the carpet base — the stone and its gloss start at z 16)
+  floor(14, 4, 22, 10, madeOf('paver', [0.2, 0.21, 0.24]), { rough: 0.35 });   // server room raised floor (anti-static laminate tiles, so laid in pieces: a soft sheen under the cold panel — Box.rough, the reflection pass)
+  floor(28, 12.2, 36, 24, K.lino, polished); // break room (the same lino as the corridor, so the same finish: the vending fronts and its beacon get a floor to glint in)
   // rugs in cubicle farm (like the reference shots)
-  floor(15, 14, 19, 17, C.carpetBlue); floor(21, 18.5, 25, 21.5, C.carpetRed); floor(14.5, 19.5, 18, 22.5, C.carpetRed);
+  floor(15, 14, 19, 17, K.carpetBlue); floor(21, 18.5, 25, 21.5, K.carpetRed); floor(14.5, 19.5, 18, 22.5, K.carpetRed);
 
   // ceiling over building footprint (light-only; hidden from camera)
   grp('ceiling');
@@ -292,7 +325,7 @@ export function buildOfficeProcedural(trace?: GeneratorTrace, opts: GeneratorOpt
 
   // exterior walls (t=0.24), all full height: the camera orbits (Q/E) to look round them
   grp('walls.exterior');
-  const ext = C.concrete;
+  const ext = K.shell;
   // south wall z=24: lobby windows x 5..11 (3 mullions), cubicle windows 14..18, 20..24, break room door 31..32.2 + window 33..35
   wallX(24, 3.88, 36.12, 0.24, ext, [
     { a: 5, b: 11, y0: 0.8, y1: 2.5, mullions: 4, glass: 'bay' }, { a: 14, b: 18, y0: 0.9, y1: 2.4, mullions: 3, glass: 'whole' }, { a: 20, b: 24, y0: 0.9, y1: 2.4, mullions: 3, glass: 'whole' },
@@ -306,7 +339,7 @@ export function buildOfficeProcedural(trace?: GeneratorTrace, opts: GeneratorOpt
   // QRF infil: the west stairwell's landing outside that door — a bare concrete box on the facade (floor, three walls, a roof slab the camera looks through like
   // the ceiling), unlit: dark until the response team's weapon lights fill it. Inner floor x 1.34‥3.88, z 9.57‥12.63 (nav cells x 1.75‥3.25 × z 9.75‥12.25 free;
   // the doorway's walkable column is z 11.25). game/qrf.ts QRF_MARKS stands the team in it. TODO(level-format lane): a 'landing' volume + the marks in LevelData.
-  slab(1.34, 0, 9.57, 3.88, 0.02, 12.63, C.concrete);                                             // landing floor (over the grass strip's decal)
+  slab(1.34, 0, 9.57, 3.88, 0.02, 12.63, K.landing);                                              // landing floor (over the grass strip's decal)
   wallX(9.45, 1.1, 3.88, 0.24, ext); wallX(12.75, 1.1, 3.88, 0.24, ext); wallZ(1.22, 9.57, 12.63, 0.24, ext);   // north, south, west walls of the stair tower (the west one between the other two: no coplanar corner faces)
   slab(1.1, H, 9.33, 3.88, H + 0.2, 12.87, C.ceiling, { flags: BoxFlag.NoPrimary });              // its roof (light-only, hidden from the camera like the ceiling)
   // east wall x=36: fire exit door z 20..21.2 (open), storage window
@@ -314,11 +347,11 @@ export function buildOfficeProcedural(trace?: GeneratorTrace, opts: GeneratorOpt
 
   // ---------------- interior partitions (t=0.12) ----------------
   grp('walls.interior');
-  const iw = C.wall;
+  const iw = K.wall;
   // corridor z=10..12.2 spans x 4..36. North side wall z=10 with doors to: conference (x 9..10.2), server (17..18.2), manager (25..26.2), storage (32..33.2)
   wallX(10, 4.12, 35.88, 0.12, iw, [{ a: 6, b: 9.0, y0: 0.0, y1: H - 0.01, mullions: 3 }, { a: 9.0, b: 10.2 }, { a: 10.2, b: 13.5, y0: 0.0, y1: H - 0.01, mullions: 3 }, { a: 17, b: 18.2 }, { a: 25, b: 26.2 }, { a: 26.2, b: 26.75, y0: 0.3, y1: 2.2 }, { a: 32, b: 33.2 }]);   // glazing either side of a clear door gap (no mullion in the doorway); the manager's door gets a sidelight east of its latch jamb (x 26.2‥26.75, over a 30 cm sill, to the door head's line)
   // conference glass wall: the opening above (6..13.5 full height with mullions) acts as glazing frames; add a low sill + header band
-  slab(6, 0, 9.94, 9.0, 0.5, 10.06, C.wallDark); slab(10.2, 0, 9.94, 13.5, 0.5, 10.06, C.wallDark); // sill (door gap at 9..10.2)
+  slab(6, 0, 9.94, 9.0, 0.5, 10.06, K.sill); slab(10.2, 0, 9.94, 13.5, 0.5, 10.06, K.sill); // sill (door gap at 9..10.2)
   slab(6, 2.5, 9.94, 9.0, H, 10.06, iw); slab(10.2, 2.5, 9.94, 13.5, H, 10.06, iw); // headers over the glazing (the door gap's lintel comes from wallX)
   // …and the GLASS in it (experiment E3): three panes a run between the mullions, sill top to header, and the manager's sidelight in its hole
   grp('glass');
@@ -457,7 +490,7 @@ export function buildOfficeProcedural(trace?: GeneratorTrace, opts: GeneratorOpt
   // playtest 08-09 'can't shoot exit lights out or OCP them?'); all battery-backed, all in the corridor group so they still switch together
   switchables.push({ name: 'exit_sign_w', boxes: [exitW], group: 'corridor', on: true, baseEmissive: [0.3, 3.2, 0.6], mains: false });
   switchables.push({ name: 'exit_sign_e', boxes: [exitE], group: 'corridor', on: true, baseEmissive: [0.3, 3.2, 0.6], mains: false });
-  add({ c: [20.0, 1.1, 12.08], h: [0.15, 0.3, 0.06], albedo: C.red, ...mk(MD.extinguisherBoxMarks([0.15, 0.3, 0.06], '-z', TX)) });   // (markings: the pictogram square + handle slot on its corridor face)
+  add({ c: [20.0, 1.1, 12.08], h: [0.15, 0.3, 0.06], albedo: K.red, ...mk(MD.extinguisherBoxMarks([0.15, 0.3, 0.06], '-z', TX)) });   // (markings: the pictogram square + handle slot on its corridor face)
   add({ c: [28.5, 1.5, 10.1], h: [0.9, 0.45, 0.02], albedo: [0.45, 0.35, 0.2] });
   bench(26.6, 11.86, 0); plant(4.65, 11.78, 0.9); plant(35.4, 11.7, 0.9); bin(21.3, 11.95);   // bench on the blank wall run between the east cubicle opening and the break-room door; the west plant in the SOUTH-west corner (QRF infil door: the stair door's leaf swings in along the north side of that end — game/qrf.ts)
   wallArt(11.5, 1.6, 12.12, 1.3, 0.75, [0.16, 0.28, 0.4], true); wallArt(15.6, 1.6, 10.09, 1.0, 0.7, [0.5, 0.42, 0.2], true);
@@ -468,7 +501,7 @@ export function buildOfficeProcedural(trace?: GeneratorTrace, opts: GeneratorOpt
   // set dressing on the north wall (the face the camera reads the whole game): an extinguisher hung west of the server-room door — 12 cm deep, so the corridor keeps
   // its width, and west of x 16.5 so it stands clear of that leaf flung into the corridor, of the stack marks east of the door and of the cubicle-door post — framed
   // prints on the long blank runs between the doors, and name plates by the server, manager and storage frames (all flush decals)
-  add({ c: [16.42, 1.0, 10.12], h: [0.07, 0.24, 0.06], albedo: C.red, ...mk(MD.extinguisherMarks([0.07, 0.24, 0.06], '+z', TX)) }); add({ c: [16.42, 1.28, 10.115], h: [0.03, 0.04, 0.03], albedo: C.black });   // extinguisher body (its label band a marking) + valve
+  add({ c: [16.42, 1.0, 10.12], h: [0.07, 0.24, 0.06], albedo: K.red, ...mk(MD.extinguisherMarks([0.07, 0.24, 0.06], '+z', TX)) }); add({ c: [16.42, 1.28, 10.115], h: [0.03, 0.04, 0.03], albedo: C.black });   // extinguisher body (its label band a marking) + valve
   wallArt(16.42, 1.56, 10.075, 0.2, 0.25, [0.6, 0.08, 0.06], true);                                                                                    // its sign
   wallArt(20.4, 1.6, 10.075, 0.9, 0.65, [0.42, 0.3, 0.16], true); wallArt(22.7, 1.6, 10.075, 0.7, 0.9, [0.15, 0.25, 0.35], true); wallArt(30.5, 1.6, 10.075, 0.8, 0.6, [0.5, 0.42, 0.22], true);
   for (const x of [18.5, 24.7, 33.5]) add({ c: [x, 1.55, 10.07], h: [0.09, 0.05, 0.01], albedo: [0.15, 0.15, 0.17], flags: BoxFlag.NoShadow });   // (the manager's on the hinge side: the sidelight has the latch side now)
@@ -563,7 +596,7 @@ export function buildOfficeProcedural(trace?: GeneratorTrace, opts: GeneratorOpt
     add({ c: [21.31, 1.13, 5.508], h: [0.008, 0.008, 0.006], albedo: C.black, emissive: [4.5, 1.6, 0.15], flags: BoxFlag.NoShadow }); }
     add({ c: [18.1, 1.55, 4.2], h: [0.3, 0.3, 0.08], albedo: [0.5, 0.51, 0.5] });                                       // wall-mount patch enclosure on the back wall (where #1's light comes through the gap between the banks)…
     add({ c: [18.34, 2.42, 4.15], h: [0.025, 0.57, 0.025], albedo: C.metal, flags: BoxFlag.NoShadow });                // …its conduit up into the ceiling (from the enclosure's top at 1.85)
-    add({ c: [15.4, 0.62, 4.3], h: [0.13, 0.62, 0.13], albedo: C.red, ...mk(MD.agentCylinderMarks([0.13, 0.62, 0.13], TX)) }); add({ c: [15.4, 1.3, 4.3], h: [0.06, 0.06, 0.06], albedo: C.black });   // clean-agent cylinder (its label a marking) and valve head against the back wall…
+    add({ c: [15.4, 0.62, 4.3], h: [0.13, 0.62, 0.13], albedo: K.red, ...mk(MD.agentCylinderMarks([0.13, 0.62, 0.13], TX)) }); add({ c: [15.4, 1.3, 4.3], h: [0.06, 0.06, 0.06], albedo: C.black });   // clean-agent cylinder (its label a marking) and valve head against the back wall…
     add({ c: [15.4, 2.16, 4.15], h: [0.025, 0.81, 0.025], albedo: [0.5, 0.1, 0.08], flags: BoxFlag.NoShadow });        // …its discharge pipe up the wall
     add({ c: [20.7, 0.011, 8.52], h: [0.13, 0.009, 1.42], albedo: drawnAs('metal', [0.06, 0.06, 0.065]), flags: BoxFlag.NoShadow, ...mk(DEMOTE ? MD.plateMark('+y', [-0.03, -1.4, 0.03, 1.4], { albedo: [0.6, 0.48, 0.1] }, 'coarse', TX) : []) });     // cable cover across the aisle from the east bank to the south wall: a 2 cm decal like the rugs (no rays, no collision — nobody trips), its yellow centre line a marking…
     if (!DEMOTE) add({ c: [20.7, 0.022, 8.52], h: [0.03, 0.002, 1.42], albedo: [0.6, 0.48, 0.1], flags: BoxFlag.NoShadow });        // …or a strip box (relief)
@@ -715,10 +748,10 @@ export function buildOfficeProcedural(trace?: GeneratorTrace, opts: GeneratorOpt
   // ---------------- exterior ----------------
   grp('exterior');
   // parked van south-east, dumpster east, fence posts, street lamp poles
-  add({ c: [30.5, 0.95, 26.4], h: [2.2, 0.95, 0.95], yaw: 0.05, albedo: [0.55, 0.55, 0.52] }); add({ c: [31.95, 1.45, 26.33], h: [0.68, 0.3, 0.965], yaw: 0.05, albedo: [0.1, 0.12, 0.15] });   // van body + dark glazing band round the cab, on the body's own (yawed) axis: below the roof line and 1.5 cm proud of both flanks, so no two faces are coplanar (they z-fought)
+  add({ c: [30.5, 0.95, 26.4], h: [2.2, 0.95, 0.95], yaw: 0.05, albedo: madeOf('carpaint', [0.55, 0.55, 0.52]) }); add({ c: [31.95, 1.45, 26.33], h: [0.68, 0.3, 0.965], yaw: 0.05, albedo: [0.1, 0.12, 0.15] });   // van body + dark glazing band round the cab, on the body's own (yawed) axis: below the roof line and 1.5 cm proud of both flanks, so no two faces are coplanar (they z-fought)
   add({ c: [38.2, 0.65, 14.0], h: [0.8, 0.65, 1.2], albedo: [0.1, 0.25, 0.15], ...mk(DEMOTE ? MD.plateMark('+y', [-0.74, -1.14, 0.74, -0.06], { albedo: [0.02, 0.02, 0.025] }, 'coarse', TX) : []) });   // dumpster (its open half's dark interior a coarse marking on the top when demoted)
   for (let i = 0; i < 9; i++) add({ c: [1.0, 0.6, 4 + i * 2.6], h: [0.05, 0.6, 0.05], albedo: C.woodDark });
-  car(11.5, 26.4, Math.PI + 0.06, [0.42, 0.08, 0.07]); car(21.0, 26.95, -0.04, [0.5, 0.52, 0.55]);     // parked along the south lot
+  car(11.5, 26.4, Math.PI + 0.06, madeOf('carpaint', [0.42, 0.08, 0.07])); car(21.0, 26.95, -0.04, madeOf('carpaint', [0.5, 0.52, 0.55]));     // parked along the south lot
   for (let i = 0; i < 7; i++) { if (i === 6) continue; add({ c: [6 + i * 4.2, 0.4, 24.75], h: [0.08, 0.4, 0.08], albedo: [0.7, 0.65, 0.2] }); }   // bollards along the facade (none in the break-room door's swing at x≈31.2)
   add({ c: [37.0, 0.45, 9.0], h: [0.45, 0.45, 0.4], albedo: [0.62, 0.63, 0.62] }); add({ c: [37.0, 0.45, 10.2], h: [0.45, 0.45, 0.4], albedo: [0.62, 0.63, 0.62] });   // AC condensers
   for (let i = 0; i < 4; i++) add({ c: [24.9 + i * 0.5, 0.4, 24.92], h: [0.03, 0.4, 0.3], albedo: C.metal });   // bike rack hoops (clear of the bollard at x = 27, and short of the z≈25.75 patrol line the nav grid routes along — at z 25.1 their ends snagged a capsule the grid thought was clear)

@@ -4,6 +4,7 @@ import { cutSwap } from './cutSwap';
 import { scenePrelude, snowLookConfig, lookConfig } from './frame';
 import { decalWgslConsts } from './decals';
 import { TexturePool } from './texpool';
+import { capUsage } from './framecap';
 import { BoxWorld, GEO_STRIDE, MAT_STRIDE, type Box } from '../scene/boxes';
 import gbufSrc from './shaders/gbuffer.wgsl' with { type: 'text' };
 import decalsSrc from './shaders/decals.wgsl' with { type: 'text' };
@@ -367,7 +368,7 @@ export class GBuffer {
   resize(w: number, h: number, ow = w, oh = h, sharp = false) {
     if (!sharp) { ow = w; oh = h; }
     if (w === this.width && h === this.height && ow === this.outW && oh === this.outH && sharp === this.sharp) return;
-    const usage = GPUTextureUsage.RENDER_ATTACHMENT | GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_SRC;   // (COPY_SRC: a frame capture reads every target back, render/framecap.ts)
+    const usage = GPUTextureUsage.RENDER_ATTACHMENT | GPUTextureUsage.TEXTURE_BINDING | capUsage();   // (a frame capture reads every target back: render/framecap.ts capUsage, nothing under ?framecap=0)
     const mk = (format: GPUTextureFormat, label: string, tw: number, th: number) => { if (!this.keepTargets) return this.device.createTexture({ size: [tw, th], format, usage, label }); const t = this.pool.acquire({ label, size: [tw, th], format, usage }).tex; t.label = label; return t; };
     if (w !== this.width || h !== this.height) {
       this.width = w; this.height = h;

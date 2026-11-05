@@ -25,7 +25,8 @@
 // hash of the burst's serial and the man's id, never Math.random.
 //
 // (No top-level statement here uses another game module's export: src/game is one import cycle — see CLAUDE.md.)
-import { SideMap } from '../math/side';
+import { isManId, eachSeat, hostMan, men, menUp } from './seats';
+import { SideMap, GameSideMap } from '../math/side';
 import { wandDrop } from './wand';
 import { Vec3, v3, clamp, lerp } from '../math/vec';
 import * as fx from './effects';
@@ -224,7 +225,7 @@ export type GlassView = 'blown' | 'wary' | 'counted' | 'whole';
 function throughGlass<T>(g: Game, from: Vec3, view: GlassView, fn: () => T): T {
   const gb = g.glassBreak; if (view === 'whole' || !gb || !glassBreakLive(g)) return fn();
   const size = { radius: FRAG.glassM, power: FRAG.glassPower };
-  return gb.seeThrough(view === 'blown' ? (bi, X) => gb.goingAt(bi, X) : view === 'wary' ? (bi) => gb.wouldGive(bi, from, size) : (bi, X) => gb.wouldGive(bi, from, size, X), fn);
+  return gb.seeThrough(view, from, size, fn);
 }
 /** is a burst's line from a to b stopped — by anything solid (the walk at the head of this file), and by glass as glass is to a burst */
 function burstBlocked(g: Game, a: Vec3, b: Vec3): boolean {
@@ -297,7 +298,7 @@ function blastRaw(g: Game, at: Vec3, spec: BlastSpec): BlastReport {
   const F = FRAG, lethal = spec.lethalM ?? F.lethalM, wound = Math.max(lethal, spec.woundM ?? F.woundM), serial = spec.serial ?? Math.floor(g.time * 1000);
   const from: Vec3 = [at[0], at[1] + F.lift, at[2]]; const name = spec.name ?? 'frag grenade';
   const rep: BlastReport = { at: v3.copy(at), who: spec.who, hits: [], killed: 0, finished: 0, wounded: 0, shielded: 0, stunned: 0, player: null };
-  const side: Team = spec.who ? teamOfId(g, spec.who) : 'guard'; const mine = spec.who === PLAYER_ID;
+  const side: Team = spec.who ? teamOfId(g, spec.who) : 'guard'; const mine = isManId(spec.who);
   if (spec.fx !== false) {
     const gpu = gpuFx(g);
     const L = fx.spawnBurst(g.smoke, g.sparks, from, g.fxSeed++, gpu ? { sparkCount: Math.min(fx.bang.sparkCount, fx.flags.trails ? fx.bang.trailCount : 0) } : undefined);
@@ -305,8 +306,8 @@ function blastRaw(g: Game, at: Vec3, spec: BlastSpec): BlastReport {
     const light = g.fogOfWar.lightBy(g.engine.lights.flash(L.pos, [1, 0.74, 0.42], L.intensity * 0.7, L.range, L.ttl, 0), spec.who); if (L.radius) light.radius = L.radius;   // (HE: a short orange flash, not the stun charge's white)
     g.audio.play('stunBang', from, 1.0, { rate: 0.62 });   // (no sample of its own yet: the stun charge's, an octave-ish down)
     bangScorch(g, from);
-    const eye = g.player.char.bones.head ?? v3.add(g.player.char.pos, [0, 1.6, 0]);
-    if (!g.player.down && v3.dist(eye, from) < wound && !g.col.segmentBlocked(from, eye)) g.audio.play('earRing', null, clamp(1.1 - v3.dist(eye, from) / wound, 0.2, 0.7));
+    const ears = hostMan(g), eye = ears.char.bones.head ?? v3.add(ears.char.pos, [0, 1.6, 0]);   // (the ring is in the ears of the man this host plays: seats.ts)
+    if (!ears.down && v3.dist(eye, from) < wound && !g.col.segmentBlocked(from, eye)) g.audio.play('earRing', null, clamp(1.1 - v3.dist(eye, from) / wound, 0.2, 0.7));
   }
   // GLASS, first: the panes round the burst take it BEFORE anything else is asked and before anybody is judged, at the burst's own size — the fracture model's
   // blast entry point, which files the holes and decides what falls (nothing when that model is not live: a pane is then what it was). ONE BLOW however many ways
@@ -331,7 +332,7 @@ function blastRaw(g: Game, at: Vec3, spec: BlastSpec): BlastReport {
     const ask = (feet: Vec3, head: Vec3, id: number) => { if (v3.dist(from, [feet[0], feet[1] + 0.9, feet[2]]) <= wound) before!.set(id, exposure(g, from, feet, head, 'blown')); };
     for (const gd of [...g.guards, ...civiliansShown(g)]) if (gd.state !== 'dead' && !gd.god) ask(gd.char.pos, gd.char.bones.head ?? v3.add(gd.char.pos, [0, 1.65, 0]), gd.char.id);
     if (F.downKill) for (const gd of g.guards) if (downAsked(gd)) { const B = lying(gd); if (v3.dist(from, B[0]) <= wound) before.set(gd.char.id, lyingShows(g, from, B, 'blown')); }   // (a man down and breathing: asked where he lies, as `finish` judges him)
-    { const pl = g.player; if (!pl.down) ask(pl.char.pos, pl.char.bones.head ?? v3.add(pl.char.pos, [0, 1.6, 0]), pl.char.id); }
+    for (const pl of men(g)) if (!pl.down) ask(pl.char.pos, pl.char.bones.head ?? v3.add(pl.char.pos, [0, 1.6, 0]), pl.char.id);
   }
   if (typeof destr.blast === 'function') destr.blast(from, { who: spec.who, ...spec.destr });
   else g.destr.bang(from, spec.who);
@@ -400,7 +401,7 @@ function blastRaw(g: Game, at: Vec3, spec: BlastSpec): BlastReport {
       c.anim.hit();
     }
   }
-  { const pl = g.player, c = pl.char;
+  eachSeat(g, g => { const pl = g.player, c = pl.char;   // (every player's man — seats.ts)
     if (!pl.down) {
       const head = c.bones.head ?? v3.add(c.pos, [0, 1.6, 0]); const j = judge(c.pos, head, c.id);
       if (j.r) {
@@ -418,11 +419,11 @@ function blastRaw(g: Game, at: Vec3, spec: BlastSpec): BlastReport {
         } else if (rep.player === 'wounded') { c.anim.hit(); if (pl.wanding) { wandDrop(pl); pl.fHeld = true; } g.msg(`the ${name} — fragments past you`); }
         else if (rep.player === 'stunned') { c.anim.hit(); if (pl.wanding) { wandDrop(pl); pl.fHeld = true; } g.msg(`the ${name} — ${came}`); }
       }
-    } }
+    } });
   moraleBlast(g, at, spec.who);   // (morale.ts: the men it did not hurt are shaken by it — a return on its first line with the switch off)
   FRAG_STATS.bursts++; FRAG_STATS.killed += rep.killed; FRAG_STATS.wounded += rep.wounded; FRAG_STATS.shielded += rep.shielded; FRAG_STATS.stunned += rep.stunned;
   FRAG_LOG.push(rep); if (FRAG_LOG.length > 64) FRAG_LOG.shift();
-  { const eyes: Vec3[] = []; if (!g.player.down) eyes.push(g.player.char.bones.head ?? v3.add(g.player.char.pos, [0, 1.6, 0]));   // the count is for eyes that had a line to it (his own, a teammate's): a room nobody has looked into keeps what it did in there to itself
+  { const eyes: Vec3[] = []; for (const pl of men(g)) if (!pl.down) eyes.push(pl.char.bones.head ?? v3.add(pl.char.pos, [0, 1.6, 0]));   // the count is for eyes that had a line to it (his own, a teammate's): a room nobody has looked into keeps what it did in there to itself
     for (const o of g.guards) if (o.team === 'operative' && o.state !== 'dead') eyes.push(o.char.bones.head ?? v3.add(o.char.pos, [0, 1.6, 0]));
     const seen = eyes.some(e => v3.dist(e, from) < 30 && !g.col.segmentBlocked(e, from));
     // (the men folded behind a door it took: only those an eye has a line to through the opening it left, and never a civilian, who only flinches — the count says nothing of a room nobody can see into)
@@ -445,7 +446,7 @@ export function fragFuse(g: Game, it: Item, dt: number) { if (it.fired) return; 
 interface Live { it: Item; side: Team; knows: Map<Guard, number>; shouted: Set<Team>; flee: Map<Guard, GuardScript | null>; /** FRAG.fleeDoor: on the leg round an open leaf's end, the way out still to be dealt */ via?: Set<Guard>; /** where it was (or was coming down) when each man's legs were dealt: it moves a metre on and they are dealt again */ fleeAt: Map<Guard, Vec3>; dealT: Map<Guard, number>; /** counted once in FRAG_STATS.fled */ counted: Set<Guard>; /** Sam has been told of it (a hostile one he can see, or hear land) */ cued: boolean; /** FRAG.fleeWise: where it will rest and the floor it has yet to cross, as last reckoned (restOf) */ rest?: Rest; /** FRAG.fleeWise: where and when each man on a leg last made ground (a man stood behind a mate in a corner is dealt another leg) */ made?: Map<Guard, { at: Vec3; t: number }>; }
 /** men who heard the other side shout a grenade out, and until when it keeps them listening for it (fragThrowTick sets it; the notice test below reads it) */
 const warned = new SideMap<Guard, number>('frag.warned');
-const books = new SideMap<Game, Live[]>('frag.books');
+const books = new GameSideMap<Game, Live[]>('frag.books');
 const booksOf = (g: Game) => { let b = books.get(g); if (!b) { b = []; books.set(g, b); } return b; };
 /** forget every live grenade's book (a restart, a load): nobody is left running from something that is no longer there */
 export function fragReset(g: Game) { defBooks.delete(g); const B = books.get(g); if (!B) return; for (const L of B) for (const gd of L.flee.keys()) { gd.path = []; gd.pathGoal = null; } B.length = 0; }
@@ -688,7 +689,7 @@ function takenBy(g: Game, L: Live | null, gd: Guard, dz: Vec3): { stay: Vec3[]; 
     if (onLeg) go.push(q);
     else if (s || g.time < o.staggerUntil || g.time < o.dazzledUntil || flat(p, dz) > FRAG.fleeM || exposedTo(g, from, p, o.char.bones.head ?? v3.add(p, [0, 1.6, 0])) <= 0) stay.push(p);
   }
-  if (FRAG.fleeSam && gd.team === 'operative' && flat(g.player.char.pos, gd.char.pos) <= 8.5) stay.push(g.player.char.pos);   // (Sam: as solid as a mate, and nobody's to deal)
+  if (FRAG.fleeSam && gd.team === 'operative') for (const pl of men(g)) if (flat(pl.char.pos, gd.char.pos) <= 8.5) stay.push(pl.char.pos);   // (Sam: as solid as a mate, and nobody's to deal)
   return { stay, go };
 }
 /** The list the deal would hand `fleeSpot` for this man off a grenade that came to rest at `dz` and has dealt nobody yet (a forecast's, before the throw:
@@ -872,7 +873,7 @@ export function fragThrowTick(g: Game, dt: number) {
       // (counted by the eye test every sighting of his goes through — cone, range, a line, the smoke between, his own dazzle: guards.ts canSeeChar — and only a man lit enough to be made out, or the one he is already on)
       // … or along his own gun line (within 45° of his aim, a line to the man, his eyes not full of magnesium): the eye test's look sits well off a shouldered gun's bore — the 'eyes on the sights' note in guards.ts
       const sights = (p: Vec3, hd: Vec3 | undefined) => { let off = Math.atan2(p[0] - c.pos[0], p[2] - c.pos[2]) - c.aimYaw; off = Math.atan2(Math.sin(off), Math.cos(off)); return Math.abs(off) < 0.785 && g.time >= gd.dazzledUntil && flat(p, c.pos) < 16 && !g.col.segmentBlocked(head, hd ?? v3.add(p, [0, 1.5, 0])); };
-      const pl = g.player; if (!pl.down && !g.playerInvisible && flat(pl.char.pos, fix) <= F.defBunch && (gd.foe === 'player' || pl.visibility > 0.2) && (canSee(g, gd).visible || (gd.smokeTrans >= 0.3 && sights(pl.char.pos, pl.char.bones.head)))) bunch++;
+      eachSeat(g, v => { const pl = v.player; if (!pl.down && !g.playerInvisible && flat(pl.char.pos, fix) <= F.defBunch && (gd.foe === 'player' || pl.visibility > 0.2) && (canSeeChar(v, gd, pl.char, true).visible || (gd.smokeTrans >= 0.3 && sights(pl.char.pos, pl.char.bones.head)))) bunch++; });   // (every player's man: seats.ts)
       for (const o of g.guards) if (o.team === 'operative' && o.state !== 'dead' && !railsDown(g, o) && flat(o.char.pos, fix) <= F.defBunch && (gd.foe === o || o.visibility > 0.2) && (canSeeChar(g, gd, o.char, false).visible || sights(o.char.pos, o.char.bones.head))) bunch++;
     }
     C.bunchT = bunch >= 2 ? C.bunchT + dt : 0;
@@ -922,8 +923,8 @@ function windUp(g: Game, B: DefBook, C: Carrier, head: Vec3, from: Vec3, aim: Ve
   B.serial = k; B.lastT = g.time; C.blockedT = C.bunchT = 0;
   const shouts = w(SHOUTS.slice(1), SHOUTS);   // ('frag out!' is the team's own drill word: not in a defender's mouth — words.ts)
   g.say(gd, shouts[Math.floor(hash01(c.id, k) * shouts.length) % shouts.length]);
-  const pc = g.player.char, pr = g.col.sound.propagate(head, pc.bones.head ?? v3.add(pc.pos, [0, 1.6, 0]));   // the cue, where Sam is in earshot of it
-  if (!g.player.down && pr.pathLen <= F.cueM * 1.5 && pr.muffle < 0.75) { g.msg("they're shouting a warning. a grenade is coming"); FRAG_STATS.cues++; }
+  const heard = menUp(g).some(pl => { const pc = pl.char, pr = g.col.sound.propagate(head, pc.bones.head ?? v3.add(pc.pos, [0, 1.6, 0])); return pr.pathLen <= F.cueM * 1.5 && pr.muffle < 0.75; });   // the cue, where a player is in earshot of it
+  if (heard) { g.msg("they're shouting a warning. a grenade is coming"); FRAG_STATS.cues++; }
   for (const o of g.guards) {   // …and the team's, the same shout in the same ears: for the next few seconds they are looking for it
     if (o.state === 'dead' || o.team === gd.team || sameSide(o.team, gd.team)) continue;
     const po = g.col.sound.propagate(head, o.char.bones.head ?? v3.add(o.char.pos, [0, 1.6, 0])); if (po.pathLen <= F.cueM * 1.5 && po.muffle < 0.75) warned.set(o, g.time + F.defWind + F.defFuse + 1);

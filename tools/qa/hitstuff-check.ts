@@ -91,13 +91,13 @@ export async function hitstuffCheck(): Promise<boolean> {
     if (body < 0 || glass < 0) throw new Error(`hitstuff-check: ${FILE} has no car where the kit writes one (body ${body}, glass ${glass})`);
     const B = st[body], G = st[glass];
 
-    // (1) the body as the level has it: it says nothing, and is read by its paint, rule up or down
-    const LOW = 0.5, pB = R.spot(body, LOW);
+    // (1) the body saying nothing (the word its level gives it — the office's cars say 'carpaint' since 11-05 — taken off): read by its paint, rule up or down
+    const LOW = 0.5, pB = R.spot(body, LOW), levelSays: string | undefined = B.stuff; B.stuff = undefined;
     up(true); const plainUp = pB ? R.fire(body, 2, LOW) : null; up(false); const plainDown = pB ? R.fire(body, 2, LOW) : null;
     const paint = surfOf(B.albedo);
     line(!!plainUp && !!plainDown && plainUp.met === 2 && plainDown.met === 2 && B.stuff === undefined && saidSurf(B) === undefined && plainUp.spark === plainDown.spark && plainUp.chips === plainDown.chips && plainUp.dust === plainDown.dust && plainUp.chips > 0 && paint !== 'metal',
-      '1 a car\'s body as the level has it says nothing of what it is made of: two rounds into it are read by the colour of its paint, and knock out the same with the rule up as down — chips, as a wall would give',
-      `by its paint: ${paint} · up: ${plainUp ? say(plainUp) : 'no spot'} · down: ${plainDown ? say(plainDown) : 'no spot'}`);
+      '1 a car\'s body that says nothing of what it is made of (the word its level gives it taken off): two rounds into it are read by the colour of its paint, and knock out the same with the rule up as down — chips, as a wall would give',
+      `as the level has it the body says ${levelSays ?? 'nothing'} · by its paint: ${paint} · up: ${plainUp ? say(plainUp) : 'no spot'} · down: ${plainDown ? say(plainDown) : 'no spot'}`);
 
     // (2) the same body, saying it is car paint; and a tyre, saying it is rubber
     B.stuff = 'carpaint';
@@ -136,12 +136,14 @@ export async function hitstuffCheck(): Promise<boolean> {
     //     marks lie on the level — over four rounds a spot at the chaos dial's top (the harness holds the dial at 0, and a hot zone is where the lane's dice
     //     fall), with the particles' stand-in in, into: the car's body, glass and a tyre saying their words; a box of every word the level itself says that a
     //     round can reach; a wall and a thing of metal that say nothing; and a window pane that says 'glass' as well, which stays the pane engine's
-    { const run = async (on: boolean) => { const V: any = await stand(on); const Q = range(V); Q.draw(); up(on); let fired = 0, panes = 0; const words = new Set<string>(), DS: any = (await import(`${ROOT}/src/game/destruction.ts`)).DESTR_STATS, ds0 = { ...DS };   // (a tally of the whole process: what THIS run adds to it is compared)
+    { const run = async (on: boolean) => { const V: any = await stand(on); const Q = range(V); Q.draw(); up(on); V.game.decals.onCut = on;   // (the page's word for a mark on a cut face rides with the rule: both are the picture's)
+        let fired = 0, panes = 0; const words = new Set<string>(), DS: any = (await import(`${ROOT}/src/game/destruction.ts`)).DESTR_STATS, ds0 = { ...DS };   // (a tally of the whole process: what THIS run adds to it is compared)
         const bd = Q.st.findIndex((b: any) => sized(b, [2.2, 0.34, 0.86])), gl = Q.st.findIndex((b: any, i: number) => i !== bd && sized(b, [1.25, 0.27, 0.8]) && Math.hypot(b.c[0] - Q.st[bd].c[0], b.c[2] - Q.st[bd].c[2]) < 0.6);
         const ty = Q.st.findIndex((b: any) => sized(b, [0.32, 0.3, 0.12]) && Math.hypot(b.c[0] - Q.st[bd].c[0], b.c[2] - Q.st[bd].c[2]) < 2);
         const vis = (b: any) => !(b.flags & (BoxFlag.NoShadow | BoxFlag.NoPrimary | BoxFlag.Dynamic)) && !b.rot;
         const pane = Q.st.findIndex((b: any) => (b.flags & BoxFlag.Glass) !== 0 && b.h[1] > 0.4), wall = Q.st.findIndex((b: any) => b.stuff === undefined && surfOf(b.albedo) === 'drywall' && b.h[1] > 1 && vis(b)), metal = first(Q, metalOf(Q));
         Q.st[bd].stuff = 'carpaint'; Q.st[gl].stuff = 'glass'; if (ty >= 0) Q.st[ty].stuff = 'rubber'; if (pane >= 0) Q.st[pane].stuff = 'glass';
+        { const soft = first(Q, Q.st.map((b: any, i: number) => i).filter((i: number) => ![bd, gl, ty, pane, wall, metal].includes(i) && Q.st[i].stuff === 'paint' && vis(Q.st[i]) && !(Q.st[i].flags & BoxFlag.Glass) && Q.st[i].h[1] > 0.3)); if (soft >= 0) Q.st[soft].stuff = 'cloth'; }   // (a soft thing: the word most boxes of the levels say, and one the office says of nothing a round reaches — a thing that said only 'paint' says it here)
         const said: number[] = []; for (const w of HIT_STUFFS as string[]) { const c = Q.st.map((b: any, i: number) => i).filter((i: number) => ![bd, gl, ty, pane].includes(i) && Q.st[i].stuff === w && vis(Q.st[i]) && !(Q.st[i].flags & BoxFlag.Glass) && Q.st[i].h[1] > 0.3); const i = first(Q, c); if (i >= 0) { said.push(i); words.add(w); } }
         const car: number[] = []; let paneSaid = true;
         await hushed(() => { for (const [i, low] of [[bd, LOW], [gl, 0], [ty, 0], ...said.map(i => [i, 0]), [wall, 0], [metal, 0], [pane, 0]] as [number, number][]) { if (i < 0 || !Q.spot(i, low)) { if (i === bd || i === gl || i === ty) car.push(0); continue; }
@@ -150,8 +152,8 @@ export async function hitstuffCheck(): Promise<boolean> {
           for (let s = 0; s < 120; s++) V.step(DT); });
         return { h: hashDigest(digestGame(V.game, true)) as string, fired, panes, paneSaid, car, words: [...words], die: V.game.destr.serial as number, marks: V.game.decals.list.length as number, stats: Object.keys(DS).some(k => DS[k] !== ds0[k]) ? JSON.stringify(Object.fromEntries(Object.keys(DS).filter(k => typeof DS[k] === 'number').map(k => [k, DS[k] - ds0[k]]))) : 'unmoved' }; };
       const a = await run(false), b = await run(true);
-      line(a.h === b.h && a.die === b.die && a.stats === b.stats && a.stats !== 'unmoved' && a.marks === b.marks && a.fired >= 24 && b.fired === a.fired && a.car.length === 3 && a.car.every(n => n >= 3) && b.car.join() === a.car.join() && a.panes === 1 && b.paneSaid && a.words.length >= 1,
-        '5 a rule of the picture: the run is the same run with the rule up as down — by digest, by the chaos lane\'s own die and its counters, and by how many marks lie on the level — over four rounds a spot at the top of the chaos dial, with the particles\' stand-in in: into the car\'s body, glass and a tyre saying their words (each met), a box of every word the level itself says that a round can reach, a wall and a thing of metal that say nothing, and a window pane that says \'glass\' too and stays the pane engine\'s',
+      line(a.h === b.h && a.die === b.die && a.stats === b.stats && a.stats !== 'unmoved' && a.marks === b.marks && a.fired >= 24 && b.fired === a.fired && a.car.length === 3 && a.car.every(n => n >= 3) && b.car.join() === a.car.join() && a.panes === 1 && b.paneSaid && a.words.length >= 6 && a.words.includes('cloth'),
+        '5 a rule of the picture: the run is the same run with the rule up as down — by digest, by the chaos lane\'s own die and its counters, and by how many marks lie on the level — the page\'s word for a mark on a cut face up with it and down with it — over four rounds a spot at the top of the chaos dial, with the particles\' stand-in in: into the car\'s body, glass and a tyre saying their words (each met), a box of every word the level itself says that a round can reach (six or more) and a soft thing saying \'cloth\', a wall and a thing of metal that say nothing, and a window pane that says \'glass\' too and stays the pane engine\'s',
         `down ${a.h} · up ${b.h} · the lane's die ${a.die} / ${b.die} · marks ${a.marks} / ${b.marks} · its counters ${a.stats === b.stats ? 'the same' : 'DIFFER'}${a.stats === 'unmoved' ? ' (UNMOVED: the lane was never in)' : ''} · ${a.fired} rounds · the car's body, glass, tyre met ${a.car.join(', ')} · the level's own words met: ${a.words.join(', ') || 'none'} · a pane among them ${a.panes === 1}, heard as a pane ${b.paneSaid}`); }
 
     // (6) the words, the lint, the stands' list, the registry and a recording from before the table
@@ -167,19 +169,21 @@ export async function hitstuffCheck(): Promise<boolean> {
         '6 every word the picture of a hit reads is a stuff a box may say — \'glass\' and \'rubber\' among them, and never \'paint\' or \'enamel\', which are a coat on anything — the level lint takes boxes that say the two and writes them back, and a word that is no stuff at all is read as none; a recording from before the table plays with the rule down and one made with it up keeps it; the stands\' list has the row and the word, and the journal the table',
         `${(HIT_STUFFS as string[]).length} words${stale.length ? `, not a box's: ${stale.join(', ')}` : ''} · lint errors ${errs.length}${errs.length ? ` (${errs[0].msg ?? errs[0]})` : ''} · written back ${back} · a word that is none ${guarded} · applyKnobs without the table: ${before} · recorded up: ${kept} · FROZEN_HOLDS ${PR.FROZEN_HOLDS['HITSTUFF.on'] ?? 'no row'} · STAND_ENV ${SE.STAND_ENV.includes('TPS_HITSTUFF')} · journal ${KN.JOURNAL_KNOBS.includes('HITSTUFF')}`); }
 
-    // (7) a mark on a cut face lies where the round met it (render/decals.ts onCut, the page's word): on a box with a leaning face, a mark laid at a point
+    // (7) a mark on a cut face, or round a round thing, lies where the round met it (render/decals.ts onCut, the page's word): on a box with a leaning face, a mark laid at a point
     //     of that face stays there with the word up, and with it down is pulled out to the uncut box's face, centimetres off the surface
     { const { cutPlane, cutRecord } = await import(`${ROOT}/src/scene/cut.ts`), { makeBox } = await import(`${ROOT}/src/scene/boxes.ts`), D = W.game.decals;
       const h: Vec3 = [0.6, 0.27, 0.8], t = 12 * Math.PI / 180, nl: Vec3 = [0, Math.sin(t), Math.cos(t)], dl = Math.cos(t) * h[2] - Math.sin(t) * h[1];   // (the +z face leaned in 12° about its bottom edge)
       const b: any = makeBox({ c: [2, 1.2, 3], h, yaw: 0, albedo: [0.07, 0.08, 0.1] }); b.cut = cutRecord(h, [cutPlane(nl, dl)]).cut;
       const lp: Vec3 = [0.1, 0.15, (dl - nl[1] * 0.15) / nl[2]], p: Vec3 = [b.c[0] + lp[0], b.c[1] + lp[1], b.c[2] + lp[2]], flat: Vec3 = [b.c[0] + 0.1, b.c[1] - 0.26, b.c[2] + h[2]];
-      const was7 = { on: D.onCut, en: D.enabled, n: D.list.length }; D.enabled = true; let up7: any, down7: any, face7: any;
-      try { D.onCut = !BREAK; up7 = D.add('bullet', p, nl, 0.03, { clampTo: b }); face7 = D.add('bullet', flat, [0, 0, 1], 0.03, { clampTo: b }); D.onCut = false; down7 = D.add('bullet', p, nl, 0.03, { clampTo: b }); }
+      const drum: any = makeBox({ c: [5, 0.45, 3], h: [0.3, 0.45, 0.3], yaw: 0, albedo: [0.2, 0.2, 0.22] }); drum.round = true; const a30 = Math.PI / 6, nr: Vec3 = [Math.cos(a30), 0, Math.sin(a30)], pr: Vec3 = [drum.c[0] + 0.3 * nr[0], drum.c[1] + 0.1, drum.c[2] + 0.3 * nr[2]];   // (a drum's side, 30° round from the box's own axis)
+      const was7 = { on: D.onCut, en: D.enabled, n: D.list.length }; D.enabled = true; let up7: any, down7: any, face7: any, rUp: any, rDown: any, rTop: any;
+      try { D.onCut = !BREAK; up7 = D.add('bullet', p, nl, 0.03, { clampTo: b }); face7 = D.add('bullet', flat, [0, 0, 1], 0.03, { clampTo: b }); rUp = D.add('bullet', pr, nr, 0.03, { clampTo: drum }); rTop = D.add('bullet', [drum.c[0] + 0.1, drum.c[1] + 0.45, drum.c[2]], [0, 1, 0], 0.03, { clampTo: drum }); D.onCut = false; down7 = D.add('bullet', p, nl, 0.03, { clampTo: b }); rDown = D.add('bullet', pr, nr, 0.03, { clampTo: drum }); }
       finally { D.onCut = was7.on; D.enabled = was7.en; D.list.length = was7.n; }
       const off = (d: any) => d ? Math.abs((d.pos[0] - b.c[0]) * nl[0] + (d.pos[1] - b.c[1]) * nl[1] + (d.pos[2] - b.c[2]) * nl[2] - dl) : 9;
-      line(!!up7 && !!down7 && !!face7 && off(up7) < 1e-6 && v3.dist(up7.pos, p) < 1e-6 && off(down7) > 0.02 && Math.abs(face7.pos[2] - (b.c[2] + h[2])) < 1e-9 && cutRecord(h, [cutPlane(nl, dl)]).cut.length === 1,
-        '7 a mark on a cut face lies where the round met it: laid at a point of a pane\'s leaning face, with the page\'s word up it stays on that face, and with it down it is pulled out to the uncut box\'s face, centimetres off the glass, where the shader drops it; a mark on a face the cut left alone is laid on that face either way',
-        `off the leaning face: ${(off(up7) * 1000).toFixed(2)} mm with the word up, ${(off(down7) * 1000).toFixed(1)} mm with it down · on the plain face ${face7 ? Math.abs(face7.pos[2] - (b.c[2] + h[2])).toExponential(1) : '-'}`); }
+      line(!!up7 && !!down7 && !!face7 && off(up7) < 1e-6 && v3.dist(up7.pos, p) < 1e-6 && off(down7) > 0.02 && Math.abs(face7.pos[2] - (b.c[2] + h[2])) < 1e-9 && cutRecord(h, [cutPlane(nl, dl)]).cut.length === 1
+        && !!rUp && !!rDown && !!rTop && v3.dist(rUp.pos, pr) < 1e-6 && v3.dist(rDown.pos, pr) > 0.03 && Math.abs(rTop.pos[1] - 0.9) < 1e-9,
+        '7 a mark on a cut face lies where the round met it: laid at a point of a pane\'s leaning face, with the page\'s word up it stays on that face, and with it down it is pulled out to the uncut box\'s face, centimetres off the glass, where the shader drops it; a mark on a face the cut left alone is laid on that face either way; and round a drum\'s side the same — where the round met it with the word up, pulled out to the square\'s face with it down, and on its flat top as ever',
+        `off the leaning face: ${(off(up7) * 1000).toFixed(2)} mm with the word up, ${(off(down7) * 1000).toFixed(1)} mm with it down · on the plain face ${face7 ? Math.abs(face7.pos[2] - (b.c[2] + h[2])).toExponential(1) : '-'} · a drum's side: ${rUp ? (v3.dist(rUp.pos, pr) * 1000).toFixed(2) : '-'} mm from the hit with the word up, ${rDown ? (v3.dist(rDown.pos, pr) * 1000).toFixed(1) : '-'} mm with it down`); }
   } catch (e) { console.log(`- FAIL — the check threw\n    ${e instanceof Error ? e.stack : String(e)}`); all = false; }
   finally { Object.assign(HITSTUFF, was); Math.random = rnd; }
   console.log(`=== hitstuff: ${all ? 'ALL PASS' : 'FAIL'} ===`);

@@ -9,6 +9,7 @@
 // touches the DOM.
 import { scenarioQuery, type ScenarioEntry } from './scenarios';
 import { squadOfQuery, sizeWords, sizeTag, type SquadSize } from '../game/loadout';   // (pure: the loadout's size, its words and its query key — nothing of the game)
+import { HELD_PAGE_WORDS, PRICE_ASK_WORDS, RUN_PAGE_WORDS, heldPage } from '../host/runpage';   // (a leaf: the words of a run's page)
 
 // THE LIST'S GROUPS (scenarios.ts MISSION_GROUPS, ui/missions.ts groupOf): a row may name its own; without one a quiet mission is 'quiet alone' / 'quiet as
 // two' by its team, a rescue is 'on the clock' and any other squad's mission a 'raid'. (A comment over a row below that says group 'ideas' or 'more' is of the groups before 10-11: the row's own field is the fact.)
@@ -84,7 +85,7 @@ export const SCENARIOS: ScenarioEntry[] = [
     only: 'Your kit is issued for this one, so it\'s played with the full squad of four.',
     blurb: 'Two enemies at the dim far end cover the whole hall, and the only door in opens onto it. Your kit is issued for this one.' },
   // The glasshouse = glass is not cover: a floodlit forecourt, a glazed front and glass partitions with dark rooms behind (rounds pass panes: game/glasspen.ts), a blank back wall with the back door into the store; both starts are dark and out of sight.
-  // FILED UNDER 'more', not 'ideas': the list's own rule is eight rows a group at most (probes.ts missions-list) and 'New ideas' holds eight — the owner's call which row moves.
+  // FILED UNDER 'more', not 'ideas': the list's own rule is eight drawn rows a group at most (probes.ts missions-list; a row cut from the list is not counted) and 'New ideas' holds eight — the owner's call which row moves.
   // The blurb is the premise and holds for both ways in (the sheet's 'Way in' row names them). The list deals the first way (beside the building: the lit glass is the player's own decision); the back lot is his pick on that row.
   // Two squads hold it since the hand placement (Front stays in the glasshouse, Back moves), and the level issues one wall charge for the blank end wall.
   { id: 'glasshouse-four', title: 'The glasshouse', kind: 'roomclear', squad: 4, level: 'glasshouse.json', ways: ['the dark beside the building, round the corner from the glass', 'the dark back lot, on the back door'], untuned: true, group: 'raids',
@@ -164,7 +165,7 @@ export const TUTORIAL_MISSIONS: ScenarioEntry[] = [
   // once, then calls his four up and has them use theirs from the ring on the squad's key. It took the place of "The fuel stop, alone" (tut-solo, below, off the list)
   { id: 'tut-kit', title: 'The fuel stop', kind: 'roomclear', squad: 4, level: 'tut-kit.json', seed: 1, group: 'tutorial',
     hour: 'night', weather: 'clear',   // (built for the dark: its lamps are the photocell's, one of them is his to shoot out and the rest are the breaker box's)
-    place: 'A walled fuel stop on a dust road', lean: 'loud', defenders: 11, squads: true,
+    place: 'A walled fuel stop on a dust road', lean: 'loud', defenders: 6, squads: true,   // (the men on the floor as it opens, as every row counts them: its script stands five more up as the lines come to them)
     blurb: 'Go in alone and use everything you carry. Then call your squad up and have them use theirs on your order.',
     scene: 'The enemies who hit the convoy fuel their trucks at a stop down the valley, and there\'s a machine gun behind its gate. You\'ll go in ahead of your squad to take out the gun, then call them up to clear the rest.',
     teaches: ['Throw smoke, a frag and a stun grenade', 'Blow a locked door with your own charge', 'Use your rifle\'s launcher and your pistol', 'Give your squad orders from their ring', 'Cut the lights and fight in the dark'] },
@@ -209,6 +210,13 @@ export const TUTORIAL_MISSIONS: ScenarioEntry[] = [
 /** every row that is a lesson: the tutorial's missions (the seven older Training lessons were taken out 2026-10-23) */
 export const LESSON_MISSIONS: ScenarioEntry[] = TUTORIAL_MISSIONS;
 export const ALL_MISSIONS: ScenarioEntry[] = [...TUTORIAL_MISSIONS, ...SCENARIOS, ...QUIET_MISSIONS];
+/** EVERY LEVEL THE LIST DRAWS: the rows a player is shown (not `offList`), a level each in the list's order, with the rows that play on it (the first is the
+ *  one a tool opens the level by). The one answer to "which levels are on the mission list": the pricing run and the level tools ask it */
+export function listedLevels(): { level: string; rows: ScenarioEntry[] }[] {
+  const by = new Map<string, { level: string; rows: ScenarioEntry[] }>();
+  for (const e of ALL_MISSIONS) { if (e.offList) continue; const level = levelWords(e), at = by.get(level); if (at) at.rows.push(e); else by.set(level, { level, rows: [e] }); }
+  return [...by.values()];
+}
 
 /** the query keys a scenario owns: a pick replaces them, a quit drops them, everything else on the URL (?quality=, ?mute, ?hud …) rides along.
  *  (`?level=` is NOT: a scenario on the
@@ -252,7 +260,8 @@ export function quitSearch(search: string): string {
   const q = new URLSearchParams(search); for (const k of SCENARIO_KEYS) q.delete(k);
   q.delete('way');   // (the way in is ONE mission's pick — ui/missions.ts waySearch puts it on that row's link alone; it names no scenario, so it is not a SCENARIO_KEY)
   if (q.get('quietfog') !== '0') q.delete('quietfog');   // (a rung of the fog lever is a QUIET mission's pick — game/quietfog.ts puts it on a quiet row's link alone; `quietfog=0`, the rule's own off switch, is the visitor's flag and stays)
-  for (const k of ['bench', 'benchcap', 'benchrun']) q.delete(k);   // (the benchmark's words, ui/bench.ts and ui/benchrun.ts: one run on the page it was asked on, never carried onto a mission's link)
+  if (heldPage(q)) for (const k of HELD_PAGE_WORDS) q.delete(k);   // (a priced page's own words for a held picture, host/runpage.ts: the run wrote them, so they go with the run's word below)
+  for (const k of ['bench', 'benchcap', ...RUN_PAGE_WORDS, ...PRICE_ASK_WORDS]) q.delete(k);   // (a run's words — the benchmark's, ui/bench.ts and ui/benchrun.ts, and a run's page of any kind, host/runpage.ts: one run on the page it was asked on, never carried onto a mission's link)
   q.delete('cams');   // (… and the sticky cameras handed with it: the button beside the lever, on a quiet row's link alone)
   return bare(q);
 }
@@ -262,7 +271,7 @@ export function pickSearch(e: ScenarioEntry, search = ''): string {
   return scenarioQuery(e) + (rest ? '&' + rest.slice(1) : '');
 }
 /** URLSearchParams back to a query string, bare flags left bare (`?mute`, not `?mute=`) */
-function bare(q: URLSearchParams): string {
+export function bare(q: URLSearchParams): string {
   const parts: string[] = []; q.forEach((v, k) => parts.push(v === '' ? encodeURIComponent(k) : `${encodeURIComponent(k)}=${encodeURIComponent(v)}`));
   return parts.length ? '?' + parts.join('&') : '';
 }

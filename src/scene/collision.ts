@@ -1,8 +1,12 @@
 // CPU-side spatial helpers over the static boxes: circle push-out, line-of-sight, nav grid + A*.
 import { Vec3, v3, quat, hyp2, hyp3 } from '../math/vec';
-import { Box, BoxFlag, rayBox } from './boxes';
-import { cutConfig, cutClip, CUT_CLIP, MAX_CUT_PLANES } from './cut';
+import { Box, BoxFlag, rayBox, cutMet } from './boxes';
+import { cutClip, CUT_CLIP, MAX_CUT_PLANES } from './cut';
 import { WORLD } from './world';
+import { BoxMirror, MIRRORED, SENSES, FACE, NAV, senseRows, type Furniture, type PaneSource } from './boxMirror';
+import { RUST, FELL, fell, f64, u32, u8, simWhyNot } from '../sim/sim';
+import type { SimState } from '../sim/state';
+import { EXACT } from '../math/exact';
 
 /** The parameter interval [t0, t1] over which the LINE a + t·rd (rd unit) lies inside box b — t0 may be negative, behind a — or null if the line misses it; and `depth`:
  *  how far INSIDE the box the origin a sits (its least distance to a face plane; ≤ 0 = on the surface or outside). This is the whole slab picture segmentBlocked judges
@@ -30,7 +34,7 @@ export function lineBox(a: Vec3, rd: Vec3, b: Box): { t0: number; t1: number; de
     if (qa < 1e-18) { if (qc > 0) return null; }
     else { const disc = qb * qb - qa * qc; if (disc < 0) return null; const s = Math.sqrt(disc), ta = (-qb - s) / qa, tb = (-qb + s) / qa; if (ta > t0) t0 = ta; if (tb < t1) t1 = tb; if (t0 > t1) return null; }
     depth = Math.min(h[0] - Math.sqrt(ox * ox + oz * oz), h[1] - Math.abs(oy));
-  } else if (b.cut !== undefined && cutConfig.on && b.cut.length > 0) {   // CUT BOXES (scene/cut.ts): the interval inside the CUT solid, and the origin's depth under its nearest face — a cut plane included
+  } else if (b.cut !== undefined && cutMet(b)) {   // CUT BOXES (scene/cut.ts): the interval inside the CUT solid, and the origin's depth under its nearest face — a cut plane included
     if (!cutClip(b.cut, ox, oy, oz, dx, dy, dz, t0, t1)) return null;
     t0 = CUT_CLIP.t0; t1 = CUT_CLIP.t1;
     for (let k = 0; k < b.cut.length && k < MAX_CUT_PLANES; k++) { const c = b.cut[k]; if (c.n[0] === 0 && c.n[1] === 0 && c.n[2] === 0) break; depth = Math.min(depth, c.d - (c.n[0] * ox + c.n[1] * oy + c.n[2] * oz)); }   // (the planes cutClip read: ≤ MAX_CUT_PLANES, ended by a zero normal)
@@ -84,6 +88,32 @@ export const FEET_Y = 0.2, BAKE_Y = 0.25;
 const footBand = (y0: number) => UNDERFOOT.on && y0 >= FEET_Y && y0 < BAKE_Y ? BAKE_Y : y0;
 
 const shotPanes: { bi: number; t: number }[] = [];   // shotBlocked's scratch (the panes one line of fire crosses)
+/** THE CHECK'S SWITCH OVER THE RUST ROWS OF THIS FILE (tools/qa/rust-check.ts raises it; nothing else does): on = every question a row sends to the module is
+ *  ALSO answered here, the two compared, and every row of the module's copy compared with its box (boxMirror.ts stale) — `asked` questions, `differ` of them
+ *  answered differently, `stale` rows that were not their box, and the first of either in words. The game plays on the TypeScript's answer while it is on. */
+export const BOTH = { on: false, asked: 0, differ: 0, stale: 0, first: '', things: 0 };
+/** A QUESTION ASKED OUTSIDE A TICK IS ASKED OF THE MODULE TOO (the window below): `on` = it is (off = outside a tick this file's own walk answers, as it
+ *  did while a row could only be asked inside a tick); `proofs` = how many times a question outside every window had the copy proven for itself alone,
+ *  which is what a caller that asks many should open a window to save. Never a rule of play: the same answers, by `rust-check --both`. */
+export const ANYTIME = { on: true, proofs: 0, who: null as Record<string, number> | null };   // (`who`: a tool's table of who asked alone, when it wants one)
+/** the same check's count of the senses' questions the module answered, a row each (RUST.sight … paths; boxMirror.ts SENSES): a row that is on and never asked proves nothing */
+export const SENSED = { sight: 0, light: 0, smoke: 0, sound: 0, paths: 0 };
+/** …and of the rays the module answered (RUST.rays: raycast) */
+export const RAYS = { n: 0, host: 0 };
+/** …and of the searches with a penalty the module answered (RUST.paths: NavGrid.findPath; rust/sim/src/nav.rs find_priced): how many, how many times one
+ *  came back for prices, and how many cells were priced for them. `waits` = one is waiting for prices NOW: the module has one set of tables, so a search
+ *  asked from inside a price is an error, not a question */
+export const PRICED = { n: 0, needs: 0, cells: 0, waits: false };
+/** eyes one question of a sight pass can name (four bits each, and the count above them: rust/sim/src/fog.rs) */
+const SIGHT_EYES = 7;
+const bothPanes: { bi: number; t: number }[] = [];   // (the check's: the panes the module listed for the question in hand)
+/** THE WIND THE COARSE GRID'S SMOKE DRIFTS BY (`gridStep`; game/wind.ts stormDrift): the vector (m/s), its rise with height (`low` of it at the ground,
+ *  `gain` more by `fullAt` metres up) and the share of it each square metre of the plan has (0 under a roof … 1 in the open) */
+export interface GridWind { x: number; z: number; low: number; gain: number; fullAt: number; share: (x: number, z: number) => number }
+/** a sense's row by its bit (boxMirror.ts SENSES), for the count of questions the TypeScript took */
+function senseName(bit: number): string { for (const [k, v] of Object.entries(SENSES)) if (v === bit) return k; return 'a sense'; }
+/** the count of questions the TypeScript took (sim.ts FELL): the row of a rule's step, named once */
+const RULES_ROW = 'a rule\'s step (doors, furniture, leaves, thrown things)';
 export class StaticCollision {
   private cells: number[][];        // per 1m cell: static box indices whose footprint overlaps and that matter for movement
   private W = WORLD.gridW; private H = WORLD.gridH; private cs = WORLD.gridCell;
@@ -112,7 +142,7 @@ export class StaticCollision {
    *  hands the AUTHORED box, so a piece slot re-shaped inside that footprint later needs no re-registration — every query re-tests the box itself). Returns its
    *  index. The nav grid is NOT touched here: the caller rebakes the cells it changed (NavGrid.rebake). */
   addStatic(b: Box, footprint: Box = b): number {
-    const i = this.boxes.length; this.boxes.push(b);
+    const i = this.boxes.length; this.boxes.push(b); this.mirror.wroteGrid();
     if (this.stamp.length <= i) { const s = new Int32Array(Math.max(i + 1, this.stamp.length * 2)); s.set(this.stamp); this.stamp = s; }
     const f = footprint; const cs = Math.abs(Math.cos(f.yaw)), sn = Math.abs(Math.sin(f.yaw));
     const ex = cs * f.h[0] + sn * f.h[2], ez = sn * f.h[0] + cs * f.h[2];
@@ -125,8 +155,49 @@ export class StaticCollision {
   truncateStatics(n: number) {
     if (this.boxes.length <= n) return;
     for (const cell of this.cells) { let w = 0; for (let k = 0; k < cell.length; k++) if (cell[k] < n) cell[w++] = cell[k]; cell.length = w; }
-    this.boxes.length = n;
+    this.boxes.length = n; this.mirror.wroteGrid();
   }
+
+  /** THE RUST MODULE'S COPY OF THIS WORLD (scene/boxMirror.ts, which says whose the boxes are and how the copy is kept): the host's, in no snapshot. */
+  readonly mirror = new BoxMirror();
+  /** A TICK OPENS (Game.stepSeats): with a row of RUST on that asks the box world, the copy is made the boxes as they stand and the questions of this tick go
+   *  to the module; with none, nothing happens here at all. */
+  tickOpen(): void { this.stand(); }
+  /** …the copy made the boxes as they stand, for whoever opens a stretch of questions: a tick, a window, a question alone (below) */
+  private stand(): void { const M = this.mirror, S = EXACT.on ? senseRows() : 0;   // (the senses answer under the game's own maths alone: senseSet)
+     if (RUST.lines || RUST.rays || RUST.circles || RUST.fog || S || ((RUST.doors || RUST.props || RUST.slabs || RUST.items) && EXACT.on)) M.open(this.boxes, this.cells, this.tiltedAt, this.W, this.H, this.cs, this.dynamicBoxes, this.glassWalkable, this.glassPanes, RUST.lines, RUST.circles, RUST.fog, S, RUST.rays); else if (M.live) M.shut(); }
+  /** THE WORLD A RULE OF THE MODULE'S MAY STEP OVER NOW (the doors' step: game/doors.ts; the furniture's: game/props.ts): the copy, standing, with the game's own leaves `dyn` in it as they
+   *  are — or null (no tick, no copy, a level too big for it, another list in the leaves' place): the TypeScript steps. */
+  rulesWorld(dyn: Box[]): BoxMirror | null { const M = this.mirror; if (M.owes) M.again(this.boxes, this.glassWalkable); if (M.rules(dyn)) return M;
+    if (FELL.on) fell(RULES_ROW, !M.live ? this.fellWhy() : 'another list in the leaves\' place, or leaves that do not fit a list'); return null; }
+  /** …and THE PANE RULE AS A RULE'S STEP TAKES IT (a slab's and a thrown thing's rays ask it; `paneAsk` below): 0 or 1 to hand the module, or −1 — the step
+   *  is the TypeScript's, and counted as its own here, once for every rule that asks */
+  rulesPanes(): number { const ask = this.paneAsk; if (ask < 0) this.paneFell(RULES_ROW, ask); return ask; }
+  /** why the copy is not answering now, for the count of questions the TypeScript took (sim.ts FELL) */
+  private fellWhy(): string { const M = this.mirror; return M.live ? 'the row was not up when the tick opened' : !M.fit ? 'the level does not fit the copy' : 'outside a tick'; }
+  /** the foot of a span as the statics are asked it (footBand), for a rule that asks them in the module */
+  footOf(y0: number): number { return footBand(y0); }
+  /** …and shuts */
+  tickShut(): void { if (this.mirror.live) this.mirror.shut(); }
+  /** A WINDOW ON THE COPY, FOR QUESTIONS ASKED OUTSIDE A TICK. The module answers a row's questions only over a copy that has been PROVEN (every static
+   *  compared with its row: tickOpen), and a proof holds only while nobody writes a box without saying so. A tick is one such stretch. `window(fn)` is
+   *  another: the copy is proven once, `fn`'s questions go to the module, and it shuts when `fn` returns, however it returns. Inside it the tick's rule
+   *  holds: a rule that writes a static says `wrote()`. Already inside a tick or a window, `fn` just runs. A tick that opens and shuts inside `fn` shuts
+   *  the window with it (a tick's writers answer to the tick alone); what `fn` asks after that is asked alone, below.
+   *  A QUESTION OUTSIDE EVERY WINDOW IS ITS OWN (`lone`): the copy is proven for it and shut behind it. That is always right and costs a proof a
+   *  question (about 25 ns a static), so code that asks many in a row opens a window (the game's constructor, a tool's driver, a pass over the floor). */
+  window<T>(fn: () => T): T {
+    const M = this.mirror; if (M.live || !ANYTIME.on) return fn();
+    this.stand(); if (!M.live) return fn();
+    try { return fn(); } finally { if (M.live) M.shut(); }
+  }
+  /** a question alone: is the copy now standing for it (the caller shuts it behind the answer) */
+  private lone(): boolean { if (!ANYTIME.on) return false; this.stand(); if (!this.mirror.live) return false; ANYTIME.proofs++;
+    if (ANYTIME.who) { const st = (new Error().stack ?? '').split('\n').slice(3, 6).map(l => l.trim().replace(/^at /, '').replace(/\(?[^()\s]*\/(src|tools)\//, '($1/').replace(/:\d+\)?$/, '')).filter(l => !/scene\/(collision|boxMirror)\.ts/.test(l)).slice(0, 2).join(' < '); ANYTIME.who[st] = (ANYTIME.who[st] ?? 0) + 1; }
+    return true; }
+  /** A STATIC WAS WRITTEN INSIDE A TICK — its place, its size, its flags, its cut — by a rule that may be asked about again before the tick ends (a wall holed,
+   *  a pane out, a bar down, a piece of furniture gone): say so, and the copy has it. Between ticks nobody need say anything. */
+  wrote(): void { this.mirror.wrote(); }
 
   /** De-duplication of box indices met in more than one grid cell during ONE query (gather / collideCircle / segmentBlocked / raycast): a box counts as seen when
    *  stamp[bi] === the query's id. One array for the object's life instead of a Set per call — these run hundreds of times a frame (every guard's eyes, every sound,
@@ -157,6 +228,20 @@ export class StaticCollision {
   /** Indices of the movement-relevant static boxes whose grid cells overlap the XZ rectangle [x0,x1]×[z0,z1] and whose vertical span overlaps
    *  [y0, y1], written once each into `out` (no allocation — the prop solver calls this per body per substep). Returns the count (capped at out.length). */
   gather(x0: number, z0: number, x1: number, z1: number, y0: number, y1: number, out: Int32Array): number {
+    if (!this.mirror.live && RUST.circles && this.lone()) { try { return this.gatherAsk(x0, z0, x1, z1, y0, y1, out); } finally { this.mirror.shut(); } }
+    return this.gatherAsk(x0, z0, x1, z1, y0, y1, out);
+  }
+  private gatherAsk(x0: number, z0: number, x1: number, z1: number, y0: number, y1: number, out: Int32Array): number {
+    const M = this.mirror; if (M.owes) M.again(this.boxes, this.glassWalkable);
+    if (!M.circles || out.length > M.listCap) { if (FELL.on && RUST.circles) fell('circles', M.circles ? 'a list longer than the module\'s' : this.fellWhy()); return this.gatherHere(x0, z0, x1, z1, y0, y1, out); }
+    // RUST.circles, inside a tick (rust/sim/src/collide.rs): the module lists them, and the list is read into `out`
+    const n = M.x.collide_gather(M.slot, x0, z0, x1, z1, y0, y1, out.length), w = u32(), at = M.list;
+    if (BOTH.on) { const t = this.gatherHere(x0, z0, x1, z1, y0, y1, out); let ok = t === n; for (let i = 0; ok && i < n; i++) ok = out[i] === w[at + i]; this.compared(M, -1, ok, 'gather', [x0, y0, z0], [x1, y1, z1], out.length, n); return t; }
+    for (let i = 0; i < n; i++) out[i] = w[at + i];
+    return n;
+  }
+  /** gather as this file answers it */
+  gatherHere(x0: number, z0: number, x1: number, z1: number, y0: number, y1: number, out: Int32Array): number {
     const id = ++this.stampId; let n = 0;
     const cx0 = Math.max(0, Math.floor(x0 / this.cs)), cx1 = Math.min(this.W - 1, Math.floor(x1 / this.cs));
     const cz0 = Math.max(0, Math.floor(z0 / this.cs)), cz1 = Math.min(this.H - 1, Math.floor(z1 / this.cs));
@@ -175,7 +260,21 @@ export class StaticCollision {
   /** The statics a circle of radius r at (x, z) TOUCHES between heights y0 and y1 — collideCircle's own test (the same boxes skipped: runtime-hidden ones,
    *  walked-through glass), asked without moving anything. Indices into `out`; returns the count, or -1 if `out` was too short to hold them all. */
   circleTouches(x: number, z: number, r: number, y0: number, y1: number, out: Int32Array): number {
-    y0 = footBand(y0); const n = this.gather(x - r, z - r, x + r, z + r, y0, y1, out); if (n >= out.length) return -1;
+    if (!this.mirror.live && RUST.circles && this.lone()) { try { return this.circleTouchesAsk(x, z, r, y0, y1, out); } finally { this.mirror.shut(); } }
+    return this.circleTouchesAsk(x, z, r, y0, y1, out);
+  }
+  private circleTouchesAsk(x: number, z: number, r: number, y0: number, y1: number, out: Int32Array): number {
+    const M = this.mirror; if (M.owes) M.again(this.boxes, this.glassWalkable);
+    if (!M.circles || out.length > M.listCap) { if (FELL.on && RUST.circles) fell('circles', M.circles ? 'a list longer than the module\'s' : this.fellWhy()); return this.circleTouchesHere(x, z, r, y0, y1, out); }
+    // RUST.circles, inside a tick: gathered and tested in the module; `out` is left as this file's own two steps leave it (the touching ones, then what the gather had put past them)
+    const v = M.x.collide_touches(M.slot, x, z, r, footBand(y0), y1, out.length), full = v < 0, n = full ? out.length : v & 0xffff, k = full ? -1 : v >>> 16, w = u32(), at = M.list;
+    if (BOTH.on) { const t = this.circleTouchesHere(x, z, r, y0, y1, out); let ok = t === k; for (let i = 0; ok && i < n; i++) ok = out[i] === w[at + i]; this.compared(M, -1, ok, 'circleTouches', [x, y0, z], [r, y1, 0], out.length, k); return t; }
+    for (let i = 0; i < n; i++) out[i] = w[at + i];
+    return k;
+  }
+  /** circleTouches as this file answers it */
+  circleTouchesHere(x: number, z: number, r: number, y0: number, y1: number, out: Int32Array): number {
+    y0 = footBand(y0); const n = this.gatherHere(x - r, z - r, x + r, z + r, y0, y1, out); if (n >= out.length) return -1;
     let k = 0;
     for (let j = 0; j < n; j++) {
       const b = this.boxes[out[j]]; const c = Math.cos(b.yaw), s = Math.sin(b.yaw), dx = x - b.c[0], dz = z - b.c[2];
@@ -187,6 +286,20 @@ export class StaticCollision {
   }
   /** Push a circle (XZ) of radius r out of static boxes overlapping the vertical span [y0, y1]. Mutates p. */
   collideCircle(p: Vec3, r: number, y0: number, y1: number, iterations = 3): boolean {
+    if (!this.mirror.live && RUST.circles && this.lone()) { try { return this.collideCircleAsk(p, r, y0, y1, iterations); } finally { this.mirror.shut(); } }
+    return this.collideCircleAsk(p, r, y0, y1, iterations);
+  }
+  private collideCircleAsk(p: Vec3, r: number, y0: number, y1: number, iterations = 3): boolean {
+    const M = this.mirror; if (M.owes) M.again(this.boxes, this.glassWalkable);
+    if (!M.circles) { if (FELL.on && RUST.circles) fell('circles', this.fellWhy()); return this.collideCircleHere(p, r, y0, y1, iterations); }
+    // RUST.circles, inside a tick: pushed out in the module, and where it ends read back
+    const hit = M.x.collide_circle(M.slot, p[0], p[2], r, footBand(y0), y1, iterations) !== 0, m = f64(), at = M.pt;
+    if (BOTH.on) { const x = m[at], z = m[at + 1], t = this.collideCircleHere(p, r, y0, y1, iterations); this.compared(M, -1, t === hit && Object.is(p[0], x) && Object.is(p[2], z), 'collideCircle', p, [r, y0, y1], iterations, 0); return t; }
+    p[0] = m[at]; p[2] = m[at + 1];
+    return hit;
+  }
+  /** collideCircle as this file answers it */
+  collideCircleHere(p: Vec3, r: number, y0: number, y1: number, iterations: number): boolean {
     let touched = false; y0 = footBand(y0);
     for (let it = 0; it < iterations; it++) {
       let any = false;
@@ -234,8 +347,36 @@ export class StaticCollision {
   }
 
   /** GLASS BREAKING (game/glassbreak.ts): is the point p on glass static bi inside a cell that has FALLEN OUT? null = panes never open (the game as it was).
-   *  raycast lets a round through such a point (on to whatever stands beyond) and the solid segment test lets sound / a step / a line of fire through it. */
-  glassOpen: ((bi: number, p: Vec3) => boolean) | null = null;
+   *  raycast lets a round through such a point (on to whatever stands beyond) and the solid segment test lets sound / a step / a line of fire through it.
+   *  A RULE HUNG ALONE HAS NO ROWS: the TypeScript answers whatever may meet a pane (`paneAsk` −1) — a check's made-up closure, a mode's own. */
+  get glassOpen(): ((bi: number, p: Vec3) => boolean) | null { return this.paneRule; }
+  set glassOpen(f: ((bi: number, p: Vec3) => boolean) | null) { this.glassRule(f, null); }
+  /** GLASS BREAKING, THE RULE AND WHAT IT ANSWERS BY, HUNG TOGETHER (game/glassbreak.ts hangs itself; scene/boxMirror.ts PaneSource): `rows` are the panes
+   *  that are no longer whole and the burst's view in hand, as the copy can hold them, so a line or a ray of the module's judges a pane where it meets it.
+   *  One call, so the module never judges by rows that were another rule's. `rows` is a FUNCTION, as every hook the game hangs here is: the collision
+   *  keeps no object of the game's, so whatever walks a game's state finds its glass where it always was. */
+  glassRule(rule: ((bi: number, p: Vec3) => boolean) | null, rows: (() => PaneSource) | null): void { this.paneRule = rule; this.paneRows = rule === null ? null : rows; this.mirror.glassIs(this.glassPanes); }
+  get glassPanes(): PaneSource | null { return this.paneRows === null ? null : this.paneRows(); }
+  private paneRule: ((bi: number, p: Vec3) => boolean) | null = null;
+  private paneRows: (() => PaneSource) | null = null;   // (handed to the copy each time it is stood up: a world outlives its game, and holds nothing of it once shut)
+  /** …the glass is being worked on, from here to there (a blow, a blast, a step of what is coming down): the copy's panes are written again before each of
+   *  the module's answers meanwhile, and before the first one after */
+  glassBegin(): void { this.mirror.glassBegin(); }
+  glassEnd(): void { this.mirror.glassEnd(); }
+  /** …or it was written with no question of its own between (a pane made another glass, every pane made whole) */
+  glassWrote(): void { this.mirror.glassWrote(); }
+  /** …and a burst's view of the glass was put on or taken off */
+  glassViewed(): void { this.mirror.viewed(); }
+  /** THE PANE RULE AS A QUESTION OF THE MODULE'S TAKES IT: 0 = the game has none (every pane is shut) · 1 = it has one and the copy holds it · −1 = it has
+   *  one the module cannot judge by (a rule hung with no rows behind it; more broken panes, or a view of more panes, than the copy's tables) · −2 = IDLE:
+   *  the engine's maths stand in Math's place and a broken pane's pieces have to be found — by angles, and the module's are the game's own. That is the
+   *  rule of every row that works a length or an angle out (sim.ts OWN_MATHS), kept for the pane's question where it is asked, since the rows that ask
+   *  it (`lines`, `rays`) answer boxes under either maths. Below nought the TypeScript answers whatever may meet a pane; only −1 is a question the
+   *  module should have had (`paneFell`). A line that passes glass meets none, and asks with 0 whatever this says. */
+  get paneAsk(): number { const M = this.mirror; return this.paneRule === null ? 0 : !EXACT.on && !M.glassPlain ? -2 : M.glassIn ? 1 : -1; }
+  /** …a question the TypeScript took for it, counted (sim.ts FELL) where the module should have had it: never where the pane's question is idle */
+  paneFell(row: string, ask: number): void {
+    if (FELL.on && ask === -1) fell(row, `a pane's rule the module cannot judge by: ${this.paneRows === null ? 'no glass stands behind glassOpen' : 'more broken panes, or a view of more panes, than the copy holds'}`); }
   /** GLASS BREAKING: is glass static bi open along a walker's WHOLE height (every cell reaching below WALK_CLEAR_H gone)? Movement (collideCircle) and the props'
    *  gather then ignore it — the one movement rule, chosen so a man's capsule and solidBlocked never disagree about a pane he could step through; a pane holed only
    *  at head height stays the wall it was to his feet. null = never. (The nav grid is baked once at construction and is NOT rebaked: A* still routes round the frame.) */
@@ -247,8 +388,35 @@ export class StaticCollision {
 
   /** True if the segment a→b crosses one of the dynamic occluders (door leaves) — statics ignored. With `needFlags`, only occluders carrying those flag bits count. */
   segmentBlockedDynamic(a: Vec3, b: Vec3, needFlags = 0): boolean {
+    if (!this.mirror.live && RUST.lines && this.lone()) { try { return this.segmentBlockedDynamicAsk(a, b, needFlags); } finally { this.mirror.shut(); } }
+    return this.segmentBlockedDynamicAsk(a, b, needFlags);
+  }
+  private segmentBlockedDynamicAsk(a: Vec3, b: Vec3, needFlags = 0): boolean {
     const d0 = b[0] - a[0], d1 = b[1] - a[1], d2 = b[2] - a[2]; const len = hyp3(d0, d1, d2); if (len < 1e-4) return false; const il = 1 / len;
+    const M = this.mirror; if (M.owes) M.again(this.boxes, this.glassWalkable);
+    if (M.lines) {   // RUST.lines, inside a tick: the same loop over the module's copy of these leaves
+      const set = len < 1e6 && ((needFlags | 0) & ~MIRRORED) === 0 ? M.leaves(this.dynamicBoxes) : -2;
+      if (set !== -2) {
+        const r = set >= 0 && M.x.lines_leaves(M.slot, a[0], a[1], a[2], b[0], b[1], b[2], len, needFlags, set) !== 0;
+        if (!BOTH.on) return r;
+        const t = this.dynamicHit(a, d0 * il, d1 * il, d2 * il, len, needFlags); this.compared(M, set, t === r, 'leaves', a, b, needFlags, 0); return t;
+      }
+    }
+    if (FELL.on && RUST.lines) fell('lines', M.lines ? 'the leaves alone: a flag or a length the copy does not keep' : this.fellWhy());
     return this.dynamicHit(a, d0 * il, d1 * il, d2 * il, len, needFlags);
+  }
+  /** THE FURNITURE'S RAY, ANSWERED BOTH WAYS (the check's: BOTH; game/props.ts PropSystem.raycast calls this with what it answered): the module is asked the
+   *  same ray over its copy of the furniture's parts (lines.rs ray_things), the two answers are compared, and the copy with the furniture as it stands. */
+  thingsBoth(P: Furniture, ro: Vec3, rd: Vec3, tmax: number, t: { t: number; n: Vec3; prop: unknown; box: Box } | null): void {
+    const M = this.mirror; if (!M.live || M.owesBoxes || !M.things(P)) return;   // (a debt is paid by the game's own questions, never by the check's)
+    const k = M.x.lines_ray_things(M.slot, ro[0], ro[1], ro[2], rd[0], rd[1], rd[2], tmax), m = f64(), at = M.scratch;
+    const ok = k < 0 ? t === null : t !== null && P.props[k] === t.prop && Object.is(m[at], t.t) && Object.is(m[at + 1], t.n[0]) && Object.is(m[at + 2], t.n[1]) && Object.is(m[at + 3], t.n[2]) && M.thingBox(P, m[at + 4]) === t.box;
+    const st = M.staleThings(P); BOTH.asked++; BOTH.things++; BOTH.stale += st; if (!ok) BOTH.differ++;
+    if ((st || !ok) && !BOTH.first) BOTH.first = `the furniture's ray [${ro.join(', ')}] → [${rd.join(', ')}] (${tmax}, ${k}): ${ok ? '' : 'the two answers differ; '}${st} row(s) of the copy not the furniture`;
+  }
+  private compared(M: BoxMirror, set: number, ok: boolean, what: string, a: Vec3, b: Vec3, p: number, q: number): void {
+    const st = M.stale(this.boxes, this.dynamicBoxes, set) + M.stalePanes(); BOTH.asked++; BOTH.stale += st; if (!ok) BOTH.differ++;
+    if ((st || !ok) && !BOTH.first) BOTH.first = `${what} [${a.join(', ')}] → [${b.join(', ')}] (${p}, ${q}): ${ok ? '' : 'the two answers differ; '}${st} row(s) of the copy not their box or their pane`;
   }
   /** segmentBlockedDynamic's loop over the leaves for a segment already reduced to origin + unit direction (r0, r1, r2) + length — the same floats the array form
    *  made (d · (1 / len)), so segmentBlocked hands its own down instead of deriving them twice. A leaf the segment provably cannot touch (segClear) is passed
@@ -258,7 +426,7 @@ export class StaticCollision {
     const uu = r0 * r0 + r2 * r2, su = Math.sqrt(uu), lu = len * uu;   // (the segment on the floor plan: a + t · (r0, r2), t in [0, len])
     for (let i = 0; i < dyn.length; i++) {
       const db = dyn[i]; if ((db.flags & needFlags) !== needFlags) continue;
-      if (db.rot || db.round === true || (db.cut !== undefined && cutConfig.on && db.cut.length > 0)) { if (segClear(a0, a1, a2, r0, r1, r2, len, db, SEG_PAD)) continue; const hit = rayBox(a, [r0, r1, r2], db, len); if (hit && hit.t >= 0) return true; continue; }
+      if (db.rot || db.round === true || (db.cut !== undefined && cutMet(db))) { if (segClear(a0, a1, a2, r0, r1, r2, len, db, SEG_PAD)) continue; const hit = rayBox(a, [r0, r1, r2], db, len); if (hit && hit.t >= 0) return true; continue; }
       // an upright leaf stands inside the cylinder of radius |h0| + |h2| round its centre: a segment whose floor-plan line passes further off than that (the cross
       // product, no division), or whose stretch of it ends before / starts after it, cannot enter the leaf — rayBox would say no
       const c = db.c, h = db.h; const R = (h[0] < 0 ? -h[0] : h[0]) + (h[2] < 0 ? -h[2] : h[2]) + SEG_PAD;
@@ -282,6 +450,148 @@ export class StaticCollision {
    *  inside its fixture's housing, a fixture box asked from its own centre which side is open (game.ts area lights) — it is not in the way of what it emits. (The
    *  END has no such exemption: a target buried in a box is behind that box's face, as it always was — the one asymmetry left, and only for endpoints inside solids.) */
   segmentBlocked(a: Vec3, b: Vec3, shrink = 0.02, through: number = BoxFlag.Glass, panes: { bi: number; t: number }[] | null = null): boolean {
+    if (!this.mirror.live && RUST.lines && this.lone()) { try { return this.segmentBlockedAsk(a, b, shrink, through, panes); } finally { this.mirror.shut(); } }
+    return this.segmentBlockedAsk(a, b, shrink, through, panes);
+  }
+  private segmentBlockedAsk(a: Vec3, b: Vec3, shrink = 0.02, through: number = BoxFlag.Glass, panes: { bi: number; t: number }[] | null = null): boolean {
+    const M = this.mirror; if (M.owes) M.again(this.boxes, this.glassWalkable);
+    if (!M.lines) { if (FELL.on && RUST.lines) fell('lines', this.fellWhy()); return this.segmentBlockedHere(a, b, shrink, through, panes); }
+    // RUST.lines, inside a tick (rust/sim/src/lines.rs: the walk below, statement for statement, over the module's copy of the boxes). The length is worked out
+    // HERE, by the maths in Math's place, and handed over. A pane crossed where it is open is passed there, by the game's own rule over the copy's panes
+    // (glass.rs); where a line of fire is counting panes, the module lists the glass in the way that is not open — nothing solid being in the way.
+    const a0 = a[0], a1 = a[1], a2 = a[2], d0 = b[0] - a0, d1 = b[1] - a1, d2 = b[2] - a2;
+    const len = hyp3(d0, d1, d2); if (len < 1e-4) return false;
+    const set = len < 1e6 && ((through | 0) & ~MIRRORED) === 0 ? M.leaves(this.dynamicBoxes) : -2;   // (a length that is no number or no length of this world's, a flag the copy does not keep: this file's own answer)
+    const ask = (through & BoxFlag.Glass) !== 0 ? 0 : this.paneAsk;   // (a line that passes glass is stopped by no pane and asks none)
+    if (ask < 0) { this.paneFell('lines', ask); return this.segmentBlockedHere(a, b, shrink, through, panes); }
+    if (set === -2) { if (FELL.on) fell('lines', 'the leaves do not fit a list'); return this.segmentBlockedHere(a, b, shrink, through, panes); }
+    const r = M.x.lines_blocked(M.slot, a0, a1, a2, b[0], b[1], b[2], len, shrink, through, set, ask | (panes ? 2 : 0));
+    if (r === -2) { if (FELL.on) fell('lines', 'more glass on one line than the module lists'); return this.segmentBlockedHere(a, b, shrink, through, panes); }
+    const n0 = panes ? panes.length : 0, hit = r === -1;
+    if (r > 0) { const wb = u32(), wt = f64(), b0 = M.glassBi, t0 = M.glassT; for (let i = 0; i < r; i++) panes!.push({ bi: wb[b0 + i], t: wt[t0 + i] }); }
+    if (BOTH.on) {
+      const mine = bothPanes; mine.length = 0; if (panes) { for (let i = n0; i < panes.length; i++) mine.push(panes[i]); panes.length = n0; }
+      const t = this.segmentBlockedHere(a, b, shrink, through, panes);
+      let ok = t === hit;
+      if (ok && !t && panes) { ok = panes.length - n0 === mine.length; for (let i = 0; ok && i < mine.length; i++) ok = panes[n0 + i].bi === mine[i].bi && Object.is(panes[n0 + i].t, mine[i].t); }
+      this.compared(M, set, ok, 'line', a, b, shrink, through); return t;
+    }
+    return hit;
+  }
+  /** IS THE LINE TEST THIS CLASS'S OWN: a check that puts its own `segmentBlocked` or `solidBlocked` over one instance is asking for ITS lines, which the
+   *  module does not walk — so a whole question of the game's that the module would answer from its own lines (the fog's pass, a sense) is not asked there */
+  private get ownLines(): boolean { return this.segmentBlocked === StaticCollision.prototype.segmentBlocked && this.solidBlocked === StaticCollision.prototype.solidBlocked; }
+  /** RUST.fog — A SIGHT PASS OPENS (game/fogofwar.ts update): may its questions go to the module (rust/sim/src/fog.rs)? Inside a tick with the row on, where
+   *  the game's own maths stand in Math's place (the module works the lengths out itself, and they are those: under an engine's maths the TypeScript's lengths
+   *  are that engine's), with no more eyes than a question names, and the line test this class's own (`ownLines`). True = the caller writes its eyes (`sightEye`) and asks with `eyesSee`. */
+  sightOpen(n: number): boolean { const M = this.mirror; if (M.owes) M.again(this.boxes, this.glassWalkable); const ok = M.sight && EXACT.on && n <= SIGHT_EYES && this.ownLines;
+    if (!ok && FELL.on && RUST.fog) fell('fog', M.sight ? (!EXACT.on ? 'the engine\'s maths' : n > SIGHT_EYES ? 'more eyes than a question names' : 'a check\'s own line test') : this.fellWhy()); return ok; }
+  /** eye `k` of the pass: where it is, where it looks in plan and that look's length (or 1), the cosine of half its field, its near field, and whether it sees all round */
+  sightEye(k: number, pos: Vec3, look: Vec3, lookLen: number, cosHalf: number, near: number, full: boolean): void {
+    const m = f64(), o = this.mirror.eyes + k * 9;
+    m[o] = pos[0]; m[o + 1] = pos[1]; m[o + 2] = pos[2]; m[o + 3] = look[0]; m[o + 4] = look[2]; m[o + 5] = lookLen; m[o + 6] = cosHalf; m[o + 7] = near; m[o + 8] = full ? 1 : 0;
+  }
+  /** WHICH EYES HAVE A LINE: the `n` eyes named four bits each in `order` are tried in that order until `want` have one. `kind` 0 = to the point `a`; 1 = to a
+   *  man down or gone (`a` his chest: only an eye over him has one); 3 = to a living man (`a` his chest, `b` his head, asked behind a blocked chest).
+   *  The answer: how many × 2²⁸ + those eyes, four bits each in the order found; −1 = the module does not answer this one (the caller walks its own lines). */
+  eyesSee(order: number, n: number, want: number, kind: number, through: number, a: Vec3, b: Vec3): number {
+    const M = this.mirror; if (M.owes) M.again(this.boxes, this.glassWalkable);
+    if (!M.sight || ((through | 0) & ~MIRRORED) !== 0 || !(through & BoxFlag.Glass)) { if (FELL.on && RUST.fog) fell('fog', M.sight ? 'a line that may have to ask a pane, or a flag the copy does not keep' : this.fellWhy()); return -1; }   // (a line that stops at glass may have to ask the pane: this file's)
+    const set = M.leaves(this.dynamicBoxes); if (set === -2) { if (FELL.on) fell('fog', 'the leaves do not fit a list'); return -1; }
+    const r = M.x.fog_see(M.slot, set, order, n, want, kind, through, a[0], a[1], a[2], b[0], b[1], b[2]);
+    return r === -1 ? -1 : r >>> 0;
+  }
+  // ---- THE SENSES IN THE MODULE (RUST.sight / light / smoke / sound / paths: rust/sim/src/sight.rs, light.rs, smoke.rs, hear.rs, nav.rs). Each is a whole
+  // question of the game's (an eye on a man, the lamps on a point, the smoke along a line, a sound's way, a way across the floor) asked once where the
+  // TypeScript asked its lines one by one; each answers null / a number below zero where the module does not, and the caller's own statements then do.
+  /** MAY ROW `bit` (boxMirror.ts SENSES) BE ASKED THERE NOW: inside a tick with the row on, the copy standing, and the game's own maths in Math's place (the
+   *  module works its lengths out itself, and they are those), and the line test this class's own (`ownLines`). → which of the module's lists holds the leaves to ask with (−1 = there are none), or −2 = no. */
+  senseSet(bit: number): number { const M = this.mirror; if (M.owes) M.again(this.boxes, this.glassWalkable); const ok = (M.senses & bit) !== 0 && EXACT.on && this.ownLines, set = ok ? M.leaves(this.dynamicBoxes) : -2;
+    if (set === -2 && FELL.on && (senseRows() & bit) !== 0) fell(senseName(bit), ok ? 'the leaves do not fit a list' : (M.senses & bit) !== 0 ? (!EXACT.on ? 'the engine\'s maths' : 'a check\'s own line test') : this.fellWhy()); return set; }
+  /** the check's line for a sense's question answered both ways (BOTH): were the two answers one, and is the copy its boxes */
+  senseCompared(set: number, ok: boolean, what: string, a: Vec3, b: Vec3): void { this.compared(this.mirror, set, ok, what, a, b, 0, 0); }
+  /** RUST.sight — game/guards.ts eyeContact as one question: the eye `E` on a man's `chest` and `head`. `unseen` = nothing is seen whatever the lines say (he
+   *  is hidden, down or dead; the eye is out), `smoked` = the smoke between them hides him. null = the caller's own statements. */
+  eyeContact(E: { pos: Vec3; look: Vec3; range: number; halfDeg: number; nearM: number; nearDeg: number; vHalfDeg?: number }, chest: Vec3, head: Vec3, unseen: boolean, smoked: boolean, through: number): { visible: boolean; dist: number; inCone: boolean } | null {
+    if (((through | 0) & ~MIRRORED) !== 0 || !(through & BoxFlag.Glass)) { if (FELL.on && RUST.sight) fell('sight', (through & BoxFlag.Glass) ? 'a flag the copy does not keep' : 'a line that stops at glass may have to ask the pane'); return null; }   // (the caller's)
+    if (!this.mirror.live && RUST.sight && this.lone()) { try { return this.eyeContactAsk(E, chest, head, unseen, smoked, through); } finally { this.mirror.shut(); } }   // (an eye asked between ticks: a tool's, a soak's watcher)
+    return this.eyeContactAsk(E, chest, head, unseen, smoked, through);
+  }
+  private eyeContactAsk(E: { pos: Vec3; look: Vec3; range: number; halfDeg: number; nearM: number; nearDeg: number; vHalfDeg?: number }, chest: Vec3, head: Vec3, unseen: boolean, smoked: boolean, through: number): { visible: boolean; dist: number; inCone: boolean } | null {
+    const set = this.senseSet(SENSES.sight); if (set === -2) return null;   // (senseSet has counted it)
+    const M = this.mirror, e = E.pos, l = E.look, v = E.vHalfDeg;
+    const r = M.x.sight_contact(M.slot, set, through, (v !== undefined ? FACE.Q_LENS : 0) | (unseen ? FACE.Q_UNSEEN : 0) | (smoked ? FACE.Q_SMOKED : 0), e[0], e[1], e[2], l[0], l[1], l[2], E.range, E.halfDeg, E.nearM, E.nearDeg, v === undefined ? 0 : v,
+      chest[0], chest[1], chest[2], head[0], head[1], head[2]);
+    if (r === -1) { if (FELL.on) fell('sight', 'the module handed the eye back (a line too long to be one)'); return null; }
+    SENSED.sight++; return { visible: (r & FACE.A_VISIBLE) !== 0, dist: f64()[M.scratch], inCone: (r & FACE.A_IN_CONE) !== 0 };
+  }
+  /** RUST.light — guards.ts lightEstimateAt's lamps: `begin` (→ may they go to the module), then a `lamp` each that passed the caller's own gates, then
+   *  `lampsOn` the point, which leaves the six faces in `acc` (false = the caller's own loop, from the start). */
+  lampsBegin(): boolean { const M = this.mirror; M.lampSet = this.senseSet(SENSES.light); M.lampN = 0; return M.lampSet !== -2; }
+  /** the light estimate's lamps did not fit a question (`lamp` said false) and its caller's own loop runs: counted here, for that caller alone */
+  lampsFell(): void { if (FELL.on) fell('light', 'more lamps in reach of a point than a question carries'); }
+  lamp(pos: Vec3, range: number, radius: number, kind: number, dir: Vec3, outerDeg: number, innerDeg: number, color: Vec3, intensity: number): boolean {
+    const M = this.mirror; if (M.lampN >= M.lampCap) return false;   // (the estimate's caller counts it, lampsFell: the grid's sweep writes lamps here too and has no TypeScript to fall to)
+    const m = f64(), o = M.lamps + M.lampN++ * FACE.LAMP;
+    m[o] = pos[0]; m[o + 1] = pos[1]; m[o + 2] = pos[2]; m[o + 3] = range; m[o + 4] = radius; m[o + 5] = kind; m[o + 6] = dir[0]; m[o + 7] = dir[1]; m[o + 8] = dir[2]; m[o + 9] = outerDeg; m[o + 10] = innerDeg;
+    m[o + 11] = color[0]; m[o + 12] = color[1]; m[o + 13] = color[2]; m[o + 14] = intensity;
+    return true;
+  }
+  /** `shade`: the smoke's shadow (sense.ts SENSE.bounce) — each lamp no wall hides is dimmed along the line to it, under `sigma`, by the smoke of the grid
+   *  whose state is in this block (sense.ts SmokeGrid.sim) */
+  lampsOn(P: Vec3, acc: number[], shade?: SimState | null, sigma = 0): boolean {
+    const M = this.mirror; let g = 0, stamp = 0; if (shade) { g = shade.bind(); stamp = shade.stamp; }
+    if (M.x.light_estimate(M.slot, M.lampSet, M.lampN, P[0], P[1], P[2], shade ? sigma : 0, g, stamp) === -1) { if (FELL.on) fell('light', shade ? 'the module handed the lamps back (a line too long to be one, or the grid\'s smoke cannot answer)' : 'the module handed the lamps back (a line too long to be one)'); return false; }
+    const m = f64(), at = M.scratch; for (let k = 0; k < 6; k++) acc[k] = m[at + k];
+    SENSED.light++; return true;
+  }
+  /** RUST.smoke — game/sense.ts CpuSmoke.trans: `begin` (→ may it go to the module, with this many blobs), a `blob` each, then the transmittance along
+   *  a → b under the model's numbers (−1 = the caller's own loop). */
+  blobsBegin(n: number): boolean { const M = this.mirror; M.blobSet = this.senseSet(SENSES.smoke); M.blobN = 0; if (M.blobSet === -2) return false;   // (senseSet has counted it)
+    if (n > M.blobCap) { if (FELL.on) fell('smoke', 'more blobs than a question carries'); return false; } return true; }
+  blob(x: number, y0: number, z: number, r2: number, age: number, mass: number): void { const M = this.mirror, m = f64(), o = M.blobs + M.blobN++ * FACE.BLOB; m[o] = x; m[o + 1] = y0; m[o + 2] = z; m[o + 3] = r2; m[o + 4] = age; m[o + 5] = mass; }
+  blobsAlong(a: Vec3, b: Vec3, sigma: number, spread: number, widest: number, rise: number, riseRate: number): number {
+    const M = this.mirror; if (M.x.smoke_trans(M.slot, M.blobSet, M.blobN, a[0], a[1], a[2], b[0], b[1], b[2], sigma, spread, widest, rise, riseRate) === -1) { if (FELL.on) fell('smoke', 'the module handed the line back (a line too long to be one)'); return -1; }
+    SENSED.smoke++; return f64()[M.scratch];
+  }
+  // ---- THE GAME'S OWN SMOKE ON THE COARSE GRID (game/sense.ts SENSE.grid, SmokeGrid; rust/sim/src/bricks.rs). No row of RUST: the grid has no TypeScript
+  // twin, so where the module does not run, or the level's plan is larger than a grid stands on, the blobs answer as they did. The state is a part of a
+  // block in the module (sim/state.ts: the game's own, or a tool's), so a step copies nothing: it names the block and this world's copy.
+  /** the emitters handed over since the last step (x y z radius rate ttl each) join the list and `n` steps of a tenth of a second are taken, over the boxes and
+   *  leaves as they stand. The copy is the grid's to stand up: where no row of RUST has it standing for this tick, it is made the boxes as they are for
+   *  the step alone and let go again, with no question of the game's sent to it (so nobody who opens a tick has to know a grid is there). False = nothing
+   *  was done (the module does not run here, more leaves than a list holds, or no grid stands on this level): the state is as it was, the emitters not
+   *  taken.
+   *  `wind`: the smoke under the open sky drifts by this vector (m/s; sense.ts SENSE.drift), each square metre of the plan by the share of it `share`
+   *  gives (0 under a roof … 1 in the open) and by its rise with height (`low` of it at the ground, `gain` more by `fullAt` metres up), and
+   *  spreads of its own by less there (`K.inWind` of its spread where the wind blows whole). None, or a plan of more squares than the table holds: still air, the step as it was. */
+  gridStep(st: SimState, pending: readonly number[], n: number, K: { decay: number; spread: number; rise: number; riseRate: number; gone: number; inWind: number },
+    glow: { K: { albedo: number; share: number; passes: number; sweep: number }; lamps: (col: StaticCollision) => boolean } | null = null,
+    wind: GridWind | null = null): boolean {
+    const M = this.mirror; if (M.owes) M.again(this.boxes, this.glassWalkable);
+    const mine = !M.live;
+    if (mine) { if (simWhyNot()) return false; M.open(this.boxes, this.cells, this.tiltedAt, this.W, this.H, this.cs, this.dynamicBoxes, this.glassWalkable, this.glassPanes, false, false, false, 0); if (!M.live) return false; }
+    try {
+      const set = M.leaves(this.dynamicBoxes); if (set === -2) return false;
+      // (THE LIGHT THAT COMES ROUND, rust/sim/src/glow.rs: the step sweeps it from the level's steady lamps, which `glow.lamps` writes as for a question
+      // about the light. More lamps than a question carries: the field stands as it was.)
+      let lamps = -1; if (glow) { M.lampN = 0; if (glow.lamps(this)) lamps = M.lampN; }
+      // (the emitters go in the scratch, written last: the step takes them once it knows a grid stands here, so one that does nothing has taken none.
+      // A step carries as many as the scratch holds, 170, the LATEST of them: the grid's own list holds 64, and `pending` is kept to that many by
+      // whoever fills it, sense.ts SmokeGrid.emit)
+      const x = M.x, m = f64(), at = M.scratch, all = pending.length - pending.length % 6, e = Math.min(all, M.scratchLen - M.scratchLen % 6); for (let i = 0, from = all - e; i < e; i++) m[at + i] = pending[from + i];
+      // (THE WIND, bricks.rs 3b: its share a square metre, row by row, two squares to a brick's side — the plan as the grid lays it, bricks.rs step)
+      let wx = 0, wz = 0, low = 1, gain = 0, fullAt = 1;
+      if (wind && (wind.x !== 0 || wind.z !== 0)) {
+        const nx = 2 * Math.ceil(this.W * this.cs / 2), nz = 2 * Math.ceil(this.H * this.cs / 2);
+        if (nx * nz <= M.windCap) { for (let z = 0, o = M.wind; z < nz; z++) for (let i = 0; i < nx; i++) m[o++] = wind.share(i + 0.5, z + 0.5); wx = wind.x; wz = wind.z; low = wind.low; gain = wind.gain; fullAt = wind.fullAt; }
+      }
+      const G = glow?.K, g = st.bind();
+      return x.grid_step(g, st.stamp, M.slot, M.gridCopy(), set, n, e / 6, K.decay, K.spread, K.rise, K.riseRate, K.gone, lamps, G ? G.albedo : 0, G ? G.share : 0, G ? G.passes : 0, G ? G.sweep : 0, wx, wz, low, gain, fullAt, K.inWind) !== -1;
+    } finally { if (mine) M.shut(); }
+  }
+  /** segmentBlocked as this file answers it (and the whole of it wherever the module does not: outside a tick, with RUST.lines off) */
+  segmentBlockedHere(a: Vec3, b: Vec3, shrink: number, through: number, panes: { bi: number; t: number }[] | null): boolean {
     // (the CPU-frame lane, second pass: the same walk, the same boxes in the same order and lineBox's own statements over scalars — so every answer, every pane noted
     //  and every glassOpen asked is what it was — minus the work that could not change them: the direction and length derived once for the leaves and the statics,
     //  a grid cell scanned once per query (cellStamp: everything in a cell seen before is already stamped), a static's cos / sin kept by its exact yaw, and a box the
@@ -358,7 +668,7 @@ export class StaticCollision {
           const bi = cell[k]; if (stamp[bi] === id) continue; stamp[bi] = id;
           const bx = boxes[bi]; if (bx.flags & skip) continue;
           let t0 = -Infinity, t1 = Infinity, depth: number;
-          if (bx.rot || bx.round === true || (bx.cut !== undefined && cutConfig.on && bx.cut.length > 0)) {   // (CUT BOXES: a cut static takes lineBox, which holds the cut rule — the scalar copy below is the whole box's; ROUND THINGS: lineBox holds the round too)
+          if (bx.rot || bx.round === true || (bx.cut !== undefined && cutMet(bx))) {   // (CUT BOXES: a cut static takes lineBox, which holds the cut rule — the scalar copy below is the whole box's; ROUND THINGS: lineBox holds the round too)
             if (segClear(a0, a1, a2, r0, r1, r2, len, bx, pad)) continue; const s = lineBox(a, rdv ??= [r0, r1, r2], bx); if (!s) continue; t0 = s.t0; t1 = s.t1; depth = s.depth; }
           else {
             // nowhere near the segment — outside the box's height span, or its floor-plan line / stretch clear of the cylinder (|h0| + |h2|) that holds the box at any
@@ -422,6 +732,29 @@ export class StaticCollision {
 
   /** Closest static hit along a ray (t, box index) or null. Solid: an intact glass pane IS hit (a round, a canister, a spark, a shin all meet it); a broken one is not. */
   raycast(ro: Vec3, rd: Vec3, tmax: number): { t: number; index: number; n: Vec3 } | null {
+    if (!(tmax > 0)) return null;   // (A RAY OF NO LENGTH MEETS NOTHING, said once for both walks: a box is met where the ray ENTERS it, at t ≥ 0 and nearer than tmax, so none is; the walk below gave the same null, by a loop of no steps)
+    if (!this.mirror.live && RUST.rays && this.lone()) { try { return this.raycastAsk(ro, rd, tmax); } finally { this.mirror.shut(); } }
+    return this.raycastAsk(ro, rd, tmax);
+  }
+  private raycastAsk(ro: Vec3, rd: Vec3, tmax: number): { t: number; index: number; n: Vec3 } | null {
+    const M = this.mirror; if (M.owes) M.again(this.boxes, this.glassWalkable);
+    if (!M.rays || !(tmax < 1e6)) { if (FELL.on && RUST.rays) fell('rays', M.rays ? 'a ray a thousand kilometres long or longer' : this.fellWhy()); return this.raycastHere(ro, rd, tmax); }
+    // RUST.rays, inside a tick (rust/sim/src/lines.rs ray: the walk below, statement for statement, over the module's copy of the boxes and of whichever
+    // leaves stand in dynamicBoxes now). A pane met where it is open is passed there (glass.rs, the game's own rule over the copy's panes), and the ray
+    // flies on to what stands beyond, as the walk below does.
+    const ask = this.paneAsk; if (ask < 0) { this.paneFell('rays', ask); return this.raycastHere(ro, rd, tmax); }
+    const set = M.leaves(this.dynamicBoxes); if (set === -2) { if (FELL.on) fell('rays', 'the leaves do not fit a list'); return this.raycastHere(ro, rd, tmax); }
+    const k = M.x.lines_ray(M.slot, ro[0], ro[1], ro[2], rd[0], rd[1], rd[2], tmax, set, ask);
+    if (k === -2) { RAYS.host++; if (FELL.on) fell('rays', 'the module handed the ray back'); return this.raycastHere(ro, rd, tmax); }
+    let hit: { t: number; index: number; n: Vec3 } | null = null;
+    if (k >= 0) { const m = f64(), at = M.scratch; hit = { t: m[at], index: k, n: [m[at + 1], m[at + 2], m[at + 3]] }; }
+    RAYS.n++;
+    if (BOTH.on) { const t = this.raycastHere(ro, rd, tmax);
+      this.compared(M, set, hit === null ? t === null : t !== null && t.index === hit.index && Object.is(t.t, hit.t) && Object.is(t.n[0], hit.n[0]) && Object.is(t.n[1], hit.n[1]) && Object.is(t.n[2], hit.n[2]), 'raycast', ro, rd, tmax, k); return t; }
+    return hit;
+  }
+  /** raycast as this file answers it */
+  raycastHere(ro: Vec3, rd: Vec3, tmax: number): { t: number; index: number; n: Vec3 } | null {
     let best = tmax, bi = -1; let bn: Vec3 = [0, 1, 0];
     this.dynamicBoxes.forEach((db, i) => { const hit = rayBox(ro, rd, db, best); if (hit && hit.t < best) { best = hit.t; bi = 1e6 + i; bn = hit.n; } });   // index ≥ 1e6: dynamic occluder
     const id = ++this.stampId; const steps = Math.ceil(tmax / 0.5) + 1;
@@ -467,6 +800,44 @@ export class SoundPaths {
   invalidate() { this.cache.clear(); }
   /** `keep` false = the answer is not kept for the next asker (a question that is not the simulation's own — game/cues.ts overheard — leaves the cache as it found it) */
   propagate(src: Vec3, dst: Vec3, keep = true): Propagation {
+    if (PRICED.waits) throw new Error('a sound was asked for from inside the price of a search: its way round is a search, and the module has one search\'s tables (rust/sim/src/nav.rs find_priced)');   // (every time, not only when the answer is not remembered)
+    return RUST.sound && !this.col.mirror.live ? this.col.window(() => this.propagateAsk(src, dst, keep)) : this.propagateAsk(src, dst, keep); }
+  private propagateAsk(src: Vec3, dst: Vec3, keep: boolean): Propagation {
+    const r = this.propagateThere(src, dst, keep, !BOTH.on); if (r === null) return this.propagateHere(src, dst, keep);
+    if (!BOTH.on) return r;
+    const t = this.propagateHere(src, dst, keep);
+    this.col.senseCompared(this.col.senseSet(SENSES.sound), t === r || (t.direct === r.direct && t.routed === r.routed && Object.is(t.pathLen, r.pathLen) && Object.is(t.muffle, r.muffle) && Object.is(t.carry, r.carry) && same3(t.via, r.via) && same3(t.apparent, r.apparent)), 'sound', src, dst);
+    return t;
+  }
+  /** RUST.sound — the same answer from the module (rust/sim/src/hear.rs), in two questions with this file's own memory of routed answers between them: what
+   *  the straight lines say, and — walled off, near enough, and not remembered — the way round by the floor (rust/sim/src/nav.rs over the grid as it stands
+   *  now). null = `propagateHere`'s, from the start (nothing was written). `write` false = the answer is not remembered (the check's second asker). */
+  private propagateThere(src: Vec3, dst: Vec3, keep: boolean, write: boolean): Propagation | null {
+    const col = this.col, set = col.senseSet(SENSES.sound); if (set === -2) return null;   // (senseSet has counted it)
+    const M = col.mirror, x = M.x, ask = col.paneAsk; if (ask < 0) { col.paneFell('sound', ask); return null; }
+    const c = x.hear_direct(M.slot, set, ask, src[0], src[1], src[2], dst[0], dst[1], dst[2]); if (c === -1) { if (FELL.on) fell('sound', 'the module handed the straight lines back (one too long to be a line)'); return null; }
+    const straight = f64()[M.scratch]; if (c !== FACE.WALLED) SENSED.sound++;
+    if (c < FACE.OVER) { let graze = 0; if (c & FACE.GRAZE_A) graze += 0.1; if (c & FACE.GRAZE_B) graze += 0.1; return { direct: true, routed: false, pathLen: straight, via: v3.copy(src), apparent: v3.copy(src), muffle: graze, carry: 1 }; }
+    if (c === FACE.OVER) return { direct: true, routed: false, pathLen: straight, via: v3.copy(src), apparent: v3.copy(src), muffle: 0.15, carry: 0.9 };
+    const sealed = (): Propagation => ({ direct: false, routed: false, pathLen: straight * 1.5, via: v3.copy(src), apparent: v3.copy(src), muffle: 1, carry: 0.25 });
+    if (c === FACE.FAR) return sealed();
+    const nav = col.nav, cs = nav.cell;
+    const key = `${Math.floor(src[0] / cs)},${Math.floor(src[2] / cs)}>${Math.floor(dst[0] / cs)},${Math.floor(dst[2] / cs)}`;
+    const hit = this.cache.get(key); if (hit && Math.abs(this.now - hit.t) < 0.5) return hit.r;
+    if (!nav.there(M)) { if (FELL.on) fell('sound', 'a floor of more cells than the module\'s table'); return null; }
+    const k = x.hear_route(M.slot, set, ask, BoxFlag.SoundSeal, nav.W, nav.H, cs, src[0], src[1], src[2], dst[0], dst[1], dst[2], straight); if (k === -1) { if (FELL.on) fell('sound', 'the module handed the way round back (a line too long to be one, a way of more waypoints than its table)'); return null; }
+    let r: Propagation; SENSED.sound++;
+    if (k === FACE.SEALED) r = sealed();
+    else {
+      const m = f64(), at = M.scratch, L = m[at], via: Vec3 = [m[at + 1], m[at + 2], m[at + 3]];
+      const dir = v3.normalize([via[0] - dst[0], 0, via[2] - dst[2]]);
+      const muffle = k === FACE.ROUTED_DOOR ? 0.85 : 0.35;
+      r = { direct: false, routed: true, pathLen: L, via, apparent: [dst[0] + dir[0] * L, src[1], dst[2] + dir[2] * L], muffle, carry: 1 - muffle * 0.8 };
+    }
+    if (write && keep && !this.asking) this.cache.set(key, { t: this.now, r }); return r;
+  }
+  /** propagate as this file answers it (and the whole of it wherever the module does not) */
+  propagateHere(src: Vec3, dst: Vec3, keep = true): Propagation {
     const a: Vec3 = [src[0], Math.max(src[1], 0.9), src[2]], b: Vec3 = [dst[0], Math.max(dst[1], 0.9), dst[2]];
     const straight = v3.dist(a, b);
     // (solidBlocked throughout: sound does not pass a glass pane — it goes round through the door like round any wall, or through the opening once the pane is broken)
@@ -520,6 +891,7 @@ export class NavGrid {
     this.W = Math.round(WORLD.gridW * WORLD.gridCell / this.cell); this.H = Math.round(WORLD.gridH * WORLD.gridCell / this.cell);
     this.blocked = new Uint8Array(this.W * this.H);
     const p: Vec3 = [0, 0, 0];
+    col.window(() => {   // (a circle a cell, thousands of them and nothing written between: one proof of the module's copy for the lot — StaticCollision.window)
     for (let z = 0; z < this.H; z++) for (let x = 0; x < this.W; x++) {
       p[0] = (x + 0.5) * this.cell; p[1] = 0; p[2] = (z + 0.5) * this.cell;
       const q: Vec3 = [p[0], 0, p[2]];
@@ -527,6 +899,7 @@ export class NavGrid {
       // clearance must be >= the guards' movement collision radius (0.3) or steering can dead-lock on prop corners the grid calls free
       if (col.collideCircle(q, 0.34, 0.25, 1.5, 1)) { const moved = v3.distXZ(q, p); if (moved > 0.005) this.blocked[z * this.W + x] = 1; }
     }
+    });
   }
   /** WALL BREAKING (game/wallbreak.ts): the level changed inside the world rectangle [x0, x1] × [z0, z1] — re-ask the bake's own question (the constructor's
    *  statement, cell for cell) of every nav cell whose centre lies within the agent's clearance of it. Returns the cells that changed as [index, nowBlocked]
@@ -565,6 +938,70 @@ export class NavGrid {
    *  search walked round (a merge is only taken if it crosses no more penalised cells than the raw cells it replaces). Absent, nothing here differs by one
    *  instruction from the search it always was. */
   findPath(a: Vec3, b: Vec3, maxIter = 6000, penalty?: (ix: number, iz: number) => number): Vec3[] | null {
+    if (PRICED.waits) throw new Error('a way was asked for from inside the price of another search: the module has one search\'s tables (rust/sim/src/nav.rs find_priced)');
+    return RUST.paths && !this.col.mirror.live ? this.col.window(() => this.findPathAsk(a, b, maxIter, penalty)) : this.findPathAsk(a, b, maxIter, penalty);
+  }
+  private findPathAsk(a: Vec3, b: Vec3, maxIter: number, penalty?: (ix: number, iz: number) => number): Vec3[] | null {
+    if (!BOTH.on || !penalty) {
+      const r = this.findPathThere(a, b, maxIter, penalty); if (r === undefined) return this.findPathHere(a, b, maxIter, penalty);
+      if (!BOTH.on) return r;
+      const t = this.findPathHere(a, b, maxIter); let ok = (t === null) === (r === null) && (t === null || t.length === r!.length);
+      for (let i = 0; ok && t && i < t.length; i++) ok = same3(t[i], r![i]);
+      this.col.senseCompared(this.col.senseSet(SENSES.paths), ok, 'path', a, b);
+      return t;
+    }
+    // (the check's, with a penalty. The module asks the caller's function ONCE a cell; this file's search asks it at EVERY visit, as it does with the row
+    //  off. What is compared: the way; the cells each side priced, in the order it first asked for them (the module must come to need exactly the cells
+    //  this file's search reads, when it reads them); and EVERY price this file's search was given against the one the module was given for that cell,
+    //  which is the rule the module's once-a-cell rests on: a penalty gives a cell one price all through a search.)
+    const W = this.W, first = new Map<number, number>(), there: number[] = [], here: number[] = [], met = new Set<number>(); let onePrice = true;
+    const r = this.findPathThere(a, b, maxIter, (ix, iz) => { const i = iz * W + ix, v = penalty(ix, iz); there.push(i); first.set(i, v); return v; });
+    const t = this.findPathHere(a, b, maxIter, (ix, iz) => { const i = iz * W + ix, v = penalty(ix, iz), was = first.get(i);
+      if (!met.has(i)) { met.add(i); here.push(i); }
+      if (was === undefined) first.set(i, v); else if (!Object.is(was, v)) onePrice = false;
+      return v; });
+    if (r === undefined) return t;
+    let ok = onePrice && (t === null) === (r === null) && (t === null || t.length === r!.length) && here.length === there.length;
+    for (let i = 0; ok && t && i < t.length; i++) ok = same3(t[i], r![i]);
+    for (let i = 0; ok && i < here.length; i++) ok = here[i] === there[i];
+    this.col.senseCompared(this.col.senseSet(SENSES.paths), ok, onePrice ? 'priced path' : 'priced path (the penalty gave one cell two prices in one search)', a, b);
+    return t;
+  }
+  /** THE GRID AS IT STANDS, WRITTEN TO THE MODULE for one question of its search (rust/sim/src/nav.rs). False = it is larger than the module's table. */
+  there(M: BoxMirror): boolean { if (this.blocked.length > M.navCap) return false; u8().set(this.blocked, M.navShut); return true; }
+  /** RUST.paths — findPath from the module: the same search and smoothing over the grid as it stands now. undefined = `findPathHere`'s.
+   *  WITH A PENALTY the module's search stops wherever it comes to a cell it has no price for and says which (eight at most at a step of the search; a
+   *  leg's cells in the smoothing); `priceThese` asks the caller's function for exactly those, once each, and the search goes on. So the function is
+   *  called for the cells this file's own search reads, in the order it first reads them (ONCE a cell where this file's reads it at every visit: every
+   *  penalty in the game gives a cell the same price all through one search), and the module calls nothing. A search that waits is scratch of this one
+   *  call: it is resumed to its end here, or dropped if the price throws. */
+  private findPathThere(a: Vec3, b: Vec3, maxIter: number, penalty?: (ix: number, iz: number) => number): Vec3[] | null | undefined {
+    const col = this.col, set = col.senseSet(SENSES.paths); if (set === -2) return undefined;   // (senseSet has counted it)
+    if ((maxIter >>> 0) !== maxIter) { if (FELL.on) fell('paths', 'a cap on the search that is no whole number'); return undefined; }
+    const M = col.mirror; if (!this.there(M)) { if (FELL.on) fell('paths', 'a floor of more cells than the module\'s table'); return undefined; }
+    const x = M.x, ask = col.paneAsk; if (ask < 0) { col.paneFell('paths', ask); return undefined; }
+    let n: number;
+    if (!penalty) n = x.nav_path(M.slot, set, ask, this.W, this.H, this.cell, a[0], a[2], b[0], b[2], maxIter);
+    else {
+      n = x.nav_priced(M.slot, set, ask, this.W, this.H, this.cell, a[0], a[2], b[0], b[2], maxIter);
+      if (n === NAV.NEED) { PRICED.waits = true;
+        try { while (n === NAV.NEED) { PRICED.needs++; this.priceThese(M, x.nav_need(), penalty); n = x.nav_resume(); } }
+        finally { PRICED.waits = false; if (n === NAV.NEED) x.nav_drop(); } }
+      if (n !== NAV.ASK_HOST) PRICED.n++;
+    }
+    if (n === NAV.ASK_HOST) { if (FELL.on) fell('paths', 'the module handed the search back (a line too long to be one, a point that is no number, a way of more waypoints than its table)'); return undefined; }
+    SENSED.paths++; if (n === NAV.NO_WAY) return null;
+    const m = f64(), out: Vec3[] = []; for (let i = 0, o = M.way; i < n; i++, o += 2) out.push([m[o], 0, m[o + 1]]);
+    return out;
+  }
+  /** the prices the module's search has asked for (`k` cells, listed at the module's own table), from the caller's function, in the order asked */
+  priceThese(M: BoxMirror, k: number, penalty: (ix: number, iz: number) => number): void {
+    const W = this.W, want = M.navWant, price = M.navPrice;
+    for (let i = 0; i < k; i++) { const c = u32()[want + i]; const v = penalty(c % W, (c / W) | 0); f64()[price + c] = v; }   // (the views are taken anew at every cell: the function may ask the module questions of its own)
+    PRICED.cells += k;
+  }
+  /** findPath as this file answers it (and the whole of it wherever the module does not) */
+  findPathHere(a: Vec3, b: Vec3, maxIter = 6000, penalty?: (ix: number, iz: number) => number): Vec3[] | null {
     const W = this.W, H = this.H;
     const sx = clampi(Math.floor(a[0] / this.cell), 0, W - 1), sz = clampi(Math.floor(a[2] / this.cell), 0, H - 1);
     let gx = clampi(Math.floor(b[0] / this.cell), 0, W - 1), gz = clampi(Math.floor(b[2] / this.cell), 0, H - 1);
@@ -574,7 +1011,8 @@ export class NavGrid {
     // (the search's four per-cell tables are the grid's own, kept between calls in their blank state — every cell a search wrote is listed in `seen` and put
     // back as it ends — and the open list is a typed array with its own count: the same values read and written in the same order as when each call made and
     // filled five fresh arrays the size of the level, so the same pops, the same ties, the same path. A search inside a search (a penalty that asks for a
-    // path) or one after a penalty threw takes fresh tables, as it always did.)
+    // path) or one after a penalty threw takes fresh tables, as it always did: that is this file's search alone. While the MODULE's priced search waits for
+    // prices, a way or a sound asked from inside a price is an error, `findPath` and `propagate` say so, and no penalty in the game asks one.)
     let S = this.scratch; if (!S || S.busy || S.g.length !== W * H) { const fresh = navScratch(W * H); if (!S || !S.busy) this.scratch = fresh; S = fresh; }   // (nothing of the LEVEL is kept: `blocked` is read afresh by every search, and a grid of another size takes new tables)
     S.busy = true;
     const gScore = S.g, came = S.came, closed = S.closed, f = S.f, blocked = this.blocked; let open = S.open, seen = S.seen, nOpen = 0, nSeen = 0;
@@ -671,6 +1109,8 @@ export class NavGrid {
 }
 
 function clampi(x: number, a: number, b: number) { return x < a ? a : x > b ? b : x; }
+/** two points, the same to the bit */
+function same3(a: Vec3, b: Vec3): boolean { return Object.is(a[0], b[0]) && Object.is(a[1], b[1]) && Object.is(a[2], b[2]); }
 interface NavScratch { busy: boolean; g: Float32Array; f: Float32Array; came: Int32Array; closed: Uint8Array; open: Int32Array; seen: Int32Array }
 function navScratch(n: number): NavScratch { return { busy: false, g: new Float32Array(n).fill(Infinity), f: new Float32Array(n).fill(Infinity), came: new Int32Array(n).fill(-1), closed: new Uint8Array(n), open: new Int32Array(1024), seen: new Int32Array(1024) }; }
 /** how many of flags[i‥j] are set (findPath's smoothing: the dear raw cells a merged leg would replace) */

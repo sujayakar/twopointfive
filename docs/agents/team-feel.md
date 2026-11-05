@@ -315,6 +315,43 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   light it puts out, and a long one drifts (the plan lesson's check, played twice over: a third enemy alerted with it on, none with it off). KNOWN: in a dim place a man whose light is off takes his goggles down (nvg.ts, as with every other reason his light is
   off) and raises them 0.7 s after it burns again; a checkpoint does not keep the 0.3 s clock (as with the other light clocks). A man facing a mate's
   back at arm's length is not a wall and stays lit. NEVER SEEN ON A GPU; nobody has played it.
+  THE FLOOR IS NOT A WALL (11-04; `guards.ts rayEnd` / `beamWalled`, the one reading this rule and the hand torch's `torchLow` both ask). The rule
+  counted the ground as "something solid" and wanted every ray to end inside its distance. A gun at the low ready ends its beam on the ground 1.50
+  to 1.55 m from the lens, between `wallM` and `wallBackM`, so a man who brushed one wall stayed dark for the rest of his walk in the open:
+  compound-four at night, the four told to stack on the front door, 1.1 of 4 weapon lights on (`probes.ts hours-team`), and `flashweight-lights`
+  red on 19 of its 25 lines on the page's stand. Now each ray ends on one of four things inside the distance: something that stands, met above the
+  ground's band (`scene/collision.ts BAKE_Y`, what the walk grid calls floor) · the foot of such a thing, met inside the band (the ray is followed
+  as it flies while it is above the band, and from there to the ground along the band's top: a wall, a leaf or a crate is in the way down to its
+  foot; the slab, a kerb and a blast's rubble are not) · the ground (it is down in the band with nothing standing in the rest of its way) ·
+  nothing. A BEAM IS INTO A WALL WHEN ITS MIDDLE ENDS ON SOMETHING THAT STANDS AND NO RAY OF IT RUNS CLEAR; a ray on the ground is neither. So a
+  lowered gun over open floor burns (its middle is on the floor), and the same gun a step from a wall is dark (its middle on the wall, its lower
+  edge on the floor at the wall's foot). To START, the middle must be on the thing above the band; a beam that read as a wall a moment ago is HELD
+  while its middle is still on the thing's foot: that is the give a lowered beam has, where a level one has the two distances, so a man who sways
+  at the edge does not blink. For a level beam nothing changed. NO NEW SWITCH: it is what `LIGHTS.wallOff` (and `TORCH.wallLow`) mean wherever
+  they are on, so the frozen stand, where both are off, does not reach it. `WALLFLOOR_BREAK=1` (QA only) is the rule as it was.
+  CHECKS: the lights' checks read a beam with `tools/qa/beam-reading.ts` (the game's own `beamFan` / `beamRayEnd` handed in, after the step, judged
+  only where the beam is plain at a 0.15 m margin either side of a rule's distance). `light-wall` 10 of 10 on both stands; its new line lays 1776
+  beams by hand at the rule's two distances and the torch's two: plainly into a wall 48 / 61 / 37 / 53, plainly open 1675 / 1669 / 1701 / 1675,
+  middle on a foot 23 / 30 / 5 / 23, none read otherwise by the rule; 310 / 599 of the open ones are beams the rule as it was called walls.
+  `WALLFLOOR_BREAK=1` fails that line on both stands, and `hours-team`, 'it burns again at once' and 19 lines of `flashweight-lights` on the page's.
+  `hours-team` on the page's stand: 1.1 → 2.2 of 4 burning, and the other 1.8 are put out for a REAL wall (every dark man's beam has its middle
+  on the compound's south wall: they walk along it with their guns on their mark, through it). The line now counts such a man — the wall rule is
+  what put his light out (`guards.ts wallPutOut`) and his beam is not plainly open — beside the lit ones, wants one burning at least, and wants
+  none so counted at midday. (Later the same day `TEAMPACE.walkAim`, further down this file, took the guns off that wall on the walk: on the page's stand the line
+  reads 4.0 of 4 burning and counts no such man; the allowance is what holds it green with `?walkaim=0`.) `flashweight-lights` on the page's stand: 24 of 25; it excuses the same man the same way, and for up to four frames
+  more with a door leaf in reach of his lens (a leaf he pushes moves after he is posed, so the rule relights a frame or two after the picture's
+  leaf has moved: 0 to 4 man-frames a scenario, every one a gun straight down beside a leaf). The one red line left is the barracks ('lit
+  through the search 119 of 126'), the lit-place rule's and the same with `TPS_WALLLIGHT=0`: the row in `expected-red.ts` says so. `torch-wall`
+  7 of 7 on both stands. MEASURED: the 21 missions' play-throughs on seeds 1 and 2 (`PT_DIGEST=1 playthrough.ts`), before against after. The page's stand: 30 of 42 runs
+  differ by digest (a light is in the simulation), 3 of them in their end, men or seconds (room-clear-four seed 2 wiped → taken with one man;
+  barracks-four seed 2 taken with three men at 165 s where one stood at 81 s; Mousehole seed 2 a second sooner), teammates standing 71 → 74 of
+  148; two seeds are no tally. The frozen stand, seed 1: 21 of 21 the same.
+  KNOWN: the squad is still dark for much of a walk ALONG a wall, rightly by this rule and wrongly to the eye: the men aim at their mark through
+  the wall beside them (walking man-frames dark for a real wall in `flashweight-lights`: warehouse 753 of 1389, compound 563 of 1602, kill house 471 of 1436). That is the aim's to mend, not the light's. A gun
+  pointed straight down in the open now lights a small patch at his own feet where it was dark. A recording made on the page before this replays
+  with the mended rule and drifts from its first relit light. The hand torch hangs more (`docs/agents/enemies.md`, its bullet: 420 → 636 man-frames of 27000 in `torch-wall`'s night). The real page boots on the software
+  adapter with the rule on, takes the stack order and steps three seconds with no page error; it could not be stepped further in reasonable time.
+  NEVER SEEN ON A GPU; nobody has played it.
 - **An IR light on the goggles** (`src/game/irlight.ts`, 10-15; the maintainer, of a depot whose rooms were flat black noise through the tube: "maybe we should
   model IR lights on the nvg so even totally dark rooms are visible. and we can assume enemies never have nvg"). SWITCH `IRLIGHT.on`: ON in the page
   (`?noirlight` puts it off), OFF in the module and on the frozen stand (`TPS_IRLIGHT=1` raises it; `FROZEN_HOLDS`, standup pin, standEnv); registered in
@@ -955,6 +992,88 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   a teammate's sprint with his kit on has never been looked at, nor the gun going low into it; nobody has played it; 0.8, the follower's 1.3, the six
   seconds back from a grenade and the cover run's numbers are first numbers; the play-through tool's player never sprints, so the tallies show no follower's
   run (the staged check does); the cover run fired 20 times in 126 runs and nobody has watched one.
+- **Nobody sprints to a stack** (`TEAMPACE.doorBrisk`, 10-28: ON in the page — `?doorbrisk=0` — OFF in the module and on the frozen stand,
+  `TPS_DOORBRISK=1`; a `FROZEN_HOLDS` row, `STAND_ENV`; journal: a recording whose TEAMPACE row has no such key replays with it off; Tab ▸ Team feel ▸
+  "teammates ▸ no sprint to a stack"; not on the three pin lists, which do not name TEAMPACE at all and run where the team's pace is off). The
+  maintainer, of a fight on the pass: "weird really fast squad movement / sprinting that didn't make sense", and asked where, "in a fight running to
+  stack up on a door". WHAT IT WAS: the run to cover above (`teamDash`), taken on the way to a door — a stack mark is out of the enemy's line by its
+  nature, so with loud in his ears a man on floor a known enemy has a line on ran the leg at the player's sprint (4.7 m/s to a walk of 1.24), gun
+  low. Scripted runs of pass-four as shipped, seeds 1‥6: 8 runs to cover on 4 of the 6 seeds, every one on a `stack` order at the tea room's door,
+  2 to 6 m each. THE RULE: `orders.ts` tells `teamDash` when the man's order is `stack` with a door (the plain order's stack and a door tool's); for
+  him the same question (`teamDashNow`, nothing about WHEN changed) answers with the fight's pace (`PACE.max` 2.2, under `runAt`, so the gun stays
+  up and fires) under the fight's leave, and no run is written. NOT CHANGED: a `move` order to a spot on the floor, a man sent off a charge, rear
+  security and a man covering an opening keep the run to cover; a wall charge's stand-off (no door on the order) too. A man at 2.2 m/s is heard as
+  a jogger is (`teamTread` 0.8), not as a walker. CHECK `bun run tools/qa/doorbrisk-check.ts` (`probes.ts doorbrisk`, in family `squadorders`;
+  both stands — it raises the team's pace and the squad's picture itself; `DOORBRISK_BREAK=1` must fail, one red line): the found case staged on
+  the tea room's door (rule off: 5.0 m at up to 4.67 m/s, 74 frames at a run, there in 1.82 s; on: top 2.20, never at a run, there in 3.10 s; the
+  fight cold: walked in 4.87 s), a move order across the same floor still runs, the journal three ways. MEASURED, page's stand, `playthrough.ts`
+  `play()`, seeds 1‥6, on against `TPS_DOORBRISK=0`: pass-four runs to cover 8 → 0, taken 6 of 6 either way, men up 18 of 24 either way (three
+  seeds move a man, one up two, two down one); compound-four the same end and men up on every seed (7 of 24), runs to cover 5 → 3 (the three left are
+  not on a stack order). Twelve runs a side is no tally of deaths: the team pace bullet's finding (more men lost walking to a door) is not re-asked.
+  The real page (`shipped-page.cjs`, software adapter) stands on the same switches as the shipped stand with the row on. NOT SEEN: never on a GPU,
+  never played; whether 2.2 m/s with the gun up reads as a hurry or still as too fast is the maintainer's to say (the card offered him a walk, and
+  keeping the sprint).
+- **A teammate paces himself on the player, and the flat 0.8 is gone from his walk** (`TEAMPACE.pacing`, 10-29: ON in the page — `?pacing=0` — OFF in
+  the module and on the frozen stand, `TPS_PACING=1`; a `FROZEN_HOLDS` row, `STAND_ENV`; journal: a recording whose TEAMPACE row has no such key replays
+  with it off; Tab ▸ Team feel ▸ "teammates ▸ pace themselves on you" and "pacing: only within this many meters of you"; knobs `paceNear 12, paceGap 1,
+  paceCos 0.5`). The maintainer, of pass-four with the squad split for two wall charges: the second team "walk[ed] very slowly to it"; then his rule:
+  "maybe we do something where if you're walking with the squad but behind them, they slow down to let you catch up (and match your speed when you're
+  ahead of them?)" — "and then we remove the static 0.8 multiplier". WHAT IT WAS: nothing slower than the team's flat walk was found (staged: both pairs at
+  1.24 m/s, 22 s from the start to the wall); no recording of his run reached the backend. THE RULE (`teamWalkOf`, read by `teamCap` in `teamWalk`'s place
+  and nowhere else): a teammate's walk is the PLAYER'S walk (1.55). It is `k` × the player's pace (the old flat share at most, half of it at least) only
+  while the player is within `paceNear` of him, `paceGap` or more further from his order's mark (`Assignment.post`, straight lines) than he is, and
+  walking after him (within 60° of the line to him). It is the player's own pace, never over the fight's 2.2 and never over what the order asks of his
+  legs (`ORDERS.brisk` 2.0), while the player is that much nearer the mark and bound for it faster than a walk. A man with no mark gets the player's walk
+  as his cap; a follower's paces are `teamFollow`'s and did not move (his 'close' leave stands over the cap). SO ALSO, read not staged: the silent and
+  the unseen squads' own caps (1.6) now bind an ordered leg where 1.24 did, so a quiet squad sent to a mark walks at the player's walk; the player's
+  pace is the one his legs are asked for (`char.vel`), so pressed against a wall he still counts as moving; a mark round a corner can misjudge behind
+  and ahead (the cost is 1.24 where 1.55 was meant, or the other way). CHECK `bun run tools/qa/pacing-check.ts` (`probes.ts pacing`, in family
+  `squadorders`; both stands — it raises the team's pace itself; `PACING_BREAK=1` must fail, three red lines): the found case walked (off: 22.3 m at
+  1.24, there in 21.0 s; on: at 1.55, there in 17.1 s), ten placings of the player asked of `teamWalkOf` and `teamCap` (and the flat share in all ten
+  with the rule off), the leg walked with the player kept three seconds of the man's track behind him (his top 0.98 while that lasts, the share of the pace the player had then; there in 22.2 s), the
+  journal three ways. HELD: `teampace-check.ts` reads this rule as the stand has it — the two lines that read a sent man's walk ask the stand's
+  walk (the player's own with the rule on, the flat share with it off), the other twelve hold either way; `teampace-page.cjs`'s bound follows the switch. `probes.ts` holds it off for `leafstall` and `noshove` on every stand (`PACE_AS_IT_WAS`): each has a FAULT arm staged at the flat walk (the tread against the open leaf lasts 0.7 s at the player's walk, not 1.5; the entry that stands a man across the player lands otherwise), and their mend lines are green with the pace on. `doorbrisk-check.ts` reads `teamWalkOf` for its walk. The header rule in CLAUDE.md was
+  reworded to match. MEASURED, page's stand, `playthrough.ts` `play()`, seeds 1‥6, on against `TPS_PACING=0`: pass-four taken 6 of 6 either way, men up 18 of 24 either way; compound-four taken 3 of 6 either way (not the same three), men up 9 of 24 on, 7 off. Twelve runs a side: no tally of deaths. Family `squadorders`: frozen all pass (45 probes); the page's stand red only on the lines that were red before it (orders-cover 1, orders-stack 4). `rails` passes on both stands. The real page (`shipped-page.cjs`, `teampace-page.cjs`, software adapter) passes with the row on. NOT SEEN: never on a GPU, never played; the walk ahead of the men was asked of the
+  cap, not walked; whether slowing to 0.8 of his pace is enough for him to catch up comfortably is his to say.
+- **On the walk to a mark a teammate looks where he walks until he can see what he was sent to watch** (`TEAMPACE.walkAim`, 11-04: ON in the page —
+  `?walkaim=0` — OFF in the module and on the frozen stand, `TPS_WALKAIM=1`; a `FROZEN_HOLDS` row, `STAND_ENV`; journal: a recording whose TEAMPACE row
+  has no such key replays with it off; the debugger ▸ Team feel ▸ "teammates ▸ look where they walk"; knobs `walkAimOff 0.25, walkAimOn 0.5`). The other
+  half of the weapon lights at a door (the wall rule's floor paragraph, above): with the floor no longer a wall, the compound's night stack still had 1.8
+  of its 4 lights out for a REAL wall, because the men walked along the south wall with their guns on the door, through it. WHAT IT WAS: an order that
+  sends a man to a mark hands him its watch point from his first step, and `orders.ts tick`'s walking carriage ("the gun up and leading",
+  `Assignment.move`, while he is more than 0.6 m off his mark) carried the gun on that point through whatever stood between. THE RULE (`teampace.ts
+  walkLead`, asked in ONE place, `orders.ts tick`): in the walking carriage, with the order's OWN watch in hand and no line from his gun's height to
+  short of it (0.5 m: a door's leaf stands in its frame), the tick hands his gun a point 3 m straight ahead of his chest instead and takes the
+  side-step off (he walks his path facing it, not with his chest to a point he cannot see); once the line has been clear for `walkAimOn` the watch is
+  his again, and it is given up only after the line has been shut for `walkAimOff` (a jamb passing does not flick the gun). IN IT: every order with a
+  walking carriage and a watch — a stack, a walk to a door, the rescue flow's cover marks, a lane to cover, a stand-off from a charge. NOT IN IT, and so
+  as they were: a point the unasked cover dealt him (`cover.ts`: its own sight test and its own keeping), `spotted.ts`'s, the fight's
+  (`GuardScript.over`), every leg of an entry or a slice (`doortools.ts`: no walking carriage, their point is the corner the muzzle leads him round
+  to), a plain 'move there' (no walking carriage either: its last steps are as they were), and every drill (`squad.ts` is not touched). The enemies are
+  not in it at all: it is asked only of a man under an order of the orders system. Two forms were tried first IN THE SCRIPT RUNNER (every aim point of
+  every walking teammate) and are out: review measured that they took the gun off an entry's corner (first corner ticked 0.30 s after the frame became
+  0.55 to 1.38 s) and the play-throughs' twitch tally rose by a third (114 → 157), most of it men whose gun the cover had; in this form an entry reads
+  the same off and on, frame for frame (room-clear-four and compound-four, three doors each). WITH IT: by the game's own muzzle rule (`guards.ts
+  muzzleCheck`) a man walking behind a mate with his gun ahead lowers it, so on the walk to a stack more guns are at the low ready (compound-four 52 →
+  60 in 100 walking man-frames, room-clear-four 44 → 63, warehouse-four 54 → 57; a mate in the gun's line 40 → 49, 37 → 58, 35 → 47), where before
+  they were up and into the wall. A man held short of his mark (off a jamb, at a handle) with no line to his watch also has his gun ahead of his chest.
+  CHECK `bun run tools/qa/probes.ts walk-aim` (`walkaim-probes.ts`, family `squadorders`; both stands — it raises the rule itself; `WALKAIM_BREAK=1`
+  must fail, and does on both): five scenarios, the floor emptied, fall in, stack on the nearest held door; of each man's walking frames, how many have
+  something standing inside 1.5 m along the gun with the gun neither along the way his feet have just carried him nor on his order's point in plain
+  sight. Page's stand, off → on: compound-four 569 → 15 of 1402, warehouse-four 610 → 10 of 1131, killhouse-four 187 → 24 of 819, room-clear-four
+  180 → 0 of 2166, rescue-registry 0 → 0 of 1172; frozen stand with the rule raised: 452 → 0 of 1025, 461 → 5 of 755, 118 → 0 of 653, 139 → 0 of
+  1706, 1 → 0 of 899. The bar is 5 in 100. Told apart and reported beside the count: the stack's rear man with his gun on an opening the cover dealt
+  him (7 to 48 man-frames a walk, with the rule on or off: the cover's to answer for). A second line holds the other side: a man who has had his
+  order's point in plain sight for a second has his gun on it (0 late frames in all five on both stands; with `walkAimOn` put to 60 s by hand the same
+  line reads 17 to 206 late and is red in all five). `hours-team` on the page's stand: the compound's night stack reads 4.0 of 4 weapon lights burning
+  (with `TPS_WALKAIM=0` it is the 2.2 burning and 1.8 put out for a real wall of the floor paragraph, still green by that line's allowance, which the
+  rule leaves unused). The row `walk-aim` is out of `expected-red.ts`. MEASURED: the 21 missions' play-throughs on seeds 1 and 2 (`PT_DIGEST=1
+  playthrough.ts`), this rule against the floor mend. The page's stand: 33 of 42 differ by digest, 9 in their end, men or seconds; ends taken 24 →
+  26, wiped 10 → 8, rescued 5 → 4 (rescue-registry seed 1: rescued with two men → lost), lost 3 → 4; teammates standing 74 → 75 of 148; hostiles
+  left 55 → 52; the watcher's smells: twitch 114 → 120 (1.14 → 1.16 in 100 man-seconds), unaware 14 → 17, flag 5 → 5, block 2 → 3. Two seeds: not a
+  tally. The frozen stand, seed 1: 21 of 21 the same by digest. FAMILIES on the page's stand, the rule against its parent: `squadorders` (48 probes) moves only in `walk-aim`'s own lines, red → green; `noshove`'s room keeper line is red on both with the same numbers (not listed, not this rule's); `cover` (72 lines) and `doortools` (266 lines) pass on both. `light-wall` 10 of 10 on both stands, `torch-wall` 7 of 7 and `flashweight-lights` 24 of 25 (the listed barracks line) on the page's. The real page (software adapter) boots with the row on: the four take a stack order on the compound, 4 of 4 weapon lights on for three game-seconds, no page error. NOT SEEN: never on a GPU, never played; the real page was only booted on the software adapter. Whether a file with its guns
+  lowered behind one another reads right, whether 3 m ahead is where the gun should lead, and whether half a second is the right beat before the gun
+  comes onto a door he has just seen, are the maintainer's to say in play. THE OFF BRANCH retires with the switch cleanup's batches after "all on".
 - **The goggles' eyepiece edge is off** (10-23; the maintainer: "i think the NVG oval is a bit much since it obscures a lot of the screen. let's try
   removing it."). A TRY, his word. The dark oval post.wgsl drew round the tube's picture (`radial` 0.62 → 0.95 to black) is now an amount,
   `passes.nvOval` 0‥1 (`PostParams.nvOval`, the uniform's twelfth word), 0 as the page opens: the picture runs to the screen's edge. To compare:

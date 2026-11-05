@@ -39,7 +39,8 @@
 // What it is NOT: no man added, no hit point, no better aim, no dice of its own (the one roll is the round's own spread, drawn by fireWeapon for a burst from a corner), nothing an enemy could not have seen or been told. Only defenders in
 // a room fight (team 'hostile' units while the fight is live); never the night game, a show, or a teammate (he is under orders). `LANES.on` off = nothing here
 // runs = the build by run digest; the frozen harness stand holds it off (TPS_LANES=1).
-import { SideMap, SideSet } from '../math/side';
+import { isManId, manById, men } from './seats';
+import { SideMap, SideSet, GameSideMap } from '../math/side';
 import { Vec3, v3 } from '../math/vec';
 import type { Game, Guard, GameEvent } from './game';
 import type { Item } from './throwables';
@@ -207,7 +208,7 @@ interface State {
   /** rounds that passed a living man who had not noticed them yet (LANES.roused): counted if his senses have them inside `reactSecs`, else forgotten. Not saved */
   near: { gd: Guard; from: Vec3; at: Vec3; who: number; t: number }[];
 }
-const states = new SideMap<Game, State>('lanes.states');
+const states = new GameSideMap<Game, State>('lanes.states');
 const fresh = (): State => ({ lanes: [], serial: 0, mask: null, ver: 0, own: new SideMap(), seen: new SideSet(), banged: new SideSet(), push: new Map(), flank: new Map(), flankOf: new Map(), dropped: new SideSet(), failT: new SideMap(), skip: false, held: new Map(), cans: [], roll: 0, due: [], look: new SideMap(), post: new SideMap(), backT: new SideMap(), saidT: -100, t: -1, tickT: 0,
   stats: { lanes: 0, known: 0, unknown: 0, held: 0, rerouted: 0, backedOut: 0, round: 0, stuns: 0, pushes: 0, lapsed: 0, peeks: 0, peekThere: 0, peekClear: 0, peekLost: 0, pins: 0, pinRounds: 0, pinLost: 0, sets: 0, goes: 0, frags: 0, fragLost: 0, fragKept: 0 }, peek: new Map(), reloads: new Map(), fragNo: new SideMap(), near: [] });
 const S = (g: Game): State => { let st = states.get(g); if (!st) { st = fresh(); states.set(g, st); } return st; };
@@ -230,7 +231,7 @@ const laneE = (L: Lane): number | undefined => LANES.glass && L.e > 0 ? L.e : un
 /** his own senses have the fire: roused already, a round since `t` rattled him (suppression.ts files it), a man of the team in his sight, gunfire in his ears */
 const roused = (g: Game, gd: Guard, t: number) => gd.state === 'alert' || gd.state === 'search' || gd.awareness >= 0.3 || gd.sup.srcT >= t - 1e-6 || gd.lastSeenT >= t - 1 || (gd.witness.heard.lastShotT >= 0 && gd.witness.heard.lastShotT >= t - 2.5);
 const flanking = (g: Game, st: State, gd: Guard) => { const t = st.flank.get(gd); if (t === undefined) return false; if (g.time < t && gd.state !== 'dead') return true; st.flank.delete(gd); if (st.flankOf.get(gd)?.phase !== 'set') st.flankOf.delete(gd); return false; };
-const upId = (g: Game, id: number) => id === g.player.char.id ? g.player.char.alive : g.guards.some(o => o.char.id === id && o.state !== 'dead');
+const upId = (g: Game, id: number) => isManId(id) ? !!manById(g, id)?.char.alive : g.guards.some(o => o.char.id === id && o.state !== 'dead');
 const defOf = (g: Game, gd: Guard) => g.fight.defs.find(d => d.gd === gd) ?? null;
 const note = (g: Game, gd: Guard | null, what: string) => { const F = g.fight; F.log.push({ t: g.time, who: gd ? gd.callsign : '-', what: `[lanes] ${what}` }); if (F.log.length > 600) F.log.splice(0, 200); };
 
@@ -293,7 +294,7 @@ function cost(g: Game, st: State, from: Vec3, at: Vec3, man: Guard, down: boolea
   L.from = v3.copy(L.guns[L.guns.length - 1]);
   L.weight += down ? 1 : K.roundK; if (down) L.downs++; L.lastT = g.time;
   L.who.add(who); L.moved.delete(who);
-  if (K.glass) { const c = who === g.player.char.id ? g.player.char : g.guards.find(o => o.char.id === who)?.char, e = c ? shotEnergy(g, c) : undefined; if (e !== undefined && e > L.e) L.e = e; }   // (the gun in his hands as the round left: what a pane is to this lane)
+  if (K.glass) { const c = manById(g, who)?.char ?? g.guards.find(o => o.char.id === who)?.char, e = c ? shotEnergy(g, c) : undefined; if (e !== undefined && e > L.e) L.e = e; }   // (the gun in his hands as the round left: what a pane is to this lane)
   // THE GUNS HAVE MOVED: a gun that made another lane has now cost them from well away from it — once all of that lane's have, it is not held for long
   for (const X of st.lanes) if (X !== L && X.who.has(who) && X.guns.every(m => flat(m, from) > K.movedM)) { X.moved.add(who); if (X.moved.size >= X.who.size) X.until = Math.min(X.until, g.time + K.movedSecs); }
   if (down && L.known) note(g, man, `lane ${L.id}: another down in it (${L.downs})`);
@@ -559,12 +560,12 @@ function bangs(g: Game, st: State) {
 /** one of the other side, on his feet, that a man looking from `eye` has a line to within `peekNearM` of where a lane's fire came from: where he stands (null =
  *  nobody). A LINE, not his eyes' own verdict: a man there in the dark counts as seen, so the dark never makes a lane 'clear' (cautious, and said so on the page). */
 function gunsManned(g: Game, L: Lane, eye: Vec3): Vec3 | null {
-  const K = LANES, pc = g.player.char;
+  const K = LANES;
   const at = (c: Guard['char']): Vec3 | null => {
     if (!L.guns.some(m => flat(m, c.pos) < K.peekNearM)) return null;
     return !g.col.segmentBlocked(eye, c.bones.head ?? v3.add(c.pos, [0, 1.65, 0])) || !g.col.segmentBlocked(eye, c.bones.chest ?? v3.add(c.pos, [0, 1.1, 0])) ? c.pos : null;
   };
-  if (pc.alive && isHostile(SIDE, teamOfId(g, pc.id))) { const p = at(pc); if (p) return p; }
+  for (const pl of men(g)) { const pc = pl.char; if (pc.alive && isHostile(SIDE, teamOfId(g, pc.id))) { const p = at(pc); if (p) return p; } }
   for (const o of g.guards) if (o.state !== 'dead' && !o.held && isHostile(SIDE, o.team)) { const p = at(o.char); if (p) return p; }
   return null;
 }
