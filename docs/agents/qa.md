@@ -436,10 +436,26 @@ but synthetic writes still work.
   line whose place printed other lines of the run too). THE PROOF OF A RUN is not the tool's: both
   typechecks; the page's stand run for run the same before and after (`TPS_PROFILE=shipped PT_DIGEST=1 bun run tools/qa/playthrough.ts --seeds 1-2 --json f`:
   42 digests); the frozen stand after = the frozen stand before with the retired rows' words raised; and the family's checks run before and after on the
-  page's stand, line by line, where a line that went from PASS to FAIL is an arm of the retired path and is taken out by the place it was printed from:
+  page's stand, line by line, where a line that went from PASS to FAIL needed the retired path and is sorted by kind (below):
   `bun run tools/retire/lines.ts run <dir> [--tree <the tree before>] <the check files the fold's report names>` before and after, `lines.ts diff <before>
   <after> --drop places.json`, `retire.ts --drop-lines places.json --write`, and `run` once more. (`diff` also says a check that DIED after the fold, one
-  that throws exits 1 as a red check does, and does not count a line that was red before under other words.) After a fold that took a row with a slider
+  that throws exits 1 as a red check does, and does not count a line that was red before under other words.) THE SORTING (2026-11-05; measured on the
+  squad's family: 96 rows, the play digests equal, and 538 lines PASS to FAIL in 131 commands): a red line is not always an arm of the retired path. FIRST,
+  before the fold, `lines.ts run <dir> --pin rows.json --importers <files>` on the tree as it stands: `RETIRE_PIN=<rows.json>` (tools/qa/headless.ts) holds
+  the listed rows at the page's values whatever a check, the stand or a recording writes, so the pinned run's red lines are the ones that need a retired
+  path, by the check's own staging and nothing else. The fold's own run of the same checks must then say the same lines but for the stand's and the
+  recording's: a red after the fold that is green under the pins is the FOLD'S fault (two were found that way, both in tools and both now the tool's own
+  cases: an `Object.assign(TABLE, kept, { row })` that lost its kept source, and a set of rows handed to a child's `--set` that kept the retired key).
+  `--importers` adds every check that imports a file given: a changed rig reaches the checks that stand on it, and the fold's report names only the
+  files it wrote in. What the pin does NOT reach: a check that never loads the harness (it is said, `NOT PINNED`, and listed in `<dir>/not-pinned.txt`:
+  its lines say nothing of the pins; `PINNED IN PART` = some of the list's rows are in no table the harness knows); a row marked `hold` in the list (it loses only its frozen line and stays a knob a tool writes); a `--set` written
+  as a JSON string (the fold says where: a note, by hand). The pin's own check: `bun run tools/retire/pin-check.ts` (`PINCHECK_BREAK=1` must fail).
+  THEN, by kind: a line that held a retired row off only to STAGE a question that still stands on the page is restaged the game's own
+  way and must still be able to fail (helpers in headless.ts: `fightStarted(game)` where a check held the unfound squad's hold off, `doorTried(game, door,
+  step)` where one held the door test off); a stand's line, a recording's line, a line whose question was "off is the build as it was" and a `--set` arm
+  for a row that is gone are taken out (`--drop-lines`); a line that set a rule's on half against its off half keeps the on half as a line of its own; a
+  check goes whole only where its ROUTE is gone from the page, and is moved where its question survives. A red line NEVER SAID BEFORE (`diff`: NEW RED) is
+  a staging that failed ("a door to stage it on") and is never in the drop list: taken out, it leaves the check silent where it should be red. After a fold that took a row with a slider
   out: `bun run tools/gen-scene-notes.ts` (the scene panel's notes are keyed by row). WHAT GOES THAT WAY, by kind: the stand's and the journal's
   lines, the off arm, the on arm measured against the off arm ("a quarter of those metres"), and the lines of a check that held a newer rule off for its
   length; in the first fifteen checks of the squad's family that was 65 of 147 lines. A check left saying nothing goes whole (`--drop`). THE TOOL'S OWN CHECK:
