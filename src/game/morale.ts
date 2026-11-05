@@ -31,7 +31,7 @@
 //   · A REAL SIGHTING ENDS IT, for good: an enemy plainly in his eyes anywhere but at the hole — or anywhere at all once the long burst is spent — and he is
 //     the fight's man again (roomfight.ts / guards.ts); he does not turn back to the hole. Nothing here touches health, aim, skill or a reaction beat: his
 //     reactT runs on under the duck as under a head-down.
-//   · WHO DRIVES HIM: while a sequence has him (`moraleOwns`) guards.ts runs this file's GuardScript for the frame the way it runs frag.ts's flee — his own
+//   · WHO DRIVES HIM: while a sequence has him (`OWN.morale`) guards.ts runs this file's GuardScript for the frame the way it runs frag.ts's flee — his own
 //     script, state and fix stand exactly as they were — and the room fight's defender tick yields. His ears are kept open (hearingCheck), his gun is out, and
 //     a frame on which the floor's own rules would take him to 'alert' is left to them: he calls his CONTACT and raises what any man at that awareness raises.
 // TRAINING (the maintainer, 10-13: "more poorly trained ones could get really scared"; "harder settings have better trained guys … higher morale"): every man
@@ -77,6 +77,7 @@ import { feedBegin } from './gunreload';
 import { isHostile, teamOfId } from './teams';
 import { w, wg } from './words';
 import { runnerNobody } from './runner';   // (asked inside a tick only: false with its switch off)
+import { claimMan, releaseMan, ownerWitness, OWN } from './owner';
 
 /** the switch and its numbers: off in the module, raised by the page (host/profile.ts pageSwitches; ?nomorale = every man as steady as he was) and by the shipped
  *  stand; the harness's frozen stand leaves it off (TPS_MORALE=1 turns it on). Dread is 0‥1: `jumpy` / `broken` are the rungs' lines, `hyst` how far under its
@@ -125,6 +126,7 @@ interface Mind { shock: number; alone: boolean; dark: boolean; lit: number; ask:
   act: MoraleAct; t: number; hole: Vec3 | null; goal: Vec3 | null; rounds: number; next: number; calls: number; callT: number; baits: number; atHole: boolean; bark: number; shout: boolean;
   drive: boolean; driveT: number; script: GuardScript; }
 const stateOf = new SideMap<Guard, Mind>('morale.stateOf');
+ownerWitness('morale', gd => MORALE.on && !!stateOf.get(gd)?.drive);
 /** a game's blasts not yet asked about (they are asked the frame after: see the head) */
 interface Blast { at: Vec3; t: number; who: number }
 const blastsOf = new SideMap<Game, Blast[]>('morale.blastsOf');
@@ -301,7 +303,7 @@ export function moraleBlast(g: Game, at: Vec3, who = 0) {
 }
 /** a restart (game.ts clearAftermath, beside frag.ts's): a blast filed and not yet asked about is the old floor's — the fresh shift is not shaken by it.
  *  `men` (the debugger's switch put off): every man's dread, rung and sequence are dropped too, so that the switch put back on starts clean */
-export function moraleReset(g: Game, men = false) { blastsOf.delete(g); if (men) for (const gd of g.guards) stateOf.delete(gd); }
+export function moraleReset(g: Game, men = false) { blastsOf.delete(g); if (men) for (const gd of g.guards) { stateOf.delete(gd); releaseMan(gd, OWN.morale, g.time); } }
 /** one filed blast, the frame after: shock to every man of ours in its reach, each man's rung, and what each does about it — the nearest ducker says so, and a
  *  leader with a green man of his on the floor beside him stands over him (the head: LEADER AND GREEN MAN) */
 function feed(g: Game, b: Blast) {
@@ -433,7 +435,7 @@ function pose(gd: Guard, S: Mind, rooted: boolean) {
  *  blasts filed since last frame are fed, the rungs are read, and every man in a sequence is taken a step through it. A return on its first line with the
  *  switch off. */
 export function moraleTick(g: Game, dt: number) {
-  if (!MORALE.on) return;
+  if (!MORALE.on) { for (const gd of g.guards) releaseMan(gd, OWN.morale, g.time); return; }
   const K = MORALE, k = Math.pow(2, -dt / K.halfLife);
   for (const gd of g.guards) {
     if (!ours(gd) || rescued(g, gd)) { stateOf.delete(gd); continue; }
@@ -449,6 +451,8 @@ export function moraleTick(g: Game, dt: number) {
     S.rung = rungNow(gd, S);
     if (S.act !== 'none') step(g, gd, S, dt);
   }
+  // who this file's script has this frame, as it stands when the sequences have all been stepped (runner.ts may yet let go of one: moraleRelease)
+  for (const gd of g.guards) { if (stateOf.get(gd)?.drive) claimMan(gd, OWN.morale, g.time); else releaseMan(gd, OWN.morale, g.time); }
 }
 /** one frame of a man's sequence: decides the act, fires its rounds, says its lines, and whether this file's script has him this frame */
 function step(g: Game, gd: Guard, S: Mind, dt: number) {
@@ -533,7 +537,6 @@ export function moraleScript(g: Game, gd: Guard): GuardScript | null {
   return S.script;
 }
 /** has a sequence of this file's got him (the other drivers yield: roomfight.ts tickDef) — as of the last tick */
-export function moraleOwns(gd: Guard): boolean { return MORALE.on && !!stateOf.get(gd)?.drive; }
 /** his dread, 0‥1 (0 with the switch off or a man never met) */
 export function dreadOf(gd: Guard): number { if (!MORALE.on) return 0; const S = stateOf.get(gd); return S ? dread(gd, S) : 0; }
 /** his dread while an event's shock is still on him, 0 otherwise — dialogue.ts agitationOf reads it, so that a shaken man's words and his body agree (where he
@@ -577,7 +580,7 @@ export function moraleFromQuery(q: URLSearchParams) {
   MORALE.nerve = nv(q.get('nerve')) ?? nv(k.nerve) ?? 'normal';
 }
 /** runner.ts: the man is that file's from here (he drops it and runs) — whatever sequence has him ends where it stands; his dread and his rung are left as they are */
-export function moraleRelease(gd: Guard) { const S = stateOf.get(gd); if (S && (S.act !== 'none' || S.drive)) end(S); }
+export function moraleRelease(g: Game, gd: Guard) { const S = stateOf.get(gd); if (S && (S.act !== 'none' || S.drive)) end(S); releaseMan(gd, OWN.morale, g.time); }
 
 // ---------------------------------------------------------------- checkpoints (game/savestate.ts): each man's dread and sequence by roster index, and the blasts not yet asked
 export interface MoraleSnap { men: (number[] | null)[]; holes: (number[] | null)[]; blasts: number[][] }
@@ -594,6 +597,7 @@ export function moraleSnapshot(g: Game): MoraleSnap | undefined {
 export function moraleRestore(g: Game, s: MoraleSnap | null | undefined) {
   const f = (x: unknown, d = 0) => typeof x === 'number' && Number.isFinite(x) ? x : d;
   g.guards.forEach((gd, i) => { const M = s?.men?.[i], H = s?.holes?.[i];
+    releaseMan(gd, OWN.morale, g.time);   // (a run loaded has nobody on a script of this file's until its first tick)
     if (!M) { stateOf.delete(gd); return; }
     const p3 = (o: number): Vec3 | null => H && Number.isFinite(H[o]) ? [H[o], H[o + 1], H[o + 2]] : null;
     stateOf.set(gd, { shock: clamp(f(M[0]), 0, 1), alone: !!M[1], dark: !!M[2], lit: f(M[3]), ask: Math.max(0, f(M[4])), rung: (M[5] === 2 ? 2 : M[5] === 1 ? 1 : 0), green: !!M[16], leaderDown: !!M[17], fall: f(M[18], -1), by: g.guards[f(M[19], -1)] ?? null, heard: f(M[20], -1), said: !!M[21], lost: !!M[22], brokeT: Math.max(0, f(M[23])), act: ACTS[f(M[6])] ?? 'none', t: Math.max(0, f(M[7])), hole: p3(0), goal: p3(3),

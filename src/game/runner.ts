@@ -177,7 +177,7 @@ function lost(g: Game, gd: Guard): boolean {
 function start(g: Game, gd: Guard, from: Vec3) {
   const c = gd.char;
   claimMan(gd, OWN.runner, g.time); stateOf.set(gd, { phase: 'say', t: 0, from: [from[0], 0, from[2]], goal: null, mate: null, told: 0, unseen: 0, at: v3.copy(c.pos), stall: 0, isOut: false, tries: 0, plan: 0, face: null, bold: false, bare: false, drive: false, driveT: -1, script: { goal: null } });
-  moraleRelease(gd); gd.reloadT = -1; c.anim.cancelReload(); gd.weapon.burst = null;   // (the magazine change he was in ends with it: the count and the clip both)
+  moraleRelease(g, gd); gd.reloadT = -1; c.anim.cancelReload(); gd.weapon.burst = null;   // (the magazine change he was in ends with it: the count and the clip both)
   bark(g, gd, 'done'); RUNNER_STATS.said++;
 }
 /** A LATER SLICE'S SEAM: start the sequence on this man directly (a broken man whose leader is killed in his view), whatever his magazine holds and whoever
@@ -334,7 +334,7 @@ export function runnerTick(g: Game, dt: number) {
 /** one frame of a man's run */
 function step(g: Game, gd: Guard, S: Run, dt: number) {
   const K = RUNNER, c = gd.char;
-  moraleRelease(gd); if (gd.reloadT >= 0) { gd.reloadT = -1; c.anim.cancelReload(); }   // (a blast since may have begun morale.ts's sequence on him again: it is let go of before it has said or fired anything)
+  moraleRelease(g, gd); if (gd.reloadT >= 0) { gd.reloadT = -1; c.anim.cancelReload(); }   // (a blast since may have begun morale.ts's sequence on him again: it is let go of before it has said or fired anything)
   if (S.phase === 'say') {
     if (!reacts(g, gd)) { stateOf.delete(gd); releaseMan(gd, OWN.runner, g.time); return; }   // (Sam's arm, a show — before the gun left his hand: nothing has happened)
     S.t += dt; if (S.t < K.beatSecs) { drive(g, gd, S); return; }
