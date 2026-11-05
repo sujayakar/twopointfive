@@ -264,6 +264,72 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   room, 4 through), no page error; under `?hungcharge=0` the same charge opens nothing and the board hangs on. NOBODY HAS SEEN IT on a GPU and nobody has
   played it: the stills (`STILLS=<dir>`, `EXTRA='hour=midday&wallsafe=0'`, the camera on the charge's side facing the wall) are the software adapter's
   at verylow; the picture goes dark between about 0.3 and 0.7 s after the blast in them, as after any wall charge (not looked into here).
+- **What is painted on a wall goes with the wall** (`src/game/wallskin.ts`, `WALLSKIN`, 2026-11-05; found by the office's hand pass: a 2.2 m blast on
+  four partitions took the vent over the hole and left every painted band from the floor hanging across its foot, and a length of conduit that carries a
+  branch hanging across the breach with its clips gone). A level's walls carry drawn-only boxes on their faces (the look kit's `skirt` and `dado`, a
+  damp foot, a mend, a stripe, conduit, card boards and the papers on them). `wallbreak.ts hangers` takes what is MOUNTED on the stretch that opened, only
+  from 0.25 m up, only once half of what holds it is gone, and only what rests on nothing: so a band from the floor, a long stripe over a short hole and a
+  conduit run resting on its own branch stayed whole, paint and pipe in the air and a man walking through them. ONE RULE, WHEREVER A SKIN STARTS AND
+  WHATEVER IT RESTS ON: an authored static that is drawn and nothing else (NoShadow), no deeper than `thick` 4 cm across one of its level axes and no
+  thinner up than across, lying square on a face of a wall this engine opens (a partition, or a hard wall a charge took on), proud of that face and its
+  near side within `off` 1 cm of the face or of the outer side of another skin already on it (a coat over a coat: a mend over a dado, a paper on a card
+  board), is drawn only where that wall still stands behind it. Over each cell that has opened it is cut square at the cell's edge, and the rest stays on
+  the standing wall. By what the box is and where it lies: no piece's name, no kit, no group, no level. Every way a cell opens comes through `openCells`
+  (rounds, a blast, a charge on a hard wall, a collapse, a checkpoint's load), and that is the one place it is told (`skins.opened`); a band along two
+  walls is cut by both. HIDDEN, NOT THROWN, AND NO FLAG WRITTEN: the authored box is left out of the picture by `BoxWorld.undrawn` (`scene/boxes.ts`: the
+  world's own list of what it draws; `staticDrawn(i)` asks it, `boxDrawn` reads a box's flags alone and does not know), and what stands of it is handed to
+  the frame's dynamic list as boxes of its paint under a key of their own (`MKEY.skin`: the fog of war passes them as it passes a wall device,
+  `fogofwar.ts THING_PASS`; the look's word says they do not move, `BoxWorld.packBox`, so a stuff laid in place is mapped by the world as on the authored
+  box). Nothing falls, nothing enters the debris pool, no counter of the lane's is drawn from, and the simulation reads every box exactly as it did:
+  what the hangers throw, they throw as before (a skin they take is hidden by its flags and its pieces go with it). A TOOL THAT ASKS "IS THIS BOX GONE"
+  BY ITS FLAGS will say a cut band stays: ask `game.destr.walls.skins.cut.has(i)`. WHY 1 CM AND NOT THE HANGERS' 8: measured over all 59 levels on the
+  shipped stand, every thin drawn-only sheet that stands 1 to 12 cm off a wall with no skin under it is the face of something SOLID mounted there (a
+  paper on a solid board, a label on a shelf, a rack's rail): cut, the paper would go and the board stay. BY THE RULE AS IT STANDS: 1356 skins in 50 of
+  the 59 levels (504 on partitions, 852 more on walls a charge could take on); 878 from the floor, 279 deeper than 2 cm (conduit, clips, card boards),
+  79 standing on another skin, 91 on more than one wall, 8 with a cut shape, 37 with markings. NOT A SKIN: anything a ray meets (a solid board, a shelf: the hangers'), a
+  thing deeper than `thick` (a duct, a case), a sheet lying flat, a tilted, round or glowing box, a fixture's or a light's box, the lane's destructibles,
+  and anything on a piece of COVER (a crate against a wall would claim the wall's band). A SKIN THAT CARRIES MARKINGS (a band with stripes, a number on a plate, a sign: 37 in the levels, two of them from the floor, on the office) is cut
+  where the wall is with every mark where it was: a marking is laid out in whole texels from the middle of the box's face, so what stands of such a skin
+  is THE WHOLE BOX AGAIN (same middle, same size, same markings) under a cut record of the rectangle that stands, four planes at most (`scene/cut.ts`),
+  not a smaller box. That needs the cut switch, which is what draws a record (on in the page; off on the frozen stand): with it off, or on a shaped box
+  with no room for four more planes, a marked skin is left as it was, nothing standing on it is cut, and it is counted (`stats.uncut`). A plain skin
+  that says a cut shape is cut into smaller boxes, each under the shape's own planes. CAPS: `perSkin` 12 pieces of one skin, `maxPieces` 256 in all; past either a skin is cut by whole columns (fewer, taller pieces:
+  the sill under a port is given up) and past that left as it last stood (`stats.coarse`, `stats.capped`). KNOWN SEAMS: the cut is square at the column's
+  edge, where the wall's standing piece ends, and `edgeLook.ts`'s plates stand up to a hand into the opening past it in the wall's own paint, bare of the
+  band; a card board cut at a hole's edge is a board sawn square; a skin the hangers throw AFTER it was cut comes off as the whole box it was authored as
+  (the pool's chunk is not this rule's to size); the pieces are packed with the frame's boxes every frame (256 at most); a stuff that is the box's own
+  (cloth, boards) is laid on each piece afresh. `thick` 0.04 takes conduit, its clips and a card board with the paint; anything deeper is the hangers' as before. THE SWITCH:
+  `WALLSKIN.on`, ON in the page (`?wallskin=0` = the bands as they were), OFF in the module and on the frozen stand (`FROZEN_HOLDS`; `TPS_WALLSKIN=1`
+  raises it there), in the registry and the journal (a recording from before the table replays with it down). State hangs off the Game
+  (`destr.walls.skins`: walked by a snapshot, dropped by `reset()`, re-derived by a checkpoint's load); the world's list is written again every frame
+  (`skins.boxes`), so a tick put back leaves nothing stale. No row in `dress.ts` (edgeLook has none either): a host that draws nothing still runs it.
+  IT TAKES THE PLACE OF `scene/lookTidy.ts lookTidy` on the page: that hid the look's floor decals WHOLE with a holed wall's box (a hole in one cell
+  bared the wall's foot along its length), only on a level in the look's paints, only on the page, and by writing their flags (so the page's boxes and
+  the harness's differed after a blast). The page calls it now only under `?wallskin=0`; it goes when the switch is retired. THE RUST ROWS: the cut
+  lives in TypeScript, in the picture's part of the tick (the walls' cells are read where `wallbreak.ts` opens them; no row computes anything it
+  writes), and the check passes with the stands' seventeen rows on and with all eighteen raised (`TPS_RUST<ROW>=1`).
+  THE CHECK: `tools/qa/wallskin-check.ts` (probe `wallskin`, family destruction; `WALLSKIN_BREAK=1` must fail, 15 lines; both stands, and each with the
+  cut switch the other way: `CUTBOXES=1` on the frozen stand, `CUTBOXES=0` on the shipped one). It lays its own paint, conduit, board and marked band on
+  the office's walls and asks, by an oracle that knows nothing of the rule's rectangles (every skin's face sampled every
+  23.7 mm against `BoxWorld.visible` after the world's own upload and against the wall's cells), after a blast, a second beside it, rounds for a port and
+  then the sill under it, a checkpoint's load, a tick put back, a charge on a hard wall and a blast on each of two walls in one line: no point drawn over
+  an open cell, none over standing wall lost; and PLAY IS ONE RUN on two floors, the rule up and down, at all ten stages (digest, cells, the feed's
+  serial, the lane's hash counter, the debris and its places, the count of statics, every authored box's flags). `tools/qa/wallskin-page.cjs` asks the
+  heart of it of the real page (headless Chromium, the software adapter), on and under `?wallskin=0`, with stills (`STILLS=<dir>`). `hole-watch.ts`
+  (every play-through's JSON, `destr.skins`) says how many skins a run cut, so "no digest moved" can say whether the rule was met.
+  MEASURED (11-05, on the joined tip the change was cut on; 42 scripted play-throughs = 21 scenarios, seeds 1 and 2, `PT_DIGEST=1 playthrough.ts --seeds 1-2`):
+  SHIPPED stand, the rule up against down (`TPS_WALLSKIN=0`), and each against the tree before the change: 42 of 42 digests the same every way; a wall
+  opens in 3 of those runs and the rule cuts 10 skins in them (3 with nothing left standing; 11 pieces). SHIPPED with every held room taken by a wall
+  charge where one fits (`PT_DESTR=1 PT_WALL=1`), up against down: 42 of 42 the same; a wall opens in 30 of the runs and the rule is met in 23 (50
+  skins cut, 14 of them with nothing left standing, 81 pieces standing at the runs' ends, no cap reached, none left uncut). FROZEN stand, as it stands
+  (down) against the tree before, and raised (`TPS_WALLSKIN=1`) against down and against the tree before: 42 of 42 each; destruction is off on that
+  stand, so no wall opens there and the rule is never met. ON THE PAGE (`wallskin-page.cjs`, the block's room clear at midday, a 5.6 m partition with
+  three bands from the floor to 0.85 m, two blasts): with the rule, 5460 sampled points of band over open cells and none drawn, none lost over standing
+  wall, 4 skins cut into 8 pieces, no page error; under `?wallskin=0` the bands are as they were before the rule (gone whole from the holed wall on that
+  level, by `lookTidy`; hanging across the hole on a level it does not know).
+  THE FAMILIES `wallskin wallbreak outerwall hungcharge fog-things shapes cleanrestart statediff journal-knobs shipped wallfurn wallreact` green on both
+  stands with it, `rollback-check` on both, `dress-check`. No tour, no soak.
+  NOBODY HAS SEEN IT ON A GPU and nobody has played it: the stills are the software adapter's at verylow.
 - **A blast's pall: a wall charge, a hand grenade and a 40 mm raise a real cloud of dust and smoke** (`CHAOS.pall`, `destruction.ts`, 10-14; his words:
   "i'd also expect much more dust/smoke from a wall charge" / "same goes for 40mm" / "and frag"). BEFORE: a blast raised the bullet's puff a few times over
   (`CHAOS.puff`: radius 0.2, a third of a second, under the round's caps of 2 a frame and 8 a second) and `WALL_BLAST.dust`, particles the picture alone

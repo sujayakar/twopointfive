@@ -52,6 +52,7 @@ import type { ShedBudget } from './breakTable';
 import { WallWear } from './wallwear';
 import { messOpened } from './floormess';
 import { leafRound } from './doorblast';
+import { WallSkin } from './wallskin';
 
 // ------------------------------------------------------------------ knobs
 export const WALLS = {
@@ -179,10 +180,13 @@ export class WallBreak {
   private ghosts: number[] = [];
   /** LOOK ONLY (wallwear.ts): what a cell shows while it is being shot — marks that grow with its count, on both faces of a thin wall */
   readonly wear = new WallWear();
+  /** LOOK ONLY (wallskin.ts): what is painted on a wall's face is drawn only where the wall still stands behind it. It writes nothing this module reads */
+  readonly skins: WallSkin;
 
   constructor(private g: Game, private destr: Destruction) {
     this.authored = g.col.boxes.length;
     this.index();
+    this.skins = new WallSkin(g, this.authored, j => this.fixtureBoxes.has(j) || !!this.destr.itemOf(j));
   }
 
   // ---------------------------------------------------------------- index
@@ -383,6 +387,7 @@ export class WallBreak {
     if (B.hard) for (const c of opened) this.shellGaps.add(c);
     WALL_STATS.navOpened += opened.length;
     this.destr.edgeLook.opened(B, fresh, cause, dir, quiet);   // (picture only: edgeLook.ts)
+    this.skins.opened(B);   // (picture only: wallskin.ts — the paint on the stretch that opened is cut with it)
     if (!quiet && (cause === 'fire' || cause === 'collapse')) messOpened(g, [x0, z0, x1, z1]);   // (picture only: floormess.ts — a blast lays its own, wider)
     const row = this.note({ kind, cause, id: B.id, pos, rect: [x0, z0, x1, z1], opened, walkable: opened.length > 0, sight: true, dead, who });
     WALL_LOG.push(`${g.time.toFixed(2)} ${kind} ${cause} #${B.id} cells ${fresh.length} (${B.nOpen}/${B.open.length}) nav+${opened.length}${dead ? ' DEAD' : ''}`); if (WALL_LOG.length > 200) WALL_LOG.splice(0, 100);
@@ -751,7 +756,7 @@ export class WallBreak {
   // ---------------------------------------------------------------- reset / checkpoints
   /** The level put back (Destruction.reset): authored boxes as they were, every appended static cut off, the nav grid re-baked. Nothing at all when nothing broke. */
   reset(silent = false) {
-    const g = this.g; this.counter = 1; this.wear.reset(); this.hungNow = null; this.hungGone.clear();
+    const g = this.g; this.counter = 1; this.wear.reset(); this.skins.clear(); this.hungNow = null; this.hungGone.clear();
     const letGo = () => { this.shellGaps.clear(); if (this.list.some(B => B.hard)) { for (const B of this.list) if (B.hard) this.owner.delete(B.id); this.list = this.list.filter(B => !B.hard); } };   // (a hard wall is the run's, not the level's: adopt)
     if (!this.dirty && g.col.boxes.length === this.authored) { letGo(); return; }
     for (const [i, f] of this.hidden) g.col.boxes[i].flags = f; this.hidden.clear();

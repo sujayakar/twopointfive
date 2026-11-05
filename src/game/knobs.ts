@@ -149,6 +149,8 @@ export const JOURNAL_KNOBS: readonly string[] = ['AIM', 'TAPSTEP', 'TRAINED', 'A
   'MARKCUT',
   // a blast's marks sit in the surface (render/decals.ts MARKSIT; a picture only): a recording made with it on draws its scorches and films of dust that way, one with no table for it as they were drawn before the rule
   'MARKSIT',
+  // the paint on a wall goes with the wall (wallskin.ts WALLSKIN): picture only — a recording made with it on shows its holed walls' bands cut, one from before shows them whole
+  'WALLSKIN',
   // round things are round (scene/round.ts ROUND): a recording made with it on has its drums and tyres round to every ray and foot, one from before has the kit's octagons
   'ROUND',
   // a box says its shape (scene/shapes.ts SHAPES): a recording made with it on has its vehicles' corners, bonnets and glass cut to every ray, one from before has the plain boxes
@@ -284,6 +286,7 @@ import { LIGHTSWITCH } from './lightswitch';
 import { CARLAMPS } from './carlamps';
 import { HITSTUFF } from './particleFx';
 import { MARKCUT, MARKSIT } from '../render/decals';
+import { WALLSKIN } from './wallskin';
 import { CLEANRESTART } from './cleanrestart';
 import { FIRELINE } from './fireline';
 import { SAVETIMELINE } from './savestate';
@@ -372,6 +375,8 @@ export function knobRegistry(): Record<string, object> {
     // a mark on a cut or a round face lies where the round met it (render/decals.ts): where a mark is drawn, never whether one is laid
     MARKCUT,
     MARKSIT,
+    // the paint on a wall goes with the wall (wallskin.ts): the switch, what counts as a skin (how thick, how far off the face) and the caps on its standing pieces
+    WALLSKIN,
     CLEANRESTART,
     // off the line of his fire (fireline.ts): whether a teammate on an order waits short of the lane the player is firing down, how long, and the way round — where every ordered man walks reads them
     FIRELINE,

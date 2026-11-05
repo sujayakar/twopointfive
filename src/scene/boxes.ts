@@ -152,7 +152,7 @@ export interface Box {
  *  maxBoxes ≤ 65534 (the visible word keeps 1 + index in 16 bits, 0xFFFF = new).
  *  `look` is more than a motion identity: a box keyed in its byte is PICTURE ONLY for the CPU's world ray whatever its flags say (BoxWorld.raycast, lookKeyed
  *  below) — key nothing there that a cursor, an order, a laser or a tripwire should land on. */
-export const MKEY = { door: 1 << 24, prop: 2 << 24, item: 3 << 24, rig: 4 << 24, device: 5 << 24, ring: 6 << 24, test: 7 << 24, debris: 8 << 24, look: 9 << 24 } as const;   // debris: the destruction lane's rigid chunks (game/debris.ts), keyed off their serial · look: what a broken wall looks like where it broke (game/edgeLook.ts: plates, lintels, rubble)
+export const MKEY = { door: 1 << 24, prop: 2 << 24, item: 3 << 24, rig: 4 << 24, device: 5 << 24, ring: 6 << 24, test: 7 << 24, debris: 8 << 24, look: 9 << 24, skin: 10 << 24 } as const;   // debris: the destruction lane's rigid chunks (game/debris.ts), keyed off their serial · look: what a broken wall looks like where it broke (game/edgeLook.ts: plates, lintels, rubble) · skin: what stands of the paint on a holed wall (game/wallskin.ts: the authored static × 16 + piece)
 /** a LOOK piece (keyed MKEY.look): drawn and lit, in no collision list — a round, an eye and a boot pass through it. Most are NoShadow; under the cut switch the
  *  bigger ones drop that flag so LIGHT's rays meet them and they cast the shadow they draw, which would also hand them to the CPU's ray: this is how it tells */
 const lookKeyed = (b: Box): boolean => b.dress === true || (b.mkey !== undefined && b.mkey >>> 24 === MKEY.look >>> 24);   // (or a piece of DRESSING under another key: Box.dress)
@@ -230,6 +230,12 @@ export class BoxWorld {
   /** PICTURE ONLY, the renderer's own: dynamic boxes left out of the RASTER this frame (still packed, still what every reader of the list sees, never written) — the squad's
    *  weapon lasers while composite draws them as light in the air (engine.ts ← passes.setBeams, settings.beamAir). null = none, the list drawn as ever. */
   hidePrimary: Set<Box> | null = null;
+  /** STATICS LEFT OUT OF THE PICTURE WITH NO WORD IN THEIR FLAGS (game/wallskin.ts: the paint on a holed wall, drawn as its standing pieces instead): a static
+   *  whose index this holds is not rasterised. Picture only, like trim's rule (trimDrawn): every flag the game and the rays read stands as it was, and
+   *  `boxDrawn` (what a box's own flags say) does not know of it — ask `staticDrawn(i)` for what the list holds. null = none. */
+  undrawn: { has(i: number): boolean } | null = null;
+  /** is static `i` in the picture: drawn by its own flags (boxDrawn) and not left out by `undrawn` */
+  staticDrawn(i: number): boolean { const b = this.statics[i]; return !!b && boxDrawn(this.statics, b) && !(this.undrawn !== null && this.undrawn.has(i)); }
   /** MOTION IDENTITY (Box.mkey): on = a keyed dynamic box hands the g-buffer the index its key had LAST frame in the top 16 bits of its `visible` word (upload();
    *  gbuffer.wgsl vsBox reads its previous transform there); off = every word is the bare index and the vertex stage index-matches as it always did — mirrored from
    *  engine.settings.motionIds each frame. `mkeyPrev` = key → index in last frame's combined list. */
@@ -606,7 +612,7 @@ export class BoxWorld {
     const cutOn = this.cutOn, roundOn = this.roundOn, SC = this.statShadowCut; let nc = 0, nct = 0; this.cutSplit = nStat;
     let np = Math.max(this.cutVisible.length, cutOn ? this.maxBoxes : 0);   // (the cut list is filled from both ends: traceable boxes from the front, picture-only ones from the back)
     if (cutOn && this.cutVisible.length < this.maxBoxes) this.cutVisible = new Uint32Array(this.maxBoxes);
-    const cv = this.cutVisible;
+    const cv = this.cutVisible, und = this.undrawn;
     for (let i = 0; i < nStat; i++) {
       const b = all[i]; const so = i * SS; const c = b.c, h = b.h, al = b.albedo, em = b.fogEmit ?? b.emissive, rot = b.rot, marks = b.marks;
       const mw = matWord(b), mg = b.fogMark ?? b.markGain ?? 1, wk = b.wetK ?? 1, ml = marks === undefined ? -1 : marks.length;
@@ -624,7 +630,7 @@ export class BoxWorld {
         S[so + 23] = ml; SM[i] = marks; if (cutOn) SC[i] = b.cut;
       }
       if (cutOn && b.cut !== undefined && b.cut.length > 0 && !(b.flags & BoxFlag.NoShadow)) nct++;
-      if (!(b.flags & (BoxFlag.NoPrimary | BoxFlag.Glass)) && (b.piece !== true || trimDrawn(all, b))) {   // (a static's word is its bare index: pslot 0 = the index rule; a pane is never rasterised; TRIM is drawn while the box that says it is — trimDrawn)
+      if (!(b.flags & (BoxFlag.NoPrimary | BoxFlag.Glass)) && (b.piece !== true || trimDrawn(all, b)) && !(und !== null && und.has(i))) {   // (a static's word is its bare index: pslot 0 = the index rule; a pane is never rasterised; TRIM is drawn while the box that says it is — trimDrawn; `undrawn` leaves a box out)
         if (roundOn && b.round === true) cv[--np] = i;   // (ROUND THINGS: drawn by the cut pipeline, cut always — the rays' round rule is in every program)
         else if (cutOn && b.cut !== undefined && b.cut.length > 0) { if (b.flags & BoxFlag.NoShadow) cv[--np] = i; else cv[nc++] = i; } else this.visible[nv++] = i;   // (CUT BOXES: a cut static goes to the cut list, drawn by the cut pipeline)
       }
@@ -720,7 +726,8 @@ export class BoxWorld {
     gf[o + 4] = b.h[0]; gf[o + 5] = b.h[1]; gf[o + 6] = b.h[2]; gu[o + 7] = flags >>> 0;
     const m = i * MAT_STRIDE;
     mf[m] = b.albedo[0] * wk; mf[m + 1] = b.albedo[1] * wk; mf[m + 2] = b.albedo[2] * wk; mf[m + 3] = b.cutHeight;
-    mf[m + 4] = em[0]; mf[m + 5] = em[1]; mf[m + 6] = em[2]; mf[m + 7] = matWord(b) + (this.stuffOf ? 8 * this.stuffOf(b, i >= this.cutSplit) : 0);   // (the finish: read through common.wgsl boxFinish by the g-buffer / reflect.wgsl — every other shader ignores the word, as it ignored the owner that sat here)
+    mf[m + 4] = em[0]; mf[m + 5] = em[1]; mf[m + 6] = em[2]; mf[m + 7] = matWord(b) + (this.stuffOf ? 8 * this.stuffOf(b, i >= this.cutSplit && !(b.mkey !== undefined && b.mkey >>> 24 === MKEY.skin >>> 24)) : 0);   // (what stands of a holed wall's paint is the level's own, handed over with the frame's boxes: it does not MOVE — game/wallskin.ts)
+      // (the finish: read through common.wgsl boxFinish by the g-buffer / reflect.wgsl — every other shader ignores the word, as it ignored the owner that sat here)
     if (b.rot) { mf[m + 8] = b.rot[0]; mf[m + 9] = b.rot[1]; mf[m + 10] = b.rot[2]; mf[m + 11] = b.rot[3]; }
     else { const s2 = Math.sin(b.yaw / 2), c2 = Math.cos(b.yaw / 2); mf[m + 8] = 0; mf[m + 9] = s2; mf[m + 10] = 0; mf[m + 11] = c2; }   // yaw about +Y (local +X → (cos, 0, −sin), +Z → (sin, 0, cos): the same convention as the packed yaw the rays use)
     mf[m + 12] = s0; mf[m + 13] = s1; mf[m + 14] = s2a; mf[m + 15] = b.fogMark ?? b.markGain ?? 1;   // secondary albedo + the marking emission gain (game/lighting.ts drives it with the switchable's supply)

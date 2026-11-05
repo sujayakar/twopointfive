@@ -3,6 +3,8 @@
 // place) nothing takes the decal off it: no ray or query ever returned a decal, so the destruction never knew it was there, and a painted sheet would hang
 // across the hole. `lookTidy(world)` hides each such decal while its wall is hidden and puts it back with it (a restart restores the wall: the decal follows).
 // Called by the PAGE once a frame (main.ts); it reads and writes the flags of drawn-only boxes and nothing else — the game cannot tell it ran.
+// SUPERSEDED (2026-11-05) by game/wallskin.ts, which cuts what is painted on ANY wall of ANY level at the hole's edge, on every stand, and writes no flag:
+// the page calls `lookTidy` only under ?wallskin=0 (the build as it was). When that switch is retired this function goes with it.
 import { BoxFlag, SHEET_MASK as DECAL_MASK, type Box } from './boxes';
 import { GWOT_PALETTE, gwotSimOf } from './gwotPalette';
 import { paintOf } from './stuff';
