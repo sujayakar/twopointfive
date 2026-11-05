@@ -46,7 +46,6 @@ import { chronRadio, chronBodyFound } from './chronicle';
 import { placeName } from './dialogue';
 import { tally } from './mission';
 import { isBreathing } from './game';
-import { runnerFled } from './runner';
 import { RESCUE } from './rescue';
 import { wg } from './words';   // (a leaf: the dialogue pass's one switch)
 
@@ -80,7 +79,7 @@ const STATES = new SideMap<Game, State>('rescuecheck.STATES');
 
 const flat = (a: Vec3, b: Vec3) => Math.hypot(a[0] - b[0], a[2] - b[2]);
 const frac = (x: number) => x - Math.floor(x);
-const alive = (gd: Guard) => gd.state !== 'dead' && gd.char.alive && !runnerFled(gd);
+const alive = (gd: Guard) => gd.state !== 'dead' && gd.char.alive && !gd.fled;
 const fit = (g: Game, gd: Guard) => alive(gd) && !gd.held && g.time >= gd.dazzledUntil && g.time >= gd.staggerUntil;
 const roused = (gd: Guard) => gd.state === 'alert' || gd.state === 'search';
 const loudHeard = (gd: Guard) => { const H = gd.witness.heard; return H.shots + H.kick + H.bang; };

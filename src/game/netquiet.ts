@@ -35,7 +35,7 @@
 //     (roomfight.ts rally → netQuietHolds), nor is he his squad's to send (enemysquads.ts home → netquietfeed.ts). `alertSecs` of nothing seen or heard and
 //     he is no longer 'alert' — wary (`wary`), still low on the spot; anything he hears has him on his gun again. A living mate at his side for `calmSecs`
 //     and he is up, the act dropped, his owner's again. A man morale.ts's own sequence has (`moraleOwns`) is that file's.
-//   · A MAN WHO HAS RUN (runner.ts `runnerOwns`: the shout, the drop, the run, gone) is nobody's mate on the net: he hears no check, answers none (asked for by name
+//   · A MAN WHO HAS RUN (runner.ts `OWN.runner`: the shout, the drop, the run, gone) is nobody's mate on the net: he hears no check, answers none (asked for by name
 //     he is a silence like a dead man's), is not whipped, is never the last man — and to the man he left he is one more gone, once that man knows it. The last
 //     man at his act is not stopped at a dark doorway nor called to one (darkdoor.ts asks netquietfeed.ts): his hold wins.
 //   No health, aim, skill or reaction table is read or written: where he stands, how low, where he looks — and, low on his spot, the floor's own alert /
@@ -55,7 +55,7 @@ import { isHostile, teamOfId } from './teams';
 import { order } from './squad';
 import { NETFEED, netFeedTake, netFeedHold } from './netquietfeed';
 import { wg } from './words';   // (a leaf: the dialogue pass's one switch)
-import { runnerOwns } from './runner';   // (asked inside calls only: false with its switch off)
+import { hasHim, OWN } from './owner';
 
 type Def = RoomFight['defs'][number];
 type Room = NonNullable<Def['room']>;
@@ -132,9 +132,9 @@ const loudOf = (gd: Guard) => { const H = gd.witness.heard; return H.shots + H.k
 const side = (g: Game, gd: Guard) => !gd.civ && (gd.team === 'hostile' || gd.team === 'guard') && !(g.rescue?.active && g.rescue.hostiles.includes(gd));
 const ours = (g: Game, gd: Guard) => gd.state !== 'dead' && side(g, gd);
 /** …on the net: alive, not in Sam's arm — and not a man runner.ts has (he has said he is done, dropped it, run: he hears no check and answers none) */
-const onNet = (g: Game, gd: Guard) => ours(g, gd) && !gd.held && !runnerOwns(gd);
+const onNet = (g: Game, gd: Guard) => ours(g, gd) && !gd.held && !hasHim(gd, OWN.runner);
 /** GONE to his mates, whether or not they know it yet: down, taken, run (runner.ts), or off the floor altogether (a man who ran and left it) */
-const lostTo = (g: Game, m: Guard) => m.state === 'dead' || !!m.held || runnerOwns(m) || !g.guards.includes(m);
+const lostTo = (g: Game, m: Guard) => m.state === 'dead' || !!m.held || hasHim(m, OWN.runner) || !g.guards.includes(m);
 function mind(gd: Guard): Mind {
   let N = stateOf.get(gd);
   if (!N) stateOf.set(gd, N = { quiet: 0, asked: new Set(), known: new Set(), paid: new Map(), say: -1, sayT: 0, sayName: '', bark: NETQUIET.barkSecs, lastKind: -1, bodyT: 60, roused: 0,
@@ -198,7 +198,7 @@ function bodyOf(g: Game, finder: Guard, N: Mind, men: readonly Guard[]): Guard |
 }
 /** A BODY FOUND (enemysquads.ts event 'found', guards.ts the staff's body in view): the finder, and the men of `men` he tells */
 export function netQuietBody(g: Game, finder: Guard | null, men: readonly Guard[]) {
-  if (!fed() || !finder || !ours(g, finder) || runnerOwns(finder)) return;
+  if (!fed() || !finder || !ours(g, finder) || hasHim(finder, OWN.runner)) return;
   const K = NETQUIET, N = mind(finder), body = bodyOf(g, finder, N, men), id = body ? body.char.id : -1, again = N.bodyT < 5;   // (two men lying together are one find: one shock, one line — and two men he knows are gone)
   const told = men.filter(m => m !== finder && m.team === finder.team && onNet(g, m));
   if (again) { if (body) for (const m of [finder, ...told]) { const Nm = mind(m); Nm.known.add(id); Nm.paid.set(id, Math.max(Nm.paid.get(id) ?? 0, m === finder ? K.body : K.bodyTold)); } return; }
@@ -298,7 +298,7 @@ function lowSpot(g: Game, gd: Guard, R: Room): Vec3 | null {
 
 // ---------------------------------------------------------------- the tick
 /** may this file act on him this frame: the AI on, no show on the floor, free of Sam's arm, himself (not dazzled, not doubled over), not morale.ts's */
-const free = (g: Game, gd: Guard) => g.aiEnabled && !g.touring && !g.quietUtility && !gd.held && g.time >= gd.dazzledUntil && g.time >= gd.staggerUntil && !moraleOwns(gd) && !runnerOwns(gd);
+const free = (g: Game, gd: Guard) => g.aiEnabled && !g.touring && !g.quietUtility && !gd.held && g.time >= gd.dazzledUntil && g.time >= gd.staggerUntil && !moraleOwns(gd) && !hasHim(gd, OWN.runner);
 /** IS HE THE LAST: 2 = he had mates and none of his side is up anywhere (the world's truth: on its own it only has him ASK — see the tick) · 1 = his squad's
  *  men are all down or taken and he knows it of every one (asked for and silent, seen to fall, found, told of), with no living man of his side inside `mateM`
  *  of him and in the open to him · 0 = neither */
@@ -332,7 +332,7 @@ export function netQuietTick(g: Game, dt: number) {
   }
   for (const gd of g.guards) {
     if (!ours(g, gd)) { stateOf.delete(gd); netFeedHold(gd, false); continue; }
-    if (runnerOwns(gd)) { const N = stateOf.get(gd); if (N) { N.last = NONE; N.t = 0; N.mateT = 0; N.spot = null; N.look = null; N.whipAt = null; N.whipT = 0; N.say = -1; N.low = false; } netFeedHold(gd, false); continue; }   // (runner.ts has him — the shout, the drop, the run: no line of this file's, no whip, no last man's act; whatever of them he was in is dropped)
+    if (hasHim(gd, OWN.runner)) { const N = stateOf.get(gd); if (N) { N.last = NONE; N.t = 0; N.mateT = 0; N.spot = null; N.look = null; N.whipAt = null; N.whipT = 0; N.say = -1; N.low = false; } netFeedHold(gd, false); continue; }   // (runner.ts has him — the shout, the drop, the run: no line of this file's, no whip, no last man's act; whatever of them he was in is dropped)
     const N = mind(gd), H = gd.witness.heard, ok = free(g, gd), eyes = g.time - gd.lastSeenT < K.calmSecs;
     const D = F?.defs.find(d => d.gd === gd) ?? null;
     N.bark = Math.min(N.bark + dt, 60); N.bodyT = Math.min(N.bodyT + dt, 60); N.low = false;
