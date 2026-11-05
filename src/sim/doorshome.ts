@@ -35,7 +35,10 @@ export class DoorStore {
   home: SimState | null = null;
   /** where the columns start in `home.d` (0 in `own`), and doors a column where they stand now */
   base = 0; stride: number;
-  constructor(readonly cap: number) { this.own = new Float64Array(DOOR_COLS * cap); this.stride = cap; }
+  constructor(readonly cap: number) {
+    if (cap > DOOR_CAP) throw new Error(`a level of ${cap} doors: the game holds ${DOOR_CAP} (sim/doorshome.ts DOOR_CAP, rust/sim/src/doors.rs CAP)`);   // (said as the level loads: there is no other step for the doors of a bigger one)
+    this.own = new Float64Array(DOOR_COLS * cap); this.stride = cap;
+  }
   /** the array the columns are in now (asked at every read: a block's view dies when the block moves) */
   get d(): Float64Array { const h = this.home; return h !== null ? h.d : this.own; }
 }
@@ -83,7 +86,7 @@ export const DOORS_STEPPED = { there: 0, here: 0, turned: 0, noises: 0, both: 0,
 interface HasDoors { doors?: { store: DoorStore; list: { length: number } } }
 // the doors' columns move into a game's block as its tick opens with RUST.doors on, and out again with it off (state.ts settle)
 simTenant({ name: 'doors', bit: 4,
-  wants(g: HasDoors) { const D = g.doors; return RUST.doors && !!D && D.list.length > 0 && D.list.length <= DOOR_CAP && D.store.cap === D.list.length; },
+  wants(g: HasDoors) { const D = g.doors; return RUST.doors && !!D && D.list.length > 0; },
   into(g: HasDoors, st: SimState) {
     const S = g.doors!.store, n = S.cap, base = simPart(P_DOORS) >>> 3, d = st.d, own = S.own;
     for (let K = 0; K < DOOR_COLS; K++) { const o = base + K * DOOR_CAP, q = K * n; for (let i = 0; i < n; i++) d[o + i] = own[q + i]; }

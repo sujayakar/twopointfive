@@ -84,6 +84,8 @@ import { WORLD } from '../../src/scene/world';
 import { BoxFlag, type Box } from '../../src/scene/boxes';
 import { livedKit } from './livedKit';
 import { gwotKit, gwotOfOffice } from '../../src/scene/gwotKit';
+import { drawnAs, madeOf, saidAs, PANEL_GREY, CHAIR_GREY } from '../../src/scene/stuff';
+import { feetOn } from '../../src/scene/carShapes';
 
 export const NAME = 'compound';
 export const NOTES = 'The compound: a perimeter wall with a lit main gate and two dark side gates, yard all round a main house of eight rooms off one corridor (three outside doors, two open windows, four loops inside), and a garage, a shed and a guard hut across the yard. Eight held rooms, four squads. For the four man squad, who start outside the wall. One floor, box geometry only, the office\'s kit. Regenerate: bun run map:export compound';
@@ -147,7 +149,7 @@ const COMPOUND_KITVIEW: KitViewData = {
     { id: 'cn_pole_b', group: 'cn.line', c: [28.7, 0.88, 5.3], h: [0.03, 0.88, 0.03], material: 'poplar|wood' },
     { id: 'cn_line', group: 'cn.line', c: [27.55, 1.69, 5.3], h: [1.15, 0.01, 0.005], albedo: [0.3, 0.2, 0.13], flags: ['NoShadow'] },
     { id: 'cn_wash_a', group: 'cn.line', c: [26.87, 1.24, 5.3], h: [0.3, 0.44, 0.02], albedo: [0.78, 0.72, 0.58], flags: ['NoShadow'] },
-    { id: 'cn_wash_b', group: 'cn.line', c: [27.47, 1.34, 5.3], h: [0.2, 0.34, 0.02], albedo: [0.14, 0.2, 0.45], flags: ['NoShadow'] },
+    { id: 'cn_wash_b', group: 'cn.line', c: [27.47, 1.34, 5.3], h: [0.2, 0.34, 0.02], albedo: [0.14, 0.2, 0.45], stuff: 'fabric', flags: ['NoShadow'] },
     { id: 'cn_wash_c', group: 'cn.line', c: [27.97, 1.19, 5.3], h: [0.2, 0.49, 0.02], albedo: [0.72, 0.36, 0.1], flags: ['NoShadow'] },
     { id: 'cn_cans', c: [26.1, 0.42, 6.6], h: [0.23, 0.42, 0.1], albedo: [0.12, 0.25, 0.5] },
     { id: 'cn_crate', c: [29.5, 0.16, 6.5], h: [0.45, 0.16, 0.24], albedo: [0.56, 0.28, 0.12] },
@@ -164,13 +166,13 @@ const COMPOUND_KITVIEW: KitViewData = {
     { id: 'cn_panel_bunk', c: [24.2, 2.98, 9.9], h: [0.6, 0.02, 0.3], material: 'white', emissive: [7, 6.2, 5], flags: ['NoPrimary'] },
     { id: 'cn_panel_back', c: [30, 2.98, 9.7], h: [0.6, 0.02, 0.3], material: 'white', emissive: [7, 6.2, 5], flags: ['NoPrimary'] },
     { id: 'cn_cot_a', group: 'cn.bunk', c: [22.7, 0.2, 11.62], h: [0.95, 0.2, 0.42], material: 'paintBlue|metal' },
-    { id: 'cn_rug_a', group: 'cn.bunk', c: [22.7, 0.44, 11.62], h: [0.93, 0.04, 0.4], albedo: [0.27, 0.18, 0.12] },
+    { id: 'cn_rug_a', group: 'cn.bunk', c: [22.7, 0.44, 11.62], h: [0.93, 0.04, 0.4], albedo: [0.27, 0.18, 0.12], stuff: 'cloth' },
     { id: 'cn_cot_b', group: 'cn.bunk', c: [25.2, 0.2, 11.62], h: [0.95, 0.2, 0.42], material: 'paintBlue|metal' },
-    { id: 'cn_rug_b', group: 'cn.bunk', c: [25.2, 0.44, 11.62], h: [0.93, 0.04, 0.4], albedo: [0.4, 0.31, 0.2] },
+    { id: 'cn_rug_b', group: 'cn.bunk', c: [25.2, 0.44, 11.62], h: [0.93, 0.04, 0.4], albedo: [0.4, 0.31, 0.2], stuff: 'cloth' },
     { id: 'cn_desk', group: 'cn.back', c: [28.6, 0.73, 11.64], h: [0.8, 0.03, 0.4], material: 'poplar|wood' },
     { id: 'cn_desk_leg_a', group: 'cn.back', c: [27.83, 0.36, 11.64], h: [0.03, 0.36, 0.38], material: 'poplar|wood' },
     { id: 'cn_desk_leg_b', group: 'cn.back', c: [29.37, 0.36, 11.64], h: [0.03, 0.36, 0.38], material: 'poplar|wood' },
-    { id: 'cn_bed', group: 'cn.back', c: [31.6, 0.25, 11.24], h: [1, 0.25, 0.8], albedo: [0.33, 0.29, 0.23] },
+    { id: 'cn_bed', group: 'cn.back', c: [31.6, 0.25, 11.24], h: [1, 0.25, 0.8], albedo: [0.33, 0.29, 0.23], stuff: 'wood' },
     { id: 'cn_bed_cover', group: 'cn.back', c: [31.6, 0.54, 11.24], h: [0.98, 0.04, 0.78], albedo: [0.34, 0.12, 0.1] },
     { id: 'cn_mat', group: 'cn.back', c: [30, 0.02, 9.9], h: [1.2, 0.01, 0.8], albedo: [0.3, 0.1, 0.09], flags: ['NoShadow'] },
     // a bulkhead lamp on the house's back wall over the washing line (the level's own lamp on this strip is out). Hung under the perimeter wall's top, so
@@ -202,7 +204,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
     add({ c: [x, 0.2, z], h: alongX ? [0.95, 0.2, 0.42] : [0.42, 0.2, 0.95], albedo: C.metal });
     add({ c: [x, 0.44, z], h: alongX ? [0.93, 0.04, 0.4] : [0.4, 0.04, 0.93], albedo: blanket });
   };
-  const DIRT: Vec3 = [0.2, 0.17, 0.13], STUCCO = C.partTan;
+  const DIRT: Vec3 = madeOf('earth', [0.2, 0.17, 0.13]), STUCCO = saidAs('stucco', C.partTan);   // (packed earth: until 11-04 its brown was drawn, and read by a round, as wood, a grey wood's darkened. And the house's walls: the office's tan partition paint, whose row says cloth)
 
   // ---------------- ground ----------------
   grp('ground');
@@ -282,20 +284,20 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
   bin(17.7, 6.05); bin(12.3, 8.2); cardboardBox(31.2, 20.2, 0.55, 0.3);                 // loose things under the kitchen's window, by the shed's side, at the alley's end
   // (LOOSE THINGS — bins, cartons, chairs a man can shove — stand a leaf's length clear of every door on this level and out of the corridor: walking men
   //  bulldoze them along a wall, and one that ends up in a doorway jams the leaf)
-  rug(23.5, 26.0, 2.6, 3.6, DIRT);                                                      // the track through the main gate
+  add({ c: [23.5, 0.018, 26.0], h: [1.3, 0.006, 1.8], yaw: 0, albedo: DIRT, flags: BoxFlag.NoShadow });   // the track through the main gate (a rug's flat box, but earth and no rug: it says no cloth)
 
   // ---------------- the kitchen (x 13..18.5, z 6.5..11.5): k_s on the corridor, k_p into the pantry; a window north onto the back strip ----------------
   grp('kitchen');
   add({ c: [13.47, 0.45, 9.0], h: [0.35, 0.45, 1.4], albedo: C.white, ...mk(MD.cupboardMarks([0.35, 0.45, 1.4], '+x', 4, TX)) }); add({ c: [13.49, 0.92, 9.0], h: [0.38, 0.03, 1.45], albedo: [0.2, 0.2, 0.22] });   // counter along the west wall
   add({ c: [13.6, 1.0, 7.1], h: [0.42, 1.0, 0.4], albedo: [0.75, 0.75, 0.74] });        // fridge
-  table(15.9, 9.3); chair(15.4, 10.15, 0, [0.5, 0.5, 0.48]); chair(16.5, 8.45, Math.PI, [0.5, 0.5, 0.48]); papers(16.1, 0.75, 9.3, 0.4);
-  bin(14.5, 11.05); cardboardBox(16.3, 6.95, 0.5, 0.2); chair(13.55, 10.95, 2.4, [0.5, 0.5, 0.48]);          // loose things along the walls
+  table(15.9, 9.3); chair(15.4, 10.15, 0, CHAIR_GREY); chair(16.5, 8.45, Math.PI, CHAIR_GREY); papers(16.1, 0.75, 9.3, 0.4);
+  bin(14.5, 11.05); cardboardBox(16.3, 6.95, 0.5, 0.2); chair(13.55, 10.95, 2.4, CHAIR_GREY);          // loose things along the walls
   ceilingPanel(15.8, 8.8, true, 'kitchen', false, 1.2, 0.6, [8, 7.6, 6.9]);
 
   // ---------------- the pantry (x 18.5..21.5): p_back from the back strip, k_p from the kitchen, p_s on the corridor. Nobody holds it; nothing loose in it (three doors in 3 m) ----------------
   grp('pantry');
   shelf(21.12, 8.8, 2.6, 0.5, Math.PI / 2, 4, 2.0);
-  const brk = add({ c: [18.6, 1.35, 10.4], h: [0.04, 0.36, 0.28], albedo: [0.42, 0.44, 0.45], name: 'breaker_panel' });
+  const brk = add({ c: [18.6, 1.35, 10.4], h: [0.04, 0.36, 0.28], albedo: PANEL_GREY, name: 'breaker_panel' });
   const brkLed = add({ c: [18.65, 1.62, 10.22], h: [0.01, 0.015, 0.015], albedo: C.black, emissive: [0.3, 4, 0.6], flags: BoxFlag.NoShadow });
   add({ c: [18.6, 2.3, 10.4], h: [0.03, 0.6, 0.03], albedo: [0.3, 0.3, 0.32], flags: BoxFlag.NoShadow });
   ceilingPanel(20.0, 9.2, false, 'pantry');
@@ -304,7 +306,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
   grp('bunk');
   cot(22.7, 7.15, true); cot(25.2, 7.15, true);
   locker(21.9, 10.0, false);
-  chair(24.9, 9.4, 1.0, [0.5, 0.5, 0.48]); cardboardBox(25.5, 11.0, 0.5, 0.2); bin(23.95, 6.95);
+  chair(24.9, 9.4, 1.0, CHAIR_GREY); cardboardBox(25.5, 11.0, 0.5, 0.2); bin(23.95, 6.95);
   ceilingPanel(24.2, 9.4, true, 'bunk', false, 1.2, 0.6, [7, 6.2, 5.0]);   // ON (the hand placement: every held room is lit — no dark room is held; the same panel, the same size)
 
   // ---------------- the back bedroom (x 27..33): ab from the bunk room, b_s on the corridor; a window east ----------------
@@ -326,8 +328,8 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
   grp('sala');
   add({ c: [14.4, 0.22, 18.45], h: [1.0, 0.22, 0.4], albedo: [0.3, 0.12, 0.1] }); add({ c: [14.4, 0.6, 18.78], h: [1.0, 0.35, 0.08], albedo: [0.3, 0.12, 0.1] });   // a couch on the south wall
   shelf(17.8, 14.88, 2.4, 0.5, 0, 4, 2.0);                                              // a sideboard on the corridor wall
-  table(18.4, 18.3); chair(17.2, 18.2, Math.PI / 2, [0.5, 0.5, 0.48]); chair(18.5, 17.45, 0.2, [0.5, 0.5, 0.48]);
-  rug(16.6, 16.6, 3.0, 2.0, [0.22, 0.07, 0.07]);
+  table(18.4, 18.3); chair(17.2, 18.2, Math.PI / 2, CHAIR_GREY); chair(18.5, 17.45, 0.2, CHAIR_GREY);
+  rug(16.6, 16.6, 3.0, 2.0, C.carpetRed);
   cardboardBox(15.8, 18.5, 0.55, 0.2); bin(16.45, 18.6); plant(19.45, 14.95);
   ceilingPanel(17.0, 16.6, true, 'sala', false, 1.2, 0.6, [8, 7.2, 6.0]);
 
@@ -350,7 +352,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
 
   // ---------------- the garage (x 4..10.5, z 18..24): g_n from the west yard, g_e from the forecourt ----------------
   grp('garage');
-  car(7.2, 22.5, 0, [0.42, 0.4, 0.36]);                                                 // a car against the south wall: the floor north of it is the room
+  const TAXI = car(7.2, 22.5, 0, [0.42, 0.4, 0.36]);                                                 // a car against the south wall: the floor north of it is the room
   desk(5.2, 18.6, 1.8, 0.75, 0); papers(5.5, 0.76, 18.6, 0.2);                          // a workbench on the north wall
   pallet(9.5, 18.8, 1.2, 1.0);
   cardboardBox(4.6, 23.3, 0.5, 0.2); bin(9.9, 23.4); chair(5.3, 19.45, 0);
@@ -451,7 +453,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
   {
     const L = livedKit(K), P = L.P, NS = BoxFlag.NoShadow;
     const PINK: Vec3 = [0.62, 0.24, 0.33], ORANGE: Vec3 = [0.72, 0.36, 0.1], TEAL: Vec3 = [0.1, 0.33, 0.37], CREAM: Vec3 = [0.78, 0.72, 0.58], COPPER: Vec3 = [0.56, 0.28, 0.12];
-    const CLAY: Vec3 = [0.5, 0.3, 0.2], STRAW: Vec3 = [0.7, 0.58, 0.26], HAY: Vec3 = [0.52, 0.5, 0.22], EARTH: Vec3 = [0.24, 0.18, 0.13], BRICK: Vec3 = [0.45, 0.33, 0.23], WETBRICK: Vec3 = [0.3, 0.21, 0.15];
+    const CLAY: Vec3 = [0.5, 0.3, 0.2], STRAW: Vec3 = [0.7, 0.58, 0.26], HAY: Vec3 = [0.52, 0.5, 0.22], EARTH: Vec3 = drawnAs('mud wall', [0.24, 0.18, 0.13]), BRICK: Vec3 = [0.45, 0.33, 0.23], WETBRICK: Vec3 = [0.3, 0.21, 0.15];
     const SOIL: Vec3 = [0.1, 0.075, 0.05], DUNG: Vec3 = [0.15, 0.11, 0.05], TURMERIC: Vec3 = [0.88, 0.58, 0.04], BREAD: Vec3 = [0.8, 0.66, 0.42], GRAIN: Vec3 = [0.82, 0.68, 0.34];
     const BEDROLL: Vec3 = [0.2, 0.26, 0.17];   // (green and low ON PURPOSE: the look reads it as a blanket and deals it one of its blanket cloths)
     const LEDGER: Vec3 = [0.07, 0.1, 0.09], BROWN: Vec3 = [0.3, 0.2, 0.13];
@@ -636,7 +638,13 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
     // load), a child's bicycle stood against the pallet stack by the north wall (drawn only: the east door's line is near), a rope bed stood on its side, flattened
     // cardboard under the engine. Colour: the taxi's yellow, echoed on its roof
     L.room('garage');
-    bx(6.0, 7.9, 21.85, 21.9, 1.52, 1.57, C.black); bx(6.0, 7.9, 23.1, 23.15, 1.52, 1.57, C.black);                // the roof rack's rails
+    // the roof rack's rails. With shapes on the roof is bowed and cut back to the glass: each rail stands on two feet on the bow, and the first carries the
+    // rack's two cross bars, the roof sign on the front one — trim, said in the rail's own frame (the taxi stands at (7.2, 22.5), unturned)
+    { const rail = (z0: number, z1: number, bars: boolean) => { const c: Vec3 = [6.95 - 7.2, 1.545, (z0 + z1) / 2 - 22.5], h: Vec3 = [0.95, 0.025, 0.025];
+        // (the front bar reaches forward to the sign's back, 7.92: the sign is bolted to it and stands out over the windscreen as a taxi's does)
+        const trim = [...feetOn(TAXI.tops.roof, c, h, [-0.6, 0.55]), ...(bars ? ([[-0.92, 0.02], [0.94, 0.03]] as const).map(([u, hx]) => ({ off: [u, 0, 0.625] as Vec3, h: [hx, 0.02, 0.645] as Vec3 })) : [])];   // (the bars stop 5 mm short of the rails' outer faces and a centimetre in from their ends: no two faces in one plane)
+        slab(6.0, 1.52, z0, 7.9, 1.57, z1, C.black, trim.length ? { shape: { with: trim } } : {}); };
+      rail(21.85, 21.9, true); rail(23.1, 23.15, false); }
     bx(6.3, 7.5, 21.98, 23.02, 1.52, 1.8, P.canvas, true); for (const x of [6.6, 7.2]) bx(x, x + 0.04, 21.97, 23.03, 1.52, 1.81, BROWN, true);   // the bundle on the roof between them, roped (drawn only)
     bx(7.55, 7.86, 22.2, 22.8, 1.52, 1.7, TEAL, true); bx(7.92, 8.06, 22.3, 22.7, 1.52, 1.64, P.brass);             // a suitcase (drawn only), the roof sign
     for (const x of [9.17, 9.83]) { bx(x - 0.22, x + 0.22, 19.3, 19.33, 0, 0.44, C.black, true); bx(x - 0.11, x + 0.11, 19.33, 19.336, 0.11, 0.33, C.concrete, true); }   // the child's bicycle, upright against the pallet stack: two wheels (their middles the wall's grey) …
@@ -645,7 +653,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
     bx(4.15, 4.23, 21.95, 22.9, 0, 0.9, C.wood); bx(4.23, 4.25, 22.0, 22.85, 0.08, 0.82, P.canvas, true);          // a rope bed on its side against the wall
     L.mat(8.2, 21.2, 9.55, 21.95, C.cardboard, 0.02);                                                             // flattened cardboard under the engine
     L.hung(4.9, 18.148, true, 0.7, 1.3, 1.9, C.metal, 0.05); L.hung(5.8, 18.142, true, 0.3, 1.4, 1.7, P.canvas);   // the tin bath and a coil of rope on the north wall
-    { K.prop('cardboard', 4.6, 21.55, 0, 9, [{ off: [0, 0.1, 0], h: [0.22, 0.1, 0.22], yaw: 0, albedo: C.black }, { off: [0, 0.205, 0], h: [0.1, 0.005, 0.1], yaw: 0, albedo: [0.5, 0.5, 0.48] }]); L.own('wheel'); }
+    { K.prop('cardboard', 4.6, 21.55, 0, 9, [{ off: [0, 0.1, 0], h: [0.22, 0.1, 0.22], yaw: 0, albedo: C.black }, { off: [0, 0.205, 0], h: [0.1, 0.005, 0.1], yaw: 0, albedo: CHAIR_GREY }]); L.own('wheel'); }
     { K.prop('cardboard', 4.4, 19.6, 0, 4, [{ off: [0, 0.22, 0], h: [0.17, 0.22, 0.08], yaw: 0, albedo: C.red }]); L.own('can'); }
 
     // ---- THE HUT — THE GATE WATCHMAN'S HUT, told at standing height and outside its door: his board of keys and his greatcoat on the north wall (face on

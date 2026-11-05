@@ -136,7 +136,8 @@ fn markSoftRead(m: MarkRec, x: f32, y: f32) -> vec3f {
   if (nb < 4u && nl < 2u) { o += mkEntry(e) * (5.0 * u * (1.0 - u) * v * (1.0 - v)); }
   return o;
 }
-/** THE LOOK PROTOTYPE (soft > 0 only on that page: gbuffer.wgsl hands lookMarkSoft(), the panel's Painted marks row, 0 to 2): a marking drawn as OLD PAINT,
+/** THE LOOK PROTOTYPE (soft.x > 0 only on that page: gbuffer.wgsl hands lookMarkSoft() = the panel's Painted marks row, 0 to 2, and how far the place's paint
+ *  is OLD, 0 to 1, which is 1 less how kept the level says it is — look.wgsl lookKept): a marking drawn as PAINT A HAND LAID, AND AS OLD AS THE PLACE,
  *  not as cells. Four parts, and all but the first keep growing to the top of the row, because at the distance the game is played from a cell is two pixels
  *  and a rounded corner alone is nothing to see (on a GPU the row read as "doesn't look like it does anything" up to 1):
  *    THE SHAPE (all of it by 1): the bitmap read as a soft picture a cell wide (markSoftRead above: a bilinear ramp between cell centres, with its corner
@@ -146,21 +147,23 @@ fn markSoftRead(m: MarkRec, x: f32, y: f32) -> vec3f {
  *      1, twice that swing at 2), over a finer ragged line the bristles left. The swing was first more than twice this over half the length, and a row of
  *      stripes read as dripped wax: a painter's stripe is nearly straight, and it is the wear that says its age;
  *    THE WEAR: the paint is rubbed thin in patches a hand to a forearm wide, measured in metres on the face and not in cells, each fading out at its rim
- *      (a quarter of the paint touched at 1, half at 2);
- *    THE AGE (markTone, the caller's): its colour has gone a shade into the surface under it.
+ *      (a quarter of the paint touched at 1, half at 2), by the years (× how far the paint is old) or by feet (where the floor is walked, however kept);
+ *    THE AGE (markTone, the caller's): its colour has gone a shade into the surface under it (× how far the paint is old).
  *  An entry that BURNS keeps its cells and its colour (an LED is a square). `w` = the crisp weights, `ws` = the soft read (the caller's: markSoftRead has
  *  ONE call site in the module, on purpose), `t` = metres a cell; returns the weights to use. */
 /** how much of the soft read a pixel takes by its footprint in cells: far off it is the plain coverage again (a tint, never noise) */
 fn markSoftNear(wT: vec2f) -> f32 { return 1.0 - smoothstep(0.75, 1.75, max(wT.x, wT.y)); }
-/** how far an old paint keeps its own colour from the surface under it (× the frame's marking contrast): 0.82 at the row's 1, 0.64 at 2 */
-fn markTone(soft: f32, near: f32) -> f32 { return 1.0 - 0.18 * min(soft, 2.0) * near; }
-fn markSoft(m: MarkRec, x: f32, y: f32, wT: vec2f, w: vec3f, soft: f32, salt: f32, ws: vec3f, t: f32) -> vec3f {
+/** how far an old paint keeps its own colour from the surface under it (× the frame's marking contrast): 0.82 at the row's 1, 0.64 at 2, in a place left
+ *  to the years (soft.y 1); its own colour whole in a place kept like new (soft.y 0) */
+fn markTone(soft: vec2f, near: f32) -> f32 { return 1.0 - 0.18 * min(soft.x, 2.0) * soft.y * near; }
+fn markSoft(m: MarkRec, x: f32, y: f32, wT: vec2f, w: vec3f, soft2: vec2f, salt: f32, ws: vec3f, t: f32, trod: f32) -> vec3f {
+  let soft = soft2.x;
   let foot = max(wT.x, wT.y); let near = markSoftNear(wT);
   let amt = min(soft, 1.0) * near; let age = min(soft, 2.0) * near;
   if (amt <= 0.0) { return w; }
   let pm = vec2f(x, y) * t;                                            // (metres on the face: the hand and the wear are the painter's and the years', not the bitmap's)
-  let worn = smoothstep(-0.16, 0.16, 0.55 * mkNoise(pm * 3.3 + vec2f(3.0, 9.0 + salt)) + 0.45 * mkNoise(pm * 11.0 + vec2f(salt, 5.0)) - (0.72 - 0.12 * age));
-  let keep = 1.0 - 0.85 * min(age, 1.0) * worn;
+  let worn = smoothstep(-0.16, 0.16, 0.55 * mkNoise(pm * 3.3 + vec2f(3.0, 9.0 + salt)) + 0.45 * mkNoise(pm * 11.0 + vec2f(salt, 5.0)) - (0.72 - 0.12 * age * soft2.y - 0.16 * trod));   // (`trod`: how much the floor here is walked, the look layer's: paint goes first where feet go)
+  let keep = 1.0 - 0.85 * min(age, 1.0) * worn * max(soft2.y, min(trod, 1.0));   // (TWO THINGS RUB PAINT THIN: the years (soft2.y: how far the paint is OLD, 0 in a place kept like new) and feet (trod). A kept place's sign is whole on its wall and still worn where its floor is walked)
   let s = ws.x + ws.y + ws.z;
   if (s <= 0.0) { return w * (1.0 - amt); }
   let eg = clamp(0.5 * foot, 0.07, 0.5);
@@ -178,7 +181,7 @@ struct MarkGB { albedo: vec3f, rough: f32 };
 /** THE G-BUFFER's evaluation at the primary hit: every record of the box's list on this fragment's face, composited in order over the albedo / roughness the
  *  fragment has so far (contrast = frame.markCfg.y lerps entry albedos from the pixel's own). dwx / dwy = the world position's screen derivatives (fsBox takes
  *  them in uniform control flow); slot = the 1-based first row. */
-fn markSurfaceGB(slot: u32, bi: u32, wp: vec3f, n: vec3f, dwx: vec3f, dwy: vec3f, albedoIn: vec3f, roughIn: f32, soft: f32) -> MarkGB {
+fn markSurfaceGB(slot: u32, bi: u32, wp: vec3f, n: vec3f, dwx: vec3f, dwy: vec3f, albedoIn: vec3f, roughIn: f32, soft: vec2f, trod: f32) -> MarkGB {
   var o: MarkGB; o.albedo = albedoIn; o.rough = roughIn;
   let g = boxGeo[bi]; let q = boxRot(bi); let qi = vec4f(-q.xyz, q.w);
   let lp = quatRotate(qi, wp - g.c); let ln = quatRotate(qi, n);
@@ -195,11 +198,11 @@ fn markSurfaceGB(slot: u32, bi: u32, wp: vec3f, n: vec3f, dwx: vec3f, dwy: vec3f
       if (markNear(m, x, y, wT)) {
         var w = markTaps(m, x, y, wT);
         var tone = 1.0;
-        if (soft > 0.0) {
+        if (soft.x > 0.0) {
           let near = markSoftNear(wT);
           if (near > 0.0) {
             let ws = markSoftRead(m, x, y);   // (the module's one call site: the software adapter builds a copy of the walk for each)
-            w = markSoft(m, x, y, wT, w, soft, f32((bi * 7u + k) % 61u), ws, t);
+            w = markSoft(m, x, y, wT, w, soft, f32((bi * 7u + k) % 61u), ws, t, trod);
             tone = markTone(soft, near);
           }
         }

@@ -4,10 +4,12 @@
 //                                                           asked of the colour it is handed: must FAIL
 // No game is stood up: the maps are arithmetic and the rest is the g-buffer's own code on a device that only counts what it is handed. The picture is not looked at
 // here (a software page and then a GPU do that); these are the rules a picture cannot show you are broken until a level is lit by them.
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { ROOT } from './headless.ts';
-const { lookLayer, lookMip, LOOK_LAYERS, LOOK_PAINTED, LOOK_NAMES, LOOK_N, LOOK_ROUGH } = await import(`${ROOT}/src/render/lookTex.ts`);
-const { GBuffer, LOOK_OF, LOOK_MATCH, LOOK_DEFAULTS, lookStuff, lookWordOf, lookAmounts } = await import(`${ROOT}/src/render/gbuffer.ts`);
+const { lookLayer, lookLayerSliced, lookMip, lookStuffOf, LOOK_LAYERS, LOOK_PAINTED, LOOK_NAMES, LOOK_N, LOOK_ROUGH, LOOK_TILE, LOOK_WITH, LOOK_BUILT, LOOK_FADES, LOOK_SOAKS, LOOK_WORN, LOOK_UNIT, LOOK_LAY, LOOK_THING, LOOK_UNDER, LOOK_HANDLED, LOOK_GROUND } = await import(`${ROOT}/src/render/lookTex.ts`);
+const { GBuffer, LOOK_DEFAULTS, LOOK_WORD, lookWordOf, lookCoreOf, lookAmounts, lookNeed, lookForget } = await import(`${ROOT}/src/render/gbuffer.ts`);
+const { PAINT_STUFF, paintOf, toned, worded } = await import(`${ROOT}/src/scene/stuff.ts`);
+const makeBox0 = (p: { albedo: number[] }): any => ({ c: [3, 1, 4], h: [0.5, 0.5, 0.5], yaw: 0, emissive: [0, 0, 0], flags: 0, owner: 0, cutHeight: 1e6, ...p });   // (a box as scene/boxes.ts makeBox makes it, with the albedo array handed over as it is)
 const { GWOT_PALETTE } = await import(`${ROOT}/src/scene/gwotPalette.ts`);
 
 const BRK = process.env.LOOKMAPS_BREAK === '1';
@@ -44,7 +46,7 @@ const hollowsOf = (b: Uint8Array) => { let s = 0; for (let i = 3; i < b.length; 
 { const CLOTH = (LOOK_NAMES as readonly string[]).indexOf('cloth'), m = layers[CLOTH], w = was[CLOTH]; let dp = 0, dh = 0;
   for (let i = 0; i < m.a.length; i += 4) { for (let c = 0; c < 3; c++) dp = Math.max(dp, Math.abs(Math.min(2, m.a[i + c] / 127.5 * m.tone) - w.a[i + c] / 127.5)); dh = Math.max(dh, Math.abs(2 * (m.b[i + 3] / 255 - m.hollow) - 2 * w.b[i + 3] / 255)); }
   const src = readFileSync(`${ROOT}/src/render/shaders/look.wgsl`, 'utf8');
-  check(was.every(l => l.tone === 1 && l.hollow === 0) && CLOTH >= 0 && new RegExp(`let tp = lookTap\\(${CLOTH}, vec2f\\(S\\.u, S\\.v\\)`).test(src) && dp < 0.02 && dh < 0.02 && (BRK || (m.tone !== 1 && m.hollow > 0))
+  check(was.every(l => l.tone === 1 && l.hollow === 0) && CLOTH >= 0 && /let tp = lookTap\(LOOK_L_CLOTH, vec2f\(S\.u, S\.v\)/.test(src) && dp < 0.02 && dh < 0.02 && (BRK || (m.tone !== 1 && m.hollow > 0))
     && /tp\.a\.rgb \* 2\.0 \* lookCfg\.h\.x, 0\.55 \* K\) \* mix\(1\.0, 0\.6 \+ 0\.8 \* \(tp\.b\.a - lookCfg\.h\.y\), 0\.6 \* K\)/.test(src),
     'with the row at 0 no layer is touched; and the men\'s cloth, which was tuned on a GPU against the cloth layer as it fell, is handed that layer back: times its tone, less its hollow, it is the old layer to a texel\'s rounding',
     `cloth: tone ${m.tone.toFixed(3)}, hollow ${m.hollow.toFixed(3)}; the paint comes back within ${dp.toFixed(4)}, the hollows within ${dh.toFixed(4)}`); }
@@ -62,6 +64,16 @@ const hollowsOf = (b: Uint8Array) => { let s = 0; for (let i = 3; i < b.length; 
     if (line[N - 1] > 1.25 * inside + 0.5) bad.push(`${LOOK_NAMES[l]} ${nm} ${axis ? 'up' : 'along'}: ${line[N - 1].toFixed(1)} at the edge, ${inside.toFixed(1)} the most inside`);
   }
   check(bad.length === 0, 'no layer has a seam: across a tile\'s edge the height and the paint step no more than they do inside the tile', bad.length ? bad.join(' · ') : `nearest ${worstAt}, ${worst.toFixed(2)} of the largest step inside`); }
+// 6b. old paint is chipped, not blotched: no bare patch reaches further than a hand and little of the tile is bare (the maintainer, 11-04, of patches up to
+// 36 cm on painted lids: "splotches on here look a bit weird, overdone"; that tile, the commit before this line, reads 35.9 cm and 5.1 % here)
+{ const l = (LOOK_NAMES as readonly string[]).indexOf('paint'), a = layers[l].a, bare = new Uint8Array(N * N), seen = new Uint8Array(N * N); let n = 0, wide = 0;
+  for (let i = 0; i < N * N; i++) if (lum(a[i * 4], a[i * 4 + 1], a[i * 4 + 2]) / 127.5 < 0.72) { bare[i] = 1; n++; }
+  for (let i = 0; i < N * N; i++) { if (!bare[i] || seen[i]) continue; let x0 = 0, x1 = 0, y0 = 0, y1 = 0; const todo: [number, number, number][] = [[i, 0, 0]]; seen[i] = 1;   // (a patch: bare texels that touch, across the tile's edge too; its size is how far it reaches along and up)
+    while (todo.length) { const [j, ox, oy] = todo.pop()!, x = j % N, y = (j / N) | 0; x0 = Math.min(x0, ox); x1 = Math.max(x1, ox); y0 = Math.min(y0, oy); y1 = Math.max(y1, oy);
+      for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) { const k = ((y + dy + N) % N) * N + (x + dx + N) % N; if (bare[k] && !seen[k]) { seen[k] = 1; todo.push([k, ox + dx, oy + dy]); } } }
+    wide = Math.max(wide, (Math.max(x1 - x0, y1 - y0) + 1) * LOOK_TILE / N); }
+  const share = n / (N * N);
+  check(wide <= 0.12 && share <= 0.02 && share >= 0.002, 'old paint is chipped, not blotched: its widest bare patch reaches no further than a hand (12 cm) and between 0.2 % and 2 % of the tile is bare', `widest ${(wide * 100).toFixed(1)} cm, ${(share * 100).toFixed(2)} % bare`); }
 // 7. a map carries no light: the normal is a direction, the finish stays about the layer's own, and a smaller copy is the same paint
 { const bad: string[] = [];
   for (let l = 0; l < LOOK_LAYERS; l++) { const b = layers[l].b; let long = 0, rs = 0;
@@ -73,18 +85,21 @@ const hollowsOf = (b: Uint8Array) => { let s = 0; for (let i = 3; i < b.length; 
     if (Math.max(...m0.map((v, c) => Math.abs(v - m1[c]))) > 0.012) bad.push(`${LOOK_NAMES[l]}: paint × ${m0.map(v => v.toFixed(3)).join(' ')} at full size, × ${m1.map(v => v.toFixed(3)).join(' ')} at 8 texels`);
   }
   check(bad.length === 0, 'every normal is a direction, every finish is about its layer\'s own, and a layer read from far off is the same paint as up close', bad.join(' · ')); }
-// 8. what a box is made of is the box's own word, decided from its authored paint
-{ const P = GWOT_PALETTE as Record<string, number[]>, names = Object.keys(P), of = LOOK_OF as Record<string, number>;
-  const wrong = names.filter(m => lookStuff(P[m]) !== (of[m] ?? 0)).map(m => `${m} is drawn as class ${lookStuff(P[m])}, its row says ${of[m] ?? 0}`);
-  check(wrong.length === 0, `every one of the palette's ${names.length} paints is drawn as its own row's stuff (${Object.keys(of).length} have a material, the rest are plain)`, wrong.join(' · '));
-  // a paint worn dark in one piece is still its stuff, unless the worn colour IS another paint: then it is that paint, as it is to a round. Counted, so a new paint that adds one is seen
-  const taken: string[] = [];
-  for (const p of Object.keys(of)) for (const q of names) { if (q === p || (of[q] ?? 0) === of[p]) continue;
-    for (let k = LOOK_MATCH.darkLo + 0.0025; k < LOOK_MATCH.darkHi; k += 0.0025) if (P[p].every((v, c) => Math.abs(v * k - P[q][c]) < LOOK_MATCH.near)) { taken.push(`${p} × ${k.toFixed(2)} = ${q}`); break; } }
-  const worn = (m: string, k: number) => lookStuff(P[m].map(v => v * k));
-  check(worn('dust', 0.7) === of.dust && worn('mud', 0.84) === of.mud && worn('slab', 0.6) === of.slab && worn('gravel', 0.5) === 0 && taken.length <= 10,
-    'a paint worn dark in one piece (a trodden patch, a door\'s wear) is still its stuff; a worn colour that is another paint\'s own is that paint, and there are no more such pairs than there were',
-    `${taken.length} pairs: ${taken.join(' · ')}`);
+// 8. what a box is made of is the box's own word: a palette paint handed over is made of what its name says, and a tone of it is the same stuff
+{ const P = GWOT_PALETTE as Record<string, number[]>, names = Object.keys(P), T = PAINT_STUFF as Record<string, string>, word = lookWordOf();
+  const drawn = (albedo: number[]) => word(worded(makeBox0({ albedo })), false) & (LOOK_WORD.stuffs - 1);
+  const wrong = names.filter(m => drawn(P[m]) !== lookStuffOf(T[m])).map(m => `${m} is drawn as class ${drawn(P[m])}, its name says ${T[m]}`);
+  check(wrong.length === 0 && names.every(m => paintOf(P[m])?.name === m), `every one of the palette's ${names.length} paints, handed over as the palette's own row, is made of what its name says (${names.filter(m => lookStuffOf(T[m]) > 0).length} have a material, the rest are plain); the same numbers written out again are nobody's paint`,
+    wrong.join(' · ') || `a copy of mud's numbers: class ${drawn([...P.mud])}`);
+  // a paint worn dark in one piece is still its stuff, HOWEVER dark, and whatever other paint its darkened numbers happen to be: the colour rule took a worn colour
+  // that was another paint's own for that paint (the pairs are counted here with that rule's two numbers, so the list is the one it had) and lost one worn past 0.55
+  const NEAR = 0.006, LO = 0.55, HI = 0.99, taken: string[] = []; let kept = 0;
+  for (const p of names) for (const q of names) { if (q === p || T[q] === T[p] || lookStuffOf(T[p]) === 0) continue;
+    for (let k = LO + 0.0025; k < HI; k += 0.0025) if (P[p].every((v, c) => Math.abs(v * k - P[q][c]) < NEAR)) { taken.push(`${p} × ${k.toFixed(2)} = ${q}`); if (drawn(toned(P[p], k)) === lookStuffOf(T[p])) kept++; break; } }
+  const worn = (m: string, k: number) => drawn(toned(P[m], k));
+  check(worn('dust', 0.7) === lookStuffOf('earth') && worn('mud', 0.84) === lookStuffOf('mud wall') && worn('slab', 0.6) === lookStuffOf('slab') && worn('gravel', 0.5) === lookStuffOf('gravel') && worn('gravel', 0.1) === lookStuffOf('gravel') && taken.length > 5 && kept === taken.length && drawn(P.dust.map(v => v * 0.7)) === 0,
+    'a paint worn dark in one piece (a trodden patch, a door\'s wear) is still its stuff, however dark it is worn; a worn colour whose numbers are another paint\'s own is still the paint it was worn from; a tone made by arithmetic alone, with nobody saying what it is a tone of, is nobody\'s paint',
+    `${taken.length} pairs the colour rule confused, ${kept} now their own: ${taken.join(' · ')}`);
   // on a real level, through the real pack: the word above the finish, the finish under it, what moves, and a number that is the box's own
   const { parseLevelData } = await import(`${ROOT}/src/scene/levelData.ts`), { loadLevel } = await import(`${ROOT}/src/scene/levelLoad.ts`), { standUp } = await import('./headless.ts'), { matWord, makeBox, MAT_STRIDE } = await import(`${ROOT}/src/scene/boxes.ts`);
   const stand = async (file: string) => { const l0 = console.log, w0 = console.warn; console.log = console.warn = () => { };
@@ -92,67 +107,146 @@ const hollowsOf = (b: Uint8Array) => { let s = 0; for (let i = 3; i < b.length; 
     console.log = l0; console.warn = w0; return W; };
   { const world = (await stand('smoke-lab')).game.engine.world, word = (i: number) => world.matData[i * MAT_STRIDE + 7], all = () => [...world.statics, ...world.dynamics];
     world.forgetSent(); world.upload(); const plain = all().every((b: any, i: number) => word(i) === Math.fround(matWord(b)));
-    world.setStuffOf(lookWordOf()); world.upload();   // (on the page the engine sets it before the first box is packed; the setter has every static packed again)
-    const nS = world.statics.length, boxes = all(); let classed = 0, finishOff = 0, classOff = 0, movesOff = 0, saltOff = 0; const salts = new Set<number>(), mine = new Map<any, number>();
-    boxes.forEach((b: any, i: number) => { const lw = Math.floor(word(i) / 8), c = lw & 15, mv = (lw & 16) !== 0, salt = lw >> 5;
-      if (c !== lookStuff(b.albedo)) classOff++; if (Math.abs(word(i) - 8 * lw - matWord(b)) > 2e-3) finishOff++; if (c > 0) classed++; if (mv !== (i >= nS)) movesOff++; if (salt > 90) saltOff++; if (mv) { salts.add(salt); mine.set(b, lw); } });
+    world.setStuffOf(lookWordOf(), lookCoreOf()); world.upload();   // (on the page the engine sets it before the first box is packed; the setter has every static packed again)
+    const nS = world.statics.length, boxes = all(); let classed = 0, finishOff = 0, classOff = 0, said = 0, movesOff = 0, saltOff = 0; const salts = new Set<number>(), mine = new Map<any, number>();
+    boxes.forEach((b: any, i: number) => { const lw = Math.floor(word(i) / 8), c = lw & (LOOK_WORD.stuffs - 1), mv = (lw & LOOK_WORD.moves) !== 0, salt = Math.floor(lw / LOOK_WORD.own);
+      if (c !== lookStuffOf(b.stuff)) classOff++; if (b.stuff !== undefined) said++; if (Math.abs(word(i) - 8 * lw - matWord(b)) > 2e-3) finishOff++; if (c > 0) classed++; if (mv !== (i >= nS)) movesOff++; if (salt >= LOOK_WORD.owns) saltOff++; if (mv) { salts.add(salt); mine.set(b, lw); } });
     // a wall goes: a static is appended, and every box after it has a new place in the list
     world.addStatic(makeBox({ c: [1, 0.5, 1], h: [0.2, 0.5, 0.2], albedo: [0.3, 0.3, 0.3] })); world.upload();
     let jumped = 0; world.dynamics.forEach((b: any, k: number) => { if (Math.floor(word(world.statics.length + k) / 8) !== mine.get(b)) jumped++; });
     check(plain && classOff === 0 && finishOff === 0 && classed > boxes.length / 2 && movesOff === 0 && saltOff === 0 && mine.size > 4 && salts.size > 2 && jumped === 0 && world.statics.length === nS + 1,
-      'on a level, through the real pack: with nobody asking, the finish word is as it ever was; on the look page every box carries its stuff above its finish and the finish reads back (to a 500th: the word shares the float); a box past the statics, and no other, says it moves; and when a static is appended no mover\'s word changes, though every mover\'s place in the list does',
-      `smoke-lab: ${boxes.length} boxes, ${classed} with a material, ${classOff} not their paint's, ${finishOff} finishes moved, ${mine.size} movers with ${salts.size} numbers between them, ${movesOff} wrong about moving, ${jumped} changed when a static was added`); }
+      'on a level, through the real pack: with nobody asking, the finish word is as it ever was; on the look page every box carries its stuff (the word it says, nothing else) above its finish and the finish reads back (to a 500th: the word shares the float); a box past the statics, and no other, says it moves; and when a static is appended no mover\'s word changes, though every mover\'s place in the list does',
+      `smoke-lab: ${boxes.length} boxes, ${classed} with a material, ${classOff} not their own word's (${said} say a word), ${finishOff} finishes moved, ${mine.size} movers with ${salts.size} numbers between them, ${movesOff} wrong about moving, ${jumped} changed when a static was added`); }
   // the rain, by the game's own weather: a level whose lot is gravel and stands wet
   { const g = (await stand('consulate-gwot')).game, world = g.engine.world, st = world.statics as any[];
     const li = st.findIndex(b => b.c[1] < 0 && b.c[1] + b.h[1] > -0.01 && b.h[0] > 18 && b.h[2] > 12), lot = st[li], dry = li < 0 ? undefined : g.weather.dryPaint(lot);
-    const cls = (i: number) => Math.floor(world.matData[i * MAT_STRIDE + 7] / 8) & 15;
-    world.setStuffOf(lookWordOf()); world.upload(); const blind = li < 0 ? -1 : cls(li);
-    world.setStuffOf(lookWordOf((b: any) => g.weather.dryPaint(b))); world.upload(); const told = li < 0 ? -1 : cls(li);
+    const cls = (i: number) => Math.floor(world.matData[i * MAT_STRIDE + 7] / 8) & (LOOK_WORD.stuffs - 1);
+    world.setStuffOf(lookWordOf(), lookCoreOf()); world.upload(); const told = li < 0 ? -1 : cls(li);
     // … and a picked rain, which darkens what it wets for the picture alone (Box.wetK): the paint is untouched, the colour a corner is handed is not. The level
     // is packed DRY first and each thing's word kept, then the rain is picked and it is packed again: the sentence itself, word against word
-    const W2 = await stand('compound-gwot'), g2 = W2.game, w2 = g2.engine.world, st2 = w2.statics as any[], cls2 = (i: number) => Math.floor(w2.matData[i * MAT_STRIDE + 7] / 8) & 15;
-    w2.setStuffOf(lookWordOf((b: any) => g2.weather.dryPaint(b))); w2.upload(); const dryWord = new Map<any, number>(st2.map((b, i) => [b, cls2(i)]));
+    const W2 = await stand('compound-gwot'), g2 = W2.game, w2 = g2.engine.world, st2 = w2.statics as any[], cls2 = (i: number) => Math.floor(w2.matData[i * MAT_STRIDE + 7] / 8) & (LOOK_WORD.stuffs - 1);
+    w2.setStuffOf(lookWordOf(), lookCoreOf()); w2.upload(); const dryWord = new Map<any, number>(st2.map((b, i) => [b, cls2(i)]));
     g2.weather.setKind('rain'); for (let i = 0; i < 10; i++) W2.step(1 / 60);
-    w2.setStuffOf(lookWordOf((b: any) => g2.weather.dryPaint(b))); w2.upload();
+    w2.setStuffOf(lookWordOf(), lookCoreOf()); w2.upload();
     const wetOnly = st2.filter(b => b.wetK !== undefined);
-    // WHAT IS WET: every flat thing under open sky (game/wetGround.ts), not the open ground alone. So a wet thing may be a thing of plain paint laid on the ground
-    // (a weed, a rug, a mat, a stain): of no stuff dry, and of none wet. The line's claim is asked of the wet things that ARE of a stuff (there must be some: a
-    // darker gravel or concrete is read as nothing), and the GROUND itself (a slab whose middle is below the floor, as the lot above is found) is always of one.
-    // A wet metal thing is handed its own colour (wetK 1).
-    // LOOKMAPS_BREAK=1 holds a wet thing to the stuff of the colour it is handed in place of the word it carried dry: the line must fail.
-    const dryOf = (b: any) => BRK ? lookStuff(b.albedo.map((v: number) => v * b.wetK)) : dryWord.get(b);
-    const wetStuff = wetOnly.filter(b => (dryWord.get(b) ?? 0) > 0), wetOff = wetOnly.filter(b => { const c = cls2(st2.indexOf(b)); return c !== dryOf(b) || c !== lookStuff(b.albedo); }).length;
-    const bare = wetOnly.filter(b => lookStuff(b.albedo) === 0), bareGround = bare.filter(b => b.c[1] < 0).length, ground = wetOnly.filter(b => b.c[1] < 0).length;
+    // WHAT IS WET: every flat thing under open sky (game/wetGround.ts), not the open ground alone. So a wet thing may be a thing that says nothing laid on the
+    // ground (a weed, a stain): of no stuff dry, and of none wet. The line's claim is asked of the wet things that ARE of a stuff (there must be some), and the
+    // GROUND itself (a slab whose middle is below the floor, as the lot above is found) always says one. A wet metal thing is handed its own colour (wetK 1).
+    // LOOKMAPS_BREAK=1 holds a wet thing to what the colour it is handed says, which is nothing (a darker copy of a paint is no paint's row), in place of the
+    // word it carried dry: the line must fail.
+    const dryOf = (b: any) => BRK ? lookStuffOf(paintOf(b.albedo.map((v: number) => v * b.wetK))?.stuff) : dryWord.get(b);
+    const wetStuff = wetOnly.filter(b => (dryWord.get(b) ?? 0) > 0), wetOff = wetOnly.filter(b => { const c = cls2(st2.indexOf(b)); return c !== dryOf(b) || c !== lookStuffOf(b.stuff); }).length;
+    const bare = wetOnly.filter(b => lookStuffOf(b.stuff) === 0), bareGround = bare.filter(b => b.c[1] < 0).length, ground = wetOnly.filter(b => b.c[1] < 0).length;
     const darker = wetOnly.filter(b => { const m = st2.indexOf(b) * MAT_STRIDE; return Math.abs(w2.matData[m] - b.albedo[0] * b.wetK) < 1e-4 && (b.metal ? b.wetK === 1 : b.wetK < 1); }).length;
-    check(li >= 0 && !!dry && lookStuff(dry) === of.gravel && lookStuff(lot.albedo) !== of.gravel && told === of.gravel && blind !== of.gravel && wetStuff.length > 0 && ground > 0 && wetOff === 0 && bareGround === 0 && darker === wetOnly.length,
-      'rain does not change what a thing is made of: the game\'s own weather darkens a gravel lot in place, and the lot is still gravel because its word is asked of the paint it had dry (asked of the colour it has now, it was not); and each thing a picked rain wets for the picture alone is handed to the shader darker and carries the word it carried dry, its paint\'s (what the darker colour of a concrete slab or of gravel would be read as is the line above: nothing); a wet thing of no stuff is a thing of plain paint laid on the ground, which had none dry, and never the ground itself',
-      li < 0 ? 'consulate-gwot: no lot found' : `consulate-gwot: the lot's paint now ${lot.albedo.map((v: number) => v.toFixed(3)).join(' ')} (class ${lookStuff(lot.albedo)}), dry ${dry ? [...dry].map((v: number) => v.toFixed(3)).join(' ') : 'not kept'} (class ${dry ? lookStuff(dry) : '?'}); packed as ${told}, and as ${blind} with the weather not asked; compound-gwot under a picked rain: ${wetOnly.length} things wet for the picture alone, ${darker} handed darker (a metal one its own colour), ${wetStuff.length} of a stuff, ${wetOff} with another word than dry; ${bare.length} things of plain paint laid on the ground, ${ground} slabs of the ground wet and ${bareGround} of them of no stuff`); }
+    const soaked = !!dry && lot.albedo.some((v: number, c: number) => Math.abs(v - dry[c]) > 0.01);
+    check(li >= 0 && soaked && lot.stuff === 'gravel' && told === lookStuffOf('gravel') && wetStuff.length > 0 && ground > 0 && wetOff === 0 && bareGround === 0 && darker === wetOnly.length,
+      'rain does not change what a thing is made of: the game\'s own weather darkens a gravel lot in place, and the lot is still gravel because it SAYS gravel (nobody is asked the paint it had dry: no colour is read); and each thing a picked rain wets for the picture alone is handed to the shader darker and carries the word it carried dry, the one it says; a wet thing of no stuff is a thing that says nothing laid on the ground, and never the ground itself',
+      li < 0 ? 'consulate-gwot: no lot found' : `consulate-gwot: the lot's paint now ${lot.albedo.map((v: number) => v.toFixed(3)).join(' ')}, dry ${dry ? [...dry].map((v: number) => v.toFixed(3)).join(' ') : 'not kept'}; it says ${lot.stuff}, packed as ${told}; compound-gwot under a picked rain: ${wetOnly.length} things wet for the picture alone, ${darker} handed darker (a metal one its own colour), ${wetStuff.length} of a stuff, ${wetOff} with another word than dry; ${bare.length} things that say nothing laid on the ground, ${ground} slabs of the ground wet and ${bareGround} of them of no stuff`); }
   const gsrc = readFileSync(`${ROOT}/src/render/shaders/gbuffer.wgsl`, 'utf8'), csrc = readFileSync(`${ROOT}/src/render/shaders/common.wgsl`, 'utf8'), lsrc = readFileSync(`${ROOT}/src/render/shaders/look.wgsl`, 'utf8'), msrc = readFileSync(`${ROOT}/src/main.ts`, 'utf8');
-  check(/if \(LOOK\) \{ o\.look = boxStuff\(bi\); \}/.test(gsrc) && !/lookClass\(o\.albedo\)/.test(gsrc) && /fn boxLook\(i: u32\) -> u32 \{ return u32\(boxMat\[i \* 4u \+ 1u\]\.w \* 0\.125\); \}/.test(csrc) && /fn boxStuff\(i: u32\) -> u32 \{ return boxLook\(i\) & 15u; \}/.test(csrc)
-    && /if \(LOOK\) \{ w -= 8\.0 \* floor\(w \* 0\.125\); \}/.test(csrc) && /let word = boxLook\(bi\); let moves = \(word & 16u\) != 0u;/.test(lsrc) && /let salt = word >> 5u;/.test(lsrc) && /\|\| moves\) \{/.test(lsrc) && !/bi % (7|13)u/.test(lsrc)
-    && /mix\(1\.0, 0\.5 \+ cav, k2\.z\)/.test(lsrc) && /setStuffOf\(lookWordOf\(b => game\.weather\.dryPaint\(b\)\)\)/.test(msrc),
-    'the shader reads the box\'s word and takes it off the finish: no box is told what it is made of by the colour a corner is handed or how to lay its map by its place in the list, the hollows are drawn round a half, and the page asks the weather for a soaked slab\'s dry paint'); }
-// 9. the g-buffer's half, on a device that only counts: nothing is made in the constructor's turn, every layer and mip is written by the fill, and the cloth's tone
-//    and hollow are the block's last row once the cloth layer is made
-{ const writes: { tex: string; mip: number; layer: number; n: number }[] = [], bufs: { off: number; data: Float32Array }[] = []; let made = 0, cfgSize = 0;
-  const dev: any = { createTexture: (d: any) => { made++; return { label: d.label, createView: () => ({}) }; }, createSampler: () => ({}), createBuffer: (d: any) => { if (d.label === 'lookCfg') cfgSize = d.size; return { label: d.label, size: d.size }; },
-    queue: { writeTexture: (t: any, _d: any, _l: any, size: number[]) => { if (t.mipLevel === 0 && !writes.some(w => w.layer === t.origin[2])) firstAt.push(yields); writes.push({ tex: t.texture.label, mip: t.mipLevel, layer: t.origin[2], n: size[0] }); }, writeBuffer: (b: any, off: number, data: Float32Array) => { if (b.label === 'lookCfg') bufs.push({ off, data: new Float32Array(data) }); } } };
+  check(/if \(LOOK\) \{ o\.look = boxStuff\(bi\); \}/.test(gsrc) && !/lookClass\(o\.albedo\)/.test(gsrc) && /fn boxLook\(i: u32\) -> u32 \{ return u32\(boxMat\[i \* 4u \+ 1u\]\.w \* 0\.125\); \}/.test(csrc) && /fn boxStuff\(i: u32\) -> u32 \{ return boxLook\(i\) & 31u; \}/.test(csrc) && LOOK_WORD.stuffs === 32
+    && /if \(LOOK\) \{ w -= 8\.0 \* floor\(w \* 0\.125\); \}/.test(csrc) && /let word = boxLook\(bi\); let moves = \(word & 32u\) != 0u;/.test(lsrc) && LOOK_WORD.moves === 32 && /let salt = word >> 6u;/.test(lsrc) && LOOK_WORD.own === 64 && /\|\| moves\) \{/.test(lsrc) && !/bi % (7|13)u/.test(lsrc)
+    && /mix\(1\.0, 0\.5 \+ cav, k2\.z\)/.test(lsrc) && /this\.world\.setStuffOf\(lookWordOf\(\), lookCoreOf\(\)\)/.test(readFileSync(`${ROOT}/src/engine.ts`, 'utf8')) && /for \(const b of engine\.world\.statics\) word\(b, false\); for \(const d of game\.doors\.list\) word\(d\.box, true\); for \(const p of game\.props\.all\) for \(const b of p\.boxes\) word\(b, true\)/.test(msrc) && /await Promise\.all\(\[engineInit, smokeInit, lookMaps, /.test(msrc),
+    'the shader reads the box\'s word and takes it off the finish: no box is told what it is made of by the colour a corner is handed or how to lay its map by its place in the list, the hollows are drawn round a half, the page makes the word from what each box says and waits for the level\'s maps before its first frame'); }
+// 9. a stuff's number: asked by name, and the box's word still holds the finish to a 500th under the largest word there can be. THE SHADER NAMES NO STUFF
+//    AND NO SIZE OF A RULE THAT GOES BY STUFF: what it did by name until 11-04 is a word in the stuff's row, and the rows say, stuff for stuff, exactly what
+//    the names said (the old rules are written out here as they stood in look.wgsl, by the numbers the stuffs had then and still have)
+{ const lsrc = readFileSync(`${ROOT}/src/render/shaders/look.wgsl`, 'utf8'), code = lsrc.split('\n').map(l => l.replace(/\/\/.*$/, '')).join('\n');
+  const top = LOOK_WORD.stuffs - 1 + LOOK_WORD.moves + LOOK_WORD.own * (LOOK_WORD.owns - 1); let blurred = 0;
+  for (let k = 0; k < 4000; k++) { const f = k / 500, w = Math.fround(8 * top + f); if (Math.abs(w - 8 * top - f) > 1 / 1000) blurred++; }   // (a finish is under 8 and read to a 500th: boxFinish takes the word off first)
+  // the shader's text: no constant that is one stuff's number, no test of the class against anything but 0 (plain), no surface.wgsl
+  const names = [...code.matchAll(/\b(SURF_[A-Z]+|LOOK_(?:CLOTH|METAL|PAINT|VENEER|PLASTIC|FABRIC|STEEL|CARPAINT)|LOOK_L_(?:STONE|BRICK|GRAVEL))\b/g)].map(m => m[1]);
+  const tests = [...code.matchAll(/\bcls\s*(==|!=|<|>|<=|>=)\s*([A-Za-z0-9_]+)/g)].filter(m => m[2] !== '0u').map(m => m[0]);
+  const gone = !existsSync(`${ROOT}/src/render/shaders/surface.wgsl`);
+  // the rules as they stood, by the number c a stuff had on 11-04 (1 = the first name; WAS lists the 28 names of that day in their order): which way its map
+  // ran on a thing of its own, the least face that showed it, what stood under its coat, what came up at its foot, the ground that froze, what snow did
+  // not lie on; and the sizes the shader wrote out. A stuff added since is its row's own business; a row of these changed ON PURPOSE changes `was` with it
+  const N = (n: string) => lookStuffOf(n) || LOOK_NAMES.indexOf(n as never) + 1, was = { runs: (c: number) => c < 9 || c === 12 ? (c === 7 || c === 12 ? 2 : 1) : 0, least: (c: number) => c === 8 ? 0.2 : 0, under: (c: number) => c === 1 ? [N('field stone') - 1, N('mud brick') - 1, 0.3, 0.12] : [-1, -1, 0, 0], foot: (c: number) => c === 4 ? N('gravel') - 1 : -1, ground: (c: number) => c === 4 || c === 5 ? 1 : 0, sheds: (c: number) => c === 10 ? 1 : 0 };
+  const differ: string[] = [];
+  const WAS = ['mud wall', 'plaster', 'block', 'earth', 'gravel', 'slab', 'wood', 'sheet', 'cloth', 'metal', 'paint', 'veneer', 'plastic', 'fabric', 'steel', 'carpaint', 'stucco', 'skim', 'gloss block', 'board concrete', 'cast panel', 'paver', 'brushed', 'louvre', 'enamel', 'carpet', 'field stone', 'mud brick'];
+  for (let c = 1; c <= WAS.length; c++) { const l = LOOK_NAMES.indexOf(WAS[c - 1] as never); if (l < 0) { differ.push(`${WAS[c - 1]} is gone`); continue; } const t = LOOK_THING[l], u = LOOK_UNDER[l];
+    if (LOOK_LAY[l][3] !== was.runs(c)) differ.push(`${LOOK_NAMES[l]} runs`); if (t[0] !== was.least(c)) differ.push(`${LOOK_NAMES[l]} least`); if (JSON.stringify(u) !== JSON.stringify(was.under(c))) differ.push(`${LOOK_NAMES[l]} under`);
+    if (t[1] !== was.foot(c)) differ.push(`${LOOK_NAMES[l]} foot`); if (t[2] !== was.ground(c)) differ.push(`${LOOK_NAMES[l]} ground`); if (t[3] !== was.sheds(c)) differ.push(`${LOOK_NAMES[l]} sheds`); }
+  const sizes = LOOK_HANDLED.long / 2 === 0.65 && LOOK_HANDLED.tall / 2 === 0.8 && LOOK_HANDLED.thin / 2 === 0.02 && LOOK_GROUND.top === 0.25 && LOOK_GROUND.snow === 0.06 && LOOK_GROUND.foot === 0.12;
+  const read = /let row = clamp\(i32\(cls\) - 1, 0, LOOK_LAYERS - 1\); let thing = LOOK_THING\[row\]; let runs = LOOK_LAY\[row\]\.w; let under = LOOK_UNDER\[row\];/.test(code) && /max\(b\.h\.x, b\.h\.z\) < LOOK_HANDLED\.x && b\.h\.y < LOOK_HANDLED\.y/.test(code) && /wp\.y < LOOK_GROUND\.x/.test(code) && /foot0 < LOOK_GROUND\.z/.test(code);
+  const withOk = JSON.stringify(LOOK_WITH) === JSON.stringify({ 'mud wall': ['field stone', 'mud brick'], earth: ['gravel'] });
+  check(lookStuffOf('veneer') === 12 && lookStuffOf('steel') === 15 && lookStuffOf('field stone') === 0 && lookStuffOf('mud brick') === 0 && lookStuffOf('no such') === 0 && lookStuffOf(undefined) === 0
+    && LOOK_PAINTED < LOOK_WORD.stuffs && LOOK_WORD.moves === LOOK_WORD.stuffs && LOOK_WORD.own === 2 * LOOK_WORD.moves && blurred === 0
+    && names.length === 0 && tests.length === 0 && gone && differ.length === 0 && sizes && read && withOk,
+    'a stuff is asked for by name; the masonry under a mud wall and a name nobody has are no stuff; the word has room for 31 stuffs and under the largest word a finish still reads to a 500th. The shader names no stuff: no constant that is one stuff\'s number and no test of a class but against plain, and the rows say for every stuff what the names said (which way its grain runs, the least face that shows it, what is under its coat, what comes up at its foot, the ground that freezes, what snow does not lie on), with the sizes a rule went by in the table as they were',
+    `${LOOK_PAINTED} stuffs of ${LOOK_WORD.stuffs - 1}; largest word ${top} (× 8 = ${8 * top}); ${blurred} finishes of 4000 off by a 1000th or more · names in the shader: ${names.join(', ') || 'none'} · tests of a class: ${tests.join(' | ') || 'none but against plain'} · surface.wgsl gone ${gone} · rows against the old rules: ${differ.join(', ') || `${WAS.length} stuffs, six words each, all the same`} · sizes as they were ${sizes} · read from the row ${read} · the layers a layer needs ${withOk}`); }
+// 10. the g-buffer's half, on a device that only counts. A LEVEL HAS THE MAPS IT DRAWS AND NO OTHERS: nothing is made in the constructor's turn; the boot makes
+//     the men's cloth alone; a stuff's layer is made the first time a box is that stuff, with the layers its drawing reads, each after a wait on the event loop,
+//     into arrays as long as the slots in use (what they held is copied, not made again); a stuff with no map has no slot; and asking twice makes nothing twice
+{ type W = { tex: string; mip: number; layer: number }; const writes: W[] = [], bufs: Float32Array[] = [], texes: number[] = []; let cfgSize = 0, copies = 0, copiedSlots = 0;
+  const dev: any = { createTexture: (d: any) => { texes.push(d.size[2]); return { label: d.label, depthOrArrayLayers: d.size[2], createView: () => ({}), destroy: () => { } }; }, createSampler: () => ({}), createBuffer: (d: any) => { if (d.label === 'lookCfg') cfgSize = d.size; return { label: d.label, size: d.size }; },
+    createCommandEncoder: () => ({ copyTextureToTexture: (_s: any, _d: any, size: number[]) => { copies++; copiedSlots = size[2]; }, finish: () => ({}) }),
+    queue: { submit: () => { }, writeTexture: (t: any) => { if (t.mipLevel === 0 && t.texture.label === 'lookA') firstAt.push(yields); writes.push({ tex: t.texture.label, mip: t.mipLevel, layer: t.origin[2] }); }, writeBuffer: (b: any, _o: number, data: Float32Array) => { if (b.label === 'lookCfg') bufs.push(new Float32Array(data)); } } };
   let yields = 0; const firstAt: number[] = [];   // (how many messages the fill had waited on when each layer's first texel was written. A message is a task of its own in a browser: the card draws and a compiled pipeline lands before it. Counting the loop's turns from here says nothing under bun, which hands a port a thousand messages in one go)
-  const G: any = Object.create(GBuffer.prototype); G.device = dev; G.lookFillMs = 0; G.lookMen = [1, 0];
-  G.makeLook();
-  const atMake = writes.length, block = bufs[0]?.data.length ?? 0, first = bufs[0]?.data.slice(block - 4, block - 2);
-  const src = readFileSync(`${ROOT}/src/render/shaders/look.wgsl`, 'utf8'), struct = /struct LookCfg \{([^}]*)\}/.exec(src)?.[1] ?? '', rows = (struct.match(/vec4f/g) ?? []).length;
+  const G: any = Object.create(GBuffer.prototype); G.device = dev; G.lookFillMs = 0; G.lookMen = [1, 0]; G.lookSlot = new Int8Array(LOOK_LAYERS).fill(-1); G.lookSlots = 0; G.lookSeenAt = -1; G.lookMips = 1; G.lookRoom = 1; G.lookEven = !BRK; G.lookJob = Promise.resolve(); G.lookMade = []; G.objBG = {};
+  lookForget(); G.makeLook();
+  const atMake = writes.length, block = bufs[0]?.length ?? 0, first = bufs[0]?.slice(28, 30), slotsOf = (d: Float32Array | undefined) => d ? [...d.slice(32, 32 + LOOK_LAYERS)] : [];
+  const src = readFileSync(`${ROOT}/src/render/shaders/look.wgsl`, 'utf8'), struct = /struct LookCfg \{([^}]*)\}/.exec(src)?.[1] ?? '', rows = (struct.match(/: vec4f/g) ?? []).length + Number(/array<vec4f, (\d+)>/.exec(struct)?.[1] ?? 0);
   const MC = globalThis.MessageChannel; (globalThis as any).MessageChannel = class extends MC { constructor() { super(); yields++; } };
-  const even0 = lookAmounts.even; lookAmounts.even = BRK ? 0 : 1; await G.fillLook(); lookAmounts.even = even0; (globalThis as any).MessageChannel = MC;
+  const even0 = lookAmounts.even; lookAmounts.even = BRK ? 0 : 1;   // (makeLook has read it already; G.lookEven above is what the layers are made by)
   let mips = 1; for (let n = LOOK_N; n > 1; n >>= 1) mips++;
-  const perLayer = new Map<number, number>(); for (const w of writes) perLayer.set(w.layer, (perLayer.get(w.layer) ?? 0) + 1);
-  check(made === 2 && atMake === 0 && writes.length === LOOK_LAYERS * mips * 2 && [...perLayer.values()].every(v => v === mips * 2) && firstAt.length === LOOK_LAYERS && firstAt.every((t, i) => i === 0 ? t >= 1 : t > firstAt[i - 1]),
-    `the maps cost the boot's first turn nothing: no texel is written where the textures are made, and the fill writes ${LOOK_LAYERS} layers × ${mips} sizes × 2 maps with a wait on the event loop before each layer`,
-    `${made} textures, ${atMake} writes at the making, ${writes.length} after the fill, the fill had waited on ${firstAt.slice(0, 4).join(', ')} … messages at each layer's first texel (${firstAt.filter((t, i) => i > 0 ? t <= firstAt[i - 1] : t < 1).length} layers with no wait before them), ${G.lookFillMs.toFixed(0)} ms`);
-  const last = bufs[bufs.length - 1]?.data.slice(block - 4, block - 2), full = lookLayer((LOOK_NAMES as readonly string[]).indexOf('cloth'), LOOK_N, !BRK) as Layer;
-  check(rows * 16 === cfgSize && block * 4 === cfgSize && first?.[0] === 1 && first?.[1] === 0 && Math.abs((last?.[0] ?? 0) - full.tone) < 1e-6 && Math.abs((last?.[1] ?? -1) - full.hollow) < 1e-6 && bufs.length === 2 && LOOK_DEFAULTS.even === 1,
-    'the block is the shader\'s struct to the byte, and its last row is the cloth layer\'s tone and hollow: 1 and 0 until that layer is made (the men drawn against nothing yet), then what the fill found, written once',
-    `block ${cfgSize} bytes, ${rows} rows in the shader, ${block} numbers written, ${bufs.length} writes; the last row ${first ? [...first].join(' ') : '?'} at the making, ${last ? [...last].map(v => v.toFixed(3)).join(' ') : '?'} after the fill`);
+  const L = (name: string) => (LOOK_NAMES as readonly string[]).indexOf(name);
+  await G.fillLook(); const boot = { made: [...G.lookMade], writes: writes.length, slots: slotsOf(bufs[bufs.length - 1]), texes: texes.length };
+  lookNeed(['mud wall', 'earth', 'paint']); await G.needLook();
+  const level = { made: [...G.lookMade], writes: writes.length, slots: slotsOf(bufs[bufs.length - 1]), texes: [...texes] };
+  await G.needLook(); const again = writes.length; lookForget();
+  // … at every write of the block: a stuff has a slot only when every layer its drawing reads has one (the mud wall waited for its stone and brick), and
+  // every layer look.wgsl taps beside a stuff's own is one its ROW names (`under`, `foot`: what LOOK_WITH is made from) or the men's cloth
+  const WITH = LOOK_WITH as Record<string, string[]>, early = bufs.filter(d => Object.entries(WITH).some(([n, w]) => d[32 + L(n)] >= 0 && w.some(x => d[32 + L(x)] < 0))).length;
+  const waited = bufs.filter(d => d[32 + L('mud wall')] < 0 && d[32 + L('earth')] >= 0).length;
+  const taps = [...src.matchAll(/lookTap\(LOOK_L_([A-Z]+),/g)].map(m => m[1]), known = new Set(['CLOTH']), rowTaps = [...src.matchAll(/lookTap\(i32\((under\.x|under\.y|thing\.y)\),/g)].map(m => m[1]);
+  // … and a layer made in slices is the layer made in one piece, to the byte
+  const whole = lookLayer(L('steel'), 128, true); let breaths = 0; const cut = await lookLayerSliced(L('steel'), 128, true, 0, async () => { breaths++; });
+  const sameCut = whole.a.every((v: number, i: number) => v === cut.a[i]) && whole.b.every((v: number, i: number) => v === cut.b[i]) && whole.tone === cut.tone && whole.hollow === cut.hollow;
+  lookAmounts.even = even0; (globalThis as any).MessageChannel = MC;
+  const want = ['cloth', 'mud wall', 'earth', 'gravel', 'paint', 'field stone', 'mud brick'], withOk = Object.entries(LOOK_WITH as Record<string, string[]>).every(([n, w]) => w.every(x => L(x) >= 0) && L(n) >= 0);
+  check(atMake === 0 && boot.texes === 2 && texes[0] === 1 && boot.made.join() === 'cloth' && boot.writes === mips * 2 && boot.slots[L('cloth')] === 0 && boot.slots.filter(v => v >= 0).length === 1
+    && level.made.length === want.length && want.every(n => level.made.includes(n)) && level.writes === want.length * mips * 2 && level.texes.length === 4 && level.texes[2] === want.length && copies === mips * 2 && copiedSlots === 1
+    && want.every(n => level.slots[L(n)] >= 0) && new Set(want.map(n => level.slots[L(n)])).size === want.length && level.slots[L('veneer')] === -1 && level.slots[L('wood')] === -1 && again === level.writes
+    && firstAt.length === want.length && firstAt.every((t, i) => i === 0 ? t >= 1 : t > firstAt[i - 1]) && withOk && early === 0 && waited > 0 && taps.length >= 1 && taps.every(t => known.has(t)) && rowTaps.join() === 'under.x,under.y,thing.y' && Object.values(WITH).flat().length === rowTaps.length && sameCut && breaths > 100,
+    'a level has the maps it draws and no others: no texel is written where the arrays are made; the boot makes the men\'s cloth alone; a level of mud, earth and old paint makes those, the stone and brick a mud wall shows and the gravel that comes up through earth, each after a wait on the event loop, into arrays as long as the layers made (the cloth copied across, not made again); a stuff no box is has no slot; asking again makes nothing; at no write of the block does a stuff have its slot before the layers its drawing reads; and a layer made in slices is the layer made whole',
+    `at the making ${atMake} writes into ${texes[0]} slot; boot: ${boot.made.join(', ')}; the level: ${level.made.join(', ')} in arrays of ${level.texes[2]}, ${copies} copies of ${copiedSlots} slot; ${level.writes} writes in all, ${again - level.writes} more when asked again; waits before the layers ${firstAt.join(', ')}; ${early} block writes with a stuff ahead of its layers, ${waited} with the mud wall still waiting; the shader taps by name ${taps.join(', ')} and by a stuff's row ${rowTaps.join(', ')}; a layer in ${breaths} slices is ${sameCut ? 'the same' : 'NOT the same'}; ${G.lookFillMs.toFixed(0)} ms`);
+  const last = bufs[bufs.length - 1]?.slice(28, 30), full = lookLayer(L('cloth'), LOOK_N, !BRK) as Layer;
+  check(rows * 16 === cfgSize && block * 4 === cfgSize && first?.[0] === 1 && first?.[1] === 0 && Math.abs((last?.[0] ?? 0) - full.tone) < 1e-6 && Math.abs((last?.[1] ?? -1) - full.hollow) < 1e-6 && LOOK_DEFAULTS.even === 1 && slotsOf(bufs[0]).every(v => v === -1),
+    'the block is the shader\'s struct to the byte: its eighth row begins with the cloth layer\'s tone and hollow (1 and 0 until that layer is made, then what the fill found), and after it the table of slots, every one −1 at the making',
+    `block ${cfgSize} bytes, ${rows} rows in the shader, ${block} numbers written, ${bufs.length} writes; the eighth row ${first ? [...first].join(' ') : '?'} at the making, ${last ? [...last].map(v => v.toFixed(3)).join(' ') : '?'} after the fill`);
 }
+// 11. A STUFF SAYS ITS OWN ROW (lookTex.ts STUFFS, as the prelude hands it to look.wgsl): a row a layer; the older stuffs' rows are what the shader's own lists
+//     said (the first six laid by the world, the five kept ones blotched a third as far and never soaked, boards never soaked); a stuff that soaks also fades
+//     (the shader asks the one before the other); a piece's size divides the tile and its map's joint IS where the row says; and a stuff somebody keeps holds
+//     no tone between a hand and a door wide (a tile's mean over 12.5 cm and over 25 cm squares stays within a hundredth and a half of its paint)
+{ const rowsOk = [LOOK_ROUGH, LOOK_BUILT, LOOK_FADES, LOOK_SOAKS, LOOK_WORN, LOOK_UNIT, LOOK_LAY].every((a: readonly unknown[]) => a.length === LOOK_LAYERS);
+  const old = LOOK_NAMES.slice(0, 16).map((_: string, l: number) => `${LOOK_BUILT[l]}${LOOK_FADES[l]}${LOOK_SOAKS[l]}`).join(' ');
+  const oldOk = old === '111 111 111 111 111 111 010 011 011 011 011 00.30 00.30 00.30 00.30 00.30';
+  const dry = LOOK_NAMES.filter((_: string, l: number) => LOOK_SOAKS[l] > 0 && !(LOOK_FADES[l] > 0));
+  // how a stuff is laid over more than a piece: the four the shader used to name still untile and no other of the sixteen older does; nothing made of pieces
+  // untiles (it deals its pieces); a bay is of whole pieces; a bonded stuff has an even count of courses a map (the deal keeps a course's parity) and no bay along
+  const untileOld = LOOK_NAMES.slice(0, 16).filter((_: string, l: number) => LOOK_LAY[l][0] > 0).join(' '), layBad = LOOK_NAMES.filter((_: string, l: number) => { const U = LOOK_UNIT[l], L = LOOK_LAY[l]; return (U[0] > 0 && L[0] > 0) || (U[0] === 0 && (L[1] > 0 || L[2] > 0)) || !Number.isInteger(L[1]) || !Number.isInteger(L[2]) || (U[2] > 0 && (L[1] > 0 || Math.round(LOOK_TILE / U[1]) % 2 !== 0)); });
+  // USE (`worn`) shows on a surface by how far it is KEPT: a kept stuff's wherever it stands, and a weathered stuff's only in a place a level calls kept
+  // (look.wgsl lookSurface's `wild`, the stuff's `fades` × the place's word; kept-check.ts holds the shader to that share, and a level that says nothing
+  // draws no use on a weathered stuff, as before the word). So a weathered stuff MAY say it. The ones that do are listed here by name, each beside the
+  // kept cousin whose number it took, so a new one is a choice somebody made: until 11-05 none could, and this line refused all of them.
+  const WORN_WILD: Record<string, string> = { plaster: 'skim', block: 'cast panel', slab: 'paver' };
+  const wornWild = LOOK_NAMES.filter((n: string, l: number) => LOOK_WORN[l] > 0 && (LOOK_FADES[l] > 0 || l < 16) && !(WORN_WILD[n] !== undefined && LOOK_WORN[l] === LOOK_WORN[LOOK_NAMES.indexOf(WORN_WILD[n])]));
+  const bad: string[] = [], slow: string[] = []; let worst = 0, worstName = '';
+  for (let l = 0; l < LOOK_PAINTED; l++) { const U = LOOK_UNIT[l], H = layers[l].a;
+    if (U[3] > 0 || U[0] > 0) {
+      const pu = LOOK_TILE / U[0], pv = LOOK_TILE / U[1];
+      if (Math.abs(pu - Math.round(pu)) > 1e-9 || Math.abs(pv - Math.round(pv)) > 1e-9 || !(U[3] > 0 && U[3] <= 0.1) || (U[2] !== 0 && U[2] !== 1)) { bad.push(`${LOOK_NAMES[l]}: a piece of ${U[0]} by ${U[1]} m`); continue; }
+      const rowPx = N / pv; let joint = 0, mid = 0;   // the height along a course's edge against the height along its middle
+      for (let x = 0; x < N; x++) { joint += H[(0 * N + x) * 4 + 3]; mid += H[(Math.round(rowPx / 2) * N + x) * 4 + 3]; }
+      if (!(joint < mid - N * 20)) bad.push(`${LOOK_NAMES[l]}: no joint along a course's edge (${(joint / N).toFixed(0)} against ${(mid / N).toFixed(0)} of 255)`);
+    }
+    if (!(LOOK_FADES[l] > 0)) { let m: Uint8Array = layers[l].a, n = N;
+      const sd = (a: Uint8Array, n: number) => { let q = 0, q2 = 0; for (let i = 0; i < n * n; i++) { const v = lum(a[i * 4], a[i * 4 + 1], a[i * 4 + 2]) / 127.5; q += v; q2 += v * v; } const mu = q / n / n; return Math.sqrt(Math.max(0, q2 / n / n - mu * mu)); };
+      while (n > 8) { m = lookMip(m, n, false); n >>= 1; if (n === 16 || n === 8) { const v = sd(m, n); if (U[0] === 0 && v > worst) { worst = v; worstName = `${LOOK_NAMES[l]} over ${(LOOK_TILE / n * 100).toFixed(1)} cm`; } if (U[0] === 0 && v > 0.015) slow.push(`${LOOK_NAMES[l]} ${v.toFixed(3)} over ${(LOOK_TILE / n * 100).toFixed(1)} cm`); } } }
+  }
+  check(rowsOk && oldOk && dry.length === 0 && wornWild.length === 0 && untileOld === 'mud wall plaster earth gravel' && layBad.length === 0 && bad.length === 0 && slow.length === 0,
+    'a stuff says its own row: one a layer; the sixteen older stuffs are laid, blotched and soaked as the shader\'s own lists had them; whatever soaks also fades; of the stuffs the weather touches only plaster, block and slab say what use does to them, each as its kept cousin does (shown only in a place a level calls kept); a piece\'s size divides the tile and the map\'s joint is where the row says; and a kept stuff that is not made of pieces holds no tone between a hand and a door wide',
+    `${LOOK_UNIT.filter((u: readonly number[]) => u[0] > 0).length} stuffs made of pieces, ${LOOK_FADES.filter((f: number, l: number) => l < LOOK_PAINTED && !(f > 0)).length} kept; the widest slow tone ${worst.toFixed(4)} (${worstName})${oldOk ? '' : '; the older rows read ' + old}${dry.length ? '; soaks and does not fade: ' + dry.join(', ') : ''}${wornWild.length ? '; says `worn` and is weathered or an older stuff, and is not on the list with its cousin\'s number: ' + wornWild.join(', ') : ''}${untileOld === 'mud wall plaster earth gravel' ? '' : '; of the older stuffs these untile: ' + untileOld}${layBad.length ? '; laid wrongly: ' + layBad.join(', ') : ''}${bad.length ? '; ' + bad.join('; ') : ''}${slow.length ? '; slow tone: ' + slow.join(', ') : ''}`); }
 console.log(red ? '\nlookmaps: RED' : '\nlookmaps: all pass');
 process.exit(red ? 1 : 0);

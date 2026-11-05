@@ -690,7 +690,23 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
     another lamp of its class lights the snow); the stencil is on the screen, so its reach in metres shrinks on a steep view of a slope; the mark has two bits, so the term
     steps once (at half) across a dusting's edge; the reach masks (full-height walls only) are the only cull by place. Two skips that leave the picture as it is
     (the cost owner's a and b, 10-14): no light is scored where the stencil's unshadowed sums are zero for both classes, and a light is passed over when its own class's
-    sum is zero. Still untimed on a GPU.
+    sum is zero.
+  - **Timed, and the walk asks a lamp's range first (2026-11-05)**. On a rented NVIDIA card (an A10G through Vulkan, headless Chrome: relative only, never a
+    frame rate), the tunnel under `?look`, High at 1368 by 770 resolved to 1777 by 1000, the world running, 21 lamps of the level's and the carried ones, 4 s medians: the
+    composite (`compS`, the picture's full size, so the render scale cannot pay for it) 1.72 ms with the glow and the sparkle, 1.15 with both words off, 1.56 with the
+    sparkle off, 1.66 with the glow off (either alone walks the lamps: the walk is what costs, not the stencil's sixteen reads nor the facet's hashes). Rebuilt in the
+    page with no walk: 1.16. So the walk was 0.55 ms, a third of the composite. Of it about a quarter was the reach table read for lamps out of range anyway: with
+    `evalLight`'s own first exit (`dist > li.range`, the same subtraction, dot and square root, read from the lamp's three fields) put BEFORE the table, 1.59; the
+    table first and the range after gave nothing back (1.71), range and cone together less than range alone (1.62), and a fixed list of the twelve lamps that matter
+    there, which is the most a list by tile or by cell could give, 1.57. The rest (0.4 ms) is the term itself for the lamps that do light the snow. NO SWITCH: the
+    line only passes over a lamp `evalLight` was about to refuse, and at a range's edge the lamp's own window is zero, so the picture is the build's.
+    The commit against its base, a box each: `compS` 1.73 and 1.72 before (two boxes), 1.59 after; at half scale 1.72 and 1.70, then 1.57; all passes 14.5 to 14.4.
+    Three stills with the world held at 75 s of game time, the base twice and the commit once: the commit's differs from either base still by no more than the two
+    base stills differ from each other (mean difference a channel 1.22 and 1.30 of 255 against 1.24; in 64-pixel blocks 0.16 and 0.18 against 0.18), falling snow and grain.
+    `snowglow-check`'s fog line holds the line where it stands, written as `evalLightRaw` writes it, and that `shaders/compact/composite.wgsl` has the term word
+    for word (`GLOWRANGE_BREAK=1` must fail, both stands). The wet coat's and the panes' walks in the same file have the table first too and were left: no scene
+    with either was timed. NOT TIMED: any Apple chip, Windows, an AMD card, another level. The maintainer's M4 Max read `compS` 3.09 ms on the same spot at
+    1481 by 1000, but a single row of that read-out is stretched where Metal runs passes side by side (its rows summed to 20.45 ms, their union was 15.84).
   - **The fog's leak watch on the pass** (`node tools/qa/fog-lit-stills.cjs --level pass.json --torches --frames 12 --w 640 --h 400`, SwiftShader, low, once with the term
     and once with `--q 'snowglow=0'`): 106 pipelines, none failed, no GPU error either way. The full picture: 399 fog px moved in patches with the enemy's torches forced
     on against 1236 with nothing changed (422 / 1248 without the term): under the noise. The lit rung: 3720 with the term, 3736 without, and the tool's own rule (any
@@ -915,7 +931,13 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   tools/qa/probes.ts rainwalls` (family `weather`), 4 lines; the rule written again in the check and the shader's function held to it by its text;
   asked over every level's roofs as the renderer has them. The depot: 19 outer walls, every outer face shown, every inner face and the floor 10 cm
   inside dry. All 50 levels: 663 outer walls (the bare rectangles hid every face), 657 faces shown, 663 inner faces dry; ground newly in front of
-  the rain with nothing standing on it 13.7 m² in all, most on quiet-relay 3.1 m². `RAINWALLS_BREAK=1` fails 2 on both stands. KNOWN LEFT: a third or
+  the rain with nothing standing on it 13.7 m² in all, most on quiet-relay 3.1 m². `RAINWALLS_BREAK=1` fails 2 on both stands. THE BARE GROUND IS
+  COUNTED IN TWO (2026-11-05): that line had gone red as levels gained shelters (59 levels, 35.4 m², sneak-lab 4.52 against a bar of 4), and every
+  square metre over the bar was the rim of a roof on no wall, which the lines below already call known. So the check now parts the ground by what
+  stands at the roof's edge there: floor AT A WALL (a ceiling-high box within half a metre: a threshold, the strip past a packed roof's wall) keeps
+  the two bars (15.5 m² over 59 levels, most on quiet-relay 1.56 m²); ground under an OPEN EDGE is barred by its DEPTH and not its amount (19.9 m², most on sneak-lab
+  3.82 m²; the ground counted over the metres of edge with no wall and no other roof, less a tenth of a square metre for corners, may not pass the rule's
+  0.2 m and a tenth: a rule that reached further in under a shelter fails here, a level that gains a shelter does not). The rule and the picture are as they were; the break now fails 3. KNOWN LEFT: a third or
   fourth roof is packed to 0.2 m rounded outward, so some of its walls' faces stay hidden (the barracks: 3 of 33) and a strip of yard up to 0.2 m at
   such a wall's foot is as it was; the rim of a roof that stands on no wall (quiet-relay's shelter) shows streaks 0.2 m in; a ray that ends on a far
   wall's top over the building shows only the rain it met before the roofs' columns; `snow-check walls` still reads the rain's old line in
@@ -1042,6 +1064,15 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   albedo is its mirror, and the packer multiplies albedo by `wetK`). DARKER is what a porous thing does as it drinks; a sealed one (a painted line,
   plastic, a glazed tile) barely darkens in life. Today `wetK` 0.5 is ONE NUMBER STANDING FOR TWO, on sealed and porous alike (the measured look of the
   wet lot): how much a thing darkens belongs in its stuff's row beside whether it soaks, when boxes say what they are made of.
+  A KNOWN MISS UNTIL THEN: A DIRT OR GRAVEL STRIP THAT STANDS FOR GRASS READS MATT WHEN WET. `soaks` reads the paint, and a look paint is read as the office paint
+  it stands for (`particleFx.ts surfOf`). So the 18 strips that stand for the office's grass go darker with no film (15 painted dirt, 2 gravel, 207 m² on
+  warehouse-gwot alone, 1 scrub; about 2,470 m² over ten levels), while the same paints laid as ground shed and take it (74 wet gravel boxes, about
+  2,800 m²; 236 wet dirt boxes, about 9,700 m², the compound twin's yard among them). A review's tallies of every level stood in a picked rain on the
+  software stand; not a repo check. The graphics goal's ruling, 11-04 late, once it had those numbers: THE STUFF'S ROW KEEPS TODAY'S RAIN. Dirt laid as ground films when wet, as it does
+  today, and so does gravel; scrub and grass soak. So the 15 dirt strips and the 2 gravel strips that stand for grass are the miss (they will film like
+  the rest of their stuff, about 2,470 m² from matt to filmed), unless a strip is really a verge, whose box then names scrub. No list of paints goes
+  into `soaks` to mend it: it waits for every box naming its material, where `soaks` is a word of the stuff's row. Whether wet earth should be matt
+  at all is a look call for later, with rain drawn on a GPU: one word in that row then.
   THE LOT stays the weather's: `setWet` soaks its slab in place (the albedo a round's material is read from: gameplay, as measured), and tells the step
   in that same call (`WetGround.follow`), so the lot and the yard are never one wet and one dry for a frame drawn with no update between (a pause, the
   start card); the picture's block of `Game.update` asks again every tick, which follows a level whose boxes changed (`wetGround.ts standing`: one
@@ -1063,7 +1094,14 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   flag written, no box added, the world's serial not moved) is dry an update later and wet again once put back. TWO BARS OF `hourwx-storm`
   MOVED WITH THE RULE, on purpose: "every wet thing is glossy" is "glossy unless it soaks", and "the level's own storm wets the lot alone" is "the lot
   and the sheets lying on it"; its sky test by collision is asked of the ground (slab and finish) and no longer of a sheet (a stain under a parked lorry
-  is wet with the ground round it: the rain's roofs decide, as they decide where rain is drawn). `dress-check.ts --weather <kind>` is new: the five
+  is wet with the ground round it: the rain's roofs decide, as they decide where rain is drawn). Its two COUNTS are of ground alone since 11-04 late:
+  with the sheets in them (dozens a level) the count of yards could not fail on either stand, nor the level's own storm against the picked rain on
+  the shipped one (the frozen stand's bar, the lot alone, was sound). Now an open slab is wet beside the lot on the compound and on the barracks, BY
+  NAME (a tightening: it was "two somewhere"); and under the level's own storm the compound has no more wet ground than under a picked rain, slab
+  against slab (1 against 2 frozen, 2 against 2 shipped). The film bar asks a thing's paint as authored (`Weather.dryPaint`), the lot's too. MEASURED
+  11-04 on step 1340's tip, software: `probes.ts hourwx` ALL PASS, 6 probes, both stands. Each count shown red on a step got wrong where the old one
+  was green: a slab asked for five open spots of 25 (the barracks' courtyard has four, and stays dry): red on both stands, old green on both; five
+  room floors wetted under the level's own storm: red on both, old green on the shipped stand. `dress-check.ts --weather <kind>` is new: the five
   missions played in a picked weather, red if nothing was wet with the rows up (on a dry night the rain's rows do nothing and a pass says nothing of
   them).
   MEASURED: 11-04, on step 1310 (and before it on step 1302: the same numbers), software only. `wetground-check` 5 of 5 on both stands (shipped, a downpour picked: the crossing
@@ -1094,12 +1132,12 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   - **WHAT IT IS NOW: ONE FIELD OF POWDER, carried by the air the falling flakes ride.** `render/powderField.ts PowderField` + `shaders/powder_field.wgsl`:
     a texture over the level's floor plan at `POW_RES` 10 cells a metre (the pass: 400 × 280), a texel = how much powder stands over that spot (a column:
     what it hides seen from above) and column × height. One compute kernel a step, old → new, then a copy (the picture always reads the same view):
-    CARRY back along the air field's velocity there (`render/airField.ts`, × `POWDER.velK` 1.08 = the flakes' own share a hand over the ground), read
+    CARRY back along the air field's velocity there (`render/airField.ts`, × `POWDER.velK` 1.1 = the flakes' own share a hand over the ground), read
     with a cubic held inside its four nearest cells (a bilinear read smears a thread into a cloud in a second at these speeds); SETTLE: `life` 12 s in
     air that moves, `lifeStill` 1.4 s in air that does not (a lee clears and its edge is drawn), and thick powder falls out faster than thin (`clump`);
-    PICK-UP from open lying snow (the air map's own "under the sky" share) where the air runs at the ambient wind or over it (`gateLo` ‥ `gateHi` × it:
-    none in a lee, most in the jet through a gap), from small crests (`crest` 0.28 m, the `crestCut` share of the ground gives none) inside gust patches
-    (`patch` 4.5 m) that stand where they are and come and go slowly, so each crest's powder is drawn out downwind into a thread; more where the air's
+    PICK-UP from open lying snow (the air map's own "under the sky" share) where the air runs faster than a share of the ambient wind (`gateLo` ‥
+    `gateHi` × it: none in a lee, most in the jet through a gap), from small
+    crests (`crest` 0.36 m, the `crestCut` share of the ground gives none) inside gust patches (`patch` 3.5 m) that stand where they are and come and go slowly, so each crest's powder is drawn out downwind into a thread; more where the air's
     lift goes up (a wall's windward foot); KICKS (below). A solid cell holds none. The powder has NO WIND OF ITS OWN: that is the whole answer to "does
     not react to walls" and "a wind that does not match the falling snow". The engine (`engine.ts powderLive`) builds it the first frame the look page
     has lying snow (`lookConfig.snow`, the page's word: `game.snowTracks`), an air field and either row up, steps it right after the air's own step on
@@ -1116,13 +1154,13 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
     stands in front of a boot). IT IS DRAWN AS THREADS (10-29; the maintainer on a GPU, of the field drawn as it stands: "i don't really see blowing
     snow and snow puffs at all?"). The field is a tenth of a metre a cell and thin (a mean column near 0.04): drawn as it stands it is a faint wash,
     white on white. So the field says WHERE the powder is, HOW MUCH and WHICH WAY the air runs there (the velocity its b and a carry), and inside
-    it `powderThreads` draws threads a few fingers wide and about 0.45 m long (`POWDER_GRAIN` 0.07 m): a grain averaged over `POWDER_READS` 10
-    reads along the air's way at that spot, `POWDER_REACH` 0.042 m apart (UNDER a grain: at four reads 0.17 m apart each read fell on a grain of its
+    it `powderThreads` draws threads a finger or two wide and six times as long (`POWDER_GRAIN` 0.03 m since 11-05, 0.07 before): a grain averaged over `POWDER_READS` 10
+    reads along the air's way at that spot, `POWDER_STEP` 0.6 of a grain apart (UNDER a grain, and said in grains since 11-05 so that it holds at any width: at four reads 0.17 m apart each read fell on a grain of its
     own and a thread was a row of beads, fish scales over the whole road in a dusk still; the pattern was then tuned in a small offline drawing
     of the same sums before the page was booted again), a sixth of the ground under a thread, and slid along at the air's speed there, drawn twice half a turn apart and cross-faded (`POWDER_TURN` 1.6 s:
     a pattern slid for ever on air that turns is torn apart), so a thread bends where the air bends and stops where the field has nothing. Nothing in
-    the shader has a wind of its own: the check reads that. The column is drawn × `POWDER_GAIN` 3, with `POWDER_THIN` 0.12 of it between threads
-    and × `POWDER_THREAD` 5 in a thread's middle; a thick column (a boot's puff) is drawn whole by a column of 0.9 and half by 0.55 (whole only past 1, a kick's round was more streaks among the
+    the shader has a wind of its own: the check reads that. The column is drawn × `POWDER_GAIN` 1.75, with `POWDER_THIN` 0.08 of it between threads
+    and × `POWDER_THREAD` 1.2 in a thread's middle (3, 0.12 and 5 before 11-05: the maintainer's numbers, below); a thick column (a boot's puff) is drawn whole by a column of 0.9 and half by 0.55 (whole only past 1, a kick's round was more streaks among the
     streaks half a second on; whole from 0.4, a line of kicks a stride apart was one white haze over the road and its tracks for seconds: both seen); in still air there is no thread and the powder is drawn even (one read of the grain showed the
     grain's own square cells in a yard's lee). A few in a thousand 3 cm spots of powder catch the sun for a tenth of a second. Its light is THAT PIXEL's own (the same sun, shadow, lamps, sky and bounce) on a whiter powder, never darker than what is
     under it (that reads as smoke), with the sun's share taken back up by the cosine the ground paid (stuff in the air is lit full on by a low sun
@@ -1135,7 +1173,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
     `render/lookveil.ts lookVeilFrame` writes the frame's `veilA` / `veilB` (@848, @864): where the field lies over the world and where the sun is.
   - **CHECKS.** `tools/qa/powder-field-page.cjs` (the solver alone in headless Chromium on the software adapter, about 0.1 s a step: no NaN, solids
     hold none, a lee holds under 35 % of the open, the jet through a gap over 2.5 × the lee, a sprinter's kicks leave over 1.8 × a walker's, 15 s of still
-    air settles it under 1 %, and its stored velocity is the air's × `velK` by a fit over 560 cells (1.054 against 1.08 ± 0.04: the powder reads the air
+    air settles it under 1 %, and its stored velocity is the air's × `velK` by a fit over 560 cells (1.054 against 1.08 ± 0.04 on 10-28; 1.073 against 1.1 with the maintainer's numbers of 11-05: the powder reads the air
     between its cells, so cell by cell the two differ by a few cm/s); 9 lines, all pass 10-28; `POWDERFIELD_BREAK=1` steps it in air that never moves and fails 3; `--mask FILE` = pictures of it on a level's own air
     map, nothing asserted). `tools/qa/lookveil-check.ts` (5 lines: the frame's side and the two writings of the shader; `LOOKVEIL_BREAK=1` fails 1),
     `tools/qa/snowpuffs-check.ts` (5 lines; `SNOWPUFFS_BREAK=1` fails 3), `frame-layout.ts` / `materials-probes.ts` for the fields. Page hooks:
@@ -1154,6 +1192,27 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
     A ROW'S NAME FITS THE PANEL'S NAME COLUMN (twenty letters; the first names were cut off and two read the same): the full sentence is the head
     of the row's tip. "copy them" hands back the tables' own keys. Checked on the software adapter: the page boots and a picture of the panel
     shows the section with every name whole. NEVER SEEN ON A GPU; no row has been moved by anybody.
+  - **THE WISPS' DEFAULTS ARE THE MAINTAINER'S OWN NUMBERS** (11-05; `render/powderField.ts POWDER`, `POWDER_DRAW`, and the four consts of
+    `shaders/composite.wgsl` and its compact twin, which `lookveil-check` holds alike). He tuned them on his GPU in the section above, copied them
+    out with its button and posted them with "I think we still need a lot of tweaking though": so these are where the next tuner STARTS, not a
+    finished look, and what he still dislikes had been asked and not yet answered when this was written. What moved, old to his: HOW IT IS DRAWN
+    gain 3 to 1.75, between the streaks 0.12 to 0.08, a streak's middle 5 to 1.2, a streak's width 0.07 to 0.03 m (so about a quarter of the
+    column's mean is drawn where the whole was, and a streak is under half as wide); WHAT THE WIND DOES the two gates 0.6 and 1.15 to 1.35 and
+    2.35 of the day's wind, a gust patch 4.5 to 3.5 m, a crest 0.28 to 0.36 m, the powder's speed 1.08 to 1.1 of the air's. WHAT THE GATES
+    DO WAS MEASURED, because the first reading of them was wrong ("both stand over the open wind, so open ground lifts nothing"): on the
+    solver's own page with his five numbers the open ground upwind still carries a mean column of 0.093 (0.103 with the old), the gap's jet
+    0.096 (0.109), and a wall's lee 0.000 (0.003). The gate is a share of the DRIVE's speed and the open air runs well over it, so doubling
+    the gates empties the lee and the slow edges and leaves the open streaming. What changes the picture most is how it is DRAWN: a
+    quarter of the brightness in streaks under half as wide. The other thirteen rows and the six of a boot's kick are as they
+    were. A picture change on every snow level of the look's page. ONE THING HAD TO MOVE WITH THE WIDTH for the defaults to draw what he
+    saw: the step between a thread's reads was metres over the grain's CONST while the panel's row drew the grain, so at his 0.03 m the
+    panel still read every 0.6 of a grain; with 0.03 made the const it would have read every 1.4 (beads, and a different pattern). The step
+    is now `POWDER_STEP` 0.6 grains, the same picture at any width (a review's find, by the sums; `lookveil-check` holds it under 1). His
+    0.08 between the streaks went to his screen as the nearest byte, 0.078: the const draws 0.08. The two gate rows' sliders now reach 2.5
+    and 3.5 (they stopped at 1.5 and 2.5, three steps over where he left them). `tools/qa/powder-field-page.cjs` is untouched and its nine lines pass
+    with his numbers as the page's defaults, on the software adapter (the fit of the powder's speed reads 1.073 against his 1.1 ± 0.04).
+    `lookveil-check` (ten lines now), `snowpuffs-check` green. Never seen on a GPU by us: the picture with these
+    numbers is, by the reading above, the one he had on his screen.
   - **THE POWDER'S STEP IS COMPILED ONCE A DEVICE** (11-03; `render/powderField.ts programOf`). A field is thrown away when both snow rows are at nothing
     and made again when one comes back, and each new field compiled "powder step" again: found by a one-boot read of the pass's page (two switches of the
     look's layers, two more compiles), against his "compile once". The layout and the pipeline are kept by device now; a field is its textures, its

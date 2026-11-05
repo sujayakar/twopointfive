@@ -1,0 +1,13 @@
+# how many of 21 lines each man of floodlit-gwot has open to the ground his gun rests on: his name, the frozen stand's count, the shipped stand's (tools/qa/marksight-check.ts --write, once on each stand; a line that starts # under this one is a note and is kept)
+roomClear.west.marks#0 18 18
+roomClear.west.marks#1 12 12
+roomClear.west.marks#2 12 12
+roomClear.hall.marks#0 6 6
+roomClear.hall.marks#1 12 12
+roomClear.hall.marks#2 15 15
+roomClear.east.marks#0 18 18
+roomClear.east.marks#1 12 12
+roomClear.east.marks#2 18 18
+roomClear.east.marks#3 12 12
+roomClear.store.marks#0 12 12
+roomClear.store.marks#1 12 12

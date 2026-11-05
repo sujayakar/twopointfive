@@ -48,11 +48,38 @@ fn wetGround(wp: vec3f, rough: f32, k: f32) -> f32 {
 }
 
 struct DetailOut { albedo: vec3f, rough: f32, metal: f32 };
-fn detailSurface(wp: vec3f, n: vec3f, bi: u32, albedoIn: vec3f, roughIn: f32, metalIn: f32, k: f32) -> DetailOut {
+struct WearOut { albedo: vec3f, rough: f32 };
+/** A FLOOR'S WEAR from the traffic map's sample `wm` (x = how much it is walked, y = how close a wall's foot is): where feet go a finish there is to wear
+ *  (`roughIn` under 0.6: the wax or sealer) is scuffed matte and a little ground-in grey; the band a mop does not reach holds dust and dirt, on any floor.
+ *  `uneven` = the caller's patchiness at arm's length (0.65‥1.35). ONE COPY OF THE NUMBERS: detailSurface's on every page, and the look layer's on its own
+ *  (look.wgsl lookSurface), which reads the map itself and hands the sample with what its weather answers for left out. */
+fn detailFloorWear(albedo: vec3f, rough: f32, roughIn: f32, wm: vec3f, k: f32, uneven: f32) -> WearOut {   // (wm: how much the floor is walked, how close a wall's foot is, and how much of the band at that foot is this layer's to draw: 1 on every page but the look's, where the weather has its share of wild ground's — look.wgsl lookSurface)
+  var o = WearOut(albedo, rough);
+  let traffic = clamp(wm.x * uneven, 0.0, 1.0);
+  let grime = wm.y * wm.y * wm.z;                                         // (squared: hugs the wall)
+  if (roughIn < 0.6) {                                                    // a finish there is to wear: the wax / sealer scuffed matte, a little ground-in grey
+    let worn = traffic * k;
+    o.rough = min(o.rough + 0.42 * worn, 1.0);
+    o.albedo = mix(o.albedo, vec3f(dot(albedo, vec3f(0.2126, 0.7152, 0.0722)) * 0.86), min(0.35 * worn, 0.35));
+  }
+  let g = grime * k;                                                      // where the mop does not reach: dust and dirt, on any floor
+  o.rough = min(o.rough + 0.3 * g, 1.0);
+  o.albedo *= 1.0 - 0.28 * g;
+  return o;
+}
+/** THE SKIRTING'S: the bottom hand-width of an upright face that stands on the floor, marked by shoes, trolleys and mops (the same one copy) */
+fn detailSkirtWear(albedo: vec3f, rough: f32, y: f32, k: f32, uneven: f32) -> WearOut {
+  let band = (1.0 - smoothstep(0.03, 0.13, y)) * k * (0.7 + 0.3 * uneven);
+  return WearOut(albedo * (1.0 - 0.3 * band), min(rough + 0.25 * band, 1.0));
+}
+/** `byLook` = the look layer wears this pixel's floor and skirting itself, by its stuff's own row (look.wgsl lookWears, the look's page only): the two terms
+ *  below that read the traffic map and the floor's edge are then left to it: it calls detailFloorWear and detailSkirtWear itself, on its own read of the
+ *  map, with what its weather answers for left out (look.wgsl, USE AND DIRT), so each mark has one answer */
+fn detailSurface(wp: vec3f, n: vec3f, bi: u32, albedoIn: vec3f, roughIn: f32, metalIn: f32, k: f32, byLook: bool) -> DetailOut {
   var o: DetailOut; o.albedo = albedoIn; o.rough = roughIn; o.metal = metalIn;
   // the cheap world-space predicates first: most wall / ceiling / carpet pixels take no term and leave here without touching the box record
-  let floorPix = n.y > 0.9 && wp.y < 0.15;
-  let skirtPix = abs(n.y) < 0.3 && wp.y < 0.14 && wp.y > -0.02;
+  let floorPix = !byLook && n.y > 0.9 && wp.y < 0.15;
+  let skirtPix = !byLook && abs(n.y) < 0.3 && wp.y < 0.14 && wp.y > -0.02;
   let dustPix = n.y > 0.9 && wp.y > DUST_Y;
   let metalPix = metalIn > 0.5;
   if (!(floorPix || skirtPix || dustPix || metalPix)) { return o; }
@@ -66,28 +93,17 @@ fn detailSurface(wp: vec3f, n: vec3f, bi: u32, albedoIn: vec3f, roughIn: f32, me
   let an = abs(ln);
   var edge: f32;                                                          // distance to the nearest edge of the face we stand on
   if (an.x >= an.y && an.x >= an.z) { edge = min(dIn.y, dIn.z); } else if (an.y >= an.z) { edge = min(dIn.x, dIn.z); } else { edge = min(dIn.x, dIn.y); }
-  let lum = dot(o.albedo, vec3f(0.2126, 0.7152, 0.0722));
   let uneven = 0.65 + 0.7 * detailNoise(wp.xz * (1.0 / 0.7)) ;           // 0.65‥1.35: wear is patchy at arm's-length scales
   // ---- floors: worn paths + the grime band (upward faces at floor level; the traffic map covers the world's grid footprint) ----
   if (floorPix) {
     let uv = (wp.xz - WORLD_MIN.xz) / (vec2f(f32(GRID_W), f32(GRID_H)) * GRID_CELL);
-    let wm = textureSampleLevel(wearTex, linSamp, uv, 0.0);
-    let traffic = clamp(wm.x * uneven, 0.0, 1.0);
-    let grime = wm.y * wm.y;                                              // (squared: hugs the wall)
-    if (roughIn < 0.6) {                                                  // a finish there is to wear: the wax / sealer scuffed matte, a little ground-in grey
-      let worn = traffic * k;
-      o.rough = min(o.rough + 0.42 * worn, 1.0);
-      o.albedo = mix(o.albedo, vec3f(lum * 0.86), min(0.35 * worn, 0.35));
-    }
-    let g = grime * k;                                                    // where the mop does not reach: dust and dirt, on any floor
-    o.rough = min(o.rough + 0.3 * g, 1.0);
-    o.albedo *= 1.0 - 0.28 * g;
+    let w = detailFloorWear(o.albedo, o.rough, roughIn, vec3f(textureSampleLevel(wearTex, linSamp, uv, 0.0).xy, 1.0), k, uneven);
+    o.albedo = w.albedo; o.rough = w.rough;
   }
   // ---- skirting: the bottom hand-width of vertical faces that stand on the floor (walls, cabinets, counters, door leaves) — shoe / trolley / mop marks ----
   if (skirtPix && an.y < 0.3 && b.c.y - b.h.y < 0.05) {
-    let band = (1.0 - smoothstep(0.03, 0.13, wp.y)) * k * (0.7 + 0.3 * uneven);
-    o.albedo *= 1.0 - 0.3 * band;
-    o.rough = min(o.rough + 0.25 * band, 1.0);
+    let w = detailSkirtWear(o.albedo, o.rough, wp.y, k, uneven);
+    o.albedo = w.albedo; o.rough = w.rough;
   }
   // ---- dust on high tops (the box's own +y face, above eye level; thinner within a few centimetres of the edges) ----
   if (dustPix && ln.y > 0.9) {

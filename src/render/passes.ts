@@ -1,6 +1,6 @@
 // Screen-space lighting passes: direct (full res), indirect gather (half — a third with the lossy option), volumetrics (half — a quarter likewise), composite, then EITHER the TAAU resolve
 // (internal → output resolution, taau.wgsl) + bloom + post + sharpen/grain at output resolution, OR (TAAU off) bloom + post + FXAA/grain at internal resolution as it always was.
-import { PLACE_BYTES } from './placeField';
+import { placeNone } from './placeField';
 import { makeBuffer, makeShader, computePipelineAsync, laterPipelineAsync, laterHold, laterRenderPipelineAsync, renderPipelineAsync, writeWordsIfChanged, PIPE_QUEUE, plainAir } from '../gpu/device';
 import { shaderText } from '../gpu/wgslTrim';
 import { KERNELS, COMPACT } from './kernels';   // (the ten kernels that exist in two writings come from there: today's, or the compact set with its row on)
@@ -292,6 +292,9 @@ export class LightingPasses implements CutSwappable {
    *  reflHist[2] (accumulated rgb + view depth), reflMom[2] (moments / history length / variance), reflFast[2] (the smoothed hit distance), reflScratch (à-trous ping-pong).
    *  Chain per frame while rtOn: reflect → refl ('reflect'); specTemporal (refl, hist[1−p]) → hist[p], mom[p], fast[p]; radAtrous × rfIters ending in refl ('rdenoise'). */
   refl!: GPUTexture; reflView!: GPUTextureView; reflScratch!: GPUTexture; reflScratchView!: GPUTextureView;
+  /** THE HIGHLIGHTS' OWN TARGET, at the reflection's size (reflect.wgsl outHi: the lamps', the panels' and the sun's highlights and a beam's image; .a = the texel holds them). Written by the
+   *  reflection pass beside the mirror's, read by the composite as it is: no history, no filter (a highlight is a sum, with no noise to take out). */
+  reflHi!: GPUTexture; reflHiView!: GPUTextureView;
   reflHist: GPUTexture[] = []; reflHistView: GPUTextureView[] = []; reflMom: GPUTexture[] = []; reflMomView: GPUTextureView[] = []; reflFast: GPUTexture[] = []; reflFastView: GPUTextureView[] = [];
   rw = 0; rh = 0; rtDiv = 2; rtOn = false; rtParity = 0;
   /** the pass has been on at least once: until then reallocRefl makes a 1×1 `refl` for the composite's binding and no histories */
@@ -319,7 +322,7 @@ export class LightingPasses implements CutSwappable {
   /** THE LOOK PROTOTYPE's loose snow in the air (render/powderField.ts `view`; composite.wgsl powderTex @16, read only under LOOK): null = the 1×1 "none" */
   private powderView: GPUTextureView | null = null; private powderNone: GPUTextureView;
   setPowder(v: GPUTextureView | null) { if (v !== this.powderView) { this.powderView = v; this.bgCompFG = null; this.bgCompS = null; } }
-  /** THE LOOK PROTOTYPE's place field (render/placeField.ts `buffer`; composite.wgsl placeBuf @17, read only under LOOK with the One exposure row up): null = the zeros that say "none" */
+  /** THE LOOK PROTOTYPE's place field (render/placeField.ts `buffer`; composite.wgsl placeBuf @17, read only under LOOK while the one exposure model is on): null = the zeros that say "none" */
   private placeBuf: GPUBuffer | null = null; private placeNone: GPUBuffer;
   setPlace(b: GPUBuffer | null) { if (b !== this.placeBuf) { this.placeBuf = b; this.bgCompFG = null; this.bgCompS = null; this.bgVol = null; } }   // (the volumetric march binds it too, @5: the air's light is shown by its place's gain as a surface's is)
   /** HDR scene colour (composite output) + bloom pyramid: down[0..4] (W/2 … W/32), up[0..3] */
@@ -574,6 +577,7 @@ export class LightingPasses implements CutSwappable {
       { binding: 6, visibility: CS, storageTexture: { access: 'write-only', format: 'rgba16float', viewDimension: '2d' } },
       { binding: 7, visibility: CS, texture: tex2d('float') }, { binding: 8, visibility: CS, texture: tex2d('float') },
       { binding: 11, visibility: CS, buffer: { type: 'uniform' } },   // the BEAMS (setBeams): lasers / tracers as line segments — a uniform, not a storage buffer (the scene group sits at the adapter's storage limit); 9 / 10 are phase 5's
+      { binding: 12, visibility: CS, storageTexture: { access: 'write-only', format: 'rgba16float', viewDimension: '2d' } },   // out: the highlights (reflHi)
     ];
     this.beamBuf = device.createBuffer({ label: 'reflBeams', size: BEAM_BYTES, usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST });
     this.lRefl = device.createBindGroupLayout({ label: 'reflect', entries: reflEntries });   // (main's layout, entry for entry)
@@ -624,6 +628,7 @@ export class LightingPasses implements CutSwappable {
       { binding: 15, visibility: FS, buffer: { type: 'uniform' } },             // the squad's weapon lasers as segments (setBeams — the reflection pass's own buffer): drawn as light in the air (composite.wgsl beamAir, settings.beamAir)
       { binding: 16, visibility: FS, texture: tex2d('float') },                // THE LOOK PROTOTYPE: the loose snow in the air (setPowder; a 1×1 "none" on every other page, never read there)
       { binding: 17, visibility: FS, buffer: { type: 'uniform' } },             // THE LOOK PROTOTYPE: the place field (setPlace, render/placeField.ts; zeros = none, on every other page, never read there). A uniform: no sampled texture is left
+      { binding: 18, visibility: FS, storageTexture: { access: 'read-only', format: 'rgba16float', viewDimension: '2d' } },   // the reflections' highlights (reflHi; read only while frame.rtCfg.w > 0). A storage texture read with textureLoad, which is all it is ever asked: no sampled texture is left
     ];   // (ALL 16 of the sampled textures a fragment stage may bind by default: 14 here + the smoke's atlas and its page texture in group 0 — the next one wants a merge, not a new binding)
     this.lComp = device.createBindGroupLayout({ label: 'composite', entries: compEntries });
     // SHARP DIRECT: the same bindings in the COMPUTE stage + the output-size HDR target as a storage texture (composite.wgsl cs / hdrOut @14)
@@ -642,7 +647,7 @@ export class LightingPasses implements CutSwappable {
       { binding: 2, visibility: CS, texture: tex2d('unfilterable-float') }, { binding: 3, visibility: CS, texture: tex2d('unfilterable-float') },
       { binding: 4, visibility: CS, storageTexture: { access: 'write-only', format: 'r32uint', viewDimension: '2d' } } ] });
     this.decalDummy = makeBuffer(device, 32, GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST, 'decalDummy');
-    this.placeNone = device.createBuffer({ label: 'placeNone', size: PLACE_BYTES, usage: GPUBufferUsage.UNIFORM });   // (never written: all zeros = no field)
+    this.placeNone = placeNone(device);   // (never written: all zeros = no field; the one the particles' splat is handed too)
     this.powderNone = device.createTexture({ label: 'powderNone', size: [1, 1], format: 'rgba16float', usage: GPUTextureUsage.TEXTURE_BINDING }).createView();   // (never written: all zeros = no powder)
     this.lFxaa = device.createBindGroupLayout({ label: 'fxaa', entries: [
       { binding: 0, visibility: FS, texture: tex2d('float') },
@@ -1333,17 +1338,20 @@ export class LightingPasses implements CutSwappable {
   private reallocRefl(R: Realloc, rw: number, rh: number, carry: boolean) {
     const oldHist = this.reflHist, oldMom = this.reflMom, oldFast = this.reflFast;
     this.drop(R, this.refl); if (this.reflScratch !== this.refl) this.drop(R, this.reflScratch);   // (the 1×1 stand-in doubles as its own scratch: let go once)
+    this.drop(R, this.reflHi);
     if (!this.rtEverOn) {   // never switched on here: a 1×1 stand-in for the composite's binding (read only while frame.rtCfg.w > 0, which it is not) and no histories at all
       for (const t of [...oldHist, ...oldMom, ...oldFast]) this.drop(R, t);
       this.reflHist = []; this.reflMom = []; this.reflFast = []; this.reflHistView = []; this.reflMomView = []; this.reflFastView = [];
       this.rw = rw; this.rh = rh;
       this.refl = this.take(R, 'reflNone', 1, 1, 'rgba16float', SU()); this.reflView = this.refl.createView(); this.reflScratch = this.refl; this.reflScratchView = this.reflView;
+      this.reflHi = this.take(R, 'reflHiNone', 1, 1, 'rgba16float', SU()); this.reflHiView = this.reflHi.createView();   // (a texture of its own: the reflect layout writes both in one group)
       this.reallocHit(R, rw, rh);   // (the 1×1 stand-in pair: the reflect layout names them whether or not anything is ever reused)
       this.bgCompFG = null; this.bgCompS = null; return;
     }
     this.rw = rw; this.rh = rh; const su = SU();
     this.refl = this.take(R, 'refl', rw, rh, 'rgba16float', su); this.reflView = this.refl.createView();
     this.reflScratch = this.take(R, 'reflScratch', rw, rh, 'rgba16float', su); this.reflScratchView = this.reflScratch.createView();
+    this.reflHi = this.take(R, 'reflHi', rw, rh, 'rgba16float', su); this.reflHiView = this.reflHi.createView();
     this.reflHist = [0, 1].map(i => this.take(R, `reflHist${i}`, rw, rh, 'rgba16float', su)); this.reflHistView = this.reflHist.map(t => t.createView());
     this.reflMom = [0, 1].map(i => this.take(R, `reflMom${i}`, rw, rh, 'rgba16float', su)); this.reflMomView = this.reflMom.map(t => t.createView());
     this.reflFast = [0, 1].map(i => this.take(R, `reflFast${i}`, rw, rh, 'rgba16float', su)); this.reflFastView = this.reflFast.map(t => t.createView());
@@ -1374,7 +1382,7 @@ export class LightingPasses implements CutSwappable {
   /** bytes of the live target set (the pool's budget follows it) */
   targetBytes(): number {
     let n = 0;
-    for (const t of [...this.dS, ...this.dU, ...this.dP, this.tileFlag, this.tileDist, ...this.dH.flat(), ...this.dDepthHist, ...this.dnShared, ...this.dnHm, ...this.dnHg, ...this.indHist, this.indirect, ...this.gi, this.spec, ...this.specHist, ...this.giMom, ...this.giFast, ...this.specMom, ...this.specFast, ...this.giF, ...this.giFHist, ...this.giFMom, ...this.giFFast, this.refl, this.reflScratch, ...this.reflHist, ...this.reflMom, ...this.reflFast, ...this.reflHit, ...this.giRes.flat(), this.vol, this.volReact, this.ldr, this.hdr, this.react, ...this.bloomDown, ...this.bloomUp, ...this.taaHist, ...this.sharpE, this.sharpMask, this.hdrCopy]) if (t) n += texBytes({ label: t.label, size: [t.width, t.height], format: t.format, usage: t.usage });
+    for (const t of [...this.dS, ...this.dU, ...this.dP, this.tileFlag, this.tileDist, ...this.dH.flat(), ...this.dDepthHist, ...this.dnShared, ...this.dnHm, ...this.dnHg, ...this.indHist, this.indirect, ...this.gi, this.spec, ...this.specHist, ...this.giMom, ...this.giFast, ...this.specMom, ...this.specFast, ...this.giF, ...this.giFHist, ...this.giFMom, ...this.giFFast, this.refl, this.reflScratch, this.reflHi, ...this.reflHist, ...this.reflMom, ...this.reflFast, ...this.reflHit, ...this.giRes.flat(), this.vol, this.volReact, this.ldr, this.hdr, this.react, ...this.bloomDown, ...this.bloomUp, ...this.taaHist, ...this.sharpE, this.sharpMask, this.hdrCopy]) if (t) n += texBytes({ label: t.label, size: [t.width, t.height], format: t.format, usage: t.usage });
     return n;
   }
   /** Explicit restart of the screen-space temporal histories (both parities of the direct pair + their depth, the indirect, the specular): the next frame accumulates from its own raw
@@ -1453,7 +1461,7 @@ export class LightingPasses implements CutSwappable {
     // RT reflections: the trace reads the g-buffer (+ its albedo / material targets), the denoised direct pair and the dice, writes refl; the phase-5 variant per hit-record parity p also reads reflHit[1−p] and writes reflHit[p]
     { const reflRes: GPUBindGroupEntry[] = [
         { binding: 0, resource: g.depthView }, { binding: 1, resource: g.normalView }, { binding: 2, resource: g.idView }, { binding: 3, resource: this.directView }, { binding: 4, resource: this.softView },
-        { binding: 5, resource: rc.diceView }, { binding: 6, resource: this.reflView }, { binding: 7, resource: g.albedoView }, { binding: 8, resource: g.matView }, { binding: 11, resource: { buffer: this.beamBuf } } ];
+        { binding: 5, resource: rc.diceView }, { binding: 6, resource: this.reflView }, { binding: 7, resource: g.albedoView }, { binding: 8, resource: g.matView }, { binding: 11, resource: { buffer: this.beamBuf } }, { binding: 12, resource: this.reflHiView } ];
       this.bgRefl = d.createBindGroup({ layout: this.lRefl, entries: reflRes });
       for (let pz = 0; pz < 2; pz++) this.bgReflP5[pz] = d.createBindGroup({ layout: this.lReflP5, entries: [ ...reflRes, { binding: 9, resource: this.reflHitView[1 - pz] }, { binding: 10, resource: this.reflHitView[pz] } ] }); }
     this.bgFGR = [null, null];   // (the resampling gather's groups are built on demand — ensureGiBG — since its reservoirs exist only once it has been asked for)
@@ -1590,7 +1598,7 @@ export class LightingPasses implements CutSwappable {
         { binding: 0, resource: g.albedoOView }, { binding: 1, resource: g.normalOView }, { binding: 2, resource: g.depthOView }, { binding: 3, resource: g.idOView },
         { binding: 4, resource: this.sharpEView[0] }, { binding: 5, resource: ind }, { binding: 6, resource: this.volView }, { binding: 7, resource: rc.diceView }, { binding: 8, resource: this.sharpEView[1] },
         { binding: 9, resource: this.specView }, { binding: 10, resource: { buffer: this.decalBuf ?? this.decalDummy } }, { binding: 11, resource: this.froxels.view },
-        { binding: 12, resource: this.reflView }, { binding: 13, resource: g.matOView }, { binding: 14, resource: this.hdrView }, { binding: 15, resource: { buffer: this.beamBuf } }, { binding: 16, resource: this.powderView ?? this.powderNone }, { binding: 17, resource: { buffer: this.placeBuf ?? this.placeNone } } ] });
+        { binding: 12, resource: this.reflView }, { binding: 13, resource: g.matOView }, { binding: 14, resource: this.hdrView }, { binding: 15, resource: { buffer: this.beamBuf } }, { binding: 16, resource: this.powderView ?? this.powderNone }, { binding: 17, resource: { buffer: this.placeBuf ?? this.placeNone } }, { binding: 18, resource: this.reflHiView } ] });
       this.bgCompFG = null;   // (rebuilt below with the same decal buffer / froxel view, so the two stay in step)
     }
     if (this.bgCompFG && this.compFroxView === this.froxels.view) return;
@@ -1599,7 +1607,7 @@ export class LightingPasses implements CutSwappable {
       { binding: 0, resource: g.albedoView }, { binding: 1, resource: g.normalView }, { binding: 2, resource: g.depthView }, { binding: 3, resource: g.idView },
       { binding: 4, resource: this.directView }, { binding: 5, resource: ind }, { binding: 6, resource: this.volView }, { binding: 7, resource: rc.diceView }, { binding: 8, resource: this.softView },
       { binding: 9, resource: this.specView }, { binding: 10, resource: { buffer: this.decalBuf ?? this.decalDummy } }, { binding: 11, resource: this.froxels.view },
-      { binding: 12, resource: this.reflView }, { binding: 13, resource: g.matView }, { binding: 15, resource: { buffer: this.beamBuf } }, { binding: 16, resource: this.powderView ?? this.powderNone }, { binding: 17, resource: { buffer: this.placeBuf ?? this.placeNone } },
+      { binding: 12, resource: this.reflView }, { binding: 13, resource: g.matView }, { binding: 15, resource: { buffer: this.beamBuf } }, { binding: 16, resource: this.powderView ?? this.powderNone }, { binding: 17, resource: { buffer: this.placeBuf ?? this.placeNone } }, { binding: 18, resource: this.reflHiView },
     ] });
     this.compDecalBuf = this.decalBuf ?? this.decalDummy; this.compFroxView = this.froxels.view;
   }

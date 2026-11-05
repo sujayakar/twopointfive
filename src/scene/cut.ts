@@ -210,9 +210,12 @@ export interface CutGlass { see: number; rim: number; anim?: boolean }
  *  (core.rgb, w), all zero without a core colour and without glass. w = 1 (a core colour) + 2 (glass) + 4 (its pattern steps) + 8 × the rim in quarter pixels, + the
  *  see-through share as its fraction: 1 exactly = a plain core, as before glass existed (gbuffer_cut.wgsl fsBoxCut decodes it). `round` (Box.cutRound, 1‥3; not with
  *  glass) adds 1024 × itself: the picture shades the prism's faces round that axis as one round face. `old` (Box.cutOld; not with glass) adds 512: an old break.
+ *  `coreStuff` (with `old`; the look page's number for what the core is made of, 0‥31: BoxWorld.coreStuffOf) adds 4096 × itself, above every bit here.
  *  `arc` (Box.cutArc; with `round`, and only where the record leaves its last row unused) rides in that unused row's w as CUT_PAD's 1 + arc: no reader of a
  *  plane looks past a zero normal. */
-export function packCut(cut: readonly CutPlane[], dst: Float32Array, o: number, core?: Vec3, glass?: CutGlass, round = 0, old = false, arc = 0) {
+/** where an old break's core says its stuff in the core row's w (packCut; gbuffer_cut.wgsl reads `(w >> 12) & 31`) */
+export const CUT_CORE_STUFF = 4096;
+export function packCut(cut: readonly CutPlane[], dst: Float32Array, o: number, core?: Vec3, glass?: CutGlass, round = 0, old = false, arc = 0, coreStuff = 0) {
   for (let k = 0; k < CUT_ROWS; k++) {
     const c = k < cut.length ? cut[k] : undefined, q = o + k * 4;
     if (c) { dst[q] = c.n[0]; dst[q + 1] = c.n[1]; dst[q + 2] = c.n[2]; dst[q + 3] = c.d; }
@@ -222,12 +225,12 @@ export function packCut(cut: readonly CutPlane[], dst: Float32Array, o: number, 
   const q = o + CUT_ROWS * 4;
   if (core) { dst[q] = core[0]; dst[q + 1] = core[1]; dst[q + 2] = core[2]; dst[q + 3] = 1; } else { dst[q] = 0; dst[q + 1] = 0; dst[q + 2] = 0; dst[q + 3] = 0; }
   if (glass) dst[q + 3] += 2 + (glass.anim ? 4 : 0) + 8 * Math.round(Math.min(3.75, Math.max(0, glass.rim)) * 4) + Math.min(0.98, Math.max(0, glass.see));
-  else dst[q + 3] += (round >= 1 && round <= 3 ? 1024 * round : 0) + (old ? 512 : 0);   // (Box.cutRound: 1024 × (1 + the axis); Box.cutOld: 512 — never with glass. 128 is a ROUND THING's own bit, scene/round.ts ROUND_CORE_W)
+  else dst[q + 3] += (round >= 1 && round <= 3 ? 1024 * round : 0) + (old ? 512 + CUT_CORE_STUFF * (coreStuff & 31) : 0);   // (Box.cutRound: 1024 × (1 + the axis); Box.cutOld: 512 — never with glass. 128 is a ROUND THING's own bit, scene/round.ts ROUND_CORE_W)
 }
 
 /** THE CPU CLIP every ray / segment test shares: the interval [t0, t1] of the local line o + t·d already inside the uncut box, cut down by the record. Result in
  *  CUT_CLIP: { t0, t1, k = the plane the line ENTERS the solid through at t0 (−1 = t0 was not moved: the box's own face, or the origin) }; false = nothing left.
- *  The same statements as common.wgsl isectCut. */
+ *  The same planes in the same order as common.wgsl isectCut, which takes them four at a time with no loop (tools/qa/cut-rule.ts holds the two together). */
 export const CUT_CLIP = { t0: 0, t1: 0, k: -1 };
 export function cutClip(cut: readonly CutPlane[], ox: number, oy: number, oz: number, dx: number, dy: number, dz: number, t0: number, t1: number): boolean {
   let k = -1;

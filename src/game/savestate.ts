@@ -791,7 +791,9 @@ function applyState(g: Game, s: SaveState, prevLoads: number, prevSaves: number,
     if (D.off) slabRestore(d, D.off, fin(D.angle));   // off its hinges: the slab where it lay (the reset above hung every leaf)
     d.place();
   }
-  g.col.dynamicBoxes = g.doors.leafBoxes();
+  // (THE SAME LIST, FILLED ANEW, never another array in its place: the box world's copy in the Rust module knows the game's own leaves by this array —
+  //  boxMirror.ts `own` — and a state put back inside a tick, a restart's, would leave every rule of that tick's rest without the copy)
+  { const L = g.col.dynamicBoxes, B = g.doors.leafBoxes(); L.length = 0; for (const b of B) L.push(b); }
   s.props.forEach((P, i) => { const p = g.props.all[i]; if (!p) return; p.x = fin(P.x, p.home[0]); p.z = fin(P.z, p.home[1]); p.yaw = fin(P.yaw, p.home[2]); p.vx = fin(P.vx); p.vz = fin(P.vz); p.w = fin(P.w); p.asleep = !!P.asleep; p.idle = fin(P.idle); p.lastWho = P.lastWho | 0; p.noiseT = fin(P.noiseT, -10); p.pushT = fin(P.pushT, -10); p.dirty = true; p.place(); });
   g.props.time = fin(s.propsTime, g.props.time);
   { const byName = new Map(g.targets.map(t => [t.name, t] as [string, LightTarget])); for (const T of s.targets) { const t = byName.get(T.name); if (!t) continue; t.on = !!T.on; t.broken = !!T.broken; t.disabledUntil = fin(T.disabledUntil, -1); t.handOff = typeof T.hand === 'number' ? fin(T.hand) : undefined; } }

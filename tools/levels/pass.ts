@@ -49,6 +49,7 @@ import { gwotKit, gwotOfOffice, GWOT_PALETTE, GWOT_MATERIALS, type GwotOpening }
 import { SNOW_PALETTE, SNOW_FINISH, SNOW_MATERIALS, type SnowMat } from '../../src/scene/gwotPalette';
 import { WORLD } from '../../src/scene/world';
 import { BoxFlag } from '../../src/scene/boxes';
+import { PANEL_GREY } from '../../src/scene/stuff';
 
 export const NAME = 'pass';
 export const NOTES = 'The pass: a walled teahouse and truck halt on a high pass road, at night, in winter. Eight men in four rooms round a yard under snow; the snow is in the file (ground, drifts, caps, trodden paths, ruts), laid by hand. Two ways in: the road west of the gate, and the back of the kitchen outside the wall. Regenerate: bun run tools/levels/export.ts pass';
@@ -282,8 +283,32 @@ export function build(extra: PassExtra = {}): { level: Level; scenarios: LevelSc
   G.partZ(22, 5.12, 10.88, 'mudLight', [{ a: 6.0, b: 7.2 }]);                                 // tea room | kitchen: 'pass', at the back-wall end (the camera looks from the front: a door close behind the front wall is never drawn)
   G.partZ(28, 5.12, 10.88, 'mudLight', [{ a: 7.6, b: 8.8 }]);                                 // kitchen | store: 'store' (off the line of 'pass': no look from the tea room through both)
   G.partX(11, 28.12, 33.88, 'mudLight', [{ a: 31.4, b: 32.6 }]);                              // store | bunk room: 'inner'
-  G.dado('x', 11, 15.7, 16.7, 1, 'paintRust'); G.dado('x', 11, 17.8, 18.8, 1, 'paintRust');   // the halt's red, on the wall either side of the tea room's door (outside)
-  G.dado('z', 28, 12.3, 13.2, -1, 'paintRust'); G.dado('z', 28, 14.3, 15.2, -1, 'paintRust'); // … and the bunk room's
+  // the halt's red, on the wall either side of the tea room's door (outside): the first worn at its edges, the second plastered over but for a strip at the foot
+  G.wallPatch('x', 11, 16.2, 1, 0.55, 1.0, 1.1, 'paintRust', 0.9); G.skirt('x', 11, 17.8, 18.8, 1, 'paintRust', 0.4);
+  G.dado('z', 28, 12.3, 13.2, -1, 'paintRust'); G.skirt('z', 28, 14.3, 15.2, -1, 'paintBlue', 0.84);   // … and the bunk room's (one was done another year, in another paint and not as high)
+  // ---- THE FRONT, gone over as people left it (the kit's pieces for a wall's face). Every window on it is in some defender's view, so each is dressed OPEN:
+  // the boards down, the shutters folded back, the blanket rolled over the lintel. (tools/qa/marksight-check.ts holds it: with the boards and shutters shut
+  // the tea room's two men at the glass lose a half and a sixth of the yard they watch, and the kitchen's blanket nailed shut costs the man on its yard
+  // door a quarter of his.) ----
+  grp('front');
+  G.boards('x', 11, 13.2, 15.0, 1, 'open');                                                   // tea 2's window: the boards taken down, one left over the lintel
+  G.shutters('x', 11, 19.2, 21.0, 1, 'open');                                                 // tea 1's: folded back
+  G.windowBlanket('x', 11, 26.2, 27.4, 1, 'open');                                            // the kitchen's: rolled up and tied
+  G.wallPatch('x', 11, 18.42, 1, 0.82, 1.16, 1.0, 'mudLight', 0.9); G.wallPatch('x', 11, 23.3, 1, 2.28, 1.9, 0.8, 'mud', 0.8); G.wallPatch('x', 11, 12.86, 1, 0.55, 0.6, 1.1, 'mudDark', 0.97);   // mends, newer and older
+  G.spout('x', 11, 25.92, 1, 2.36, 'mud');                                                    // a spout under the roof, between the kitchen's door and its window, and the streak its water left
+  add({ c: [25.94, 0.05, 11.29], h: [0.2, 0.05, 0.15], yaw: 0.2, ...S.snowPacked, rough: 0.2, flags: DECAL, shape: { cut: [[0.5, 1, 0.2, 0.035], [-0.6, 1, 0.5, 0.04], [0.1, 1, -0.8, 0.05]], old: true } });   // … and its ice at the foot
+  G.beamEnds('x', 11, 12.0, 28.0, 1);                                                         // the roof's beam ends
+  // split wood stacked under the first window's sill, and two billets that rolled off it. (The trial stacked it under the second window, on the wall the
+  // third and fourth men of a stack on the tea room's door stand along: tools/qa/lived-stack-check.ts --ask shows a face's marks. The wood moved.)
+  G.splitWood('x', 11, 13.3, 14.5, 1, 3);
+  G.log(14.42, 11.8, 1.05 + HALF, 0.42, 0.08); G.log(13.5, 11.78, -0.5 + HALF, 0.36, 0.07);
+  G.ladder('x', 11, 21.72, 1);                                                                // a ladder leaned by the kitchen's door
+  // a plank bench with a pot and a can on it, another can on its side in front: at the wall's WEST end, beside the first window, where
+  // no charge could be set before (the trial stood it by the kitchen's door, on the one stretch of the kitchen's front a wall charge goes on:
+  // tools/qa/wallfurn-check.ts held the count, and the bench moved, not the count)
+  G.plankBench(12.56, 11.37, 0, 1.0); G.pot(12.8, 11.37, 0.41);
+  add({ c: [12.3, 0.58, 11.36], h: [0.11, 0.17, 0.07], yaw: 0.35, ...M.jerryYellow }); add({ c: [12.5, 0.085, 11.78], h: [0.17, 0.075, 0.11], yaw: -0.55, ...M.olive });
+  G.bricks(18.2, 11.33, 0.04, 5);                                                             // mud bricks left under the mend they were for
   grp('walls.bay');
   G.wallZ(6, 13.62, 20.38, 'mud'); G.wallX(13.5, 5.88, 12.12, 'mud'); G.wallX(20.5, 5.88, 12.12, 'mud');   // the bay: three walls, open on the yard
   add({ c: [12.0, H / 2, 17.0], h: [0.09, H / 2, 0.09], ...M.woodGrey });                     // the post under its eaves
@@ -300,24 +325,13 @@ export function build(extra: PassExtra = {}): { level: Level; scenarios: LevelSc
   // ---- THE LORRY: a two-axle lorry with a canvas tilt, where it stopped when the pass shut (KEPT: it is the yard's one piece of cover, what screens
   // the gateway from the tea room's windows and what the ruts are laid to). Nose toward local +X ----
   grp('lorry');
-  const L = G.piece(LORRY.x, LORRY.z, LORRY.yaw);
-  for (const lx of [2.2, -1.2, -2.25]) for (const s of [-1, 1]) L(lx, s * 0.98, 0, 0.96, 0.48, 0.15, M.rubber);
-  L(-0.1, 0, 0.5, 0.74, 3.1, 0.42, M.iron);                                                   // the chassis
-  L(3.42, 0, 0.5, 0.78, 0.06, 1.12, M.iron);                                                  // bumper
-  L(2.75, 0, 0.74, 1.5, 0.62, 0.98, M.truckRed);                                              // bonnet
-  L(1.55, 0, 0.74, 1.5, 0.62, 1.12, M.truckRed);                                              // the cab: doors
-  L(1.55, 0, 1.5, 2.08, 0.58, 1.06, M.glassDark);                                             // … glass
-  L(1.5, 0, 2.08, 2.2, 0.62, 1.1, M.truckRed);                                                // … roof
-  for (const s of [-1, 1]) L(3.38, s * 0.7, 0.86, 1.02, 0.02, 0.1, M.plasticWhite);           // headlamps (dead)
-  L(-1.15, 0, 0.74, 0.9, 2.05, 1.16, M.woodGrey);                                             // the bed
-  for (const s of [-1, 1]) L(-1.15, s * 1.14, 0.9, 1.45, 2.05, 0.03, M.poplar);               // sideboards
-  L(-3.17, 0, 0.9, 1.45, 0.03, 1.16, M.poplar); L(0.87, 0, 0.9, 1.7, 0.03, 1.16, M.poplar);   // tailboard, headboard
-  L(-1.15, 0, 0.9, 1.95, 1.95, 1.06, M.canvas);                                               // the load under its canvas
+  const LS = G.lorry(LORRY.x, LORRY.z, LORRY.yaw), L = G.piece(LORRY.x, LORRY.z, LORRY.yaw);   // (the kit's lorry, box for box what stood here; LS = the shapes it says)
   grp('snow.lorry');
-  L(-1.15, 0, 1.95, 2.05, 1.84, 0.96, S.snow, { flags: DECAL });                              // CAPS: the tilt (deep: it has stood for days),
-  L(-1.15, 0, 2.05, 2.11, 1.84, 0.96, S.snow, { flags: DECAL });                              //   a second fall over the first, the whole tilt (one outline: two nested ones read as slabs)
-  L(1.5, 0, 2.2, 2.27, 0.55, 1.02, S.snow, { flags: DECAL });                                 //   the cab's roof
-  L(2.8, 0, 1.5, 1.555, 0.52, 0.9, S.snow, { flags: DECAL });                                 //   the bonnet
+  // CAPS, laid on the lorry's bowed tops by the kit's one rule (G.lay: each slab keeps to the crown, and a sheet of snow follows the bow under it — trim, there
+  // only when shapes are on): the tilt (deep: it has stood for days), a second fall over the first (one outline: two nested ones read as slabs), the cab's
+  // roof, the bonnet
+  { const lay = (t: typeof LS.tops.load, lx: number, y0: number, y1: number, hx: number, hz: number, nth = 0) => G.lay(LORRY.x, LORRY.z, LORRY.yaw, t, lx, 0, y0, y1, hx, hz, S.snow, nth);
+    lay(LS.tops.load, -1.15, 1.95, 2.05, 1.84, 0.96); lay(LS.tops.load, -1.15, 2.05, 2.11, 1.84, 0.96, 1); lay(LS.tops.roof, 1.5, 2.2, 2.27, 0.55, 1.02); lay(LS.tops.bonnet, 2.8, 1.5, 1.555, 0.52, 0.9); }
   L(3.72, 0, 0, 0.44, 0.25, 1.0, S.snow);                                                     // BANK (stops feet): the nose stands into the wind; snow is banked on the bumper,
   L(4.12, 0, 0, 0.3, 0.2, 0.9, S.snow);                                                       //   stepping down
   L(4.47, 0, 0, 0.17, 0.2, 0.75, S.snow);                                                     //   to a lip a man wades
@@ -331,7 +345,11 @@ export function build(extra: PassExtra = {}): { level: Level; scenarios: LevelSc
   // ---- the yard (kept things: what stands in the open) ----
   grp('yard');
   G.woodPile(22.1, 11.47, 0, 1.4);                                                            // the winter's wood, against the range between a window and the kitchen's door
-  add({ c: [22.9, 0.16, 12.5], h: [0.22, 0.16, 0.22], yaw: 0.4, ...M.poplar });               // the chopping block
+  G.choppingBlock(22.9, 12.5, 0.4);                                                           // the chopping block
+  // logs by the block waiting to be split (stepped over), one thrown across two of them, and two along the top of the pile
+  G.log(23.69, 12.22, 0.25, 1.0); G.log(23.84, 12.59, -0.2, 0.9, 0.09); G.log(23.2, 13.5, 0.6, 1.05);
+  const logOn = G.log(23.76, 12.39, 0.05, 0.85, 0.09, 0.19);
+  for (const z of [11.385, 11.565]) G.log(22.1, z, 0, 1.3, 0.07, 0.42);
   add({ c: [23.5, 0.05, 12.9], h: [0.22, 0.05, 0.06], yaw: 0.9, ...M.woodGrey }); add({ c: [22.4, 0.05, 13.0], h: [0.2, 0.05, 0.06], yaw: -0.5, ...M.woodGrey });   // split billets (walk-over)
   G.crates(27.5, 17.5, HALF, 3, 'coyote');                                                    // crates under snow against the bunk room, south of its window
   G.drum(27.3, 11.55, 'drumBlue');                                                            // the water drum by the kitchen
@@ -340,6 +358,14 @@ export function build(extra: PassExtra = {}): { level: Level; scenarios: LevelSc
   void crate;
   G.handcart(13.8, 20.9, 0.0, 'sacks');
   G.tyres(12.7, 21.2, 3);
+  G.tyres(15.3, 20.75, 1);                                                                    // a loose tyre by the cart, flat in the snow
+  // steel pipes left in the yard's far corner, south of the bunk room: two on the ground and one in the notch. (The trial laid them along the bunk room's
+  // wall beside its yard door, on the three places a stack takes on that jamb; and against a room's wall they would take its places for a wall charge.
+  // Out in the corner they take neither: the stack's marks on every door face are the level's as it was.)
+  const PIPES = { x: 31.0, z: 20.0, yaw: 0.2, len: 1.8 }, pipeTops = G.pipes(PIPES.x, PIPES.z, PIPES.yaw, 3, PIPES.len);
+  // fuel drums in the pocket of yard between the lean-to and the bay: three standing, one on its side
+  G.drum(7.7, 9.85, 'rust'); G.drum(8.36, 9.72, 'drumBlue'); G.drum(8.02, 10.4, 'olive', 0.3);
+  const DRUM_DOWN = { x: 9.15, z: 10.75, yaw: 0.5 }, drumTop = G.drumDown(DRUM_DOWN.x, DRUM_DOWN.z, DRUM_DOWN.yaw, 'drumRed');
   grp('road');
   G.jersey(27.5, 24.1, 1, 0.22); G.jersey(31.2, 25.9, 1, -0.18);                              // the halt's chicane on the road
   for (const [x, z, w, d, h, yaw] of [[3.0, 9.4, 0.8, 0.55, 0.6, 0.4], [2.2, 17.2, 0.6, 0.5, 0.45, -0.3], [37.0, 13.6, 0.9, 0.6, 0.7, 0.2], [36.6, 6.2, 0.6, 0.45, 0.4, 0.7], [9.2, 2.0, 0.7, 0.5, 0.5, -0.5], [34.0, 1.8, 0.8, 0.6, 0.55, 0.1], [37.6, 20.6, 0.55, 0.4, 0.35, 0.5]] as const) {
@@ -384,13 +410,19 @@ export function build(extra: PassExtra = {}): { level: Level; scenarios: LevelSc
   cap(12.0, 22, 0.42, 0.42, 2.52, 0, 0.06); cap(27.0, 22, 0.42, 0.42, 2.52, 0, 0.06);         // the piers
   cap(17.83, 22, 0.3, 0.3, 2.58, 0, 0.07); cap(21.17, 22, 0.3, 0.3, 2.58, 0, 0.07);           // the gate posts
   cap(22.1, 11.47, 1.2, 0.3, 0.42, 0, 0.07);                                                  // the wood pile
-  cap(22.9, 12.5, 0.34, 0.34, 0.32, 0.4, 0.04);                                               // the chopping block
+  cap(22.9, 12.5, 0.29, 0.29, 0.32, 0.4, 0.04); cap(22.9, 12.5, 0.29, 0.29, 0.318, 0.4 + Math.PI / 4, 0.04);   // the chopping block (a round: two squares inside its rim, as on a drum's lid)
   cap(27.5, 17.5, 0.3, 0.78, 0.9, 0, 0.07);                                                   // the crates
   cap(27.3, 11.55, 0.36, 0.36, 0.88, 0, 0.05); cap(27.3, 11.55, 0.36, 0.36, 0.878, Math.PI / 4, 0.05);   // the drum's lid (two squares: an octagon's)
   cap(22.2, 20.9, 0.36, 1.2, 0.8, 0, 0.05);                                                   // the sandbags
   cap(14.8, 11.42, 0.42, 0.3, 0.3, 0, 0.04);                                                  // the crate by the door, beside the lantern
   cap(13.8, 20.9, 0.7, 0.45, 0.97, 0.4, 0.05);                                                // the handcart's load
   cap(12.7, 21.2, 0.44, 0.44, 0.6, 0.3, 0.05);                                                // the tyres
+  cap(15.3, 20.75, 0.44, 0.44, 0.27, 0.2, 0.04);                                              // the loose tyre
+  for (const [x, z] of [[7.7, 9.85], [8.36, 9.72], [8.02, 10.4]]) { cap(x, z, 0.36, 0.36, 0.88, 0, 0.05); cap(x, z, 0.36, 0.36, 0.878, Math.PI / 4, 0.05); }   // the fuel drums' lids
+  // snow ALONG a round that lies, by the kit's one rule for a bowed top (G.lay): a ridge kept to the crown, and a sheet that follows the round under it
+  pipeTops.forEach((t, k) => G.lay(PIPES.x, PIPES.z, PIPES.yaw, t, t.c[0], t.c[2], t.c[1] + t.h[1], t.c[1] + t.h[1] + (k === 2 ? 0.05 : 0.03), PIPES.len / 2 - (k === 2 ? 0.03 : 0.05), t.h[2] * (k === 2 ? 0.72 : 0.45), S.snow));
+  G.lay(DRUM_DOWN.x, DRUM_DOWN.z, DRUM_DOWN.yaw, drumTop, 0, 0, drumTop.c[1] + drumTop.h[1], drumTop.c[1] + drumTop.h[1] + 0.04, 0.37, drumTop.h[2] * 0.6, S.snow);   // the drum on its side
+  G.lay(23.76, 12.39, 0.05, logOn, 0, 0, logOn.c[1] + logOn.h[1], logOn.c[1] + logOn.h[1] + 0.03, 0.385, logOn.h[2] * 0.55, S.snow);   // the log thrown across the others
   cap(27.5, 24.1, 1.86, 0.2, 0.81, 0.22, 0.05); cap(31.2, 25.9, 1.86, 0.2, 0.81, -0.18, 0.05);   // the barriers
   // ---- BANKS (they stop feet: against a wall, out of every route, none within 1.4 m of a door) ----
   grp('snow.banks');
@@ -465,7 +497,7 @@ export function build(extra: PassExtra = {}): { level: Level; scenarios: LevelSc
   G.wire(9.6, 7.0, 11.88, 7.0, 2.8); G.wire(8.6, 9.0, 8.6, 13.5, 2.8); G.wire(12.1, 20.3, 21.0, 22.0, 2.62);
   // ---- the breaker (the lean-to's back wall) and one emergency beacon: the game's blackout wants both ----
   grp('breaker');
-  const brk = add({ c: [6.16, 1.35, 8.0], h: [0.04, 0.36, 0.28], albedo: [0.42, 0.44, 0.45], name: 'breaker_panel' });
+  const brk = add({ c: [6.16, 1.35, 8.0], h: [0.04, 0.36, 0.28], albedo: PANEL_GREY, name: 'breaker_panel' });
   const brkLed = add({ c: [6.21, 1.62, 7.82], h: [0.01, 0.015, 0.015], albedo: P.plasticBlack, rough: 0.5, emissive: [0.3, 4, 0.6], flags: BoxFlag.NoShadow });
   grp('beacons');
   add({ c: [17.6, H - 0.06, 8.6], h: [0.07, 0.06, 0.07], albedo: [0.2, 0.2, 0.22], flags: BoxFlag.NoShadow | BoxFlag.NoPrimary });
