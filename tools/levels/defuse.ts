@@ -243,17 +243,14 @@ export function build(opts: K.KitOpts = {}): { level: Level; scenarios: LevelSce
     P.boots(16.4, 16.6, Math.PI, 3); P.crate(7.0, 13.6, 0.5, 0.2); P.crate(33.1, 13.6, 0.5, -0.2);
     P.floor(20.0, 15.0, 24.0, 1.2, [0.3, 0.17, 0.14], 0.006, 0.006);
     // THE LOT AND THE BACK, from the look's kit (src/scene/gwotKit.ts: a drum and a tyre are round). What a bomb maker's house keeps outside: fertiliser
-    // in sacks against the front wall, two drums east of the door, the spare wheels by the car that has not moved, firewood at the far edge of the back strip,
-    // and the stones nobody has cleared. Nothing stands within 3 m of the front door or under a window, on the walk round either end, before a back door,
-    // or ON THE DEFENDERS' WAY ROUND THE OUTSIDE, which is 45.7 to 45.9 m of the 46 it may be (tools/qa/wayround-check.ts): it hugs the front wall, so the
-    // sacks and the two drums stand beside the cars; and behind the house, with the team heard in the hall, it bows out to about 2 m from the back wall,
-    // so the firewood is stacked at the strip's far edge. (Firewood on that line made the way 46.9 m and the pair stopped going round on one run in seven.)
+    // in sacks against the front wall, two drums east of the door, the spare wheels by the car that has not moved, firewood against the blank back wall,
+    // and the stones nobody has cleared. Nothing stands within 3 m of the front door or under a window, on the walk round either end, or before a back door.
     P.room('lot');
     { const G = gwotKit(gwotOfKit(k, K));
-      G.sacks(10.4, 22.5, 0, 2); G.drum(29.9, 22.3, 'drumBlue'); G.drum(30.56, 22.42, 'rust');
+      G.sacks(14.2, 17.5, 0, 2); G.drum(24.6, 17.52, 'drumBlue'); G.drum(25.26, 17.6, 'rust');
       G.tyres(15.7, 22.3, 2);
       G.rubble(8.0, 23.6, 0.9, 7); G.rubble(32.2, 23.9, 0.8, 6);
-      K.grp(k, 'lived.back'); G.woodPile(15.0, 1.9, 0, 1.6); G.rubble(26.0, 5.2, 0.9, 6); G.rubble(9.4, 4.6, 0.7, 5); }
+      K.grp(k, 'lived.back'); G.woodPile(15.0, 4.4, 0, 1.6); G.rubble(26.0, 5.2, 0.9, 6); G.rubble(9.4, 4.6, 0.7, 5); }
   }
 
   const level: Level = K.kitLevel(k, {

@@ -148,9 +148,8 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   two
   workshops' own mats keep their red and blue as carpet (from above that is how the two charges' rooms are told apart), the two cars wear car paint
   (4.8 % → 1.3 %); the lot has the street's ruts, each car's way in, the walk to the front door and the beat that parts before the house and goes
-  round each end to a workshop's back door (the level's two ways to each charge, worn into the ground); and from the kit, sacks and two drums beside
-  the cars and firewood at the far edge of the back strip (off the defenders' way round: the way-round bullet below says why), two drums, the spare
-  wheels, firewood at the back, field stones. ROUND 0 → 4. Both look files' `ground` need passes (192 and 315 m² were bare).
+  round each end to a workshop's back door (the level's two ways to each charge, worn into the ground); and from the kit, sacks against the front wall,
+  two drums, the spare wheels, firewood at the back, field stones. ROUND 0 → 4. Both look files' `ground` need passes (192 and 315 m² were bare).
   LEFT, kept boxes (a base move): the yard's three fuel drums, both levels' cars (two boxes each), the sandbags under the eaves. The pad's orange and
   the wire's copper are accents.
   MOVES on the shipped stand: any recording, checkpoint or kept replay made on either level; the two charges' play-through digests (the floodlit
@@ -194,10 +193,6 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   more than its file; a mend takes its file out in its own commit. `tight as built` on a line is the level's own edge with no furniture at all: the
   two charges have 89 ways in 902 within 2 m of the cap, so a man a stride off his mark already loses some. That is the cap's, for whoever owns squad
   sense.
-  THE MEND on the two charges, two moves, `defuse.ts` says why: the firewood is stacked at the far edge of the back strip, and the sacks and two drums stand
-  beside the cars (against the front wall they squeezed the front way and made the squad's first walk 0.2 s later). The check is green and the held bar is
-  out. ON 100 SEEDS the mended level is the level before it was dressed on every count: taken 95, the pair goes round 60, sweep-and-hunt endings 33, mean
-  118.9 s, first contact 28.5 s; no seed loses the move and none gains it. With the first move alone it was 45 runs of 100 and the check was red.
   NOT YET a line of `level-needs.ts` or of a gate family: run it by name after furnishing a level with squads. NOT SEEN ON A GPU.
 - **A roof over walkable floor is the kit's ceiling** (a LEVEL RULE, no switch): `K.ceiling` (levelKit.ts `ceiling()`: a slab flagged `NoPrimary`, so the camera sees the floor under it) or a slab
   flagged `NoPrimary` by hand — and, if rain should stop at it, inside `weather.ts roofsOf`'s height band: underside at `WORLD.ceilingY` − 0.25 (2.75 m) or over, top no higher than + 0.45, at
