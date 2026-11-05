@@ -64,6 +64,8 @@ const matOf = (n: GwotMat): Mat => ({ albedo: GWOT_PALETTE[n], rough: GWOT_FINIS
 const palOf = (n: GwotMat): MarkPal => ({ albedo: GWOT_PALETTE[n], rough: GWOT_FINISH[n]?.rough ?? ROUGH_CLOTH });
 const frameAt = (x: number, z: number, yaw: number) => { const cs = Math.cos(yaw), sn = Math.sin(yaw); return (lx: number, ly: number, lz: number): Vec3 => [x + cs * lx + sn * lz, ly, z - sn * lx + cs * lz]; };
 const DECAL = BoxFlag.NoShadow;
+/** the gap left between two cloths on one line that would have lapped (m) */
+const CLOTH_GAP = 0.02;
 
 /** MARKINGS OVER A WHOLE FACE: f(i, j, W, H) → 0 (the box's own paint) | 1‥3 (pal entry) for every cell of the face's lattice at `res`, i left → right and j
  *  bottom → top as seen from outside (+y: i along +x, j along −z), cut into ≤ `maxTiles` bitmaps of ≤ 32 × 32 cells (a face over 64 cells a side keeps its
@@ -475,7 +477,12 @@ export function gwotKit(host: GwotHost) {
     if (posts) for (const e of [-1, 1]) b(e * L / 2, 0, 0, 2.0, 0.03, 0.03, M.woodGrey);   // (posts = false: strung between two walls — then every box of it is a decal)
     b(0, 0, 1.94, 1.95, L / 2, 0.004, M.iron, { flags: DECAL });
     const cols: GwotMat[] = ['rugCream', 'paintBlue', 'whitewash', 'rugOchre', 'blanketBrown', 'paintGreen'];
-    for (let k = 0; k < n; k++) { const u = -L / 2 + (k + 0.5 + (h01(s, k, 1) - 0.5) * 0.4) * L / n, w = 0.22 + h01(s, k, 2) * 0.2, drop = 0.45 + h01(s, k, 3) * 0.35; b(u, 0, 1.94 - drop, 1.94, w, 0.006, M[cols[mkHash(s, k, 4) % cols.length]], { flags: DECAL }); }
+    // the cloths are sheets in ONE plane: two that lapped flickered front, back and along the top. So each is dealt its place and width first, and two that
+    // would lap are both cut back to a finger short of where they would have met (a cloth nothing reaches is laid by the numbers it always was)
+    const cloths = Array.from({ length: n }, (_, k) => { const u = -L / 2 + (k + 0.5 + (h01(s, k, 1) - 0.5) * 0.4) * L / n, w = 0.22 + h01(s, k, 2) * 0.2; return { k, u, w, lo: u - w, hi: u + w, cut: false, drop: 0.45 + h01(s, k, 3) * 0.35 }; });
+    for (let k = 0; k + 1 < n; k++) { const a = cloths[k], c = cloths[k + 1]; if (a.hi + CLOTH_GAP <= c.lo) continue; const mid = (a.hi + c.lo) / 2; a.hi = mid - CLOTH_GAP / 2; c.lo = mid + CLOTH_GAP / 2; a.cut = c.cut = true; }
+    const short = cloths.find(c => c.hi - c.lo < 2 * CLOTH_GAP); if (short) throw new Error(`washLine: ${n} cloths do not hang on ${L.toFixed(2)} m of line without lapping (cloth ${short.k} is left ${(short.hi - short.lo).toFixed(3)} m): ask for fewer`);   // (never fewer cloths than asked, and never one squeezed to a sliver that laps both neighbours)
+    for (const c of cloths) b(c.cut ? (c.lo + c.hi) / 2 : c.u, 0, 1.94 - c.drop, 1.94, c.cut ? (c.hi - c.lo) / 2 : c.w, 0.006, M[cols[mkHash(s, c.k, 4) % cols.length]], { flags: DECAL });
   };
 
   // ------------------------------------------------------------ furniture ----
@@ -741,7 +748,7 @@ export function gwotKit(host: GwotHost) {
     const b = piece(x, z, yaw), P = coat(M[body]), S = vanShapes({ hub: hubPaint(GWOT_PALETTE.galv) });   // (S: the shape each box says — scene/carShapes.ts)
     for (const sx of [-1.45, 1.5]) for (const sz of [-1, 1]) b(sx, sz * 0.8, 0, 0.74, 0.37, 0.13, M.rubber, { shape: S.wheel(sz) });
     b(0, 0, 0.3, 0.86, 2.4, 0.9, P, { shape: S.body });                                     // the body, sill to waistline
-    b(2.43, 0, 0.36, 0.58, 0.05, 0.9, M.plasticBlack, { shape: S.bumper }); b(-2.43, 0, 0.3, 0.44, 0.05, 0.9, M.plasticBlack, { shape: S.step });   // bumper, the rear step
+    b(2.44, 0, 0.36, 0.58, 0.04, 0.9, M.plasticBlack, { shape: S.bumper }); b(-2.44, 0, 0.3, 0.44, 0.04, 0.9, M.plasticBlack, { shape: S.step });   // bumper, the rear step (each BEGINS at the body's end: two centimetres into it, their sides lay in the body's sides and flickered)
     b(2.0, 0, 0.86, 1.06, 0.4, 0.86, P, { shape: S.bonnet });                               // bonnet
     b(1.3, 0, 0.86, 1.1, 0.4, 0.9, P, { shape: S.doors }); b(1.3, 0, 1.1, 1.62, 0.36, 0.84, M.glassDark, { shape: S.glass }); b(1.22, 0, 1.62, 1.95, 0.34, 0.86, P, { shape: S.brow });   // the cab: doors, glass, the roof's brow
     b(-0.5, 0, 0.86, 1.95, 1.4, 0.9, P, { shape: S.load });                                 // the load box
@@ -781,7 +788,7 @@ export function gwotKit(host: GwotHost) {
   /** COVER (waist): a flat HANDCART (karachi) 1.7 × 0.95 on two wheels, shafts toward local +X; `load`: sacks, produce crates or nothing */
   const handcart = (x: number, z: number, yaw = 0, load: 'none' | 'sacks' | 'produce' = 'none') => {
     const b = piece(x, z, yaw), s = seedOf(x, z), prod: GwotMat[] = ['prodOrange', 'prodGreen', 'prodRed', 'prodYellow'];
-    for (const sz of [-1, 1]) { b(-0.1, sz * 0.52, 0, 0.66, 0.33, 0.035, M.rubber); b(1.25, sz * 0.36, 0.52, 0.57, 0.42, 0.02, M.woodGrey); }
+    for (const sz of [-1, 1]) { b(-0.1, sz * 0.52, 0, 0.66, 0.33, 0.035, M.rubber); b(1.26, sz * 0.36, 0.52, 0.57, 0.41, 0.02, M.woodGrey); }   // (the shafts END at the bed: their tops are in its top's plane, and lapping it they flickered)
     b(0, 0, 0.5, 0.57, 0.85, 0.47, M.poplar, mk(face('+y', 'coarse', [{ mul: 0.6 }], (i, j) => j % 4 === 3 ? 1 : 0, 0, 2))); b(0.7, 0, 0, 0.5, 0.03, 0.03, M.woodGrey);
     if (load === 'sacks') { b(-0.3, -0.1, 0.57, 0.77, 0.38, 0.25, M.sack); b(0.35, 0.12, 0.57, 0.77, 0.38, 0.25, M.sack); b(0, 0, 0.77, 0.97, 0.38, 0.25, M.sack, {}, 0.4); }
     if (load === 'produce') for (let k = 0; k < 6; k++) b(-0.56 + (k % 3) * 0.56, k < 3 ? -0.22 : 0.22, 0.57, 0.71, 0.25, 0.19, M.ply, mk(face('+y', 'base', [palOf(prod[mkHash(s, k, 1) % 4])], (i, j, W, Hc) => Math.min(i, W - 1 - i, j, Hc - 1 - j) >= 1 ? 1 : 0, 0, 1)));

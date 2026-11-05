@@ -168,9 +168,10 @@ export function skinLevel(level: Level, groups: string[], S: Skin = {}): SkinSta
     if (!Object.hasOwn(GWOT_PALETTE, m)) throw new Error(`skinLevel: box ${i} [${g}] is to wear '${String(m)}', which is no paint of the palette`);
     const sim: GwotSim = (name ?? (steel ? (surf0 === 'drywall' ? '~steelPale' : '~steel') : '~' + surf0)) as GwotSim;
     const before = { name, surf: surf0, cls: breakClassOf(b.albedo), steel: steelGrey(b.albedo), dark: lum(b.albedo) > 0.1, pale: lum(b.albedo) > 0.7 };
-    const old = b.albedo; repainted(b, gwotAs(m, sim)); b.rough = GWOT_FINISH[m]?.rough ?? ROUGH_CLOTH;   // (a word belongs to the paint it was said with: the old paint's goes, and the box is made of what the skin's paint is — but a named coat stays under a plain one, so a car in the skin's enamel is still a car. scene/stuff.ts repainted)
-    const finish = said ?? GWOT_FINISH[m];
-    if (said) { repainted(b, saidAs(said.stuff, b.albedo)); b.rough = said.rough; }   // (… unless the skin SAID what that paint is on this thing: the same numbers to the eye and to a round, another stuff and its finish)
+    const old = b.albedo; repainted(b, gwotAs(m, sim));   // (a word belongs to the paint it was said with: the old paint's goes, and the box is made of what the skin's paint is — but a named coat stays under a plain one, so a car in the skin's enamel is still a car. scene/stuff.ts repainted)
+    if (said) repainted(b, saidAs(said.stuff, b.albedo, said));   // (… unless the skin SAID what that paint is on this thing: the same numbers to the eye and to a round, another stuff, and its finish said with the word)
+    const finish = said ?? GWOT_FINISH[m];   // (the box takes the finish of what was picked: a said paint's own, which its paint now knows too, else the palette row's)
+    b.rough = finish?.rough ?? ROUGH_CLOTH;
     if (!c.full) { if (finish?.metal) b.metal = true; else delete b.metal; }
     // THE CHECK: the game's own classifiers say the same of the box as before (a round, a charge, a blast and the destruction index read nothing else of a paint)
     const after = { name: paletteName(b.albedo), surf: surfOf(b.albedo), cls: breakClassOf(b.albedo), steel: steelGrey(b.albedo), dark: lum(b.albedo) > 0.1, pale: lum(b.albedo) > 0.7 };
