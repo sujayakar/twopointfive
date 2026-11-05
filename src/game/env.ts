@@ -11,7 +11,8 @@
 // nvg.ts and irlight.ts read these. The picture is told as it always was (hours.ts and lighting.ts write the engine's settings), and a player's Brightness
 // is a factor of his picture alone.
 // NEXT OF THE SAME KIND, still read from the engine's settings by game code and named in tools/qa/settings-check.ts until they move here: the sky's two
-// colours for the hour, the emissive scale, a torch's radius, the debris cap.
+// colours for the hour, the emissive scale, a torch's radius, the debris cap. And one that is not a setting and so not on that list: the picture's
+// CAMERA (engine.viewFocus, read by wind.ts, airSim.ts, fire.ts and snowBreath.ts): two players of one game have two.
 // (This file imports nothing: src/game is one import cycle, and a table every other module may read at any moment must not wait on one of them.)
 
 const BUILT = { exposure: 2.0, tubeGain: 475 };
