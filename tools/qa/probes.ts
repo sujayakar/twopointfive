@@ -51,7 +51,7 @@
 //     grab: grab-auto grab-choke grab-gate grab-release grab-rollcall grab-talk grab-walk
 //     gunhold: gunhold-cover gunhold-dialogue gunhold-fire gunhold-variant gunhold-whip
 //     journal: journal-fixtures journal-knob journal-knobs journal-pagelike journal-perturb journal-roundtrip
-//     missions: missions-shipped secondway rowset
+//     missions: missions-shipped secondway marksight rowset
 //     shipped: shipped-profile
 //     music: music   (the score's newer pieces: tools/qa/music-check.ts; MUSIC_BREAK=1 must fail)
 //     restart: restart-fresh   (a restart equals a fresh staging, the solo night + three office missions as shipped; ~45 s of CPU, 30–60 s of wall on a busy box: not in all-quick)
@@ -3771,6 +3771,8 @@ if (on('everygone', 'wallreact', 'all')) await run('everygone', async () => (awa
 // ---------------------------------------------------------------- every room the defenders can shut has another way in (tools/qa/second-way-check.ts — a program of its own: its exit code the verdict)
 // every squad mission's and squad lesson's level, as shipped: whatever the defenders wedge, the squad still walks from its start to every room with men at home — by a door no wedge holds, a window a man steps through, or the clinic's issued wall charges (~15 s; SECONDWAY_BREAK=1 must fail)
 if (on('secondway', 'missions', 'all')) await run('secondway', async () => (await Bun.spawn(['bun', 'run', `${import.meta.dir}/second-way-check.ts`], { stdout: 'inherit', stderr: 'inherit', env: { ...process.env, TPS_PROFILE: 'shipped' } }).exited) === 0);
+// … and a defender sees what he watches: dressing never blinds a mark (tools/qa/marksight-check.ts, a program of its own)
+if (on('marksight', 'missions', 'all')) await run('marksight', async () => (await Bun.spawn(['bun', 'run', `${import.meta.dir}/marksight-check.ts`], { stdout: 'inherit', stderr: 'inherit', env: { ...process.env, TPS_PROFILE: 'shipped' } }).exited) === 0);
 // ---------------------------------------------------------------- aimed fire chews cover (src/game/coverfire.ts, coverfire-probes.ts — a program of its own: run as one, its exit code the verdict)
 { if (on('coverfire', 'coverfire')) await run('coverfire', async () => (await Bun.spawn(['bun', 'run', `${import.meta.dir}/coverfire-probes.ts`, 'all'], { stdout: 'inherit', stderr: 'inherit' }).exited) === 0); }
 

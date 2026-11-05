@@ -31,7 +31,7 @@
 //   bun run tools/qa/tut-road-check.ts                     the lesson played as said, and failed the two ways its lines warn of
 //   page: ?levelFile=tut-road.json&quiet
 import type { Vec3 } from '../../src/math/vec';
-import { glowShape, pickupLens } from '../../src/scene/carShapes';
+import { glowShape, pickupLens, coated } from '../../src/scene/carShapes';
 import type { Level, LevelDoorDef, PatrolRoute } from '../../src/scene/level';
 import type { LevelScenarios, LessonData, LessonStep, QuietData, Rect, IssueData } from '../../src/scene/scenarios';
 import type { SurfacesData } from '../../src/scene/levelData';
@@ -296,7 +296,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
   grp('convoy.tanker');
   // THE TANKER: it took the post's corner and the rail, and stands across the whole road from the hut's wall to over the edge, its cab burning out past the
   // rail. Nobody passes it on the road: the way on is through the hut. A skirt to the ground along its length (nothing is seen or shot under it)
-  { const b = G.piece(TANKER.x, TANKER.z, TANKER.yaw), tank = M.paintCream;
+  { const b = G.piece(TANKER.x, TANKER.z, TANKER.yaw), tank = coated(M.paintCream);   // (a tanker's tank is a vehicle's painted body, not the wall its cream is elsewhere: scene/carShapes.ts)
     for (const lx of [-3.0, -2.1, 0.7]) for (const s of [-1, 1]) b(lx, s * 0.98, 0, 0.92, 0.44, 0.15, M.rubber);
     b(-1.1, 0, 0.3, 1.0, 2.5, 1.02, { ...M.iron, rough: 0.85 });                                                    // the frame and its lockers
     b(-1.1, 0, 1.0, 2.45, 2.5, 1.15, tank); b(-1.1, 0, 2.45, 2.7, 2.4, 0.7, tank);              // the tank, its crown

@@ -99,11 +99,25 @@ if (CHECK) {
 // IN STEP: a level that has a file in the default look (tools/levels/<name>-gwot.ts — the same boxes in other paint, src/scene/look.ts) is exported / checked
 // with it, so the two never drift apart (tools/qa/look-check.ts compares them box for box).
 if (existsSync(resolve(import.meta.dir, `${name}-gwot.ts`))) { const p = Bun.spawnSync(['bun', 'run', import.meta.path, `${name}-gwot`, ...argv.filter(a => a.startsWith('--'))], { stdout: 'inherit', stderr: 'inherit' }); if (p.exitCode !== 0) process.exit(p.exitCode ?? 1); }
-// ANOTHER WAY IN: a level a squad mission plays (a room clear or a rescue in its file, a row in the mission list) is asked the second-way rule the day it is
-// written: whatever its defenders wedge, every room with men in it is still reached without a charge (tools/qa/second-way-check.ts, on the shipped stand). The
-// file is written either way; a red check fails the export. SECONDWAY=0 in front skips it for a level still in the making.
+// ANOTHER WAY IN: a level that stands a room clear or a rescue is asked the second-way rule the day it is written: whatever its defenders wedge, every
+// room with men in it is still reached without a charge (tools/qa/second-way-check.ts, on the shipped stand). The file is written either way. THE RULE
+// IS ABOUT A LEVEL A SQUAD MISSION PLAYS (any row of scenarioList.ts ALL_MISSIONS that is not a quiet one: the missions, the lessons, the rows off the
+// list), so a red check
+// FAILS THE EXPORT of such a level and is a NOTE on any other: a test yard or a showroom stands a team to try things on and no player is ever shut out
+// of it, and a level in the making reads here what it will owe the day it has a row. SECONDWAY=0 in front skips the question.
 if (!CHECK && !name.endsWith('-gwot') && (data.scenarios?.roomClear || data.scenarios?.rescue) && process.env.SECONDWAY !== '0') {
+  const { ALL_MISSIONS } = await import(`${ROOT}/src/scene/scenarioList.ts`), played = (ALL_MISSIONS as { kind: string; level?: string }[]).some(e => e.kind !== 'quiet' && (e.level ?? 'office.json') === basename(OUT));   // (every row a squad plays: the lessons' and the rows off the list with the rest)
   const p = Bun.spawnSync(['bun', 'run', resolve(import.meta.dir, '../qa/second-way-check.ts'), basename(OUT)], { stdout: 'pipe', stderr: 'pipe', env: { ...process.env, TPS_PROFILE: 'shipped' } });
-  if (p.exitCode === 1) { console.error(`second way in: FAILED on ${basename(OUT)} (the file is written)\n${p.stdout.toString()}${p.stderr.toString()}`); process.exit(1); }
-  console.log(p.exitCode === 0 ? '  second way in: every room they can shut has another way in' : `  second way in: NOT ASKED (${p.stderr.toString().trim().split('\n').pop() ?? 'the check did not run'})`);
+  if (p.exitCode === 1 && played) { console.error(`second way in: FAILED on ${basename(OUT)} (the file is written)\n${p.stdout.toString()}${p.stderr.toString()}`); process.exit(1); }
+  if (p.exitCode === 1) console.log(`  second way in: A NOTE, not a failure: no squad mission on the list plays ${basename(OUT)}, and the day one does this fails its export\n${p.stdout.toString().split('\n').filter(l => /NO WAY IN|FAIL —/.test(l)).map(l => `    ${l.trim()}`).join('\n')}`);
+  else console.log(p.exitCode === 0 ? '  second way in: every room they can shut has another way in' : `  second way in: NOT ASKED (${p.stderr.toString().trim().split('\n').pop() ?? 'the check did not run'})`);
+}
+// A DEFENDER SEES WHAT HE WATCHES: the same day, every man the file stands with a `pos` and an `aimAt` is asked for his line and for the ground he watches,
+// against the level's own count file (tools/qa/marksight-check.ts, on the shipped stand; the look twin with it). The file is written either way; a red check
+// fails the export: something was stood in a man's view, or a level new to the check has no count file yet (the check's --write, once on each stand).
+// MARKSIGHT=0 in front skips it for a level still in the making.
+if (!CHECK && !name.endsWith('-gwot') && process.env.MARKSIGHT !== '0') {
+  const twin = OUT.replace(/\.json$/, '-gwot.json'), p = Bun.spawnSync(['bun', 'run', resolve(import.meta.dir, '../qa/marksight-check.ts'), basename(OUT), ...(existsSync(twin) ? [basename(twin)] : [])], { stdout: 'pipe', stderr: 'pipe', env: { ...process.env, TPS_PROFILE: 'shipped' } });
+  if (p.exitCode === 1) { console.error(`a defender sees what he watches: FAILED on ${basename(OUT)} (the file is written)\n${p.stdout.toString()}${p.stderr.toString()}`); process.exit(1); }
+  console.log(p.exitCode === 0 ? '  marks\' sight: no man the file stands sees less than its count file says (or it stands none)' : `  marks' sight: NOT ASKED (${p.stderr.toString().trim().split('\n').pop() ?? 'the check did not run'})`);
 }

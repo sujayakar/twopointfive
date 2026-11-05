@@ -18,7 +18,7 @@ import { mathsFrom, EXACT, type Maths } from '../math/exact';
 import { kahanN } from '../math/hyp';
 
 /** the version of the exports this file was written against (rust/sim/src/lib.rs ABI) */
-export const SIM_ABI = 23;
+export const SIM_ABI = 24;
 
 /** the module's exports, by name (rust/sim/src/lib.rs: plain C functions, `<module>_<thing>`) */
 export interface SimExports {
@@ -262,13 +262,13 @@ let doorsOn = false, fallsOn = false, propsOn = false, slabsOn = false, itemsOn 
  *          maths; the step runs there inside a tick, where the game's own maths stand and the box world's copy does. ?rustprops / TPS_RUSTPROPS=1.
  *  slabs   a leaf off its hinges, in the air (game/doorblast.ts stepSlab: the loose slab flying, toppling, stopped by what its rays find, slamming flat
  *          and coming to rest clear of every static) from rust/sim/src/slabs.rs, each slab's own numbers at home in the block (sim/slabshome.ts). It
- *          writes no row of the box world: the host poses the slab's box from the columns after each slab's step, as it did. A step whose ray ends on a
- *          pane is handed back to the TypeScript whole (a pane's open question is the host's). ?rustslabs / TPS_RUSTSLABS=1.
+ *          writes no row of the box world: the host poses the slab's box from the columns after each slab's step, as it did. A pane its ray meets is judged
+ *          there (rust/sim/src/glass.rs); nothing of play is handed back. ?rustslabs / TPS_RUSTSLABS=1.
  *  items   what is thrown or dropped (game/throwables.ts Throwables.update: a can, a grenade, a magazine, a gun out of a dying hand — ageing, falling,
  *          bouncing off walls, leaves and furniture, coming to rest, dropping off a chair that moved) from rust/sim/src/items.rs, each thing's own
  *          numbers at home in the block (sim/itemshome.ts). The pool is walked in one call; what a thing does to anything else (a bounce said, a share
- *          of momentum for a chair, its time up) is listed and done by the host after. A row whose ray ends on a pane, or that bounces on ground
- *          that may be lying snow, is handed back to the TypeScript whole. ?rustitems / TPS_RUSTITEMS=1. */
+ *          of momentum for a chair, its time up) is listed and done by the host after. A pane a ray meets and lying snow under a bounce are asked
+ *          there (glass.rs; items.rs bog_at over the level's snow); nothing of play is handed back. ?rustitems / TPS_RUSTITEMS=1. */
 export const RUST = {
   get maths(): boolean { return mathsOn; },
   set maths(v: boolean) { const on = !!v && !simWhyNot(); if (on === mathsOn) return; mathsFrom(on ? mathsOfRust() : null); mathsOn = on; },   // (a runtime that cannot run the module keeps the row off: the same game either way)
@@ -312,12 +312,16 @@ export const RUST = {
  *  shape it knows. Everywhere else the TypeScript still answers, which is why it cannot be deleted yet. This is the list of those places, by row and by
  *  reason, as a run met them: zero for a row is what lets its TypeScript go. Off (the default) it costs one test at a place that was falling back anyway.
  *  A tool of the build's, never a rule of play: it counts and changes no answer. */
-export const FELL = { on: false, hard: false, who: 0, n: {} as Record<string, number> };
+/** who asked: the first `n` callers on the stack from frame `skip` on (of the next `span` frames, if given), outside the files `not` names — for the
+ *  count below and for the box world's count of questions asked alone (scene/collision.ts) */
+export function callers(skip: number, n: number, not: RegExp, span = Infinity): string {
+  return (new Error().stack ?? '').split('\n').slice(skip, skip + span).map(l => l.trim().replace(/^at /, '').replace(/\(?[^()\s]*\/(src|tools)\//, '($1/').replace(/:\d+\)?$/, '')).filter(l => !not.test(l)).slice(0, n).join(' < ');
+}
+export const FELL = { on: false, hard: false, who: 0, n: {} as Record<string, number>, red: false, reds: {} as Record<string, number> };
 export function fell(row: string, why: string): void {
   let k = row + ' · ' + why;
   if (FELL.who) {   // (`=who`: …and who asked — the first two callers outside the box world's own files, `=who6` the first six, so the count says which code still asks outside a tick)
-    const st = (new Error().stack ?? '').split('\n').slice(2).map(l => l.trim().replace(/^at /, '').replace(/\(?[^()\s]*\/(src|tools)\//, '($1/').replace(/:\d+\)?$/, '')).filter(l => !/scene\/(collision|boxMirror)\.ts/.test(l));
-    k += ' · asked by ' + st.slice(0, FELL.who).join(' < ');
+    k += ' · asked by ' + callers(3, FELL.who, /scene\/(collision|boxMirror)\.ts/);
   }
   FELL.n[k] = (FELL.n[k] ?? 0) + 1;
   if (FELL.hard) throw new Error(`rust: the TypeScript answered for the row "${row}": ${why}`);
@@ -329,12 +333,28 @@ export function fell(row: string, why: string): void {
  *  said was open there flew on in the TypeScript walk, some five hundred a mission with glass in it.
  *  THE SENSES', all five: `sight`, `light` and `smoke` (every caller's sight line passes glass, and a level's lamps and the game's blobs are fewer
  *  than a question carries), and `sound` and `paths`, whose lines came to a pane and handed the question back, for the ray's reason, until the
- *  panes were in the module's copy (`collision.ts paneAsk`). Nothing of the five is counted over the missions on either stand. */
-export const SEALED: readonly string[] = ['lines', 'circles', 'fog', 'poses', 'rays', 'walk', 'sight', 'light', 'smoke', 'sound', 'paths'];
+ *  panes were in the module's copy (`collision.ts paneAsk`). Nothing of the five is counted over the missions on either stand.
+ *  THE RULES OF THE THINGS joined when their last ways back were closed (a pane and lying snow asked in the module, a ray of no length, the landing a
+ *  checkpoint files, a pool that grew, a level too big for a pool stopped as it loads): the doors, what falls, the furniture, a leaf off its hinges, the
+ *  thrown things — and RULES_ROW, the copy of the box world refused to any of them. */
+export const RULES_ROW = 'a rule\'s step (doors, furniture, leaves, thrown things)';
+export const SEALED: readonly string[] = ['lines', 'circles', 'fog', 'poses', 'rays', 'walk', 'sight', 'light', 'smoke', 'sound', 'paths', 'doors', 'falls', 'props', 'slabs', 'items', RULES_ROW];
+/** A RULE OF `row` WAS STEPPED IN TYPESCRIPT WHILE THE ROW IS UP (a family's fallback site says so, with the reason in plain words): counted, except
+ *  where the row is idle by its own rule — one that works lengths and angles out answers only under the game's own maths (OWN_MATHS, below) */
+export function ruleFell(row: string, why: string): null { if (FELL.on && (EXACT.on || !OWN_MATHS.includes(row))) fell(row, why); return null; }
+/** THE SEAL'S RED PATH FOR A RULE'S ROW (`FELL.red`, raised by a tool under FELL_BREAK=1 and by nothing else): the first step of each row, and every
+ *  hundredth after, is sent to its TypeScript and counted, so a run with the break up reaches every sealed rule's row that stepped in it, by name. The
+ *  TypeScript's step is the same game; the count says a way back was taken, and the tool must end red. → true: this step is this side's. */
+export function ruleRed(row: string): boolean {
+  if (!FELL.red) return false;
+  const n = FELL.reds[row] = (FELL.reds[row] ?? 0) + 1; if (n % 100 !== 1) return false;
+  fell(row, 'the red path: a step sent to its TypeScript'); return true;
+}
 /** the sealed rows the count has met */
 export const fellSealed = (): string[] => SEALED.filter(r => Object.keys(FELL.n).some(k => k.startsWith(r + ' · ')));
-/** the count's switches from a word (`1`, `throw`, `who`, `who6`): the harness's TPS_FELL, the page's ?fell */
-export function fellWord(w: string): void { FELL.on = true; FELL.hard = w === 'throw'; const m = /^who(\d*)$/.exec(w); FELL.who = m ? Number(m[1] || 2) : 0; }
+/** the count's switches from a word (`1`, `throw`, `who`, `who6`; `0` = off): the harness's TPS_FELL, the page's ?fell */
+export function fellWord(w: string): void { if (w === '0') { FELL.on = false; return; }   // (`0` is off, as every word of this family reads it)
+  FELL.on = true; FELL.hard = w === 'throw'; const m = /^who(\d*)$/.exec(w); FELL.who = m ? Number(m[1] || 2) : 0; }
 /** the count so far, the busiest first, as one line a row and reason */
 export const fellLines = (): string[] => Object.entries(FELL.n).sort((a, b) => b[1] - a[1]).map(([k, v]) => `${v} × ${k}`);
 /** the rows that work their lengths and angles out in the module, and so answer only where the game's own maths stand in Math's place (EXACT.on) */

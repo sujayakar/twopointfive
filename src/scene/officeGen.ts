@@ -8,7 +8,7 @@
 import { Vec3, DEG, quat } from '../math/vec';
 import { Box, BoxFlag, makeBox } from './boxes';
 import { saidFor, namePaints, paintOf, worded, type BoxStuff, drawnAs, PANEL_GREY, CHAIR_GREY, KERB_GREY, madeOf, saidAs } from './stuff';
-import { carShapes, hubPaint } from './carShapes';
+import { carShapes, hubPaint, carSays } from './carShapes';
 import { WORLD } from './world';
 import type { Level, LightDef, PatrolRoute, Chokepoint, RoomClearPlan, BreachPlan, DaylightDef, LevelDoorDef, PropKind, PropPart, PropDef, DeviceDef, CivilianDef, VentDef } from './level';
 import { MarkingDef, MARKING_TEXEL, markStats } from './markings';
@@ -241,11 +241,11 @@ export function officeKit(trace?: GeneratorTrace, opts: GeneratorOpts = {}) {
   /** COVER: a parked CAR 4.4 × 1.7, nose toward local +X, in the body colour given */
   function car(x: number, z: number, yaw: number, body: Vec3) {   // local +X forward
     const at = frameAt(x, z, yaw);
-    const S = carShapes({ hub: hubPaint([0.5, 0.52, 0.53]) });   // (S: the shape each box says — scene/carShapes.ts)
-    add({ c: [x, 0.62, z], h: [2.2, 0.34, 0.86], yaw, albedo: body, shape: S.body });                                   // lower body
-    add({ c: at(-0.25, 1.2, 0), h: [1.25, 0.27, 0.8], yaw, albedo: [0.07, 0.08, 0.1], shape: S.glass });                 // greenhouse (dark glass)
-    add({ c: at(-0.25, 1.49, 0), h: [1.15, 0.03, 0.76], yaw, albedo: body, shape: S.roof });                             // roof
-    for (const [lx, lz] of [[1.35, 0.8], [1.35, -0.8], [-1.4, 0.8], [-1.4, -0.8]]) add({ c: at(lx, 0.3, lz), h: [0.32, 0.3, 0.12], yaw, albedo: C.black, shape: S.wheel(Math.sign(lz)) });   // wheels
+    const S = carShapes({ hub: hubPaint([0.5, 0.52, 0.53]) }), { paint, glass, tyre } = carSays(body, C.black);   // (S: the shape each box says — scene/carShapes.ts)
+    add({ c: [x, 0.62, z], h: [2.2, 0.34, 0.86], yaw, albedo: paint, shape: S.body });                                   // lower body
+    add({ c: at(-0.25, 1.2, 0), h: [1.25, 0.27, 0.8], yaw, albedo: glass, shape: S.glass });                 // greenhouse (dark glass)
+    add({ c: at(-0.25, 1.49, 0), h: [1.15, 0.03, 0.76], yaw, albedo: paint, shape: S.roof });                             // roof
+    for (const [lx, lz] of [[1.35, 0.8], [1.35, -0.8], [-1.4, 0.8], [-1.4, -0.8]]) add({ c: at(lx, 0.3, lz), h: [0.32, 0.3, 0.12], yaw, albedo: tyre, shape: S.wheel(Math.sign(lz)) });   // wheels
     for (const lz of [0.62, -0.62]) { add({ c: at(2.2, 0.7, lz), h: [0.02, 0.07, 0.14], yaw, albedo: [0.8, 0.8, 0.75], flags: BoxFlag.NoShadow, shape: S.head(Math.sign(lz)) }); add({ c: at(-2.2, 0.75, lz), h: [0.02, 0.06, 0.16], yaw, albedo: [0.3, 0.02, 0.02], emissive: [0.5, 0.03, 0.02], flags: BoxFlag.NoShadow, shape: S.tail(Math.sign(lz)) }); }   // head / tail lights
     return S;   // (the shapes it says, its `tops` among them: what a level stands on its roof is fitted by carShapes.ts feetOn / layOn)
   }
@@ -748,10 +748,10 @@ export function buildOfficeProcedural(trace?: GeneratorTrace, opts: GeneratorOpt
   // ---------------- exterior ----------------
   grp('exterior');
   // parked van south-east, dumpster east, fence posts, street lamp poles
-  add({ c: [30.5, 0.95, 26.4], h: [2.2, 0.95, 0.95], yaw: 0.05, albedo: madeOf('carpaint', [0.55, 0.55, 0.52]) }); add({ c: [31.95, 1.45, 26.33], h: [0.68, 0.3, 0.965], yaw: 0.05, albedo: [0.1, 0.12, 0.15] });   // van body + dark glazing band round the cab, on the body's own (yawed) axis: below the roof line and 1.5 cm proud of both flanks, so no two faces are coplanar (they z-fought)
+  add({ c: [30.5, 0.95, 26.4], h: [2.2, 0.95, 0.95], yaw: 0.05, albedo: madeOf('carpaint', [0.55, 0.55, 0.52]) }); add({ c: [31.95, 1.45, 26.33], h: [0.68, 0.3, 0.965], yaw: 0.05, albedo: madeOf('glass', [0.1, 0.12, 0.15]) });   // van body + dark glazing band round the cab, on the body's own (yawed) axis: below the roof line and 1.5 cm proud of both flanks, so no two faces are coplanar (they z-fought)
   add({ c: [38.2, 0.65, 14.0], h: [0.8, 0.65, 1.2], albedo: [0.1, 0.25, 0.15], ...mk(DEMOTE ? MD.plateMark('+y', [-0.74, -1.14, 0.74, -0.06], { albedo: [0.02, 0.02, 0.025] }, 'coarse', TX) : []) });   // dumpster (its open half's dark interior a coarse marking on the top when demoted)
   for (let i = 0; i < 9; i++) add({ c: [1.0, 0.6, 4 + i * 2.6], h: [0.05, 0.6, 0.05], albedo: C.woodDark });
-  car(11.5, 26.4, Math.PI + 0.06, madeOf('carpaint', [0.42, 0.08, 0.07])); car(21.0, 26.95, -0.04, madeOf('carpaint', [0.5, 0.52, 0.55]));     // parked along the south lot
+  car(11.5, 26.4, Math.PI + 0.06, [0.42, 0.08, 0.07]); car(21.0, 26.95, -0.04, [0.5, 0.52, 0.55]);     // parked along the south lot
   for (let i = 0; i < 7; i++) { if (i === 6) continue; add({ c: [6 + i * 4.2, 0.4, 24.75], h: [0.08, 0.4, 0.08], albedo: [0.7, 0.65, 0.2] }); }   // bollards along the facade (none in the break-room door's swing at x≈31.2)
   add({ c: [37.0, 0.45, 9.0], h: [0.45, 0.45, 0.4], albedo: [0.62, 0.63, 0.62] }); add({ c: [37.0, 0.45, 10.2], h: [0.45, 0.45, 0.4], albedo: [0.62, 0.63, 0.62] });   // AC condensers
   for (let i = 0; i < 4; i++) add({ c: [24.9 + i * 0.5, 0.4, 24.92], h: [0.03, 0.4, 0.3], albedo: C.metal });   // bike rack hoops (clear of the bollard at x = 27, and short of the z≈25.75 patrol line the nav grid routes along — at z 25.1 their ends snagged a capsule the grid thought was clear)

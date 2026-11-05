@@ -47,6 +47,7 @@ import { gwotKit, gwotOfOffice, roundSlabs, GWOT_PALETTE, GWOT_MATERIALS } from 
 import { WORLD } from '../../src/scene/world';
 import { BoxFlag } from '../../src/scene/boxes';
 import { drawnAs, PANEL_GREY } from '../../src/scene/stuff';
+import { carCoat } from '../../src/scene/carShapes';
 
 /** one deal for the checks: QUIET_VARIANT=spot,set,start (absent = the committed file: the first of each, every route) */
 const VARIANT = (() => { const s = (typeof process !== 'undefined' && process.env.QUIET_VARIANT) || ''; if (!s) return null; const v = s.split(',').map(Number); if (v.length !== 3 || v.some(n => !Number.isInteger(n) || n < 0 || n > 2)) throw new Error(`QUIET_VARIANT=${s}: want spot,set,start, each 0‥2`); return v as [number, number, number]; })();
@@ -220,7 +221,8 @@ export function build(): { level: Level; scenarios?: LevelScenarios; groups: str
   kiosk(30.1, 31.1, 18.2, P.paintRust);                                                              // a third, hard by the garage's wicket: from the wicket to the east gate nobody up the street sees you
   // THE LORRY, nose east along the south wall: a canvas tilt over the bed, a red cab
   slab(14.2, 0.45, 19.5, 18.6, 2.5, 21.88, P.canvas, { rough: 0.9 });
-  slab(18.6, 0.45, 19.7, 20.0, 1.25, 21.7, P.truckRed, { rough: 0.5 }); slab(18.7, 1.25, 19.78, 19.9, 1.86, 21.62, P.glassDark, { rough: 0.2 }); slab(18.62, 1.86, 19.72, 19.98, 1.9, 21.68, P.truckRed, { rough: 0.5 });
+  const cabRed = carCoat(P.truckRed);   // (a vehicle's body says it is a car's coat: scene/carShapes.ts)
+  slab(18.6, 0.45, 19.7, 20.0, 1.25, 21.7, cabRed, { rough: 0.5 }); slab(18.7, 1.25, 19.78, 19.9, 1.86, 21.62, P.glassDark, { rough: 0.2 }); slab(18.62, 1.86, 19.72, 19.98, 1.9, 21.68, cabRed, { rough: 0.5 });
   for (const x of [15.0, 17.6, 19.4]) for (const z of [19.75, 21.6]) add({ c: [x, 0.3, z], h: [0.36, 0.3, 0.14], ...M.rubber });
   for (const x of [14.9, 15.8, 16.7, 17.6]) slab(x, 2.5, 19.5, x + 0.08, 2.57, 21.88, P.woodGrey, { rough: 0.8 });                // the tilt's hoops
   for (let i = 0; i < 6; i++) slab(14.35 + i * 0.7, 0.95, 19.46, 14.95 + i * 0.7, 1.75, 19.5, [P.paintRust, P.paintCream, P.paintGreen][i % 3], { rough: 0.5 });   // painted panels down the flank

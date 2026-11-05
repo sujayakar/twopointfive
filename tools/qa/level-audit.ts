@@ -1,6 +1,6 @@
 // EVERY LEVEL ON THE MISSION LIST, COUNTED AS THE LOOK PAGE DRAWS IT (the levels goal, 11-03: "we'll want to dress up all the levels and check their budget").
 // One command, no GPU, about a second a level: for each level a drawn row of the list plays on (scene/scenarioList.ts, rows without `offList`), stood up on the
-// SHIPPED stand in the default look, with the look page's shapes laid over it as main.ts lays them (scene/geoTry.ts and the three trials) and the mission started
+// SHIPPED stand in the default look, with the look page's shapes laid over it as main.ts lays them (scene/geoTry.ts and the lorry's trial) and the mission started
 // at the hour its row opens at, it says
 //   WHAT THE LEVEL IS MADE OF   boxes, cut boxes and their planes, round things, broken wall tops, glass, tilted boxes, marks, props, doors
 //   WHAT LIGHTS IT              lamps by kind, how many burn at that hour, lit panels, openings that let daylight in (render/openings.ts)
@@ -15,7 +15,7 @@
 //   bun run tools/qa/level-audit.ts pass block          these levels only, with each one's paints listed
 //   bun run tools/qa/level-audit.ts --paints            … every level, with its paints
 //   bun run tools/qa/level-audit.ts --out <dir>         where the files go (<dir>/<level>.json, <dir>/audit.json, <dir>/audit.md)
-//   bun run tools/qa/level-audit.ts --plain pass        the level as its FILE has it: none of the look page's shapes laid (what ?geo=0&dress=0&front=0&lorry=0 loads)
+//   bun run tools/qa/level-audit.ts --plain pass        the level as its FILE has it: none of the look page's shapes laid (what ?geo=0&lorry=0 loads)
 //   bun run tools/qa/level-audit.ts --check [level …]   THE BUDGET CHECK: exit 1 when a level is over one of the engine's own caps or one of the bars below
 //   LEVELAUDIT_BREAK=1 bun run tools/qa/level-audit.ts --check pass     every bar at a tenth: must FAIL
 //   bun run tools/qa/level-audit.ts --counts block      … and the level's `counts` block for its row.json: its baseline row and the row as it stands now
@@ -63,8 +63,8 @@ async function one(level: string) {
   const { parseLevelData } = await import(`${ROOT}/src/scene/levelData.ts`), { loadLevel } = await import(`${ROOT}/src/scene/levelLoad.ts`), { buildLevel } = await import(`${ROOT}/src/scene/level.ts`);
   const { lookLevelFile } = await import(`${ROOT}/src/scene/look.ts`), { scenarioQuery } = await import(`${ROOT}/src/scene/scenarios.ts`);
   const { BoxFlag } = await import(`${ROOT}/src/scene/boxes.ts`), { WORLD } = await import(`${ROOT}/src/scene/world.ts`), { cutConfig } = await import(`${ROOT}/src/scene/cut.ts`);
-  const { geoTryLevel } = await import(`${ROOT}/src/scene/geoTry.ts`), { dressFront } = await import(`${ROOT}/src/scene/frontTry.ts`), { dressLorry, kitLorry } = await import(`${ROOT}/src/scene/lorryTry.ts`);
-  const { dressPass } = await import(`${ROOT}/src/scene/passTry.ts`), { seatPosts } = await import(`${ROOT}/src/scene/lookMend.ts`);
+  const { geoTryLevel } = await import(`${ROOT}/src/scene/geoTry.ts`), { dressLorry, kitLorry } = await import(`${ROOT}/src/scene/lorryTry.ts`);
+  const { seatPosts } = await import(`${ROOT}/src/scene/lookMend.ts`);
   const { skyPlan } = await import(`${ROOT}/src/scene/placePlan.ts`), { planOpenings, openAreas, LOOK_OPENINGS } = await import(`${ROOT}/src/scene/openings.ts`);   // (loaded by a built path, as every check here loads the game, so the typecheck does not see a module that moves: RUN the audit after a merge)
   const { LOOK_NAMES, lookStuffOf } = await import(`${ROOT}/src/render/lookTex.ts`), { snowPaintOf } = await import(`${ROOT}/src/render/snowField.ts`);
   const { GWOT_PALETTE } = await import(`${ROOT}/src/scene/gwotPalette.ts`), { MAX_LIGHTS } = await import(`${ROOT}/src/render/lights.ts`);
@@ -81,8 +81,8 @@ async function one(level: string) {
   const shapes = { rounds: 0, walls: 0, front: 0, lorry: 0, lorryKit: 0, pass: 0, seated: 0 };
   if (!PLAIN) quiet(() => { cutConfig.on = true; cutConfig.swap = false;
     const gt = geoTryLevel(lv, skyPlan(lv.boxes)); shapes.rounds = gt.rounds; shapes.walls = gt.walls;
-    shapes.front = dressFront(lv);
-    if (/^pass\b/.test(rows.file ?? '')) { shapes.lorry = dressLorry(lv); if (shapes.lorry) shapes.lorryKit = kitLorry(lv); shapes.pass = dressPass(lv); }
+    // (`front` and `pass` were the house front's and the yard's trials: they are the kit's pieces in the pass's own file since 11-05, counted with its boxes; the two words stay 0 for the rows kept from before)
+    if (/^pass\b/.test(rows.file ?? '')) { shapes.lorry = dressLorry(lv); if (shapes.lorry) shapes.lorryKit = kitLorry(lv); }
     shapes.seated = seatPosts(lv); });
 
   // ---- the game on it, the mission started, at the hour its row opens at
@@ -209,7 +209,7 @@ async function all() {
   console.log(`\n=== level-audit --check: the engine's caps, the heaviest level of the list before dressing, and every surface a material${BRK ? ' (every bar at a tenth: must fail)' : ''} ===`);
   for (const r of got) if (r.error) check(false, `${r.level} stands`, r.error);
   if (!base) { check(false, `the baseline is there (${BASE})`, 'bun run tools/qa/level-audit.ts --write-base, on the levels before they are dressed'); process.exit(1); }
-  const k = BRK ? 0.1 : 1, H = AUDIT_BARS.headroom, X = AUDIT_BARS.overHeaviest, all0 = Object.entries(base);
+  const k = BRK ? 0.1 : 1, H = AUDIT_BARS.headroom, X = AUDIT_BARS.overHeaviest, all0 = Object.entries(base).filter(([lv]) => list.some(r => r.level === lv));   // (the baseline's rows of the levels the list draws TODAY: a level that left the list sets no bar)
   const caps = stood.flatMap(r => ([[r.boxes.all, H * r.boxes.cap, 'boxes', r.boxes.cap], [r.lamps.on, H * r.lamps.cap, 'lamps burning', r.lamps.cap], [r.openings.found, r.openings.keep - 0.5, 'openings found (at the cap: the smallest were dropped)', r.openings.keep], [r.boxes.glass, 24, 'panes of glass', 24]] as [number, number, string, number][])
     .filter(([n, bar]) => n > bar * k).map(([n, , w, cap]) => `${r.level}: ${n} ${w}, the cap is ${cap}`));
   check(caps.length === 0, `the engine's own caps: no level is within a tenth of its boxes (${stood[0]?.boxes.cap}) or of the lamps that can burn at once (${stood[0]?.lamps.cap}), and none has as many openings as are kept (${stood[0]?.openings.keep}: at the cap the smallest lose their light) or more panes than a lamp can shine through (24)`, caps.join('; '));

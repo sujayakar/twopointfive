@@ -30,6 +30,8 @@ import { MarkingDef, MAX_MARKS_PER_BOX, MARKING_TEXEL, markingErrors } from './m
 import { shapeErrors, formOf, type ShapeForm } from './shapes';
 import { findOctagons } from './round';
 import { BOX_STUFFS, boxStuffOk } from './stuff';
+import { DOOR_CAP } from '../sim/doorshome';
+import { PROP_CAP, PROP_PARTS } from '../sim/propshome';
 export type { MarkingDef } from './markings';
 
 export const LEVEL_DATA_VERSION = 1 as const;
@@ -59,7 +61,7 @@ export interface FloorData { id: string; name?: string; /** world Y of the walka
 /** A named paint: linear diffuse albedo. Boxes and prop parts reference materials by key OR carry an inline albedo (one-offs). `rough` / `metal` = the FINISH the
  *  ray-traced reflection pass reads (boxes.ts Box.rough / metal; docs/internal/claude-md-renderer-systems.md): GGX roughness 0‥1 (absent = matte, ROUGH_DEFAULT: no ray is
  *  spent) and bare metal (F0 = albedo). A box may override either (BoxData.rough / metal). Old files carry neither and load exactly as before.
- *  `stuff` = WHAT THE PAINT IS MADE OF (scene/stuff.ts: a material of the look, 'plain' or 'waits'): every box and prop's part that wears the row is that,
+ *  `stuff` = WHAT THE PAINT IS MADE OF (scene/stuff.ts: a material of the look, 'plain', 'waits', or the two a round's hit reads, 'glass' and 'rubber'): every box and prop's part that wears the row is that,
  *  unless it says its own (BoxData.stuff). Absent = plain. The look's alone: no rule of the game reads it. */
 export interface MaterialData { albedo: Vec3; rough?: number; metal?: boolean; stuff?: string; notes?: string; }
 /** What is underfoot for everyone who listens to a footstep (game/floor.ts: the mixer, the guards' ears and the SOUND meter read ONE map). Zones are floor
@@ -384,6 +386,9 @@ export function validateLevelData(d: LevelData): string[] {
   const boxOk = (where: string, id: unknown, more?: ReadonlySet<string>) => { if (!isStr(id) || !(boxIds.has(id) || more?.has(id))) err(where, `unknown box '${show(id)}'`); };
   // props
   const props = recs('props', d.props); uniq('props', props.map(p => (p as any)?.id));
+  // (HOW BIG A LEVEL MAY BE — docs/level-format.md; game/levelfit.ts refuses the level as it loads. Said here of the document whole, lived-in things and all)
+  if (props.length > PROP_CAP) err('props', `at most ${PROP_CAP} loose things of furniture (${props.length})`);
+  { let parts = 0; for (const p of props) parts += Array.isArray((p as any)?.parts) ? (p as any).parts.length : 0; if (parts > PROP_PARTS) err('props', `at most ${PROP_PARTS} boxes in all the loose furniture (${parts})`); }
   props.forEach((p, i) => {
     if (!isObj(p)) return; const w = `props[${i}] '${show(p.id)}'`; known(w, p, KEYS.prop);
     if (!['chair', 'cardboard', 'bin', 'plant'].includes(p.kind)) err(w, `kind '${show(p.kind)}'`); floorOk(w, p.floor);
@@ -419,6 +424,7 @@ export function validateLevelData(d: LevelData): string[] {
   });
   // doors
   const doors = recs('doors', d.doors); const doorIds = uniq('doors', doors.map(x => (x as any)?.id));
+  if (doors.length > DOOR_CAP) err('doors', `at most ${DOOR_CAP} (${doors.length})`);
   doors.forEach((o, i) => {
     if (!isObj(o)) return; const w = `doors[${i}] '${show(o.id)}'`; known(w, o, KEYS.door); floorOk(w, o.floor);
     if (!isVec(o.hinge, 2)) err(w, 'hinge [x, z]'); if (!isNum(o.closedDir)) err(w, 'closedDir'); if (!(isNum(o.width) && o.width > 0)) err(w, 'width > 0');

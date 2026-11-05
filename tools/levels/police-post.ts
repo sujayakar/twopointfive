@@ -677,7 +677,7 @@ export function build(): { level: Level; scenarios?: LevelScenarios; groups: str
 
     // THE MOTOR POOL — vehicle bay: the fuel point south of the canopy (two drums and the hand pump), painted bays, a spare wheel, a bonnet off and leaning; the gap between the trucks stays empty
     room('motorpool');
-    G.drum(4.62, 9.9, 'drumRed'); G.drum(4.62, 10.62, 'drumRed');                                         // (standing: a drum on its side is a box to the picture until the kit has a lying round)
+    G.drum(4.62, 9.9, 'drumRed'); G.drum(4.62, 10.62, 'drumRed');                                         // (standing, as a fuel point's drums are: the hand pump stands in the first)
     W(4.62, 9.9, 0.88, 1.36, 0.02, 0.02, M.iron); W(4.78, 9.9, 1.32, 1.36, 0.14, 0.015, M.iron);          // the hand pump, standing in the first
     rnd(8.55, 6.7, 0, 0.18, 0.19, 'rubber'); W(8.55, 6.7, 0.18, 0.19, 0.09, 0.09, M.galv);
     W(4.17, 6.65, 0, 1.0, 0.03, 0.45, M.truckWhite);
