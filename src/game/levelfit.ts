@@ -27,7 +27,7 @@ import { BoxFlag, type Box } from '../scene/boxes';
 import { PANE_CAP, FACE, tooBig } from '../scene/boxMirror';
 import { levelNameOf } from '../scene/levelLoad';
 import type { Level } from '../scene/level';
-import { simWhyNot } from '../sim/sim';
+import { sim as simX, simWhyNot } from '../sim/sim';
 import { DOOR_CAP, doorIo } from '../sim/doorshome';
 import { PROP_CAP, PROP_PARTS, propIo } from '../sim/propshome';
 import { MEN_ROWS } from '../sim/men/schema';
@@ -35,6 +35,7 @@ import { isSheet } from './glass';
 import { manSingles, type Cast } from './posehome';
 import { posePoolRoom } from '../anim/skeleton';
 import { MAX_SKINNED, steadyMost } from './guards';
+import { GLASSBREAK } from './glassbreak';
 import { SEATS } from './seats';
 import { BODY_DOOR_PARTICLES } from './game';
 import { WALLS } from './wallbreak';
@@ -129,6 +130,8 @@ export function fitRows(g: Stood, tables: Readonly<Record<string, number>>): Fit
     { row: 'sheets', what: 'sheets of glass (a row a pane that is no longer whole)', has: L.sheets, cap: Math.min(t('glass'), cap.sheets), table: 'glass' },
     { row: 'view', what: 'sheets of glass (a row a pane a burst\'s view names)', has: L.sheets, cap: t('view'), table: 'view' },
     { row: 'steady', what: 'lamps the smoke\'s light sweep takes as one table (every lamp nobody carries that is no flash and no beacon\'s, lit or not)', has: g.engine && g.beacons ? steadyMost(g as never) : 0, cap: held ? FACE.MAX_LAMPS : Infinity, table: null },
+    { row: 'clumps', what: 'clumps the largest sheet of glass dices into', has: clumpsMost(g.level.boxes), cap: held ? simX().panes_cap(1) : Infinity, table: null },
+    { row: 'bars', what: 'window\'s bars (a row a bar gone, in the game\'s block)', has: col.boxes.filter(b => b.flags & BoxFlag.Bar).length, cap: held ? simX().panes_cap(0) : Infinity, table: null },
     { row: 'doors', what: 'doors (a row a door, and a row a leaf off its hinges)', has: L.doors, cap: cap.doors, table: null },
     // what a game holds of men, and what one step of a rule is handed of them (the rules' hand-overs: no table of the copy)
     { row: 'men', what: 'the first seat\'s man and the guards as the level is stood up (what guards.ts spawnUnit counts against the picture\'s budget of characters)', has: 1 + (g.guards?.length ?? 0), cap: MAX_SKINNED, table: null },
@@ -146,6 +149,9 @@ export function fitRows(g: Stood, tables: Readonly<Record<string, number>>): Fit
     { row: 'beacons', what: 'emergency beacons', has: L.beacons, cap: cap.beacons, table: null },
   ];
 }
+
+/** the clumps the largest sheet of a level's glass dices into, as the rule cuts them (rust/sim/src/panes.rs start_dice) */
+const clumpsMost = (boxes: readonly Box[]): number => { let n = 0; for (const b of boxes) if (isSheet(b)) n = Math.max(n, Math.max(1, Math.round(2 * Math.max(b.h[0], b.h[2]) / GLASSBREAK.clumpM)) * Math.max(1, Math.round(2 * b.h[1] / GLASSBREAK.clumpM))); return n; };
 
 /** why this stood game cannot be played, in words, or null: every row of the count is inside what holds it (a row the game holds itself to in play is
  *  no reason: `play`) */
