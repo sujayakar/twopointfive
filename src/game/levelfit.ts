@@ -14,15 +14,20 @@ import { BoxFlag, type Box } from '../scene/boxes';
 import { PANE_CAP } from '../scene/boxMirror';
 import { DOOR_CAP } from '../sim/doorshome';
 import { PROP_CAP, PROP_PARTS } from '../sim/propshome';
+import { LIGHT_CAPS } from '../sim/lightshome';
 import { isSheet } from './glass';
+import { findCarLamps } from './carlamps';
 
 /** what of a level is counted before it is built, and what it has of each: doors · loose things of furniture · the boxes those are made of · sheets of glass */
-export interface LevelFit { doors: number; things: number; parts: number; sheets: number }
+export interface LevelFit { doors: number; things: number; parts: number; sheets: number; fixtures: number; cameras: number; lasers: number; beacons: number; lamps: number }
 /** …and how many of each the game holds */
-export const levelCaps = (): LevelFit => ({ doors: DOOR_CAP, things: PROP_CAP, parts: PROP_PARTS, sheets: PANE_CAP });
-export function levelCounts(level: { doors: readonly unknown[]; props: readonly { parts: readonly unknown[] }[]; boxes: readonly Box[] }): LevelFit {
+export const levelCaps = (): LevelFit => ({ doors: DOOR_CAP, things: PROP_CAP, parts: PROP_PARTS, sheets: PANE_CAP, fixtures: LIGHT_CAPS.targets, cameras: LIGHT_CAPS.cameras, lasers: LIGHT_CAPS.lasers, beacons: LIGHT_CAPS.beacons, lamps: LIGHT_CAPS.rows });
+export function levelCounts(level: { doors: readonly unknown[]; props: readonly { parts: readonly unknown[] }[]; boxes: readonly Box[]; lights: readonly unknown[]; switchables: readonly { boxes: readonly number[]; group: string }[]; beacons: readonly unknown[]; devices?: readonly { kind: string }[] }): LevelFit {
   let parts = 0, sheets = 0; for (const p of level.props) parts += p.parts.length; for (const b of level.boxes) if (isSheet(b)) sheets++;
-  return { doors: level.doors.length, things: level.props.length, parts, sheets };
+  let cameras = 0, lasers = 0; for (const d of level.devices ?? []) { if (d.kind === 'camera') cameras++; else if (d.kind === 'laser') lasers++; }
+  // (the lamps its fixtures can feed, at most: a box of a switchable is at most an area light and one for each of its markings. Game's constructor works out which are, game.ts; the fullest level today has 52)
+  let flat = 0; for (const s of level.switchables) for (const bi of s.boxes) flat += 1 + (level.boxes[bi]?.marks?.length ?? 0);
+  return { doors: level.doors.length, things: level.props.length, parts, sheets, fixtures: level.lights.length + level.switchables.length + findCarLamps(level.boxes).length + cameras + lasers + 1, cameras, lasers, beacons: level.beacons.length, lamps: level.lights.length + flat + level.beacons.length + cameras };
 }
 /** why this level cannot be loaded, in words, or null: it fits */
 export function levelOver(level: Parameters<typeof levelCounts>[0]): string | null {
@@ -31,6 +36,11 @@ export function levelOver(level: Parameters<typeof levelCounts>[0]): string | nu
   if (has.things > cap.things) over.push(`${has.things} loose things of furniture (${cap.things})`);
   if (has.parts > cap.parts) over.push(`loose furniture of ${has.parts} boxes (${cap.parts})`);
   if (has.sheets > cap.sheets) over.push(`${has.sheets} sheets of glass (${cap.sheets})`);
+  if (has.fixtures > cap.fixtures) over.push(`${has.fixtures} light fixtures (${cap.fixtures})`);
+  if (has.lamps > cap.lamps) over.push(`lamps on its fixtures, up to ${has.lamps} (${cap.lamps})`);
+  if (has.cameras > cap.cameras) over.push(`${has.cameras} cameras (${cap.cameras})`);
+  if (has.lasers > cap.lasers) over.push(`${has.lasers} tripwires (${cap.lasers})`);
+  if (has.beacons > cap.beacons) over.push(`${has.beacons} emergency beacons (${cap.beacons})`);
   return over.length ? `this level is too big to load: ${over.join(', ')}` : null;
 }
 
@@ -64,5 +74,10 @@ export function fitRows(g: Stood, tables: Readonly<Record<string, number>>): Fit
     { row: 'sheets', what: 'sheets of glass (a row a pane that is no longer whole)', has: L.sheets, cap: Math.min(t('glass'), cap.sheets), room: 1, table: 'glass' },
     { row: 'view', what: 'sheets of glass (a row a pane a burst\'s view names)', has: L.sheets, cap: t('view'), room: 1, table: 'view' },
     { row: 'doors', what: 'doors (a row a door, and a row a leaf off its hinges)', has: L.doors, cap: cap.doors, room: 1, table: null },
+    { row: 'fixtures', what: 'light fixtures (a row of the lights\' columns each)', has: L.fixtures, cap: cap.fixtures, room: 1, table: null },
+    { row: 'lamps', what: 'lamps on its fixtures, at most (a row of the table a light question reads)', has: L.lamps, cap: cap.lamps, room: 1, table: null },
+    { row: 'cameras', what: 'cameras', has: L.cameras, cap: cap.cameras, room: 1, table: null },
+    { row: 'lasers', what: 'tripwires', has: L.lasers, cap: cap.lasers, room: 1, table: null },
+    { row: 'beacons', what: 'emergency beacons', has: L.beacons, cap: cap.beacons, room: 1, table: null },
   ];
 }

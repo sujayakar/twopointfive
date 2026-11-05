@@ -95,8 +95,8 @@ export async function devicesCamera() {
     let peak = 0; for (let i = 0; i < 60 * 4; i++) { W.step(DT); game.player.visibility = 1; game.probe.results.set(cam.smokeKey, [0.15, 0, 0]); peak = Math.max(peak, cam.seen); }
     if (peak > 0.05 || cam.state !== 'idle' || msgs.some(m => /CONTROL/.test(m.text))) fails.push(`through smoke: peak ${f2(peak)}, state ${cam.state}`);
     // and the ramp: at 0.55 transmittance it fills at half the clear-air rate (the same 0.3‥0.8 ramp sightGain has)
-    game.probe.results.set(cam.smokeKey, [0.55, 0, 0]); cam.seen = 0; const s0 = cam.seen; for (let i = 0; i < 30; i++) { W.step(DT); game.player.visibility = 1; game.probe.results.set(cam.smokeKey, [0.55, 0, 0]); } const half = cam.seen - s0;
-    game.probe.results.set(cam.smokeKey, [1, 0, 0]); cam.seen = 0; cam.state = 'idle'; cam.reportedAt = -100; for (let i = 0; i < 30; i++) { W.step(DT); game.player.visibility = 1; game.probe.results.set(cam.smokeKey, [1, 0, 0]); } const full = cam.seen;
+    game.probe.results.set(cam.smokeKey, [0.55, 0, 0]); cam.put(cam.yaw, cam.phase, 0, cam.state, cam.reportedAt, cam.lastSeen, cam.deadCalled); const s0 = cam.seen; for (let i = 0; i < 30; i++) { W.step(DT); game.player.visibility = 1; game.probe.results.set(cam.smokeKey, [0.55, 0, 0]); } const half = cam.seen - s0;
+    game.probe.results.set(cam.smokeKey, [1, 0, 0]); cam.put(cam.yaw, cam.phase, 0, 'idle', -100, cam.lastSeen, cam.deadCalled); for (let i = 0; i < 30; i++) { W.step(DT); game.player.visibility = 1; game.probe.results.set(cam.smokeKey, [1, 0, 0]); } const full = cam.seen;
     if (!(half > 0.15 * full && half < 0.7 * full)) fails.push(`ramp: 0.5 s at T 0.55 filled ${f2(half)} vs ${f2(full)} clear (want about half)`);
     v(fails.length === 0, '(c) lit but a plume between (transmittance 0.15 on the lens → chest segment): nothing; at 0.55 it fills at about half the clear-air rate', `peak ${f2(peak)} · half-smoke ${f2(half)} vs clear ${f2(full)} per 0.5 s`, fails);
   }
@@ -117,7 +117,7 @@ export async function devicesCamera() {
   {
     const { W, game, msgs, cam } = await stage(805, { vis: 0.03 }); const fails: string[] = [];
     const sparks0 = game.sparks.live;
-    cam.target.broken = true;   // (combat.ts's light pass does exactly this when Sam's round passes within 0.3 m of the lens; the round itself is fireWeapon's business)
+    game.lightHome.stage(cam.target, null, true);   // (combat.ts's light pass does exactly this when Sam's round passes within 0.3 m of the lens; the round itself is fireWeapon's business)
     W.step(DT); W.step(DT);
     const sent = game.guards.find((g: any) => g.task?.kind === 'device');
     if (!msgs.some(m => /CONTROL — camera 1 just went dark/.test(m.text))) fails.push(`no 'camera 1 just went dark' line (${msgs.map(m => m.text).slice(-3).join(' | ')})`);
@@ -372,7 +372,7 @@ export async function devicesLaser() {
     if (L.cut !== 0 && !DEV.alive(L.target)) { /* cut is 0 while dark: nothing drawn */ } if (game.dynBoxes.some((b: any) => Math.abs(b.c[0] - 14.5) < 0.01 && Math.abs(b.c[1] - 0.35) < 0.01 && b.h[2] > 0.5)) fails.push('the beam is still drawn while dark');
     steps(W, game.tune.ocpDuration + 1.5); if (!DEV.alive(L.target)) fails.push('not back after the OCP');
     walk(game, W, [13.0, 0, 11.1], [16.2, 0, 11.1], false); if (L.trips !== 1) fails.push(`back on: trips ${L.trips} (want 1)`);
-    L.target.broken = true; steps(W, 0.1);
+    game.lightHome.stage(L.target, null, true); steps(W, 0.1);
     const sent = game.guards.find((g: any) => g.task?.kind === 'device' && v3.distXZ(g.task.pos, L.def.from) < 2);
     if (!msgs.some(m => /the corridor beam just went dark/.test(m.text))) fails.push(`no 'went dark' line (${msgs.slice(-3).map(m => m.text).join(' | ')})`); if (!sent) fails.push('nobody sent to the dead emitter');
     steps(W, 4.5); walk(game, W, [13.0, 0, 11.1], [16.2, 0, 11.1], false); if (L.trips !== 1) fails.push('a dead beam tripped');
