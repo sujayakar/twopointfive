@@ -14,7 +14,7 @@ export async function waysCheck(): Promise<boolean> {
   console.log(`\n=== ways: how a level is walked${BRK ? ' (the reader takes none: must fail)' : ''} ===`);
   const { loadLevel } = await import(`${ROOT}/src/scene/levelLoad.ts`), { StaticCollision, NavGrid } = await import(`${ROOT}/src/scene/collision.ts`);
   const { levelWays } = await import(`${ROOT}/src/scene/ways.ts`), { buildWearMap, WEAR_RES } = await import(`${ROOT}/src/render/wear.ts`), { WORLD } = await import(`${ROOT}/src/scene/world.ts`);
-  const { withOfficeScript, isOfficeFamily } = await import(`${ROOT}/src/scene/level.ts`);
+  const { withOfficeScript, isOfficeFamily } = await import(`${ROOT}/src/scene/level.ts`), { pageWays } = await import('./walked-check.ts');
   // (the office's missions and its ways are code beside it, attached as the game attaches them: a level opened without them would be checked with no ways of its own)
   const open = (f: string) => { const data = JSON.parse(readFileSync(resolve(ROOT, 'levels', f), 'utf8')), level = isOfficeFamily(data) ? withOfficeScript(loadLevel(data)) : loadLevel(data), nav = new NavGrid(new StaticCollision(level.boxes)); return { level, nav }; };
   const sumOf = (a: Float32Array) => { let n = 0, most = 0; for (const v of a) { if (v > 0) n++; most = Math.max(most, v); } return { n, most }; };
@@ -34,10 +34,12 @@ export async function waysCheck(): Promise<boolean> {
     const W = levelWays(level, level.scenarios, nav), twice = levelWays(level, level.scenarios, nav, { hints: [...H, ...H] }), none = levelWays(level, level.scenarios, nav, { hints: [] }), bad = levelWays(level, level.scenarios, nav, { hints: [{ from: 'no such thing', to: 'service' }] });
     const most = sumOf(W.hint).most, wsum = H.reduce((a: number, h: any) => a + (h.weight ?? 1), 0), doubles = W.hint.every((v: number, i: number) => twice.hint[i] === 2 * v);
     const off = open('office.json'), O = levelWays(off.level, off.level.scenarios, off.nav);
-    // … and over every level of the game: no way without a path, no name a level does not have, no name that is two things (a door's id is looked for first)
+    // … and over every level of the game, EACH AS THE PAGE WALKS IT (walked-check.ts pageWays: the lived rooms and the dressing in, the one floor the ways' only
+    //   reader has; this line once opened each level as the caller's stand does, a second floor for the same rule): no way without a path, no name a level
+    //   does not have, no name that is two things (a door's id is looked for first)
     const sick: string[] = []; let ways = 0;
-    for (const f of readdirSync(resolve(ROOT, 'levels')).filter(x => x.endsWith('.json') && !x.endsWith('.lint.json'))) { let L; try { L = open(f); } catch { continue; }
-      const A = levelWays(L.level, L.level.scenarios, L.nav), sc: any = L.level.scenarios ?? {}; ways += A.paths.length;
+    for (const f of readdirSync(resolve(ROOT, 'levels')).filter(x => x.endsWith('.json') && !x.endsWith('.lint.json'))) { let L; try { L = pageWays(f.replace(/\.json$/, '')); } catch { continue; }
+      const A = L.ways, sc: any = L.level.scenarios ?? {}; ways += A.paths.length;
       if (A.lost) sick.push(`${f}: ${A.lost} with no path`); if (A.unknown.length) sick.push(`${f}: no such ${A.unknown.join(', ')}`);
       const kinds = (n: string) => [n === 'spawn', L.level.doors.some((d: any) => d.name === n), (L.level.marks ?? []).some((m: any) => m.name === n), L.level.routes.some((r: any) => r.name === n), (sc.roomClear?.rooms ?? []).some((r: any) => r.id === n || r.name === n), (sc.places?.areas ?? []).some((a: any) => a.name === n)].filter(Boolean).length;
       for (const h of sc.walked ?? []) for (const n of [h.from, h.to]) if (kinds(n) > 1) sick.push(`${f}: '${n}' is two things`); }

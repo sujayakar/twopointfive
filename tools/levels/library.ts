@@ -80,7 +80,7 @@ for (const f of readdirSync(HERE).filter(f => f.endsWith('.ts')).sort()) {
     levels.push(name);
   } catch (e) { unbuilt.push({ level: name, why: firstLine(e) }); }
 }
-building = 'office'; open.length = 0; buildOfficeProcedural({ groups: [] }); levels.push('office');   // (the office is built by its own function, not a file under tools/levels)
+building = 'office'; open.length = 0; buildOfficeProcedural({ groups: [] }, { lived: true }); levels.push('office');   // (the office is built by its own function, not a file under tools/levels; `lived`: as its FILE has it, whatever stand this tool runs on — the exporter says the same word)
 building = ''; for (const k of KITS) k.stand();                   // a kit no generator stood up still says its pieces
 watchPieces(null);
 levels.sort();
