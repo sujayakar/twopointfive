@@ -105,8 +105,16 @@ src/host/savefile.ts  THE ONE DOOR A FILE LEAVES THE PAGE BY (2026-10-27): `save
                      to `BENCH_SEND_MS` for `cloud.filesIdle`, and its line turns to "were sent"); a file HELD on a page that never shows the
                      notice (F9 on a mission opened by its link, first visit) is lost with the page. A long take fits: the backend packs text. A page is one bundle: the workbench has no listener, and the replay pages carry no door.
                      `bun run tools/qa/savefile-check.ts` (`SAVEFILE_BREAK=1` must fail; it also drives the door over the
-                     real `FileSync` and reads main.ts's mapping) is red on a `.download =` or createObjectURL of its own in src/ (11-05: but for an address a module hands to a worker with no way out of the page beside it, no link, window, location or frame: a worker's script, `render/lookWorkers.ts`; the check tries the rule both ways on lines of its own). Checked 2026-10-27:
+                     real `FileSync` and reads main.ts's mapping) is red on a `.download =` or createObjectURL of its own in src/. Checked 2026-10-27:
                      that check and bench-check on both stands; on a page, see qa.md. Never seen on a GPU.
+                     11-05, run on both stands with `SAVEFILE_BREAK=1` red: (1) AN ADDRESS THAT IS A WORKER'S SCRIPT IS NO FILE. An address
+                     made with createObjectURL is let by only where every use of it in its module is a worker's (made inside `new Worker(…)`,
+                     or kept under one name that is only handed to a worker, let go, emptied or asked for): `render/lookWorkers.ts` today. A
+                     closed list of what a worker needs, not a list of ways out of a page. (2) THE CHECK WALKS THE DOOR'S OWN LIST
+                     (`SAVED_KINDS`, which `SavedKind` is made of): the level is the one kind still downloaded, and every kind has a file that
+                     hands it to the door; a kind nobody saves, a kind off the list, and a save whose kind is not said outright or by one
+                     const are red. A new kind needs no line in the check. Both rules are tried on lines of the check's own. Not seen by it: a
+                     download with no address of the page's making and no `download` spelling (a `data:` link built as an object).
 src/render/          passes.ts (pass graph + target lifecycles), frame.ts (uniforms/flags — THE flag table + Frame byte table + the scene prelude incl. TRACE_VARIANT), lights.ts (+ identity
                      maps for the reservoirs), rc.ts (cascades), probe.ts (the light meter / smoke probe queries), gbuffer.ts, texpool.ts (pooled targets + history resampling),
                      denoise.ts (the shared denoiser's pipelines), froxels.ts, particles.ts (GPU pool + impulses + wind records), decals.ts, reach.ts (per-light reach masks), wear.ts (traffic
