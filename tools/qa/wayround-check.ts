@@ -37,6 +37,7 @@
 // 'nothing to ask' there: that is the frozen stand's answer, and the shipped run is the one that asks. Lines are `- PASS — …` / `- FAIL — …`; exit 0 = all pass, 1 = a way lost,
 // 2 = bad usage. THE CHECK'S OWN BREAK PATH: `WAYROUND_BREAK=1` asks the furnished side with the path limit at a tenth, as if every way had grown ten
 // times as long, and must be red on every mission that has a way at all.
+import './stand.ts';   // (the stand's word, written down before this file reads it)
 import { existsSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { spawn } from 'node:child_process';
 import { resolve } from 'node:path';

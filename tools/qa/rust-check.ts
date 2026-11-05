@@ -580,10 +580,10 @@ let wordOwn = '', wordRust = '';
 
 // ---- state
 {
-  const run = (profile: string | undefined) => child(['bun', 'run', 'tools/qa/simstate-check.ts'], { TPS_PROFILE: profile, QA_HOLD: undefined, SIMSTATE_BREAK: BREAK ? '1' : undefined });
+  const run = (profile: 'frozen' | 'shipped') => child(['bun', 'run', 'tools/qa/simstate-check.ts'], { TPS_PROFILE: profile, QA_HOLD: undefined, SIMSTATE_BREAK: BREAK ? '1' : undefined });
   // (both stands play on the game's own maths, so on both the rows whose step is their own maths — sim.ts OWN_MATHS — step in the module: `stepped`, of
   //  each such family, the steps taken in the module, must not be none on either)
-  const fr = run(undefined), sh = run('shipped'), rows = (o: string) => o.split('\n').filter(l => /^- (PASS|FAIL) — /.test(l)), bad = [...rows(fr.out), ...rows(sh.out)].filter(l => /^- FAIL/.test(l));
+  const fr = run('frozen'), sh = run('shipped'), rows = (o: string) => o.split('\n').filter(l => /^- (PASS|FAIL) — /.test(l)), bad = [...rows(fr.out), ...rows(sh.out)].filter(l => /^- FAIL/.test(l));
   const steppedOf = (o: string) => [...o.matchAll(/ (\d+) of the (\d+) steps taken in the module/g)].map(m => Number(m[1])), stepped = [...steppedOf(fr.out), ...steppedOf(sh.out)];
   const ok = fr.status === 0 && sh.status === 0 && rows(fr.out).length >= 8 && rows(sh.out).length >= 8 && steppedOf(fr.out).length >= 3 && steppedOf(sh.out).length >= 3 && stepped.every(n => n > 0);
   red.dice = [fr, sh].every(c => rows(c.out).some(l => /^- FAIL — dice:/.test(l)));   // (the die's own line, on both stands: the other lines fail for the block)

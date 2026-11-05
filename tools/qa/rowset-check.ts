@@ -18,6 +18,7 @@
 //   · the switch is the page's: pageSwitches raises it and `?rowset=0` puts it off (read in the source), this stand has it as its profile says, FROZEN_HOLDS
 //     has its row, and main.ts runs the rule after the page's switches and the recipe's tables and before it reads the weather, the snow and the hour
 // EXIT: 0 = every line holds · 1 = one does not. Headless: no GPU, nothing here saw a picture.
+import './stand.ts';   // (the stand's word, written down before this file reads it)
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
