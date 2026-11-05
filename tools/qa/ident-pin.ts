@@ -60,6 +60,7 @@ export interface Held {
  *  `o.unfit` = why this run may not be recorded ('' = it may). It prints the child's line when asked for one (`--words`: the caller then exits),
  *  judges through `o.verdict`, and answers what moved; under `--record` it writes nothing itself and answers `record` (see Held). */
 export function hold(o: { root: string; tool: string; fixture: string; run: string; runArgs: string[]; end: string; words: Words; breakWord: string; unfit: string;
+  /** the stand this family's recording is of, where it is not the frozen stand's */ stand?: string;
   verdict: (ok: boolean, label: string, detail: string) => void; say: (line: string) => void }): Held {
   const args = process.argv.slice(2), flag = (n: string) => { const i = args.indexOf(n); return i >= 0 ? args[i + 1] : undefined; };
   const stand = String(process.env.TPS_PROFILE ?? 'frozen'), FIX = `${o.root}/tools/qa/fixtures/${o.fixture}`, BREAK = process.env[o.breakWord] === '1', words = o.words;
@@ -95,13 +96,13 @@ export function hold(o: { root: string; tool: string; fixture: string; run: stri
   if (args.includes('--record')) {
     // (a name the recording holds and this run does not reach is not let go of quietly: what a recording holds can shrink only by a word said for it)
     const gone = Object.keys(file.stands[stand]?.words ?? {}).filter(n => !words[n]);
-    const why = stand !== 'frozen' ? 'a recording is the frozen stand\'s (TPS_PROFILE=frozen): on the page\'s stand a run\'s course moves with every rule that lands' : o.unfit
+    const why = stand !== (o.stand ?? 'frozen') ? `a recording of this family is the ${o.stand ?? 'frozen'} stand's (TPS_PROFILE=${o.stand ?? 'frozen'})` : o.unfit
       || (gone.length && !args.includes('--forget') ? `the recording holds ${gone.join(', ')} and this run does not reach ${gone.length > 1 ? 'them' : 'it'} (--record --forget writes a recording without)` : '');
     if (why) { o.verdict(false, 'same: the run is recorded', `NOTHING WRITTEN: ${why}`); return { off: [], stayed: [], to: '' }; }
     const git = (...a: string[]) => String(spawnSync('git', ['-C', o.root, ...a], { encoding: 'utf8' }).stdout ?? '').trim();
     const tree = flag('--tree') ?? `${git('log', '-1', '--format=%h %s')}${git('status', '--porcelain', '--', 'src', 'rust') ? ', with changes not committed' : ''}`;
     return { off: [], stayed: [], to: '', record: () => {
-      file.what = `${o.tool}: every name's count of calls and word over its run on the frozen stand (tools/qa/ident-pin.ts; --record writes it)`;
+      file.what = `${o.tool}: every name's count of calls and word over its run on the ${stand} stand (tools/qa/ident-pin.ts; --record writes it)`;
       file.stands[stand] = { run: o.run, end: o.end, tree, stood, words };
       writeFileSync(FIX, JSON.stringify(file, null, 1) + '\n');
       o.say(`- RECORDED — same: ${Object.keys(words).length} names, ${calls} calls, written to tools/qa/fixtures/${o.fixture} for the ${stand} stand · taken on: ${tree}`);
