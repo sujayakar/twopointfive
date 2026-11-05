@@ -32,7 +32,6 @@ import type { Level } from '../../src/scene/level';
 import type { LevelScenarios, StructureData, ResponseData } from '../../src/scene/scenarios';
 import * as K from '../../src/scene/levelKit';
 import { gwotKit, gwotOfKit } from '../../src/scene/gwotKit';
-import { feetOn } from '../../src/scene/carShapes';
 import { livedPieces, INK, h01 } from './livedPieces';
 import { drawnAs, madeOf, KERB_GREY } from '../../src/scene/stuff';
 
@@ -237,7 +236,7 @@ export function build(opts: K.KitOpts = {}): { level: Level; scenarios: LevelSce
 
   // ---------------- outside ----------------
   K.grp(k, 'exterior');
-  const TRUCK_S = K.car(k, ...TRUCK, RECORDS_PAINT.carYard);                        // the yard in the crook of the L: a parked car, dark
+  K.car(k, ...TRUCK, RECORDS_PAINT.carYard);                        // the yard in the crook of the L: a parked car, dark
   K.car(k, 14.6, 25.4, Math.PI, RECORDS_PAINT.carLot);              // the lot: the car the team forms up behind
   K.slab(k, 0, 0, 27.94, 40, 0.32, 28, RECORDS_PAINT.kerb); K.slab(k, 39.94, 0, 0, 40, 0.32, 27.94, RECORDS_PAINT.kerb);   // kerbs on the lot's south and east edges
   K.grp(k, 'exterior.lamps');
@@ -320,9 +319,7 @@ export function build(opts: K.KitOpts = {}): { level: Level; scenarios: LevelSce
     // in the lane along the west wall that a man at the front office's corner holds the back door down.
     // the gang's truck is the car in the crook: a ladder and two ranging rods on its roof, 1.52 m up where levelKit's car has it (the car the team forms up
     // behind stays bare: the front door's kit picture takes that one out by its boxes), two spare tyres and two drums on the ground behind it
-    { const L = P.at(...TRUCK), [lx, , lz] = L.p(-0.25, 0, -0.36), [px, , pz] = L.p(-0.2, 0, 0.42); const n0 = k.boxes.length; P.ladder(lx, 1.52, lz, TRUCK[2], 2.3, 0.4); P.poles(px, 1.56, pz, TRUCK[2], 2, 1.9, 0.09);
-      // (with shapes on the roof is bowed: the ladder's outer stile, the first box of it, stands on two feet — trim, carShapes.ts feetOn)
-      const feet = feetOn(TRUCK_S.tops.roof, [-0.25, 1.555, -0.56], [1.15, 0.035, 0.02], [-0.5, 0.45]); if (feet.length) k.boxes[n0].shape = { with: feet }; }
+    { const L = P.at(...TRUCK), [lx, , lz] = L.p(-0.25, 0, -0.36), [px, , pz] = L.p(-0.2, 0, 0.42); P.ladder(lx, 1.52, lz, TRUCK[2], 2.3, 0.4); P.poles(px, 1.56, pz, TRUCK[2], 2, 1.9, 0.09); }
     G.tyres(19.2, 21.7, 2); G.drum(20.6, 22.25, 'drumBlue', 0.2); G.drum(21.25, 22.32, 'rust', 0.5);
     // the west yard, out in the open: the hand pump on its pad, the tank it fills up on its plinth, the dish
     P.room('water');

@@ -184,7 +184,6 @@ export class Furniture {
     const others: AABB[] = [];   // every authored static that is NOT furniture: what may be resting on a piece of it (see the load rule below)
     for (let i = 0; i < n; i++) {
       const b = boxes[i];
-      if (b.piece === true) continue;   // TRIM a box says (scene/shapes.ts): drawn and nothing else. It stands on nothing, joins nothing and loads nothing, so the furniture of a level stood on its shapes is the furniture of the plain level; it is drawn while its box is (scene/boxes.ts trimDrawn)
       // by the flags the level was AUTHORED with, not as it stands: the index is made at the first blast, and by then rounds or that very blast may have hidden
       // things — a part missed here would be lost to every later encounter, and the index would depend on when it was made
       const f0 = this.hidden.get(i) ?? this.destr.flags0(i) ?? b.flags;
@@ -520,7 +519,7 @@ export class Furniture {
   private roofed(x: number, z: number): boolean { const I = this.g.reachInterior; if (!I) return true; const cx = Math.floor(x - WORLD.min[0]), cz = Math.floor(z - WORLD.min[2]); return cx >= 0 && cz >= 0 && cx < WORLD.gridW && cz < WORLD.gridH && I[cz * WORLD.gridW + cx] === 1; }
   /** may the mouth rule take the static `i` at all, by what it was AUTHORED as (asked of a blast and of a checkpoint alike)? */
   private mouthOk(i: number, saved = false): boolean {
-    const b = this.g.col.boxes[i]; if (!b || b.piece === true || b.rot || this.kept.has(i) || this.destr.walls.breakableAt(i)) return false;   // (trim is no thing: never the mouth's to take, to rest on or to rest)
+    const b = this.g.col.boxes[i]; if (!b || b.rot || this.kept.has(i) || this.destr.walls.breakableAt(i)) return false;
     if ((this.hidden.get(i) ?? b.flags) & (BoxFlag.Glass | BoxFlag.Dynamic) || (!this.hidden.has(i) && this.destr.flags0(i) === undefined && b.flags & BoxFlag.NoPrimary && !this.destr.itemOf(i))) return false;
     const a = aabbOf(b); return a.y1 <= FURN.mouth.top && (volOf(b) <= FURN.mouth.vol || ((FURN.mouth.snow || saved) && snowPaintOf(b) !== null)) &&   // (a long bank of lying snow is no heavy thing: the size bar is the furniture's — `saved`: a checkpoint's, taken under the switch whatever it says now)
        !this.fronts.some(f => f[0] > a.x0 - 0.3 && f[0] < a.x1 + 0.3 && f[2] > a.z0 - 0.3 && f[2] < a.z1 + 0.3);
@@ -556,7 +555,7 @@ export class Furniture {
    *  where the rule would not run (the switches, a showcase). Whether a thing is takeable does not hang on the zone, so that half is kept for the frame. */
   mouthWouldTake(i: number, r: [number, number, number, number], depth = 0): boolean {
     if (!FURN.mouth.on || !FURNBLAST.on || !DESTRUCTION.on || this.destr.showChaos !== null) return false;
-    const g = this.g, boxes = g.col.boxes, walls = this.destr.walls, n = Math.min(boxes.length, walls.authored), b = boxes[i]; if (!b || i >= n || b.piece === true) return false;
+    const g = this.g, boxes = g.col.boxes, walls = this.destr.walls, n = Math.min(boxes.length, walls.authored), b = boxes[i]; if (!b || i >= n) return false;
     const M = this.mouthMemo, serial = (g.engine.world as { geomSerial?: number }).geomSerial ?? 0; if (M.t !== g.time || M.serial !== serial) { M.t = g.time; M.serial = serial; M.can.clear(); M.under.clear(); }
     const a = aabbOf(b);
     if (overPlan(a, { x0: r[0], z0: r[1], x1: r[2], z1: r[3] })) {   // as a thing in the zone itself
@@ -593,7 +592,7 @@ export class Furniture {
     };
     const cx = (r[0] + r[2]) / 2, cz = (r[1] + r[3]) / 2, hx = (r[2] - r[0]) / 2, hz = (r[3] - r[1]) / 2; const razed: AABB[] = [];
     for (let i = 0; i < n; i++) {
-      const b = boxes[i], reach = Math.max(b.h[0], b.h[2]) * 1.42; if (b.piece === true || Math.abs(b.c[0] - cx) > hx + reach || Math.abs(b.c[2] - cz) > hz + reach || done.has(i)) continue;
+      const b = boxes[i], reach = Math.max(b.h[0], b.h[2]) * 1.42; if (Math.abs(b.c[0] - cx) > hx + reach || Math.abs(b.c[2] - cz) > hz + reach || done.has(i)) continue;
       const a = aabbOf(b); if (!overPlan(a, zone) || a.y0 >= 1.7 || a.y1 <= 0.2) continue;   // (in a walking body's way: on the floor, on legs or on a wall)
       const br = walls.breakableAt(i);
       if (br) {   // the wall engine's cover: the stretch of it in the way (a wall proper is the blast's own business)

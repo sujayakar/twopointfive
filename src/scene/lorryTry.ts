@@ -54,7 +54,6 @@ export function dressLorry(level: { boxes: Box[] }): number {
   const bonnet = find(2.75, 0, 0.74, 1.5, 0.62, 0.98), bonnetSnow = find(2.8, 0, 1.5, 1.555, 0.52, 0.9);
   const wheels = [2.2, -1.2, -2.25].flatMap(lx => [-1, 1].map(s => find(lx, s * 0.98, 0, 0.96, 0.48, 0.15))), lamps = [-1, 1].map(s => find(3.38, s * 0.7, 0.86, 1.02, 0.02, 0.1));
   if (!tilt || !tiltSnow || !tiltSnow2 || !roof || !roofSnow || !glass || !bonnet || !bonnetSnow || wheels.some(w => !w) || lamps.some(l => !l)) return 0;
-  if (tilt.shape !== undefined || bonnet.shape !== undefined || roof.shape !== undefined) return 0;   // (THE LEVEL'S LORRY SAYS ITS OWN SHAPES now, scene/carShapes.ts lorryShapes: this trial was their first drawing and stands down — gone over by hand as well, the lorry would be shaped twice)
   const out: Box[] = [];
   const set = (b: Box, lx: number, lz: number, y0: number, y1: number, hx: number, hz: number) => { b.c = at(lx, (y0 + y1) / 2, lz); b.h = [hx, (y1 - y0) / 2, hz]; return b; };
   const snowOf = (like: Box, lx: number, lz: number, y0: number, y1: number, hx: number, hz: number): Box => box(lx, lz, y0, y1, hx, hz, like.albedo, { flags: like.flags, rough: like.rough });

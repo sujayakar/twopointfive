@@ -1,2 +1,2 @@
-# the kits' vehicles say their shapes: the boxes of each vehicle carry a shape, and a pickup's bonnet no longer carries its two panel lines
-67d70c92f74b4b27a4626e9d2f926150182a6b72
+# the yard's own scatter of block on its road is all block: one of its stones was the mud wall's dark row whatever was asked (gwotKit.ts rubble)
+132afb573301fcc38b5412f7e5c4d97a2c17a48a

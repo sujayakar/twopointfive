@@ -409,7 +409,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
   path([[10.5, 14.3], [11.5, 16.5], [13.3, 17.55], [22.6, 17.8], [25.5, 17.75]], 0.8);
   // the forecourt: the shop's water, its fuel, the clerk's motorbike under the wall, firewood for the stove
   G.waterTank(9.4, 7.4); cap(9.4, 7.4, 0.84, 0.84, 2.2, 0.3, 0.045); G.drums(11.1, 7.0, 3); cap(11.1, 7.0, 0.4, 0.4, 0.88, 0.2, 0.04); cap(11.74, 7.06, 0.4, 0.4, 0.88, 0.5, 0.04); cap(11.4, 7.6, 0.4, 0.4, 0.88, 0.1, 0.04);
-  { const MB = G.motorbike(11.9, 11.6, HALF); G.lay(11.9, 11.6, HALF, MB.tops.seat, -0.36, 0, 0.8, 0.8 + 0.035, 0.25, 0.1, S.snow); }
+  G.motorbike(11.9, 11.6, HALF); capOn(11.9, 11.6, HALF, -0.36, 0, 0.5, 0.2, 0.8, 0.035);
   G.woodPile(9.3, 21.35, 0, 1.8); cap(9.3, 21.35, 1.5, 0.28, 0.42);
   drift(8.44, 9.4, 3.4, 0.62, HALF); drift(8.42, 18.6, 3.2, 0.58, HALF, 0.15); drift(12.1, 9.6, 2.0, 0.5, -HALF, 0.14); bank(8.75, 6.72, 1.1, 1.0, 0);
   // the lane: what a shop keeps behind it. Drifts lie along the foot of the alley wall and of the shop, off the path
@@ -465,7 +465,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
   G.stall(1.62, 16.6, -HALF, 2.2, 'rugMadder'); capOn(1.62, 16.6, -HALF, 0, 0.8, 2.1, 0.7, 2.18, 0.045);
   G.stall(1.62, 23.4, -HALF, 2.4, 'canvas'); capOn(1.62, 23.4, -HALF, 0, 0.7, 2.3, 0.86, 2.18, 0.045);
   G.lantern(2.1, 17.2, 'lantern_street', 'exterior', 0.84);
-  { const PK = G.pickup(5.55, 8.4, HALF + 0.05, 'truckWhite', { load: 'sacks' }); G.lay(5.55, 8.4, HALF + 0.05, PK.tops.bonnet, 1.75, 0, 1.0, 1.0 + 0.05, 0.6, 0.75, S.snow); G.lay(5.55, 8.4, HALF + 0.05, PK.tops.roof, 0.36, 0, 1.58, 1.58 + 0.05, 0.5, 0.7, S.snow); }
+  G.pickup(5.55, 8.4, HALF + 0.05, 'truckWhite', { load: 'sacks' }); capOn(5.55, 8.4, HALF + 0.05, 1.75, 0, 1.2, 1.5, 1.0); capOn(5.55, 8.4, HALF + 0.05, 0.36, 0, 1.0, 1.4, 1.58);
   bank(7.5, 9.2, 4.6, 0.74, -HALF, 0.44); bank(7.52, 18.4, 5.4, 0.7, -HALF, 0.38); drift(0.75, 13.0, 2.6, 0.7, HALF); drift(0.75, 20.0, 2.0, 0.7, HALF, 0.15);
   // THE ALLEY behind the back wall: two stalls put up against it, a handcart, the other lantern
   grp('town.alley');
