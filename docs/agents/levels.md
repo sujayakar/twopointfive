@@ -983,7 +983,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   rooms in painted block (a skimmed floor and stucco piers; a carpet and one orange wall); one solid orange stair head; a painted pad. Every box says
   its `stuff` (the ten kept stuffs, `docs/agents/render.md`), and walls stand on a half-metre grid so a paver's and a panel's joints land on walls'
   ends. Its doors are orange gloss outside and white inside (`LOOK_DOORS`). `level-needs white-roof`: no FAIL, two NOTEs (no mission row; the open deck
-  is one paint over 231 m²). `level-lint` passes; `round-check` knows its ten round things. Nothing here is a mission: no
+  is one paint over 201 m² as the tool counts it since 11-05, 231 when this was written). `level-lint` passes; `round-check` knows its ten round things. Nothing here is a mission: no
   scenarios but door names, the stealth mission's three places only because the format wants them. Drawn on the software adapter only; never seen on
   a GPU, never played.
   SECOND PASS, the same day, after he looked ("directionally nice but still doesn't have enough "personality / cm^2""): what his pictures carry on
@@ -1002,6 +1002,29 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   ends are names, so the roof now NAMES THREE PLACES (`scenarios.places`: stair landing, plant pad, service room). Those are words the game may say
   of this level (`game/dialogue.ts placeName`) and middles a response sweep may walk to (`game/qrf.ts`); no mission is staged on the roof, so
   nothing says them today and nobody has heard them. The level's fingerprint does not move (words and a picture's list).
+  ITS ROOMS AT NIGHT (11-05; level data, no switch; the model's side is `docs/agents/render.md`, ONE EXPOSURE AT EVERY HOUR, KNOWN, LEFT). Each
+  of the two rooms had a point lamp of 60 over 9 m hung between its pair of ceiling tubes, on top of the tubes, which are lights of their own as
+  in every level of the kit (3.72 each, `game/game.ts`). No other level has a lamp indoors over 28. The lamp alone put 7.9 on the floor under it,
+  1.75 times what the night's white is made from (`EXPO_LAMP`: the kit's bulb, 26, at 2.4 m), before any bounce, and a night shows a lit room at
+  the night's own exposure, which never comes down. SEEN ON A CLOUD NVIDIA CARD, night, doors shut, the man inside: the service room (white on
+  every face) burnt white, its floor 245 of 255, a black suit 113, the meter at 99; the lounge (a blue carpet, one orange wall) a washed pale
+  blue, the suit 161. The service room with the lamp set at run time to 30, 18 and 6: floor 235, 225 and about 205, the suit still grey. At 0,
+  the tubes alone: floor 155 to 160, the suit black, a shadow at the man's feet, the meter at 59; and the lounge a deep blue carpet with the
+  suit at 28. How much of the glare was the room's air is not known: the lamps were the only lights there with a share in the haze (0.1), a
+  tube's light has none. THE TWO LAMPS ARE OUT OF THE GENERATOR. The level's fingerprint moves (a checkpoint or a recording of it from before
+  is refused); its file has two lights where it had four; nothing in a check or a fixture named or counted them. WHAT ELSE MOVES, seen on the
+  same card with the doors shut and the man inside: BY DAY AND AT DUSK THE SERVICE ROOM IS DRAWN BRIGHTER AND FLATTER, its floor 200 to 233
+  at midday and 158 to 217 at dusk, the suit 14 to 34 and 8 to 32, the man's shadow fainter. WHY, READ FROM THE CODE AND NOT
+  MEASURED: not the lamp's own light on the floor, which by day is drawn at the hour's exposure and was about a seventh of the room's at midday,
+  but its light on the ceiling, a hand under which it hung. The place field holds what a face that looks up gets from the cache, so a lit ceiling
+  raised the room's level and the model showed the room down by it; a tube faces down and lights the floor, which the field does not hold, and
+  the floor reads over the place's level. If so it is the model's (the same KNOWN, LEFT) and true of every room lit by tubes alone. THE GAME'S OWN READINGS FALL: the CPU's light on a man (direct light only, `guards.ts
+  lightEstimateAt`) reads 19.9 to 1.07 in the middle of each room and 2.7 to 0.17 and 2.9 to 0.21 in a corner, so a man is seen at 1.0 to 0.71
+  and 0.9 to under 0.4, and a corner is now under the lit-place level (`LIGHTS.litAt`, 0.5) though the picture shows it lit; the page's own
+  meter, which has the bounce, read 59 mid-room. Nobody is staged on the roof. `level-needs white-roof --run` on both stands: no FAIL, the two
+  NOTEs. NOT SEEN: the lounge by day, dawn, a grey day, the plain page (where a fixture is at its night strength at every hour, so by day the
+  rooms lose most of their lamp light there), Metal; never played. The renderer's records of the service room at night from before this
+  (`docs/agents/render.md`, THE MIRROR AND THE HIGHLIGHTS) were drawn with the lamp in.
 - **The kits' vehicles say their shapes** (`src/scene/carShapes.ts`, 2026-11-04; the maintainer from the library's showroom: "could we make it so the cars
   have rounded surfaces? look really blocky right now"; of the trial that drew them, "Yes, build these in" and "geometry looks pretty good"; of the pass's
   lorry before, "some curved surfaces on the truck would go a long way"). Every pickup, van, car, motorbike and lorry a kit builds (`gwotKit.ts pickup /
