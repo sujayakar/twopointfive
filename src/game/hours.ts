@@ -312,7 +312,7 @@ export function hourWorldChanged(g: Game) { nights.delete(g); const st = states.
 function castersOf(g: Game): number { const S = g.engine.world.statics; let h = S.length * 7919; for (let i = 0; i < S.length; i++) if (S[i].flags & BoxFlag.NoShadow) h = (h + (i + 1) * 31) | 0; return h; }
 
 // ================================================================================================================================ the meter's stand-in
-const N6: Vec3[] = [[1, 0, 0], [-1, 0, 0], [0, 1, 0], [0, -1, 0], [0, 0, 1], [0, 0, -1]];   // guards.ts METER_NORMALS (probe.wgsl's six)
+const N6: Vec3[] = [[1, 0, 0], [-1, 0, 0], [0, 1, 0], [0, -1, 0], [0, 0, 1], [0, 0, -1]];   // (probe.wgsl's six: the faces the lamps' sum is on too, rust/sim/src/light.rs)
 /** the sample directions of the ambient: the sky's dome in three bands (zenith cap above 70°, six at 50°, eight at 16° — each weighted by its band's solid
  *  angle) and eight just under the horizon, which end on the floor some six metres out: the ground's one bounce (a sunlit yard through a doorway) */
 const SKY: Ray[] = [], GND: Ray[] = [];

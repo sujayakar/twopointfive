@@ -4,8 +4,9 @@
 //   bun run tools/qa/sense-ident.ts [--n 20000] [--levels office.json,warehouse.json] [--seed 1]       random questions over whole levels (the page's stand)
 //   bun run tools/qa/sense-ident.ts --made [--n 21000] [--seed 1] [--record]                             …over a box world of the tool's own (the frozen stand)
 //   … --against <root>                                                                                  the same run by another checkout's tool: every word the same
-// WHILE THE TYPESCRIPT STANDS, every question is asked BOTH WAYS in the same run: of the module, and of the TypeScript it stands in for (the same function
-// with every row of the box world's copy put down for the one call), and every number of every answer must be the same to the bit.
+// NOTHING IN TYPESCRIPT ANSWERS A SENSE (collision.ts THE SENSES), so there is nothing to compare an answer to: the module is held to ITS OWN EARLIER
+// ANSWERS, the four ways of tools/qa/ident-pin.ts — the words, the red paths by a child that plays the same run plain, the pin, and `--against`. A
+// question the module will not take is thrown by name, and a run that threw is a FAIL.
 // OVER LEVELS no tick runs, so the tool opens the box world's copy as a tick would (StaticCollision.tickOpen). Doors are swung to random angles first; half
 // way through, a share of the statics is re-shaped in place and SAID (col.wrote), as a blast says it, and the floor's grid is baked again over them. A level
 // that does not stand up is a FAIL, not a level left out. A level's questions come off a die of its own (the seed and the level's name), and so does its
@@ -14,7 +15,8 @@
 // panes of glass, thin things, tilted and round and cut boxes, decals), leaves, lamps of every kind (more in reach of a point than one part of a light
 // question carries), blobs of smoke and a team's eyes, all dealt from the seed and from nothing else: no level's edit moves a word of it, and the smoke's
 // numbers are the tool's own for the run (a tuning of the game's moves none). Its words on the frozen stand are held to tools/qa/fixtures/sense-words.json;
-// `--record` writes that file, and only from a run in which every answer was the same both ways.
+// `--record` writes that file. ITS FIRST RECORDING was taken on the last tree where the TypeScript stood, from a run in which every one of the 21,000
+// questions was also asked of it and the two agreed to the bit: that is all the pin ever knew of the TypeScript.
 // What a question is: an eye anywhere with any cone on a chest and a head anywhere (guards.ts eyeContact; some lenses, some hidden or smoked, some eyes that
 // pass the thin statics too) · the light on a point, lamps of every kind (lightEstimateAt, steady or not, some with an owner skipped) · the smoke of two
 // dozen blobs along a line (sense.ts CpuSmoke.along) · a sound from anywhere to anywhere (collision.ts SoundPaths.propagate, nothing remembered between
@@ -24,13 +26,14 @@
 // THE LAMPS IN PARTS, AND THE SMOKE'S SHADOW (a block of its own after a level's questions): some six hundred lamps in reach of a few points, asked in
 // parts (collision.ts lamp, light.rs); then the same lamps through a field of smoke: its grid able to answer, no grid standing for it, and a grid holding
 // more smoke than bricks — in the last two the blobs answer, inside the lamp loop (smoke.rs).
-// THE RED PATHS, one at a time:
+// THE RED PATHS, one at a time. Under one the tool plays the same run again, plain, in a child, and holds its own words to the child's:
 //   RUST_BREAK=1        the re-shape goes unsaid and the floor's new grid is not handed over: the module answers from a copy that is no longer the boxes,
-//                       and every sense must differ somewhere.
-//   PRICED_BREAK=1      the host prices the cells the module asks for last first: the way is the same and the order is not. `paths` must FAIL, nothing else.
-//   LAMPS_BREAK=1       every part of a light question begins its sum again: the lamps in parts must FAIL, and no sense of the questions.
-//   LAMPS_BREAK=shade   the module is handed no blobs: the two cases where the grid cannot answer must FAIL, and nothing else.
-// The last lines: `SENSE-IDENT {…}` is each row's count of differing answers for a caller to read; exit 3 = the red path left a row green (named).
+//                       and every kind of question's word must move on some level (every word of the made-up world).
+//   PRICED_BREAK=1      the host prices the cells the module asks for last first: the way is the same and the order is not. The paths' words must move,
+//                       and no other.
+//   LAMPS_BREAK=1       every part of a light question begins its sum again: the words of the lamps' block must move, and no kind's of the questions.
+//   SHADE_BREAK=1       the module is handed no blobs: the words of the two cases where the grid cannot answer must move, and nothing else.
+// Exit 0 = every verdict passed · 1 = a verdict failed (under a red path: as it must) · 3 = a red path that moved the wrong words, or none (named).
 const ARGV = process.argv.slice(2), MADE = ARGV.includes('--made');
 process.env.TPS_PROFILE ??= MADE ? 'frozen' : 'shipped'; if (!MADE) process.env.TPS_CPUSENSE ??= '1';   // (the rows and the game's own maths are the build's: no word raises them)
 import { readdirSync } from 'fs';
@@ -46,41 +49,35 @@ const { WORLD } = await import(`${ROOT}/src/scene/world.ts`);
 type Vec3 = [number, number, number];
 
 const flag = (n: string) => { const i = ARGV.indexOf(n); return i >= 0 ? ARGV[i + 1] : undefined; };
-const N = Number(flag('--n') ?? (MADE ? 21000 : 20000)), SEED = Number(flag('--seed') ?? 1), UNSAID = process.env.RUST_BREAK === '1', BACKWARD = process.env.PRICED_BREAK === '1', AGAIN = process.env.LAMPS_BREAK === '1', UNSHADED = process.env.LAMPS_BREAK === 'shade';
+const N = Number(flag('--n') ?? (MADE ? 21000 : 20000)), SEED = Number(flag('--seed') ?? 1), UNSAID = process.env.RUST_BREAK === '1', BACKWARD = process.env.PRICED_BREAK === '1', AGAIN = process.env.LAMPS_BREAK === '1', UNSHADED = process.env.SHADE_BREAK === '1';
 const files = (flag('--levels') ?? readdirSync(resolve(ROOT, 'levels')).filter(f => f.endsWith('.json') && !f.endsWith('.lint.json')).join(',')).split(',');
 /** a die of its own from a seed (the one the tool has always rolled) */
 const die = (seed: number) => { let s = seed >>> 0; return () => { s = (s + 0x6D2B79F5) >>> 0; let t = s; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; };
 /** …and the seed of a name's own die */
 const seedOf = (name: string, salt: number) => { let h = (2166136261 ^ Math.imul(SEED + salt, 0x9e3779b1)) >>> 0; for (let i = 0; i < name.length; i++) h = Math.imul(h ^ name.charCodeAt(i), 16777619) >>> 0; return h; };
-if (process.env.LAMPS_BREAK && !AGAIN && !UNSHADED) { console.log(`=== sense-ident: LAMPS_BREAK=${process.env.LAMPS_BREAK} is no red path (1 = the parts, shade = the blobs' shadow) ===`); process.exit(2); }
-if (+UNSAID + +BACKWARD + +(AGAIN || UNSHADED) > 1) { console.log('=== sense-ident: RUST_BREAK, PRICED_BREAK and LAMPS_BREAK are three red paths: one at a time ==='); process.exit(2); }
+const BREAK_WORD = UNSAID ? 'RUST_BREAK' : BACKWARD ? 'PRICED_BREAK' : AGAIN ? 'LAMPS_BREAK' : UNSHADED ? 'SHADE_BREAK' : 'RUST_BREAK';
+if (+UNSAID + +BACKWARD + +AGAIN + +UNSHADED > 1) { console.log('=== sense-ident: RUST_BREAK, PRICED_BREAK, LAMPS_BREAK and SHADE_BREAK are four red paths: one at a time ==='); process.exit(2); }
 { const no = SIM.simWhyNot(); if (no) { console.log(`=== sense-ident: the module does not run here (${no}) — FAIL ===`); process.exit(1); } }
 const BM: any = await import(`${ROOT}/src/scene/boxMirror.ts`);
-type Sense = keyof typeof import('../../src/scene/boxMirror.ts').SENSES; const SENSES = Object.keys(BM.SENSES) as Sense[];   // (the senses are boxMirror.ts's list: one added there and not asked below does not typecheck)
-type Kind = Sense | 'fog'; const KINDS: Kind[] = [...SENSES, 'fog'];   // (…and the fog's pass, a row of its own with a flag of its own on the copy: `sight` there, `senses` the five)
-const none = (): Record<Kind, number> => Object.fromEntries(KINDS.map(k => [k, 0])) as Record<Kind, number>;
+/** the kinds of question (collision.ts SENSE_WATCH's rows) */
+const KINDS = ['sight', 'light', 'smoke', 'sound', 'paths', 'fog'] as const; type Kind = (typeof KINDS)[number];
 const log = console.log, err = console.error; const hush = (on: boolean) => { console.log = on ? () => {} : log; console.error = on ? () => {} : err; };
-/** an answer as the numbers it is made of (a missing answer is its own number) */
-const flat = (v: unknown, out: number[] = []): number[] => { if (v === null || v === undefined) out.push(-12345.5); else if (typeof v === 'number') out.push(v); else if (typeof v === 'boolean') out.push(v ? 1 : 0); else if (Array.isArray(v)) { out.push(v.length); for (const e of v) flat(e, out); } else for (const k of Object.keys(v as object).sort()) flat((v as Record<string, unknown>)[k], out); return out; };
-const same = (a: number[], b: number[]) => a.length === b.length && a.every((x, i) => Object.is(x, b[i]));
-let bad = 0, blindMade = false; const verdict = (ok: boolean, label: string, detail: string) => { log(`- ${ok ? 'PASS' : 'FAIL'} — ${label}: ${detail}`); if (!ok) bad++; };
+let bad = 0; const blind: string[] = []; const verdict = (ok: boolean, label: string, detail: string) => { log(`- ${ok ? 'PASS' : 'FAIL'} — ${label}: ${detail}`); if (!ok) bad++; };
 
 // ---- THE WORDS: every answer the module gives, under the name of its kind of question and of where it was asked (`WHERE`: a level, or the made-up
 // world). A light question of the lamps' block is folded under that block's own name (`SUB`), apart from the questions' own.
 const FOLD = new PIN.Fold(); let WHERE = '', SUB: string | null = null;
 const lane = (row: string) => FOLD.call(`${row === 'light' && SUB ? SUB : row} · ${WHERE}`);
+/** THE MODULE'S OWN COUNT of the questions it answered, a kind (collision.ts SENSED counts five where the answer is read; the fog's pass is counted here,
+ *  where its answer comes back): a question of the tool's that the game answered some other way — a grid, a cache, an early return — is not in it */
+let fogThere = 0; { const P = C.StaticCollision.prototype, see = P.eyesSee; P.eyesSee = function (this: unknown, ...a: unknown[]) { const r = see.apply(this, a); fogThere++; return r; }; }
+const there = (): Record<string, number> => ({ ...C.SENSED, fog: fogThere });
+/** an answer as the numbers it is made of (a missing answer is its own number) */
+const flat = (v: unknown, out: number[] = []): number[] => { if (v === null || v === undefined) out.push(-12345.5); else if (typeof v === 'number') out.push(v); else if (typeof v === 'boolean') out.push(v ? 1 : 0); else if (Array.isArray(v)) { out.push(v.length); for (const e of v) flat(e, out); } else for (const k of Object.keys(v as object).sort()) flat((v as Record<string, unknown>)[k], out); return out; };
 /** …and what the question HANDS THE GAME, as its numbers, under the same name: the host's half of a sense (a sound's loudness and apparent place made of
  *  what the lines said, an eye's verdict read off the answer's bits, a way's waypoints) is held with the module's */
 const handed = (k: string, a: unknown): number[] => { const r = flat(a); FOLD.doubles(FOLD.call(`${k} · ${WHERE}`), r); return r; };
 C.SENSE_WATCH.see = (row: string, v: ArrayLike<number>) => { if (WHERE) FOLD.doubles(lane(row), v); };   // (only the tool's own questions: what a game's own ticks ask as a level is stood up is no part of the run)
-/** HERE: the same function with EVERY row of the copy `M` down for the one call — the senses' own and the lines, rays and circles their TypeScript walks
- *  with: a stand has those up too, and a "TypeScript's answer" that asked the module its lines would be the module's answer twice. (Nothing is shown to
- *  the watcher from in here: no sense is the module's with its row down.) */
-const here = (M: any, run: () => unknown): number[] => {
-  const rows = M.rowSenses, sight = M.rowSight, ln = M.rowLines, ry = M.rowRays, ci = M.rowCircles;
-  M.senses = 0; M.rowSenses = 0; M.sight = M.rowSight = false; M.lines = M.rowLines = false; M.rays = M.rowRays = false; M.circles = M.rowCircles = false; const h = flat(run());
-  M.rowSenses = rows; M.rowSight = sight; M.rowLines = ln; M.rowRays = ry; M.rowCircles = ci; { const up = !(M.owes || !M.live); M.senses = up ? rows : 0; M.sight = up && sight; M.lines = up && ln; M.rays = up && ry; M.circles = up && ci; }
-  return h; };
 /** a price a cell for a search: plain floor mostly, some dear, some all but a wall, some under 1, in blocks of a cell or of four by four — a function of the
  *  cell alone, as every penalty of the game's is */
 const priceOf = (salt: number, shift: number) => (ix: number, iz: number) => { let h = Math.imul((ix >> shift) + 1, 73856093) ^ Math.imul((iz >> shift) + 1, 19349663) ^ salt; h = Math.imul(h ^ (h >>> 15), 0x2c1b3c6d); h = (h ^ (h >>> 12)) >>> 0; const r = h % 16; return r < 9 ? 1 : r < 12 ? 6 : r < 14 ? 20 : r === 14 ? 0.5 : 200; };
@@ -97,10 +94,9 @@ const priced = (col: any, a: Vec3, b: Vec3, cap: number, salt: number, shift: nu
 /** the order's red path: the host prices the cells the module asks for last first */
 const backward = (col: any) => { col.nav.priceThese = (m: any, k: number, pen: (ix: number, iz: number) => number) => { const w = col.nav.W; C.SENSE_WATCH.see?.('paths', SIM.u32().slice(m.navWant, m.navWant + k)); for (let i = k - 1; i >= 0; i--) { const c = SIM.u32()[m.navWant + i]; SIM.f64()[m.navPrice + c] = pen(c % w, (c / w) | 0); } }; };
 
-let CUR = '';   // (the kind of question being asked now: who the made-up glass's rule is asked for)
-let lampsEver = 0; const ever = none(), unable: Record<string, boolean> = { 'a grid that answers': false, 'no grid standing': false, 'more smoke than bricks': false };
-/** …and the differing answers of the lamps block, a case: the parts with no smoke, and each way the smoke's shadow is read */
-const lampCase: Record<string, number> = { parts: 0, 'a grid that answers': 0, 'no grid standing': 0, 'more smoke than bricks': 0 };
+const unable: Record<string, boolean> = { 'a grid that answers': false, 'no grid standing': false, 'more smoke than bricks': false };
+/** the first line of what was thrown, and where from */
+const thrown = (e: unknown) => String((e as Error).stack ?? (e as Error).message).split('\n').slice(0, 3).join(' / ').slice(0, 500);
 
 // ================================================================ THE MADE-UP WORLD
 async function made(): Promise<void> {
@@ -123,7 +119,7 @@ async function made(): Promise<void> {
   for (let i = 0; i < 6; i++) boxes.push(makeBox({ c: at(1 + rnd()), h: [0.5, 0.5, 0.02], yaw: turn(), flags: BoxFlag.NoShadow }));   // decals: no line meets one
   for (let i = 0; i < 24; i++) boxes.push(makeBox({ c: at(1.25), h: [0.6 + rnd() * 2.4, 1.25, 0.03], yaw: turn(), flags: BoxFlag.Glass }));   // sheets of glass, floor to head height
   const leaves: any[] = []; for (let i = 0; i < 14; i++) leaves.push(makeBox({ c: at(1.0), h: [0.45, 1.0, 0.025], yaw: rnd() * TAU, flags: BoxFlag.Dynamic | (rnd() < 0.4 ? BoxFlag.SoundSeal : 0) }));
-  const col: any = new C.StaticCollision(boxes), M = col.mirror; col.dynamicBoxes = leaves;
+  const col: any = new C.StaticCollision(boxes); col.dynamicBoxes = leaves;
   const anywhere = (): Vec3 => [-1 + rnd() * (x1 + 2), rnd() < 0.7 ? [0.15, 0.45, 0.9, 1.1, 1.6, 2.0, 2.6][Math.floor(rnd() * 7)] : -0.5 + rnd() * 4.5, -1 + rnd() * (z1 + 2)];
   const onBox = (): Vec3 => { const b = boxes[Math.floor(rnd() * boxes.length)]; return [b.c[0] + (rnd() * 2 - 1) * (b.h[0] + 0.4), b.c[1] + (rnd() * 2 - 1) * (b.h[1] + 0.2), b.c[2] + (rnd() * 2 - 1) * (b.h[2] + 0.4)]; };
   const onLeaf = (): Vec3 => { const b = leaves[Math.floor(rnd() * leaves.length)]; return [b.c[0] + (rnd() * 2 - 1) * 1.5, b.c[1] + (rnd() * 2 - 1) * 1.2, b.c[2] + (rnd() * 2 - 1) * 1.5]; };
@@ -146,7 +142,7 @@ async function made(): Promise<void> {
   const K0 = { ...SE.SENSE.smoke }, list = g.engine.lights.lights as any[], had = list.slice(), col0 = g.col;
   Object.assign(SE.SENSE.smoke, { sigma: 6, spread: 0.2, widest: 3.5, rise: 1, riseRate: 0.3 });
   list.length = 0; for (const l of lamps) list.push(l); g.col = col;
-  const KM = ['sight', 'light', 'shaded', 'smoke', 'sound', 'paths', 'fog'] as const, differ: Record<string, number> = Object.fromEntries(KM.map(k => [k, 0])); let first = '', regrid = 0, moved = 0;
+  const KM = ['sight', 'light', 'shaded', 'smoke', 'sound', 'paths', 'fog'] as const; let regrid = 0, moved = 0;
   const ask: Record<(typeof KM)[number], () => Ask> = {
     sight: () => {
       const eye = pick(), E: any = { pos: eye, look: unit(), range: 4 + rnd() * 40, halfDeg: 20 + rnd() * 160, nearM: rnd() * 4, nearDeg: 60 + rnd() * 120 }; if (rnd() < 0.3) E.vHalfDeg = 10 + rnd() * 60;
@@ -191,42 +187,34 @@ async function made(): Promise<void> {
   const per = Math.ceil(N / KM.length), movers = boxes.filter(b => !b.rot && b.h[1] > 0.4 && !(b.flags & (BoxFlag.NoShadow | BoxFlag.Glass)) && rnd() < 0.15);
   // (THE GLASS'S STATE, made up and said twice as the game's own is — the rule a walk of this side asks and the rows the module's copy holds, boxMirror.ts
   //  PaneSource: half of the glass gone whole. Where a pane is open piece by piece is tools/qa/glass-ident.ts's to hold.)
-  const goneOf = (bi: number) => (((bi * 7919) >>> 2) & 1) === 0, paneRows: any[] = []; let gone = 0; const metOpen: Record<string, number> = {};
+  const goneOf = (bi: number) => (((bi * 7919) >>> 2) & 1) === 0, paneRows: any[] = []; let gone = 0;
   boxes.forEach((b: any, bi: number) => { if ((b.flags & BoxFlag.Glass) && goneOf(bi)) paneRows.push({ bi, gone: true, run: false, sites: [], open: new Uint8Array(0), pending: [], dice: null }); });
   const paneSaid = { each: (to: (r: any) => void) => { for (const r of paneRows) to(r); }, view: null };
   if (BACKWARD) backward(col);
-  WHERE = 'made'; let threw = ''; const parts0 = C.LAMPS.parts;
+  WHERE = 'made'; let threw = '', asking = ''; const parts0 = C.LAMPS.parts, t0 = there();
   try {
     col.sound.invalidate(); col.tickOpen();
     for (let i = 0; i < per; i++) {
       // a quarter of the way: half the glass is gone (the rule and its rows are hung). A third of the way: the leaves swing. Half way: a share of the statics is re-shaped in place and SAID (or, on the red path, not), and the floor's grid follows
       if (i === Math.floor(per / 3)) { for (const b of leaves) if (rnd() < 0.5) { b.yaw = rnd() * TAU; b.c[0] += (rnd() - 0.5) * 0.6; b.c[2] += (rnd() - 0.5) * 0.6; moved++; } BM.leafWrote(); }
-      if (i === Math.floor(per / 4)) { gone = paneRows.length; col.glassRule((bi: number) => { const o = goneOf(bi); if (o && CUR) metOpen[CUR] = (metOpen[CUR] ?? 0) + 1; return o; }, () => paneSaid); }
+      if (i === Math.floor(per / 4)) { gone = paneRows.length; col.glassRule(goneOf, () => paneSaid); }
       if (i === (per >> 1)) { for (const b of movers) { b.c[0] += (rnd() - 0.5) * 1.5; b.c[2] += (rnd() - 0.5) * 1.5; b.h[1] *= 0.3 + rnd() * 0.7; } if (!UNSAID) col.wrote();
         if (UNSAID) col.nav.there = () => {};
         regrid += col.nav.rebake(0, 0, x1, z1).length >> 1; }
-      for (const k of KM) {
-        const Q = ask[k](); CUR = k; const a = Q.run(); Q.fold?.(a);
-        const r = handed(k, a), h = here(M, Q.run); CUR = '';
-        if (!same(r, h)) { differ[k]++; first ||= `${k}: ${Q.q}: here ${JSON.stringify(h).slice(0, 200)}, the module ${JSON.stringify(r).slice(0, 200)}`; }
-      }
+      for (const k of KM) { const Q = ask[k](); asking = `${k}: ${Q.q}`; const a = Q.run(); Q.fold?.(a); handed(k, a); }
     }
-  } catch (e) { threw = String((e as Error).stack ?? (e as Error).message).split('\n').slice(0, 3).join(' / ').slice(0, 500); }
+  } catch (e) { threw = `${thrown(e)} — asking ${asking.slice(0, 300)}`; }
   finally { col.tickShut(); g.col = col0; list.length = 0; for (const l of had) list.push(l); Object.assign(SE.SENSE.smoke, K0); field.grid.free(); WHERE = ''; }
-  const words = FOLD.words(), total = KM.reduce((n, k) => n + differ[k], 0), run = `made-up world · seed ${SEED} · ${per} questions a kind`, end = `${boxes.length} statics, ${movers.length} re-shaped, ${regrid} cells of the floor's grid changed, ${leaves.length} leaves (${moved} swung), ${gone} panes gone a quarter of the way in, ${lamps.length} lamps, ${smoke.blobs.length} and ${field.blobs.length} blobs`;
-  const thin = KM.filter(k => (words[`${k} · made`]?.asked ?? 0) < per);   // (every question is the module's: a kind asked less was answered elsewhere, or not at all)
+  const words = FOLD.words(), run = `made-up world · seed ${SEED} · ${per} questions a kind`, end = `${boxes.length} statics, ${movers.length} re-shaped, ${regrid} cells of the floor's grid changed, ${leaves.length} leaves (${moved} swung), ${gone} panes gone a quarter of the way in, ${lamps.length} lamps, ${smoke.blobs.length} and ${field.blobs.length} blobs`;
+  const t1 = there(), by = (k: string) => t1[k] - t0[k], want: Record<string, number> = { sight: per, light: 2 * per, smoke: per, sound: per, paths: per, fog: per };   // (`light` and `shaded` are both the light's)
+  const thin = Object.keys(want).filter(k => by(k) < want[k]);   // (by the module's own count: a kind it answered less often was answered some other way)
   log(`the made-up world: ${per} questions a kind · ${end} · ${C.LAMPS.parts - parts0} parts of light questions sent ahead`);
   if (threw) verdict(false, 'asked: every question of the made-up world was answered', `it threw: ${threw}`);
-  verdict(!thin.length, 'reach: every kind of question went to the module', thin.length ? `TOO FEW of ${thin.join(', ')}` : KM.map(k => `${k} ${words[`${k} · made`].asked}`).join(' · '));
-  for (const k of KM) ever[k === 'shaded' ? 'light' : k as Kind] += differ[k];
-  verdict(UNSAID ? KM.every(k => differ[k] > 0) : total === 0, UNSAID ? 'both ways: with the re-shape unsaid every kind differs somewhere' : 'both ways: the TypeScript\'s answer to every question is the module\'s, to the bit',
-    total ? `${KM.filter(k => differ[k]).map(k => `${k} ${differ[k]}`).join(', ')} differ, first: ${first}` : `0 of ${per * KM.length} differ`);
-  // (while there are two languages: this side's walk of a sound and of a way asks the rule pane by pane, so it can say whether the run went past a hole)
-  if (!UNSAID) verdict((metOpen.sound ?? 0) > 100 && (metOpen.paths ?? 0) > 10, 'holes: a sound and a way were asked past panes that are gone', `this side's walk met an open pane ${metOpen.sound ?? 0} times for a sound and ${metOpen.paths ?? 0} for a way (${gone} of the glass gone)`);
+  verdict(!thin.length, 'reach: the module counts an answer for every question of every kind', `${Object.keys(want).map(k => `${k} ${by(k)}`).join(' · ')}${thin.length ? ` — TOO FEW of ${thin.join(', ')}` : ''}`);
   if (BACKWARD || AGAIN || UNSHADED) return;   // (red paths of the levels' run: nothing more is held here under one)
   const held = PIN.hold({ root: ROOT, tool: 'tools/qa/sense-ident.ts', fixture: 'sense-words.json', run, runArgs: ['--made', '--n', String(N), '--seed', String(SEED)], end, words, breakWord: 'RUST_BREAK',
-    unfit: threw ? 'the run threw' : total ? 'the two languages did not agree on every answer of this run' : thin.length ? 'a kind of question did not reach the module' : '', verdict, say: log });
-  if (UNSAID && held.stayed.length) { log(`THE RED PATH IS NOT RED FOR ${held.stayed.join(', ')}`); blindMade = true; }
+    unfit: threw ? 'the run threw' : thin.length ? 'a kind of question did not reach the module' : '', verdict, say: log });
+  if (UNSAID) blind.push(...held.stayed);   // (every word of the made-up world must move with the re-shape unsaid)
   if (held.record && !bad) held.record();
 }
 
@@ -237,12 +225,10 @@ for (const file of files) {
   try { const data = JSON.parse(await Bun.file(resolve(ROOT, 'levels', file)).text()); W = await standUp({ uploadEvery: 1000, seed: seedOf(file, 3), ...(file === 'office.json' ? {} : { level: loadLevel(data) }) }); }   // (the game on a die of its own, as the page's is: the lamps men carry and the doors they have passed are then the same from run to run)
   catch (e) { hush(false); log(`${file.padEnd(20)} FAIL — not stood up (${String((e as Error).message).split('\n')[0].slice(0, 90)}): nothing was asked`); bad++; continue; }
   hush(false);
-  const rnd = die(seedOf(file, 1)), rndTwo = die(seedOf(file, 2));   // (`rndTwo`: the die of what is asked only while there are two languages, so that taking it out moves no word)
-  const g = W.game, col = g.col as any, M = col.mirror, boxes = col.boxes as any[], fog = g.fogOfWar as any;
-  let fogThere = 0; { const see = col.eyesSee; col.eyesSee = function (this: unknown, ...a: unknown[]) { const r = see.apply(col, a); if (r >= 0) fogThere++; return r; }; }   // (the men the module answered for: collision.ts counts the five senses, not the fog)
-  const asked = (k: Kind): number => k === 'fog' ? fogThere : C.SENSED[k];
+  const rnd = die(seedOf(file, 1));
+  const g = W.game, col = g.col as any, boxes = col.boxes as any[], fog = g.fogOfWar as any;
   for (const d of g.doors.list) { if (rnd() < 0.6) { d.angle = (rnd() * 2 - 1) * 1.9; d.latched = false; } } hush(true); try { for (let i = 0; i < 3; i++) W.step(1 / 60); } catch { /* a level that needs more to run a frame still has its statics and leaves */ } hush(false);
-  if (!X.EXACT.on || KINDS.some(k => !SIM.RUST[k])) { log(`${file.padEnd(20)} FAIL — the stand left a row down (${KINDS.filter(k => !SIM.RUST[k]).join(', ') || 'the game\'s own maths'}): nothing was asked`); bad++; continue; }
+  if (!X.EXACT.on) { log(`${file.padEnd(20)} FAIL — the stand left the game's own maths down: nothing was asked`); bad++; continue; }
   WHERE = file.replace(/\.json$/, '');
   const x1 = col.W * col.cs, z1 = col.H * col.cs;
   const anywhere = (): Vec3 => [-1 + rnd() * (x1 + 2), rnd() < 0.7 ? [0.15, 0.45, 0.9, 1.1, 1.6, 2.0, 2.6][Math.floor(rnd() * 7)] : -0.5 + rnd() * 4.5, -1 + rnd() * (z1 + 2)];
@@ -303,36 +289,20 @@ for (const file of files) {
   // a share of the statics is re-shaped half way: in place, and said (or, on the red path, not)
   const movers = boxes.filter(b => !b.rot && b.h[1] > 0.4 && !(b.flags & (BoxFlag.NoShadow | BoxFlag.Glass)) && rnd() < 0.15);
   if (BACKWARD) backward(col);
-  const diff = none(), there = none(); let first = '';
-  col.sound.invalidate(); col.tickOpen();
-  for (const k of SENSES) C.SENSED[k] = 0;
+  let threw = '', asking = '', lampsSay = '', lampsOk = true; const t0 = there();
   const per = Math.ceil(N / KINDS.length); let regrid = 0;
+  try {
+  col.sound.invalidate(); col.tickOpen();
   for (let i = 0; i < per; i++) {
     if (i === (per >> 1)) { for (const b of movers) { b.c[0] += (rnd() - 0.5) * 1.5; b.c[2] += (rnd() - 0.5) * 1.5; b.h[1] *= 0.3 + rnd() * 0.7; } if (!UNSAID) col.wrote();
       // the floor's grid follows the boxes, as it does where a wall is broken; on the red path the module keeps the grid it had (the hand-over is cut)
       if (UNSAID) col.nav.there = () => {};
       const ch = col.nav.rebake(0, 0, x1, z1); regrid += ch.length >> 1; }
-    for (const k of KINDS) {
-      const Q = ask[k](), n0 = asked(k);
-      const a = Q.run(); Q.fold?.(a); const r = handed(k, a); if (asked(k) > n0) there[k]++;
-      const h = here(M, Q.run);
-      if (!same(r, h)) { diff[k]++; first ||= `${k}: ${Q.q}: here ${JSON.stringify(h).slice(0, 200)}, the module ${JSON.stringify(r).slice(0, 200)}`; }
-    }
+    for (const k of KINDS) { const Q = ask[k](); asking = `${k}: ${Q.q}`; const a = Q.run(); Q.fold?.(a); handed(k, a); }
   }
-  // THE RULE THE MODULE'S ONCE-A-CELL PRICING RESTS ON, held by the both-ways check (collision.ts findPathAsk, which rust-check --both runs over the
-  // missions): a penalty gives a cell one price all through a search. Here that check's own two paths: an honest price is the same answer, and a price
-  // that is another number at every ask must be counted as a differ. (Off its own die and out of the watcher's sight: it goes with the TypeScript.)
-  let onePrice = '', twoPriced = true;
-  if (!UNSAID && !BACKWARD) { const B = C.BOTH, was = { ...B }, see = C.SENSE_WATCH.see; let honest = 0, caught = 0, asked = 0; B.on = true; C.SENSE_WATCH.see = null;
-    const pk = (): Vec3 => [rndTwo() * x1, 0.9, rndTwo() * z1];
-    for (let k = 0; k < 12; k++) { const a = pk(), th = rndTwo() * 6.283, l = 4 + rndTwo() * 16, b: Vec3 = [a[0] + Math.sin(th) * l, 0.9, a[2] + Math.cos(th) * l]; let n = 0, d = B.differ, q = B.asked;
-      col.nav.findPath(a, b, 6000, (ix: number, iz: number) => (ix * 7 + iz * 13) % 5 === 0 ? 6 : 1); honest += B.differ - d; d = B.differ;
-      col.nav.findPath(a, b, 6000, () => 1 + (n++ % 7)); caught += B.differ - d; asked += B.asked - q; }
-    Object.assign(B, was); C.SENSE_WATCH.see = see; twoPriced = honest === 0 && caught > 0;
-    onePrice = ` · one price a cell: 24 priced searches (${asked} questions compared), an honest price differs ${honest} times, a price that changes at every ask is caught ${caught} times${twoPriced ? '' : ' — NOT AS IT MUST BE'}`; }
   // THE LAMPS IN PARTS, AND THE SMOKE'S SHADOW (the head of this file)
-  let lampsSay = '', lampsOk = true, lampsDiffer = 0;
-  if (!UNSAID && !BACKWARD) {
+  asking = 'the lamps in parts';
+  if (!UNSAID) {   // (not with the re-shape unsaid: the block's own verdicts are of a copy that is the boxes)
     // (the middle of it all is OPEN FLOOR: a place a man can stand with two metres of floor to each side, so the smoke a case lets out there is on the
     //  plan the grid stands on and round the points asked. A middle dealt anywhere fell off the plan's edge or in a pocket on some level and seed: the
     //  grid answered clear air honestly, the case dimmed no point and proved nothing of the shadow)
@@ -343,25 +313,24 @@ for (const file of files) {
     for (let i = 0; i < MANY; i++) { const c = centre, pos = near(c, 0.5 + rnd() * 5), kind = [0, 1, 3][Math.floor(rnd() * 3)];   // (every one in reach of every point asked, and lit toward the middle of them, give or take: a spot and a panel look somewhere)
       L.push({ kind, pos, dir: rnd() < 0.8 ? to(pos, c) : unit(), color: [rnd(), rnd(), rnd()], intensity: 5 + rnd() * 200, range: 14 + rnd() * 10, innerDeg: 20 + rnd() * 40, outerDeg: 65 + rnd() * 20, radius: rnd() < 0.5 ? 0.05 : rnd() * 0.4, owner: 0, enabled: true, ttl: -1 }); }
     const part0 = col.lampsPart, begin0 = col.lampsBegin;
-    if (AGAIN) col.lampsPart = function (this: any) { this.lampQ.parts = 0; return part0.call(this); };   // (the parts' red path: no part is a later part)
-    if (UNSHADED) col.lampsBegin = function (this: any, P: Vec3, shade: any, K: any) { return begin0.call(this, P, shade ? { grid: shade.grid, blobs: [] } : null, K); };   // (the shadow's red path: the module is handed no blobs)
+    if (AGAIN) col.lampsPart = function (this: any) { this.lampQ.parts = 0; part0.call(this); };   // (the parts' red path: no part is a later part)
+    if (UNSHADED) col.lampsBegin = function (this: any, P: Vec3, shade: any, K: any) { begin0.call(this, P, shade ? { grid: shade.grid, blobs: [] } : null, K); };   // (the shadow's red path: the module is handed no blobs)
     const canister = (f: any, p: Vec3, ttl: number) => f.emit({ pos: [p[0], 0.2, p[2]], dir: [0, 1, 0], speed: 0, radius: 0.5, density: 6, temperature: 0, ttl, age: 0, kind: 'canister' });
     const field = (): any => { const f = new SE.CpuSmoke(); f.grid = SE.SmokeGrid.make(); return f.grid ? f : null; };
-    /** the light on each of `pts` asked both ways under the field `f` (null: no smoke), folded under `name`: how many differ, how many the module answered and in how many parts, and the answers */
-    const asks = (name: string, pts: Vec3[], f: any) => { let differ = 0; const n0 = C.SENSED.light, p0 = C.LAMPS.parts, got: number[] = []; SUB = name;
-      try { for (const P of pts) { const run = () => G.lightEstimateAt(g, P, undefined, false, f, false), r = flat(run()), h = here(M, run); got.push(r[0]); if (!same(r, h)) { differ++; first ||= `lamps: light on ${P} under ${MANY} more lamps${f ? ' through smoke' : ''}: here ${JSON.stringify(h)}, the module ${JSON.stringify(r)}`; } } }
-      finally { SUB = null; }
+    /** the light on each of `pts` under the field `f` (null: no smoke), folded under `name`: how many the module answered and in how many parts, and the answers */
+    const asks = (name: string, pts: Vec3[], f: any) => { const n0 = C.SENSED.light, p0 = C.LAMPS.parts, got: number[] = []; SUB = name;
+      try { for (const P of pts) got.push(G.lightEstimateAt(g, P, undefined, false, f, false)); } finally { SUB = null; }
       FOLD.doubles(FOLD.call(`${name} · ${WHERE}`), got);   // (…and what the game is handed for each: the meter's one number off the six faces)
-      return { n: pts.length, differ, there: C.SENSED.light - n0, parts: C.LAMPS.parts - p0, got }; };
+      return { n: pts.length, there: C.SENSED.light - n0, parts: C.LAMPS.parts - p0, got }; };
     const round = (n: number): Vec3[] => Array.from({ length: n }, () => near(centre, rnd() * 3));
-    const plain = asks('lamps in parts', round(40), null), cases: string[] = [`${plain.n} points under ${at + MANY} lamps: ${plain.there} to the module in ${plain.there + plain.parts} parts, ${plain.differ} differ`];
-    lampsDiffer += plain.differ; lampCase.parts += plain.differ; if (plain.there < plain.n || plain.parts < 2 * plain.n) { lampsOk = false; cases.push('THE LAMPS WERE NOT ASKED IN PARTS (three a point at least)'); }
+    const plain = asks('lamps in parts', round(40), null), cases: string[] = [`${plain.n} points under ${at + MANY} lamps: ${plain.there} to the module in ${plain.there + plain.parts} parts`];
+    if (plain.there < plain.n || plain.parts < 2 * plain.n) { lampsOk = false; cases.push('THE LAMPS WERE NOT ASKED IN PARTS (three a point at least)'); }
     // …through smoke: a grid that answers · no grid standing (never stepped: sense.ts SmokeGrid.along says −1) · more smoke than bricks (a canister on every free cell of a three-metre lattice).
     // The smoke of a case is let out at the middle and a metre and a half to three sides of it, and those four places are the first four points asked
     const shaded = (name: string, make: (f: any) => void, want: (f: any) => boolean, spots: Vec3[] = [centre, ...[0, 2.1, 4.2].map((th): Vec3 => [centre[0] + Math.sin(th) * 1.5, centre[1], centre[2] + Math.cos(th) * 1.5])]): void => { const f = field(); if (!f) { lampsOk = false; cases.push(`${name}: no grid of the tool's own`); return; }
       try { for (const p of spots) canister(f, p, 60); make(f); const is = want(f), pts = [...spots, ...round(24 - spots.length)], a = asks(`lamps, ${name}`, pts, f), clear = asks('lamps, clear air', pts, null), dimmed = a.got.filter((v, i) => v < clear.got[i]).length;
-        lampsDiffer += a.differ; lampCase[name] += a.differ; if (a.there < a.n || (is && !dimmed)) lampsOk = false; if (is) unable[name] = true;
-        cases.push(`${name}${is ? '' : ' (NOT SO ON THIS LEVEL)'}: ${f.blobs.length} blobs · ${a.n} points, ${a.there} to the module, ${dimmed} dimmed by the smoke${is && !dimmed ? ' — NONE' : ''}, ${a.differ} differ`); }
+        if (a.there < a.n || (is && !dimmed)) lampsOk = false; if (is) unable[name] = true;
+        cases.push(`${name}${is ? '' : ' (NOT SO ON THIS LEVEL)'}: ${f.blobs.length} blobs · ${a.n} points, ${a.there} to the module, ${dimmed} dimmed by the smoke${is && !dimmed ? ' — NONE' : ''}`); }
       finally { f.grid.free(); } };
     const far: Vec3 = [centre[0] + 3, 1.2, centre[2]];
     shaded('a grid that answers', f => { for (let i = 0; i < 40; i++) { f.step(0.1); f.grid.step(col, 0.1); } }, f => f.grid.stands && f.grid.along(centre, far) !== -1);
@@ -370,32 +339,34 @@ for (const file of files) {
       const d2 = (p: Vec3) => (p[0] - centre[0]) ** 2 + (p[2] - centre[2]) ** 2; cells.sort((a, b) => d2(a) - d2(b) || a[0] - b[0] || a[2] - b[2]);   // (after the case's own four, which the cap keeps: the cells nearest the points asked — the smoke that outruns the bricks is the smoke on their lines)
       for (const p of cells.slice(0, 56)) canister(f, p, 60); for (let i = 0; i < 300; i++) { f.step(0.1); f.grid.step(col, 0.1); } }, f => f.grid.stands && f.grid.along(centre, far) === -1);
     col.lampsPart = part0; col.lampsBegin = begin0; L.length = at;
-    lampsSay = `\n${''.padEnd(20)} lamps in parts: ${cases.join(' · ')}${lampsDiffer ? ' — DIFFER' : ''}`;
+    lampsSay = `\n${''.padEnd(20)} lamps in parts: ${cases.join(' · ')}`;
   }
-  col.tickShut(); L.length = own; WHERE = '';
-  const total = KINDS.reduce((n, k) => n + diff[k], 0), thin = KINDS.filter(k => there[k] < per);   // (every question is the module's: none is handed back)
-  const fail = total > 0 || (!UNSAID && thin.length > 0) || !twoPriced || lampsDiffer > 0 || !lampsOk;
-  log(`${file.padEnd(20)} ${per} questions a sense (to the Rust module: ${KINDS.map(k => `${k} ${there[k]}`).join(', ')}) · ${boxes.length} statics, ${movers.length} re-shaped${UNSAID ? ' UNSAID' : ''}, ${regrid} cells of the floor's grid changed · ${col.dynamicBoxes.length} leaves · ${own} + 14 lamps · ${smoke.blobs.length} blobs · ${fail ? `FAIL — ${total ? `${KINDS.filter(k => diff[k]).map(k => `${k} ${diff[k]}`).join(', ')} differ, first: ${first}` : thin.length ? `not every question went to the module (${thin.join(', ')})` : lampsDiffer ? `the lamps in parts differ ${lampsDiffer} times, first: ${first}` : !lampsOk ? 'the lamps in parts were not asked as they must be (below)' : 'the one-price check below'}` : 'PASS — every answer the same to the bit'}${onePrice}${lampsSay}`);
-  if (fail) bad++; for (const k of KINDS) ever[k] += diff[k]; lampsEver += lampsDiffer;
+  } catch (e) { threw = `${thrown(e)} — asking ${asking.slice(0, 300)}`; }
+  finally { col.tickShut(); L.length = own; }
+  const t1 = there(), thin = KINDS.filter(k => t1[k] - t0[k] < per);   // (by the module's own count: a kind it answered less often was answered some other way)
+  WHERE = '';
+  const fail = !!threw || thin.length > 0 || !lampsOk;
+  log(`${file.padEnd(20)} ${per} questions a kind · ${boxes.length} statics, ${movers.length} re-shaped${UNSAID ? ' UNSAID' : ''}, ${regrid} cells of the floor's grid changed · ${col.dynamicBoxes.length} leaves · ${own} + 14 lamps · ${smoke.blobs.length} blobs · ${fail ? `FAIL — ${threw ? `it threw: ${threw}` : thin.length ? `not every question went to the module (${thin.join(', ')})` : 'the lamps in parts were not asked as they must be (below)'}` : 'PASS — every question answered by the module'}${lampsSay}`);
+  if (fail) bad++;
 }
 }
 
 if (MADE) await made(); else await levels();
-const blind: string[] = MADE ? [] : UNSAID ? KINDS.filter(k => !ever[k]) : BACKWARD ? KINDS.filter(k => (k === 'paths') !== !!ever[k]) : AGAIN ? [...KINDS.filter(k => !!ever[k]), ...(lampCase.parts ? [] : ['the lamps in parts'])]
-  : UNSHADED ? [...KINDS.filter(k => !!ever[k]), ...Object.keys(lampCase).filter(k => (k === 'no grid standing' || k === 'more smoke than bricks') !== !!lampCase[k])] : [];   // (the red path must turn every sense red on some level; the order's red path, the paths and nothing else)
-if (MADE && blindMade) blind.push('a kind of the made-up world');
-log('SENSE-IDENT ' + JSON.stringify({ ...ever, lamps: lampsEver, ...lampCase }));
 if (!MADE) {
   const unreached = Object.keys(unable).filter(k => !unable[k]);   // (a way the grid cannot answer that no level reached proves nothing of it)
-  if (!UNSAID && !BACKWARD && unreached.length) { log(`    never reached on any level asked: ${unreached.join(', ')}`); bad++; }
-  // THE WORDS of this run over levels: held to nothing by themselves on the page's stand (a run's course there moves with every level's edit), and to
-  // another checkout's run of the same tool with `--against <root>`. Not under a red path: there the two languages a call are what is red.
-  if (!UNSAID && !BACKWARD && !AGAIN && !UNSHADED) PIN.hold({ root: ROOT, tool: 'tools/qa/sense-ident.ts', fixture: 'sense-words.json', run: `levels ${files.join(',')} · seed ${SEED} · ${N} questions a level`, runArgs: ['--n', String(N), '--seed', String(SEED), '--levels', files.join(',')],
-    end: `${files.length} levels`, words: FOLD.words(), breakWord: 'RUST_BREAK', unfit: 'a recording is the made-up world\'s (--made): a level\'s edit moves a level\'s words', verdict, say: log });
+  if (!UNSAID && unreached.length) { log(`    never reached on any level asked: ${unreached.join(', ')}`); bad++; }
+  // THE WORDS of this run over levels: held to nothing by themselves on the page's stand (a run's course there moves with every level's edit), to the
+  // same run played plain by a child under a red path, and to another checkout's run of the same tool with `--against <root>`.
+  const held = PIN.hold({ root: ROOT, tool: 'tools/qa/sense-ident.ts', fixture: 'sense-words.json', run: `levels ${files.join(',')} · seed ${SEED} · ${N} questions a level`, runArgs: ['--n', String(N), '--seed', String(SEED), '--levels', files.join(',')],
+    end: `${files.length} levels`, words: FOLD.words(), breakWord: BREAK_WORD, unfit: 'a recording is the made-up world\'s (--made): a level\'s edit moves a level\'s words', verdict, say: log });
+  // WHAT A RED PATH MUST MOVE, AND MUST NOT: by the names of the words that moved against the plain run
+  const off = held.off, kindOf = (n: string) => n.split(' · ')[0], is = (n: string, k: string) => kindOf(n) === k, lamp = (n: string) => kindOf(n).startsWith('lamps');
+  if (UNSAID) blind.push(...KINDS.filter(k => !off.some(n => is(n, k))));   // (every kind of question, on some level)
+  else if (BACKWARD) { if (!off.some(n => is(n, 'paths'))) blind.push('the paths (no word of theirs moved)'); blind.push(...off.filter(n => !is(n, 'paths'))); }
+  else if (AGAIN) { if (!off.some(n => is(n, 'lamps in parts'))) blind.push('the lamps in parts (no word of theirs moved)'); blind.push(...off.filter(n => !lamp(n))); }
+  else if (UNSHADED) { const two = ['lamps, no grid standing', 'lamps, more smoke than bricks']; for (const t of two) if (!off.some(n => is(n, t))) blind.push(`${t} (no word of it moved)`); blind.push(...off.filter(n => !two.includes(kindOf(n)))); }
 }
-const redSay = UNSHADED ? (blind.length ? `THE SHADOW'S RED PATH IS WRONG ABOUT ${blind.join(', ')} (the two cases where the grid cannot answer must differ, and nothing else)` : 'the smoke\'s shadow where the grid cannot answer differed and nothing else, as its red path must')
-  : AGAIN ? (blind.length ? `THE PARTS' RED PATH IS WRONG ABOUT ${blind.join(', ')} (the lamps in parts must differ, and nothing else)` : 'the lamps in parts differed and nothing else, as their red path must')
-  : BACKWARD ? (blind.length ? `THE ORDER'S RED PATH IS WRONG ABOUT ${blind.join(', ')} (the paths must differ, and nothing else)` : 'the paths differed and nothing else, as the order\'s red path must')
-  : UNSAID ? (blind.length ? `THE RED PATH IS NOT RED FOR ${blind.join(', ')}` : 'every sense differed somewhere, as the red path must') : '';
+const red = UNSAID || BACKWARD || AGAIN || UNSHADED;
+const redSay = !red ? '' : blind.length ? `THE RED PATH (${BREAK_WORD}=1) IS WRONG ABOUT ${blind.slice(0, 12).join(', ')}` : `${BREAK_WORD}=1 moved the words it must and no other`;
 log(bad || blind.length ? `=== sense-ident: ${bad} ${MADE ? 'verdict(s)' : 'level(s) or verdict(s)'} FAIL${redSay ? ' — ' + redSay : ''} ===` : '=== sense-ident: ALL PASS ===');
 process.exit(blind.length ? 3 : bad ? 1 : 0);

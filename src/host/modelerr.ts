@@ -92,7 +92,7 @@ export const MODELS: { name: string; kind: 'light' | 'smoke'; light?: LightOf; s
   { name: 'estimate', kind: 'light', light: (r, p, skip) => lightEstimateAt(r.g, p, skip, false, null, false) },
   { name: 'lit', kind: 'light', light: (r, p, skip) => r.lit && r.lit.grid.stands ? lightEstimateAt(r.g, p, skip, false, r.lit, false) : null },
   { name: 'moonlit', kind: 'light', light: (r, p, skip) => r.lit && r.lit.grid.stands ? lightEstimateAt(r.g, p, skip, false, r.lit, true) : null },   // (the whole light model: the light that comes round and the moon — sense.ts SENSE.bounce and SENSE.moon)
-  { name: 'blobs', kind: 'smoke', smoke: (r, a, b) => r.blobs.trans(a, b, (p, q) => r.g.col.segmentBlocked(p, q)) },
+  { name: 'blobs', kind: 'smoke', smoke: (r, a, b) => r.blobs.blobsAlong(r.g.col, a, b) },
   { name: 'grid', kind: 'smoke', smoke: (r, a, b) => { const G = r.grid.grid; if (!G) return null; const t = G.along(a, b); return t === -1 ? null : t; } },
   { name: 'adrift', kind: 'smoke', smoke: (r, a, b) => { const G = r.adrift.grid ?? r.grid.grid; if (!G) return null; const t = G.along(a, b); return t === -1 ? null : t; } },   // (the grid with the weather's wind in it — sense.ts SENSE.drift: the same smoke as `grid` wherever no wind blows, and where none blows on the level at all it is `grid`'s own: a walk then holds one block of the module's four the fewer)
 ];

@@ -24,7 +24,7 @@
 process.env.TPS_PROFILE ??= 'shipped'; process.env.TPS_CPUSENSE ??= '1';   // (the rows and the game's own maths are the build's: no word raises them)
 import { resolve } from 'path';
 const { standUp, hold } = await import('./headless.ts');   // (not a static import: those load before this file's first line, and the harness reads the stand as it loads)
-hold({ rows: { lines: false, rays: false, circles: false, fog: false, props: false } });   // (this check's own arm: the TypeScript's step is all TypeScript, its rays collision.ts's own walk, so the box world's rows and the furniture's are held down for both arms)
+hold({ rows: { lines: false, rays: false, circles: false, props: false } });   // (this check's own arm: the TypeScript's step is all TypeScript, its rays collision.ts's own walk, so the box world's rows and the furniture's are held down for both arms)
 const ROOT = resolve(import.meta.dir, '../..');
 const { loadLevel } = await import(`${ROOT}/src/scene/levelLoad.ts`);
 const SIM: any = await import(`${ROOT}/src/sim/sim.ts`), X: any = await import(`${ROOT}/src/math/exact.ts`), C: any = await import(`${ROOT}/src/scene/collision.ts`), BM: any = await import(`${ROOT}/src/scene/boxMirror.ts`);

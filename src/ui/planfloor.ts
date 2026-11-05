@@ -17,12 +17,12 @@ const Y = 0.04;          // just off the floor
 const RING_N = 48, FAN_N = 5;   // (a ring is a floor circle through the camera: enough points that no corner shows at any zoom)
 const NEAR_W = 0.5;      // a point this near the camera's own plane (or behind it) is not drawn: its projection is anywhere
 const TAG_DROP = 15;     // px: a standing man's tag sits under his ring, clear of his body
-/** each man's kept legs and the tables the grid is searched on (game/floorplan.ts PlanKept): the PICTURE'S own — a game drawn and the same game not
+/** each man's kept legs (game/floorplan.ts PlanKept): the PICTURE'S own — a game drawn and the same game not
  *  drawn hold the same state */
 const keptLegs = new WeakMap<Guard, PlanLeg[]>();
 const keptOf: PlanKept[] = [];
-/** a seat's own store (the legs are a man's, and a man is one seat's; the grid's tables and the throw page's are whoever asks) */
-const keptFor = (seat: number): PlanKept => keptOf[seat] ??= { get: gd => keptLegs.get(gd), set: (gd, L) => keptLegs.set(gd, L), nav: {} };
+/** a seat's own store (the legs are a man's, and a man is one seat's; the throw page's is whoever asks) */
+const keptFor = (seat: number): PlanKept => keptOf[seat] ??= { get: gd => keptLegs.get(gd), set: (gd, L) => keptLegs.set(gd, L) };
 /** the same wait in two plans (a door's, or a wall's two ends) */
 const sameWait = (a: PlanDoor, b: PlanDoor): boolean => (!!a.door && a.door === b.door) || (Math.abs(a.a[0] - b.a[0]) + Math.abs(a.a[2] - b.a[2]) + Math.abs(a.b[0] - b.b[0]) + Math.abs(a.b[2] - b.b[2]) < 0.02);
 /** THE PLANS A FRAME DRAWS, the page's own seat's first and whole, at `k` 1; then, in a game of several players, each other seat's as another's
