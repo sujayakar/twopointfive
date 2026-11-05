@@ -205,7 +205,7 @@ export class Engine {
       const o = r.o, l = r.l, whole = 4 * o.half[0] * o.half[1], open = Math.min(Math.max(o.ajar, 1e-6 * whole), whole), I = m * open;   // (radiance × area = its strength straight out)
       const at = o.mid;   // (a portal is its rectangle, about the rectangle's middle)
       l.pos[0] = at[0]; l.pos[1] = at[1]; l.pos[2] = at[2]; l.dir[0] = o.dir[0]; l.dir[1] = o.dir[1]; l.dir[2] = o.dir[2]; l.radius = Math.hypot(o.half[0], o.half[1]);
-      l.range = Math.min(26, Math.max(3, Math.sqrt(m * whole / 0.0015)));   // (as far as it lights anything, wide open: a swinging leaf does not move it)
+      l.range = Math.min(26, Math.max(3, Math.sqrt(m * whole / 0.0015))) * ((this.settings as unknown as { portalReach?: number }).portalReach ?? 1);   // (as far as it lights anything, wide open: a swinging leaf does not move it)
       l.color[0] = rad[0] / m; l.color[1] = rad[1] / m; l.color[2] = rad[2] / m; l.intensity = I; l.peakIntensity = I; l.reach = masks ? r.mask ?? undefined : undefined;
       l.portal!.halfWide = o.half[0]; l.portal!.share = open / whole; l.portal!.deep = this.settings.portalHole ? o.deep : 0; l.portal!.rims = o.rims;   // (&holedepth=0: no depth, the whole rectangle and every ray for itself, as it was)
       // (lit from the first hand's width a door opens, where its own rays let next to nothing through, and while the picture would show anything of what it looks out on)
