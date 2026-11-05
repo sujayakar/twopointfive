@@ -42,7 +42,7 @@ import type { Prop } from './props';
 import { frameOf } from './guards';
 import { order } from './squad';
 import { pressWants, pressKeeps } from './pressure';
-import { squadsLive, squadDefers, squadMayWedge } from './enemysquads';
+import { squadsLive, squadMayWedge } from './enemysquads';
 import { lastStandMan } from './laststand';
 import { hearPath } from './weather';
 import { w, wg, WORDS } from './words';
@@ -50,6 +50,7 @@ import { doorWords } from './orders';   // (call-time only: what a door is calle
 import { simRandom } from '../math/dice';   // the simulation's die (math/dice.ts): the Game's own when it has one, Math.random otherwise
 import { gunKeepsPost } from './gunroles';   // (call-time only)
 import { laneCovers } from './lanes';   // (call-time only: is this spot in a lane his side knows is covered)
+import { hasHim, OWN } from './owner';
 
 export const DIGIN = {
   /** THE switch: off = nothing here runs (the room fight as it was) */
@@ -711,7 +712,7 @@ export function digInTick(rf: unknown, def: unknown, _dt: number) {
       if (contact) { M.phase = 'idle'; DIGIN_STATS.aborted++; return; }
       if (!D.room || !isNaN(st.rooms.get(D.room)?.enteredAt ?? NaN) || listeners(F).some(L => F.inRoom(D.room, L.head))) { M.phase = 'idle'; return; }   // they are in his room already (he was blind, or thinking): the room fight's man
       if (g.time < M.until) return;
-      if (squadDefers(g, gd)) return;   // (enemysquads.ts: his squad has heard and not yet said what it does — or he is about to be sent: the door waits for the word)
+      if (hasHim(gd, OWN.squadWord)) return;   // (enemysquads.ts: his squad has heard and not yet said what it does — or he is about to be sent: the door waits for the word)
       if (!DIGIN.stay && !(M.far && DIGIN.reachM > 0) && pressWants(g, D)) return;   // (pressure.ts on as well: he is on his beat toward a press, or in one — the press has him first; whether the man it leaves to keep the room digs in is the next line's)
       if (!DIGIN.keeper && !DIGIN.stay && !(M.far && DIGIN.reachM > 0) && pressKeeps(g, D)) { M.phase = 'idle'; return; }   // (DIGIN.keeper off: made the keeper while he thought — he does not dig in)
       if (!DIGIN.stay && !(M.far && DIGIN.reachM > 0) && !isNaN(D.rallyAt) && D.rallyGo && g.time < D.rallyAt + 0.5) return;   // (stay off) he is weighing the fight next door and means to go: the room fight's rally has him first — only a man who holds his room digs in
