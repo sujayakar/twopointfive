@@ -665,14 +665,16 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   has changed) before this step too. `office-loud` is NOT recorded again here: played on the page today its script ends at 209 s for the tape's 275 and
   reaches ten sounds fewer, on the build before this step as well (no 'rattle' row, no glass underfoot, no can thrown), so a new recording is the script's
   mend first.
-  THE CHECK: `tools/qa/hitseed-check.ts` (`probes.ts hitseed`, also under `glass`, `wallpen` and `all`), 7 lines, both stands; it raises the glass parts and
-  the thin walls itself. The office is stood up twice from its file, once with ONE INERT BOX WRITTEN FIRST, so every box of the second game stands one
+  THE CHECK: `tools/qa/hitseed-check.ts` (`probes.ts hitseed`, also under `glass`, `wallpen` and `all`), 8 lines, both stands; it raises the glass parts,
+  the thin walls and the bars itself. The office is stood up twice from its file, once with ONE INERT BOX WRITTEN FIRST, so every box of the second game stands one
   place later in the list, and the two are asked the same things: the word of each of the 22 sheets (and that the seed as it was reads another in all 66
   points), the star of one blow, the break of each kind of glass over six blows and two seconds (every answer, the pane's record, every piece as it lets
-  go), a blast and a stun beside fresh glass, and 6 000 rifle flights over the floor (about 490 sheets, 2 600 thin walls and things, 160 door leaves
-  crossed). `HITSEED_BREAK=1` stands the second game's glass and thin things a millimetre higher, so each is another box: 7 of 7 red on both stands, and by
+  go), a blast and a stun beside fresh glass, 6 000 rifle flights over the floor (about 490 sheets, 2 600 thin walls and things, 160 door leaves
+  crossed), and, on the barracks stood up the same two ways, one round into each of six window bars (the same pieces: their lengths, their throw, their
+  spin). `HITSEED_BREAK=1` stands the second game's glass and thin things a millimetre higher, so each is another box: 8 of 8 red on both stands, and by
   the seed alone (every blow is given from the box's own middle and every answer read from it). Tried once by hand, not kept: with the seed by the list
-  place again all 7 are red; with `hitSeed` alone mended and the pane's own hashes left on `st.bi`, the float and toughened breaks and the blast are red.
+  place again the seven lines of glass and walls are red; with `hitSeed` alone mended and the pane's own hashes left on `st.bi`, the float and toughened
+  breaks and the blast are red.
   MEASURED (the cut `29126b9f`, both stands, `playthrough.ts` with digests, 21 missions × seeds 1 and 2): the frozen stand 42 of 42 THE SAME (the glass
   parts and the thin walls are off there: a seed only draws a star's look). The page's stand: 32 of 42 on other digests and 10 the same; no run ends
   another way; four end at another second (block-squads:2 138.7 for 138.1, defuse-four:1 111.6 for 111.7, pass-four:2 81.3 for 92.7, records-pair:2 39.6
@@ -685,11 +687,16 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   THE POINT, MEASURED: one inert box written second into EVERY level file. Before this step: 25 of 42 runs on the page's stand and 5 of 9 lessons read
   other digests (tut-kit and tut-squad read the very digests they had before the drum step). With this step: the frozen stand 42 of 42
   and the nine lessons on both stands (18 of 18) read the step's own digests, and tut-kit and tut-squad read the same word with a box put back after
-  the lying drum as without it. The page's stand: 38 of 42. The four that still move (block-four:2, glasshouse-four:1, pass-four:2, rescue-consulate:2)
-  each break a WINDOW BAR, whose pieces are thrown by the bar's index (next line): with that seed made the bar's own in a trial, all four hold.
-  STILL SEEDED BY A PLACE IN A LIST, listed and not mended here: a window bar's break (`winbars.ts breakBar`, the bar's static index), a door blown off
-  its hinges (`doorblast.ts`, the door's place among the doors), a broken wall's edge (`breakTable.ts` and `edgeLook.ts`, the breakable's id: a wall's
-  static index) and its wear marks (`wallbreak.ts`, look only). Only the window bar moved a run of the 42 in the trial above; none moved a lesson.
+  the lying drum as without it. The page's stand: 38 of 42 by the glass and wall seeds alone. The four that still moved (block-four:2,
+  glasshouse-four:1, pass-four:2, rescue-consulate:2) each broke a WINDOW BAR, whose pieces were thrown by the bar's index.
+  A WINDOW BAR'S BREAK IS SEEDED BY THE BAR ITSELF TOO (`winbars.ts breakBar`, the step after): the lengths it is cut into and the throw of each piece
+  start from `boxSeed` of the bar and where it was struck. WITH IT ONE INERT BOX IN EVERY LEVEL FILE MOVES NOTHING: 42 of 42 on both stands and the nine
+  lessons on both stands read the digests they read without the box. It gives every bar's pieces another roll, once: on the page's stand four of the 42
+  read other digests than with the glass and wall seeds alone (glasshouse-four:1, pass-four:2, rescue-consulate:1 and :2; every run ends as it did, at
+  the same second), the frozen stand 42 of 42 and the nine lessons the same; `winbars-check` green on both stands, `WINBARS_BREAK=1` red.
+  STILL SEEDED BY A PLACE IN A LIST, listed and not mended here: a door blown off its hinges (`doorblast.ts`, the door's place among the doors), a
+  broken wall's edge (`breakTable.ts` and `edgeLook.ts`, the breakable's id: a wall's static index) and its wear marks (`wallbreak.ts`, look only). None
+  moved a run of the 42 or a lesson in the trial above.
   AND THE ORDER OF WORK IS NOT A SEED: where two panes share a frame's budget (`releasesPerFrame`) the one written first is served first, so two panes
   written the other way round can still let their pieces go on other frames.
   THREE STAGED PROBES LEANED ON ONE ROLL and now find their stage instead of naming it (the bars as they were): `gearglass-joined` (b, b') seeks its aim

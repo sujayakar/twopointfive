@@ -107,8 +107,9 @@ const seedMix = (h: number, x: number): number => { h = Math.imul(h ^ (Math.roun
  *    one size are one box to a seed (no sheet of glass and no thin wall of any level is such a pair today).
  *  - A piece cut from a wall is a box of its own and seeds by what it is; a door's leaf by where it stands as it is struck.
  *  - NOT COVERED: the ORDER of work. Where two panes share a frame's budget (glassbreak.ts releasesPerFrame) the one written first in the level is served
- *    first, so two panes written the other way round can still let their pieces go on other frames. And a few seeds outside glass and thin walls still read
- *    a place in a list (a window bar's break, a door blown off, a wall's edge look): docs/agents/destruction.md, the hit seed's bullet, lists them. */
+ *    first, so two panes written the other way round can still let their pieces go on other frames. And a few seeds outside glass, thin walls and window
+ *    bars (winbars.ts starts from this word too) still read a place in a list (a door blown off, a wall's edge look): docs/agents/destruction.md, the hit
+ *    seed's bullet, lists them. */
 export function boxSeed(b: Box): number {
   let h = 0x9E3779B1;
   for (let k = 0; k < 3; k++) h = seedMix(h, b.c[k]);
