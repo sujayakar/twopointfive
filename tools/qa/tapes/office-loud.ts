@@ -106,10 +106,10 @@ export function free(B: Bot) {
   if (!B.verb('door', 'rattle', [4.0, 1.0, 11.3])) B.say('  no row to try the stair door\'s bar'); B.wait(1.2);
   if (!B.verb('door', 'kick', [4.0, 1.0, 11.3])) B.say('  no kick row on the stair door'); B.wait(2);
 
-  // up the corridor: a stun and a frag at his own feet on the way (god mode: he is stunned, not hurt), then a smoke can on ahead (it pops and hisses)
+  // up the corridor: a stun at his own feet on the way (god mode: he is stunned, not hurt), then a smoke can on ahead (it pops and hisses)
   B.go([9.0, 0, 11.1], 20);
-  toss(B, 'Digit4', 'flash', [10.6, 0.1, 11.1], 3.5);
-  toss(B, 'Digit3', 'smoke', [22.0, 0.1, 11.1], 3.5);
+  toss(B, 'Digit4', 'flash', [10.6, 0.1, 11.1], 8);   // (long enough to be on his feet again: folded by his own bang he throws nothing)
+  toss(B, 'Digit3', 'smoke', [15.5, 0.1, 11.1], 3.5);   // (a throw is aimed with the cursor: a mark further up the corridor is off the page's picture)
 
   // while the response team is on its way: the storage room at the corridor's far end — its lock booted, the breaker thrown by hand and the mains put
   // back the same way
