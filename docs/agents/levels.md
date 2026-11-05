@@ -48,9 +48,10 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   `tools/levels/lookMarks.ts lookMarks(T)` (seg / path / dashed / outline / fill / hazard / checker / glyph / word / tally — a 3 × 5 font for 0‥9 A B C N S), every
   one a floor decal through the skin's own `T.flat`. `Skin.rooms` names MORE rooms for the dado and rug rules than the scenarios do (they list held rooms only: a
   dressed room would mark a held one), `Skin.noRug` holds the automatic rug off.
-  THE SIMULATION READS PAINT (particleFx.ts `paletteName / surfOf`, furnblast.ts `breakClassOf / steelGrey`, the destruction / wallbreak / furnblast shape indexes, the wet lot), so every GWOT
-  paint on a repainted box STANDS FOR the office paint or surface it replaced: `src/scene/gwotPalette.ts gwotAs(mat, sim)` codes the stand-in as a ≤ 0.0024 shift of the albedo and
-  `gwotSimOf(albedo)` reads it back — a new classifier of paint in the game must ask `gwotSimOf` first, as those two files do. THE KIT for new levels: `src/scene/gwotKit.ts gwotKit(...)`
+  WHAT A BOX IS TO A ROUND, A CHARGE AND A BLAST IS A WORD ON THE BOX (`Box.does`, a row of `src/scene/materials.ts`; the bullet "What a box does is said
+  in a word" at the end of this file), never its paint: the skin gives every box its word before the first repaint and a repaint leaves it, so a level
+  and its look twin are one simulation in any colours. (Until 2026-11-05 the rules read the colour and a repainted box wore its paint a hair off, the
+  office paint it stood for in the offset; `gwotAs(mat, does)` is now the row's own numbers on a thing that does something else.) THE KIT for new levels: `src/scene/gwotKit.ts gwotKit(...)`
   (walls, parapets, gates, HESCO, drums, cots, rugs, lanterns, wash lines … flat colours, boxes only) + `GWOT_MATERIALS`; the showroom `levels/gwot-yard.json` (`tools/levels/gwot-yard.ts`,
   `?levelFile=gwot-yard.json&solo&hour=midday`); the one-page guide is rebuild/play-style-levels/look/read-first.md. QA: `probes.ts look` (tools/qa/look-check.ts, in
   all-quick: the palette has no clashes and no other level carries one of its colours; per pair — both files fresh, boxes equal but paint, repaints classify the same, extras are decals,
@@ -1360,6 +1361,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   exactly as on the step before: `probes.ts glassreal` line 9 (the showroom's row of the table) and `wallfurn-check --levels library-hall.json` (it
   has no count file; 86 places before and after on both stands). No mission's level file moves, so no play-through was run for this step alone.
   NEVER SEEN on any adapter as laid on the showroom; on the white roof the pieces draw as they did.
+
 - **THE OFFICE IS HAND-FINISHED** (11-05, the first hand pass; `src/scene/officeGen.ts` "THE HAND PASS", `levels/office.scenarios.ts` `OFFICE_MARKS` and
   `walked`). The maintainer: "wear, paths in the ground, different materials can all tell a story for how people walk through the level, its logic, leading
   the player for game play"; of the look he is after, "it's all quite intentionally dressed"; of the office itself, "a lot of personality per room": added
@@ -1459,3 +1461,52 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   page's and the page's with its lived tier off: 16 of 16 run digests the same as the step before, each. The page opened on a software adapter with
   the five boxes at their new sizes and nothing in the console. Never seen on a GPU: the check reads the file, and nobody has watched the eight
   places for a flicker before or after.
+
+- **What a box does is said in a word, and no rule reads a colour** (the table of materials, 2026-11-05; the game's rules, the level tools and every
+  level file; NO SWITCH: by run digest the game is the game it was. The maintainer, that day: "we should fix the color walls issue. breaking/penetration
+  shouldn't depend on color at all."). UNTIL THEN the rules knew a thing by its paint's COLOUR: an exact match against the office's palette named the
+  paint (`particleFx.ts paletteName`, gone), a paint of the look carried the office name it stood for in a shift of up to 0.0024 a channel
+  (`gwotPalette.ts gwotAs / gwotSimOf`, the append-only `GWOT_SIM_NAMES`, gone), and a colour nobody named was classed by how bright and how grey it
+  was (`surfOf`, `furnblast.ts steelGrey`, the destruction index's tone bars, gone). Moving every colour of the office by 0.004 left it with no
+  breakable wall, no cover and nothing a round went through, and no level could be painted pale or neutral.
+  THE TABLE: `src/scene/materials.ts MATERIALS`, a row a word, two columns kept apart. `looks` = the picture draws it (the look's own numbers stay
+  beside its shader, `render/lookTex.ts STUFFS`, under the same word; `does-check` holds the two lists equal). `does` = EVERY column a rule reads:
+  `surf` (a round's hit, a wall's toughness, what a round goes through, what a charge is told), `breaks` (how furniture breaks), `steel` (a cabinet
+  comes apart as sheets), `wall` ('board' | 'screen': the wall engine's partitions), `board` (plasterboard to a round), `cover`, `struct`, `counter`,
+  `casing` / `paper` / `screen` (what the destruction index finds), `snow` (which lying snow), `wet` (the row the lot's slab takes while soaked:
+  nothing is kept, `particleFx.ts surfAt` asks the weather's own `lot` each time). The rules ask `doesOf(box)` and nothing else of a material.
+  A BOX SAYS TWO WORDS AT MOST AND NEITHER IS WORKED OUT FROM THE OTHER: `stuff` (what it is DRAWN as; dressing; a repaint changes it) and `does`
+  (gameplay; a repaint leaves it). Measured before the choice: what is drawn as 'paint' is steel, timber and concrete to a blast, and a level and its
+  look twin are one simulation under two pictures. The word is written onto the box ONCE by whoever makes it: the loader from the file (the box's own
+  `does`, else its material row's), a kit from its paint (`scene/stuff.ts PAINT_DOES` by the paint's name; `doing(word, colour)` for numbers; `gwotAs(row,
+  word)` for a row on a thing that does something else), the game from the box a piece came off (`boxes.ts wordOf` carries both words). A box that
+  says nothing takes THE DEFAULT ROW, `unnamed`. A file, a recording and a checkpoint carry the word; `doesRows()` hands the columns to a module that
+  reads no strings as numbers at boot, and no row's place is ever written anywhere.
+  EVERY ROW IS AN ANSWER THE COLOUR GAVE, UNDER A PLAIN NAME, so some are accidents kept and each is one edit away from a choice: the `unnamed …` rows
+  are TONES (a colour nobody named: dark is metal to a round, middling concrete, light and pale plaster; a plain grey is a steel cabinet to a blast);
+  two rugs are `dark carpet` and the white plastic `grey plastic` for their tone; `tarmac` and the snow rows go to `unnamed dark` soaked (a wet lot
+  sparks); a bare stud is `unnamed light grey` (`breakTable.ts BREAKS.stud.does`). A TONE OF A PAINT SAYS NOTHING OF WHAT IT DOES (`stuff.ts tonedAs`
+  keeps `stuff` only: to the rules a tone was never its paint).
+  THE LEVEL TOOLS: the exporters give every box whose maker said no word the word its colour had (`tools/levels/doesWas.ts stampDoes`: the old rule,
+  FROZEN, with its own copy of the palettes; nothing in `src/` reads it) before a skin repaints anything; a material row says what its NAME says,
+  else what its colour did. `tools/levels/does-bake.ts <file>` brings a file from before forward (on the old barracks it writes the export's file to
+  the byte). So a NEW paint is free: name it and say its word, and its colour is anyone's; numbers nobody names still get the tone's answer, written
+  in the file where it can be read. The skin's old refusal ("would change what the simulation reads") is gone with its cause.
+  CHECKS: `bun run tools/qa/does-check.ts` (probes.ts `does`, families `destruction`, `look`; both stands; `DOES_BREAK=1` takes the words off and must
+  fail): the table; no old reader under `src/`, no renderer file asking what a box does but the snow field, no rule file importing the look; six
+  levels stood up three times each, as filed, every colour moved by 0.004 and every colour replaced, and everything the rules make of a material the
+  same (the office: 18 walls, 56 cover, 137 things a round goes through, each time); no level file from before. `tools/qa/does-audit.ts`: each box's
+  columns by word against by colour (`--before <ref>`: word against word). `tools/qa/look-check.ts` line 3 now holds every box of a level and its
+  twin to the same word.
+  MEASURED: on the files written that day with their words and the old colours, 37,503 boxes and 4,050 props' parts, none doing another thing by word
+  than by colour; after the stand-ins lost their shift every box and every prop's part says the word it said (40 files moved, colours only, at most 0.0024
+  a channel). The ribs of sixteen oil drums (TRIM, two a drum) moved their word, `unnamed dark` by their tone and `steel` by their kit: trim is drawn
+  and met by no rule (`destruction.ts`, `wallbreak.ts` and `furnblast.ts` pass a piece by), and the one thing asked of a piece's word is whether it is snow.
+  42 play-throughs (21 missions, seeds 1 and 2) give the digests of the build before on the frozen stand and on the shipped stand.
+  STILL ASKED OF A PAINT, AND NOT A MATERIAL: which slabs are one round thing is "do they wear the same paint" (`scene/round.ts`, `geoTry.ts`); a
+  vehicle's lamps are found by a size and a paint together (`game/carlamps.ts`: a lamp repainted is no lamp to a round); the snow SHADER knows the
+  three snow paints by their numbers (`shaders/snow.wgsl`), so a level's snow wears the palette's whites; `scene/lookTidy.ts` asks whether a level
+  wears the look by its paints (`gwotPalette.ts lookPaintOf`); the editor's writer names a box's row by its numbers. The editor keeps what a box does
+  through a repaint and a cut and has no field to set it by hand.
+  NOT SEEN: nothing here draws, and the 0.0024 the twins' colours moved has not been looked at on any adapter. Nobody has played it.
+

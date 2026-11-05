@@ -1273,3 +1273,9 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   what was red on the shipped stand before it (`decals-sites`, three checkpoint probes). THE PAGE CHECK ran once with the table (the yard in rain,
   software adapter): 118 of 118 pipelines, no error, the word up at boot, and moving the table changes 47 % of the picture (mean 0.457 down, 0.441
   up), the numbers of 11-01. NOT SEEN: never on a GPU, never in motion; its break run and a dry still were not run.
+- **The wall engine, a round through a wall, a wall charge, the furniture blast and the destruction index know a thing by its word** (2026-11-05;
+  `src/scene/materials.ts`, `Box.does`; no switch, the same game by digest). Where these notes say a rule reads a PAINT, a paint's NAME or a tone
+  (`paletteName`, `surfOf`, `breakClassOf(albedo)`, `steelGrey`, `STRUCT`, "by its paint", "the wall paints"), read: the box's word, through
+  `materials.ts doesOf(box)` and its columns (`wall`, `cover`, `board`, `surf`, `breaks`, `steel`, `struct`, `counter`, `casing`, `paper`, `screen`,
+  `snow`). A piece broken off a thing carries the thing's word (`boxes.ts wordOf`); a slot of the wall engine that turns from a piece into a stud
+  takes the stud's. The whole of it, with its checks and what is still asked of a paint: `docs/agents/levels.md`, "What a box does is said in a word".

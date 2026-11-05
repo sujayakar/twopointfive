@@ -1240,3 +1240,9 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   - **A TRAP FOR STILLS.** A frame that is not drawn steps no particles, no air and no powder, and a drawn frame of a few thousandths of a second steps
     neither field (they run on the air's own clock, 0.8 of a sixtieth at least). To put powder in a still, step the two by hand first
     (`__engine.air.step` then `__engine.powder.step` on one encoder, a thirtieth of a second each, submitted one at a time), then draw.
+- **The soaked lot and lying snow are known by the box's word** (2026-11-05; `src/scene/materials.ts`; no switch, the same game by digest). Where
+  these notes say a rule reads the wet lot's halved colour, a snow paint's numbers or `surfOf` / `gwotSimOf`: the lot's slab is asked its word's
+  `wet` row while the weather has it soaked (`particleFx.ts surfAt`: `tarmac` and the snow rows go to `unnamed dark`, so a wet lot still sparks, and
+  nothing is kept for it); a box is lying snow because it says `snow`, `packed snow` or `old snow` (`render/snowField.ts snowPaintOf` reads the word:
+  the bog, the wind's snow test, the blast's mouth and the field's bake); `wetGround.ts soaks` reads the word's surface. The snow SHADER still knows
+  the three snow paints by their numbers. The whole of it: `docs/agents/levels.md`, "What a box does is said in a word".
