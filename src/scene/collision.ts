@@ -153,13 +153,21 @@ export class StaticCollision {
   addStatic(b: Box, footprint: Box = b): number {
     const i = this.boxes.length; this.boxes.push(b); this.mirror.wroteGrid();
     if (this.stamp.length <= i) { const s = new Int32Array(Math.max(i + 1, this.stamp.length * 2)); s.set(this.stamp); this.stamp = s; }
-    const f = footprint; const cs = Math.abs(Math.cos(f.yaw)), sn = Math.abs(Math.sin(f.yaw));
-    const ex = cs * f.h[0] + sn * f.h[2], ez = sn * f.h[0] + cs * f.h[2];
-    const x0 = Math.max(0, Math.floor((f.c[0] - ex) / this.cs)), x1 = Math.min(this.W - 1, Math.floor((f.c[0] + ex) / this.cs));
-    const z0 = Math.max(0, Math.floor((f.c[2] - ez) / this.cs)), z1 = Math.min(this.H - 1, Math.floor((f.c[2] + ez) / this.cs));
+    const [x0, x1, z0, z1] = this.footCells(footprint);
     for (let z = z0; z <= z1; z++) for (let x = x0; x <= x1; x++) this.cells[z * this.W + x].push(i);
     return i;
   }
+  /** the cells a static appended over `f` is filed in (addStatic's own: the plan's rectangle round f as it is turned, inside the grid): x0, x1, z0, z1 */
+  footCells(f: Box): [number, number, number, number] {
+    const cs = Math.abs(Math.cos(f.yaw)), sn = Math.abs(Math.sin(f.yaw));
+    const ex = cs * f.h[0] + sn * f.h[2], ez = sn * f.h[0] + cs * f.h[2];
+    return [Math.max(0, Math.floor((f.c[0] - ex) / this.cs)), Math.min(this.W - 1, Math.floor((f.c[0] + ex) / this.cs)),
+      Math.max(0, Math.floor((f.c[2] - ez) / this.cs)), Math.min(this.H - 1, Math.floor((f.c[2] + ez) / this.cs))];
+  }
+  /** the grid by its counts, as the Rust module's copy holds it in three tables: its cells, the entries filed in them, the tilted statics' own list */
+  gridCount(): { cells: number; entries: number; tilted: number } { let entries = 0; for (const c of this.cells) entries += c.length; return { cells: this.W * this.H, entries, tilted: this.tiltedAt.length / 5 }; }
+  /** …and how many entries of the cells that is (none for a box wholly off the grid) */
+  footEntries(f: Box): number { const [x0, x1, z0, z1] = this.footCells(f); return Math.max(0, x1 - x0 + 1) * Math.max(0, z1 - z0 + 1); }
   /** …and the level's list cut back to its first `n` statics (the authored ones: a restart): every later index leaves the cells. */
   truncateStatics(n: number) {
     if (this.boxes.length <= n) return;
@@ -171,12 +179,12 @@ export class StaticCollision {
   readonly mirror = new BoxMirror();
   /** A TICK OPENS (Game.stepSeats): with a row of RUST on that asks the box world, the copy is made the boxes as they stand and the questions of this tick go
    *  to the module; with none, nothing happens here at all. */
-  tickOpen(): void { this.noFit = false; this.stand(); }
+  tickOpen(): void { this.stand(); this.mirror.played = true; }   // (…and from its first tick a box world is a level in play: what the copy says of a table outgrown — boxMirror.ts outgrown)
   /** …the copy made the boxes as they stand, for whoever opens a stretch of questions: a tick, a window, a question alone (below) */
   private stand(): void { const M = this.mirror, S = EXACT.on ? senseRows() : 0;   // (the senses answer under the game's own maths alone: senseSet)
      if (RUST.lines || RUST.rays || RUST.circles || RUST.fog || S || ((RUST.doors || RUST.props || RUST.slabs || RUST.items) && EXACT.on)) M.open(this.boxes, this.cells, this.tiltedAt, this.W, this.H, this.cs, this.dynamicBoxes, this.glassWalkable, this.glassPanes, RUST.lines, RUST.circles, RUST.fog, S, RUST.rays); else if (M.live) M.shut(); }
   /** THE WORLD A RULE OF THE MODULE'S MAY STEP OVER NOW (the doors' step: game/doors.ts; the furniture's: game/props.ts): the copy, standing, with the game's own leaves `dyn` in it as they
-   *  are — or null (no tick, no copy, a level too big for it, another list in the leaves' place): the TypeScript steps. */
+   *  are — or null (no tick, no copy, another list in the leaves' place): the TypeScript steps. */
   rulesWorld(dyn: Box[]): BoxMirror | null { if (ruleRed(RULES_ROW)) return null; const M = this.ready(); if (M.rules(dyn)) return M;
     if (FELL.on) fell(RULES_ROW, !M.live ? this.fellWhy() : 'another list in the leaves\' place, or leaves that do not fit a list'); return null; }
   /** …and THE WORLD A RULE MAY ASK THE STATICS OF ALONE (the furniture's settle as a level is stood up, game/props.ts: no leaf is asked for, and the game's
@@ -186,7 +194,7 @@ export class StaticCollision {
    *  is the TypeScript's, and counted as its own here, once for every rule that asks */
   rulesPanes(): number { const ask = this.paneAsk; if (ask < 0) this.paneFell(RULES_ROW, ask); return ask; }
   /** why the copy is not answering now, for the count of questions the TypeScript took (sim.ts FELL) */
-  private fellWhy(): string { const M = this.mirror; return M.live ? 'the row was not up when the tick opened' : !M.fit ? 'the level does not fit the copy' : 'outside a tick'; }
+  private fellWhy(): string { const M = this.mirror; return M.live ? 'the row was not up when the tick opened' : 'outside a tick'; }
   /** the foot of a span as the statics are asked it (footBand), for a rule that asks them in the module */
   footOf(y0: number): number { return footBand(y0); }
   /** …and shuts */
@@ -201,20 +209,17 @@ export class StaticCollision {
    *  probe, a tool's driver). A window is proven by the first question asked in it: one that asks nothing costs nothing. */
   window<T>(fn: () => T): T {
     const M = this.mirror; if (M.live || this.windowed || !ANYTIME.on) return fn();
-    this.windowed = true; this.noFit = false;
+    this.windowed = true;
     try { return fn(); } finally { this.windowed = false; if (M.live) M.shut(); }
   }
   /** inside `window(fn)`, outside a tick: the copy is proven by the first question `fn` asks and stands until `fn` returns (a window nobody asks in costs nothing) */
   private windowed = false;
-  /** the copy did not stand when it was last asked for, because the level does not fit it: nobody asks again until the next tick or window opens (a
-   *  level that does not fit is the TypeScript's, slower and never wrong; a failed copy a question would be slower than that) */
-  private noFit = false;
   /** THE COPY MADE READY FOR A QUESTION OF THE MODULE'S, where every asker passes: inside a window that no question has proven yet it is proven now, and
    *  a debt of the tick (a static written and said, the grid written) is paid */
   private ready(): BoxMirror { const M = this.mirror; if (!M.live && this.windowed) this.lone(); if (M.owes) M.again(this.boxes, this.glassWalkable); return M; }
   /** a question outside a tick: is the copy now standing for it ALONE (true: the caller shuts it behind the answer; false with the copy standing: a
    *  window's, which shuts it) */
-  private lone(): boolean { if (!ANYTIME.on || this.noFit) return false; this.stand(); if (!this.mirror.live) { if (!this.mirror.fit) this.noFit = true; return false; }
+  private lone(): boolean { if (!ANYTIME.on) return false; this.stand(); if (!this.mirror.live) return false;   // (no row up that asks the box world: a level the copy cannot hold is no case — boxMirror.ts outgrown)
     if (this.windowed) { ANYTIME.windows++; return false; }
     ANYTIME.proofs++; if (ANYTIME.who || FELL.who) { const W = ANYTIME.who ?? (ANYTIME.who = {}), st = callers(4, 2, /scene\/(collision|boxMirror)\.ts/, 3); W[st] = (W[st] ?? 0) + 1; }   // (who asked alone, wherever the count asks who: TPS_FELL=who, ?fell=who)
     return true; }
