@@ -144,7 +144,7 @@ for (const file of files) {
   for (let i = 0; i < per; i++) {
     if (i === (per >> 1)) { for (const b of movers) { b.c[0] += (rnd() - 0.5) * 1.5; b.c[2] += (rnd() - 0.5) * 1.5; b.h[1] *= 0.3 + rnd() * 0.7; } if (!UNSAID) col.wrote();
       // the floor's grid follows the boxes, as it does where a wall is broken; on the red path the module keeps the grid it had (the hand-over is cut)
-      if (UNSAID) { const nav = col.nav; nav.there = (m: any) => nav.blocked.length <= m.navCap; }
+      if (UNSAID) col.nav.there = () => {};
       const ch = col.nav.rebake(0, 0, x1, z1); regrid += ch.length >> 1; }
     for (const k of KINDS) {
       const Q = ask[k](), n0 = asked(k);

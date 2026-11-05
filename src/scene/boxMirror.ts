@@ -170,7 +170,7 @@ export class BoxMirror extends HostOwned {
   /** where a pushed circle ends (an index into the doubles), and the statics a gather listed (into the words) with how many it can list */
   pt = 0; list = 0; listCap = 0;
   /** the module's scratch (an index into the doubles), and the tables a sense's question is written to: the lamps and the blobs (into the doubles, and how
-   *  many each holds), the nav grid's shut cells (into the bytes, and how many) and a way's waypoints (into the doubles). One set a process: each is scratch
+   *  many each holds), the nav grid's shut cells (into the bytes, and how many cells of floor a search holds: nav.rs MAX_FLOOR) and a way's waypoints (into the doubles). One set a process: each is scratch
    *  of the one question that wrote it. */
   scratch = 0; scratchLen = 0; lamps = 0; lampCap = 0; blobs = 0; blobCap = 0; wind = 0; windCap = 0; navShut = 0; navCap = 0; way = 0; navWant = 0; navPrice = 0;
   /** one question's lamps and blobs as they are written (collision.ts lampsBegin … lampsOn, blobsBegin … blobsAlong): the leaves' list to ask with, how many so far */
