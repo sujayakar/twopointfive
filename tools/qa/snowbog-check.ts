@@ -16,6 +16,7 @@
 import { standUp, ROOT } from './headless.ts';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
+import { standInChar } from './standin.ts';
 
 const DT = 1 / 60;
 
@@ -96,7 +97,7 @@ export async function snowBogCheck(o: { verbose?: boolean } = {}): Promise<boole
       verdict(fa < 0.15 && fr2 < 0.15 && fFloor > 0.3, 'flight — the throw a man works out beforehand ends where the thrown thing does, on deep and on trodden snow',
         `the flight's end against the real rest: deep snow ${fa.toFixed(2)} m · trodden snow ${fr2.toFixed(2)} m (flown as over a floor: ${fFloor.toFixed(2)} m off)`);
       // ---- squad (squadsmoke.ts squadArcTo: the solver's arc + its closed-form run-on, a frag's and a can's, ordered 5 and 7 m on)
-      const gd: any = { char: { pos: [0, 0, 0], bones: {} } }; let worst = 0, worstFloor = 0, n = 0, none = 0; const said: string[] = [];
+      const gd: any = { char: standInChar({ pos: [0, 0, 0], bones: {} }) }; let worst = 0, worstFloor = 0, n = 0, none = 0; const said: string[] = [];
       for (const [name, p] of [['deep', YARD], ['trodden', ROAD]] as const) for (const [kind, rollK] of [['frag', SQUADTHROW.fragRollK], ['smoke', undefined]] as const) for (const dist of [5, 6]) {
         const at: [number, number, number] = [p[0] + dist - 1.5, 0, p[2]], stood: [number, number, number] = [p[0] - 1.5, 0, p[2]];
         const real = (R: typeof On, arc: any) => { SNOWBOG.on = R.sw; const it = R.g.items.spawn(kind, [...arc.from], [...arc.sol.v0], { fuse: 60, life: 60 }); it.spin = 0; it.tumbleRate = 0; for (let i = 0; i < 900 && !it.settled; i++) R.g.items.update(DT, R.g); const q = [...it.pos]; R.g.items.items.splice(R.g.items.items.indexOf(it), 1); return Math.hypot(q[0] - at[0], q[2] - at[2]); };

@@ -266,7 +266,7 @@ export const roomclearEnds = guarded(async () => {
   }
   { // the point man dropped on the stack with his number two still up: the drill's entry is off — said once, by this scenario
     const R = await rig(11); const { game: g, RC, NB } = R; R.step(60); R.press(); R.until(() => NB.state === 'set', 30);
-    killGuard(g, NB.ops[0], [1, 0, 0], false, 'shot', 'hostile'); R.until(() => NB.state === 'failed', 10); R.step(60);
+    killGuard(g, NB.ops[0], [1, 0, 0], false, 'shot', 'guard'); R.until(() => NB.state === 'failed', 10); R.step(60);
     verdict(NB.state === 'failed' && RC.end === null && up(NB.ops) === 1 && R.heard(/your point man is down at the door, so you'll have to take the break room yourself/) === 1 && R.heard(/or press Shift\+Enter to restart/) === 0 && R.logged('pair:down') === 0,
       'the point man down on the stack: the entry is off, said once in this scenario\'s words; no end, his number two still up', `${NB.summary()} · ${RC.summary()} · said: ${R.said.slice(1).join(' | ')}`);
   }
@@ -278,7 +278,7 @@ export const roomclearEnds = guarded(async () => {
       for (const on of [true, false]) {
         const R = await rig(11); const { game: g, RC, NB } = R; WORDS.on = on; R.step(30);   // (after the stand-up: the frozen stand pins the switch off as it stands a game)
         const h = R.room('storage').defenders[0]; const n0 = R.said.length; killGuard(g, h, [1, 0, 0], false, 'shot', 'player'); const mine = R.said.slice(n0);   // (his line alone: the teammate's own way down below logs the old words too)
-        const op = NB.ops[0]; op.bubble = { text: 'man down.', t: g.time, dur: 2, radio: false }; killGuard(g, op, [1, 0, 0], false, 'shot', 'hostile'); R.step(2);
+        const op = NB.ops[0]; op.bubble = { text: 'man down.', t: g.time, dur: 2, radio: false }; killGuard(g, op, [1, 0, 0], false, 'shot', 'guard'); R.step(2);
         for (let i = 0; i < 4 && !g.player.down; i++) hitPlayer(g, [1, 0, 0]);
         R.step(2);
         const kill = on ? `${h.callsign} down` : 'guard down — dead', cut = `${on ? op.callsign : 'guard'}: man down.`;
@@ -288,7 +288,7 @@ export const roomclearEnds = guarded(async () => {
           `want '${kill}' · '${cut}' · ${end} · row ${obj} — said: ${R.said.slice(1).join(' | ')} · row '${g.objectiveText()}' · pair ${up(NB.ops)}/2`);
       }
       const R = await rig(11); const { game: g, RC, NB } = R; WORDS.on = true; R.step(30);
-      for (const op of NB.ops) killGuard(g, op, [1, 0, 0], false, 'shot', 'hostile');
+      for (const op of NB.ops) killGuard(g, op, [1, 0, 0], false, 'shot', 'guard');
       R.step(5);
       for (let i = 0; i < 4 && !g.player.down; i++) hitPlayer(g, [1, 0, 0]);
       R.step(2);

@@ -31,6 +31,7 @@
 import { resolve } from 'node:path';
 import { readFileSync } from 'node:fs';
 import { standUp, ROOT } from './headless.ts';
+import { standInChar } from './standin.ts';
 
 const SC = await import(`${ROOT}/src/game/stickycam.ts`);
 const { STICKY, STICKY_STATS, stickyIssue, fireCam, stickyEyes, camLens, stickyMarks } = SC;
@@ -178,7 +179,7 @@ export async function stickyFly(): Promise<boolean> {
     }
     { // a wall, a leaf, a man, the fourth
       const W = await P.stage(7102, false), g = W.game, pl = g.player; raise(); stickyIssue(pl, 3); g.infiniteAmmo = true; SC.stickyStatsReset();
-      const A = g.guards[0]; const w = wallFor(g, { char: { pos: pl.char.pos, bones: {} } });
+      const A = g.guards[0]; const w = wallFor(g, { char: standInChar({ pos: pl.char.pos, bones: {} }) });
       const cam = w ? send(W, w.from, v3.mad(w.P, w.n, -0.5) as Vec3) : null;
       const off = cam && w ? v3.len(v3.sub(cam.pos, w.P)) : NaN, dn = cam && w ? cam.n[0] * w.n[0] + cam.n[1] * w.n[1] + cam.n[2] * w.n[2] : NaN;
       F.verdict(!!cam && !cam.vel && cam.si === w!.index && off < 0.2 && dn > 0.99, 'sent at a wall it sticks where it struck, on that wall, facing off it', `wall static ${w?.index} · stuck on ${cam?.si}, ${f2(off)} m from the point aimed at, normal · wall's ${f2(dn)}`);
@@ -270,7 +271,7 @@ export async function stickySave(): Promise<boolean> {
   const onWas = STICKY.on, qfWas = QF.QUIETFOG.on, rnd = Math.random;
   try {
     const { W, g } = await quietFloor(31), pl = g.player; stickyIssue(pl, 2);
-    const w = wallFor(g, g.guards[0]) ?? wallFor(g, { char: { pos: pl.char.pos, bones: {} } });
+    const w = wallFor(g, g.guards[0]) ?? wallFor(g, { char: standInChar({ pos: pl.char.pos, bones: {} }) });
     const flying = w ? fireCam(g, pl, w.from, v3.mad(w.P, w.n, -0.5) as Vec3) : null; pl.rifle.cams--;
     const why = SAVE.canSave(g, false); let n = 0; while (flying?.vel && n++ < 180) W.step(DT);
     F.verdict(!!flying && /sticky camera/.test(String(why)), 'a plain save waits for one in the air', `canSave → "${why}"`);

@@ -15,6 +15,7 @@
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { standUp, ROOT } from './headless.ts';
+import { standInChar } from './standin.ts';
 const { parseLevelData } = await import(`${ROOT}/src/scene/levelData.ts`);
 const { loadLevel } = await import(`${ROOT}/src/scene/levelLoad.ts`);
 const { startFromQuery } = await import(`${ROOT}/src/game/scenarioRun.ts`);
@@ -50,9 +51,9 @@ export async function wordsOverheard(): Promise<boolean> {
     {
       let asked = 0, carry = 1;
       const hid = new Set<any>();
-      const man = (callsign: string, team: string, x: number) => ({ callsign, team, unit: true, state: 'alert', char: { pos: [x, 0, 0], alive: true } });
+      const man = (callsign: string, team: string, x: number) => ({ callsign, team, unit: true, state: 'alert', char: standInChar({ pos: [x, 0, 0], alive: true }) });
       const g: any = { time: 10, messages: [] as { text: string; t: number }[], audio: { play: () => { } }, fight: { log: [], defs: [], live: true }, level: {}, guards: [] as any[],
-        player: { down: false, char: { pos: [0, 0, 0] } }, fogOfWar: { hidden: (gd: any) => hid.has(gd) },
+        player: { down: false, char: standInChar({ pos: [0, 0, 0] }) }, fogOfWar: { hidden: (gd: any) => hid.has(gd) },
         col: { sound: { propagate: (a: number[], b: number[]) => { asked++; return { pathLen: Math.hypot(a[0] - b[0], a[2] - b[2]), carry, muffle: 0 }; } } } };
       g.seats = [{ view: g }];   // a game of one: the ears are its one player's (seats.ts men), which the cue asks for since the game seats two
       g.msg = (text: string) => { g.messages.push({ text, t: g.time }); if (g.messages.length > 5) g.messages.shift(); g.cues.raw(text); };

@@ -278,7 +278,7 @@ export const quietFixes = guarded(async () => {
     g.godMode = true; g.playerInvisible = true;
     const m = g.quiet.ops[0], gd = g.guards.find((x: any) => !x.unit && x.state === 'patrol')!;
     gd.state = 'alert'; gd.awareness = 1; gd.foe = m; gd.lastKnown = [m.char.posX, 0, m.char.posZ]; gd.lastSeenT = g.time;
-    await hushed(() => killGuard(g, m, [0, 0, 1], false, 'shot', 'ai')); m.killerId = gd.char.id;
+    await hushed(() => killGuard(g, m, [0, 0, 1], false, 'shot', 'guard')); m.killerId = gd.char.id;
     const said: string[] = []; const states: string[] = [];
     let fired = 0, seenSam = false; g.playerInvisible = false; g.lightAt = () => 0; g.player.visibility = 0;   // (Sam there to be shot at for the first two thirds of a second, in the dark where he started)
     for (let i = 0; i < 360; i++) { W.step(DT); if (i < 40) { fired += g.events.filter((e: any) => e.kind === 'shot' && e.who === gd.char.id && e.time >= g.time - DT / 2).length; seenSam ||= gd.sawPlayerThisFrame; } if (i === 40) g.playerInvisible = true; if (gd.bubble && !said.includes(gd.bubble.text)) said.push(gd.bubble.text); if (states[states.length - 1] !== gd.state) states.push(gd.state); }

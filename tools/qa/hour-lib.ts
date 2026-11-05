@@ -12,6 +12,7 @@
 // no smoke or haze between a light and a man, no fixture flicker. Sam's own meter is never answered (the scripted commander is unseen by design).
 // With `sky` off meterAt IS lightEstimateAt, and selfCheck() holds that to the last bit on a spread of points.
 import { ROOT } from './headless.ts';
+import { standInChar } from './standin.ts';
 const GU: any = await import(`${ROOT}/src/game/guards.ts`);
 const NV: any = await import(`${ROOT}/src/game/nvg.ts`);
 const { lightFromDef }: any = await import(`${ROOT}/src/render/lights.ts`);
@@ -130,8 +131,8 @@ export function reachable(g: any, from: number[]): { x: number; z: number }[] {
  *  guards.ts sightGainOn on two stand-in men — nothing of the formula is repeated here. `hot`: the room fight's ×2.2 for a roused eye (roomfight.ts rateOn) — the eye itself stays a 'patrol' eye, so a STANDING man is understated for a hunting
  *  defender (guards.ts motionCore gives an alert / searching eye a higher floor for a still target); the walking columns are exact. */
 export function sightRate(g: any, vis: number, dist: number, speed: number, hot: boolean): number {
-  const eye: any = { state: 'patrol', team: 'hostile', char: { pos: [0, 0, 0], id: -1, bones: {}, chestDir: [0, 0, 1], aimYaw: 0 } };
-  const tgt: any = { state: 'patrol', team: 'operative', visibility: vis, irradiance: 0, flashlight: null, char: { pos: [0, 0, dist], vel: [speed, 0, 0], id: -2, bones: {}, anim: { crouch: 0 } } };
+  const eye: any = { state: 'patrol', team: 'hostile', char: standInChar({ pos: [0, 0, 0], id: -1, bones: {}, chestDir: [0, 0, 1], aimYaw: 0 }) };
+  const tgt: any = { state: 'patrol', team: 'operative', visibility: vis, irradiance: 0, flashlight: null, char: standInChar({ pos: [0, 0, dist], vel: [speed, 0, 0], id: -2, bones: {}, anim: { crouch: 0 } }) };
   const r = GU.sightGainOn(g, eye, tgt, dist);
   return hot ? r * 2.2 : r;
 }

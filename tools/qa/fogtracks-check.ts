@@ -15,6 +15,7 @@
 import { standUp, ROOT } from './headless.ts';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
+import { standInChar } from './standin.ts';
 
 export async function fogTracksCheck(o: { verbose?: boolean } = {}): Promise<boolean> {
   const { SNOW, SNOW_LOOK, WEATHER_BOOT } = await import(`${ROOT}/src/game/weatherKinds.ts`);
@@ -45,7 +46,7 @@ export async function fogTracksCheck(o: { verbose?: boolean } = {}): Promise<boo
   }
   const near = (T: any, x: number, z: number, r: number) => { let n = 0; const x0 = Math.floor((x - r - WORLD.min[0]) * R), x1 = Math.ceil((x + r - WORLD.min[0]) * R), z0 = Math.floor((z - r - WORLD.min[2]) * R), z1 = Math.ceil((z + r - WORLD.min[2]) * R);
     for (let tz = Math.max(0, z0); tz <= Math.min(T.h - ST.TRACK_PAD - 1, z1); tz++) for (let tx = Math.max(0, x0); tx <= Math.min(T.w - 1, x1); tx++) if (T.data[tz * T.w + tx] > 0) n++; return n; };
-  const lying = (x: number, z: number) => ({ alive: false, bodyYaw: 0, pos: [x, 0, z], vel: [0, 0, 0], bones: { hips: [x, 0.16, z], head: [x + 0.62, 0.12, z + 0.1], footL: [x - 0.8, 0.08, z - 0.12], footR: [x - 0.78, 0.08, z + 0.14] } });
+  const lying = (x: number, z: number) => standInChar({ alive: false, bodyYaw: 0, pos: [x, 0, z], vel: [0, 0, 0], bones: { hips: [x, 0.16, z], head: [x + 0.62, 0.12, z + 0.1], footL: [x - 0.8, 0.08, z - 0.12], footR: [x - 0.78, 0.08, z + 0.14] } });
   try {
     { // ---- kept, found, as in sight (stand-ins' bones: who is hidden and what is seen are the things on trial)
       const A = await rig(7, true); const g = A.g, F = g.snowField, T = g.snowTracks;
@@ -55,10 +56,10 @@ export async function fogTracksCheck(o: { verbose?: boolean } = {}): Promise<boo
         const spots: [number, number][] = []; for (let z = WORLD.min[2] + 3; z < Z1 && spots.length < 320; z += 1.25) for (let x = WORLD.min[0] + 3; x < X1 && spots.length < 320; x += 1.25) {
           if ([[0, 0], [0.7, 0.1], [-0.8, -0.12], [-0.8, 0.14]].every(([dx, dz]) => snow(x + dx, z + dz) > 0.9)) spots.push([x, z]); }
         const [sx, sz] = spots[0] ?? [0, 0]; let see = false, field = true, lines = 0, hid = true; const asked = new Set<string>();
-        const sam = { char: { alive: true, pos: [0, 0, 0], vel: [0, 0, 0], bones: {} } };
+        const sam = { char: standInChar({ alive: true, pos: [0, 0, 0], vel: [0, 0, 0], bones: {} }) };
         const game = (men: { char: unknown }[], active = true) => ({ player: sam, guards: men, civilians: [], fogOfWar: { hidden: () => hid, active, groundLook: (x: number, z: number) => { if (!field) return 0; lines++; asked.add(`${x},${z}`); return see ? 2 : 1; } } });
         const frame = (Gx: any, n = 1) => { for (let i = 0; i < n; i++) { ST.updateSnowTracks(Gx, T, F, DT); ST.formSnowTracks(T, DT); } };
-        const standing = (x: number, z: number) => ({ alive: true, bodyYaw: 0, pos: [x, 0, z], vel: [0, 0, 0], bones: { hips: [x, 0.95, z], head: [x, 1.6, z], footL: [x - 0.1, 0.04, z], footR: [x + 0.1, 0.04, z], toeL: [x - 0.1, 0.02, z + 0.2], toeR: [x + 0.1, 0.02, z + 0.2] } });
+        const standing = (x: number, z: number) => standInChar({ alive: true, bodyYaw: 0, pos: [x, 0, z], vel: [0, 0, 0], bones: { hips: [x, 0.95, z], head: [x, 1.6, z], footL: [x - 0.1, 0.04, z], footR: [x + 0.1, 0.04, z], toeL: [x - 0.1, 0.02, z + 0.2], toeR: [x + 0.1, 0.02, z + 0.2] } });
         const darks = () => [...T.unseen.values()].flatMap((q: any) => q.marks).map((u: any) => u.dark as boolean);
         let man = { char: lying(sx, sz) };
         // in sight, from the first: what he leaves, settled
@@ -121,7 +122,7 @@ export async function fogTracksCheck(o: { verbose?: boolean } = {}): Promise<boo
       for (let z = WORLD.min[2] + 3; z < WORLD.min[2] + WORLD.gridH * WORLD.gridCell - 3; z += 1.25) for (let x = WORLD.min[0] + 3; x < WORLD.min[0] + WORLD.gridW * WORLD.gridCell - 4.5; x += 1.25) {
         const d = Math.hypot(x - sp[0], z - sp[2]); if (d > far && open(x, z) && open(x + 1.25, z) && fog.groundLook(x, z) !== 2) {   /* (in a field or not: with no cone — the frozen stand — every place is in one) */ far = d; at = [x, z]; stand = [x + 1.25, z]; } }
       const tally = fog.thingStats.tests === t0, [ax, az] = at ?? [0, 0];
-      const man = { char: lying(ax, az) }, G = { player: { char: { alive: true, pos: [0, 0, 0], vel: [0, 0, 0], bones: {} } }, guards: [man], civilians: [], fogOfWar: { hidden: () => true, active: true, groundLook: (x: number, z: number) => fog.groundLook(x, z) } };
+      const man = { char: lying(ax, az) }, G = { player: { char: standInChar({ alive: true, pos: [0, 0, 0], vel: [0, 0, 0], bones: {} }) }, guards: [man], civilians: [], fogOfWar: { hidden: () => true, active: true, groundLook: (x: number, z: number) => fog.groundLook(x, z) } };
       for (let i = 0; i < 90; i++) { ST.updateSnowTracks(G as any, T, F, DT); ST.formSnowTracks(T, DT); }   // (the stand-in lies there under the game's own eyes: his hollow is kept)
       const kept = T.kept, dark = ([...T.unseen.values()][0] as any)?.marks[0]?.dark, f0 = T.found; for (let i = 0; i < 30; i++) E.W.step(DT);   // (the game's own frames, nobody looking)
       const still = T.kept, f1 = T.found - f0, clean = near(T, ax, az, 1.2);

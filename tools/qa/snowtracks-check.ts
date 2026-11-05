@@ -29,6 +29,7 @@ import { standUp, ROOT } from './headless.ts';
 import { readFileSync, existsSync, mkdtempSync, rmSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { tmpdir } from 'node:os';
+import { standInChar } from './standin.ts';
 
 export async function snowTracksCheck(o: { verbose?: boolean; fast?: boolean } = {}): Promise<boolean> {
   const { SNOW, SNOW_LOOK, WEATHER_BOOT } = await import(`${ROOT}/src/game/weatherKinds.ts`);
@@ -117,10 +118,10 @@ export async function snowTracksCheck(o: { verbose?: boolean; fast?: boolean } =
         verdict(len(in2) > 0.6 && inside === 0 && bare === 0, 'where — nothing is pressed where no snow lies',
           `under the roof at (${roofed}): ${len(in2).toFixed(2)} m walked, ${inside} texels pressed anywhere meanwhile · over the whole plan: ${pressed(T)} pressed texels, ${bare} of them with no snow within 25 cm`);
         // ---- fog (stand-ins' bones: who is hidden is the one thing on trial)
-        { const lying = (x: number, z: number) => ({ alive: false, bodyYaw: 0, pos: [x, 0, z], vel: [0, 0, 0], bones: { hips: [x, 0.16, z], head: [x + 0.62, 0.12, z + 0.1], footL: [x - 0.8, 0.08, z - 0.12], footR: [x - 0.78, 0.08, z + 0.14] } });
+        { const lying = (x: number, z: number) => standInChar({ alive: false, bodyYaw: 0, pos: [x, 0, z], vel: [0, 0, 0], bones: { hips: [x, 0.16, z], head: [x + 0.62, 0.12, z + 0.1], footL: [x - 0.8, 0.08, z - 0.12], footR: [x - 0.78, 0.08, z + 0.14] } });
           const hx = open[0] + 1.5, hz = open[1] - 1.5, fx = open[0] - 1.5, fz = open[1] - 1.5;
           const seen = { char: lying(hx, hz) }, unseen = { char: lying(fx, fz) };
-          const G = { player: { char: { alive: true, pos: [0, 0, 0], vel: [0, 0, 0], bones: {} } }, guards: [seen, unseen], civilians: [], fogOfWar: { hidden: (gd: unknown) => gd === unseen } };
+          const G = { player: { char: standInChar({ alive: true, pos: [0, 0, 0], vel: [0, 0, 0], bones: {} }) }, guards: [seen, unseen], civilians: [], fogOfWar: { hidden: (gd: unknown) => gd === unseen } };
           const h0 = T.hollows, b0 = near(T, [[hx, hz]], 1.2), f0 = near(T, [[fx, fz]], 1.2);
           ST.updateSnowTracks(G as any, T, F, DT); const early = T.hollows - h0;
           for (let i = 0; i < 60; i++) ST.updateSnowTracks(G as any, T, F, DT); const once = T.hollows; for (let i = 0; i < 60; i++) ST.updateSnowTracks(G as any, T, F, DT);
@@ -140,7 +141,7 @@ export async function snowTracksCheck(o: { verbose?: boolean; fast?: boolean } =
       /** footfalls → a fresh map: each foot stands four frames where it lands (ankle at `at`, toe along `dir`), the other is in the air */
       const stamp = (mess: number, falls: { at: [number, number]; dir: [number, number]; left: boolean; mid?: [number, number] }[], pace = 1.4) => {
         K.mess = mess; const T = ST.makeSnowTracks();
-        const c: any = { alive: true, bodyYaw: 0, pos: [0, 0, 0], vel: [0, 0, 0], bones: {} };
+        const c: any = standInChar({ alive: true, bodyYaw: 0, pos: [0, 0, 0], vel: [0, 0, 0], bones: {} });
         const G = { player: { char: c }, guards: [], civilians: [], fogOfWar: { hidden: () => false } };
         for (const { at: [x, z], dir: [fx, fz], left, mid } of falls) {
           const down = [x, 0.08, z], toe = [x + fx * 0.17, 0.03, z + fz * 0.17], up = [x - fx * 0.4, 0.4, z - fz * 0.4];

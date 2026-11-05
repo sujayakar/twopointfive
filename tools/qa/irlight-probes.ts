@@ -45,6 +45,7 @@ import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { ROOT, standUp } from './headless.ts';
 import { stage } from './bang-tally.ts';
+import { standInChar } from './standin.ts';
 const { SCENARIOS } = await import(`${ROOT}/src/scene/scenarioList.ts`);
 const { digestGame } = await import(`${ROOT}/src/game/digest.ts`);
 const NVM: any = await import(`${ROOT}/src/game/nvg.ts`);
@@ -193,7 +194,7 @@ export const irlTeam = guarded(async () => {
     let r = 0; for (const d of [4, 3, 2, 1.5]) if (!g.col.segmentBlocked(mine.pos, [c.posX + fx * d, 1.2, c.posZ + fz * d])) { r = d; break; }
     if (!r) { reset(); continue; }
     asked++;
-    const man = (x: number, z: number) => ({ char: { pos: [x, 0, z], bones: {}, id: 9000 + (manId++) }, irradiance: 0, visibility: 0, callsign: 'nobody' });
+    const man = (x: number, z: number) => ({ char: standInChar({ pos: [x, 0, z], bones: {}, id: 9000 + (manId++) }), irradiance: 0, visibility: 0, callsign: 'nobody' });
     const foe = g.guards.find((x: any) => x.team === 'hostile' && x.state !== 'dead');
     L.ir.length = 0; L.ir.push(mine);   // (his own flood alone: the others' must not light the man behind him)
     const ahead = NVM.nvgSight(g, m, man(c.posX + fx * r, c.posZ + fz * r)), behind = NVM.nvgSight(g, m, man(c.posX - fx * 3, c.posZ - fz * 3));
@@ -224,7 +225,7 @@ export const irlTeam = guarded(async () => {
 export const irlOff = guarded(async () => {
   const F = family('irl-off: the switch, and the two stands');
   { const S = await settled(IDS[0], false, true, true); const { g, step } = S; const L = g.engine.lights; let most = 0; for (let f = 0; f < 120; f++) { step(); most = Math.max(most, L.ir.length); }
-    const m = mates(g)[0], o = { char: { pos: [m.char.posX + 2, 0, m.char.posZ], bones: {}, id: 9001 }, irradiance: 0.03, visibility: 0 };
+    const m = mates(g)[0], o = { char: standInChar({ pos: [m.char.posX + 2, 0, m.char.posZ], bones: {}, id: 9001 }), irradiance: 0.03, visibility: 0 };
     const withIt = NVM.nvgDown(g, m) ? NVM.nvgSight(g, m, o) : NVM.tubeVis(g, 0.03), plain = NVM.tubeVis(g, 0.03);
     F.verdict(most === 0 && withIt === plain && ILM.irOnMan(g, o) === 0 && !ILM.irCarried(), 'IRLIGHT.on off: no infrared light anywhere, the tube\'s term as it was', `most infrared lights in 120 frames with Sam's goggles down: ${most} · a man at E 0.03 through the tube: ${f2(withIt)} (nvg.ts alone: ${f2(plain)}) · ${ILM.irLightSummary(g)}`);
     IRLIGHT.on = true; step(2); const on = L.ir.length; IRLIGHT.on = false; step(1);
