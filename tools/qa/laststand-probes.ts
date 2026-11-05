@@ -186,9 +186,9 @@ export async function lastStandFew(): Promise<boolean> {
   return F.done();
 }
 
-/** A MAN WHO HAS DROPPED HIS GUN AND RUN IS NO MAN OF THE RADIO CHECK (laststand.ts alive / fitGd ask runner.ts runnerOwns). Found in a play session on the
+/** A MAN WHO HAS DROPPED HIS GUN AND RUN IS NO MAN OF THE RADIO CHECK (laststand.ts alive / fitGd ask runner.ts `OWN.runner`). Found in a play session on the
  *  block: a green man saw his leader shot, dropped his gun, was cornered in his room — and then LED the last stand's check and closed it counting himself.
- *  Here: the block, eight staged, three left up by hand, one of the three made to run (runner.ts runnerBreak, with the runner and morale raised for the run
+ *  Here: the block, eight staged, three left up by hand, one of the three made to run (runner.ts `OWN.runner`, with the runner and morale raised for the run
  *  on a stand that holds them off). Two fighting men are then the last few: the check goes out, and the man who ran neither calls it, nor is asked for by
  *  name, nor answers, nor is counted. */
 export async function lastStandFled(): Promise<boolean> {

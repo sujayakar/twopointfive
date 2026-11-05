@@ -1,4 +1,4 @@
-// The 'holdglass' family (game/silent.ts silentGlassHolds — the maintainer, 10-08: "for shooting through conference glass it should depend if they're loud or
+// The 'holdglass' family (game/silent.ts roundHeldGlass — the maintainer, 10-08: "for shooting through conference glass it should depend if they're loud or
 // not. accept if loud, hold fire if they're trying to stay quiet"). Headless: the whole Game over the fake device, the room clear's pair on the office with
 // ROUNDS THROUGH GLASS LIVE (glasspen.ts — the harness stands it up off), the two teammates posted in the corridor on 'cover that way' with their guns on one
 // defender the far side of the conference partition (z 10: plain float glass), that defender's state written back every frame so the only thing that differs
