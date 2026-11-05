@@ -1872,8 +1872,7 @@ interleaved and filtered to their quiet minimum, and a row whose p75 sits far ab
   changed either. The camera looks down about 50 degrees, so a face whose normal stands e degrees up mirrors at 2e − 50: a flat top mirrors the empty
   sky, a flat flank the ground at its foot, and what a car is seen to reflect (the horizon: walls, lamps, a man's torch, whose highlight wants a normal
   25 degrees up) is on normals a stack of boxes does not have. So the gain is in the FORM, and the form is the stuff's to say:
-  `rolled` = metres over which a face's shading normal turns toward the face it meets (car paint 0.16), asked in lookSurface before the tilt is held,
-  under the EDGES row (whole at the row's rest, gone as it goes to 0). A flank turns UP into its top and round an upright arris, never down at its foot;
+  `rolled` = metres over which a face's shading normal turns toward the face it meets (car paint 0.16), asked in lookSurface before the tilt is held. A flank turns UP into its top and round an upright arris, never down at its foot;
   a top turns out at every edge; a rail or a slab thinner than the roll is rolled all across; and a roll is taken back wherever it would turn the
   face from the eye that sees it (a flank seen along its length: a normal turned away takes no ray and no highlight). It is the look's own tilt (held
   to LOOK_MAX_TILT, 29 degrees, and marked), so every pass that wants the face itself finds it and the fog of war's test of a top (N.y over 0.5) is as
@@ -1885,7 +1884,9 @@ interleaved and filtered to their quiet minimum, and a row whose p75 sits far ab
   half-round strip on each outer arris, a cut plane under it: true outline, but a cut row a shoulder, coarser crowns under them, digests moved) and
   chose this on the stills; that commit of theirs is kept as a study. `mirrors` = how much of what it faces a stuff's outer coat mirrors head-on (car
   paint 0.08; anything else the 0.04 every coat was), by the word a box says (the scene prelude's `LOOK_MIRRORS`, 32 words' room, read by reflect.wgsl,
-  reflect_p5.wgsl and the compact twin for the rays and the highlights alike), under the FINISH row (`beams.k.z`; 0 on any other page). KNOWN, LEFT:
+  reflect_p5.wgsl and the compact twin for the rays and the highlights alike; `beams.k.z`, 0 on any other page). ONE ROW FOR BOTH, "Pressed panels"
+  (`&look=pressed:0` = the build without either: no arris rolled, every coat a plain one; first sent riding the Edges and the Finish rows, which
+  left nothing to compare it by alone). KNOWN, LEFT:
   ONE RULE OVER A CUT SOLID'S OWN PLANES (turn toward each plane it meets by how near that edge is, the box's six among them) would roll a round, an
   arc and a post too and be one rule where this is two (lookRoll for a box's faces, lookRollUp for upright planes): not built, it wants the cut
   pass's own distances and a test of which plane is really met; the two rolls meet at the arris 33 degrees apart (the cap: each side turns 29 of the 90), so a highlight steps over the arris itself; a stack's INNER seam
