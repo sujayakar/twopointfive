@@ -405,7 +405,7 @@ fn main(@builtin(workgroup_id) wid: vec3u, @builtin(local_invocation_index) lidx
       var i = s; if (tileCull) { i = wgList[s]; }
       let uP = rndPick(cohPick);                                   // the pick's draw for this light — taken for EVERY listed light, before any per-lane early-out, so the tile-shared stream stays in lockstep
       let li = wgLights[i];
-      let ev = evalLightDirect(li, P, N);
+      let ev = evalLightDirectAt(li, P, N, i);
       if (!ev.ok) { continue; }
       let w = luminance(ev.E);
       if (w < 1e-4 * lampFloorK()) { continue; }

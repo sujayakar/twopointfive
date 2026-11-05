@@ -1262,7 +1262,7 @@ fn portalOutside(L: vec3f, ground: vec3f) -> vec3f { if (L.y > 0.0) { return sky
 /// hides it. Looking down: until it is PORTAL_OUT clear of the opening's plane, a leaf's length, or at the ground if that comes first (the ground is
 /// what it looks out on, not a thing in its way)
 fn portalPast(li: Light, Po: vec3f, dir: vec3f, dist: f32) -> f32 {
-  if (frame.shadeCfg.z >= 9.5) { return 0.0; }   // DIAGNOSTIC: the ray stops at the opening
+  if (frame.shadeCfg.z >= 9.5 && frame.shadeCfg.z < 19.5) { return 0.0; }   // DIAGNOSTIC: the ray stops at the opening
   if (dir.y > 0.0) { return PORTAL_SKY; }
   return min(PORTAL_OUT / max(-dot(dir, li.dir), 0.25), max((Po.y - 0.02) / max(-dir.y, 1e-4) - dist, 0.0));
 }
@@ -1565,22 +1565,35 @@ fn evalLight(li: Light, P: vec3f, N: vec3f) -> LightEval {
 /// evalLight as the DIRECT LIGHT'S ESTIMATORS take it (restir, direct, sharp_direct: whoever follows it with shadowSample): a portal is what of its
 /// rectangle shows the outside, added up piece by piece (portalFlux; LIGHT_PORTAL above; a surface whose plane cuts the opening still has the part above it, which a look at the
 /// middle alone would not say; the fog's light classes do not touch a portal: it is the picture's own and carries neither bit). Any other light as it is.
+fn portalOnePoint(li: Light, P: vec3f, N: vec3f) -> LightEval {
+  var r: LightEval; r.ok = false; r.E = vec3f(0.0);
+  let d = li.pos - P; let dist = length(d);
+  if (dist > li.range) { return r; }
+  r.L = d / max(dist, 1e-4); r.dist = vec3f(dist, 0.0, 0.0);
+  let hh = portalHigh(li); let see = portalSeen(li, d, hh);
+  if (!(see.z * see.w > 0.0)) { return r; }
+  let up = vec3f(0.0, 1.0, 0.0); let T = vec3f(li.dir.z, 0.0, -li.dir.x);
+  let dc = d + T * (see.x * li.cosOuter) + up * (see.y * hh);
+  r.E = portalPoint(li, dc, N, portalSoft(li, hh) * see.z * see.w * f32(PORTAL_POINTS), portalGround(li)) * (portalArea(li) * see.z * see.w * lightWindow(dist, li.range)); r.ok = any(r.E > vec3f(0.0));
+  return r;
+}
+/// DIAGNOSTIC: the scoring loops' entry: an opening a wall hides from this cell (the reach mask) as one point (20‥29) or not at all (30‥39)
+fn evalLightDirectAt(li: Light, P: vec3f, N: vec3f, slot: u32) -> LightEval {
+  if (frame.shadeCfg.z >= 19.5 && lightPortal(li) && lightReachLevel(slot, P) == 0u) {
+    if (frame.shadeCfg.z >= 29.5) { var r: LightEval; r.ok = false; r.E = vec3f(0.0); return r; }
+    return portalOnePoint(li, P, N);
+  }
+  return evalLightDirect(li, P, N);
+}
 fn evalLightDirect(li: Light, P: vec3f, N: vec3f) -> LightEval {
   if (!lightPortal(li)) { return evalLight(li, P, N); }
   var r: LightEval; r.ok = false; r.E = vec3f(0.0);
   let d = li.pos - P; let dist = length(d);
   if (dist > li.range) { return r; }
   r.L = d / max(dist, 1e-4); r.dist = vec3f(dist, 0.0, 0.0);
-  let tryZ = frame.shadeCfg.z - select(0.0, 10.0, frame.shadeCfg.z >= 9.5);
+  let tryZ = frame.shadeCfg.z - 10.0 * floor((frame.shadeCfg.z + 0.5) / 10.0);
   if (tryZ >= 2.5) { return r; }   // DIAGNOSTIC: listed, never scored
-  if (tryZ >= 0.5) {               // DIAGNOSTIC: the middle of what shows, one point
-    let hh = portalHigh(li); let see = portalSeen(li, d, hh);
-    if (!(see.z * see.w > 0.0)) { return r; }
-    let up = vec3f(0.0, 1.0, 0.0); let T = vec3f(li.dir.z, 0.0, -li.dir.x);
-    let dc = d + T * (see.x * li.cosOuter) + up * (see.y * hh);
-    r.E = portalPoint(li, dc, N, portalSoft(li, hh) * see.z * see.w * f32(PORTAL_POINTS), portalGround(li)) * (portalArea(li) * see.z * see.w * lightWindow(dist, li.range)); r.ok = any(r.E > vec3f(0.0));
-    return r;
-  }
+  if (tryZ >= 0.5) { return portalOnePoint(li, P, N); }   // DIAGNOSTIC: the middle of what shows, one point
   r.E = portalFlux(li, P, N) * (portalArea(li) * lightWindow(dist, li.range)); r.ok = any(r.E > vec3f(0.0));
   return r;
 }

@@ -114,7 +114,7 @@ fn main(@builtin(workgroup_id) wid: vec3u, @builtin(local_invocation_index) lidx
     for (var s = 0u; s < nIter; s++) {
       var i = s; if (tileCull) { i = wgList[s]; }
       let li = wgLights[i];
-      let ev = evalLightDirect(li, P, N);
+      let ev = evalLightDirectAt(li, P, N, i);
       if (!ev.ok) { continue; }
       let w = luminance(ev.E);
       if (w < 1e-4 * lampFloorK()) { continue; }
