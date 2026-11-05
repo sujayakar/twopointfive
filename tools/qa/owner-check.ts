@@ -89,7 +89,7 @@ await arm('as the stand has them', {});
 if (!process.env.OWNER_SCN || process.env.OWNER_ALLON) await arm('with last stand, buddy, pressure and dig-in up', ALL_ON);
 
 /** the rules' own families, whose checks put a man where the missions never do: the breaker's party, the rescue's walker, a trip for a coffee, the silent and unseen squads, a standoff */
-const FAMILIES = (process.env.OWNER_FAMS ?? 'rescuecheck,powerout,needs,gunhold,silent,unseen,spotted,holdfire,laststand,enemysquads,runner,morale,netquiet').split(',').filter(Boolean);
+const FAMILIES = (process.env.OWNER_FAMS ?? 'rescuecheck,powerout,needs,gunhold,silent,unseen,spotted,holdfire,laststand,enemysquads,runner,morale,netquiet,startle').split(',').filter(Boolean);
 { const dir = mkdtempSync(join(tmpdir(), 'owner-fam-')), reads: Record<string, [number, number]> = {}, held: Record<string, number> = {}, first: string[] = [], lost: string[] = [], reds: string[] = []; let next = 0, bad = 0, ticks = 0;
   const jobs = Number(process.env.OWNER_JOBS ?? 4);
   await Promise.all(Array.from({ length: jobs }, async () => { for (;;) {
