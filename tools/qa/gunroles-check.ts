@@ -28,7 +28,7 @@ const { sideOut } = await import(`${ROOT}/src/game/gunslots.ts`);
 const { WEAPONS, Firearm } = await import(`${ROOT}/src/game/weapons.ts`);
 const { burstTrigger, spawnUnit } = await import(`${ROOT}/src/game/guards.ts`);
 const { fireWeapon } = await import(`${ROOT}/src/game/combat.ts`);
-const { laneHolds } = await import(`${ROOT}/src/game/lanes.ts`);
+const { hasHim, OWN } = await import(`${ROOT}/src/game/owner.ts`);
 const { digestGame, hashDigest } = await import(`${ROOT}/src/game/digest.ts`);
 const { knobRegistry } = await import(`${ROOT}/src/game/knobs.ts`);
 const { applyKnobs, knobsSnapshot } = await import(`${ROOT}/src/game/journal.ts`);
@@ -177,7 +177,7 @@ export async function gunrolesLanes(): Promise<boolean> {
   const post = async (on: boolean, keys: Partial<typeof GUNROLES> = {}) => withSwitch(on, async () => { const R: any = await hushed(() => rig(seed, { nb: { squad: 4 } })); const g = R.game;
     let belt = R.hostiles.find((h: any) => h.weapon.def.id === 'pkm') ?? null; const dealt = !!belt; if (!belt) { belt = R.hostiles[0]; hand(belt, 'pkm'); }   // (off: nobody was dealt one — the same gun is put in a man's hands to ask the rule alone)
     const other = R.hostiles.find((h: any) => h !== belt && h.weapon.def.cls !== 'pistol'), mark = [...belt.char.pos], p0 = GUNROLES_STATS.posts;
-    const holds = laneHolds(g, belt), holdsOther = other ? laneHolds(g, other) : true, keeps = gunKeepsPost(belt);
+    const holds = gunKeepsPost(belt) || hasHim(belt, OWN.lane), holdsOther = other ? gunKeepsPost(other) || hasHim(other, OWN.lane) : true, keeps = gunKeepsPost(belt);
     // a fight next door: rounds on the floor, the squad let go at the door nearest them, twenty seconds
     await hushed(() => { fireWeapon(g, R.ops[0].char, [R.ops[0].char.pos[0] + 3, 1.2, R.ops[0].char.pos[2]], false, { weapon: WEAPONS.aks74u }); });
     let far = 0; for (let i = 0; i < 60 * 20; i++) { R.step(); if (belt.state !== 'dead') far = Math.max(far, Math.hypot(belt.char.pos[0] - mark[0], belt.char.pos[2] - mark[2])); }

@@ -67,7 +67,7 @@ import { spottedHolds, spottedKeen } from './spotted';
 import { coverSeen, coverOp } from './coverfire';
 import { lastStandTick, lastStandStop, lastStandMan, lastStandOwns } from './laststand';
 import { netQuietLook } from './netquiet';
-import { laneHolds, laneWarns, laneThrows } from './lanes';
+import { laneBars, laneThrows, laneKnownAt } from './lanes';
 import { shotEnergy } from './glasspen';
 import { hearPath, airTrans } from './weather';
 import { CLEARLINE, clearLineBlocked } from './clearline';
@@ -909,7 +909,7 @@ export class RoomFight {
     if (squadOwns(g, gd)) return;  // (enemysquads.ts: a squad's man goes to another squad's fight on his squad's word, not his own)
     if (pressOwns(g, D)) return;   // (pressure.ts, off by default: with it on he forms up outside that room with the others instead of walking over by himself)
     if (DIGIN.on && digInStays(g, gd)) return;             // digin.ts: digging in, he holds his room
-    if (laneHolds(g, gd, D.noiseAt) || laneWarns(g, gd, D.noiseAt)) { if (D.rallyAt !== Infinity) D.rallyAt = NaN; return; }   // (lanes.ts: held short of a lane his side knows is covered — he keeps its mouth; and nobody walks over ALONE to a fight at such a lane's guns)
+    if (laneBars(g, gd, D.noiseAt) || laneKnownAt(g, gd, D.noiseAt)) { if (D.rallyAt !== Infinity) D.rallyAt = NaN; return; }   // (lanes.ts: held short of a lane his side knows is covered — he keeps its mouth; and nobody walks over ALONE to a fight at such a lane's guns)
     if (lastStandOwns(g, D)) { D.rallyAt = NaN; return; }   // (laststand.ts, default off: the last stand holds its room — no man of it walks off to a noise next door)
     if (hasHim(gd, OWN.lastMan)) { D.rallyAt = NaN; return; }   // (netquiet.ts, false on its first line with its switch off: the last man up, who knows nobody answers him, does not walk off to a fight next door)
     if (buddyOwns(g, D)) { D.rallyAt = NaN; return; }   // (buddy.ts, off by default: a colleague is on his way to him, or the two have just paired up — he waits, and no rally clock is left running to send him the frame he is let go)

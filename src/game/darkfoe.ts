@@ -44,10 +44,12 @@ import { order } from './squad';
 import { lastStandMan } from './laststand';
 import { digInPhase } from './digin';
 import { squadDefers, squadStaysIn } from './enemysquads';
-import { laneHolds, laneWarns } from './lanes';
 import { pressOwns } from './pressure';
 import { buddyOwns } from './buddy';
 import { powerOutWord } from './powerout';
+import { hasHim, OWN } from './owner';
+import { gunKeepsPost } from './gunroles';
+import { laneKnownAt } from './lanes';
 
 /** the switch and its numbers: off in the module, raised by the page (host/profile.ts pageSwitches; ?nodarkfoe = defenders leave their lights alone and stand
  *  where they were put, as they did) and by the shipped stand; the harness's frozen stand leaves it off (TPS_DARKFOE=1 turns it on). `litAt` is on the meter's
@@ -163,7 +165,7 @@ export function darkFoeSpot(g: Game, D: Def): { spot: Vec3; mate: boolean } | nu
   const K = DARKFOE, gd = D.gd, c = gd.char, nav = g.col.nav, cs = nav.cell, threat = threatOf(g, D), far = v3.distXZ(c.pos, threat) - 0.5;
   const free = (p: Vec3) => { const x = p[0], z = p[2];
     return !nav.isBlocked(x, z) && !nav.isBlocked(x + cs, z) && !nav.isBlocked(x - cs, z) && !nav.isBlocked(x, z + cs) && !nav.isBlocked(x, z - cs)   // (room for his shoulders)
-      && (!fenced(g, gd) || inRoom(g, D, p)) && !laneWarns(g, gd, p) && !(D.room?.entries.some(e => v3.distXZ(p, e.at) < 1.2)) && v3.distXZ(p, threat) >= far   // (his own room, off its doorways, no nearer the trouble than he stands)
+      && (!fenced(g, gd) || inRoom(g, D, p)) && !laneKnownAt(g, gd, p) && !(D.room?.entries.some(e => v3.distXZ(p, e.at) < 1.2)) && v3.distXZ(p, threat) >= far   // (his own room, off its doorways, no nearer the trouble than he stands)
       && !g.guards.some(o => { if (o === gd || o.state === 'dead') return false; const t = stateOf.get(o)?.to; return v3.distXZ(o.char.pos, p) < 0.9 || (!!t && v3.distXZ(t, p) < 0.9); }); };   // (nor where another man stands or was sent)
   for (const edge of K.edge ? [true, false] : [false]) { let tries = 0;   // the dark edge of the light first, then any floor he can see from
     for (let r = 2; r <= K.seekM + 1e-6 && tries < WAY_TRIES; r += 1.5) { const n = Math.max(8, Math.round(r * 2.5));   // rings outward: the first that passes is the nearest
@@ -196,7 +198,7 @@ export function darkFoeKept(g: Game, gd: Guard, D: Def | undefined = g.fight.def
   if (g.time - gd.lastSeenT < DARKFOE.quietSecs || g.time - gd.witness.heard.lastShotT < DARKFOE.calmSecs || gd.sup.v > 0.05) return 'in a fight';
   if (digInPhase(g, gd) !== 'idle') return 'dug in';
   if (squadDefers(g, gd)) return 'his squad\'s';
-  if (laneHolds(g, gd)) return 'holds a lane';
+  if (gunKeepsPost(gd) || hasHim(gd, OWN.lane)) return 'holds a lane';
   const rally = D.rallyAt, press = pressOwns(g, D); D.rallyAt = rally;   // (pressOwns is roomfight's hook and may stop his rally clock as it answers: asked here it changes nothing)
   if (press || buddyOwns(g, D)) return 'the press\'s';
   if (g.rescue.captor() === gd || lastStandMan(g, gd)) return 'the captor / last stand';

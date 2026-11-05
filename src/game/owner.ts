@@ -22,6 +22,7 @@ const RULES = [
   { name: 'morale', why: ['a blast has him ducked or broken'] },
   // WHO MAY MOVE HIM OFF HIS POST
   { name: 'lastMan', why: ['the last man up, at his act'] },
+  { name: 'lane', why: ['held short of a covered lane, or looking round its corner'] },
 ] as const;
 export type OwnerRule = typeof RULES[number]['name'];
 
