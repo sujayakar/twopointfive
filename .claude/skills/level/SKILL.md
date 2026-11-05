@@ -120,6 +120,10 @@ did not.
 - **Flat decals are ordered, and start at the floor.** Crossing decals lie 0.7 mm apart by the exporter's order; a
   drawn-only decal hung off the floor falls when the wall breaks. **seen** "zorder issues on the floor", twice. **check**
   `bun run tools/qa/floor-order-check.ts <name>.json`.
+- **No two faces drawn in one plane.** A wall ends at the NEAR face of the wall it meets, never run through to its far
+  face; a post, a lamp's arm or a thing against a wall stops at it or stands a centimetre off. **seen** "a sorting issue
+  that's flickering to right of the red door". **check** `bun run tools/qa/zfight-check.ts <name>` (a `seen` line is a
+  patch a player can watch flip; a library piece's own are held by `bun run tools/levels/library.ts --check`).
 - **A roof is the kit's ceiling** (`K.ceiling`: flagged `NoPrimary`, so the camera sees the room), at ceiling height if rain
   should stop at it, and no more than four. **seen** "weird to have shed that you can't see through the ceiling"; "rain is
   busted on records office". **check** `roof`; `bun run tools/qa/ownroofs-check.ts`; `rain-reach.ts --map <name>.json`.
@@ -170,12 +174,67 @@ like that."
   edge with no start on it, are added up apart.
   It does not hold `STYLE.md`'s rule for a patch. Whether it reads is **by eye**, at the level's own hour (a midday
   sun shows ground a night hid). Never seen on a GPU here.
+- **A level says how kept it is, once.** `export const KEPT = <0 to 1>` in the generator (the file's `meta.kept`;
+  absent = 0, a place left to the weather, which is how every level was drawn before the word). A look's second
+  file (`<name>-gwot.ts`) takes the word of the level it dresses unless it exports its own; the office, which has
+  no generator of this kind, says it as `level.kept` in its builder. At 1 nothing blotches, no wall has a damp
+  foot or runs under its head, no rubbish gathers where nobody treads, a mud wall's render has not let go, and
+  paint on a wall is whole and its own colour; what USE does stays (a lane where feet go, paint trodden off a
+  floor), and plaster, block and slab get the knocked foot and the brought-in dirt their kept cousins have.
+  A level built on another's floor with no `DRESS_AS` (a squads level on its plain one) says the word itself:
+  `export { KEPT } from './<plain>'`. Say it before saying a wall again as another stuff to make it look clean.
+  `&kept=<n>` on the look page's address is the word for a visit. **What it does not do:** it changes no stuff's
+  own picture. Rust on a rack is drawn into the `metal` stuff itself, so a clean rack is another stuff's word
+  (`steel`, `enamel`, `brushed`), not a kept level. **seen** an office's half-metre wall numerals drew chipped,
+  because every mark was old paint whatever the place; its racks drew rusty because they were said as `metal`.
+  **check** `probes.ts kept`.
 - **Furniture is additions only**, the tail of the generator's lists, group `lived.<room>`, behind `LIVED.on`.
 - **Clear of doors, stacks, marks and lines**: 1.1 m off a door's line and out of its sweep; a 0.9 m lane between a room's
   doors; nothing on or 0.45 m beside an authored point; never across a mark's aim line; never a new wall; nothing in the
   hidden band under a room's north wall. **seen** a crate stack shut the one way round; furnished barracks played harder
   because of one rack. **check** `bun run tools/qa/lived-check.ts <name>`.
 - **Measure a loud level after furnishing it**, and say the seeds: under 144 paired seeds a difference is noise.
+
+### A hand pass (after a level is dressed)
+
+The maintainer: "wear, paths in the ground, different materials can all tell a story for how people walk through the level, its logic, leading
+the player for game play", and of the look he wants: "it's all quite intentionally dressed". A hand pass adds worn paths, paint and fittings to a
+level that already has its rooms, and moves nobody's fight. The office was the first (`docs/agents/levels.md`, "the office is hand-finished").
+
+- **Read the level first, and tie every item to the read.** Three sources, all headless: the level's marks and routes (`map-plan.ts <mission>
+  --png`), where its ways run (`src/scene/ways.ts`), and six seeds of each mission traced on the page's stand with everybody's place twice a
+  second (`TPS_PROFILE=shipped PT_WHERE=0-600 PT_FOES=<their call signs> bun run tools/qa/playthrough.ts --trace <mission>:<seed>`). Count
+  where men fall. **seen** on the office thirteen of thirty-one fell at one side door that nothing in the picture said was there.
+- **Worn paths are data.** `scenarios.walked` rows between names (a door, a route, a room, a named mark), each with a weight beside one lap of a
+  patrol. Use a name that is one thing: **seen** `storage` was a door and a room, so the row took the door; a mark inside the room says which.
+  A room's name is the middle of its floor: **seen** the server room's middle is a bank of racks, so three rows ended at the racks' near face
+  and not where anyone stands; a mark on free floor at the thing says where.
+  Draw the ways after and look: **seen** a row to a machine at the end of a walkway ran right round the building, because a parked car and a
+  bollard shut the walkway on the walk grid. **check** `bun run tools/qa/ways-check.ts`, then `bun run tools/qa/walked-check.ts <level>`: a
+  start or a door your rows now reach leaves its count file with `--write`, and the hand-over says which names left.
+- **No word names a room, and no paint is there for the player.** The maintainer, playing the office's first cut: "i don't like the "lobby"
+  and "conference" labels in the level, pretty lame". A room is shown by what is in it. The test for paint: would THIS building's own people
+  have painted it for themselves? A door's number, a parking bay's number, hatching outside a fire exit pass. A hatched bay on an office
+  floor and a line that leads to a door do not: **seen** both went out of the office with the names. What leads a player is a THING the room
+  would have (a threshold, a mat, a duct), and that is a pass of its own. And his rule for size: "let's avoid large markings (e.g. numbers
+  or room names) where they don't seem realistic". Would this kind of place paint it, at this size, for its own people? A yard paints bays
+  and lines; an office paints almost nothing. Marks are seasoning; the surface carries the look.
+- **Paint on a surface that is there is a marking on that box** (`markingDefaults.ts` `stencilMarks`, `hazardMarks`, the painter's tins
+  `TIN`): four a box, 1.6 m a bitmap. The office kit has the tools: `boxOn(face, x, y, z)` finds the box by where its face is, never by its
+  number; `stencilS` / `stencilTop` lay a word with its middle at a place of the world; `keepClear` hatches a bay on a floor; `bandRuns` paints
+  a band along a wall door to door with names on it; `conduitRuns` lays conduit in lengths. Centre on the box: a doorway is not the middle of
+  its slot. Hand every paint a colour array of its own: **seen** a band took another paint's finish because both were made from one array.
+- **A new thing is a kit piece, drawn only, in the lived tier.** The office kit's `band`, `vent`, `conduit` and `pipe` lie on a wall's face
+  and are drawn only unless told they are solid; a band of paint is the wall's own stuff in another colour (`saidAs`). Groups `lived.<room>`
+  at the generator's tail, so the frozen stand's level is the level it was. Lay conduit in lengths of under two metres: a breach takes what
+  hangs over the hole and leaves the rest. A band from the floor stays across a breach, as every painted dado in the game does today.
+  **check** `lived-check` (it prints "0 solid"), `wallfurn-check`, `marksight-check`, `second-way-check` and `zfight-check <level>` (no more
+  seen than before) on both stands, and the three play-through reads against the step before: none moves.
+- **Put it where the play camera reads, and draw your stills from that camera.** It opens at yaw -22 and pitch 55 degrees and turns with him.
+  At rest it shows floors, tops, south faces and west faces, and a wall hides about two metres of floor behind it. **seen** the office's
+  first stills were pinned at yaw 0 and 58: paint on a corridor's floor was all but hidden, a bay behind a parked van was never seen, and
+  one finding (a door "the camera cannot see") was simply wrong from the game's own camera. **By eye**, on a real card, at the mission's own
+  hour, panel shut, the game's AI held still. At night a mark shows only inside a lamp's pool, and the look's worn lanes do not show at all.
 
 ## 5. Light, hour, weather
 
@@ -395,6 +454,11 @@ stays dark. These are guidelines, not misses like the rest of this page: each sa
   probes, the squad deal). A new level is in none of them until added: `grep -ln "depot" tools/qa/*.ts` shows which.
 - **Both stands, every check.** Frozen is the harness default; shipped is the page. A tool's own "as shipped" is not the
   shipped stand.
+- **The sound replays saved on the level.** `public/assets/replays` holds recorded runs the sounds page plays: the office
+  has four (office-loud, chairs, reloads, doors), Mousehole one (wall-charge). A step that moves the level's fingerprint
+  or how it plays parts them: **seen** a hit seeded another way parted the loud office at its first firefight. **check**
+  `PORT=<dev server> node tools/qa/sound-tapes.cjs --check` (a real page, minutes a replay). Red: record again with the
+  same tool, and say in the hand-over which were recorded and what each now plays.
 - **Boot the real page once** on the mission's link (`.claude/skills/verify`), no console errors. No GPU in the cloud: say
   "never seen on a GPU" of what was not, and name what nobody has played.
 - **Write it up** at the foot of `docs/agents/missions.md` or `levels.md`: the sentence, the hand placement, the checks and

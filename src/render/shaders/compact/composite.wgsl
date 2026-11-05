@@ -524,6 +524,10 @@ fn snowGlow(sPix: vec2i, P: vec3f, N: vec3f, z: f32, EdS: vec3f, EdB: vec3f) -> 
   if (S.x <= 0.0 && S.y <= 0.0) { return vec3f(0.0); }   // no light of either class reaches the stencil (deep shade, under a roof): vis below is exactly 0 — the loop is not walked
   var U = vec2f(0.0); var Q = vec2f(0.0); var gS = vec3f(0.0); var gB = vec3f(0.0);
   for (var i = 0u; i < min(frame.numLights, 64u); i++) {
+    // THE LAMP'S OWN RANGE FIRST: evalLight's first exit (common.wgsl evalLightRaw, `dist > li.range`), in its own arithmetic and from the lamp's own three fields,
+    // before the reach table is read. Most of a level's lamps are out of range of a snow pixel, and the table's read was what a lamp cost here that gave nothing
+    // (timed 11-05: docs/agents/weather.md, the glow's bullet). The same lamps pass as before: one this line drops, evalLight was about to
+    if ((lights[i].kind & 255u) != 2u) { let dq = lights[i].pos - P; if (sqrt(dot(dq, dq)) > lights[i].range) { continue; } }   // (255: lightKind's own mask; 2 = directional, which has no range)
     if (!lightReaches(i, P)) { continue; }
     let li = lights[i];
     let ev = evalLight(li, P, vec3f(0.0));                 // square-on irradiance (no receiver cosine)
@@ -625,13 +629,16 @@ const POWDER_TOP: f32 = 0.9;   // m: no powder stands higher than this (the call
 // THREADS, a hand wide and a stride long, lying along the wind. So the field says WHERE the powder is, HOW MUCH and WHICH WAY the air runs there (its own
 // velocity, the b and a it carries), and the threads are drawn inside it: a grain a hand across, averaged along the air's way at this spot and slid along at
 // the air's speed there. A thread bends where the air bends and stops where the field has nothing: nothing here has a wind of its own.
-const POWDER_GAIN: f32 = 3.0;       // × the field's column as it is drawn
-const POWDER_THIN: f32 = 0.12;      // the share of the column that lies between threads …
-const POWDER_THREAD: f32 = 5.0;     // … and in a thread's middle (a sixth of the ground is under a thread, so the column's mean is about kept)
-const POWDER_GRAIN: f32 = 0.07;     // m: a thread's width
-const POWDER_REACH: f32 = 0.042;    // m: the step along the air between the reads a thread is averaged over. UNDER a grain, or the reads fall on
-                                    // grains of their own and a thread is drawn as a row of beads (seen: fish scales over a whole road at 0.17 m and four reads)
-const POWDER_READS: i32 = 10;       // reads along the air: a thread is about 0.45 m long by a grain wide
+const POWDER_GAIN: f32 = 1.75;      // × the field's column as it is drawn (these four are the maintainer's own, 11-05: render/powderField.ts POWDER_DRAW)
+const POWDER_THIN: f32 = 0.08;      // the share of the column that lies between threads …
+const POWDER_THREAD: f32 = 1.2;     // … and in a thread's middle (a sixth of the ground is under a thread, so about a quarter of the column's mean is drawn: at 5.0 the mean was kept and a thread's middle was four times this)
+const POWDER_GRAIN: f32 = 0.03;     // m: a thread's width
+const POWDER_STEP: f32 = 0.6;       // GRAINS between the reads a thread is averaged over along the air. UNDER 1, or the reads fall on grains of their own
+                                    // and a thread is drawn as a row of beads (seen: fish scales over a whole road at 0.17 m and four reads). It was
+                                    // metres (0.042) divided by the grain's CONST while the grain drawn was the panel's row: so a narrower grain kept
+                                    // 0.6 on the panel, and making a tuned width the const would have made it 1.4. Said in grains, it is the same picture
+                                    // at any width, on the panel or here
+const POWDER_READS: i32 = 10;       // reads along the air: a thread is 6 grains long by one wide (0.18 m at the grain above)
 const POWDER_PUFF: f32 = 0.3;       // m: the height of the sun's second read (a walker's kick is thrown to 0.3 m, a sprinter's to 0.46)
 const POWDER_TURN: f32 = 1.6;       // s: the threads are drawn twice, each slid for this long and then begun again, cross-faded (a pattern slid for ever on air that turns is torn apart)
 // THE LOOK PANEL'S SNOW WISPS ROWS (frame.sideCfg.w, a byte a row; render/powderField.ts POWDER_DRAW): 0 = the const above, so the picture is as it was until a row is moved
@@ -645,7 +652,7 @@ fn powderNoise(p: vec2f) -> f32 {
 /** how much of a thread lies over ground point q (0‥1), in air that runs at v (m/s) there. In still air there is no thread to draw
  *  (the reads fall on one spot, and one read of the grain is the grain's own square cells: seen in a yard's lee), so the powder there is even */
 fn powderThreads(q: vec2f, v: vec2f) -> f32 {
-  let sp = length(v); let run = smoothstep(0.05, 0.3, sp); let d = v * (POWDER_REACH * run / (max(sp, 1e-3) * POWDER_GRAIN));
+  let sp = length(v); let run = smoothstep(0.05, 0.3, sp); let d = v * (POWDER_STEP * run / max(sp, 1e-3));
   var acc = 0.0; var w2 = 0.0;
   for (var i = 0; i < 2; i++) {
     let ph = fract(frame.time / POWDER_TURN + 0.5 * f32(i)); let w = 1.0 - abs(2.0 * ph - 1.0);

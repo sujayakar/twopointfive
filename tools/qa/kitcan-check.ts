@@ -8,6 +8,7 @@
 // ever drawn on the shotgun; none of it writes the card or the words the rest of the game reads (kitWords); and with the switch off the tile and the roster
 // are the build before. It sets the switches it needs itself, so it asks the same on either stand. Looks at no picture: never seen on a GPU.
 import { ROOT } from './headless.ts';
+import { asProbe } from './holds.ts';   // (run alone, each part runs as the probe the runner calls it by: one stand both ways)
 import { withDom, El } from './scenario-picker-probes.ts';
 
 const K = await import(`${ROOT}/src/game/kit.ts`);
@@ -106,4 +107,4 @@ export async function kitcanCheck(): Promise<boolean> {
   console.log(`\nkitcan-check (${STAND} stand): ${ok ? 'ALL PASS' : 'FAILED'}`);
   return ok;
 }
-if (import.meta.main) { const ok = await kitcanCheck(); process.exit(ok ? 0 : 1); }
+if (import.meta.main) { const ok = await asProbe('kitcan-tiles', kitcanCheck); process.exit(ok ? 0 : 1); }

@@ -21,7 +21,7 @@
 //     has a clear line to, before the wall round them is judged.
 //   • Eyes, feet, sound, a thrown thing and a gun held against one: a standing bar is what it was.
 //
-// DETERMINISTIC: every choice hashes the bar's index and where it was struck (debris.ts hash01) — never Math.random, no wall clock. RESET with the level
+// DETERMINISTIC: every choice hashes the bar's own word (glass.ts boxSeed: what the box is, never its place in the level's list) and where it was struck (debris.ts hash01) — never Math.random, no wall clock. RESET with the level
 // (Game.resetLevelState → resetBars: every bar stands again). CHECKPOINTS carry which bars are gone (savestate.ts files the slice `bars` beside the walls'
 // and re-applies it after the restart, silently; the pieces on the floor are not filed — no debris is); nothing broken = no slice, the file byte for byte
 // what it was. The switch rides in session journals (knobs.ts JOURNAL_KNOBS; a recording from before the table replays with it off — journal.ts applyKnobs).
@@ -30,6 +30,7 @@ import { Vec3, v3, lerp, clamp } from '../math/vec';
 import { Box, BoxFlag, copyBox } from '../scene/boxes';
 import { gpuFx } from './particleFx';
 import { hash01 } from './debris';
+import { boxSeed } from './glass';   // (read inside breakBar only)
 import { FURN_BREAK, breakClassOf } from './furnblast';   // (read inside breakBar only: src/game is one import cycle)
 import { NOBODY_ID } from './consts';
 import type { Game } from './game';
@@ -112,8 +113,8 @@ function breakBar(g: Game, index: number, at: Vec3, dir: Vec3, who: number, caus
   changed(g, b);
   WINBARS_STATS.broken++; if (cause === 'round') WINBARS_STATS.byRound++; else WINBARS_STATS.byBlast++;
   // the pieces: the bar cut across into uneven lengths, the struck one thrown hardest
-  const K = WINBARS, n = Math.max(1, Math.round(K.pieces)), y0 = b.c[1] - b.h[1], H = 2 * b.h[1], cls = breakClassOf(b.albedo), land = FURN_BREAK[cls].land;
-  const seed = index * 977 + 131 + Math.floor(clamp((at[1] - y0) / H, 0, 1) * 16) * 31, R = (k: number) => hash01((seed + k) * 2654435761);
+  const K = WINBARS, n = Math.max(1, Math.round(K.pieces)), y0 = b.c[1] - b.h[1], H = 2 * b.h[1], cls = breakClassOf(b), land = FURN_BREAK[cls].land;
+  const seed = (boxSeed(b) + 131 + Math.floor(clamp((at[1] - y0) / H, 0, 1) * 16) * 31) >>> 0, R = (k: number) => hash01(Math.imul(seed + k, 2654435761));   // (the bar's own word, not its place in the level's list: glass.ts boxSeed)
   const cuts = [0]; for (let j = 1; j < n; j++) cuts.push((j + (R(10 + j) - 0.5) * K.uneven) / n); cuts.push(1);
   let dx = dir[0], dz = dir[2]; { const l = Math.hypot(dx, dz); if (l < 0.2) { const c = Math.cos(b.yaw), s = Math.sin(b.yaw); [dx, dz] = b.h[0] > b.h[2] ? [c, -s] : [s, c]; } else { dx /= l; dz /= l; } }   // (a round straight down a bar still sends it out through its wall)
   const P = gpuFx(g), hitU = clamp((at[1] - y0) / H, 0, 1); let k = 100;

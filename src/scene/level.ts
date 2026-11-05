@@ -143,7 +143,7 @@ export interface VentDef { name: string; pos: Vec3; dir: Vec3; speed: number; sp
 export type PropKind = 'chair' | 'cardboard' | 'bin' | 'plant';
 /** One box of a loose prop, in the prop's local frame: `off` from the prop origin (on the floor, y up), `yaw` relative to the prop's heading (frameAt / Box.yaw convention);
  *  `marks` = the markings on the part's faces (scene/markings.ts — the tape and glyphs on a carton), carried onto the box props.ts makes of it. */
-export interface PropPart { off: Vec3; h: Vec3; yaw: number; albedo: Vec3; marks?: MarkingDef[]; /** what the part is made of, where its paint's name does not say (Box.stuff) */ stuff?: import('./boxes').BoxStuff; }
+export interface PropPart { off: Vec3; h: Vec3; yaw: number; albedo: Vec3; marks?: MarkingDef[]; /** what the part is made of, where its paint's name does not say (Box.stuff) */ stuff?: import('./boxes').BoxStuff; /** what the part does, as Box.does (scene/materials.ts) */ does?: import('./boxes').DoesWord; }
 /** Loose furniture handed to the physics layer (src/game/props.ts) instead of `boxes`: a rigid group of parts standing on the floor at (x, z) with
  *  heading `yaw`, its collision footprint (half extents of the local XZ rectangle about the origin), overall height and mass (kg). */
 export interface PropDef { kind: PropKind; name: string; x: number; z: number; yaw: number; parts: PropPart[]; half: [number, number]; height: number; mass: number; }
@@ -189,6 +189,8 @@ export interface Level {
   breach?: BreachPlan;
   /** the base texel (m) the level's marking bitmaps were generated for (scene/markings.ts; absent = MARKING_TEXEL 0.025) — main.ts hands it to the engine */
   markTexel?: number;
+  /** how kept the place is, 0‥1 (the file's meta.kept; absent = 0): main.ts hands it to the look (scene/look.ts lookKeptOf) */
+  kept?: number;
   /** The one mission thread's geometry (game.ts Mission): the room to reach (floor rectangle) and the door the HUD points at for it, the rack whose drive
    *  gets pulled (its index n names the switchables `rack${n}_leds` / `rack${n}_glow` that go dark; `front` is the marker point on its LED face), the door
    *  to leave by and the x past which you are outside it. */
@@ -221,7 +223,7 @@ export function buildBundledLevel(): Level {
   return withOfficeScript(loadLevel(OFFICE_DATA));
 }
 /** attach what the office keeps OUTSIDE its level file to a Level of the office family (the bundled file, relief, a texel variant off the dev server, the editor's document) —
- *  loadLevel itself stays pure data → Level. Today that is its scenario data alone: the office's level script (the night and day showcases) was removed, so the office has no
+ *  loadLevel itself stays pure data → Level. Today that is its scenario data (its named marks are in its file, like any level's: LevelData.marks): the office's level script (the night and day showcases) was removed, so the office has no
  *  script and the Director no program (the name stays: every tool that loads a level file calls this). */
 export function withOfficeScript(level: Level): Level { return withScenarios(level, OFFICE_SCENARIOS); }
 /** attach a level SCRIPT to a Level. The script is CODE, not level data: it rides on the Level as a non-enumerable property, so everything that walks the Level's keys as data

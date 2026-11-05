@@ -128,9 +128,7 @@ import { RESCUECHECK } from './rescuecheck';
 import { RESCUEEND } from './rescueend';
 import { SNATCHOUT } from './snatchout';
 import { RESCUEFLUSH } from './rescueflush';
-import { EXACT } from '../math/exact';
 import { POSEMATH } from '../anim/skeleton';
-import { rustRows, rustRow } from '../sim/sim';
 import { SENSE } from './sense';
 import { CMDCHECK } from './cmd';
 import { DOZE } from './doze';
@@ -160,6 +158,7 @@ import { LIGHTSWITCH } from './lightswitch';
 import { CARLAMPS } from './carlamps';
 import { HITSTUFF } from './particleFx';
 import { MARKCUT, MARKSIT } from '../render/decals';
+import { COATFINISH, SOLIDGLASS } from '../scene/stuff';
 import { CLEANRESTART } from './cleanrestart';
 import { FIRELINE } from './fireline';
 import { SAVETIMELINE } from './savestate';
@@ -477,6 +476,8 @@ export function applyKnobs(g: Game, k: KnobsSnap): void {
   if (!k.tables.CARLAMPS) CARLAMPS.on = false;   // (a file from before a vehicle's lamps were light targets: its floor has none)
   if (!k.tables.MARKCUT) MARKCUT.on = false;   // (a file with no table for the rule that a mark on a cut face lies where the round met it: its marks there are pulled to the plain box's face, as before the rule. A picture only — and that is also a tape of the hours on 11-05 when the page raised the rule by hand with no table to record it)
   if (!k.tables.MARKSIT) MARKSIT.on = false;   // (a file with no table for the word for marks that sit in the surface: its blast marks are drawn as before the rule. A picture only — and that is also a tape of 11-04 and 11-05, when the page raised the word by hand with no table to record it)
+  if (!k.tables.COATFINISH) COATFINISH.on = false;   // (a file with no table for a named coat's finish: its vehicles' bodies have the finish their level files give them, as before the rule. A picture only)
+  if (!k.tables.SOLIDGLASS) SOLIDGLASS.on = false;   // (a file with no table for solid glass's dark: its vehicles' windows are the grey their level files give them, as before the rule. A picture only)
   if (!k.tables.HITSTUFF) HITSTUFF.on = false;   // (a file from before a round read what a thing says it is made of: every hit in it was read by the paint's colour)
   if (!k.tables.CLEANRESTART) CLEANRESTART.on = false;   // (a file from before a restart gave a clean level: its restarts mended the mains by the breaker's own road and kept the last try's lines and clocks)
   if (!k.tables.THROWBACK) THROWBACK.on = false;   // (a file from before a can in the wind-up went back on the belt: its cans froze through a kick or a pick and left his hand after)
@@ -552,9 +553,7 @@ export function applyKnobs(g: Game, k: KnobsSnap): void {
   if ((k.tables.SENSE as Partial<typeof SENSE> | undefined)?.bounce === undefined) SENSE.bounce = false;   // (…and one from before the light model: the estimate was the direct light alone)
   if ((k.tables.SENSE as Partial<typeof SENSE> | undefined)?.moon === undefined) SENSE.moon = false;   // (…and one from before the estimate had the moon: a night's sky lit nobody)
   if ((k.tables.SENSE as Partial<typeof SENSE> | undefined)?.drift === undefined) SENSE.drift = false;   // (…and one from before the grid's smoke drifted: still air out of doors)
-  if (!k.tables.EXACT) EXACT.on = false;   // (a file from before the game's own maths: it was recorded on the engine's sin and cos, and replays on them)
   if (!k.tables.POSEMATH) POSEMATH.singles = false;   // (a file from before a pose's arithmetic could be in singles: it was recorded in doubles, and replays in them — anim/skeleton.ts)
-  { const t = k.tables.RUST as Record<string, unknown> | undefined; for (const r of rustRows()) if (t?.[r] === undefined) rustRow(r, false); }   // (a file from before a system could run in the Rust module: it ran in TypeScript — the same game either way, and the file is replayed as it was made)
   if (!k.tables.SNATCHOUT) SNATCHOUT.on = false;   // (a file from before a snatch ended with the man in the van: the house taken with him in hand ended it)
   if (!k.tables.RESCUEEND) RESCUEEND.on = false;   // (a file from before a rescue was won only by the hostages led out or the floor cleared: the room held fifteen seconds ended it)
   if (typeof (k.tables.RESCUEFLUSH as { lanesChoose?: boolean } | undefined)?.lanesChoose !== 'boolean') RESCUEFLUSH.lanesChoose = false;   // (…and one from before the covered lanes only chose a man's door: a man they warned off was kept back)

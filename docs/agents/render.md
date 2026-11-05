@@ -1854,6 +1854,63 @@ interleaved and filtered to their quiet minimum, and a row whose p75 sits far ab
   static, door or prop was (a held thing, a thrown one) costs no frame: it draws plain for the second or so its map takes. The `even` row is read once, at the
   making of the arrays. They take the `kept` rule BY NAME: a stuff added later says in `look.wgsl` how it is laid and whether the weather touches it. `lookmaps-check.ts` holds the names against the
   shader's, the float, the slots and the block. Drawn as tiles (rebuild pictures); a software boot; never seen on a GPU.
+  - **The maps are made on workers (2026-11-05; `render/lookWorkers.ts`, `lookWorkerMain.ts`, `lookWorkerSource.ts`, `lookWorkerText.ts`; `gbuffer.ts makeLayers`)**.
+    WHY: the boot waits for the level's maps beside the pipelines (`main.ts`, one `Promise.all`), and a level names about twenty: the office's 21 are 5.9 s of
+    one thread's arithmetic under bun on the engine's maths, more on the game's own. Behind half a minute of shader compiles nobody saw it. On a SECOND load in
+    one browser, with the shaders cached, the maps were the last thing the start card waited for: on a rented cloud box (an NVIDIA A10G, 24 cores) every pipeline
+    group was in by 2.5 to 8.5 s and the maps at 10 to 14 s (`__boot.spans.pipelines_materials`).
+    HOW: the layers do not depend on each other. `makeLayers` asks a `LookPool` for the whole batch at once and takes the layers in the batch's own order, so
+    the slots, `lookMade` and the moment a stuff is pointed at its slot are what they were. A worker is started from TEXT: `lookWorkerMain.ts` (the generator,
+    `math/exact.ts`, the few lines that answer) bundled by itself by a bundle-time macro (`lookWorkerSource.ts` runs this bun's `build` as a command, the way
+    bun gives a macro; `lookWorkerText.ts` holds the string and is imported only when a worker is about to start, so a tool under bun that starts none never
+    bundles it). So every build carries the worker (the dev server, `dist`, the one-file page) with no second entry point and no file beside the page. The
+    text is a PLAIN SCRIPT and the worker a classic one: a module worker started from a blob is refused on a page opened from disk, which is how the one-file
+    page is opened. One core is left to the page, eight workers at the most (`LOOK_WORKERS.most`), and they are stopped when the batch is in.
+    THE SAME BYTES, AND THE MATHS: a worker starts on the engine's `Math`; the page computes on the game's own (`EXACT`). Two of the thirty layers come out
+    different in a byte here and there between the two, so each ask carries which maths the asking thread is on and the worker puts itself on it first.
+    WHERE THERE IS NO WORKER (none in this place, one that will not start, a layer a worker failed on) the layer is made on the page's own thread in slices,
+    as above: the workers are only ever a faster way to the same maps. A worker that holds a layer for `LOOK_WORKERS.waitMs` (30 s; a layer is under a second
+    of work) is taken for dead, so a boot never waits on one that will not answer. A place where a worker failed AS A WORKER (would not start, did not
+    answer) says so once on the console ("look maps: made on the page's own thread from here on") and starts no more; THE TAB REMEMBERS it (sessionStorage
+    `twopointsix.lookWorkersGaveUp`), because a mission is a page load and a place whose workers start and never answer would wait the 30 s at every one; a layer the
+    generator itself throws on is refused alone. A macro that cannot bundle hands over an empty text (no workers), never a failed build.
+    `__engine.gbuffer.lookBy` counts the layers made each way.
+    THE SMALLER SIZES COME FROM THE WORKER TOO (11-05, a step after the first): a worker hands back each map with its nine smaller sizes made (the
+    same `lookMip`, each from the size above, down to one texel), so a layer from a worker costs the page's thread its twenty texture writes and nothing
+    else. WHY: a batch asked for IN PLAY (`needLook(LOOK_SLICE.play)`, when a blast shows a stuff no box had been) goes through the same pool, and the
+    page making the smaller sizes itself was 5 to 12 ms of one frame a layer. A layer made on the page's own thread makes its sizes there, as before.
+    `lookworkers-check` holds every smaller size a worker hands back to the page's own, byte for byte (30 layers, both maths). NOT TIMED on a GPU: on
+    the office no blast makes a map in play (nine wall charges profiled on the cloud box: none), so there was nothing there to time it on.
+    **Switch**: `LOOK_WORKERS.on`: ON in the page (`?lookworkers=0` = every layer on the page's own thread, as it was), OFF in the module, so the headless
+    harness makes its maps as it did on either stand. Not a rule of the game: NO REGISTRY ROW, no journal key, no `FROZEN_HOLDS` row (the maps are the same
+    bytes either way, and nothing of the simulation reads them). So `knobs-check` does not hold it (it reads `src/game`'s tables) and a recording cannot
+    carry it; what holds it is its own check.
+    **Check**: `bun run tools/qa/lookworkers-check.ts` (`probes.ts lookworkers`, family `render`), both stands: the worker's text is whole and a plain
+    script (nothing to fetch, no import); the rule is down in the module and no pool opens where there is no Worker; ALL THIRTY LAYERS made on workers are
+    the layers made here to the byte, on the engine's maths and on the game's own; one layer the generator throws on is refused alone, workers that cannot
+    start are given up on (said once, none started after, and none at the tab's next page load), and one that never answers is given up on after its wait; THE PAGE'S OWN LOOP (`makeLayers`,
+    over a counting device) makes the same layers in the same order into the same slots as the same writes of the same bytes with the workers down, up,
+    and up where there is no Worker. `LOOKWORKERS_BREAK=1` (the workers answer with the next layer) must fail, on the bytes line alone.
+    `node tools/qa/lookworkers-page.cjs` does the bytes in headless Chromium, on both maths, served and with the bundle OPENED FROM DISK: a plain worker
+    does start there from the bundled text.
+    MEASURED (a rented cloud box, an NVIDIA A10G through Vulkan under headless Chrome, 24 cores so 8 workers; the office's look page on High, 21 layers;
+    relative only, never a player's seconds; the page loaded once cold, then again and again in a frame of itself with the shaders cached, the workers off
+    and on in turn, four boxes on the joined build of 11-05 with the lattice tables in): THE MAPS take 2.2 to 2.8 s on the workers in every one of 10
+    warm loads, and 6.5 to 10.7 s on the page's own thread in every one of 10 (`lookFillMs`; `lookBy` 21 / 0 and 0 / 21, the same 21 names in the same
+    order). THE WARM BOOT without workers was 8.3 to 12.7 s in all 10. With them it was 3.3 to 4.2 s in the 4 loads where nothing else was late, and
+    6.8 to 14.0 s in the other 6, where something else was: one pipeline group (`passes` or `particles`) took 7 to 10 s to come back although the shaders
+    were cached, or the page's own script took 3.6 s to arrive. Both happen without the workers too (a slow group in 4 of the 10 loads without them, 5 of
+    the 10 with; the late script on the second warm load of a box whichever way that load made its maps). The script is late before a worker exists, and
+    the slow group comes back 4 to 7 s after the workers have stopped, so neither is the workers'; both were hidden under the maps before. WHY A CACHED PIPELINE GROUP IS SOMETIMES SLOW IS NOT KNOWN and is now the warm boot's longest
+    wait on that box. Before the lattice tables, on the first cut of this, 8 warm loads without workers were 10.9 to 14.8 s and 8 with them 3.5 to 3.7 s
+    (6) and 7.8, 8.2 s (2, a slow `passes`). THE COLD BOOT does not move: 27.5 to 29.4 s either way, the pipelines being the wait (the maps 6.0 to
+    6.3 s on workers while the compiles hold the cores). THE PICTURE: three stills held at 40 s of game time, the workers off twice and on once: the
+    workers' still differs from a base still by less than the two bases differ from each other (mean a channel 1.02 and 1.03 of 255 against 1.13).
+    Under bun on four cores, three workers: 30 layers in 2.4 to 2.6 s against 7.2 to 8.4 s here; in headless Chromium 2.1 to 2.4 s against 7.6 to 14.0 s.
+    NOT SEEN: any Apple chip, Windows, a player's own second visit (a fresh tab, not a frame of a page still open; whether his browser keeps its
+    compiled shaders between loads of the address he plays at decides what he feels of this, and nobody has looked), the one-file page on a GPU (its
+    worker text is in the file and a plain worker starts from a bundle opened from disk in headless Chromium, which has no adapter to draw with). What a
+    machine with four cores gains is three workers' worth; one with two cores gets one worker and little.
 - **CAR PAINT IS A STUFF; ITS SHINE IS THE BOX'S** (11-04; `render/lookTex.ts carpaint`, stuff 16, `look.wgsl LOOK_CARPAINT`; the look's page only). The
   maintainer, of the rounded cars in the dressed showroom: "i think the materials could use some work though. we already have some metal shaders right? maybe
   we want a car paint material too?". A truck's body drew as old `paint` (chips and rust specks all over), a saloon's as nothing. The layer is an enamel
@@ -1864,6 +1921,111 @@ interleaved and filtered to their quiet minimum, and a row whose p75 sits far ab
   (a cost to measure before a car park of them is a default). Agreed words, proposed to the cars part: body `carpaint`, roughness about 0.2, not metal (a
   metallic paint: metal, 0.3); glass plain, 0.05 to 0.1; bumpers and arch trim `plastic`, 0.5; chrome and hubcaps `steel` with metal, 0.25; tyres plain, 0.9.
   It takes the `kept` rule (no damp foot, no bleached head). Drawn as a tile; never seen on a page or a GPU.
+- **THE STATICS ARE DRAWN FROM THE TOP DOWN, AND NO FACE CHANGES HANDS** (11-05; every page; no switch and no second path: it is the order of one
+  draw). The g-buffer drew the static boxes in the list's order with the depth test at "less", so a ground slab laid first under a whole level (the
+  office kit's box 0, 40 by 28 m) was shaded over the whole screen and then drawn over by the floor. Free while that slab was plain; once car parks said
+  tarmac the pass cost a third more under the look, indoors as much as outside (the performance goal's timing). `scene/boxes.ts BoxWorld` now keeps a
+  rank a static (`drawRank`, made by `rankStatics`) and lays the drawn plain statics out by it each upload. No shader text, pipeline or buffer changes.
+  THE ORDER: tops falling, the list's own order between equal tops, EXCEPT that a box waits for every earlier box it shares a face's plane with.
+  Where two faces lie in one plane the depth test keeps the first drawn, and that was always the earlier box: on the white roof an orange plinth,
+  written before the piers, runs across their feet; a look's ground sheets lie a fiftieth of a millimetre apart and show in the order written. Tops
+  falling alone handed thousands of such patches to the taller box (124 of a centimetre or more in different paint over the 59 files). So two faces that
+  look the same way, lie within a quarter of a millimetre along their normal (`TIE_PLANE`: what the depth buffer cannot tell apart at the camera's
+  farthest) and whose bounds lie over one another by more than half a millimetre (`TIE_PATCH`) keep the list's order: the later box takes the turn of
+  the latest box it waits for. ONE RULE FOR EVERY BOX: a face is its plane and its bounds in the world, whatever the turn or tilt; no frames, no bins.
+  A cutaway box is asked as it is drawn. Bounds of a turned face are wider than the face, which only makes a box wait that need not.
+  COUNTED over all 59 level files on the shipped stand by the check's own finder (`DRAWORDER_ALL=1`): 13,036 shared faces among 32,872 drawn statics,
+  none won by the later box, and on every level the ground is drawn after every static that stands above it.
+  WHAT IT KEEPS OF THE SAVING: counting the fragments a depth test lets through on a CPU, through the game's camera (a proxy, not a timing), the order
+  with waits shades 3 to 13 percent more than tops falling alone and still about 60 percent less than the list's order (office 2.70 M, 0.96 M, 1.08 M).
+  WHEN IT IS MADE: when a static's place, size, turn, or whether and how far it is drawn changes, or the list's length does; never for paint, a wet
+  floor's gloss or any other flag. 1.5 to 3 ms for 800 to 1,350 statics under bun; none in fifteen seconds of the office's shift. A wall coming down
+  makes it again on the frames its pieces are added.
+  TIMED on a rented NVIDIA A10 (relative; the office under the look, High) for the PLAIN tops-falling order, an earlier commit, against its parent on
+  like boxes: the g-buffer where the page frames Sam indoors 0.89 ms to 0.34, over the car park 0.91 to 0.64, every other pass and the sum the same;
+  Medium indoors 0.72 to 0.28. The order with waits is to be timed the same way: see the merge's book for its numbers.
+  NOT KNOWN: what an Apple GPU gains (it hides covered fragments by itself, so likely little). Whether a GPU gives two faces in one plane the same depth
+  at every pixel: where it does not the pair fights whatever the order, as before. The dynamics are still drawn after the floor they stand on, and a
+  plain box never waits for a cut one (the cut pass is drawn after). The check is `draworder` (family render; `DRAWORDER_BREAK=1` fails two lines;
+  `DRAWORDER_ALL=1` asks all 59 levels): shared faces found a second way, every face against every other with the patch cut out exactly, any turn or
+  tilt, and every reason to make the order again asked against an order made fresh.
+- **A LOOK MAP'S LATTICES ARE HASHED ONCE A LAYER** (11-05; the look's page only, at its boot and whenever a level names a new stuff; no switch, because
+  no map moves by a byte). `render/lookTex.ts cells2` asked nine cells where their points lie for every texel: three hashes and a square root a cell, most
+  of what a layer cost. A lattice (size, seed, jitter) now fills a table once (`cellTable`, emptied as a layer starts and ends), the nine are told apart by
+  squared distance and only the two nearest are rooted. Compared once, layer by layer: all 30 byte for byte the same at 512, 128 and 64 texels, evened and
+  not. Under bun on one thread the thirty took 8.9 s and take 6.2 (tarmac 609 to 362 ms, grass 695 to 444). The check is `lookcells` (family render;
+  `LOOKCELLS_BREAK=1` fails two of its three lines): cells2 against the plain way written out again, 1.7 million answers to the bit, and a lattice that is
+  not whole cells is refused aloud. A LAYER MADE IN PLAY (a blast shows a stuff no box had been) also breathes in its last passes now: made in 3 ms
+  slices its longest unbroken stretch was 22 to 41 ms (the evening, the blurs, the normals after the rows) and is 4 to 7; same bytes; the check's
+  fourth line counts the stops. Its mip chain is still built in one go (5 to 12 ms): the workers step's to move. NOT DONE: `vn` still hashes four corners a call and is most of the hashing left; the layers still wait on one thread
+  (making them on workers is the performance goal's). Nobody has timed a look page's boot with its shaders already cached, in a browser.
+- **A PRESSED THING'S ARRISES ARE ROLLED, AND A LACQUER MIRRORS MORE THAN PAINT** (11-05; the look's page only; `render/lookTex.ts STUFFS`' two new
+  words `rolled` and `mirrors`, `look.wgsl lookRoll` / `lookRollUp`, the reflection texts' `coat`). The maintainer, of the cars: "we don't need to go full
+  hyperrealistic but we should sell it more", and "how reflective is the car material, btw? it does feel like it should reflect more of the environment
+  and be quite dynamic as we move around it". WHAT WAS FOUND FIRST, on a GPU (four rounds of stills of the white pickup: a yard at midday and dusk, a
+  crossing at night under its lamps): a stronger coat and a smoother one changed NOTHING, and the car drawn as a FULL mirror at finish 0.05 barely
+  changed either. The camera looks down about 50 degrees, so a face whose normal stands e degrees up mirrors at 2e − 50: a flat top mirrors the empty
+  sky, a flat flank the ground at its foot, and what a car is seen to reflect (the horizon: walls, lamps, a man's torch, whose highlight wants a normal
+  25 degrees up) is on normals a stack of boxes does not have. So the gain is in the FORM, and the form is the stuff's to say:
+  `rolled` = metres over which a face's shading normal turns toward the face it meets (car paint 0.16), asked in lookSurface before the tilt is held. A flank turns UP into its top and round an upright arris, never down at its foot;
+  a top turns out at every edge; a rail or a slab thinner than the roll is rolled all across; and a roll is taken back wherever it would turn the
+  face from the eye that sees it (a flank seen along its length: a normal turned away takes no ray and no highlight). It is the look's own tilt (held
+  to LOOK_MAX_TILT, 29 degrees, and marked), so every pass that wants the face itself finds it and the fog of war's test of a top (N.y over 0.5) is as
+  it was. WHICH FACES: one of a box's own six, on a plain box and on a cut one (`rolls`, lookSurface's last word); and under shapes an UPRIGHT cut
+  plane (a body's rounded corner) turns up into the top by the same measure (`lookRollUp`, asked by the plane's own normal, unmarked as every cut
+  plane's relief is, at most 0.48 of up). A round, an arc and a leaning cut plane (a wheel, a wheel arch, the crowned bonnet, a window post) are NOT
+  rolled: the look is asked of them as the box face they lean to, which is not where their own edges are. SHADING ONLY: no box, outline, ray, body or
+  digest moves, no level file and no vehicle says anything, and it is every vehicle at once. The vehicles' maker would have built it as geometry (a
+  half-round strip on each outer arris, a cut plane under it: true outline, but a cut row a shoulder, coarser crowns under them, digests moved) and
+  chose this on the stills; that commit of theirs is kept as a study. `mirrors` = how much of what it faces a stuff's outer coat mirrors head-on (car
+  paint 0.08; anything else the 0.04 every coat was), by the word a box says (the scene prelude's `LOOK_MIRRORS`, 32 words' room, read by reflect.wgsl,
+  reflect_p5.wgsl and the compact twin for the rays and the highlights alike; `beams.k.z`, 0 on any other page). ONE ROW FOR BOTH, "Pressed panels"
+  (`&look=pressed:0` = the build without either: no arris rolled, every coat a plain one; first sent riding the Edges and the Finish rows, which
+  left nothing to compare it by alone; the row alone keeps the look's surface from standing down, the plain-boxes hold lowers it with the
+  layers, and its slot in the look's block (c.y) is held by number in `lookmaps-check`). The row at 0 against 1 was drawn on the cloud GPU at dusk
+  (errors 0): flat edges and a plain coat against the belt line, the rolled rails and a cooler bonnet; that was the commit before the row learnt to
+  keep the surface awake by itself, a change no still of the page as it opens can show. KNOWN, LEFT:
+  ONE RULE OVER A CUT SOLID'S OWN PLANES (turn toward each plane it meets by how near that edge is, the box's six among them) would roll a round, an
+  arc and a post too and be one rule where this is two (lookRoll for a box's faces, lookRollUp for upright planes): not built, it wants the cut
+  pass's own distances and a test of which plane is really met; the two rolls meet at the arris 33 degrees apart (the cap: each side turns 29 of the 90), so a highlight steps over the arris itself; a stack's INNER seam
+  rolls too (the pickup's base slab under its cab reads as a belt line: on the stills a styling line, not a fault); the paint under the coat is not
+  stepped back by what the coat mirrors (4 hundredths more light at most); glass on vehicles is still matte (the vehicles' paint rows). **Check**:
+  `bun run tools/qa/probes.ts rolled` (family `render`), 3 lines: the table; the rule written again and asked (never down, a thin rail, whole as the
+  page opens, the summed tilt held, the eye's guard over 5,868 views, an upright plane's share of up); the texts. What it buys at the game's camera
+  is said in line 2's detail and not barred. `ROLLED_BREAK=1` fails 2. `highlights`' pin of the highlights' F0 moved with the text. SEEN ON A GPU (the cloud's, High, 11-05, stills only, the rule as it stands here with the vehicles' coat finish laid over
+  it in a study build): at dusk the white pickup's cab and tub rails read rolled and its flank has a belt line where the base slab meets what stands
+  on it; at night a red pickup's roof edge and rails catch the lamps softly; the player's weapon light walked along the tub puts a tight highlight
+  on the rail that moves with him; one still with the fog of war on showed no fault. It is a quiet change: the form reads, the paint does not shout.
+  NEVER SEEN: in motion, on his GPU, in rain, a van or a lorry close up. A first study that turned each side 45 degrees, unmarked, through every
+  face of a shaped vehicle read rounder; it would have told the fog of war a tall van's flank was a top, and a review found it measured a cut
+  plane's roll to edges the plane is not at.
+- **A BLAST'S OPENING LIGHTS ARE PACED** (11-05; the look's page only; `?reachpace=old`, the game's own word for the pace as it was, decides a
+  hole's first mask whole at once here too). The performance goal profiled three wall charges on the office under the look (Chrome's own CPU profile
+  on a rented box, relative): `engine.ts lookOpeningLights` took 80 to 90, about 50 and about 45 ms of the 0.7 s after each charge, against under 2
+  percent of a calm stretch, and the frame that read the first blast's walls was 63 ms of render alone. Two causes, both on that frame.
+  (1) THE JUMP FIELD. The look keeps its own wall raster for its reach masks (`ReachJob.own`: a picture's light is nobody's state) and made that
+  raster's field again whole (`reach.ts jumpsFor`), though a blast only opens walls and the old field is still safe; the game's own raster has always
+  handed its field on. `wallRasterHandOn` now hands the look's on the same way (one scan serves both, `rasterScan`): ONLY where no sub-cell went from
+  open ground to a wall or a doorway's gap. A wall put back by a restart or a rollback, or a box set down, closes cells: then it is not handed on and the
+  next mask makes the field fresh. A door shutting moves no cell (a doorway is in the raster by its frame, not its leaf). A handed-on field is a little
+  too careful near the hole (its own first mask took 6 percent more steps in one measure) and is not brought up to date until a cell closes.
+  (2) WHOLE AT ONCE. A light with no mask was decided whole on the spot, 150 to 330 thousand sight-line steps where a frame's share is 60,000
+  (`REACH_PACE`). Now the masks' FIRST FRAME (a level's first, a new level on the same engine, the rooms row put on) gives EVERY opening its mask, the
+  shut and the far too, and in play nothing is decided whole. So that nothing lit goes dark for it, the rule is in the REPLAN: an opening that is new
+  where another stood (a second hole beside the first makes one opening of the two; a hole takes in a window; a wall put back) takes the mask of the
+  nearest it lies over as its OLD mask, and that one's light if it is free; a job in hand is kept across a replan that moved no wall, and after one that
+  did it is finished against the walls it began with and its mask then counts as old. Only an opening where NONE was has no mask: it is first in line for
+  each frame's share and its daylight comes on about five frames after it is found (itself `LOOK_OPENINGS.settle` frames after the walls stood still).
+  A first cut of this (e23b74ff) had none of the replan's rule and a code review showed what that cost: a widened hole dark for five frames, a hole's
+  light starved for good by a crate shot to bits every five frames, doors opened in a level's second frame lit one every six frames.
+  TIMED by the performance goal on the FIRST cut (the same box, a frame recorder): the frame that reads a blast's walls 63 ms to 16 and 17 on a first
+  blast, 19 to 22 to 10 to 20 on later ones; `jumpsFor` gone from the profile. The mended cut is to be timed the same way. Under bun the first frame of a
+  level decides more masks than it did (the office 7 to 11: 2.6 million steps, behind the start card).
+  HELD by `tools/qa/openings-check.ts`: the wall-holed line (the most steps in a frame, the fields made) and "what is lit stays lit and no job is lost"
+  (the openings found again every five frames, a hole widened, a box set down with every mask against a fresh raster's, the wall put back, the first
+  frame's masks, a second level, the old pace). Five one-line breaks of the rule each turn it red.
+  NEVER SEEN ON A GPU: the hole's daylight coming on five frames late. LEFT: `wallSides.update → placeSides` (18 to 19 ms on that box at a first blast,
+  on the frame the charge goes) and `wallsKey` hashing the statics every frame (0.2 ms); `rankStatics` reads 6 to 10 ms on that box on a blast's frame.
 - **DAYLIGHT COUNTED ONCE: AN OPENING IS A PORTAL** (THE ROW IS GONE SINCE 11-04 AND THIS IS THE ONLY WAY AN OPENING IS LIT: the maintainer played with
   it up on his M4 and chose to keep it on a card at 15:18Z, after saying of it that morning "my preference would be that we use this sampling
   unconditionally and then have no asymmetry between night and day". Deleted in one commit: the `portal` row and `lookConfig.portal`, the disk
@@ -2565,6 +2727,73 @@ interleaved and filtered to their quiet minimum, and a row whose p75 sits far ab
   row's `untiles` now, and stucco, skim and carpet have it. CHECK `lookmaps-check` line 11: the four older stuffs still untile and no other of the
   sixteen; nothing made of pieces untiles; a bay is of whole pieces; a bonded map has an even count of courses. Shader texts compile. NEVER SEEN ON A
   GPU; a software draw of the white roof's deck with the row off and on is what was looked at.
+- **A LEVEL SAYS HOW KEPT IT IS, ONE WORD** (11-05; the look's page; level data, absent = 0 = every level as it was drawn, so no picture moves
+  until a level says it. `scene/levelData.ts meta.kept`, `scene/level.ts Level.kept`, `scene/look.ts lookKeptOf`, `main.ts hostLevel`,
+  `render/frame.ts lookConfig.kept`, `render/gbuffer.ts setLook` (the look's uniform, c's first number), `shaders/look.wgsl lookKept`,
+  `lookSurface`'s `left` / `wild`, `lookMarkSoft`, `shaders/markings.wgsl markSoft`, `markTone`; the address's `&kept=<0 to 1>` is the word
+  for a visit). Asked by the level pass: an office's half-metre wall numerals drew "blotched and broken, like chipped paint or dirt",
+  because whether a surface looked looked-after was said STUFF BY STUFF (a stuff with no `fades` is "a place somebody keeps") and every
+  painted mark was old paint by one number for the whole game. A place that should read as cleaned last night had to say every wall again
+  as a kept cousin of its stuff, and its signs still drew rubbed. THE RULE: a level says ONE number, from 0 (left to the weather and the
+  years) to 1 (cleaned and painted last night). `lookSurface` reads it once (`left` = 1 − kept), and HOW WILD A SURFACE IS becomes its
+  stuff's word × the place's (`wild` = the stuff's `fades` > 0 × `left`), where it was the stuff's word alone. Four things follow.
+  (1) THE WEATHER'S AMOUNT on a weathered stuff is the panel's Weather row × `left`: the slow blotches and the drift of hue of a stuff that
+  `fades`, the damp foot, the tide mark, the bleached head and the dark runs of one that `soaks`, the rubbish that gathers at a wall's foot
+  where nobody treads. A mud wall's render that has let go (the masonry rule's patches of bare brick) shrinks with it and is gone at 1; the
+  stone plinth is how the wall was built and stays. (2) WHAT THE WEATHER GIVES UP THE KEPT RULES TAKE, by the same share, so a weathered
+  stuff in a kept place is drawn as a kept one and never as neither: the detail layer's dust band at a wall's foot and its shoe marks on a
+  skirting come in by 1 − `wild`, and so does the No repeat row's drift of three in a hundred. (First built with the weather's amount
+  scaled and the choice of rules left on the stuff alone: at 1 a mud wall had no damp foot AND no skirting marks, the review's find. The
+  dust band's share is `detailFloorWear`'s third number, × its squared nearness, so it is linear in the share: scaling the nearness that
+  goes in gave the square of it, the band weakest half way.) (3) WHAT USE DOES TO A STUFF (`worn`: a piece stained or changed, a wall's
+  foot knocked, the dirt feet bring in) shows by 1 − `wild` too, where it was gated on the stuff having no `fades`. So a weathered stuff
+  may now say `worn`, and plaster, block and slab do, each with its kept cousin's number (skim, cast panel, paver): in a kept office a
+  plaster wall has its knocked foot, in a ruin the weather has it. No picture moves for it until a level says the word.
+  `lookmaps-check`'s line "use shows on kept stuffs only and on none of the older sixteen" is CHANGED for this: it now lists the three by
+  name beside their cousins and refuses any other. (4) A MARK'S PAINT: the years' share of its wear and the colour gone a shade into its wall are × `left`; the brushed shape and the
+  painter's hand stay, so a kept place's sign is whole and its own colour and still paint, not square cells. WHAT DOES NOT ASK IT: where feet go. A
+  trodden lane on bare ground, a floor's scuffed lane, and paint trodden off a floor (a mark's wear is the greater of the years' share and
+  how much its floor is walked) are in a kept place as in a ruin. On a floor whose stuff says `worn` the lane has one answer by share: the
+  weather's (beaten pale) by `wild`, the kept one (the dirt feet bring in, a shade darker) by 1 − `wild`; first built with both whole on
+  a kept slab floor, where they cancelled to a mottle, the third review's find. A knocked foot is a WALL's: a box that moves has none (its
+  run of knocks is laid along the face's plane and hopped as a leaf swung; that was so of any kept stuff before this and is mended here,
+  the one picture this change moves with no word said, if a moving box of stucco, skim or pavers stands on a floor anywhere). WHAT IT CANNOT DO: change a
+  stuff's own picture. The rust and streaks of `metal` are drawn into that stuff's map (the Paint row), so racks that "draw speckled like
+  rust" in a kept office are cured by saying them as `steel`, `enamel` or `brushed`, not by this word. A stuff's own `fades` and `soaks`
+  now say what it does where nobody keeps it, and the kept cousins (stucco and skim of plaster, cast panel and gloss block of block, paver
+  of slab) are no longer the only way to a clean wall; folding each pair into one stuff is not done. WHO SAYS IT: a generator, `export
+  const KEPT = 0.8`; the exporter writes the file's `meta.kept`, and gives a look's second file (`<name>-gwot.ts`, what the look's page
+  loads) the word of the level it dresses unless it says its own (`tools/levels/keptWord.ts`, which the check runs too); a level built on
+  another's floor with no `DRESS_AS` re-exports the word; the office would say it as `level.kept` in its builder (`levelToData` writes
+  the file's meta from the Level and drops either key from a caller's `meta`, a marks' texel the same way now). Every way a level enters
+  the page goes through `main.ts hostLevel`, so the bundled office that stands in for an editor level that cannot stand takes its own
+  word, and its own marks' texel (2.5 cm said outright, where the failed level's stayed). The page logs the word in force when
+  a level or the address says one. ONE WORD A LEVEL: a room's own (a kept office over a derelict cellar) would ride the place field and is
+  not built. Picture only: nothing in the game reads it, and a level's fingerprint (`game/savestate.ts levelFingerprint`: names, counts
+  and the boxes' geometry) does not take it in, so saying the word refuses no checkpoint or recording. With no word the frame is the frame
+  as it was: every new term is × 1 or + 0 at kept 0, written so that holds to the bit. SEEN ON A CLOUD NVIDIA CARD, TWICE. First, the
+  weather's amount and a mark's wear only, the same build with `&kept=0` and `&kept=1`: on the white roof's block wall the red FIRE
+  stencil and its bar, pink and rubbed through at 0, are whole and red at 1, and the chalk 1 on its orange plate is whole, both still
+  brushed; the knocked foot of the orange plinth under them is there in both; the roof's deck, all kept stuffs, does not move (mean
+  difference 0.07 of 255). On the compound at midday the mud walls lose their blotches and their damp foot and the band of stones along
+  the wall is gone, the trodden paths stay. Second, with `wild` by the place (the first review's mends), the compound's start at 0, 0.5
+  and 1: AT 0 IT IS THE FIRST BUILD'S PICTURE AT 0 to the card's own noise (mean difference 0.75 of 255, scattered, on the men's idle
+  and the panel's frame counter, no line along a wall or its foot), which is the one measure there is of "no word, no change"; 0.5 lies
+  between; at 1 the ground along the wall is one pale tone and the wall's stones stay. No error or warning on ten boots. NOT SEEN ON ANY
+  GPU: the second review's mends (the dust band's share made linear; the knocked foot of plaster, block and slab in a kept place; the
+  share on a kept stuff's lane dirt); a mark on a walked floor in a kept place; Metal, where "to the bit" also rests on the driver
+  keeping the order of a product; a level that says the word in its file (none does yet; the office is to be the first). KNOWN, NOT LOOKED AT: block's and slab's own maps hold a slow tone three to four times what the
+  kept stuffs are held to (0.055 and 0.042 against a bar of 0.015, `lookmaps-check`'s measure), and neither untiles. Left to the weather
+  the blotch hides it; at kept 1 a long block wall or slab floor has only the drift of three in a hundred, and may show its 2 m tile. If
+  it does the mend is in the two maps or their rows, not here. Between 0 and 1 a weathered surface pays for both families of rules
+  (about twice the noise reads of either end): a level that settles part way is the look's dearest setting, unmeasured. Check: `bun run tools/qa/probes.ts kept` (family
+  `render`; five lines: the word there and back through the file, the page's rule, the rule by its text in the shaders, their uniform's
+  writer, the page and the exporter, a second writing of the places it acts, the word in each look's second FILE against its
+  generator's; `KEPT_BREAK=1` fails two). It holds the rule by its text and a second writing: nothing in it draws a frame, so that kept 0
+  is the frame as it was rests on the reading of each term and the card pair above, on both
+  stands; the render family's gate, `shaderrows-check`, `shaderinline-check` (both settings), `look-check`, `stuff-check`,
+  `lookmaps-check`, `ways`, `materials`, `level`, `frame-layout`, all 213 shader texts compile, `tsc` both, every level file's export
+  unchanged.
 - **WHAT DAYLIGHT THROUGH OPENINGS STILL COSTS, SPLIT ON ONE CARD** (11-05; a measurement, no code: read it before trying to cut the openings'
   cost again). After the reach rule and the three pieces (the two bullets below), one cloud NVIDIA box a level, High, 1368 by 770, the render
   size held (`adapt=0`), the clock stopped, every word flipped in the running page (two boxes of one commit differ by 1 to 2 ms, so only a flip
@@ -2667,7 +2896,7 @@ interleaved and filtered to their quiet minimum, and a row whose p75 sits far ab
   word in both lists; `PORTALREACH_BREAK=1` is the old worth and fails it), both stands. NOT SEEN: any of it in motion; a deep room by day; on
   the maintainer's GPU. NOT RUN: the digests (nothing under the simulation's folders; the meter's reading above is the look page's only).
 - **TARMAC AND GRASS ARE STUFFS** (11-05; `render/lookTex.ts` `tarmac`, `grass`: two rows of `STUFFS`, two maps, 28 painted layers where there were
-  26. NO LEVEL NAMES THEM YET: `scene/stuff.ts PAINT_STUFF` still says the car park's paint is 'plain' and a lawn's 'waits', and a level's FILE carries
+  26. EVERY LEVEL NAMES THEM SINCE THE STEP AFTER (the same day; `docs/agents/levels.md`, "Lots and lawns say tarmac and grass": the two rows say them and every level file was exported again). As this bullet was written, NO LEVEL NAMED THEM YET: `scene/stuff.ts PAINT_STUFF` still says the car park's paint is 'plain' and a lawn's 'waits', and a level's FILE carries
   its own word a material (`levels/<name>.json materials`), so the page reads the file's word and a change to the table alone moves nothing until the
   level is exported again. Naming them is the dressing's step, a level at a time.) The dress goal's ask: the lot under every office-kit level and its
   verges were the two biggest flat colours left in a picture. TARMAC is rolled asphalt years down: black binder with stone chips of two sizes rolled
@@ -3465,8 +3694,8 @@ interleaved and filtered to their quiet minimum, and a row whose p75 sits far ab
   the lived kit's rubber ink rubber, a quarry-tile floor slab, a gravel hardstanding gravel, sandbags cloth, an exhaust metal; a picture on
   a wall, black file folders, mugs, a planter trough, pull strips and three vehicles' bodies say nothing (the vehicles' words are the
   vehicles task's); the registry's lacquered leaves say paint and the consulate's varnished ones wood.
-  NO SWITCH: it is not a rule of play and both stands draw the same. THE CHECK: `bun run tools/qa/stuff-check.ts` (15 lines;
-  `STUFF_BREAK=1` strikes the rows' words and fails lines 2, 3, 4, 7, 13, 14 and 15; line 14 is a shape's piece; line 15 holds that no wall and no door frame is cloth by a borrowed paint; line 10 holds that in `src/game` a box's word is READ in at
+  NO SWITCH: it is not a rule of play and both stands draw the same. THE CHECK: `bun run tools/qa/stuff-check.ts` (16 lines;
+  `STUFF_BREAK=1` strikes the rows' words and fails lines 2, 3, 4, 7, 13, 14 and 15; line 14 is a shape's piece; line 15 holds that no wall and no door frame is cloth by a borrowed paint; line 16 that no generator writes a word or a finish by hand beside a paint; line 10 holds that in `src/game` a box's word is READ in at
   most one place, the picture of a hit) and `bun run tools/qa/stuff-audit.ts --before <ref>`, which prints what every box was and is, by
   kind and file, and exits 1 where one lost or moved its material: against the head before this series it lists the 1,046 below and exits
   1, by design.
@@ -3513,7 +3742,7 @@ interleaved and filtered to their quiet minimum, and a row whose p75 sits far ab
   text has no stuff's constant and no class test but against plain, and that for each of the 28 stuffs of that day the row says exactly
   what the named rules said, six words each, the old rules written out in the check (`was`: a row changed on purpose changes it there);
   `wgsl-compile`, all 68 texts. Never seen on a GPU by a person.
-- **MARKS AS PAINT, A FIRST TRY** (`shaders/markings.wgsl markSoft`, behind `lookMarkSoft()` = `lookCfg.g.x`, 0 off the look page by gbuffer.ts's
+- **MARKS AS PAINT, A FIRST TRY** (`shaders/markings.wgsl markSoft`, behind `lookMarkSoft()`, whose first number is `lookCfg.g.x` (its second, since 11-05, is how far the place's paint is old: A LEVEL SAYS HOW KEPT IT IS), 0 off the look page by gbuffer.ts's
   stub; the maintainer, 10-23: "we also need to get away from the pixel art textures"). A marking is still the level's 2-bit cell bitmap (2.5 cm
   cells), but on the look page it is not drawn as squares: the coverage is read over a one-cell footprint, cut back at half cover along a ragged line
   (noise by box and marking, so two signs do not share an edge), the shares sharpened so two colours meet in a line and not a blur, and thin rubbed

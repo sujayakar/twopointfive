@@ -7,6 +7,7 @@ import { openingStart } from './opening';
 import { Vec3, v3, clamp, wrapAngle, approachAngle, damp, lerp, smoothstep, DEG } from '../math/vec';
 import { PatrolRoute, Chokepoint, RoomClearPlan } from '../scene/level';
 import { Character, HOLD } from './character';
+import { manLeaves } from '../sim/men/store';
 import type { UpperMode } from './character';
 import { BoxFlag, rayBox } from '../scene/boxes';
 import { BOTH, BAKE_Y, type StaticCollision } from '../scene/collision';   // (read inside a function only: the check's count of answers given both ways)
@@ -2668,11 +2669,12 @@ const CARRIED = (): boolean => true;
  *  carries (it moves faster than a sweep, and lights a man directly in the estimate). False = the module cannot take them: the field stands as it was. */
 export function steadyLamps(g: Game, col: StaticCollision): boolean { return writeLamps(g, col, null, CARRIED, true); }
 /** the lamps' part of lightEstimateAt from the module: every lamp that passes the gates below (lampsHere's own, in its order) and whose reach can hold the
- *  point is written, and the module sums them. False = lampsHere's loop, from the start (`acc` is untouched). */
+ *  point is written, and the module sums them — in as many parts as the lamps need (collision.ts lamp), one sum in lampsHere's order. False = lampsHere's
+ *  loop, from the start (`acc` is untouched). The smoke's shadow is the grid's cells and, where the grid cannot answer, the field's own blobs, as
+ *  `field.along` has it: both the module's (light.rs, smoke.rs). */
 function lampsThere(g: Game, P: Vec3, skipOwner: ((owner: number) => boolean) | undefined, steadyOnly: boolean, acc: number[], field: LightField | null): boolean {
-  const col = g.col; if (!col.lampsBegin()) return false;
-  if (!writeLamps(g, col, P, skipOwner, steadyOnly)) { col.lampsFell(); return false; }
-  return col.lampsOn(P, acc, field && field.grid.fed ? field.grid.sim : null, SENSE.smoke.sigma);   // (the smoke's shadow from the grid's cells; a grid that cannot answer hands the question back, and lampsHere asks the blobs)
+  const col = g.col;   // (a grid nothing was let out into dims nothing: not asked)
+  return col.lampsBegin(P, field !== null && field.grid.fed ? field : null, SENSE.smoke) && writeLamps(g, col, P, skipOwner, steadyOnly) && col.lampsOn(acc);
 }
 /** the lamps' part of lightEstimateAt as this file answers it: the shadowed direct light of every lamp, onto the six faces in `acc` */
 function lampsHere(g: Game, P: Vec3, skipOwner: ((owner: number) => boolean) | undefined, steadyOnly: boolean, acc: number[], field: LightField | null): void {
@@ -2972,7 +2974,9 @@ export function resetGuards(g: Game) {
   for (const pl of men(g)) if (pl) { pl.dragging = null; pl.takedown = null; pl.holding = null; pl.char.anim.holdPose = null; }   // the old bodies / targets are gone — the man in his arm with them
   for (const gd of g.guards) if (gd.unit) releaseUnit(g, gd);
   endEngagement(g, 'reset');
-  g.guards = g.guards.filter(gd => !gd.unit).map(gd => new Guard(g.ch, gd.char.id, gd.route, gd.routeI, gd.flashlight, gd.char.tint));
+  const old = g.guards, fresh = old.filter(gd => !gd.unit).map(gd => ({ id: gd.char.id, route: gd.route, routeI: gd.routeI, fl: gd.flashlight, tint: gd.char.tint }));
+  for (const gd of old) manLeaves(gd.char, gd);   // (the old shift's rows are free before the new shift takes them)
+  g.guards = fresh.map(o => new Guard(g.men, g.ch, o.id, o.route, o.routeI, o.fl, o.tint));
   for (const gd of g.guards) gd.char.update(0);          // fresh characters get a pose (bones) immediately — reset can happen mid-frame
   openingStart(g);   // the night's opening (opening.ts): nobody of the fresh shift starts on top of the way in — nothing under a show's flag or with OPENING.on off
   g.breakerFixT = 0; eachSeat(g, v => { v.aimGuard = null; });
@@ -3524,7 +3528,7 @@ export function spawnUnit(g: Game, o: UnitOpts): Guard {
   const weapon: WeaponId = o.carbineRig ? 'aks74u' : o.weapon ?? (o.team === 'operative' ? 'fn2000' : o.team === 'hostile' ? 'aks74u' : 'guard9mm');
   const route: PatrolRoute = { name, points: [[o.pos[0], 0, o.pos[2]]], wait: [0], weapon, keys: [] };   // his one-point stand: nothing to walk, nothing on his belt
   const T = g.tune; const fl = g.engine.lights.add(torchLightDef(`unitlight${id}`, id, T.flashIntensity, T.flashInner, T.flashOuter));
-  const gd = new Guard(g.ch, id, route, -1, fl, o.tint ?? TEAM_TINT[o.team], { tint2: o.tint2 ?? TEAM_TINT2[o.team], yaw: o.yaw ?? 0, name, team: o.team });
+  const gd = new Guard(g.men, g.ch, id, route, -1, fl, o.tint ?? TEAM_TINT[o.team], { tint2: o.tint2 ?? TEAM_TINT2[o.team], yaw: o.yaw ?? 0, name, team: o.team });
   gd.unit = { name, spawnedAt: g.time, light: o.light !== false }; if (o.pair) gd.unit.pair = o.pair; gd.hold = true;
   gd.heardUpTo = g.eventSeq;   // (deaf to what was in the air before he existed; the ids run on from here)
   gd.char.update(0);           // a pose — bones — before anybody's sight test or the frame's capsule upload reads him
@@ -3553,6 +3557,7 @@ export function despawnUnit(g: Game, gd: Guard): boolean {
     if (o.leader === gd) o.leader = null;
     if (o.task?.kind === 'checkOn' && o.task.who === gd) o.task = null;
   }
+  manLeaves(gd.char, gd);
   return true;
 }
 export function despawnUnits(g: Game) { for (const gd of [...g.guards]) if (gd.unit) despawnUnit(g, gd); }

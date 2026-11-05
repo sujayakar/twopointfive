@@ -1075,7 +1075,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   whose, a sponge round a pouch each. CHECK: `bun run tools/qa/probes.ts kitstealth` on BOTH stands (13 lines: off to the count, the card, a reload, the follow, the
   store, As issued, the Quiet kit, four staged runs, the journal); `KITSTEALTH_BREAK=1` fails 6 on each. The real page: `PORT=<port> node
   tools/qa/kitstealth-page.cjs` (`STEALTH_BREAK=1` must fail). Probes written against the hand-overs run with the key held off by the runner
-  (`STEALTH_AS_IT_WAS` in `probes.ts`; `kitanim-midswap` beside it, whose night alone throws a frag; `lesson-check.ts` holds it for its kit block, whose 'same start off a lesson's page' is a quiet run alone — a lesson's page under a kept stealth card is kitstealth's own line). A run tape carries the kept stealth card beside the cards (`kit.stealth`). Never seen on a GPU; nobody has played
+  (`STEALTH_AS_IT_WAS` in `tools/qa/holds.ts`; `kitanim-midswap` beside it, whose night alone throws a frag; `lesson-check.ts` holds it for its kit block, whose 'same start off a lesson's page' is a quiet run alone — a lesson's page under a kept stealth card is kitstealth's own line). A run tape carries the kept stealth card beside the cards (`kit.stealth`). Never seen on a GPU; nobody has played
   it; whether five rounds, two cameras and a wand is the right kit to start a quiet night with is the maintainer's to say.
 
 - **A suppressed gun is drawn and named as one on the kit card** (2026-10-17; the maintainer on the Team & kit screen of a quiet mission: "quiet missions
@@ -1152,7 +1152,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   off there is no such row; both door charges are still carried either way. (So the tool buys no time at a door a boot opens: it buys the doors a
   boot is refused at, and a lead who goes in with his gun up.) Not measured as issued: a door locked on the face it opens toward (the boot's
   refusal, the tools' answer: `bigslot-shut` asks it with cards set by hand). PROBES WRITTEN FOR A FOUR WITH EMPTY BIG SLOTS are held to that on
-  every stand by the runner (`probes.ts MORE_AS_IT_WAS`: the word and the table, unless whoever runs the tool set the word himself), as the deal's
+  every stand by the runner (`tools/qa/holds.ts MORE_AS_IT_WAS`: the word and the table, unless whoever runs the tool set the word himself), as the deal's
   own older probes are: `frameholds-tools`, `doortest`, `silent-pick`, `silent-boot` (a locked or wedged door such a four boots is one the tool
   takes), the ones that read a door's tools page row for row against the pair's or count its rows by their digits (`doormenu-rows`,
   `thresholdmenu-rows`, `shutdoor-menu`, `silent-tools`, `pressorders-squad4`, `pressorders-nightbreach4`), and `kitpaste` (its squads' big slots
@@ -1165,7 +1165,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   CHECK: `bun run tools/qa/kitdeal-check.ts` (`probes.ts kitdeal`, also in `kit`; 39 lines on both stands, `KITDEAL_BREAK=1` fails 3 on both: nobody
   comes bare, a pair a door, the roster of four); the real page: `PORT=<port> node tools/qa/kitdeal-page.cjs` (with `more`: the roster's lines
   name the two tools, the staged four have the big row, `?nokitmore` is the deal alone). The older card probes (`kit-*`,
-  `pouch-*`, `squadsmoke-*`, `bigslot-card`, `wand-mate`) press a pouch too many on the table's own layout at four, so `probes.ts DEAL_AS_IT_WAS`
+  `pouch-*`, `squadsmoke-*`, `bigslot-card`, `wand-mate`) press a pouch too many on the table's own layout at four, so `tools/qa/holds.ts DEAL_AS_IT_WAS`
   holds the deal off for them on every stand; the worn cards are this check's, with 3000 seeded presses of its own. `bigslot-check.ts` run BY ITS
   OWN FILE takes the same holds itself (the deal for its card part, the two gun rows for every part: it was red on the shipped stand alone while
   green inside the gate), and now runs its `weight` part too. A MISSION'S ISSUE IS NOBODY'S OWN LAYOUT: `asIssued` holds the player's own-layout
@@ -1206,7 +1206,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   lines: bars, tiles under their gun, sponge none on a loud mission and the mission's five on a quiet one, the one Reset, the row of kits alone, and
   at 1000, 1180, 1353, 1440 and 1512 px wide nothing cut and nothing run into; `KITTREE_BREAK=1` fails 4); a deploy off the card,
   `tools/qa/kittree-deploy-page.cjs` (two mission boots on the software adapter, slow). The older card probes that read a row's place (`wand-kit`,
-  `wand-tile`) hold the tree off on every stand (`probes.ts ROWS_BEFORE_THE_TREE`), as `gunslots-check.ts` does in its own `raise`; `loadout-screen`
+  `wand-tile`) hold the tree off on every stand (`tools/qa/holds.ts ROWS_BEFORE_THE_TREE`), as `gunslots-check.ts` does in its own `raise`; `loadout-screen`
   reads 'bare' in a man's line where it read the old row's name, and `kitpaste-page.cjs` counts the one Reset on a tree card. A MAN'S LINE under his
   name (`kitWords`) names his guns by their picks under the tree, with `bare` after one whose suppressor the card has taken off. LEFT, the
   maintainer's calls: a sponge round costs a pouch and on a quiet run buys nothing over the lent five; the Quiet kit names no sponge; which four

@@ -32,6 +32,7 @@ pub mod layers;
 pub mod light;
 pub mod lines;
 pub mod maths;
+pub mod men;
 pub mod nav;
 pub mod poses;
 pub mod props;
@@ -51,7 +52,7 @@ pub const SCRATCH_LEN: usize = 1024;
 static mut SCRATCH: [f64; SCRATCH_LEN] = [0.0; SCRATCH_LEN];
 
 /// The version of the exports: src/sim/sim.ts names the one it was written against, and a page that loaded another says so instead of calling into it.
-pub const ABI: u32 = 24;
+pub const ABI: u32 = 28;
 
 // ---- the C face (wasm32: these are the module's exports)
 #[no_mangle]
@@ -671,6 +672,12 @@ pub extern "C" fn props_cap(table: u32) -> usize {
 pub extern "C" fn props_update(g: usize, w: usize) -> u32 {
     props::update(g, w)
 }
+/// props.ts PropSystem.settle's passes for the game in slot `g`, over world `w` (the level's furniture resolved out of its authoring overlaps as the
+/// level is stood up): how many times a thing was pushed out of a static
+#[no_mangle]
+pub extern "C" fn props_settle(g: usize, w: usize) -> u32 {
+    props::settle(g, w)
+}
 
 // ---- a leaf off its hinges, in the air (slabs.rs: each slab's state in the game's block, its door's facts handed in)
 /// where the hand-over of one slab's step is (0)
@@ -786,11 +793,14 @@ pub extern "C" fn light_lamps() -> usize {
 pub extern "C" fn light_cap() -> usize {
     light::MAX_LAMPS
 }
-/// guards.ts lightEstimateAt's loop over the first `n` lamps written: the six faces → scratch 0‥5 · 0xffffffff = ask the TypeScript. `sigma` > 0: each
-/// lamp is dimmed by the smoke of the coarse grid of the game in slot `g`, whose block's stamp is `stamp` (bricks.rs); 0: neither is read
+/// guards.ts lightEstimateAt's loop over the first `n` lamps written: the six faces → scratch 0‥5 · 0xffffffff = ask the TypeScript. `more` ≠ 0: a later
+/// PART of the question the call before began (the faces are kept in light.rs SUM from part to part and summed on, not begun again).
+/// `sigma` > 0: each lamp is dimmed by the smoke of the coarse grid of the game in slot `g`, whose block's stamp is `stamp` (bricks.rs; `stands` = 0:
+/// no grid stands there), and where the grid cannot answer by the first `nb` blobs written (smoke.rs) under `spread`, `widest`, `rise`, `rise_rate`;
+/// 0: none of those is read
 #[no_mangle]
-pub extern "C" fn light_estimate(w: usize, set: i32, n: usize, p0: f64, p1: f64, p2: f64, sigma: f64, g: usize, stamp: f64) -> u32 {
-    light::estimate(w, set, n, [p0, p1, p2], sigma, g, stamp, &mut scratch()[..6])
+pub extern "C" fn light_estimate(w: usize, set: i32, n: usize, p0: f64, p1: f64, p2: f64, sigma: f64, g: usize, stamp: f64, stands: u32, more: u32, nb: usize, spread: f64, widest: f64, rise: f64, rise_rate: f64) -> u32 {
+    light::asked(w, set, n, [p0, p1, p2], sigma, g, stamp, stands != 0, more != 0, nb, [spread, widest, rise, rise_rate], &mut scratch()[..6])
 }
 /// where a question's blobs are written (smoke::BLOB doubles a blob), and how many it can carry
 #[no_mangle]
