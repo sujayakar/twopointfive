@@ -2,10 +2,10 @@
 // writes them through `Item`), in TypeScript and in the Rust module alike, and how they move between the two.
 //
 // THE LAYOUT IS ONE, BYTE FOR BYTE (rust/sim/src/items.rs Items), and it is the furniture's kind of layout (sim/propshome.ts, props.rs: a column a number
-// as narrow as its values, hot before cold, every column whole vectors on a 16-byte boundary). The bytes are the `items` part of the game's block from
-// the moment the pool is made (sim/state.ts, sim/colstore.ts ColStore, which every such store is), and the pool is walked over them, in the module
-// (items.rs update, the row RUST.items on) or in game/throwables.ts. A column is read as `d[b8 + O.px + row]` (the doubles) or `u[b4 + O.flags + row]`
-// (the words).
+// as narrow as its values, hot before cold, every column whole vectors on a 16-byte boundary). While the row RUST.items is off the bytes are an array of
+// the game's own (sim/colstore.ts ColStore, which every such store is); while it is on they are the `items` part of the game's block of the module's
+// memory, and the pool is walked there (items.rs update). A column is read as `d[b8 + O.px + row]` (the doubles) or `u[b4 + O.flags + row]` (the words)
+// either way.
 //
 // ROWS. Rows 0 .. n are the pool, IN THE GAME'S OWN ORDER: row k is `Throwables.items[k]`, the oldest first. That order is the rule's (a full pool gives
 // up the first spent thing; the picture's boxes are listed in it; the step walks it from the newest down), so nothing sorts the rows. The pool's own
@@ -23,9 +23,9 @@
 // thing's id plus one (0: none).
 //
 // (Imports sim.ts, state.ts and colstore.ts alone: like the rest of src/sim, this is below the game.)
-import { sim, f64, type SimExports } from './sim';
-import { simRoom, P_ITEMS, type SimState } from './state';
-import { ColStore, colsOf, colDiff } from './colstore';
+import { sim, f64, RUST, type SimExports } from './sim';
+import { simTenant, simPart, P_ITEMS, type SimState } from './state';
+import { ColStore, colDiff } from './colstore';
 
 /** things a pool holds by the game's rule (game/throwables.ts spawn gives one up at this many, unless every one is a live can) */
 export const ITEM_CAP = 32;
@@ -48,17 +48,12 @@ type U = (typeof ITEM_U32)[number];
  *  how game/throwables.ts Item asks for one of its numbers */
 export const IC = Object.fromEntries([...ITEM_F64, ...ITEM_U32].map((k, i) => [k, i])) as Record<F | U, number>;
 const NF = ITEM_F64.length, NC = ITEM_F64.length + ITEM_U32.length;
-/** where each column starts (sim/colstore.ts colsOf), the pool's bit in the head of a game's block (sim/state.ts: one a family, never reused), and how
- *  long its part is */
-export const itemCols = () => colsOf(ITEM_HEAD, ITEM_F64, ITEM_U32, ITEM_ROWS);
-const ITEM_BIT = 128;
-simRoom(P_ITEMS, itemCols().bytes);
 
-/** THE COLUMNS OF ONE POOL (a game's, a lone stage's), over its game's block `st`: sim/colstore.ts's store, and what its rows mean */
+/** THE COLUMNS OF ONE POOL (a game's, a lone stage's): sim/colstore.ts's store, and what its rows mean */
 export class ItemStore extends ColStore<F, U> {
   /** where each column starts, by its place (IC): the doubles' as indices into the doubles, the words' into the words — `O` by number, made anew with it */
   at: number[];
-  constructor(st: SimState) { super(st, P_ITEMS, ITEM_BIT, 'thrown things', ITEM_HEAD, ITEM_F64, ITEM_U32, ITEM_ROWS); this.at = this.places(); }
+  constructor() { super(ITEM_HEAD, ITEM_F64, ITEM_U32, ITEM_ROWS); this.at = this.places(); }
   private places(): number[] { const O = this.O; return [...ITEM_F64.map(k => O[k]), ...ITEM_U32.map(k => O[k])]; }
   /** `n` rows fit, or it is nobody's pool: the game's rule keeps a pool far under its rows (the header), and one past them is a fault */
   private room(n: number): void { if (n > this.cap) throw new Error(`a pool of ${n} thrown things: its columns hold ${this.cap} (sim/itemshome.ts ITEM_ROWS, rust/sim/src/items.rs CAP; game/throwables.ts spawn gives one up for each new one past ${ITEM_CAP})`); }
@@ -121,7 +116,7 @@ export interface ItemIo { x: SimExports; par: number; ev: number; maxEvents: num
 let IO: ItemIo | null = null;
 export function itemIo(): ItemIo {
   if (IO) return IO;
-  const x = sim(), O = itemCols(), names = [...ITEM_F64, ...ITEM_U32];
+  const x = sim(), O = new ItemStore().O, names = [...ITEM_F64, ...ITEM_U32];
   // (the layout this file works out is the module's own: every column where items.rs has it, the part as long)
   const off = names.filter((k, i) => x.items_cap(100 + i) !== (i < ITEM_F64.length ? O[k] * 8 : O[k] * 4));
   if (x.items_cap(0) !== ITEM_ROWS || x.items_cap(13) !== O.bytes || off.length || x.items_cap(100 + names.length) !== 0 || x.items_cap(1) !== ITEM_PARS || x.items_cap(4) !== ITEM_ROOFS || x.items_cap(3) !== ITEM_EV || x.items_cap(2) !== ITEM_ROWS * ITEM_ROW_EVENTS)
@@ -135,6 +130,14 @@ export const itemMem = f64;
  *  play: a ray that is no number), calls into the module, walks answered both ways and how many of those differed, with the first in words; what the module's walks asked and
  *  met; and the steps of a pool with something in it that began in the module (`stepsThere`) and that were this side's whole (`stepsHere`) */
 export const ITEMS_STEPPED = { there: 0, here: 0, host: 0, walks: 0, asked: 0, differ: 0, first: '', rays: 0, thingRays: 0, substeps: 0, rested: 0, events: 0, stepsThere: 0, stepsHere: 0 };
+
+/** what the tenant asks of a game: its pool's columns (game/throwables.ts Throwables.store) */
+interface HasItems { items?: { store: ItemStore } }
+// the pool's bytes move into a game's block as its tick opens with RUST.items on, and out again with it off (state.ts settle): one copy each way
+simTenant({ name: 'items', bit: 128,
+  wants(g: HasItems) { return RUST.items && !!g.items?.store; },
+  into(g: HasItems, st: SimState) { g.items!.store.moveIn(st, simPart(P_ITEMS)); },
+  outOf(g: HasItems, st: SimState) { g.items?.store.moveOut(st, simPart(P_ITEMS)); } });
 
 /** WHERE TWO TAKES OF A STORE'S BYTES DIFFER, in words (`bytes()` of the same store, twice). → at most `most` lines, none if they are the same state */
 export function itemDiff(S: ItemStore, a: Uint8Array, b: Uint8Array, most = 4): string[] {

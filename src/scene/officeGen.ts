@@ -386,7 +386,7 @@ export function buildOfficeProcedural(trace?: GeneratorTrace, opts: GeneratorOpt
   // rendered wall that blotches and takes a damp foot, a poured slab that cracks, a coarse cloth. Drawn that way the office's partitions peeled at the skirting
   // and its carpet was stained from wall to wall. Here a partition is skimmed and painted, the shell is cast in panels, the carpet is a loop pile, the lobby's
   // stone and the server room's raised floor are laid in tiles, the lino is one waxed sheet (the look's plain gloss coat), and what is red is enamel.
-  // NOT SAID: the lot (no stuff the look has is tarmac: gravel drew it as cobbles and a slab as cracked paving, so it stays plain) and the lawn (it waits).
+  // THE LOT AND THE LAWN are said at their paints' rows, not here (scene/stuff.ts PAINT_STUFF: tarmac and grass, since 11-05).
   const K = { wall: saidAs('skim', C.wall), sill: saidAs('skim', C.wallDark), shell: saidAs('cast panel', C.concrete), landing: saidAs('board concrete', C.concrete),
     carpet: saidAs('carpet', C.carpet), carpetBlue: saidAs('carpet', C.carpetBlue), carpetRed: saidAs('carpet', C.carpetRed),
     stone: saidAs('paver', C.stone), lino: saidAs('enamel', C.lino), red: saidAs('enamel', C.red),

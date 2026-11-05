@@ -1171,7 +1171,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   one, else how bright it is), so a white car was plasterboard (pale chips and a puff of gypsum), a blue one concrete, and its dark glass and tyres
   metal. A box says what it is made of (`Box.stuff`, `scene/stuff.ts`: its own word or its paint's row's), and with the rule on THE PICTURE OF A HIT
   reads that word first (`saidSurf`, the table `STUFF_SURF`: car paint, steel, metal and sheet are metal; wood and veneer wood; plaster and skim
-  plasterboard; stucco, mud wall, block, slab and pavers concrete; fabric, the fine weave of a seat or a screen, cloth on a frame; cloth, the coarse
+  plasterboard; stucco, mud wall, block, slab, pavers and tarmac concrete; fabric, the fine weave of a seat or a screen, cloth on a frame; cloth, the coarse
   weave of a carpet, a rug, a sandbag or a tarpaulin, the soft thing that never sparks; rubber and plastic plastic; glass glass). The colour is asked
   only of a box that says nothing, or whose word is not one thing to a round ('paint' and 'enamel' are a coat on a door, a drum, a pipe or a line on
   a floor; 'plain' and 'waits' say nothing; the ground is what its paint says).
@@ -1275,3 +1275,9 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   what was red on the shipped stand before it (`decals-sites`, three checkpoint probes). THE PAGE CHECK ran once with the table (the yard in rain,
   software adapter): 118 of 118 pipelines, no error, the word up at boot, and moving the table changes 47 % of the picture (mean 0.457 down, 0.441
   up), the numbers of 11-01. NOT SEEN: never on a GPU, never in motion; its break run and a dry still were not run.
+- **The wall engine, a round through a wall, a wall charge, the furniture blast and the destruction index know a thing by its word** (2026-11-05;
+  `src/scene/materials.ts`, `Box.does`; no switch, the same game by digest). Where these notes say a rule reads a PAINT, a paint's NAME or a tone
+  (`paletteName`, `surfOf`, `breakClassOf(albedo)`, `steelGrey`, `STRUCT`, "by its paint", "the wall paints"), read: the box's word, through
+  `materials.ts doesOf(box)` and its columns (`wall`, `cover`, `board`, `surf`, `breaks`, `steel`, `struct`, `counter`, `casing`, `paper`, `screen`,
+  `snow`). A piece broken off a thing carries the thing's word (`boxes.ts wordOf`); a slot of the wall engine that turns from a piece into a stud
+  takes the stud's. The whole of it, with its checks and what is still asked of a paint: `docs/agents/levels.md`, "What a box does is said in a word".

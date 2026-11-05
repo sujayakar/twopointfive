@@ -287,9 +287,9 @@ export async function standGame(host: HostApi, opts: StandOpts = {}): Promise<St
   const dice = opts.seed == null ? null : newDice(opts.seed); useDice(dice);   // (before the Game exists: its constructor rolls the men's construction dice)
   const seats = opts.seats ?? seatsOfSearch(opts.search ?? (typeof location !== 'undefined' ? location.search : ''));
   const game = new Game(host, level, ch, smoke, { seats }); game.dice = dice;
-  // THE GAME'S STATE THAT STILL MOVES IS AT HOME FROM HERE (sim/state.ts settle, the statement every tick's open makes; said once, where every Game is
-  // made, and after its die is hung): the die and the poses go into the game's block now, so a roll of the die before the first tick is the Rust
-  // module's like any other. (The doors, the falls, the furniture, the slabs and the thrown things were made over the block and need no move.)
+  // THE GAME'S STATE IS AT HOME FROM HERE (sim/state.ts settle, the statement every tick's open makes; said once, where every Game is made, and after its
+  // die is hung): a rule that acts before the first tick — a level staged or restarted, a leaf shot apart on a game just loaded, a checkpoint filed, a
+  // roll of the die — finds its numbers in the game's block and is the Rust module's, like any other.
   game.sim.settle(game);
   if (opts.audio) game.audio = opts.audio;
   if (!opts.harness) game.saves.onPutBack = () => hostAfterPutBack(game);   // (a save kept in memory put back — savestate.ts SAVETIMELINE: the GPU's buffers are told so; host/putback.ts)

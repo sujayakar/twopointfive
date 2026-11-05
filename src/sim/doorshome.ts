@@ -1,16 +1,16 @@
 // THE DOORS' STATE, AS COLUMNS — where every leaf's own numbers are kept (game/doors.ts Door reads and writes them through its accessors), in TypeScript
 // and in the Rust module alike, and how they move between the two.
 //
-// A leaf's state is not fields on an object: it is a COLUMN A NUMBER, a door an index (the layout the Rust side steps: rust/sim/src/doors.rs Doors). The
-// columns are the `doors` part of the game's block (sim/state.ts) from the moment the doors are made, and the doors' step runs over them with no copy in or
-// out, in the module (doors.rs update, the row RUST.doors on) or in game/doors.ts. `Door.angle` is the same read either way, so everything that reads a
-// door — the door tools, the men, a checkpoint file, the digest — reads the same values whichever side stepped.
+// A leaf's state is not fields on an object: it is a COLUMN A NUMBER, a door an index (the layout the Rust side steps: rust/sim/src/doors.rs Doors). While
+// the row RUST.doors is off the columns stand in a Float64Array of the game's own (`DoorStore.own`); while it is on they are the `doors` part of the game's
+// block of the module's memory (sim/state.ts), and the doors' step runs there (doors.rs update) with no copy in or out. `Door.angle` is the same read either
+// way, so everything that reads a door — the door tools, the men, a checkpoint file, the digest — reads the same values with the row on or off.
 //
 // A truth is 1 or 0, a man is his id, a set of men (Door.passers) its bits as a number, a kind (DoorDrive.kind) its place in DRIVE_KINDS.
 //
 // (Imports sim.ts and state.ts alone: like the rest of src/sim, this is below the game.)
-import { sim, f64, type SimExports } from './sim';
-import { simRoom, simPart, P_DOORS, type SimState } from './state';
+import { sim, f64, RUST, type SimExports } from './sim';
+import { simTenant, simPart, P_DOORS, type SimState } from './state';
 
 /** doors a level can have and still keep them in the module (rust/sim/src/doors.rs CAP; more: they stay in TypeScript, the row on or not) */
 export const DOOR_CAP = 64;
@@ -27,20 +27,20 @@ export const DOOR_SOUNDS = ['creak', 'bang', 'latch', 'bash', 'rattle', 'pick', 
 /** DoorStrike.tier, the same way */
 export const STRIKE_TIERS = ['open', 'slam', 'boot'] as const;
 
-/** the doors' bit in the head of a game's block (sim/state.ts: one a family, never reused), and how long their part is */
-const DOOR_BIT = 4;
-simRoom(P_DOORS, DOOR_COLS * DOOR_CAP * 8);
-/** THE COLUMNS OF ONE SET OF DOORS (a level's, or a lone door's): the `doors` part of its game's block `home` (never a view of it: the block moves), DOOR_CAP
- *  doors a column, for the game's life. Value K of door i is `d[base + K * stride + i]`; `cap` is how many doors there are. */
+/** THE COLUMNS OF ONE SET OF DOORS (a level's, or a lone door's): `own` while they are in TypeScript — `cap` doors a column — or the `doors` part of the game's
+ *  block (`home`, never a view of it: the block moves) with DOOR_CAP doors a column. Value K of door i is `d[base + K * stride + i]`. */
 export class DoorStore {
-  /** where the columns start in `home.d`, and doors a column */
-  readonly base: number; readonly stride = DOOR_CAP;
-  constructor(readonly home: SimState, readonly cap: number) {
+  own: Float64Array;
+  /** the game's block of the module's memory while the columns are at home there (RUST.doors), else null */
+  home: SimState | null = null;
+  /** where the columns start in `home.d` (0 in `own`), and doors a column where they stand now */
+  base = 0; stride: number;
+  constructor(readonly cap: number) {
     if (cap > DOOR_CAP) throw new Error(`a level of ${cap} doors: the game holds ${DOOR_CAP} (sim/doorshome.ts DOOR_CAP, rust/sim/src/doors.rs CAP)`);   // (said as the level loads: there is no other step for the doors of a bigger one)
-    home.keep(DOOR_BIT, 'doors'); this.base = simPart(P_DOORS) >>> 3;
+    this.own = new Float64Array(DOOR_COLS * cap); this.stride = cap;
   }
   /** the array the columns are in now (asked at every read: a block's view dies when the block moves) */
-  get d(): Float64Array { return this.home.d; }
+  get d(): Float64Array { const h = this.home; return h !== null ? h.d : this.own; }
 }
 
 // ---- the hand-over of one step (rust/sim/src/doors.rs: its tables and their columns, by the same numbers)
@@ -81,3 +81,20 @@ export const doorMem = f64;
 /** COUNTS FOR THE CHECKS (the host's: no game reads them): door steps the module took and the TypeScript took, leaves the module turned, noises it listed,
  *  steps answered both ways (collision.ts BOTH) and how many of those differed, with the first in words */
 export const DOORS_STEPPED = { there: 0, here: 0, turned: 0, noises: 0, both: 0, differ: 0, first: '' };
+
+/** what the tenant asks of a game: its doors' columns (game/doors.ts Doors.store) and how many doors there are */
+interface HasDoors { doors?: { store: DoorStore; list: { length: number } } }
+// the doors' columns move into a game's block as its tick opens with RUST.doors on, and out again with it off (state.ts settle)
+simTenant({ name: 'doors', bit: 4,
+  wants(g: HasDoors) { const D = g.doors; return RUST.doors && !!D && D.list.length > 0; },
+  into(g: HasDoors, st: SimState) {
+    const S = g.doors!.store, n = S.cap, base = simPart(P_DOORS) >>> 3, d = st.d, own = S.own;
+    for (let K = 0; K < DOOR_COLS; K++) { const o = base + K * DOOR_CAP, q = K * n; for (let i = 0; i < n; i++) d[o + i] = own[q + i]; }
+    S.home = st; S.base = base; S.stride = DOOR_CAP;
+  },
+  outOf(g: HasDoors, st: SimState) {
+    const S = g.doors?.store; if (!S || S.home === null) return;
+    const n = S.cap, base = S.base, d = st.d, own = S.own;
+    for (let K = 0; K < DOOR_COLS; K++) { const o = base + K * DOOR_CAP, q = K * n; for (let i = 0; i < n; i++) { own[q + i] = d[o + i]; d[o + i] = 0; } }   // (a part nobody is at home in is zeros: state.rs)
+    S.home = null; S.base = 0; S.stride = n;
+  } });

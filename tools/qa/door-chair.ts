@@ -7,15 +7,10 @@
 // circle (0.3 m, 75 kg, 1.5 m/s) walks the frame's middle line from 1.3 m before it to 1.5 m beyond, on both faces, with an office chair stood 0.6 m before the
 // frame — up to 0.2 m off the middle, square and turned — and nothing else on the floor (no leaf: the door stands open or is off). The props' own simulation
 // (PropSystem.update) and the men's own push-out of the statics run each 1/60 s. A case PLUGS when six seconds on the man is not 0.8 m past the wall (his whole body out of the frame).
-// THE FURNITURE'S STEP IS THE GAME'S OWN, WHEREVER THE GAME TAKES IT: a game is stood up once so that the stand is in force (the rows of the Rust
-// module up, the game's own maths), and each case is stepped inside a window on its own statics' copy — so the chair is stepped in the module
-// (props.rs), as a chair in play is. The last line says how many steps the module took, and the check FAILS if the TypeScript took one.
-// exit 0 = no door plugs · 1 = a plug (listed with --list), or a step the module did not take · 2 = no such level
+// exit 0 = no door plugs · 1 = a plug (listed with --list) · 2 = no such level
 import { resolve } from 'node:path';
 import { readFileSync, existsSync } from 'node:fs';
 const ROOT = resolve(import.meta.dir, '../..');
-{ const { standUp } = await import('./headless.ts'), log = console.log, err = console.error; console.log = console.error = () => {}; try { await standUp({ uploadEvery: 1000 }); } finally { console.log = log; console.error = err; } }
-const { PROPS_STEPPED } = await import(`${ROOT}/src/sim/propshome.ts`);
 const { parseLevelData } = await import(`${ROOT}/src/scene/levelData.ts`);
 const { loadLevel } = await import(`${ROOT}/src/scene/levelLoad.ts`);
 const { StaticCollision } = await import(`${ROOT}/src/scene/collision.ts`);
@@ -40,12 +35,12 @@ for (const name of todo) {
       if (!OFF) P.doorways = [{ cx: mx, cz: mz, ux: u[0], uz: u[1], half: d.width / 2 - 0.02 }];
       const pos: [number, number, number] = [mx - n[0] * side * 1.3, 0, mz - n[1] * side * 1.3], vel: [number, number, number] = [n[0] * side * 1.5, 0, n[1] * side * 1.5];
       const through = () => (pos[0] - mx) * n[0] * side + (pos[2] - mz) * n[1] * side;
-      col.window(() => { for (let f = 0; f < 360 && through() < 0.8; f++) {
+      for (let f = 0; f < 360 && through() < 0.8; f++) {
         const gx = mx + n[0] * side * 1.5 - pos[0], gz = mz + n[1] * side * 1.5 - pos[2], gl = Math.hypot(gx, gz) || 1; vel[0] = gx / gl * 1.5; vel[2] = gz / gl * 1.5;   // (he steers at his mark beyond the door, as a path's waypoint)
         pos[0] += vel[0] / 60; pos[2] += vel[2] / 60; col.collideCircle(pos, 0.3, 0.2, 1.5);
         P.update(1 / 60, [{ pos, vel, radius: 0.3, who: 1, mass: 75, quiet: false }], []);
         col.collideCircle(pos, 0.3, 0.2, 1.5);
-      } });
+      }
       asked++; mine++;
       if (through() < 0.8) { bad++; plugs.push(`${name} ${d.name} ${side > 0 ? '+' : '-'} chair ${a >= 0 ? '+' : ''}${a.toFixed(1)} m off the middle, turned ${yaw.toFixed(2)}: the man ${through().toFixed(2)} m past the wall after 6 s`); }
     }
@@ -53,7 +48,6 @@ for (const name of todo) {
   console.log(`${bad ? 'FAIL' : 'PASS'}  ${name.padEnd(12)} ${mine} cases · ${bad} plugged`);
 }
 if (LIST) for (const p of plugs) console.log('      ' + p);
-console.log(`\n${asked} cases over ${todo.length} levels · ${plugs.length} plugged${OFF ? ' · the guide OFF (props.ts doorways empty)' : ''} · ${PROPS_STEPPED.there} steps of the furniture taken in the Rust module, ${PROPS_STEPPED.here} in TypeScript`);
-if (PROPS_STEPPED.here > 0 || PROPS_STEPPED.there === 0) { console.log(`=== door-chair: FAIL — the furniture's step was not the module's (${PROPS_STEPPED.here} steps taken in TypeScript) ===`); process.exit(1); }
+console.log(`\n${asked} cases over ${todo.length} levels · ${plugs.length} plugged${OFF ? ' · the guide OFF (props.ts doorways empty)' : ''}`);
 if (plugs.length) { console.log(`=== door-chair: ${plugs.length} FAIL ===`); process.exit(1); }
 console.log('=== door-chair: ALL PASS ===');

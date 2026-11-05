@@ -1,6 +1,6 @@
 // WHAT FALLS, AND WHAT IT LEAVES — the landings the simulation has scheduled for things that let go, and the LITTER map (m² of broken glass in each
-// half-metre cell of the floor: what makes a footfall louder), as one flat store a game: the `falls` part of the game's block (sim/state.ts) from the
-// moment the game is made (rust/sim/src/falls.rs has the layout and the same five rules, statement for statement).
+// half-metre cell of the floor: what makes a footfall louder), as one flat store a game: in TypeScript, and at home in the Rust module's block while the row
+// RUST.falls is on (rust/sim/src/falls.rs has the layout and the same five rules, statement for statement).
 //
 // THIS IS THE GAMEPLAY HALF OF WHAT BREAKS. The landings wait in LISTS, one for each kind of thing that falls, each with its own count and its own memory
 // of when the floor was last told (so one kind's cap, gap or going inert never moves another's):
@@ -8,13 +8,13 @@
 //   FALL_PIECES  the pieces a thing that breaks throws (game/debris.ts, under DEBRIS.dress): when and where each comes down, and that the floor hears it
 // The plates, the chunks and the spray a player sees are dressing and never write here.
 //
-// Every rule below is ONE function with two bodies over the same store — the module's (`there`, the row RUST.falls on) and this file's (`here`) — and a third road
+// Every rule below is ONE function with two bodies — the module's (`there`, the row on and the store at home) and this file's (`here`) — and a third road
 // for the checks (`FALLS.both`: both taken from the same store, everything they leave compared; the game goes on with this file's). No length or angle is
 // worked out by either, so the row answers under either maths.
 //
 // (Imports sim.ts and state.ts alone: like the rest of src/sim, this is below the game.)
-import { sim, f64, RUST, ruleRed } from './sim';
-import { simRoom, simPart, P_FALLS, type SimState } from './state';
+import { sim, f64, RUST, ruleFell, ruleRed } from './sim';
+import { simTenant, simPart, P_FALLS, type SimState } from './state';
 
 /** the floor's cells (rust/sim/src/falls.rs: the world's floor rectangle, 40 m × 28 m from the origin, in half-metre cells) and the landings that can wait */
 export const FALL_CELL = 0.5, FALL_CELLS_X = 80, FALL_CELLS_Z = 56, FALL_CELL_MAX = 0.25, FALL_MAXP = 96;
@@ -42,15 +42,14 @@ export interface FallDue { name: FallSound; pos: [number, number, number]; gain:
  *  answered both ways, how many differed, and the first that did in words */
 export const FALLS = { both: false, there: 0, here: 0, asked: 0, differ: 0, first: '', dues: 0, steps: 0, crunches: 0 };
 
-/** the falls' bit in the head of a game's block (sim/state.ts: one a family, never reused), and how long their part is */
-const FALL_BIT = 8;
-simRoom(P_FALLS, FALL_LEN * 8);
 export class FallStore {
-  /** where the store starts in `home.d` */
-  readonly base: number;
-  /** `home`: the game's block, which the store is a part of for the game's life (never a view of it: the block moves) */
-  constructor(readonly home: SimState) { home.keep(FALL_BIT, 'falls'); this.base = simPart(P_FALLS) >>> 3; this.d.fill(-1e9, this.base + O_LAST, this.base + O_LAST + FALL_LISTS); }
-  private get d(): Float64Array { return this.home.d; }
+  own = new Float64Array(FALL_LEN);
+  /** the game's block of the module's memory while the store is at home there (RUST.falls), else null */
+  home: SimState | null = null;
+  /** where the store starts in `home.d` (0 in `own`) */
+  base = 0;
+  constructor() { this.own.fill(-1e9, O_LAST, O_LAST + FALL_LISTS); }
+  private get d(): Float64Array { const h = this.home; return h !== null ? h.d : this.own; }
 
   // ---- reads (no call: the store is read where it stands)
   /** landings waiting in the glass's list */
@@ -70,37 +69,37 @@ export class FallStore {
   /** a landing put on list `l` — or, the list at `cap`, its glass laid now and its sound thickening the last landing of the list that has one */
   schedule(t: number, x: number, y: number, z: number, name: FallSound, gain: number, rate: number, amount: number, who: number, event: number, level: number, cap: number, l = FALL_GLASS, dust = 0): boolean {
     const n = (FALL_SOUNDS as readonly string[]).indexOf(name);
-    return this.rule('schedule', () => sim().falls_schedule(this.home.bind(), l, t, x, y, z, n, gain, rate, amount, who, event, level, dust, cap) !== 0, () => scheduleHere(this.d, this.base, l, t, x, y, z, n, gain, rate, amount, who, event, level, dust, cap));
+    return this.rule('schedule', () => sim().falls_schedule(this.home!.bind(), l, t, x, y, z, n, gain, rate, amount, who, event, level, dust, cap) !== 0, () => scheduleHere(this.d, this.base, l, t, x, y, z, n, gain, rate, amount, who, event, level, dust, cap));
   }
   /** shards.ts deposit: `amount` m² of glass laid at (x, z) */
-  deposit(x: number, z: number, amount: number): void { this.rule('deposit', () => { sim().falls_deposit(this.home.bind(), x, z, amount); return 0; }, () => { depositHere(this.d, this.base, x, z, amount); return 0; }); }
+  deposit(x: number, z: number, amount: number): void { this.rule('deposit', () => { sim().falls_deposit(this.home!.bind(), x, z, amount); return 0; }, () => { depositHere(this.d, this.base, x, z, amount); return 0; }); }
   /** the landings of list `l` whose time has come, in order: each one's glass laid and the floor told (one event a `gap`, at `level` unless the landing has its own) */
   due(time: number, level: number, gap: number, l = FALL_GLASS): FallDue[] {
     if (this.waitingIn(l) === 0) return NONE;
     FALLS.dues++;
-    return this.rule('due', () => { const n = sim().falls_due(this.home.bind(), l, time, level, gap), m = f64(), at = sim().sim_scratch() / 8, out: FallDue[] = [];
+    return this.rule('due', () => { const n = sim().falls_due(this.home!.bind(), l, time, level, gap), m = f64(), at = sim().sim_scratch() / 8, out: FallDue[] = [];
       for (let i = 0, o = at; i < n; i++, o += DUE) out.push({ name: FALL_SOUNDS[m[o]] ?? '', pos: [m[o + 1], m[o + 2], m[o + 3]], gain: m[o + 4], rate: m[o + 5], heard: m[o + 6] !== 0, level: m[o + 7], who: m[o + 8], dust: m[o + 9] });
       return out; }, () => dueHere(this.d, this.base, l, time, level, gap));
   }
   /** shards.ts step: a footfall at (x, z) of hearing level `level` → the level to file, and how much glass was underfoot (0‥1; 0 = no crunch) */
   step(x: number, z: number, level: number, crunchFull: number, grind: number, gain: number, add: number): { level: number; k: number } {
     FALLS.steps++;
-    const r = this.rule('step', () => { const l = sim().falls_step(this.home.bind(), x, z, level, crunchFull, grind, gain, add); return { level: l, k: f64()[sim().sim_scratch() / 8] }; }, () => stepHere(this.d, this.base, x, z, level, crunchFull, grind, gain, add));
+    const r = this.rule('step', () => { const l = sim().falls_step(this.home!.bind(), x, z, level, crunchFull, grind, gain, add); return { level: l, k: f64()[sim().sim_scratch() / 8] }; }, () => stepHere(this.d, this.base, x, z, level, crunchFull, grind, gain, add));
     if (r.k > 0) FALLS.crunches++;
     return r;
   }
   /** may the floor be told of a landing of list `l` at `time` (one a `gap`, floor-wide)? If so the telling is remembered. */
-  heard(time: number, gap: number, l = FALL_GLASS): boolean { return this.rule('heard', () => sim().falls_heard(this.home.bind(), l, time, gap) !== 0, () => { const d = this.d, o = this.base + O_LAST + l; if (time - d[o] < gap) return false; d[o] = time; return true; }); }
+  heard(time: number, gap: number, l = FALL_GLASS): boolean { return this.rule('heard', () => sim().falls_heard(this.home!.bind(), l, time, gap) !== 0, () => { const d = this.d, o = this.base + O_LAST + l; if (time - d[o] < gap) return false; d[o] = time; return true; }); }
   /** nothing waits in list `l`, and the floor's memory of its last landing is new — with the glass's list, no glass lies either; `listOnly`: the landings
    *  alone are dropped (the rule went inert) */
   clear(listOnly = false, l = FALL_GLASS): void {
-    this.rule('clear', () => { sim().falls_clear(this.home.bind(), l, listOnly ? 0 : 1, -1e9); return 0; }, () => { clearHere(this.d, this.base, l, listOnly); return 0; });
+    this.rule('clear', () => { sim().falls_clear(this.home!.bind(), l, listOnly ? 0 : 1, -1e9); return 0; }, () => { clearHere(this.d, this.base, l, listOnly); return 0; });
   }
 
   /** ONE RULE, there or here — or both ways for the checks (FALLS.both): the module's taken first with nothing of it kept, then this file's from the same
    *  store, and the two stores and answers compared to the bit */
   private rule<T>(what: string, there: () => T, here: () => T): T {
-    if (!RUST.falls || ruleRed('falls')) { FALLS.here++; return here(); }
+    if (!RUST.falls || this.home === null || ruleRed('falls')) { if (RUST.falls && this.home === null) ruleFell('falls', 'the store is not at home in a block of the module'); FALLS.here++; return here(); }
     if (!FALLS.both) { FALLS.there++; return there(); }
     const o = this.base, was = this.home.d.slice(o, o + FALL_LEN), a = there(), after = this.home.d.slice(o, o + FALL_LEN); this.home.d.set(was, o);
     const b = here(), d = this.home.d; let bad = JSON.stringify(a, nanSafe) === JSON.stringify(b, nanSafe) ? '' : `answers ${JSON.stringify(b)} here, ${JSON.stringify(a)} there`;
@@ -159,3 +158,11 @@ function clearHere(d: Float64Array, o: number, l: number, listOnly: boolean): vo
   d[o + O_LAST + l] = -1e9;
   if (l === FALL_GLASS) { d.fill(0, o, o + NCELLS); d[o + O_ANY] = 0; }
 }
+
+/** what the tenant asks of a game: its falls (game.ts Game.falls) */
+interface HasFalls { falls?: FallStore }
+// the store moves into a game's block as its tick opens with RUST.falls on, and out again with it off (state.ts settle)
+simTenant({ name: 'falls', bit: 8,
+  wants(g: HasFalls) { return RUST.falls && !!g.falls; },
+  into(g: HasFalls, st: SimState) { const S = g.falls!, base = simPart(P_FALLS) >>> 3; st.d.set(S.own, base); S.home = st; S.base = base; },
+  outOf(g: HasFalls, st: SimState) { const S = g.falls; if (!S || S.home === null) return; const o = S.base; S.own.set(st.d.subarray(o, o + FALL_LEN)); st.d.fill(0, o, o + FALL_LEN); S.home = null; S.base = 0; } });

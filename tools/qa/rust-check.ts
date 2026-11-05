@@ -423,7 +423,7 @@ let wordOwn = '', wordRust = '';
   for (const [k, t] of [['PROP_CAP', 'CAP'], ['PROP_EV', 'NEV'], ['PROP_PARS', 'NPAR']]) { shared++; const h = Number(new RegExp(`export const ${k} = (\\d+)`).exec(home)?.[1]); if (h !== there(t)) off.push(`${k} ${h} here, ${t} ${there(t)} there`); }
   { const sounds = /PROP_SOUNDS = \[([^\]]*)\]/.exec(home)?.[1].replace(/['\s]/g, '').split(',') ?? []; ['SCRAPE', 'THUD', 'ROLL'].forEach(k => { shared++; if (sounds[there(k)] !== k.toLowerCase()) off.push(`sound ${k}`); }); }
   const here = (name: string): number => Number(new RegExp(`\\b${name} = (-?[\\d.]+)`).exec(ts)?.[1] ?? NaN);
-  for (const k of ['MAX_V', 'MAX_W', 'SLEEP_V', 'SLEEP_W', 'SLEEP_T', 'DOOR_GUIDE', 'Y_MIN', 'NEAR', 'SETTLE_PASSES']) { shared++; if (here(k) !== there(k)) off.push(`${k} ${here(k)} in props.ts, ${there(k)} in props.rs`); }
+  for (const k of ['MAX_V', 'MAX_W', 'SLEEP_V', 'SLEEP_W', 'SLEEP_T', 'DOOR_GUIDE', 'Y_MIN', 'NEAR']) { shared++; if (here(k) !== there(k)) off.push(`${k} ${here(k)} in props.ts, ${there(k)} in props.rs`); }
   const ok = r.status === 0 && rows.length >= 4 && rows.every(l => / PASS /.test(l)) && /=== prop-ident: PASS/.test(r.out) && off.length === 0 && shared > 70;
   verdict(ok, 'props: every thing the Rust module steps ends where the TypeScript\'s step leaves it — its columns, the clock, the men, the noises, its boxes — and the two sides name their numbers alike',
     (rows.length ? rows.map(l => l.replace(/\s+/g, ' ').trim()).join('\n    ') + '\n    ' + sum.slice(0, 600) : `the differential left nothing (exit ${r.status}): ${(r.err || r.out).trim().split('\n').slice(-2).join(' / ').slice(0, 300)}`)
@@ -501,9 +501,7 @@ let wordOwn = '', wordRust = '';
     const world = fs.readFileSync(resolve(ROOT, 'rust/sim/src/world.rs'), 'utf8'), bog = fs.readFileSync(resolve(ROOT, 'src/game/snowBog.ts'), 'utf8');
     const kinds = [.../export const SNOW_KIND = \{([^}]*)\}/.exec(bog)?.[1].matchAll(/(\w+):\s*(\d+)/g) ?? []]; if (kinds.length !== 5) off.push('SNOW_KIND not found in snowBog.ts');
     for (const q of kinds) { if (q[1] === 'none') continue; shared++; const t = Number(new RegExp(`pub const SNOW_${q[1].toUpperCase()}: u8 = (\\d+);`).exec(world)?.[1]); if (t !== Number(q[2])) off.push(`SNOW_KIND.${q[1]} ${q[2]} in snowBog.ts, ${t} in world.rs`); }
-    shared++; const roofs = Number(/\bITEM_ROOFS = (\d+)/.exec(home)?.[1]); if (roofs !== there('MAX_ROOFS')) off.push(`ITEM_ROOFS ${roofs} here, MAX_ROOFS ${there('MAX_ROOFS')} there`);
-    // (…and the weather's own: the roofs it keeps in force are the roofs a walk is handed — one number in three places)
-    shared++; const wx = Number(/export const MAX_ROOFS = (\d+)/.exec(fs.readFileSync(resolve(ROOT, 'src/game/weatherKinds.ts'), 'utf8'))?.[1]); if (wx !== roofs) off.push(`MAX_ROOFS ${wx} in weatherKinds.ts, ITEM_ROOFS ${roofs} in itemshome.ts`); }
+    shared++; const roofs = Number(/\bITEM_ROOFS = (\d+)/.exec(home)?.[1]); if (roofs !== there('MAX_ROOFS')) off.push(`ITEM_ROOFS ${roofs} here, MAX_ROOFS ${there('MAX_ROOFS')} there`); }
   { shared += 2; const g = Number(/export const GRAVITY = ([\d.]+)/.exec(ts)?.[1]); if (g !== there('GRAVITY')) off.push(`GRAVITY ${g} in throwables.ts, ${there('GRAVITY')} in items.rs`);
     if (!/const sub = 2;/.test(ts) || there('SUB') !== 2) off.push('the substeps, sub'); }
   { // THE NUMBERS WRITTEN IN THE RULE ITSELF, function by function (as the slabs' are held): the step, the pose's key, and the furniture's ray
@@ -513,7 +511,7 @@ let wordOwn = '', wordRust = '';
     for (const [what, a, b] of [
       ['stepRow | update', body(ts, /^  private stepRow\(/m, '\n  }\n'), body(rs, /^pub fn update\(/m, '\n}\n')],
       ['poseKey | pose_key', body(ts, /^const poseKey = /m, '\n'), body(rs, /^fn pose_key\(/m, '\n}\n')],
-      ['PropSystem.raycastHere | ray_things', body(props, /^  raycastHere\(ro: Vec3/m, '\n  }\n'), body(lines, /^pub fn ray_things\(/m, '\n}\n')]] as [string, string | null, string | null][]) {
+      ['PropSystem.raycast | ray_things', body(props, /^  raycast\(ro: Vec3/m, '\n  }\n'), body(lines, /^pub fn ray_things\(/m, '\n}\n')]] as [string, string | null, string | null][]) {
       if (a === null || b === null) { off.push(`${what}: not found`); continue; }
       const na = nums(a), nb = nums(b); shared += na.length; if (na.join() !== nb.join()) off.push(`the numbers written in ${what}: ${na.join(' ')} here, ${nb.join(' ')} there`);
     } }

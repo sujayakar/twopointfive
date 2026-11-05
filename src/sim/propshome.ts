@@ -2,11 +2,11 @@
 // TypeScript and in the Rust module alike, and how they move between the two.
 //
 // THE LAYOUT IS ONE, BYTE FOR BYTE (rust/sim/src/props.rs Props, which says why it is what it is: dense rows in the game's own order, a column a number as
-// narrow as its values, hot before cold, every column whole vectors on a 16-byte boundary). The bytes are the `props` part of the game's block
-// (sim/state.ts, sim/colstore.ts ColStore, which every such store is) from the moment the furniture is made, and the furniture's step runs over them
-// with no copy in or out, in the module (props.rs update, the row RUST.props on) or in props.ts. A column is read as `d[b8 + O.x + row]` (the
-// doubles) or `u[b4 + O.flags + row]` (the words), so the step and everything that reads a chair through `Prop.x` — the men who walk round it,
-// a blast, a checkpoint file, the digest — reads the same values whichever side stepped.
+// narrow as its values, hot before cold, every column whole vectors on a 16-byte boundary). While the row RUST.props is off the bytes are an array of
+// the game's own (sim/colstore.ts ColStore, which every such store is); while it is on they are the `props` part of the game's block of the module's memory (sim/state.ts), and the furniture's
+// step runs there (props.rs update) with no copy in or out: moving home is one copy of the bytes. Either way a column is read as `d[b8 + O.x + row]` (the
+// doubles) or `u[b4 + O.flags + row]` (the words), so the step in props.ts and everything that reads a chair through `Prop.x` — the men who walk round it,
+// a blast, a checkpoint file, the digest — reads the same values with the row on or off.
 //
 // ROWS AND IDS. Rows 0 .. n are the things in the level now, in the order of `PropSystem.props` (which this keeps: row k IS props[k]); rows n .. total the
 // ones a blast took out, kept for the level put back. A thing's id never moves; `row[id]` and `id[row]` say who is where. `leave` and `home` are the two
@@ -15,8 +15,8 @@
 // A truth is a bit of `flags` (PT), a man is his id (an i32: read `| 0`), a sound (PropEvent.sound) its place in PROP_SOUNDS.
 //
 // (Imports sim.ts, state.ts and colstore.ts alone: like the rest of src/sim, this is below the game.)
-import { sim, f64, type SimExports } from './sim';
-import { simRoom, P_PROPS, type SimState } from './state';
+import { sim, f64, RUST, type SimExports } from './sim';
+import { simTenant, simPart, P_PROPS, type SimState } from './state';
 import { ColStore, colsOf, colDiff, type ColsOf } from './colstore';
 
 /** loose things of furniture a level can have (rust/sim/src/props.rs CAP; a level of more is not loaded: game/levelfit.ts) */
@@ -39,22 +39,19 @@ export const PROP_SOUNDS = ['scrape', 'thud', 'roll'] as const;
 /** where each column starts for columns `cap` rows long (sim/colstore.ts colsOf) */
 export type PropCols = ColsOf<(typeof PROP_F64)[number], (typeof PROP_U32)[number]>;
 export const propCols = (cap: number): PropCols => colsOf(PROP_HEAD, PROP_F64, PROP_U32, cap);
-/** the furniture's bit in the head of a game's block (sim/state.ts: one a family, never reused), and how long its part is */
-const PROP_BIT = 32;
-simRoom(P_PROPS, propCols(PROP_CAP).bytes);
 
-/** THE COLUMNS OF ONE SET OF FURNITURE (a level's, or a lone stage's), over its game's block `st`: sim/colstore.ts's store, and what its rows mean. `cap`
- *  is PROP_CAP, so that the bytes are the module's part as they stand; a level of more things than that is not loaded, and says so. */
+/** THE COLUMNS OF ONE SET OF FURNITURE (a level's, or a lone stage's): sim/colstore.ts's store, and what its rows mean. `cap` is PROP_CAP, so that the
+ *  bytes are the module's part as they stand; a level of more things than that is not loaded, and says so. */
 export class PropStore extends ColStore<(typeof PROP_F64)[number], (typeof PROP_U32)[number]> {
   /** the maths the kept cos and sin were worked out under (math/exact.ts mathsEpoch: the host's, game/props.ts keeps it fresh) */
   epoch = -1;
-  constructor(st: SimState, readonly total: number) {
+  constructor(readonly total: number) {
     if (total > PROP_CAP) throw new Error(`a level of ${total} loose things of furniture: the game holds ${PROP_CAP} (sim/propshome.ts PROP_CAP, rust/sim/src/props.rs CAP)`);   // (said as the level loads: there is no other step for the furniture of a bigger one)
-    super(st, P_PROPS, PROP_BIT, 'furniture', PROP_HEAD, PROP_F64, PROP_U32, PROP_CAP);
-    const d = this.d, u = this.u, O = this.O, B = this.b8, W = this.b4;
-    u[W + 2] = total; u[W + 3] = total;
+    super(PROP_HEAD, PROP_F64, PROP_U32, PROP_CAP);
+    const d = this.d, u = this.u, O = this.O;
+    u[2] = total; u[3] = total;
     // (a thing as it is made: in its own row, asleep, to be placed, its clocks long past, the cos and sin of a yaw of 0)
-    for (let i = 0; i < total; i++) { u[W + O.id + i] = i; u[W + O.row + i] = i; u[W + O.flags + i] = PT.asleep | PT.dirty; d[B + O.noiseT + i] = -10; d[B + O.pushT + i] = -10; d[B + O.cs + i] = 1; }
+    for (let i = 0; i < total; i++) { u[O.id + i] = i; u[O.row + i] = i; u[O.flags + i] = PT.asleep | PT.dirty; d[O.noiseT + i] = -10; d[O.pushT + i] = -10; d[O.cs + i] = 1; }
   }
   /** the system's clock */
   get time(): number { return this.d[this.b8]; } set time(v: number) { this.d[this.b8] = v; }
@@ -117,10 +114,15 @@ export const propMem = f64;
 /** COUNTS FOR THE CHECKS (the host's: no game reads them): steps the module took and the TypeScript took, noises the module listed, steps answered both
  *  ways (collision.ts BOTH) and how many of those differed, with the first in words; and what the module's steps met (leaves that swept a thing, frames
  *  that guided one, things knocking each other, a thing against a static, men held back, substeps), so a check can say its run was a fair one */
-export const PROPS_STEPPED = { there: 0, here: 0, noises: 0, asked: 0, differ: 0, first: '', swept: 0, guided: 0, pairs: 0, walls: 0, held: 0, substeps: 0,
-  /** a level's settle (game/props.ts PropSystem.settle): taken in the module, taken in TypeScript, how often the module pushed a thing out of a static, and
-   *  — both ways — how many things the settle moved at all */
-  settled: 0, settledHere: 0, settleWalls: 0, settleMoved: 0 };
+export const PROPS_STEPPED = { there: 0, here: 0, noises: 0, asked: 0, differ: 0, first: '', swept: 0, guided: 0, pairs: 0, walls: 0, held: 0, substeps: 0 };
+
+/** what the tenant asks of a game: its furniture's columns (game/props.ts PropSystem.store) */
+interface HasProps { props?: { store: PropStore } }
+// the furniture's bytes move into a game's block as its tick opens with RUST.props on, and out again with it off (state.ts settle): one copy each way
+simTenant({ name: 'props', bit: 32,
+  wants(g: HasProps) { const S = g.props?.store; return RUST.props && !!S && S.total > 0; },
+  into(g: HasProps, st: SimState) { g.props!.store.moveIn(st, simPart(P_PROPS)); },
+  outOf(g: HasProps, st: SimState) { g.props?.store.moveOut(st, simPart(P_PROPS)); } });
 
 /** WHERE TWO TAKES OF A STORE'S BYTES DIFFER, in words (`bytes()` of the same store, twice): the clock, the counts, then column by column and row by
  *  row — the doubles by their value (a NaN is a NaN), the words by theirs. → at most `most` lines, none if they are the same state */

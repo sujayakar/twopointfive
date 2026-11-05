@@ -155,7 +155,7 @@ const cellName = (ix: number, iz: number) => (ix + 512) * 4096 + (iz + 512);
 
 export class GlassShards {
   /** THE GAMEPLAY HALF — the scheduled landings (sound + litter + at most one hearing event each) and the litter map — is the game's FallStore
-   *  (sim/fallshome.ts, `g.falls`: a part of the game's block). What a tool reads of it: the landings waiting … */
+   *  (sim/fallshome.ts, `g.falls`: in TypeScript, or in the Rust module's block while RUST.falls is on). What a tool reads of it: the landings waiting … */
   get pending(): Pending[] { const F = this.g.falls, out: Pending[] = []; for (let i = 0; i < F.waiting; i++) { const r = F.landing(i); out.push({ t: r.t, pos: [r.x, r.y, r.z], name: r.name ? 'glassShatter' : 'glassTinkle', gain: r.gain, rate: r.rate, amount: r.amount, who: r.who, event: r.event }); } return out; }
   /** births still alive, by expiry (the live estimate) */
   private lives: Life[] = []; private liveEst = 0;

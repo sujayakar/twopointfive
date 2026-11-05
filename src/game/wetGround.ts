@@ -18,8 +18,8 @@
 // asphalt, cloth; a sealed one (a painted line, plastic, a glazed tile) barely darkens in life, and bare METAL not at all — its albedo is its mirror (F0),
 // and water dims no mirror. Today the darkening is ONE NUMBER STANDING FOR TWO (Box.wetK = weather.ts WET_ALBEDO, 0.5, on everything but metal, sealed and
 // porous alike: the measured look of the wet lot), and 1 on metal (wet, and the same colour). How much a thing darkens belongs in its stuff's row beside
-// whether it soaks, when boxes say what they are made of. Until then a box says what it is made of through its paint (particleFx.ts surfOf, what the thing
-// is to a round) and its `metal`: `soaks` below reads the first.
+// whether it soaks, when the look's rows say it. Until then `soaks` below reads what the box is to a round (scene/materials.ts, Box.does: its row's
+// surface) and its `metal`.
 // THE LOT IS NOT THIS STEP'S. weather.ts setWet soaks the lot's slab in place (its albedo halved: a round's material is read from that, and the runs were
 // measured with it), under the level's own storm and a picked rain alike. This step never writes an albedo; a sheet lying on the lot follows it.
 // WHEN: weather.ts setWet tells the step in the very call that wets or dries the lot (`follow`), so the lot and the yard are never one wet and one dry for a
@@ -37,7 +37,7 @@ import type { Game } from './game';
 import { DRESS } from './dress';
 import { openGround, skyOverMost, WET_ALBEDO, WET_ROUGH } from './weather';
 import type { Rect } from './weatherKinds';
-import { surfOf } from './particleFx';
+import { doesOf } from '../scene/materials';
 
 /** how far over a wet slab's top a finish may lie and still be the ground (m). It sits in the gap between what LIES and what STANDS: the kit's table of
  *  what lies on what tops out at 15 mm (scene/gwotKit.ts `lie`), 17 with the exporter's steps on it; a mat, a rug and a duckboard, the lowest things that
@@ -46,10 +46,9 @@ export const WET_OVER = 0.02;
 const top = (b: Box) => b.c[1] + b.h[1];
 /** the highest top of a flat a sheet may lie on (m): no box that stands higher is read by the rule, but a finish on a lot that itself stands higher */
 const FLAT_TOP = 0.06;
-/** does what this box is made of soak water up (no film on it, no puddle): cloth, a lawn, card. Read from its paint, the one word a box has for it today —
- *  so it must be asked of a box whose `albedo` is as authored. This step never writes an albedo and never asks it of the lot, the one box the weather
- *  halves in place (weather.ts setWet): a paint at half its tone reads as another thing (a dirt yard as metal) */
-export const soaks = (b: Box): boolean => { const s = surfOf(b.albedo); return s === 'carpet' || s === 'fabric' || s === 'foliage' || s === 'cardboard'; };
+/** does what this box is made of soak water up (no film on it, no puddle): cloth, a lawn, card. Read from the box's word for what it does, the one word
+ *  that says it today. This step never writes an albedo and never asks it of the lot, the one box the weather soaks in place (weather.ts setWet) */
+export const soaks = (b: Box): boolean => { const s = doesOf(b).surf; return s === 'carpet' || s === 'fabric' || s === 'foliage' || s === 'cardboard'; };
 /** a sheet lying on the ground: drawn only, thin, low, not under the ground */
 export const groundSheet = (b: Box): boolean => (b.flags & SHEET_MASK) === BoxFlag.NoShadow && b.h[1] <= 0.02 && top(b) <= 0.03 && b.c[1] - b.h[1] >= 0;
 /** a flat a sheet may lie on: solid, square to the world, low, broader than a kerb */

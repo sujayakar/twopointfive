@@ -4,14 +4,9 @@
 //   bun run tools/qa/chair-roll-check.ts --doors [door-chair.ts's own arguments]   tools/qa/door-chair.ts with the castors on (a rolling chair still goes through a door)
 // The props' own simulation alone (PropSystem.update at 1/60 s over the office's statics), a man's circle (0.3 m, 75 kg) walking into the office's own chair
 // on a clear run of floor found in the level. Coast = how far the chair goes on after the man has stopped.
-// THE FURNITURE'S STEP IS THE GAME'S OWN, WHEREVER THE GAME TAKES IT: a game is stood up once so that the stand is in force (the rows of the Rust
-// module up, the game's own maths), and each shove is stepped inside a window on the statics' copy — so the chair is stepped in the module (props.rs),
-// as a chair in play is. A line holds that no step was the TypeScript's.
 import { resolve } from 'node:path';
 import { readFileSync } from 'node:fs';
 const ROOT = resolve(import.meta.dir, '../..');
-{ const { standUp } = await import('./headless.ts'), log = console.log, err = console.error; console.log = console.error = () => {}; try { await standUp({ uploadEvery: 1000 }); } finally { console.log = log; console.error = err; } }
-const { PROPS_STEPPED } = await import(`${ROOT}/src/sim/propshome.ts`);
 const { PropSystem, CASTOR } = await import(`${ROOT}/src/game/props.ts`);
 const BREAK = process.env.CHAIRROLL_BREAK === '1';
 if (process.argv.includes('--doors')) { CASTOR.on = true; process.argv = process.argv.filter(a => a !== '--doors'); await import('./door-chair.ts'); }
@@ -41,7 +36,7 @@ function shove(def: any, at: [number, number], pace: number, walk: number, on: b
   const P = new PropSystem([{ ...def, x: at[0] + 0.8, z: at[1], yaw: 0 }], col, (e: any) => events.push(e));
   const c = P.props[0], pos: [number, number, number] = [at[0], 0, at[1]], vel: [number, number, number] = [0, 0, 0];
   let x0 = NaN, tStop = 0, t = 0, crossed = false, px = c.x, pz = c.z;
-  col.window(() => { for (let f = 0; f < secs * 60; f++) {
+  for (let f = 0; f < secs * 60; f++) {
     const walking = pos[0] - at[0] < walk; vel[0] = walking ? pace : 0;
     pos[0] += vel[0] / 60; col.collideCircle(pos, 0.3, 0.2, 1.5);
     P.update(1 / 60, [{ pos, vel, radius: 0.3, who: 1, mass: 75, quiet: false }], []);
@@ -50,7 +45,7 @@ function shove(def: any, at: [number, number], pace: number, walk: number, on: b
     if (col.solidBlocked([px, 0.3, pz], [c.x, 0.3, c.z])) crossed = true;
     px = c.x; pz = c.z;
     if (Math.hypot(c.vx, c.vz) > 0.02) tStop = t;
-  } });
+  }
   CASTOR.on = false;
   return { coast: Math.hypot(c.x - x0, 0), secs: tStop, events, crossed, end: [c.x, c.z], asleep: c.asleep };
 }
@@ -76,6 +71,5 @@ line(k(oOff) === k(oOn), `a prop that is no chair (${OTHER.kind}) ends on the sa
 const hitOn = shove(CHAIR, blind, 4.6, 1.0, ON), hitOff = shove(CHAIR, blind, 4.6, 1.0, false);
 if (process.argv.includes('--verbose')) console.log('  wall run', JSON.stringify({ blind, on: { ...hitOn, events: hitOn.events.length }, off: { ...hitOff, events: hitOff.events.length } }));
 line(!hitOn.crossed && !hitOff.crossed && hitOn.end[0] - blind[0] < 2.5 + 3 + 0.5 && hitOn.asleep, `rolled at a wall from a sprint it never crosses a solid and comes to rest before it (ends ${(hitOn.end[0] - blind[0]).toFixed(2)} m along)`);
-line(PROPS_STEPPED.here === 0 && PROPS_STEPPED.there > 0, `every step of the furniture was the Rust module's (${PROPS_STEPPED.there} there, ${PROPS_STEPPED.here} in TypeScript)`);
 console.log(bad ? `=== chair-roll-check: ${bad} FAILED ===` : '=== chair-roll-check: ALL PASS ===');
 process.exit(bad ? 1 : 0);

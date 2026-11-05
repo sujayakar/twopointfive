@@ -1,7 +1,6 @@
 // The 'wallbreak' probe family (src/game/wallbreak.ts — interior walls and cover coming apart under rounds and blasts), run through probes.ts:
 //   bun run tools/qa/probes.ts wallbreak | wallbreak-blast | wallbreak-fire | wallbreak-cover | wallbreak-seams | wallbreak-caps | wallbreak-reset |
 //                               wallbreak-determinism | wallbreak-checkpoint | wallbreak-off [--verbose] [--level block-squads]
-//   ROOM_BREAK=1 … wallbreak-caps   the red path of the level's room (WallBreak.room): the room is not made small, and its three lines must FAIL
 // Headless = the Proxy device: nothing is drawn. What is asserted is the ONE MODEL — after each break the questions the game asks of the level agree:
 //   (blast)        a charge against a partition on a loud level opens a hole a man fits through: before, the round's ray / the sight test / the sound test / the feet /
 //                  the nav route all say WALL; after, all five say OPEN (the round's ray passes, eyes pass, sound goes straight, a man's circle is not pushed, the
@@ -373,21 +372,14 @@ export async function wallbreakCaps(): Promise<boolean> {
   { const fl = [...floaters()].filter(i => !float0.has(i)); const st = engine.world.statics;
     F.verdict(fl.length === 0, 'the wreck leaves nothing drawn hanging in the air', fl.length ? `${fl.length} new: ${fl.slice(0, 6).map(i => `#${i} at (${f2(st[i].c[0])}, ${f2(st[i].c[1])}, ${f2(st[i].c[2])}) ${f2(st[i].h[0] * 2)}×${f2(st[i].h[1] * 2)}×${f2(st[i].h[2] * 2)}`).join(' · ')}` : `${float0.size} authored that way before, no new one after; ${WALL_STATS.falls} things fell, ${WALL_STATS.floating} too big to throw and left`); }
   { const d = digestGame(game, true); F.verdict(!!d, 'the game still digests and steps', `${game.guards.length} men, t ${f2(game.time)}`); }
-  // the piece cap forced tiny — by the knob, and by the room the level left in the Rust module's copy of the box world (WallBreak.room, taken as the level
-  // loaded: the breaker holds to the smaller of the two), in statics and in the entries of the grid's cells
-  for (const [how, most, set] of [
-    ['cap 3', 3, (_w: any) => { WALLS.maxPieces = 3; }],
-    ['room for 3 statics, the knob as shipped', 3, (w: any) => { w.room = { ...w.room, boxes: 3 }; }],
-    ['room for 3 cut rows, the knob raised a thousandfold', 3, (w: any) => { WALLS.maxPieces *= 1000; w.room = { ...w.room, cuts: 3 }; }],
-    ['room for no entry of a cell, the knob as shipped', 0, (w: any) => { w.room = { ...w.room, items: 0 }; }],
-  ] as [string, number, (w: any) => void][]) {
-    const S = await stage(16, 0.5); const g2 = S.game; { const w = g2.destr.walls as any, own = w.room; set(w); if (process.env.ROOM_BREAK === '1') w.room = own; }   /* (the red path: the room is left the level's own, and the three lines of the room must FAIL) */ const furn0 = FURNBLAST.on; FURNBLAST.on = false;   /* the WALL engine's cap alone: a refused wall changes nothing — the furniture on the charge's own side going is furnblast's business, probed there */ const pick = pickWall(g2)!; resetStats();
+  // the piece cap forced tiny
+  { const S = await stage(16, 0.5); WALLS.maxPieces = 3; const g2 = S.game; const furn0 = FURNBLAST.on; FURNBLAST.on = false;   /* the WALL engine's cap alone: a refused wall changes nothing — the furniture on the charge's own side going is furnblast's business, probed there */ const pick = pickWall(g2)!; resetStats();
     const r1 = g2.destr.blast([pick.mid[0] + pick.n[0] * 0.3, 0.3, pick.mid[2] + pick.n[2] * 0.3], {});
     const p1 = g2.destr.walls.inventory().pieces; const pick2 = pickWall(g2, 1);
     let r2: any = null, state0 = '', state1 = '';
     if (pick2) { state0 = JSON.stringify(g2.destr.walls.all().map((x: any) => x.open)) + navHash(g2); r2 = g2.destr.blast([pick2.mid[0] + pick2.n[0] * 0.3, 0.3, pick2.mid[2] + pick2.n[2] * 0.3], { chaos: false }); state1 = JSON.stringify(g2.destr.walls.all().map((x: any) => x.open)) + navHash(g2); }
     const le = lists(g2, S.engine); FURNBLAST.on = furn0;
-    F.verdict(g2.destr.walls.inventory().pieces <= most && !le && (!pick2 || (WALL_STATS.refused > 0 && (r2.walls === 0 ? state0 === state1 : true))), how === 'cap 3' ? 'over the cap a change is refused whole' : `over the level's room a change is refused whole (${how})`, `${how}: first blast walls ${r1.walls} → ${p1} pieces; second wall: walls ${r2?.walls}, refused ${WALL_STATS.refused}, cells + nav ${state0 === state1 ? 'unchanged' : 'changed (a wall that fit)'}; ${le ?? 'lists consistent'}`);
+    F.verdict(g2.destr.walls.inventory().pieces <= 3 && !le && (!pick2 || (WALL_STATS.refused > 0 && (r2.walls === 0 ? state0 === state1 : true))), 'over the cap a change is refused whole', `cap 3: first blast walls ${r1.walls} → ${p1} pieces; second wall: walls ${r2?.walls}, refused ${WALL_STATS.refused}, cells + nav ${state0 === state1 ? 'unchanged' : 'changed (a wall that fit)'}; ${le ?? 'lists consistent'}`);
     restoreKnobs(); }
   return F.done();
 }

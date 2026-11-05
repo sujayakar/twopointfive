@@ -677,7 +677,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
     // house on the shed's wall with its hens shut in their run, the handcart of pumpkins. Colour: leaf green and tomato red on black soil
     L.room('westyard');
     bx(7.9, 8.3, 13.26, 13.6, 0, 0.12, C.concrete, true); bx(8.04, 8.16, 13.36, 13.5, 0, 0.95, C.red); bx(7.78, 8.04, 13.4, 13.46, 0.7, 0.76, C.red, true); bx(8.16, 8.5, 13.41, 13.45, 0.9, 0.95, C.red, true);   // the hand pump, painted red: its slab, body, spout and handle (only the body solid)
-    L.mat(8.0, 13.62, 9.1, 14.3, C.asphalt);                                                                      // mud at it
+    L.mat(8.0, 13.62, 9.1, 14.3, saidAs('earth', C.asphalt));                                                                      // mud at it
     L.mat(4.78, 9.96, 7.72, 13.18, SOIL, 0.007);                                                                  // the dug bed (under the look's furrows)
     for (let r = 0; r < 6; r++) { const x = 5.0 + r * 0.5, tall = r < 3; bx(x - 0.1, x + 0.1, r === 0 ? 11.0 : 10.1 + (r % 2) * 0.2, 13.0 - ((r + 1) % 3) * 0.18, 0, tall ? 0.3 : 0.13, C.plant, true);
       if (tall) yb(x + 0.04, 11.4 + r * 0.6, 0.04, 0.04, 0.3, 0.36, C.red, 0, true); }                          // six rows: three of tomatoes (a red one showing on each), three of low greens

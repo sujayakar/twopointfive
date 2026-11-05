@@ -1,16 +1,30 @@
-// A FAMILY'S STATE AS COLUMNS, IN THE GAME'S BLOCK — what every store of that kind is (sim/propshome.ts PropStore: the furniture; sim/slabshome.ts
-// SlabStore: the leaves off their hinges; sim/itemshome.ts ItemStore: the thrown things), kept once.
+// A FAMILY'S STATE AS COLUMNS, IN TYPESCRIPT OR IN THE RUST MODULE — what every store of that kind is (sim/propshome.ts PropStore: the furniture;
+// sim/slabshome.ts SlabStore: the leaves off their hinges), kept once.
 //
-// THE BYTES ARE ONE LAYOUT, AND THEY ARE THE FAMILY'S PART OF THE GAME'S BLOCK (sim/state.ts) from the store's first line: a head, then a column a number
-// — the doubles first, then the words — every column `cap` rows long (the family's struct in rust/sim/src says why the columns are in the order they
-// are). The store is made over the game's SimState and has no array of its own; a column is read as `d[b8 + O.x + row]` (a double) or
-// `u[b4 + O.flags + row]` (a word), `d` and `u` being the block as it stands NOW (bound in the module or parked: asked at every use). The family's step
-// runs over those bytes whichever side takes it — the Rust module's (its row of RUST on) with no copy in or out, or its TypeScript twin — and everything
-// that reads the family through its accessors reads the same values.
+// THE BYTES ARE ONE LAYOUT, WHEREVER THEY STAND: a head, then a column a number — the doubles first, then the words — every column `cap` rows long (the
+// family's struct in rust/sim/src says why the columns are in the order they are). While the family's row of RUST is off the bytes are an array of the
+// game's own (`own`); while it is on they are the family's part of the game's block of the module's memory (sim/state.ts), and its step runs there with
+// no copy in or out: moving home is one copy of the bytes (`moveIn`, `moveOut`: the tenant's two moves). Either way a column is read as
+// `d[b8 + O.x + row]` (a double) or `u[b4 + O.flags + row]` (a word), so the TypeScript step and everything that reads the family through its accessors
+// reads the same values with the row on or off.
 //
-// What a store's ROWS mean (which are live, in what order, which tables say who is where) is the family's own: this file names bytes and swaps rows.
-// (Imports state.ts alone: like the rest of src/sim, this is below the game.)
-import { simPart, type SimState } from './state';
+// ONE ARRAY IS THE FIELD. A snapshot (game/rollback.ts) takes every typed array it meets whole, so a second view of the same bytes kept beside the
+// first would be the same bytes copied twice a snapshot. The words are a view asked for here (`wordsOf`); a view holds nothing of its own, so it is no
+// state of any game: the few asked for last are kept (two games in a process, two stores a game), and one not among them is made again.
+//
+// What a store's ROWS mean (which are live, in what order, which tables say who is where) is the family's own: this file moves bytes and swaps rows.
+// (Imports state.ts for its type alone: like the rest of src/sim, this is below the game.)
+import type { SimState } from './state';
+
+const KEPT = 4;
+const FOR: (Float64Array | null)[] = [null, null, null, null], VIEW: (Uint32Array | null)[] = [null, null, null, null];
+let next = 0;
+/** the words of `d`'s bytes */
+export function wordsOf(d: Float64Array): Uint32Array {
+  for (let i = 0; i < KEPT; i++) if (FOR[i] === d) return VIEW[i]!;
+  const i = next; next = (next + 1) % KEPT; FOR[i] = d;
+  return VIEW[i] = new Uint32Array(d.buffer, d.byteOffset, d.byteLength >>> 2);
+}
 
 /** where each column starts for columns `cap` rows long behind a head of `head` bytes: a double column as an index into doubles, a word column as an
  *  index into words, from the part's start; `bytes` the part's length */
@@ -24,23 +38,22 @@ export function colsOf<F extends string, U extends string>(head: number, f64: re
 
 /** THE COLUMNS OF ONE FAMILY OF ONE GAME: doubles named `F`, words named `U`. */
 export class ColStore<F extends string, U extends string> {
-  /** where each column starts (`O.x + row` into the doubles from `b8`, `O.flags + row` into the words from `b4`) */
+  /** where each column starts (`O.x + row` into the doubles from `b8`, `O.flags + row` into the words from `b4`): asked at every use, as the arrays are */
   O: ColsOf<F, U>;
-  /** the game's block, which the columns are a part of for the game's life (never a view of it: the block moves) */
-  readonly home: SimState;
-  /** where the part starts in the block: an index into its doubles, and into its words */
-  readonly b8: number; readonly b4: number;
+  /** the game's own array of them while they are not at home in the module */
+  private own: Float64Array;
+  /** the game's block of the module's memory while the columns are at home there, else null */
+  home: SimState | null = null;
+  /** where the part starts where the columns stand now: an index into the doubles, and into the words (0 in `own`) */
+  b8 = 0; b4 = 0;
   /** `cap`: rows a column — the module's own number, so that the bytes are the module's part as they stand */
   cap: number;
-  /** `st`: the game's block (or a lone system's own); `part`, `bit`, `name`: which part of it the family's is (sim/state.ts P_…), its bit in the head and
-   *  what it is called. The part is zeros until the family writes it. */
-  constructor(st: SimState, part: number, bit: number, name: string, head: number, f64: readonly F[], u32: readonly U[], cap: number) {
-    this.cap = cap; this.O = colsOf(head, f64, u32, cap); this.home = st; st.keep(bit, name);
-    const at = simPart(part); this.b8 = at >>> 3; this.b4 = at >>> 2;
+  constructor(head: number, f64: readonly F[], u32: readonly U[], cap: number) {
+    this.cap = cap; this.O = colsOf(head, f64, u32, cap); this.own = new Float64Array(this.O.bytes >>> 3);
   }
   /** the doubles and the words the columns are in now (asked at every use: a block's views die when the block moves) */
-  get d(): Float64Array { return this.home.d; }
-  get u(): Uint32Array { return this.home.w; }
+  get d(): Float64Array { const h = this.home; return h !== null ? h.d : this.own; }
+  get u(): Uint32Array { const h = this.home; return h !== null ? h.w : wordsOf(this.own); }
   /** rows a and b change places in these columns (the family's tables follow in the family's own hands) */
   protected swapCols(a: number, b: number, f64: readonly F[], u32: readonly U[]): void {
     const d = this.d, u = this.u, O = this.O, B = this.b8, W = this.b4;
@@ -51,6 +64,14 @@ export class ColStore<F extends string, U extends string> {
   bytes(): Uint8Array { const u = this.u; return new Uint8Array(u.buffer, u.byteOffset + this.b4 * 4, this.O.bytes).slice(); }
   /** …and put back */
   put(b: Uint8Array): void { const u = this.u; new Uint8Array(u.buffer, u.byteOffset + this.b4 * 4, this.O.bytes).set(b); }
+  /** THE TENANT'S TWO MOVES (sim/state.ts simTenant `into` and `outOf`): the bytes into the part of block `st` that starts at byte `at`, and out of it
+   *  again, the part left zeros (a part nobody is at home in is zeros: rust/sim/src/state.rs) */
+  moveIn(st: SimState, at: number): void { const b = this.bytes(); this.home = st; this.b8 = at >>> 3; this.b4 = at >>> 2; this.put(b); }
+  moveOut(st: SimState, at: number): void {
+    if (this.home === null) return;
+    const b = this.bytes(); st.w.fill(0, at >>> 2, (at + this.O.bytes) >>> 2);
+    this.home = null; this.b8 = 0; this.b4 = 0; this.put(b);
+  }
 }
 
 /** WHERE TWO TAKES OF A STORE'S BYTES DIFFER, column by column and row by row over the first `rows` rows — the doubles by their value (a NaN is a NaN,

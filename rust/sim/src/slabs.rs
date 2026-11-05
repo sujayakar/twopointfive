@@ -18,9 +18,9 @@
 //! for the host to say; what its settling did, for the host's tallies).
 //!
 //! THE SLAB'S OWN BOX IS NOT A WALL TO IT: every ray here leaves one leaf of the world's copy out (`lines::ray_but`), the slab's own.
-//! A RAY THAT IS NO NUMBER HAS NO ANSWER (lines.rs ray_rule). The step then writes nothing and says so (HOST) — it works on a copy of its row for
-//! that — and the host names the mistake. Nothing of play is such a ray: one of no length meets nothing, no length is too long, and a pane of glass is
-//! met or flown through here (glass.rs).
+//! A RAY THE MODULE CANNOT WALK IS THE HOST'S (one that is no number, or longer than any level: lines.rs ray_rule). The step then writes nothing and
+//! says so (HOST), and the TypeScript takes this slab's step for this tick; the step works on a copy of its row for that. Nothing of play is such a
+//! ray: one of no length meets nothing, and a pane of glass is met or flown through here (glass.rs).
 use crate::collide;
 use crate::lines::{ray_rule, RAY_HOST};
 use crate::maths::{cos, exp, hypot2, sin};
@@ -227,7 +227,7 @@ fn hit_at(d: &mut Leaf, x: f64, y: f64, z: f64, ex: f64, ez: f64, tmax: f64) -> 
     d.rays += 1.0;
     let k = ray_rule(d.w, x, y, z, ex, 0.0, ez, tmax, 0, d.but, d.ask, &mut out);
     if k == RAY_HOST {
-        d.host = true; // (a ray that is no number: lines.rs ray_rule)
+        d.host = true; // (a ray collision.ts walks itself: the host's question — lines.rs ray_rule)
         return None;
     }
     if k < 0 {
