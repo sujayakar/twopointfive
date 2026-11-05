@@ -19,7 +19,7 @@ import { WallSides } from './render/wallSides';
 import { lookGrade, lookGradeFrame } from './render/lookgrade';
 import { lookExpoFrame, lookExpoBound, lookNightSkyE } from './render/lookexpo';
 import { planOpenings, openAreas, openingLooks, openingReach, openingsKey, leavesKey, LOOK_OPENINGS, type Opening } from './scene/openings';
-import { buildWallRaster, wallRasterDiff, reachMaskSome, REACH_WORK, REACH_PACE, type ReachJob } from './render/reach';
+import { buildWallRaster, wallRasterDiffOwn, reachMaskSome, REACH_WORK, REACH_PACE, type ReachJob } from './render/reach';
 import { MeshShadows, MESH_MAX_CHARS } from './render/meshShadows';
 import { RigFit, RIG_KPAD } from './render/sdfrig';
 import { Decals } from './render/decals';
@@ -146,11 +146,13 @@ export class Engine {
   private openRecs: { o: Opening; l: RtLight; mask: Uint32Array | null; old: boolean; job: ReachJob | null }[] = [];
   private openLevel: unknown = null; private openSerial = -1; private openTick = 0; private openSeen = NaN; private openPlanned = NaN; private openWait = 0; private openLeaves = NaN;
   private openWalls: { solid: Uint8Array; jumps?: Uint8Array } | null = null;
+  /** the masks have had their first frame on this level with the rooms row up: from then on none is decided whole at once (lookOpeningLights, the reach masks) */
+  private openBegun = false;
   /** this frame's opening lights, for the upload (lights.ts upload `own`) and the glass masks */
   private dayLights: RtLight[] = [];
   private lookOpeningLights() {
     const L = this.lights, W = this.world, K = LOOK_OPENINGS, recs = this.openRecs, day = this.dayLights;
-    const none = () => { for (const r of recs) r.l.slot = -1; recs.length = 0; day.length = 0; this.openLevel = null; this.openWalls = null; };
+    const none = () => { for (const r of recs) r.l.slot = -1; recs.length = 0; day.length = 0; this.openLevel = null; this.openWalls = null; this.openBegun = false; };
     if (!lookConfig.on || !(lookConfig.windows > 0)) { if (recs.length || day.length) none(); return; }
     const level = W.statics[0] ?? null;
     if (level !== this.openLevel) { none(); this.openLevel = level; this.openSerial = -1; this.openSeen = this.openPlanned = this.openLeaves = NaN; this.openWait = 0; }   // (a new level: its statics are new boxes)
@@ -178,20 +180,24 @@ export class Engine {
       // the walls as the reach masks read them (render/reach.ts: full-height walls, a doorway open ground that is ranked down, as the game's own raster has
       // it). Only where THEY have changed is any mask decided again (a pane shot out, a crate gone: none is), the old one serving until the new is whole
       const gaps = lookConfig.doorGaps?.() ?? [], solid = buildWallRaster(W.statics, gaps.map(g => ({ hinge: [g[0], g[1]] as [number, number], closedDir: Math.atan2(g[3] - g[1], g[2] - g[0]), width: Math.hypot(g[2] - g[0], g[3] - g[1]) })));
-      if (!this.openWalls || wallRasterDiff(this.openWalls.solid, solid)) { this.openWalls = { solid }; for (const r of recs) { r.old = !!r.mask; r.job = null; } }
+      const walls: { solid: Uint8Array; jumps?: Uint8Array } = { solid };   // (where the walls only opened, a blast, the old raster's jump field is handed on: reach.ts wallRasterDiffOwn)
+      if (!this.openWalls || wallRasterDiffOwn(this.openWalls, walls)) { this.openWalls = walls; for (const r of recs) { r.old = !!r.mask; r.job = null; } }
     }
     const leaves = leavesKey(W.dynamics); if (leaves !== this.openLeaves) { this.openLeaves = leaves; openAreas(recs.map(r => r.o), W.dynamics); }   // (a leaf swung)
     // more open than can be lit at once: the nearest to Sam are (as the pane list is the nearest glass)
     const e = lookConfig.eyeAt?.() ?? null, fx = e ? e[0] : this.viewFocus[0], fz = e ? e[1] : this.viewFocus[2], masks = lookConfig.rooms > 0;
     let cut = Infinity;
     if (recs.length > K.lit) { const far: number[] = []; for (const r of recs) if (isOpen(r.o)) far.push(Math.hypot(r.o.pos[0] - fx, r.o.pos[2] - fz)); if (far.length > K.lit) cut = far.sort((a, b) => a - b)[K.lit - 1]; }
-    // the reach masks: a frame's share of sight-line steps (render/reach.ts REACH_PACE, the game's own pace for a lamp's) for a mask being decided AGAIN;
-    // a light that would be lit now and has none at all gets its first whole, at once (a level's first frame, a new hole, the rooms row put on)
-    if (masks && this.openWalls) { const c0 = REACH_WORK.steps, walls = this.openWalls;
+    // the reach masks: a frame's share of sight-line steps (render/reach.ts REACH_PACE, the game's own pace for a lamp's). WHOLE AT ONCE only on the masks'
+    // first frame (a level's first frame, the rooms row put on: no room is shown dark, and nobody is playing that frame). IN PLAY NOTHING IS: a hole blown
+    // in a wall is first in line for the frame's share and its light comes on a few frames later, with its mask whole (until 11-05 it was decided whole on
+    // the frame the blast's walls were read: tens of milliseconds, with the jump field made again beside it)
+    if (!masks) this.openBegun = false;
+    if (masks && this.openWalls) { const c0 = REACH_WORK.steps, walls = this.openWalls, first = !this.openBegun; this.openBegun = true;
       for (;;) {
         let best: (typeof recs)[number] | null = null, score = Infinity, now = false;
-        for (const r of recs) { if (r.mask && !r.old) continue; const d = Math.hypot(r.o.pos[0] - fx, r.o.pos[2] - fz), urgent = !r.mask && isOpen(r.o) && d <= cut;
-          const s = d + (urgent ? -5000 : 0) + (isOpen(r.o) ? 0 : 1000) + (r.mask ? 500 : 0) - (r.job ? 2000 : 0); if (s < score) { score = s; best = r; now = urgent; } }   // (one begun is finished first)
+        for (const r of recs) { if (r.mask && !r.old) continue; const d = Math.hypot(r.o.pos[0] - fx, r.o.pos[2] - fz), urgent = first && !r.mask && isOpen(r.o) && d <= cut;
+          const s = d + (urgent ? -5000 : 0) + (isOpen(r.o) ? 0 : 1000) + (r.mask ? 500 : 0) - (r.job ? (r.mask ? 2000 : 2600) : 0) - (!r.mask && isOpen(r.o) && d <= cut ? 600 : 0); if (s < score) { score = s; best = r; now = urgent; } }   // (one begun is finished first)
         if (!best) break;
         const left = now ? Infinity : REACH_PACE.steps - (REACH_WORK.steps - c0); if (left <= 0) break;
         const job = best.job ??= { budget: left, own: walls }; job.budget = left;

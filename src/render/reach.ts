@@ -114,6 +114,17 @@ export function wallRasterDiff(prev: Uint8Array, next: Uint8Array): [number, num
   return [x0, z0, x1, z1];
 }
 
+/** The same question for a raster that is NOBODY'S STATE (ReachJob.own: the look page's daylight at openings keeps its own walls and their jump field, and
+ *  neither side table of this file knows them): does `next` differ from `prev`? And where its walls only OPENED (a wall holed: every blast), prev's jump field
+ *  is handed to next, as wallRasterDiff hands the game's. Until 11-05 the look made the field again, whole, on the frame it read a blast's walls. */
+export function wallRasterDiffOwn(prev: { solid: Uint8Array; jumps?: Uint8Array }, next: { solid: Uint8Array; jumps?: Uint8Array }): boolean {
+  const a = prev.solid, b = next.solid; if (a.length !== b.length) return true;
+  let changed = false, closed = false;
+  for (let i = 0; i < a.length; i++) if (a[i] !== b[i]) { changed = true; if (b[i] && !a[i]) { closed = true; break; } }
+  if (changed && !closed && prev.jumps) next.jumps = prev.jumps;
+  return changed;
+}
+
 /** 2D line of sight over the fine raster from the centre of sub-cell (ax, az) to the centre of (bx, bz), ignoring both end sub-cells.
  *  Sampled 1¼ times per sub-cell rather than an exact supercover walk: a sight line that threads the shared corner of two
  *  diagonal wall cells may slip through — that only ever ADDS reach, the safe direction. Samples known to fall on open ground are not taken (`jump`, jumpsOf). */
