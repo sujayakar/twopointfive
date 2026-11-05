@@ -59,7 +59,7 @@ export interface FloorData { id: string; name?: string; /** world Y of the walka
 /** A named paint: linear diffuse albedo. Boxes and prop parts reference materials by key OR carry an inline albedo (one-offs). `rough` / `metal` = the FINISH the
  *  ray-traced reflection pass reads (boxes.ts Box.rough / metal; docs/internal/claude-md-renderer-systems.md): GGX roughness 0‥1 (absent = matte, ROUGH_DEFAULT: no ray is
  *  spent) and bare metal (F0 = albedo). A box may override either (BoxData.rough / metal). Old files carry neither and load exactly as before.
- *  `stuff` = WHAT THE PAINT IS MADE OF (scene/stuff.ts: a material of the look, 'plain' or 'waits'): every box and prop's part that wears the row is that,
+ *  `stuff` = WHAT THE PAINT IS MADE OF (scene/stuff.ts: a material of the look, 'plain', 'waits', or the two a round's hit reads, 'glass' and 'rubber'): every box and prop's part that wears the row is that,
  *  unless it says its own (BoxData.stuff). Absent = plain. The look's alone: no rule of the game reads it. */
 export interface MaterialData { albedo: Vec3; rough?: number; metal?: boolean; stuff?: string; notes?: string; }
 /** What is underfoot for everyone who listens to a footstep (game/floor.ts: the mixer, the guards' ears and the SOUND meter read ONE map). Zones are floor

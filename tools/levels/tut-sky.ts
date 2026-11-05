@@ -42,7 +42,7 @@
 // the shutters. ON THEIR OWN FUEL: the brazier in the yard, two stoves, the bread oven, the lanterns, the gun truck's head lamps. ON A BATTERY, and only when
 // the mains are out: five red beacons (the yard wall, the bunkhouse, the gate, the tea room, the tunnel's mouth).
 import type { Vec3 } from '../../src/math/vec';
-import { pickupLens } from '../../src/scene/carShapes';
+import { pickupLens, coated } from '../../src/scene/carShapes';
 import type { Level, LevelDoorDef } from '../../src/scene/level';
 import type { LessonData, LevelScenarios, Rect, StructureData } from '../../src/scene/scenarios';
 import type { SurfacesData } from '../../src/scene/levelData';
@@ -293,14 +293,14 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
   // ---- THE PLOUGH LORRY (KEPT: the yard's one big thing, and what the gate is held from). A two-axle tipper in the roads department's orange, a blade on
   // its nose, grit in its bed. Nose toward local +X ----
   grp('lorry');
-  const L = G.piece(LORRY.x, LORRY.z, LORRY.yaw);
+  const L = G.piece(LORRY.x, LORRY.z, LORRY.yaw), orange = coated(M.prodOrange);   // (its body says it is a car's coat: scene/carShapes.ts)
   for (const lx of [2.2, -1.2, -2.25]) for (const s of [-1, 1]) L(lx, s * 0.98, 0, 0.96, 0.48, 0.15, M.rubber);
   L(-0.1, 0, 0.5, 0.74, 3.1, 0.42, M.iron);                                                   // the chassis
   L(3.42, 0, 0.5, 0.78, 0.06, 1.12, M.iron);                                                  // bumper
-  L(2.75, 0, 0.74, 1.5, 0.62, 0.98, M.prodOrange);                                            // bonnet
-  L(1.55, 0, 0.74, 1.5, 0.62, 1.12, M.prodOrange);                                            // the cab: doors
+  L(2.75, 0, 0.74, 1.5, 0.62, 0.98, orange);                                            // bonnet
+  L(1.55, 0, 0.74, 1.5, 0.62, 1.12, orange);                                            // the cab: doors
   L(1.55, 0, 1.5, 2.08, 0.58, 1.06, M.glassDark);                                             // … glass
-  L(1.5, 0, 2.08, 2.2, 0.62, 1.1, M.prodOrange);                                              // … roof
+  L(1.5, 0, 2.08, 2.2, 0.62, 1.1, orange);                                              // … roof
   L(1.5, 0, 2.2, 2.3, 0.07, 0.45, M.genYellow);                                               // … the amber bar on it (dead)
   for (const s of [-1, 1]) L(3.38, s * 0.7, 0.86, 1.02, 0.02, 0.1, M.plasticWhite);           // headlamps (dead)
   L(-1.15, 0, 0.74, 0.9, 2.05, 1.16, M.iron);                                                 // the tipper's floor

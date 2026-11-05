@@ -8,12 +8,12 @@
 // Both stands: the check gives the stand its word (TPS_HITSTUFF) itself. WHAT A ROUND KNOCKS OUT IS READ OFF A STAND-IN for the GPU particles (the harness
 // has none): the calls the game makes at the hit, their kind and count; a mark is the call that lays it. Nothing here is a picture, and no spark, chip or
 // crack has been seen on a GPU by this check.
-import { readFileSync } from 'node:fs';
+import { readFileSync, readdirSync } from 'node:fs';
 import { standUp, ROOT } from './headless.ts';
 const { parseLevelData, validateLevelData } = await import(`${ROOT}/src/scene/levelData.ts`);
 const { loadLevel, levelToData } = await import(`${ROOT}/src/scene/levelLoad.ts`);
 const { HITSTUFF, HIT_STUFFS, saidSurf, solidGlass, surfOf } = await import(`${ROOT}/src/game/particleFx.ts`);
-const { BOX_STUFFS } = await import(`${ROOT}/src/scene/stuff.ts`);
+const { BOX_STUFFS, stuffOfName } = await import(`${ROOT}/src/scene/stuff.ts`);
 const { digestGame, hashDigest } = await import(`${ROOT}/src/game/digest.ts`);
 const { fireWeapon } = await import(`${ROOT}/src/game/combat.ts`);
 const { BoxFlag } = await import(`${ROOT}/src/scene/boxes.ts`);
@@ -23,15 +23,15 @@ type Vec3 = [number, number, number];
 const DT = 1 / 60, BREAK = process.env.HITSTUFF_BREAK === '1', VERBOSE = !!process.env.HITSTUFF_VERBOSE, FILE = 'office.json';
 function seeded(seed: number) { let a = seed >>> 0; return () => { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
 async function hushed<T>(f: () => T | Promise<T>): Promise<T> { const log = console.log, warn = console.warn; if (!VERBOSE) console.log = console.warn = () => { }; try { return await f(); } finally { console.log = log; console.warn = warn; } }
-const levelOf = () => loadLevel(parseLevelData(readFileSync(`${ROOT}/levels/${FILE}`, 'utf8')));
+const levelOf = (file = FILE) => loadLevel(parseLevelData(readFileSync(`${ROOT}/levels/${file}`, 'utf8')));
 let stood: boolean | null = null;   // (the switch as a stand with no word of the check's left it, read once)
-async function stand(on: boolean): Promise<any> {
+async function stand(on: boolean, file = FILE): Promise<any> {
   Math.random = seeded(33);
   const word = process.env.TPS_HITSTUFF;
   try {
     if (stood === null) { await hushed(() => standUp({ level: levelOf(), seed: 1 })); stood = !!HITSTUFF.on; }
     process.env.TPS_HITSTUFF = on && !BREAK ? '1' : '0';
-    return await hushed(() => standUp({ level: levelOf(), seed: 1 }));
+    return await hushed(() => standUp({ level: levelOf(file), seed: 1 }));
   } finally { if (word === undefined) delete process.env.TPS_HITSTUFF; else process.env.TPS_HITSTUFF = word; }
 }
 const near = (a: number, b: number) => Math.abs(a - b) < 1e-6;
@@ -184,6 +184,36 @@ export async function hitstuffCheck(): Promise<boolean> {
         && !!rUp && !!rDown && !!rTop && v3.dist(rUp.pos, pr) < 1e-6 && v3.dist(rDown.pos, pr) > 0.03 && Math.abs(rTop.pos[1] - 0.9) < 1e-9,
         '7 a mark on a cut face lies where the round met it: laid at a point of a pane\'s leaning face, with the page\'s word up it stays on that face, and with it down it is pulled out to the uncut box\'s face, centimetres off the glass, where the shader drops it; a mark on a face the cut left alone is laid on that face either way; and round a drum\'s side the same — where the round met it with the word up, pulled out to the square\'s face with it down, and on its flat top as ever',
         `off the leaning face: ${(off(up7) * 1000).toFixed(2)} mm with the word up, ${(off(down7) * 1000).toFixed(1)} mm with it down · on the plain face ${face7 ? Math.abs(face7.pos[2] - (b.c[2] + h[2])).toExponential(1) : '-'} · a drum's side: ${rUp ? (v3.dist(rUp.pos, pr) * 1000).toFixed(2) : '-'} mm from the hit with the word up, ${rDown ? (v3.dist(rDown.pos, pr) * 1000).toFixed(1) : '-'} mm with it down`); }
+    // (8) THE VEHICLES AS THE LEVELS HAVE THEM say what they are made of, and a round reads it, nothing put on them by this check: the office's car on a
+    //     fresh stand; the kits' vehicles in the showroom yard, a round into a body, a window and a tyre there; and every level file's plain car (its
+    //     default-look twin's too, whose body the skin repaints) and every shaped box in a truck enamel
+    { const V: any = await stand(true), Q = range(V), s8 = Q.st; Q.draw();
+      const bd = s8.findIndex((b: any) => sized(b, [2.2, 0.34, 0.86])), gl = s8.findIndex((b: any, i: number) => i !== bd && sized(b, [1.25, 0.27, 0.8]) && Math.hypot(b.c[0] - s8[bd].c[0], b.c[2] - s8[bd].c[2]) < 0.6);
+      const ty = s8.findIndex((b: any) => sized(b, [0.32, 0.3, 0.12]) && Math.hypot(b.c[0] - s8[bd].c[0], b.c[2] - s8[bd].c[2]) < 2);
+      const car = `${s8[bd]?.stuff}, ${s8[gl]?.stuff}, ${s8[ty]?.stuff}`;
+      up(true); const b8 = Q.spot(bd, LOW) ? Q.fire(bd, 2, LOW) : null, g8 = Q.spot(gl) ? Q.fire(gl) : null, t8 = ty >= 0 && Q.spot(ty) ? Q.fire(ty, 1) : null; up(false);
+      // the showroom yard: the kit's pickup, van, lorry and motorbike stand there
+      const Y: any = await stand(true, 'gwot-yard.json'), QY = range(Y), sy = QY.st; QY.draw();
+      const hit = (b: any) => !(b.flags & (BoxFlag.NoShadow | BoxFlag.NoPrimary | BoxFlag.Dynamic | BoxFlag.Glass)) && !b.rot && !b.piece, idx = (w: string, tall: number) => sy.map((b: any, i: number) => i).filter((i: number) => sy[i].stuff === w && hit(sy[i]) && sy[i].h[1] >= tall).sort((a: number, b: number) => sy[b].h[1] * Math.min(sy[b].h[0], sy[b].h[2]) - sy[a].h[1] * Math.min(sy[a].h[0], sy[a].h[2]));   // (the biggest face first: a round aimed at its middle meets it)
+      up(true); const yb = first(QY, idx('carpaint', 0.3)), kb = yb >= 0 ? QY.fire(yb, 2) : null, yg = first(QY, idx('glass', 0.15)), kg = yg >= 0 ? QY.fire(yg) : null, yt = first(QY, idx('rubber', 0.2)), kt = yt >= 0 ? QY.fire(yt, 1) : null; up(false);   // (each fired from the spot found for it: finding a spot moves the man)
+      // every level file: the plain car (by its boxes' sizes) and the kits' vehicles (a shaped box in a truck enamel)
+      const files = readdirSync(`${ROOT}/levels`).filter(f => f.endsWith('.json') && !f.includes('.lint')), wrong: string[] = []; let cars = 0, shaped = 0, built = 0, panes = 0;
+      const TRUCK = ['truckWhite', 'truckTan', 'truckRed'];
+      for (const f of files) { const d = JSON.parse(readFileSync(`${ROOT}/levels/${f}`, 'utf8')), bs = loadLevel(parseLevelData(JSON.stringify(d))).boxes;
+        for (const b of bs as any[]) { if (b.stuff === 'glass' && (b.flags & BoxFlag.Glass)) panes++;
+          if (sized(b, [2.2, 0.34, 0.86]) && b.shape) { cars++; const g = (bs as any[]).find(q => sized(q, [1.25, 0.27, 0.8]) && Math.hypot(q.c[0] - b.c[0], q.c[2] - b.c[2]) < 0.6), t = (bs as any[]).find(q => sized(q, [0.32, 0.3, 0.12]) && Math.hypot(q.c[0] - b.c[0], q.c[2] - b.c[2]) < 2);
+            if (b.stuff !== 'carpaint' || g?.stuff !== 'glass' || t?.stuff !== 'rubber') wrong.push(`${f} car: ${b.stuff}, ${g?.stuff}, ${t?.stuff}`); } }
+        const word = (r: any) => r.stuff ?? d.materials[r.material]?.stuff, drawn = (r: any) => (r.flags ?? []).some((x: string) => x === 'NoShadow' || x === 'NoPrimary');
+        const wins = (d.boxes as any[]).filter(r => word(r) === 'glass' && !drawn(r) && r.h[1] > 0.15);   // (a vehicle's window: solid glass a round can meet, taller than a counter's top)
+        for (const r of d.boxes as any[]) if (TRUCK.includes(r.material) && !r.shape && !drawn(r) && Math.max(r.h[0], r.h[1], r.h[2]) > 0.2 && wins.some(w => Math.hypot(w.c[0] - r.c[0], w.c[2] - r.c[2]) < 2.6 && r.c[1] - r.h[1] < w.c[1])) { built++; if (word(r) !== 'carpaint') wrong.push(`${f} ${r.id} (built by hand): ${r.material} says ${word(r)}`); }   // (a vehicle a level builds by hand: a panel in a truck enamel beside and under a window)
+        for (const r of d.boxes as any[]) if (TRUCK.includes(r.material) && r.shape && Math.max(r.h[0], r.h[1], r.h[2]) > 0.2) { shaped++; const w = r.stuff ?? d.materials[r.material]?.stuff; if (w !== 'carpaint') wrong.push(`${f} ${r.id}: ${r.material} says ${w}`); } }   // (a body panel, by the file's own words: a tail lamp's lens in the red enamel is 15 cm and stays paint)
+      line(car === 'carpaint, glass, rubber' && !!b8 && b8.met === 2 && b8.spark > 0 && b8.chips === 0 && b8.dust === 0 && count(b8, 'bullet') === 2
+        && !!g8 && g8.marks.length >= 2 && count(g8, 'damage 9') === g8.marks.length && (s8[gl].flags & BoxFlag.Glass) === 0
+        && !!t8 && t8.met === 1 && t8.chips > 0 && count(t8, 'damage 0') === 0
+        && !!kb && kb.met === 2 && kb.spark > 0 && kb.chips === 0 && kb.dust === 0 && !!kg && kg.met >= 1 && kg.marks.length >= 1 && count(kg, 'damage 9') === kg.marks.length && !!kt && kt.met === 1 && kt.chips > 0 && count(kt, 'damage 0') === 0
+        && wrong.length === 0 && cars >= 20 && shaped >= 40 && built >= 6 && panes === 0 && stuffOfName('truckWhite') === 'paint',
+        '8 the vehicles as the levels have them say what they are made of, nothing put on them here: with the rule up a round into the office car\'s body gives sparks and no chips or dust, one into its window the crack on glass that stands, one into a tyre plastic\'s chips and no dent; the same of a body, a window and a tyre of the kits\' vehicles in the showroom yard; and in every level file each plain car says car paint, glass and rubber (a default-look twin\'s repainted car too) and each shaped panel in a truck enamel says car paint, and so does each plain panel in one beside a window (a vehicle a level builds by hand), while the enamel\'s own row stays paint (a cot, a locker, a floor line); no pane says glass',
+        `the office's car says ${car} · body: ${b8 ? say(b8) : 'no spot'} · window: ${g8 ? say(g8) : 'no spot'} · tyre: ${t8 ? say(t8) : 'no spot'}\n    the yard's vehicles · body (box ${yb}): ${kb ? say(kb) : 'no spot'} · window (box ${yg}): ${kg ? say(kg) : 'no spot'} · tyre (box ${yt}): ${kt ? say(kt) : 'no spot'}\n    ${files.length} level files: ${cars} plain cars, ${shaped} shaped panels in a truck enamel, ${built} plain ones beside a window, ${panes} panes saying glass${wrong.length ? ` · WRONG: ${wrong.slice(0, 6).join(' · ')}${wrong.length > 6 ? ` … ${wrong.length}` : ''}` : ''}`); }
   } catch (e) { console.log(`- FAIL — the check threw\n    ${e instanceof Error ? e.stack : String(e)}`); all = false; }
   finally { Object.assign(HITSTUFF, was); Math.random = rnd; }
   console.log(`=== hitstuff: ${all ? 'ALL PASS' : 'FAIL'} ===`);

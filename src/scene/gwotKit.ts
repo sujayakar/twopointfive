@@ -16,9 +16,10 @@
 //                        bottles, dry bushes. Props never block sight, sound or the nav grid.
 // Conventions: positions are the piece's CENTRE on the floor; `yaw` is Box.yaw (local +X → world (cos yaw, −sin yaw), local +Z → (sin yaw, cos yaw)); a
 // piece with a front faces local −Z unless its line says otherwise; vehicles point +X.
-import type { Vec3 } from '../math/vec';
+import { quat, type Quat, type Vec3 } from '../math/vec';
 import { Box, BoxFlag } from './boxes';
-import { pickupShapes, vanShapes, bikeShapes, lorryShapes, hubPaint, layOn, type BowedTop } from './carShapes';
+import { pickupShapes, vanShapes, bikeShapes, lorryShapes, hubPaint, layOn, type BowedTop, coated } from './carShapes';
+import type { BoxShape, ShapePiece } from './shapes';
 import { WORLD } from './world';
 import type { Level, LightDef, PropKind, PropPart, PropDef } from './level';
 import { MarkingDef, MarkFace, MarkRes, MarkPal, MARKING_TEXEL, RES_K, CellCanvas, marking, mkHash, faceHalf, faceIndex } from './markings';
@@ -27,7 +28,7 @@ const H = WORLD.ceilingY;
 
 import { GWOT_PALETTE, GWOT_FINISH, GWOT_SIM, GWOT_DARKER, ROUGH_CLOTH, gwotAs, type GwotMat, type GwotSim } from './gwotPalette';
 import { pieces } from './library';
-import { tonedAs } from './stuff';
+import { tonedAs, wordFor } from './stuff';
 export { GWOT_PALETTE, GWOT_FINISH, GWOT_MATERIALS, GWOT_SURFACE, GWOT_SIM, gwotAs, gwotSimOf, type GwotMat, type GwotSim } from './gwotPalette';
 
 /** one opening in a wall (officeGen.ts / levelKit.ts Opening, field for field) */
@@ -116,6 +117,7 @@ const TONE = { lo: 0.55, hi: 0.99, near: 0.006 };
 export function gwotKit(host: GwotHost) {
   const TX = host.texel;
   const M = Object.fromEntries((Object.keys(GWOT_PALETTE) as GwotMat[]).map(n => [n, matOf(n)])) as Record<GwotMat, Mat>;
+  const coat = (m: Mat): Mat => coated(m);   // (a vehicle's body says it is a car's coat itself: scene/carShapes.ts carCoat)
   /** the paint `m` standing for something else to rounds and blasts (gwotPalette.ts gwotAs): `b(…, G.as('mud', 'wall'))` */
   const as = (m: GwotMat, sim: GwotSim): Mat => ({ ...M[m], albedo: gwotAs(m, sim) });
   /** the paint `m` DARKER IN ONE PIECE, k of it (TONE: 0.55‥0.99): how wear, wet and shade are written — the ground's own paint, never a colour laid on it.
@@ -155,6 +157,18 @@ export function gwotKit(host: GwotHost) {
   /** a round thing of radius r, as the slabs of `roundSlabs` (the first carries `extra`, the others `extra2`) */
   const round = (b: Put, lx: number, lz: number, y0: number, y1: number, r: number, m: Mat, extra: Extra = {}, extra2: Extra = extra) => {
     roundSlabs(r).forEach((s, k) => b(lx, lz, y0, y1 - s.drop, s.hx, s.hz, m, k === 0 ? extra : extra2, s.yaw));
+  };
+  /** TRIM IN A PAINT OF ITS OWN (a log's pale end, a pipe's bore, the ties on a rolled blanket): the paint, its finish, and WHAT THAT PAINT IS MADE OF — a
+   *  shape's piece is of its box's stuff unless it says another (scene/shapes.ts ShapePiece), and nothing reads a word off a colour */
+  const trimIn = (albedo: Vec3, rough: number) => ({ albedo, rough, ...wordFor(albedo) });
+  /** A ROUND THING LYING, the one way the kit writes it: ONE box along the piece's local X, square across it, that says `round: 1` (scene/shapes.ts: a
+   *  twelve-sided prism with shapes on, the plain box with them off — so what walks meets the box either way). `ends` = its two ends as trim in another paint
+   *  (a pipe's dark bore, a log's pale grain). Its middle is `y` over the floor. Hands back its top, so a level lays snow or dust along it with `lay` */
+  const lying = (b: Put, lx: number, lz: number, y: number, len: number, r: number, m: Mat, ends?: { albedo: Vec3; rough: number }, inset = 0.9): BowedTop => {
+    const caps: ShapePiece[] = ends ? [-1, 1].map(s => ({ off: [s * (len / 2 + 0.003), 0, 0] as Vec3, h: [0.003, r * inset, r * inset] as Vec3, round: 1 as const, ...trimIn(ends.albedo, ends.rough) })) : [];
+    const shape: BoxShape = { round: 1, ...(caps.length ? { with: caps } : {}) };
+    b(lx, lz, y - r, y + r, len / 2, r, m, { shape });
+    return { c: [lx, y, lz], h: [len / 2, r, r], shape };
   };
   const h01 = (s: number, a: number, b = 0) => mkHash(s, a, b) / 4294967296;
   const seedOf = (x: number, z: number) => (Math.round(x * 100) * 73856093 ^ Math.round(z * 100) * 19349663) >>> 0;
@@ -199,6 +213,110 @@ export function gwotKit(host: GwotHost) {
     host.add({ c: axis === 'x' ? [at, 1.6, off] : [off, 1.6, at], h: hh, albedo: m.albedo, rough: m.rough, flags: DECAL,
       ...marksOf(hh, face(f, 'coarse', [palOf(R.pal[0]), palOf(R.pal[1])], (i, j, W, Hc) => rugCell(style, i, j, W, Hc))) });
   };
+  // ----------------------------------------------- what is done to a wall's face ----
+  /** A WALL FACE'S FRAME: a `piece` whose local X runs along the wall and whose local Z points OUT of the face on `side`, its origin on the face at `at`
+   *  along the wall. So what hangs on, leans on or stands against a wall is written once for all four ways a wall can face. `q(…)` = a turn said in that
+   *  frame as the box's own `rot` (a plank rolled in the wall's plane, a ladder tipped back onto it) */
+  const onFace = (axis: 'x' | 'z', line: number, at: number, side: 1 | -1, t = GW_SHELL) => {
+    const f = line + side * t / 2, yaw = axis === 'x' ? (side > 0 ? 0 : Math.PI) : side * Math.PI / 2;
+    return { b: axis === 'x' ? piece(at, f, yaw) : piece(f, at, yaw), q: (ax: Vec3, ang: number): { rot: Quat } => ({ rot: quat.mul(quat.yaw(yaw), quat.axisAngle(ax, ang)) }) };
+  };
+  /** … and the frame of a STRETCH a‥b of a wall's face: its origin at the end local +X runs INTO the stretch from (a frame is a turn, never a mirror, so
+   *  on two of the four ways a wall can face local X runs against the world's axis), and the stretch's length. What is dealt along a wall goes by this */
+  const onStretch = (axis: 'x' | 'z', line: number, a: number, b: number, side: 1 | -1, t = GW_SHELL) => {
+    const lo = Math.min(a, b), hi = Math.max(a, b), up = (axis === 'x' ? side : -side) > 0;
+    return { ...onFace(axis, line, up ? lo : hi, side, t), len: hi - lo, seed: seedOf(lo, line) };
+  };
+  const DEG = Math.PI / 180;
+  /** the planes that give a flat thing on a face a rough OUTLINE: `n` of them round its middle, each a little off its turn and a share of the way out (so no
+   *  two mends are one shape, and the same mend is the same every export: dealt from where it is) */
+  const outline = (hx: number, hy: number, seed: number, n = 6, lo = 0.78): [number, number, number, number][] => Array.from({ length: n }, (_, k) => {
+    const a = (k + 0.15 + 0.7 * h01(seed, k, 7)) * (360 / n) * DEG, share = lo + (0.96 - lo) * h01(seed, k, 8);
+    return [r4(Math.cos(a)), r4(Math.sin(a)), 0, r4(share * (Math.abs(Math.cos(a)) * hx + Math.abs(Math.sin(a)) * hy))];
+  });
+  const r4 = (v: number) => Math.round(v * 1e4) / 1e4;
+  /** HOW A WINDOW'S DRESSING STANDS: 'shut' closes the opening to a look and a round (what it is made of is real: cover, and a blind window); 'open' is the
+   *  same things put aside, the opening left clear. A LEVEL'S RULE, not the kit's: a window a defender watches through gets the open form
+   *  (tools/qa/marksight-check.ts holds every man's line to what he watches), and a shut one costs the team too (measured on the block:
+   *  docs/agents/levels.md), so a window is shut only where its mission's tally was read with it shut */
+  type Shut = 'shut' | 'open';
+  /** a window BOARDED UP (the opening a‥b of a wall along `axis`, y0‥y1): shut = two planks nailed across, one across those, and one hanging by its last
+   *  nail — a look and a round pass BETWEEN the planks, not through them. Open = the boards pulled off the opening: one left nailed over the lintel and
+   *  two swung down on their last nails to hang on the wall beside the jambs. Neither form puts anything on the ground */
+  const boards = (axis: 'x' | 'z', line: number, a: number, b: number, side: 1 | -1, form: Shut = 'shut', y0 = 0.9, y1 = 1.85, t = GW_SHELL) => {
+    const F = onFace(axis, line, (a + b) / 2, side, t), w = Math.abs(b - a) / 2, hh = (y1 - y0) / 2, ym = (y0 + y1) / 2, woods = [M.poplar, M.woodGrey, M.ply];
+    const plank = (lx: number, y: number, len: number, roll: number, m: Mat, hy: number, out = 0) => F.b(lx, 0.016 + out, y - hy, y + hy, len, 0.012, m, roll ? F.q([0, 0, 1], roll * DEG) : {});
+    if (form === 'shut') {
+      plank(-0.02, ym + hh * 0.62, w + 0.1, -2.5, woods[0], 0.07); plank(0.04, ym - hh * 0.05, w + 0.05, 3.5, woods[1], 0.085);
+      plank(-w * 0.7, ym - hh * 0.9, 0.5, 78, woods[2], 0.06, 0.024); plank(w * 0.45, ym - hh * 0.62, 0.5, -27, woods[1], 0.055, 0.024);   // one hangs by its last nail, one was nailed across the others
+    } else {
+      plank(0.03, y1 + 0.14, w + 0.08, -2, woods[0], 0.07);                                    // the one nobody took down, over the lintel
+      plank(-w - 0.11, ym + 0.04, hh * 0.95, 86, woods[1], 0.075); plank(w + 0.1, ym - 0.03, hh * 0.9, -93, woods[2], 0.06);   // two hanging by a nail, beside the jambs
+    }
+  };
+  /** a window's SHUTTERS, two leaves in a paint: shut = one leaf shut over its half and the other swung out on its hinge (the half behind the shut leaf is
+   *  blind; the leaves are real). Open = both folded back flat on the wall beside the opening */
+  const shutters = (axis: 'x' | 'z', line: number, a: number, b: number, side: 1 | -1, form: Shut = 'shut', paint: Paint = 'paintGreen', y0 = 0.9, y1 = 1.85, t = GW_SHELL) => {
+    const F = onFace(axis, line, (a + b) / 2, side, t), w = Math.abs(b - a) / 2, lw = w / 2, hh = (y1 - y0) / 2 + 0.03, ym = (y0 + y1) / 2, m = M[paint], batten = { albedo: toned(paint, 0.9), rough: m.rough };
+    const flatLeaf = (lx: number) => { F.b(lx, 0.016, ym - hh, ym + hh, lw, 0.014, m); for (const y of [ym + hh * 0.56, ym - hh * 0.56]) F.b(lx, 0.034, y - 0.035, y + 0.035, lw - 0.02, 0.006, batten, { flags: DECAL }); };
+    if (form === 'open') { flatLeaf(-w - lw - 0.02); flatLeaf(w + lw + 0.02); return; }
+    flatLeaf(-lw);                                                                             // the shut leaf, over its half
+    const ang = 62 * DEG; F.b(w + Math.cos(ang) * lw, 0.01 + Math.sin(ang) * lw, ym - hh, ym + hh, lw, 0.014, m, {}, -ang);   // the other, swung out on its hinge at the far jamb
+  };
+  /** a BLANKET over a window: shut = nailed over the opening under a batten, one lower corner come loose (it is real: a look stops at it). Open = rolled up
+   *  and tied over the lintel, the opening clear */
+  const windowBlanket = (axis: 'x' | 'z', line: number, a: number, b: number, side: 1 | -1, form: Shut = 'shut', cloth: GwotMat = 'blanketGrey', y0 = 0.9, y1 = 1.85, t = GW_SHELL) => {
+    const F = onFace(axis, line, (a + b) / 2, side, t), w = Math.abs(b - a) / 2 + 0.12, hh = (y1 - y0) / 2 + 0.12, ym = (y0 + y1) / 2;
+    const top = form === 'shut' ? ym + hh : y1 + 0.2;                                          // the batten it is nailed under: along the cloth's top edge, or over the roll
+    F.b(0, 0.026, top - (form === 'shut' ? 0.05 : 0), top + (form === 'shut' ? 0.01 : 0.06), w + 0.02, 0.008, M.woodGrey, { flags: DECAL });
+    if (form === 'shut') F.b(0, 0.014, ym - hh, ym + hh, w, 0.008, M[cloth], { shape: { cut: [[0.42, -1, 0, r4(hh - 0.42 * 0.46 * w)], [-0.06, 1, 0, r4(0.95 * hh)], [-1, -0.05, 0, r4(0.96 * w)]] } });
+    else { const r = 0.07, shape: BoxShape = { round: 1, with: [-0.5, 0.45].map(u => ({ off: [u * w, 0, 0] as Vec3, h: [0.02, r + 0.006, r + 0.006] as Vec3, round: 1 as const, ...trimIn(M.canvas.albedo, M.canvas.rough) })) };
+      F.b(0, r + 0.004, y1 + 0.2 - 2 * r, y1 + 0.2, w, r, M[cloth], { shape }); }
+  };
+  /** DECAL: a MEND on a wall's face — a patch of newer or older mud, w × h about `y`, with a rough outline (said as a shape: with shapes off it is the plain
+   *  rectangle). `tone` darkens the wall paint `mat` in one piece (0.55‥0.99; 1 = the paint as it is). It lies OVER a dado or a skirt (a painted band plastered over) */
+  const wallPatch = (axis: 'x' | 'z', line: number, at: number, side: 1 | -1, y: number, w: number, hgt: number, mat: GwotMat = 'mudLight', tone = 0.9, t = GW_SHELL) => {
+    const F = onFace(axis, line, at, side, t), seed = seedOf(axis === 'x' ? at : line, axis === 'x' ? line : at) ^ Math.round(y * 100);
+    F.b(0, 0.011, y - hgt / 2, y + hgt / 2, w / 2, 0.003, tone >= 1 ? M[mat] : { albedo: toned(mat, tone), rough: M[mat].rough }, { flags: DECAL, shape: { cut: outline(w / 2, hgt / 2, seed), old: true } });
+  };
+  /** a roof SPOUT through the wall at `y`, tipped to throw its water clear, and the STREAK the water left down the face (a decal in the wall's own paint, darker) */
+  const spout = (axis: 'x' | 'z', line: number, at: number, side: 1 | -1, y = 2.36, wall: GwotMat = 'mud', t = GW_SHELL) => {
+    const F = onFace(axis, line, at, side, t);
+    F.b(0, 0.1, y - 0.035, y + 0.035, 0.035, 0.13, M.iron, F.q([1, 0, 0], 16 * DEG));
+    // (two planes, each through a side of the streak's foot and a side of a finger's width under the spout: so it is as wide at the foot and as narrow at the
+    // top whatever the spout's height; the foot is a little wider on one side, as water runs)
+    const hy = (y - 0.08) / 2, top = 0.015, edge = (foot: number, s: 1 | -1): [number, number, number, number] => { const L = Math.hypot(2 * hy, foot - top); return [r4(s * 2 * hy / L), r4((foot - top) / L), 0, r4(hy * (foot + top) / L)]; };
+    F.b(0, 0.007, 0.04, y - 0.04, 0.1, 0.003, { albedo: toned(wall, 0.6), rough: M[wall].rough }, { flags: DECAL, shape: { cut: [edge(0.1, 1), edge(0.085, -1)], old: true } });
+  };
+  /** the ENDS OF THE ROOF'S BEAMS through a wall a‥b under the roof line (over every head): round poles, unevenly spaced and of uneven reach, one snapped short */
+  const beamEnds = (axis: 'x' | 'z', line: number, a: number, b: number, side: 1 | -1, y = 2.64, pitch = 1.9, t = GW_SHELL) => {
+    const F = onStretch(axis, line, a, b, side, t), seed = F.seed;
+    for (let u = 0.4, k = 0; u < F.len - 0.3; u += pitch * (0.75 + 0.5 * h01(seed, k, 1)), k++) {
+      const r = r4(0.06 + 0.015 * h01(seed, k, 2)), out = k % 5 === 4 ? 0.07 : r4(0.24 + 0.14 * h01(seed, k, 3)), len = out + 0.02;
+      F.b(u, out / 2 - 0.01, y + 0.05 * h01(seed, k, 4) - r, y + 0.05 * h01(seed, k, 4) + r, r, len / 2, M.woodGrey,
+        { shape: { round: 3, with: [{ off: [0, 0, r4(len / 2 + 0.002)], h: [r4(r * 0.93), r4(r * 0.93), 0.002], round: 3, ...trimIn(M.poplar.albedo, 0.85) }] } });
+    }
+  };
+  /** COVER (knee): SPLIT WOOD stacked against a wall from a to b, `rows` high: round billets end-on to the yard, pale grain showing, each a box of its own.
+   *  No two billets that touch are as thick, as long or as far out (their girth, length and set-back step through small tables by place and row, and every face lands
+   *  on an odd millimetre, off the centimetre grid levels are written on): with shapes off they are boxes that overlap, and two of their faces in one plane would flicker */
+  const splitWood = (axis: 'x' | 'z', line: number, a: number, b: number, side: 1 | -1, rows = 3, t = GW_SHELL) => {
+    const F = onStretch(axis, line, a, b, side, t), barks = [M.woodGrey, M.poplar], grains = [M.ply, M.poplar];
+    for (let row = 0, n = 0; row < rows; row++) for (let u = 0.09 + row * 0.09, j = 0; u < F.len - 0.09 - row * 0.09; u += 0.175, j++, n++) {
+      const r = r4(0.0715 + 0.002 * ((3 * j + 4 * row) % 10)), len = r4(0.38 + 0.036 * (n % 3)), off = r4(0.003 + 0.004 * ((2 * j + 5 * row) % 15)),   // (tops, backs and fronts all on odd millimetres)
+      g = grains[n % 3 === 2 ? 1 : 0];
+      F.b(u, 0.02 + off + len / 2, row * 0.15, row * 0.15 + 2 * r, r, len / 2, barks[n % 4 === 1 ? 1 : 0],
+        { shape: { round: 3, with: [{ off: [0, 0, r4(len / 2 + 0.002)], h: [r4(r * 0.93), r4(r * 0.93), 0.002], round: 3, ...trimIn(g.albedo, 0.85) }] } });
+    }
+  };
+  /** a LADDER leaned on a wall at `at`: two stiles and the rungs between them, one rung gone; its feet stand `len` × sin(lean) out from the face */
+  const ladder = (axis: 'x' | 'z', line: number, at: number, side: 1 | -1, len = 2.84, leanDeg = 15, t = GW_SHELL) => {
+    const F = onFace(axis, line, at, side, t), back = leanDeg * DEG, L = len / 2, cy = L * Math.cos(back), cz = 0.05 + L * Math.sin(back), tip = F.q([1, 0, 0], -back);
+    for (const s of [-1, 1]) F.b(s * 0.2, cz, cy - L, cy + L, 0.022, 0.03, s < 0 ? M.poplar : M.woodGrey, tip);
+    const rungs = Math.floor((len - 0.64) / 0.36) + 1;   // (a rung every 0.36 m from 0.32 above the feet; a ladder of six or more has lost its fifth)
+    for (let k = 0; k < rungs; k++) { if (k === 4 && rungs > 5) continue; const u = -L + 0.32 + k * 0.36, y = cy + Math.cos(back) * u; F.b(0, cz - Math.sin(back) * u, y - 0.016, y + 0.016, 0.2, 0.018, M.woodGrey, tip); }
+  };
+
   /** a sheet-metal GATE in an opening `width` wide centred at (x, z) of a wall along `axis`: two capped posts and two painted leaves standing open by `openDeg`
    *  toward `side` (static: a gate that is open tonight). The wall's opening is the caller's (a‥b = centre ∓ width / 2, y1 ≥ the wall's height). */
   const gate = (x: number, z: number, axis: 'x' | 'z', width = 3.0, side: 1 | -1 = 1, paint: Paint = 'paintBlue', openDeg = 78, height = 2.4) => {
@@ -511,6 +629,36 @@ export function gwotKit(host: GwotHost) {
       ...face('-z', 'base', pal, (i, j, W) => i === W / 2 || j % 8 === 0 ? 2 : 0), ...face('+z', 'base', pal, (i, j, W) => i === W / 2 || j % 8 === 0 ? 2 : 0),
     ]));
   };
+  /** COVER (knee to thigh): steel PIPES stacked along local X — n = 1‥3: two on the ground side by side and the third in the notch between them; one of
+   *  the ground pair is rust. Their bores are dark at both ends. Hands back each pipe's top (`lay` puts snow along it) */
+  const pipes = (x: number, z: number, yaw = 0, n = 3, len = 1.8, r = 0.16) => {
+    const b = piece(x, z, yaw), bore = { albedo: toned('iron', 0.6), rough: 0.9 }, d = r + 0.005;
+    // (each lies a little along from the next: nobody stacks pipe flush, and with shapes off three boxes that overlap would share the planes of their ends)
+    const spots: [number, number, GwotMat, number][] = n === 1 ? [[0, r, 'iron', 0]] : [[-d, r, 'iron', 0.02], [d, r, 'rust', -0.035], [0, r + Math.sqrt(4 * r * r - d * d), 'iron', 0.06]];
+    return spots.slice(0, n).map(([lz, y, m, lx]) => lying(b, lx, lz, y, len, r, M[m], bore, 0.8));
+  };
+  /** one LOG lying along local X, bark on, its ends pale grain. WALK-OVER at the default (0.19 across: a top between 0.20 and 0.25 m stops a body on a cell
+   *  the nav grid calls free, so a single log is under that or over it); `baseY` lifts it onto a pile. Hands back its top */
+  const log = (x: number, z: number, yaw = 0, len = 1.0, r = 0.095, baseY = 0, bark: GwotMat = 'woodGrey', grain: GwotMat = 'poplar') =>
+    lying(piece(x, z, yaw), 0, 0, baseY + r, len, r, M[bark], { albedo: M[grain].albedo, rough: 0.85 });
+  /** COVER (knee): a CHOPPING BLOCK — a round of poplar 0.44 across and 0.32 high, its top scored */
+  const choppingBlock = (x: number, z: number, yaw = 0) => {
+    const b = piece(x, z, yaw);
+    round(b, 0, 0, 0, 0.32, 0.22, M.poplar, mk(face('+y', 'base', [{ mul: 0.7 }], (i, j, W, Hc) => (i + 2 * j) % 9 === 0 && Math.hypot(i - (W - 1) / 2, j - (Hc - 1) / 2) < W / 3 ? 1 : 0, 0, 1)), {});
+  };
+  /** COVER (knee): a PLANK BENCH — a board across two stacks of mud brick, `len` long along local X */
+  const plankBench = (x: number, z: number, yaw = 0, len = 1.12) => {
+    const b = piece(x, z, yaw);
+    b(-len / 2 + 0.14, -0.01, 0, 0.36, 0.13, 0.15, M.mud, {}, 0.06); b(len / 2 - 0.14, 0, 0, 0.36, 0.15, 0.14, M.mudLight, {}, -0.09);
+    b(0, 0, 0.36, 0.41, len / 2, 0.17, M.poplar, {}, 0.035);
+  };
+  /** WALK-OVER: loose MUD BRICKS left where the work stopped, n of them, some on the others */
+  const bricks = (x: number, z: number, yaw = 0, n = 5) => {
+    const b = piece(x, z, yaw), s = seedOf(x, z), spots: [number, number, number][] = [[0, 0, 0], [0.31, 0.02, 0], [0.14, 0.01, 1], [0.36, 0, 1], [0.08, 0.32, 0], [-0.3, 0.05, 0]];
+    for (let k = 0; k < Math.min(n, spots.length); k++) b(spots[k][0], spots[k][1], spots[k][2] * 0.09, spots[k][2] * 0.09 + 0.09, 0.14, 0.065, k % 3 === 2 ? M.mudLight : M.mud, {}, (h01(s, k, 1) - 0.5) * (k === 4 ? 1.8 : 0.3));
+  };
+  /** a cooking POT, sooted iron, 0.26 across (under 0.2 m of radius a round is two squares: `roundSlabs`); `baseY` stands it on a bench or a stove */
+  const pot = (x: number, z: number, baseY = 0) => round(piece(x, z, 0), 0, 0, baseY, baseY + 0.14, 0.13, { albedo: M.iron.albedo, rough: 0.9 });   // (black with soot: iron, and no mirror)
   /** COVER (knee): a WOOD PILE — split poplar, three layers */
   const woodPile = (x: number, z: number, yaw = 0, len = 1.4) => {
     const b = piece(x, z, yaw), s = seedOf(x, z), ends = (f: MarkFace, hz: number) => face(f, 'base', [{ mul: 0.55 }], (i) => i % 5 === 4 ? 1 : 0, 0, 1);
@@ -548,7 +696,7 @@ export function gwotKit(host: GwotHost) {
   /** COVER (full height at the cab): a PICKUP, 5.0 × 1.8, nose toward local +X: cab, open bed, tailgate. `load`: what rides in the bed; `mount`: a pedestal
    *  gun in the bed (the "technical") */
   const pickup = (x: number, z: number, yaw = 0, body: GwotMat = 'truckWhite', opts: { load?: 'none' | 'drums' | 'sacks' | 'crates'; mount?: boolean } = {}) => {
-    const b = piece(x, z, yaw), P = M[body], S = pickupShapes({ hub: hubPaint(GWOT_PALETTE.galv) });   // (S: the shape each box says — scene/carShapes.ts)
+    const b = piece(x, z, yaw), P = coat(M[body]), S = pickupShapes({ hub: hubPaint(GWOT_PALETTE.galv) });   // (S: the shape each box says — scene/carShapes.ts)
     for (const sx of [-1.5, 1.52]) for (const sz of [-1, 1]) b(sx, sz * 0.78, 0, 0.74, 0.37, 0.13, M.rubber, { shape: S.wheel(sz) });
     b(0, 0, 0.3, 0.8, 2.45, 0.86, P, { shape: S.tub });                                     // the body tub, sill to waistline
     b(2.47, 0, 0.36, 0.58, 0.05, 0.88, M.plasticBlack, { shape: S.bumperFront }); b(-2.47, 0, 0.36, 0.58, 0.05, 0.88, M.plasticBlack, { shape: S.bumperRear });   // bumpers
@@ -568,7 +716,7 @@ export function gwotKit(host: GwotHost) {
   /** COVER (head high): a PANEL VAN 4.9 × 1.8 × 1.95, nose toward local +X, its two back doors standing open on the load bay (the spot a stride behind them is
    *  local (−3.2, 0): where a man is put in) */
   const van = (x: number, z: number, yaw = 0, body: GwotMat = 'truckWhite') => {
-    const b = piece(x, z, yaw), P = M[body], S = vanShapes({ hub: hubPaint(GWOT_PALETTE.galv) });   // (S: the shape each box says — scene/carShapes.ts)
+    const b = piece(x, z, yaw), P = coat(M[body]), S = vanShapes({ hub: hubPaint(GWOT_PALETTE.galv) });   // (S: the shape each box says — scene/carShapes.ts)
     for (const sx of [-1.45, 1.5]) for (const sz of [-1, 1]) b(sx, sz * 0.8, 0, 0.74, 0.37, 0.13, M.rubber, { shape: S.wheel(sz) });
     b(0, 0, 0.3, 0.86, 2.4, 0.9, P, { shape: S.body });                                     // the body, sill to waistline
     b(2.43, 0, 0.36, 0.58, 0.05, 0.9, M.plasticBlack, { shape: S.bumper }); b(-2.43, 0, 0.3, 0.44, 0.05, 0.9, M.plasticBlack, { shape: S.step });   // bumper, the rear step
@@ -584,14 +732,14 @@ export function gwotKit(host: GwotHost) {
   /** COVER (full height): a TWO-AXLE LORRY with a canvas tilt, 7 m, nose toward local +X (the pass's, where it stopped when the road shut). Like every
    *  vehicle here it hands back the shapes its boxes say (scene/carShapes.ts), `tops` among them: what a level lays on its roof goes by `lay` */
   const lorry = (x: number, z: number, yaw = 0) => {
-    const L = piece(x, z, yaw), S = lorryShapes({ red: M.truckRed, canvas: M.canvas, iron: M.iron, galv: M.galv, rust: M.rust, rubber: M.rubber, poplar: M.poplar, white: M.plasticWhite, glass: M.glassDark, jerry: M.jerryYellow, olive: M.olive, orange: M.prodOrange });
+    const L = piece(x, z, yaw), red = coat(M.truckRed), S = lorryShapes({ red: M.truckRed, canvas: M.canvas, iron: M.iron, galv: M.galv, rust: M.rust, rubber: M.rubber, poplar: M.poplar, white: M.plasticWhite, glass: M.glassDark, jerry: M.jerryYellow, olive: M.olive, orange: M.prodOrange });
     for (const lx of [2.2, -1.2, -2.25]) for (const s of [-1, 1]) L(lx, s * 0.98, 0, 0.96, 0.48, 0.15, M.rubber, { shape: S.wheel(s) });
     L(-0.1, 0, 0.5, 0.74, 3.1, 0.42, M.iron, { shape: S.chassis });                            // the chassis
     L(3.42, 0, 0.5, 0.78, 0.06, 1.12, M.iron, { shape: S.bumper });                            // bumper
-    L(2.75, 0, 0.74, 1.5, 0.62, 0.98, M.truckRed, { shape: S.bonnet });                        // bonnet
-    L(1.55, 0, 0.74, 1.5, 0.62, 1.12, M.truckRed, { shape: S.cab });                           // the cab: doors
+    L(2.75, 0, 0.74, 1.5, 0.62, 0.98, red, { shape: S.bonnet });                        // bonnet
+    L(1.55, 0, 0.74, 1.5, 0.62, 1.12, red, { shape: S.cab });                           // the cab: doors
     L(1.55, 0, 1.5, 2.08, 0.58, 1.06, M.glassDark, { shape: S.glass });                        // … glass
-    L(1.5, 0, 2.08, 2.2, 0.62, 1.1, M.truckRed, { shape: S.roof });                            // … roof
+    L(1.5, 0, 2.08, 2.2, 0.62, 1.1, red, { shape: S.roof });                            // … roof
     for (const s of [-1, 1]) L(3.38, s * 0.7, 0.86, 1.02, 0.02, 0.1, M.plasticWhite, { shape: S.lamp(s) });   // headlamps
     L(-1.15, 0, 0.74, 0.9, 2.05, 1.16, M.woodGrey);                                            // the bed
     for (const s of [-1, 1]) L(-1.15, s * 1.14, 0.9, 1.45, 2.05, 0.03, M.poplar, { shape: S.side(s) });   // sideboards
@@ -603,7 +751,7 @@ export function gwotKit(host: GwotHost) {
   const motorbike = (x: number, z: number, yaw = 0, tank: GwotMat = 'truckRed') => {
     const b = piece(x, z, yaw), S = bikeShapes();   // (S: the shape each box says — scene/carShapes.ts)
     b(0.66, 0, 0, 0.6, 0.3, 0.05, M.rubber, { shape: S.wheel }); b(-0.62, 0, 0, 0.6, 0.3, 0.05, M.rubber, { shape: S.wheel });
-    b(0.02, 0, 0.26, 0.56, 0.2, 0.12, M.iron); b(0.18, 0, 0.56, 0.84, 0.24, 0.12, M[tank], { shape: S.tank }); b(-0.36, 0, 0.62, 0.8, 0.34, 0.11, M.plasticBlack, { shape: S.seat });
+    b(0.02, 0, 0.26, 0.56, 0.2, 0.12, M.iron); b(0.18, 0, 0.56, 0.84, 0.24, 0.12, coat(M[tank]), { shape: S.tank }); b(-0.36, 0, 0.62, 0.8, 0.34, 0.11, M.plasticBlack, { shape: S.seat });
     b(0.6, 0, 0.6, 1.02, 0.03, 0.03, M.galv); b(0.56, 0, 1.0, 1.04, 0.02, 0.32, M.iron, { shape: S.bars }); b(0.74, 0, 0.78, 0.94, 0.05, 0.07, M.iron, { shape: S.lamp });
     b(-0.84, 0, 0.66, 0.7, 0.16, 0.13, M.iron); b(-0.4, 0.16, 0.28, 0.36, 0.42, 0.035, M.iron, { shape: S.exhaust });   // (nothing pale on it: from above a bike is two black wheels in line and one tank of colour)
     return S;
@@ -681,7 +829,9 @@ export function gwotKit(host: GwotHost) {
     // furniture
     lowTable, table, seedTray, plasticChair, chairAs, trunk, stove, tandoor,
     // stores & cover
-    drum, drums, drumDown, jerryCan, gasBottle, crates, sacks, sandbags, hesco, jersey, tWall, tyres, blocks, woodPile,
+    drum, drums, drumDown, jerryCan, gasBottle, crates, sacks, sandbags, hesco, jersey, tWall, tyres, blocks, woodPile, pipes, log, choppingBlock, plankBench, bricks, pot,
+    // a wall's face
+    boards, shutters, windowBlanket, wallPatch, spout, beamEnds, splitWood, ladder,
     // machines & vehicles
     generator, waterTank, pump, pickup, van, lorry, motorbike, handcart, stall, container, satDish, bush,
     // lights

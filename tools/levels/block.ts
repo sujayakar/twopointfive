@@ -81,6 +81,7 @@ import type { Vec3 } from '../../src/math/vec';
 import type { Level, LevelDoorDef } from '../../src/scene/level';
 import type { KitViewWay, LevelScenarios, Rect } from '../../src/scene/scenarios';
 import { officeKit, normalize3, OFFICE_PALETTE, type GeneratorTrace } from '../../src/scene/officeGen';
+import { gwotKit, gwotOfOffice } from '../../src/scene/gwotKit';
 import * as MD from '../../src/scene/markingDefaults';
 import { WORLD } from '../../src/scene/world';
 import { BoxFlag, type Box } from '../../src/scene/boxes';
@@ -180,6 +181,12 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
   ]);
   wallX(4, 3.88, 36.12, 0.24, ext);                                                                              // north: blind
   wallZ(4, 4, 24, 0.24, ext, [{ a: 10.5, b: 11.7, y0: 0, y1: 2.2 }, { a: 16.5, b: 19.5, y0: 0.9, y1: 2.4, mullions: 3, glass: 'whole' }]);
+  // the west wall's long window, on the side nobody comes from: its shutters are folded back on the wall and the winter's wood is stacked under the sill
+  // (the library's pieces for a wall's face — src/scene/gwotKit.ts through the office kit's door). THE OPEN FORM, AND MEASURED: no mark watches through
+  // this pane and no mark's line crosses this wall (tools/qa/marksight-check.ts), so one leaf was first laid shut; on the page's stand the scripted team
+  // then took the floor 3 times in 24 seeds, against 7 in 24 before the shutters and 7 in 24 with them folded back. A shut leaf costs the team too (not
+  // traced further: a look, a shot and the window's daylight all stop at it). So a window is shut only where its mission's tally is read with it shut.
+  { const G = gwotKit(gwotOfOffice(K)); G.shutters('z', 4, 16.5, 19.5, -1, 'open', 'paintGreen', 0.9, 2.4); G.splitWood('z', 4, 16.7, 19.3, -1, 3); }
   // the west stairwell's landing outside that door (officeGen.ts's, box for box: game/qrf.ts QRF_MARKS stands a team in it)
   slab(1.34, 0, 9.57, 3.88, 0.02, 12.63, C.concrete);
   wallX(9.45, 1.1, 3.88, 0.24, ext); wallX(12.75, 1.1, 3.88, 0.24, ext); wallZ(1.22, 9.57, 12.63, 0.24, ext);
