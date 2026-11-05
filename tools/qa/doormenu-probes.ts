@@ -282,9 +282,9 @@ export const doormenuMan = guarded(async () => {
         R.stand(p);
         const F0 = R.frame(d), side = Math.sign((p[0] - F0.c[0]) * F0.nx + (p[2] - F0.c[2]) * F0.nz) || 1, at = [F0.c[0] + F0.nx * side * 0.35, 0, F0.c[2] + F0.nz * side * 0.35];
         if (game.col.nav.isBlocked(at[0], at[2])) continue;
-        man.char.pos[0] = at[0]; man.char.pos[1] = 0; man.char.pos[2] = at[2]; O.give('hold', { kind: 'none', at: [...game.player.char.pos] }, 'all'); R.step(3);   // (put there FIRST: a hold is where he stands — told to hold and then moved, he walks back to where he was told, and at a walk he is still inside the tolerance below when the cursor is read)
-        if (Math.hypot(man.char.pos[0] - at[0], man.char.pos[2] - at[2]) > 0.4) continue;   // he walked off it
-        const [sx, sy, front] = R.W.cam.project([man.char.pos[0], 1.2, man.char.pos[2]], CW, CH); if (!front) continue;
+        man.char.posX = at[0]; man.char.posY = 0; man.char.posZ = at[2]; O.give('hold', { kind: 'none', at: [...game.player.char.pos] }, 'all'); R.step(3);   // (put there FIRST: a hold is where he stands — told to hold and then moved, he walks back to where he was told, and at a walk he is still inside the tolerance below when the cursor is read)
+        if (Math.hypot(man.char.posX - at[0], man.char.posZ - at[2]) > 0.4) continue;   // he walked off it
+        const [sx, sy, front] = R.W.cam.project([man.char.posX, 1.2, man.char.posZ], CW, CH); if (!front) continue;
         const ray = R.W.cam.ray(sx / CW, sy / CH); if (!(man.char.rayHit(ray.ro, ray.rd, 200) >= 0)) continue;
         if (!O.doorOnRay(ray.ro, ray.rd)) continue;   // his chest is not drawn over the doorway from here: another spot
         const on = R.pick(sx, sy); ORDERS.doorRay = false; const off = R.pick(sx, sy); ORDERS.doorRay = true;

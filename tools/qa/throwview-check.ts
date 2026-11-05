@@ -67,7 +67,7 @@ export async function throwviewCheck(): Promise<boolean> {
           if ((BREAK ? old(R) : ST.squadThrowPlans(g, mine)).some((p: any) => p.preview)) drew++;
           if (RB.stateHash(g, true, true) !== h0) { wrote++; if (f0 && !what) what = (RB.flatDiff(f0, RB.stateFlat(g, true, true), 3) as string[]).map(l => l.split(': ')[0]).join(', '); }
           V.forEach((v: any, k: number) => { if (v.get() !== v0[k]) { vars++; names.add(v.name); } });
-          R.step(); if (i % 6 === 5) for (const m of R.team) place(m, [m.char.pos[0] + (Math.floor(i / 48) % 2 ? -0.3 : 0.3), m.char.pos[1], m.char.pos[2]], m.char.bodyYaw);
+          R.step(); if (i % 6 === 5) for (const m of R.team) place(m, [m.char.posX + (Math.floor(i / 48) % 2 ? -0.3 : 0.3), m.char.posY, m.char.posZ], m.char.bodyYaw);
         }
         if (!(wrote === 0 && vars === 0 && drew >= 30)) bad.ask++;
         rows.ask.push(`${name}: the ask changed the game's state on ${wrote} of 150 frames${what ? ` (${what})` : ''}, a module variable on ${vars}${names.size ? ` (${[...names].join(', ')})` : ''} · the picture was there on ${drew}`);

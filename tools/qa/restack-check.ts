@@ -64,7 +64,7 @@ export async function restackCheck(): Promise<boolean> {
 
     const said: [any, string][] = [], shown: string[] = [], say0 = g.say.bind(g), msg0 = g.msg.bind(g);
     g.say = (who: any, text: string, ...r: any[]) => { said.push([who, text]); return say0(who, text, ...r); }; g.msg = (text: string, ...r: any[]) => { shown.push(text); return msg0(text, ...r); };
-    const marks = () => all().map((m: any) => [m.char.pos[0], 0, m.char.pos[2]]), moved = (a: number[][]) => Math.max(...marks().map((p: number[], i: number) => dist(p, a[i])));
+    const marks = () => all().map((m: any) => [m.char.posX, 0, m.char.posZ]), moved = (a: number[][]) => Math.max(...marks().map((p: number[], i: number) => dist(p, a[i])));
     /** one press of the quick key on the door, then a second of the game: what was said and shown, what was written, what the door tools hold, how far anybody went */
     const press = () => { const on = !!aimOf(D), n0 = O.log.length, ops0 = T.ops.length, at = marks(), posts = all().map((m: any) => O.of(m)?.post), s0 = said.length, m0 = shown.length, k0 = AUTOPILOT_STATS.again;
       I.pressed.add(ORDERS.quickKey); step(3); const lines = said.slice(s0), msgs = shown.slice(m0); step(60);

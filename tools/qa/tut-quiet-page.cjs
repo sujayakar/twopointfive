@@ -38,8 +38,8 @@ const check = (ok, label, detail) => { if (!ok) failed = true; console.log(`- ${
       fatal: document.getElementById('fatal')?.textContent || '', rails: g.rails.live, slot: P.slot, away: !!P.holstered, setup: P.setup ? P.setup.gun : '', load: rf.attachment, shells: rf.shells, rings: rf.rings, back: (d => d ? +d.angle.toFixed(3) : null)(g.doors.list.find(d => d.def.name === 'back')), ring: !!P.sel?.open, hints: g.nearby.filter(r => r.kind === 'guard').map(r => `${r.line2 ?? ''}`).join(' | '),
       strip: (eq?.textContent ?? '').replace(/\s+/g, ' ').trim(), words: eq?.querySelector('.hb-st')?.textContent ?? '', rows: [...(eq?.querySelectorAll('.hp kbd:not(.x)') ?? [])].map(k => k.textContent),
       card: { on: !!card && card.classList.contains('on'), h: card?.querySelector('h2')?.textContent ?? '', p: [...(card?.querySelectorAll('p') ?? [])].map(x => x.textContent).join(' / ') },
-      hall: hall ? { state: hall.state, how: hall.down?.how ?? hall.downHow ?? '', at: [+hall.char.pos[0].toFixed(2), +hall.char.pos[2].toFixed(2)], aw: +(hall.awareness ?? 0).toFixed(2) } : null, other: box ? box.state : '',
-      trips: (g.devices?.lasers ?? []).reduce((n, l) => n + l.trips, 0), ko: g.chronicle.events.filter(r => r.kind === 'ko').map(r => r.data?.method).join(','), at: [+P.char.pos[0].toFixed(2), +P.char.pos[2].toFixed(2)], holding: !!P.holding, t: +g.time.toFixed(1) }; });
+      hall: hall ? { state: hall.state, how: hall.down?.how ?? hall.downHow ?? '', at: [+hall.char.posX.toFixed(2), +hall.char.posZ.toFixed(2)], aw: +(hall.awareness ?? 0).toFixed(2) } : null, other: box ? box.state : '',
+      trips: (g.devices?.lasers ?? []).reduce((n, l) => n + l.trips, 0), ko: g.chronicle.events.filter(r => r.kind === 'ko').map(r => r.data?.method).join(','), at: [+P.char.posX.toFixed(2), +P.char.posZ.toFixed(2)], holding: !!P.holding, t: +g.time.toFixed(1) }; });
   // (a picture, as tut-page.cjs takes one: the frame is drawn and read back in the page and stood under the HUD as a still)
   const shot = async tag => { if (process.env.SHOTS === '0') return '(no picture asked)'; const f = path.join(OUT, `tut-quiet-${tag}.png`);
     await page.evaluate(async () => { const dev = window.__engine.device, y = () => new Promise(res => { const ch = new MessageChannel(); ch.port1.onmessage = () => res(); ch.port2.postMessage(0); });
@@ -54,7 +54,7 @@ const check = (ok, label, detail) => { if (!ok) failed = true; console.log(`- ${
     finally { await page.evaluate(() => { document.getElementById('view').style.visibility = ''; document.getElementById('__still')?.remove(); }); }
     return f; };
   const point = async w => { const s = await page.evaluate(p => { const c = document.getElementById('view'), r = c.getBoundingClientRect(), [x, y] = window.__cam.project(p, r.width, r.height, 1); return { x: r.left + x, y: r.top + y }; }, w); await page.mouse.move(s.x, s.y); await run(2); return s; };
-  const head = () => page.evaluate(() => { const g = window.__game, h = g.guards.find(x => !x.unit && x.route?.name === 'hall'); return h.char.bones?.head ? [...h.char.bones.head] : [h.char.pos[0], 1.6, h.char.pos[2]]; });
+  const head = () => page.evaluate(() => { const g = window.__game, h = g.guards.find(x => !x.unit && x.route?.name === 'hall'); return h.char.bones?.head ? [...h.char.bones.head] : [h.char.posX, 1.6, h.char.posZ]; });
   const right = async frames => { await page.mouse.down({ button: 'right' }); await run(frames); await page.mouse.up({ button: 'right' }); await run(3); };
   const key = async (k, frames = 3) => { await page.keyboard.press(k); await run(frames); };
   // (the physical key the board has put a game code on — host/keymap.ts: the first of `codes` that the board reads as one of `games`)
@@ -99,7 +99,7 @@ const check = (ok, label, detail) => { if (!ok) failed = true; console.log(`- ${
   check(L0.rings === R.rings && L0.shells === R.shells && L0.hall?.state === R.hall?.state && L0.id === 'rifle' && moved < 0.1 && !L0.holding && L0.trips === R.trips && !/LMB|sneak/i.test(L0.hints), 'from the doorway\'s line, hands empty: the left button held on the man stalks nobody, no row offers that click, and the right button does nothing',
     `${s(L0)} · moved ${moved.toFixed(2)} m · holding ${L0.holding} · beams broken ${L0.trips - R.trips} · the man's rows say: "${L0.hints || 'nothing'}" · him ${JSON.stringify(L0.hall)}`);
   // …and put right behind him on that line (0.6 m, low: under the beam), where the row that grabs is his: its line names no mouse button, because both are shut
-  const BEHIND = await page.evaluate(() => { const H = window.__game.guards.find(x => !x.unit && x.route?.name === 'hall'); return H ? [H.char.pos[0] - Math.sin(H.char.bodyYaw) * 0.6, 0, H.char.pos[2] - Math.cos(H.char.bodyYaw) * 0.6] : null; });
+  const BEHIND = await page.evaluate(() => { const H = window.__game.guards.find(x => !x.unit && x.route?.name === 'hall'); return H ? [H.char.posX - Math.sin(H.char.bodyYaw) * 0.6, 0, H.char.posZ - Math.cos(H.char.bodyYaw) * 0.6] : null; });
   if (BEHIND) { await stand(BEHIND); await point(await head()); await run(12); } const B0 = await read();
   check(!!BEHIND && /grab him/.test(B0.hints) && !/LMB|RMB/.test(B0.hints) && !B0.holding && B0.trips === R.trips && B0.hall?.state === R.hall?.state, 'right behind him on that line the row that grabs is his and its line names no mouse button',
     `the man's rows say: "${B0.hints || 'nothing'}" · holding ${B0.holding} · beams broken ${B0.trips - R.trips} · ${s(B0)} · him ${JSON.stringify(B0.hall)}`);

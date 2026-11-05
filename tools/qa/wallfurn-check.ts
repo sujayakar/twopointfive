@@ -146,8 +146,8 @@ export async function wallfurnCheck(o: { levels?: string[]; cap?: number; baseli
         const op = C.ops[0], armed = op?.phase === 'armed';
         verdict(!why && armed, 'the squad ordered onto it from the yard: the order is taken and the charge is set', `refusal ${JSON.stringify(why ?? null)} · phase ${op?.phase ?? '—'}`);
         R.W.input.pressed.add('KeyF'); R.step(); R.step(60 * 25);
-        const men = O.squad().filter((m: any) => m.state !== 'dead'), inside = men.filter((m: any) => m.char.pos[0] > 9.1 && m.char.pos[0] < 15 && m.char.pos[2] > 7 && m.char.pos[2] < 15);
-        verdict(!!op?.hole && inside.length === men.length && men.length > 0, 'F: the wall opens and every man goes into the ward through it', `hole ${!!op?.hole} · ended '${op?.ended}' · ${inside.length} of ${men.length} inside · ${men.map((m: any) => `${m.callsign} (${f2(m.char.pos[0])}, ${f2(m.char.pos[2])})`).join(' ')}`);
+        const men = O.squad().filter((m: any) => m.state !== 'dead'), inside = men.filter((m: any) => m.char.posX > 9.1 && m.char.posX < 15 && m.char.posZ > 7 && m.char.posZ < 15);
+        verdict(!!op?.hole && inside.length === men.length && men.length > 0, 'F: the wall opens and every man goes into the ward through it', `hole ${!!op?.hole} · ended '${op?.ended}' · ${inside.length} of ${men.length} inside · ${men.map((m: any) => `${m.callsign} (${f2(m.char.posX)}, ${f2(m.char.posZ)})`).join(' ')}`);
         WALLCHARGE.farFurn = false; g.restartEncounter(); R.step(10);
       }
       return;
@@ -178,8 +178,8 @@ export async function wallfurnCheck(o: { levels?: string[]; cap?: number; baseli
       const op = C.ops[0], armed = op?.phase === 'armed';
       verdict(!why && armed, 'the squad ordered onto it: the order is taken and the charge is set', `refusal ${JSON.stringify(why ?? null)} · phase ${op?.phase ?? '—'}`);
       R.W.input.pressed.add('KeyF'); R.step(); R.step(60 * 25);
-      const men = O.squad().filter((m: any) => m.state !== 'dead'), inside = men.filter((m: any) => m.char.pos[2] < 23.8 && m.char.pos[2] > 20 && m.char.pos[0] > 16 && m.char.pos[0] < 23);
-      verdict(!!op?.hole && inside.length === men.length && men.length > 0, 'F: the wall opens and every man goes in through it', `hole ${!!op?.hole} · ended '${op?.ended}' · ${inside.length} of ${men.length} inside · ${men.map((m: any) => `${m.callsign} (${f2(m.char.pos[0])}, ${f2(m.char.pos[2])})`).join(' · ')}`);
+      const men = O.squad().filter((m: any) => m.state !== 'dead'), inside = men.filter((m: any) => m.char.posZ < 23.8 && m.char.posZ > 20 && m.char.posX > 16 && m.char.posX < 23);
+      verdict(!!op?.hole && inside.length === men.length && men.length > 0, 'F: the wall opens and every man goes in through it', `hole ${!!op?.hole} · ended '${op?.ended}' · ${inside.length} of ${men.length} inside · ${men.map((m: any) => `${m.callsign} (${f2(m.char.posX)}, ${f2(m.char.posZ)})`).join(' · ')}`);
     } else verdict(false, 'the room clear starts on the barracks', 'start refused');
   }
 

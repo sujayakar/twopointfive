@@ -97,7 +97,7 @@ function parkSam(g: any, from: Vec3) {
 /** the shooter of this kind made a man in a fight who has `T` for his enemy: the fight AI's man alert on a post, or a teammate under an order to hold and aim */
 function arm(R: Rig, kind: Kind, S: any, T: any) {
   const g = R.g;
-  if (kind === 'order') { order(S, { goal: null, upper: 'aim', aimAt: [T.char.pos[0], 1.25, T.char.pos[2]] }); return; }
+  if (kind === 'order') { order(S, { goal: null, upper: 'aim', aimAt: [T.char.posX, 1.25, T.char.posZ] }); return; }
   S.hold = false; S.pinned = true; S.state = 'alert'; S.awareness = 1; S.foe = T; S.reactT = 0.2; S.fireCd = 0.4; S.reloadT = -1; S.lastKnown = v3.copy(T.char.pos); S.aim?.clear?.();
   S.witness.alertedBy = 'radio'; S.witness.alertT = g.time;
 }
@@ -209,7 +209,7 @@ async function cover() {
     const rows = rowsOf(g, s0, P.id), rep = coverfireReport(g); const fired = R.of(S).slice(n0).filter((s: any) => rowT < 0 || s.t <= rowT);
     dump(R);
     if (VERBOSE) console.log(`      T ${T.state} crouch ${T.char.anim.crouch.toFixed(2)} · S on ${JSON.stringify(coverfireOn(g, S))} · rounds at ${R.of(S).map((s: Shot) => (s.t - t0).toFixed(1)).join(' ')} · S script ${JSON.stringify(S.script ?? null).slice(0, 200)} mag ${S.weapon.mag} reloadUntil ${g.fight.opOf(S)?.reloadUntil}`);
-    if (VERBOSE) for (const y of [1.25, 0.8, 0.55]) { const from = S.char.muzzle as Vec3, to: Vec3 = [T.char.pos[0], y, T.char.pos[2]]; const d = v3.normalize(v3.sub(to, from)); const h = g.col.raycast(from, d, v3.dist(from, to));
+    if (VERBOSE) for (const y of [1.25, 0.8, 0.55]) { const from = S.char.muzzle as Vec3, to: Vec3 = [T.char.posX, y, T.char.posZ]; const d = v3.normalize(v3.sub(to, from)); const h = g.col.raycast(from, d, v3.dist(from, to));
       const b = h && h.index < 1e6 ? g.col.boxes[h.index] : null; console.log(`      line to y ${y}: ${h ? `#${h.index} at ${h.t.toFixed(2)} of ${v3.dist(from, to).toFixed(2)} ${b ? `c ${b.c.map((x: number) => x.toFixed(2))} h ${b.h.map((x: number) => x.toFixed(2))}` : ''} breakable ${JSON.stringify(g.destr.walls.breakableAt(h.index)?.id ?? null)}` : 'clear'} · S ${S.state} foe ${S.foe === T} sawAgo ${(g.time - S.lastSeenT).toFixed(1)} muzzle ${from.map(x => x.toFixed(2))} T ${T.char.pos.map((x: number) => x.toFixed(2))} P ${JSON.stringify(P)}`); }
     check(rep.chews >= 1, `${kind}: he went on the stack once the man was down behind it (${rep.chews} chew, ${rep.shots} rounds, ${rep.landed} on it; ${(rowT - t0).toFixed(1)} s)`);
     check(rows.length > 0 && rows[0].kind === 'cover' && rows[0].cause === 'fire', `${kind}: a cell of the stack gave to fire (the engine's feed: ${rows.length ? `${rows[0].kind} by ${rows[0].cause}` : 'no row'})`);
@@ -259,7 +259,7 @@ async function seen() {
   console.log(`coverfire-seen (${LEVEL})`);
   // (a) eyes on, no line: the round may go when what blocks it is the partition, and not when the same man is next asked about behind something unindexed
   { const X = await wallRig('def'); if (!X) check(false, 'no partition fits');
-    else { const { R, g, P, S, T } = X; const chest: Vec3 = [T.char.pos[0], 1.25, T.char.pos[2]];
+    else { const { R, g, P, S, T } = X; const chest: Vec3 = [T.char.posX, 1.25, T.char.posZ];
       const a = coverSeen(g, S, T, chest), on = coverfireOn(g, S);
       check(a && on?.id === P.id, `eyes on, the line blocked by the partition: the round may go (${a}; on #${on?.id})`);
       // a point a stride behind the nearest thing in his reach the engine has NOT indexed

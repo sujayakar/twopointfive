@@ -27,7 +27,7 @@ const RG: [number[], string, number][] = [[[RAG.hipL, RAG.kneeL, RAG.ankL], '#e0
 interface Fig { label: string; sam: Record<string, P3>; rag: P3[]; }
 const figs: Fig[] = [];
 const gd = g.guards[0]; let rag: any;
-const snap = (label: string) => { const f = c.forward(), L = [f[2], 0, -f[0]]; const rel = (p: P3): P3 => { const dx = p[0] - c.pos[0], dz = p[2] - c.pos[2]; return [dx * L[0] + dz * L[2], p[1] - c.pos[1], dx * f[0] + dz * f[2]]; };
+const snap = (label: string) => { const f = c.forward(), L = [f[2], 0, -f[0]]; const rel = (p: P3): P3 => { const dx = p[0] - c.posX, dz = p[2] - c.posZ; return [dx * L[0] + dz * L[2], p[1] - c.posY, dx * f[0] + dz * f[2]]; };
   const sam: Record<string, P3> = {}; for (const k of new Set(CH.flatMap(x => x[0]))) sam[k] = rel(c.bones[k]); const r: P3[] = []; for (let i = 0; i < 16; i++) r.push(rel(rag.point(i)));
   figs.push({ label: `${label} · ${pl.haul?.phase ?? 'free'}`, sam, rag: r }); };
 const step = (n = 1, keys: string[] = []) => { for (let i = 0; i < n; i++) { for (const k of keys) I.keys.add(k); W.step(DT); for (const k of keys) I.keys.delete(k); } };

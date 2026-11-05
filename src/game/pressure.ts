@@ -310,7 +310,7 @@ const pick = (r: [number, number]) => r[0] + simRandom() * (r[1] - r[0]);
 const alive = (D: Def) => D.gd.state !== 'dead';
 const note = (g: Game, F: RoomFight, gd: Guard, what: string) => { F.log.push({ t: g.time, who: gd.callsign, what: `[pressure] ${what}` }); if (F.log.length > 600) F.log.splice(0, 200); };
 const cellOf = (g: Game, p: Vec3) => { const nav = g.col.nav; return nav.idx(Math.floor(p[0] / nav.cell), Math.floor(p[2] / nav.cell)); };
-const eyeOf = (gd: Guard): Vec3 => { const h = gd.char.bones.head; return h ? [h[0], h[1], h[2]] : [gd.char.pos[0], 1.6, gd.char.pos[2]]; };
+const eyeOf = (gd: Guard): Vec3 => { const h = gd.char.bones.head; return h ? [h[0], h[1], h[2]] : [gd.char.posX, 1.6, gd.char.posZ]; };
 
 /** the room of his side's he hears fought over: the nearest post of a mate's in ANOTHER room to where his own ears put the noise (he knows where his side
  *  stands; he does not know where the enemy does), if that is a real room and not his */
@@ -999,7 +999,7 @@ function standAndFight(g: Game, F: RoomFight, st: State) {
     const dc = doorCells(g), at = cellOf(g, gd.sightPos), mine = cellOf(g, c.pos), dAt = dc.get(at), fc = gd.foe === 'player' ? g.player.char : gd.foe ? gd.foe.char : null;
     if (!fc || k.T.cells.has(at) || k.T.cells.has(mine) || dc.has(mine)) continue;   // (never in a door frame himself: his mates need it)
     if (dAt && k.T.entries.some(e => e.door === dAt)) continue;                      // one of them in that room's own door frame is not out of it (frames are no room's cells)
-    if (!clearShot(g, c, [fc.pos[0], fc.pos[1] + 1.2, fc.pos[2]])) continue;
+    if (!clearShot(g, c, [fc.posX, fc.posY + 1.2, fc.posZ])) continue;
     if (laneExposed(g, gd)) continue;   // (lanes.ts: where he stands is floor his side knows a gun covers — no place to plant himself; the lane's own rule has him out of it)
     gd.hold = true; gd.path = []; gd.pathGoal = null;
     if (PRESSURE.secondKeeps) F.standOn(D, PRESSURE.secondSet); else run(g, D, v3.copy(c.pos), null);

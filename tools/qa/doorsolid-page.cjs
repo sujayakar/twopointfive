@@ -29,8 +29,8 @@ const NOISE = /""?smoke[A-Za-z0-9_]*""?|\[pipeline\] smoke_|number of storage te
       const face = g.doors.pullFace(d, off(1, 0.8)) ? 1 : -1, dirIn = [uz * face, -ux * face];
       g.teleportPlayer(off(face, 1.3)); pl.crouch = false; await window.__runFrames(5);
       let yaw = 0, best = -2; for (let i = 0; i < 720; i++) { cam.yaw = i * Math.PI / 360; cam.rebuild(); const f = cam.planarBasis().fwd, dot = f[0] * dirIn[0] + f[2] * dirIn[1]; if (dot > best) { best = dot; yaw = cam.yaw; } }
-      const out = () => (-(c.pos[0] - d.def.hinge[0]) * uz + (c.pos[2] - d.def.hinge[1]) * ux) * face;
-      const read = () => { const [hx, hz] = d.def.hinge, u = d.dir(), px = c.pos[0] - hx, pz = c.pos[2] - hz, along = px * u[0] + pz * u[1], perp = u[0] * pz - u[1] * px, t = Math.max(0, Math.min(W, along));
+      const out = () => (-(c.posX - d.def.hinge[0]) * uz + (c.posZ - d.def.hinge[1]) * ux) * face;
+      const read = () => { const [hx, hz] = d.def.hinge, u = d.dir(), px = c.posX - hx, pz = c.posZ - hz, along = px * u[0] + pz * u[1], perp = u[0] * pz - u[1] * px, t = Math.max(0, Math.min(W, along));
         return { inside: along > 0.14 && along < W, face: perp >= 0 ? 1 : -1, along, pen: 0.34 + d.thick / 2 - Math.hypot(px - u[0] * t, pz - u[1] * t) }; };
       let crossed = false, deepest = 0, cross = -1, wide = 0, last = read(); const s0 = { ...g.doors.solids };
       for (let i = 0; i < 200 && cross < 0; i++) { cam.yaw = yaw; cam.rebuild(); await window.__runFrames(1, 1 / 60, ['KeyW']); const r = read();

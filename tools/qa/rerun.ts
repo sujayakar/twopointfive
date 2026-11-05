@@ -154,8 +154,8 @@ export async function rerun(F: ReplayFile, opts: { toN?: number; tol?: number; e
   const byN = new Map<number, number>(); F.samples.forEach((s, i) => byN.set(s.n, i));
   const idOf = new Map<number, number>(); F.cast.forEach((c, ci) => idOf.set(c.id, ci));
   let compared = 0, worst: Drift | null = null, drift: Drift | null = null, castDiffers = '';
-  const placeOf = (ci: number): [number, number] | null => { const c = F.cast[ci]; if (c.kind === 'player') return [g.player.char.pos[0], g.player.char.pos[2]];
-    const m = (c.kind === 'civ' ? g.civilians : g.guards).find((x: any) => x.char?.id === c.id) ?? [...g.guards, ...g.civilians].find((x: any) => x.char?.id === c.id); return m ? [m.char.pos[0], m.char.pos[2]] : null; };
+  const placeOf = (ci: number): [number, number] | null => { const c = F.cast[ci]; if (c.kind === 'player') return [g.player.char.posX, g.player.char.posZ];
+    const m = (c.kind === 'civ' ? g.civilians : g.guards).find((x: any) => x.char?.id === c.id) ?? [...g.guards, ...g.civilians].find((x: any) => x.char?.id === c.id); return m ? [m.char.posX, m.char.posZ] : null; };
   for (let f = 0; f < toN; f++) {
     // from outside the step, as the page did it
     for (const [, kind, data] of walk.outside()) {

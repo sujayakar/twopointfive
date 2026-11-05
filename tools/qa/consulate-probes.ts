@@ -121,7 +121,7 @@ export const consulateStage = guarded(async () => {
   { // who F takes from the side door's room (rescue.ts pick): all four in there = a pair of one colour on the side door, the other pair on the main door;
     // one pair alone in there = one and one — the main door is never left to nobody
     const W = await stand(1, 4), g = W.game, R = g.rescue as any; await quiet(async () => R.start());
-    R.ops.forEach((o: any, i: number) => { o.char.pos[0] = 25.4 + (i % 2) * 1.2; o.char.pos[2] = 16.5 + (i >> 1) * 1.2; }); g.teleportPlayer([26.5, 0, 19.5]);
+    R.ops.forEach((o: any, i: number) => { o.char.posX = 25.4 + (i % 2) * 1.2; o.char.posZ = 16.5 + (i >> 1) * 1.2; }); g.teleportPlayer([26.5, 0, 19.5]);
     const names = (l: any[]) => l.map(o => o.callsign).join('+') || 'nobody', all = R.pick();
     R.ops[2].state = 'dead'; R.ops[3].state = 'dead'; const reds = R.pick();
     verdict(!!all && all.side.length === 2 && all.side[0].unit.pair === all.side[1].unit.pair && all.front.length === 2 && all.front.every((o: any) => o.unit.pair !== all.side[0].unit.pair) && !!reds && reds.side.length === 1 && reds.front.length === 1,

@@ -28,7 +28,7 @@ if (/\bnocivilians\b/.test(page.query)) { g.tune.civilians = false; (await impor
 loud();
 if (!g.probe) g.probe = { results: new Map() }; else if (!g.probe.results) g.probe.results = new Map();
 const doorSounds: string[] = [];
-{ const A = g.audio, play = A.play.bind(A); A.play = (n: string, p: any, ...rest: any[]) => { if (/^door/.test(n) && p) doorSounds.push(`${n}@${g.time.toFixed(1)}s (${p[0].toFixed(1)}, ${p[2].toFixed(1)}) guards ${g.guards.map((x: any) => `${x.char.pos[0].toFixed(1)},${x.char.pos[2].toFixed(1)}`).join(' ')}`); return play(n, p, ...rest); }; }
+{ const A = g.audio, play = A.play.bind(A); A.play = (n: string, p: any, ...rest: any[]) => { if (/^door/.test(n) && p) doorSounds.push(`${n}@${g.time.toFixed(1)}s (${p[0].toFixed(1)}, ${p[2].toFixed(1)}) guards ${g.guards.map((x: any) => `${x.char.posX.toFixed(1)},${x.char.posZ.toFixed(1)}`).join(' ')}`); return play(n, p, ...rest); }; }
 { const A = g.audio, step = A.footstep.bind(A); A.footstep = (p: any, l: number, isPlayer: boolean, mat?: string) => { A.play(isPlayer ? `(step ${mat ?? ''})` : '(a step)', p, l); return step(p, l, isPlayer, mat); }; }
 Object.assign(Wn, { __game: g, __input: W.input, __cam: W.cam, __audio: g.audio, __hour: { est: (p: any, id: number) => lightEstimateAt(g, p, (o: number) => o === id) },
   __runFrames: (n: number, dt: number) => { for (let i = 0; i < n; i++) W.step(dt); } });

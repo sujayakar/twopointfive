@@ -18,12 +18,12 @@ const YARD = [11.4, 0.02, 16.4], TEA_DOOR = [9.0, 1.0, 11.7], KITCHEN_DOOR = [13
 const BY_GATE = [10.4, 0, 18.6], IN_TEA = [10.4, 0, 8.6], BY_BUNK = [26.2, 0, 17.5];
 const BLOCK = /^Tango (6|7|8)$/;
 const squad = (B: Bot) => B.g.guards.filter((x: any) => x.unit && x.team === 'operative' && x.state !== 'dead');
-const taken = (B: Bot, id: string) => { const r = B.g.roomClear.rooms.find((x: any) => x.def.id === id); if (!r) throw new Error(`the mission has no room '${id}'`); if (r.cleared) return true; const b = r.def.bounds; return squad(B).filter((m: any) => m.char.pos[0] > b.x0 && m.char.pos[0] < b.x1 && m.char.pos[2] > b.z0 && m.char.pos[2] < b.z1).length >= 3; };
-const near = (B: Bot, p: number[], r: number) => squad(B).every((m: any) => Math.hypot(m.char.pos[0] - p[0], m.char.pos[2] - p[2]) < r);
+const taken = (B: Bot, id: string) => { const r = B.g.roomClear.rooms.find((x: any) => x.def.id === id); if (!r) throw new Error(`the mission has no room '${id}'`); if (r.cleared) return true; const b = r.def.bounds; return squad(B).filter((m: any) => m.char.posX > b.x0 && m.char.posX < b.x1 && m.char.posZ > b.z0 && m.char.posZ < b.z1).length >= 3; };
+const near = (B: Bot, p: number[], r: number) => squad(B).every((m: any) => Math.hypot(m.char.posX - p[0], m.char.posZ - p[2]) < r);
 const stacked = (B: Bot) => squad(B).every((m: any) => { const o = B.g.orders.of(m); return o?.order === 'stack' && o.arrived; });
 const following = (B: Bot) => squad(B).every((m: any) => B.g.orders.of(m)?.order === 'fallIn');
 const last = (B: Bot) => { const l = B.g.orders.log; return l.length ? l[l.length - 1] : null; };
-const where = (B: Bot) => squad(B).map((m: any) => `${m.callsign} (${m.char.pos[0].toFixed(1)},${m.char.pos[2].toFixed(1)}) ${B.g.orders.of(m)?.order ?? '-'}`).join(' · ');
+const where = (B: Bot) => squad(B).map((m: any) => `${m.callsign} (${m.char.posX.toFixed(1)},${m.char.posZ.toFixed(1)}) ${B.g.orders.of(m)?.order ?? '-'}`).join(' · ');
 /** the squad's key on a point */
 function command(B: Bot, p: number[]) { B.aim(p); B.step(2); B.aim(p); B.press('KeyB', 2); }
 /** the squad's key on himself: they fall in. Asked of the order book: a tap that gave anything else is a line that lies */
@@ -50,7 +50,7 @@ export const steps: Record<string, (B: Bot) => void> = {
   zoom: B => { for (let i = 0; i < 20; i++) { if (!B.g.rails.locks('zoom')) B.cam.zoom(60); B.step(); } B.wait(1); },
   // nothing to press: the two cans are called, thrown and burning before the line goes by
   smoke: B => { B.wait(4.2); },
-  move: B => { command(B, YARD); if (!B.until(() => squad(B).every((m: any) => m.char.pos[2] < 19.7 && m.char.pos[0] > 4.4), 45)) { command(B, YARD); B.until(() => squad(B).every((m: any) => m.char.pos[2] < 19.7), 30); } B.wait(1); },
+  move: B => { command(B, YARD); if (!B.until(() => squad(B).every((m: any) => m.char.posZ < 19.7 && m.char.posX > 4.4), 45)) { command(B, YARD); B.until(() => squad(B).every((m: any) => m.char.posZ < 19.7), 30); } B.wait(1); },
   with: B => { if (!B.go(BY_GATE, 40)) B.fail(`he did not reach the yard from the road: he is at ${B.pos().map(v => v.toFixed(1)).join(', ')}`); },
   gate: B => { B.until(() => !B.g.guards.some((x: any) => BLOCK.test(x.callsign) && x.state !== 'dead'), 70); B.wait(0.9); },
   stack: B => { for (let k = 0; k < 3; k++) { command(B, TEA_DOOR); if (B.until(() => stacked(B) || near(B, TEA_DOOR, 3.2), 30)) break; B.say('  not at the door: ' + where(B)); }
@@ -60,8 +60,8 @@ export const steps: Record<string, (B: Bot) => void> = {
   kitchen: B => { if (!B.go(IN_TEA, 40)) B.fail(`he did not reach the tea room: he is at ${B.pos().map(v => v.toFixed(1)).join(', ')}`); breach(B, KITCHEN_DOOR, 'kitchen'); },
   fallin: B => { callIn(B); B.wait(1); },
   lead: B => { if (!B.go(BY_BUNK, 60)) B.fail(`he did not reach the bunkhouse: he is at ${B.pos().map(v => v.toFixed(1)).join(', ')}`);
-    if (!B.until(() => squad(B).filter((m: any) => m.char.pos[0] > 19 && m.char.pos[0] < 28.9 && m.char.pos[2] > 11.7 && m.char.pos[2] < 19.8).length >= Math.min(3, squad(B).length), 40)) B.say('  not with him: ' + where(B)); },
+    if (!B.until(() => squad(B).filter((m: any) => m.char.posX > 19 && m.char.posX < 28.9 && m.char.posZ > 11.7 && m.char.posZ < 19.8).length >= Math.min(3, squad(B).length), 40)) B.say('  not with him: ' + where(B)); },
   bunk: B => { breach(B, BUNK_DOOR, 'bunk'); },
   out: B => { callIn(B); if (!B.go(TRUCKS, 80)) B.fail(`he did not reach the trucks: he is at ${B.pos().map(v => v.toFixed(1)).join(', ')}`);
-    if (!B.until(() => squad(B).filter((m: any) => m.char.pos[0] < 12.5 && m.char.pos[2] > 20.1).length >= Math.min(3, squad(B).length), 60)) B.say('  not back with him: ' + where(B)); B.wait(1.2); },
+    if (!B.until(() => squad(B).filter((m: any) => m.char.posX < 12.5 && m.char.posZ > 20.1).length >= Math.min(3, squad(B).length), 60)) B.say('  not back with him: ' + where(B)); B.wait(1.2); },
 };

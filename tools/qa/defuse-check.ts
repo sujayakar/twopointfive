@@ -59,7 +59,7 @@ console.log('defuse-off — a level without the block, and the switch off');
   void g;
   // (the pair that says something: the charges' own level with the switch off, against the same file with the block taken out of it — and, so the digest is
   //  known to see the overlay at all, against the mission as shipped, which must differ: its clock blows both charges inside the stretch)
-  const dig = async (on: boolean, strip: boolean) => { DEFUSE.on = on; const s = await stage('defuse.json', l => { if (strip) delete l.scenarios.defuse; else l.scenarios.defuse = { ...l.scenarios.defuse, secs: 5 }; }); s.run(1); s.g.orders.give('fallIn', { kind: 'none' }, 'all'); s.g.teleportPlayer([s.g.player.char.pos[0] + 1.5, 0, s.g.player.char.pos[2]]); s.run(9); return JSON.stringify(digestGame(s.g, true)); };
+  const dig = async (on: boolean, strip: boolean) => { DEFUSE.on = on; const s = await stage('defuse.json', l => { if (strip) delete l.scenarios.defuse; else l.scenarios.defuse = { ...l.scenarios.defuse, secs: 5 }; }); s.run(1); s.g.orders.give('fallIn', { kind: 'none' }, 'all'); s.g.teleportPlayer([s.g.player.char.posX + 1.5, 0, s.g.player.char.posZ]); s.run(9); return JSON.stringify(digestGame(s.g, true)); };
   if (!BREAK) { const a = await dig(false, false), b = await dig(true, true), c = await dig(true, false); DEFUSE.on = true;
     line(a === b && a.length > 200, `this level played ten seconds with the switch off, and with the block taken out of its file: the same game by digest (${a.length} B)`);
     line(c !== a, '…and the mission itself (a 5 s clock) is another game by that digest: the pair above is not blind to it'); } }

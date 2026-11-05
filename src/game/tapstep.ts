@@ -66,7 +66,7 @@ function backOf(g: Game, dx: number, dz: number, far: number): { gd: Guard; x: n
     if (!best || d < best.d) best = { gd, x, z, d }; }
   return best;
 }
-const spotOf = (gd: Guard) => ({ x: gd.char.pos[0] - Math.sin(gd.char.bodyYaw) * STALK.keyM, z: gd.char.pos[2] - Math.cos(gd.char.bodyYaw) * STALK.keyM });
+const spotOf = (gd: Guard) => ({ x: gd.char.posX - Math.sin(gd.char.bodyYaw) * STALK.keyM, z: gd.char.posZ - Math.cos(gd.char.bodyYaw) * STALK.keyM });
 /** how long a step of `len` m takes from rest to rest */
 const stepSecs = (len: number): number => TAPSTEP.secs * Math.sqrt(Math.max(len, 0.05) / TAPSTEP.reachM);
 function lift(g: Game, S: St, mx: number, mz: number, rush: number, least: number) {
@@ -78,7 +78,7 @@ function lift(g: Game, S: St, mx: number, mz: number, rush: number, least: numbe
 function plant(g: Game, S: St) {
   const c = g.player.char, T = TAPSTEP, under = g.time - S.maskT <= T.maskSecs, base = T.quiet + (T.scuff - T.quiet) * S.rush;
   const level = tread(g, c.pos, base * loadHeard(g, 'player'), true) * (under ? T.mask : 1);
-  g.events.push({ kind: 'step', pos: [c.pos[0], c.pos[1], c.pos[2]], time: g.time, loud: false, level }); g.player.noise = Math.max(g.player.noise, level);
+  g.events.push({ kind: 'step', pos: [c.posX, c.posY, c.posZ], time: g.time, loud: false, level }); g.player.noise = Math.max(g.player.noise, level);
   if (S.rush > 0) TAPSTEP_STATS.scuffs++; if (under) TAPSTEP_STATS.masked++; if (S.man) TAPSTEP_STATS.lands++;
   TAPSTEP_STATS.last = S.man ? 'landed behind him' : under ? 'under his footfall' : S.rush > 0 ? 'a scuff' : 'quiet';
   S.st = 2; S.t = T.settle; S.v = S.a = 0; S.man = null;
@@ -86,8 +86,8 @@ function plant(g: Game, S: St) {
 /** a frame of it, crouched with his feet his own: the keys in, the step out */
 export function tapTick(g: Game, mx: number, mz: number, ml: number, dt: number): TapMove {
   const S = stateOf(g), T = TAPSTEP, c = g.player.char, fresh = ml > 0 && !S.keys;
-  const moved = S.prev ? Math.hypot(c.pos[0] - S.prev[0], c.pos[2] - S.prev[2]) : 0, asked = S.asked;
-  S.keys = ml > 0; S.at = g.time; S.prev = [c.pos[0], c.pos[1], c.pos[2]];
+  const moved = S.prev ? Math.hypot(c.posX - S.prev[0], c.posZ - S.prev[2]) : 0, asked = S.asked;
+  S.keys = ml > 0; S.at = g.time; S.prev = [c.posX, c.posY, c.posZ];
   if (S.st === 2) { S.t -= dt;
     if (fresh) lift(g, S, mx, mz, clamp(S.t / T.settle, 0, 1), T.tapM);
     else if (S.t <= 0) { S.st = 0; S.t = 0; } }
@@ -97,7 +97,7 @@ export function tapTick(g: Game, mx: number, mz: number, ml: number, dt: number)
     if (asked > 0.2 * dt && moved < 0.25 * asked) { if (++S.stuck >= 3) plant(g, S); } else S.stuck = 0; }
   if (S.st === 1) { S.age += dt; S.left -= dt;
     const k = 1 - Math.exp(-T.turn * dt), bend = (x: number, z: number) => { const a = S.dir[0] + (x - S.dir[0]) * k, b = S.dir[1] + (z - S.dir[1]) * k, l = Math.hypot(a, b); if (l > 1e-3) S.dir = [a / l, b / l]; };
-    if (S.man) { const { x, z } = spotOf(S.man), ax = x - c.pos[0], az = z - c.pos[2], d = Math.hypot(ax, az);
+    if (S.man) { const { x, z } = spotOf(S.man), ax = x - c.posX, az = z - c.posZ, d = Math.hypot(ax, az);
       if (!stalkCould(g, S.man) || (ml > 0 && ax * mx + az * mz < 0)) S.man = null;   // (the keys taken away from it, or the chance gone: a plain step from here)
       else { if (d > 0.02) bend(ax / d, az / d); S.len = Math.min(S.done + d, T.landM + 0.25); } }
     if (!S.man) { if (ml > 0) bend(mx, mz);

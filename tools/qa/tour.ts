@@ -130,12 +130,12 @@ async function runOnce(seed: number, runIdx: number): Promise<RunReport> {
     const i = curStop;
     pinVisibility();
     const hf = game.player.hitFlash;   // only ever decays (game.update) unless a round found Sam (combat.ts fireWeapon sets it to 1, god mode or not)
-    if (hf > prevHit + 1e-9) { hits[i >= 0 ? i : STOPS]++; fail(`hit@${frame}`, `Sam was hit (hitFlash ${prevHit.toFixed(2)} → ${hf.toFixed(2)}) at (${f2(game.player.char.pos[0])}, ${f2(game.player.char.pos[2])}) crouch=${game.player.crouch}; guards ${game.guards.map((g: any) => `${routeName(g)}:${g.state}@(${f2(g.char.pos[0])},${f2(g.char.pos[2])})`).join(' ')}`); }
+    if (hf > prevHit + 1e-9) { hits[i >= 0 ? i : STOPS]++; fail(`hit@${frame}`, `Sam was hit (hitFlash ${prevHit.toFixed(2)} → ${hf.toFixed(2)}) at (${f2(game.player.char.posX)}, ${f2(game.player.char.posZ)}) crouch=${game.player.crouch}; guards ${game.guards.map((g: any) => `${routeName(g)}:${g.state}@(${f2(g.char.posX)},${f2(g.char.posZ)})`).join(' ')}`); }
     prevHit = hf;
     if (game.player.down && !allowDownUntilP) fail('player-down', `the player is down${demo?.active ? ' during the tour' : ''}`);
     const pc = game.player.char;
-    if (!fin(pc.pos[0], pc.pos[1], pc.pos[2], pc.bodyYaw, pc.aimYaw, pc.aimPitch, pc.vel[0], pc.vel[2])) fail('nan-player', `player pos ${pc.pos} yaw ${pc.bodyYaw} aim ${pc.aimYaw}/${pc.aimPitch} vel ${pc.vel}`);
-    for (const gd of game.guards) { const c = gd.char; if (!fin(c.pos[0], c.pos[1], c.pos[2], c.bodyYaw, c.aimYaw, c.aimPitch, gd.speed, gd.awareness)) fail(`nan-guard-${routeName(gd)}`, `guard ${routeName(gd)} pos ${c.pos} yaw ${c.bodyYaw} aim ${c.aimYaw}/${c.aimPitch} speed ${gd.speed} aw ${gd.awareness} (${gd.script ? 'scripted' : gd.state})`); const hb = c.bones.hips; if (hb && !fin(hb[0], hb[1], hb[2])) fail(`nan-bones-${routeName(gd)}`, `guard ${routeName(gd)} hips ${hb} (${gd.state})`); }
+    if (!fin(pc.posX, pc.posY, pc.posZ, pc.bodyYaw, pc.aimYaw, pc.aimPitch, pc.velX, pc.velZ)) fail('nan-player', `player pos ${pc.pos} yaw ${pc.bodyYaw} aim ${pc.aimYaw}/${pc.aimPitch} vel ${pc.vel}`);
+    for (const gd of game.guards) { const c = gd.char; if (!fin(c.posX, c.posY, c.posZ, c.bodyYaw, c.aimYaw, c.aimPitch, gd.speed, gd.awareness)) fail(`nan-guard-${routeName(gd)}`, `guard ${routeName(gd)} pos ${c.pos} yaw ${c.bodyYaw} aim ${c.aimYaw}/${c.aimPitch} speed ${gd.speed} aw ${gd.awareness} (${gd.script ? 'scripted' : gd.state})`); const hb = c.bones.hips; if (hb && !fin(hb[0], hb[1], hb[2])) fail(`nan-bones-${routeName(gd)}`, `guard ${routeName(gd)} hips ${hb} (${gd.state})`); }
     if (!fin(cam.target[0], cam.target[1], cam.target[2], cam.yaw, cam.distance, cam.desiredDistance, cam.pos[0], cam.pos[2])) fail('nan-camera', `camera target ${cam.target} yaw ${cam.yaw} dist ${cam.distance}/${cam.desiredDistance}`);
     if (demo?.active && !fin(demo.fade, demo.t, demo.shotT)) fail('nan-demo', `demo fade ${demo.fade} t ${demo.t} shotT ${demo.shotT}`);
     for (const d of game.doors.list) if (!fin(d.angle, d.vel, d.pick)) fail(`nan-door-${d.def.name}`, `door ${d.def.name} angle ${d.angle} vel ${d.vel} pick ${d.pick}`);
@@ -201,9 +201,9 @@ async function runOnce(seed: number, runIdx: number): Promise<RunReport> {
     game.setBlackout(40, 'ocp'); game.escalate();
     game.teleportPlayer([20.5, 0, 11.3]); game.player.crouch = true; game.setGroup('lobby', false);
     settle(2);
-    info(`dirty floor before P: ${game.escalationSummary()}; blackout ${game.blackout.active}; server door broken ${sd?.lockBroken}; guards ${game.guards.map((g: any) => g.state).join('/')}; player at (${f2(game.player.char.pos[0])}, ${f2(game.player.char.pos[2])})`);
+    info(`dirty floor before P: ${game.escalationSummary()}; blackout ${game.blackout.active}; server door broken ${sd?.lockBroken}; guards ${game.guards.map((g: any) => g.state).join('/')}; player at (${f2(game.player.char.posX)}, ${f2(game.player.char.posZ)})`);
   }
-  if (DOWN) { game.godMode = false; hitPlayer(game, [1, 0, 0]); allowDownUntilP = true; settle(1.5); if (!game.player.down) fail('down-setup', '--down: the player did not go down'); info(`P pressed lying dead at (${f2(game.player.char.pos[0])}, ${f2(game.player.char.pos[2])})`); }
+  if (DOWN) { game.godMode = false; hitPlayer(game, [1, 0, 0]); allowDownUntilP = true; settle(1.5); if (!game.player.down) fail('down-setup', '--down: the player did not go down'); info(`P pressed lying dead at (${f2(game.player.char.posX)}, ${f2(game.player.char.posZ)})`); }
   const sandboxBefore = { ai: game.aiEnabled, god: game.godMode, invisible: game.playerInvisible };
 
   // ---- the Demo, constructed once as main.ts does: (game, cam, smoke, input) — smoke is the Game's own null object (clearAll exists and drops)
@@ -338,7 +338,7 @@ async function runOnce(seed: number, runIdx: number): Promise<RunReport> {
       if (i === S.firefight && game.player.flashbangs !== (acc.bangs0 ?? 2) - 1) fail(`stop${i}-stun`, `firefight: ${acc.bangs0} stun canisters at enter, ${game.player.flashbangs} at exit — the beat's key (4, the stun slot) never selected one / it was never lobbed`);
       if (i === S.firefight) {
         const posted: any[] = acc.posted ?? []; const alive = posted.filter((g: any) => g.state !== 'dead');
-        if (alive.length) fail(`stop${i}-firefight`, `firefight: ${alive.length} of the ${posted.length} posted men still alive at the end (${alive.map((g: any) => `${routeName(g)}:${g.state} dazzled=${game.time < g.dazzledUntil}`).join(' ')}); player at (${f2(game.player.char.pos[0])}, ${f2(game.player.char.pos[2])}) mag ${game.player.pistol.mag} chamber ${game.player.pistol.chamber}`);
+        if (alive.length) fail(`stop${i}-firefight`, `firefight: ${alive.length} of the ${posted.length} posted men still alive at the end (${alive.map((g: any) => `${routeName(g)}:${g.state} dazzled=${game.time < g.dazzledUntil}`).join(' ')}); player at (${f2(game.player.char.posX)}, ${f2(game.player.char.posZ)}) mag ${game.player.pistol.mag} chamber ${game.player.pistol.chamber}`);
         rec?.notes.push(`posted ${posted.map(routeName).join('+')}: ${posted.map((g: any) => g.state).join('/')}, down at ${posted.map((g: any) => acc.killAt?.has(g) ? `+${f2(acc.killAt.get(g))} s` : '—').join(' / ')}; guard rounds ${acc.guardShots ?? 0}, Sam's ${acc.playerShots ?? 0}`);
       }
       if (i === S.clear) {
@@ -411,7 +411,7 @@ async function runOnce(seed: number, runIdx: number): Promise<RunReport> {
       if (m !== missionAtStart) fail(`${label}-mission`, `abort in stop ${abortedIn}: the player's mission object was replaced (stage ${m.stage} pulled ${m.pulled})`);
       if (m.driveT !== -1 || m.pulled !== acc.pulledAtStart) fail(`${label}-mission-state`, `abort in stop ${abortedIn}: mission driveT ${m.driveT} pulled ${m.pulled} (was ${acc.pulledAtStart})`);
       if (rackTargets.some((t: any) => t.on !== !m.pulled)) fail(`${label}-rack`, `abort in stop ${abortedIn}: rack targets on=${rackTargets.map((t: any) => t.on).join('/')}, mission pulled=${m.pulled}`);
-      if (!settled && v3.distXZ(game.player.char.pos, posAtStart) > 0.6) fail(`${label}-player-pos`, `abort in stop ${abortedIn}: player left at (${f2(game.player.char.pos[0])}, ${f2(game.player.char.pos[2])}), P found him at (${f2(posAtStart[0])}, ${f2(posAtStart[2])})`);
+      if (!settled && v3.distXZ(game.player.char.pos, posAtStart) > 0.6) fail(`${label}-player-pos`, `abort in stop ${abortedIn}: player left at (${f2(game.player.char.posX)}, ${f2(game.player.char.posZ)}), P found him at (${f2(posAtStart[0])}, ${f2(posAtStart[2])})`);
       if (!settled && game.player.crouch) fail(`${label}-player-crouch`, 'player left crouched after the abort');
       if (!settled && game.player.holstered !== holsteredAtStart) fail(`${label}-player-holster`, `abort in stop ${abortedIn}: player handed back holstered=${game.player.holstered}, P found him holstered=${holsteredAtStart} (the takedown / hold beats holster him; Demo.stop restores what it saved)`);
       if (!settled) return;
@@ -435,7 +435,7 @@ async function runOnce(seed: number, runIdx: number): Promise<RunReport> {
       const missionBefore = game.mission; const prevShot = demo.shotI;
       if (SELFTEST) {   // deliberate faults the tripwires must report: a guard put 2.5 m in front of Sam fires one aimed round at his chest; later a guard's awareness goes NaN
         if (!injected.hit && demo.shotI === S.torches && demo.shotT >= 3) { injected.hit = true; const gd = game.guards.find((g: any) => g.state !== 'dead'); const pc = game.player.char; const f = pc.forward();
-          if (gd) { gd.char.pos = [pc.pos[0] + f[0] * 2.5, 0, pc.pos[2] + f[2] * 2.5]; gd.char.bodyYaw = gd.char.aimYaw = Math.atan2(-f[0], -f[2]); gd.char.aimPitch = 0; gd.char.update(0); fireWeapon(game, gd.char, v3.add(pc.pos, [0, 1.2, 0]), false); info('selftest: guard round fired at Sam'); } }
+          if (gd) { gd.char.pos = [pc.posX + f[0] * 2.5, 0, pc.posZ + f[2] * 2.5]; gd.char.bodyYaw = gd.char.aimYaw = Math.atan2(-f[0], -f[2]); gd.char.aimPitch = 0; gd.char.update(0); fireWeapon(game, gd.char, v3.add(pc.pos, [0, 1.2, 0]), false); info('selftest: guard round fired at Sam'); } }
         if (!injected.nan && demo.shotI === S.restrike && demo.shotT >= 2) { injected.nan = true; const gd = game.guards[game.guards.length - 1]; if (gd) { gd.awareness = NaN; info(`selftest: NaN put into ${routeName(gd)}'s awareness`); } }
       }
       if (abortAt && abortedIn < 0 && demo.shotI === abortAt.stop && demo.shotT >= abortAt.frac * (shots[abortAt.stop]?.dur ?? 0)) {   // P again, mid-beat (main.ts handles KeyP just before demo.update in the same step)

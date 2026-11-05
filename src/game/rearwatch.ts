@@ -166,7 +166,7 @@ export function rearWatchTick(g: Game): void {
       //  turned in for the second it takes the door to go, with nobody new allowed the watch. Three or more on an entry that will carry it through: his eyes
       //  stay spare, as they are once the door is going, and he follows last)
       const had = hadOf(op, men, L);
-      if (had && !cands.includes(had) && carries(op)) { const A = S.of(had)!; A.spare = true; A.from ??= op.from.get(had) ?? [had.char.pos[0], 0, had.char.pos[2]]; cands.push(had); }
+      if (had && !cands.includes(had) && carries(op)) { const A = S.of(had)!; A.spare = true; A.from ??= op.from.get(had) ?? [had.char.posX, 0, had.char.posZ]; cands.push(had); }
       // (a man let off to step onto his mark has the watch again once he is on it — unless the door then goes at once and the entry will not carry the watch
       //  through: a pair, a threshold. On again as he lands and off a quarter second later is the give-and-take-back this file is not to make)
       const brief = op.phase === 'stack' && !op.onWord && !carries(op);
@@ -226,7 +226,7 @@ export function rearWatchTick(g: Game): void {
     P.cls = pick.cls; P.front = pick.front; P.A = S.of(pick.m)!; P.out = false; P.going = G.going; if (!pick.blind) P.seenT = g.time; heldOut.add(pick.o); next.set(pick.m, P); if (G.op) B.byOp.set(G.op, pick.m);   // (heldOut: no second stack pins a man to the same way this tick)
     if (P !== was) { REARWATCH_STATS.pins++; note(B, `${g.time.toFixed(1)} ${pick.m.callsign} on ${pick.o.id} (${pick.cls ? 'known' : 'uncleared'} beyond) behind the stack on ${G.door.def.name}${G.going ? ' · through the entry' : ''}`); }
     // (the door is going: doortools.ts has just turned every gun in — his eyes stay spare, as on the wait)
-    if (G.going) { const A = S.of(pick.m) as Assignment; A.spare = true; A.from ??= G.op!.from.get(pick.m) ?? [pick.m.char.pos[0], 0, pick.m.char.pos[2]]; }
+    if (G.going) { const A = S.of(pick.m) as Assignment; A.spare = true; A.from ??= G.op!.from.get(pick.m) ?? [pick.m.char.posX, 0, pick.m.char.posZ]; }
   }
   for (const [m, P] of B.pins) if (!next.has(m)) { const G = groups.find(x => x.men.includes(m)), W = G ? rearWays(g, G.door, G.side, G.marks) : [], w = W.find(x => x.o === P.o);
     // (why, for the log: read by the checks and whoever asks why a back door went unwatched)

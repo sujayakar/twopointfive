@@ -112,7 +112,7 @@ const PLAY = (secs) => {
           await page.evaluate((on) => { window.__game.player.nv = on; }, on);
           threw = await page.evaluate(PLAY, 1.5); if (threw) R.errors.push('play threw: ' + threw);
           R.notes.push(tag + ': ' + JSON.stringify(await page.evaluate(() => { const g = window.__game, m = window.__orders.squad(), p = [0, 0, 0];
-            for (const x of m) { p[0] += x.char.pos[0] / m.length; p[2] += x.char.pos[2] / m.length; }
+            for (const x of m) { p[0] += x.char.posX / m.length; p[2] += x.char.posZ / m.length; }
             window.__stage({ look: [p[0], 1.0, p[2]], yaw: 0, pitch: 1.05, dist: 9 }, {});
             const ir = g.dynBoxes.filter(b => b.emissive && b.emissive[0] > 0 && b.emissive[0] === b.emissive[1] && b.emissive[1] === b.emissive[2] && b.albedo[0] === 0 && b.albedo[1] === 0 && b.albedo[2] === 0 && b.h[0] < 0.05 && b.h[1] < 0.05);   // (irlaser-probes.ts isIr: a hueless emissive hair with no albedo)
             return { nv: g.player.nv, nvAmount: +g.player.nvAmount.toFixed(2), infraredBoxes: ir.length, torch: window.__orders.squad().map(x => x.flashlight.enabled ? 1 : 0).join('') }; })));
@@ -132,7 +132,7 @@ const PLAY = (secs) => {
             if (cx < 0 || cz < 0 || cx >= nav.W || cz >= nav.H || nav.blocked[cz * nav.W + cx]) continue;
             const t = O.targetAt(at); if (!t || t.kind !== 'floor') continue;
             const pl = T.plan(at, 'frag'); if (!pl || !pl.post) continue;
-            const walk = Math.hypot(pl.post[0] - pl.gd.char.pos[0], pl.post[2] - pl.gd.char.pos[2]); if (!best || walk > best.walk) best = { at, walk, who: pl.gd.callsign, post: pl.post, from: [pl.gd.char.pos[0], 0, pl.gd.char.pos[2]] };
+            const walk = Math.hypot(pl.post[0] - pl.gd.char.posX, pl.post[2] - pl.gd.char.posZ); if (!best || walk > best.walk) best = { at, walk, who: pl.gd.callsign, post: pl.post, from: [pl.gd.char.posX, 0, pl.gd.char.posZ] };
           }
           if (!best) return { err: 'no spot with a walk' };
           const mid = [(best.at[0] + best.from[0]) / 2, 0.5, (best.at[2] + best.from[2]) / 2], span = Math.hypot(best.at[0] - best.from[0], best.at[2] - best.from[2]);
@@ -176,14 +176,14 @@ const PLAY = (secs) => {
       if (staged.squad && process.env.FOE) {
         const ord = await page.evaluate(() => {
           const g = window.__game, O = window.__orders, m = O.squad()[0], h = g.guards.find(x => x.team === 'hostile');
-          const put = (gd, p) => { gd.char.pos[0] = p[0]; gd.char.pos[2] = p[2]; gd.char.bodyYaw = gd.char.aimYaw = Math.PI / 2; gd.lastPos = [p[0], 0, p[2]]; gd.path = []; gd.pathGoal = null; };
+          const put = (gd, p) => { gd.char.posX = p[0]; gd.char.posZ = p[2]; gd.char.bodyYaw = gd.char.aimYaw = Math.PI / 2; gd.lastPos = [p[0], 0, p[2]]; gd.path = []; gd.pathGoal = null; };
           put(h, [22, 0, 17.6]); put(m, [13, 0, 17.6]); g.teleportPlayer([11, 0, 18.5]);
           return { foe: h.callsign, up: window.__pair.up };
         });
         threw = await page.evaluate(PLAY, 0.6); if (threw) R.errors.push('play threw: ' + threw);
         Object.assign(ord, await page.evaluate(() => {
           const g = window.__game, O = window.__orders, h = g.guards.find(x => x.team === 'hostile');
-          const t = O.targetAt([h.char.pos[0], 0, h.char.pos[2]]), given = t ? O.give('pairMark', t, 'all') : 'no target'; O.open(t); const hud = O.hud().menu;   // (the order first: a loud teammate shoots a defender he sees in the open)
+          const t = O.targetAt([h.char.posX, 0, h.char.posZ]), given = t ? O.give('pairMark', t, 'all') : 'no target'; O.open(t); const hud = O.hud().menu;   // (the order first: a loud teammate shoots a defender he sees in the open)
           return { kind: t && t.kind, given, menu: !!O.menu, rows: (hud?.rows ?? []).map(r => `${r.opts?.[0]?.key ?? ''} ${r.opts?.[0]?.text ?? r.label}${r.off ? ' (greyed)' : ''}`) };
         }));
         log(job.name, 'foe menu', JSON.stringify(ord));

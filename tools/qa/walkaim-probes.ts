@@ -62,19 +62,19 @@ export async function walkToStack(id: string, on?: boolean): Promise<Walk> {
   const team: any[] = O.squad().filter((x: any) => x.state !== 'dead'), sam = g.player.char.pos, per = new Map<any, number>(), trail = new Map<any, number[][]>(), seen = new Map<any, number>(); let walk = 0, walled = 0, covers = 0, late = 0;
   /** his gun is on the point his order gave him, and he has a line to it */
   const onSeenPoint = (x: any): boolean => { const s = x.script, aim = s?.over ? s.over.aimAt : s?.aimAt, ch = x.char; if (!aim) return false;
-    const eye = [ch.pos[0], 1.45 - 0.45 * ch.anim.crouch, ch.pos[2]], d = [aim[0] - eye[0], aim[1] - eye[1], aim[2] - eye[2]], l = Math.hypot(d[0], d[1], d[2]), offP = ch.aimYaw - Math.atan2(d[0], d[2]);
+    const eye = [ch.posX, 1.45 - 0.45 * ch.anim.crouch, ch.posZ], d = [aim[0] - eye[0], aim[1] - eye[1], aim[2] - eye[2]], l = Math.hypot(d[0], d[1], d[2]), offP = ch.aimYaw - Math.atan2(d[0], d[2]);
     if (Math.abs(Math.atan2(Math.sin(offP), Math.cos(offP))) > ON_POINT) return false; const k = Math.max(0, (l - SHORT) / (l || 1));
     return !g.col.segmentBlocked(eye, [eye[0] + d[0] * k, eye[1] + d[1] * k, eye[2] + d[2] * k]); };
   step(60 * 6); await quiet(() => O.give('fallIn', O.targetAt([sam[0], 0, sam[2]]), 'all')); for (let f = 0; f < 60 * 12; f++) step();
   for (const c of cands) { if (await quiet(() => O.give('stack', O.targetAt(c.ent.door.frameCentre), 'all'))) continue;
     for (let f = 0; f < 60 * 30; f++) { step();
-      for (const x of team) { const A = O.of(x), ch = x.char, tr = trail.get(x) ?? []; trail.set(x, tr); tr.push([ch.pos[0], 0, ch.pos[2]]); if (tr.length > MOVED_FRAMES + 1) tr.shift();
+      for (const x of team) { const A = O.of(x), ch = x.char, tr = trail.get(x) ?? []; trail.set(x, tr); tr.push([ch.posX, 0, ch.posZ]); if (tr.length > MOVED_FRAMES + 1) tr.shift();
         if (!A?.post || A.arrived || flat(ch.pos, A.post) < NEAR_MARK || tr.length <= MOVED_FRAMES || flat(tr[0], ch.pos) < MOVED) continue;
-        walk++; const o = [ch.pos[0], GUN_Y, ch.pos[2]];
+        walk++; const o = [ch.posX, GUN_Y, ch.posZ];
         { const w = A.watch, J = g.cover.of(x) ?? g.cover.keptJob(x), l = w ? flat(ch.pos, w) : 0, k = l > LATE_SHORT ? (l - LATE_SHORT) / l : 0;   // (… and the other way: his order's point in plain sight — this probe's own line, from the gun's height to further short of it than the rule asks — for a whole second, and his gun still not on it)
           const plain = !!w && !(J && x.script?.aimAt === J.aim) && k > 0 && !g.col.segmentBlocked(o, [o[0] + (w[0] - o[0]) * k, GUN_Y, o[2] + (w[2] - o[2]) * k]), n = plain ? (seen.get(x) ?? 0) + 1 : 0; seen.set(x, n);
-          if (n >= LATE_FRAMES && off(ch.aimYaw, Math.atan2(w[0] - ch.pos[0], w[2] - ch.pos[2])) > ON_POINT) late++; }
-        const along = off(ch.aimYaw, Math.atan2(ch.pos[0] - tr[0][0], ch.pos[2] - tr[0][2])) <= ON_POINT;   // (his gun is on the way his feet have just carried him)
+          if (n >= LATE_FRAMES && off(ch.aimYaw, Math.atan2(w[0] - ch.posX, w[2] - ch.posZ)) > ON_POINT) late++; }
+        const along = off(ch.aimYaw, Math.atan2(ch.posX - tr[0][0], ch.posZ - tr[0][2])) <= ON_POINT;   // (his gun is on the way his feet have just carried him)
         if (along || !g.col.segmentBlocked(o, [o[0] + Math.sin(ch.aimYaw) * reach, GUN_Y, o[2] + Math.cos(ch.aimYaw) * reach]) || onSeenPoint(x)) continue;
         const J = g.cover.of(x) ?? g.cover.keptJob(x); if (J && x.script?.aimAt === J.aim) { covers++; continue; }   // (the stack's rear man: his gun is on an opening the unasked cover dealt him, and kept him on — cover.ts's to answer for, told apart and reported)
         walled++; per.set(x, (per.get(x) ?? 0) + 1); }

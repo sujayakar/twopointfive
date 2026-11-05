@@ -61,7 +61,7 @@ export async function seenwalkCheck(): Promise<boolean> {
       line(SEENWALK.on === want && typeof row === 'string' && row.includes('TPS_SEENWALK=1'), `the stand: ${want ? 'on, as the page opens' : 'held off, as every frozen tally was recorded'}; FROZEN_HOLDS carries the row and its word`, `after the stand-up: ${SEENWALK.on} · TPS_SEENWALK ${env ?? 'unset'} · TPS_PROFILE ${process.env.TPS_PROFILE ?? 'unset'} · row ${row ?? 'MISSING'}`); }
 
     // (2) the office floor: the walk most in view
-    const g = A.g, gd = g.orders.squad().filter((x: any) => x.state !== 'dead')[0], from: Vec3 = [gd.char.pos[0], 0, gd.char.pos[2]];
+    const g = A.g, gd = g.orders.squad().filter((x: any) => x.state !== 'dead')[0], from: Vec3 = [gd.char.posX, 0, gd.char.posZ];
     let pick: any = null;
     for (const T of targets(g)) { SEENWALK.on = false; const off = way(g, gd, T.to); if (off.why) continue; SEENWALK.on = true; const on = way(g, gd, T.to); SEENWALK.on = false;
       const m0 = seenM(g, from, off.pts), m1 = seenM(g, from, on.pts); if (!pick || m0 - m1 > pick.m0 - pick.m1) pick = { ...T, off, on, m0, m1 }; }
@@ -82,19 +82,19 @@ export async function seenwalkCheck(): Promise<boolean> {
 
     // (3) he walks it
     const walk = async (rule: boolean, picture = false) => { const S: any = await stage('room-clear-four'); const G = S.g, m = G.orders.squad().filter((x: any) => x.state !== 'dead')[0]; SEENWALK.on = rule;
-      let seen = 0, gone = 0, last: Vec3 = [m.char.pos[0], 0, m.char.pos[2]], t = 0; const start: Vec3 = [...last] as Vec3;
+      let seen = 0, gone = 0, last: Vec3 = [m.char.posX, 0, m.char.posZ], t = 0; const start: Vec3 = [...last] as Vec3;
       // (the floor in view as he sets off, read once over the whole floor BEFORE a tick is stepped: nothing of this check's is on the table while the game runs)
       const cs = G.col.nav.cell, dearCells = new Set<number>(), m0 = SEENWALK.margin; SEENWALK.margin = 200;
       try { const price = seenPrice(G, start, [pick.to]); if (price) for (let iz = 0; iz < G.col.nav.H; iz++) for (let ix = 0; ix < G.col.nav.W; ix++) if (G.col.nav.blocked[G.col.nav.idx(ix, iz)] !== 1 && price(ix, iz) > 1) dearCells.add(iz * 8192 + ix); } finally { SEENWALK.margin = m0; }
       seenReset(G);
       const why = await quiet(() => G.orders.give('move', { kind: 'floor', at: pick.to }, 'all', { men: [m] }));
       const others = G.orders.squad().filter((x: any) => x !== m && x.state !== 'dead'), trail: number[] = [];
-      for (; t < 60 * 60 && Math.hypot(m.char.pos[0] - pick.to[0], m.char.pos[2] - pick.to[2]) > 0.8; t++) { S.step(); trail.push(m.char.pos[0], m.char.pos[2]);
+      for (; t < 60 * 60 && Math.hypot(m.char.posX - pick.to[0], m.char.posZ - pick.to[2]) > 0.8; t++) { S.step(); trail.push(m.char.posX, m.char.posZ);
         // (what the page's picture does between ticks and a headless run never does: it asks the router walks of its own — here the same walk for every man, and the throw planner's drawn plans)
         if (picture) await quiet(() => { for (const o of [m, ...others]) G.orders.route(o, pick.to); squadThrowPlans(G); });
-        if (t % 6 === 0) { const p: Vec3 = [m.char.pos[0], 0, m.char.pos[2]], dd = Math.hypot(p[0] - last[0], p[2] - last[2]);
+        if (t % 6 === 0) { const p: Vec3 = [m.char.posX, 0, m.char.posZ], dd = Math.hypot(p[0] - last[0], p[2] - last[2]);
           if (dearCells.has(Math.floor(p[2] / cs) * 8192 + Math.floor(p[0] / cs))) seen += dd; gone += dd; last = p; } }
-      return { why, seen, gone, trail, there: Math.hypot(m.char.pos[0] - pick.to[0], m.char.pos[2] - pick.to[2]) <= 0.8, secs: t / 60 }; };
+      return { why, seen, gone, trail, there: Math.hypot(m.char.posX - pick.to[0], m.char.posZ - pick.to[2]) <= 0.8, secs: t / 60 }; };
     if (pick) { const off = await walk(false), on = await walk(RULE);
       line(!off.why && !on.why && off.there && on.there && on.seen <= off.seen - 1, 'a man given that move walks it: fewer metres of his walk are on lit floor in view with the rule on than off (a metre or more), and he gets there both times',
         `off: walked ${f1(off.gone)} m in ${f1(off.secs)} s, ${f1(off.seen)} m of it in view, ${off.there ? 'there' : 'NOT there'}${off.why ? ` · refused: ${off.why}` : ''} · ${RULE ? 'on' : 'the rule left off'}: walked ${f1(on.gone)} m in ${f1(on.secs)} s, ${f1(on.seen)} m in view, ${on.there ? 'there' : 'NOT there'}${on.why ? ` · refused: ${on.why}` : ''}`); }
@@ -108,7 +108,7 @@ export async function seenwalkCheck(): Promise<boolean> {
     else line(false, 'the picture\'s asks do not move the walk', 'no walk to ask it of');
 
     // (4) the regular systems: nothing lit, nobody left unlooked-at
-    { const B: any = await stage('room-clear-four'), G = B.g, m = G.orders.squad().filter((x: any) => x.state !== 'dead')[0], f: Vec3 = [m.char.pos[0], 0, m.char.pos[2]];
+    { const B: any = await stage('room-clear-four'), G = B.g, m = G.orders.squad().filter((x: any) => x.state !== 'dead')[0], f: Vec3 = [m.char.posX, 0, m.char.posZ];
       const same = (a: Vec3[], b: Vec3[]) => a.length === b.length && a.every((p, i) => Math.hypot(p[0] - b[i][0], p[2] - b[i][2]) < 1e-6);
       SEENWALK.on = false; const off = pick ? way(G, m, pick.to) : null; SEENWALK.on = RULE; const on = pick ? way(G, m, pick.to) : null;
       const lit0 = SEENWALK.litAt; SEENWALK.litAt = 2; G.time += 1; const dark = pick ? way(G, m, pick.to) : null; SEENWALK.litAt = lit0;
@@ -118,7 +118,7 @@ export async function seenwalkCheck(): Promise<boolean> {
         off && on && dark && known ? `off ${f1(len(f, off.pts))} m · on ${f1(len(f, on.pts))} m (${same(off.pts, on.pts) ? 'THE SAME WAY' : 'another way'}) · nothing lit ${same(off.pts, dark.pts) ? 'the way as it was' : 'ANOTHER WAY'} · every room known (${eyes} eyes left) ${same(off.pts, known.pts) ? 'the way as it was' : 'ANOTHER WAY'}` : 'no walk to ask it of'); }
 
     // (5) the glasshouse: in view all the way, no way round by the same doors
-    { const H: any = await stage('glasshouse-four'), G = H.g, m = G.orders.squad().filter((x: any) => x.state !== 'dead')[0], f: Vec3 = [m.char.pos[0], 0, m.char.pos[2]];
+    { const H: any = await stage('glasshouse-four'), G = H.g, m = G.orders.squad().filter((x: any) => x.state !== 'dead')[0], f: Vec3 = [m.char.posX, 0, m.char.posZ];
       const front = G.doors.list.find((d: any) => d.def.name === 'front'), T = front ? targets(G).filter(t => t.name.startsWith('front ')) : [];
       const asked0 = SEENWALK_STATS.inView; const rows = T.map(t => { SEENWALK.on = false; const off = way(G, m, t.to); SEENWALK.on = RULE; const on = way(G, m, t.to); SEENWALK.on = false; return { t, off, on, m0: seenM(G, f, off.pts), same: off.pts.length === on.pts.length && off.pts.every((p, i) => Math.hypot(p[0] - on.pts[i][0], p[2] - on.pts[i][2]) < 1e-6) }; });
       const asked = SEENWALK_STATS.inView - asked0;

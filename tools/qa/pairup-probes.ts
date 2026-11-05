@@ -113,7 +113,7 @@ export async function rig(o: RigOpts = {}) {
     if (!gaze.has(c)) { const dir = () => { const y = gaze.get(c)!; return [Math.sin(y), 0, Math.cos(y)]; }; Object.defineProperty(c, 'chestDir', { get: dir, set: () => { }, configurable: true }); c.headDir = dir; }
     gaze.set(c, yaw); };
   const pose = () => { for (const [h, p] of pins) { if (h.state === 'dead') continue; const c = h.char;
-    c.pos[0] = p.at[0]; c.pos[2] = p.at[2]; c.vel[0] = c.vel[2] = 0; c.bodyYaw = c.aimYaw = p.yaw; stare(h, p.yaw); h.hold = true; h.pinned = true; h.lastPos = [p.at[0], 0, p.at[2]]; h.path = []; h.pathGoal = null;
+    c.posX = p.at[0]; c.posZ = p.at[2]; c.velX = c.velZ = 0; c.bodyYaw = c.aimYaw = p.yaw; stare(h, p.yaw); h.hold = true; h.pinned = true; h.lastPos = [p.at[0], 0, p.at[2]]; h.path = []; h.pathGoal = null;
     if (p.state !== undefined) h.state = p.state; if (p.aw !== undefined) h.awareness = p.aw;
     if (p.eyesOn === 'sam') { h.foe = 'player'; h.lastSeenT = game.time; h.lastKnown = [...game.player.char.pos]; } else if (p.eyesOn === 'mate') { h.foe = R.mate; h.lastSeenT = game.time; h.lastKnown = [...R.mate.char.pos]; } else if (p.eyesOn === null) { h.foe = null; h.lastSeenT = -100; }
     h.fireCd = Math.max(h.fireCd ?? 0, 0.5); } };   // (he never gets a round off: the family is about the partner)
@@ -127,7 +127,7 @@ export async function rig(o: RigOpts = {}) {
       R.post?.(); } },
     until(pred: () => boolean, secs: number) { for (let i = 0; i < secs * 60 && !pred(); i++) R.step(); return pred(); },
     /** a man stood somewhere by hand, facing `yaw` (the partner: once; a defender: see `pin`) */
-    put(gd: any, p: number[], yaw: number) { gd.char.pos[0] = p[0]; gd.char.pos[2] = p[2]; gd.char.bodyYaw = gd.char.aimYaw = yaw; gd.lastPos = [p[0], 0, p[2]]; gd.path = []; gd.pathGoal = null; if (gd.script) gd.script.path = undefined; },
+    put(gd: any, p: number[], yaw: number) { gd.char.posX = p[0]; gd.char.posZ = p[2]; gd.char.bodyYaw = gd.char.aimYaw = yaw; gd.lastPos = [p[0], 0, p[2]]; gd.path = []; gd.pathGoal = null; if (gd.script) gd.script.path = undefined; },
     /** a defender held from here on: his feet, his gaze, and whatever of his state the probe writes (the rest stays his own) */
     pin(h: any, p: Pin) { pins.set(h, { ...(pins.get(h) ?? {}), ...p }); pose(); },
     turn(h: any, yaw: number) { const p = pins.get(h); if (p) p.yaw = yaw; pose(); },
@@ -136,7 +136,7 @@ export async function rig(o: RigOpts = {}) {
       for (let f = 0; f < secs * 60; f++) { const p = game.player.char.pos; while (i < path.length - 1 && flat(path[i], p) < 0.3) i++; const wp = path[i], d = flat(wp, p); if (i === path.length - 1 && d < 0.05) return true;
         const s = Math.min(d, pace * DT); game.teleportPlayer([p[0] + (wp[0] - p[0]) / (d || 1) * s, 0, p[2] + (wp[2] - p[2]) / (d || 1) * s]); R.step(); }
       return false; },
-    foe(h: any) { return { kind: 'foe', at: [h.char.pos[0], 0, h.char.pos[2]], foe: h }; },
+    foe(h: any) { return { kind: 'foe', at: [h.char.posX, 0, h.char.posZ], foe: h }; },
     silent(): boolean { return SLM.squadSilent(game); },
     status(): string { return O.statusOf(R.mate); },
     log(): string { return PM.PAIR_LOG.map((x: any) => `${f1(x.t)} ${x.what}`).join(' | '); },
@@ -198,7 +198,7 @@ async function feetRun(o: { lit: boolean; spotted: boolean; low?: boolean; samLo
   fallIn(R); const samLow = o.samLow ? crouchKey(R) : false;
   const rows: { f: number; what: string | null; spot: number[] | null; goal: number[] | null; speed: number; crouch: boolean; here: number[]; word: string | null; lit: number; trail: number }[] = [], trail: number[][] = [];
   R.post = () => { const sp = SPM.spottedOf(m), w = written(m), s = g.player.char.pos; trail.push([s[0], 0, s[2]]);
-    rows.push({ f: R.frames, what: sp?.what ?? null, spot: sp?.spot ? [...sp.spot] : null, ...w, here: [m.char.pos[0], 0, m.char.pos[2]], word: SNM.sneakWord(g, m), lit: m.visibility, trail: w.goal ? Math.min(...trail.map(t => flat(t, w.goal!))) : NaN }); };
+    rows.push({ f: R.frames, what: sp?.what ?? null, spot: sp?.spot ? [...sp.spot] : null, ...w, here: [m.char.posX, 0, m.char.posZ], word: SNM.sneakWord(g, m), lit: m.visibility, trail: w.goal ? Math.min(...trail.map(t => flat(t, w.goal!))) : NaN }); };
   // (lit: Sam stands a moment first. spotted.ts holds the partner still for `slipWait` after the man turned before it moves him off the line, and once Sam
   //  has walked on up the corridor every spot out of the man's line is in SAM's line to him: the slip has to be found while Sam still stands here)
   if (o.lit) R.step(Math.ceil(60 * (SPOTTED.slipWait + 0.6)));
@@ -346,7 +346,7 @@ export const pairupOneEye = guarded(async () => {
         g.lightAt = (k: string) => H.v !== null && (k === `unitC${id}` || k === `unitH${id}`) ? E(H.v) : la(k);
         SNEAK.stalkAmbient = false; R.step(60 * 8); return { R, g, m, F, D, H }; };
       const { R, g, m, F, D, H } = await stageIt(), P = R.P;
-      const spot = R.O.freeSpot(P.stage(F)) ?? P.stage(F), dSpot = flat(spot, D.char.pos), here = [m.char.pos[0], 0, m.char.pos[2]];
+      const spot = R.O.freeSpot(P.stage(F)) ?? P.stage(F), dSpot = flat(spot, D.char.pos), here = [m.char.posX, 0, m.char.posZ];
       const dark = Math.max(...[0, 0.25, 0.5, 0.75, 1].map(k => R.lit([here[0] + (spot[0] - here[0]) * k, 0, here[2] + (spot[2] - here[2]) * k])));
       const c = m.char, own = g.visibilityOf(Math.max(GDM.lightEstimateAt(g, c.bones.chest), GDM.lightEstimateAt(g, c.bones.head)));
       const ask = (rule: boolean, meter: number) => { SNEAK.stalkAmbient = rule && !BREAK; m.visibility = meter; m.irradiance = EV(g, meter); (P as any).ways.delete(m); const w = P.stalk(m, spot); return { exposed: w.exposed as boolean, by: w.by ?? null, path: JSON.stringify(w.path.map((q: number[]) => [+q[0].toFixed(3), +q[2].toFixed(3)])) }; };
@@ -357,19 +357,19 @@ export const pairupOneEye = guarded(async () => {
       verdict(eq.exposed === off0.exposed && eq.path === off0.path, 'his meter equal to the estimate: the plan is the one it was before the rule',
         `his meter ${f3(own)} = the estimate of where he stands · rule off: ${off0.exposed ? 'exposed' : 'clear'}, rule on: ${eq.exposed ? 'exposed' : 'clear'} · the same path ${eq.path === off0.path}`);
       // … and on his feet: the order given with his meter held at 0.5 for as long as it runs — he holds where he stands, in words; with the rule off he walks
-      const walk = async (rule: boolean) => { const S = await stageIt(); SNEAK.stalkAmbient = rule && !BREAK; S.H.v = 0.5; S.R.step(30); const p0 = [S.m.char.pos[0], 0, S.m.char.pos[2]];
+      const walk = async (rule: boolean) => { const S = await stageIt(); SNEAK.stalkAmbient = rule && !BREAK; S.H.v = 0.5; S.R.step(30); const p0 = [S.m.char.posX, 0, S.m.char.posZ];
         const err = S.R.O.give('pairMark', S.R.foe(S.F), 'all'); let far = 0, lit = 1; S.R.post = () => { far = Math.max(far, flat(S.m.char.pos, p0)); lit = Math.min(lit, S.m.visibility); }; S.R.step(60 * 4); S.R.post = null;
         return { err, far, lit, status: S.R.status() as string }; };
       const on = await walk(true), off = await walk(false);
       // … and under a roof the same half a meter over a torch-lit estimate is no moon: a roofed step takes it in proportion to its own direct light (none)
       { const S = await stageIt(11), sp = S.R.O.freeSpot(S.R.P.stage(S.F)) ?? S.R.P.stage(S.F), c2 = S.m.char, own2 = S.g.visibilityOf(Math.max(GDM.lightEstimateAt(S.g, c2.bones.chest), GDM.lightEstimateAt(S.g, c2.bones.head)));
         const q = (rule: boolean) => { SNEAK.stalkAmbient = rule; S.m.visibility = 0.5; S.m.irradiance = EV(S.g, 0.5); (S.R.P as any).ways.delete(S.m); const w = S.R.P.stalk(S.m, sp); return `${w.exposed}:${JSON.stringify(w.path)}`; };
-        const roofedOn = q(true), roofedOff = q(false), under = S.g.weather.underRoof(c2.pos[0], c2.pos[2]);
+        const roofedOn = q(true), roofedOff = q(false), under = S.g.weather.underRoof(c2.posX, c2.posZ);
         verdict(under && own2 > 0.03 && roofedOn === roofedOff, 'CONTROL under STALKAMBIENT_BREAK (rule on is compared with rule off, whatever the word) — the same meter under a roof, over a LIT estimate (it must read lit, or the line is not run true): the way is read as a crumb is — dark steps stay dark',
           `the corridor: under a roof ${under}, his meter 0.500 over an estimate of ${f3(own2)} · rule on ${roofedOn.split(':')[0] === 'true' ? 'exposed' : 'clear'}, rule off ${roofedOff.split(':')[0] === 'true' ? 'exposed' : 'clear'}, the same way ${roofedOn === roofedOff}`); }
       // … and THE METER'S OWN LAG IS NOT A MOON: he stands in a lamp pool until his meter has it, then is on the dark strip — for a fifth of a second his eased
       //     meter is still the lamp's while what it reads this frame is the dark's. No step of the dark way takes that: the way reads as it does once the meter settles.
-      { const S = await stageIt(), g2 = S.g, m2 = S.m, nav = g2.col.nav, sp = S.R.O.freeSpot(S.R.P.stage(S.F)) ?? S.R.P.stage(S.F), dark0 = [m2.char.pos[0], 0, m2.char.pos[2]];
+      { const S = await stageIt(), g2 = S.g, m2 = S.m, nav = g2.col.nav, sp = S.R.O.freeSpot(S.R.P.stage(S.F)) ?? S.R.P.stage(S.F), dark0 = [m2.char.posX, 0, m2.char.posZ];
         let lamp: number[] | null = null, best = 0; for (let x = 12; x <= 26; x += 0.5) for (const z of [10.5, 11, 11.5]) { if (nav.isBlocked(x, z)) continue; const v = S.R.lit([x, 0, z]); if (v > best) { best = v; lamp = [x, 0, z]; } }
         const q = () => { SNEAK.stalkAmbient = !BREAK; (S.R.P as any).ways.delete(m2); const w = S.R.P.stalk(m2, sp); SNEAK.stalkAmbient = false; return w.exposed as boolean; };
         let vLamp = 0, vLag = 0, now = 0, lag = false, settled = false;
@@ -560,7 +560,7 @@ export const pairupClatter = guarded(async () => {
     R.pin(T1, { at: AISLE_MID, yaw: EAST }); R.pin(T2, { at: [20, 0, 11], yaw: EAST }); g.teleportPlayer([11, 0, 18.5]); R.put(m, AISLE_W, EAST); R.step(10);
     let ready = true;
     if (how === 'partner') { R.O.give('pairMark', R.foe(T1), 'all'); ready = R.until(() => !!R.P.jobOf(m)?.set, 30) && R.P.mark('api') && R.until(() => (R.P.jobOf(m)?.t0 ?? -1) >= 0, 5); }
-    else { R.O.give('hold', R.O.targetAt(m.char.pos), 'all'); R.step(30); if (how === 'sam') { g.teleportPlayer([T1.char.pos[0] - 0.6, 0, T1.char.pos[2]]); R.step(2); } }
+    else { R.O.give('hold', R.O.targetAt(m.char.pos), 'all'); R.step(30); if (how === 'sam') { g.teleportPlayer([T1.char.posX - 0.6, 0, T1.char.posZ]); R.step(2); } }
     // (every event already filed is old: the count is of what is filed from here — the hands going on — to three seconds after he is down)
     const old = new Set<any>(g.events), props: Prop[] = [], t0 = g.time, aw0 = T2.awareness, st0 = T2.state; let peak = aw0;
     R.post = () => { for (const e of g.events) { if (old.has(e)) continue; old.add(e); if (e.kind === 'prop') props.push({ t: e.time - t0, level: e.level, who: e.who }); } peak = Math.max(peak, T2.awareness); };
@@ -590,7 +590,7 @@ async function minute(o: RigOpts): Promise<{ hash: string; frames: number; taken
   const R = await rig(o); const g = R.game, m = R.mate, T1 = R.tango(1), T3 = R.tango(3), home = [...T3.char.pos];
   let h = 0x811c9dc5; const mix = (s: string) => { for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 0x01000193) >>> 0; } };
   R.post = () => { if (R.frames & 1) return; mix(JSON.stringify(digestGame(g, true)));
-    for (const x of g.guards) { const w = written(x); mix(`${x.callsign}|${x.state}|${f3(x.char.pos[0])},${f3(x.char.pos[2])}|${f3(x.char.aimYaw)}|${f2(crouchOf(x))}|${w.goal ? f3(w.goal[0]) + ',' + f3(w.goal[2]) : '-'}|${f3(w.speed)}|${w.crouch}|${x.bubble?.text ?? ''}`); }
+    for (const x of g.guards) { const w = written(x); mix(`${x.callsign}|${x.state}|${f3(x.char.posX)},${f3(x.char.posZ)}|${f3(x.char.aimYaw)}|${f2(crouchOf(x))}|${w.goal ? f3(w.goal[0]) + ',' + f3(w.goal[2]) : '-'}|${f3(w.speed)}|${w.crouch}|${x.bubble?.text ?? ''}`); }
     mix(R.status()); mix(String(R.said.length)); };
   const to = (f: number) => { while (R.frames < f) R.step(); };
   R.pin(T1, { at: AISLE_MID, yaw: EAST }); g.teleportPlayer([10, 0, 20]); R.put(m, [9.3, 0, 20.3], 0); const f0 = R.frames;

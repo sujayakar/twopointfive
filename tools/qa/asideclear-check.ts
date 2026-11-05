@@ -28,7 +28,7 @@ const fmt = (p: number[]) => `(${p[0].toFixed(2)}, ${p[2].toFixed(2)})`;
 /** 1: every spot aside() answers round every door of `scn` — [asked, answered, in a doorway's way, differs from `ref` where `ref` was clear] */
 async function spots(scn: string, on: boolean, ref: Map<string, number[] | null> | null, keep: Map<string, number[] | null>): Promise<[number, number, number, number, string]> {
   const R = await rig(scn, 5), g = R.game, O = R.O as any; DOORMANNERS.on = true; ORDERS.asideClear = on;
-  for (const h of R.hostiles) if (h.state !== 'dead') R.put(h, [h.char.pos[0] + 400, 0, h.char.pos[2]]);
+  for (const h of R.hostiles) if (h.state !== 'dead') R.put(h, [h.char.posX + 400, 0, h.char.posZ]);
   const man = R.up[0]; if (!man) return [0, 0, 0, 0, 'no man up'];
   O.give('fallIn', O.targetAt(g.player.char.pos), 'all'); R.step(3);
   const sam = g.player.char.pos, bad = (q: number[]) => O.inFrame(q) || doorwayInWay(g, q);
@@ -43,7 +43,7 @@ async function spots(scn: string, on: boolean, ref: Map<string, number[] | null>
         for (let k = 0; k < 8; k++) {
           const a = k * Math.PI / 4, s = [m[0] - Math.sin(a) * 1.1, 0, m[2] - Math.cos(a) * 1.1];
           if (g.col.nav.isBlocked(s[0], s[2]) || g.col.solidBlocked([s[0], 0.45, s[2]], [m[0], 0.45, m[2]])) continue;
-          sam[0] = s[0]; sam[2] = s[2]; man.char.pos[0] = m[0]; man.char.pos[2] = m[2]; O.samV = 1.5; O.samDir = [Math.sin(a), 0, Math.cos(a)]; O.asideMem.delete(man);
+          sam[0] = s[0]; sam[2] = s[2]; man.char.posX = m[0]; man.char.posZ = m[2]; O.samV = 1.5; O.samDir = [Math.sin(a), 0, Math.cos(a)]; O.asideMem.delete(man);
           const q = O.aside(man) as number[] | null, key = `${d.def.name}|${st}|${ix}|${iz}|${k}`; asked++; keep.set(key, q ? [...q] : null);
           if (q) { got++; if (bad(q)) { inWay++; if (!first) first = `${d.def.name}${st === null ? '' : ` stood at ${st} rad`}: the man at ${fmt(m)}, Sam at ${fmt(s)} → ${fmt(q)}`; } }
           if (ref) { const r = ref.get(key); if (r && !bad(r) && (!q || flat(q, r) > 1e-6)) moved++; }
@@ -61,7 +61,7 @@ interface Case { ok: boolean; inDoor: number; stood: number; aside: number; say:
 async function found(on: boolean, leaf: number): Promise<Case> {
   const R = await rig('compound-four', 5), g = R.game, O = R.O as any; DOORMANNERS.on = true; DOORSTAY.on = true; ORDERS.asideClear = on;
   DOORWAY.leafWay = false;   // (the case as it was found: c_n's leaf standing open in the office. With DOORWAY.leafWay that door opens to the corridor and no leaf stands here)
-  for (const h of R.hostiles) if (h.state !== 'dead') R.put(h, [h.char.pos[0] + 400, 0, h.char.pos[2]]);
+  for (const h of R.hostiles) if (h.state !== 'dead') R.put(h, [h.char.posX + 400, 0, h.char.posZ]);
   const d = (g.doors.list as any[]).find(x => x.def.name === 'c_n'); if (!d) return { ok: false, inDoor: 0, stood: 0, aside: 0, say: 'no door c_n' };
   const open = () => { d.latched = false; d.angle = leaf; };
   const man = R.up[0], idx = O.roster.indexOf(man); if (!man || idx < 0) return { ok: false, inDoor: 0, stood: 0, aside: 0, say: 'no man up' };

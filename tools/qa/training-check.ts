@@ -87,7 +87,7 @@ export async function trainingCheck(): Promise<boolean> {
   const atWas = { ...MORALE_AT }, spoil = () => { if (BREAK) { MORALE_AT.standard = 'hard'; MORALE_AT.hard = 'mixed'; MORALE.greenBroken = 2; MORALE.leaderDown = 0; MORALE.leaderShock = 0; MORALE.orderM = 0; } };
   const put = (gd: any, p: number[]) => { gd.char.pos = [p[0], 0, p[2]]; gd.char.vel = [0, 0, 0]; gd.path = []; gd.pathGoal = null; gd.speed = 0; gd.lastPos = [p[0], 0, p[2]]; };
   const fired = (gd: any) => gd.weapon.shotsFired;
-  const facing = (gd: any, at: number[]) => Math.abs(wrap(Math.atan2(at[0] - gd.char.pos[0], at[2] - gd.char.pos[2]) - gd.char.bodyYaw));
+  const facing = (gd: any, at: number[]) => Math.abs(wrap(Math.atan2(at[0] - gd.char.posX, at[2] - gd.char.posZ) - gd.char.bodyYaw));
 
   /** the hut and its door. `training` = the knob; `dark` = the hut's lamps put out; `pair` = a leader and a green man of his stood in the hut (else one man
    *  alone in it — the nearest who is not his squad's first — the rest across the yard); `deep` = the lone man walked back off the door until the wall is at
@@ -257,11 +257,11 @@ export async function trainingCheck(): Promise<boolean> {
 
     // (T6) the leader killed in his green men's view, and (F2) the blast after it
     { const R = await stage(66, { training: 'mixed', pair: true, trio: true }), g = R.g, L = R.T, G = R.T2, H = R.T3; R.step(30);
-      const look = (x: any) => Math.atan2(L.char.pos[0] - x.char.pos[0], L.char.pos[2] - x.char.pos[2]);
+      const look = (x: any) => Math.atan2(L.char.posX - x.char.posX, L.char.posZ - x.char.posZ);
       for (let i = 0; i < 20; i++) { G.char.bodyYaw = look(G); H.char.bodyYaw = look(H); R.step(); G.char.bodyYaw = look(G); H.char.bodyYaw = look(H); }
       const near = flat(G.char.pos, L.char.pos) <= flat(H.char.pos, L.char.pos) ? G : H, far = near === G ? H : G;
       const his = g.guards.filter((x: any) => x !== L && x !== G && x !== H && x.state !== 'dead' && trainingOf(g, x) === 'green' && leaderOf(g, x) === L);
-      const blind = his.filter((x: any) => g.col.segmentBlocked(x.char.bones.head ?? [x.char.pos[0], 1.6, x.char.pos[2]], L.char.bones.chest ?? [L.char.pos[0], 1.2, L.char.pos[2]]));
+      const blind = his.filter((x: any) => g.col.segmentBlocked(x.char.bones.head ?? [x.char.posX, 1.6, x.char.posZ], L.char.bones.chest ?? [L.char.posX, 1.2, L.char.posZ]));
       const others = g.guards.filter((x: any) => x.team === 'hostile' && x.state !== 'dead' && x !== L && leaderOf(g, x) !== L);
       const before = { down: !!moraleOf(near)?.leaderDown, fall: sawLeaderFall(near), shock: moraleOf(near)?.shock ?? 0 };
       // the switch off: the seam does nothing

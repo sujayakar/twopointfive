@@ -21,7 +21,7 @@ const DRIVE = async () => {
   const heard = () => !!g.cues.heardRow;
   let who = '', tries = 0;
   // the switch up: the first hidden man whose shout the hearing model carries to the player stood beside him. Down: the same men, the same places, all tried
-  pick: for (const gd of foes) for (const [dx, dz] of ROUND) { tries++; g.teleportPlayer([gd.char.pos[0] + dx, 0, gd.char.pos[2] + dz]); g.cues.reset(); g.say(gd, 'over here!'); if (heard()) { who = gd.callsign; break pick; } }
+  pick: for (const gd of foes) for (const [dx, dz] of ROUND) { tries++; g.teleportPlayer([gd.char.posX + dx, 0, gd.char.posZ + dz]); g.cues.reset(); g.say(gd, 'over here!'); if (heard()) { who = gd.callsign; break pick; } }
   window.__runFrames(2);
   const el = document.getElementById('log');
   return { on: K.on, overheard: K.overheard, fog: g.fogOfWar.on, hidden: foes.length, tries, who, rows: g.cues.rows.map(r => r.text), heardRow: g.cues.heardRow ? g.cues.heardRow.text : '', html: el ? el.innerHTML : null, ring: g.messages.map(m => m.text) };

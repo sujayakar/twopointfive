@@ -115,13 +115,13 @@ if (argv.includes('--rerun')) {
   const live = (g: any, gd: any): string => { const a = g.orders?.of?.(gd), sc = gd.script, goal = gd.pathGoal ?? sc?.goal;
     return [gd.state, gd.downKind, a ? `order ${a.order}: ${a.arrived ? a.there : a.going}` : '', sc ? `script${sc.phase ? ` ${sc.phase}` : ''}` : '', gd.task ? `errand ${gd.task.kind ?? gd.task}` : '', gd.hold ? 'held' : '', gd.pinned ? 'pinned' : '',
       goal ? `going to ${pt([goal[0], goal[2]])}` : '', gd.path?.length > gd.pathI ? `route ${gd.path.length - gd.pathI} pts` : 'no route'].filter(Boolean).join(' · '); };
-  const centreOf = (g: any): [number, number] => M.pos ?? [g.player.char.pos[0], g.player.char.pos[2]];
-  const nearMen = (g: any) => [...g.guards, ...g.civilians].filter((gd: any) => who ? String(gd.callsign).toLowerCase().includes(who) : all || Math.hypot(gd.char.pos[0] - centreOf(g)[0], gd.char.pos[2] - centreOf(g)[1]) <= near);
+  const centreOf = (g: any): [number, number] => M.pos ?? [g.player.char.posX, g.player.char.posZ];
+  const nearMen = (g: any) => [...g.guards, ...g.civilians].filter((gd: any) => who ? String(gd.callsign).toLowerCase().includes(who) : all || Math.hypot(gd.char.posX - centreOf(g)[0], gd.char.posZ - centreOf(g)[1]) <= near);
   const lastLine = new Map<any, string>(), changes: string[] = []; let dumped = false, at: any = null;
   const R = await rerun(F, { toN: n + Math.round(runSecs * 60), force: argv.includes('--force'), each: (W, f) => {
     if (f + 1 < n) return; const g = W.game;
-    if (!dumped) { dumped = true; at = { time: g.time, men: nearMen(g).map((gd: any) => { const ln = live(g, gd); lastLine.set(gd, ln); return `  ${gd.callsign} [${gd.team}] at ${pt([gd.char.pos[0], gd.char.pos[2]])}  ${ln}${gd.path?.length > gd.pathI ? `\n      route: ${gd.path.slice(gd.pathI, gd.pathI + 10).map((p: number[]) => pt([p[0], p[2]])).join(' ')}` : ''}`; }), sam: `  Sam at ${pt([g.player.char.pos[0], g.player.char.pos[2]])}${g.player.down ? ' DOWN' : ''}${g.godMode ? ' (god mode)' : ''}` }; return; }
-    for (const gd of nearMen(g)) { const ln = live(g, gd); if (ln !== lastLine.get(gd)) { lastLine.set(gd, ln); changes.push(`  +${((f + 1 - n) / 60).toFixed(2)} s  ${gd.callsign} at ${pt([gd.char.pos[0], gd.char.pos[2]])}  ${ln}`); } }
+    if (!dumped) { dumped = true; at = { time: g.time, men: nearMen(g).map((gd: any) => { const ln = live(g, gd); lastLine.set(gd, ln); return `  ${gd.callsign} [${gd.team}] at ${pt([gd.char.posX, gd.char.posZ])}  ${ln}${gd.path?.length > gd.pathI ? `\n      route: ${gd.path.slice(gd.pathI, gd.pathI + 10).map((p: number[]) => pt([p[0], p[2]])).join(' ')}` : ''}`; }), sam: `  Sam at ${pt([g.player.char.posX, g.player.char.posZ])}${g.player.down ? ' DOWN' : ''}${g.godMode ? ' (god mode)' : ''}` }; return; }
+    for (const gd of nearMen(g)) { const ln = live(g, gd); if (ln !== lastLine.get(gd)) { lastLine.set(gd, ln); changes.push(`  +${((f + 1 - n) / 60).toFixed(2)} s  ${gd.callsign} at ${pt([gd.char.posX, gd.char.posZ])}  ${ln}`); } }
   } });
   if (R.refuse || !R.report || !R.W) { console.log(`REFUSED: ${R.refuse}`); process.exit(3); }
   for (const ln of rerunWords(R.report, F)) console.log(ln);

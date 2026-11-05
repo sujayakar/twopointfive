@@ -31,13 +31,13 @@ export async function wallShotCheck(): Promise<boolean> {
       const emits: any[] = []; let inPall = false; const pe = g.destr.pallEmit.bind(g.destr); g.destr.pallEmit = (...a: any[]) => { inPall = true; try { return pe(...a); } finally { inPall = false; } };
       g.smoke.emit = (e: any) => { emits.push({ ...e, pall: inPall }); };
       const of = (who: string) => g.guards.find((x: any) => x.callsign === who);
-      for (const m of men) { const gd = of(m.who); if (!gd) return null; if (m.at) { gd.char.pos[0] = m.at[0]; gd.char.pos[2] = m.at[2]; } gd.dazzledUntil = 0; gd.staggerUntil = 0; }
-      if (sam) { g.player.char.pos[0] = sam[0]; g.player.char.pos[2] = sam[2]; } g.player.dazzledUntil = 0;
+      for (const m of men) { const gd = of(m.who); if (!gd) return null; if (m.at) { gd.char.posX = m.at[0]; gd.char.posZ = m.at[2]; } gd.dazzledUntil = 0; gd.staggerUntil = 0; }
+      if (sam) { g.player.char.posX = sam[0]; g.player.char.posZ = sam[2]; } g.player.dazzledUntil = 0;
       const w = wallAt(g, at, from); if (!w || !w.ok) return null;
       g.wallCharge.set.push({ wall: w, t: g.time, by: 'probe', paid: 0 }); const res: any = g.wallCharge.blow(g.wallCharge.set[g.wallCharge.set.length - 1]);
       const row = (who: string) => { const gd = of(who), p = gd.char.pos; return { who, dead: gd.state === 'dead', blind: Math.max(0, gd.dazzledUntil - g.time), folded: Math.max(0, gd.staggerUntil - g.time), room: g.cleared.roomAt(p), dist: Math.hypot(p[0] - w.u, p[2] - at[2]), state: gd.state as string }; };
       const rows = men.map(m => row(m.who)), samT = Math.max(0, g.player.dazzledUntil - g.time); let walked = -1, state = '';
-      if (opt.watch) { const gd = of(opt.watch), p0 = [...gd.char.pos], until = gd.staggerUntil - 0.1; g.aiEnabled = true; walked = 0; while (g.time < until) { W.step(1 / 60); walked = Math.max(walked, Math.hypot(gd.char.pos[0] - p0[0], gd.char.pos[2] - p0[2])); } state = gd.state; }
+      if (opt.watch) { const gd = of(opt.watch), p0 = [...gd.char.pos], until = gd.staggerUntil - 0.1; g.aiEnabled = true; walked = 0; while (g.time < until) { W.step(1 / 60); walked = Math.max(walked, Math.hypot(gd.char.posX - p0[0], gd.char.posZ - p0[2])); } state = gd.state; }
       return { g, hole: !!res?.hole, walked, state, men: rows, sam: samT, pall: emits.filter(e => e.pall), rest: emits.filter(e => !e.pall), big: !!g.orders.big };
     } finally { console.log = log; } };
   const K = DOORTOOLS, S = WALLSHOT, roomM0: number = WALLSHOT.roomM;

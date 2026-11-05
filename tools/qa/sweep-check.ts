@@ -95,7 +95,7 @@ async function play(scn: string, seed: number, arm: Arm, secs: number): Promise<
     R.squads = !!squadsLive(g); R.drilled = !!squadDrill(g); R.defenders = foes().length; R.team = team().length;
     const squadOf = new Map<any, string>();
     if (R.squads) for (const Q of squadsReport(g) as any[]) for (const h of squadMen(g, Q.name) as any[]) squadOf.set(h, Q.name);
-    const home = new Map<any, number[]>(); for (const h of foes()) home.set(h, [h.char.pos[0], 0, h.char.pos[2]]);
+    const home = new Map<any, number[]>(); for (const h of foes()) home.set(h, [h.char.posX, 0, h.char.posZ]);
     // every line a defender says, and the room fight's own notes when they are kept (--trace)
     { const say0 = g.say.bind(g); g.say = (gd: any, text: string, ...rest: any[]) => { if (gd?.team === 'hostile') { const t = g.time - R.wordT; R.lines.push(text); if (/gone quiet/.test(text) && Number.isNaN(R.callT)) R.callT = t; say(`    ${f1(t).padStart(6)}  “${text}” — ${gd.callsign} ${at(gd.char.pos)}`); } return say0(gd, text, ...rest); }; }
     if (TRACE && fight?.log) { const push0 = fight.log.push.bind(fight.log); fight.log.push = (...rows: any[]) => { for (const r of rows) say(`    ${f1(Number(r.t) - R.wordT).padStart(6)}  · ${r.who}: ${r.what}`); return push0(...rows); }; }
@@ -106,7 +106,7 @@ async function play(scn: string, seed: number, arm: Arm, secs: number): Promise<
     for (let f = 0; f < secs * 60; f++) {
       step(1);
       for (const e of g.events) if (!seen.has(e)) { seen.add(e); if (e.kind === 'shot' || e.kind === 'guardShot') { if (everFree.size) R.shotsAfter++; else R.shots++; } }
-      for (const D of (fight.defs ?? []) as any[]) if (D.mode === 'free' && D.gd.state !== 'dead' && !everFree.has(D.gd)) { everFree.set(D.gd, { from: [D.gd.char.pos[0], 0, D.gd.char.pos[2]], near: Infinity, t: g.time - R.wordT }); if (Number.isNaN(R.goT)) { R.goT = g.time - R.wordT; R.upAtGo = alive(foes()); R.teamAtGo = alive(team()); } say(`    ${f1(g.time - R.wordT).padStart(6)}  → ${D.gd.callsign} is let go from ${at(D.gd.char.pos)}, ${f1(flat(D.gd.char.pos, R.wordAt))} m from the report`); }
+      for (const D of (fight.defs ?? []) as any[]) if (D.mode === 'free' && D.gd.state !== 'dead' && !everFree.has(D.gd)) { everFree.set(D.gd, { from: [D.gd.char.posX, 0, D.gd.char.posZ], near: Infinity, t: g.time - R.wordT }); if (Number.isNaN(R.goT)) { R.goT = g.time - R.wordT; R.upAtGo = alive(foes()); R.teamAtGo = alive(team()); } say(`    ${f1(g.time - R.wordT).padStart(6)}  → ${D.gd.callsign} is let go from ${at(D.gd.char.pos)}, ${f1(flat(D.gd.char.pos, R.wordAt))} m from the report`); }
       for (const [h, m] of everFree) m.near = Math.min(m.near, flat(h.char.pos, R.wordAt));
     }
     const st = pressureStats(g); R.lookCalled = st.lookCalled; R.lookMen = st.lookMen; R.lookOff = st.lookOff;

@@ -41,7 +41,7 @@ export interface Ahead {
  *  record (`path[i]` after `cmds[i]`; its length is set). No record: where the game has him. The game, the seat and the records are as they were on return. */
 export function walkAhead(seat: Seat, cmds: readonly PlayerCmd[], dt: number, path?: Vec3[]): Ahead {
   const v = seat.view, pl = v.player, ch = pl.char, n = cmds.length, free = legsOwn(v);
-  const m: Legs = { char: { pos: [ch.pos[0], ch.pos[1], ch.pos[2]], vel: [ch.vel[0], ch.vel[1], ch.vel[2]], bodyYaw: ch.bodyYaw, aimYaw: ch.aimYaw }, safe: pl.safe ? [pl.safe[0], pl.safe[1], pl.safe[2]] : null,
+  const m: Legs = { char: { pos: [ch.posX, ch.posY, ch.posZ], vel: [ch.velX, ch.velY, ch.velZ], bodyYaw: ch.bodyYaw, aimYaw: ch.aimYaw }, safe: pl.safe ? [pl.safe[0], pl.safe[1], pl.safe[2]] : null,
     crouch: pl.crouch, sprinting: pl.sprinting, dash: pl.dash, backpedal: pl.backpedal, speedSm: pl.speedSm, pace: TWOGEARS.on ? 1 : pl.pace, dragging: null, haul: null,
     shoved: [0, 0], shovedT: -1, shovedFrom: [0, 0], down: pl.down, doorRipUntil: pl.doorRipUntil, doorBashAt: pl.doorBashAt, doorBashLean: pl.doorBashLean };
   let aim: Vec3 | null = v.aimPoint ? [v.aimPoint[0], v.aimPoint[1], v.aimPoint[2]] : null;
@@ -76,7 +76,7 @@ export function walkAhead(seat: Seat, cmds: readonly PlayerCmd[], dt: number, pa
       if (path) path[i] = [c.pos[0], c.pos[1], c.pos[2]];
     }
   });
-  else if (path) for (let i = 0; i < n; i++) path[i] = [ch.pos[0], ch.pos[1], ch.pos[2]];
+  else if (path) for (let i = 0; i < n; i++) path[i] = [ch.posX, ch.posY, ch.posZ];
   const c = m.char, f = v.followPos(c.pos);
   return { pos: c.pos, vel: c.vel, aimYaw: c.aimYaw, bodyYaw: c.bodyYaw, crouch: m.crouch, follow: [f[0], f[1], f[2]], aim, free };
 }

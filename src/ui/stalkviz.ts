@@ -21,7 +21,7 @@ export class StalkViz {
   }
   update(game: Game, cam: FollowCamera, w: number, h: number, edge: number) {
     const pl = game.player.char.pos; let gd: Guard | null = STALKVIZ.on ? stalkOn(game) : null;
-    if (STALKVIZ.on && !gd) { let bd = 6; for (const x of game.guards) { if (x.state === 'dead' || x.civ || x.held) continue; const dd = Math.hypot(x.char.pos[0] - pl[0], x.char.pos[2] - pl[2]); if (dd < bd) { gd = x; bd = dd; } } }
+    if (STALKVIZ.on && !gd) { let bd = 6; for (const x of game.guards) { if (x.state === 'dead' || x.civ || x.held) continue; const dd = Math.hypot(x.char.posX - pl[0], x.char.posZ - pl[2]); if (dd < bd) { gd = x; bd = dd; } } }
     if (!gd) { if (this.shown) { this.root.style.display = 'none'; this.shown = false; } return; }
     if (!this.shown) { this.root.style.display = 'block'; this.shown = true; }
     const path = (pts: Vec3[]) => { let d = '', run = 0; for (const q of pts) { const [x, y, vis] = cam.project([q[0], FLOOR, q[2]], w, h, edge); if (!vis) { run = 0; continue; } d += `${run++ ? 'L' : 'M'}${x.toFixed(1)} ${y.toFixed(1)}`; } return d.includes('L') ? d : ''; };

@@ -46,15 +46,15 @@ async function world(orbit: boolean, gap = 1.6, walk = 0, drag = false, yaw = 0)
   let wt: number | null = null;   // (`walk`: when the man set off, east at `walk` m/s — `go()`)
   const step = (n = 1) => { for (let i = 0; i < n; i++) { STALK.orbit = orbit; STALK.drag = drag; const on = wt !== null; A.char.vel = [on ? walk : 0, 0, 0]; A.char.pos = [AT[0] + (on ? walk * (g.time - wt!) : 0), 0, AT[2]]; A.char.bodyYaw = EAST; W.step(DT); g.player.visibility = 0.02; } };
   const go = () => { wt = g.time; };
-  step(40); W.cursorAt([A.char.pos[0], 1.2, A.char.pos[2]]); W.input.buttons |= 1; W.input.clicked |= 1; step(1); W.input.clicked &= ~1;
+  step(40); W.cursorAt([A.char.posX, 1.2, A.char.posZ]); W.input.buttons |= 1; W.input.clicked |= 1; step(1); W.input.clicked &= ~1;
   /** the move key that points most across the man (or `into` him, or away), from where Sam stands, by the camera's floor axes */
-  const pick = (want: 'across' | 'in' | 'out') => { const { fwd, right } = W.cam.planarBasis(), ux = (A.char.pos[0] - c.pos[0]), uz = (A.char.pos[2] - c.pos[2]), L = Math.hypot(ux, uz) || 1;
+  const pick = (want: 'across' | 'in' | 'out') => { const { fwd, right } = W.cam.planarBasis(), ux = (A.char.posX - c.posX), uz = (A.char.posZ - c.posZ), L = Math.hypot(ux, uz) || 1;
     const ks: [string, number[]][] = [['KeyW', fwd], ['KeyS', [-fwd[0], 0, -fwd[2]]], ['KeyD', right], ['KeyA', [-right[0], 0, -right[2]]]];
     const score = (d: number[]) => { const r = (d[0] * ux + d[2] * uz) / L; return want === 'across' ? -Math.abs(r) : want === 'in' ? r : -r; };
     return ks.sort((a, b) => score(b[1]) - score(a[1]))[0][0]; };
-  const gapNow = () => Math.hypot(c.pos[0] - A.char.pos[0], c.pos[2] - A.char.pos[2]), speed = () => Math.hypot(c.vel[0], c.vel[2]);
-  const round = () => Math.atan2(c.pos[0] - A.char.pos[0], c.pos[2] - A.char.pos[2]);   // (his bearing round the man, from the man)
-  const faces = () => deg(c.aimYaw - Math.atan2(A.char.pos[0] - c.pos[0], A.char.pos[2] - c.pos[2]));
+  const gapNow = () => Math.hypot(c.posX - A.char.posX, c.posZ - A.char.posZ), speed = () => Math.hypot(c.velX, c.velZ);
+  const round = () => Math.atan2(c.posX - A.char.posX, c.posZ - A.char.posZ);   // (his bearing round the man, from the man)
+  const faces = () => deg(c.aimYaw - Math.atan2(A.char.posX - c.posX, A.char.posZ - c.posZ));
   const behind = () => Math.cos(round() - A.char.bodyYaw);   // (−1 = dead behind him, the creep's own measure)
   return { W, g, A, c, step, go, pick, gapNow, speed, round, faces, behind, on: () => stalkOn(g) === A };
 }

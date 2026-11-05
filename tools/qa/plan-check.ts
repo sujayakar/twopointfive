@@ -320,7 +320,7 @@ async function planLines(): Promise<boolean> {
       let shut = -1; game.rails.locks = (a: string) => a === 'word'; try { shut = (floorPlan(game).doors as any[]).filter(x => x.why === 'pair').length; } finally { game.rails.locks = locks0; }
       const set = R.until(() => !!P.jobOf(mate)?.set, 30); R.step(2);
       const ds: any[] = floorPlan(game).doors, d = ds[0], off = d ? dist([(d.a[0] + d.b[0]) / 2, 0, (d.a[2] + d.b[2]) / 2], mate.char.pos) : NaN;
-      const fx = Math.sin(mate.char.aimYaw), fz = Math.cos(mate.char.aimYaw), ahead = d ? ((d.a[0] + d.b[0]) / 2 - mate.char.pos[0]) * fx + ((d.a[2] + d.b[2]) / 2 - mate.char.pos[2]) * fz : NaN;
+      const fx = Math.sin(mate.char.aimYaw), fz = Math.cos(mate.char.aimYaw), ahead = d ? ((d.a[0] + d.b[0]) / 2 - mate.char.posX) * fx + ((d.a[2] + d.b[2]) / 2 - mate.char.posZ) * fz : NaN;
       game.player.down = true; const downNow = (floorPlan(game).doors as any[]).some(x => x.now); game.player.down = false;
       R.press('KeyF'); R.step(2);
       const J = P.jobOf(mate), went = !J || J.go, after = (floorPlan(game).doors as any[]).filter(x => x.why === 'pair').length;

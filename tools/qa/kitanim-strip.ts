@@ -89,7 +89,7 @@ type World = Awaited<ReturnType<typeof world>>;
 function measure(S: any): Frame {
   const { g, c } = S; const yaw = c.bodyYaw, sn = Math.sin(yaw), cs = Math.cos(yaw), hp = c.bones.hips as P3;
   let bad = 0;
-  const rel = (p: ArrayLike<number>): P3 => { const dx = p[0] - hp[0], dz = p[2] - hp[2]; const r: P3 = [-(dx * cs - dz * sn), p[1] - c.pos[1], dx * sn + dz * cs]; if (!r.every(Number.isFinite)) bad++; return r; };
+  const rel = (p: ArrayLike<number>): P3 => { const dx = p[0] - hp[0], dz = p[2] - hp[2]; const r: P3 = [-(dx * cs - dz * sn), p[1] - c.posY, dx * sn + dz * cs]; if (!r.every(Number.isFinite)) bad++; return r; };
   const b: Record<string, P3> = {}; for (const k of BONES) b[k] = c.bones[k] ? rel(c.bones[k]) : [NaN, NaN, NaN];
   for (const k of BONES) if (!c.bones[k]) bad++;
   const headC: P3 = [(c.bones.head[0] + c.bones.headTop[0]) / 2, (c.bones.head[1] + c.bones.headTop[1]) / 2, (c.bones.head[2] + c.bones.headTop[2]) / 2];
@@ -331,7 +331,7 @@ if (want('close')) { const app: Row[] = [], hold: Row[] = []; const DS = [3.4, 2
   const lab = (S: World, fr: Frame) => [`closeK ${(+S.an.closeK).toFixed(2)} creep ${S.an.creep ? 'Y' : 'n'}`, `ready ${S.an.ready ?? '—'} reach ${(+S.an.reachShown).toFixed(2)}`, `hips ${fr.b.hips[1].toFixed(3)} · R→sheath ${(sheathD(fr) * 100).toFixed(0)} cm`];
   for (const [on, v] of VARS) { const S = await world(on, { guard: true }); S.cursor = [S.at[0], 1.2, S.at[2]]; const cells: Cell[] = []; S.log.length = 0;
     say(`close/${v}:   d    closeK creep ready     reach  hipsY   handR→sheath  handR (right, up, fwd)`);
-    for (const d of DS) { S.put([S.at[0], 0, S.at[2] - d]); const fr = S.step(45); const real = Math.hypot(S.c.pos[0] - S.A.char.pos[0], S.c.pos[2] - S.A.char.pos[2]); if (Math.abs(real - d) > 0.03) say(`close/${v}: asked for ${d} m, he stands ${real.toFixed(2)} m off the man (Sam ${S.c.pos[0].toFixed(2)}, ${S.c.pos[2].toFixed(2)} · the man ${S.A.char.pos[0].toFixed(2)}, ${S.A.char.pos[2].toFixed(2)})`);
+    for (const d of DS) { S.put([S.at[0], 0, S.at[2] - d]); const fr = S.step(45); const real = Math.hypot(S.c.pos[0] - S.A.char.posX, S.c.pos[2] - S.A.char.posZ); if (Math.abs(real - d) > 0.03) say(`close/${v}: asked for ${d} m, he stands ${real.toFixed(2)} m off the man (Sam ${S.c.pos[0].toFixed(2)}, ${S.c.pos[2].toFixed(2)} · the man ${S.A.char.posX.toFixed(2)}, ${S.A.char.posZ.toFixed(2)})`);
       cells.push({ fr, label: [`d ${d.toFixed(2)} m`, ...lab(S, fr)] });
       say(`close/${v}: ${real.toFixed(2)}  ${(+S.an.closeK).toFixed(2).padStart(5)}  ${S.an.creep ? 'Y' : 'n'}     ${String(S.an.ready ?? '—').padEnd(8)} ${(+S.an.reachShown).toFixed(2)}   ${fr.b.hips[1].toFixed(3)}   ${(sheathD(fr) * 100).toFixed(1).padStart(5)} cm     (${fr.b.handR.map(x => x.toFixed(2)).join(', ')})`); }
     app.push({ name: `${v}: walked in on a man's back — 45 frames stood at each distance`, variant: v, cells }); stats('close approach', v, S.log);

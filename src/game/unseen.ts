@@ -182,7 +182,7 @@ function wallSlot(g: Game, gd: Guard, back: number, file: Guard[]): Vec3 | null 
   const pl = lead(g), w = pl.wall; if (!w || !onWall(pl)) return null;   // (wallBeat: a wall he has only brushed deals nobody a place along it)
   const S = stateOf(g), t = w.along, n = w.n, sam = pl.char.pos, su = sam[0] * t[0] + sam[2] * t[2];
   if (S.hold !== w) {   // the side, once a hold: away from the end of the face he has taken (the corner he is looking round is not where a file stacks) — else where the file is now — else behind the shoulder he leads with
-    let m = 0; for (const o of file) m += o.char.pos[0] * t[0] + o.char.pos[2] * t[2] - su;
+    let m = 0; for (const o of file) m += o.char.posX * t[0] + o.char.posZ * t[2] - su;
     const lo = su - w.lo, hi = w.hi - su;
     S.hold = w; S.sgn = Math.min(lo, hi) < UNSEEN.wallEnd && Math.abs(lo - hi) > 0.5 ? (lo > hi ? -1 : 1) : Math.abs(m) > 0.3 * Math.max(1, file.length) ? (m > 0 ? 1 : -1) : (w.side > 0 ? -1 : 1);
   }

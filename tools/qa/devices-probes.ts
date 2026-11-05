@@ -188,7 +188,7 @@ export async function devicesKeypad() {
     if (!sd.latched || !sd.locked) fails.push('the deny opened something');
     // walking into it: a wall
     game.puppet = { goal: [21.0, 0, 8.6], aim: null }; steps(W, 3); game.puppet = null;
-    if (game.player.char.pos[0] < 22.2) fails.push(`walked through a keypad door without the code (x ${f2(game.player.char.pos[0])})`);
+    if (game.player.char.posX < 22.2) fails.push(`walked through a keypad door without the code (x ${f2(game.player.char.posX)})`);
     // from the server room side: a thumb-turn — push / ease rows, and it opens
     game.teleportPlayer([21.35, 0, 8.55]); W.cursorAt(sd.pos); W.step(DT); W.step(DT);
     const rowsIn = game.nearby.filter((r: any) => r.door === sd).map((r: any) => r.verb).join(',');
@@ -196,8 +196,8 @@ export async function devicesKeypad() {
     // staff: a guard scripted from the office through it
     sd.reset(); const A = game.guards[0]; A.hold = false; A.heardUpTo = game.eventSeq; place(A, [23.2, 0, 8.6], -Math.PI / 2); A.script = { goal: [19.5, 0, 8.6], speed: 1.3, upper: 'relaxed' };
     game.teleportPlayer([8, 0, 20]); steps(W, 8);
-    if (A.char.pos[0] > 21.0) fails.push(`the guard did not get through the keypad door (x ${f2(A.char.pos[0])}, leaf ${f2(sd.angle)})`);
-    v(fails.length === 0, "(a) from the office without the code: 'keypad — no code' (a deny tone and a word) + the boot, no pick / rattle, and walking into it is a wall; from the server room it pushes open; a guard walks straight through it", `rows office [${rows}] · server side [${rowsIn}] · guard x ${f2(A.char.pos[0])}`, fails);
+    if (A.char.posX > 21.0) fails.push(`the guard did not get through the keypad door (x ${f2(A.char.posX)}, leaf ${f2(sd.angle)})`);
+    v(fails.length === 0, "(a) from the office without the code: 'keypad — no code' (a deny tone and a word) + the boot, no pick / rattle, and walking into it is a wall; from the server room it pushes open; a guard walks straight through it", `rows office [${rows}] · server side [${rowsIn}] · guard x ${f2(A.char.posX)}`, fails);
   }
   // (b) the code off a questioned man: Novak (nervy, the cubicles — no keyed door on his beat, so the pad is his first useful thing) in the arm, two taps
   {
@@ -270,8 +270,8 @@ export async function devicesKeypad() {
     if (!msgs.some(m => /7-3-9-1 — the side door takes it/.test(m.text))) fails.push('no acceptance line');
     // through, and it springs locked behind
     game.puppet = { goal: [19.6, 0, 8.6], aim: null }; steps(W, 5); game.puppet = null;
-    const through = game.player.char.pos[0] < 21.2; steps(W, 8, () => sd.latched);
-    if (!through) fails.push(`never got through (x ${f2(game.player.char.pos[0])})`);
+    const through = game.player.char.posX < 21.2; steps(W, 8, () => sd.latched);
+    if (!through) fails.push(`never got through (x ${f2(game.player.char.posX)})`);
     // (where doors stay as they are left — doors.ts DOORSTAY — nothing springs it shut behind him: it stands open, its lock unbroken, and it is locked against
     //  the office again when a hand shuts it, which is `probes.ts stay-open-lock`'s line)
     const stays = !!game.doors.stay;
@@ -310,8 +310,8 @@ export async function devicesLaser() {
   {
     const { W, game, msgs } = await world(842); const fails: string[] = [];
     game.teleportPlayer([8, 0, 20]); const L = game.devices.lasers[0];
-    let crossings = 0; let lastX = game.guards[0].char.pos[0];
-    steps(W, 75, () => { const x = game.guards[0].char.pos[0]; if ((lastX - 14.5) * (x - 14.5) < 0 && Math.abs(game.guards[0].char.pos[2] - 11.2) < 1) crossings++; lastX = x; return false; });
+    let crossings = 0; let lastX = game.guards[0].char.posX;
+    steps(W, 75, () => { const x = game.guards[0].char.posX; if ((lastX - 14.5) * (x - 14.5) < 0 && Math.abs(game.guards[0].char.posZ - 11.2) < 1) crossings++; lastX = x; return false; });
     if (crossings < 1) fails.push(`staging: the corridor man crossed the beam ${crossings} times in 75 s`);
     if (L.trips || msgs.some(m => /beam broken/.test(m.text))) fails.push(`a guard tripped it (${L.trips})`);
     v(fails.length === 0, '(b) staff walk through their own beams: the corridor route crosses it, nothing', `crossings ${crossings}, trips ${L.trips}`, fails);
@@ -324,11 +324,11 @@ export async function devicesLaser() {
     game.player.keys.add('floor');   // (the storage door is keyed against him: with the floor key his crouched contact pushes it open — the beam is the subject here, not the lock)
     walk(game, W, [32.6, 0, 11.2], [32.6, 0, 8.6], true, 9);   // from the corridor, on his knees, under the beam across the doorway's corridor face and through the door
     const under = L.trips; if (under !== 0) fails.push(`crouch-walked under: trips ${under}`);
-    if (game.player.char.pos[2] > 9.0) fails.push(`staging: he never got in crouched (z ${f2(game.player.char.pos[2])}, leaf ${f2(game.doors.byName('storage').angle)})`);
+    if (game.player.char.posZ > 9.0) fails.push(`staging: he never got in crouched (z ${f2(game.player.char.posZ)}, leaf ${f2(game.doors.byName('storage').angle)})`);
     steps(W, 6, () => game.doors.byName('storage').latched);   // (let the closer take the leaf — swung out into the corridor by his push from inside it would cut the picture of the beam and shield him, which is true of any leaf and not what this measures)
     walk(game, W, [32.6, 0, 8.6], [32.6, 0, 11.2], false, 8);
     if (L.trips !== 1) fails.push(`walked standing: trips ${L.trips} (want 1)`);
-    v(fails.length === 0, '(c) the storage beam at 1.25 (UPS) across the doorway: in on his knees under it, nothing; back out through it standing, a trip', `crouched ${under}, standing ${L.trips}, ended z ${f2(game.player.char.pos[2])}`, fails);
+    v(fails.length === 0, '(c) the storage beam at 1.25 (UPS) across the doorway: in on his knees under it, nothing; back out through it standing, a trip', `crouched ${under}, standing ${L.trips}, ended z ${f2(game.player.char.posZ)}`, fails);
   }
   // (d) a canister thrown along the corridor through the shin beam trips it (its flight segment against the beam), Sam nowhere near
   {
@@ -356,7 +356,7 @@ export async function devicesLaser() {
     if (!got) fails.push('staging: never got hold of the body');
     if (game.player.haul?.carry) fails.push('staging: he lifted it over his shoulder (this line is the floor haul)');
     const whoBroke: string[] = []; const origTrip = L.lastTripAt;
-    steps(W, 12, () => { if (L.lastTripAt !== origTrip && L.lastTripAt === game.time) { const hitBody = !!DEV.bodyBreaks(A.char, L.def.from, L.def.to), hitSam = !!DEV.bodyBreaks(game.player.char, L.def.from, L.def.to); whoBroke.push(hitSam ? 'player' : hitBody ? 'body' : '?'); } return whoBroke.includes('body') || game.player.char.pos[0] > 16.8; });
+    steps(W, 12, () => { if (L.lastTripAt !== origTrip && L.lastTripAt === game.time) { const hitBody = !!DEV.bodyBreaks(A.char, L.def.from, L.def.to), hitSam = !!DEV.bodyBreaks(game.player.char, L.def.from, L.def.to); whoBroke.push(hitSam ? 'player' : hitBody ? 'body' : '?'); } return whoBroke.includes('body') || game.player.char.posX > 16.8; });
     // Sam backs through it first hauling the ankles (a trip of his own); the corpse follows a body-length behind — wait out the cooldown mid-beam if need be and it breaks it too
     if (!whoBroke.includes('body')) { steps(W, 5, () => { if (L.lastTripAt === game.time) whoBroke.push(DEV.bodyBreaks(A.char, L.def.from, L.def.to) ? 'body' : 'player'); return whoBroke.includes('body'); }); }
     game.puppet = null;

@@ -469,7 +469,7 @@ if (OUT) fs.mkdirSync(OUT, { recursive: true });
       //  some 160 for this scrub. That was the tool's long silence. `frames` in the detail is the count.)
       try { while (T.state.seeking && n++ < 4000) { window.__runFrames(1, 1 / 60); await tick(); } } finally { E.render = drawIt; }
       out.scrub = { from: f0, to, held, asked, frames: n, f: T.state.f, share: T.state.f / T.state.ticks, ghost: !ghost.hidden };
-      await drawn(); out.after = px(mini, 6, g.player.char.pos[0], g.player.char.pos[2]);
+      await drawn(); out.after = px(mini, 6, g.player.char.posX, g.player.char.posZ);
       let s = T.state; n = 0; while (!s.ended && n++ < 4000) { s = T.run(120, true); await e.device.queue.onSubmittedWorkDone(); await tick(); }
       out.state = T.state; out.pos = [...g.player.char.pos].map(x => +x.toFixed(3)); return out; });
     if (!M.why) await shot(page, 'engine-replay-map');
@@ -680,8 +680,8 @@ if (OUT) fs.mkdirSync(OUT, { recursive: true });
       const btn = [...document.querySelectorAll('button')].find(b => b.textContent === 'dark corridor'); if (!btn) return { why: 'no "dark corridor" button on the lab\'s panel' };
       btn.click(); quick(20); const picked = { unseen: g.playerInvisible, pos: at().map(v => +v.toFixed(2)) };
       // …and he is put in front of the nearest man, a metre and a half off (a move made between two steps: the tape's 'pose' row)
-      const p = at(); let to = null, near = Infinity; for (const x of live()) { const d = Math.hypot(x.char.pos[0] - p[0], x.char.pos[2] - p[2]); if (d < near) { near = d; to = x; } }
-      if (!to) return { why: 'no man on the lab\'s floor' }; const y = to.char.bodyYaw; g.teleportPlayer([to.char.pos[0] + Math.sin(y) * 1.5, 0, to.char.pos[2] + Math.cos(y) * 1.5]);
+      const p = at(); let to = null, near = Infinity; for (const x of live()) { const d = Math.hypot(x.char.posX - p[0], x.char.posZ - p[2]); if (d < near) { near = d; to = x; } }
+      if (!to) return { why: 'no man on the lab\'s floor' }; const y = to.char.bodyYaw; g.teleportPlayer([to.char.posX + Math.sin(y) * 1.5, 0, to.char.posZ + Math.cos(y) * 1.5]);
       for (let k = 0; k < 3; k++) { quick(50, ['KeyW', 'ShiftLeft']); quick(50, ['KeyS', 'ShiftLeft']); } quick(200);   // (…where he runs up and down: steps a man hears, unless the sandbox has made him unnoticed)
       const f = window.__replay.file('lab'), id = await window.__replay.save('lab'), kinds = {}; for (const r of f?.rerun?.x ?? []) kinds[r[1]] = (kinds[r[1]] || 0) + 1;
       return { id, ticks: f?.rerun?.ticks ?? null, dead: f?.rerun?.dead ?? null, search: f?.rerun?.recipe?.search ?? null, was, picked, near: +near.toFixed(2), states: states(), unseen: g.playerInvisible, kinds, pos: at().map(v => +v.toFixed(3)), men: g.guards.map(x => [...x.char.pos].map(v => +v.toFixed(3))) }; });

@@ -1140,7 +1140,7 @@ export class DoorTools {
   }
   private newOp(kind: DoorToolKind, d: Door, side: 1 | -1, men: Guard[], phase: Phase): DoorOp {
     for (const o of [...this.ops]) { o.men = o.men.filter(m => !men.includes(m)); if (!o.men.length) this.end(o, 're-ordered'); }   // (the men are this order's now)
-    const op: DoorOp = { kind, door: d, side, men: [...men], lead: men[0], rear: new Set(), from: new Map(men.map(m => [m, [m.char.pos[0], 0, m.char.pos[2]] as Vec3])), phase, t0: this.g.time, bangHeld: false, mine: new Map(), post: new Map(), kick: null, openT: NaN, can: null, tossT: NaN, landT: NaN, bangT: NaN, bangAt: null,
+    const op: DoorOp = { kind, door: d, side, men: [...men], lead: men[0], rear: new Set(), from: new Map(men.map(m => [m, [m.char.posX, 0, m.char.posZ] as Vec3])), phase, t0: this.g.time, bangHeld: false, mine: new Map(), post: new Map(), kick: null, openT: NaN, can: null, tossT: NaN, landT: NaN, bangT: NaN, bangAt: null,
       queue: [], setT: NaN, pod: new Map(), onPod: new Map(), slice: new Map(), crossed: new Map(), corner: new Map(), search: undefined, beats: [], onWord: false, word: null, hold: 0, readyT: NaN, gate: null };
     this.ops.push(op); this.stats.orders++; return op;
   }
@@ -1306,7 +1306,7 @@ export class DoorTools {
     if (!DOORTOOLS.openHand) return;
     const g = this.g, S = g.orders, d = op.door, name = doorWords(d), c = d.frameCentre;
     for (const m of op.men) { const A = op.mine.get(m); if (m.state === 'dead' || !A || S.of(m) !== A || !A.post || this.arrived(op, m)) continue;
-      const at: Vec3 = [m.char.pos[0], 0, m.char.pos[2]]; if (!this.crossesOpen(d, op.side, at, A.post)) continue;
+      const at: Vec3 = [m.char.posX, 0, m.char.posZ]; if (!this.crossesOpen(d, op.side, at, A.post)) continue;
       S.assign(m, { order: 'stack', post: at, face: Math.atan2(c[0] - at[0], c[2] - at[2]), watch: [c[0], 1.05, c[2]], door: d, shy: d, stance: 'highReady', upper: 'none', move: { stance: 'none', upper: 'aim' }, stackSide: A.stackSide, going: `stacking · ${name}`, there: `stacked · ${name}` });
       this.stats.handKept++; this.beat(op, `hand kept · ${m.callsign}`); }
   }
@@ -2178,7 +2178,7 @@ export class DoorTools {
     for (const m of stay) { this.stats.handKept++; this.beat(op, `hand kept · ${m.callsign}`); }
     this.end(op, why); if (!left.length) return;
     S.newGroup();
-    for (const m of left) { const P = op.post.get(m)!, at: Vec3 = stay.has(m) ? [m.char.pos[0], 0, m.char.pos[2]] : P.pos;
+    for (const m of left) { const P = op.post.get(m)!, at: Vec3 = stay.has(m) ? [m.char.posX, 0, m.char.posZ] : P.pos;
       S.assign(m, { order: 'hold', post: at, face: stay.has(m) ? Math.atan2(c[0] - at[0], c[2] - at[2]) : P.face, watch: [c[0], 1.1, c[2]], door: d, shy: d, stance: 'none', upper: 'aim', light: NIGHTBREACH.opLights, going: `to hold · ${doorWords(d)}`, there: `holding · ${doorWords(d)}` }); }
   }
   /** the charge came off the door under the men stood off from it (tickSet: the leaf came open, or went off its hinges — nothing else takes a set
@@ -2304,7 +2304,7 @@ export class DoorTools {
         const into = !op.frag && !op.thr && K.bangInto ? this.bangSpot(op, from) : null, land = into?.at ?? this.landAt(op, op.frag ? FRAG.orderIn : undefined);   // (bangInto: thrown deep into the room, to the deepest point its burst lights nearly all the floor from, and off as it gets there)
         const sol = g.items.solve(from, land, 9);
         // (bangInto, the hand: a thrower off the opening's edge with a clear line to it passes the can there first — a flat lob from his own hand — and it turns in off the jamb)
-        const hand: Vec3 = [th.char.pos[0] + (from[0] - th.char.pos[0]) * 0.2, 1.3, th.char.pos[2] + (from[2] - th.char.pos[2]) * 0.2], gap = flat(hand, from);
+        const hand: Vec3 = [th.char.posX + (from[0] - th.char.posX) * 0.2, 1.3, th.char.posZ + (from[2] - th.char.posZ) * 0.2], gap = flat(hand, from);
         const pass = into && gap > K.bangHandM && K.bangPassV > 0 && !g.col.solidBlocked(hand, from) ? { to: from, v0: sol.v0, T: Math.max(0.15, gap / K.bangPassV) } : undefined;
         const at0 = pass ? hand : from, v0: Vec3 = pass ? [(from[0] - hand[0]) / pass.T, (from[1] - hand[1] + 0.5 * GRAVITY * pass.T * pass.T) / pass.T, (from[2] - hand[2]) / pass.T] : sol.v0;
         op.aim = into ? { at: into.at, from } : undefined; op.pass = pass;
@@ -2464,7 +2464,7 @@ export class DoorTools {
           let fin = false; if (P) P.begun = true;
           if (P && flat(gd.char.pos, s.pts[s.i]) < 0.12) P.on = true;
           if (P && s.i > 0 && !P.on && !P.to && P.gun === 0 && (g.fight.contact(gd) || g.fight.engaged(gd))) {   // (a man shows while he is still stepping to the cut: he stops on the angle that shows him — the cut is where he stands, until nobody is in his sight)
-            const p: Vec3 = [gd.char.pos[0], 0, gd.char.pos[2]], w = A.watch ?? s.looks[s.i][0]; P.to = s.pts[s.i]; s.pts[s.i] = p; P.on = true;
+            const p: Vec3 = [gd.char.posX, 0, gd.char.posZ], w = A.watch ?? s.looks[s.i][0]; P.to = s.pts[s.i]; s.pts[s.i] = p; P.on = true;
             this.assign(op, gd, { post: p, face: yawTo(p, w), watch: w, stance: 'none', upper: 'aim', light: this.lights ?? NIGHTBREACH.opLights, search: A.search, ...(K.slicePace > 0 ? { pace: K.slicePace } : {}), ...(P.lean ? { lean: P.lean, crouch: P.knee[s.i] } : {}), going: `slicing · ${name}`, there: `slicing · ${name}` }); }
           if (P ? t - P.at <= PIE_WAIT && (!(A.arrived || flat(gd.char.pos, s.pts[s.i]) < 0.12) || (P.knee[s.i] && gd.char.anim.crouch < 0.8)) : flat(gd.char.pos, s.pts[s.i]) > 0.5 && !A.arrived) s.t = NaN;   // (thrPie: a cut's clock starts with his hips ON it — and down, where it is a knee's —, or PIE_WAIT after it was given: somebody stands there)
           else { if (isNaN(s.t) || g.fight.contact(gd) || g.fight.engaged(gd)) s.t = t;   // a man in his sight: he stays on the angle that shows him
@@ -2719,7 +2719,7 @@ export class DoorTools {
   }
   /** one of the order's men still up has a line from his eyes to a man on the floor there (a mate who dropped, an enemy who did) */
   private sees(op: DoorOp, p: Vec3): boolean { const g = this.g, at: Vec3 = [p[0], 0.4, p[2]];
-    return op.men.some(m => m.state !== 'dead' && !g.col.segmentBlocked(m.char.bones.head ?? [m.char.pos[0], 1.6, m.char.pos[2]], at)); }
+    return op.men.some(m => m.state !== 'dead' && !g.col.segmentBlocked(m.char.bones.head ?? [m.char.posX, 1.6, m.char.posZ], at)); }
   /** the entry's first frame: the first man in is given the known place nearest the doorway, the second the next — or, with one known, the same one until the
    *  first man has a line to it. Nothing known: nothing dealt, the entry as it was */
   private threatDeal(op: DoorOp) {
@@ -2733,7 +2733,7 @@ export class DoorTools {
    *  seconds on a man are not counted against `threatCap` */
   private threatStep(op: DoorOp, gd: Guard, A: Assignment, pod: { pos: Vec3; face: number }): boolean {
     const G = op.threat!.deal!.get(gd); if (!G || !isNaN(G.doneT)) return false;
-    const g = this.g, K = DOORTOOLS, t = g.time, c = gd.char, th = G.th, w: Vec3 = [th.at[0], 1.2, th.at[2]], eye = (m: Guard): Vec3 => m.char.bones.head ?? [m.char.pos[0], 1.6, m.char.pos[2]];
+    const g = this.g, K = DOORTOOLS, t = g.time, c = gd.char, th = G.th, w: Vec3 = [th.at[0], 1.2, th.at[2]], eye = (m: Guard): Vec3 => m.char.bones.head ?? [m.char.posX, 1.6, m.char.posZ];
     const done = (why: string) => { G.doneT = t; A.watch = null; if (G.faced) { A.strafe = false; A.face = pod.face; } this.beat(op, `threat ${why} · ${gd.callsign}`); return false; };
     if (!K.threatFirst) return done('let go: switched off');
     if (t - th.t > K.threatSecs) return done('let go: old news');   // (also the bound for a man who never gets through the frame)
@@ -2745,7 +2745,7 @@ export class DoorTools {
     A.watch = w;
     const tx = this.inAt(op, gd);
     if (isNaN(tx)) {   // (not through the frame yet: the muzzle leads him round the jamb onto it — unless he is held up there)
-      if (K.threatStuck > 0) { if (!G.at || flat(G.at, c.pos) > 0.3) { G.at = [c.pos[0], 0, c.pos[2]]; G.still = 0; } else if (!gd.script?.over) G.still = (G.still ?? 0) + clamp(t - (isNaN(G.last) ? t : G.last), 0, 0.05);
+      if (K.threatStuck > 0) { if (!G.at || flat(G.at, c.pos) > 0.3) { G.at = [c.posX, 0, c.posZ]; G.still = 0; } else if (!gd.script?.over) G.still = (G.still ?? 0) + clamp(t - (isNaN(G.last) ? t : G.last), 0, 0.05);
         G.last = t; if ((G.still ?? 0) > K.threatStuck) return done('let go: held up at the frame'); }
       return true; }
     const yaw = yawTo(c.pos, w), over = !!gd.script?.over;
@@ -3133,7 +3133,7 @@ export class DoorTools {
         if (h !== 'alone' && h !== 'no') mate = h; else if (this.away(gd, P1, men, where, len) !== 'alone') { for (const w of [why, this.awayWhy]) if (w && !whys.includes(w)) whys.push(w); far ||= was || this.awayFar; continue; } }   // (no partner to be had: one man's walk only where a friend is near — as the search ever sent him)
       let pods: [Guard, { pos: Vec3; face: number }][];
       if (mate) { let A: Vec3, B: Vec3;
-        if (two) [A, B] = two; else { const q = this.besidePod(P1, yawTo(P1, mid), mate, [...stay, ...here.filter(q => q !== gd.char.pos && q !== mate!.char.pos)], (p: Vec3) => cellOf(p[0], p[2]) !== undefined); if (!q) { if (!whys.includes('no floor beside the point')) whys.push('no floor beside the point'); continue; } A = P1; B = q.pos; }
+        if (two) [A, B] = two; else { const q = this.besidePod(P1, yawTo(P1, mid), mate, [...stay, ...here.filter(q => !v3.same(q, gd.char.pos) && !v3.same(q, mate!.char.pos))], (p: Vec3) => cellOf(p[0], p[2]) !== undefined); if (!q) { if (!whys.includes('no floor beside the point')) whys.push('no floor beside the point'); continue; } A = P1; B = q.pos; }
         if (flat(gd.char.pos, A) + flat(mate.char.pos, B) > flat(gd.char.pos, B) + flat(mate.char.pos, A)) [A, B] = [B, A];   // (the walks that do not cross)
         pods = [[gd, { pos: [A[0], 0, A[2]], face: faceOf(A, B) }], [mate, { pos: [B[0], 0, B[2]], face: faceOf(B, A) }]]; }
       else pods = [[gd, { pos: [P1[0], 0, P1[2]], face: faceOf(P1, null) }]];
@@ -3426,7 +3426,7 @@ export class DoorTools {
   private toSlice(op: DoorOp) {
     const g = this.g, K = DOORTOOLS, d = op.door, W = d.def.width, nav = g.col.nav, name = doorWords(d);
     const looksFrom = (p: Vec3, sgn: -1 | 1) => this.sliceLooks(op, p, sgn);
-    const L = op.post.get(op.lead), start: Vec3 = L ? L.pos : [op.lead.char.pos[0], 0, op.lead.char.pos[2]];
+    const L = op.post.get(op.lead), start: Vec3 = L ? L.pos : [op.lead.char.posX, 0, op.lead.char.posZ];
     const sgn: -1 | 1 = alongOf(d, start) < W / 2 ? -1 : 1;
     // ONE arc for everybody, from the lead's own jamb — the thinnest slice there is — out, round the front of the door and in to the far wall, each step showing a
     // little more of the room; the lead walks all of it, each man behind him stops two stations short of the man ahead (two muzzles on the opening, two angles)
@@ -3438,12 +3438,12 @@ export class DoorTools {
       if (!nav.isBlocked(q[0], q[2]) && (ours && alongOf(d, prev) < 0 || !g.col.solidBlocked([prev[0], 0.45, prev[2]], [q[0], 0.45, q[2]]))) arc.push(q); }   // (… and from a mark beyond it the way out is round that leaf's end: the floor alone is asked)
     const across = (gd: Guard) => { const P = op.post.get(gd); return op.men.length > 2 && (alongOf(d, P ? P.pos : gd.char.pos) < W / 2 ? -1 : 1) !== sgn; };   // (three or more: a man stacked on the OTHER jamb)
     for (const gd of op.men) if (across(gd) && !op.rear.has(gd)) {   // … works the opening from where he stands — his own angle through it, the half of the room the arc's men see last — and never walks across the front of the door to join the arc
-      const P = op.post.get(gd), here: Vec3 = P ? P.pos : [gd.char.pos[0], 0, gd.char.pos[2]], looks = looksFrom(here, -sgn as -1 | 1);
+      const P = op.post.get(gd), here: Vec3 = P ? P.pos : [gd.char.posX, 0, gd.char.posZ], looks = looksFrom(here, -sgn as -1 | 1);
       op.slice.set(gd, { pts: [here], looks: [looks], i: 0, j: 0, t: NaN, ahead: null });
       this.assign(op, gd, { post: here, face: yawTo(here, looks[0]), watch: looks[0], stance: 'none', upper: 'aim', light: this.lights ?? NIGHTBREACH.opLights, search: true, going: `slicing · ${name}`, there: `holding outside · ${name}` });
     }
     [op.lead, ...op.men.filter(m => m !== op.lead && !across(m) && !op.rear.has(m))].forEach((gd, k, file) => {
-      const n = Math.max(1, arc.length - 2 * k), P = op.post.get(gd), here: Vec3 = P ? P.pos : [gd.char.pos[0], 0, gd.char.pos[2]];
+      const n = Math.max(1, arc.length - 2 * k), P = op.post.get(gd), here: Vec3 = P ? P.pos : [gd.char.posX, 0, gd.char.posZ];
       const pts = k === 0 ? arc.slice(0, n) : [here, ...arc.slice(1, n)];
       const s = { pts, looks: pts.map((q, i) => { const l = looksFrom(q, sgn); return i === 0 || l.length < 3 ? l : [l[2], l[1], l[2]]; }), i: 0, j: 0, t: NaN, ahead: k === 0 ? null : file[k - 1] ?? null };
       op.slice.set(gd, s);
@@ -3470,7 +3470,7 @@ export class DoorTools {
    *  diagonal: one step out from his mark, where the floor lets him */
   private thrFar(op: DoorOp): { far: Guard; fs: -1 | 1; here: Vec3 } | null {
     const g = this.g, K = DOORTOOLS, d = op.door, W = d.def.width, nav = g.col.nav, lead = op.lead;
-    const mark = (gd: Guard): Vec3 => op.post.get(gd)?.pos ?? [gd.char.pos[0], 0, gd.char.pos[2]], hi = (gd: Guard) => alongOf(d, mark(gd)) > W / 2;
+    const mark = (gd: Guard): Vec3 => op.post.get(gd)?.pos ?? [gd.char.posX, 0, gd.char.posZ], hi = (gd: Guard) => alongOf(d, mark(gd)) > W / 2;
     const far = op.men.filter(m => m !== lead && !!op.post.get(m)?.lead && hi(m) !== hi(lead)).sort((a, b) => flat(mark(a), d.frameCentre) - flat(mark(b), d.frameCentre))[0] ?? null;
     if (!far) return null;
     const P = mark(far), fs: -1 | 1 = hi(lead) ? -1 : 1, { q, from } = this.thrSpot(op, fs, P);
@@ -3519,7 +3519,7 @@ export class DoorTools {
   }
   private toThreshold(op: DoorOp) {
     const g = this.g, K = DOORTOOLS, d = op.door, W = d.def.width, nav = g.col.nav, name = doorWords(d), t = g.time, lead = op.lead, light = this.lights ?? NIGHTBREACH.opLights;
-    const mark = (gd: Guard): Vec3 => op.post.get(gd)?.pos ?? [gd.char.pos[0], 0, gd.char.pos[2]], hi = (gd: Guard) => alongOf(d, mark(gd)) > W / 2;
+    const mark = (gd: Guard): Vec3 => op.post.get(gd)?.pos ?? [gd.char.posX, 0, gd.char.posZ], hi = (gd: Guard) => alongOf(d, mark(gd)) > W / 2;
     const floor = (from: Vec3, p: Vec3) => !nav.isBlocked(p[0], p[2]) && !g.col.solidBlocked([from[0], 0.45, from[2]], [p[0], 0.45, p[2]]);
     const F = this.thrFar(op), far = F?.far ?? null;
     const jamb = far ? [lead, far] : [lead]; op.rear.clear(); for (const m of op.men) if (!jamb.includes(m)) op.rear.add(m);

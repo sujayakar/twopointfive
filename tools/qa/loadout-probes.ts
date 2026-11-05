@@ -53,7 +53,7 @@ interface BootReport { query: string; spec: any; why: string | null; start: Shot
 function shotOf(W: any, levelFile: string | null, line = ''): Shot {
   const g = W.game, run = runningScenario(g, levelFile), ops: any[] = teamOf(g);
   return { active: activeScenario(g), team: run?.team ?? null, title: run?.title ?? null,
-    ops: ops.map((gd: any) => ({ name: gd.callsign, pos: [...gd.char.pos], pair: gd.unit?.pair ?? null, alive: gd.state !== 'dead', blocked: g.col.nav.isBlocked(gd.char.pos[0], gd.char.pos[2]) })),
+    ops: ops.map((gd: any) => ({ name: gd.callsign, pos: [...gd.char.pos], pair: gd.unit?.pair ?? null, alive: gd.state !== 'dead', blocked: g.col.nav.isBlocked(gd.char.posX, gd.char.posZ) })),
     hostiles: g.guards.filter((x: any) => x.unit && x.team === 'hostile').length, drill: !!g.nightBreach.drill, noDrill: !!g.nightBreach.noDrill, plan: !!g.level.breach,
     knobNB: NIGHTBREACH.squad, knobRS: RESCUE.squad, ordersActive: !!g.orders.active, line };
 }

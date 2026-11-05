@@ -18,9 +18,9 @@ function stride(speed: number, amount: number | null): Told {
   const T: Told = { body: [], kick: [], soft: [], stir: [] };
   g.smoke = { ...was.smoke, push(p: any) { (p.body > 0 ? T.body : p.radius < 0.2 ? T.kick : T.soft).push({ ...p, pos: [...p.pos], dir: [...p.dir], phase: sam.anim.phase }); }, setStir(a: number) { T.stir.push(a); } };
   lookConfig.on = amount !== null; lookConfig.stir = amount === null ? 1 : BRK ? 0 : amount;
-  const v = [sam.vel[0], sam.vel[1], sam.vel[2]], ph = sam.anim.phase;
-  for (let i = 0; i < 20; i++) { sam.vel[0] = speed; sam.vel[1] = 0; sam.vel[2] = 0; sam.anim.phase = i / 20; g.smokeWake([sam]); }
-  sam.vel[0] = v[0]; sam.vel[1] = v[1]; sam.vel[2] = v[2]; sam.anim.phase = ph; g.smoke = was.smoke; return T;
+  const v = [sam.velX, sam.velY, sam.velZ], ph = sam.anim.phase;
+  for (let i = 0; i < 20; i++) { sam.velX = speed; sam.velY = 0; sam.velZ = 0; sam.anim.phase = i / 20; g.smokeWake([sam]); }
+  sam.velX = v[0]; sam.velY = v[1]; sam.velZ = v[2]; sam.anim.phase = ph; g.smoke = was.smoke; return T;
 }
 try {
   const up = stride(1.2, 1), f = (v: number) => v.toFixed(2);
@@ -39,8 +39,8 @@ try {
   check(still.body.length + still.kick.length + still.soft.length === 0, 'a man who stands is not told of', `${still.body.length + still.kick.length + still.soft.length} pushes`);
   // (the row at nothing and a page that is not the look page are the build's wake: asked without the break, which is about the row being UP)
   const zero = (() => { const T: Told = { body: [], kick: [], soft: [], stir: [] }; g.smoke = { ...was.smoke, push(p: any) { (p.body > 0 ? T.body : T.soft).push(p); }, setStir(a: number) { T.stir.push(a); } };
-    lookConfig.on = true; lookConfig.stir = 0; const v0 = sam.vel[0]; for (let i = 0; i < 20; i++) { sam.vel[0] = 1.2; g.smokeWake([sam]); } const a = { ...T, soft: [...T.soft] };
-    lookConfig.on = false; lookConfig.stir = 1; T.soft.length = 0; T.stir.length = 0; for (let i = 0; i < 20; i++) { sam.vel[0] = 1.2; g.smokeWake([sam]); } sam.vel[0] = v0; g.smoke = was.smoke; return { a, b: T }; })();
+    lookConfig.on = true; lookConfig.stir = 0; const v0 = sam.velX; for (let i = 0; i < 20; i++) { sam.velX = 1.2; g.smokeWake([sam]); } const a = { ...T, soft: [...T.soft] };
+    lookConfig.on = false; lookConfig.stir = 1; T.soft.length = 0; T.stir.length = 0; for (let i = 0; i < 20; i++) { sam.velX = 1.2; g.smokeWake([sam]); } sam.velX = v0; g.smoke = was.smoke; return { a, b: T }; })();
   check(zero.a.body.length === 0 && zero.a.soft.length === 40 && zero.b.body.length === 0 && zero.b.soft.length === 40 && zero.a.stir.every(s => s === 0) && zero.b.stir.every(s => s === 0),
     'with the row at nothing, and off the look page, he is the two soft shoves a frame the build has, and the solver is told nothing is stirred',
     `row at nothing: ${zero.a.soft.length} shoves, ${zero.a.body.length} bodies; off the look page: ${zero.b.soft.length} shoves, ${zero.b.body.length} bodies`);

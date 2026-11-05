@@ -130,12 +130,12 @@ function plan(S: SquadOrders, g: Game, d: Door, men: Guard[]): { gd: Guard; spot
 /** who or what is in the leaf's way shut (null: nothing) — Sam, a living man but `but`, a body lying there. `seen`: the menu's question — an enemy the
  *  picture does not show is not given away by a greyed row (the leaf itself meets him all the same: the tick asks without it) */
 function inTheWay(g: Game, d: Door, but: Guard | null, seen = false): string | null {
-  const P = g.player; if (!P.down && inShutSwing(d, P.char.pos[0], P.char.pos[2], K.body)) return "you're in its way.";
+  const P = g.player; if (!P.down && inShutSwing(d, P.char.posX, P.char.posZ, K.body)) return "you're in its way.";
   const body = (c: Guard['char']) => { const rag = c.ragdoll; if (!rag || flat(c.pos, d.frameCentre) > 4) return false;
     return [RAG.pelvis, RAG.spine, RAG.head, RAG.kneeL, RAG.kneeR, RAG.ankL, RAG.ankR].some(i => { const p = rag.point(i); return inShutSwing(d, p[0], p[2], rag.radius(i)); }); };   // (the particles of a body a leaf feels: game.ts's own list)
   for (const m of [...g.guards, ...civiliansShown(g)]) { if (m === but) continue;
     if (m.state === 'dead') { if (body(m.char)) return "a body's in its way."; continue; }
-    if (!inShutSwing(d, m.char.pos[0], m.char.pos[2], K.body) || (seen && m.team !== 'operative' && !g.fogOfWar.drawn(m))) continue;
+    if (!inShutSwing(d, m.char.posX, m.char.posZ, K.body) || (seen && m.team !== 'operative' && !g.fogOfWar.drawn(m))) continue;
     return m.team === 'operative' ? `${m.callsign} is in its way.` : "somebody's in its way."; }
   return P.down && body(P.char) ? "a body's in its way." : null;
 }
@@ -146,7 +146,7 @@ function contactThrough(g: Game, d: Door): boolean {
   for (const h of g.guards) { if (h.state === 'dead' || !isHostile('operative', h.team)) continue;
     for (const m of g.fight.seenBy(h)) if (crossesDoor(m.char.pos, h.char.pos, d)) return true;
     if (!sam.down && crossesDoor(sam.char.pos, h.char.pos, d) && flat(sam.char.pos, h.char.pos) < 30 && g.fogOfWar.drawn(h)
-      && !g.col.segmentBlocked([sam.char.pos[0], 1.5, sam.char.pos[2]], [h.char.pos[0], 1.2, h.char.pos[2]])) return true; }
+      && !g.col.segmentBlocked([sam.char.posX, 1.5, sam.char.posZ], [h.char.posX, 1.2, h.char.posZ])) return true; }
   return false;
 }
 /** why these men cannot shut that door (null: one of them can) — the row's `valid` */

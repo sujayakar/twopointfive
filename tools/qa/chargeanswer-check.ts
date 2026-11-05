@@ -65,7 +65,7 @@ async function run(scn: string, door: string, rule: boolean, how: How, pre: 'ope
   if (pre === 'open') { put(d, true); F.on = false; }   // (nothing hidden: the picture is the floor as it stands, and has the leaf open)
   if (pre === 'empty') { D.sync(); D.charges = 0; }
   await quiet(() => S.step(30));
-  const at0 = team.map(m => [m.char.pos[0], 0, m.char.pos[2]]), n0 = spoke.length;
+  const at0 = team.map(m => [m.char.posX, 0, m.char.posZ]), n0 = spoke.length;
   R.given = await quiet(() => O.give('charge', target(d), 'all')) as string | null;
   if (pre) { await quiet(() => S.step(120)); R.moved = Math.max(...team.map((m, i) => flat(m.char.pos, at0[i]))); R.said = spoke.slice(n0).filter(x => team.includes(x.who)).map(x => `${x.who.callsign}: ${x.text}`); R.ended = D.ops.some((o: any) => o.kind === 'charge') ? 'an order in the book' : 'no order'; return R; }
   if (R.given) { R.note = `refused: ${R.given}`; return R; }

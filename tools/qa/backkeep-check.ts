@@ -10,7 +10,7 @@ const SEEDS = (() => { const i = process.argv.indexOf('--seeds'); return (i > 0 
 const gaze = new WeakMap<object, number[]>();
 /** a defender's gaze pinned on a point (as sneak-probes.ts: the men's idle glancing is dice, and nobody here is to be seen) */
 const stare = (h: any, to: number[]) => { const c = h.char;
-  if (!gaze.has(c)) { const dir = () => { const t = gaze.get(c)!, dx = t[0] - c.pos[0], dz = t[2] - c.pos[2], l = Math.hypot(dx, dz) || 1; return [dx / l, 0, dz / l]; };
+  if (!gaze.has(c)) { const dir = () => { const t = gaze.get(c)!, dx = t[0] - c.posX, dz = t[2] - c.posZ, l = Math.hypot(dx, dz) || 1; return [dx / l, 0, dz / l]; };
     Object.defineProperty(c, 'chestDir', { get: dir, set: () => {}, configurable: true }); c.headDir = dir; }
   gaze.set(c, [to[0], 0, to[2]]); };
 
@@ -18,12 +18,12 @@ async function walk(quiet: boolean, keep: boolean, seed: number) {
   const R = await Run.start('roomclear=10&squad=1', seed, { sneak: quiet, set: { COVER: { backKeep: keep } } }); R.stopOnNotice = false;
   if (quiet) squadUp(R);
   else { if (!R.order(R.onSelf(), ['Digit3'], 'fallIn')) { const why = R.g.orders.give('fallIn', { kind: 'none', at: [R.pos[0], 0, R.pos[2]] }); if (why) throw new Error(`fall in refused — ${why}`); } R.wait(0.8); }
-  for (const h of R.hostiles) stare(h, [h.char.pos[0] - 6, 0, h.char.pos[2] + 1]);
+  for (const h of R.hostiles) stare(h, [h.char.posX - 6, 0, h.char.posZ + 1]);
   const m = R.mate; let away = 0, flips = 0, changes = 0, was: boolean | null = null, last = -9, n = 0, backFrames = 0;
   const step0 = R.step.bind(R);
   (R as any).step = (k = 1) => { for (let i = 0; i < k; i++) { step0(1); n++;
     const v = m.char.vel, sp = Math.hypot(v[0], v[2]), wp = m.path[m.pathI], back = !!m.script?.strafe;
-    if (wp && sp > 0.3 && v[0] * (wp[0] - m.char.pos[0]) + v[2] * (wp[2] - m.char.pos[2]) < 0) away++;
+    if (wp && sp > 0.3 && v[0] * (wp[0] - m.char.posX) + v[2] * (wp[2] - m.char.posZ) < 0) away++;
     if (back && sp > 0.3) backFrames++;
     if (was !== null && back !== was) { changes++; if (n - last === 1) flips++; last = n; }
     was = back; } };

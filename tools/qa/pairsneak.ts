@@ -97,7 +97,7 @@ export class Run {
       if (goal && !g.player.down) { const dx = goal[0] - this.pos[0], dz = goal[2] - this.pos[2], d = Math.hypot(dx, dz);
         if (d > 0.12) { const { fwd, right } = this.cam.planarBasis(), a = (dx * fwd[0] + dz * fwd[2]) / d, b = (dx * right[0] + dz * right[2]) / d, T = 0.3827; if (a > T) I.keys.add('KeyW'); if (a < -T) I.keys.add('KeyS'); if (b > T) I.keys.add('KeyD'); if (b < -T) I.keys.add('KeyA'); } }
       // Sam's light meter, as the harness can have it: the CPU estimate of the direct light on him (his own lights skipped), through the game's own mapping
-      { const c = g.player.char, pc = c.bones.chest ?? [c.pos[0], 1.2, c.pos[2]], ph = c.bones.head ?? [c.pos[0], 1.6, c.pos[2]], own = (o: number) => o === PLAYER_ID;
+      { const c = g.player.char, pc = c.bones.chest ?? [c.posX, 1.2, c.posZ], ph = c.bones.head ?? [c.posX, 1.6, c.posZ], own = (o: number) => o === PLAYER_ID;
         g.player.visibility = g.visibilityOf(Math.max(lightEstimateAt(g, pc, own), lightEstimateAt(g, ph, own))); }
       this.W.step(DT); this.t += DT;
       this.watch();
@@ -113,7 +113,7 @@ export class Run {
   /** the watcher (the head comment) */
   private watch() {
     const g = this.g, mate = this.mate, K = Math.exp(-DT / 3);
-    if (mate) { const p = mate.char.pos, sp = Math.hypot(mate.char.vel[0], mate.char.vel[2]);
+    if (mate) { const p = mate.char.pos, sp = Math.hypot(mate.char.velX, mate.char.velZ);
       if (this.matePrev) { const d = flat(p, this.matePrev); if (d < 1) this.mateM += d; } this.matePrev = [p[0], 0, p[2]];
       if (sp > 0.3) { this.movS += DT; if (mate.char.anim.crouch > 0.5) this.crouchS += DT; else this.uprightS += DT; this.litS += mate.visibility * DT; }
       this.farM = Math.max(this.farM, flat(p, this.pos)); }
@@ -131,7 +131,7 @@ export class Run {
         let whom: Whom = E!.mate < 0.02 && E!.sam < 0.02 ? 'noise' : E!.mate >= E!.sam ? 'mate' : 'sam', w = what;
         if (whom === 'noise') { const ev = [...g.events].reverse().find((e: any) => g.time - e.time < 2 && flat(e.pos, h.char.pos) < 12 && e.kind !== 'step'), st = ev ?? [...g.events].reverse().find((e: any) => g.time - e.time < 2 && flat(e.pos, h.char.pos) < 9);
           if (st) { w += ` · heard ${st.kind}${st.who !== undefined ? ` of ${st.who === PLAYER_ID ? 'Sam' : g.guards.find((x: any) => x.char.id === st.who)?.callsign ?? st.who}` : ''} at ${at(st.pos)}`; if (st.who !== undefined && mate && st.who === mate.char.id) whom = 'mate'; else if (st.who === undefined || st.who === PLAYER_ID) whom = 'sam'; } }
-        return { t: this.t, by: h.callsign, whom, what: w, mate: E!.mate, sam: E!.sam, at: [...h.char.pos], mateAt: mate ? [...mate.char.pos] : null, samAt: [...this.pos], mateCrouch: mate?.char.anim.crouch ?? 0, mateVis: mate?.visibility ?? 0, samVis: g.player.visibility, mateSpeed: mate ? Math.hypot(mate.char.vel[0], mate.char.vel[2]) : 0 }; };
+        return { t: this.t, by: h.callsign, whom, what: w, mate: E!.mate, sam: E!.sam, at: [...h.char.pos], mateAt: mate ? [...mate.char.pos] : null, samAt: [...this.pos], mateCrouch: mate?.char.anim.crouch ?? 0, mateVis: mate?.visibility ?? 0, samVis: g.player.visibility, mateSpeed: mate ? Math.hypot(mate.char.velX, mate.char.velZ) : 0 }; };
       const words = (N: Notice) => `${N.by} ${N.what} — ${N.whom === 'mate' ? `the PARTNER (at ${N.mateAt ? at(N.mateAt) : '—'}, crouch ${f1(N.mateCrouch)}, lit ${Math.round(N.mateVis * 100)} %, ${f1(N.mateSpeed)} m/s)` : N.whom === 'sam' ? `SAM (at ${at(N.samAt)}, lit ${Math.round(N.samVis * 100)} %)` : 'a noise'} · eyes: partner ${N.mate.toFixed(2)} sam ${N.sam.toFixed(2)}`;
       if (!this.huh && was === 'patrol' && h.state !== 'patrol') { this.huh = note(`${was} → ${h.state} (awareness ${h.awareness.toFixed(2)})`); this.say(`   ? ${words(this.huh)}`); }
       if (!this.noticed && (h.state === 'alert' || h.state === 'search' || h.awareness >= SILENT.noticed)) { this.noticed = note(`NOTICING: ${h.state}, awareness ${h.awareness.toFixed(2)}`); this.say(`   ! ${words(this.noticed)}`); }

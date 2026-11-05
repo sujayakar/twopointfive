@@ -37,7 +37,7 @@ async function world(on: boolean, bearing: number, gap = 0.8) {
   const [A, ...rest] = g.guards; for (const [i, gd] of rest.entries()) { gd.char.pos = [37.5, 0, 4.5 + i * 1.5]; gd.path = []; gd.pathGoal = null; gd.hold = true; gd.heardUpTo = 1e12; }
   A.char.pos = [...AT]; A.char.bodyYaw = A.char.aimYaw = EAST; A.char.vel = [0, 0, 0]; A.path = []; A.pathGoal = null; A.hold = true; A.pinned = true; A.awareness = 0; A.heardUpTo = 1e12;
   const a = EAST + bearing * Math.PI / 180; W.cam.yaw = 0; W.cam.rebuild?.(); g.teleportPlayer([AT[0] + Math.sin(a) * gap, 0, AT[2] + Math.cos(a) * gap]);
-  const step = (n = 1) => { for (let i = 0; i < n; i++) { W.cursorAt([A.char.pos[0], 1.2, A.char.pos[2]]); W.step(DT); g.player.visibility = 0.02; } };
+  const step = (n = 1) => { for (let i = 0; i < n; i++) { W.cursorAt([A.char.posX, 1.2, A.char.posZ]); W.step(DT); g.player.visibility = 0.02; } };
   const click = (bit: number) => { W.input.buttons |= bit; W.input.clicked |= bit; step(); W.input.buttons &= ~bit; step(); };
   const said = () => g.nearby.map((r: any) => Object.values(r).filter(v => typeof v === 'string').join(' ')).join(' | ');
   const ev0 = g.chronicle.events.length, filed = () => g.chronicle.events.slice(ev0).map((e: any) => `${e.kind}${e.data?.weapon ? ':' + e.data.weapon : ''}${e.data?.method ? ':' + e.data.method : ''}`);

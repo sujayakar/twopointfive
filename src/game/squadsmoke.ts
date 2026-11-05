@@ -102,7 +102,7 @@ export function squadArcTo(g: Game, gd: Guard, at: Vec3, rollK = SQUADSMOKE.roll
   const K = SQUADSMOKE, to: Vec3 = [at[0], at[1] + 0.05, at[2]];
   // (`stood`: the throw he would have standing THERE as he stands now — squadthrow.ts's walk to a throw; absent: from where he is)
   const p = stood ?? gd.char.pos, d = flat(p, at), k = d > 1e-3 ? K.handAhead / d : 0, head = gd.char.bones.head;
-  const up = Math.max(0.6, Math.min(K.handUp, head ? head[1] - gd.char.pos[1] - K.headDrop : K.handUp));
+  const up = Math.max(0.6, Math.min(K.handUp, head ? head[1] - gd.char.posY - K.headDrop : K.handUp));
   const from: Vec3 = [p[0] + (at[0] - p[0]) * k, p[1] + up, p[2] + (at[2] - p[2]) * k];
   if (g.col.solidBlocked([p[0], p[1] + up, p[2]], from)) return null;   // (his hand would be in the wall he stands against)
   // (in lying snow the thing runs on less far than on a floor, or not at all: snowBog.ts bogRun — × 1 with SNOWBOG off or no snow under its landing)

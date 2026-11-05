@@ -85,7 +85,7 @@ export function layPoint(g: Game, o: LaidOrder): Vec3 | null {
 function targetOf(g: Game, o: LaidWhere): OrderTarget | null {
   const S = g.orders, at: Vec3 = [o.at[0], 0, o.at[2]];
   if (o.kind === 'door') { const d = g.doors.list[o.door ?? -1]; return d ? { kind: 'door', at: [d.frameCentre[0], 0, d.frameCentre[2]], door: d, side: sideOf(d, g.player.char.pos) } : null; }
-  if (o.kind === 'none') { if (!o.man) return { kind: 'none', at }; const m = S.squad().find(x => x.callsign === o.man && x.state !== 'dead'); return m ? { kind: 'none', at: [m.char.pos[0], 0, m.char.pos[2]], man: m } : null; }
+  if (o.kind === 'none') { if (!o.man) return { kind: 'none', at }; const m = S.squad().find(x => x.callsign === o.man && x.state !== 'dead'); return m ? { kind: 'none', at: [m.char.posX, 0, m.char.posZ], man: m } : null; }
   // (a wall's or a thing's own order: found again by the point ON it — never by the spot the man stands on, which is a stride off it and may have a man near)
   if (o.found === 'wall' && o.pick) { const W = wallAt(g, o.pick); return W ? { kind: 'floor', at, wall: W } : null; }
   if (o.found === 'thing' && o.pick) { const w = workNear(g, o.pick); return w && w.target.kind === 'floor' && w.target.thing ? w.target : null; }
