@@ -93,9 +93,9 @@ fn shadowSample(li: Light, Po: vec3f, N: vec3f, owner: u32, k: u32, n: u32, u0: 
     var d = (li.pos + T * (cos(a) * r) + B * (sin(a) * r)) - Po; var past = 0.0;
     if (lightPortal(li)) {
       // AN OPENING TO THE OUTSIDE (common.wgsl LIGHT_PORTAL): the ray goes to a point of the opening's own rectangle (T runs along the wall, B up it) and on
-      // through it to the sky or the ground it stands for. WHICH point: one of PORTAL_POINTS, the lattice portalFlux adds up moved round by this sample's two numbers,
+      // through it to the sky or the ground it stands for. WHICH point: one of PORTAL_POINTS, a lattice over the part of it that shows the outside, moved round by this sample's two numbers,
       // picked in proportion to what each sends Po. So the rays go where the light comes from, and a ray's answer is yes or no like any light's.
-      let hh = portalHigh(li); let see = portalSeen(li, toC, hh); let part = see.z * see.w;   // (THE PART OF THE RECTANGLE THE OUTSIDE SHOWS THROUGH FROM HERE, common.wgsl portalSeen: the rays go there and nowhere else, so the hole's own sides are in the light's sum and not in a ray's luck)
+      let hh = portalHigh(li); let see = portalAbove(li, toC, portalSeen(li, toC, hh), hh, N); let part = see.z * see.w;   // (THE PART OF THE RECTANGLE THE OUTSIDE SHOWS THROUGH FROM HERE, common.wgsl portalSeen: the rays go there and nowhere else, so the hole's own sides are in the light's sum and not in a ray's luck)
       if (!(part > 0.0)) { return vec2f(0.0, -1.0); }
       let soft = portalSoft(li, hh) * part; let u = vec2f(ur, ua); let ground = portalGround(li);
       var w: array<f32, PORTAL_POINTS>; var sum = 0.0;
