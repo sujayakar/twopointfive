@@ -18,7 +18,7 @@ import { mathsFrom, EXACT, type Maths } from '../math/exact';
 import { kahanN } from '../math/hyp';
 
 /** the version of the exports this file was written against (rust/sim/src/lib.rs ABI) */
-export const SIM_ABI = 25;
+export const SIM_ABI = 26;
 
 /** the module's exports, by name (rust/sim/src/lib.rs: plain C functions, `<module>_<thing>`) */
 export interface SimExports {
@@ -108,6 +108,7 @@ export interface SimExports {
   props_addr(table: number): number; props_cap(table: number): number;
   /** every thing of the game in slot g stepped, over world w: the noises listed */
   props_update(g: number, w: number): number;
+  props_settle(g: number, w: number): number;
   // a leaf off its hinges, in the air (rust/sim/src/slabs.rs — src/game/doorblast.ts stepSlab, over the hand-over src/sim/slabshome.ts names)
   slabs_addr(table: number): number; slabs_cap(table: number): number;
   /** one slab of the game in slot g stepped, over world w: 0 = stepped · 1 = the host's to take (nothing written) · 2 = no such step */
@@ -136,7 +137,7 @@ export const SIM_EXPORTS: readonly (keyof SimExports)[] = ['memory', 'sim_abi', 
   'sight_contact', 'light_lamps', 'light_cap', 'light_estimate', 'smoke_blobs', 'smoke_cap', 'smoke_trans', 'nav_addr', 'nav_cap', 'nav_path', 'nav_priced', 'nav_need', 'nav_resume', 'nav_drop', 'hear_direct', 'hear_route',
   'state_addr', 'state_len', 'state_games', 'state_layout', 'state_parts', 'state_part', 'dice_roll',
   'grid_reset', 'grid_clear', 'grid_dirty', 'grid_step', 'grid_wind', 'grid_wind_cap', 'grid_trans',
-  'pose_new', 'pose_clear', 'doors_addr', 'doors_cap', 'doors_update', 'props_addr', 'props_cap', 'props_update', 'slabs_addr', 'slabs_cap', 'slabs_step', 'items_addr', 'items_cap', 'items_update',
+  'pose_new', 'pose_clear', 'doors_addr', 'doors_cap', 'doors_update', 'props_addr', 'props_cap', 'props_update', 'props_settle', 'slabs_addr', 'slabs_cap', 'slabs_step', 'items_addr', 'items_cap', 'items_update',
   'falls_schedule', 'falls_deposit', 'falls_due', 'falls_step', 'falls_heard', 'falls_clear', 'falls_cap'];
 
 let X: SimExports | null = null, why: string | null = null;
@@ -341,6 +342,10 @@ export const RULES_ROW = 'a rule\'s step (doors, furniture, leaves, thrown thing
 export const SEALED: readonly string[] = ['lines', 'circles', 'fog', 'poses', 'rays', 'walk', 'sight', 'light', 'smoke', 'sound', 'paths', 'doors', 'falls', 'props', 'slabs', 'items', RULES_ROW];
 /** A RULE OF `row` WAS STEPPED IN TYPESCRIPT WHILE THE ROW IS UP (a family's fallback site says so, with the reason in plain words): counted, except
  *  where the row is idle by its own rule — one that works lengths and angles out answers only under the game's own maths (OWN_MATHS, below) */
+/** A TWIN'S BODY REACHED WITH NO CHOICE MADE: a rule of the things answered by its TypeScript where nothing asks whether the module could (so no `ruleFell`
+ *  says it). Counted under this name, a row of its own, wherever one is known, until the place has a choice like any other; no run may reach one by the
+ *  time a twin is deleted. KNOWN TODAY: a ray into the furniture (game/props.ts PropSystem.raycast: rounds, beams, debris, marks — always here). */
+export const TWIN_ROW = "a twin's body, no choice made";
 export function ruleFell(row: string, why: string): null { if (FELL.on && (EXACT.on || !OWN_MATHS.includes(row))) fell(row, why); return null; }
 /** THE SEAL'S RED PATH FOR A RULE'S ROW (`FELL.red`, raised by a tool under FELL_BREAK=1 and by nothing else): the first step of each row, and every
  *  hundredth after, is sent to its TypeScript and counted, so a run with the break up reaches every sealed rule's row that stepped in it, by name. The
