@@ -136,13 +136,19 @@ export function worded<T extends { albedo?: readonly number[]; stuff?: BoxStuff 
   const w = wordFor(o.albedo, o.stuff).stuff; if (w !== undefined) o.stuff = w; else delete o.stuff;
   return o;
 }
-/** A NAMED COAT IS A KIND OF A PLAIN ONE: 'carpaint' is paint, on a vehicle. One row a named coat (the look's own material for it, and one thing to a round:
- *  game/particleFx.ts STUFF_SURF), beside the plain coat it is a kind of — which is a coat on anything and says nothing of what is under it. */
-export const COAT_KIND: Partial<Record<BoxStuff, BoxStuff>> = { carpaint: 'paint' };
+/** THE PLAIN COATS: the words that are a coat on anything and say nothing of what is under them (a brushed paint, a sprayed enamel). A palette paints a
+ *  thing in whichever its look has, so a rule about "a plain coat" is about all of them. */
+export const PLAIN_COATS: readonly BoxStuff[] = ['paint', 'enamel'];
+/** A NAMED COAT IS A KIND OF A PLAIN ONE: 'carpaint' is a coat, on a vehicle. One row a named coat (the look's own material for it, and one thing to a round:
+ *  game/particleFx.ts STUFF_SURF): `under` = the plain coats it is a kind of, and stays under when a look repaints the thing. */
+export interface NamedCoat { readonly under: readonly BoxStuff[] }
+export const NAMED_COATS: Partial<Record<BoxStuff, NamedCoat>> = { carpaint: { under: PLAIN_COATS } };
+export const namedCoat = (word: BoxStuff | undefined): NamedCoat | undefined => word !== undefined && Object.hasOwn(NAMED_COATS, word) ? NAMED_COATS[word] : undefined;
 /** the word of a thing that said `was` and is painted again with a paint that says `now`: the new paint's (whoever repaints a thing does not keep the
- *  old paint's word) — but A NAMED COAT STAYS UNDER A PLAIN ONE: a car's body given another enamel is still a car's body. */
+ *  old paint's word) — but A NAMED COAT STAYS UNDER A PLAIN ONE, whichever plain coat the look has: a car's body given another paint or another enamel is
+ *  still a car's body. */
 export const repaintWord = (was: BoxStuff | undefined, now: BoxStuff | undefined): BoxStuff | undefined =>
-  was !== undefined && now !== undefined && Object.hasOwn(COAT_KIND, was) && COAT_KIND[was] === now ? was : now;
+  now !== undefined && namedCoat(was)?.under.includes(now) ? was : now;
 /** A BOX PAINTED AGAIN, the one place it is done (the default look's skin, for boxes and for props' parts: tools/levels/gwotSkin.ts): the new paint, and
  *  the word repaintWord gives. Returns it. */
 export function repainted<T extends { albedo?: readonly number[]; stuff?: BoxStuff }, A extends NonNullable<T['albedo']>>(o: T, albedo: A): T {
