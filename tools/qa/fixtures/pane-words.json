@@ -4,7 +4,7 @@
   "frozen": {
    "run": "office.json,glasshouse.json,barracks.json,consulate.json n 300 seed 1",
    "end": "5447 calls",
-   "tree": "de30c89d WIP: no fall asked is none said; the check flips the newer rules a level, with changes not committed",
+   "tree": "b42d0aa6 WIP: the docs say where the level's sheets stand, with changes not committed",
    "words": {
     "annealed": {
      "asked": 328,
