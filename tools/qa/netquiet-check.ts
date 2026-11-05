@@ -117,7 +117,7 @@ export async function netquietCheck(): Promise<boolean> {
   const M = await import(`${ROOT}/src/game/morale.ts`);
   const { MORALE, moraleOf, rungOf, trainingOf, leaderOf, moraleShock } = M;
   const NQ = await import(`${ROOT}/src/game/netquiet.ts`);
-  const { NETQUIET, NETQUIET_STATS, NETQUIET_LOG, NETQUIET_QA, netQuietAsked, netQuietClosed, netQuietBody, netQuietFall, netQuietLook, netQuietPose, netQuietTick, netQuietOf, netQuietLines, netQuietSnapshot, netQuietRestore, netQuietSummary, netQuietHolds } = NQ;
+  const { NETQUIET, NETQUIET_STATS, NETQUIET_LOG, NETQUIET_QA, netQuietAsked, netQuietClosed, netQuietBody, netQuietFall, netQuietLook, netQuietPose, netQuietTick, netQuietOf, netQuietLines, netQuietSnapshot, netQuietRestore, netQuietSummary } = NQ;
   const { NETFEED, netFeedAsked, netFeedTake } = await import(`${ROOT}/src/game/netquietfeed.ts`);
   const { PLAYER_ID } = await import(`${ROOT}/src/game/consts.ts`);
   const { parseLevelData } = await import(`${ROOT}/src/scene/levelData.ts`);
