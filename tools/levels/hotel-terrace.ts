@@ -3,8 +3,8 @@
 // (think amanzoe) would be an amazing setting". So: a small hotel on a hilltop terrace in full sun, built the way the white roof study is
 // (tools/levels/white-roof.ts, which he called "starting to look very good"): THE GROUND IS ARCHITECTURE, white pavers wall to wall; every wall is cast
 // panels a step under the ground's white; a colonnade whose shadow lies across the terrace; ONE long pool as the field of colour and one warm wall; few
-// things, each big; and the personality placed by hand where somebody would have put it (a stencilled number at each daybed, the pool's depths on its
-// coping, a drain, bays painted on the forecourt, a striped foot, a louvre, a plate).
+// things, each big; and the personality placed by hand where somebody would have put it (a stencilled number at each daybed, the pool's depths, a
+// drain, bays painted on the forecourt, a striped foot, a louvre, a plate).
 // It stands the kit's own pieces (src/scene/gwotKit.ts) over the coast skin's QUIET table (tools/levels/coastSkin.ts COAST_QUIET_OF): no piece is written
 // twice. What this file lays itself it lays in the coast palette's rows.
 // NOT WATER: the pool is a flat glossy plane a man could walk on. What water needs from this camera is the graphics work's question.
@@ -103,7 +103,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
   const water = pool(8, 2.6, 32, 7.4);
   mark(water, MD.stencilMarks('+y', '1.2', ...onTop(water, 9.0, 6.9), CHALK, 2), MD.stencilMarks('+y', '2.0', ...onTop(water, 29.4, 6.9), CHALK, 2));
   mass(19.6, 0, 7.8, 20.4, 0.9, 8.0, 'brushedSteel');                                     // the ladder's two rails, as one plate at the pool's middle
-  mark(terrM, MD.stencilMarks('+y', 'POOL', ...onTop(terrM, 21.2, 9.4), INK), MD.hazardMarks('+y', rectTop(terrM, 19.2, 8.95, 20.8, 9.35), INK, undefined, 2, 'coarse', 1));
+  mark(terrM, MD.hazardMarks('+y', rectTop(terrM, 19.2, 8.95, 20.8, 9.35), INK, undefined, 2, 'coarse', 1));
 
   // ---- the pool terrace: six daybeds in three pairs, a parasol to a pair, a number at each bed's foot ----
   grp('terrace');
@@ -130,8 +130,8 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
   grp('room.reception');
   skinS(14.12, 19.3, 0, H, 15.12, 'skimRed', 0.01); skinS(20.7, 25.88, 0, H, 15.12, 'skimRed', 0.01);                    // the warm wall: the first thing through the door
   G.table(17.0, 16.6, 2.6, 0.8, 0); G.plankBench(23.0, 19.6, 0, 1.8); G.plankBench(23.0, 16.4, 0, 1.8); G.tub(14.8, 20.2, 'whitewash'); G.tub(25.2, 20.2, 'whitewash');
-  // its name by the door, the way to the pool, a louvre and a plate on the forecourt side: paint and fittings on the wall that faces the camera
-  mark(skinS(17.75, 19.25, 2.2, 2.62, 21.12, 'enamelWhite', 0.01), MD.stencilMarks('+z', 'RECEPTION', -0.7, -0.09, INK, 1, 'base'));
+  // its door's number, a louvre and a plate on the forecourt side: paint and fittings on the wall that faces the camera
+  mark(skinS(18.55, 19.15, 1.35, 1.95, 21.12, 'enamelWhite', 0.01), MD.stencilMarks('+z', '1', -0.125, -0.175, INK, 2, 'base'));   // the door's number on a plate (no word names a place: a number, a depth, a bay, a line are the place's own)
   skinS(24.9, 25.7, 0.3, 1.1, 21.12, 'darkSteel', 0.02); skinS(14.3, 15.1, 2.2, 2.6, 21.12, 'brushedSteel', 0.02);
   G.planter(17.6, 21.9, 0, 2.4, 0.6, 'mud'); G.planter(22.4, 21.9, 0, 2.4, 0.6, 'mud');
   mass(19.2, 0, 21.12, 20.8, 0.06, 21.7, 'skimWhite');                                                                   // the front door's threshold: one smooth slab
@@ -150,7 +150,6 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
   for (const [x, z] of [[2.6, 9.2], [8.4, 9.2], [2.6, 13.9], [8.4, 13.9]] as const) pillar(x, z, 2.6);
   for (const z of [9.2, 13.9]) mass(2.2, 2.6, z - 0.12, 8.8, 2.8, z + 0.12, 'skimWhite');
   for (let x = 2.9; x <= 8.2; x += 0.86) mass(x - 0.06, 2.8, 8.8, x + 0.06, 2.96, 14.3, 'enamelWhite');
-  mark(terrW, MD.stencilMarks('+y', 'SPA', ...onTop(terrW, 9.6, 12.4), INK, 2));
 
   // ---- the service yard on the east side, behind a screen of cast panels: a tank, a generator, two bins under a flat canopy ----
   grp('service');
@@ -159,7 +158,6 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
   for (const [x, z] of [[34.6, 18.2], [38.2, 18.2], [34.6, 20.4], [38.2, 20.4]] as const) add({ c: [x, 1.15, z], h: [0.04, 1.15, 0.04], albedo: C.brushedSteel, ...row('brushedSteel') });
   mass(34.3, 2.3, 17.9, 38.5, 2.42, 20.7, 'castPanel');
   G.wheelieBin(35.5, 19.3, 0, 'plasticWhite'); G.wheelieBin(37.2, 19.3, 0.08, 'plasticBlack');
-  mark(terrE, MD.stencilMarks('+y', 'STAFF', ...onTop(terrE, 31.2, 12.6), INK));
 
   // ---- THE FORECOURT: three bays painted on the pavers, a striped line to stop at, bollards, a van and a pickup, a bicycle ----
   grp('forecourt');
