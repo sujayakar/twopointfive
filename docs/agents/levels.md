@@ -1398,3 +1398,34 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   rows). An outside review of those stills said the same and its ideas are held for the next pass. The first cut was priced twice before and twice
   after on rented boxes: no cost that shows over what two boxes differ by. The maintainer played the first cut and his word on it is above. Never
   seen on an Apple or an AMD GPU.
+- **THE OFFICE SAYS IT IS KEPT** (11-05; the builder's `kept: 1` in `src/scene/officeGen.ts`, so `meta.kept` in `levels/office.json` and
+  `levels/office-relief.json`; the rule is the look's, `docs/agents/render.md` A LEVEL SAYS HOW KEPT IT IS). The first level to say the word. WHY 1 AND
+  NOT PART WAY: it is a let office with a cleaner on contract, and the paint its hand pass laid (door numbers and bay numbers a hand high) was drawn as
+  every mark was before the word, rubbed and gone a shade into its wall, which at that size reads as dirt on the picture and not as a number. At 1 a
+  mark is whole and its own colour and a plaster wall is one shade with its knocked foot. A part-way word is the one the look has never been priced
+  at. WHAT MOVES: the look's page's picture of the office and nothing else. No rule of play reads the word, the level's fingerprint is taken over its
+  boxes, and a checkpoint or a recording loads as before. `&kept=0` on the address is the office as it was drawn, for the visit. WHAT IT DOES NOT
+  DO: the worn lanes are where feet go and do not ask the word, so they are as faint at night as they were.
+  CHECKS, both stands: `probes.ts kept` (and its break path fails), `probes.ts level`, `level-export.ts --check` and `--relief --check`, and the
+  hand pass's own list in the bullet above. The office's four missions, seeds 1 and 2, on the frozen stand, the page's and the page's with its
+  lived tier off: 8 of 8 run digests the same as the step before, each. The page opened on a software adapter with the word read off the level (1)
+  and nothing in the console.
+  PRICED on a rented NVIDIA A10G, the office alone at night on high, twice a side: what the look adds over its layers off was +21.1% and +21.3% of the
+  frame before and +21.1% and +23.0% after, and two boxes of one kind differ by more than that. No cost that shows.
+  SEEN on that GPU in stills only, seven cameras at the play camera's resting view, before and after on one base: a door's number draws whole (`01`
+  was two broken strokes), the lobby sign's lines and the bays' numbers are a shade stronger, and nothing else reads as changed. Of the picture's
+  pixels 0.1 to 0.6% move by more than 8 of 255 indoors and 1.5% on the lot; two draws of one commit differ by 0.01%. Never seen on an Apple or an
+  AMD GPU, and nobody has played it.
+- **NO TWO DRAWN FACES OF THE OFFICE LIE IN ONE PLANE** (11-05; `src/scene/officeGen.ts` `HAIR`; `tools/qa/zfight-check.ts office` went from 8 seen
+  patches to none, its 186 noted pairs as they were). The eight were the office's own: the lobby's corner planter, whose plant was exactly its pot's
+  footprint and stood 5 cm into it (four sides), and the four desk clusters, where the cross partition met the spine at one height in another cloth
+  (four tops). THE MEND is the check's own, a face sunk a hair (4 mm, one named number): the plant's sides stand inside the pot's and the cross
+  partition's top is under the spine's. Five boxes are a hair smaller; none is added, removed or moved in the list, and none moves at the centimetre
+  the level's fingerprint reads, so a checkpoint or a recording still loads on either stand. BOTH STANDS' OFFICE CHANGES (these are boxes of the base,
+  not of a tier): a ray that grazed the top 4 mm of a cross partition, or the plant's outer 4 mm above its pot, now passes. No switch: it is level
+  data, and off is the file before. WHAT IS LEFT for a later hand: the noted pairs are drawn alike today and flicker only under a look that paints a
+  box by its own size or place. CHECKS, both stands: the hand pass's own list (`wallfurn-check` still 669 and 669), `probes.ts kept`, `probes.ts
+  level`, both export checks, and `zfight-check office` (its break path fails). The office's four missions, seeds 1 to 4, on the frozen stand, the
+  page's and the page's with its lived tier off: 16 of 16 run digests the same as the step before, each. The page opened on a software adapter with
+  the five boxes at their new sizes and nothing in the console. Never seen on a GPU: the check reads the file, and nobody has watched the eight
+  places for a flicker before or after.
