@@ -10,4 +10,5 @@ export const DRESS_AS = 'depot';
 export const MATERIALS = COAST_MATERIALS;
 export const NOTES = `${PLAIN_NOTES ?? ''} — DRAFT: a palette beside the one laid.`;
 export const build = buildPlain;
+export { KEPT } from './depot-gwot';
 export const finish = (level: Level, groups: string[]) => skinLevel(level, groups, yardSkin(YARD_B));

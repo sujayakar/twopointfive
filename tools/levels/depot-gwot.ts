@@ -18,6 +18,7 @@ import { stencilWidth, MARKING_TEXEL, type MarkPal } from '../../src/scene/marki
 import * as MD from '../../src/scene/markingDefaults';
 import { WORLD } from '../../src/scene/world';
 import type { Level } from '../../src/scene/level';
+import type { Vec3 } from '../../src/math/vec';
 
 export const NAME = 'depot-gwot';
 export const DRESS_AS = 'depot';
@@ -26,22 +27,26 @@ export const NOTES = `${PLAIN_NOTES ?? ''} — AS THE PAGE LOADS IT (a kept haul
 export const build = buildPlain;
 const R = DEPOT_ROOMS;
 
-/** A YARD'S PAINTS: four pale planes (the ground, the yard wall a step under it, the huts' block a step over it, a smooth skim indoors), the huts' floors a
- *  mid value (an inside reads as an inside), two fields each as an enamel on a thing and as the huts' block painted (a band on a wall is the wall's own
- *  stuff in the field's colour: the same blocks run on under the colour's edge), the two line paints (rows of the second palette) */
-export interface YardPaints { paver: CoastMat; panel: CoastMat; block: CoastMat; skim: CoastMat; floor: CoastMat; field: CoastMat; second: CoastMat; fieldWall: CoastMat; secondWall: CoastMat; line: CoastMat; ink: CoastMat }
+/** HOW KEPT THE PLACE IS (docs/level-format.md): a yard somebody keeps. Its paint is whole and its walls are clean; a floor is still worn where it is walked */
+export const KEPT = 1;
+
+/** A YARD'S PAINTS (rows of the second palette). FOUR VALUES, each with a reason: the ground a pale paver; the lane a lorry drives the road's own dark
+ *  tarmac, in at one gate and out at the other; the huts and the aprons a man walks along them the palest, a smooth skim; the yard wall cast panels a step
+ *  under the ground; the huts' floors a step under that (an inside reads as an inside). Then two fields, each as an enamel on a thing and as the huts'
+ *  block painted (a band on a wall is a wall's stuff in the field's colour), and the painter's two tins: ink on what is pale, chalk on what is dark */
+export interface YardPaints { paver: CoastMat; panel: CoastMat; skim: CoastMat; floor: CoastMat; field: CoastMat; second: CoastMat; fieldWall: CoastMat; secondWall: CoastMat }
 /** JADE AND ROSE ON WARM LIMESTONE (the one laid): one secondary colour and one earth colour, a value apart, on a stone a little warm */
-export const YARD_A: YardPaints = { paver: 'limePaver', panel: 'limePanel', block: 'limeBlock', skim: 'limeSkim', floor: 'limeFloor', field: 'jade', second: 'rose', fieldWall: 'jadeBlock', secondWall: 'roseBlock', line: 'lineChalk', ink: 'lineInk' };
+export const YARD_A: YardPaints = { paver: 'limePaver', panel: 'limePanel', skim: 'limeSkim', floor: 'limeFloor', field: 'jade', second: 'rose', fieldWall: 'jadeBlock', secondWall: 'roseBlock' };
 /** FIG AND PEAR ON COOL GREY, and PETROL AND OCHRE ON BLUE-WHITE: the two beside it (draft files depot-roof-b / -c) */
-export const YARD_B: YardPaints = { paver: 'greyPaver', panel: 'greyPanel', block: 'greyBlock', skim: 'greySkim', floor: 'greyFloor', field: 'fig', second: 'pear', fieldWall: 'figBlock', secondWall: 'pearBlock', line: 'lineChalk', ink: 'lineInk' };
-/** NO ACCENT (the goal's one corner first: a patch that must convince with its planes, edges and marks alone): the fields wear the planes' own rows */
-export const YARD_N: YardPaints = { paver: 'limePaver', panel: 'limePanel', block: 'limeBlock', skim: 'limeSkim', floor: 'limeFloor', field: 'limeDeep', second: 'limeDeep', fieldWall: 'deepBlock', secondWall: 'deepBlock', line: 'lineChalk', ink: 'lineInk' };
-export const YARD_C: YardPaints = { paver: 'coolPaver', panel: 'coolPanel', block: 'coolBlock', skim: 'coolSkim', floor: 'coolFloor', field: 'petrol', second: 'ochre', fieldWall: 'petrolBlock', secondWall: 'ochreBlock', line: 'ochre', ink: 'lineInk' };
+export const YARD_B: YardPaints = { paver: 'greyPaver', panel: 'greyPanel', skim: 'greySkim', floor: 'greyFloor', field: 'fig', second: 'pear', fieldWall: 'figBlock', secondWall: 'pearBlock' };
+export const YARD_C: YardPaints = { paver: 'coolPaver', panel: 'coolPanel', skim: 'coolSkim', floor: 'coolFloor', field: 'petrol', second: 'ochre', fieldWall: 'petrolBlock', secondWall: 'ochreBlock' };
+/** NO ACCENT (the goal's one corner first: a patch that must convince with its values, edges and marks alone): the fields are a dark limestone */
+export const YARD_N: YardPaints = { paver: 'limePaver', panel: 'limePanel', skim: 'limeSkim', floor: 'limeFloor', field: 'limeDeep', second: 'limeDeep', fieldWall: 'deepBlock', secondWall: 'deepBlock' };
 /** which row of the second palette each of the kit's rows wears in a yard: the quiet table, and what a yard changes in it */
 export const yardOf = (Y: YardPaints): Readonly<Record<GwotMat, CoastMat>> => ({ ...COAST_QUIET_OF,
-  slab: Y.paver, dust: Y.paver, mudFloor: Y.floor, tWall: Y.panel, block: 'paleGravel', render: Y.block, whitewash: Y.skim, paintCream: Y.skim, mudLight: Y.skim,
+  slab: Y.paver, dust: Y.paver, mudFloor: Y.floor, tWall: Y.panel, block: 'paleGravel', render: Y.skim, whitewash: Y.skim, paintCream: Y.skim, mudLight: Y.skim,
   olive: Y.field, paintRust: Y.field, genYellow: Y.second, drumRed: Y.field, paintGreen: Y.fieldWall, paintBlue: Y.secondWall,
-  oil: 'roadTarmac', dirt: 'roadTarmac', iron: 'graphite', drumBlue: 'graphite', rust: 'graphite', galv: 'brushedSteel', tin: 'brushedSteel' });
+  oil: 'yardTarmac', dirt: 'yardTarmac', iron: 'graphite', drumBlue: 'graphite', rust: 'graphite', galv: 'brushedSteel', tin: 'brushedSteel' });
 
 export const yardSkin = (Y: YardPaints): Skin => ({
   of: yardOf(Y),
@@ -56,61 +61,70 @@ export const yardSkin = (Y: YardPaints): Skin => ({
   rooms: [{ id: 'duty', bounds: R.duty }],
   dress: (G, level, T) => {
     const M = lookMarks(T), B = level.boxes, H = WORLD.ceilingY;
-    const FIELD = C[Y.field], SECOND = C[Y.second], LINE = C[Y.line], INKP = C[Y.ink];
-    const INK: MarkPal = { albedo: INKP, rough: 0.55 }, CHALK: MarkPal = { albedo: C.lineChalk, rough: 0.5 };
-    /** a piece of the ground in its own paint, to carry what is painted on it (a box holds four markings: the ground is laid in the pieces that carry its paint) */
+    const FIELD = C[Y.field], SECOND = C[Y.second], APRON = C[Y.skim], ROAD = C.yardTarmac, INKP = C.lineInk, CHALKP = C.lineChalk, SLOT = C.darkSteel;
+    const INK: MarkPal = { albedo: INKP, rough: 0.55 }, CHALK: MarkPal = { albedo: CHALKP, rough: 0.5 };
+    /** a field on the ground in a paint: under every line, and under a door's worn threshold */
+    const field = (x0: number, z0: number, x1: number, z1: number, paint: Vec3) => T.flat((x0 + x1) / 2, (z0 + z1) / 2, x1 - x0, z1 - z0, paint, 0, 0.0104);
+    /** a piece of the ground in its own paint (or the paint of the field it lies on), to carry what is painted on it (a box holds four markings: the ground is laid in the pieces that carry its paint) */
     const piece = (x0: number, z0: number, x1: number, z1: number, paint = T.floorAt((x0 + x1) / 2, (z0 + z1) / 2)!) => T.flat((x0 + x1) / 2, (z0 + z1) / 2, x1 - x0, z1 - z0, paint, 0, 0.0116);
     const rectTop = (i: number, x0: number, z0: number, x1: number, z1: number): [number, number, number, number] => [x0 - B[i].c[0], B[i].c[2] - z1, x1 - B[i].c[0], B[i].c[2] - z0];
     /** stencilled text on a piece's top, its middle at x, its foot (the south end: the camera reads a top from the south) at z */
     const stencil = (i: number, text: string, x: number, z: number, pal: MarkPal, scale: number) => T.mark(i, MD.stencilMarks('+y', text, x - stencilWidth(text, scale) * MARKING_TEXEL - B[i].c[0], B[i].c[2] - z, pal, scale));
-    /** a figure or a letter on the ground, on a piece of its own */
-    const figure = (text: string, x: number, z: number, pal: MarkPal = INK, scale = 3) => { const w = stencilWidth(text, scale) * 2 * MARKING_TEXEL / 2 + 0.1, h = 7 * scale * 2 * MARKING_TEXEL + 0.1; return stencil(piece(x - w, z - h, x + w, z + 0.1), text, x, z, pal, scale); };
+    /** a figure or a letter on the ground, on a piece of its own: ink on the pale ground, chalk on a dark field (`on`: that field's paint) */
+    const figure = (text: string, x: number, z: number, scale = 3, on?: Vec3) => { const w = stencilWidth(text, scale) * MARKING_TEXEL + 0.1, h = 7 * scale * 2 * MARKING_TEXEL + 0.1; return stencil(piece(x - w, z - h, x + w, z + 0.1, on), text, x, z, on ? CHALK : INK, scale); };
     /** a hatched square where nothing may stand, an edge round it */
-    const hatch = (x0: number, z0: number, x1: number, z1: number, pal: MarkPal = INK) => { const i = piece(x0, z0, x1, z1); return T.mark(i, MD.hazardMarks('+y', rectTop(i, x0, z0, x1, z1), pal, undefined, 2, 'coarse', 1)); };
-    /** a way a man walks: two lines a stride apart through the points (the middle of the way) */
-    const walk = (pts: [number, number][], w = 0.9) => { for (const s of [-1, 1]) M.path(pts.map(([x, z], k): [number, number] => { const [ax, az] = pts[Math.max(0, k - 1)], [bx, bz] = pts[Math.min(pts.length - 1, k + 1)], L = Math.hypot(bx - ax, bz - az) || 1; return [x - (bz - az) / L * s * w / 2, z + (bx - ax) / L * s * w / 2]; }), 0.07, LINE); };
+    const hatch = (x0: number, z0: number, x1: number, z1: number, on: Vec3) => { const i = piece(x0, z0, x1, z1, on); return T.mark(i, MD.hazardMarks('+y', rectTop(i, x0, z0, x1, z1), INK, undefined, 2, 'coarse', 1)); };
+    /** a line `off` to the side of a way through points (square joints) */
+    const beside = (pts: [number, number][], off: number): [number, number][] => pts.map(([x, z], k) => { const [ax, az] = pts[Math.max(0, k - 1)], [bx, bz] = pts[Math.min(pts.length - 1, k + 1)], L = Math.hypot(bx - ax, bz - az) || 1; return [x - (bz - az) / L * off, z + (bx - ax) / L * off]; });
+    /** a strip of a paint through points, `w` wide, under every line */
+    const strip = (pts: [number, number][], w: number, paint: Vec3) => { for (let k = 0; k + 1 < pts.length; k++) { const [ax, az] = pts[k], [bx, bz] = pts[k + 1], L = Math.hypot(bx - ax, bz - az); T.flat((ax + bx) / 2, (az + bz) / 2, L + (k + 2 < pts.length ? w * 0.5 : 0), w, paint, -Math.atan2(bz - az, bx - ax), 0.0104); } };
 
-    // ---- THE ONE LONG FACE (the north row's yard wall, z 9.5: a quarter of a frame is wall faces, and this is the biggest that looks at the camera): a dado in
-    // the firm's colour to 0.9 m, the same blocks under the colour, door to door (the look kit's own band from the floor, in the kit row that wears the
-    // field's block). And the hut's west face, which the yard's length looks at.
+    // ---- THE ONE LONG FACE (the north row's yard wall, z 9.5: a quarter of a frame is wall faces, and this is the biggest that looks at the camera): the wall
+    // itself is smooth (the ground is jointed: where the ground is, the wall is quiet); a dado of painted block in the firm's colour to 0.9 m, door to door
+    // (the look kit's own band from the floor, in the kit row that wears the field's block). And the hut's west face, which the yard's length looks at.
     for (const [a, b] of [[4.12, 5.8], [7.0, 11.8], [13.0, 20.8], [22.0, 23.88]] as const) G.skirt('x', 9.5, a, b, 1, 'paintGreen', 0.9, 0.24);
     G.skirt('z', 24, 9.62, 15.12, -1, 'paintGreen', 0.9, 0.24);
     // ---- THE HUT'S SOUTH FACE, over the mouth: one whole wall in the second colour (its window is a hole: the colour stops at the sill under it)
     G.skirt('x', 15, 23.88, 24.2, 1, 'paintBlue', H, 0.24); G.skirt('x', 15, 25.0, 29.62, 1, 'paintBlue', H, 0.24); G.skirt('x', 15, 24.2, 25.0, 1, 'paintBlue', 0.95, 0.24);
 
-    // ---- THE LANE A LORRY DRIVES, gate to gate: a broken line down its middle, an arrow in from each gate, the line to stop at inside the main gate
-    M.seg(5.0, 12.6, 5.0, 15.4, 0.2, LINE);
-    M.dashed(5.8, 12.9, 18.6, 12.9, 0.1, LINE, 1.2, 0.9); M.dashed(18.6, 12.9, 24.4, 16.7, 0.1, LINE, 1.2, 0.9); M.dashed(24.4, 16.7, 35.2, 17.4, 0.1, LINE, 1.2, 0.9);
-    figure('→', 8.0, 13.6, CHALK, 2); figure('←', 32.0, 16.6, CHALK, 2);
-    // ---- THE BAYS on the yard's south side (the lorry stands in the first; the second is empty, and an empty bay says there is no cover here), and two for
-    // trailers in the east yard. A number at each bay's mouth
-    for (const x of [9.6, 15.4, 18.8]) M.seg(x, 14.9, x, 17.4, 0.1, LINE);
-    figure('1', 12.5, 14.75); figure('2', 17.1, 14.75);
-    for (const x of [30.2, 33.0, 35.75]) M.seg(x, 19.6, x, 23.8, 0.1, LINE);
-    figure('3', 31.6, 19.4); figure('4', 34.4, 19.4);
-    // ---- THE WAYS A MAN WALKS, door to door along the walls. They are the level's own answers: along the north row; THE STORES' WAY along the south row's
-    // wall behind the lorry to the workshop's side door and the store; ROUND THE BACK from the back gate through the gap, up the lane behind the cabin to
-    // the generator room's door
-    walk([[4.8, 10.25], [23.5, 10.25]]);
-    walk([[4.8, 17.87], [23.9, 17.87]], 0.86);
-    walk([[35.0, 16.4], [35.0, 6.9], [29.8, 6.9]]);
+    // ---- THE LANE A LORRY DRIVES: the road's own tarmac in at the main gate, down the yard, through the mouth and out at the back gate. The one dark
+    // field of the yard, and where nobody on foot should stand. A chalk line at each edge, a broken one down its middle, an arrow in from each gate, the
+    // line to stop at inside the main gate
+    const LANE: [number, number][] = [[4.12, 12.7], [18.8, 12.7], [24.6, 16.9], [35.88, 17.4]], LW = 2.8;
+    strip(LANE, LW, ROAD);
+    M.path(beside(LANE, LW / 2 - 0.05), 0.1, CHALKP); M.path(beside(LANE, -(LW / 2 - 0.05)), 0.1, CHALKP);
+    M.dashed(6.2, 12.7, 18.8, 12.7, 0.1, CHALKP, 1.2, 0.9); M.dashed(18.8, 12.7, 24.6, 16.9, 0.1, CHALKP, 1.2, 0.9); M.dashed(24.6, 16.9, 35.2, 17.4, 0.1, CHALKP, 1.2, 0.9);
+    M.seg(5.2, 11.4, 5.2, 14.0, 0.25, CHALKP);
+    figure('→', 8.0, 12.25, 2, ROAD); figure('←', 31.5, 16.75, 2, ROAD);
+    // ---- THE APRONS A MAN WALKS, door to door along the walls, in the huts' own smooth skim, a slot drain between each and the yard. They are the level's
+    // own answers: along the north row; THE STORES' WAY along the south row's wall behind the lorry to the workshop's side door and the store; ROUND THE
+    // BACK from the back gate through the gap, up the lane behind the cabin to the generator room's door
+    field(4.12, 9.62, 23.88, 10.6, APRON); field(4.12, 10.6, 23.88, 10.7, SLOT);
+    field(4.12, 17.42, 24.0, 18.38, APRON); field(4.12, 17.32, 24.0, 17.42, SLOT);
+    strip([[35.0, 15.9], [35.0, 6.9], [29.62, 6.9]], 0.9, APRON);
+    M.path(beside([[35.0, 15.9], [35.0, 6.9], [29.62, 6.9]], 0.5), 0.07, INKP); M.path(beside([[35.0, 15.9], [35.0, 6.9], [29.62, 6.9]], -0.5), 0.07, INKP);
     // a hatched square before the store's hatch, where nothing may stand (a door's own threshold is worn, and says so itself)
-    hatch(19.4, 17.44, 21.4, 18.3);
-    // ---- THE LETTERS: A the crew room, B the signals hut, C the store, on the ground at each one's doors (the walls' own are the generator's: depot.ts)
-    // (each a stride clear of its door's worn threshold: paint is laid where feet have not taken it off)
-    figure('A', 12.4, 12.05); figure('A', 17.6, 7.6);
-    figure('B', 27.4, 9.2);
-    figure('C', 22.9, 17.0); figure('C', 16.2, 20.3);
+    hatch(19.4, 17.5, 21.4, 18.3, APRON);
+    // ---- THE BAYS on the yard's south side (the lorry stands in the first; the second is empty, and an empty bay says there is no cover here), and two for
+    // trailers in the east yard. Ink on the pale ground; a number at each bay's mouth
+    for (const x of [9.6, 15.4, 18.8]) M.seg(x, 14.85, x, 17.32, 0.1, INKP);
+    figure('1', 12.5, 14.9, 2); figure('2', 17.1, 14.9, 2);
+    for (const x of [30.2, 33.0, 35.75]) M.seg(x, 19.6, x, 23.8, 0.1, INKP);
+    figure('3', 31.6, 19.9); figure('4', 34.4, 19.9);
+    // ---- THE LETTERS on the ground, where a lettered room's door has no wall face that looks at the camera to carry one (the walls' own are the
+    // generator's: depot.ts): the store's yard door, in chalk on the lane that passes it; and indoors a stride clear of each door's worn threshold
+    figure('C', 23.0, 16.9, 3, ROAD);
+    figure('A', 17.6, 7.6); figure('B', 27.4, 9.2); figure('C', 16.2, 20.3);
     // ---- THE DOCK: a field of the firm's colour against the hut's west wall (a field in the sun before a pale wall: what its colour is thrown onto), an
     // edge to its open sides, its load limit, and the hut's letter where a door would be
-    { const dock = piece(21.2, 10.95, 23.75, 13.5, FIELD);
-      M.hazard(21.05, 10.95, 21.2, 13.65, INKP, C.lineChalk, 0.3); M.hazard(21.2, 13.5, 23.75, 13.65, INKP, C.lineChalk, 0.3);
-      stencil(dock, '3.5T', 22.4, 13.3, CHALK, 1); stencil(dock, 'B', 22.9, 12.4, CHALK, 3); }
+    { const dock = piece(21.2, 10.95, 23.75, 12.9, FIELD);
+      M.hazard(21.05, 10.95, 21.2, 13.05, INKP, CHALKP, 0.3); M.hazard(21.2, 12.9, 23.75, 13.05, INKP, CHALKP, 0.3);
+      stencil(dock, '3.5T', 22.2, 12.75, CHALK, 1); stencil(dock, 'B', 23.0, 12.2, CHALK, 3); }
     // ---- THE FUEL POINT in the east yard: a pad of the second colour, an edge to it
-    piece(26.4, 22.2, 28.8, 23.86, SECOND);
-    M.hazard(26.25, 22.05, 28.8, 22.2, INKP, C.lineChalk, 0.3); M.hazard(26.25, 22.2, 26.4, 23.86, INKP, C.lineChalk, 0.3);
+    field(26.4, 22.2, 28.8, 23.86, SECOND);
+    M.hazard(26.25, 22.05, 28.8, 22.2, INKP, CHALKP, 0.3); M.hazard(26.25, 22.2, 26.4, 23.86, INKP, CHALKP, 0.3);
     // ---- THE BAY: the inspection pit's edge, round the lorry that stands over it
-    M.hazard(10.9, 21.55, 15.9, 21.7, INKP, C.lineChalk); M.hazard(10.9, 21.7, 11.1, 23.7, INKP, C.lineChalk, 0.25); M.hazard(15.7, 21.7, 15.9, 23.7, INKP, C.lineChalk, 0.25);
+    M.hazard(10.9, 21.55, 15.9, 21.7, INKP, CHALKP); M.hazard(10.9, 21.7, 11.1, 23.7, INKP, CHALKP, 0.25); M.hazard(15.7, 21.7, 15.9, 23.7, INKP, CHALKP, 0.25);
     // ---- THE SIGNALS HUT: the darker floor round the desk
     { const fa = T.floorAt(27, 12.6); if (fa) M.fill(25.7, 11.7, 28.4, 13.7, T.tone(fa, 0.82)); }
   },
