@@ -2551,6 +2551,29 @@ interleaved and filtered to their quiet minimum, and a row whose p75 sits far ab
   row's `untiles` now, and stucco, skim and carpet have it. CHECK `lookmaps-check` line 11: the four older stuffs still untile and no other of the
   sixteen; nothing made of pieces untiles; a bay is of whole pieces; a bonded map has an even count of courses. Shader texts compile. NEVER SEEN ON A
   GPU; a software draw of the white roof's deck with the row off and on is what was looked at.
+- **WHAT DAYLIGHT THROUGH OPENINGS STILL COSTS, SPLIT ON ONE CARD** (11-05; a measurement, no code: read it before trying to cut the openings'
+  cost again). After the reach rule and the three pieces (the two bullets below), one cloud NVIDIA box a level, High, 1368 by 770, the render
+  size held (`adapt=0`), the clock stopped, every word flipped in the running page (two boxes of one commit differ by 1 to 2 ms, so only a flip
+  inside one page is a timing). Whole frame GPU ms, the direct pass in brackets. THE OFFICE AT MIDDAY, twelve openings lit, their reaches 9 to
+  23 m: 19.9 (8.4) against 13.3 (3.9) with the Daylight at openings row off; before the two mends 24.4 to 24.9 (10.2 to 10.5). THE CONSULATE AT
+  NIGHT: 13.45 (4.74) against 10.7 (3.06); before 20.0 (10.1 to 10.6). The white roof at midday with its doors shut lights no opening and pays
+  nothing (9.1 both ways). WHERE THE OFFICE'S 6.6 ms GOES, each found by a run-time switch on a timing-only tree: the exact sum in pieces
+  against one point, 1.8 in the direct pass and 0.4 in the sharp resolve; the part of a shadow ray that runs on past the opening to the sky,
+  0.8; what is left of the direct pass with the sum as one point and the ray stopped, 1.9 (twelve more lights a pixel through the candidate
+  loop, and the class's rays to them: two rays a pixel for four saves 1.25 with the openings and 0.66 without); the sharp resolve's own share
+  of scoring them, 0.3; THE CACHE'S FOUR CASCADES, 1.07 (3.54 against 2.47), and the reflection pass 0.14: a bounce ray's hit gives every light
+  that reaches its cell a shadow ray (`directIrradiance`, to which an opening is an area light, `evalLightRaw`), and by day every opening is
+  over that loop's threshold; the cache's dice 0.1. The final gather and the fog move by under 0.1. Listing the openings and never scoring them
+  costs nothing (3.93 against 3.86). WHY THE REST STAYS, each lever weighed: (1) a shorter reach by day: the reach is where an opening's own
+  light stops being worth a ray, and past it the bounce carries the sky only as far as its firefly bound lets it, which is relative to what the
+  cache says a point receives and so is no fault of the hour: at 2.5 times the worth a room's far wall drew a step greyer by day. (2) The ray
+  past the opening is what lets a wall across the yard, a shutter and a man outside stand between a room and its sky; the walk already skips
+  empty cells and culls by height, and what is left is the forty cells themselves. (3) At a bounce ray's hit a per-light threshold cannot
+  thin twelve openings of like strength without losing the room's bounced daylight, and drawing them by lot puts noise into the cache, which
+  nobody has judged (a still does not show a boil). (4) Fewer pieces was tried (one point from far off: 20 to 100 % out; one sky piece: five times
+  the error). (5) Two shadow rays a pixel for four is the quality ladder's own number, not a mend. WHAT WOULD BE A LADDER ROW, if one is ever
+  wanted: how many openings are lit at once (`LOOK_OPENINGS.lit`, twelve): the cost by day is near half a millisecond an opening. NOT
+  MEASURED: any other card (Metal, D3D12), a level with more glass than the office, dawn and dusk.
 - **THE MEN'S NOISE HOLDS NO LOOP AND NO LOCAL ARRAY, ON PURPOSE** (11-05; `look.wgsl manNoise`, `manH4`; every look page with men in it: the Men,
   Kit detail and Printed cloth rows. The same picture by the same arithmetic; no word.) The men's fragment program was 325 KB as a compiler
   pastes it against a bar of 200: its value noise called a one-corner hash eight times, at each of ninety-two places (195 KB). First mend, the
