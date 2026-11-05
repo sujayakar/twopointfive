@@ -156,7 +156,7 @@ export async function settingsReads(): Promise<boolean> {
   const uses = files.flatMap(f => usesOf(relative(SRC, f).split('\\').join('/'), readFileSync(f, 'utf8'), keys));
   // (a file's uses by the row that answers for them: its `(all)` row if it has one, else the key's)
   const got = new Map<string, number[]>(); for (const u of uses) { const k = `${u.file} ${KNOWN[u.file]?.['(all)'] ? '(all)' : u.key}`; got.set(k, [...(got.get(k) ?? []), u.at]); }
-  const rows = Object.entries(KNOWN).flatMap(([f, r]) => Object.entries(r).map(([k, [n]]) => [`${f} ${k}`, n] as const)), want = new Map(rows);
+  const rows = Object.entries(KNOWN).flatMap(([f, r]) => Object.entries(r).map(([k, [n]]): [string, number] => [`${f} ${k}`, n])), want = new Map(rows);
   const more = [...got].filter(([k, at]) => at.length > (want.get(k) ?? 0)), fewer = rows.filter(([k, n]) => (got.get(k)?.length ?? 0) < n);
   line(more.length === 0 && fewer.length === 0, `reads: ${uses.length} reads of the picture's settings in ${files.length} files of the simulation (${SIM_DIRS.join(', ')}, ${SIM_FILES.join(', ')}), each counted on a list of ${rows.length} rows`
     + (more.length ? `\n    NEW READS (the simulation may not read the picture's settings: src/game/env.ts says where a number of the game's own goes): ${more.map(([k, at]) => `${k}: ${at.length} at line ${at.join(', ')}${want.has(k) ? ` (its row allows ${want.get(k)})` : ' (no row)'}`).join(' · ')}` : '')
