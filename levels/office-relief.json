@@ -1,7 +1,7 @@
 {
   "version": 1,
   "name": "office",
-  "meta": { "bounds": { "min": [0, -0.25, 0], "max": [40, 8, 28] }, "generator": "src/scene/officeGen.ts buildOfficeProcedural → tools/level-export.ts", "notes": "The night-shift office: one floor, box geometry only. Regenerated from the legacy generator until the editor (lane G1b) takes over; hand edits survive only if the generator is retired first." },
+  "meta": { "bounds": { "min": [0, -0.25, 0], "max": [40, 8, 28] }, "generator": "src/scene/officeGen.ts buildOfficeProcedural → tools/level-export.ts", "notes": "The night-shift office: one floor, box geometry only. Regenerated from the legacy generator until the editor (lane G1b) takes over; hand edits survive only if the generator is retired first.", "kept": 1 },
   "floors": [
     { "id": "f0", "name": "ground floor", "y": 0, "ceiling": 3 }
   ],
