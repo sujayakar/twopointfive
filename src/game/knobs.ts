@@ -147,7 +147,7 @@ export const JOURNAL_KNOBS: readonly string[] = ['AIM', 'TAPSTEP', 'TRAINED', 'A
   'MARKSIT',
   // the picture's planners are made a little a frame (render/planPace.ts PLAN_PACE; a picture only): a recording made with it on says so, one with no table for it had each plan whole on its frame
   'PLAN_PACE',
-  // the pace the lamps' reach masks are decided at after a wall changes (render/reach.ts REACH_PACE; the game's tick reads it, the masks are the picture's): a recording says which, one with no table for it had the shares
+  // the pace the lamps' reach masks are decided at after a wall changes (render/reach.ts REACH_PACE; the picture's keeper reads it on drawn frames, render/reachKeep.ts: nothing in the tick does): a recording says which, one with no table for it had the shares
   'REACH_PACE',
   // a named coat's finish goes wherever its word goes (scene/stuff.ts COATFINISH; a picture only): a recording made with it on draws its vehicles' bodies as a clear coat, one with no table for it with the finish their files give them
   'COATFINISH',

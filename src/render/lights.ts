@@ -34,11 +34,6 @@ export interface RtLight {
    *  kind word's bits 11‥24 with bit 10 set (common.wgsl lightMarkRef) so the reflection pass can texture this light's ANALYTIC highlight with the marking's own
    *  pattern at the mirror point (markings.wgsl markPatternAtMirror) — a uniform rectangle otherwise. undefined = not a marking's light. */
   markRef?: number;
-  /** which 1 m cells of the level this light can possibly reach (reach.ts; REACH_ROW_WORDS u32, bit ci = cell cz*gridW+cx) — undefined = anywhere */
-  reach?: Uint32Array;
-  /** DIRECTIONAL lights only (the moon, the breach's sun): the cells with any unblocked path toward it (reach.ts reachMaskForDirectional) — consulted INSTEAD of `reach`
-   *  while LightSet.dirMasks is on (the ReSTIR estimator; the leader / tail path keeps the all-ones row it always had, bit for bit) */
-  reachDir?: Uint32Array;
   /** a hand-held / carried spot (the guards' torches and weapon lights, Sam's rail light): under settings.torchBounceCards its footprint on the surface it hits
    *  becomes an analytic one-bounce emitter for the final gather (render/shaders/cards.wgsl) instead of a hotspot the gather's rays must find */
   card?: boolean;
@@ -143,7 +138,7 @@ export class LightSet {
    *  was in slot p last frame (255 = not uploaded now), `slotInv[s]` = last frame's slot of the light now in slot s (255 = new this frame). */
   prevData = new Uint8Array(MAX_LIGHTS * 64); prevCount = 0; private prev32 = new Uint32Array(this.prevData.buffer);
   slotFwd = new Uint8Array(MAX_LIGHTS).fill(255); slotInv = new Uint8Array(MAX_LIGHTS).fill(255);
-  /** use RtLight.reachDir for directional lights that carry one (engine.render sets it from settings.restir before upload; off = every row exactly as before) */
+  /** use a directional light's own mask where it has one (render/reachKeep.ts dirOf) (engine.render sets it from settings.restir before upload; off = every row exactly as before) */
   dirMasks = false;
   /** THE INFRARED LIGHTS (LIGHT_IR; game/irlight.ts poses them every frame): a list of their own, so that no reader of `lights` — the CPU's light estimates, the
    *  fog of war's classes, the reach masks, a digest — can ever count one. Uploaded after `lights`, flagged infrared, and only while `tube` is up; enabled / intensity are read
@@ -215,9 +210,11 @@ export class LightSet {
   dayExp = 1; dayAmount = 1;
   /** `own` = THE PICTURE'S OWN LIGHTS for this frame (the look page's daylight at openings, engine.ts lookOpeningLights): handed in, never kept here. This set
    *  is the game's and goes into every checkpoint; a light that is only in the picture must be in neither, and no reader of `lights` (the CPU's light
-   *  estimates, the fog's lamp list, the game's reach masks, the count a new man's torch is held to) can then count one. Uploaded last, steady, each with
-   *  its own reach row; when the 64 slots are full they are the ones left out. */
-  upload(time: number, own: readonly RtLight[] = NO_LIGHTS) {
+   *  estimates, the fog's lamp list, the count a new man's torch is held to) can then count one. Uploaded last, steady, each with
+   *  its own reach row; when the 64 slots are full they are the ones left out.
+   *  `masks` = WHO KEEPS THE LIGHTS' REACH MASKS (render/reachKeep.ts, the engine's: handed in, never kept here, so no snapshot of this set holds it or a
+   *  mask): `row(l, dirMasks)` is the mask a light's row is sent as, or none. null = nobody: every light may reach anywhere. */
+  upload(time: number, own: readonly RtLight[] = NO_LIGHTS, masks: { row(l: RtLight, dirMasks: boolean): Uint32Array | undefined } | null = null) {
     const f = this.f32, u = this.u32; let n = 0; this.activeIdx.length = 0; let firstT = -1;
     { const words = Math.max(1, this.activeCount) * 16, p32 = this.prev32; for (let i = 0; i < words; i++) p32[i] = u[i]; } this.prevCount = this.activeCount;   // last frame's records (prevCount × 64 B, word for word), before they are overwritten in place — no per-frame view (review R1.4)
     this.slotFwd.fill(255); this.slotInv.fill(255);
@@ -239,7 +236,7 @@ export class LightSet {
       const fc = ir ? 0 : ghost ? 2 : this.fogClass(l);
       packLight(f, u, o, l, inten, l.kind | (ir ? LIGHT_IR : 0) | (l.ttl >= 0 || l.transient ? 256 : 0) | (l.broad ? 512 : 0) | (l.portal ? LIGHT_PORTAL | portalHoleBits(l.portal.deep, l.portal.rims) : 0) | (!l.portal && l.markRef !== undefined && l.markRef >= 0 && l.markRef < 16384 ? 1024 | (l.markRef << 11) : 0) | (fc === 1 ? LIGHT_FOG_SEEN : fc === 2 ? LIGHT_FOG_UNSEEN : 0),   // + bit 10 / bits 11‥24: the emissive marking this light stands for (RtLight.markRef)
         l.volumetric, ((l.owner & 0xff) | (((l.glassMask ?? 0) & 0xffffff) << 8)) >>> 0);   // owner byte + the glass pane mask above it (common.wgsl lightGlassMask)
-      this.reachData.set((this.dirMasks && l.reachDir) ? l.reachDir : (l.reach ?? REACH_ALL), n * REACH_ROW_WORDS);   // the slot's reach row follows the light into whatever slot it lands in this frame (a directional light's own mask only under dirMasks)
+      this.reachData.set(masks?.row(l, this.dirMasks) ?? REACH_ALL, n * REACH_ROW_WORDS);   // the slot's reach row follows the light into whatever slot it lands in this frame (a directional light's own mask only under dirMasks)
       this.activeIdx.push(i); l.slot = n; if (firstT < 0 && !ir && (l.ttl >= 0 || l.transient)) firstT = n; if (ir) { this.irCount++; this.irSpell = true; } n++;   // (activeIdx: an index past `lights` is into `ir`, and past that into `own`)
     }
     this.activeCount = n; this.firstTransientSlot = firstT < 0 ? n : firstT;
