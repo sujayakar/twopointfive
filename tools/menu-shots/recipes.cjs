@@ -13,13 +13,13 @@ const R = {};
 R['block-four'] = {      // the mess, a room that turns a corner: the point man fires round the turn, the file behind him in the lit leg, a man waiting in the dark leg and one more behind the next wall
   query: 'levelFile=block.json&roomclear&squad4' + Q, quality: 'medium', frames: 8,
   play: `ms.approach('m_s', 3.0, 30); ms.order('openClear', 'm_s');
-         return ms.sim(25, () => ms.shotNow() && ms.ops().some(o => o.char.pos[2] < 8 && o.char.pos[0] < 15.5));`,
+         return ms.sim(25, () => ms.shotNow() && ms.ops().some(o => o.char.posZ < 8 && o.char.posX < 15.5));`,
   cam: { look: [14.7, 1, 7.4], yaw: -2.5, pitch: 1.1, dist: 11.5 } };
 R['block-squads'] = {    // night; the workshop taken through its second door behind a can: the first two men through the tool crib's door, a round going, seen from the corner its men held
   query: 'levelFile=block-squads.json&roomclear&squad4' + Q, quality: 'medium', frames: 8,
   play: `ms.order('fallIn', [8.6, 0, 13.9]); ms.go([9.4, 0, 21.2]); ms.sim(25, () => ms.arrived());
          ms.order('bangClear', 'w_c'); const t0 = g.time; ms.must(ms.sim(40, () => ms.bangBy('w_c', t0)), 'the can');
-         return ms.sim(8, () => ms.shotNow() && ms.ops().some(o => o.char.pos[0] > 17.05 && o.char.pos[2] > 18.6));`,
+         return ms.sim(8, () => ms.shotNow() && ms.ops().some(o => o.char.posX > 17.05 && o.char.posZ > 18.6));`,
   cam: { look: [17.7, 1.1, 22.5], yaw: 2.4, pitch: 0.3, dist: 3.4 } };
 R['pass-four'] = {       // night, snow; in by the gate and round the lorry's tail, a can through the tea room's door: the flash in the doorway and out of its windows, the door man black against it, the brazier, seen from the yard past the lorry's cab
   query: 'levelFile=pass.json&roomclear&squad4' + Q, quality: 'medium', frames: 8,
@@ -31,7 +31,7 @@ R['warehouse-four'] = {  // night; first man through the hall's south-west door 
   query: 'levelFile=warehouse.json&roomclear&squad4' + Q, quality: 'medium', frames: 8,
   play: `ms.order('fallIn', [8, 0, 26.2]); ms.go([11.6, 0, 21.6]); ms.sim(25, () => ms.arrived());
          ms.order('bangClear', 'h_sw'); const t0 = g.time; ms.sim(40, () => ${bang('h_sw')});
-         const inHall = () => ms.shooters().some(by => by.team === 'operative' && by.char.pos[0] > 13.6);
+         const inHall = () => ms.shooters().some(by => by.team === 'operative' && by.char.posX > 13.6);
          return ms.sim(14, inHall);`,
   cam: { look: [13.4, 1, 21.3], yaw: PI / 2 - 0.35, pitch: 0.6, dist: 6.8 } };
 R['compound-four'] = {   // dusk; the stack on the house's west door as the flashbang goes off inside
@@ -55,7 +55,7 @@ R['night-breach'] = {    // the group's tile. The F drill run to its end: boot, 
   query: 'nightbreach' + Q, quality: 'medium', frames: 8,
   play: `const nb = g.nightBreach; ms.tap('KeyF'); ms.sim(40, () => nb.state === 'set');
          ms.tap('KeyF'); const t0 = g.time; ms.sim(25, () => ${bang('breakroom_w')});
-         return ms.sim(10, () => ms.ops().some(x => x.char.pos[0] > 28.4) && ms.shotNow());`,
+         return ms.sim(10, () => ms.ops().some(x => x.char.posX > 28.4) && ms.shotNow());`,
   cam: { look: [31, 1, 18.6], yaw: 0.9, pitch: 0.5, dist: 6.3 } };
 R['room-clear-pair'] = { // the game's own view: the server room's lock booted, a can, the first man in and firing by the racks, his mate at the door, Sam on the corridor
   query: 'roomclear' + Q, quality: 'medium', frames: 8,
@@ -78,9 +78,9 @@ R['depot-four'] = {      // night rain; down the lee of the truck unseen, the fi
   query: 'levelFile=depot.json&roomclear&squad4' + Q, quality: 'medium', frames: 8,
   play: `ms.tap('KeyC'); ms.sim(0.2);
          for (const w of [[5.5, 0, 15.6], [9.6, 0, 17.7], [14.9, 0, 17.7]]) { ms.go(w); ms.must(ms.sim(20, () => ms.arrived()), 'the walk down the lee of the truck'); }
-         ms.order('stack', 'bay_to_yard'); ms.must(ms.sim(25, () => ms.ops().filter(o => Math.hypot(o.char.pos[0] - 16.3, o.char.pos[2] - 18) < 2.2).length >= 2), 'the stack'); ms.sim(5);
+         ms.order('stack', 'bay_to_yard'); ms.must(ms.sim(25, () => ms.ops().filter(o => Math.hypot(o.char.posX - 16.3, o.char.posZ - 18) < 2.2).length >= 2), 'the stack'); ms.sim(5);
          ms.order('openClear', 'bay_to_yard'); const d = ms.door('bay_to_yard');
-         const r = ms.sim(20, () => Math.abs(d.angle) > 0.8 && ms.ops().some(o => o.char.pos[2] > 18.45 && Math.abs(o.char.pos[0] - 16.25) < 0.6));
+         const r = ms.sim(20, () => Math.abs(d.angle) > 0.8 && ms.ops().some(o => o.char.posZ > 18.45 && Math.abs(o.char.posX - 16.25) < 0.6));
          return { hit: r.hit && ms.ops().length === 4, t: g.time, angle: d.angle };`,
   cam: { look: [16.1, 1.0, 18.5], yaw: 0.2, pitch: 0.16, dist: 4.2 } };
 R['floodlit-four'] = {   // caught crossing the floodlit pad: the guard room's window opens up on the file, a man goes down, the first round goes back
@@ -97,7 +97,7 @@ R['glasshouse-four'] = { // dusk; Sam's own rifle through the frontage on the ma
   query: 'levelFile=glasshouse.json&roomclear&squad4&hour=dusk' + Q, quality: 'medium', frames: 8,
   play: `ms.order('fallIn', ms.sam()); ms.go([28.7, 0, 20.5]); ms.sim(14, () => ms.arrived());
          const t2 = ms.man('Tango 2'), t0 = g.time; let n = 0;
-         ms.must(ms.sim(6, () => { ms.aim([t2.char.pos[0], 1.25, t2.char.pos[2]]); if (g.time > t0 + 0.5 && n++ % 12 === 0) ms.fire(); return ms.since(/glass/, t0); }), 'a round through the pane');
+         ms.must(ms.sim(6, () => { ms.aim([t2.char.posX, 1.25, t2.char.posZ]); if (g.time > t0 + 0.5 && n++ % 12 === 0) ms.fire(); return ms.since(/glass/, t0); }), 'a round through the pane');
          return await ms.lead(3);`,
   cam: { look: [28.1, 1.0, 19.0], yaw: 0.6, pitch: 0.4, dist: 6.2 } };
 
@@ -108,7 +108,7 @@ R['hostage-rescue'] = { // the group's tile. The charge on the manager's office 
   play: `ms.go([22.6, 0, 11.1]); ms.sim(25, () => ms.arrived());
          ms.order('charge', 'manager'); ms.must(ms.sim(40, () => g.doorTools.ops.some(o => o.phase === 'armed')), 'the charge');
          ms.tap('KeyF'); await ms.lead(2);
-         return ms.sim(15, () => ms.ops().some(x => x.char.pos[2] < 9.5 && x.char.pos[0] > 22.2 && x.char.pos[0] < 30));`,
+         return ms.sim(15, () => ms.ops().some(x => x.char.posZ < 9.5 && x.char.posX > 22.2 && x.char.posX < 30));`,
   cam: { look: [26.65, 1, 7.15], yaw: 2.2, pitch: 0.8, dist: 7.3 } };
 
 R['rescue-registry'] = { // the game's own view, after the charge: the pair in the registrar's office with their lights on, its door flat on the rug, a hostage alive in the corner
@@ -117,21 +117,21 @@ R['rescue-registry'] = { // the game's own view, after the charge: the pair in t
          ms.must(ms.putDown('Roamer 1'), 'the man at their back');   // (the corridor's man is alert three metres behind where the pair will stand off: Sam drops him first, as a person would)
          ms.order('charge', 'office'); ms.must(ms.sim(30, () => g.doorTools.ops.some(o => o.phase === 'armed')), 'the charge');
          ms.tap('KeyF'); await ms.lead(2);
-         ms.must(ms.sim(15, () => ms.ops().filter(x => x.char.pos[0] > 29.3 && x.char.pos[2] < 12.6).length >= 2), 'two men in the office'); return ms.sim(11);`,
+         ms.must(ms.sim(15, () => ms.ops().filter(x => x.char.posX > 29.3 && x.char.posZ < 12.6).length >= 2), 'two men in the office'); return ms.sim(11);`,
   cam: { look: [32.0, 1, 7.7], yaw: 0.25, pitch: 1.0, dist: 11 } };
 
 R['rescue-consulate'] = { // dusk; the four in by the suite's side door behind a can, from inside the suite: the first man in, the second in the doorway, their lights in the can's smoke
   query: 'levelFile=consulate.json&rescue&squad=4&hour=dusk' + Q, quality: 'medium', frames: 8,
   play: `ms.approach('suite_side', 3.4, 26); ms.order('bangClear', 'suite_side'); const t0 = g.time; ms.must(ms.sim(14, () => ${bang('suite_side')}), 'the can');
-         return ms.sim(8, () => ms.ops().filter(x => x.char.pos[0] > 29.3).length >= 2);`,
+         return ms.sim(8, () => ms.ops().filter(x => x.char.posX > 29.3).length >= 2);`,
   cam: { look: [30.7, 1.0, 17.0], yaw: Math.PI / 2 - 0.25, pitch: 0.16, dist: 4.6 } };
 
 R['snatch-four'] = {    // dawn; Sam's rounds at the hut wake the house, the man runs for the side door and meets the stack coming in: on his knees in their lights
   query: 'levelFile=snatch.json&roomclear&squad4&hour=dawn' + Q, quality: 'medium', frames: 8,
   play: `const sn = g.snatch, d = ms.door('side'); ms.approach('side', 3.5, 45); ms.go([27.8, 0, 10.6]); ms.sim(6, () => ms.arrived());
-         const t8 = ms.man('Tango 8'); let n = 0; ms.sim(10, () => { ms.aim([t8.char.pos[0], 1.2, t8.char.pos[2]]); if (n++ % 9 === 4) ms.fire(); return false; });
+         const t8 = ms.man('Tango 8'); let n = 0; ms.sim(10, () => { ms.aim([t8.char.posX, 1.2, t8.char.posZ]); if (n++ % 9 === 4) ms.fire(); return false; });
          ms.go([28.4, 0, 12.2]); ms.order('openClear', 'side');
-         return ms.sim(14, () => Math.abs(d.angle) > 0.9 && ms.ops().some(x => x.char.pos[0] < 26.3) && !!sn.tied);`,
+         return ms.sim(14, () => Math.abs(d.angle) > 0.9 && ms.ops().some(x => x.char.posX < 26.3) && !!sn.tied);`,
   cam: { look: [25.3, 1.05, 10.8], yaw: -1.3, pitch: 0.3, dist: 5.3 } };
 
 R['defuse-four'] = {    // grey day; the west shop taken by its back door, Sam's hands on the charge at the bench with the clock running, a teammate's gun on the room beside him
@@ -139,7 +139,7 @@ R['defuse-four'] = {    // grey day; the west shop taken by its back door, Sam's
   play: `ms.approach('back_1', 3.4, 45); ms.order('bangClear', 'back_1'); const t0 = g.time; ms.must(ms.sim(25, () => ${bang('back_1')}), 'the can');
          const t3 = ms.man('Tango 3'), t4 = ms.man('Tango 4'); ms.sim(12, () => t3.state === 'dead' && t4.state === 'dead');
          ms.go([8.5, 0, 8.6]); ms.sim(12, () => ms.arrived());
-         ms.order('move', [9.4, 0, 10.4]); ms.sim(4.5, () => ms.ops().filter(x => x.char.pos[0] > 6.3).length >= 2);
+         ms.order('move', [9.4, 0, 10.4]); ms.sim(4.5, () => ms.ops().filter(x => x.char.posX > 6.3).length >= 2);
          ms.aim([8.5, 0.9, 7.65]); ms.sim(0.2); ms.verb('objective', 'defuse'); ms.sim(3.0); return { hit: !!g.defuse.sam };`,
   cam: { look: [8.9, 0.95, 8.1], yaw: -0.6, pitch: 0.4, dist: 4.3 } };
 R['killhouse-four'] = { // midday; both pairs set on facing doors of the plywood hall, the word given: the first man through the tyre room's door fires
@@ -148,7 +148,7 @@ R['killhouse-four'] = { // midday; both pairs set on facing doors of the plywood
          ms.order('openClear', 'tyres', 'red', { onWord: true }); ms.order('openClear', 'store', 'blue', { onWord: true });
          ms.must(ms.sim(14, () => g.doorTools.ops.filter(o => o.phase === 'ready').length >= 2), 'both pairs ready');
          ms.tap('KeyF'); await ms.lead(1);
-         return ms.sim(8, () => ms.shotNow() && ms.shooters().some(x => x.char.pos[2] < 12.2 && x.char.pos[0] < 16));`,
+         return ms.sim(8, () => ms.shotNow() && ms.shooters().some(x => x.char.posZ < 12.2 && x.char.posX < 16));`,
   cam: { look: [14.7, 1.0, 10.8], yaw: -2.475, pitch: 0.27, dist: 3.9 } };
 
 // ── Quiet, alone ── (Sam is the subject: the camera stays with him)
@@ -160,7 +160,7 @@ R['solo-night'] = {     // the group's tile. Through his own goggles: Sam low at
   cam: `const p = ms.man('Kowalski').char.pos, s = ms.sam(); ms.cam({ look: [p[0] + 0.9, 0.95, 11.2], yaw: Math.PI / 2 - 0.07, pitch: 0.24, dist: (s[0] - p[0]) + 1.75 });` };
 R['bazaar-quiet'] = {   // in by the north gate behind the man on his round, and down the alley after him to its mouth: Sam low a stride and a half off his back, his torch on the street and the shop fronts across it
   query: 'levelFile=bazaar.json&quiet' + Q, quality: 'medium', frames: 8,
-  play: `ms.tap('KeyC'); ms.sim(0.2); const n = ms.man('Novak'); ms.must(ms.sim(40, () => n.char.pos[0] < 24.5), 'his round'); ms.sim(20, () => n.char.pos[0] < 20.0);
+  play: `ms.tap('KeyC'); ms.sim(0.2); const n = ms.man('Novak'); ms.must(ms.sim(40, () => n.char.posX < 24.5), 'his round'); ms.sim(20, () => n.char.posX < 20.0);
          ms.stalk(n, { near: 2.4, off: 1.8, secs: 30 }); const r = ms.stalk(n, { near: 1.5, off: 1.1, secs: 12 }); return { hit: r.why === 'behind', r };`,
   cam: `const n = ms.man('Novak').char.pos, s = ms.sam(), d = Math.hypot(s[0] - n[0], s[2] - n[2]), u = [(s[0] - n[0]) / d, (s[2] - n[2]) / d];   // over Sam's shoulder, on the line from the man back to him
         ms.cam({ look: [n[0] + u[0] * 0.31, 1.08, n[2] + u[1] * 0.31], yaw: Math.atan2(u[0], u[1]) - 0.25, pitch: 0.33, dist: 3.95 });` };
@@ -192,8 +192,8 @@ R['quiet-yard-alone'] = {  // dusk; the yard's man shot from behind on his round
 R['quiet-crossing-two'] = { // the group's tile. In by the south gate, the partner sent up on the checkpoint's man 'on your mark', the mark given: his blow lands under the lamp, Sam low behind the crates
   query: 'levelFile=crossing.json&quiet&squad=1' + Q, quality: 'medium', frames: 8,
   play: `ms.tap('KeyC'); ms.sim(0.2); ms.go([16.3, 0, 21.6]); ms.must(ms.sim(20, () => ms.arrived()), 'the crates'); ms.sim(6);
-         const k = ms.man('Kowalski'), m = ms.ops()[0], d = () => Math.hypot(m.char.pos[0] - k.char.pos[0], m.char.pos[2] - k.char.pos[2]);
-         window.__orders.give('pairMark', { kind: 'foe', at: [k.char.pos[0], 0, k.char.pos[2]], foe: k }, 'all'); ms.must(ms.sim(30, () => d() < 1.45), 'the partner set at his back');
+         const k = ms.man('Kowalski'), m = ms.ops()[0], d = () => Math.hypot(m.char.posX - k.char.posX, m.char.posZ - k.char.posZ);
+         window.__orders.give('pairMark', { kind: 'foe', at: [k.char.posX, 0, k.char.posZ], foe: k }, 'all'); ms.must(ms.sim(30, () => d() < 1.45), 'the partner set at his back');
          ms.tap('KeyF'); const r = ms.sim(12, () => k.state === 'dead'); return { hit: r.hit && k.downKind === 'struck', r };`,
   cam: { look: [16.1, 0.85, 18.8], yaw: 0.1, pitch: 0.24, dist: 5.4 } };
 R['lights-out-two'] = {     // the partner sent to throw the breaker: the yard goes black, and the man who comes to look turns his torch into the shed where the pair wait in the dark (a step before he sees them and the partner shoots: the old half metre further in no longer comes)
@@ -202,13 +202,13 @@ R['lights-out-two'] = {     // the partner sent to throw the breaker: the yard g
          const nr = g.work.near([13.15, 0, 16.4]); ms.must({ hit: !!nr }, 'the breaker'); window.__orders.give('work', nr.target, 'all');
          ms.must(ms.sim(40, () => g.blackout && g.blackout.active), 'the mains thrown');
          const o = ms.must(ms.comer([10, 16.3], 40, 3.2), 'he comes to look').man, D = () => ms.flat(o.char.pos, [10, 0, 16.3]), loud = () => ms.foes(true).some(x => x.state === 'alert' || x.state === 'dead');
-         ms.aim([10, 1.2, 16.3]); ms.must(ms.sim(8, () => D() < 1.5 || loud()), 'he reaches the shed'); const r = ms.sim(8, () => (o.char.pos[0] > 10 && D() < 1.2) || loud()); return { hit: r.hit && !loud(), r, who: o.callsign };`,
+         ms.aim([10, 1.2, 16.3]); ms.must(ms.sim(8, () => D() < 1.5 || loud()), 'he reaches the shed'); const r = ms.sim(8, () => (o.char.posX > 10 && D() < 1.2) || loud()); return { hit: r.hit && !loud(), r, who: o.callsign };`,
   cam: { look: [11.75, 0.9, 16.05], yaw: 0.22, pitch: 0.85, dist: 5.0 } };
 R['quiet-relay-two'] = {    // night; the picket marked for the partner and put out from behind on a word, the lens over the hut's door put dark by the pistol's OCP, Sam on a knee at the lock in the door lamp's pool
   query: 'levelFile=quiet-relay.json&quiet&squad=1' + Q, quality: 'medium', frames: 8,
-  play: `const k = ms.man('Novak'), m = ms.ops()[0], d = () => Math.hypot(m.char.pos[0] - k.char.pos[0], m.char.pos[2] - k.char.pos[2]);
+  play: `const k = ms.man('Novak'), m = ms.ops()[0], d = () => Math.hypot(m.char.posX - k.char.posX, m.char.posZ - k.char.posZ);
          ms.tap('KeyC'); ms.sim(0.2); ms.go([13.4, 0, 13.4]); ms.sim(4);
-         window.__orders.give('pairMark', { kind: 'foe', at: [k.char.pos[0], 0, k.char.pos[2]], foe: k }, 'all'); ms.sim(40, () => ms.arrived());
+         window.__orders.give('pairMark', { kind: 'foe', at: [k.char.posX, 0, k.char.posZ], foe: k }, 'all'); ms.sim(40, () => ms.arrived());
          ms.must(ms.sim(60, () => d() < 1.45), 'the partner set behind the picket'); ms.tap('KeyF'); ms.must(ms.sim(12, () => k.state === 'dead'), 'the picket down');
          ms.go([13.6, 0, 15.1]); ms.sim(10, () => ms.arrived()); ms.tap('Digit1'); ms.sim(0.8); ms.aim([18.7, 2.7, 14.7]); ms.sim(0.5); window.__click(2); ms.sim(0.6); ms.tap('KeyE'); ms.sim(0.5);
          ms.go([16.77, 0, 15.15]); ms.sim(10, () => ms.arrived()); ms.aim([16.77, 1, 14.5]); ms.sim(0.3); ms.must({ hit: ms.verb('door', 'pick') }, 'the lock');
@@ -221,7 +221,7 @@ R['quiet-yard-two'] = {     // dusk; the yard's man taken from behind on his rou
          ms.must(ms.sim(80, () => K()[2] > 19.6 && K()[0] > 14.5 && K()[0] < 17), 'his round'); ms.stalk(k, { near: 0.9, off: 0, secs: 25 });
          let held = false; for (let i = 0; i < 30 && !held; i++) { held = ms.verb('guard', 'grab'); ms.sim(0.15); } ms.must({ hit: held }, 'the grab'); ms.sim(1.5);
          ms.verb('held', 'question'); ms.sim(5); ms.aim([19.6, 0, 15]); ms.sim(1.2);
-         const m = ms.ops()[0]; return { hit: !!m && m.char.pos[2] > 22.4 && (g.nearby || []).some(r => r.kind === 'held'), at: ms.sam() };`,
+         const m = ms.ops()[0]; return { hit: !!m && m.char.posZ > 22.4 && (g.nearby || []).some(r => r.kind === 'held'), at: ms.sam() };`,
   cam: { look: [19.45, 1.1, 20.9], yaw: Math.PI - 0.42, pitch: 0.27, dist: 4.1 } };
 
 

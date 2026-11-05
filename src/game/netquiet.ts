@@ -188,7 +188,7 @@ export function netQuietClosed(g: Game, asker: Guard, silent: Guard[], heard: Gu
 /** the man he has found: of `men`'s dead of his side, the nearest he has a line to inside `bodyM` and does not yet know of — else the nearest he does not know
  *  of at all (a mate found by ear: the squad's word for a shot heard). Whose death the shock is counted against, and a man he now knows is gone. */
 function bodyOf(g: Game, finder: Guard, N: Mind, men: readonly Guard[]): Guard | null {
-  const eye: Vec3 = [finder.char.pos[0], 1.5, finder.char.pos[2]]; let best: Guard | null = null, bs = Infinity;
+  const eye: Vec3 = [finder.char.posX, 1.5, finder.char.posZ]; let best: Guard | null = null, bs = Infinity;
   for (const m of men) {
     if (m === finder || m.state !== 'dead' || m.team !== finder.team || !side(g, m)) continue;
     const b = m.char.bones.hips ?? m.char.pos, d = flat(b, finder.char.pos), inView = d < NETQUIET.bodyM && !g.col.segmentBlocked(eye, [b[0], 0.3, b[2]]);
@@ -282,7 +282,7 @@ function lowSpot(g: Game, gd: Guard, R: Room): Vec3 | null {
     return { p, seen: a.seen, arc: Math.max(a.arc, lim), near: a.near, score: Math.min(a.near, 8) - 0.35 * flat(p, c.pos) + (g.col.segmentBlocked([p[0], 1.0, p[2]], back) ? 1.5 : 0) }; };
   const better = (a: ReturnType<typeof rate>, b: ReturnType<typeof rate>, by = 0) => a.seen !== b.seen ? a.seen > b.seen : Math.abs(a.arc - b.arc) > 1e-6 ? a.arc < b.arc : a.score > b.score + by;
   const order = (a: ReturnType<typeof rate>, b: ReturnType<typeof rate>) => better(a, b) ? -1 : better(b, a) ? 1 : 0, clear = (r: ReturnType<typeof rate>) => r.near >= K.doorM;
-  const here = rate([c.pos[0], 0, c.pos[2]]), coarse = R.cells.size > 400, mouth = !clear(here); const all: ReturnType<typeof rate>[] = [];
+  const here = rate([c.posX, 0, c.posZ]), coarse = R.cells.size > 400, mouth = !clear(here); const all: ReturnType<typeof rate>[] = [];
   for (const i of R.cells) {
     const ix = i % W, iz = (i / W) | 0; if (coarse && ((ix & 1) || (iz & 1))) continue;
     const p: Vec3 = [(ix + 0.5) * cs, 0, (iz + 0.5) * cs];
@@ -306,7 +306,7 @@ function lastKind(g: Game, gd: Guard, N: Mind): 0 | 1 | 2 {
   let had = (squadOf(g, gd)?.men.length ?? 0) > 1, up = false, near = false;   // (a squad whose other men ran and left the floor is still a squad he had)
   for (const o of g.guards) {
     if (o === gd || o.team !== gd.team || !side(g, o)) continue; had = true;
-    if (!lostTo(g, o)) { up = true; if (flat(o.char.pos, gd.char.pos) < NETQUIET.mateM && !g.col.segmentBlocked([gd.char.pos[0], 1.5, gd.char.pos[2]], [o.char.pos[0], 1.5, o.char.pos[2]])) near = true; }   // (at his side: not a man through the wall)
+    if (!lostTo(g, o)) { up = true; if (flat(o.char.pos, gd.char.pos) < NETQUIET.mateM && !g.col.segmentBlocked([gd.char.posX, 1.5, gd.char.posZ], [o.char.posX, 1.5, o.char.posZ])) near = true; }   // (at his side: not a man through the wall)
   }
   if (had && !up) return 2;
   return !near && knowsSquad(g, gd, N) ? 1 : 0;
@@ -424,7 +424,7 @@ function ease(gd: Guard) { gd.state = 'suspicious'; NETQUIET_STATS.eased++; }
 function wary(gd: Guard) { gd.awareness = Math.max(gd.awareness, NETQUIET.wary); }
 /** down where he stands, on his gun: the arc as it reads from here (no room of his, or no way into it: no arc — the room fight's own watch stands) */
 function settle(g: Game, gd: Guard, N: Mind, D: Def) {
-  const p: Vec3 = [gd.char.pos[0], 0, gd.char.pos[2]], a = D.room && D.room.entries.length ? arcAt(g, D.room.entries, p) : { arc: Math.PI * 2, yaw: gd.char.bodyYaw };
+  const p: Vec3 = [gd.char.posX, 0, gd.char.posZ], a = D.room && D.room.entries.length ? arcAt(g, D.room.entries, p) : { arc: Math.PI * 2, yaw: gd.char.bodyYaw };
   N.spot = p; N.yaw = a.yaw; N.arc = a.arc; N.last = LOW; N.t = 0; N.low = true; NETQUIET_STATS.low++; watch(N); rouse(gd);
 }
 /** what he watches from the spot: the middle of the arc his doors sit in — moved round, by no more than it takes, until every door of it is inside his EYES
@@ -460,7 +460,7 @@ export function netQuietPose(g: Game, gd: Guard, dt: number, eyesOnFoe: boolean)
   const N = stateOf.get(gd); if (!N) return null;
   if (N.low) return { aim: null, crouch: NETQUIET.crouch };
   if (!whipping(gd, N) || eyesOnFoe || g.time - gd.lastSeenT < NETQUIET.calmSecs) return null;
-  const c = gd.char, at = N.whipAt!, yaw = Math.atan2(at[0] - c.pos[0], at[2] - c.pos[2]), rate = rungOf(gd) >= 2 ? NETQUIET.whipTurnBroken : NETQUIET.whipTurn;
+  const c = gd.char, at = N.whipAt!, yaw = Math.atan2(at[0] - c.posX, at[2] - c.posZ), rate = rungOf(gd) >= 2 ? NETQUIET.whipTurnBroken : NETQUIET.whipTurn;
   c.aimYaw = approachAngle(c.aimYaw, yaw, Math.max(0, rate - 6) * dt);   // (the pose's own easing adds its 6 rad/s after this)
   if (gd.speed < 0.3) c.bodyYaw = approachAngle(c.bodyYaw, yaw, rate * dt);   // (further: the whole man comes round, not his gun as far as his waist lets it)
   return { aim: [at[0], 1.1, at[2]], crouch: 0 };

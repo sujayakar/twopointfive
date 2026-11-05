@@ -1066,7 +1066,7 @@ export function kitViewStart(d: KitViewDeps): KitView {
     B.spot = spot; game.puppet.throwAt = spot;
     return outOf(S, [pv.land[0], pv.land[2]]) <= -S.fragLand; };
   /** a burst at `p` has a line to SAM as he is (frag.ts exposedTo, as blast() judges him: from `lift` over the grenade, glass that is going counted open) */
-  const reachesSam = (p: Vec3): boolean => { try { const c = game.player.char, head = (c.bones as unknown as { head?: Vec3 }).head ?? [c.pos[0], c.pos[1] + 1.6, c.pos[2]]; return exposedTo(game, [p[0], p[1] + (fragKnob()?.lift ?? 0.2), p[2]], c.pos, head, 'blown') > 0; } catch { return false; } };
+  const reachesSam = (p: Vec3): boolean => { try { const c = game.player.char, head = (c.bones as unknown as { head?: Vec3 }).head ?? [c.posX, c.posY + 1.6, c.posZ]; return exposedTo(game, [p[0], p[1] + (fragKnob()?.lift ?? 0.2), p[2]], c.pos, head, 'blown') > 0; } catch { return false; } };
   /** a blast at `p` would take the leaf off its hinges (destruction.ts doorsFor: read only) */
   const takesLeaf = (S: Staged, p: Vec3): boolean => { try { const L = (game.destr as unknown as { doorsFor?(at: Vec3, o: { radius: number; power: number }): unknown[] }).doorsFor?.(p, { radius: fragKnob()?.destrM ?? 2.5, power: 1 }); return !!S.door && !!L && L.includes(S.door); } catch { return false; } };
   const wrap = (a: number) => Math.atan2(Math.sin(a), Math.cos(a));
@@ -1122,7 +1122,7 @@ export function kitViewStart(d: KitViewDeps): KitView {
   const send = (man: Guard, p: V2, face: number, watch: Vec3 | null = null, pace = K.pace, strafe = true, crouch = false) => game.orders.assign(man, { order: 'cover', post: [p[0], 0, p[1]], face, strafe, watch, stance: watch ? 'none' : 'lowReady', upper: watch ? 'aim' : 'none', going: '', there: '', pace, crouch });
   /** where a man lives between beats and how he is turned there: his slot — the fourth man (across the door), while his card is open, a place at Sam's jamb */
   const homeOf = (S: Staged, g: Guard): { p: V2; yaw: number } => { const k = S.order.indexOf(g); if (k === 0 && S.mate && actor() !== g) return S.mate;   // (the quiet picture: the partner rests behind Sam; his own card open, he is at the plan's place by the door)
-    return { p: k === 3 && S.four ? S.act4 : S.spots[k] ?? [g.char.pos[0], g.char.pos[2]], yaw: S.yaws[k] ?? g.char.bodyYaw }; };
+    return { p: k === 3 && S.four ? S.act4 : S.spots[k] ?? [g.char.posX, g.char.posZ], yaw: S.yaws[k] ?? g.char.bodyYaw }; };
   // THE WALKS: where every teammate is going, kept by the squad's hand-over — sent when it changes, and again whenever he is found with no order of this
   // kind (Game.puppet — Sam's beats — takes every order away each step it is set; a door order cut short leaves its own on him). A man with no order of
   // his own drifts after Sam (a staged man's `hold` / `pinned` is only "nothing moves until the first order")
@@ -1140,7 +1140,7 @@ export function kitViewStart(d: KitViewDeps): KitView {
     if (beat && beat.row.team && !beat.loose) return;   // (the squad's own order has every man: the wall charge)
     for (const g of S.order) { if (beat && beat.man === g && beat.row.door === 'none') continue;   // (the door tools' own order has him)
       homeward(S, g); const W = walk.get(g); if (!W) continue;
-      if (game.time < W.at) { if (V.home && game.orders.of(g)?.order !== 'cover') send(g, [g.char.pos[0], g.char.pos[2]], g.char.bodyYaw); continue; }   // (a walk not yet due: he STANDS for it — a man fresh from a restart has the scenario's own order until his first, and drifted after Sam for the shuffle's quarter second)
+      if (game.time < W.at) { if (V.home && game.orders.of(g)?.order !== 'cover') send(g, [g.char.posX, g.char.posZ], g.char.bodyYaw); continue; }   // (a walk not yet due: he STANDS for it — a man fresh from a restart has the scenario's own order until his first, and drifted after Sam for the shuffle's quarter second)
       if (W.k < W.pts.length - 1 && flat(g.char.pos, W.pts[W.k]) <= K.wayM) { W.k++; W.sent = null; }
       const q = W.pts[W.k], A = game.orders.of(g);
       if (W.lane && W.k === W.pts.length - 1 && flat(g.char.pos, q) <= K.onSlot) W.lane = false;
@@ -1165,7 +1165,7 @@ export function kitViewStart(d: KitViewDeps): KitView {
     const nS = Math.min(3, S.order.length), j = m ? S.order.indexOf(m) : -1; if (!m || j <= 0 || j >= nS) return;
     const was = S.order.slice(), stack = was.slice(0, nS); stack.splice(j, 1); stack.unshift(m); S.order = [...stack, ...was.slice(nS)];
     const laneOut = outOf(S, S.spots[0]) + K.lane; let rank = 0;
-    for (let k = nS - 1; k >= 0; k--) { const g = S.order[k]; if (was[k] === g) continue; const T = S.spots[k], p: V2 = [g.char.pos[0], g.char.pos[2]];
+    for (let k = nS - 1; k >= 0; k--) { const g = S.order[k]; if (was[k] === g) continue; const T = S.spots[k], p: V2 = [g.char.posX, g.char.posZ];
       if (g === m) { const a = P(p, -K.cutIn, laneOut - outOf(S, p)), b = P(T, K.cutIn, K.lane); go(g, ok(a) && ok(b) && along(S, a) > along(S, b) ? [a, b, T] : ok(b) ? [b, T] : [T], K.swapPace, 0, true); }
       else { const b = P(T, 0, K.lane); go(g, outOf(S, p) > outOf(S, T) + 0.3 && ok(b) ? [b, T] : [T], K.pace, K.shuffle[0] + K.shuffle[1] * rank++); }
       walk.get(g)!.dealt = true; }
@@ -1389,7 +1389,7 @@ export function kitViewStart(d: KitViewDeps): KitView {
       // (A LEAF LEFT WIDE by the row before — the sticky camera's holds it at `camWide`: his post is in its arc, and walked there at once he stood in its
       //  way; it came round to him, went back and stayed, and the door never offered the wand. So it is pulled HOME first, with him out of its sweep —
       //  where he stands if that is clear of it, else his own place, as tidy() has it between rows — and only then is he walked to its foot)
-      if (Math.abs(S.door!.angle - S.shut) >= 0.03) { const D = S.door!.def, clear = Math.hypot(pl.char.pos[0] - D.hinge[0], pl.char.pos[2] - D.hinge[1]) > D.width + K.wandClear, w = clear ? [pl.char.pos[0], pl.char.pos[2]] : S.sam;
+      if (Math.abs(S.door!.angle - S.shut) >= 0.03) { const D = S.door!.def, clear = Math.hypot(pl.char.posX - D.hinge[0], pl.char.posZ - D.hinge[1]) > D.width + K.wandClear, w = clear ? [pl.char.posX, pl.char.posZ] : S.sam;
         to(B, 'shut'); game.puppet = { goal: [w[0], 0, w[1]], aim: null, throwAt: null, walk: K.samWalk }; return null; }
       to(B, 'go'); game.puppet = { goal: [G[0], 0, G[2]], aim: null, throwAt: null, walk: K.samWalk }; return null; },
     tick: (B, S) => { const pl = game.player, el = game.time - B.pt, W = pl.wanding, ajar = Math.abs(S.door!.angle - S.shut) >= 0.03;
@@ -1454,7 +1454,7 @@ export function kitViewStart(d: KitViewDeps): KitView {
       tubeWas = pl.rifle.attIdx; game.puppet = { goal: [P[0], 0, P[1]], aim: null, throwAt: null, walk: K.samWalk }; return null; },
     tick: (B, S) => { const pl = game.player, el = game.time - B.pt, D = S.door!, cam1 = pl.cams[pl.cams.length - 1];
       game.doors.crack(D, B.char.pos, B.char.id, stepDt, undefined, K.swing, K.camWide);   // (his hand on the leaf until the row ends)
-      if (B.phase === 'open') { if (flat(pl.char.pos, B.post!) <= K.wayM) B.spot = camSpot(S, [pl.char.pos[0], pl.char.pos[2]]) ?? B.spot;   // (the line from where he STOPPED, not from the post: 0.2 m aside put one round in three on the jamb)
+      if (B.phase === 'open') { if (flat(pl.char.pos, B.post!) <= K.wayM) B.spot = camSpot(S, [pl.char.posX, pl.char.posZ]) ?? B.spot;   // (the line from where he STOPPED, not from the post: 0.2 m aside put one round in three on the jamb)
         const up = tube('cam'), there = flat(pl.char.pos, B.post!) <= K.wayM && Math.abs(D.angle - S.shut) >= K.camWide - 0.1 && off(pl.char.aimYaw, yawTo(pl.char.pos, B.spot!)) <= 3 * R;
         if (!(up && there) && el < 4) return 'on'; if (!up) { B.marks.push('kept'); V.refused = 'cams: the launcher never came up'; return 'done'; }
         to(B, 'fire'); B.legT = NaN; return 'on'; }
@@ -1517,7 +1517,7 @@ export function kitViewStart(d: KitViewDeps): KitView {
         if (why !== null) { V.refused = `walls: ${why}`; wallKept(S, B, why); B.marks.push('kept'); return 'done'; }   // (Sam was walked out for nothing: remembered — he is not walked out and back every loop)
         B.moved = A!.men; B.given = true; to(B, 'place'); return 'on'; }
       if (!isNaN(B.markT)) {   // (blown: nobody goes in — each man stands where he stood off, and the hole is looked at)
-        if (!B.loose) { B.loose = true; for (const g of B.moved) { go(g, [[g.char.pos[0], g.char.pos[2]]]); walk.get(g)!.face = g.char.bodyYaw; } }
+        if (!B.loose) { B.loose = true; for (const g of B.moved) { go(g, [[g.char.posX, g.char.posZ]]); walk.get(g)!.face = g.char.bodyYaw; } }
         return game.time - B.markT >= K.aftermath ? 'done' : 'on'; }
       // THE HOLE IS KEPT ONLY ON THE SPAN (the review, 10-15): the order's own test may slide the charge along the wall (WALLCHARGE.slide, ±1.5 m), and the rows
       // that play through the hole aim at the span. A charge set off the span is taken down unblown; one that opened nothing, or opened it off the span, is
@@ -1682,7 +1682,7 @@ export function kitViewStart(d: KitViewDeps): KitView {
   const costBegin = (S: Staged, B: Beat) => { const L = KIT_VIEW_QUIET.cost.lamp, D = S.door; lifeOff(true);
     const G = kitViewCostLamp(S.plan, S.width, S.sam, D && !D.off ? D.def.hinge : null, (x, z) => !game.col.nav.isBlocked(x, z));
     costT = game.time; costSeen.n++; costSeen.last = { field: B.field, i: B.i, share: 1, door: !!D && !D.off, leaf: 0, up: false, lamp: true, catches: G.catches, s: 0, how: '', moved: 0, pool: false };
-    costFeet = [game.player.char.pos[0], game.player.char.pos[2]];   // (HE IS FROZEN where the row left him: tidy() holds him there, turned to the door)
+    costFeet = [game.player.char.posX, game.player.char.posZ];   // (HE IS FROZEN where the row left him: tidy() holds him there, turned to the door)
     quietInside(1, KIT_VIEW_QUIET.cost.blade);
     costLamp = engine.lights.add({ name: 'kitview_cost', group: 'kitview', owner: 0, fixtureBox: -1, flicker: 0, ttl: -1, age: 0, kind: 0 as const, pos: G.pos, dir: [0, -1, 0] as Vec3, color: [L.color[0], L.color[1], L.color[2]] as Vec3,
       intensity: L.intensity, peakIntensity: L.intensity, range: L.range, innerDeg: 0, outerDeg: 180, radius: L.radius, volumetric: 0, broad: false, enabled: true }); };
@@ -1887,7 +1887,7 @@ export function kitViewStart(d: KitViewDeps): KitView {
     if (Q && !B && !game.puppet && !pl.holstered && (pl.slot === 'pistol' || pl.slot === 'rifle') && game.time - stowT > 1 && flat(pl.char.pos, S.sam) <= K.onSlot && !(pl.char.anim as unknown as { kitBusy?: boolean }).kitBusy && asked === null && game.time - lastEnd >= KIT_VIEW_QUIET.stow) { stowT = game.time; input.pressed.add('KeyE'); }
     // (AT A WALL LEFT OPEN — `hole`: what the charge threw down may lie on his place. A half step home that gets no nearer for a second is given up, and where he
     //  stands IS his place: Game.puppet left on him would refuse the squad every order for as long as the hole is kept)
-    if (S.hole && game.puppet && !game.puppet.aim && !game.puppet.throwAt && (!B || B.man)) { const dH = flat(pl.char.pos, S.sam); if (dH <= K.onSlot || dH < stuckD - 0.02) { stuckD = dH; stuckT = game.time; } else if (game.time - stuckT >= 1 && dH <= K.samGive) { S.sam = [pl.char.pos[0], pl.char.pos[2]]; stuckD = Infinity; stuckT = game.time; } }   // (only the half step itself, and only its last stretch: a walk still metres out is a walk)
+    if (S.hole && game.puppet && !game.puppet.aim && !game.puppet.throwAt && (!B || B.man)) { const dH = flat(pl.char.pos, S.sam); if (dH <= K.onSlot || dH < stuckD - 0.02) { stuckD = dH; stuckT = game.time; } else if (game.time - stuckT >= 1 && dH <= K.samGive) { S.sam = [pl.char.posX, pl.char.posZ]; stuckD = Infinity; stuckT = game.time; } }   // (only the half step itself, and only its last stretch: a walk still metres out is a walk)
     else { stuckD = Infinity; stuckT = game.time; }
     // (THE QUIET PICTURE: Sam rests a body's width from where the game stacks a man on the door, and a partner taking his post shoulders him a few
     //  centimetres — over `onSlot`, and the walk home this gives him is Game.puppet, which takes the partner's order away: his frag went back on his

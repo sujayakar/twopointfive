@@ -180,14 +180,14 @@ export const gearglassJoined = guarded(async () => {
     const from = lifted(P); let x = 7.5, share0 = -1;
     for (let k = 0; k <= 24 && !(share0 > 0 && share0 < 1); k++) { x = 7.5 + (k % 2 ? 1 : -1) * Math.ceil(k / 2) * 0.1; share0 = exposure(g, from, [x, 0, 9.3], [x, 1.65, 9.3], 'whole'); }
     R.put(A, [x, 0, 9.3], P); A.char.update(0); A.char.update(DT); R.step(2);
-    const feet = [...A.char.pos] as Vec3, head = [...(A.char.bones.head ?? [A.char.pos[0], 1.65, A.char.pos[2]])] as Vec3;
+    const feet = [...A.char.pos] as Vec3, head = [...(A.char.bones.head ?? [A.char.posX, 1.65, A.char.posZ])] as Vec3;
     const fr = () => PANES.map(bi => R.gb.paneInfo(bi)?.openFraction.toFixed(4)).join(); const open0 = fr(); share0 = exposure(g, from, feet, head, 'whole');
     // THE REPORT IS MADE ON THE FRAME OF THE BURST, from the burst's own point, of the man as he stands on that frame: the two shares it is held between are
     // asked the same way (a man standing still sways, and a line that passes a hand's breadth from a hole's edge is open from one pose and shut from the next).
     // On that frame the grenade's pieces are queued and none has left (`unfallen`): the glass as it stands is still what was open before it went off
     const o0 = R.open(PM), n0 = FRAG_LOG.length; g.items.spawn('frag', [P[0], 0.05, P[2]], [0, 0, 0], { fuse: 0.2, who: 1 }); for (let i = 0; i < 120 && FRAG_LOG.length === n0; i++) R.step();
     const rep = FRAG_LOG[n0] ?? null, at: Vec3 = rep ? [rep.at[0], rep.at[1] + FRAG.lift, rep.at[2]] : from;
-    const feetB = [...A.char.pos] as Vec3, headB = [...(A.char.bones.head ?? [A.char.pos[0], 1.65, A.char.pos[2]])] as Vec3, unfallen = fr() === open0;
+    const feetB = [...A.char.pos] as Vec3, headB = [...(A.char.bones.head ?? [A.char.posX, 1.65, A.char.posZ])] as Vec3, unfallen = fr() === open0;
     share0 = exposure(g, at, feetB, headB, 'whole');
     R.step(1); const h = rep?.hits.find((q: any) => q.id === A.char.id) ?? null; R.settle(2.5); const open1 = fr();
     const share1 = exposure(g, at, feetB, headB, 'whole');   // (what ends open, once the glass the grenade loosened has fallen)

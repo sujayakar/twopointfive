@@ -76,12 +76,12 @@ const stood = async (zoom: boolean, say: string) => { const rows: string[] = [];
     const why = await live(seed, (W, g) => {
       const marks: number[][] = L.scenarios.roomClear.team.ops, full = g.player.hitsLeft;
       if (zoom) for (let i = 0; i < 30 && g.lesson.step?.id === 'zoom'; i++) { W.cam.zoom(60); W.step(1 / 60); }   // (the host's own wheel on the view, as tools/qa/lesson-run.ts does it)
-      for (let i = 0; i < SECS * 60; i++) { W.step(1 / 60); for (const m of g.guards) if (m.unit && m.team === 'operative' && g.rails.isSpared(m) && !knees.some(k => k.startsWith(m.callsign))) knees.push(`${m.callsign} at ${g.time.toFixed(1)} s (${m.char.pos[0].toFixed(1)}, ${m.char.pos[2].toFixed(1)})`); }
+      for (let i = 0; i < SECS * 60; i++) { W.step(1 / 60); for (const m of g.guards) if (m.unit && m.team === 'operative' && g.rails.isSpared(m) && !knees.some(k => k.startsWith(m.callsign))) knees.push(`${m.callsign} at ${g.time.toFixed(1)} s (${m.char.posX.toFixed(1)}, ${m.char.posZ.toFixed(1)})`); }
       hits = full - g.player.hitsLeft; down = !!g.player.down; step = g.lesson.step?.id ?? '';
       posts = g.guards.filter((x: any) => POSTS.some(([n]) => n === x.callsign) && x.state !== 'dead').length;
       const men = g.guards.filter((x: any) => x.unit && x.team === 'operative' && x.state !== 'dead');
-      const away = men.filter((m: any) => !marks.some(k => Math.hypot(m.char.pos[0] - k[0], m.char.pos[2] - k[2]) < 1.0)); off = 4 - men.length + away.length;
-      who = away.map((m: any) => `${m.callsign} at (${m.char.pos[0].toFixed(1)}, ${m.char.pos[2].toFixed(1)}) ${g.orders.of(m)?.order ?? 'no order'}${m.script ? ', the script\'s' : ', NOT the script\'s'}`).join(', ');
+      const away = men.filter((m: any) => !marks.some(k => Math.hypot(m.char.posX - k[0], m.char.posZ - k[2]) < 1.0)); off = 4 - men.length + away.length;
+      who = away.map((m: any) => `${m.callsign} at (${m.char.posX.toFixed(1)}, ${m.char.posZ.toFixed(1)}) ${g.orders.of(m)?.order ?? 'no order'}${m.script ? ', the script\'s' : ', NOT the script\'s'}`).join(', ');
     }, zoom ? BLIND : OPEN);
     const want = zoom ? 'move' : 'zoom', ok = !why && hits === 0 && !down && posts === 3 && off === 0 && knees.length === 0 && step === want; if (!ok) bad++;
     rows.push(`seed ${seed}: ${why || `${hits ? `HIT ${hits}×${down ? ', DOWN' : ''}` : 'not hit'} · posts ${posts} · ${off ? `${off} OFF THEIR MARKS (${who})` : 'the four on their marks'}${knees.length ? ` · PUT ON A KNEE: ${knees.join(', ')}` : ''}${step === want ? '' : ` · step '${step}'`}`}`);

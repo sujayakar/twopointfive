@@ -72,7 +72,7 @@ export class PathsWatch {
     for (const op of D.ops as any[]) { if (Number.isNaN(op.openT)) continue; if (!this.ops.has(op)) this.ops.add(op);
       for (const m of op.men) this.last.set(m, { op, t, door: op.door, phase: op.phase });
       if (!this.offAtGo.has(op) && (op.phase === 'enter' || op.queue?.length)) { const M = new Map<any, [number, number]>(), F = frameOf(op.door);
-        for (const m of op.men) { const al = (m.char.pos[0] - F.hx) * F.ux + (m.char.pos[2] - F.hz) * F.uz - F.W / 2; M.set(m, [flat(m.char.pos, op.door.frameCentre), Math.abs(al) < 0.3 ? 0 : Math.sign(al)]); }   // (which jamb he stood at: 0 = square in front of the opening)
+        for (const m of op.men) { const al = (m.char.posX - F.hx) * F.ux + (m.char.posZ - F.hz) * F.uz - F.W / 2; M.set(m, [flat(m.char.pos, op.door.frameCentre), Math.abs(al) < 0.3 ? 0 : Math.sign(al)]); }   // (which jamb he stood at: 0 = square in front of the opening)
         this.offAtGo.set(op, M); }
       if (!this.dealt.has(op) && op.queue?.length) this.dealt.set(op, op.queue.map((q: any) => q.gd)); }
     let any: { door: any; phase: string } | null = null;
@@ -84,7 +84,7 @@ export class PathsWatch {
       if (was && this.crossed.get(m)?.who !== L.op) { const F = frameOf(L.door), da = (was[0] - F.hx) * F.nx + (was[2] - F.hz) * F.nz, db = (p[0] - F.hx) * F.nx + (p[2] - F.hz) * F.nz, al = (p[0] - F.hx) * F.ux + (p[2] - F.hz) * F.uz;
         if (da * L.op.side > 0 && db * L.op.side <= 0 && al > -0.3 && al < F.W + 0.3) { const prev = [...this.crossed.entries()].filter(([, c]) => c.who === L.op).sort((a, b) => b[1].t - a[1].t)[0];
           const n = [...this.crossed.values()].filter(c => c.who === L.op).length + 1, off = this.offAtGo.get(L.op);
-          const out = (o: any) => o !== m && o.state !== 'dead' && L.op.men.includes(o) && this.crossed.get(o)?.who !== L.op && ((o.char.pos[0] - F.hx) * F.nx + (o.char.pos[2] - F.hz) * F.nz) * L.op.side > 0;   // (still on the stack's side of the line)
+          const out = (o: any) => o !== m && o.state !== 'dead' && L.op.men.includes(o) && this.crossed.get(o)?.who !== L.op && ((o.char.posX - F.hx) * F.nx + (o.char.posZ - F.hz) * F.nz) * L.op.side > 0;   // (still on the stack's side of the line)
           const mine = off?.get(m), near = off && mine ? [...off].filter(([o, [d]]) => out(o) && d < mine[0] - 0.5) : [];   // (men who stood half a metre nearer the frame at the go and are still outside)
           const far = !near.length ? null : near.some(([, [, jamb]]) => jamb * mine![1] >= 0) ? 'own' : 'other';
           const order = this.dealt.get(L.op) ?? [], turn = order.indexOf(m), jumped = order.slice(0, Math.max(0, turn)).some(out);
@@ -110,8 +110,8 @@ export class PathsWatch {
       // statics
       { const q: [number, number, number] = [p[0], p[1], p[2]]; if (g.col.collideCircle(q, PATHS.jamb, 0.2, 1.5, 3)) { const moved = Math.hypot(q[0] - p[0], q[2] - p[2]); if (moved > 0.01) this.hit(t, 'jamb', m, `${p[0].toFixed(1)},${p[2].toFixed(1)}`, moved, false, door, phase); } }
     }
-    if (this.rec && any && this.n++ % 3 === 0) this.rec.push({ t: +t.toFixed(2), men: team.map(m => ({ who: m.callsign, x: +m.char.pos[0].toFixed(3), z: +m.char.pos[2].toFixed(3), yaw: +m.char.aimYaw.toFixed(2), up: m.state !== 'dead', ...(m.char.muzzle ? { mz: [+m.char.muzzle[0].toFixed(3), +m.char.muzzle[2].toFixed(3)] as [number, number] } : {}), ...(m.muzzleDown ? { low: true } : {}), ...(m.script?.over ? { ov: true } : {}), ...(m.script ? {} : { ai: true }) })), sam: [+sam.pos[0].toFixed(2), +sam.pos[2].toFixed(2)],
-      foes: g.guards.filter((x: any) => x.team === 'hostile').map((x: any) => [+x.char.pos[0].toFixed(2), +x.char.pos[2].toFixed(2), x.state !== 'dead'] as [number, number, boolean]), doors: g.doors.list.map((d: any) => [d.def.name, +d.angle.toFixed(3)] as [string, number]), door: any.door.def.name, phase: any.phase });
+    if (this.rec && any && this.n++ % 3 === 0) this.rec.push({ t: +t.toFixed(2), men: team.map(m => ({ who: m.callsign, x: +m.char.posX.toFixed(3), z: +m.char.posZ.toFixed(3), yaw: +m.char.aimYaw.toFixed(2), up: m.state !== 'dead', ...(m.char.muzzle ? { mz: [+m.char.muzzle[0].toFixed(3), +m.char.muzzle[2].toFixed(3)] as [number, number] } : {}), ...(m.muzzleDown ? { low: true } : {}), ...(m.script?.over ? { ov: true } : {}), ...(m.script ? {} : { ai: true }) })), sam: [+sam.posX.toFixed(2), +sam.posZ.toFixed(2)],
+      foes: g.guards.filter((x: any) => x.team === 'hostile').map((x: any) => [+x.char.posX.toFixed(2), +x.char.posZ.toFixed(2), x.state !== 'dead'] as [number, number, boolean]), doors: g.doors.list.map((d: any) => [d.def.name, +d.angle.toFixed(3)] as [string, number]), door: any.door.def.name, phase: any.phase });
   }
   private meta() { const g = this.g, doors: Record<string, { hinge: [number, number]; dir: number; w: number }> = {}; for (const d of g.doors.list) doors[d.def.name] = { hinge: [d.def.hinge[0], d.def.hinge[1]], dir: d.def.closedDir, w: d.def.width };
     const r = (n: number) => +n.toFixed(3), boxes: number[][] = [];

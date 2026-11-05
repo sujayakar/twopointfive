@@ -99,7 +99,7 @@ async function arm(id: string, seed: number, play: number, quietFrames: number, 
       for (const e of g.events) if (!ev.has(e)) { ev.add(e); if ((e as any).kind === 'shot' && (e as any).who === PLAYER_ID) shots++; }
     } });
     const pl = g.player;
-    note = `played ${play} s: Sam walked ${Math.hypot(pl.char.pos[0] - g.level.playerSpawn[0], pl.char.pos[2] - g.level.playerSpawn[2]).toFixed(1)} m from the spawn, ${shots} of his shots heard (ready ${ammo0} → ${pl.pistol.roundsReady ?? '?'}/${pl.rifle.roundsReady ?? '?'}), `
+    note = `played ${play} s: Sam walked ${Math.hypot(pl.char.posX - g.level.playerSpawn[0], pl.char.posZ - g.level.playerSpawn[2]).toFixed(1)} m from the spawn, ${shots} of his shots heard (ready ${ammo0} → ${pl.pistol.roundsReady ?? '?'}/${pl.rifle.roundsReady ?? '?'}), `
       + `${door ? `door '${door.def.name}' ${doorHow} (angle ${door.angle.toFixed(2)}${door.lockBroken ? ', lock broken' : ''})` : 'no door'}, ${g.decals.list.length} marks, ${g.items.items.length} items on the floor, ${g.guards.filter((x: any) => x.state === 'dead').length} of ${g.guards.length} men down, Sam ${pl.down ? 'DOWN' : 'up'}, escalation ${g.escalation}`;
     // ---- the restart, as the page's cards and Shift+Enter make it
     input.keys.clear(); input.pressed.clear(); input.buttons = 0; input.clicked = 0; input.mouseX = 800; input.mouseY = 500;

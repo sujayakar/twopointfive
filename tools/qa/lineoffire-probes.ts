@@ -117,14 +117,14 @@ async function meet(o: Setup) {
     W.step(DT); scan();
     if (t0 > 0 && foe.state !== 'dead' && !CLM.CLEARLINE_LOG.length) {   // up to the rule's first move: where Sam is against the first man's gun line, by the FIRE GATE's own test (roomfight.ts friendInLine) — as he is, and as if he stood still
       samV = Math.max(samV, flat(samAt(), sam0) / DT);
-      const c = men[0].gd.char, h = g.player.char.bones.hips ?? samAt(), to = [foe.char.pos[0], 1.2, foe.char.pos[2]], sh = c.bones.upperArmR ?? [c.pos[0], 1.4, c.pos[2]];
+      const c = men[0].gd.char, h = g.player.char.bones.hips ?? samAt(), to = [foe.char.posX, 1.2, foe.char.posZ], sh = c.bones.upperArmR ?? [c.posX, 1.4, c.posZ];
       const tx = to[0] - sh[0], tz = to[2] - sh[2], L = Math.hypot(tx, tz) || 1, off = Math.abs(tx * (h[2] - sh[2]) - tz * (h[0] - sh[0])) / L;
       const inNow = [c.muzzle, sh].some(f => g.fight.friendInLine(f, to, men[0].gd) === 'player'), inStill = [c.muzzle, sh].some(f => g.fight.friendInLine(f, to, men[0].gd, true) === 'player');
       if (inNow) { samOff = [Math.min(samOff[0], off), Math.max(samOff[1], off)]; if (inStill) lane.body++; else lane.edge++; } }
     if (foe.state === 'dead' && foeDown < 0) foeDown = g.time - t0;
-    for (const m of men) { const c = m.gd.char, v = Math.hypot(c.vel[0], c.vel[2]); if (!running(g, m.gd)) m.maxV = Math.max(m.maxV, v); m.walked += flat(c.pos, m.last); m.last = [c.pos[0], 0, c.pos[2]];
+    for (const m of men) { const c = m.gd.char, v = Math.hypot(c.velX, c.velZ); if (!running(g, m.gd)) m.maxV = Math.max(m.maxV, v); m.walked += flat(c.pos, m.last); m.last = [c.posX, 0, c.posZ];
       // stood upright and still with his gun down in the living man's plain sight, a friend masking him: the thing the rule is there to end
-      if (foe.state !== 'dead' && g.time - t0 > 1 && v < 0.3 && m.gd.muzzleDown && !(c.anim.crouchTarget > 0.5) && !g.col.segmentBlocked(foe.char.bones.head ?? [foe.char.pos[0], 1.6, foe.char.pos[2]], [c.pos[0], 1.1, c.pos[2]])) m.idle += DT; }
+      if (foe.state !== 'dead' && g.time - t0 > 1 && v < 0.3 && m.gd.muzzleDown && !(c.anim.crouchTarget > 0.5) && !g.col.segmentBlocked(foe.char.bones.head ?? [foe.char.posX, 1.6, foe.char.posZ], [c.posX, 1.1, c.posZ])) m.idle += DT; }
   } };
   step(2);
   const O = g.orders; let why: string | null = null;
@@ -138,7 +138,7 @@ async function meet(o: Setup) {
   for (let i = 0; i < (o.secs ?? 10) * 60; i++) step();
   const cues = said.filter(s => /^blocked|^no shot — (getting|you|Blue)/.test(s.text));
   return { g, O, foe, men, mate, said, cues, pass, passWho, foeDown, why, marks, samOff: () => samOff, samV: () => samV, lane, samEnd: () => [...samAt()], stats: { ...CLM.CLEARLINE_STATS }, log: [...CLM.CLEARLINE_LOG], t0,
-    hidden: (m: Man) => g.col.segmentBlocked(foe.char.bones.head ?? [foe.char.pos[0], 1.6, foe.char.pos[2]], [m.gd.char.pos[0], 0.9, m.gd.char.pos[2]]),
+    hidden: (m: Man) => g.col.segmentBlocked(foe.char.bones.head ?? [foe.char.posX, 1.6, foe.char.posZ], [m.gd.char.posX, 0.9, m.gd.char.posZ]),
     step, cueAt: () => cues.length ? cues[0].t - t0 : -1 };
 }
 /** the two things every on-case owes: no round inside a friend's lane, nobody over the team's pace */
@@ -291,8 +291,8 @@ async function entry(o: { seed?: number; knobs?: Record<string, unknown>; sam: n
     g.player.visibility = 0.05; W.step(DT); op ??= g.doorTools.ops[0] ?? null; const live = !!op && g.doorTools.ops.includes(op), t = g.time - t0;
     if (live && !(op.phase in at)) at[op.phase] = t;
     if (op && !live && !('end' in at)) at.end = t;
-    if (live && !foe && op.phase === o.foeAt) { foe = spawn('hostile', o.foe, men[0].char.pos, 'Tango 1'); foe.god = true; foe.state = 'alert'; foe.awareness = 1; foe.lastKnown = [men[0].char.pos[0], 0, men[0].char.pos[2]]; g.fight.hotT = g.time; at.foe = t; }
-    for (const m of men) { if (!running(g, m)) maxV = Math.max(maxV, Math.hypot(m.char.vel[0], m.char.vel[2]));
+    if (live && !foe && op.phase === o.foeAt) { foe = spawn('hostile', o.foe, men[0].char.pos, 'Tango 1'); foe.god = true; foe.state = 'alert'; foe.awareness = 1; foe.lastKnown = [men[0].char.posX, 0, men[0].char.posZ]; g.fight.hotT = g.time; at.foe = t; }
+    for (const m of men) { if (!running(g, m)) maxV = Math.max(maxV, Math.hypot(m.char.velX, m.char.velZ));
       if (!live) continue;
       if (op.crossed.has(m) && !crossed.has(m)) crossed.set(m, t);
       // on his point: the door tools say so — or (set and taken back inside one tick: sent straight on) his entry assignment has been replaced
@@ -305,7 +305,7 @@ async function entry(o: { seed?: number; knobs?: Record<string, unknown>; sam: n
   const cues = said.filter(x => /^blocked|^no shot — (getting|you|Blue)/.test(x.text)).map(x => ({ ...x, t: x.t - t0 }));
   return { g, why, men, at, crossed: men.map(m => crossed.get(m) ?? -1), point: men.map(m => point.get(m) ?? -1), log, acts, inWindow, cues, maxV, ended: op ? (op.beats.filter((b: any) => !/^other door · /.test(b.what)).at(-1)?.what ?? '') : 'no order',   // (the order's last beat of its own: a man put on the room's other door after the room is theirs — DOORTOOLS.otherDoorM — is a beat too, and comes later)
     stats: { ...CLM.CLEARLINE_STATS },
-    inRoom: men.map(m => m.char.pos[2] > d.frameCentre[2] + 0.3) };
+    inRoom: men.map(m => m.char.posZ > d.frameCentre[2] + 0.3) };
 }
 
 export const lineoffireEntry = guarded(async () => {

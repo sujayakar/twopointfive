@@ -708,14 +708,14 @@ export function fragTick(g: Game, _dt: number) {
     if (!g.aiEnabled) continue;
     for (const gd of g.guards) {
       if (gd.state === 'dead' || gd.held || gd.civ) continue;
-      const c = gd.char; const d = Math.hypot(c.pos[0] - at[0], c.pos[2] - at[2]);
+      const c = gd.char; const d = Math.hypot(c.posX - at[0], c.posZ - at[2]);
       if (!L.knows.has(gd)) {
         if (d > Math.max(F.seeM, F.fleeM)) continue;
         let when = -1;
         if (sameSide(L.side, gd.team)) when = g.time + 0.1;   // his own side's: called as it left the hand ('frag out')
         else if (g.time >= gd.dazzledUntil) {
           const head = c.bones.head ?? v3.add(c.pos, [0, 1.6, 0]);
-          const to = Math.atan2(at[0] - c.pos[0], at[2] - c.pos[2]); let off = to - c.aimYaw; off = Math.atan2(Math.sin(off), Math.cos(off));
+          const to = Math.atan2(at[0] - c.posX, at[2] - c.posZ); let off = to - c.aimYaw; off = Math.atan2(Math.sin(off), Math.cos(off));
           const told = (warned.get(gd) ?? -1) > g.time, hearM = told ? F.hearM * 2 : F.hearM;   // (he heard them shout it: he is listening for it, and looking)
           const sees = d <= F.seeM && (told || d < 3 || Math.abs(off) < 1.9) && !g.col.segmentBlocked(head, eyeAt);
           let hears = false;
@@ -784,7 +784,7 @@ export function ownNoise(g: Game, gd: Guard, who?: number): boolean { return who
  *  where it lies (fragMarks). Nothing moves him: the fuse is long enough that a player who goes when he reads it lives. */
 function samCue(g: Game, L: Live, eyeAt: Vec3) {
   const pc = g.player.char; if (g.player.down) return;
-  const d = Math.hypot(pc.pos[0] - eyeAt[0], pc.pos[2] - eyeAt[2]); if (d > FRAG.cueM) return;
+  const d = Math.hypot(pc.posX - eyeAt[0], pc.posZ - eyeAt[2]); if (d > FRAG.cueM) return;
   const head = pc.bones.head ?? v3.add(pc.pos, [0, 1.6, 0]);
   let knows = !g.col.segmentBlocked(head, eyeAt);
   if (!knows && L.it.bounces > 0) { const pr = g.col.sound.propagate(eyeAt, head); knows = pr.muffle < 0.6 && pr.pathLen <= FRAG.cueM; }
@@ -802,7 +802,7 @@ export function fragStepOff(g: Game, speed = 3.2): Vec3 | null {
   const B = books.get(g); if (!B || !B.length) return null; const pc = g.player.char;
   for (const L of B) {
     if (!L.cued || L.it.fired) continue; const wise = FRAG.fleeWise ? restOf(g, L) : null, at = wise ? wise.at : comeDown(g, L.it);   // (the same judgment the men make)
-    if (Math.hypot(pc.pos[0] - at[0], pc.pos[2] - at[2]) > FRAG.woundM) continue;
+    if (Math.hypot(pc.posX - at[0], pc.posZ - at[2]) > FRAG.woundM) continue;
     if (exposedTo(g, [at[0], at[1] + FRAG.lift, at[2]], pc.pos, pc.bones.head ?? v3.add(pc.pos, [0, 1.6, 0])) <= 0) continue;
     const spot = fleeSpot(g, pc, at, speed, L.it.fuse, Infinity, wise ? { path: wise.path, keep: null } : undefined); if (spot) return spot;
   }
@@ -846,11 +846,11 @@ export function fragThrowTick(g: Game, dt: number) {
       if (!Wd.swung && g.time >= Wd.until - THROW_RELEASE) { Wd.swung = true; c.anim.throwItem(flat(c.pos, Wd.at)); }
       if (g.time < Wd.until) continue;
       C.wind = null;
-      let from: Vec3 = Wd.hand && flat(Wd.hand, c.pos) < 1 && !g.col.solidBlocked([c.pos[0], Wd.hand[1], c.pos[2]], Wd.hand) ? Wd.hand : Wd.toward ? armRound(g, c.pos, Wd.toward) : [c.pos[0] + Math.sin(c.aimYaw) * 0.35, c.pos[1] + 1.5, c.pos[2] + Math.cos(c.aimYaw) * 0.35];
+      let from: Vec3 = Wd.hand && flat(Wd.hand, c.pos) < 1 && !g.col.solidBlocked([c.posX, Wd.hand[1], c.posZ], Wd.hand) ? Wd.hand : Wd.toward ? armRound(g, c.pos, Wd.toward) : [c.posX + Math.sin(c.aimYaw) * 0.35, c.posY + 1.5, c.posZ + Math.cos(c.aimYaw) * 0.35];
       let sol = g.items.solve(from, Wd.at, 11);
       if (GUNHAND.on && GUNHAND.throwFree && !Wd.toward && c.anim.throwOff) {   // (gunhand.ts: thrown with the free hand, it leaves THAT hand — where the hand has the same arc to the same spot; from where it always did otherwise. The plain throw only: an arm round a corner is that rule's own point)
         const h = c.bones.handL;
-        if (h && flat(h, c.pos) < 1 && !g.col.solidBlocked([c.pos[0], h[1], c.pos[2]], h)) { const sh = g.items.solve(h, Wd.at, 11); if (lands(sh, Wd.at, 2)) { from = v3.copy(h); sol = sh; } }
+        if (h && flat(h, c.pos) < 1 && !g.col.solidBlocked([c.posX, h[1], c.posZ], h)) { const sh = g.items.solve(h, Wd.at, 11); if (lands(sh, Wd.at, 2)) { from = v3.copy(h); sol = sh; } }
       }
       if (!lands(sol, Wd.at, 2) || !ownClear(g, gd, sol.land, true) || hostageNear(g, sol.land)) {   // (a mate has come into its reach, or he has lost the arc: it stays in his hand, he says so, and the floor's clock is as it was before he shouted)
         B.lastT = Wd.lastT; C.tryAt = g.time + 2; g.say(gd, w('no — holding it!', 'no — hold it!')); FRAG_STATS.held++; continue; }
@@ -872,7 +872,7 @@ export function fragThrowTick(g: Game, dt: number) {
     if (g.time - gd.lastSeenT < 0.5) {
       // (counted by the eye test every sighting of his goes through — cone, range, a line, the smoke between, his own dazzle: guards.ts canSeeChar — and only a man lit enough to be made out, or the one he is already on)
       // … or along his own gun line (within 45° of his aim, a line to the man, his eyes not full of magnesium): the eye test's look sits well off a shouldered gun's bore — the 'eyes on the sights' note in guards.ts
-      const sights = (p: Vec3, hd: Vec3 | undefined) => { let off = Math.atan2(p[0] - c.pos[0], p[2] - c.pos[2]) - c.aimYaw; off = Math.atan2(Math.sin(off), Math.cos(off)); return Math.abs(off) < 0.785 && g.time >= gd.dazzledUntil && flat(p, c.pos) < 16 && !g.col.segmentBlocked(head, hd ?? v3.add(p, [0, 1.5, 0])); };
+      const sights = (p: Vec3, hd: Vec3 | undefined) => { let off = Math.atan2(p[0] - c.posX, p[2] - c.posZ) - c.aimYaw; off = Math.atan2(Math.sin(off), Math.cos(off)); return Math.abs(off) < 0.785 && g.time >= gd.dazzledUntil && flat(p, c.pos) < 16 && !g.col.segmentBlocked(head, hd ?? v3.add(p, [0, 1.5, 0])); };
       eachSeat(g, v => { const pl = v.player; if (!pl.down && !g.playerInvisible && flat(pl.char.pos, fix) <= F.defBunch && (gd.foe === 'player' || pl.visibility > 0.2) && (canSeeChar(v, gd, pl.char, true).visible || (gd.smokeTrans >= 0.3 && sights(pl.char.pos, pl.char.bones.head)))) bunch++; });   // (every player's man: seats.ts)
       for (const o of g.guards) if (o.team === 'operative' && o.state !== 'dead' && !railsDown(g, o) && flat(o.char.pos, fix) <= F.defBunch && (gd.foe === o || o.visibility > 0.2) && (canSeeChar(g, gd, o.char, false).visible || sights(o.char.pos, o.char.bones.head))) bunch++;
     }
@@ -883,7 +883,7 @@ export function fragThrowTick(g: Game, dt: number) {
     if (hostageNear(g, fix)) { no('hostage'); continue; }   // (not with their own hostages in its reach)
     // WHERE HE MEANS IT: the fix itself, else the nearest spot by it that his arm can reach AND that has a line to the man (a grenade is what goes round the
     // corner his rifle cannot) — then off that by an untrained arm's scatter, which is where it really lands
-    const from: Vec3 = [c.pos[0] + Math.sin(c.aimYaw) * 0.35, c.pos[1] + 1.5, c.pos[2] + Math.cos(c.aimYaw) * 0.35];
+    const from: Vec3 = [c.posX + Math.sin(c.aimYaw) * 0.35, c.posY + 1.5, c.posZ + Math.cos(c.aimYaw) * 0.35];
     // A FIX HIS EARS GAVE HIM (nobody in his sight inside defFresh) is where the noise reached him from — through a doorway, that is the doorway itself, on his own
     // side of it. He throws PAST such a point (the two spots beyond it on his own line: through the opening, with a line back to it) or not at all: at it, or
     // beside it, is his own side of a shut door. Measured: 185 grenades in 288 scripted room clears burst on the thrower's side of a door the team was behind.
@@ -899,7 +899,7 @@ export function fragThrowTick(g: Game, dt: number) {
  *  past his cover — then the fix itself, then two rings round it), those that are open floor with the burst's line to the man's chest by the glass rule his
  *  rifle goes by. `from` given: only the first of them his arm can land it on from that hand (none = empty); null: all of them, whatever his arm reaches */
 function aimSpots(g: Game, gd: Guard, from: Vec3 | null, fix: Vec3, n: number): Vec3[] {
-  const F = FRAG, c = gd.char, d = flat(c.pos, fix), ux = (fix[0] - c.pos[0]) / (d || 1), uz = (fix[2] - c.pos[2]) / (d || 1), out: Vec3[] = [];
+  const F = FRAG, c = gd.char, d = flat(c.pos, fix), ux = (fix[0] - c.posX) / (d || 1), uz = (fix[2] - c.posZ) / (d || 1), out: Vec3[] = [];
   const chest: Vec3 = [fix[0], fix[1] + 1.1, fix[2]], glass: GlassView = (shotEnergy(g, c, gd.weapon.def) ?? 0) > 0 ? 'counted' : 'whole';
   for (let q = -2; q < n; q++) {
     const rr = q <= 0 ? 0 : q <= 8 ? 1.3 : 2.4, aa = q * (Math.PI / 4), on = q === -2 ? F.defPast : q === -1 ? F.defPast * 0.55 : 0;

@@ -74,7 +74,7 @@ if (import.meta.main && process.argv.includes('--boot')) {
     const sam0 = [...g.player.char.pos];
     for (let i = 0; i < Math.round(secs / DT); i++) { g.player.visibility = 0.05; W.step(DT); if (i === 30) R.silent = !!squadSilent(g); }
     Object.assign(R, { t1: g.time, d1: word(), operativesAfter: teamOf(g).filter((x: any) => x.state !== 'dead').length, hostilesAfter: hostile(), samDown: !!g.player.down,
-      samMoved: Math.hypot(g.player.char.pos[0] - sam0[0], g.player.char.pos[2] - sam0[2]), stage: g.mission?.stage ?? null });
+      samMoved: Math.hypot(g.player.char.posX - sam0[0], g.player.char.posZ - sam0[2]), stage: g.mission?.stage ?? null });
   } catch (e: any) { R.threw = String(e?.stack ?? e).split('\n').slice(0, 4).join(' | '); }
   log(TAG + JSON.stringify(R));
   process.exit(0);

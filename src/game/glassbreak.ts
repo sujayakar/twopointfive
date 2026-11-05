@@ -738,12 +738,12 @@ export class GlassBreak {
     // cheap gates first — this is asked every frame of every run pane: within rakeM of the sheet, inside its width, and his legs are taking him AT it, more at it
     // than along it (the commanded velocity — the pane itself has stopped his body; a shallow pass along the glass is not a walk into it)
     const c = pl.char; const n = this.normalOf(st); const w = v3.dot(v3.sub(c.pos, st.box.c), n);
-    if (Math.abs(w) > K.rakeM || c.pos[1] >= st.box.c[1] + st.hv) return;
+    if (Math.abs(w) > K.rakeM || c.posY >= st.box.c[1] + st.hv) return;
     const [mu] = this.toUV(st, c.pos); if (Math.abs(mu) > st.hu + 0.1) return;
-    const vn = -v3.dot(c.vel, n) * Math.sign(w || 1); const sp = Math.hypot(c.vel[0], c.vel[2]);
+    const vn = -v3.dot(c.vel, n) * Math.sign(w || 1); const sp = Math.hypot(c.velX, c.velZ);
     if (vn <= 0.3 || vn < 0.6 * sp) return;
     if (st.pending.some(p => p.cause === 'rake') || this.openFraction(st.bi) < K.rakeOpen) return;
-    const vClear = K.walkClearH - st.box.c[1]; const from: Vec3 = [c.pos[0], 1.0, c.pos[2]]; let took = 0;
+    const vClear = K.walkClearH - st.box.c[1]; const from: Vec3 = [c.posX, 1.0, c.posZ]; let took = 0;
     const waiting = new Set(st.pending.map(p => p.fid));
     for (const f of this.fragsOf(st)) {
       if (st.open[f.fid] || f.vMin >= vClear || waiting.has(f.fid)) continue;

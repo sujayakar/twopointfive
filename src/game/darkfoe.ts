@@ -98,12 +98,12 @@ const floorLight = (g: Game, x: number, z: number, skip: (owner: number) => bool
 /** is the floor he is watching dark to him: under `seeShare` of it at `litAt` along his aim and either edge of his look, his own lamp left out (no floor in view at
  *  all — a wall at his nose — reads by where he stands) */
 export function darkFoeBlind(g: Game, gd: Guard): boolean {
-  const K = DARKFOE, c = gd.char, eye: Vec3 = [c.pos[0], 1.5, c.pos[2]], skip = mine(gd); let n = 0, lit = 0; DARKFOE_STATS.asks++;
+  const K = DARKFOE, c = gd.char, eye: Vec3 = [c.posX, 1.5, c.posZ], skip = mine(gd); let n = 0, lit = 0; DARKFOE_STATS.asks++;
   for (const off of [0, -K.fanRad, K.fanRad]) { const fx = Math.sin(c.aimYaw + off), fz = Math.cos(c.aimYaw + off);
     for (let r = K.stepM; r <= K.lookM + 1e-6; r += K.stepM) { const x = eye[0] + fx * r, z = eye[2] + fz * r;
       if (g.col.segmentBlocked(eye, [x, 1.5, z])) break;
       n++; if (floorLight(g, x, z, skip) >= K.litAt) lit++; } }
-  if (!n) return floorLight(g, c.pos[0], c.pos[2], skip) < K.litAt;
+  if (!n) return floorLight(g, c.posX, c.posZ, skip) < K.litAt;
   return lit / n < K.seeShare;
 }
 /** has it reached him for good: he is or has been alert or searching, his ears have counted gunfire, a kick or a bang */
@@ -116,10 +116,10 @@ function hasWord(g: Game, gd: Guard): boolean {
   if (DARKFOE.suspect && gd.state === 'suspicious') return true;   // (the maintainer, 10-13: the lamp only once he is alerted — a man who has merely heard something keeps it off, and a partner told to hold still stays in the dark)
   if (powerOutWord(g, gd)) return true;   // (powerout.ts, false on its first line with its switch off: their net has called the dark the team's doing)
   if (!DARKFOE.byLamp) return false;
-  const c = gd.char, eye: Vec3 = [c.pos[0], 1.5, c.pos[2]], cos = Math.cos(GUARD_EYE.halfDeg * Math.PI / 180), fx = Math.sin(c.aimYaw), fz = Math.cos(c.aimYaw);
+  const c = gd.char, eye: Vec3 = [c.posX, 1.5, c.posZ], cos = Math.cos(GUARD_EYE.halfDeg * Math.PI / 180), fx = Math.sin(c.aimYaw), fz = Math.cos(c.aimYaw);
   for (const o of g.guards) { if (o === gd || o.team !== gd.team || o.state === 'dead' || !stateOf.get(o)?.knows || !darkFoeLit(g, o) || !o.flashlight?.enabled) continue;   // (a lamp lit by one who KNOWS, and really burning: word of a word is no word, so a ring of lamps cannot keep itself lit)
-    const dx = o.char.pos[0] - c.pos[0], dz = o.char.pos[2] - c.pos[2], d = Math.hypot(dx, dz); if (d > DARKFOE.lampM || d < 1e-3 || (dx * fx + dz * fz) / d < cos) continue;
-    if (!g.col.segmentBlocked(eye, [o.char.pos[0], 1.5, o.char.pos[2]])) return true; }
+    const dx = o.char.posX - c.posX, dz = o.char.posZ - c.posZ, d = Math.hypot(dx, dz); if (d > DARKFOE.lampM || d < 1e-3 || (dx * fx + dz * fz) / d < cos) continue;
+    if (!g.col.segmentBlocked(eye, [o.char.posX, 1.5, o.char.posZ])) return true; }
   return false;
 }
 /** the switch under his thumb, for the player's ears only: no event is filed, nobody hears it */
@@ -167,14 +167,14 @@ export function darkFoeSpot(g: Game, D: Def): { spot: Vec3; mate: boolean } | nu
       && !g.guards.some(o => { if (o === gd || o.state === 'dead') return false; const t = stateOf.get(o)?.to; return v3.distXZ(o.char.pos, p) < 0.9 || (!!t && v3.distXZ(t, p) < 0.9); }); };   // (nor where another man stands or was sent)
   for (const edge of K.edge ? [true, false] : [false]) { let tries = 0;   // the dark edge of the light first, then any floor he can see from
     for (let r = 2; r <= K.seekM + 1e-6 && tries < WAY_TRIES; r += 1.5) { const n = Math.max(8, Math.round(r * 2.5));   // rings outward: the first that passes is the nearest
-      for (let k = 0; k < n && tries < WAY_TRIES; k++) { const a = (k + (r % 3 ? 0.5 : 0)) * 2 * Math.PI / n, p: Vec3 = [c.pos[0] + Math.sin(a) * r, 0, c.pos[2] + Math.cos(a) * r];
+      for (let k = 0; k < n && tries < WAY_TRIES; k++) { const a = (k + (r % 3 ? 0.5 : 0)) * 2 * Math.PI / n, p: Vec3 = [c.posX + Math.sin(a) * r, 0, c.posZ + Math.cos(a) * r];
         if (!free(p) || !darkFoeSees(g, p, edge)) continue;
         tries++; if (wayTo(g, D, p)) return { spot: p, mate: false }; } } }
   let best: Vec3 | null = null, bd = Infinity;
   for (const o of g.guards) { if (o === gd || o.team !== gd.team || o.state === 'dead' || !darkFoeLit(g, o) || !o.flashlight?.enabled) continue;
     const d = v3.distXZ(o.char.pos, c.pos); if (d < 2.5 || d > K.walkM || d >= bd) continue;
     const f = o.char.forward();
-    for (const side of [1, -1]) { const p: Vec3 = [o.char.pos[0] - f[0] * 0.9 + f[2] * 1.1 * side, 0, o.char.pos[2] - f[2] * 0.9 - f[0] * 1.1 * side];   // (at his shoulder, a pace back: behind the lens, out of his line)
+    for (const side of [1, -1]) { const p: Vec3 = [o.char.posX - f[0] * 0.9 + f[2] * 1.1 * side, 0, o.char.posZ - f[2] * 0.9 - f[0] * 1.1 * side];   // (at his shoulder, a pace back: behind the lens, out of his line)
       if (free(p) && wayTo(g, D, p)) { best = p; bd = d; break; } } }
   return best ? { spot: best, mate: true } : null;
 }

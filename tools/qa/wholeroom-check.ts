@@ -58,7 +58,7 @@ async function arm(scn: string, door: string, side: 1 | -1, on: boolean, wide = 
     const team: any[] = O.squad().filter((x: any) => x.state !== 'dead'), spots: number[][] = [];
     for (const back of [3.2, 4.2, 2.4, 5.2, 6.2]) for (const lat of [1.1, -1.1, 0.4, -0.4, 1.9, -1.9]) { const p = free(outPt(back, lat)); if (p && clearTo(p) && flat(p, at) > 1.8 && !spots.some(s => flat(s, p) < 0.8)) spots.push(p); }
     if (spots.length < team.length + 1) { A.note = `no floor outside for the team (${spots.length} spots)`; return A; }
-    team.forEach((gd, i) => { const p = spots[i]; gd.char.pos[0] = p[0]; gd.char.pos[2] = p[2]; gd.char.vel = [0, 0, 0]; gd.path = []; gd.pathGoal = null; gd.char.bodyYaw = gd.char.aimYaw = Math.atan2(-ox, -oz); });
+    team.forEach((gd, i) => { const p = spots[i]; gd.char.posX = p[0]; gd.char.posZ = p[2]; gd.char.vel = [0, 0, 0]; gd.path = []; gd.pathGoal = null; gd.char.bodyYaw = gd.char.aimYaw = Math.atan2(-ox, -oz); });
     await quiet(() => g.teleportPlayer(spots[team.length] as any));
     await quiet(() => step(30));
     const s0 = { ...D.stats }, t0 = g.time, why = await quiet(() => O.give('openClear', O.targetAt(at), 'all'));
@@ -69,7 +69,7 @@ async function arm(scn: string, door: string, side: 1 | -1, on: boolean, wide = 
     A.left = op?.search ? op.search.left : -1; A.flowed = D.stats.flowed - s0.flowed; A.moved = D.stats.sentOn - s0.sentOn - A.flowed;
     const cell = (p: number[]) => nav.idx(Math.floor(p[0] / nav.cell), Math.floor(p[2] / nav.cell));
     const up = team.filter(x => x.state !== 'dead'); A.inFar = up.filter(x => H.hidden.has(cell(x.char.pos))).length;
-    A.where = up.map(x => `${VERBOSE ? `${x.callsign} ` : ''}(${x.char.pos[0].toFixed(1)}, ${x.char.pos[2].toFixed(1)})${VERBOSE ? ` ${O.of(x)?.there ?? '-'}` : ''}`).join(VERBOSE ? ' · ' : ' ');
+    A.where = up.map(x => `${VERBOSE ? `${x.callsign} ` : ''}(${x.char.posX.toFixed(1)}, ${x.char.posZ.toFixed(1)})${VERBOSE ? ` ${O.of(x)?.there ?? '-'}` : ''}`).join(VERBOSE ? ' · ' : ' ');
     if (up.length < team.length) A.note = `${team.length - up.length} of the team down`;
     if (op) { const b = (op.beats as { what: string }[] | undefined)?.map(x => x.what).filter(x => /^(flow|bound|close up|on):|^flow: no|searched/.test(x)).join(' | '); if (b) A.note += (A.note ? ' · ' : '') + b; }
     return A;

@@ -740,7 +740,7 @@ export class SquadOrders {
     for (const gd of this.squad()) { const m = flat(gd.char.pos, at); if (gd.state !== 'dead' && m < dm) { dm = m; man = gd; } }
     const ds = flat(sam, at);
     const fo = this.people?.near(at) ?? null;   // (pairorders.ts: a man of the other side nearer the point than a door, a teammate or Sam himself)
-    if (fo && !(door && dd < fo.d) && !(man && dm < fo.d) && !(ds < K.selfM && ds < fo.d)) return { kind: 'foe', at: [fo.gd.char.pos[0], 0, fo.gd.char.pos[2]], foe: fo.gd };
+    if (fo && !(door && dd < fo.d) && !(man && dm < fo.d) && !(ds < K.selfM && ds < fo.d)) return { kind: 'foe', at: [fo.gd.char.posX, 0, fo.gd.char.posZ], foe: fo.gd };
     const wk = workNear(g, at);   // (workthings.ts: a thing a teammate can work — the breaker, the mission's thing — nearer the point than a door, a teammate or Sam himself; null with its switch off)
     if (wk && !(door && dd < wk.d) && !(man && dm < wk.d) && !(ds < K.selfM && ds < wk.d)) return wk.target;
     if (man && !(door && dd < dm) && !(ds < K.selfM && ds < dm)) return { kind: 'none', at, man };
@@ -781,8 +781,8 @@ export class SquadOrders {
     let man: Guard | null = null, best = hit ? hit.t + 0.3 : 200;
     for (const gd of this.squad()) { if (gd.state === 'dead') continue; const t = gd.char.rayHit(ray.ro, ray.rd, best); if (t >= 0 && t < best) { best = t; man = gd; } }
     const fo = this.people?.ray(ray.ro, ray.rd, best) ?? null;   // (pairorders.ts: a man of the other side under the cursor, nearer than any teammate there)
-    if (fo) return { kind: 'foe', at: [fo.char.pos[0], 0, fo.char.pos[2]], foe: fo };
-    if (man) return { kind: 'none', at: [man.char.pos[0], 0, man.char.pos[2]], man };
+    if (fo) return { kind: 'foe', at: [fo.char.posX, 0, fo.char.posZ], foe: fo };
+    if (man) return { kind: 'none', at: [man.char.posX, 0, man.char.posZ], man };
     const wt = hit ? workOn(g, g.engine.world.all[hit.index]) : null; if (wt) return wt;   // (workthings.ts: the cursor on the breaker's own panel is the breaker)
     // (ORDERS.selfBody: his own body under the cursor, in front of whatever of the scene the ray lands on, is himself — not the door a pace past him)
     if (K.selfBody && !SELFBODY_BREAK && g.player.char.rayHit(ray.ro, ray.rd, hit ? hit.t : 200) >= 0) { const s = g.player.char.pos; return { kind: 'none', at: [s[0], 0, s[2]] }; }
@@ -1368,12 +1368,12 @@ export class SquadOrders {
     if (followers.length) {
       this.crumb(sam.pos, followers);
       const step = this.samT >= 0 ? flat(sam.pos, this.samP) : 0, el = g.time - this.samT;
-      const own = this.samT >= 0 ? noShoveOwn(g, sam.pos[0] - this.samP[0], sam.pos[2] - this.samP[2]) : null;   // (noshove.ts: the step his own legs took — a shove is not his walking; null with its switch off)
+      const own = this.samT >= 0 ? noShoveOwn(g, sam.posX - this.samP[0], sam.posZ - this.samP[2]) : null;   // (noshove.ts: the step his own legs took — a shove is not his walking; null with its switch off)
       if (this.samT >= 0 && el > 1e-6 && step < 1) {   // (a jump of a metre is a teleport, not a pace)
-        const ox = own ? own[0] : sam.pos[0] - this.samP[0], oz = own ? own[1] : sam.pos[2] - this.samP[2], st = own ? Math.hypot(ox, oz) : step;
+        const ox = own ? own[0] : sam.posX - this.samP[0], oz = own ? own[1] : sam.posZ - this.samP[2], st = own ? Math.hypot(ox, oz) : step;
         this.samV += (st / el - this.samV) * 0.25;
         if (st > 1e-3) { this.samDir[0] = ox / st; this.samDir[2] = oz / st; } }
-      this.samP[0] = sam.pos[0]; this.samP[2] = sam.pos[2]; this.samT = g.time;
+      this.samP[0] = sam.posX; this.samP[2] = sam.posZ; this.samT = g.time;
     } else { this.trail.length = 0; this.samT = -1; this.samV = 0; }
     for (const [gd, A] of this.asg) {
       if (gd.state === 'dead') { this.drop(gd); continue; }
@@ -1386,7 +1386,7 @@ export class SquadOrders {
         if (hot) continue;
         gd.state = 'search';
       }
-      if (A.yieldT >= 0) { A.yieldT = -1; A.arrived = false; FOLLOW_WORD.delete(A); A.movedT = A.markT = g.time; A.mark[0] = gd.char.pos[0]; A.mark[2] = gd.char.pos[2]; this.fight?.retaken?.(gd, A);
+      if (A.yieldT >= 0) { A.yieldT = -1; A.arrived = false; FOLLOW_WORD.delete(A); A.movedT = A.markT = g.time; A.mark[0] = gd.char.posX; A.mark[2] = gd.char.posZ; this.fight?.retaken?.(gd, A);
         if (A.post && (K.cleared || (K.ownDoor && A.thru))) { const R = this.route(gd, A.post, A.shy, A.thru ?? null); if (!R.why) { A.via = R.via; if (K.retakeGoal) A.goal = A.via[0] ?? v3.copy(A.post); if (R.how) g.cleared.stats[R.how]++; } }   // (ORDERS.retakeGoal: … and he walks for it, not for a corner of the way he was on before)
         else if (!A.post) A.viaT = A.viaFor = undefined; }   // back on his order (we took him, or the fight AI let go of him itself) — by the way an order walks him (cleared.ts), from wherever the fight left him
       if (this.ours.delete(gd)) gd.pinned = false;
@@ -1406,7 +1406,7 @@ export class SquadOrders {
         //  enemy's line is left for cover a step or two off it. Not a man cover.ts has stepped to watch a door (that is a job), not the silent squad's men, not
         //  a man keeping a door or held short, never out of Sam's way)
         let nearV: boolean | null = null;
-        const nearP = () => nearV ??= !aside && !onWall && stopped && toSam > K.nearM && toSam < backM + K.bandM && !this.inFrame(p) && !(doorwayLane(g, p) && (off || !DOORMANNERS.laneLeaf || !doorwayLane(g, slot))) && !g.col.solidBlocked([p[0], 0.45, p[2]], [sam.pos[0], 0.45, sam.pos[2]]) && !(doorwayFile() && this.onTop(gd, A));
+        const nearP = () => nearV ??= !aside && !onWall && stopped && toSam > K.nearM && toSam < backM + K.bandM && !this.inFrame(p) && !(doorwayLane(g, p) && (off || !DOORMANNERS.laneLeaf || !doorwayLane(g, slot))) && !g.col.solidBlocked([p[0], 0.45, p[2]], [sam.posX, 0.45, sam.posZ]) && !(doorwayFile() && this.onTop(gd, A));
         const ps = !st0 && PICTURE.on && PICTURE.step && stopped && !aside && !onWall && !sneaking(g, gd) && !unseenMan(g, gd) && !roomKept(g, gd) && !g.fight.short(gd)
           ? pictureStep(g, gd, A, nearP() ? p : slot, q => !(this.inFrame(q) || doorwayInWay(g, q) || !!doorwayLane(g, q)), g.fight.busy(gd, 0.5)) : null;
         const st = ps?.at ?? st0;
@@ -1557,7 +1557,7 @@ export class SquadOrders {
     const T = this.trail, K = ORDERS, last = T[T.length - 1];
     if (last && flat(last, p) > 3) T.length = 0;   // (a teleport: the old trail leads nowhere he walked)
     if (!T.length) {   // no trail yet: 'behind him' is the side his men are on — they close up to him from where they stand and stop short, whichever way he is looking
-      let cx = 0, cz = 0; for (const gd of men) { cx += gd.char.pos[0] - p[0]; cz += gd.char.pos[2] - p[2]; }
+      let cx = 0, cz = 0; for (const gd of men) { cx += gd.char.posX - p[0]; cz += gd.char.posZ - p[2]; }
       const l = Math.hypot(cx, cz); const c = this.g.player.char;
       this.back = l > 0.3 ? [cx / l, 0, cz / l] : [-Math.sin(c.bodyYaw), 0, -Math.cos(c.bodyYaw)];
     }
@@ -1692,7 +1692,7 @@ export class SquadOrders {
   /** the point `back` metres behind Sam along his trail — past its end, on straight the way it was going (behind his back while there is no trail), as far as the floor is free */
   private slot(back: number): Vec3 {
     const g = this.g, sam = g.player.char, T = this.trail;
-    let prev: Vec3 = [sam.pos[0], 0, sam.pos[2]], left = back, dir: Vec3 = this.back;
+    let prev: Vec3 = [sam.posX, 0, sam.posZ], left = back, dir: Vec3 = this.back;
     for (let i = T.length - 1; i >= 0; i--) {
       const seg = flat(prev, T[i]); if (seg < 1e-4) continue;
       const sd: Vec3 = [(T[i][0] - prev[0]) / seg, 0, (T[i][2] - prev[2]) / seg];
@@ -2396,7 +2396,7 @@ export class SquadOrders {
    *  of the older end of the stretch it is on. -1 off the trail's end. By the walk, not by what is near: where the player turned about and came back
    *  over his own steps two passes of the trail lie on one line */
   private slotCrumb(back: number): number {
-    const sam = this.g.player.char, T = this.trail; let prev: Vec3 = [sam.pos[0], 0, sam.pos[2]], left = back;
+    const sam = this.g.player.char, T = this.trail; let prev: Vec3 = [sam.posX, 0, sam.posZ], left = back;
     for (let i = T.length - 1; i >= 0; i--) { const seg = flat(prev, T[i]); if (seg < 1e-4) continue; if (seg >= left) return i; left -= seg; prev = T[i]; }
     return -1;
   }
@@ -2618,8 +2618,8 @@ export class SquadOrders {
    *  word for it, the addressed element's colour. Null: no menu, or one opened on nothing (himself, nowhere). */
   mark(): { at: Vec3; text: string; tone?: Tone } | null {
     const M = this.menu; if (!M || this.cmdRing) return null; const t = M.target;   // (cmdring.ts: a ring stands on the place itself and carries the words — ringView's caption)
-    if (t.kind === 'none') return t.man ? { at: [t.man.char.pos[0], 1.0, t.man.char.pos[2]], text: t.man.callsign, tone: this.toneOf(M.men) } : null;
-    if (t.kind === 'foe') return { at: [t.foe.char.pos[0], 1.0, t.foe.char.pos[2]], text: `${this.whoTag().tag} → ${this.hoverWords(t)}`, tone: this.toneOf(M.men) };   // (the ring rides the man)
+    if (t.kind === 'none') return t.man ? { at: [t.man.char.posX, 1.0, t.man.char.posZ], text: t.man.callsign, tone: this.toneOf(M.men) } : null;
+    if (t.kind === 'foe') return { at: [t.foe.char.posX, 1.0, t.foe.char.posZ], text: `${this.whoTag().tag} → ${this.hoverWords(t)}`, tone: this.toneOf(M.men) };   // (the ring rides the man)
     return { at: [t.at[0], t.kind === 'door' ? 1.0 : 0.03, t.at[2]], text: `${this.whoTag().tag} → ${this.hoverWords(t)}`, tone: this.toneOf(M.men) };
   }
   /** one line for the console */
@@ -2655,7 +2655,7 @@ export function propPenalty(g: Game, gd: Guard, pen: ((ix: number, iz: number) =
   const doors = g.doors.list, by = K.propRoundDoor;
   for (const p of g.props.props) { if (!doors.some(d => Math.hypot(d.frameCentre[0] - p.x, d.frameCentre[2] - p.z) < by)) continue; const r = p.radius + K.propRoundPad, x0 = Math.floor((p.x - r) / cs), x1 = Math.floor((p.x + r) / cs), z0 = Math.floor((p.z - r) / cs), z1 = Math.floor((p.z + r) / cs);
     for (let z = z0; z <= z1; z++) for (let x = x0; x <= x1; x++) if (x >= 0 && z >= 0 && x < nav.W && z < nav.H && Math.hypot((x + 0.5) * cs - p.x, (z + 0.5) * cs - p.z) < r) dear.add(nav.idx(x, z)); }
-  dear.delete(nav.idx(Math.floor(gd.char.pos[0] / cs), Math.floor(gd.char.pos[2] / cs)));   // (where he stands: he is not 'stepping into' it, and the search's own smoothing counts the cell a leg starts on)
+  dear.delete(nav.idx(Math.floor(gd.char.posX / cs), Math.floor(gd.char.posZ / cs)));   // (where he stands: he is not 'stepping into' it, and the search's own smoothing counts the cell a leg starts on)
   if (!dear.size) return pen;
   const cost = K.propRoundCost; return (ix, iz) => (dear.has(nav.idx(ix, iz)) ? cost : 1) * (pen ? pen(ix, iz) : 1);
 }

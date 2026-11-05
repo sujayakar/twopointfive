@@ -216,7 +216,7 @@ const plants = (g: Game, by: Character): boolean => HANDRING.turn && by === g.pl
  *  player.ts updateWorkPlant turns him at WORK_TURN) */
 function turnSecs(by: Character, sw: WallSwitch): number {
   const face = Math.atan2(-sw.n[0], -sw.n[2]), d = Math.atan2(Math.sin(face - by.bodyYaw), Math.cos(face - by.bodyYaw));
-  const step = Math.max(0, Math.hypot(sw.pos[0] + sw.n[0] * HANDWORK.standM - by.pos[0], sw.pos[2] + sw.n[2] * HANDWORK.standM - by.pos[2]) - 0.15);
+  const step = Math.max(0, Math.hypot(sw.pos[0] + sw.n[0] * HANDWORK.standM - by.posX, sw.pos[2] + sw.n[2] * HANDWORK.standM - by.posZ) - 0.15);
   return Math.min(HANDRING.turnMax, Math.abs(d) / WORK_TURN + step / HANDWORK.stepPace);
 }
 /** …what breaks the plant off (the breaker's own ways out, handwork.ts breakerTick): he is down, has a man or a body in hand, is folded by a blast, or

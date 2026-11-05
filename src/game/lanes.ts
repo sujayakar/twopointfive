@@ -318,7 +318,7 @@ function cost(g: Game, st: State, from: Vec3, at: Vec3, man: Guard, down: boolea
 /** a fit man of the side has a line to what happened at `at`, inside `reach` and not behind his back */
 function sees(g: Game, o: Guard, at: Vec3, reach: number): boolean {
   const d = flat(o.char.pos, at); if (d >= reach) return false;
-  if (d > 4) { const f = o.char.forward(); if (((at[0] - o.char.pos[0]) * f[0] + (at[2] - o.char.pos[2]) * f[2]) / d < -0.35) return false; }
+  if (d > 4) { const f = o.char.forward(); if (((at[0] - o.char.posX) * f[0] + (at[2] - o.char.posZ) * f[2]) / d < -0.35) return false; }
   return !g.col.segmentBlocked(eyeOf(o), [at[0], 0.9, at[2]]);
 }
 function becomeKnown(g: Game, st: State, L: Lane, who: Guard) {
@@ -461,7 +461,7 @@ function backOut(g: Game, st: State, gd: Guard, L: Lane): boolean {
   if (found < 0) found = first; if (found < 0) { st.failT.set(gd, g.time); return false; }   // (no cover in reach: asked again in two seconds, not every step)
   const spot: Vec3 = [(found % W + 0.5) * n.cell, 0, (((found / W) | 0) + 0.5) * n.cell];
   // (a step further from the lane than its very edge, where the floor allows: the same direction once more)
-  { const ex = spot[0] - gd.char.pos[0], ez = spot[2] - gd.char.pos[2], el = Math.hypot(ex, ez) || 1; const far: Vec3 = [spot[0] + ex / el * 0.6, 0, spot[2] + ez / el * 0.6]; const fi = cellAt(g, far); if (fi >= 0 && !n.blocked[fi] && cover(fi)) { spot[0] = far[0]; spot[2] = far[2]; } }
+  { const ex = spot[0] - gd.char.posX, ez = spot[2] - gd.char.posZ, el = Math.hypot(ex, ez) || 1; const far: Vec3 = [spot[0] + ex / el * 0.6, 0, spot[2] + ez / el * 0.6]; const fi = cellAt(g, far); if (fi >= 0 && !n.blocked[fi] && cover(fi)) { spot[0] = far[0]; spot[2] = far[2]; } }
   st.backT.set(gd, g.time); st.held.set(gd, { lane: L.id, t: g.time, look: mouthOf(g, L, spot), aimed: false, at: v3.copy(spot) }); st.stats.backedOut++;
   gd.path = []; gd.pathGoal = null; legTo(g, D, spot, null, 0.3);
   if (g.time - st.saidT > 4) { st.saidT = g.time; g.say(gd, 'get back — out of their line!', true); }
@@ -520,7 +520,7 @@ function stun(g: Game, st: State, L: Lane, at: Guard[]) {
   let best: Guard | null = null, bd = K.stunM;
   for (const gd of at) { if (stunsOf(gd) <= 0) continue; const d = flat(gd.char.pos, L.from); if (d < bd && d > 4) { best = gd; bd = d; } }
   if (!best) return;
-  const c = best.char, tx = L.from[0] - c.pos[0], tz = L.from[2] - c.pos[2], tl = Math.hypot(tx, tz);
+  const c = best.char, tx = L.from[0] - c.posX, tz = L.from[2] - c.posZ, tl = Math.hypot(tx, tz);
   // his arm round the corner he holds: the can leaves his hand half a pace toward the lane's line, and is asked to land short of the guns, in their eyes
   const from = armRound(g, c.pos, mouthOf(g, L, c.pos));
   const land: Vec3 = [L.from[0] - tx / tl * 1.6, 0, L.from[2] - tz / tl * 1.6];
@@ -610,7 +610,7 @@ function stepper(g: Game, st: State, L: Lane, skip: Set<Guard> | null, armed: bo
       if (len > K.peekReachM * 1.4 || crosses) continue; }   // (…and never one that crosses a covered lane's floor on the way to this one's mouth)
     if (minGun > 0 && L.guns.some(q => flat(q, m) < minGun)) continue;   // (a corner that near the guns is no place to stand and fire from)
     const score = d + gd.char.id * 1e-4; if (score >= bd) continue;
-    best = gd; bd = score; to = on ? [m[0] + on[0] * 0.6, 0, m[2] + on[2] * 0.6] : [m[0] + (m[0] - gd.char.pos[0]) / d * 0.6, 0, m[2] + (m[2] - gd.char.pos[2]) / d * 0.6];   // (a stride on into it: he stops the moment he has a line down it)
+    best = gd; bd = score; to = on ? [m[0] + on[0] * 0.6, 0, m[2] + on[2] * 0.6] : [m[0] + (m[0] - gd.char.posX) / d * 0.6, 0, m[2] + (m[2] - gd.char.posZ) / d * 0.6];   // (a stride on into it: he stops the moment he has a line down it)
     if (g.col.nav.isBlocked(to[0], to[2])) to = v3.copy(m);
   }
   return best && to ? { gd: best, to } : null;
@@ -637,7 +637,7 @@ function flankTick(g: Game, st: State, L: Lane) {
       const look = mouthOf(g, L, gd.char.pos); gd.path = []; gd.pathGoal = null;
       if (g.fight.laneStop(gd, look)) st.held.set(gd, { lane: L.id, t: g.time, look: v3.copy(look), aimed: true, at: v3.copy(gd.char.pos) });
       if (g.time - st.saidT > 2) { st.saidT = g.time; g.say(gd, 'set — I\'ve got an angle on them!', true); }
-      note(g, gd, `lane ${L.id}: round and set at (${gd.char.pos[0].toFixed(1)}, ${gd.char.pos[2].toFixed(1)}), ${flat(gd.char.pos, L.from).toFixed(0)} m from its guns: holds it from this side`);
+      note(g, gd, `lane ${L.id}: round and set at (${gd.char.posX.toFixed(1)}, ${gd.char.posZ.toFixed(1)}), ${flat(gd.char.pos, L.from).toFixed(0)} m from its guns: holds it from this side`);
       L.pinAt = Math.max(L.pinAt, g.time + 1.5);
     }
     if (f.phase === 'set') {
@@ -736,9 +736,9 @@ function fragPlace(g: Game, st: State, gd: Guard, to: Vec3, s: number, going: bo
     let left = 0, a = c.pos; for (let i = gd.pathI; i < gd.path.length && left < s; i++) { left += flat(a, gd.path[i]); a = gd.path[i]; }
     if (left < s) return 'edge'; b = along(gd, s);
   } else {
-    const dx = to[0] - c.pos[0], dz = to[2] - c.pos[2], d = Math.hypot(dx, dz); if (s > d) return 'edge';
-    b = [c.pos[0] + dx / d * s, 0, c.pos[2] + dz / d * s];
-    if (g.col.nav.isBlocked(b[0], b[2]) || g.col.solidBlocked([c.pos[0], 1.1, c.pos[2]], [b[0], 1.1, b[2]])) return null;
+    const dx = to[0] - c.posX, dz = to[2] - c.posZ, d = Math.hypot(dx, dz); if (s > d) return 'edge';
+    b = [c.posX + dx / d * s, 0, c.posZ + dz / d * s];
+    if (g.col.nav.isBlocked(b[0], b[2]) || g.col.solidBlocked([c.posX, 1.1, c.posZ], [b[0], 1.1, b[2]])) return null;
   }
   return inMask(g, maskOf(g, st, gd), b) ? 'edge' : b;
 }
@@ -812,7 +812,7 @@ function peekStep(g: Game, st: State, gd: Guard, p: Peek) {
   if (!L) return;
   if (p.frag) { fragStep(g, st, gd, p, L, D, back); return; }
   // his head round the corner ahead of his feet: the look is taken from his eyes leant `peekLean` toward the mouth (nothing solid between the two)
-  let eye = eyeOf(gd); { const dx = p.to[0] - gd.char.pos[0], dz = p.to[2] - gd.char.pos[2], d = Math.hypot(dx, dz); if (d > 0.05 && p.lineT < 0) { const out: Vec3 = [eye[0] + dx / d * K.peekLean, eye[1], eye[2] + dz / d * K.peekLean]; if (!g.col.solidBlocked(eye, out)) eye = out; p.eye = eye; } else if (p.eye && p.lineT >= 0) eye = p.eye; }
+  let eye = eyeOf(gd); { const dx = p.to[0] - gd.char.posX, dz = p.to[2] - gd.char.posZ, d = Math.hypot(dx, dz); if (d > 0.05 && p.lineT < 0) { const out: Vec3 = [eye[0] + dx / d * K.peekLean, eye[1], eye[2] + dz / d * K.peekLean]; if (!g.col.solidBlocked(eye, out)) eye = out; p.eye = eye; } else if (p.eye && p.lineT >= 0) eye = p.eye; }
   const seen = gunsManned(g, L, eye);
   // out to FIRE down it: his burst goes unless he can see all of where they stood and nobody is there (then it is a look: clear)
   if (p.fire && p.fire.n > 0 && (seen || !L.guns.every(m => spotSeen(g, eye, m)))) { pinStep(g, st, gd, p, L, D, seen, back); return; }
@@ -905,7 +905,7 @@ function plantShort(g: Game, st: State, gd: Guard, lane: number, look: Vec3) {
   gd.path = []; gd.pathGoal = null;
   st.held.set(gd, { lane, t: g.time, look: v3.copy(look), aimed: true, at: v3.copy(gd.char.pos) }); st.stats.held++;
   if (g.time - st.saidT > 5) { st.saidT = g.time; g.say(gd, 'holding here — I\'m not walking into that!', true); }
-  note(g, gd, `lane ${lane}: stops short of it at (${gd.char.pos[0].toFixed(1)}, ${gd.char.pos[2].toFixed(1)})`);
+  note(g, gd, `lane ${lane}: stops short of it at (${gd.char.posX.toFixed(1)}, ${gd.char.posZ.toFixed(1)})`);
 }
 /** the first point of a known lane on the next `aheadM` of his way (null = none). `inside`: he stands in one — null when his way leaves it for good within reach */
 function ahead(g: Game, m: Uint8Array, gd: Guard, inside: boolean): Vec3 | null {

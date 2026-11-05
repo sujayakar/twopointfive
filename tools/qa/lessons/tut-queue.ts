@@ -65,7 +65,7 @@ function word(B: Bot, doors: string[], room: string) {
   const stacks: Record<string, any[]> = {}; for (const d of doors) stacks[d] = on(B, d);
   B.press('KeyF', 3); B.step(6);
   const t0 = B.t(), inAt: Record<string, number> = {}, daz0 = new Map(squad(B).map(m => [m, m.dazzledUntil as number])), hit = new Set<string>();
-  const R = B.g.roomClear.rooms.find((r: any) => r.def.id === room)?.def.bounds, inside = (m: any) => !!R && m.char.pos[0] > R.x0 + 0.2 && m.char.pos[0] < R.x1 - 0.2 && m.char.pos[2] > R.z0 + 0.2 && m.char.pos[2] < R.z1 - 0.2;
+  const R = B.g.roomClear.rooms.find((r: any) => r.def.id === room)?.def.bounds, inside = (m: any) => !!R && m.char.posX > R.x0 + 0.2 && m.char.posX < R.x1 - 0.2 && m.char.posZ > R.z0 + 0.2 && m.char.posZ < R.z1 - 0.2;
   const watch = () => { for (const d of doors) if (!(d in inAt) && (stacks[d] ?? []).some(inside)) inAt[d] = B.t() - t0; for (const [m, u] of daz0) if (m.dazzledUntil > u + 1e-6) hit.add(m.callsign); return false; };
   B.until(() => watch() || cleared(B, room), 40); for (let i = 0; i < 180; i++) { watch(); B.step(); }
   const ts = doors.map(d => inAt[d]), out = doors.filter((_, i) => ts[i] === undefined), apart = doors.length > 1 && !out.length ? Math.max(...ts) - Math.min(...ts) : NaN;
@@ -100,7 +100,7 @@ export const steps: Record<string, (B: Bot) => void> = {
   word2: B => { const n0 = B.g.rails.log.length; word(B, ['hall', 'hall_back'], 'hall'); told(B, n0); B.wait(1.5); },
   call: B => { B.say(`  as the hall falls: ${watches(B)}`); B.aim(B.pos()); B.step(2); const t = under(B); key(B, false); B.step(6); B.say(`  the key on himself (${t.kind}${t.man ? ' a man' : ''}): ${watches(B)}`); },
   yard: B => { spot(B, 'yard', ['gateA', 'gateB'], process.env.TUTQUEUE_WEST ? [[23.3, 0, 20.4], [23.3, 0, 13.0]] : []); B.wait(Number(process.env.TUTQUEUE_WAIT ?? 2));
-    for (const m of squad(B)) B.say(`    ${m.callsign} (${m.char.pos[0].toFixed(1)}, ${m.char.pos[2].toFixed(1)}) line to the road gate's spot ${O(B).hasLine(m, { kind: 'floor', at: stepOf(B, 'gateA').at })} · the back gate's ${O(B).hasLine(m, { kind: 'floor', at: stepOf(B, 'gateB').at })}`); },
+    for (const m of squad(B)) B.say(`    ${m.callsign} (${m.char.posX.toFixed(1)}, ${m.char.posZ.toFixed(1)}) line to the road gate's spot ${O(B).hasLine(m, { kind: 'floor', at: stepOf(B, 'gateA').at })} · the back gate's ${O(B).hasLine(m, { kind: 'floor', at: stepOf(B, 'gateB').at })}`); },
   gateA: B => { onMark(B, 'gateA', 'the road gate'); key(B, true); B.step(10); B.say(`  Shift with the key by the road gate: ${watches(B)}`); },
   // (the wheel for the part: a Shift tap gives nothing on this step; the pair kept down past the hold is the ring, named for the men a tap would have sent, and the wedge picked is theirs)
   gateB: B => {

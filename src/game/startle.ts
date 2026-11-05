@@ -74,7 +74,7 @@ export function startleMan(g: Game, gd: Guard, at: Vec3, secs = STARTLE.beat, to
   const c = gd.char;
   S.torch = torch ?? handCarry(gd) === 'torch';
   S.at = g.time; S.until = g.time + secs; S.toward = [at[0], 0, at[2]]; S.pre = false; S.choose = false;
-  c.anim.startleFrom([at[0] - c.pos[0], 0, at[2] - c.pos[2]]);
+  c.anim.startleFrom([at[0] - c.posX, 0, at[2] - c.posZ]);
   STARTLE_STATS.given++;
   return true;
 }

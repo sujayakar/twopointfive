@@ -524,7 +524,7 @@ function pressOf(c: Character, T: SnowTracks, field: SnowField, dt: number, hid:
   {
     const b = c.bones; if (!b) return;
     let st = feetOf.get(c); if (!st) { st = { l: null, r: null, pl: null, pr: null, body: null, hips: null, lain: 0 }; feetOf.set(c, st); }
-    const hips = b.hips, low = !!hips && hips[1] - c.pos[1] < K.bodyLow;
+    const hips = b.hips, low = !!hips && hips[1] - c.posY < K.bodyLow;
     if (!c.alive || low) {
       // down: the hollow his trunk and legs lie in, once, where he comes to rest (again if he is moved a pace and rests again)
       if (!hips || !low) return;
@@ -546,12 +546,12 @@ function pressOf(c: Character, T: SnowTracks, field: SnowField, dt: number, hid:
     }
     st.hips = null; st.lain = 0;
     st.body = null;
-    const still = Math.max(K.still, K.stillK * Math.hypot(c.vel[0], c.vel[2]));
+    const still = Math.max(K.still, K.stillK * Math.hypot(c.velX, c.velZ));
     for (let side = 0; side < 2; side++) {
       const left = side === 0, f = left ? b.footL : b.footR; if (!f) continue;
       const prev = left ? st.pl : st.pr; const now: [number, number] = [f[0], f[2]];
       if (left) st.pl = now; else st.pr = now;
-      if (!prev || f[1] - c.pos[1] > K.ankle || Math.hypot(now[0] - prev[0], now[1] - prev[1]) / dt > still) continue;
+      if (!prev || f[1] - c.posY > K.ankle || Math.hypot(now[0] - prev[0], now[1] - prev[1]) / dt > still) continue;
       const toe = (left ? b.toeL : b.toeR) ?? f;
       let ux = toe[0] - f[0], uz = toe[2] - f[2]; const ul = Math.hypot(ux, uz);
       if (ul > 0.02) { ux /= ul; uz /= ul; } else { ux = Math.sin(c.bodyYaw); uz = Math.cos(c.bodyYaw); }
@@ -563,12 +563,12 @@ function pressOf(c: Character, T: SnowTracks, field: SnowField, dt: number, hid:
       const m = Math.max(0, Math.min(1, +K.mess || 0));
       if (m > 0) {
         // (its outer side: the side of his own middle the foot is on; where it came from: this foot's last print if that is a stride away, else straight behind)
-        const side = (f[0] - c.pos[0]) * uz - (f[2] - c.pos[2]) * ux < 0 ? -1 : 1;
+        const side = (f[0] - c.posX) * uz - (f[2] - c.posZ) * ux < 0 ? -1 : 1;
         let bx = -ux, bz = -uz;
         if (last) { const lx = last[0] - cx, lz = last[1] - cz, ll = Math.hypot(lx, lz); if (ll > 0.25 && ll < 1.8) { bx = lx / ll; bz = lz / ll; } }
         // (a run: how fast HE is going as the foot lands — a walk's 0, a flat sprint's 1)
-        const rk = Math.max(0, Math.min(1, +K.runMess || 0)), ru = rk > 0 ? Math.max(0, Math.min(1, (Math.hypot(c.vel[0], c.vel[2]) - K.runLo) / Math.max(0.1, K.runHi - K.runLo))) : 0;
-        const run = ru * ru * (3 - 2 * ru) * rk, serial = T.prints, sp = Math.hypot(c.vel[0], c.vel[2]);
+        const rk = Math.max(0, Math.min(1, +K.runMess || 0)), ru = rk > 0 ? Math.max(0, Math.min(1, (Math.hypot(c.velX, c.velZ) - K.runLo) / Math.max(0.1, K.runHi - K.runLo))) : 0;
+        const run = ru * ru * (3 - 2 * ru) * rk, serial = T.prints, sp = Math.hypot(c.velX, c.velZ);
         // (how hard the boot lands: a creep under a walk, a walk, a sprint well over it)
         mark(T, hid, 1, [cx, cz, ux, uz, side, bx, bz, m, serial, run, K.footLen, 0.3 + 0.15 * Math.min(1, sp / 1.4) + 0.75 * run]);
       } else {

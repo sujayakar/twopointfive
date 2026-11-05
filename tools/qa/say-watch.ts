@@ -56,7 +56,7 @@ export class SayWatch {
     g.say = (gd: any, text: string, radio = false) => {
       const n0 = g.messages.length, last0 = g.messages[n0 - 1], m0 = me.out.msgs.length;
       const site = ((new Error().stack ?? '').split('\n').map(s => /src\/game\/([\w-]+\.ts):(\d+)/.exec(s)).filter(Boolean) as RegExpExecArray[]).map(m => `${m[1]}:${m[2]}`).find(s => !/^game\.ts:/.test(s)) ?? '?';
-      const head = gd.char.bones.head ?? [gd.char.pos[0], gd.char.pos[1] + 1.7, gd.char.pos[2]], sam = g.player.char.bones.head ?? [g.player.char.pos[0], 1.65, g.player.char.pos[2]];
+      const head = gd.char.bones.head ?? [gd.char.posX, gd.char.posY + 1.7, gd.char.posZ], sam = g.player.char.bones.head ?? [g.player.char.posX, 1.65, g.player.char.posZ];
       let path = NaN, carry = NaN; try { const pr = g.col.sound.propagate(head, sam); path = pr.pathLen; carry = pr.carry; } catch { /* (a point the grid has no cell for) */ }
       const b0 = gd.bubble, c0 = g.cues?.stats.heardDrawn ?? 0, raw0 = g.cues?.stats.drawn[0] ?? 0; const ret = say0(gd, text, radio);
       const cued = !!g.cues && (g.cues.stats.heardDrawn > c0 || g.cues.stats.drawn[0] > raw0);   // (game/cues.ts on: the strip is its rows — this line got one)
@@ -78,7 +78,7 @@ export class SayWatch {
     const A = this.W.audioLog as { name: string; pos: number[] | null; gain: number }[];
     for (const a of A) {
       if (a.name === 'radio' || a.name === 'alertSting') { let level = a.gain;
-        if (a.pos) { const sam = g.player.char.bones.head ?? [g.player.char.pos[0], 1.65, g.player.char.pos[2]]; try { const pr = g.col.sound.propagate(a.pos, sam); const d = Math.max(1.6, Math.hypot(pr.apparent[0] - sam[0], pr.apparent[1] - sam[1], pr.apparent[2] - sam[2])); level = a.gain * (1 - 0.55 * pr.muffle) * (1.6 / (1.6 + 1.1 * (d - 1.6))); } catch { level = NaN; } }
+        if (a.pos) { const sam = g.player.char.bones.head ?? [g.player.char.posX, 1.65, g.player.char.posZ]; try { const pr = g.col.sound.propagate(a.pos, sam); const d = Math.max(1.6, Math.hypot(pr.apparent[0] - sam[0], pr.apparent[1] - sam[1], pr.apparent[2] - sam[2])); level = a.gain * (1 - 0.55 * pr.muffle) * (1.6 / (1.6 + 1.1 * (d - 1.6))); } catch { level = NaN; } }
         this.out.blips.push({ t: r1(t), name: a.name, gain: a.gain, level: +level.toFixed(4), samDown: !!g.player.down }); }
       if (a.name !== 'footstep' && a.pos) for (const L of this.fresh) if (flat(a.pos, this.freshAt.get(L).char.pos) < 2 && !L.audio.includes(a.name)) L.audio.push(a.name);
     }
@@ -108,7 +108,7 @@ export class SayWatch {
     if (this.afterOn && Math.floor(t) !== this.lastAfter) { this.lastAfter = Math.floor(t);
       for (const h of g.guards) { if (h.team !== 'hostile' || h.state === 'dead') continue; const w = this.was.get(h); if (!w) continue;
         const marker = h.state === 'alert' ? '!' : h.state === 'suspicious' || h.state === 'search' ? '?' : h.awareness > 0.05 ? '·'.repeat(1 + Math.floor(h.awareness * 6)) : '';   // (ui/headmark.ts: the glyph over a defender's head, less the doze and stun marks)
-        this.out.after.push({ t: r1(t), who: h.callsign, state: h.state, mode: w.mode, marker, hidden: !!g.fogOfWar.hidden(h), fromMark: r1(flat(h.char.pos, w.mark)), toSam: r1(flat(h.char.pos, g.player.char.pos)), speed: r1(Math.hypot(h.char.vel[0], h.char.vel[2])) }); }
+        this.out.after.push({ t: r1(t), who: h.callsign, state: h.state, mode: w.mode, marker, hidden: !!g.fogOfWar.hidden(h), fromMark: r1(flat(h.char.pos, w.mark)), toSam: r1(flat(h.char.pos, g.player.char.pos)), speed: r1(Math.hypot(h.char.velX, h.char.velZ)) }); }
     }
   }
   close(): SaidOut { return this.out; }

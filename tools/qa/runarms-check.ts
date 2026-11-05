@@ -36,13 +36,13 @@ async function world(on: boolean, gun: 'pistol' | 'holstered' | 'rifle') {
   const C = { W, g, pl, c,
     go: (keys: string[], secs: number) => { for (const k of keys) W.input.keys.add(k);
       const M = { hand: 0, elbow: 0, inn: 9, fLo: [9, 9], fHi: [-9, -9], n: 0, sprint: 0, v: 0, trace: [] as number[] };
-      for (let i = 0; i < Math.round(secs / DT); i++) { W.cursorAt([c.pos[0] + 6, 1, c.pos[2]]); W.step(DT); M.n++; if (pl.sprinting) M.sprint++;
+      for (let i = 0; i < Math.round(secs / DT); i++) { W.cursorAt([c.posX + 6, 1, c.posZ]); W.step(DT); M.n++; if (pl.sprinting) M.sprint++;
         fk.run(a.pose); const A = fk.pos[nd.upperArmL], B = fk.pos[nd.upperArmR]; let lx = A[0] - B[0], lz = A[2] - B[2]; const ll = Math.hypot(lx, lz) || 1; lx /= ll; lz /= ll;
         for (const [k, s, el, hd, sg] of [[0, A, nd.forearmL, nd.handL, 1], [1, B, nd.forearmR, nd.handR, -1]] as [number, number[], number, number, number][]) {
           const e = fk.pos[el], h = fk.pos[hd], out = (p: number[]) => ((p[0] - s[0]) * lx + (p[2] - s[2]) * lz) * sg, f = -(h[0] - s[0]) * lz + (h[2] - s[2]) * lx;
           M.hand = Math.max(M.hand, out(h)); M.elbow = Math.max(M.elbow, out(e)); M.inn = Math.min(M.inn, out(h), out(e)); M.fLo[k] = Math.min(M.fLo[k], f); M.fHi[k] = Math.max(M.fHi[k], f); M.trace.push(h[0], h[1], h[2], e[0], e[1], e[2]); } }
-      for (const k of keys) W.input.keys.delete(k); M.v = Math.hypot(c.vel[0], c.vel[2]); return M; } };
-  for (let i = 0; i < 30; i++) { W.cursorAt([c.pos[0] + 6, 1, c.pos[2]]); W.step(DT); } return C;
+      for (const k of keys) W.input.keys.delete(k); M.v = Math.hypot(c.velX, c.velZ); return M; } };
+  for (let i = 0; i < 30; i++) { W.cursorAt([c.posX + 6, 1, c.posZ]); W.step(DT); } return C;
 }
 const RUN = ['KeyD', 'ShiftLeft'];
 const travel = (M: any) => Math.min(M.fHi[0] - M.fLo[0], M.fHi[1] - M.fLo[1]);

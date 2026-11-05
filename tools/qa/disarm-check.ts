@@ -40,7 +40,7 @@ async function world(on: boolean) {
   for (const [i, gd] of rest.entries()) { gd.char.pos = [37.5, 0, 4.5 + i * 1.5]; gd.path = []; gd.pathGoal = null; gd.hold = true; gd.heardUpTo = 1e12; }
   A.char.pos = [...AT]; A.char.bodyYaw = A.char.aimYaw = EAST; A.char.vel = [0, 0, 0]; A.path = []; A.pathGoal = null; A.hold = true; A.pinned = true; A.awareness = 0; A.heardUpTo = 1e12;
   W.cam.yaw = 0; W.cam.rebuild?.(); g.teleportPlayer([AT[0] - 0.8, 0, AT[2]]);
-  const step = (n = 1) => { for (let i = 0; i < n; i++) { W.cursorAt([A.char.pos[0], 1.2, A.char.pos[2]]); W.step(DT); g.player.visibility = 0.02; } };
+  const step = (n = 1) => { for (let i = 0; i < n; i++) { W.cursorAt([A.char.posX, 1.2, A.char.posZ]); W.step(DT); g.player.visibility = 0.02; } };
   step(40);
   const gun = () => g.items.items.find((it: any) => it === A.dropped) ?? null;
   return { W, g, A, step, gun, armed: inHand(A) === 'weapon' };

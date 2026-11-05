@@ -76,10 +76,10 @@ function seeded(a: number) { return () => { a |= 0; a = (a + 0x6D2B79F5) | 0; le
   const { h: man, R: home } = all[0];
   for (const x of all) if (x.h !== man && x.h.state !== 'dead') killGuard(g, x.h, [1, 0, 0], true);
   // stood where the fight had planted him in the runs the fault was read on: on floor that is no room of the structure
-  const stand = (p: [number, number, number]) => { const D = g.fight.defs.find((d: any) => d.gd === man); man.char.pos[0] = p[0]; man.char.pos[2] = p[2]; if (D) { D.station = [...p]; D.home = [...p]; D.stallAt = [...p]; } man.path = []; man.pathGoal = null; };   // (an empty path, as the game itself writes one that is over: a null one is no state of a man, and a script that walks him throws on it)
+  const stand = (p: [number, number, number]) => { const D = g.fight.defs.find((d: any) => d.gd === man); man.char.posX = p[0]; man.char.posZ = p[2]; if (D) { D.station = [...p]; D.home = [...p]; D.stallAt = [...p]; } man.path = []; man.pathGoal = null; };   // (an empty path, as the game itself writes one that is over: a null one is no state of a man, and a script that walks him throws on it)
   const spot = free(place.b)!; stand(spot);
   let line: { text: string; kind: string } | null = null, obj: { text: string; pos: number[] | null } | null = null, at: number[] = [], n0 = 0;
-  steps(LASTSTAND.first[1] + LASTSTAND.listen[1] + 8, () => { stand(spot); if (line) return; const l = said().find(x => /At$/.test(x.kind) && x.who === man.callsign); if (l) { line = l; n0 = said().length; at = [man.char.pos[0], man.char.pos[2]]; } });
+  steps(LASTSTAND.first[1] + LASTSTAND.listen[1] + 8, () => { stand(spot); if (line) return; const l = said().find(x => /At$/.test(x.kind) && x.who === man.callsign); if (l) { line = l; n0 = said().length; at = [man.char.posX, man.char.posZ]; } });
   steps(0.5, () => stand(spot)); obj = g.roomClear.objective();
   if (!line) { console.log(`- NO VERDICT — ${man.callsign} said nothing in ${(LASTSTAND.first[1] + LASTSTAND.listen[1] + 8).toFixed(0)} s alone (${said().map(l => l.text).join(' · ') || 'no line at all'}): the check looked at nothing`); process.exit(1); }
   looked++;

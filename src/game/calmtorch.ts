@@ -71,7 +71,7 @@ export function workLit(g: Game, x: number, z: number, bar = TORCH.litAt): boole
  *  `litAt` × `offK`: nothing he is about to walk into is dark), −1 = DARK (where he stands, or the nearer of the two, under `litAt`), 0 = between the two — the
  *  edge of a pool, dark floor still a few strides off: the torch stays as it is */
 export function placeRead(g: Game, gd: Guard): -1 | 0 | 1 {
-  const c = gd.char, x = c.pos[0], z = c.pos[2]; TORCH_STATS.asks++;
+  const c = gd.char, x = c.posX, z = c.posZ; TORCH_STATS.asks++;
   if (!workLit(g, x, z)) return -1;
   const fx = Math.sin(c.bodyYaw), fz = Math.cos(c.bodyYaw), eye: Vec3 = [x, 1.5, z], hi = TORCH.litAt * TORCH.offK;
   let lit = workLit(g, x, z, hi);

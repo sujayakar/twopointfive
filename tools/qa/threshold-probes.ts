@@ -146,7 +146,7 @@ function outFace(R: Rig, ent: any): boolean {
 function watchedBy(R: Rig, room: any, ent: any): string[] {
   const g = R.g, nav = g.col.nav, lx = -ent.out[1], lz = ent.out[0], c = [ent.at[0] + ent.out[0] * 0.7, 1.2, ent.at[2] + ent.out[1] * 0.7];
   const pts = [-2.2, -1.3, 0, 1.3, 2.2].map(l => [c[0] + lx * l, 1.2, c[2] + lz * l]).filter(p => !nav.isBlocked(p[0], p[2]) && !g.col.solidBlocked(c, p));
-  return g.fight.defs.filter((d: any) => d.room !== room && d.gd.state !== 'dead' && pts.some(p => !g.col.segmentBlocked([d.gd.char.pos[0], 1.5, d.gd.char.pos[2]], p))).map((d: any) => d.gd.callsign ?? 'a man');
+  return g.fight.defs.filter((d: any) => d.room !== room && d.gd.state !== 'dead' && pts.some(p => !g.col.segmentBlocked([d.gd.char.posX, 1.5, d.gd.char.posZ], p))).map((d: any) => d.gd.callsign ?? 'a man');
 }
 
 interface Run {

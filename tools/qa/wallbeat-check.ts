@@ -41,14 +41,14 @@ async function play(on: boolean, how: 'stay' | 'brush', o: { secs?: number } = {
     await quiet(() => R.step(60));
     if (pl.crouch || pl.wall || sneaking()) { P.why = `not an upright walk to begin with (crouch ${pl.crouch}, wall ${!!pl.wall}, the squad ${U.unseenWord(g) ?? 'loud'})`; return P; }
     let dir: number[] | null = null;
-    await quiet(() => { for (const d of WAYS) { if (pl.wall) break; R.goal = [c.pos[0] + d[0] * 12, 0, c.pos[2] + d[1] * 12]; for (let i = 0; i < 60 * 6 && !pl.wall; i++) { R.step(); if (sneaking() && !pl.wall) P.pre++; } if (pl.wall) dir = d; } });
+    await quiet(() => { for (const d of WAYS) { if (pl.wall) break; R.goal = [c.posX + d[0] * 12, 0, c.posZ + d[1] * 12]; for (let i = 0; i < 60 * 6 && !pl.wall; i++) { R.step(); if (sneaking() && !pl.wall) P.pre++; } if (pl.wall) dir = d; } });
     if (!pl.wall || !dir) { P.why = 'no way he walked took him onto a wall'; return P; }
     const t0 = g.time; let off = false; const bits: string[] = [], away: number[] = dir;
     await quiet(() => {
       for (let i = 0; i < Math.round(2.5 / DT) + (how === 'brush' ? 60 : 0); i++) {
         const hit = pl.wall?.hitT ?? 0; if (pl.wall) { P.held++; P.maxHit = Math.max(P.maxHit, hit); }
         const s = sneaking(); bits.push(s ? '1' : '0'); if (s) { P.frames++; if (isNaN(P.first)) { P.first = g.time - t0; P.firstHit = hit; } }
-        if (how === 'brush' && !off && pl.wall && hit >= 0.25) { off = true; R.goal = [c.pos[0] - away[0] * 12, 0, c.pos[2] - away[1] * 12]; }
+        if (how === 'brush' && !off && pl.wall && hit >= 0.25) { off = true; R.goal = [c.posX - away[0] * 12, 0, c.posZ - away[1] * 12]; }
         R.step();
       }
     });

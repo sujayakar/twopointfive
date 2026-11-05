@@ -93,7 +93,7 @@ export async function conditionCheck(): Promise<boolean> {
             '(11) each of the three figures is dealt the hurt look and the fold, the player\'s the tucked head of a man with the blast still on him; with the switch off the next frame takes all of it back', `on ${J(on)} · the player shaken ${f2(shaken)} · off ${J(off)} · shaken ${f2(shakenOff)}`); }
         // (3) pace — the legs' own function, a clear run of floor ahead of him, asked for the chase
         const legs = (gd: any, speed: number, fn: any = GU.followPath) => { const c = gd.char, keep = { st: gd.staggerUntil, rt: gd.reactT, p: [...c.pos], path: gd.path, pi: gd.pathI, sp: gd.speed, lp: gd.lastPos, yaw: c.bodyYaw };
-          const to = [S.P.at[0], 0, S.P.at[2]]; gd.staggerUntil = -1; gd.path = [to]; gd.pathI = 0; gd.speed = 0; c.bodyYaw = Math.atan2(to[0] - c.pos[0], to[2] - c.pos[2]); let top = 0;
+          const to = [S.P.at[0], 0, S.P.at[2]]; gd.staggerUntil = -1; gd.path = [to]; gd.pathI = 0; gd.speed = 0; c.bodyYaw = Math.atan2(to[0] - c.posX, to[2] - c.posZ); let top = 0;
           for (let i = 0; i < 120; i++) { c.pos = [...keep.p]; gd.lastPos = [...keep.p]; fn(g, gd, 1 / 60, speed); top = Math.max(top, gd.speed); }
           c.pos = keep.p; gd.staggerUntil = keep.st; gd.reactT = keep.rt; gd.path = keep.path; gd.pathI = keep.pi; gd.speed = keep.sp; gd.lastPos = keep.lp; c.bodyYaw = keep.yaw; c.vel = [0, 0, 0]; return top; };
         const chase = g.tune.guardChase, hurtTop = legs(foe, chase); const at = foe.hurtAt; foe.hurtAt = -1; const soundTop = legs(foe, chase); foe.hurtAt = at;
@@ -124,11 +124,11 @@ export async function conditionCheck(): Promise<boolean> {
           line(a.sprint === 0 && a.top > 0.5 && a.top <= g.tune.playerWalk + 0.1 && b.sprint > 30 && b.top > g.tune.playerWalk + 1,
             '(4) hurt, Shift and W held never make a sprint: he walks; sound, the same keys from the same spot are a sprint', `hurt: ${a.sprint} sprint frames, top ${f2(a.top)} m/s · sound: ${b.sprint} sprint frames, top ${f2(b.top)} m/s · walk ${g.tune.playerWalk} · sprint ${g.tune.playerSprint}`); }
         // (6) one round each, from 2.5 m, at the chest
-        { g.godMode = false; const chest = (c: any) => [c.pos[0], 1.2, c.pos[2]];
+        { g.godMode = false; const chest = (c: any) => [c.posX, 1.2, c.posZ];
           /** `sh` stood 2.5 m from the man with his muzzle's line to him clear head to foot (the first such spot round him, from the burst's side) */
-          const stand = (sh: any, target: any): boolean => { const c = target.char, a0 = Math.atan2(S.P.at[0] - c.pos[0], S.P.at[2] - c.pos[2]);
-            for (let k = 0; k < 24; k++) { const a = a0 + (k % 2 ? -1 : 1) * Math.ceil(k / 2) * Math.PI / 12, q = [c.pos[0] + Math.sin(a) * 2.5, 0, c.pos[2] + Math.cos(a) * 2.5]; if (g.col.nav.isBlocked(q[0], q[2])) continue;
-              put(sh, q, c.pos); sh.char.update(0); if (exposure(g, sh.char.muzzle, c.pos, [c.pos[0], 1.65, c.pos[2]]) === 1) return true; }
+          const stand = (sh: any, target: any): boolean => { const c = target.char, a0 = Math.atan2(S.P.at[0] - c.posX, S.P.at[2] - c.posZ);
+            for (let k = 0; k < 24; k++) { const a = a0 + (k % 2 ? -1 : 1) * Math.ceil(k / 2) * Math.PI / 12, q = [c.posX + Math.sin(a) * 2.5, 0, c.posZ + Math.cos(a) * 2.5]; if (g.col.nav.isBlocked(q[0], q[2])) continue;
+              put(sh, q, c.pos); sh.char.update(0); if (exposure(g, sh.char.muzzle, c.pos, [c.posX, 1.65, c.posZ]) === 1) return true; }
             return false; };
           put(mate, S.P.spots[0], S.P.at); put(foe, S.P.spots[1], S.P.at); mate.char.update(0); foe.char.update(0);   // (back on their spots: the frames above let them walk)
           const hurtF = isHurt(g, foe), hurtM = isHurt(g, mate), hurtY = isHurt(g, pl), hits = pl.hitsLeft;

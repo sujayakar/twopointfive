@@ -65,7 +65,7 @@ async function gunMen() {
     if (b2.muzzleDown || b2.char.anim.upper !== 'aim' || b2.char.anim.gunWall !== 0) fails.push('on, back from the wall: the gun is not up');
     if (far > 1e-9) fails.push(`back from the wall the muzzle differs by ${far} m between the two`);
     verdict(!fails.length, `${what}: off the ${A.through?.seg ?? 'gun'} is in the wall (${A.how}); on it is at the low ready, the muzzle ${f2(B.short)} m short of the face; 1.9 m back it is up, to the bit`,
-      fails.join('; ') || `he stands at z ${f2(b.char.pos[2])} · wall face ${f2(NEAR)} · off: muzzle z ${f3(A.muzzle[2])} · on: muzzle z ${f3(B.muzzle[2])}, ${B.how}, gunWall ${f2(b.char.anim.gunWall)}`);
+      fails.join('; ') || `he stands at z ${f2(b.char.posZ)} · wall face ${f2(NEAR)} · off: muzzle z ${f3(A.muzzle[2])} · on: muzzle z ${f3(B.muzzle[2])}, ${B.how}, gunWall ${f2(b.char.anim.gunWall)}`);
   }
 }
 
@@ -78,7 +78,7 @@ function samAt(W: any, z: number, gun: 'rifle' | 'pistol') {
   hold(W, [X, 0, 3.7], 90);
   const firearm = gun === 'rifle' ? pl.rifle : pl.pistol, r0 = firearm.roundsReady;
   hold(W, [X, 0, 3.7], 2, true); hold(W, [X, 0, 3.7], 20);
-  return { ...snap(W, pl.char), fired: r0 - firearm.roundsReady, up: gun === 'rifle' ? pl.rifleUp : pl.pistolUp, upper: pl.char.anim.upper, z: pl.char.pos[2] as number };
+  return { ...snap(W, pl.char), fired: r0 - firearm.roundsReady, up: gun === 'rifle' ? pl.rifleUp : pl.pistolUp, upper: pl.char.anim.upper, z: pl.char.posZ as number };
 }
 async function gunSam() {
   console.log('\n=== gun-sam: Sam pressed to the wall, pistol then FN2000 — off: in the wall and it fires; on: the low ready, out of it, and a click fires nothing; back: it fires ===');
@@ -102,8 +102,8 @@ async function gunWalk() {
     order(gd, { goal: [X, 0, 1.4], face: NORTH, aimAt: [X, 1.35, 12], upper: 'aim', hot: true }); for (let i = 0; i < 60; i++) W.step(DT);
     order(gd, { goal: [X, 0, NEAR - 0.1], face: NORTH, aimAt: [X, 1.35, 12], upper: 'aim', hot: true });
     let through = 0, worst = 0, downAt = -1, frames = 0;
-    for (let i = 0; i < 300; i++) { W.step(DT); frames++; const h = gunThrough(g.col, gd.char); if (h) { through++; worst = Math.max(worst, h.depth); } if (downAt < 0 && gd.muzzleDown) downAt = NEAR - gd.char.pos[2]; }
-    return { through, worst, downAt, frames, z: gd.char.pos[2] as number, down: gd.muzzleDown as boolean }; };
+    for (let i = 0; i < 300; i++) { W.step(DT); frames++; const h = gunThrough(g.col, gd.char); if (h) { through++; worst = Math.max(worst, h.depth); } if (downAt < 0 && gd.muzzleDown) downAt = NEAR - gd.char.posZ; }
+    return { through, worst, downAt, frames, z: gd.char.posZ as number, down: gd.muzzleDown as boolean }; };
   const off = await run(false), on = await run(true);
   verdict(off.through > 30 && on.through === 0 && on.down && NEAR - on.z < 0.45, 'walked into the wall: off the gun ends in it; on it came down before the wall and never touched it',
     `off: ${off.through} of ${off.frames} frames in the wall, ${f2(off.worst)} m deep · on: ${on.through} frames, down from ${f2(on.downAt)} m off the face · he ends ${f2(NEAR - on.z)} m off it`);
@@ -114,7 +114,7 @@ async function gunBeside() {
   const W = await stage(34, true), g = W.game;
   const a = spawnUnit(g, { team: 'operative', pos: [X, 0, NEAR - 0.33], yaw: Math.PI / 2, weapon: 'fn2000', light: false });
   order(a, { goal: [X, 0, NEAR - 0.33], face: Math.PI / 2, aimAt: [X + 12, 1.35, NEAR - 0.33], upper: 'aim', hot: true }); for (let i = 0; i < 90; i++) W.step(DT);
-  verdict(!a.muzzleDown && a.char.anim.upper === 'aim' && !gunThrough(g.col, a.char), 'facing along the wall, shoulder to it: the rifle is up', `he stands ${f2(NEAR - a.char.pos[2])} m off the face · muzzleDown ${a.muzzleDown} · ${carriageOf(a.char)}`);
+  verdict(!a.muzzleDown && a.char.anim.upper === 'aim' && !gunThrough(g.col, a.char), 'facing along the wall, shoulder to it: the rifle is up', `he stands ${f2(NEAR - a.char.posZ)} m off the face · muzzleDown ${a.muzzleDown} · ${carriageOf(a.char)}`);
   despawnUnit(g, a);
   const b = manAt(W, 'operative', 'fn2000', NEAR - 0.95);
   verdict(!b.muzzleDown && b.char.anim.upper === 'aim', 'facing the wall from 0.95 m (the muzzle a forearm short of it): the rifle is up', `muzzle ${f2(NEAR - b.char.muzzle[2])} m short of the face · muzzleDown ${b.muzzleDown}`);
@@ -124,7 +124,7 @@ async function gunBand() {
   console.log('\n=== gun-band: carried to the wall and back two millimetres at a time — down once, up once, and up further out than down ===');
   const W = await stage(35, true), g = W.game, gd = manAt(W, 'operative', 'fn2000', 2.6);
   let downs = 0, ups = 0, downAt = 0, upAt = 0, was = false;
-  const go = (z: number) => { gd.char.pos[2] = z; gd.script.goal = [X, 0, z]; for (let i = 0; i < 6; i++) W.step(DT); const low = gd.muzzleDown; if (low && !was) { downs++; downAt = NEAR - z; } if (!low && was) { ups++; upAt = NEAR - z; } was = low; };
+  const go = (z: number) => { gd.char.posZ = z; gd.script.goal = [X, 0, z]; for (let i = 0; i < 6; i++) W.step(DT); const low = gd.muzzleDown; if (low && !was) { downs++; downAt = NEAR - z; } if (!low && was) { ups++; upAt = NEAR - z; } was = low; };
   for (let z = 2.6; z <= PRESS + 1e-9; z += 0.002) go(z);   // (2 mm a step, six frames a step: the rule leads by his feet's own speed, and this is a crawl)
   for (let z = PRESS; z >= 2.6 - 1e-9; z -= 0.002) go(z);
   verdict(downs === 1 && ups === 1 && upAt > downAt + 0.03, 'the gun went down once on the way in and came up once on the way out, further from the wall than it went down', `down at ${f2(downAt)} m off the face (${downs}×) · up at ${f2(upAt)} m (${ups}×)`);
@@ -142,7 +142,7 @@ async function gunLock() {
 async function gunHot() {
   console.log('\n=== gun-hot: a man in his sights — the gun is down only while it IS in the wall, not for the room a calm man keeps ===');
   const W = await stage(37, true), g = W.game, gd = manAt(W, 'operative', 'fn2000', NEAR - 0.5);
-  const put = (off: number, n: number) => { gd.char.pos[2] = NEAR - off; gd.script.goal = [X, 0, NEAR - off]; for (let i = 0; i < n; i++) W.step(DT); };
+  const put = (off: number, n: number) => { gd.char.posZ = NEAR - off; gd.script.goal = [X, 0, NEAR - off]; for (let i = 0; i < n; i++) W.step(DT); };
   put(0.7, 30); const calm = gd.muzzleDown;   // back out, inside the band: a calm man keeps it down
   gd.script.over = { aimAt: [X, 1.35, 12], face: null }; put(0.7, 60); const hotUp = !gd.muzzleDown && gd.char.anim.upper === 'aim' && !gunThrough(g.col, gd.char), short = NEAR - gd.char.muzzle[2];
   put(0.45, 60); const hotDown = gd.muzzleDown && !gunThrough(g.col, gd.char);
@@ -154,7 +154,7 @@ async function gunModel() {
   console.log('\n=== gun-model: the rule\'s worked-out carriages against the posed gun, in open floor — a re-tuned carriage table that moves a muzzle shows here ===');
   for (const [team, weapon, what] of [['operative', 'fn2000', 'FN2000'], ['guard', 'aks74u', 'carbine'], ['guard', 'guard9mm', 'pistol']] as const) {
     const W = await stage(38, true), gd = manAt(W, team, weapon, 2.0), c = gd.char;
-    const rel = (p: Vec3) => [p[2] - c.pos[2], p[0] - c.pos[0], p[1] - c.pos[1]];   // ahead (he faces north), to the side, up
+    const rel = (p: Vec3) => [p[2] - c.posZ, p[0] - c.posX, p[1] - c.posY];   // ahead (he faces north), to the side, up
     const M = rel(gunWallModel.raisedLine(c, 'aim', c.aimYaw).b), A = rel(c.muzzle), up = Math.max(Math.abs(M[0] - A[0]), Math.abs(M[1] - A[1])), upY = Math.abs(M[2] - A[2]);
     order(gd, { goal: [X, 0, 2.0], face: NORTH, aimAt: [X, 1.35, 12], upper: 'none', stance: 'lowReady', hot: true }); for (let i = 0; i < 90; i++) W.step(DT);
     const low = Math.abs(rel(c.muzzle)[0] - gunWallModel.lowReach(c));

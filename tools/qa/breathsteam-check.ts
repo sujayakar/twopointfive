@@ -84,7 +84,7 @@ export async function breathSteamCheck(): Promise<boolean> {
     const ops: any[] = g.guards.filter((gd: any) => gd.team === 'operative'), foes: any[] = g.guards.filter((gd: any) => gd.team !== 'operative');
     const open = (c: any) => !!c.bones.head && !g.weather.underRoof(c.bones.head[0], c.bones.head[2]);
     const out: any[] = [g.player.char, ...ops.map(gd => gd.char)].filter(open);
-    const still = () => { for (const c of out) { c.vel[0] = 0; c.vel[2] = 0; } };
+    const still = () => { for (const c of out) { c.velX = 0; c.velZ = 0; } };
     // ---- steam
     const on = fly(A, 600, { pre: still });
     { const who = on.ems.map(e => near(e, out)), per = out.map(c => on.ems.filter((_, i) => who[i] === c).length);
@@ -107,7 +107,7 @@ export async function breathSteamCheck(): Promise<boolean> {
       verdict(!!first && got.length === 1 && late.frame > first.frame + 2 && late.frame <= first.frame + 3 + 12 && late.ttl > 0.05 && late.ttl < first.ttl - 1e-6 && late.look === true, 'late — a man under a roof as his breath began steams for what is left of it when he steps out',
         `in the open his breath starts on frame ${first?.frame} and its source runs ${first ? f(first.ttl) : '—'} s · under the roof until frame ${first ? first.frame + 3 : '—'}: ${got.length} source, on frame ${late?.frame ?? '—'}, for ${late ? f(late.ttl) : '—'} s`); }
     // ---- follows
-    { const sam = g.player.char, sv = solver(); let e0: any = null; const keep = { x: sam.pos[0], hx: sam.bones.head[0], alive: sam.alive, hy: sam.bones.head[1] };
+    { const sam = g.player.char, sv = solver(); let e0: any = null; const keep = { x: sam.posX, hx: sam.bones.head[0], alive: sam.alive, hy: sam.bones.head[1] };
       // (his breath's first source, then the same closure asked as he is moved, walked, killed)
       const r = fly(A, 600, { pre: still, smoke: sv }); e0 = r.ems.find(e => near(e, [sam]));
       let moved = false, walked = false, down = false, dead = false, off = false, stale = false, fogged = false;
@@ -119,9 +119,9 @@ export async function breathSteamCheck(): Promise<boolean> {
         for (let i = 0; i < 600 && !e1; i++) { tick(); e1 = sv2.ems.find(x => near(x, [sam])); }
         if (e1) {
           const a = e1.track(); sam.bones.head[0] += 0.5; const b = e1.track(); moved = !!a && !!b && Math.abs(b.pos[0] - a.pos[0] - 0.5) < 1e-9;
-          sam.vel[0] = 2; const c = e1.track(); sam.vel[0] = 0; const cv = K.carry * B.carryK; walked = !!b && !!c && Math.abs(c.dir[0] - b.dir[0] - 2 * cv) < 1e-9 && Math.abs(c.dir[1] - b.dir[1]) < 1e-12;
+          sam.velX = 2; const c = e1.track(); sam.velX = 0; const cv = K.carry * B.carryK; walked = !!b && !!c && Math.abs(c.dir[0] - b.dir[0] - 2 * cv) < 1e-9 && Math.abs(c.dir[1] - b.dir[1]) < 1e-12;
           sam.bones.head[0] = keep.hx;
-          sam.bones.head[1] = sam.pos[1] + 0.25; tick(); down = e1.track() === null; sam.bones.head[1] = keep.hy; tick();
+          sam.bones.head[1] = sam.posY + 0.25; tick(); down = e1.track() === null; sam.bones.head[1] = keep.hy; tick();
           // (a breath on from there: a new source, asked the same things)
           const next = () => { const n0 = sv2.ems.length; let x: any = null; for (let i = 0; i < 600 && !x; i++) { tick(); x = sv2.ems.slice(n0).find(y => near(y, [sam])); } return x; };
           const e2 = next(); if (e2) { sam.alive = false; dead = e2.track() === null; sam.alive = keep.alive; }
@@ -134,9 +134,9 @@ export async function breathSteamCheck(): Promise<boolean> {
       verdict(!!e0 && moved && walked && down && dead && off && stale && fogged, 'follows — a source rides the mouth and its velocity is his head\'s facing and his walk; it lets go of a man who lies down, dies or goes into the fog, and when the switch goes off',
         `his head moved half a metre: the source with it ${moved} · walking at 2 m/s: the gas leaves with ${f(K.carry * B.carryK)} of it ${walked} · his head at the ground: let go ${down} · dead: ${dead} · the switch off: ${off} · the breath reseeded under it: ${stale} · a teammate the fog of war hides: ${fogged}`); }
     // ---- sprint
-    { const sam = g.player.char; const run = (R: any, v: number) => { const c = R.g.player.char, mates = R.g.guards.filter((gd: any) => gd.team === 'operative').map((gd: any) => gd.char); return fly(R, 600, { pre: () => { for (const m of mates) { m.vel[0] = 0; m.vel[2] = 0; } c.vel[0] = v; c.vel[2] = 0; } }).ems.filter(e => near(e, [c])); };
+    { const sam = g.player.char; const run = (R: any, v: number) => { const c = R.g.player.char, mates = R.g.guards.filter((gd: any) => gd.team === 'operative').map((gd: any) => gd.char); return fly(R, 600, { pre: () => { for (const m of mates) { m.vel[0] = 0; m.vel[2] = 0; } c.velX = v; c.velZ = 0; } }).ems.filter(e => near(e, [c])); };
       const Bq = await rig(true, false);   // (the hard breath rule off)
-      const ra = run(A, 4.7), rb = run(Bq, 4.7), sa = run(A, 0), sb = run(Bq, 0); sam.vel[0] = 0; Bq.g.player.char.vel[0] = 0;
+      const ra = run(A, 4.7), rb = run(Bq, 4.7), sa = run(A, 0), sb = run(Bq, 0); sam.velX = 0; Bq.g.player.char.velX = 0;
       const la = ra[ra.length - 1], lb = rb[rb.length - 1], s0 = sa[0];
       const same = sa.length > 0 && sa.length === sb.length && sa.every((e, i) => e.frame === sb[i].frame && e.density === sb[i].density && e.radius === sb[i].radius && e.speed === sb[i].speed);
       const jet = (e: any) => Math.hypot(e.dir[0] - 4.7 * (H.carry * B.carryK), e.dir[1], e.dir[2]);
@@ -146,18 +146,18 @@ export async function breathSteamCheck(): Promise<boolean> {
     // ---- who (it kills a man: late on this game)
     { const dead = ops[1], lying = ops[2], fogged = ops[3]; const fog = g.fogOfWar as any;
       const keep = { state: dead.state, alive: dead.char.alive, y: lying.char.bones.head[1] };
-      dead.state = 'dead'; dead.char.alive = false; lying.char.bones.head[1] = lying.char.pos[1] + 0.25; fog.hidden = (gd: any) => gd === fogged;
+      dead.state = 'dead'; dead.char.alive = false; lying.char.bones.head[1] = lying.char.posY + 0.25; fog.hidden = (gd: any) => gd === fogged;
       const w = fly(A, 600, { pre: still });
       delete fog.hidden; dead.state = keep.state; dead.char.alive = keep.alive; lying.char.bones.head[1] = keep.y;
       const roofed = foes.filter(gd => gd.state !== 'dead' && !open(gd.char)); const n = (c: any) => w.ems.filter(e => near(e, [c])).length;
-      const rest = n(g.player.char) + n(ops[0].char), under = roofed.reduce((s, gd) => s + w.ems.filter(e => Math.hypot(e.pos[0] - gd.char.pos[0], e.pos[2] - gd.char.pos[2]) < 0.5).length, 0);
+      const rest = n(g.player.char) + n(ops[0].char), under = roofed.reduce((s, gd) => s + w.ems.filter(e => Math.hypot(e.pos[0] - gd.char.posX, e.pos[2] - gd.char.posZ) < 0.5).length, 0);
       verdict(n(dead.char) === 0 && n(lying.char) === 0 && n(fogged.char) === 0 && roofed.length > 0 && under === 0 && rest >= 4 && w.ems.length === rest && w.recs.length === 0,
         'who — not the dead, not a man lying down, not a man in the fog, not a man under a roof', `sources in ten seconds: the dead man ${n(dead.char)} · the man with his head at the ground ${n(lying.char)} · the man the fog of war hides ${n(fogged.char)} · ${roofed.length} living defenders under a roof, the fog bared: ${under} · the player and the teammate beside them: ${rest} of ${w.ems.length} in all`); }
     // ---- falls
     { const off = await rig(false); const base = fly(off, 600, { pre: () => { } }), k0 = base.recs.map(pkey).join('|');
-      const cases: [string, any, number[] | undefined, (() => void)?][] = [['the harness\'s null solver', null, undefined], ['a solver that is not drawing', solver(false), undefined], ['the steam\'s density at nothing', solver(), undefined, () => { B.density = 0; }], ['every man past `reach` from where the view looks', solver(), [g.player.char.pos[0] + B.reach + 40, 0, g.player.char.pos[2]]]];
+      const cases: [string, any, number[] | undefined, (() => void)?][] = [['the harness\'s null solver', null, undefined], ['a solver that is not drawing', solver(false), undefined], ['the steam\'s density at nothing', solver(), undefined, () => { B.density = 0; }], ['every man past `reach` from where the view looks', solver(), [g.player.char.posX + B.reach + 40, 0, g.player.char.posZ]]];
       const d0 = B.density; const got = cases.map(([name, sv, focus, set]) => { set?.(); let r: any; try { r = fly(A, 600, { pre: () => { }, smoke: sv, focus }); } finally { B.density = d0; } return { name, ems: r.ems.length, pushes: r.pushes.length, same: r.recs.map(pkey).join('|') === k0, n: r.recs.length }; });
-      const inView = fly(A, 600, { pre: () => { }, focus: [g.player.char.pos[0], 0, g.player.char.pos[2]] });
+      const inView = fly(A, 600, { pre: () => { }, focus: [g.player.char.posX, 0, g.player.char.posZ] });
       verdict(off.stood === false && base.ems.length === 0 && base.recs.length > 10 && base.S.steam === 0 && got.every(x => x.ems === 0 && x.pushes === 0 && x.same) && inView.ems.length > 0,
         'falls — with no solver drawing, no steam to let out, or past `reach` from the view, the breath is the puffs it was, record for record; with the switch off not one source',
         `the switch off (as the stand left it: ${off.stood}): ${base.ems.length} sources, ${base.recs.length} puff records · ${got.map(x => `${x.name}: ${x.ems} sources, ${x.n} records, the same ${x.same}`).join(' · ')} · the view on the player: ${inView.ems.length} sources`); }
@@ -193,7 +193,7 @@ export async function breathSteamCheck(): Promise<boolean> {
       // the pass stood and nothing started on it, twice (the men stand still and nobody shoots: what is left to differ is the picture's)
       // (one state = one state hash, rollback.ts stateHash: the whole state walked into one word; a red run asks the row walk, stateDiff, which rows. Both with
       //  `own`: two games stood in one process are compared without what the modules share between them)
-      const W1 = await rig(true, true, false), W0 = await rig(true, true, false), cam = () => [W1.g.player.char.pos[0], 0, W1.g.player.char.pos[2]];
+      const W1 = await rig(true, true, false), W0 = await rig(true, true, false), cam = () => [W1.g.player.char.posX, 0, W1.g.player.char.posZ];
       const same = () => RB.stateHash(W1.g, false, true) === RB.stateHash(W0.g, false, true), why = (): string => `: ${(RB.stateDiff(W1.g, W0.g, 6, false, true) as string[]).join(' | ')}`;
       const twins = same();
       // the same game twice, stepped by the game: one with a solver that draws and the view on the player, one with a solver that says it does not and the view a street away

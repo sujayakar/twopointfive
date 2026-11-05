@@ -292,7 +292,7 @@ export function attentionMarks(g: Game): AttentionMark[] {
   for (const gd of g.guards) {
     const H = attentionOf(g, gd); if (!H || gd.state === 'dead' || g.fogOfWar.hidden(gd)) continue;   // (fog of war: nothing live of a man nobody on the team sees — not his thread either)
     const left = H.mode === 'lent' ? 1 : clamp((H.until < 0 ? H.secs : H.until - g.time) / Math.max(1e-3, H.full), 0, 1);   // (against a FRESH taking's length)
-    out.push({ gd, from: [gd.char.pos[0], 0.05, gd.char.pos[2]], at: [H.at[0], 0.05, H.at[2]], left, mode: H.mode, kind: H.kind, ending: H.mode !== 'lent' && H.until >= 0 && H.until - g.time <= ATTENTION.tellSecs, worn: H.nth > 1, walking: H.mode === 'go' && H.until < 0 });
+    out.push({ gd, from: [gd.char.posX, 0.05, gd.char.posZ], at: [H.at[0], 0.05, H.at[2]], left, mode: H.mode, kind: H.kind, ending: H.mode !== 'lent' && H.until >= 0 && H.until - g.time <= ATTENTION.tellSecs, worn: H.nth > 1, walking: H.mode === 'go' && H.until < 0 });
   }
   return out;
 }

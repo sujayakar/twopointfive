@@ -111,11 +111,11 @@ export class Run {
   atLast(what: string): number | null { const L = this.R.log; for (let i = L.length - 1; i >= 0 && L[i].what !== 'staged'; i--) if (L[i].what === what) return isNaN(this.R.t0) ? null : L[i].t - this.R.t0; return null; }
 
   // ── Sam's hands, once a frame ──
-  private chest(x: any): Vec3 { return x.char.bones.chest ?? [x.char.pos[0], 1.2, x.char.pos[2]]; }
+  private chest(x: any): Vec3 { return x.char.bones.chest ?? [x.char.posX, 1.2, x.char.posZ]; }
   /** a hostage within `r` of the line of fire, out to 4 m past the man */
   private hostageNear(from: Vec3, to: Vec3, r = 0.7): boolean {
     const dx = to[0] - from[0], dz = to[2] - from[2], L = Math.hypot(dx, dz); if (L < 1e-3) return false; const ux = dx / L, uz = dz / L;
-    for (const h of this.R.hostages) { if (h.state === 'dead') continue; const px = h.char.pos[0] - from[0], pz = h.char.pos[2] - from[2]; const s = px * ux + pz * uz; if (s < 0.3 || s > L + 4) continue; if (Math.abs(px * uz - pz * ux) < r) return true; }
+    for (const h of this.R.hostages) { if (h.state === 'dead') continue; const px = h.char.posX - from[0], pz = h.char.posZ - from[2]; const s = px * ux + pz * uz; if (s < 0.3 || s > L + 4) continue; if (Math.abs(px * uz - pz * ux) < r) return true; }
     return false;
   }
   /** inside the picture (a margin in from the canvas's edge): where the cursor can go */
@@ -126,7 +126,7 @@ export class Run {
     I.buttons &= ~1;
     if (pl.down) return;
     // eyes: who he may shoot
-    const eye: Vec3 = [c.pos[0], 1.45, c.pos[2]]; let best: any = null, bd = 1e9;
+    const eye: Vec3 = [c.posX, 1.45, c.posZ]; let best: any = null, bd = 1e9;
     for (const h of this.R.hostiles) {
       if (h.state === 'dead') { this.seen.delete(h); continue; }
       const ch = this.chest(h), d = flat(c.pos, h.char.pos);
@@ -140,9 +140,9 @@ export class Run {
     // feet
     const engaging = !!this.target; let ahead: Vec3 | null = null;
     if (this.goal) {
-      const dx = this.goal[0] - c.pos[0], dz = this.goal[2] - c.pos[2], d = Math.hypot(dx, dz);
+      const dx = this.goal[0] - c.posX, dz = this.goal[2] - c.posZ, d = Math.hypot(dx, dz);
       if (d > 0.2) {
-        ahead = [c.pos[0] + dx / d * 6, 1.1, c.pos[2] + dz / d * 6];
+        ahead = [c.posX + dx / d * 6, 1.1, c.posZ + dz / d * 6];
         if (!engaging || this.shootOnMove) {
           const { fwd, right } = this.cam.planarBasis(); const a = (dx * fwd[0] + dz * fwd[2]) / d, b = (dx * right[0] + dz * right[2]) / d, T = 0.3827;   // the eight ways the keys give, nearest to the line (re-picked every frame: it weaves onto it)
           if (a > T) I.keys.add('KeyW'); if (a < -T) I.keys.add('KeyS'); if (b > T) I.keys.add('KeyD'); if (b < -T) I.keys.add('KeyA');
@@ -160,7 +160,7 @@ export class Run {
   private meter() {
     const g = this.g, pl = g.player, c = pl.char;
     if (this.samMeter === 'dark') { pl.visibility = 0; return; }
-    const E = Math.max(lightEstimateAt(g, c.bones.chest ?? [c.pos[0], 1.2, c.pos[2]]), lightEstimateAt(g, c.bones.head ?? [c.pos[0], 1.6, c.pos[2]]));
+    const E = Math.max(lightEstimateAt(g, c.bones.chest ?? [c.posX, 1.2, c.posZ]), lightEstimateAt(g, c.bones.head ?? [c.posX, 1.6, c.posZ]));
     this.vis += (g.visibilityOf(E) - this.vis) * (1 - Math.exp(-6 * DT)); pl.irradiance = E; pl.visibility = this.vis;
   }
 
@@ -318,7 +318,7 @@ function crawlHand(R: Run) {
   R.kick('server');
   R.order('move', R.floorT(AT.server)); R.until(() => R.set(), 8); R.wait(1.5);
   // (he calls them back to him first: F with a man still posted in the server room would send that man to the side door — the two-door go, which is FLOW's)
-  R.order('fallIn', R.noneT()); R.until(() => R.ops.every((m: any) => m.char.pos[2] > 10.1), 6);
+  R.order('fallIn', R.noneT()); R.until(() => R.ops.every((m: any) => m.char.posZ > 10.1), 6);
   R.F(); R.go(AT.post); R.finish({ reorder: true, post: AT.post, watch: AT.east });
 }
 /** CRAWL (the answer page's 3.12: 'stack, bang and entry'): every room on the way, in order — the conference room, the cubicles, the server room — each door taken by
@@ -330,7 +330,7 @@ function crawl(R: Run) {
   R.order('move', R.floorT(AT.cubiclesB)); R.until(() => R.set(), 8); R.wait(1.5);
   R.order('fallIn', R.noneT()); R.watch = AT.east; R.go(AT.serverFront);
   R.tool('bangClear', 'server'); R.wait(1.5);
-  R.order('fallIn', R.noneT()); R.until(() => R.ops.every((m: any) => m.char.pos[2] > 10.1), 6);
+  R.order('fallIn', R.noneT()); R.until(() => R.ops.every((m: any) => m.char.posZ > 10.1), 6);
   R.F(); R.go(AT.post); R.finish({ reorder: true, post: AT.post, watch: AT.east });
 }
 /** RUSH: sprint the corridor, boot the hostage room's door and go in first. No bang, no order; the pair come on behind unasked, the last of them stopping on each opening he passes (rescueflow.ts). */
@@ -355,7 +355,7 @@ function flow(R: Run, o: { conference?: boolean; side?: boolean; corridor?: bool
     R.say('a man behind the conference glass — the pair go in after him'); R.order('move', R.floorT(AT.conference)); R.watch = AT.west;
     R.until(() => seen.state === 'dead', 8); R.say(seen.state === 'dead' ? 'he is down — on' : 'they have not got him — on');
     // (and he goes on WITH them: the corridor ahead is the door man's lane, and a man alone at the server door with his boot up is shot there — every loss of the first cut)
-    R.order('fallIn', R.noneT()); R.watch = AT.east; R.until(() => R.ops.some((m: any) => m.char.pos[2] > 10.1 && flat(m.char.pos, R.pos) < 3), 5);
+    R.order('fallIn', R.noneT()); R.watch = AT.east; R.until(() => R.ops.some((m: any) => m.char.posZ > 10.1 && flat(m.char.pos, R.pos) < 3), 5);
   }
   R.watch = AT.east;
   if (side && tools && R.ops.length === 2) {   // the door tools: the side door's man opens the server room himself (the boot is his), Sam never stops in the lane to do it

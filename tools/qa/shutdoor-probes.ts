@@ -83,9 +83,9 @@ async function rig(seed: number, o: { fight?: boolean; squad?: 2 | 4; keep?: boo
       for (let i = 0; i < n; i++) {
         game.player.visibility = 0.05;
         if (R.quiet) for (const h of NB.hostiles) if (h.state !== 'dead') h.dazzledUntil = game.time + 5;
-        const was = R.ops.map((x: any) => [x, x.char.pos[0], x.char.pos[2], O.of(x)?.order === SHUT_ID] as const);
+        const was = R.ops.map((x: any) => [x, x.char.posX, x.char.posZ, O.of(x)?.order === SHUT_ID] as const);
         W.step(DT);
-        let n = 0; for (const [x, px, pz, had] of was) { const has = O.of(x)?.order === SHUT_ID; if (has) { n++; R.everHad.add(x); } if (had && has && x.state !== 'dead') R.top = Math.max(R.top, Math.hypot(x.char.pos[0] - px, x.char.pos[2] - pz) / DT); }
+        let n = 0; for (const [x, px, pz, had] of was) { const has = O.of(x)?.order === SHUT_ID; if (has) { n++; R.everHad.add(x); } if (had && has && x.state !== 'dead') R.top = Math.max(R.top, Math.hypot(x.char.posX - px, x.char.posZ - pz) / DT); }
         R.most = Math.max(R.most, n);
         for (const e of game.events) { if (seen.has(e)) continue; seen.add(e); if (e.kind === 'door') R.doorEvents.push({ t: e.time, level: e.level, who: e.who }); }
         for (const gd of game.guards) { const b = gd.bubble; if (b && !heard.has(b)) { heard.add(b); R.lines.push({ who: gd.callsign, text: b.text, t: game.time, net: !!b.radio }); } }
@@ -97,7 +97,7 @@ async function rig(seed: number, o: { fight?: boolean; squad?: 2 | 4; keep?: boo
     target(name: string) { return O.targetAt(R.door(name).frameCentre); },
     give(id: string, name: string, who: any = 'all'): string | null { return O.give(id, R.target(name), who); },
     /** put the teammates at these places, standing, and have them hold there */
-    stand(places: number[][]) { R.ops.forEach((x: any, i: number) => { const p = places[i]; if (!p) return; x.char.pos[0] = p[0]; x.char.pos[2] = p[2]; x.char.vel[0] = x.char.vel[2] = 0; }); R.step(2); O.give('hold', { kind: 'none' }, 'all'); R.step(20); },
+    stand(places: number[][]) { R.ops.forEach((x: any, i: number) => { const p = places[i]; if (!p) return; x.char.posX = p[0]; x.char.posZ = p[2]; x.char.velX = x.char.velZ = 0; }); R.step(2); O.give('hold', { kind: 'none' }, 'all'); R.step(20); },
     /** X pressed on p: the first page's rows, then the door tools' page behind its opener (ids, digits, words, greyed, reasons), Esc, Esc */
     menuOn(p: number[]) {
       W.cursorAt([p[0], p[1], p[2]]); input.pressed.add(ORDERS.key); R.step(); R.step(24);
@@ -114,7 +114,7 @@ async function rig(seed: number, o: { fight?: boolean; squad?: 2 | 4; keep?: boo
     said(who: any, since: number) { return R.lines.filter(l => l.who === who.callsign && l.t >= since).map(l => l.text); },
   };
   R.step(30);
-  if (!o.fight && !o.keep) { NB.hostiles.forEach((h: any, i: number) => { h.char.pos[0] = PARK[0] + i * 1.2; h.char.pos[2] = PARK[2]; }); R.step(30); }   // (the defenders out of every sight line: the lot outside, dazzled)
+  if (!o.fight && !o.keep) { NB.hostiles.forEach((h: any, i: number) => { h.char.posX = PARK[0] + i * 1.2; h.char.posZ = PARK[2]; }); R.step(30); }   // (the defenders out of every sight line: the lot outside, dazzled)
   return R;
 }
 type Rig = Awaited<ReturnType<typeof rig>>;
@@ -177,7 +177,7 @@ export const shutdoorRefuse = guarded(async () => {
   { const x = refused(/you're in its way/); verdict(x.ok, 'Sam standing where the leaf comes round: you\'re in its way', `Sam ${at(g.player.char.pos)} · ${x.text}`); }
   g.teleportPlayer(SAM_W); R.step(3);
   // a teammate in its swing, the order addressed to another man
-  { const a = R.ops[3], p = mid(); a.char.pos[0] = p[0]; a.char.pos[2] = p[2]; R.step(1); O.give('hold', { kind: 'none' }, 3); R.step(3);
+  { const a = R.ops[3], p = mid(); a.char.posX = p[0]; a.char.posZ = p[2]; R.step(1); O.give('hold', { kind: 'none' }, 3); R.step(3);
     const before = snap(), n0 = O.log.length, w = O.give(SHUT_ID, O.targetAt(d.frameCentre), 0); R.step(2);
     verdict(new RegExp(`${a.callsign} is in its way`).test(w ?? '') && snap().every((q: any, i: number) => q === before[i]) && O.log.length === n0, 'a teammate standing in it, the order addressed to another man: refused, naming him', `give to ${R.ops[0].callsign}: "${w}"`);
     // … and addressed to all, he is the nearest: he takes it himself and steps out of it
@@ -190,9 +190,9 @@ export const shutdoorRefuse = guarded(async () => {
     verdict(/no place to shut it from/.test(w ?? '') && same, 'no floor to stand on by its latch jamb (the walkers\' grid blanked for the one question — the menu asks the same function): no place to shut it from', `give: "${w}" · assignments ${same ? 'untouched' : 'CHANGED'}`); }
   // an enemy in sight through it
   { const R3 = await rig(5, { fight: true }); const g3 = R3.game, d3 = R3.door('breakroom_w'); g3.teleportPlayer(SAM_W); prop(d3); R3.stand([[26.0, 0, 17.6], [24.5, 0, 18.4], [22, 0, 18], [16, 0, 17.6]]);
-    const h = R3.hostiles.find((x: any) => x.state !== 'dead'); for (const o of R3.hostiles) if (o !== h) { o.char.pos[0] = 6; o.char.pos[2] = 30; o.dazzledUntil = 1e9; }
+    const h = R3.hostiles.find((x: any) => x.state !== 'dead'); for (const o of R3.hostiles) if (o !== h) { o.char.posX = 6; o.char.posZ = 30; o.dazzledUntil = 1e9; }
     const F = frame(d3), far = pt(d3, F.W / 2, -faceOf(d3, R3.ops[0].char.pos) * 2.6);   // inside the room, on the far face from the corridor men
-    h.char.pos[0] = far[0]; h.char.pos[2] = far[2]; h.dazzledUntil = 1e9; h.god = true;
+    h.char.posX = far[0]; h.char.posZ = far[2]; h.dazzledUntil = 1e9; h.god = true;
     const sees = R3.until(() => g3.fight.seenBy(h).length > 0, 6);
     const r = row3(R3, d3), w = R3.O.give(SHUT_ID, R3.O.targetAt(d3.frameCentre));
     verdict(sees && r.id === SHUT_ID && !!r.row?.off && /contact through that door/.test(r.why ?? '') && /contact through that door/.test(w ?? ''), 'a defender the team has in sight through the doorway: contact through that door',
@@ -200,8 +200,8 @@ export const shutdoorRefuse = guarded(async () => {
   // a body in its swing
   { const R4 = await rig(5, { keep: true }); const g4 = R4.game, d4 = R4.door('breakroom_w'); g4.teleportPlayer(SAM_W); R4.stand(WEST); prop(d4); R4.step(5);
     const F = frame(d4), c = d4.def.closedDir + d4.angle / 2, p = [F.hx + Math.cos(c) * F.W * 0.6, 0, F.hz + Math.sin(c) * F.W * 0.6];
-    const h = R4.hostiles[0]; R4.hostiles.forEach((o: any, i: number) => { if (o !== h) { o.char.pos[0] = PARK[0] + i * 1.2; o.char.pos[2] = PARK[2]; } });
-    h.char.pos[0] = p[0]; h.char.pos[2] = p[2]; R4.step(1); killGuard(g4, h, [0, 0, 0.01], true, 'struck', 'player'); R4.step(150);
+    const h = R4.hostiles[0]; R4.hostiles.forEach((o: any, i: number) => { if (o !== h) { o.char.posX = PARK[0] + i * 1.2; o.char.posZ = PARK[2]; } });
+    h.char.posX = p[0]; h.char.posZ = p[2]; R4.step(1); killGuard(g4, h, [0, 0, 0.01], true, 'struck', 'player'); R4.step(150);
     { const rg = h.char.ragdoll, q = rg.point(0), dx = p[0] - q[0], dz = p[2] - q[2]; for (let i = 0; i * 3 < rg.x.length; i++) rg.nudge(i, dx, dz); }   // (laid where the leaf comes round whichever way he fell: a real door's swing is too short to count on his fall ending in it)
     prop(d4); R4.step(2);
     const rag = h.char.ragdoll, before = R4.ops.map((x: any) => R4.O.of(x)), r = row3(R4, d4), w = R4.O.give(SHUT_ID, R4.O.targetAt(d4.frameCentre)); R4.step(3);
@@ -294,7 +294,7 @@ export const shutdoorFile = guarded(async () => {
     verdict(near && x.others, '  and he walks back to Sam; the other three never left the file', `${man?.callsign} ${man ? f2(dist(man.char.pos, x.g.player.char.pos)) : '—'} m from Sam · others untouched ${x.others}`); }
   // a man of the file who is on the far face of the door from Sam (he trailed in, or went through first): he comes back through and shuts it from Sam's side —
   // shutting it from where he stands would put the door between him and the man he follows
-  { const x = await oneShut(11, 'breakroom_w', WEST, SAM_W, { fallIn: true, who: 0, pre: R => { const a = R.ops[0]; a.char.pos[0] = INSIDE[0]; a.char.pos[2] = INSIDE[2]; a.char.vel[0] = a.char.vel[2] = 0; } }); const { R, d, man } = x;
+  { const x = await oneShut(11, 'breakroom_w', WEST, SAM_W, { fallIn: true, who: 0, pre: R => { const a = R.ops[0]; a.char.posX = INSIDE[0]; a.char.posZ = INSIDE[2]; a.char.velX = a.char.velZ = 0; } }); const { R, d, man } = x;
     const m = x.moved, his = x.pos0 ? faceOf(d, x.pos0) : 0, sams = faceOf(d, x.sam0);
     verdict(x.why === null && man === R.ops[0] && his === -sams && !!m && faceOf(d, m.pos) === sams && !m.inWay && x.latched && x.after?.order === 'fallIn',
       'a man of the file standing on the far face of the door from Sam, told to shut it: he comes through and shuts it from Sam\'s side, then falls in', `${man?.callsign} was on face ${his}, Sam on ${sams} · the leaf moved with him on face ${m ? faceOf(d, m.pos) : '—'} at ${m ? at(m.pos) : '—'} · latched ${x.latched} in ${f2(x.secs)} s · then ${x.after?.order} · ${logText()} · he said: ${man ? R.said(man, x.t0).join(' / ') : ''}`); }

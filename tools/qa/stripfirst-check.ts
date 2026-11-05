@@ -39,7 +39,7 @@ async function world(first: boolean, o: { rifle?: boolean; gap?: number; stalk?:
   for (const [i, gd] of rest.entries()) { gd.char.pos = [37.5, 0, 4.5 + i * 1.5]; gd.path = []; gd.pathGoal = null; gd.hold = true; gd.heardUpTo = 1e12; }
   A.char.pos = [...AT]; A.char.bodyYaw = A.char.aimYaw = EAST; A.char.vel = [0, 0, 0]; A.path = []; A.pathGoal = null; A.hold = true; A.pinned = true; A.awareness = 0; A.heardUpTo = 1e12;
   W.cam.yaw = 0; W.cam.rebuild?.(); g.teleportPlayer([AT[0] - (o.gap ?? 0.8), 0, AT[2]]); if (o.stalk) g.player.crouch = true;
-  const step = (n = 1) => { for (let i = 0; i < n; i++) { A.char.vel = [0, 0, 0]; W.cursorAt([A.char.pos[0], 1.2, A.char.pos[2]]); W.step(DT); g.player.visibility = 0.02; } };
+  const step = (n = 1) => { for (let i = 0; i < n; i++) { A.char.vel = [0, 0, 0]; W.cursorAt([A.char.posX, 1.2, A.char.posZ]); W.step(DT); g.player.visibility = 0.02; } };
   step(40); W.audioLog = [];
   return { W, g, A, step, armed: inHand(A) === 'weapon' };
 }
@@ -74,7 +74,7 @@ async function lead() {
 async function arm() {
   console.log('\n=== arm: the gun has left his hands before the arm is round his neck ===');
   const go = async (first: boolean) => { const C = await world(first, { gap: 2.6, stalk: true }), { W, g, A } = C, c = g.player.char; W.input.buttons |= 1; W.input.clicked |= 1;
-    for (let n = 0; n < 900; n++) { C.step(); if (n > 60 && Math.hypot(c.vel[0], c.vel[2]) < 0.02 && Math.hypot(c.pos[0] - A.char.pos[0], c.pos[2] - A.char.pos[2]) < 0.95) break; }
+    for (let n = 0; n < 900; n++) { C.step(); if (n > 60 && Math.hypot(c.velX, c.velZ) < 0.02 && Math.hypot(c.posX - A.char.posX, c.posZ - A.char.posZ) < 0.95) break; }
     C.step(30); const sel = g.selectVerb('guard', 'grab'); W.input.pressed.add('Space'); W.audioLog = []; const R = run(C); return { R, sel, held: !!g.player.holding }; };
   const a = await go(up()), b = await go(false), gap = a.R.neckF - a.R.takeF, gap0 = b.R.neckF - b.R.takeF;
   verdict(a.held && a.R.takeF > 0 && a.R.neckF > 0 && gap >= 5 && gap > gap0 + 1 && Math.abs(a.R.catch - a.R.neckF * DT) < 0.07, 'the click brings him in behind the rifleman and the key takes him: the gun is out of the man\'s hand at least five frames before Sam\'s left hand is at his neck, more of them than with the key down, and the catch is heard within four frames of the hand landing',

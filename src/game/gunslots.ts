@@ -79,7 +79,7 @@ function swap(gd: Guard) {
   s.gun = was; s.id = was.def.id; s.ahead = ahead;
 }
 /** … on the fight AI's path (guards.ts startReloadBeat: the round that emptied his gun has just gone): his man is where he last had him, while he is on him */
-export function sideOutAlert(g: Game, gd: Guard): boolean { const k = gd.lastKnown; return !!gd.second && gd.state === 'alert' && !!k && sideOut(g, gd, Math.hypot(k[0] - gd.char.pos[0], k[2] - gd.char.pos[2])); }
+export function sideOutAlert(g: Game, gd: Guard): boolean { const k = gd.lastKnown; return !!gd.second && gd.state === 'alert' && !!k && sideOut(g, gd, Math.hypot(k[0] - gd.char.posX, k[2] - gd.char.posZ)); }
 /** DRY ON A MAN (roomfight.ts, where his trigger found nothing to fire): the sidearm comes out instead of the reload — true, and no round
  *  goes for `out` seconds (sideLocked). False: he has none, it is out already or empty, his hands hold the big slot's shotgun, or his man is past `near`. */
 export function sideOut(g: Game, gd: Guard, dist: number): boolean {

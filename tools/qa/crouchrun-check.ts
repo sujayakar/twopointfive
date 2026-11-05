@@ -34,10 +34,10 @@ async function world(on: boolean, crouch: boolean) {
   for (const [i, gd] of g.guards.entries()) { gd.char.pos = [37.5, 0, 4.5 + i * 1.5]; gd.path = []; gd.pathGoal = null; gd.hold = true; gd.heardUpTo = 1e12; }
   W.cam.yaw = 0; W.cam.rebuild?.(); g.teleportPlayer([...FROM]); g.player.crouch = crouch; const c = g.player.char;
   const C = { W, g, pl: g.player, c,
-    go: (keys: string[], secs: number) => { for (const k of keys) W.input.keys.add(k); let loud = 0, steps = 0; const x0 = c.pos[0];
-      for (let i = 0; i < Math.round(secs / DT); i++) { W.cursorAt([c.pos[0] + 6, 1, c.pos[2]]); W.step(DT); for (const e of g.events) if (e.kind === 'step' && e.time === g.time) { loud = Math.max(loud, e.level); steps++; } }
-      for (const k of keys) W.input.keys.delete(k); return { v: Math.hypot(c.vel[0], c.vel[2]), loud, steps, dx: c.pos[0] - x0, per: steps / secs }; },
-    still: () => { g.teleportPlayer([...FROM]); for (let i = 0; i < 30; i++) { W.cursorAt([c.pos[0] + 6, 1, c.pos[2]]); W.step(DT); } } };
+    go: (keys: string[], secs: number) => { for (const k of keys) W.input.keys.add(k); let loud = 0, steps = 0; const x0 = c.posX;
+      for (let i = 0; i < Math.round(secs / DT); i++) { W.cursorAt([c.posX + 6, 1, c.posZ]); W.step(DT); for (const e of g.events) if (e.kind === 'step' && e.time === g.time) { loud = Math.max(loud, e.level); steps++; } }
+      for (const k of keys) W.input.keys.delete(k); return { v: Math.hypot(c.velX, c.velZ), loud, steps, dx: c.posX - x0, per: steps / secs }; },
+    still: () => { g.teleportPlayer([...FROM]); for (let i = 0; i < 30; i++) { W.cursorAt([c.posX + 6, 1, c.posZ]); W.step(DT); } } };
   C.still(); return C;
 }
 

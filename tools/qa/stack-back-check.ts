@@ -56,7 +56,7 @@ for (const id of IDS) {
       if (free(q, m.char.pos) && !taken.some(t => flat(t, q) < 0.5) && flat(q, g.player.char.pos) > 0.7) return q; }
     return null; };
   const shove = (d: any, side: 1 | -1, who: any[], from?: V): number => { const taken: V[] = men.filter(m => !who.includes(m)).map(m => [...m.char.pos]); let n = 0;
-    for (const m of who) { const q = shoveOf(d, side, m, taken, from); if (!q) { taken.push([...m.char.pos]); continue; } taken.push(q); m.char.pos[0] = q[0]; m.char.pos[2] = q[2]; n++; } return n; };
+    for (const m of who) { const q = shoveOf(d, side, m, taken, from); if (!q) { taken.push([...m.char.pos]); continue; } taken.push(q); m.char.posX = q[0]; m.char.posZ = q[2]; n++; } return n; };
   const faces: { d: any; side: 1 | -1; spots: V[] }[] = [];
   for (const d of g.doors.list) for (const side of [1, -1] as const) { const sp = spotsOf(d, side); if (sp) faces.push({ d, side, spots: sp }); }
   const pick = faces.filter((_, i, a) => FACES >= a.length || Math.floor(i * FACES / a.length) !== Math.floor((i - 1) * FACES / a.length));
@@ -79,13 +79,13 @@ for (const id of IDS) {
   // the rule rightly sends nobody
   if (last) { DOORMANNERS.backOn = !BREAK; const marks = await form(last.d, last.side, last.spots);
     if (marks) { const m = men[men.length - 1], mk = marks[men.length - 1]; await quiet(() => S.step(24)); const sent0 = STACK_OWN.back;
-      if (shove(last.d, last.side, [m], mk)) { const q: V = [...m.char.pos]; await quiet(() => { for (let f = 0; f < 6 * 60; f++) { S.step(1); m.char.pos[0] = q[0]; m.char.pos[2] = q[2]; } });
+      if (shove(last.d, last.side, [m], mk)) { const q: V = [...m.char.pos]; await quiet(() => { for (let f = 0; f < 6 * 60; f++) { S.step(1); m.char.posX = q[0]; m.char.posZ = q[2]; } });
         const A = O.of(m), sent = STACK_OWN.back - sent0, ok = !!A?.arrived && sent >= 1 && sent <= BACK_TRIES && !!A.post && flat(A.post, q) < 0.05;
         takenPlayed++; if (ok) takenOk++; else bad.push(`${id} ${last.d.def.name}, ${m.callsign} held ${flat(q, mk).toFixed(2)} m off his mark: sent back ${sent} times, ${A?.arrived ? 'arrived' : 'not arrived'}, his mark ${A?.post ? flat(A.post, q).toFixed(2) : '?'} m from him`); } }
     // never: a man held short of a mark he never had — the old rule, untouched
     { DOORMANNERS.backOn = !BREAK; await reset(last.d, last.spots); const why = await quiet(() => O.give('stack', { kind: 'door', at: [...last.d.frameCentre], door: last.d, side: last.side }, 'all')), m = men[men.length - 1], A0 = O.of(m);
       if (!why && A0?.post) { const mk: V = [...A0.post], sent0 = STACK_OWN.back; let q: V | null = null;
-        await quiet(() => { for (let f = 0; f < (FORM + 4) * 60; f++) { S.step(1); const k = flat(m.char.pos, mk); if (!q && k < 0.8 && k > 0.5) q = [...m.char.pos]; if (q) { m.char.pos[0] = q[0]; m.char.pos[2] = q[2]; if (O.of(m)?.arrived && f % 60 === 59) break; } } });
+        await quiet(() => { for (let f = 0; f < (FORM + 4) * 60; f++) { S.step(1); const k = flat(m.char.pos, mk); if (!q && k < 0.8 && k > 0.5) q = [...m.char.pos]; if (q) { m.char.posX = q[0]; m.char.posZ = q[2]; if (O.of(m)?.arrived && f % 60 === 59) break; } } });
         if (q) { const A = O.of(m); neverPlayed++; if (A?.arrived && A.post && flat(A.post, q) < 0.05 && STACK_OWN.back === sent0) neverOk++; else bad.push(`${id} ${last.d.def.name}, ${m.callsign} held ${flat(q, mk).toFixed(2)} m short of a mark he never had: sent back ${STACK_OWN.back - sent0} times, ${A?.arrived ? 'arrived' : 'not arrived'}`); } } }
     // off: the door manners off, the rule sends nobody
     DOORMANNERS.backOn = true; DOORMANNERS.on = false; const m2 = await form(last.d, last.side, last.spots);

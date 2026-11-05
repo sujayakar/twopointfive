@@ -157,7 +157,7 @@ export function updateStickies(g: Game, dt: number) {
       const tS = st ? st.t : Infinity, tP = ph ? ph.t : Infinity;
       if (hitC && hitG && best <= tS && best <= tP) {
         const gd = hitG as Guard, c = hitC as Character, at = v3.mad(cam.pos, dir, Math.max(0, best - 0.1));
-        if (gd.civ) { c.anim.hit(); if (!gd.held) toAlarmed(g, gd, 'noise', [c.pos[0] - dir[0] * 4, 0, c.pos[2] - dir[2] * 4], false); }
+        if (gd.civ) { c.anim.hit(); if (!gd.held) toAlarmed(g, gd, 'noise', [c.posX - dir[0] * 4, 0, c.posZ - dir[2] * 4], false); }
         else staggerGuard(g, gd, dir, pl.char);
         settle(g, pl, cam, at, [0, 1, 0], -1); done = true; break;
       }

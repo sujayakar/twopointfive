@@ -115,7 +115,7 @@ export function tryWhistle(g: Game): boolean {
   const B = blower(g); if (g.time < B.readyAt) return false;
   B.readyAt = g.time + WHISTLE.cooldown; B.blown++; B.lastAt = g.time; WHISTLE_STATS.blown++;
   const c = pl.char;
-  g.events.push({ kind: 'whistle', pos: [c.pos[0], 0, c.pos[2]], time: g.time, loud: false, level: WHISTLE.level, who: c.id });
+  g.events.push({ kind: 'whistle', pos: [c.posX, 0, c.posZ], time: g.time, loud: false, level: WHISTLE.level, who: c.id });
   pl.noise = Math.max(pl.noise, WHISTLE.level);
   g.audio.play('whistle', c.bones.head ?? v3.add(c.pos, [0, pl.crouch ? 1.05 : 1.6, 0]), WHISTLE.gain);
   return true;
@@ -216,7 +216,7 @@ export function whistlePatrolTick(g: Game, gd: Guard) {
   const M = memOf.get(gd); if (!M) return;
   M.soft = false;
   if (g.time < M.glanceUntil && M.glanceAt) {
-    const c = gd.char; const to = Math.atan2(M.glanceAt[0] - c.pos[0], M.glanceAt[2] - c.pos[2]);
+    const c = gd.char; const to = Math.atan2(M.glanceAt[0] - c.posX, M.glanceAt[2] - c.posZ);
     c.anim.lookYawExtra = clamp(wrapAngle(to - c.bodyYaw), -WHISTLE.glanceMax, WHISTLE.glanceMax);
   }
 }

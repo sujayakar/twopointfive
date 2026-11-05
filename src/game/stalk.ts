@@ -146,7 +146,7 @@ function stateOf(g: Game): St { let s = STATE.get(g); if (!s) { s = fresh(); STA
 function end(S: St, why: Why) { if (S.on) { S.armed = false; S.on = null; STALK_STATS.out[why]++; STALK_STATS.last = why; } S.orbitR = S.orbitT = undefined; S.orbitAsk = undefined; }
 
 /** his bearing to a point, off his facing (0 = dead ahead of him) */
-const bearingOf = (gd: Guard, p: ArrayLike<number>): number => wrapAngle(Math.atan2(p[0] - gd.char.pos[0], p[2] - gd.char.pos[2]) - gd.char.bodyYaw);
+const bearingOf = (gd: Guard, p: ArrayLike<number>): number => wrapAngle(Math.atan2(p[0] - gd.char.posX, p[2] - gd.char.posZ) - gd.char.bodyYaw);
 /** are Sam's hands free for it at all (empty, and nothing else has him) */
 function hands(g: Game): boolean {
   const pl = g.player;
@@ -173,7 +173,7 @@ export function stalkOutM(): number { return outM(); }
 export function stalkClickOnly(g?: Game): boolean { return STALK.on && STALK.only && (!STALK.key || !!g?.player.wall) && !(g && shut(g)); }   // (a step that takes the click gives the row back: a line that named the click would name a dead button)
 function outOf(g: Game, gd: Guard, p: ArrayLike<number>, begin: boolean): Why | null {
   if (gd.civ || !closeSubject(g, gd) || gd.state === 'alert') return 'him';
-  const d = Math.hypot(p[0] - gd.char.pos[0], p[2] - gd.char.pos[2]);
+  const d = Math.hypot(p[0] - gd.char.posX, p[2] - gd.char.posZ);
   if (d >= (begin ? beginM() : outM())) return 'far';
   if (Math.cos(bearingOf(gd, p)) > (begin ? STALK.beginCos : STALK.outCos)) return 'turned';
   if (!closeClear(g, gd.char.pos, p)) return 'wall';
@@ -186,7 +186,7 @@ function pressed(g: Game): Guard | null {
   const p = g.player.char.pos, a = g.aimPoint;
   if (g.aimGuard && outOf(g, g.aimGuard, p, true) === null) return g.aimGuard;
   let best: Guard | null = null, bd = STALK.cursorM;
-  for (const gd of g.guards) { const d = Math.hypot(a[0] - gd.char.pos[0], a[2] - gd.char.pos[2]); if (d < bd && outOf(g, gd, p, true) === null) { best = gd; bd = d; } }
+  for (const gd of g.guards) { const d = Math.hypot(a[0] - gd.char.posX, a[2] - gd.char.posZ); if (d < bd && outOf(g, gd, p, true) === null) { best = gd; bd = d; } }
   return best;
 }
 
@@ -201,13 +201,13 @@ function cornerMan(g: Game): Guard | null {
   const p = pl.char.pos, cos = Math.cos(STALK.cornerDeg * Math.PI / 180); let best: Guard | null = null, bd = STALK.cornerM;
   for (const gd of g.guards) {
     if (gd.civ || !closeSubject(g, gd) || gd.state === 'alert') continue;
-    const d = Math.hypot(p[0] - gd.char.pos[0], p[2] - gd.char.pos[2]);
+    const d = Math.hypot(p[0] - gd.char.posX, p[2] - gd.char.posZ);
     if (d < bd && Math.cos(bearingOf(gd, p)) <= cos && closeClear(g, gd.char.pos, p)) { best = gd; bd = d; }
   }
   return best;
 }
 /** the animator's SOFT duck (character.ts flinchFrom): it leaves a hand's errand alone — a pistol he draws the next instant keeps its draw and its click */
-function duck(g: Game, gd: Guard, k: number) { const p = g.player.char.pos; g.player.char.anim.flinchFrom([gd.char.pos[0] - p[0], 0, gd.char.pos[2] - p[2]], k, true); }
+function duck(g: Game, gd: Guard, k: number) { const p = g.player.char.pos; g.player.char.anim.flinchFrom([gd.char.posX - p[0], 0, gd.char.posZ - p[2]], k, true); }
 /** the man who turned off his back with a stalk on (St.broke): if HE comes on round until where Sam stood is inside `joltFace` degrees of his nose — or he is
  *  onto him — inside `joltSecs`, Sam ducks: part of the duck for the turn, the whole for a man onto him. A man who only turned a quarter (a patrol's corner)
  *  never gets there. Only while Sam's hands are still empty and idle, nobody else is being stalked, he has not gone a pace from where he was caught, and
@@ -263,7 +263,7 @@ export function stalkStep(g: Game, lmb: boolean, lmbHit: boolean, ownKeys: boole
   if (STALK.drag && stick && S.stick) return dragged(g, S, gd, p, at, dist, stick, S.stick, 1 / 60);
   // toward the point behind his back: from his rear it is a straight line in; from a rear quarter it swings Sam in behind him as he closes
   const yaw = gd.char.bodyYaw, bx = gp[0] - Math.sin(yaw) * STALK.stationM - p[0], bz = gp[2] - Math.cos(yaw) * STALK.stationM - p[2], bl = Math.hypot(bx, bz) || 1;
-  const his = Math.hypot(gd.char.vel[0], gd.char.vel[2]);
+  const his = Math.hypot(gd.char.velX, gd.char.velZ);
   if (hold !== null) { const ease = STALK.closeMin * hold; return { mx: bx / bl, mz: bz / bl, pace: Math.min(STALK.pace, Math.max(0, his + (Math.abs(ease) < 0.02 ? 0 : ease))), at, keep: true }; }
   return { mx: bx / bl, mz: bz / bl, pace: Math.min(STALK.pace, his + STALK.closeMin + clamp(dist - STALK.grabM, 0, 4) * (STALK.low ? STALK.lowK : STALK.closeK)), at };
 }
@@ -274,7 +274,7 @@ function dragged(g: Game, S: St, gd: Guard, p: ArrayLike<number>, at: Vec3, dist
   if (k <= 0) return { mx: 0, mz: 0, pace: 0, at, keep: true };
   let mx = st.right[0] * dx - st.fwd[0] * dy, mz = st.right[2] * dx - st.fwd[2] * dy; { const L = Math.hypot(mx, mz) || 1; mx /= L; mz /= L; }   // (screen down is the camera's back)
   if (STALK.orbit) return orbited(g, S, gd, p, at, dist, mx, mz, STALK.pace * k, dt);   // (STALK.orbit: the stick taken round him, as the keys are)
-  const ux = (gd.char.pos[0] - p[0]) / Math.max(1e-3, dist), uz = (gd.char.pos[2] - p[2]) / Math.max(1e-3, dist), into = mx * ux + mz * uz;
+  const ux = (gd.char.posX - p[0]) / Math.max(1e-3, dist), uz = (gd.char.posZ - p[2]) / Math.max(1e-3, dist), into = mx * ux + mz * uz;
   let pace = STALK.pace * k;
   if (into > 0 && dist < STALK.keyM + 0.2) { const keep = intoKeep(dist); mx -= ux * into * (1 - keep); mz -= uz * into * (1 - keep); const L = Math.hypot(mx, mz); if (L < 1e-3) return { mx: 0, mz: 0, pace: 0, at, keep: true }; mx /= L; mz /= L; pace *= L; }   // (the last 20 cm into him taken off the stick, all of it 4 cm out — his own speed carries him that far: he comes up to `keyM` and stops, and can still go round)
   return { mx, mz, pace, at, keep: true };
@@ -309,7 +309,7 @@ function orbited(g: Game, S: St, gd: Guard, p: ArrayLike<number>, at: Vec3, dist
 export function stalkTell(g: Game): { gd: Guard; at: Vec3; reach: number; rise: number; /** STALK.low: how far he is sunk, 0‥1 */ low: number } | null {
   if (!STALK.tell || !free(g)) return null;
   const p = g.player.char.pos; let gd = STATE.get(g)?.on ?? null, bd = Infinity;
-  if (!gd) for (const x of g.guards) { const d = Math.hypot(p[0] - x.char.pos[0], p[2] - x.char.pos[2]); if (d < bd && d < beginM() && outOf(g, x, p, true) === null) { gd = x; bd = d; } }
+  if (!gd) for (const x of g.guards) { const d = Math.hypot(p[0] - x.char.posX, p[2] - x.char.posZ); if (d < bd && d < beginM() && outOf(g, x, p, true) === null) { gd = x; bd = d; } }
   if (!gd) return null;
   const gp = gd.char.pos, d = Math.hypot(p[0] - gp[0], p[2] - gp[2]), neck = gd.char.bones.neck ?? gd.char.bones.head, at: Vec3 = neck ? [neck[0], neck[1], neck[2]] : [gp[0], gp[1] + 1.45, gp[2]];
   // (straight by the distance, not an S: an S did all of its work between 1.8 and 1.5 m and nothing either side — the animator's own easing rounds the ends)
@@ -322,9 +322,9 @@ export function stalkTell(g: Game): { gd: Guard; at: Vec3; reach: number; rise: 
 export function stalkWait(g: Game): { at: Vec3; reach: number; coil: number } | null {
   const S = STATE.get(g), pl = g.player, w = pl.wall; if (!STALK.cornerShow || !S || !S.wait || !w || g.time - S.t > 0.1 || !cornerGate(g)) return null;
   const p = pl.char.pos; let best: Guard | null = null, bd = STALK.cornerSee;
-  for (const gd of g.guards) { if (gd.civ || !closeSubject(g, gd) || gd.state === 'alert') continue; const d = Math.hypot(p[0] - gd.char.pos[0], p[2] - gd.char.pos[2]); if (d < bd && closeClear(g, gd.char.pos, p)) { best = gd; bd = d; } }
+  for (const gd of g.guards) { if (gd.civ || !closeSubject(g, gd) || gd.state === 'alert') continue; const d = Math.hypot(p[0] - gd.char.posX, p[2] - gd.char.posZ); if (d < bd && closeClear(g, gd.char.pos, p)) { best = gd; bd = d; } }
   const neck = best ? best.char.bones.neck ?? best.char.bones.head : null, R = STALK.cornerReach;
-  const at: Vec3 = neck ? [neck[0], neck[1], neck[2]] : best ? [best.char.pos[0], 1.45, best.char.pos[2]] : [p[0] + w.n[0] * 0.8, 1.35, p[2] + w.n[2] * 0.8];
+  const at: Vec3 = neck ? [neck[0], neck[1], neck[2]] : best ? [best.char.posX, 1.45, best.char.posZ] : [p[0] + w.n[0] * 0.8, 1.35, p[2] + w.n[2] * 0.8];
   const near = best ? clamp((STALK.cornerSee - bd) / Math.max(0.05, STALK.cornerSee - STALK.cornerM), 0, 1) : 0;
   return { at, reach: R[0] + (R[1] - R[0]) * near, coil: STALK.cornerCoil };
 }

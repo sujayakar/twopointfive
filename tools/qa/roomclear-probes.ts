@@ -146,12 +146,12 @@ export const roomclearStage = guarded(async () => {
   const opsOk = NB.ops.length === 2 && NB.ops.every((o: any, i: number) => o.team === 'operative' && o.unit && dist(o.char.pos, P.from[i]) < 0.3);
   const hosOk = NB.hostiles.length === want.length && JSON.stringify(RC.placement) === JSON.stringify(want) && NB.hostiles.every((h: any, i: number) => h.team === 'hostile' && h.unit && h.hold && h.pinned && !h.script && dist(h.char.pos, want[i].pos) < 0.3 && h.callsign === want[i].name);
   verdict(opsOk && hosOk, 'the cast: two operatives on the approach marks, five hostiles held and pinned on the dealt marks, left to the fight AI (no script)',
-    `ops ${NB.ops.map((o: any) => `${o.callsign}@${o.char.pos.map(f2)}`).join(' ')} · hostiles ${NB.hostiles.map((h: any) => `${h.callsign}@${f2(h.char.pos[0])},${f2(h.char.pos[2])}`).join(' ')}`);
+    `ops ${NB.ops.map((o: any) => `${o.callsign}@${o.char.pos.map(f2)}`).join(' ')} · hostiles ${NB.hostiles.map((h: any) => `${h.callsign}@${f2(h.char.posX)},${f2(h.char.posZ)}`).join(' ')}`);
   const roomsOk = RC.rooms.length === STRUCTURE.rooms.length && RC.rooms.every((r: any) => r.defenders.length === r.def.garrison && !r.cleared && isNaN(r.clearedAt) && r.defenders.every((h: any) => RC.roomAt(h.char.pos) === r.def.id));
   const drillOk = NB.drill.hostiles.length === 2 && NB.drill.hostiles.every((h: any) => R.room('breakroom').defenders.includes(h));
   verdict(roomsOk && drillOk, 'each room is given its own men, standing inside it, none clear; the drill behind F is handed the break room\'s two and nobody else', `${RC.rooms.map((r: any) => `${r.def.name}: ${r.defenders.map((h: any) => h.callsign).join('+')}`).join(' · ')} · drill: ${NB.drill.hostiles.map((h: any) => h.callsign).join('+')}`);
   R.step(30);
-  const facing = NB.hostiles.map((h: any, i: number) => { const yaw = Math.atan2(want[i].aimAt[0] - h.char.pos[0], want[i].aimAt[2] - h.char.pos[2]); let d = Math.abs(h.char.bodyYaw - yaw) % (2 * Math.PI); if (d > Math.PI) d = 2 * Math.PI - d; return d * 57.3; });
+  const facing = NB.hostiles.map((h: any, i: number) => { const yaw = Math.atan2(want[i].aimAt[0] - h.char.posX, want[i].aimAt[2] - h.char.posZ); let d = Math.abs(h.char.bodyYaw - yaw) % (2 * Math.PI); if (d > Math.PI) d = 2 * Math.PI - d; return d * 57.3; });
   verdict(facing.every((d: number) => d < 12), 'every defender squared to the door his mark watches', NB.hostiles.map((h: any, i: number) => `${h.callsign}→${want[i].watch} ${f2(facing[i])}°`).join(' · '));
   const doors = DOORS.map(id => g.doors.byName(id));
   verdict(doors.every((d: any) => d && Math.abs(d.angle) < 0.02 && d.latched && d.locked === R.before.doors[d.def.name] && !d.lockBroken), 'every way into the structure is shut and latched, with the level\'s own locks', doors.map((d: any) => `${d.def.name} ${f2(d.angle)}${d.locked ? ' locked' : ''}`).join(' · '));

@@ -37,12 +37,12 @@ async function world(on: boolean, gun: 'pistol' | 'holstered' | 'rifle') {
   const C = { W, g, pl, c,
     go: (keys: string[], secs: number) => { for (const k of keys) W.input.keys.add(k);
       const M = { apart: 0, yLo: 9, yHi: -9, fLo: 9, fHi: -9, dip: 9, told: 0, n: 0, sprint: 0, stance: 0, walled: 0, v: 0 };
-      for (let i = 0; i < Math.round(secs / DT); i++) { W.cursorAt([c.pos[0] + 6, 1, c.pos[2]]); W.step(DT); const b = c.bones, r = b.handR, l = b.handL; M.n++;
+      for (let i = 0; i < Math.round(secs / DT); i++) { W.cursorAt([c.posX + 6, 1, c.posZ]); W.step(DT); const b = c.bones, r = b.handR, l = b.handL; M.n++;
         M.apart = Math.max(M.apart, Math.hypot(r[0] - l[0], r[1] - l[1], r[2] - l[2])); M.yLo = Math.min(M.yLo, r[1]); M.yHi = Math.max(M.yHi, r[1]);
-        const f = (r[0] - c.pos[0]) * Math.sin(c.bodyYaw) + (r[2] - c.pos[2]) * Math.cos(c.bodyYaw); M.fLo = Math.min(M.fLo, f); M.fHi = Math.max(M.fHi, f);
+        const f = (r[0] - c.posX) * Math.sin(c.bodyYaw) + (r[2] - c.posZ) * Math.cos(c.bodyYaw); M.fLo = Math.min(M.fLo, f); M.fHi = Math.max(M.fHi, f);
         M.dip = Math.min(M.dip, -c.gunDir[1]); if (c.anim.runReady) M.told++; if (pl.sprinting) M.sprint++; const wall = gunWallIs(g, c); if (wall) M.walled++; else if (c.anim.stance !== 'none') M.stance++; }
-      for (const k of keys) W.input.keys.delete(k); M.v = Math.hypot(c.vel[0], c.vel[2]); return M; },
-    still: () => { g.teleportPlayer([...FROM]); for (let i = 0; i < 30; i++) { W.cursorAt([c.pos[0] + 6, 1, c.pos[2]]); W.step(DT); } } };
+      for (const k of keys) W.input.keys.delete(k); M.v = Math.hypot(c.velX, c.velZ); return M; },
+    still: () => { g.teleportPlayer([...FROM]); for (let i = 0; i < 30; i++) { W.cursorAt([c.posX + 6, 1, c.posZ]); W.step(DT); } } };
   C.still(); return C;
 }
 const RUN = ['KeyD', 'ShiftLeft'];

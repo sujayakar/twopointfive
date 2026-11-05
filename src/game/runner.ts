@@ -116,8 +116,8 @@ function bark(g: Game, gd: Guard, kind: LineKind) {
 }
 
 const flat = (a: Vec3, b: Vec3) => Math.hypot(a[0] - b[0], a[2] - b[2]);
-const chestOf = (c: Character): Vec3 => c.bones.chest ?? [c.pos[0], c.pos[1] + 1.2, c.pos[2]];
-const headOf = (c: Character): Vec3 => c.bones.head ?? [c.pos[0], c.pos[1] + 1.6, c.pos[2]];
+const chestOf = (c: Character): Vec3 => c.bones.chest ?? [c.posX, c.posY + 1.2, c.posZ];
+const headOf = (c: Character): Vec3 => c.bones.head ?? [c.posX, c.posY + 1.6, c.posZ];
 /** a man this file is about at all (morale.ts's own): a living defender or a man of the night staff — never a civilian, an operative, a body */
 const ours = (gd: Guard) => gd.state !== 'dead' && !gd.civ && (gd.team === 'hostile' || gd.team === 'guard');
 /** nobody's to take: the hostage rescue's cast (rescue.ts) and the response team (qrf.ts) */
@@ -211,7 +211,7 @@ const lineTo = (g: Game, e: Foe, p: Vec3) => !g.col.segmentBlocked(e.eye, [p[0],
  *  inside `cornerM` of him by the floor, farthest from every enemy (his own cell if there is none). `see` = the enemies whose lines the outside floor is
  *  picked clear of, where that is more men than wall the floor off */
 function flood(g: Game, gd: Guard, E: Foe[], ask: number = RUNNER.askCells, see: Foe[] = E): { out: Vec3 | null; hidden: boolean; corner: Vec3; /** an enemy's nearness refused it a cell */ shied: boolean } {
-  const K = RUNNER, nav = g.col.nav, cs = nav.cell, W = nav.W, H = nav.H, from = nav.nearestFreePoint(gd.char.pos[0], gd.char.pos[2]) ?? gd.char.pos;
+  const K = RUNNER, nav = g.col.nav, cs = nav.cell, W = nav.W, H = nav.H, from = nav.nearestFreePoint(gd.char.posX, gd.char.posZ) ?? gd.char.pos;
   const depth = new Int32Array(W * H).fill(-1), queue = new Int32Array(W * H); let head = 0, tail = 0;
   const near = (p: Vec3) => { let d = Infinity; for (const e of E) d = Math.min(d, flat(e.pos, p)); return d; };
   const s = nav.idx(Math.min(W - 1, Math.max(0, Math.floor(from[0] / cs))), Math.min(H - 1, Math.max(0, Math.floor(from[2] / cs)))); depth[s] = 0; queue[tail++] = s;

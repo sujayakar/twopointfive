@@ -38,7 +38,7 @@ export async function hardBreathCheck(): Promise<boolean> {
   const vaddOf = (r: any) => Math.hypot(r.opts.vadd[0], r.opts.vadd[2]);
   try {
     const A = await rig(true), B = await rig(false); const sam = (R: any) => R.g.player.char, mate = (R: any) => R.g.guards.find((gd: any) => gd.team === 'operative').char;
-    const hold = (R: any, c: any, v: number) => { c.vel[0] = v; c.vel[2] = 0; };
+    const hold = (R: any, c: any, v: number) => { c.velX = v; c.velZ = 0; };
     // (1) at rest, and walking: the breath as it was, record for record
     { const walk = (R: any) => fly(R, 600, () => { hold(R, sam(R), 0); hold(R, mate(R), 1.5); }), a = walk(A), b = walk(B);
       const sa = a(sam(A).id).map(key).join('|'), sb = b(sam(B).id).map(key).join('|'), ma = a(mate(A).id).map(key).join('|'), mb = b(mate(B).id).map(key).join('|');
@@ -65,9 +65,9 @@ export async function hardBreathCheck(): Promise<boolean> {
     //     beyond that, frame for frame (a man in a stance or a hold has no life layer: one at the stack does not heave, with the rule or without)
     { const chest = async (rule: boolean, none = false) => { const R = await rig(rule, false), c = sam(R), L = (c.anim as any).life, keep = { a: LIFE.breathAmp, r: LIFE.breathAmpRun, h: H.chestAmp };
         if (none) { LIFE.breathAmp = 0; LIFE.breathAmpRun = 0; H.chestAmp = 0; }
-        try { R.g.aiEnabled = false; c.vel[0] = c.vel[2] = 0; R.step(60); L.exert = 1; L.breath = 0; let turns = 0, prev = L.breath, e3 = 0; const d: number[][] = [];
+        try { R.g.aiEnabled = false; c.velX = c.velZ = 0; R.step(60); L.exert = 1; L.breath = 0; let turns = 0, prev = L.breath, e3 = 0; const d: number[][] = [];
           for (let i = 0; i < 180; i++) { R.step(1); const b = c.bones; d.push([b.neck[0] - b.hips[0], b.neck[1] - b.hips[1], b.neck[2] - b.hips[2]]); if (L.breath < prev) turns++; prev = L.breath; e3 = L.exert; }
-          return { d, turns, e3, still: Math.hypot(c.vel[0], c.vel[2]) }; } finally { LIFE.breathAmp = keep.a; LIFE.breathAmpRun = keep.r; H.chestAmp = keep.h; } };
+          return { d, turns, e3, still: Math.hypot(c.velX, c.velZ) }; } finally { LIFE.breathAmp = keep.a; LIFE.breathAmpRun = keep.r; H.chestAmp = keep.h; } };
       const ca = await chest(true), cb = await chest(false), na = await chest(true, true), nb = await chest(false, true);
       const share = (x: any, n: any) => Math.max(...x.d.map((v: number[], i: number) => Math.hypot(v[0] - n.d[i][0], v[1] - n.d[i][1], v[2] - n.d[i][2]))), ta = share(ca, na), tb = share(cb, nb);
       verdict(ca.still < 0.05 && cb.still < 0.05 && ta > tb * 1.3 && tb > 0.001 && ca.turns > cb.turns && ca.e3 > cb.e3 + 0.08,

@@ -43,7 +43,7 @@ const URL = extra => `http://localhost:${PORT}/?paused&quality=${QUALITY}&mute&l
     out.verbs = (g.nearby || []).filter(r => r.guard === S.man && r.verb).map(r => r.verb);
     out.word = X.ruled ? X.word(g.player.char) : false; step(30);
     out.led = !!X.lead;
-    if (X.ruled && X.van) { const V = X.van; S.man.char.pos[0] = V[0] + 4.5; S.man.char.pos[2] = V[2] - 0.6; g.teleportPlayer([V[0] + 1.4, 0, V[2] - 0.5]); step(900, () => !!S.end); }
+    if (X.ruled && X.van) { const V = X.van; S.man.char.posX = V[0] + 4.5; S.man.char.posZ = V[2] - 0.6; g.teleportPlayer([V[0] + 1.4, 0, V[2] - 0.5]); step(900, () => !!S.end); }
     out.end = S.end; out.why = S.why; out.inAt = X.inAt; out.clear = g.roomClear.end || null;
     return out;
   };
