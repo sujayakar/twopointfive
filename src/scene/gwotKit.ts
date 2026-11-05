@@ -65,8 +65,8 @@ const matOf = (n: GwotMat): Mat => ({ albedo: GWOT_PALETTE[n], rough: GWOT_FINIS
 const palOf = (n: GwotMat): MarkPal => ({ albedo: GWOT_PALETTE[n], rough: GWOT_FINISH[n]?.rough ?? ROUGH_CLOTH });
 const frameAt = (x: number, z: number, yaw: number) => { const cs = Math.cos(yaw), sn = Math.sin(yaw); return (lx: number, ly: number, lz: number): Vec3 => [x + cs * lx + sn * lz, ly, z - sn * lx + cs * lz]; };
 const DECAL = BoxFlag.NoShadow;
-/** the gap left between two cloths on one line that would have lapped (m) */
-const CLOTH_GAP = 0.02;
+/** the gap left between two cloths on one line that would have lapped, and how far a gate's post reaches past the end of the wall it closes, each way (m) */
+const CLOTH_GAP = 0.02, POST_OVER = 0.006;   // (six millimetres, off the centimetre grid levels are laid on: at a whole centimetre a post grew into the plane of a lamp a tutorial hangs on it)
 
 /** MARKINGS OVER A WHOLE FACE: f(i, j, W, H) → 0 (the box's own paint) | 1‥3 (pal entry) for every cell of the face's lattice at `res`, i left → right and j
  *  bottom → top as seen from outside (+y: i along +x, j along −z), cut into ≤ `maxTiles` bitmaps of ≤ 32 × 32 cells (a face over 64 cells a side keeps its
@@ -339,9 +339,9 @@ export function gwotKit(host: GwotHost) {
       const ci = Math.abs(i - (W - 1) / 2), cj = Math.abs(j - (rail - 1) / 2), d = ci + cj; return d > 4.4 && d <= 5.6 ? 2 : 0;   // the lower: a diamond
     };
     for (const s of [-1, 1] as const) {
-      const px = s * (width / 2 + 0.17);
-      b(px, 0, 0, height + 0.1, 0.17, 0.17, M.render); b(px, 0, height + 0.1, height + 0.18, 0.2, 0.2, M.mudLight);
-      // the leaf: hinged at the post's inner face, swung by a toward `side` (local +z · side)
+      const px = s * (width / 2 + 0.17);   // (a post is six millimetres FATTER each way along the wall than the 0.34 it stands in: flush with the wall's end its face and the wall's were one plane and flickered — the patch beside the pass's gate. Its middle stays where a level that caps or lights it expects it)
+      b(px, 0, 0, height + 0.1, 0.17 + POST_OVER, 0.17, M.render); b(px, 0, height + 0.1, height + 0.18, 0.2, 0.2, M.mudLight);
+      // the leaf: hinged at the opening's edge (a centimetre inside the post's face), swung by a toward `side` (local +z · side)
       const hx = s * width / 2, cx = hx - s * Math.cos(a) * lw / 2, cz = side * Math.sin(a) * lw / 2, dy = s * side * a;
       b(cx, cz, 0.06, 2.1, lw / 2, 0.02, M[paint], mk([...face('+z', 'coarse', pal, leafArt, 0, 2), ...face('-z', 'coarse', pal, leafArt, 0, 2)]), dy);
     }
@@ -753,7 +753,7 @@ export function gwotKit(host: GwotHost) {
     b(2.0, 0, 0.86, 1.06, 0.4, 0.86, P, { shape: S.bonnet });                               // bonnet
     b(1.3, 0, 0.86, 1.1, 0.4, 0.9, P, { shape: S.doors }); b(1.3, 0, 1.1, 1.62, 0.36, 0.84, M.glassDark, { shape: S.glass }); b(1.22, 0, 1.62, 1.95, 0.34, 0.86, P, { shape: S.brow });   // the cab: doors, glass, the roof's brow
     b(-0.5, 0, 0.86, 1.95, 1.4, 0.9, P, { shape: S.load });                                 // the load box
-    for (const sz of [-1, 1]) b(-2.15, sz * 0.87, 0.86, 1.95, 0.25, 0.03, P, { shape: S.baySide(sz) });   // the open bay: its sides, roof, the dark inside
+    for (const sz of [-1, 1]) b(-2.145, sz * 0.87, 0.86, 1.95, 0.245, 0.03, P, { shape: S.baySide(sz) });   // the open bay: its sides (each ENDS at its tail lamp: a centimetre round it, the side's face and the lamp's were one plane and flickered; the lamp is not moved, a level hangs a light on it and the game finds it by its size), roof, the dark inside
     b(-2.15, 0, 1.89, 1.95, 0.25, 0.9, P, { shape: S.bayRoof }); b(-1.89, 0, 0.86, 1.89, 0.02, 0.84, M.plasticBlack); b(-2.15, 0, 0.86, 0.88, 0.25, 0.84, M.plasticBlack);
     for (const sz of [-1, 1]) b(-2.77, sz * 1.1, 0.5, 1.9, 0.42, 0.025, P, {}, sz * 0.5);   // the two back doors, swung out
     for (const sz of [-1, 1]) { b(2.43, sz * 0.66, 0.62, 0.76, 0.03, 0.16, M.plasticWhite, { shape: S.head(sz) }); b(-2.41, sz * 0.86, 0.9, 1.2, 0.02, 0.04, M.truckRed, { shape: S.tail(sz) }); }

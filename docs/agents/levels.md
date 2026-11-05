@@ -880,6 +880,26 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   A LOOSE THING'S OWN PATCH (11-05, with the first step: it moves nothing either). `livedPieces.armchair`'s arms ran three centimetres into its back with
   their outer faces in the back's sides. An arm now ENDS at the back's front; it gives up only what lay inside the back, so the chair fills the space it
   filled. Seven files re-exported (consulate, defuse, registry, their looks, the showroom): 13 chairs, a line each, nothing added or removed.
+  THE SECOND STEP (11-05): TWO SOLIDS MOVE, AND THE LIBRARY HOLDS EVERY PIECE. The VAN'S BAY SIDES each ran a centimetre round a tail lamp with a face in the
+  lamp's; a bay side now ENDS at its lamp. The lamp is not moved or resized: a level hangs a light on its centre and `game/carlamps.ts` finds it by its
+  size (`carShapes.ts vanShapes` says the side's new size). A GATE'S POSTS stood flush in the end of the wall they close (the patch the maintainer saw on
+  the pass); a post is now 6 mm fatter each way along the wall than the 0.34 m it stands in, its middle where it was, so what a level caps or lights it
+  with stays centred and an opening of 3 m is 2.988 m between the posts. Six millimetres is off the centimetre grid levels are laid on: at a whole
+  centimetre a post grew into the plane of a lamp a tutorial hangs on it. Neither could be spared a solid move: the lamp is found by its size and carries
+  a light, and a post and a wall's end are both solid. 12 level files re-exported (gwot-yard, library-hall, pass, police-post, snatch, train-move, tut-kit,
+  tut-pair, tut-road, tut-sky, tut-solo, tut-team): 48 boxes, 32 posts (`h` only) and 16 bay sides, none added or removed, no light moved. 206 seen after
+  (ONE grew over the check's centimetre: tut-road's hand-built lamp head already bit a centimetre into a gate post with a face in the post's, and is
+  1.6 cm there now; it is one of the lamps owed a piece).
+  TWO RULES of `bun run tools/levels/library.ts --check` keep it so. NO PIECE FLICKERS BY ITSELF: every call a generator makes that lays a box is laid
+  alone on a stand of its own and asked by `zfight`: of each CALL, not of each piece once, because the wash line's fault depended on where the line stood
+  and its showroom call was clean; and a patch a call shows alone is asked again with everything its generator BUILT round it, in this run and never
+  from the file on disk, because a piece on a wall's face has a back that only being alone uncovers (the office kit's conduit and its clips lie in the
+  wall's plane in two paints; 46 such patches in all, none a player can see). A LOOSE THING'S PARTS are asked too, each thing in its own frame with nothing round it (it is
+  carried and shoved about). NO SHOWROOM HAS A SEEN PATCH (its file, where pieces made to meet, a gate in its yard wall, stand as they are meant to). Red
+  on the kit as it was before the first step: the three pieces by name, the armchair, and gwot-yard 6, library-hall 4.
+  PLAY MOVES, measured in the step's own notes on both stands: a van's bay sides and a gate's posts are solid, so runs on levels that stand them can
+  differ by a step. What is left is each level's own: a wall laid THROUGH the wall it meets to its far face (end it at the near face), a lamp's arm in
+  its head's top (four generators build that lamp by hand: it is owed a piece), two things laid over each other. Never seen on a GPU: the check reads files.
 - **THE SMOKE LAB'S FLOOR** (11-01; `levels/smoke-lab.json` from `tools/levels/smoke-lab.ts`, the GWOT kit; opened by the dev server's `/smokelab`, in no
   mission list, nobody on it but Sam; the lab's panel is `docs/agents/render.md`, THE SMOKE LAB). The maintainer asked for "a separate smoke lab that's more
   suited to playing with it". Each place shows one thing smoke does and is there for nothing else: the YARD (open ground under the sky and a low wall of
@@ -912,7 +932,8 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   boxes (`tools/levels/libraryDraw.ts`: the boxes and their markings under one fixed light, NOT the game's picture; `tools/qa/png.ts encodePng` writes the
   file); `--json FILE` is all of it as data.
   THE RULES (`--check`, exit 1): every piece stands in a showroom, says what it is (a `/** comment */` over its definition), does not top out between 0.20 and
-  0.25 m where that is the piece's top (lived-check's band and probes, asked of the piece), every kit that hands pieces out has its row in the script, and
+  0.25 m where that is the piece's top (lived-check's band and probes, asked of the piece), every kit that hands pieces out has its row in the script,
+  no piece flickers by itself in any call a generator makes and no showroom has a patch that flickers (FACES THAT FLICKER, above), and
   `docs/library.md` is what the kits give now. TWO SHOWROOMS: `levels/gwot-yard.json` (the look's kit in a lived compound, untouched: `lived-check` holds its
   kept part, so a piece the look's kit gains is stood in the hall, or in the yard as a lived thing) and `levels/library-hall.json`
   (`tools/levels/library-hall.ts`, new: a hut furnished with the office's kit, the pieces of the look's kit the yard does not stand (one drum, the van, a
