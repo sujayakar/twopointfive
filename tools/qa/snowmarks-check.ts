@@ -65,7 +65,7 @@ export async function snowMarksCheck(o: { verbose?: boolean } = {}): Promise<boo
     const lvl = loadLevel(parseLevelData(readFileSync(resolve(ROOT, 'levels', 'pass.json'), 'utf8')));
     const W: any = await quiet(() => standUp({ level: lvl, seed: 7 }));
     const g = W.game; const stood: boolean = SNOW_LOOK.marks;
-    YARD = standSpot(g, lvl.boxes);
+    { const s = standSpot(g, lvl.boxes); YARD_FOUND = s !== null; YARD = s ?? YARD_MIDDLE; }
     const set = () => { SNOW_LOOK.marks = sw; SNOW_LOOK.on = true; SNOW_LOOK.tracks = true; SNOW_LOOK.oneAir = false; SNOW_LOOK.blast = false; }; set();
     const step = (n = 1) => { for (let i = 0; i < n; i++) { set(); W.step(DT); } };
     return { W, g, step, set, stood, sw };
@@ -84,14 +84,14 @@ export async function snowMarksCheck(o: { verbose?: boolean } = {}): Promise<boo
    *  standing within a chair's reach of the three metres it will be shoved over. It was (15, 21) written as numbers, and went stale the day the yard was
    *  dressed (11-05: a tyre lay 0.4 m from it, the chair did not move, and four lines were red on a level nobody had broken). The same place every game */
   const YARD_MIDDLE: [number, number] = [15, 21], SHOVE: [number, number] = [0.35 / Math.hypot(0.35, 0.12), 0.12 / Math.hypot(0.35, 0.12)];
-  let YARD: [number, number] = YARD_MIDDLE;
+  let YARD: [number, number] = YARD_MIDDLE, YARD_FOUND = true;   // (YARD_FOUND false = no clear open snow within six metres of the middle: the middle is stood on so the lines can run, and the furrow line FAILS and says so. A level dressed until its yard has no clear snow is the level's to mend, or the search's to widen, never a silent pass)
   const standsNear = (boxes: readonly { c: number[]; h: number[]; yaw?: number }[], x: number, z: number, reach: number) => boxes.some(b => { if (b.c[1] + b.h[1] <= 0.2 || b.c[1] - b.h[1] >= 1.1) return false;
     const cs = Math.cos(b.yaw ?? 0), sn = Math.sin(b.yaw ?? 0), dx = x - b.c[0], dz = z - b.c[2], lx = cs * dx - sn * dz, lz = sn * dx + cs * dz; return Math.hypot(Math.max(Math.abs(lx) - b.h[0], 0), Math.max(Math.abs(lz) - b.h[2], 0)) < reach; });
-  const standSpot = (g: any, boxes: readonly { c: number[]; h: number[]; yaw?: number }[]): [number, number] => { const spots: [number, number, number][] = [];
+  const standSpot = (g: any, boxes: readonly { c: number[]; h: number[]; yaw?: number }[]): [number, number] | null => { const spots: [number, number, number][] = [];
     for (let dz = -6; dz <= 6; dz += 0.25) for (let dx = -6; dx <= 6; dx += 0.25) spots.push([YARD_MIDDLE[0] + dx, YARD_MIDDLE[1] + dz, Math.hypot(dx, dz)]);
     spots.sort((a, b) => a[2] - b[2] || a[1] - b[1] || a[0] - b[0]);
     for (const [x, z] of spots) { if (!openAt(g, x, z)) continue; let clear = true; for (let t = 0; t <= 3 && clear; t += 0.25) clear = !standsNear(boxes, x + SHOVE[0] * t, z + SHOVE[1] * t, 0.75); if (clear) return [x, z]; }
-    return YARD_MIDDLE; };
+    return null; };
   /** stand a chair of the level on the yard's open snow, still */
   const chairOut = (R: Rig, at: [number, number] = YARD) => { const p = R.g.props.props.find((p: any) => p.def.kind === 'chair'); if (!p) return null; p.x = at[0]; p.z = at[1]; p.vx = 0; p.vz = 0; p.w = 0; p.place(); p.wake(); return p; };
   /** shove it for `frames` frames, then let it run out; where each of its floor parts was, every frame */
@@ -134,9 +134,9 @@ export async function snowMarksCheck(o: { verbose?: boolean } = {}): Promise<boo
       let asked = 0, pressed = 0; const legs = path.length ? path[0].length / 2 : 0;
       for (let i = 6; i < path.length; i += 6) { const moved = Math.hypot(path[i][0] - path[i - 6][0], path[i][1] - path[i - 6][1]); if (moved < 0.03) break; for (let k = 0; k < legs; k++) { if (snowFieldAt(A.g.snowField, path[i - 6][k * 2], path[i - 6][k * 2 + 1]).cover < 0.9 || snowFieldAt(A.g.snowField, path[i][k * 2], path[i][k * 2 + 1]).cover < 0.9) continue; asked++; if (T && mostAt(T, path[i - 6][k * 2], path[i - 6][k * 2 + 1], 0.05) > 200) pressed++; } }
       hashA = hash(A.g);
-      verdict(!!T && !!p && open && still === true && went > 0.5 && legs === 4 && asked >= 8 && pressed === asked && T.marks > m0 + 3 && hashA !== h0,
+      verdict(YARD_FOUND && !!T && !!p && open && still === true && went > 0.5 && legs === 4 && asked >= 8 && pressed === asked && T.marks > m0 + 3 && hashA !== h0,
         'furrow — a chair shoved over open snow cuts a groove under each leg, along the way it went; standing, it cuts nothing',
-        `${p ? `${p.def.name} (${p.mass} kg) stood on the yard at (${YARD[0]}, ${YARD[1]}), the nearest clear open snow to (${YARD_MIDDLE[0]}, ${YARD_MIDDLE[1]})${open ? '' : ' (NOT open snow)'}` : 'NO chair on the level'}: 30 frames standing, the map the same and no mark: ${still} · shoved: ${went.toFixed(2)} m, ${legs} legs on the floor · pressed to the floor under ${pressed} of ${asked} points its legs passed over snow · ${T ? T.marks - m0 : 0} marks counted`);
+        `${p ? `${p.def.name} (${p.mass} kg) stood on the yard at (${YARD[0]}, ${YARD[1]}), ${YARD_FOUND ? 'the nearest clear open snow to' : 'the middle itself, because there is NO CLEAR OPEN SNOW within six metres of'} (${YARD_MIDDLE[0]}, ${YARD_MIDDLE[1]})${open ? '' : ' (NOT open snow)'}` : 'NO chair on the level'}: 30 frames standing, the map the same and no mark: ${still} · shoved: ${went.toFixed(2)} m, ${legs} legs on the floor · pressed to the floor under ${pressed} of ${asked} points its legs passed over snow · ${T ? T.marks - m0 : 0} marks counted`);
       const B = await rig(true); const pb = chairOut(B); B.step(32); if (pb) shove(B, pb); if (B.g.snowTracks) ST.settleSnowTracks(B.g.snowTracks);
       verdict(!!pb && hash(B.g) === hashA && hashA !== h0, 'same — the same shove in two fresh games presses the same bytes', `${hashA} and ${hash(B.g)}`); }
 
