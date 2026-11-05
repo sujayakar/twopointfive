@@ -22,6 +22,7 @@
 //                     so it is another run) — and nothing of shotgun.ts ran (its counters all nought). The words are the FROZEN stand's: on the page's
 //                     stand (TPS_PROFILE=shipped) none is asked; on every stand the same run with SHOTGUN.on false must digest to the same word
 import { standUp, ROOT } from './headless.ts';
+import { asProbe, asProbes, exitCode, wanted } from './holds.ts';   // (run alone, each part runs as the probe the runner calls it by: one stand both ways)
 const { WEAPONS } = await import(`${ROOT}/src/game/weapons.ts`);
 const { SHOTGUN, SHOTGUN_STATS, SHOTGUN_LAST, breachSpot, lockPoint, pelletDrops } = await import(`${ROOT}/src/game/shotgun.ts`);
 const { fireWeapon } = await import(`${ROOT}/src/game/combat.ts`);
@@ -332,10 +333,11 @@ export async function identityWord(secs = 20): Promise<{ word: string; glass: 'o
  *  in FROZEN_HOLDS, and with it on the frozen stand reads 60731ea6 / 2a2baaea. The glass-on word's movers were not bisected; the last row (the gun's switch off:
  *  the same word) is what says the gun changes nothing on this tree. */
 const IDENTITY = { off: '42535089', on: 'c96c0542' };
-export const shotgunIdentity = guarded(async () => {
+/** the stand the frozen words were taken on, for the probe and for the tool that prints a word to freeze: on the frozen stand COVER.backKeep is held off (a
+ *  newer rule those words were not taken under), and put back after */
+async function asFrozen<T>(fn: () => Promise<T>): Promise<T> { const bk = COVER.backKeep; if (harnessProfile() === 'frozen') COVER.backKeep = false; try { return await fn(); } finally { COVER.backKeep = bk; } }
+export const shotgunIdentity = guarded(() => asFrozen(async () => {
   const { verdict, done } = family('shotgun-identity: with nobody carrying one, a run is the run it was');
-  const bk = COVER.backKeep; if (harnessProfile() === 'frozen') COVER.backKeep = false;   // (a newer rule the frozen words were not taken under — put back below)
-  try {
   zero(); const { word, glass } = await identityWord();
   // (THE FROZEN WORDS ARE THE FROZEN STAND'S: both were taken on it, and the page's stand — TPS_PROFILE=shipped — plays every newer rule that stand holds off (src/host/profile.ts FROZEN_HOLDS);
   //  asked there the row was red by construction and said nothing of the gun. That stand gets the next row alone.)
@@ -347,8 +349,8 @@ export const shotgunIdentity = guarded(async () => {
   // a word that has moved under this row with this one still green was moved by something else than the gun)
   { SHOTGUN.on = false; const off = await identityWord(); SHOTGUN.on = SG_DEFAULTS.on;
     verdict(off.word === word && off.glass === glass, 'SHOTGUN.on false, the same twenty seconds: the same word — with nobody carrying one the switch changes nothing of the run', `on ${word} · off ${off.word}`); }
-  } finally { COVER.backKeep = bk; }
   return done();
-});
+}));
 
-if (import.meta.main && process.argv.includes('--identity')) { const { word, glass } = await identityWord(); console.log(`${word} (glass parts ${glass})`); process.exit(0); }
+if (import.meta.main && process.argv.includes('--identity')) { const { word, glass } = await asProbe('shotgun-identity', () => asFrozen(() => identityWord()));   /* (the word as the probe of that name reads it: the kit cards held as they were, and the frozen words' own stand) */ console.log(`${word} (glass parts ${glass})`); process.exit(0); }
+if (import.meta.main) process.exit(exitCode(await asProbes({ 'shotgun-range': shotgunRange, 'shotgun-door': shotgunDoor, 'shotgun-card': shotgunCard, 'shotgun-identity': shotgunIdentity }, wanted())));   // (`bun run tools/qa/shotgun-probes.ts [name …]`: the file's probes alone, each as the runner runs it)

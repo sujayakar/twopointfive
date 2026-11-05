@@ -31,6 +31,7 @@
 import { resolve } from 'node:path';
 import { readFileSync } from 'node:fs';
 import { standUp, ROOT } from './headless.ts';
+import { asProbes, exitCode, wanted } from './holds.ts';   // (run alone, each part runs as the probe the runner calls it by: one stand both ways)
 
 const SC = await import(`${ROOT}/src/game/stickycam.ts`);
 const { STICKY, STICKY_STATS, stickyIssue, fireCam, stickyEyes, camLens, stickyMarks } = SC;
@@ -675,10 +676,6 @@ export async function stickyDefault(): Promise<boolean> {
   return F.done();
 }
 
-export async function stickyCheck(only?: string): Promise<boolean> {
-  let ok = true;
-  const parts: [string, () => Promise<boolean>][] = [['kit', stickyKit], ['fly', stickyFly], ['fog', stickyFog], ['save', stickySave], ['ways', stickyWays], ['default', stickyDefault], ['take', stickyTake], ['mark', stickyMark], ['wand', stickyWand], ['off', stickyOff]];
-  for (const [name, fn] of parts) if (!only || only === name) ok = (await fn()) && ok;
-  return ok;
-}
-if (import.meta.main) { const ok = await stickyCheck(process.argv[2]); process.exit(ok ? 0 : 1); }
+/** the file's probes, by the names the runner calls them */
+const PROBES = { 'sticky-kit': stickyKit, 'sticky-fly': stickyFly, 'sticky-fog': stickyFog, 'sticky-save': stickySave, 'sticky-ways': stickyWays, 'sticky-default': stickyDefault, 'sticky-take': stickyTake, 'sticky-mark': stickyMark, 'sticky-wand': stickyWand, 'sticky-off': stickyOff };
+if (import.meta.main) process.exit(exitCode(await asProbes(PROBES, wanted())));
