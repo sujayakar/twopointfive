@@ -2,7 +2,7 @@
 // Three places say it, and each is data somebody wrote:
 //   · a PAINT'S NAME. A kit's palette names its paints ('wood', 'carpet', 'tWall') and this table says what each name is made of: one of the look's materials
 //     (render/lookTex.ts LOOK_NAMES); 'plain', meant to be drawn as a flat colour (laminate, a dark screen); 'waits', a stuff the look has no
-//     material for yet (card, foliage; drawn plain. A lawn's paint still says it, though the look has had 'grass' since 11-05: see asphalt below); or one of the two the look draws plain and a round's hit reads, 'glass' and 'rubber' (BOX_STUFFS below). Where one name is more than one thing, the piece that knows better says its own word;
+//     material for yet (card, foliage; drawn plain); or one of the two the look draws plain and a round's hit reads, 'glass' and 'rubber' (BOX_STUFFS below). Where one name is more than one thing, the piece that knows better says its own word;
 //   · a level file's MATERIAL ROW (levelData.ts MaterialData.stuff), written by the exporter from this table: the file says it, and the loader asks no table;
 //   · a BOX or a prop's part (Box.stuff, a file's `stuff` on a box), where it is another thing than its paint's row says, or wears a paint written as numbers.
 // A box takes its own word, else its row's, when the file is loaded (levelLoad.ts), and a kit's add() does the same for a box it makes with a named paint
@@ -36,15 +36,16 @@ export const PAINT_STUFF: Readonly<Record<string, Stuff>> = {
   carpet: 'cloth', carpetBlue: 'cloth', carpetRed: 'cloth', chair: 'fabric',   // (a carpet is the coarse weave; a seat's cloth the fine one)
   wall: 'plaster', ceiling: 'plaster', wallDark: 'block', concrete: 'block', stone: 'slab', lino: 'slab',
   black: 'plain', white: 'plain', screenOff: 'plain', glass: 'plain', glassExt: 'plain',
-  cardboard: 'waits', plant: 'waits', grass: 'waits',
+  cardboard: 'waits', plant: 'waits',
+  grass: 'grass',       // (a lawn, a verge: the look's grass since 11-05. No round meets one: a lawn is a strip no ray meets, laid on the lot's slab, and a round into it is a round into that)
   metal: 'steel',   // (an office's steel is CLEAN painted steel: shelving, desk legs, lamp posts, bins. The look's 'metal' is bare iron gone to rust and its 'paint' is chipped)
   // ---- ONE NAME, MORE THAN ONE THING. The kits have used these six paints for two things each (a level file's writer names a box by the row that has its
   // numbers: levelLoad.ts levelToData), so the name cannot say what its boxes are and a PIECE that knows better says its own word: a cubicle partition says
-  // fabric. NOBODY CHOSE THE WORDS HERE: each is what the look made of the paint's COLOUR until 11-04, kept so that no box moved the day the colour rule went.
+  // fabric. NOBODY CHOSE THE WORDS HERE (but the car park's, 11-05): each is what the look made of the paint's COLOUR until 11-04, kept so that no box moved the day the colour rule went.
   partRed: 'plain', partBlue: 'plain',   // (cubicle partitions, which say fabric themselves; and a car's body, lived things)
   partTan: 'cloth',     // (a partition; and a hut's stucco walls, drawn as cloth because the tan is a cream rug's, darkened)
   red: 'plain',         // (an extinguisher's enamel; and tape, a ball, a mast's lamps)
-  asphalt: 'plain',     // (the car park. The look has had 'tarmac' and 'grass' since 11-05 (render/lookTex.ts); this row and grass's above still say what they did because a level's FILE carries its own word a material, so they move with the export of the levels that are dressed in them: docs/agents/render.md, TARMAC AND GRASS ARE STUFFS. Until 11-04 its grey was drawn as bare iron, iron's grey darkened; the lived kit's iron fittings, in the same numbers, say metal themselves: livedPieces.ts INK.iron)
+  asphalt: 'tarmac',    // (the car park, the road: the look's tarmac since 11-05, and concrete to the picture of a round's hit wet or dry (game/particleFx.ts STUFF_SURF: dry, its paint always was; wet, its tone read as metal). Until 11-04 its grey was drawn as bare iron, iron's grey darkened; the lived kit's iron fittings, in the same numbers, say metal themselves: livedPieces.ts INK.iron. A thing painted in it that is no lot says its own word: the compound's mud at the pump is earth)
   glassFrame: 'plain',  // (a window's frame; and every outside door's leaf, painted from the same numbers as the game runs)
   // ---- the snow kit's (the look lays its own snow over a thing; the paint under it stays plain)
   snow: 'plain', snowOld: 'plain', snowPacked: 'plain',
@@ -93,7 +94,7 @@ export function namePaint(row: readonly number[], name: string, finish?: { rough
  *  made of and its finish, said outright */
 export function sayPaint(row: readonly number[], name: string, said: { stuff?: BoxStuff } & Finish): void { PAINTS.set(row, record(name, said, said.stuff)); }
 /** ONE PAINT, ANOTHER THING: the same paint to the eye (its numbers, its name, its finish) said to be made of `stuff` where a kit paints two things with
- *  it and the row can say only one: `saidAs('plain', C.asphalt)` is the lot under a level, whose paint's row says metal for the iron fittings.
+ *  it and the row can say only one: `saidAs('earth', C.asphalt)` is the compound's mud at the pump, laid in the car park's paint for its darkness.
  *  `finish` = the thing's own, where its stuff has another than the paint's row (as `madeOf` takes one: the word and its finish are said together, so
  *  nobody writes a roughness by hand beside the word): `saidAs('paint', dust, { rough: 0.5 })` is an enamel in the colour of dust. */
 export function saidAs(stuff: BoxStuff, paint: readonly number[], finish?: { rough: number; metal?: boolean }): [number, number, number] {
@@ -160,20 +161,6 @@ export const namedCoat = (word: BoxStuff | undefined): NamedCoat | undefined => 
 export const COATFINISH = { on: false };
 /** the roughness a named coat lends the thing that says `word`, or nothing (the rule down, no word, a word that is no named coat) */
 export const coatRough = (word: BoxStuff | undefined): number | undefined => COATFINISH.on && word !== undefined ? namedCoat(word)?.rough : undefined;
-/** A THING OF SOLID GLASS IS DARK AND SMOOTH: a box that says 'glass' and is no pane (a vehicle's window, a display case's top, a handset's screen:
- *  nothing is modelled behind them) is sent to the GPU as a neutral near black and polished, whatever grey its row or its maker gave it — glass is dark
- *  because what is seen through it is an unlit inside, and it is what mirrors most on a car. A PANE (BoxFlag.Glass) is the glass engine's and is not
- *  touched; nor is a face that carries MARKINGS (a mark is laid out in its own colours on the colour under it: a panel's grid, a screen's picture).
- *  THE COLOUR IS NOT REPAINTED: `Box.albedo` stays the file's, because the game reads a box's colour (a round's material with the hit rule down, a
- *  blast's dust) and the kits' dark glass is glass to a round by being its palette's row; the pack sends it dark, in the one place it sends a wet box
- *  darker (scene/boxes.ts sentAlbedo), and no rougher than `rough` (matWord). Darker and smoother stay as they are. NEUTRAL, not the row's hue scaled
- *  down: under about 0.03 a hue does not survive the 8-bit albedo target (render/shaders/gbuffer.wgsl), and a channel on a rounding edge would flicker.
- *  `lum` and `rough` ride in the table, so the page's knobs and a recording carry them.
- *  THE SWITCH: SOLIDGLASS.on — ON in the page (`?solidglass=0` = every such box as its file gives it, as it was), OFF in the module and on the frozen
- *  stand (FROZEN_HOLDS; TPS_SOLIDGLASS=1 raises it there); in the registry (game/knobs.ts) and the journal. A picture only on the harness; on a GPU page
- *  the light meter's bounce sees the darker glass, as it sees a wet box's darker ground (Box.wetK).
- *  CHECK: tools/qa/coatfinish-check.ts lines 6 and 7 (SOLIDGLASS_BREAK=1 fails both), on both stands. */
-export const SOLIDGLASS = { on: false, lum: 0.02, rough: 0.05 };
 /** the word of a thing that said `was` and is painted again with a paint that says `now`: the new paint's (whoever repaints a thing does not keep the
  *  old paint's word) — but A NAMED COAT STAYS UNDER A PLAIN ONE, whichever plain coat the look has: a car's body given another paint or another enamel is
  *  still a car's body. */

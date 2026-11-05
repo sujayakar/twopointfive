@@ -1171,7 +1171,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   one, else how bright it is), so a white car was plasterboard (pale chips and a puff of gypsum), a blue one concrete, and its dark glass and tyres
   metal. A box says what it is made of (`Box.stuff`, `scene/stuff.ts`: its own word or its paint's row's), and with the rule on THE PICTURE OF A HIT
   reads that word first (`saidSurf`, the table `STUFF_SURF`: car paint, steel, metal and sheet are metal; wood and veneer wood; plaster and skim
-  plasterboard; stucco, mud wall, block, slab and pavers concrete; fabric, the fine weave of a seat or a screen, cloth on a frame; cloth, the coarse
+  plasterboard; stucco, mud wall, block, slab, pavers and tarmac concrete; fabric, the fine weave of a seat or a screen, cloth on a frame; cloth, the coarse
   weave of a carpet, a rug, a sandbag or a tarpaulin, the soft thing that never sparks; rubber and plastic plastic; glass glass). The colour is asked
   only of a box that says nothing, or whose word is not one thing to a round ('paint' and 'enamel' are a coat on a door, a drum, a pipe or a line on
   a floor; 'plain' and 'waits' say nothing; the ground is what its paint says).

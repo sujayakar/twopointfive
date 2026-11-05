@@ -7,7 +7,7 @@
 // rounds by it): the particles hash their own serial. The one sound it adds — a case landing — is scheduled off the shot on the CPU (the GPU cannot call
 // back), and is deliberately NOT a hearing event: the report it follows already is one, at the same spot, an order of magnitude louder.
 import { SideMap } from '../math/side';
-import { BoxFlag, solidGlassBox, type Box, type BoxStuff } from '../scene/boxes';
+import { BoxFlag, type Box, type BoxStuff } from '../scene/boxes';
 import { Vec3, v3 } from '../math/vec';
 import { OFFICE_DATA } from '../scene/level';
 import { gwotSimOf } from '../scene/gwotPalette';
@@ -121,11 +121,11 @@ const PROP_SURF: Record<string, Surf> = { chair: 'fabric', cardboard: 'cardboard
 export const HITSTUFF = { on: false };
 /** what each stuff a box may say is to a round ('cloth', the look's coarse weave, is a carpet, a rug, a sandbag and a tarpaulin: the soft thing that gives
  *  its own colour's tufts and dust and never a spark; 'fabric', the fine weave, is a seat or a screen on a frame) — only the stuffs that are ONE thing to a round: 'paint' and 'enamel' are a coat on a door, a drum, a pipe
- *  or a line on a floor, 'plain' and 'waits' say nothing, and the ground (earth, gravel) is what its paint already says */
+ *  or a line on a floor, 'plain' and 'waits' say nothing, and the ground (earth, gravel) is what its paint already says; a lot's tarmac is stone wet or dry (its wet paint's tone read as metal; the row the cars' part asked for), and a lawn's grass has no row: no round meets a lawn, a strip no ray meets */
 const STUFF_SURF: Partial<Record<BoxStuff, Surf>> = {
   carpaint: 'metal', steel: 'metal', metal: 'metal', sheet: 'metal', brushed: 'metal', louvre: 'metal',
   glass: 'glass', rubber: 'plastic', plastic: 'plastic', wood: 'wood', veneer: 'wood', fabric: 'fabric', cloth: 'carpet', carpet: 'carpet',
-  plaster: 'drywall', skim: 'drywall', stucco: 'concrete', 'mud wall': 'concrete', block: 'concrete', 'gloss block': 'concrete', 'board concrete': 'concrete', 'cast panel': 'concrete', slab: 'concrete', paver: 'concrete',
+  plaster: 'drywall', skim: 'drywall', stucco: 'concrete', 'mud wall': 'concrete', block: 'concrete', 'gloss block': 'concrete', 'board concrete': 'concrete', 'cast panel': 'concrete', slab: 'concrete', paver: 'concrete', tarmac: 'concrete',
 };
 /** the words the picture of a hit reads (the check holds each to be a stuff a box may say) */
 export const HIT_STUFFS: readonly string[] = Object.keys(STUFF_SURF);
@@ -133,7 +133,7 @@ export const HIT_STUFFS: readonly string[] = Object.keys(STUFF_SURF);
  *  (BoxFlag.Glass: the pane engine's, whatever it says) — then what the hit was always read by is asked (surfOf). (A word is looked up as its own key only: a file opened leniently can carry any string.) */
 export function saidSurf(b: Box | null | undefined): Surf | undefined { return HITSTUFF.on && b && b.stuff !== undefined && (b.flags & BoxFlag.Glass) === 0 && Object.hasOwn(STUFF_SURF, b.stuff) ? STUFF_SURF[b.stuff] : undefined; }
 /** a solid thing of glass that is not a pane, by its own word: a round cracks it and it stays (a pane is the pane engine's) */
-export function solidGlass(b: Box | null | undefined): boolean { return HITSTUFF.on && !!b && solidGlassBox(b); }   // (the one test of solid glass: scene/boxes.ts solidGlassBox; the word 'glass' is glass to a round by STUFF_SURF)
+export function solidGlass(b: Box | null | undefined): boolean { return saidSurf(b) === 'glass'; }
 /** the chips a round knocks out of solid glass that only cracks: a pinch (a pane that breaks throws the row's nine, and the pane engine its shards) */
 export const SOLID_GLASS_CHIPS = 3;
 /** the crack a round leaves in it: the 'damage' mark's own look for it (decals.wgsl damageMark 9: a dead screen's star drawn pale, because black hairlines
