@@ -861,6 +861,26 @@ export function gwotKit(host: GwotHost) {
     const fb = host.add({ c: [x + dx * 0.175, height + 0.02, z + dz * 0.175], h: [0.13, 0.08, 0.008], yaw, ...M.plasticWhite, emissive: on ? [60, 62, 64] : [0, 0, 0], flags: DECAL });
     host.lights.push({ kind: 'spot', pos: [x + dx * 0.2, height, z + dz * 0.2], dir: [dx * 0.8, -0.6, dz * 0.8], color: [0.92, 0.96, 1.0], intensity: 210, range: 20, innerDeg: 38, outerDeg: 70, name, group: 'exterior', enabled: on, volumetric: 0.14, fixtureBox: fb, radius: 0.14, mains, broad: true });
   };
+  /** a yard LAMP: a pole with a shaded head on an arm, throwing a POOL straight down (about 7 m across the ground at the default cone) and little past it: a
+   *  thing to walk round, where the floodLight washes a whole yard. The HEAD hangs at (x, z), not the pole: the pole stands `reach` from it along `axis`
+   *  ('z' and -0.6, north, unless said), so the light is under the head with nothing solid round it and the pole's thin shadow falls away from the pool's
+   *  middle. The arm ENDS AT the pole's face and at the head's: it runs into neither, so no top of the three lies in another's. A fixture like any other: a
+   *  round or the OCP puts it out. Options: `on`; `mains` (the breaker takes it too; its own supply unless said); `height` of the lens (3.4); `axis` and
+   *  `reach`; `pole`, its half width (0.04); `outerDeg` (52) and `innerDeg` (22 under it); `intensity` (90); `range` (9); `color`; `volumetric`; `group`
+   *  ('exterior'). Returns the lens (the light's fixture box) and the head's `top`, for what a level lays on it */
+  const yardLamp = (x: number, z: number, name: string, o: { on?: boolean; mains?: boolean; height?: number; axis?: 'x' | 'z'; reach?: number; pole?: number; outerDeg?: number; innerDeg?: number;
+    intensity?: number; range?: number; color?: Vec3; volumetric?: number; group?: string } = {}) => {
+    const h = o.height ?? 3.4, on = o.on ?? true, alongX = o.axis === 'x', reach = o.reach ?? -0.6, pw = o.pole ?? 0.04, HEAD = 0.2, top = h + 0.11, outerDeg = o.outerDeg ?? 52;
+    const far = Math.abs(reach), s = Math.sign(reach), mid = s * (HEAD + far - pw) / 2, half = (far - pw - HEAD) / 2;
+    if (!(half > 0)) throw new Error(`gwotKit yardLamp '${name}': its pole stands ${far} m from its head and must stand more than ${pw + HEAD} m off (the arm runs from the head's face to the pole's)`);
+    host.add({ c: alongX ? [x + reach, top / 2, z] : [x, top / 2, z + reach], h: [pw, top / 2, pw], ...M.galv });
+    host.add({ c: alongX ? [x + mid, h + 0.085, z] : [x, h + 0.085, z + mid], h: alongX ? [half, 0.025, 0.025] : [0.025, 0.025, half], ...M.galv });
+    host.add({ c: [x, h + 0.06, z], h: [HEAD, 0.05, HEAD], ...M.plasticBlack });
+    const lens = host.add({ c: [x, h, z], h: [0.12, 0.012, 0.12], ...M.plasticWhite, emissive: on ? [40, 34, 22] : [0, 0, 0], flags: BoxFlag.NoShadow });
+    host.lights.push({ kind: 'spot', pos: [x, h - 0.03, z], dir: [0, -1, 0], color: o.color ?? [1.0, 0.86, 0.6], intensity: o.intensity ?? 90, range: o.range ?? 9, innerDeg: o.innerDeg ?? Math.max(outerDeg - 22, 0), outerDeg,
+      name, group: o.group ?? 'exterior', enabled: on, volumetric: o.volumetric ?? 0.2, fixtureBox: lens, radius: 0.1, mains: o.mains ?? false });
+    return { lens, top };
+  };
 
   // the kit's TOOLS, then its PIECES by name (scene/library.ts: the catalogue, docs/library.md, is written from this list)
   return { M, mk, face, marksOf, piece, as, groundAt, lie, flatAt, lay, ...pieces('gwotKit', {
@@ -879,7 +899,7 @@ export function gwotKit(host: GwotHost) {
     // machines & vehicles
     generator, waterTank, pump, pickup, van, lorry, motorbike, handcart, stall, container, satDish, bush,
     // lights
-    wire, bulb, lantern, tube, floodLight,
+    wire, bulb, lantern, tube, floodLight, yardLamp,
   }) };
 }
 export type GwotKit = ReturnType<typeof gwotKit>;
