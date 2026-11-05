@@ -2550,6 +2550,43 @@ interleaved and filtered to their quiet minimum, and a row whose p75 sits far ab
   row's `untiles` now, and stucco, skim and carpet have it. CHECK `lookmaps-check` line 11: the four older stuffs still untile and no other of the
   sixteen; nothing made of pieces untiles; a bay is of whole pieces; a bonded map has an even count of courses. Shader texts compile. NEVER SEEN ON A
   GPU; a software draw of the white roof's deck with the row off and on is what was looked at.
+- **AN OPENING'S OWN LIGHT REACHES AS FAR AS IT IS WORTH A RAY** (11-05; the look's page, wherever an opening is a portal: `scene/openings.ts
+  openingReach`, `LOOK_OPENINGS.worth` 0.04, `.near` 3 m, `.far` 26 m, `.past` 2 m; `engine.ts lookOpeningLights` sets the light's range by it. ONE
+  RULE AT EVERY HOUR, no test of the hour and no second path: the address's `&portalworth=<number>` is the same rule with another worth for the
+  visit, and `&portalworth=0.003` is the reach every opening had until this day, to hold the two pictures and the two costs side by side). IT IS
+  THE NIGHT'S MEND AND ONLY A TENTH OF THE DAY'S: read WHAT IS LEFT before promising a bright interior at speed. WHAT WAS FOUND: a pricing walk of
+  all 29 levels on a cloud card read the look's layers at 3 to 6 ms in the DIRECT pass on indoor levels at night, where they had been 0.3 to 1.1
+  before the light series; one row off at a time named Daylight at openings (the consulate's night: direct 10.1 ms with it, 3.1 without). Split
+  on one box by words flipped in the running page (timing-only commits, not in the build): an opening's sum taken as one point, 2.5 to 3.3 ms
+  less in direct and 0.7 to 1.4 in the sharp upscale; the eight points a ray's aim is weighed by, nothing; the ray stopped at the opening and
+  not 40 m on to the sky, 0.6 less; two rays a pixel for four, 2.0 less; the dim-class trade, nothing; openings listed and never scored, the
+  cost of none; AN OPENING A WALL HIDES FROM A PIXEL'S CELL scored as one point or not at all, 0.2 less (so it is NOT the pixels behind walls:
+  it is the pixels in plain sight, by their number). And their number was the whole building: the range was where the light fell to 0.0015 on a
+  floor facing it, 0.3 of a per cent of white, which on a night is 11 to 18 m from a window (26 from a glass wall) and by day the cap for every
+  opening. THE RULE: the reach is where what the opening alone would SHOW on a floor facing it straight out (what it looks out on × the frame's
+  exposure, the product that already says whether it is lit at all, × the open area of the whole stretch it is a piece of ∕ the distance
+  squared) falls to `worth`, 4% of white; and never less than 2 m past its own rectangle's corner. A long opening lit as several lights reaches
+  as one (`Opening.of`). Past the reach the light has faded out (`lightWindow`) and the bounce's rays that leave by the opening keep the rest of
+  the sky (`skyKeep`), as they did for every opening before 11-04. THAT HAND-OVER IS NOT WHOLE, and a review said why: by day the gather bounds
+  each ray at four times the cache's level (`giFireflyK`), and a ray that leaves by a door carries the sky at many times that, so part of what
+  the bounce is handed is cut; and the cache finds a doorway by its own few rays. So past the reach a deep room is a little darker than it was
+  and has no shadow of a man in the sky's light there; on the look's page the GPU light meter's reading past the reach is the cache's, not a
+  shadowed ray's. WHAT IT COSTS NOW, the same card, High, 1368 by 770, medians on one box, the rule against the old worth and against the row
+  off (timed at the same reaches, before the exposure, the stretch and the corner were in the rule): the consulate's night, direct 10.1 to
+  5.05 ms (3.05 off), all passes 20.0 to 13.9 (10.8 off); the office's night, direct 9.2 to 5.85 (4.2 off), all passes 19.6 to 15.3 (12.9
+  off); THE OFFICE AT MIDDAY, direct 10.2 to 9.1 (3.9 off), all passes 24.4 to 21.6 (14.05 off): by day what an opening looks out on is twenty
+  times a night's, a glass wall still reaches 25 m, and the rooms' light IS the openings'. WHAT IS LEFT, in the order it would pay: the sum made
+  as fine as the angle the opening covers from the pixel (five pieces by a doorway, fewer from across a room: up to the 3.3 ms and 1.4 above,
+  with no change to the picture); the sky ray no further than the level's roofs (0.6); and the class's rays, which by day are the room's light
+  and are owed. THE PICTURE, stills on the cloud card at the reach as it was, a half, a quarter, and at three worths: the consulate's and the
+  office's night starts are the same picture at every one (their floors' pools are the moon's); the office at midday and the white roof's
+  service room with its door open are the same at this worth, and at two and a half times it the white roof room's far wall goes a step greyer
+  (the hand-over above). KNOWN, LEFT: a dark place's own gain (up to four times) is not in the rule; dragging the sky's or the sun's sliders by
+  day now moves a reach, and the reservoirs' memory is cut across the band while it moves; the reach masks are still decided over the whole
+  grid. Check: `bun run tools/qa/probes.ts portal` (its last line: the consulate's widest opening 4.9 m where it was 17.9, a door at midday
+  8.7 m, the bounds, a wide opening never short of its own corners, a strip's piece reaching as its strip, the engine's one line, the page's
+  word in both lists; `PORTALREACH_BREAK=1` is the old worth and fails it), both stands. NOT SEEN: any of it in motion; a deep room by day; on
+  the maintainer's GPU. NOT RUN: the digests (nothing under the simulation's folders; the meter's reading above is the look page's only).
 - **TARMAC AND GRASS ARE STUFFS** (11-05; `render/lookTex.ts` `tarmac`, `grass`: two rows of `STUFFS`, two maps, 28 painted layers where there were
   26. NO LEVEL NAMES THEM YET: `scene/stuff.ts PAINT_STUFF` still says the car park's paint is 'plain' and a lawn's 'waits', and a level's FILE carries
   its own word a material (`levels/<name>.json materials`), so the page reads the file's word and a change to the table alone moves nothing until the
