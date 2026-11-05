@@ -15,7 +15,7 @@
 //   THE WALK is pressure.ts's leg (`run`: a script with his own senses under it — roomfight.ts tickMove: an enemy seen close stops him to fight), his boots
 //     filed for the team's ears (`boots`), run again in legs when the room fight's ten-second move plants him short. The caller down or gone before he is
 //     there: 'he's not answering — going back!', and back to the post he left.
-//   MEANWHILE the caller waits for him: he does not walk off to a fight next door by himself (roomfight.ts rally asks `buddyOwns`), nor does the pair for
+//   MEANWHILE the caller waits for him: he does not walk off to a fight next door by himself (roomfight.ts rally reads `OWN.buddy`), nor does the pair for
 //     `again` seconds after it is made. That is the stock rally only: his squad's word (enemysquads.ts) or a press (pressure.ts) still takes him, and the
 //     man coming finds him where he stops, if there is still a way that is not past the team.
 //   THERE he is the room fight's holder of that room ('with you — two on this room!'), told what the caller knows of its doors (the caller's evidence is his),
@@ -29,11 +29,10 @@ import { SideMap } from '../math/side';
 import { Vec3, v3 } from '../math/vec';
 import type { Game, Guard } from './game';
 import type { RoomFight } from './roomfight';
-import { run, boots, pressOwns } from './pressure';
+import { run, boots, pressStopsClock } from './pressure';
 import { DIGIN, digInSet } from './digin';
-import { lastStandMan } from './laststand';
 import { simRandom } from '../math/dice';   // the simulation's die (math/dice.ts): the Game's own when it has one, Math.random otherwise
-import { hasHim, OWN } from './owner';
+import { claimMan, releaseMan, hasHim, ownerWitness, OWN } from './owner';
 
 export const BUDDY = {
   /** the switch: off = none of this file runs. SHIPPED OFF, the maintainer's call: on, a scripted team keeps clearly MORE men on the compound and the barracks
@@ -74,6 +73,7 @@ interface Errand { caller: Def; buddy: Def; phase: 'beat' | 'run' | 'back'; goAt
 const newStats = () => ({ calls: 0, answered: 0, arrived: 0, metOnWay: 0, turnedBack: 0, diedOnWay: 0, short: 0, noOne: 0, secs: 0, metres: 0 });
 interface State { men: Map<Def, Man>; errands: Errand[]; stats: ReturnType<typeof newStats>; stale: boolean }
 const STATES = new SideMap<Game, State>('buddy.STATES');
+ownerWitness<Game>('buddy', (gd, g) => { if (!BUDDY.on) return false; const st = STATES.get(g), D = g.fight.defs.find(X => X.gd === gd); return !!st && !!D && buddyHas(g, st, D); });
 const stateOf = (g: Game): State => { let s = STATES.get(g); if (!s) { s = { men: new Map(), errands: [], stats: newStats(), stale: false }; STATES.set(g, s); } return s; };
 
 const flat = (a: Vec3, b: Vec3) => Math.hypot(a[0] - b[0], a[2] - b[2]);
@@ -128,7 +128,7 @@ function free(g: Game, F: RoomFight, st: State, X: Def, mine: Errand | null = nu
   const gd = X.gd;
   if (!own(g, X) || g.time - gd.lastSeenT < BUDDY.quiet || st.errands.some(e => e !== mine && (e.buddy === X || e.caller === X))) return false;
   if (g.time - (st.men.get(X)?.doneT ?? -100) < BUDDY.again) return false;   // (he has only just come to somebody: not off again on the next call)
-  if (pressOwns(g, X) || gd.staysInRooms || hasHim(gd, OWN.squadWord) || lastStandMan(g, gd)) return false;   // (laststand.ts, default off: a man of the last stand answers nobody's call)
+  pressStopsClock(g, X); if (hasHim(X.gd, OWN.press) || gd.staysInRooms || hasHim(gd, OWN.squadWord) || hasHim(gd, OWN.stand)) return false;   // (laststand.ts, default off: a man of the last stand answers nobody's call)
   const set = digInSet(g, gd);
   if (set && (DIGIN.stay || DIGIN.reachM > 0)) return false;                  // (digin.ts's own rules for who holds his room, when they are on, keep him)
   const all = mates(F, X), firm = all.filter(m => m.mode === 'hold' && !st.errands.some(e => e.buddy === m)).length;
@@ -161,7 +161,7 @@ function consider(g: Game, F: RoomFight, st: State, D: Def) {
   const gd = D.gd;
   if (M.open && g.time - M.calledT > BUDDY.again) { M.open = false; M.callAt = NaN; st.stats.noOne++; note(g, F, gd, 'nobody could come'); }
   if (D.mode !== 'hold' || !D.room) { M.callAt = NaN; return; }   // (walking a leg of somebody's: a call he has made stands meanwhile)
-  if (lastStandMan(g, gd)) { M.callAt = NaN; M.open = false; return; }   // (laststand.ts, default off: the last stand has its own radio check — he makes no buddy call)
+  if (hasHim(gd, OWN.stand)) { M.callAt = NaN; M.open = false; return; }   // (laststand.ts, default off: the last stand has its own radio check — he makes no buddy call)
   if (mates(F, D).length) { M.had = true; M.callAt = NaN; M.open = false; return; }
   if (st.errands.some(e => e.caller === D || e.buddy === D)) return;
   if (!own(g, D)) return;
@@ -235,10 +235,11 @@ function nearestEntry(R: Room, p: Vec3): number { let best = -1, bd = Infinity; 
 
 /** roomfight.ts rally() asks: true = this man has a colleague on his way to him, or the two of them have only just paired up — he does not walk off to a
  *  fight next door by himself meanwhile (the man who asked for company waits for it). False on its first line with the switch off */
-export function buddyOwns(g: Game, D: Def): boolean {
-  if (!BUDDY.on) return false;
-  const st = STATES.get(g); if (!st) return false;
-  return g.time < (st.men.get(D)?.keepT ?? -100) || st.errands.some(e => e.caller === D);
+const buddyHas = (g: Game, st: State, D: Def) => g.time < (st.men.get(D)?.keepT ?? -100) || st.errands.some(e => e.caller === D);
+/** WHO THE CALL HAS (src/game/owner.ts): a colleague is on his way to him, or the two have just paired up. As each frame's fight opens (the pair's time may have run out) and as this file's tick ends */
+export function buddySay(g: Game, F: RoomFight): void {
+  const st = BUDDY.on ? STATES.get(g) : undefined;
+  for (const gd of g.guards) { const D = st && F.defs.find(X => X.gd === gd); if (st && D && buddyHas(g, st, D)) claimMan(gd, OWN.buddy, g.time); else releaseMan(gd, OWN.buddy, g.time); }
 }
 /** once a frame from RoomFight.tick, after the defenders', the teammates' and the press's own ticks */
 export function buddyTick(g: Game, F: RoomFight) {
@@ -247,9 +248,10 @@ export function buddyTick(g: Game, F: RoomFight) {
   if (st.stale) { st.stale = false; st.stats = newStats(); }
   for (const D of F.defs) if (alive(D)) consider(g, F, st, D);
   if (st.errands.length) st.errands = st.errands.filter(e => { const over = tickErrand(g, F, st, e); if (over && e.phase !== 'beat') { const M = st.men.get(e.buddy); if (M) M.doneT = g.time; } return !over; });
+  buddySay(g, F);
 }
 /** the fight is over (RoomFight.stop): every call forgotten. The counts stay for whoever reads them after the run; a new fight starts them again */
-export function buddyStop(g: Game) { const st = STATES.get(g); if (!st) return; st.men.clear(); st.errands = []; st.stale = true; }
+export function buddyStop(g: Game) { const st = STATES.get(g); if (!st) return; st.men.clear(); st.errands = []; st.stale = true; for (const gd of g.guards) releaseMan(gd, OWN.buddy, g.time); }
 /** the counts of this run (tools/qa/playthrough.ts files them per run) */
 export function buddyStats(g: Game): Record<string, number> { const s = STATES.get(g)?.stats ?? newStats(); return { ...s, secs: +s.secs.toFixed(1), metres: +s.metres.toFixed(1) }; }
 export function buddySummary(g: Game): string {
