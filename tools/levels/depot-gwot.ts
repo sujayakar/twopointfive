@@ -91,14 +91,13 @@ export const yardSkin = (Y: YardPaints): Skin => ({
     G.skirt('x', 15, 23.88, 24.2, 1, 'paintBlue', H, 0.24); G.skirt('x', 15, 25.0, 29.62, 1, 'paintBlue', H, 0.24); G.skirt('x', 15, 24.2, 25.0, 1, 'paintBlue', 0.95, 0.24);
 
     // ---- THE LANE A LORRY DRIVES: the road's own tarmac in at the main gate, down the yard, through the mouth and out at the back gate. The one dark
-    // field of the yard, and where nobody on foot should stand. A chalk line at each edge, a broken one down its middle, an arrow in from each gate, the
-    // line to stop at inside the main gate
+    // field of the yard, and where nobody on foot should stand. A chalk line at each edge, a broken one down its middle, the line to stop at
+    // inside the main gate
     const LANE: [number, number][] = [[4.12, 12.7], [18.8, 12.7], [24.6, 16.9], [35.88, 17.4]], LW = 2.8;
     strip(LANE, LW, ROAD);
     M.path(beside(LANE, LW / 2 - 0.05), 0.1, CHALKP); M.path(beside(LANE, -(LW / 2 - 0.05)), 0.1, CHALKP);
     M.dashed(6.2, 12.7, 18.8, 12.7, 0.1, CHALKP, 1.2, 0.9); M.dashed(18.8, 12.7, 24.6, 16.9, 0.1, CHALKP, 1.2, 0.9); M.dashed(24.6, 16.9, 35.2, 17.4, 0.1, CHALKP, 1.2, 0.9);
     M.seg(5.2, 11.4, 5.2, 14.0, 0.25, CHALKP);
-    figure('→', 8.0, 12.25, 2, ROAD); figure('←', 31.5, 16.75, 2, ROAD);
     // ---- THE APRONS A MAN WALKS, door to door along the walls, in the huts' own smooth skim, a slot drain between each and the yard. They are the level's
     // own answers: along the north row; THE STORES' WAY along the south row's wall behind the lorry to the workshop's side door and the store; ROUND THE
     // BACK from the back gate through the gap, up the lane behind the cabin to the generator room's door
