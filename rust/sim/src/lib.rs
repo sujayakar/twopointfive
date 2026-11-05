@@ -24,6 +24,7 @@ pub mod dice;
 pub mod doors;
 pub mod falls;
 pub mod fog;
+pub mod glass;
 pub mod glow;
 pub mod hear;
 pub mod knobs;
@@ -50,7 +51,7 @@ pub const SCRATCH_LEN: usize = 1024;
 static mut SCRATCH: [f64; SCRATCH_LEN] = [0.0; SCRATCH_LEN];
 
 /// The version of the exports: src/sim/sim.ts names the one it was written against, and a page that loaded another says so instead of calling into it.
-pub const ABI: u32 = 21;
+pub const ABI: u32 = 22;
 
 // ---- the C face (wasm32: these are the module's exports)
 #[no_mangle]
@@ -144,11 +145,29 @@ pub extern "C" fn lines_blocked(w: usize, a0: f64, a1: f64, a2: f64, b0: f64, b1
 pub extern "C" fn lines_leaves(w: usize, a0: f64, a1: f64, a2: f64, b0: f64, b1: f64, b2: f64, len: f64, need: u32, set: i32) -> u32 {
     lines::leaves_blocked(w, a0, a1, a2, b0, b1, b2, len, need, set) as u32
 }
-/// collision.ts raycast with every pane taken as shut: −1 nothing met · −2 the host answers (a ray that is not a number) · else the static's index, or
-/// 1e6 + the leaf's of list `set`; how far along and the face's normal → scratch 0 … 3. A pane met is the host's to judge (open: it walks the ray itself).
+/// how many panes of world `w` are no longer whole (the rows of its glass tables that are written: glass.rs)
 #[no_mangle]
-pub extern "C" fn lines_ray(w: usize, a0: f64, a1: f64, a2: f64, r0: f64, r1: f64, r2: f64, tmax: f64, set: i32) -> i32 {
-    lines::ray(w, a0, a1, a2, r0, r1, r2, tmax, set, &mut scratch()[..4])
+pub extern "C" fn world_glass(w: usize, n: u32) {
+    world::world(w).glass_n = if (n as usize) < world::MAX_GLASS { n } else { world::MAX_GLASS as u32 };
+}
+/// a burst's view of the glass of world `w` for the judgment in hand (glass.rs VIEW_*; 0 = none), and how many panes its rows name
+#[no_mangle]
+pub extern "C" fn world_view(w: usize, kind: u32, n: u32) {
+    let o = world::world(w);
+    o.view_kind = kind;
+    o.view_n = if (n as usize) < world::MAX_VIEW { n } else { world::MAX_VIEW as u32 };
+}
+/// glassbreak.ts `openAt(bi, X) || also(bi, X)`: is static `bi`, a pane of glass, open at the point (1) or not (0)
+#[no_mangle]
+pub extern "C" fn glass_open(w: usize, bi: u32, x: f64, y: f64, z: f64) -> u32 {
+    let o = world::world(w);
+    ((bi as usize) < world::MAX_BOXES && glass::open(o, bi as usize, x, y, z)) as u32
+}
+/// collision.ts raycast: −1 nothing met · −2 the host answers (a ray that is not a number) · else the static's index, or 1e6 + the leaf's of list `set`;
+/// how far along and the face's normal → scratch 0 … 3. `ask` = 1 where the game has a rule for an open pane: a pane met where it is open is passed.
+#[no_mangle]
+pub extern "C" fn lines_ray(w: usize, a0: f64, a1: f64, a2: f64, r0: f64, r1: f64, r2: f64, tmax: f64, set: i32, ask: u32) -> i32 {
+    lines::ray(w, a0, a1, a2, r0, r1, r2, tmax, set, ask != 0, &mut scratch()[..4])
 }
 /// props.ts PropSystem.raycast over the furniture's parts as world `w` holds them: −1 nothing met · else which thing of the level's list; how far along,
 /// the face's normal and which part of the parts' list → scratch 0 … 4

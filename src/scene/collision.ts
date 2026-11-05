@@ -3,7 +3,7 @@ import { Vec3, v3, quat, hyp2, hyp3 } from '../math/vec';
 import { Box, BoxFlag, rayBox, cutMet } from './boxes';
 import { cutClip, CUT_CLIP, MAX_CUT_PLANES } from './cut';
 import { WORLD } from './world';
-import { BoxMirror, MIRRORED, SENSES, FACE, senseRows, type Furniture } from './boxMirror';
+import { BoxMirror, MIRRORED, SENSES, FACE, senseRows, type Furniture, type PaneSource } from './boxMirror';
 import { RUST, FELL, fell, f64, u32, u8, simWhyNot } from '../sim/sim';
 import type { SimState } from '../sim/state';
 import { EXACT } from '../math/exact';
@@ -108,6 +108,8 @@ const bothPanes: { bi: number; t: number }[] = [];   // (the check's: the panes 
 export interface GridWind { x: number; z: number; low: number; gain: number; fullAt: number; share: (x: number, z: number) => number }
 /** a sense's row by its bit (boxMirror.ts SENSES), for the count of questions the TypeScript took */
 function senseName(bit: number): string { for (const [k, v] of Object.entries(SENSES)) if (v === bit) return k; return 'a sense'; }
+/** the count of questions the TypeScript took (sim.ts FELL): the row of a rule's step, named once */
+const RULES_ROW = 'a rule\'s step (doors, furniture, leaves, thrown things)';
 export class StaticCollision {
   private cells: number[][];        // per 1m cell: static box indices whose footprint overlaps and that matter for movement
   private W = WORLD.gridW; private H = WORLD.gridH; private cs = WORLD.gridCell;
@@ -159,11 +161,14 @@ export class StaticCollision {
   tickOpen(): void { this.stand(); }
   /** …the copy made the boxes as they stand, for whoever opens a stretch of questions: a tick, a window, a question alone (below) */
   private stand(): void { const M = this.mirror, S = EXACT.on ? senseRows() : 0;   // (the senses answer under the game's own maths alone: senseSet)
-     if (RUST.lines || RUST.rays || RUST.circles || RUST.fog || S || ((RUST.doors || RUST.props || RUST.slabs || RUST.items) && EXACT.on)) M.open(this.boxes, this.cells, this.tiltedAt, this.W, this.H, this.cs, this.dynamicBoxes, this.glassWalkable, RUST.lines, RUST.circles, RUST.fog, S, RUST.rays); else if (M.live) M.shut(); }
+     if (RUST.lines || RUST.rays || RUST.circles || RUST.fog || S || ((RUST.doors || RUST.props || RUST.slabs || RUST.items) && EXACT.on)) M.open(this.boxes, this.cells, this.tiltedAt, this.W, this.H, this.cs, this.dynamicBoxes, this.glassWalkable, this.glassPanes, RUST.lines, RUST.circles, RUST.fog, S, RUST.rays); else if (M.live) M.shut(); }
   /** THE WORLD A RULE OF THE MODULE'S MAY STEP OVER NOW (the doors' step: game/doors.ts; the furniture's: game/props.ts): the copy, standing, with the game's own leaves `dyn` in it as they
    *  are — or null (no tick, no copy, a level too big for it, another list in the leaves' place): the TypeScript steps. */
   rulesWorld(dyn: Box[]): BoxMirror | null { const M = this.mirror; if (M.owes) M.again(this.boxes, this.glassWalkable); if (M.rules(dyn)) return M;
-    if (FELL.on) fell('a rule\'s step (doors, furniture, leaves, thrown things)', !M.live ? this.fellWhy() : 'another list in the leaves\' place, or leaves that do not fit a list'); return null; }
+    if (FELL.on) fell(RULES_ROW, !M.live ? this.fellWhy() : 'another list in the leaves\' place, or leaves that do not fit a list'); return null; }
+  /** …and THE PANE RULE AS A RULE'S STEP TAKES IT (a slab's and a thrown thing's rays ask it; `paneAsk` below): 0 or 1 to hand the module, or −1 — the step
+   *  is the TypeScript's, and counted as its own here, once for every rule that asks */
+  rulesPanes(): number { const ask = this.paneAsk; if (ask < 0) this.paneFell(RULES_ROW, ask); return ask; }
   /** why the copy is not answering now, for the count of questions the TypeScript took (sim.ts FELL) */
   private fellWhy(): string { const M = this.mirror; return M.live ? 'the row was not up when the tick opened' : !M.fit ? 'the level does not fit the copy' : 'outside a tick'; }
   /** the foot of a span as the statics are asked it (footBand), for a rule that asks them in the module */
@@ -338,8 +343,36 @@ export class StaticCollision {
   }
 
   /** GLASS BREAKING (game/glassbreak.ts): is the point p on glass static bi inside a cell that has FALLEN OUT? null = panes never open (the game as it was).
-   *  raycast lets a round through such a point (on to whatever stands beyond) and the solid segment test lets sound / a step / a line of fire through it. */
-  glassOpen: ((bi: number, p: Vec3) => boolean) | null = null;
+   *  raycast lets a round through such a point (on to whatever stands beyond) and the solid segment test lets sound / a step / a line of fire through it.
+   *  A RULE HUNG ALONE HAS NO ROWS: the TypeScript answers whatever may meet a pane (`paneAsk` −1) — a check's made-up closure, a mode's own. */
+  get glassOpen(): ((bi: number, p: Vec3) => boolean) | null { return this.paneRule; }
+  set glassOpen(f: ((bi: number, p: Vec3) => boolean) | null) { this.glassRule(f, null); }
+  /** GLASS BREAKING, THE RULE AND WHAT IT ANSWERS BY, HUNG TOGETHER (game/glassbreak.ts hangs itself; scene/boxMirror.ts PaneSource): `rows` are the panes
+   *  that are no longer whole and the burst's view in hand, as the copy can hold them, so a line or a ray of the module's judges a pane where it meets it.
+   *  One call, so the module never judges by rows that were another rule's. `rows` is a FUNCTION, as every hook the game hangs here is: the collision
+   *  keeps no object of the game's, so whatever walks a game's state finds its glass where it always was. */
+  glassRule(rule: ((bi: number, p: Vec3) => boolean) | null, rows: (() => PaneSource) | null): void { this.paneRule = rule; this.paneRows = rule === null ? null : rows; this.mirror.glassIs(this.glassPanes); }
+  get glassPanes(): PaneSource | null { return this.paneRows === null ? null : this.paneRows(); }
+  private paneRule: ((bi: number, p: Vec3) => boolean) | null = null;
+  private paneRows: (() => PaneSource) | null = null;   // (handed to the copy each time it is stood up: a world outlives its game, and holds nothing of it once shut)
+  /** …the glass is being worked on, from here to there (a blow, a blast, a step of what is coming down): the copy's panes are written again before each of
+   *  the module's answers meanwhile, and before the first one after */
+  glassBegin(): void { this.mirror.glassBegin(); }
+  glassEnd(): void { this.mirror.glassEnd(); }
+  /** …or it was written with no question of its own between (a pane made another glass, every pane made whole) */
+  glassWrote(): void { this.mirror.glassWrote(); }
+  /** …and a burst's view of the glass was put on or taken off */
+  glassViewed(): void { this.mirror.viewed(); }
+  /** THE PANE RULE AS A QUESTION OF THE MODULE'S TAKES IT: 0 = the game has none (every pane is shut) · 1 = it has one and the copy holds it · −1 = it has
+   *  one the module cannot judge by (a rule hung with no rows behind it; more broken panes, or a view of more panes, than the copy's tables) · −2 = IDLE:
+   *  the engine's maths stand in Math's place and a broken pane's pieces have to be found — by angles, and the module's are the game's own. That is the
+   *  rule of every row that works a length or an angle out (sim.ts OWN_MATHS), kept for the pane's question where it is asked, since the rows that ask
+   *  it (`lines`, `rays`) answer boxes under either maths. Below nought the TypeScript answers whatever may meet a pane; only −1 is a question the
+   *  module should have had (`paneFell`). A line that passes glass meets none, and asks with 0 whatever this says. */
+  get paneAsk(): number { const M = this.mirror; return this.paneRule === null ? 0 : !EXACT.on && !M.glassPlain ? -2 : M.glassIn ? 1 : -1; }
+  /** …a question the TypeScript took for it, counted (sim.ts FELL) where the module should have had it: never where the pane's question is idle */
+  paneFell(row: string, ask: number): void {
+    if (FELL.on && ask === -1) fell(row, `a pane's rule the module cannot judge by: ${this.paneRows === null ? 'no glass stands behind glassOpen' : 'more broken panes, or a view of more panes, than the copy holds'}`); }
   /** GLASS BREAKING: is glass static bi open along a walker's WHOLE height (every cell reaching below WALK_CLEAR_H gone)? Movement (collideCircle) and the props'
    *  gather then ignore it — the one movement rule, chosen so a man's capsule and solidBlocked never disagree about a pane he could step through; a pane holed only
    *  at head height stays the wall it was to his feet. null = never. (The nav grid is baked once at construction and is NOT rebaked: A* still routes round the frame.) */
@@ -371,15 +404,15 @@ export class StaticCollision {
   /** THE FURNITURE'S RAY, ANSWERED BOTH WAYS (the check's: BOTH; game/props.ts PropSystem.raycast calls this with what it answered): the module is asked the
    *  same ray over its copy of the furniture's parts (lines.rs ray_things), the two answers are compared, and the copy with the furniture as it stands. */
   thingsBoth(P: Furniture, ro: Vec3, rd: Vec3, tmax: number, t: { t: number; n: Vec3; prop: unknown; box: Box } | null): void {
-    const M = this.mirror; if (!M.live || M.owes || !M.things(P)) return;
+    const M = this.mirror; if (!M.live || M.owesBoxes || !M.things(P)) return;   // (a debt is paid by the game's own questions, never by the check's)
     const k = M.x.lines_ray_things(M.slot, ro[0], ro[1], ro[2], rd[0], rd[1], rd[2], tmax), m = f64(), at = M.scratch;
     const ok = k < 0 ? t === null : t !== null && P.props[k] === t.prop && Object.is(m[at], t.t) && Object.is(m[at + 1], t.n[0]) && Object.is(m[at + 2], t.n[1]) && Object.is(m[at + 3], t.n[2]) && M.thingBox(P, m[at + 4]) === t.box;
     const st = M.staleThings(P); BOTH.asked++; BOTH.things++; BOTH.stale += st; if (!ok) BOTH.differ++;
     if ((st || !ok) && !BOTH.first) BOTH.first = `the furniture's ray [${ro.join(', ')}] → [${rd.join(', ')}] (${tmax}, ${k}): ${ok ? '' : 'the two answers differ; '}${st} row(s) of the copy not the furniture`;
   }
   private compared(M: BoxMirror, set: number, ok: boolean, what: string, a: Vec3, b: Vec3, p: number, q: number): void {
-    const st = M.stale(this.boxes, this.dynamicBoxes, set); BOTH.asked++; BOTH.stale += st; if (!ok) BOTH.differ++;
-    if ((st || !ok) && !BOTH.first) BOTH.first = `${what} [${a.join(', ')}] → [${b.join(', ')}] (${p}, ${q}): ${ok ? '' : 'the two answers differ; '}${st} row(s) of the copy not their box`;
+    const st = M.stale(this.boxes, this.dynamicBoxes, set) + M.stalePanes(); BOTH.asked++; BOTH.stale += st; if (!ok) BOTH.differ++;
+    if ((st || !ok) && !BOTH.first) BOTH.first = `${what} [${a.join(', ')}] → [${b.join(', ')}] (${p}, ${q}): ${ok ? '' : 'the two answers differ; '}${st} row(s) of the copy not their box or their pane`;
   }
   /** segmentBlockedDynamic's loop over the leaves for a segment already reduced to origin + unit direction (r0, r1, r2) + length — the same floats the array form
    *  made (d · (1 / len)), so segmentBlocked hands its own down instead of deriving them twice. A leaf the segment provably cannot touch (segClear) is passed
@@ -420,24 +453,18 @@ export class StaticCollision {
     const M = this.mirror; if (M.owes) M.again(this.boxes, this.glassWalkable);
     if (!M.lines) { if (FELL.on && RUST.lines) fell('lines', this.fellWhy()); return this.segmentBlockedHere(a, b, shrink, through, panes); }
     // RUST.lines, inside a tick (rust/sim/src/lines.rs: the walk below, statement for statement, over the module's copy of the boxes). The length is worked out
-    // HERE, by the maths in Math's place, and handed over. Where a pane may be open (glassOpen) or a line of fire is counting them (panes), the module lists
-    // the glass the line crosses — nothing solid being in the way — and the two rules judge the list here, as the walk below does pane by pane.
+    // HERE, by the maths in Math's place, and handed over. A pane crossed where it is open is passed there, by the game's own rule over the copy's panes
+    // (glass.rs); where a line of fire is counting panes, the module lists the glass in the way that is not open — nothing solid being in the way.
     const a0 = a[0], a1 = a[1], a2 = a[2], d0 = b[0] - a0, d1 = b[1] - a1, d2 = b[2] - a2;
     const len = hyp3(d0, d1, d2); if (len < 1e-4) return false;
     const set = len < 1e6 && ((through | 0) & ~MIRRORED) === 0 ? M.leaves(this.dynamicBoxes) : -2;   // (a length that is no number or no length of this world's, a flag the copy does not keep: this file's own answer)
+    const ask = (through & BoxFlag.Glass) !== 0 ? 0 : this.paneAsk;   // (a line that passes glass is stopped by no pane and asks none)
+    if (ask < 0) { this.paneFell('lines', ask); return this.segmentBlockedHere(a, b, shrink, through, panes); }
     if (set === -2) { if (FELL.on) fell('lines', 'the leaves do not fit a list'); return this.segmentBlockedHere(a, b, shrink, through, panes); }
-    const open = this.glassOpen, r = M.x.lines_blocked(M.slot, a0, a1, a2, b[0], b[1], b[2], len, shrink, through, set, (open ? 1 : 0) | (panes ? 2 : 0));
+    const r = M.x.lines_blocked(M.slot, a0, a1, a2, b[0], b[1], b[2], len, shrink, through, set, ask | (panes ? 2 : 0));
     if (r === -2) { if (FELL.on) fell('lines', 'more glass on one line than the module lists'); return this.segmentBlockedHere(a, b, shrink, through, panes); }
-    const n0 = panes ? panes.length : 0; let hit = r === -1;
-    if (r > 0) {
-      const il = 1 / len, r0 = d0 * il, r1 = d1 * il, r2 = d2 * il, wb = u32(), wt = f64(), b0 = M.glassBi, t0 = M.glassT;
-      for (let i = 0; i < r; i++) {
-        const bi = wb[b0 + i], te = wt[t0 + i];
-        if (open && open(bi, [a0 + r0 * te, a1 + r1 * te, a2 + r2 * te])) continue;
-        if (panes) { panes.push({ bi, t: te }); continue; }
-        hit = true; break;
-      }
-    }
+    const n0 = panes ? panes.length : 0, hit = r === -1;
+    if (r > 0) { const wb = u32(), wt = f64(), b0 = M.glassBi, t0 = M.glassT; for (let i = 0; i < r; i++) panes!.push({ bi: wb[b0 + i], t: wt[t0 + i] }); }
     if (BOTH.on) {
       const mine = bothPanes; mine.length = 0; if (panes) { for (let i = n0; i < panes.length; i++) mine.push(panes[i]); panes.length = n0; }
       const t = this.segmentBlockedHere(a, b, shrink, through, panes);
@@ -532,7 +559,7 @@ export class StaticCollision {
     wind: GridWind | null = null): boolean {
     const M = this.mirror; if (M.owes) M.again(this.boxes, this.glassWalkable);
     const mine = !M.live;
-    if (mine) { if (simWhyNot()) return false; M.open(this.boxes, this.cells, this.tiltedAt, this.W, this.H, this.cs, this.dynamicBoxes, this.glassWalkable, false, false, false, 0); if (!M.live) return false; }
+    if (mine) { if (simWhyNot()) return false; M.open(this.boxes, this.cells, this.tiltedAt, this.W, this.H, this.cs, this.dynamicBoxes, this.glassWalkable, this.glassPanes, false, false, false, 0); if (!M.live) return false; }
     try {
       const set = M.leaves(this.dynamicBoxes); if (set === -2) return false;
       // (THE LIGHT THAT COMES ROUND, rust/sim/src/glow.rs: the step sweeps it from the level's steady lamps, which `glow.lamps` writes as for a question
@@ -702,15 +729,14 @@ export class StaticCollision {
     const M = this.mirror; if (M.owes) M.again(this.boxes, this.glassWalkable);
     if (!M.rays || !(tmax < 1e6)) { if (FELL.on && RUST.rays) fell('rays', M.rays ? 'a ray a thousand kilometres long or longer' : this.fellWhy()); return this.raycastHere(ro, rd, tmax); }
     // RUST.rays, inside a tick (rust/sim/src/lines.rs ray: the walk below, statement for statement, over the module's copy of the boxes and of whichever
-    // leaves stand in dynamicBoxes now) — WITH EVERY PANE TAKEN AS SHUT. If the nearest thing it meets is no pane, no pane stood nearer, open or shut, and
-    // the walk below ends on the same thing. If it is a pane, this file asks its one question (glassOpen: a pane's open question only reads): shut, and
-    // it is the answer; open, and the ray flies on to what stands beyond, which the walk below follows whole (RAYS.host counts those).
+    // leaves stand in dynamicBoxes now). A pane met where it is open is passed there (glass.rs, the game's own rule over the copy's panes), and the ray
+    // flies on to what stands beyond, as the walk below does.
+    const ask = this.paneAsk; if (ask < 0) { this.paneFell('rays', ask); return this.raycastHere(ro, rd, tmax); }
     const set = M.leaves(this.dynamicBoxes); if (set === -2) { if (FELL.on) fell('rays', 'the leaves do not fit a list'); return this.raycastHere(ro, rd, tmax); }
-    const k = M.x.lines_ray(M.slot, ro[0], ro[1], ro[2], rd[0], rd[1], rd[2], tmax, set);
+    const k = M.x.lines_ray(M.slot, ro[0], ro[1], ro[2], rd[0], rd[1], rd[2], tmax, set, ask);
     if (k === -2) { RAYS.host++; if (FELL.on) fell('rays', 'the module handed the ray back'); return this.raycastHere(ro, rd, tmax); }
     let hit: { t: number; index: number; n: Vec3 } | null = null;
-    if (k >= 0) { const m = f64(), at = M.scratch; hit = { t: m[at], index: k, n: [m[at + 1], m[at + 2], m[at + 3]] };   // (read out before anybody is asked anything)
-      if (k < 1e6 && this.glassOpen && (this.boxes[k].flags & BoxFlag.Glass) && this.glassOpen(k, v3.mad(ro, rd, hit.t))) { RAYS.host++; if (FELL.on) fell('rays', 'the nearest thing is a pane the host says is open there: the ray flies on in the TypeScript walk'); return this.raycastHere(ro, rd, tmax); } }
+    if (k >= 0) { const m = f64(), at = M.scratch; hit = { t: m[at], index: k, n: [m[at + 1], m[at + 2], m[at + 3]] }; }
     RAYS.n++;
     if (BOTH.on) { const t = this.raycastHere(ro, rd, tmax);
       this.compared(M, set, hit === null ? t === null : t !== null && t.index === hit.index && Object.is(t.t, hit.t) && Object.is(t.n[0], hit.n[0]) && Object.is(t.n[1], hit.n[1]) && Object.is(t.n[2], hit.n[2]), 'raycast', ro, rd, tmax, k); return t; }
@@ -775,7 +801,7 @@ export class SoundPaths {
    *  now). null = `propagateHere`'s, from the start (nothing was written). `write` false = the answer is not remembered (the check's second asker). */
   private propagateThere(src: Vec3, dst: Vec3, keep: boolean, write: boolean): Propagation | null {
     const col = this.col, set = col.senseSet(SENSES.sound); if (set === -2) return null;
-    const M = col.mirror, x = M.x, ask = col.glassOpen ? 1 : 0;
+    const M = col.mirror, x = M.x, ask = col.paneAsk; if (ask < 0) { col.paneFell('sound', ask); return null; }
     const c = x.hear_direct(M.slot, set, ask, src[0], src[1], src[2], dst[0], dst[1], dst[2]); if (c === -1) return null;
     const straight = f64()[M.scratch]; if (c !== FACE.WALLED) SENSED.sound++;
     if (c < FACE.OVER) { let graze = 0; if (c & FACE.GRAZE_A) graze += 0.1; if (c & FACE.GRAZE_B) graze += 0.1; return { direct: true, routed: false, pathLen: straight, via: v3.copy(src), apparent: v3.copy(src), muffle: graze, carry: 1 }; }
@@ -915,8 +941,9 @@ export class NavGrid {
   /** RUST.paths — findPath with no penalty from the module: the same search and smoothing over the grid as it stands now. undefined = `findPathHere`'s. */
   private findPathThere(a: Vec3, b: Vec3, maxIter: number): Vec3[] | null | undefined {
     const col = this.col, set = col.senseSet(SENSES.paths); if (set === -2 || (maxIter >>> 0) !== maxIter) return undefined;
-    const M = col.mirror; if (!this.there(M)) return undefined;
-    const n = M.x.nav_path(M.slot, set, col.glassOpen ? 1 : 0, this.W, this.H, this.cell, a[0], a[2], b[0], b[2], maxIter);
+    const M = col.mirror, ask = col.paneAsk; if (ask < 0) { col.paneFell('paths', ask); return undefined; }
+    if (!this.there(M)) return undefined;
+    const n = M.x.nav_path(M.slot, set, ask, this.W, this.H, this.cell, a[0], a[2], b[0], b[2], maxIter);
     if (n === -2) return undefined; SENSED.paths++; if (n === -1) return null;
     const m = f64(), out: Vec3[] = []; for (let i = 0, o = M.way; i < n; i++, o += 2) out.push([m[o], 0, m[o + 1]]);
     return out;

@@ -18,7 +18,7 @@ import { mathsFrom, EXACT, type Maths } from '../math/exact';
 import { kahanN } from '../math/hyp';
 
 /** the version of the exports this file was written against (rust/sim/src/lib.rs ABI) */
-export const SIM_ABI = 21;
+export const SIM_ABI = 22;
 
 /** the module's exports, by name (rust/sim/src/lib.rs: plain C functions, `<module>_<thing>`) */
 export interface SimExports {
@@ -41,8 +41,9 @@ export interface SimExports {
   // the line tests through it (rust/sim/src/lines.rs — src/scene/collision.ts segmentBlocked / segmentBlockedDynamic past their length)
   lines_blocked(w: number, a0: number, a1: number, a2: number, b0: number, b1: number, b2: number, len: number, shrink: number, through: number, set: number, ask: number): number;
   lines_leaves(w: number, a0: number, a1: number, a2: number, b0: number, b1: number, b2: number, len: number, need: number, set: number): number;
-  /** collision.ts raycast: −1 nothing met · −2 the host answers (glass it has a rule for) · else the static's index, or 1e6 + the leaf's; t and the normal → the scratch */
-  lines_ray(w: number, a0: number, a1: number, a2: number, r0: number, r1: number, r2: number, tmax: number, set: number): number;
+  /** collision.ts raycast: −1 nothing met · −2 the host answers (a ray that is no number) · else the static's index, or 1e6 + the leaf's; t and the normal → the scratch. `ask` 1 = a pane met where it is open is passed (glass.rs) */
+  lines_ray(w: number, a0: number, a1: number, a2: number, r0: number, r1: number, r2: number, tmax: number, set: number, ask: number): number;
+  world_glass(w: number, n: number): void; world_view(w: number, kind: number, n: number): void; glass_open(w: number, bi: number, x: number, y: number, z: number): number;
   // a circle against it (rust/sim/src/collide.rs — src/scene/collision.ts collideCircle / circleTouches / gather)
   collide_circle(w: number, px: number, pz: number, r: number, y0: number, y1: number, iterations: number): number;
   collide_touches(w: number, x: number, z: number, r: number, y0: number, y1: number, cap: number): number;
@@ -127,7 +128,7 @@ export interface SimExports {
 /** every export this file expects, for the check that the built module and this face name the same things (tools/qa/rust-check.ts) */
 export const SIM_EXPORTS: readonly (keyof SimExports)[] = ['memory', 'sim_abi', 'sim_scratch', 'sim_scratch_len', 'maths_sin', 'maths_cos', 'maths_tan', 'maths_asin', 'maths_acos', 'maths_atan', 'maths_atan2',
   'maths_exp', 'maths_log', 'maths_log2', 'maths_log10', 'maths_pow', 'maths_tanh', 'maths_hypot2', 'maths_hypot3', 'maths_hypot4', 'maths_hypot_n',
-  'world_addr', 'world_cap', 'world_shape', 'world_leaves', 'world_things', 'lines_blocked', 'lines_leaves', 'lines_ray', 'lines_ray_things', 'collide_circle', 'collide_touches', 'collide_gather', 'fog_eyes', 'fog_see',
+  'world_addr', 'world_cap', 'world_shape', 'world_leaves', 'world_things', 'world_glass', 'world_view', 'glass_open', 'lines_blocked', 'lines_leaves', 'lines_ray', 'lines_ray_things', 'collide_circle', 'collide_touches', 'collide_gather', 'fog_eyes', 'fog_see',
   'pose_addr', 'pose_rig', 'pose_blend', 'pose_run', 'pose_parent_rot', 'pose_turn', 'pose_ik', 'pose_sample', 'clip_begin', 'clip_track', 'clip_end', 'knob_addr', 'knob_len', 'layer_mv_trunk', 'layer_long_body', 'layer_life', 'layer_mv_pre', 'layer_stance_body', 'layer_stand_pose', 'layer_crouch_pose', 'layer_soft_knees', 'layer_run_arms', 'layer_run_plant', 'layer_sneak_body', 'layer_steady', 'layer_creep_body', 'layer_kick_body', 'layer_toes_up', 'layer_wall_body', 'layer_watch_slip', 'layer_watch_look', 'layer_mv_post_body', 'layer_turn_weigh', 'layer_lean_body', 'layer_gaze_keep', 'layer_sneak_arms', 'layer_carry_arms', 'layer_wall_arms', 'layer_act_pose', 'layer_wound_body', 'layer_wound_limbs', 'layer_long_arms', 'layer_mv_post_arms', 'layer_watch_arm', 'layer_creep_arms', 'layer_clutch_arm', 'layer_bound_arms', 'layer_reload_arm', 'layer_pistol_reload_arm', 'layer_hands_pass', 'layer_throw_layer', 'layer_big_layer', 'layer_hold_layer', 'layer_held_layer', 'layer_catch_arm', 'layer_door_layer', 'layer_work_layer', 'layer_ready_layer', 'layer_kit_layer', 'layer_taken_layer', 'layer_blow_legs', 'layer_blow_trunk', 'layer_blow_arms', 'layer_knife_pose', 'layer_cable_pose', 'layer_stealth_layer', 'layer_swap_pose', 'layer_lockpick_layer', 'layer_haul_layer', 'layer_torch_up', 'layer_radio_pose', 'layer_smoke_pose', 'layer_nv_pose', 'layer_signal_layer', 'layer_tell_layer',
   'sight_contact', 'light_lamps', 'light_cap', 'light_estimate', 'smoke_blobs', 'smoke_cap', 'smoke_trans', 'nav_addr', 'nav_cap', 'nav_path', 'hear_direct', 'hear_route',
   'state_addr', 'state_len', 'state_games', 'state_layout', 'state_parts', 'state_part', 'dice_roll',
@@ -321,9 +322,9 @@ export function fell(row: string, why: string): void {
 /** THE ROWS THAT ARE ONE WAY IN: no run of the gate reaches their TypeScript (the box world's lines and circles, the fog's pass, the posing
  *  functions). A count on one of them is a way back in that somebody opened, so the tool that counted says so and ends red (headless.ts; the page's
  *  check reads `fellSealed`). A family adds its row here in the step that closes its last fallback, and its TypeScript can go in the step after.
- *  NOT YET `rays`: a ray whose nearest thing is a pane the host says is open there flies on in the TypeScript walk (collision.ts raycast; some five
- *  hundred a mission with glass in it), until a pane's open cells are in the module's copy and the module's ray flies on by itself. */
-export const SEALED: readonly string[] = ['lines', 'circles', 'fog', 'poses'];
+ *  `rays` joined when a pane's open question moved to the module (rust/sim/src/glass.rs): until then a ray whose nearest thing was a pane the host
+ *  said was open there flew on in the TypeScript walk, some five hundred a mission with glass in it. */
+export const SEALED: readonly string[] = ['lines', 'circles', 'fog', 'poses', 'rays'];
 /** the sealed rows the count has met */
 export const fellSealed = (): string[] => SEALED.filter(r => Object.keys(FELL.n).some(k => k.startsWith(r + ' · ')));
 /** the count's switches from a word (`1`, `throw`, `who`, `who6`): the harness's TPS_FELL, the page's ?fell */
