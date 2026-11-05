@@ -136,7 +136,7 @@ export const silentOrder = guarded(async () => {
   const m3 = R.menu([sam[0], 1.0, sam[2]]), r3 = rowOf(m3.rows, 'go silent'); R.esc();
   verdict(m3.kind === 'none' && !!r3 && r3.key === '5' && !digitAbove5(m3.rows), 'X on Sam himself: the row is there too, on 5', m3.rows.map((r: any) => `${r.key || '·'} ${r.text}`).join(' | '));
   const s4 = R.said.length, w4 = R.give('silent', spot, 0), told4 = R.said.slice(s4).find((t: string) => /^you: /.test(t)) ?? '';
-  verdict(w4 === null && /gold — go silent/i.test(told4) && R.silent() && R.team.every((x: any) => SLM.silentMan(game, x)), 'addressed to one man it is still the squad\'s: all four take it', `refusal ${w4} · "${told4}" · silent men ${R.team.filter((x: any) => SLM.silentMan(game, x)).length}`);
+  verdict(w4 === null && /gold — go silent/i.test(told4) && R.silent() && R.team.every((x: any) => SLM.underSilence(game, x)), 'addressed to one man it is still the squad\'s: all four take it', `refusal ${w4} · "${told4}" · silent men ${R.team.filter((x: any) => SLM.underSilence(game, x)).length}`);
   // a door's menu keeps its 5
   const bw = R.door('breakroom_w'); const m5 = R.menu(bw.frameCentre), five = m5.rows.find((r: any) => r.key === '5'); R.esc();
   verdict(m5.kind === 'door' && !!five && /^door tools/.test(five.text) && !m5.rows.some((r: any) => /go (silent|loud)/.test(r.text)) && !digitAbove5(m5.rows), 'a door\'s menu is as it was: 5 is the door tools, no posture row',
@@ -153,7 +153,7 @@ export const silentOrder = guarded(async () => {
     `word on a digit: ${m6.rows.map((r: any) => `${r.key || '·'} ${r.text}`).join(' | ')} · back: silent row on '${s7?.key}'`);
   // the pair
   const P = await rig(7, { squad: 2 }); const mp = P.menu(AISLE), rp = rowOf(mp.rows, 'go silent'); P.press('Digit5'); P.step(2);
-  verdict(P.team.length === 2 && rp?.key === '5' && P.silent() && P.team.every((x: any) => SLM.silentMan(P.game, x)), 'the pair has the same row on the same digit', `${mp.rows.map((r: any) => `${r.key || '·'} ${r.text}`).join(' | ')} · silent ${P.silent()}`);
+  verdict(P.team.length === 2 && rp?.key === '5' && P.silent() && P.team.every((x: any) => SLM.underSilence(P.game, x)), 'the pair has the same row on the same digit', `${mp.rows.map((r: any) => `${r.key || '·'} ${r.text}`).join(' | ')} · silent ${P.silent()}`);
   return done();
 });
 
@@ -493,7 +493,7 @@ export const silentStart = guarded(async () => {
       `before '${was ? 'compromised' : 'clean'}' · after '${R.label()}' · a wedged door asked: ${SLM.silentBoot(game, Md)}`); Md.lockId = Md.def.lock ?? Md.lockId; RC.start(8); R.step(5); }
   // a man leaving the roster (a cast changed, not replaced) leaves Sam's word standing; a showcase's cast is never silent
   const gone = game.guards.indexOf(R.team[3]), man = game.guards.splice(gone, 1)[0]; R.step(3); const kept = R.silent(); game.guards.splice(gone, 0, man); R.step(3); const kept2 = R.silent();
-  game.touring = true; const show = { squad: R.silent(), man: SLM.silentMan(game, R.team[0]), pace: SLM.silentPace(game, R.team[0], 2.2) }; game.touring = false;
+  game.touring = true; const show = { squad: R.silent(), man: SLM.underSilence(game, R.team[0]), pace: SLM.silentPace(game, R.team[0], 2.2) }; game.touring = false;
   verdict(kept && kept2 && !show.squad && !show.man && show.pace === 2.2 && R.silent(), 'one man off the roster and back: still silent; under a showcase / the tour no rule applies (the squad is not under Sam\'s orders there)',
     `three men ${kept} · four again ${kept2} · touring: silent ${show.squad}, pace asked 2.2 → ${show.pace}`);
   SILENT.start = false; RC.start(9); R.step(5);

@@ -54,7 +54,7 @@ import { run, boots } from './pressure';
 import { breakerErrand } from './workthings';
 import { breakerResetNear } from './lighting';
 import { lightEstimateAt } from './guards';
-import { darkFoeCarries } from './darkfoe';
+import { carriesDarkLamp } from './darkfoe';
 import { digInPhase } from './digin';
 import { wg } from './words';   // (a leaf: the dialogue pass's one switch)
 import { gunKeepsPost } from './gunroles';
@@ -252,7 +252,7 @@ export function powerOutRules(g: Game, gd: Guard): boolean { return POWEROUT.on 
 /** guards.ts poseFlashlight: a man out for the lights burns his own while the mains are down */
 export function powerOutLit(g: Game, gd: Guard): boolean {
   if (!POWEROUT.on || !g.blackout.active) return false;
-  const M = STATES.get(g)?.men.find(m => m.gd === gd); return !!M && M.phase !== 'wait' && darkFoeCarries(gd);   // (a man the mission dealt no lamp at all has none to burn: darkfoe.ts `carry`)
+  const M = STATES.get(g)?.men.find(m => m.gd === gd); return !!M && M.phase !== 'wait' && carriesDarkLamp(gd);   // (a man the mission dealt no lamp at all has none to burn: darkfoe.ts `carry`)
 }
 /** darkfoe.ts hasWord: their side holds this dark for the team's doing */
 export function powerOutWord(g: Game, gd: Guard): boolean { return POWEROUT.on && g.blackout.active && !!STATES.get(g)?.word && isHostile(gd.team, 'player'); }
