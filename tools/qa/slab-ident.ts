@@ -52,7 +52,7 @@ for (const entry of files) {
   if (mode === 'panes') {   // (made before the first tick opens, so the module's copy has them as the boxes do)
     let q = 12345; for (const b of col.boxes) { q = (Math.imul(q, 1103515245) + 12345) >>> 0; if ((q >>> 16) % 10 < 3 && !(b.flags & BX.BoxFlag.NoShadow)) b.flags |= BX.BoxFlag.Glass; }
     // (a quarter of the made panes GONE — a made-up state of the glass, said twice as the game's own is: the rule a walk of this side asks, and the rows the
-    //  module's copy holds, boxMirror.ts PaneSource. Where a pane is open piece by piece is tools/qa/glass-ident.ts's to hold.)
+    //  module's copy holds, boxMirror.ts PaneSource. Where a pane is open piece by piece is tools/qa/pane-ident.ts's to hold.)
     const goneOf = (bi: number) => (((bi * 7919) >>> 2) & 3) === 0, rows: any[] = [];
     col.boxes.forEach((b: any, bi: number) => { if ((b.flags & BX.BoxFlag.Glass) && goneOf(bi)) rows.push({ bi, gone: true, run: false, sites: [], open: new Uint8Array(0), pending: [], dice: null }); });
     col.glassWalkable = null; const said = { each: (to: (r: any) => void) => { for (const r of rows) to(r); }, view: null }; col.glassRule((bi: number) => { const o = goneOf(bi); if (o) MET.open++; return o; }, () => said); }
