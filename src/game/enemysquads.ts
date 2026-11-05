@@ -67,7 +67,7 @@ import { digInPhase } from './digin';
 import { lastStandMan } from './laststand';
 import { wayName } from './dialogue';
 import { WORDS, wg } from './words';
-import { netFeedAsked, netFeedBody, netFeedHolds } from './netquietfeed';   // (a leaf: netquiet.ts itself is not to be imported from here — see that file's head)
+import { netFeedAsked, netFeedBody } from './netquietfeed';   // (a leaf: netquiet.ts itself is not to be imported from here — see that file's head)
 import { simRandom } from '../math/dice';   // the simulation's die (math/dice.ts): the Game's own when it has one, Math.random otherwise
 import { STAYASK, stayAskHere } from './stayask';   // (squads that stay in their rooms still miss a room that goes silent: read at staging and in netSend)
 import { hasHim, OWN } from './owner';
@@ -410,7 +410,7 @@ export function squadHolds(g: Game, gd: Guard, p: Vec3): boolean { const Q = STA
 function home(g: Game, Q: Squad): Def[] {
   const out: Def[] = [];
   for (const m of Q.men) { if (!fit(g, m) || g.time - m.lastSeenT < 2 || Q.sent.some(s => s.gd === m) || lastStandMan(g, m) || Q.rc?.look.some(l => l.gd === m)) continue;   // (laststand.ts: a man of the last stand is not the squad's to send)
-    if (netFeedHolds(m)) continue;   // (netquiet.ts, through netquietfeed.ts — false on its first line with its switch off: the last man up, at his act, is not the squad's to send to a room nobody of his is left in)
+    if (hasHim(m, OWN.lastMan)) continue;   // (netquiet.ts, through netquietfeed.ts — false on its first line with its switch off: the last man up, at his act, is not the squad's to send to a room nobody of his is left in)
     if (m.script && g.director?.lessonRuns) continue;   // (a staged moment of a tutorial mission's script has him, as roomfight.ts and lanes.ts leave him to it: not at home — sent to look for a mate gone quiet, he walked out of its hand)
     const D = defOf(g, m); if (D && D.mode === 'hold' && D.rallyAt !== Infinity) out.push(D); }
   return out;

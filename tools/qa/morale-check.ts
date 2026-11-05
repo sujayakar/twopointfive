@@ -36,7 +36,8 @@ const quiet = async <T>(fn: () => Promise<T> | T): Promise<T> => { const log = c
 export async function moraleCheck(): Promise<boolean> {
   const { standUp } = (await import('./headless.ts')) as any;
   const M = await import(`${ROOT}/src/game/morale.ts`);
-  const { MORALE, MORALE_STATS, MORALE_LOG, moraleOf, rungOf, dreadOf, moraleOwns, moraleSummary, moraleLines, inTheDark } = M;
+  const { MORALE, MORALE_STATS, MORALE_LOG, moraleOf, rungOf, dreadOf, moraleSummary, moraleLines, inTheDark } = M;
+  const { hasHim, OWN } = await import(`${ROOT}/src/game/owner.ts`);
   const { DOORBLAST } = await import(`${ROOT}/src/game/doorblast.ts`);
   const { FRAG, blast } = await import(`${ROOT}/src/game/frag.ts`);
   const { DESTRUCTION } = await import(`${ROOT}/src/game/destructionSwitch.ts`);
@@ -177,7 +178,7 @@ export async function moraleCheck(): Promise<boolean> {
       for (let i = 1; i <= 600 && Number.isNaN(reloadAt); i++) { g.player.visibility = 1; R.W.step(DT); if (Number.isNaN(seenAt) && moraleOf(T)?.act === 'bait') seenAt = i * DT; if (T.reloadT >= 0) reloadAt = i * DT; }
       const burst = fired(T) - n0, toHole = hits.map(h => off(h, R.hole)), toHim = hits.map(h => off(h, him)), apart = Math.abs(wrap(Math.atan2(him[0] - T.char.muzzle[0], him[2] - T.char.muzzle[2]) - Math.atan2(R.hole[0] - T.char.muzzle[0], R.hole[2] - T.char.muzzle[2])));
       for (let i = 0; i < 600 && moraleOf(T)?.act !== 'hold'; i++) { g.player.visibility = 0.05; R.W.step(DT); }
-      const afterChange = moraleOf(T)?.act; for (let i = 0; i < 90; i++) { g.player.visibility = 1; R.W.step(DT); } const afterSight = moraleOf(T)?.act ?? 'none', owned = moraleOwns(T);
+      const afterChange = moraleOf(T)?.act; for (let i = 0; i < 90; i++) { g.player.visibility = 1; R.W.step(DT); } const afterSight = moraleOf(T)?.act ?? 'none', owned = hasHim(T, OWN.morale);
       for (let i = 0; i < 120; i++) { g.player.visibility = 0.05; R.W.step(DT); } const later = moraleOf(T)?.act ?? 'none';   // (nobody's man any more — or, with a team at the player's back, a dead one: either way not this file's)
       line(act0 === 'hold' && dHole <= MORALE.baitM && !Number.isNaN(seenAt) && burst >= 12 && toHole.length === burst && apart > 0.25 && mean(toHole) < 0.2 && mean(toHim) > apart / 2,
         '(5) a man standing a stride inside the door, off the hole\'s line, seen: the long burst goes at the HOLE, not at him',
@@ -214,20 +215,20 @@ export async function moraleCheck(): Promise<boolean> {
       const snap = W.snapshot('morale', true); step(240);
       Math.random = seeded(5); W.restore(snap); const m2 = g.guards.find((x: any) => x.callsign === name), S1 = moraleOf(m2);
       const same = !!was5 && !!S1 && S1.rung === was5.rung && S1.act === was5.act && Math.abs(S1.shock - was5.shock) < 1e-9 && S1.baits === was5.baits && S1.calls === was5.calls;
-      step(30); const low = m2.char.anim.crouch > 0.7 && moraleOwns(m2);
+      step(30); const low = m2.char.anim.crouch > 0.7 && hasHim(m2, OWN.morale);
       line(T.state !== 'dead' && clear && same && was5!.rung === 2 && was5!.act === 'hold' && dust >= 3 && low,
         '(6) alone in a blacked-out office, a grenade six metres off: broken too — and a checkpoint taken in his hold loads him the same man, low on the hole',
         `${name} · line to the blast ${clear} · dark ${dark0} alone ${alone0} · saved rung ${was5?.rung} ${was5?.act} shock ${f2(was5?.shock ?? NaN)} calls ${was5?.calls} · rounds into the dust ${dust} · loaded rung ${S1?.rung} ${S1?.act} shock ${f2(S1?.shock ?? NaN)} · low and held after the load ${low}`); }
     // (7) a restart between a blast and the next tick
     { const R = await stage(24, true, true), T = R.T, fed0 = MORALE_STATS.fed, filed0 = MORALE_STATS.blasts; R.shell(); const filed = MORALE_STATS.blasts - filed0; R.g.clearAftermath(); R.step(90);
-      line(filed === 1 && MORALE_STATS.fed === fed0 && (moraleOf(T)?.shock ?? 0) === 0 && (moraleOf(T)?.act ?? 'none') === 'none' && !moraleOwns(T),
+      line(filed === 1 && MORALE_STATS.fed === fed0 && (moraleOf(T)?.shock ?? 0) === 0 && (moraleOf(T)?.act ?? 'none') === 'none' && !hasHim(T, OWN.morale),
         '(7) a restart between a blast and the next tick: the blast filed is dropped, and the floor after it is fed nothing', `filed ${filed} · fed ${MORALE_STATS.fed - fed0} · his shock ${f2(moraleOf(T)?.shock ?? 0)} · act ${moraleOf(T)?.act ?? 'none'}`); }
     // (8) the hostage rescue's cast
     { Math.random = seeded(42); MORALE.on = false; const W: any = await quiet(() => standUp()), g = W.game, Rs = g.rescue; g.godMode = true; const why = Rs.start(); MORALE.on = true; MORALE.training = 'none'; MORALE.nerve = 'normal'; held();
       for (let i = 0; i < 30; i++) W.step(DT); const cap = Rs.captor(), fed0 = MORALE_STATS.fed, filed0 = MORALE_STATS.blasts, cast: any[] = Rs.hostiles;
       const at: V3 = cap ? [cap.char.pos[0] + 1.2, 0, cap.char.pos[2]] : [0, 0, 0];
       if (cap) blast(g, at, { who: PLAYER_ID, name: 'frag grenade', lethalM: 0.05, woundM: 0.1, fx: false });
-      let owned = 0; for (let i = 0; i < 120; i++) { W.step(DT); if (cast.some(x => moraleOwns(x))) owned++; }
+      let owned = 0; for (let i = 0; i < 120; i++) { W.step(DT); if (cast.some(x => hasHim(x, OWN.morale))) owned++; }
       line(!!cap && Rs.active && MORALE_STATS.blasts - filed0 === 1 && MORALE_STATS.fed === fed0 && cast.every(x => !moraleOf(x)) && owned === 0,
         '(8) the hostage rescue: a blast a stride from the captor meets no man of its cast — his clock and his gun are the rescue\'s alone',
         cap ? `captor ${cap.callsign} · cast ${cast.length} · filed ${MORALE_STATS.blasts - filed0} · fed ${MORALE_STATS.fed - fed0} · men of the cast met ${cast.filter(x => moraleOf(x)).length} · frames owned ${owned}` : `no captor (${why ?? 'started'})`); }
@@ -240,7 +241,7 @@ export async function moraleCheck(): Promise<boolean> {
         const R = await stage(31, false, true), T = R.T, n0 = fired(T), p0 = [...T.char.pos], st: Record<string, number> = { ...MORALE_STATS }; MORALE_LOG.length = 0; let s = '', low = 0;
         R.shell(); for (let i = 0; i < 480; i++) { R.step(); if (T.char.anim.crouch > 0.5) low++; if (i % 20 === 19) s += hashDigest(digestGame(R.g, true)) + ' '; }
         const filed: number = Object.keys(st).reduce((a: number, k: string) => a + ((MORALE_STATS as any)[k] - (st as any)[k]), 0);
-        return { s, draws, met: R.g.guards.filter((x: any) => moraleOf(x)).length, filed, rounds: fired(T) - n0, moved: flat(T.char.pos, p0), low, sum: moraleSummary(R.g), owns: R.g.guards.some((x: any) => moraleOwns(x)) };
+        return { s, draws, met: R.g.guards.filter((x: any) => moraleOf(x)).length, filed, rounds: fired(T) - n0, moved: flat(T.char.pos, p0), low, sum: moraleSummary(R.g), owns: R.g.guards.some((x: any) => hasHim(x, OWN.morale)) };
       };
       const base = await run();   // (a stand that never had the rule on)
       { const R = await stage(32, true, true); R.shell(); R.step(120); }   // …the rule run in between, in this process…
