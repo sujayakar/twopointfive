@@ -313,12 +313,10 @@ export const BODY_DOOR_PARTICLES = [RAG.pelvis, RAG.spine, RAG.head, RAG.kneeL, 
 class AsideOwn extends HostOwned { s?: object; q?: object; w?: object; lens?: FollowCamera }
 export class Player extends PlayerCols {
   char: Character;
-  crouch = false; aimHeld = false; lastFireT = -10; fireCd = 0; backpedal = false; sprinting = false; /** Shift held in a crouch this frame (player.ts CROUCHRUN): the fast crouch walk — set where `sprinting` is, false wherever that is not reached */ dash = false;
-  friendLow = false; friendT = -10;   // friends.ts: his raised gun is down for a teammate in its line (FRIENDS.lowReady), and how long that line has been clear
+  /** Shift held in a crouch this frame (player.ts CROUCHRUN): the fast crouch walk — set where `sprinting` is, false wherever that is not reached */ dash = false;
   shoved: [number, number] = [0, 0]; shovedT = -1; shovedFrom: [number, number] = [0, 0];   // noshove.ts: what the men he met moved him by in this update (x, z), the clock of that update, and where the update found him — written and read inside one frame
   haul: Haul | null = null; doorMove: DoorMove | null = null;   // hands.ts: the pick-up of the body in `dragging` (which end, which beat) · the door he is working by hand (HANDS, its switch; both null with it off)
-  dragging: Guard | null = null; dragYaw = 0; dragNoiseT = 0; dragStuckT = 0;   // the body being dragged (F): crouched, facing it, its ankles in your hands (ragdoll pins), the rest trailing along the floor
-  noise = 0;                                                    // HUD sound meter: the loudest thing you did lately (hearing-model level, decays)
+  dragging: Guard | null = null;   // the body being dragged (F): crouched, facing it, its ankles in your hands (ragdoll pins), the rest trailing along the floor
   takedown: { g: Guard; t: number; kind?: CloseKind; from?: number; alert?: boolean; yaw?: number; at?: Vec3; lethal?: boolean; /** CLOSE.rmbHold: the quick knockout — heard further */ loud?: boolean } | null = null;             // silent takedown in progress (a LEFT CLICK with the hands empty on the man in reach behind): locked behind the guard until the strike lands
   /** the man in his arm (player.ts startGrab / updateHold — the 'grab him' row on a living guard from behind): the pair moves as one at a slow walk, his rows put
    *  questions to him (Game.interrogate) and choke him out quiet (holstered: the arm variant) or pistol-whip him (pistol drawn: the gun variant, which also
@@ -331,15 +329,8 @@ export class Player extends PlayerCols {
   bubble: { text: string; t: number; dur: number; radio: boolean } | null = null;
   visibility = 0;          // 0..1 from light meter
   irradiance = 0;
-  hitFlash = 0;
   /** a blast that left him up (samstun.ts): folded until / blind until, on the game clock, and where the flash was — the same two stamps a Guard carries */
-  staggerUntil = -1; dazzledUntil = -1; dazzledAt: Vec3 | null = null; stunPosed = false;
-  /** game time a blast left him hurt (condition.ts: -1 = never; read through isHurt) */
-  hurtAt = -1;
-  /** a sprint into a door (sprintdoor.ts): when he last put his shoulder through one and which way it turned him, and until when his hand is ripping one round (the run held to a walk) — on the game clock */
-  doorBashAt = -10; doorBashLean = 0; doorRipUntil = -1; doorKickTail = false;
-  /** the look his head was last given against that turn, and the game time it was given on (player.ts's sprint facing; game.ts takes it back off the frame nobody renews it) */
-  doorHead = 0; doorHeadT = -1;
+  dazzledAt: Vec3 | null = null; 
   /** suppression (suppression.ts, docs/internal/sc20k-design.md §4): the rounds passing / striking close to him — the same scalar and rule the guards duck under.
    *  This lane reads it for one thing only, the cone his own rounds open up by (player.ts fire sites, samSpread); the picture, the mix and the reticle are R4's. */
   sup = new Sup();
@@ -350,7 +341,7 @@ export class Player extends PlayerCols {
   aim = new AimState();
   /** aimweight.ts: his gun's heading trails the cursor — the swing's rate and the circle's range, live only on frames the weighted turn drove his aim */
   aimw = new AimWeight();
-  static readonly MAX_HITS = 1; hitsLeft = Player.MAX_HITS; down = false;   // one 9 mm hit and you are down, same as the guards; Enter restarts the encounter
+  static readonly MAX_HITS = 1;   // one 9 mm hit and you are down, same as the guards; Enter restarts the encounter
   // equipment, by KIND (SlotKind — the digits and the kit column's numbering are KIT_ORDER's: 1 the pistol, 2 the FN2000 when the kit has it — hasRifle, the start
   // card's loadout toggle, remembered per machine — 3 smoke canisters, 4 stun canisters); G quick-throws whichever throwable was selected last (`throwKind`) where the quick throw is on (quickthrow.ts: not in the page). "The
   // weapon in his hand" is gunInHand(): the pistol with 'pistol' selected and drawn, the rifle with 'rifle' selected and off the sling, nothing holstered / slung or
@@ -361,8 +352,6 @@ export class Player extends PlayerCols {
    *  SLUNG across his back (rigProps RIG.sc20k.slung) — the same one flag E, the wall hold, the grab and every hands-free rule already read; in the hands it is
    *  the animator's long gun (player.ts arms it: LONG carriages by state). */
   rifle = new Rifle(); hasRifle: boolean;
-  /** seconds left of the rifle coming off the sling into the hands (or of any change of what is in them that involves it): no round or ring meanwhile */
-  equipT = 0;
   /** slotsetup.ts: the setup of the gun in his hands is up (its digit pressed again) — which gun, the game time it opened or was last used, and the last
    *  update that saw it; null = not up. Never saved: a load is a fresh Player with nothing up */
   setup: { gun: 'pistol' | 'rifle'; t: number; seen: number } | null = null;
@@ -386,7 +375,6 @@ export class Player extends PlayerCols {
   /** the one-time word that the OCP lives on the pistol: said the first time the right button is pressed over a light with a long gun in the hands that has
    *  nothing under its barrel (the shotgun in the rifle's slot — player.ts) — after that the button is simply dead there */
   ocpHinted = false;
-  holstered = true;    // he starts with the pistol on the thigh (playtest call: hands free by default — Space grabs, a click behind a man is the takedown); E puts the selected item away / draws it again (Chaos Theory: equip / unequip); holstered + LMB behind a guard in reach = the silent takedown (its one and only input), the pistol's paths all check it
   /** the keys in his pocket, by lock name (doors.ts Door.lockId / FLOOR_KEY): taken off a man he questions the moment the man gives the keyed door up (player.ts
    *  takeKey — Guard.keys empties into this). His door contact carries them (updateDoors) and every 'is this lock against you' test reads them (Doors.lockedOut),
    *  so a keyed door on its corridor face opens to him as it does to the staff — no pick, no kick — and springs locked again behind him. The kit column shows a
@@ -416,8 +404,6 @@ export class Player extends PlayerCols {
   get listOpen(): boolean { return this.sel.open && !this.sel.ring; }
   /** the selector open with his hand on it — a list, or a ring whose key is still down; not a ring that merely stands (handring.ts) */
   get choosing(): boolean { return this.sel.open && !this.sel.ring?.free; }
-  pace = 1; paceShownT = -10;   // walking-pace multiplier set with the mouse wheel, PACE_MIN‥1 of the walk / crouch-walk speed (sprint is its own held modifier); shown as ticks in the kit column
-  nv = false; nvAmount = 0;
   light!: RtLight;   // the rail light: posed from the gun every frame (rigProps.rigLightPose)
   throwEaten = false;   // (the quick-throw key's press went to the order menu's frag row: the rest of that press — the key still down, on the page — is not a throw; cleared when the key is up. player.ts)
   throwHeld = false; heldKind: ThrowKind = 'smoke'; throwPreview: ThrowSolution | null = null; pendingThrow: { t: number; sol: ThrowSolution; kind: ThrowKind } | null = null;
@@ -457,7 +443,7 @@ export class Player extends PlayerCols {
   constructor(men: MenStore, ch: GltfCharacter, pos: Vec3, hasRifle = true, seat = 0) {   // (`men`: his game's rows · `seat`: whose man — seats.ts; the first is PLAYER_ID in the suit he always wore, a second player's wears another trim so the two tell apart)
     super();
     this.char = new Character(ch, { id: seatManId(seat), tint: [0.05, 0.06, 0.07], tint2: seat ? [0.1, 0.2, 0.36] : [0.1, 0.32, 0.18], pos, yaw: Math.PI, men });
-    sameMan(this, this.char); this.stepTravel = 1; this.stepAt = -1;
+    sameMan(this, this.char); this.initPlayer();
     this.char.muzzleAhead = this.pistol.def.muzzleAhead;   // (the row's: where the round, the flash and the rail light's beam start along the gun)
     this.hasRifle = hasRifle;
   }
@@ -591,7 +577,7 @@ export type PairId = 'red' | 'blue';
 /** Who a man's senses, fix and gun are ON (guards.ts, teams): Sam — every staff guard's for life, and today's whole game — or a hostile AI man, or nobody yet. */
 export type Foe = 'player' | Guard | null;
 export class Guard extends GuardCols {
-  char: Character; state: GuardState = 'patrol';
+  char: Character; 
   /** his name on the net (CALLSIGNS by roster index; a spawned unit's given name) */
   callsign: string;
   /** SIDES (teams.ts): which side he is on — 'guard' for every man the level's routes stand up (hostile to Sam and nobody else: the game as it was); the
@@ -611,9 +597,6 @@ export class Guard extends GuardCols {
   /** set on a CIVILIAN (civilians.ts — the cleaner, the late worker: a Guard record for the plumbing that takes one — the hold, the ragdoll, the bubble, the path
    *  follower — kept in Game.civilians, never in Game.guards); null for every man of every AI side */
   civ: Civ | null = null;
-  /** a trained man (the response team, game/qrf.ts): the aim-settle model lines him up quicker and his hands are steadier (aim.ts TRAINED — × the settle time,
-   *  × his row's cone), and qrf.ts keeps his reaction beats short. False for the night staff and the showcase's men: their numbers are untouched. */
-  trained = false;
   /** in a room fight (roomfight.ts sets it every frame he is in one): his side's multipliers on the aim model's settle time and cone — takes TRAINED's place, and a
    *  pinned man with it earns his track like anybody instead of standing on 1 */
   skill: { settleK: number; spreadK: number } | null = null;
@@ -624,10 +607,6 @@ export class Guard extends GuardCols {
   routeI: number; wp = 0; wait = 0; awareness = 0; lastKnown: Vec3 | null = null; lastSeenT = -100;
   hold = false;                  // scripted (showcase tour): stand your ground while on patrol / merely suspicious (look, don't walk over)
   pinned = false;                // scripted: in a fight, keep the position you were given (shoot from it, cover the last fix from it) instead of closing in
-  /** scripted, SHOWCASE CAST ONLY (director.ts LoadoutSpec.god — the day showcase's two operatives): a round that would have found him passes through him as it passes a colleague (combat.ts
-   *  fireWeapon). The show's doctrine keeps the opposition's rounds off them by construction (laid on their cover, traced: tools/qa/day-probes.ts); this is the net under a stray, never
-   *  the mechanism, and nothing the player or the level's men can ever carry. */
-  god = false;
   /** Sam has him from behind (player.ts Hold — docs/internal/grab-interrogate-design.md §2.1): NOT a state — his `state` stays what it was so what he knew survives
    *  it — but a side record updateGuard branches on before anything else, the way it does for a scripted man: no senses, no feet of his own (updateHold places and
    *  turns him), no voice but his answers to Sam (guards.ts say drops the rest), off the net (guards.ts offNet: the radio check asks after him and sends somebody
@@ -635,9 +614,6 @@ export class Guard extends GuardCols {
    *  phase mirrors the hold's beat; reverse = Sam is backing the pair up (his legs play the cycle backwards too). */
   held: { by: 'player'; since: number; variant: HoldVariant; phase: HoldPhase; reverse: boolean } | null = null;
   bubble: { text: string; t: number; dur: number; radio: boolean } | null = null;   // what he is saying right now (drawn over his head when on screen; off-screen lines go to the log)
-  found = false;                 // (dead) somebody has discovered this body — counted once for the debrief
-  /** (dead) how he went down and by whose hand — set once by combat.ts killGuard; null while he lives. isBreathing() reads it: struck / choked = out cold. */
-  downKind: DownKind | null = null; downBy: DownBy | null = null;
   /** WOUNDS (wounds.ts): down wounded — out of the fight, breathing, posed where he went down (state 'dead', downKind 'wounded'). null on everybody else, always with the switch off. */
   wound: Wound | null = null;
   /** what he has personally seen and heard this encounter (see Witness) — event memory for the dialogue to come; the AI itself never reads it */
@@ -649,16 +625,6 @@ export class Guard extends GuardCols {
    *  admission true of him at all (dialogue.ts gather: no key on him, no 'mine's on my belt'). NOT what the leaves ask of him: to a door every man on the
    *  staff is keyed (updateDoors `key: true`) — the man in Sam's arm still walks the pair through one whatever is left on his belt. Dies with the Guard. */
   keys: Set<string>;
-  /** (dead, not found) the net has called this man and got nothing back — when (guards.ts updateRollcall; -1 = never): from then on the others count him as
-   *  missing (superviseLockdown stops dealing his corpse a role) — and whether the floor has already been raised once on his account (it is, once, when the man
-   *  sent round his route comes back with nothing) */
-  missedAt = -1; missingRaised = false;
-  /** muzzle discipline (guards.ts muzzleCheck): a living colleague stands in his line this frame, so the pistol is at the low ready and no round leaves it;
-   *  clearT = seconds the line has been clear again (it comes back up after a beat, not on the frame); evalT = the game time it was last worked out (the alert
-   *  branch does it early, before the shot); lineBarkT = when he (or the man in his line) last said so */
-  muzzleDown = false; muzzleClearT = 0; muzzleEvalT = -1; lineBarkT = -100;
-  /** alert, licensed to shoot: seconds a colleague has stood in the line of the shot itself (a man crossing is waited out for a beat; one standing there is stepped round) */
-  lineInT = 0;
   /** the side-step round a colleague (guards.ts lineStep): lineSide = which way the step under way goes (−1 / +1 along the square-off-the-line basis, 0 = none);
    *  lineGain / lineStepM = how far last frame's step should have left him from its goal, and how long that step was (a step handed straight back by a chair
    *  wedged against the table, a leaf, a man standing on the spot reads as no gain: lineStuckT counts those seconds); lineFail = the sides that went nowhere from
@@ -675,18 +641,12 @@ export class Guard extends GuardCols {
    *  widening out to a search point away from it ('fan'); null = ordinary suspicion. Cleared whenever he leaves 'suspicious'. */
   bodyDuty: { body: Guard; role: 'finder' | 'called'; stage: 'to' | 'cover' | 'fan'; t: number; t0: number; spot: Vec3 | null } | null = null;
   dropped: Item | null = null;   // the torch / pistol that left his hand when he died (the sputtering light rides it)
-  gunLostAt = -1;   // a LIVING man whose gun was knocked from his hand at the grab (HOLD.dropGun): dropped = that gun, this = when — his hands are empty (guards.ts inHand) and its light dies on the floor; −1 again once he has it back (player.ts handBack)
-  torchLostAt = -1;   // a LIVING man whose torch was knocked from his hand (the grab): dropped = that torch, this = when — the beam follows it down and sputters out (guards.ts updateFlashlight); on patrol afterwards his hand is empty
   path: Vec3[] = []; pathI = 0; repathT = 0; pathGoal: Vec3 | null = null;
   /** What he carries and its state (weapons.ts: the row from his route — the 9 mm service pistol unless the level says otherwise — with its chamber and magazine;
    *  guards.ts fires it and reads its cadence, fireWeapon its report / flash / spread, killGuard what falls out of the hand). fireCd: seconds until the trigger
    *  will go again (the AI's beat: cadence, the reaction on going alert, the shield's floor). reloadT: his reload BEAT — seconds left standing there changing
    *  magazines (the row's reload.dur), −1 = not; when it runs out the weapon is simply full again (weapon.rearm: a guard's spares are bottomless). */
-  weapon: Firearm; fireCd = 1; reloadT = -1;
-  /** rifles (docs/internal/sc20k-design.md §3): dealt the carbine by the sandbox knob (tune.carbineGuards, written by Game.update each frame) — and the deal IS the
-   *  weapon: while it stands, `weapon` is the AKS-74U row (bursts, the 30-round box, the harder report, the rifle that drops — guards.ts burstTrigger, combat.ts),
-   *  the RIG in his hands the carbine and his poses the long gun's; dealt away again, his route's row comes back. guards.ts rigOf reads it. */
-  carbine = false;
+  weapon: Firearm; 
   /** suppression (suppression.ts): rounds passing / striking close to him — the scalar every reaction branches on (guards.ts: flinch, worse and later rounds, head
    *  down, the shift to cover) and its clocks. Nothing else writes it; the panel line and the QA probes read it. */
   sup = new Sup();
@@ -695,7 +655,7 @@ export class Guard extends GuardCols {
   aim = new AimState();
   reactT = 0; searchT = 0; lookPhase = simRandom() * 10;
   flashlight: RtLight; sweep = 0; beamDir: Vec3 = [0, -0.3, 1];
-  heardUpTo = -1; smokeTrans = 1; lightDeadUntil = -1; diedAt = -1;
+  heardUpTo = -1; smokeTrans = 1; 
   /** a teammate's breaching shotgun out of his big slot and in his hands for a lock (bigkit.ts gunUp / gunDown): the gun he put down for it, to take up again */
   slung: { own: Firearm; ownId: WeaponId | undefined; ahead: number; gun: Firearm; out: boolean; t: number } | null = null;
   /** a teammate's second gun (gunslots.ts GUNSLOTS: his card's other slot) — `gun` / `id` / `ahead` are the one that is NOT in his hands; `out`: that is his
@@ -707,23 +667,11 @@ export class Guard extends GuardCols {
   /** a teammate's gun let go of for a two-handed job (workstow.ts mateStow / mateStowTick): the game time his hands left it, the time it is back up (−1: the job
    *  still runs) and whether the job fed it this frame. null = it is in his hands. Not saved: a load finds it there. */
   workStow: { upT: number; fed: boolean } | null = null;
-  /** was his light burning the moment it left his hand (killed / grabbed)? a dark weapon light must not sputter ON as it tumbles (review 08-10 #7: the breach hostiles' unlit lights swept the sunlit room the frame each died) */
-  lightLitAtLoss = true;
   dazzledAt: Vec3 | null = null;   // where the charge that blinded him went off (the motion pass turns him away from it — character.ts MOVES; not saved)
-  dazzledUntil = -1;   // stun canister with line of sight: no vision, no shooting, rooted to the spot until this time (see Game.detonateStun)
-  /** a ring airfoil took him in the body (launcher.ts staggerGuard): doubled over till this time — rooted like the dazzle (reactT), no round from him, but he can SEE,
-   *  and he comes out of it alert toward the side it came from */
-  staggerUntil = -1;
-  /** a booted door met him where he stood right at it (doorthrow.ts): on a knee till this time, inside the fold the same blow gave him */
-  doorDownUntil = -1;
-  /** game time a blast left him hurt (condition.ts: -1 = never; read through isHurt) */
-  hurtAt = -1;
   sawPlayerThisFrame = false; stuckT = 0; stuckN = 0;
   /** a real sighting of his FOE this frame, whoever that is (teams) — sawPlayerThisFrame stays what its name says: eyes on Sam (what the mission's 'spotted' count
    *  and the witnesses read), which for the staff is the same thing */
   sawFoeThisFrame = false;
-  /** (dead) the id of the character whose round put him down, −1 = not by a round / unknown (combat.ts fireWeapon stamps it; the engagement record names him) */
-  killerId = -1;
   sawBodyT = -100;                     // game time he last discovered a body: a short refractory before he can call in another (two lying together are one 'man down', not two in two frames)
   leaderStillT = 0;                    // lockdown follower: seconds the man he trails has not moved (planted beside a leader who never moves again, he turns to look at him — guards.ts followLeader)
   alertBest = 1e9; alertStallT = 0; alertRef: Vec3 | null = null; chaseT = 0;   // alert with a fix: nearest he has got to it, how long without getting nearer, the fix that was measured against (a no-progress exit into 'search', guards.ts — re-based when the fix moves), and the seconds this chase has run without eyes on Sam (its hard backstop)
@@ -750,14 +698,14 @@ export class Guard extends GuardCols {
   /** alarm escalation (guards.ts updateEscalation): drawn = the sidearm is out on patrol (level ≥ 1) — handProps / attachFlashlight / killGuard read it where they
    *  used to read 'patrol ⇒ torch'; leader = lockdown pairing: trail this man while calm (followT: re-plan clock, ≤ 2 path plans a second; followGoal: his
    *  station behind him); post = lockdown: hold this corridor junction instead of walking the route */
-  drawn = false; leader: Guard | null = null; followT = 0; followGoal: Vec3 = [0, 0, 0]; post: Chokepoint | null = null;
+  leader: Guard | null = null; followT = 0; followGoal: Vec3 = [0, 0, 0]; post: Chokepoint | null = null;
   /** `look` (a spawned unit's, guards.ts spawnUnit — absent for the level's men, whose call is unchanged): the trouser tint, the facing (a one-point route has no
    *  first leg to face down), the name he answers to, his side. */
   constructor(men: MenStore, ch: GltfCharacter, id: number, route: PatrolRoute, routeI: number, flashlight: RtLight, tint: Vec3, look?: { tint2?: Vec3; yaw?: number; name?: string; team?: Team }) {
     super();
     const pos = v3.copy(route.points[0]); const p1 = route.points[1 % route.points.length];
     this.char = new Character(ch, { id, tint, tint2: look?.tint2 ?? [0.02, 0.02, 0.025], pos, yaw: look?.yaw ?? v3.yawTo(pos, p1), men });   // facing down the first leg
-    sameMan(this, this.char);
+    sameMan(this, this.char); this.initGuard(); this.fireCd = 1;
     this.lastPos = v3.copy(pos); this.routeI = routeI; this.route = route; this.flashlight = flashlight; this.callsign = look?.name ?? CALLSIGNS[Math.max(0, id - 10) % CALLSIGNS.length];
     if (look?.team) this.team = look.team;
     if (this.team !== 'guard' && this.team !== 'hostile') this.foe = null;   // a side not hostile to Sam has nobody until a hostile man shows himself (a hostile unit starts on Sam like the staff, and re-targets by salience)
