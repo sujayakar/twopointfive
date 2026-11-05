@@ -26,7 +26,7 @@
 // LAMPS_BREAK=shade is the red path of the blobs' shadow: the host hands the module no blobs, so the two cases where the grid cannot answer must FAIL
 // and nothing else may — not the lamps in parts with no smoke, not the grid that answers.
 // The last lines: `SENSE-IDENT {…}` is each row's count of differing answers for a caller to read; exit 3 = the red path left a row green (named).
-process.env.TPS_PROFILE ??= 'shipped'; process.env.TPS_CPUSENSE ??= '1';   // (the rows and the game's own maths are the build's: no word raises them)
+process.env.TPS_PROFILE ??= 'shipped'; process.env.TPS_CPUSENSE ??= '1'; process.env.TPS_EXACT = '1';   // (the game's own maths: the rows answer under no other)
 import { readdirSync } from 'fs';
 import { resolve } from 'path';
 const { standUp } = await import('./headless.ts');   // (not a static import: those load before this file's first line, and the harness reads the stand as it loads)
@@ -48,6 +48,7 @@ const BM: any = await import(`${ROOT}/src/scene/boxMirror.ts`);
 type Sense = keyof typeof import('../../src/scene/boxMirror.ts').SENSES; const SENSES = Object.keys(BM.SENSES) as Sense[];   // (the senses are boxMirror.ts's list: one added there and not asked below does not typecheck)
 type Kind = Sense | 'fog'; const KINDS: Kind[] = [...SENSES, 'fog'];   // (…and the fog's pass, a row of its own with a flag of its own on the copy: `sight` there, `senses` the five)
 const none = (): Record<Kind, number> => Object.fromEntries(KINDS.map(k => [k, 0])) as Record<Kind, number>;
+for (const k of KINDS) process.env['TPS_RUST' + k.toUpperCase()] = '1';   // (the stand's own words: every level is stood up, and asked, with the six rows raised)
 const log = console.log, err = console.error; const hush = (on: boolean) => { console.log = on ? () => {} : log; console.error = on ? () => {} : err; };
 /** an answer as the numbers it is made of (a missing answer is its own number) */
 const flat = (v: unknown, out: number[] = []): number[] => { if (v === null || v === undefined) out.push(-12345.5); else if (typeof v === 'number') out.push(v); else if (typeof v === 'boolean') out.push(v ? 1 : 0); else if (Array.isArray(v)) { out.push(v.length); for (const e of v) flat(e, out); } else for (const k of Object.keys(v as object).sort()) flat((v as Record<string, unknown>)[k], out); return out; };

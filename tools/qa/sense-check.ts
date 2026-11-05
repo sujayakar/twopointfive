@@ -114,7 +114,7 @@ const watch = (g: any) => { const P = g.probe, C = { asks: 0 }, q = P.query, s =
 // ---- same
 {
   const dir = mkdtempSync(join(tmpdir(), 'sense-')), path = join(dir, 'tape.json');
-  const env = { ...process.env, TPS_PROFILE: 'shipped', TPS_CPUSENSE: BREAK ? '0' : '1' } as Record<string, string>;
+  const env = { ...process.env, TPS_PROFILE: 'shipped', TPS_CPUSENSE: BREAK ? '0' : '1' } as Record<string, string>; delete env.TPS_EXACT;
   const made = spawnSync(process.execPath, ['run', 'tools/qa/sense-check.ts', '--tape-to', path], { cwd: ROOT, env, encoding: 'utf8', maxBuffer: 1 << 26 });
   let F: any = null; try { F = JSON.parse(readFileSync(path, 'utf8')); } catch { /* said below */ }
   if (!F) verdict(false, 'same: a taped fight re-run on its own senses', `the tape was not made (exit ${made.status}): ${(made.stderr || made.stdout || '').trim().split('\n').slice(-3).join(' / ').slice(0, 400)}`);

@@ -33,7 +33,7 @@ if (import.meta.main) {
   // --profile shipped | frozen: THIS run's stand whatever the invoking shell exported — every word the stands read is cleared first (src/host/standEnv.ts), which must
   // happen before the game loads (the dynamic imports below), since some modules read their word as they load
   { const prof = arg('--profile'); if (prof !== null) { if (prof !== 'shipped' && prof !== 'frozen') { console.error(`--profile ${prof}: shipped | frozen`); process.exit(2); }
-      const { STAND_ENV } = await import('../../src/host/standEnv.ts'); for (const k of STAND_ENV) delete process.env[k]; delete process.env.QA_HOLD; process.env.TPS_PROFILE = prof; } }
+      const { STAND_ENV } = await import('../../src/host/standEnv.ts'); for (const k of STAND_ENV) delete process.env[k]; process.env.TPS_PROFILE = prof; } }
   const { standUp, ROOT } = await import('./headless.ts');
   const { knobRegistry } = await import(`${ROOT}/src/game/knobs.ts`);
   const query = arg('--query') ?? '', out = arg('--out');

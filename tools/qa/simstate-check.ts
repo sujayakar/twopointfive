@@ -40,11 +40,12 @@
 //              every tick. ITS OWN RED PATH, SIMSTATE_BREAK=park: a block parked to make room is left behind and nothing else is broken (the whole
 //              red path above ends in a throw before this line is reached) — `slots`, `parked poses` and `a crowd` must FAIL
 // Not game code; nothing here needs a GPU, and nothing here has been seen on one.
-// THE STAND THIS CHECK STANDS ON HAS NO ROW UP: it raises and drops the rows it asks about itself. This check's own arm (tools/qa/headless.ts hold), held
-// before a game is stood: a stand-up puts every row where the build has it, which is up (src/sim/sim.ts RUST_ON).
-export {};   // (a module, for the top-level awaits)
-const { standUp, ROOT, hold } = await import('./headless.ts');
-hold({ rows: false });
+// THE STAND THIS CHECK STANDS ON HAS NO ROW UP: it raises and drops the rows it asks about itself. Said as the stand's own word, before the harness
+// loads: a stand-up puts every row where its stand has it, and both stands have every row but the maths up (src/sim/sim.ts RUST_ON). A row's own word
+// in the caller's shell still raises that row (the red paths use it).
+process.env.TPS_RUST = '0';
+export {};   // (a module, for the top-level awaits: the one import below is no longer an `import` statement)
+const { standUp, ROOT } = await import('./headless.ts');   // (after the word: an `import` statement would load the harness before the line above ran)
 const S: any = await import(`${ROOT}/src/sim/sim.ts`), ST: any = await import(`${ROOT}/src/sim/state.ts`), D: any = await import(`${ROOT}/src/math/dice.ts`);
 const RB: any = await import(`${ROOT}/src/game/rollback.ts`), DG: any = await import(`${ROOT}/src/game/digest.ts`);
 const BREAK = process.env.SIMSTATE_BREAK === '1', BREAK_PARK = process.env.SIMSTATE_BREAK === 'park', DT = 1 / 60;

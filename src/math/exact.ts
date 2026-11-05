@@ -331,11 +331,8 @@ function install(on: boolean): void {
   hypExact(on, on ? other : null);
   for (const fn of remade) fn();
 }
-/** `on` = the simulation (and everything else on the page) computes on the functions above; off (the module's default) = on the engine's own.
- *  WHEREVER THE GAME IS PLAYED IT IS ON, and no word takes it out: the page's boot and the harness's stand-up write it (sim.ts mathsUp, standup.ts
- *  pinMaths), because the Rust module's rows answer under no other maths. It is OFF AS THIS MODULE LOADS on purpose: a tool that stands no game — the
- *  level exporters above all — works on the engine's own functions, and the level files in the repo are what those gave. The setter also serves the
- *  checks that hold the two sets of functions against each other in their own process (tools/qa/exact-check.ts). Writing it does the work. */
+/** `on` = the simulation (and everything else on the page) computes on the functions above; off (the module's default) = on the engine's own, as it always did.
+ *  ON in the page (?noexact takes it out), OFF on the frozen stand (TPS_EXACT=1 raises it there). Writing it does the work. */
 export const EXACT = {
   get on(): boolean { return installed; },
   set on(v: boolean) { if (!!v !== installed) install(!!v); },

@@ -10,6 +10,7 @@ import type { Game } from '../game/game';
 import * as J from '../game/journal';
 import * as K from '../game/knobs';
 import * as Kt from '../game/kit';
+import { EXACT } from '../math/exact';
 import { POSEMATH } from '../anim/skeleton';
 import { SENSE } from '../game/sense';
 import { CMDCHECK } from '../game/cmd';
@@ -37,6 +38,7 @@ export class RecipeStand {
     const rc = this.recipe;
     const kn = rc.knobs as { tables?: Plain } | null, src: Plain = { ...(kn?.tables ?? {}), ...(rc.tables ?? {}) }, into = (rc.tables ? K.knobsPlayed() : J.knobTables()) as Record<string, Plain>;
     for (const [name, Tb] of Object.entries(into)) { const t = src[name]; if (plain(t)) { if (rc.tables) put(Tb, t); else K.assignDeep(Tb, t); } }
+    if (!plain(src.EXACT)) EXACT.on = false;   // (a tape from before the game's own maths was recorded on the engine's functions: said here, BEFORE the level and the game are built on them — math/exact.ts)
     if (!plain(src.POSEMATH)) POSEMATH.singles = false;   // (… and one from before a pose's arithmetic could be in singles was recorded in doubles: said BEFORE the game is built, whose animators measure their clips as they are made)
     if (!plain(src.SENSE)) SENSE.cpu = false;  // (… and one from before these keys was played on the renderer's senses, its records believed as they came)
     if (!plain(src.CMDCHECK)) CMDCHECK.on = false;

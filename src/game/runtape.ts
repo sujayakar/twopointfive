@@ -28,9 +28,7 @@ const proc = (): Proc => (globalThis as { process?: Proc }).process;
  *  here, at the game's first step: a tool that changed its stand by hand after loading the harness is not followed) */
 const standNow = (): 'page' | 'shipped' | 'frozen' => { const P = proc(); return !P?.versions?.bun && !P?.versions?.node ? 'page' : P.env?.TPS_PROFILE === 'shipped' ? 'shipped' : 'frozen'; };
 /** the stand's own env words a tool was started with (TPS_GEAR=1 …: the harness writes some of them before the game is built, where no table put back later reaches) */
-const wordsNow = (): Record<string, string> => { const E = proc()?.env ?? {}, out: Record<string, string> = {}; for (const w of STAND_ENV) if (w !== 'TPS_PROFILE' && w !== 'TPS_SEED' && E[w] !== undefined) out[w] = E[w]!;
-  if (E.QA_HOLD !== undefined) out.QA_HOLD = E.QA_HOLD;   // (a check's own arm, tools/qa/headless.ts hold: a run made under one says so, and the re-run refuses it — it is no recording of the game as it is played)
-  return out; };
+const wordsNow = (): Record<string, string> => { const E = proc()?.env ?? {}, out: Record<string, string> = {}; for (const w of STAND_ENV) if (w !== 'TPS_PROFILE' && w !== 'TPS_SEED' && E[w] !== undefined) out[w] = E[w]!; return out; };
 /** every registered knob table as JSON text, by name (the journal's knobTables() is a subset: a switch the page has on and a recording does not carry — the rear
  *  watch, the fresh deal of a room clear's placement, every Team feel row — is exactly what a re-run on another stand would get wrong) */
 const tableKey = (k: string, T: Record<string, unknown>): string => { const skip = NOT_KNOBS[k]; return JSON.stringify(skip ? Object.fromEntries(Object.entries(T).filter(([key]) => !skip.includes(key))) : T); };

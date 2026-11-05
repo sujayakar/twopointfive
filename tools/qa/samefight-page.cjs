@@ -2,8 +2,8 @@
 // at a MIX OF FRAME TIMES (60, 120, 30 and 144 a second: the tape keeps each step's own), folding the raw float64 bits of the game after every step
 // (`__digest.chain`, src/game/digest.ts). The page's own replay file is then handed to bun (JavaScriptCore), which walks a headless game through the tape
 // (tools/qa/samefight-rerun.ts → rerun.ts) folding the same bits. PASS = every word equal: the fight the page played is the fight the tape plays, to the last
-// bit, on another JavaScript engine with no GPU. That holds only under the game's own maths (src/math/exact.ts); SAMEFIGHT_BREAK=1 walks the tape on the
-// engine's own sin and cos (the re-run's own arm, QA_HOLD=exact=0: a page has no word for it) and must FAIL.
+// bit, on another JavaScript engine with no GPU. That holds only under the game's own maths (src/math/exact.ts); SAMEFIGHT_BREAK=1 opens the page with ?noexact
+// (each engine on its own sin and cos) and must FAIL.
 //   PORT=5231 node tools/qa/samefight-page.cjs [--runs compound,rescue] [--keep dir]      (a dev server on that port: PORT=5231 bun run tools/serve.ts)
 //   SAMEFIGHT_QUERY=cpusense …   the same with the senses on the CPU (src/game/sense.ts): the tape's GPU values are then not used at all — the re-run answers its own
 //   senses and the tape's are only held against them — so the page's fight is its seed and its inputs and nothing else
@@ -34,14 +34,14 @@ const picked = (arg('runs') || 'compound,rescue').split(',').filter(Boolean);
   const browser = await chromium.launch({ headless: true, channel: 'chromium', args: FLAGS }); let failed = false;
   const line = (ok, s) => { if (!ok) failed = true; console.log(`- ${ok ? 'PASS' : 'FAIL'} — ${s}`); };
   const dir = arg('keep') || mkdtempSync(join(tmpdir(), 'samefight-'));
-  console.log(`=== samefight-page: ${picked.length} run(s) on the real page (Chromium, software adapter) against a headless re-run of each one's tape${BREAK ? ' · SAMEFIGHT_BREAK: the re-run on the engine\'s maths' : ''} ===`);
+  console.log(`=== samefight-page: ${picked.length} run(s) on the real page (Chromium, software adapter) against a headless re-run of each one's tape${BREAK ? ' · SAMEFIGHT_BREAK: the page on ?noexact' : ''} ===`);
   for (const name of picked) {
     const q = RUNS[name]; if (!q) { line(false, `${name}: no such run (${Object.keys(RUNS).join(', ')})`); continue; }
     const page = await browser.newPage({ viewport: { width: VIEW[0], height: VIEW[1] }, deviceScaleFactor: 1 }); const errors = [];
     page.on('console', m => { if (m.type() === 'error' && !NOISE.test(m.text()) && !/Failed to load resource/.test(m.text())) errors.push(m.text().slice(0, 300)); });
     page.on('pageerror', x => errors.push('pageerror: ' + String(x && x.stack || x).slice(0, 400)));
     const t0 = Date.now(); if (process.env.SAMEFIGHT_SAY) page.on('console', m => { if (m.text().startsWith('[samefight]')) console.error(`  ${((Date.now() - t0) / 1000).toFixed(0)} s ${m.text()}`); });   // (SAMEFIGHT_SAY=1: where the page has got to, on stderr — the software adapter is slow)
-    await page.goto(`http://localhost:${PORT}/?paused&quality=${QUALITY}&mute&seed=7&nokeep&${q}${EXTRA ? '&' + EXTRA : ''}`);
+    await page.goto(`http://localhost:${PORT}/?paused&quality=${QUALITY}&mute&seed=7&nokeep&${q}${BREAK ? '&noexact' : ''}${EXTRA ? '&' + EXTRA : ''}`);
     const P = await page.evaluate(async ({ script, every }) => {
       await window.__ready; try { window.__menu && window.__menu.close(); } catch { /* */ }
       console.log('[samefight] the page is up'); let row = 0;
@@ -54,7 +54,7 @@ const picked = (arg('runs') || 'compound,rescue').split(',').filter(Boolean);
       }
       inp.buttons = 0; C.stop();
       const file = window.__replay.file('samefight'), reg = window.__knobs.registry();
-      return { fatal: document.getElementById('fatal')?.textContent || '', parts: C.parts, sam: C.sam, words: C.words, steps: C.steps, file, seed: g.dice ? g.dice.seed : null, exact: window.__sim.exact(), sense: reg.SENSE ? reg.SENSE.cpu : undefined,
+      return { fatal: document.getElementById('fatal')?.textContent || '', parts: C.parts, sam: C.sam, words: C.words, steps: C.steps, file, seed: g.dice ? g.dice.seed : null, exact: reg.EXACT && reg.EXACT.on, sense: reg.SENSE ? reg.SENSE.cpu : undefined,
         gpuReads: g.sensors.stats.reads, fixed: g.seat.fixed, fixedCmds: g.seat.fixedCmds, checked: reg.CMDCHECK && reg.CMDCHECK.on, events: g.events.length - before.events, down: before.up - g.guards.filter(x => x.state !== 'dead').length, men: g.guards.length, time: g.time, playerUp: g.player.char.health > 0 };
     }, { script: SCRIPT, every: DRAW }).catch(e => ({ fatal: String(e && e.stack || e).slice(0, 600) }));
     await page.close();
@@ -63,7 +63,7 @@ const picked = (arg('runs') || 'compound,rescue').split(',').filter(Boolean);
     if (P.checked) line(P.fixed === 0, `${name}: the page's own records are honest ones — the record check (src/game/cmd.ts) put ${P.fixed} thing(s) right in ${P.fixedCmds} record(s)`);
     line(!errors.length, `${name}: the page played ${P.steps} steps (${P.time.toFixed(1)} s of game, ${secs} s of wall) with no page error — seed ${P.seed}, ${P.men} men, ${P.events} events, ${P.down} down, own maths ${P.exact ? 'on' : 'OFF'}, ${((P.file.rerun || {}).lens || []).length} step(s) on a lens that was not its pose's${P.sense === undefined ? '' : `, senses on the ${P.sense ? 'CPU' : 'GPU'}`}${errors.length ? ' — ' + errors.join(' ; ').slice(0, 500) : ''}`);
     const path = join(dir, `${name}.replay.json`); writeFileSync(path, JSON.stringify(P.file));
-    const r = spawnSync('bun', ['run', 'tools/qa/samefight-rerun.ts', path, String(P.steps), '30'], { cwd: ROOT, encoding: 'utf8', maxBuffer: 1 << 26, env: { ...process.env, TPS_PROFILE: '', ...(BREAK ? { QA_HOLD: 'exact=0' } : {}) } });
+    const r = spawnSync('bun', ['run', 'tools/qa/samefight-rerun.ts', path, String(P.steps), '30'], { cwd: ROOT, encoding: 'utf8', maxBuffer: 1 << 26, env: { ...process.env, TPS_PROFILE: '', TPS_EXACT: '' } });
     const l = (r.stdout || '').split('\n').find(x => x.startsWith('SAMEFIGHT ')), H = l ? JSON.parse(l.slice(10)) : null;
     if (!H || H.refuse) { line(false, `${name}: the tape was not re-run — ${H ? H.refuse : (r.stderr || r.stdout || '').trim().split('\n').slice(-3).join(' / ').slice(0, 500)}`); continue; }
     let k = 0; while (k < P.words.length && k < H.words.length && P.words[k] === H.words[k]) k++;

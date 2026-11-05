@@ -28,7 +28,7 @@
 // PROPS_BREAK=1 (or RUST_BREAK=1) is the red path: the module is handed a tick one unit in the last place too long, every thing a hair wider for its
 // settle, and every ray from a hair to one side, and the run must FAIL (the steps differ, and the settles and the rays: `settles differ` and `rays
 // differ` must not be 0).
-process.env.TPS_PROFILE ??= 'shipped'; process.env.TPS_CPUSENSE ??= '1';   // (the rows and the game's own maths are the build's: no word raises them)
+process.env.TPS_PROFILE ??= 'shipped'; process.env.TPS_CPUSENSE ??= '1'; process.env.TPS_EXACT = '1'; process.env.TPS_RUSTPROPS = '1';   // (the game's own maths: the step runs in the module under no other)
 import { resolve } from 'path';
 const { standUp } = await import('./headless.ts');   // (not a static import: those load before this file's first line, and the harness reads the stand as it loads)
 const ROOT = resolve(import.meta.dir, '../..');

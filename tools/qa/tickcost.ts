@@ -12,7 +12,7 @@
 //   bun run tools/qa/tickcost.ts --each                       the box list made again after EVERY update, as a networked game's tick does (the play-through's own cadence is every 4th:
 //                                                             another run, so its bits are compared with another --each run's only)
 //   bun run tools/qa/tickcost.ts --list                       … and made by BoxWorld.relist() (the half the game reads) instead of upload(): the same run to the bit as without it
-//   QA_HOLD=rows=0 | <row>=0                                  a check's own arm (tools/qa/headless.ts hold): the cost with a system's TypeScript ticking, while it has one; the first line says which rows were up
+//   TPS_RUST<ROW>=0|1                                         which systems tick in the Rust module (src/sim/sim.ts RUST; the shipped stand has RUST_ON's on): the first line says which were
 //   TICKCOST_BREAK=1                                          the red path: a run is played with the last bit of one float flipped once, after the warm-up; --compare must then FAIL
 // EXIT 0 = every run left its ticks (and, under --compare, every run's bits agree) · 1 = a run left none / bits differ / a run is in one file only · 2 = unknown flag
 import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';

@@ -120,6 +120,10 @@ did not.
 - **Flat decals are ordered, and start at the floor.** Crossing decals lie 0.7 mm apart by the exporter's order; a
   drawn-only decal hung off the floor falls when the wall breaks. **seen** "zorder issues on the floor", twice. **check**
   `bun run tools/qa/floor-order-check.ts <name>.json`.
+- **No two faces drawn in one plane.** A wall ends at the NEAR face of the wall it meets, never run through to its far
+  face; a post, a lamp's arm or a thing against a wall stops at it or stands a centimetre off. **seen** "a sorting issue
+  that's flickering to right of the red door". **check** `bun run tools/qa/zfight-check.ts <name>` (a `seen` line is a
+  patch a player can watch flip; a library piece's own are held by `bun run tools/levels/library.ts --check`).
 - **A roof is the kit's ceiling** (`K.ceiling`: flagged `NoPrimary`, so the camera sees the room), at ceiling height if rain
   should stop at it, and no more than four. **seen** "weird to have shed that you can't see through the ceiling"; "rain is
   busted on records office". **check** `roof`; `bun run tools/qa/ownroofs-check.ts`; `rain-reach.ts --map <name>.json`.
@@ -450,6 +454,11 @@ stays dark. These are guidelines, not misses like the rest of this page: each sa
   probes, the squad deal). A new level is in none of them until added: `grep -ln "depot" tools/qa/*.ts` shows which.
 - **Both stands, every check.** Frozen is the harness default; shipped is the page. A tool's own "as shipped" is not the
   shipped stand.
+- **The sound replays saved on the level.** `public/assets/replays` holds recorded runs the sounds page plays: the office
+  has four (office-loud, chairs, reloads, doors), Mousehole one (wall-charge). A step that moves the level's fingerprint
+  or how it plays parts them: **seen** a hit seeded another way parted the loud office at its first firefight. **check**
+  `PORT=<dev server> node tools/qa/sound-tapes.cjs --check` (a real page, minutes a replay). Red: record again with the
+  same tool, and say in the hand-over which were recorded and what each now plays.
 - **Boot the real page once** on the mission's link (`.claude/skills/verify`), no console errors. No GPU in the cloud: say
   "never seen on a GPU" of what was not, and name what nobody has played.
 - **Write it up** at the foot of `docs/agents/missions.md` or `levels.md`: the sentence, the hand placement, the checks and

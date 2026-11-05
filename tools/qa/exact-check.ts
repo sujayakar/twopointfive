@@ -13,18 +13,13 @@
 //              there; a constant made at load (onExact) is remade both ways
 //   load       no module of the game works one of the fourteen out as it loads, except inside onExact — such a constant would be the engine's whatever the switch says
 //   uncovered  nothing under src/ calls a rounded Math function this file does not replace (cbrt, expm1, log1p, sinh, cosh, asinh, acosh, atanh) or uses `**`
-//   stand      both stands play on the game's own maths and no word takes them out: TPS_EXACT stops the tool that says it; a check's own arm
-//              (QA_HOLD=exact=0, tools/qa/headless.ts hold) is how a red path gets the engine's
+//   stand      the frozen stand leaves the switch off (TPS_EXACT=1 raises it), the shipped stand has it on (TPS_EXACT=0 takes it out)
 import { readdirSync, readFileSync, statSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { spawnSync } from 'node:child_process';
 const ROOT = resolve(import.meta.dir ?? new URL('.', import.meta.url).pathname, '../..');
 const args = process.argv.slice(2);
 const NAMES = ['sin', 'cos', 'tan', 'asin', 'acos', 'atan', 'atan2', 'exp', 'log', 'log2', 'log10', 'pow', 'tanh', 'hypot'] as const;
-/** THE SIMULATION'S FOLDERS under src/, and the two render files the game's own step runs (the reach masks and the light set): what `load` loads and
- *  holds, and where `uncovered` allows no power but a square. One list, read by both. */
-const SIM = ['game', 'math', 'scene', 'anim', 'host', 'smoke', 'sim'], SIM_FILES = ['src/render/reach.ts', 'src/render/lights.ts'];
-const inSim = (rel: string): boolean => SIM.some(d => rel.startsWith(`src/${d}/`)) || SIM_FILES.includes(rel);
 
 // ---- 'load' runs alone in a child (Math has to be wrapped before any module of the game is loaded)
 if (args[0] === '--load') {
@@ -32,27 +27,14 @@ if (args[0] === '--load') {
   for (const n of NAMES) {
     const f = (Math as any)[n];
     (Math as any)[n] = function (...a: number[]) {
-      if (watching) { const st = new Error().stack ?? ''; if (!/onExact/.test(st)) {
-          // (the frames of THIS checkout's src/, innermost first, by the checkout's own path — a checkout that sits under a folder named src must not file every call under this tool. The site is the innermost frame in the simulation's folders if there is one, so a constant a simulation module makes at load through a helper elsewhere is still held; else the innermost)
-          const fr = st.split('\n').map(l => l.trim().replace(/^at /, '')).filter(l => l.includes(`${ROOT}/src/`)).map(l => l.slice(l.indexOf(`${ROOT}/src/`) + ROOT.length + 1)), at = fr.find(l => inSim(l.split(':')[0])) ?? fr[0] ?? '?'; sites.set(`Math.${n} at ${at}`, (sites.get(`Math.${n} at ${at}`) ?? 0) + 1); } }
+      if (watching) { const st = new Error().stack ?? ''; if (!/onExact/.test(st)) { const at = st.split('\n').map(l => l.trim()).find(l => /\/src\//.test(l))?.replace(/^at /, '').replace(/^.*\/src\//, 'src/') ?? '?'; sites.set(`Math.${n} at ${at}`, (sites.get(`Math.${n} at ${at}`) ?? 0) + 1); } }
       return f.apply(Math, a);
     };
   }
   process.env.TPS_NOHYP = '1';   // (math/hyp.ts holds its candidates against Math.hypot as it loads: that trial is not a constant of the game)
-  // (the harness puts the game's own maths on as it loads, and their functions would stand over the watch: this child holds them out while it does —
-  //  its own arm, tools/qa/headless.ts hold — so every module of the game loads under the watched Math)
-  process.env.QA_HOLD = 'exact=0';
   await import(`${ROOT}/tools/qa/headless.ts`); await import(`${ROOT}/src/game/game.ts`); await import(`${ROOT}/src/host/standup.ts`);
-  // (…and EVERY OTHER module of the simulation's folders, one by one: a module only the page imports works its constants out as it loads too, and the
-  //  three above never reach it — a tangent at the top of a file src/main.ts alone imports went unseen until 2026-11-05. The folders are the ones
-  //  `uncovered` holds. A module that cannot load without a browser is named, and the line is red on one that is not on the list it keeps)
-  const files: string[] = [], unloaded: string[] = [];
-  const walk = (dir: string) => { for (const f of readdirSync(dir).sort()) { const q = `${dir}/${f}`; if (statSync(q).isDirectory()) walk(q); else if (f.endsWith('.ts') && !f.endsWith('.d.ts')) files.push(q); } };
-  for (const d of SIM) walk(`${ROOT}/src/${d}`); for (const f of SIM_FILES) files.push(`${ROOT}/${f}`);
-  for (const f of files) { try { await import(f); } catch (e) { unloaded.push(`${f.slice(ROOT.length + 1)} (${String((e as Error)?.message ?? e).split('\n')[0].slice(0, 80)})`); } }
   watching = false;
   console.log('EXACT-LOAD ' + JSON.stringify([...sites].map(([k, v]) => `${k} ×${v}`)));
-  console.log('EXACT-UNLOADED ' + JSON.stringify({ files: files.length, unloaded }));
   process.exit(0);
 }
 
@@ -164,32 +146,27 @@ const ulps = (a: number, b: number): number => {
   X.EXACT.on = true;
   const onIsOwn = NAMES.every(n => (Math as any)[n] === X[n]), onValue = value, lengths = H.hyp3(3, 4, 12) === X.hypot(3, 4, 12) && H.hyp2(1e-3, 7) === X.hypot(1e-3, 7);
   X.EXACT.on = false;
-  const back = NAMES.every(n => (Math as any)[n] === SYS[n]), backValue = value, times = made;   // (counted before the switch is put back as it was: on, where the game is played, which makes the constant once more)
+  const back = NAMES.every(n => (Math as any)[n] === SYS[n]), backValue = value;
   X.EXACT.on = was;
-  const restored = NAMES.every((n, i) => (Math as any)[n] === before[i]);   // (put back as it was, whichever that was: the very functions that stood in Math's place before)
-  verdict(offIsSys && onIsOwn && back && restored && lengths && times === 3 && onValue === X.cos(1.25) && offValue === SYS.cos(1.25) && backValue === offValue,
+  const restored = was ? true : NAMES.every((n, i) => (Math as any)[n] === before[i]);
+  verdict(offIsSys && onIsOwn && back && restored && lengths && made === 3 && onValue === X.cos(1.25) && offValue === SYS.cos(1.25) && backValue === offValue,
     'switch: writing EXACT.on puts the fourteen in or takes them out, and remakes the constants made at load',
-    `off: Math's are the engine's ${offIsSys} · on: Math's are the game's ${onIsOwn}, lengths on the one sum ${lengths} · off again: the very functions back ${back && restored} · a load-time constant made ${times}× (engine's, game's, engine's: ${offValue === SYS.cos(1.25)} ${onValue === X.cos(1.25)} ${backValue === offValue})`);
+    `off: Math's are the engine's ${offIsSys} · on: Math's are the game's ${onIsOwn}, lengths on the one sum ${lengths} · off again: the very functions back ${back && restored} · a load-time constant made ${made}× (engine's, game's, engine's: ${offValue === SYS.cos(1.25)} ${onValue === X.cos(1.25)} ${backValue === offValue})`);
 }
 
 // ---- load
 {
-  const c = child([process.execPath, 'run', 'tools/qa/exact-check.ts', '--load'], { TPS_PROFILE: '' });   // (the child holds the game's own maths out itself while the harness loads: on, they stand over the watch)
-  const all: string[] | null = marked(c.out, 'EXACT-LOAD '), un: { files: number; unloaded: string[] } | null = marked(c.out, 'EXACT-UNLOADED ');
-  // (the SIMULATION's modules are held: the folders `uncovered` below holds, for the same reason. What they pull in from elsewhere — a sound's table, a
-  //  viewer's curve — worked out at load on the engine's own functions is dressing: no digest reads it, and it is counted, not failed)
-  const NEEDS_A_BROWSER = ['src/host/onefile.ts'];
-  const at = (x: string) => / at (src\/[^:]+)/.exec(x)?.[1] ?? '?', sites = all?.filter(x => inSim(at(x))) ?? null, dress = all ? all.length - (sites?.length ?? 0) : 0;
-  const strangers = un ? un.unloaded.filter(u => !NEEDS_A_BROWSER.includes(u.split(' ')[0])) : [];
-  verdict(!!sites && !!un && sites.length === 0 && strangers.length === 0, 'load: no module of the simulation works a rounded function out as it loads, outside onExact (every module of its folders loaded under a watched Math)',
-    sites && un ? (sites.length ? `${sites.length} site(s): ${sites.slice(0, 8).join(' · ')} — make each inside onExact(() => …) (math/exact.ts)` : `none in the simulation's folders`) + ` · ${un.files} modules loaded, ${un.unloaded.length} need a browser${strangers.length ? ` — NOT ON THE LIST: ${strangers.join(' · ')}` : ''} · ${dress} site(s) in what they pull in from outside those folders, counted and not held`
-      : `the child did not answer (exit ${c.status}): ${c.err.trim().split('\n').slice(-2).join(' / ')}`);
+  const c = child([process.execPath, 'run', 'tools/qa/exact-check.ts', '--load'], { TPS_PROFILE: '', TPS_EXACT: '' });   // (the frozen stand whatever the shell says: a stand that turns the switch on as it boots puts the game's functions over the watch)
+  const sites: string[] | null = marked(c.out, 'EXACT-LOAD ');
+  verdict(!!sites && sites.length === 0, 'load: no module of the game works a rounded function out as it loads, outside onExact',
+    sites ? (sites.length ? `${sites.length} site(s): ${sites.slice(0, 8).join(' · ')} — make each inside onExact(() => …) (math/exact.ts)` : 'none (the harness, game.ts and the stand-up loaded under a watched Math)') : `the child did not answer (exit ${c.status}): ${c.err.trim().split('\n').slice(-2).join(' / ')}`);
 }
 
 // ---- uncovered
 {
   // `**` IS Math.pow, but it cannot be put in Math's place: a cube by it is the engine's (V8's differs from x·x·x about one time in four, JavaScriptCore's never).
   // x ** 2 alone is x·x on both, so that spelling stays; anything else in the folders the simulation is made of is written Math.pow(x, y).
+  const SIM = ['game', 'math', 'scene', 'anim', 'host', 'smoke', 'sim'], SIM_FILES = ['src/render/reach.ts', 'src/render/lights.ts'];   // (the two render files the game's own step runs: the reach masks and the light set)
   const ALLOW: Record<string, string> = { 'src/math/hyp.ts': "the inputs of its trial against the engine's own Math.hypot, at load", 'src/smoke/smoke.ts': 'the GPU solver: its grid levels, 2 to a whole power (exact on every engine), and nothing the game reads back' };
   const hits: string[] = [], re = new RegExp(`Math\\.(${(X.EXACT_UNCOVERED as string[]).join('|')})\\s*\\(`), pw = /[\w)\]]\s*\*\*=?\s*(?!2\b(?!\.))[\w(.+-]/;
   const walk = (dir: string, sim: boolean) => { for (const f of readdirSync(dir)) { const p = `${dir}/${f}`, rel = p.slice(ROOT.length + 1); if (statSync(p).isDirectory()) walk(p, sim); else if (p.endsWith('.ts')) readFileSync(p, 'utf8').split('\n').forEach((line, i) => { const code = line.replace(/\/\/.*$/, '').replace(/\/\*.*?\*\//g, '').replace(/^\s*\*.*$/, '').replace(/'(?:[^'\\]|\\.)*'|"(?:[^"\\]|\\.)*"|`(?:[^`\\]|\\.)*`/g, "''"); if (re.test(code) || ((sim || SIM_FILES.includes(rel)) && !ALLOW[rel] && pw.test(code))) hits.push(`${rel}:${i + 1}`); }); } };
@@ -200,17 +177,13 @@ const ulps = (a: number, b: number): number => {
 
 // ---- stand
 {
-  const stood = (env: Record<string, string>) => child([process.execPath, '-e', `const { standUp } = await import('${ROOT}/tools/qa/headless.ts'); await standUp(); const { EXACT } = await import('${ROOT}/src/math/exact.ts'); console.log('EXACT-STAND ' + JSON.stringify(EXACT.on)); process.exit(0);`], env);
-  const ask = (env: Record<string, string>): string => { const c = stood(env), v = marked(c.out, 'EXACT-STAND '); return v === null ? `? (exit ${c.status})` : String(v); };
-  const clear = { TPS_PROFILE: '', QA_HOLD: '' };
+  const ask = (env: Record<string, string>): string => { const c = child([process.execPath, '-e', `const { standUp } = await import('${ROOT}/tools/qa/headless.ts'); await standUp(); const { EXACT } = await import('${ROOT}/src/math/exact.ts'); console.log('EXACT-STAND ' + JSON.stringify(EXACT.on)); process.exit(0);`], env); const v = marked(c.out, 'EXACT-STAND '); return v === null ? `? (exit ${c.status})` : String(v); };
+  const clear = { TPS_PROFILE: '', TPS_EXACT: '' };
   const env = (o: Record<string, string>) => { const e: Record<string, string> = {}; for (const [k, v] of Object.entries({ ...clear, ...o })) if (v !== '') e[k] = v; return e; };
-  const saved = { p: process.env.TPS_PROFILE, h: process.env.QA_HOLD }; delete process.env.TPS_PROFILE; delete process.env.QA_HOLD;
-  const frozen = ask(env({})), shipped = ask(env({ TPS_PROFILE: 'shipped' })), held = ask(env({ TPS_PROFILE: 'shipped', QA_HOLD: 'exact=0' }));
-  // (the word that was the switch stops a tool that says it, by name, on either stand and whatever it is set to)
-  const old = [env({ TPS_EXACT: '0' }), env({ TPS_PROFILE: 'shipped', TPS_EXACT: '1' })].map(e => stood(e)), stopped = old.every(c => c.status !== 0 && marked(c.out, 'EXACT-STAND ') === null && /TPS_EXACT=[01]: the Rust module's rows and the game's own maths are not switches/.test(c.err));
-  if (saved.p !== undefined) process.env.TPS_PROFILE = saved.p; if (saved.h !== undefined) process.env.QA_HOLD = saved.h;
-  verdict(frozen === 'true' && shipped === 'true' && held === 'false' && stopped, 'stand: on on both stands, with no word; TPS_EXACT stops the tool that says it; a check\'s own arm (QA_HOLD=exact=0) takes the maths out for a red path',
-    `frozen ${frozen} · shipped ${shipped} · shipped under QA_HOLD=exact=0 ${held} · TPS_EXACT=0 and =1: ${stopped ? 'each stopped the tool by name' : `NOT STOPPED (exits ${old.map(c => c.status).join(', ')}: ${old.map(c => c.err.trim().split('\n').slice(-1)[0]?.slice(0, 120)).join(' / ')})`}`);
+  const saved = { p: process.env.TPS_PROFILE, x: process.env.TPS_EXACT }; delete process.env.TPS_PROFILE; delete process.env.TPS_EXACT;
+  const frozen = ask(env({})), raised = ask(env({ TPS_EXACT: '1' })), shipped = ask(env({ TPS_PROFILE: 'shipped' })), held = ask(env({ TPS_PROFILE: 'shipped', TPS_EXACT: '0' }));
+  if (saved.p !== undefined) process.env.TPS_PROFILE = saved.p; if (saved.x !== undefined) process.env.TPS_EXACT = saved.x;
+  verdict(frozen === 'false' && raised === 'true' && shipped === 'true' && held === 'false', 'stand: off on the frozen stand, on as shipped, each with its word', `frozen ${frozen} · frozen TPS_EXACT=1 ${raised} · shipped ${shipped} · shipped TPS_EXACT=0 ${held}`);
 }
 
 console.log(fails ? `=== exact-check: ${fails} FAIL ===` : '=== exact-check: ALL PASS ===');

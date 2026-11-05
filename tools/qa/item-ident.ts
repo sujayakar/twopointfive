@@ -21,10 +21,10 @@
 // nothing may differ there either).
 // A run is FAIR only if it met every kind of thing the step does. ITEMS_BREAK=1 (or RUST_BREAK=1) is the red path: the module is handed a tick one
 // unit in the last place too long, and the run must FAIL.
-process.env.TPS_PROFILE ??= 'shipped'; process.env.TPS_CPUSENSE ??= '1';   // (the rows and the game's own maths are the build's: no word raises them)
+process.env.TPS_PROFILE ??= 'shipped'; process.env.TPS_CPUSENSE ??= '1'; process.env.TPS_EXACT = '1'; process.env.TPS_RUSTITEMS = '1';   // (the game's own maths: the step runs in the module under no other)
+process.env.TPS_RUSTLINES = '0'; process.env.TPS_RUSTRAYS = '0'; process.env.TPS_RUSTCIRCLES = '0'; process.env.TPS_RUSTFOG = '0'; process.env.TPS_RUSTPROPS = '0';   // (the TypeScript's arm is all TypeScript, whatever the stand has on: its rays are collision.ts's own walk)
 import { resolve } from 'path';
-const { standUp, hold } = await import('./headless.ts');   // (not a static import: those load before this file's first line, and the harness reads the stand as it loads)
-hold({ rows: { lines: false, rays: false, circles: false, fog: false, props: false } });   // (this check's own arm: the TypeScript's step is all TypeScript, its rays collision.ts's own walk, so the box world's rows and the furniture's are held down for both arms)
+const { standUp } = await import('./headless.ts');   // (not a static import: those load before this file's first line, and the harness reads the stand as it loads)
 const ROOT = resolve(import.meta.dir, '../..');
 const { loadLevel } = await import(`${ROOT}/src/scene/levelLoad.ts`);
 const SIM: any = await import(`${ROOT}/src/sim/sim.ts`), X: any = await import(`${ROOT}/src/math/exact.ts`), C: any = await import(`${ROOT}/src/scene/collision.ts`), BM: any = await import(`${ROOT}/src/scene/boxMirror.ts`);

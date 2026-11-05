@@ -16,7 +16,7 @@
 // in the air, a lock rail, doors hung again, a slab thrown at a pane and a pane that was open where a ray met it, and a
 // listener that put the game's block out of the module while a noise was said.
 // SLABS_BREAK=1 (or RUST_BREAK=1) is the red path: the module is handed a tick one unit in the last place too long, and the run must FAIL.
-process.env.TPS_PROFILE ??= 'shipped'; process.env.TPS_CPUSENSE ??= '1';   // (the rows and the game's own maths are the build's: no word raises them)
+process.env.TPS_PROFILE ??= 'shipped'; process.env.TPS_CPUSENSE ??= '1'; process.env.TPS_EXACT = '1'; process.env.TPS_RUSTSLABS = '1';   // (the game's own maths: the step runs in the module under no other)
 import { resolve } from 'path';
 const { standUp } = await import('./headless.ts');   // (not a static import: those load before this file's first line, and the harness reads the stand as it loads)
 const ROOT = resolve(import.meta.dir, '../..');

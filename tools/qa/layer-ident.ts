@@ -20,7 +20,7 @@
 import { resolve } from 'node:path';
 import { readFileSync, readdirSync } from 'node:fs';
 const ROOT = resolve(import.meta.dir, '../..');
-process.env.TPS_PROFILE ??= 'shipped'; process.env.TPS_CPUSENSE ??= '1';   // (the rows and the game's own maths are the build's: no word raises them)
+process.env.TPS_PROFILE ??= 'shipped'; process.env.TPS_CPUSENSE ??= '1'; process.env.TPS_RUSTPOSES = '1'; process.env.TPS_RUSTWALK = '1';
 const BREAK = process.env.RUST_BREAK === '1', args = process.argv.slice(2), flag = (n: string) => { const i = args.indexOf(n); return i >= 0 ? args[i + 1] : undefined; };
 /** the layers that have moved (rust/sim/src/layers.rs, a `pub fn` each), by the name game/character.ts asks them both ways under */
 const LAYERS_MOVED = ['standPose', 'crouchPose', 'softKnees', 'runArms', 'runPlant', 'steadyLayer', 'sneakBody', 'creepBody', 'watchSlip', 'watchLook', 'mvPostBody', 'kickBody', 'toesUp', 'wallBody', 'stanceBody', 'mvPre', 'mvTrunk', 'longBody', 'lifeLayer', 'leanBody', 'gazeKeep', 'turnWeigh', 'sneakArms', 'carryArms', 'wallArms', 'actPose', 'woundBody', 'woundLimbs', 'longArms', 'mvPostArms', 'watchArm', 'creepArms', 'clutchArm', 'boundArms', 'reloadArm', 'pistolReloadArm', 'handsPass', 'signalLayer', 'tellLayer', 'smokePose', 'nvPose', 'torchUpLayer', 'radioPose', 'lockpickLayer', 'haulLayer', 'swapPose', 'stealthLayer', 'cablePose', 'takenLayer', 'blowLegs', 'blowTrunk', 'blowArms', 'knifePose', 'readyLayer', 'kitLayer', 'doorLayer', 'workLayer', 'holdLayer', 'heldLayer', 'catchArm', 'bigLayer', 'throwLayer'], FLOOR = 100;

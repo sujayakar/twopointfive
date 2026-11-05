@@ -112,6 +112,11 @@ export const JOURNAL_KNOBS: readonly string[] = ['AIM', 'TAPSTEP', 'TRAINED', 'A
   // stand's values. A recording cannot START with a squad on the floor, but men who work by the squad's code can come once it runs. A file from before
   // these names carries none of them and replays on the stand's values, as it always did. tools/qa/knobs-check.ts holds the rule for the next one.
   'ORDERS', 'DOORTOOLS', 'SNEAK', 'COVER', 'STACKLINE', 'REARWATCH', 'ROOMCLEAR', 'HARD', 'TEAMTALLY', 'SPRINTDOOR', 'HAULHOME', 'AUTOPILOT', 'PLANLAY', 'CMDRING', 'SILENT', 'SNOWBOG', 'IRLIGHT', 'CUES', 'CONDITION', 'INHAND', 'GUNHAND', 'PACKSIDE', 'BACKKEY', 'WALLSHOT', 'WALLKILL', 'HARDBREATH', 'WALLPEN', 'PEEKSIGHT', 'SQUADDEAL', 'STAYASK', 'SEENWALK', 'RESCUECHECK', 'UNDERFOOT', 'RESCUEEND', 'RESCUEFLUSH', 'SNATCHOUT', 'KITLOAD', 'SQUAD40',
+  // the game's own maths (math/exact.ts): which sin and cos the whole simulation computes on — a recording made on one replays on that one
+  'EXACT',
+  // which systems of the update run in the Rust module (src/sim/sim.ts): never a rule of play — a recording replays the same with a row off — but a
+  // recording says which ran, so a difference between the two is one flip to find
+  'RUST',
   // the senses on the CPU (sense.ts): a recording made with it on replays with it on — its sensor stream is the game's own answers
   'SENSE',
   // a record from anyone (cmd.ts): a recording made with the check on replays with it on
@@ -264,6 +269,8 @@ import { RESCUECHECK } from './rescuecheck';
 import { RESCUEEND } from './rescueend';
 import { SNATCHOUT } from './snatchout';
 import { RESCUEFLUSH } from './rescueflush';
+import { EXACT } from '../math/exact';
+import { RUST } from '../sim/sim';
 import { POSEMATH } from '../anim/skeleton';
 import { SENSE } from './sense';
 import { CMDCHECK } from './cmd';
@@ -480,6 +487,10 @@ export function knobRegistry(): Record<string, object> {
     RESCUEEND, RESCUEFLUSH,
     // a snatch ends with the man in the team's van, the squad covering the walk out by bounds (snatchout.ts)
     SNATCHOUT,
+    // the game's own maths (math/exact.ts EXACT.on: a setter — writing it puts the functions in Math's place or takes them out)
+    EXACT,
+    // which systems of the update run in the Rust module (src/sim/sim.ts RUST: setters — writing a row moves that system across)
+    RUST,
     // a pose's bulk arithmetic in singles (anim/skeleton.ts POSEMATH.singles: blendPose and sampleClip's step, in both languages)
     POSEMATH,
     // the senses on the CPU (sense.ts SENSE.cpu, and its smoke model's numbers)

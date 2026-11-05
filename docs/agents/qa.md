@@ -10,8 +10,8 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   (`TPS_PROFILE=shipped` in front of any headless tool) = the page as it opens with no URL flag on a machine that has kept nothing: none of those lines runs, `shippedBoot()` calls
   `pageSwitches('')` — THE function `src/main.ts` calls with the page's own query for the switches its boot writes (destruction, furniture, wall reactions, wall charge, the door
   walk) — reads the kit from an empty store, takes the squads' page-only `?radiocheck=call`, and the cast is loaded. `FROZEN_HOLDS` there lists every row the two stands differ in (73 when this line was last touched; the table is the count, not this line)
-  — since 2026-11-04 NOT the game's own maths or a row of the Rust module: both are on on both stands (`standup.ts pinMaths`, `pinRust`; `docs/agents/rust.md`, "All on"), and since 2026-11-05 neither is a
-  switch: those words stop a tool that says them (`docs/agents/rust.md`, "Not switches"; a check's own arm is `QA_HOLD`) —
+  — since 2026-11-04 NOT the game's own maths or a row of the Rust module: both are on on both stands (`standup.ts pinMaths`, `pinRust`; `docs/agents/rust.md`, "All on"), and the stand every
+  older digest was recorded on is asked for by `TPS_EXACT=0 TPS_RUST=0` until the TypeScript twins are deleted —
   with the word that raises each on a frozen run (`TPS_MOVES=1`, `GLASSFX=on`, `SLOTS=on`, `SQUADS=radiocheck-call`, …); under shipped a pin's own word still holds
   (`TPS_PROFILE=shipped TPS_MOVES=0`), except that a PLAY-THROUGH writes the door rules and chaos itself on either stand (`--set` there). Held by: `probes.ts shipped`
   (shipped-check.ts: the two stands differ in exactly those rows, plain and with a mission staged; every pin's word is in `src/host/standEnv.ts STAND_ENV`) and

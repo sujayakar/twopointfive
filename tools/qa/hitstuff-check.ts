@@ -16,7 +16,7 @@ const { loadLevel, levelToData } = await import(`${ROOT}/src/scene/levelLoad.ts`
 const { HITSTUFF, HIT_STUFFS, saidSurf, solidGlass } = await import(`${ROOT}/src/game/particleFx.ts`);
 const { doesOf } = await import(`${ROOT}/src/scene/materials.ts`);
 const surfOf = (b: { does?: string }): string => doesOf(b).surf;   // (what a hit goes by where the box's `stuff` is not asked: what the box does)
-const { BOX_STUFFS, stuffOfName } = await import(`${ROOT}/src/scene/stuff.ts`);
+const { BOX_STUFFS, stuffOfName, PLAIN_COATS } = await import(`${ROOT}/src/scene/stuff.ts`);
 const { digestGame, hashDigest } = await import(`${ROOT}/src/game/digest.ts`);
 const { fireWeapon } = await import(`${ROOT}/src/game/combat.ts`);
 const { BoxFlag } = await import(`${ROOT}/src/scene/boxes.ts`);
@@ -147,7 +147,7 @@ export async function hitstuffCheck(): Promise<boolean> {
         const vis = (b: any) => !(b.flags & (BoxFlag.NoShadow | BoxFlag.NoPrimary | BoxFlag.Dynamic)) && !b.rot;
         const pane = Q.st.findIndex((b: any) => (b.flags & BoxFlag.Glass) !== 0 && b.h[1] > 0.4), wall = Q.st.findIndex((b: any) => b.stuff === undefined && surfOf(b) === 'drywall' && b.h[1] > 1 && vis(b)), metal = first(Q, metalOf(Q));
         Q.st[bd].stuff = 'carpaint'; Q.st[gl].stuff = 'glass'; if (ty >= 0) Q.st[ty].stuff = 'rubber'; if (pane >= 0) Q.st[pane].stuff = 'glass';
-        { const soft = first(Q, Q.st.map((b: any, i: number) => i).filter((i: number) => ![bd, gl, ty, pane, wall, metal].includes(i) && Q.st[i].stuff === 'paint' && vis(Q.st[i]) && !(Q.st[i].flags & BoxFlag.Glass) && Q.st[i].h[1] > 0.3)); if (soft >= 0) Q.st[soft].stuff = 'cloth'; }   // (a soft thing: the word most boxes of the levels say, and one the office says of nothing a round reaches — a thing that said only 'paint' says it here)
+        { const soft = first(Q, Q.st.map((b: any, i: number) => i).filter((i: number) => ![bd, gl, ty, pane, wall, metal].includes(i) && (PLAIN_COATS as readonly string[]).includes(Q.st[i].stuff) && vis(Q.st[i]) && !(Q.st[i].flags & BoxFlag.Glass) && Q.st[i].h[1] > 0.3)); if (soft >= 0) Q.st[soft].stuff = 'cloth'; }   // (a soft thing: the word most boxes of the levels say, and one the office says of nothing a round reaches — a thing that said only a plain coat, 'paint' or 'enamel', says it here: a coat is no word a hit reads, and a kept office has no old paint to borrow, stuff-check line 19)
         const said: number[] = []; for (const w of HIT_STUFFS as string[]) { const c = Q.st.map((b: any, i: number) => i).filter((i: number) => ![bd, gl, ty, pane].includes(i) && Q.st[i].stuff === w && vis(Q.st[i]) && !(Q.st[i].flags & BoxFlag.Glass) && Q.st[i].h[1] > 0.3); const i = first(Q, c); if (i >= 0) { said.push(i); words.add(w); } }
         const car: number[] = []; let paneSaid = true;
         await hushed(() => { for (const [i, low] of [[bd, LOW], [gl, 0], [ty, 0], ...said.map(i => [i, 0]), [wall, 0], [metal, 0], [pane, 0]] as [number, number][]) { if (i < 0 || !Q.spot(i, low)) { if (i === bd || i === gl || i === ty) car.push(0); continue; }

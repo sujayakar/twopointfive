@@ -2,7 +2,7 @@
 // runs the page on) — and on THIS machine as on the one that filed a reference? A server and a client that are to agree from inputs alone (and a page and the
 // headless harness) must compute one game; the game's own maths (src/math/exact.ts, on as shipped) is what makes them. Not game code: it reads.
 //   bun run tools/qa/coop-check.ts                 the runs below on the shipped stand, each under bun AND under node at this commit: the two must agree to the bit
-//   COOP_BREAK=1 bun run tools/qa/coop-check.ts    the red path: both engines on their own sin and cos (this check's own arm, QA_HOLD=exact=0) — the runs must then DIFFER
+//   COOP_BREAK=1 bun run tools/qa/coop-check.ts    the red path: both engines on their own sin and cos (TPS_EXACT=0) — the runs must then DIFFER
 //   bun run tools/qa/coop-check.ts --runs a:1,b:2  other runs (tools/qa/playthrough.ts's scenarios)
 //   bun run tools/qa/coop-check.ts --ref           against tools/qa/fixtures/coop-reference.json instead (another MACHINE's run of the same commit: file it there
 //                                                  with --write, carry the file over; any change to how the game plays moves every run, so a kept file goes stale)
@@ -72,7 +72,7 @@ const runs = (at >= 0 && args[at + 1] ? args[at + 1].split(',') : RUNS).map(s =>
 const write = args.includes('--write'), byRef = write || args.includes('--ref'), BREAK = process.env.COOP_BREAK === '1';
 if (byRef && !write && !existsSync(REF)) { console.error(`coop-check: no reference at ${REF.pathname} (file one with --write)`); process.exit(2); }
 const HERE = new URL(import.meta.url).pathname, ROOT = new URL('../..', import.meta.url).pathname;
-const childEnv = { ...process.env, TPS_PROFILE: 'shipped', PT_DIGEST: '1', ...(BREAK ? { QA_HOLD: 'exact=0' } : {}) } as Record<string, string>;
+const childEnv = { ...process.env, TPS_PROFILE: 'shipped', PT_DIGEST: '1', ...(BREAK ? { TPS_EXACT: '0' } : {}) } as Record<string, string>;
 /** one run in a child of its own (play() keeps module state, and a run is a fresh process on every engine and machine); null = it did not finish, said */
 async function runOne(engine: 'bun' | 'node', scn: string, seed: number): Promise<Row | null> {
   const cmd = engine === 'bun' ? [process.execPath, 'run', HERE, '--one', scn, String(seed)] : ['node', '--no-warnings', '--import', './tools/qa/framecost-v8.mjs', 'tools/qa/coop-check.ts', '--one', scn, String(seed)];
