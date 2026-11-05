@@ -32,7 +32,7 @@ export const LOOK_GROUP = 'look';
 export const LOOK_NOTE = ' — IN THE DEFAULT LOOK (2010s GWOT: tools/levels/gwotSkin.ts): the same boxes repainted, decals added; what a man collides with, hides behind or sees through is the plain file\'s.';
 const lum = (a: Vec3) => 0.2126 * a[0] + 0.7152 * a[1] + 0.0722 * a[2];
 /** the finish a paint of the second palette says with its row (or a tone of one): a decal in such a paint is laid in it, never at a number written here */
-const finishSaid = (a: Vec3): number | undefined => { const n = paintOf(a)?.name; return n !== undefined && Object.hasOwn(COAST_FINISH, n) ? COAST_FINISH[n as CoastMat].rough : undefined; };
+const finishSaid = (a: Vec3): number | undefined => { const p = paintOf(a); return p?.rough ?? (p !== undefined && Object.hasOwn(COAST_FINISH, p.name) ? COAST_FINISH[p.name as CoastMat].rough : undefined); };
 const h01 = (a: number, b: number, c = 0) => (mkHash(a | 0, b | 0, c | 0) % 4096) / 4096;
 
 /** ALREADY IN THE LOOK'S OWN PAINT: a paint of the palette or one of its stand-ins, and no paint of the office's. A generator lays such a box when it builds

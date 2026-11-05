@@ -100,6 +100,8 @@ export const COAST_PALETTE = {
   // the quiet way's four (tools/levels/coastSkin.ts COAST_QUIET_OF; the white roof study's vocabulary, tools/levels/white-roof.ts): a white paver the ground is
   // laid in (walls and things sit a step under it), a smooth wall in the one warm colour, and two clean enamels: that colour on a thing, and the water's blue
   paverWhite: [0.715, 0.72, 0.725] as Vec3, skimRed: [0.8, 0.2, 0.05] as Vec3, accentRed: [0.78, 0.17, 0.04] as Vec3, accentBlue: [0.02, 0.215, 0.43] as Vec3,
+  // DRAFT (the depot's rework, tools/levels/depot-gwot.ts): three palettes for a kept yard, each four pale planes and two fields, and the painter's two line paints. The commit keeps one
+  limePaver: [0.58, 0.55, 0.485] as Vec3, limePanel: [0.52, 0.5, 0.45] as Vec3, limeBlock: [0.66, 0.64, 0.58] as Vec3, limeSkim: [0.6, 0.575, 0.52] as Vec3, jade: [0.02, 0.26, 0.2] as Vec3, rose: [0.6, 0.22, 0.18] as Vec3, greyPaver: [0.55, 0.56, 0.55] as Vec3, greyPanel: [0.5, 0.5, 0.52] as Vec3, greyBlock: [0.64, 0.65, 0.62] as Vec3, greySkim: [0.585, 0.59, 0.58] as Vec3, fig: [0.28, 0.06, 0.22] as Vec3, pear: [0.45, 0.5, 0.1] as Vec3, coolPaver: [0.57, 0.585, 0.595] as Vec3, coolPanel: [0.49, 0.505, 0.52] as Vec3, coolBlock: [0.65, 0.665, 0.675] as Vec3, coolSkim: [0.59, 0.6, 0.605] as Vec3, petrol: [0.024, 0.21, 0.33] as Vec3, ochre: [0.62, 0.38, 0.03] as Vec3, lineChalk: [0.74, 0.73, 0.67] as Vec3, lineInk: [0.03, 0.05, 0.06] as Vec3, graphite: [0.105, 0.11, 0.12] as Vec3, limeDeep: [0.44, 0.4, 0.32] as Vec3, limeFloor: [0.42, 0.4, 0.36] as Vec3, greyFloor: [0.4, 0.405, 0.4] as Vec3, coolFloor: [0.4, 0.415, 0.43] as Vec3,
 };
 export type CoastMat = keyof typeof COAST_PALETTE;
 namePaints(COAST_PALETTE);
@@ -111,6 +113,7 @@ export const COAST_FINISH: Readonly<Record<CoastMat, { rough: number; metal?: bo
   brushedSteel: { rough: 0.4, metal: true }, darkSteel: { rough: 0.5, metal: true }, binGreen: { rough: 0.5 }, plasticPale: { rough: 0.45 }, plasticDark: { rough: 0.5 },
   tyreRubber: { rough: 0.85 }, canvasWhite: { rough: 0.95 }, canvasBlue: { rough: 0.95 }, towelStripe: { rough: 0.95 }, foliage: { rough: 1 },
   paverWhite: { rough: 0.5 }, skimRed: { rough: 0.45 }, accentRed: { rough: 0.35 }, accentBlue: { rough: 0.35 },
+  limePaver: { rough: 0.5 }, limePanel: { rough: 0.68 }, limeBlock: { rough: 0.4 }, limeSkim: { rough: 0.55 }, jade: { rough: 0.34 }, rose: { rough: 0.38 }, greyPaver: { rough: 0.5 }, greyPanel: { rough: 0.68 }, greyBlock: { rough: 0.4 }, greySkim: { rough: 0.55 }, fig: { rough: 0.34 }, pear: { rough: 0.38 }, coolPaver: { rough: 0.5 }, coolPanel: { rough: 0.68 }, coolBlock: { rough: 0.4 }, coolSkim: { rough: 0.55 }, petrol: { rough: 0.34 }, ochre: { rough: 0.38 }, lineChalk: { rough: 0.5 }, lineInk: { rough: 0.55 }, graphite: { rough: 0.5 }, limeDeep: { rough: 0.4 }, limeFloor: { rough: 0.5 }, greyFloor: { rough: 0.5 }, coolFloor: { rough: 0.5 },
 };
 export const COAST_MATERIALS: Readonly<Record<string, { albedo: Vec3; rough: number; metal?: boolean }>> = Object.fromEntries(
   (Object.keys(COAST_PALETTE) as CoastMat[]).map(n => [n, { albedo: COAST_PALETTE[n], rough: COAST_FINISH[n].rough, ...(COAST_FINISH[n].metal ? { metal: true } : {}) }]));
@@ -123,6 +126,7 @@ export const COAST_SIM: Readonly<Record<CoastMat, GwotSim>> = {
   brushedSteel: 'metal', darkSteel: 'metal', binGreen: '~plastic', plasticPale: '~plastic', plasticDark: '~plastic',
   tyreRubber: '~plastic', canvasWhite: 'chair', canvasBlue: 'chair', towelStripe: 'chair', foliage: 'plant',
   paverWhite: 'stone', skimRed: 'wall', accentRed: 'metal', accentBlue: 'metal',
+  limePaver: 'stone', limePanel: 'concrete', limeBlock: 'concrete', limeSkim: 'wall', jade: 'metal', rose: 'metal', greyPaver: 'stone', greyPanel: 'concrete', greyBlock: 'concrete', greySkim: 'wall', fig: 'metal', pear: 'metal', coolPaver: 'stone', coolPanel: 'concrete', coolBlock: 'concrete', coolSkim: 'wall', petrol: 'metal', ochre: 'metal', lineChalk: 'metal', lineInk: 'metal', graphite: 'metal', limeDeep: 'metal', limeFloor: 'stone', greyFloor: 'stone', coolFloor: 'stone',
 };
 /** the palette + finishes as the exporter's `materials` rows (tools/levels/export.ts: a generator's `MATERIALS` export) */
 export const GWOT_MATERIALS: Readonly<Record<string, { albedo: Vec3; rough: number; metal?: boolean }>> = Object.fromEntries(
