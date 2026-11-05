@@ -10,7 +10,7 @@
 // as they always did), so his numbers move to a store of leavers (`manLeaves`), and his row in the game is free the moment he goes.
 //
 // (Imports sim.ts and state.ts alone: like the rest of src/sim, this is below the game.)
-import { sim, simWhyNot } from '../sim';
+import { sim } from '../sim';
 import { simTenant, simPart, P_MEN, type SimState } from '../state';
 import { MEN_F64, MEN_U32, MEN_HEAD, MEN_GEN, MEN_SCHEMA, type ManCols } from './cols';
 import { MEN_ROWS } from './schema';
@@ -23,7 +23,7 @@ const NF = MEN_F64.length;
 let held = false;
 /** the module's table is this file's table, once a process: a built.ts of another schema is a mistake, said by name */
 function holdSchema(): void {
-  if (held || simWhyNot()) return;
+  if (held) return;
   held = true;
   const x = sim(), names = [...MEN_F64, ...MEN_U32];
   const off = names.filter((_, i) => x.men_col(i) !== (i < NF ? MEN_AT[i] * 8 : MEN_AT[i] * 4));
@@ -119,6 +119,6 @@ export function loneMen(): MenStore {
 interface HasMen { men?: MenStore }
 // a game's men move into its block as its first tick opens, once, and stay (state.ts settle)
 simTenant({ name: 'men', bit: 256,
-  wants(g: HasMen) { return !!g.men && !simWhyNot(); },
+  wants(g: HasMen) { return !!g.men; },
   into(g: HasMen, st: SimState) { g.men!.moveIn(st, simPart(P_MEN)); },
   outOf() { throw new Error('a game\'s men do not leave its block'); } });
