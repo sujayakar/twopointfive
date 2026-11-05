@@ -1111,9 +1111,12 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   glass: no vehicle's window is a pane), a tyre gives plastic's chips and no dent. WHAT THAT CHANGED FOR A ROUND: the windows (by their colour a kit
   vehicle's was glass that took a hole and threw nine chips, the plain car's was metal), the plain car's body and tyres in its own colours and in a
   twin's skin (plasterboard, concrete or metal by tone), and the tanker's tank. The kit vehicles' bodies were metal to a round already, by their
-  enamel's colour: for them the word changes the look page only. THE SKIN KEEPS A CAR'S COAT (`tools/levels/gwotSkin.ts`): a default-look twin
-  repaints the plain car in one of its enamels, and a repaint drops a box's word; a box that said 'carpaint' and is given a paint that says only
-  'paint' still says 'carpaint'. ALSO SOLID GLASS NOW, by the same row: a phone shop's display case top (bazaar), a solar panel (police post) and a
+  enamel's colour: for them the word changes the look page only. A NAMED COAT STAYS UNDER A PLAIN ONE (`scene/stuff.ts COAT_KIND`, `repaintWord`,
+  `repainted`: the one place a thing is painted again, which the default look's skin calls for boxes and for props' parts): a repaint gives a thing
+  its new paint's word, as ever, but 'carpaint' is a kind of 'paint', so a twin's plain car in one of the skin's enamels is still car paint. A rule of
+  words, not of cars: the next named coat is a row of the table. (203 steel things the skin gives an enamel become 'paint', as the look wants them
+  drawn, and are metal to a round by their colour: carrying every word through every repaint would be wrong.) `stuff-check` line 8, `COAT_BREAK=1`.
+  ALSO SOLID GLASS NOW, by the same row: a phone shop's display case top (bazaar), a solar panel (police post) and a
   workshop's tube, a prop's part; every other thing in that paint is drawn only. 51 level files carry the words (two rows, and 839 boxes that say
   their own); they differ by words only, so every level's fingerprint holds, and no shape was added (the count of cut planes is as it was). ON THE
   LOOK PAGE a vehicle's body is drawn as car paint where it was the chipped coat 'paint', plaster or plain; glass and rubber are drawn plain as

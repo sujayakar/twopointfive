@@ -2,13 +2,14 @@
 //   bun run tools/qa/stuff-check.ts            exit 0 = every line passes
 //   STUFF_BREAK=1 bun run tools/qa/stuff-check.ts     every level file is read with its material rows' words struck out (a file from before 11-04, loaded
 //                                                    as it stood): lines 2, 3, 4, 7, 13 and 14 must FAIL
+//   COAT_BREAK=1 bun run tools/qa/stuff-check.ts      the table of named coats (scene/stuff.ts COAT_KIND) is emptied: line 8 must FAIL
 // No game is stood up and no picture is looked at: what a box is drawn as is decided on the CPU (the loader puts a word on the box, lookWordOf reads it) and
 // this asks it. What a material LOOKS like on a desk is a page's still and then a GPU's. The same on both stands: nothing here is a rule of play and no
 // stand's word reaches it. What every box WAS drawn as before the colour rule went, against what it is now, is tools/qa/stuff-audit.ts.
 import { readFileSync, readdirSync } from 'node:fs';
 import { ROOT } from './headless.ts';
 import { fromBefore, paintUsers, rowOf } from '../levels/paintUsers.ts';
-const ST = await import(`${ROOT}/src/scene/stuff.ts`), { PAINT_STUFF, stuffOfName, rowWord, BOX_STUFFS, saidFor, namePaints, paintOf, toned, tonedAs, madeOf, drawnAs, wordFor, worded } = ST;
+const ST = await import(`${ROOT}/src/scene/stuff.ts`), { PAINT_STUFF, stuffOfName, rowWord, BOX_STUFFS, saidFor, namePaints, paintOf, toned, tonedAs, madeOf, drawnAs, wordFor, worded, repainted, repaintWord, COAT_KIND } = ST;
 const { LOOK_NAMES, LOOK_PAINTED, lookStuffOf } = await import(`${ROOT}/src/render/lookTex.ts`);
 const GB = await import(`${ROOT}/src/render/gbuffer.ts`), { lookWordOf, lookCoreOf, LOOK_WORD } = GB;
 const { GWOT_PALETTE, gwotAs } = await import(`${ROOT}/src/scene/gwotPalette.ts`);
@@ -119,12 +120,17 @@ const plainIs = (w: string | undefined) => w === undefined || w === 'plain' ? un
   // the editor: painting a box with another paint drops the box's own word (the new paint's row speaks), in one command that undoes
   const ED = dataOf('library-hall.json') as any, eb = ED.boxes.find((b: any) => b.material === 'wood'); eb.stuff = 'veneer'; const ed = new Editor(ED, {}); boxPaint(ed, [eb.id], 'concrete');
   const painted = ed.data.boxes.find((b: any) => b.id === eb.id), dropped = painted.material === 'concrete' && painted.stuff === undefined;
-  const skin = readFileSync(`${ROOT}/tools/levels/gwotSkin.ts`, 'utf8').includes('b.albedo = gwotAs(m, sim); b.rough = GWOT_FINISH[m]?.rough ?? ROUGH_CLOTH; delete b.stuff; worded(b);');
+  // a repaint: the one helper gives the new paint's word, and a named coat stays under a plain one; the skin repaints boxes and props' parts through it and nowhere else
+  const coatWas = { ...COAT_KIND }; if (process.env.COAT_BREAK === '1') for (const k of Object.keys(COAT_KIND)) delete (COAT_KIND as any)[k];   // (COAT_BREAK=1: the table of named coats is emptied, so a repaint keeps no coat — this line must FAIL)
+  const rp = (was: string | undefined, paint: readonly number[]) => repainted({ albedo: [0.5, 0.5, 0.5] as readonly number[], ...(was ? { stuff: was } : {}) } as any, paint).stuff as string | undefined;
+  const coats = `${rp('veneer', GWOT_PALETTE.galv)}, ${rp('steel', GWOT_PALETTE.paintGreen)}, ${rp('carpaint', GWOT_PALETTE.paintGreen)}, ${rp('carpaint', GWOT_PALETTE.galv)}, ${rp('carpaint', GWOT_PALETTE.prodOrange) ?? 'nothing'}, ${rp(undefined, GWOT_PALETTE.paintGreen)}`;
+  const skinSrc = readFileSync(`${ROOT}/tools/levels/gwotSkin.ts`, 'utf8'), skin = skinSrc.includes('repainted(b, gwotAs(m, sim))') && skinSrc.includes('repainted(part, next)') && !/delete (b|part)\.stuff/.test(skinSrc) && coats === 'sheet, paint, carpaint, sheet, nothing, paint' && repaintWord('paint', 'paint') === 'paint' && Object.keys(COAT_KIND).length >= 1 && Object.keys(COAT_KIND).every(k => (BOX_STUFFS as string[]).includes(k) && (BOX_STUFFS as string[]).includes((COAT_KIND as any)[k]));
+  Object.assign(COAT_KIND, coatWas);
   // a piece broken off a thing is made of what the thing is
   const from = makeBox({ c: [0, 0, 0], h: [1, 1, 1], albedo: [0.2, 0.2, 0.2], stuff: 'veneer' }), copy = makeBox({ c: [0, 0, 0], h: [0.1, 0.1, 0.1], albedo: [0.2, 0.2, 0.2], ...wordOf(from) }), bare = makeBox({ c: [0, 0, 0], h: [0.1, 0.1, 0.1], albedo: [0.2, 0.2, 0.2], ...wordOf(makeBox({ c: [0, 0, 0], h: [1, 1, 1] })) });
   check(says(own, 'veneer') && says(dark, 'veneer') && says(steel, 'steel') && says(white) && says(rug, 'cloth') && JSON.stringify(saidFor('veneer', [0.3, 0.31, 0.33], KIT_PALETTE.wood, KIT_PALETTE.woodDark)) === '{}' && JSON.stringify(saidFor('veneer', [...KIT_PALETTE.wood], KIT_PALETTE.wood, KIT_PALETTE.woodDark)) === '{}' && saidFor('veneer', KIT_PALETTE.wood, KIT_PALETTE.wood).stuff === 'veneer' && dropped && skin && copy.stuff === 'veneer' && bare.stuff === undefined,
-    '8 a word belongs to the paint it was said with: the kit\'s desk says veneer in its own wood paints; handed the kit\'s steel it is a steel bench (the paint handed over speaks), handed white laminate it says nothing, and handed a COPY of the wood\'s numbers it says nothing either (the row, not its numbers); a rug is cloth in any colour; the skin drops a repainted box\'s old word and gives it its new paint\'s; the editor\'s paint drops a box\'s own word; a piece broken off a thing copies the thing\'s word',
-    `desk ${own[0]?.stuff}, dark ${dark[0]?.stuff}, as a steel bench ${steel[0]?.stuff ?? 'no word'}, white ${white[0]?.stuff ?? 'no word'} · rug ${rug[0]?.stuff} · the skin says the new word: ${skin} · the editor drops it: ${dropped} · a broken piece: ${copy.stuff}`); }
+    '8 a word belongs to the paint it was said with: the kit\'s desk says veneer in its own wood paints; handed the kit\'s steel it is a steel bench (the paint handed over speaks), handed white laminate it says nothing, and handed a COPY of the wood\'s numbers it says nothing either (the row, not its numbers); a rug is cloth in any colour; the skin repaints through the one helper, which drops a repainted thing\'s old word and gives it its new paint\'s — but a named coat stays under a plain one (a car in another enamel is still car paint; in sheet metal it is sheet, in a plain orange nothing); the editor\'s paint drops a box\'s own word; a piece broken off a thing copies the thing\'s word',
+    `desk ${own[0]?.stuff}, dark ${dark[0]?.stuff}, as a steel bench ${steel[0]?.stuff ?? 'no word'}, white ${white[0]?.stuff ?? 'no word'} · rug ${rug[0]?.stuff} · the skin says the new word: ${skin} (veneer → sheet, steel → paint, car paint → paint, → sheet, → plain orange, nothing → paint: ${coats}) · the editor drops it: ${dropped} · a broken piece: ${copy.stuff}`); }
 
 // 9. A PAINT IS KNOWN BY THE ROW HANDED OVER, never by its numbers: a kit's finish and word come with the palette's own array; a copy of its numbers is nobody's
 { const k = newKit(), C = KIT_PALETTE, i0 = KD.add(k, { c: [1, 1, 1], h: [0.2, 0.2, 0.2], albedo: C.metal }), i1 = KD.add(k, { c: [2, 1, 1], h: [0.2, 0.2, 0.2], albedo: [...C.metal] as any }), i2 = KD.add(k, { c: [3, 1, 1], h: [0.2, 0.2, 0.2], albedo: C.metal, rough: 0.9 }), i3 = KD.add(k, { c: [4, 1, 1], h: [0.2, 0.2, 0.2], albedo: C.metal, stuff: 'plain' });
