@@ -1,2 +1,2 @@
-# the clinic in the look: its own colours given their palette rows (floor, car, tank, kerbs), white things enamel or cloth, the ground's wear laid
-ac54494b6f9f6f45377e03f8164b15b0f41edba8
+# the kits' vehicles say their shapes: the boxes of each vehicle carry a shape, and a pickup's bonnet no longer carries its two panel lines
+c77059c2ba6f1070bf9f2debfef96bb891c6f6e7

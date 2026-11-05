@@ -1,5 +1,5 @@
 {
- "commit": "the real-doors step, with the rescue's two runs taken again once its conference cover mark moved with the door's jamb (every level's walls moved: the af55d89 words can no longer be met; the same switches held at their old values), and the depot's two runs taken again on build 43fea0ae once the motor-pool depot was rebuilt (its walls and posts moved; the frozen stand, the same switches held; the other twelve runs as they were)",
+ "commit": "the all-on step: the frozen stand plays on the game's own maths with the Rust module's rows on, so five of the fourteen runs fold to other words (room-clear-four 1 and 2, hostage-rescue 1 and 2, records-pair 1; each ends the same way at the same second); the other nine read the words they had. The words before this step are still read by TPS_EXACT=0 TPS_RUST=0 on the fixture as it was",
  "seeds": "1-2",
  "how": "PT_DIGEST=1 bun run tools/qa/playthrough.ts --seeds 1-2 --jobs 4 --json <file> on a checkout of af55d89 with only the digest hook of playthrough.ts added (the hook reads the game, it changes nothing); run twice, both runs identical",
  "runs": [
@@ -36,35 +36,35 @@
    "seed": 1,
    "end": "taken",
    "t": 83.2,
-   "digest": "ea994360"
+   "digest": "b6aeb91c"
   },
   {
    "scn": "room-clear-four",
    "seed": 2,
    "end": "wiped",
    "t": 46.9,
-   "digest": "68baeb5e"
+   "digest": "f19c26b1"
   },
   {
    "scn": "hostage-rescue",
    "seed": 1,
    "end": "lost",
    "t": 41.1,
-   "digest": "72c9b2c"
+   "digest": "fd0c26c6"
   },
   {
    "scn": "hostage-rescue",
    "seed": 2,
    "end": "lost",
    "t": 51,
-   "digest": "f2d011f8"
+   "digest": "ab7a0219"
   },
   {
    "scn": "records-pair",
    "seed": 1,
    "end": "taken",
    "t": 55.7,
-   "digest": "a49933b1"
+   "digest": "c60dc5a"
   },
   {
    "scn": "records-pair",

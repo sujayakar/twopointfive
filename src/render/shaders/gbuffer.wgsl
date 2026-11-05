@@ -150,24 +150,21 @@ fn cubeNormal(vi: u32) -> vec3f {
   let bi = v.id & 0xFFFFFu; let cap = ((v.id >> 29u) & 1u) != 0u;
   var rough = 1.0; var metal = 0.0; var wetG = false;
   if (!cap) { let fin = boxFinish(bi); rough = fin.rough; metal = select(0.0, 1.0, fin.metal); wetG = fin.aniso; }
+  let lookW = LOOK && !cap && lookWears(n, bi, v.hf);                    // (ONE layer wears this pixel's floor and skirting: the look's, where it dresses the pixel and its Weather row is up — look.wgsl lookWears; both layers are told)
   if (frame.matCfg.w > 0.0 && !cap) {                                    // the DETAIL layer (detailSurface below): wear you can explain, at the primary hit only — 0 = nothing here runs, the pixel exactly as it was
-    let dt = detailSurface(v.wp, n, bi, albedo, rough, metal, frame.matCfg.w);
+    let dt = detailSurface(v.wp, n, bi, albedo, rough, metal, frame.matCfg.w, lookW);
     albedo = dt.albedo; rough = dt.rough; metal = dt.metal;
   }
   var lookTilt = false;
   if (LOOK && !cap) {                                                    // THE LOOK PROTOTYPE (look.wgsl; the page /look — dead code on every other): the paint drawn off its material's maps, weathered as the building is, a small box's edges rounded
-    let lk = lookSurface(v.look, v.wp, n, bi, v.lc, v.hf, albedo, rough, dwx, dwy, distance(v.wp, frame.camPos) * 2.0 * frame.post.w * frame.invScreen.y);
+    let lk = lookSurface(v.look, v.wp, n, bi, v.lc, v.hf, albedo, rough, dwx, dwy, distance(v.wp, frame.camPos) * 2.0 * frame.post.w * frame.invScreen.y, lookW);
     albedo = lk.albedo; rough = lk.rough;
     n = lk.n; lookTilt = lk.tilted;
-  }
-  if (SURF_TRY && !LOOK && !cap) {                                                // SURFACES, A TRY (surface.wgsl; ?surf at boot — dead code on every other page): a paint drawn as the stuff it stands for, after the wear, before the markings
-    let sf = surfaceTry(v.wp, n, bi, v.lc, v.hf, v.albedo, albedo, rough, distance(v.wp, frame.camPos) * 2.0 * frame.post.w * frame.invScreen.y);
-    albedo = sf.albedo; n = sf.n; rough = sf.rough;
   }
   let wetK = floor(frame.rtCfg.z * 0.5) * 0.1;                           // WET GROUND (detail.wgsl wetGround; settings.wetBreakup rides rtCfg.z as 2 × tenths — 0 = nothing here runs)
   if (wetK > 0.0 && wetG && select(n.y, gn.y, LOOK) > 0.9) { rough = wetGround(v.wp, rough, wetK); }
   if (v.mark != 0u && !cap) {                                             // MARKINGS (markings.wgsl): the pixel-art signifiers on this box's faces — albedo + roughness only, after the wear, before the encounter's marks
-    let mk = markSurfaceGB(v.mark, bi, v.wp, n, dwx, dwy, albedo, rough, lookMarkSoft());
+    let mk = markSurfaceGB(v.mark, bi, v.wp, n, dwx, dwy, albedo, rough, lookMarkSoft(), lookTrod());
     albedo = mk.albedo; rough = mk.rough;
   }
   if (SNOW_SURF && !cap && snowCfg.p[1].z > 0.5 && f32(bi) < snowCfg.p[1].w) {   // THE SNOW'S SURFACE (snow.wgsl; a snow level with its look on — dead code on every other page): the ground and every snow-painted box of the level file are shaded off the level's snow field, after the markings, before the encounter's marks
