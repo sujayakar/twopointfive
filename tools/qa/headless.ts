@@ -98,6 +98,51 @@ if (pinned('SLOTS')) { // SLOTS=on (or 1) = the rule on from the start, as the p
   K.SLOTS.on = K.SLOTS.ok && /^(1|on)$/i.test(spec);
 }
 
+// RETIRE_PIN=<rows.json> in front of any headless tool = the rows that file lists ([{ row: 'TABLE.key', value }], the list `tools/retire/retire.ts --rows`
+// takes; a row a level down by its whole name, 'TABLE.part.key') are held at its values WHATEVER the tool, the stand or a recording writes to them: what a
+// check will meet once those switches are retired, asked before the fold is made (`tools/retire/lines.ts run --pin`: a line that fails under the pins is a
+// line that needed a retired path, by the check's own staging and nothing else; the fold's own run of the same checks must then say the same lines). A row
+// marked `hold` in the list loses only its line on the frozen stand and stays a knob a tool may write: it is not held. Here, with every module the harness
+// loads already loaded — a check that never loads the harness is not pinned, and `lines.ts run --pin` says which those were (no mark in their trace).
+if (process.env.RETIRE_PIN) { const { readFileSync, appendFileSync } = await import('node:fs'); const { knobRegistry } = await import(`${ROOT}/src/game/knobs.ts`); const R = knobRegistry() as Record<string, any>, missed: string[] = []; let held = 0, wanted = 0;
+  for (const { row, value, hold } of JSON.parse(readFileSync(process.env.RETIRE_PIN, 'utf8')) as { row: string; value: unknown; hold?: boolean }[]) { if (hold) continue; wanted++; const path = row.split('.'), k = path.pop()!;
+    let o: any = R; for (const part of path) o = o && typeof o === 'object' ? o[part] : undefined;
+    if (!o || typeof o !== 'object' || !(k in o)) { missed.push(row); continue; }
+    Object.defineProperty(o, k, { get: () => value, set: () => { /* held */ }, enumerable: true, configurable: true }); held++; }
+  if (missed.length) console.error(`RETIRE_PIN: ${missed.length} rows are in no registered table and are not held: ${missed.join(' ')}`);
+  if (process.env.LINES_TRACE_OUT) appendFileSync(process.env.LINES_TRACE_OUT, JSON.stringify({ v: 'PIN', text: `${held} of ${wanted} rows held`, frames: [] }) + '\n'); }
+
+/** THE FIGHT HAS STARTED, AND STAYS STARTED, for this game. A check that asks what a teammate's free trigger does (cover fire, a burst through a wall, light
+ *  and smoke on his sight, his rounds in the player's picture) stages men who have noticed nobody and gives no shot or order of Sam's: there the unfound
+ *  squad's hold (game/holdfire.ts) holds every round, rightly. The hold is lifted here the game's own way — the drill's 'go' (holdFireDrill), given again
+ *  before every tick so that it outlasts `liftSecs` and a change of cast — never by a switch. Who fires first is holdfire-check's question.
+ *  The lift takes only with a squad under orders (the hold itself asks no less): `lifted()` says whether it stands this frame, for a check to hold its
+ *  staging to; `stop()` gives the game its own tick back. Asked twice of one game it is the same one.
+ *  Written for the game with the hold's own switch retired (HOLDFIRE.on): on a stand that holds that switch off nothing holds fire and `lifted()` is false. */
+type Fight = { lifted: () => boolean; stop: () => void };
+const fights = new WeakMap<object, Promise<Fight>>();
+export function fightStarted(game: any): Promise<Fight> { const had = fights.get(game); if (had) return had;   // (kept before anything is awaited: two askers in one tick get the one wrap)
+  const made = (async (): Promise<Fight> => { const { holdFireDrill, holdFireLifted } = await import(`${ROOT}/src/game/holdfire.ts`); const own = Object.prototype.hasOwnProperty.call(game, 'update'), was = game.update, tick = was.bind(game);
+    game.update = (...a: any[]) => { holdFireDrill(game); return tick(...a); };
+    return { lifted: (): boolean => !!holdFireLifted(game), stop: (): void => { if (own) game.update = was; else delete game.update; fights.delete(game); } }; })();
+  fights.set(game, made); return made; }
+/** THE TEAM KNOWS THIS DOOR IS LOCKED AGAINST IT, learnt the game's own way: the player stands at its lock for a few frames — his own prompt there teaches
+ *  the team (doortools.ts) — and is put back where he stood. For a check that asks what an entry order does at a locked door once it goes to the tool (the
+ *  boot, a shell, a pick, a can after it): at a door nobody has tried the order halts at the handle first ('found shut'), and the halt has lines of its
+ *  own. `side`: the face the order will come from (where the player stands now, if not given). true: the team knows it · false: nothing to learn (the
+ *  door is not locked against that face, or stands open). THROWS where a door locked against that face could not be learnt: a staging that failed must
+ *  not read as a door that was free.
+ *  Written for the game with the door test's switch retired (DOORTOOLS.testDoor): on a stand that holds it off the team learns no door, and this throws. */
+export function doorTried(game: any, door: any, step: (frames: number) => void, side?: 1 | -1): boolean {
+  const D = game.doorTools, home = [...game.player.char.pos], s = (side ?? game.doors.side(door, home)) as 1 | -1, th = door.def.closedDir, n = [-Math.sin(th), Math.cos(th)];
+  if (!D.lockedOut(door, s)) return false;   // (the door tools' own test of that face: a keyed lock, a wedge, a keypad — asked before a place to stand is looked for)
+  for (const back of [0.7, 0.9, 0.55, 1.1]) { for (const k of [1, -1]) { const p = [door.frameCentre[0] + n[0] * back * k, 0, door.frameCentre[2] + n[1] * back * k];
+      if (game.doors.side(door, p) !== s || game.col.nav.isBlocked(p[0], p[2])) continue;
+      game.teleportPlayer(p); for (let i = 0; i < 12 && !D.knownShut(door, s); i++) step(1);
+      const known = D.knownShut(door, s); game.teleportPlayer(home); step(1); if (known) return true; } }
+  throw new Error(`doorTried: ${door.def.name} is locked against that face and the team did not learn it from the player standing at its lock (no floor to stand on by it, or the door test is held off on this stand)`);
+}
+
 let chPromise: Promise<any> | null = null;
 /** the glTF mannequin, loaded once per process (file:// fetch of public/assets) */
 /** is this run's character THE CAST? (the shipped stand: yes, as the page; the frozen one: only under TPS_CAST=<anything>; `TPS_CAST=` — set and empty — is the mannequin on either) */
