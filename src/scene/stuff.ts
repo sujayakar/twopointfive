@@ -1,8 +1,8 @@
 // WHAT A THING IS MADE OF IS SAID, NEVER READ OFF ITS COLOUR.
 // Three places say it, and each is data somebody wrote:
 //   · a PAINT'S NAME. A kit's palette names its paints ('wood', 'carpet', 'tWall') and this table says what each name is made of: one of the look's materials
-//     (render/lookTex.ts LOOK_NAMES); 'plain', meant to be drawn as a flat colour (laminate, rubber, a dark screen); or 'waits', a stuff the look has no
-//     material for yet (card, foliage, a lawn; drawn plain). Where one name is more than one thing, the piece that knows better says its own word;
+//     (render/lookTex.ts LOOK_NAMES); 'plain', meant to be drawn as a flat colour (laminate, a dark screen); 'waits', a stuff the look has no
+//     material for yet (card, foliage, a lawn; drawn plain); or one of the two the look draws plain and a round's hit reads, 'glass' and 'rubber' (BOX_STUFFS below). Where one name is more than one thing, the piece that knows better says its own word;
 //   · a level file's MATERIAL ROW (levelData.ts MaterialData.stuff), written by the exporter from this table: the file says it, and the loader asks no table;
 //   · a BOX or a prop's part (Box.stuff, a file's `stuff` on a box), where it is another thing than its paint's row says, or wears a paint written as numbers.
 // A box takes its own word, else its row's, when the file is loaded (levelLoad.ts), and a kit's add() does the same for a box it makes with a named paint
@@ -23,8 +23,9 @@ const PALETTE_STUFF = {
   dust: 'earth', dirt: 'earth', mudFloor: 'earth', damp: 'earth', gravel: 'gravel', slab: 'slab', poplar: 'wood', woodGrey: 'wood', ply: 'wood', galv: 'sheet', tin: 'sheet',
   sack: 'cloth', sandbag: 'cloth', hesco: 'cloth', canvas: 'cloth', tarpBlue: 'cloth', blanketGrey: 'cloth', blanketBrown: 'cloth', rugRed: 'cloth', rugNavy: 'cloth', rugCream: 'cloth', rugOchre: 'cloth', rugGreen: 'cloth', rugMadder: 'cloth', coyote: 'cloth',
   rust: 'metal', iron: 'metal',
-  paintBlue: 'paint', paintGreen: 'paint', paintRust: 'paint', drumBlue: 'paint', drumRed: 'paint', genYellow: 'paint', truckWhite: 'paint', truckTan: 'paint', truckRed: 'paint', olive: 'paint',
-  oil: 'plain', stencil: 'plain', plasticWhite: 'plastic', plasticGreen: 'plastic', plasticBlue: 'plastic', plasticBlack: 'plastic', jerryYellow: 'plain', rubber: 'plain', glassDark: 'plain',
+  paintBlue: 'paint', paintGreen: 'paint', paintRust: 'paint', drumBlue: 'paint', drumRed: 'paint', genYellow: 'paint', truckWhite: 'paint', truckTan: 'paint', truckRed: 'paint', olive: 'paint',   // (the truck enamels are a cot, a locker, a floor line and a sign as well as a vehicle: a vehicle's body says 'carpaint' itself — gwotKit.ts coat, carShapes.ts carSays)
+  rubber: 'rubber', glassDark: 'glass',   // (a tyre and a mat; a vehicle's window, a counter's top, a solar panel, a tube: SOLID glass, nothing modelled behind it — not a pane, which says so with its flag)
+  oil: 'plain', stencil: 'plain', plasticWhite: 'plastic', plasticGreen: 'plastic', plasticBlue: 'plastic', plasticBlack: 'plastic', jerryYellow: 'plain',
   prodOrange: 'plain', prodGreen: 'plain', prodRed: 'plain', prodYellow: 'plain', straw: 'waits', scrub: 'waits',
 } as const satisfies Record<GwotMat, Stuff>;
 

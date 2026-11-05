@@ -32,12 +32,12 @@ const said = (c: number) => c === 0 ? 'plain' : LOOK_NAMES[c - 1];
 const plainIs = (w: string | undefined) => w === undefined || w === 'plain' ? undefined : w;
 
 // 1. every name a level file writes has a row in the table, and every row says a stuff a box can be
-{ const none = new Map<string, string>(), bad: string[] = [], seen = new Set<string>(), kinds: Record<string, number> = { material: 0, plain: 0, waits: 0 };
+{ const none = new Map<string, string>(), bad: string[] = [], seen = new Set<string>(), kinds: Record<string, number> = { material: 0, plain: 0, waits: 0, hit: 0 };
   for (const f of FILES) for (const name of Object.keys(dataOf(f).materials)) { seen.add(name); if (stuffOfName(name) === undefined && !none.has(name)) none.set(name, f); }
-  for (const [name, stuff] of Object.entries(PAINT_STUFF) as [string, string][]) { if (stuff === 'plain' || stuff === 'waits') kinds[stuff]++; else if (lookStuffOf(stuff) > 0) kinds.material++; else bad.push(`${name}: '${stuff}'`); }
+  for (const [name, stuff] of Object.entries(PAINT_STUFF) as [string, string][]) { if (stuff === 'plain' || stuff === 'waits') kinds[stuff]++; else if (lookStuffOf(stuff) > 0) kinds.material++; else if (stuff === 'glass' || stuff === 'rubber') kinds.hit++; else bad.push(`${name}: '${stuff}'`); }   // (glass and rubber: the two the look draws plain and the picture of a round's hit reads — the vehicles' windows and tyres)
   check(none.size === 0 && bad.length === 0 && seen.size > 60 && stuffOfName('constructor') === undefined && stuffOfName('toString') === undefined && !(Object.values(PAINT_STUFF) as string[]).includes('mixed'),
-    '1 every paint name in every level file has a row of its own in the table, and every row says a material the look draws, or plain, or waits (no name is left to its colour); a name that is a method of every object has no row',
-    `${seen.size} names in ${FILES.length} level files · ${Object.keys(PAINT_STUFF).length} rows: ${kinds.material} a material, ${kinds.plain} plain, ${kinds.waits} waiting${none.size ? ` · NO ROW: ${[...none].map(([n, f]) => `${n} (${f})`).join(', ')}` : ''}${bad.length ? ` · not a material: ${bad.join(', ')}` : ''}`); }
+    '1 every paint name in every level file has a row of its own in the table, and every row says a material the look draws, or plain, or waits, or one of the two a round\'s hit reads and the look draws plain, glass and rubber (no name is left to its colour); a name that is a method of every object has no row',
+    `${seen.size} names in ${FILES.length} level files · ${Object.keys(PAINT_STUFF).length} rows: ${kinds.material} a material, ${kinds.plain} plain, ${kinds.waits} waiting, ${kinds.hit} glass or rubber${none.size ? ` · NO ROW: ${[...none].map(([n, f]) => `${n} (${f})`).join(', ')}` : ''}${bad.length ? ` · not a material: ${bad.join(', ')}` : ''}`); }
 
 // 2. THE FILES SAY IT: every material row of every level file says what it is made of, and a row whose name the table knows says the table's word
 { let rows = 0, silent = 0, other = 0, old = 0; const eg: string[] = [];
