@@ -1,2 +1,2 @@
-# the kits' vehicles say their shapes: the boxes of each vehicle carry a shape, and a pickup's bonnet no longer carries its two panel lines
-8987085ccb1e1379b95a406b0784de40ba749816
+# the vehicles say what they are made of: car paint on their bodies, glass and rubber on their windows and tyres; no box, colour or number moved
+04cd9c31fb8b85b775905ebed643f33db5dac566

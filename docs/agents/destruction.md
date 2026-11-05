@@ -1101,11 +1101,25 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   rugs and blankets that were concrete, a seat's cloth or cardboard are the soft thing (839); steel, sheet and metal that were pale or mid-grey spark (276).
   KNOWN WRONG, AND THE LEVEL'S TO MEND: the depot's hut walls are painted with the partition's tan, whose row says 'cloth' (`stuff.ts`: "drawn as
   cloth because the tan is a cream rug's"), so 32 boxes of its walls throw tufts where they threw gypsum; the compound's walls of the same paint say
-  'stucco' beside it and are right. THE VEHICLES, SO FAR: the office's van and two cars say 'carpaint' of their bodies (the office's own words,
-  11-05), so a round into one sparks and throws no chips; their glass and tyres say nothing and are still metal by their dark paint. The kits'
-  vehicles paint their bodies from rows that say 'paint' and their glass and tyres from rows that say 'plain', and the plain-numbers car of the other
-  levels says nothing, so a round into any of those is still read by its colour. They say car paint, glass and rubber in the change after this one;
-  until then the crack in solid glass is met only where the check puts the word on.
+  'stucco' beside it and are right. THE VEHICLES SAY WHAT THEY ARE MADE OF (11-05, the change after the rule). A vehicle's BODY says
+  'carpaint' ITSELF, whatever paint it wears, through ONE helper (`scene/carShapes.ts carCoat`, `coated` for a kit's paint): the kits' pickup, van,
+  lorry and motorbike (`gwotKit.ts coat`), the plain car (`carSays`: `officeGen.ts car`, `levelKit.ts car`), and the three vehicles a level builds by
+  hand (the bazaar's lorry, tut-road's tanker, the plough lorry of tut-sky and tut-team). A paint's ROW cannot say it: the truck enamels are cots,
+  lockers, floor lines and signs too and stay 'paint', and the tanker's cream is a wall's elsewhere (its row says plaster: a round threw gypsum off a
+  fuel tank). A window is painted from the row glassDark, which says 'glass', and a tyre, a stack of tyres and a mat from the row rubber, which says
+  'rubber'; the plain car says both itself. So a round into a body sparks and throws no chips, a window takes the pale crack and stands (solid
+  glass: no vehicle's window is a pane), a tyre gives plastic's chips and no dent. WHAT THAT CHANGED FOR A ROUND: the windows (by their colour a kit
+  vehicle's was glass that took a hole and threw nine chips, the plain car's was metal), the plain car's body and tyres in its own colours and in a
+  twin's skin (plasterboard, concrete or metal by tone), and the tanker's tank. The kit vehicles' bodies were metal to a round already, by their
+  enamel's colour: for them the word changes the look page only. THE SKIN KEEPS A CAR'S COAT (`tools/levels/gwotSkin.ts`): a default-look twin
+  repaints the plain car in one of its enamels, and a repaint drops a box's word; a box that said 'carpaint' and is given a paint that says only
+  'paint' still says 'carpaint'. ALSO SOLID GLASS NOW, by the same row: a phone shop's display case top (bazaar), a solar panel (police post) and a
+  workshop's tube, a prop's part; every other thing in that paint is drawn only. 51 level files carry the words (two rows, and 839 boxes that say
+  their own); they differ by words only, so every level's fingerprint holds, and no shape was added (the count of cut planes is as it was). ON THE
+  LOOK PAGE a vehicle's body is drawn as car paint where it was the chipped coat 'paint', plaster or plain; glass and rubber are drawn plain as
+  before. NOT DONE: a shape's trim painted from a row's numbers (the lorry's fittings, a spare wheel, a mirror) says nothing, as before, so the file
+  writes 'plain' on it; trim is drawn only, no round meets it. A tail lamp's lens in the red enamel stays 'paint'. The editor's kit-view sets (a
+  level file's `sets`) hold older copies of a truck as plain boxes and say nothing. Check line 8. NEVER SEEN ON A GPU.
   A MARK ON A CUT OR A ROUND FACE LIES WHERE THE ROUND MET IT (`render/decals.ts Decals.onCut`, raised by the page as `sit` is, `?markcut=0`): a
   mark clamped to its box was pulled onto the face of the box's PLAIN shape, so on a leaning pane, a rounded nose or a crowned bonnet, and round the
   side of a drum, it stood centimetres off the surface (87 mm on a pane leaning 12 degrees, 40 mm on a 0.3 m drum 30 degrees round) and the shader's
@@ -1116,15 +1130,16 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   SWITCH: ON in the page (`?hitstuff=0` = by the colour, as it was), OFF in the module and on the frozen stand (`TPS_HITSTUFF=1`), a `FROZEN_HOLDS`
   row, in the registry and the journal (a recording from before the table plays with it off: `applyKnobs`; the rule is read at each hit). On or off,
   the same run.
-  CHECK: `bun run tools/qa/hitstuff-check.ts` (`probes.ts hitstuff`, families `destruction` and `player`; `HITSTUFF_BREAK=1` fails lines 2, 3, 4
-  and 7), eight lines on both stands, real rounds on the office with a stand-in for the GPU particles that keeps what the game asks of them at the
+  CHECK: `bun run tools/qa/hitstuff-check.ts` (`probes.ts hitstuff`, families `destruction` and `player`; `HITSTUFF_BREAK=1` fails lines 2, 3, 4,
+  7 and 8), nine lines on both stands, real rounds on the office with a stand-in for the GPU particles that keeps what the game asks of them at the
   hit: the car's body with its word taken off, by its paint, the same up as down; saying 'carpaint', sparks, no chips, no dust; a tyre saying 'rubber', plastic's chips and
   no dent; the glass saying 'glass', the crack in place of the hole on every round, with the chaos lane off too, six chips from two rounds and the
   box standing; a cabinet that is metal by its paint, the same sparks and no chips; AND THE SAME RUN up as down — by digest, by the chaos lane's own
   die and counters and by the count of marks, the cut-face word up and down with it — over 68 rounds at the top of the chaos dial (the harness holds
   the dial at 0: the check raises it): the car's body, glass and a tyre saying their words, a box of each word the level says that a round can reach
   (eleven met: carpaint, steel, metal, sheet, plastic, wood, veneer, fabric, skim, cast panel, and a soft thing made to say cloth), a wall, a thing of metal and a
-  window pane that says 'glass' too; the words, the lint and the stands; a mark on a leaning face and round a drum's side.
+  window pane that says 'glass' too; the words, the lint and the stands; a mark on a leaning face and round a drum's side; and the vehicles as the levels have them, nothing put on by the check: rounds into the office's car and into a body, a window and a tyre
+  in the showroom yard, and every level file's plain cars (29), shaped panels in a truck enamel (369) and plain ones beside a window (41) by their words.
   MEASURED (11-05, on the build's joined branch): the 42 play-through digests (21 scenarios, seeds 1 and 2) against the branch without it:
   frozen 42 of 42 the same, shipped 42 of 42, shipped with the rule down (`TPS_HITSTUFF=0`) 42 of 42. Gates `destruction` 108, `decals` 15,
   `hitstuff` 8, `round` 13 and `shapes` 11 lines green on the frozen stand; on the shipped stand the same but `decals-sites`, whose two wall-wear

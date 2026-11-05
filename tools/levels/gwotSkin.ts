@@ -156,7 +156,9 @@ export function skinLevel(level: Level, groups: string[], S: Skin = {}): SkinSta
     if (!m) { st.kept++; continue; }
     const sim: GwotSim = (name ?? (steel ? (surf0 === 'drywall' ? '~steelPale' : '~steel') : '~' + surf0)) as GwotSim;
     const before = { name, surf: surf0, cls: breakClassOf(b.albedo), steel: steelGrey(b.albedo), dark: lum(b.albedo) > 0.1, pale: lum(b.albedo) > 0.7 };
-    const old = b.albedo; b.albedo = gwotAs(m, sim); b.rough = GWOT_FINISH[m]?.rough ?? ROUGH_CLOTH; delete b.stuff; worded(b);   // (a word belongs to the paint it was said with: the old paint's goes, and the box is made of what the skin's paint is. scene/stuff.ts)
+    const old = b.albedo, car = b.stuff === 'carpaint'; b.albedo = gwotAs(m, sim); b.rough = GWOT_FINISH[m]?.rough ?? ROUGH_CLOTH; delete b.stuff; worded(b);
+    if (car && b.stuff === 'paint') b.stuff = 'carpaint';   // (A COAT STAYS THE COAT IT WAS: a car's body given one of the skin's enamels is still a car's body — 'paint' is a coat on anything, and says nothing of what is under it)
+      // (a word belongs to the paint it was said with: the old paint's goes, and the box is made of what the skin's paint is. scene/stuff.ts)
     if (!c.full) { if (GWOT_FINISH[m]?.metal) b.metal = true; else delete b.metal; }
     // THE CHECK: the game's own classifiers say the same of the box as before (a round, a charge, a blast and the destruction index read nothing else of a paint)
     const after = { name: paletteName(b.albedo), surf: surfOf(b.albedo), cls: breakClassOf(b.albedo), steel: steelGrey(b.albedo), dark: lum(b.albedo) > 0.1, pale: lum(b.albedo) > 0.7 };
