@@ -24,7 +24,7 @@ const BREAK = process.env.RUNNOBODY_BREAK === '1';
 
 export async function runnobodyCheck(): Promise<boolean> {
   const { standUp, ROOT } = await import('./headless.ts');
-  const { RUNNER, runnerBreak, runnerOf, runnerFled, runnerNobody, runnerMute } = await import(`${ROOT}/src/game/runner.ts`);
+  const { RUNNER, runnerBreak, runnerOf, runnerNobody, runnerMute } = await import(`${ROOT}/src/game/runner.ts`);
   const { MORALE, hasMate } = await import(`${ROOT}/src/game/morale.ts`);
   const { noteRound } = await import(`${ROOT}/src/game/suppression.ts`);
   const { FOG } = await import(`${ROOT}/src/game/fogofwar.ts`);
@@ -55,7 +55,7 @@ export async function runnobodyCheck(): Promise<boolean> {
     const step = (n = 1, each?: () => void) => { for (let i = 0; i < n; i++) { g.player.visibility = 0.02; for (const k of keeps) k(); W.step(DT); each?.(); } };
     A.char.pos = [...HIS]; A.char.vel = [0, 0, 0]; A.path = []; A.pathGoal = null; A.script = null; A.dazzledUntil = 1e9; A.heardUpTo = 1e12; g.teleportPlayer(FAR); step(5);
     let broke = true; if (broken) { broke = runnerBreak(g, A); step(60); } if (kept) stand(A, HIS);
-    return { W, g, A, B, op, hs, step, stand, park, broke, fled: runnerFled(A) as boolean };
+    return { W, g, A, B, op, hs, step, stand, park, broke, fled: A.fled as boolean };
   };
   try {
     // ------------------------------------------------------------ contact
