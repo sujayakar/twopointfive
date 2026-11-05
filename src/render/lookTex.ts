@@ -20,6 +20,8 @@ export type LookName = typeof LOOK_NAMES[number];
  *  fades   how far sun and years blotch it (1; 0.3 = made in a factory and kept indoors, or washed). ABSENT = a place somebody keeps: no blotch, no drift
  *          of hue, none of the traffic's dirt on it
  *  soaks   standing on the ground it takes a damp foot, and its head bleaches and sheds dark runs
+ *          (HOW FAR `fades` and `soaks` SHOW IN A PLACE is the place's word, not the stuff's: a level says how kept it is, look.wgsl lookKept; these two
+ *          say what the stuff does where nobody keeps it)
  *  unit    a stuff MADE OF PIECES: one piece's size, metres along and up (each divides LOOK_TILE), whether every other course is laid half a piece along,
  *          and how far one piece's shade may sit from the next's (± × the paint). The map draws the pieces' joints at these sizes (`piece`) and gives them no
  *          shade of their own; the shader gives each piece of the WORLD its shade by where it is, so a wall of eighty panels is not a tile's eight repeated

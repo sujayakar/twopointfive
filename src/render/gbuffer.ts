@@ -241,7 +241,8 @@ export class GBuffer {
   lookMade: string[] = [];
   /** how long the maps have taken to make, each batch start to end, the boot's other work between the layers included (ms; 0 = none made) */
   lookFillMs = 0;
-  /** the panel moved a number (lookAmounts): the uniform block again. Nothing on a page without the look. */
+  /** the panel moved a number (lookAmounts), or a level came in and said how kept it is (lookConfig.kept, main.ts hostLevel): the uniform block again.
+   *  Nothing on a page without the look. */
   setLook() {
     if (!this.lookCfg) return;
     const k = lookAmounts, c = k.clarity;   // CLARITY: one number over the layers that add contrast between neighbours (the relief's depth, the shadow in joints, the rubbed edges, the snow's prints). The maintainer, 10-25, on a GPU: the look "does feel a bit too 'high frequency' for me, like edges are cranked up (e.g. 'clarity' knob in lightroom)"
