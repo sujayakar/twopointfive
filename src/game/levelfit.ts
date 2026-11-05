@@ -24,7 +24,7 @@
 //                      is a mistake said by name (doors.ts there, props.ts there).
 // (The pools themselves refuse more rows than they have: sim/doorshome.ts, sim/slabshome.ts, sim/propshome.ts. This is the same statement, made early.)
 import { BoxFlag, type Box } from '../scene/boxes';
-import { PANE_CAP, FACE, tooBig } from '../scene/boxMirror';
+import { PANE_CAP, tooBig } from '../scene/boxMirror';
 import { levelNameOf } from '../scene/levelLoad';
 import type { Level } from '../scene/level';
 import { simWhyNot } from '../sim/sim';
@@ -34,7 +34,7 @@ import { MEN_ROWS } from '../sim/men/schema';
 import { isSheet } from './glass';
 import { manSingles, type Cast } from './posehome';
 import { posePoolRoom } from '../anim/skeleton';
-import { MAX_SKINNED, steadyMost } from './guards';
+import { MAX_SKINNED } from './guards';
 import { SEATS } from './seats';
 import { BODY_DOOR_PARTICLES } from './game';
 import { WALLS } from './wallbreak';
@@ -137,7 +137,6 @@ export function fitRows(g: Stood, tables: Readonly<Record<string, number>>): Fit
     { row: 'panes', what: 'glass one line can note (no more than the level\'s glass)', has: glass, cap: t('panes'), table: 'panes' },
     { row: 'sheets', what: 'sheets of glass (a row a pane that is no longer whole)', has: L.sheets, cap: Math.min(t('glass'), cap.sheets), table: 'glass' },
     { row: 'view', what: 'sheets of glass (a row a pane a burst\'s view names)', has: L.sheets, cap: t('view'), table: 'view' },
-    { row: 'steady', what: 'lamps the smoke\'s light sweep takes as one table (every lamp nobody carries that is no flash and no beacon\'s, lit or not)', has: g.engine && g.beacons ? steadyMost(g as never) : 0, cap: held ? FACE.MAX_LAMPS : Infinity, table: null },
     { row: 'doors', what: 'doors (a row a door, and a row a leaf off its hinges)', has: L.doors, cap: cap.doors, table: null },
     // what a game holds of men, and what one step of a rule is handed of them (the rules' hand-overs: no table of the copy)
     { row: 'men', what: 'the first seat\'s man and the guards as the level is stood up (what guards.ts spawnUnit counts against the picture\'s budget of characters)', has: 1 + (g.guards?.length ?? 0), cap: MAX_SKINNED, table: null },
