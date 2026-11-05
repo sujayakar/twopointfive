@@ -36,8 +36,8 @@
 import { sim, u32, simWhyNot } from './sim';
 
 /** THE PARTS OF A BLOCK, in the order of rust/sim/src/state.rs PARTS (tools/qa/rust-check.ts holds the two lists to each other) */
-export const SIM_PARTS = ['head', 'dice', 'doors', 'falls', 'props', 'slabs', 'items', 'men', 'lights', 'smoke', 'poses'] as const;
-export const P_DICE = 1, P_DOORS = 2, P_FALLS = 3, P_PROPS = 4, P_SLABS = 5, P_ITEMS = 6, P_MEN = 7, P_LIGHTS = 8, P_SMOKE = 9, P_POSES = 10;   // (0 is the head; the pools after the parts of a fixed length, the largest last: a parked block is one run of bytes to its last word in use, `span`)
+export const SIM_PARTS = ['head', 'dice', 'doors', 'falls', 'props', 'slabs', 'items', 'men', 'lights', 'smoke', 'poses', 'panes'] as const;
+export const P_DICE = 1, P_DOORS = 2, P_FALLS = 3, P_PROPS = 4, P_SLABS = 5, P_ITEMS = 6, P_MEN = 7, P_LIGHTS = 8, P_SMOKE = 9, P_POSES = 10, P_PANES = 11;   // (0 is the head; the pools after the parts of a fixed length, and of those every game's by size, then the panes; the largest last: a parked block is one run of bytes to its last word in use, `span`)
 /** the head's words (state.rs Head): the layout's word, the homes */
 const H_LAYOUT = 0, H_HOMES = 1;
 
@@ -136,6 +136,8 @@ export class SimState {
    *  changed place (a take put back, parked, brought into a slot, born, shut). A family that keeps tables DERIVED from its state (never in the block: the
    *  block is state and nothing else) keeps the stamp they were made at, and makes them again when it differs. A family's own writes do not change it. */
   stamp = 0;
+  /** whoever reads the block by its slot, for as long as it does (scene/boxMirror.ts: the box world's copy, whose lines and rays read a pane where it stands) */
+  moved: ((slot: number) => void) | null = null;
   /** the slot the block stands in NOW, −1 = parked or none: for a caller that must not move it (anim/skeleton.ts: a question about a pose) */
   get where(): number { return this.slot; }
   /** THE SLOT, for a call into the module: the block is bound first if it was parked (a game with no block gets one) */
@@ -151,9 +153,10 @@ export class SimState {
     for (let i = 0; i < l.games; i++) { const h = HELD[i]; if (!h || h.slot !== i) { s = i; break; } if (h.used < oldest) { oldest = h.used; s = i; } }
     const was = HELD[s]; if (was && was.slot === s) was.park();
     const from = this.w, to = u32(), at = sim().state_addr(s) >>> 2;
-    for (let i = 0; i < l.off.length; i++) { const o = l.off[i] >>> 2; to.set(from.subarray(o, o + this.live(i)), at + o); }
+    for (let i = 0; i < l.off.length; i++) { const o = l.off[i] >>> 2, n = this.live(i); if (o >= from.length) to.fill(0, at + o, at + o + n); else to.set(from.subarray(o, o + n), at + o); }   // (past the end of a parked block: a last pool with nothing in it)
     this.own = null; this.slot = s; HELD[s] = this; this.used = this.stamp = ++CLOCK.n; SIM_STATE_TALLY.bound++;
     this.view();
+    this.moved?.(s);
     return s;
   }
   /** a block for a game that had none: zeros under the layout's word, parked */
@@ -161,17 +164,21 @@ export class SimState {
   /** out of the module into a buffer of its own (another game needs the slot) */
   private park(): void {
     const l = layout(), from = this.w, own = new ArrayBuffer(this.span(false)), to = new Uint32Array(own);
-    for (let i = 0; i < l.off.length; i++) { const o = l.off[i] >>> 2; to.set(from.subarray(o, o + this.live(i)), o); }
+    for (let i = 0; i < l.off.length; i++) { const o = l.off[i] >>> 2; if (o < to.length) to.set(from.subarray(o, o + this.live(i)), o); }
     this.own = own;
     if (HELD[this.slot] === this) HELD[this.slot] = null;
     this.slot = -1; SIM_STATE_TALLY.parked++; this.stamp = ++CLOCK.n;
+    this.moved?.(-1);
     this.view();
   }
   /** HOW MANY BYTES A PARKED BLOCK NEEDS: up to the end of the last word that is state (a pool is sized for the largest game, and a parked game does not
    *  pay for the room it does not use). `empty`: of a block of zeros. A whole number of doubles. */
   private span(empty: boolean): number {
-    const l = layout(); let end = 0;
-    for (let i = 0; i < l.off.length; i++) { const e = (l.off[i] >>> 2) + (empty ? (l.pool[i] ? 2 : l.len[i] >>> 2) : this.live(i)); if (e > end) end = e; }
+    const l = layout(), tail = l.off.length - 1; let end = 0;
+    for (let i = 0; i < l.off.length; i++) {
+      if (i === tail && l.pool[i] && (empty || this.w[l.off[i] >>> 2] === 0)) continue;   // (the last pool, with nothing in it: no room at all, for it lies past every part a game is using)
+      const e = (l.off[i] >>> 2) + (empty ? (l.pool[i] ? 2 : l.len[i] >>> 2) : this.live(i)); if (e > end) end = e;
+    }
     return ((end + 1) >>> 1) << 3;
   }
   /** a parked block made long enough for `words` words (a take put back into it may hold more of a pool than it does) */
@@ -224,6 +231,11 @@ export class SimState {
     //  part that holds a piece more or fewer than it did then does not put this part's pieces out of step with the ones they are compared with)
     for (let i = 0, kw = 0; i < l.off.length; i++) {
       const o0 = l.off[i] >>> 2, n = this.live(i), nw = was !== undefined && kw < was.length ? Math.ceil(liveOf(l, i, was[kw][0]) / PIECE) : 0;
+      if (o0 >= w.length) {   // (a last pool with nothing in it, past the end of a parked block: its first words are zeros)
+        const c = nw === 1 ? was![kw] : undefined;
+        if (c !== undefined && c.length === n && c.every(x => x === 0)) out.push(c); else { shared = false; out.push(new Uint32Array(n)); }
+        kw += nw; continue;
+      }
       for (let o = 0, p = 0; o < n; o += PIECE, p++) {
         const e = o + PIECE < n ? o + PIECE : n, c = p < nw ? was![kw + p] : undefined;
         let same = c !== undefined && c.length === e - o;
@@ -240,6 +252,7 @@ export class SimState {
     const l = layout(); let k = 0;
     for (let i = 0; i < l.off.length; i++) {
       const o0 = l.off[i] >>> 2, n = this.live(i);
+      if (o0 >= w.length) { const a = c[k++]; if (a === undefined || a.length !== n || !a.every(x => x === 0)) return false; continue; }
       for (let o = 0; o < n; o += PIECE, k++) {
         const e = o + PIECE < n ? o + PIECE : n, a = c[k]; if (a === undefined || a.length !== e - o) return false;
         for (let j = o0 + o, q = 0, m = e - o; q < m; j++, q++) if (w[j] !== a[q]) return false;
@@ -255,17 +268,17 @@ export class SimState {
     const l = layout(); let need = 0;
     // (a part of no length has no piece — with no module, a part no store lives in: `layout` — and after the last piece there is no first word to read)
     const live = (i: number, k: number): number => l.len[i] === 0 ? 0 : liveOf(l, i, c[k][0]);
-    for (let i = 0, k = 0; i < l.off.length; i++) { const n = live(i, k); k += Math.ceil(n / PIECE); if ((l.off[i] >>> 2) + n > need) need = (l.off[i] >>> 2) + n; }
+    for (let i = 0, k = 0; i < l.off.length; i++) { const n = live(i, k), empty = i === l.off.length - 1 && l.pool[i] && l.len[i] !== 0 && c[k][0] === 0; k += Math.ceil(n / PIECE); if (!empty && (l.off[i] >>> 2) + n > need) need = (l.off[i] >>> 2) + n; }
     this.room(need);
     const w = this.w;
-    for (let i = 0, k = 0; i < l.off.length; i++) { const o0 = l.off[i] >>> 2, n = live(i, k); for (let o = 0; o < n; o += c[k++].length) w.set(c[k], o0 + o); }
+    for (let i = 0, k = 0; i < l.off.length; i++) { const o0 = l.off[i] >>> 2, n = live(i, k); for (let o = 0; o < n; o += c[k++].length) if (o0 + o < w.length) w.set(c[k], o0 + o); }
     this.stamp = ++CLOCK.n;
   }
   /** the block a part at a time, each under its name, as its live words (fresh views, for a walk that reads them at once: never kept) */
   parts(): { name: string; words: Uint32Array }[] {
     if (this.w.length === 0) return [];
     const l = layout(), w = this.w;
-    return l.off.map((off, i) => ({ name: SIM_PARTS[i] ?? `part${i}`, words: w.subarray(off >>> 2, (off >>> 2) + this.live(i)) }));
+    return l.off.map((off, i) => ({ name: SIM_PARTS[i] ?? `part${i}`, words: (off >>> 2) >= w.length ? new Uint32Array(this.live(i)) : w.subarray(off >>> 2, (off >>> 2) + this.live(i)) }));
   }
 }
 
