@@ -104,6 +104,11 @@ export const BOTH = { on: false, asked: 0, differ: 0, stale: 0, first: '', thing
 export const ANYTIME = { on: true, proofs: 0, windows: 0, who: null as Record<string, number> | null };   // (`who`: a tool's table of who asked alone, when it wants one)
 /** the same check's count of the senses' questions the module answered, a row each (RUST.sight … paths; boxMirror.ts SENSES): a row that is on and never asked proves nothing */
 export const SENSED = { sight: 0, light: 0, smoke: 0, sound: 0, paths: 0 };
+/** A WATCHER OF THE SENSES' ANSWERS (`see` is null in play; tools/qa/sense-ident.ts hangs one): shown every answer the module gives one of the senses'
+ *  questions, as the numbers it is made of, under its row's name — an eye's verdict and distance · the six faces of the light on a point · the smoke
+ *  along a line · what the straight lines of a sound said, and its way round · a way's waypoints, and the cells a priced search asked the price of ·
+ *  the eyes of a team that have a line. That is what a check folds into the words it holds the senses to (tools/qa/ident-pin.ts). Never a rule of play. */
+export const SENSE_WATCH: { see: ((row: keyof typeof SENSES | 'fog', v: ArrayLike<number>) => void) | null } = { see: null };
 /** a blob of the smoke as a question carries it (sense.ts Blob's six; rust/sim/src/smoke.rs BLOB), and the model's numbers that go with them (SENSE.smoke's) */
 export interface BlobRow { x: number; y0: number; z: number; r2: number; age: number; mass: number }
 export interface SmokeNumbers { sigma: number; spread: number; widest: number; rise: number; riseRate: number }
@@ -546,6 +551,7 @@ export class StaticCollision {
     const set = M.leaves(this.dynamicBoxes); if (set === -2) { if (FELL.on) fell('fog', 'the leaves do not fit a list'); return -1; }
     const r = M.x.fog_see(M.slot, set, order, n, want, kind, through, a[0], a[1], a[2], b[0], b[1], b[2]);
     if (r === -1) { if (FELL.on) fell('fog', 'the module handed the pass back (a length that is no length of this world\'s, or more eyes than a question names)'); return -1; }
+    if (SENSE_WATCH.see) SENSE_WATCH.see('fog', [r >>> 0]);
     return r >>> 0;
   }
   // ---- THE SENSES IN THE MODULE (RUST.sight / light / smoke / sound / paths: rust/sim/src/sight.rs, light.rs, smoke.rs, hear.rs, nav.rs). Each is a whole
@@ -570,7 +576,8 @@ export class StaticCollision {
     const r = M.x.sight_contact(M.slot, set, through, (v !== undefined ? FACE.Q_LENS : 0) | (unseen ? FACE.Q_UNSEEN : 0) | (smoked ? FACE.Q_SMOKED : 0), e[0], e[1], e[2], l[0], l[1], l[2], E.range, E.halfDeg, E.nearM, E.nearDeg, v === undefined ? 0 : v,
       chest[0], chest[1], chest[2], head[0], head[1], head[2]);
     if (r === -1) { if (FELL.on) fell('sight', 'the module handed the eye back (a line too long to be one)'); return null; }
-    SENSED.sight++; return { visible: (r & FACE.A_VISIBLE) !== 0, dist: f64()[M.scratch], inCone: (r & FACE.A_IN_CONE) !== 0 };
+    SENSED.sight++; if (SENSE_WATCH.see) SENSE_WATCH.see('sight', [r, f64()[M.scratch]]);
+    return { visible: (r & FACE.A_VISIBLE) !== 0, dist: f64()[M.scratch], inCone: (r & FACE.A_IN_CONE) !== 0 };
   }
   /** RUST.light — guards.ts lightEstimateAt's lamps: `lampsBegin` the question (→ may it go to the module), then a `lamp` each that passed the caller's
    *  own gates, then `lampsOn`, which leaves the six faces in `acc` (false anywhere = the caller's own loop, from the start).
@@ -610,7 +617,7 @@ export class StaticCollision {
   lampsOn(acc: number[]): boolean {
     const M = this.mirror; if (!this.lampQ.on || !this.lampsPart()) return false; this.lampsOver();
     const m = f64(), at = M.scratch; for (let k = 0; k < 6; k++) acc[k] = m[at + k];
-    SENSED.light++; return true;
+    SENSED.light++; if (SENSE_WATCH.see) SENSE_WATCH.see('light', acc.slice(0, 6)); return true;
   }
   /** RUST.smoke — game/sense.ts CpuSmoke.trans: `begin` (→ may it go to the module, with this many blobs), a `blob` each, then the transmittance along
    *  a → b under the model's numbers (−1 = the caller's own loop). */
@@ -621,7 +628,8 @@ export class StaticCollision {
   blob(x: number, y0: number, z: number, r2: number, age: number, mass: number): void { const M = this.mirror, m = f64(), o = M.blobs + M.blobN++ * FACE.BLOB; m[o] = x; m[o + 1] = y0; m[o + 2] = z; m[o + 3] = r2; m[o + 4] = age; m[o + 5] = mass; }
   blobsAlong(a: Vec3, b: Vec3, sigma: number, spread: number, widest: number, rise: number, riseRate: number): number {
     const M = this.mirror; if (M.x.smoke_trans(M.slot, M.blobSet, M.blobN, a[0], a[1], a[2], b[0], b[1], b[2], sigma, spread, widest, rise, riseRate) === -1) { if (FELL.on) fell('smoke', 'the module handed the line back (a line too long to be one)'); return -1; }
-    SENSED.smoke++; return f64()[M.scratch];
+    SENSED.smoke++; if (SENSE_WATCH.see) SENSE_WATCH.see('smoke', [f64()[M.scratch]]);
+    return f64()[M.scratch];
   }
   // ---- THE GAME'S OWN SMOKE ON THE COARSE GRID (game/sense.ts SENSE.grid, SmokeGrid; rust/sim/src/bricks.rs). No row of RUST: the grid has no TypeScript
   // twin, so where the module does not run, or the level's plan is larger than a grid stands on, the blobs answer as they did. The state is a part of a
@@ -891,6 +899,7 @@ export class SoundPaths {
     const M = col.mirror, x = M.x, ask = col.paneAsk; if (ask < 0) { col.paneFell('sound', ask); return null; }
     const c = x.hear_direct(M.slot, set, ask, src[0], src[1], src[2], dst[0], dst[1], dst[2]); if (c === -1) { if (FELL.on) fell('sound', 'the module handed the straight lines back (one too long to be a line)'); return null; }
     const straight = f64()[M.scratch]; if (c !== FACE.WALLED) SENSED.sound++;
+    if (SENSE_WATCH.see) SENSE_WATCH.see('sound', [c, straight]);
     if (c < FACE.OVER) { let graze = 0; if (c & FACE.GRAZE_A) graze += 0.1; if (c & FACE.GRAZE_B) graze += 0.1; return { direct: true, routed: false, pathLen: straight, via: v3.copy(src), apparent: v3.copy(src), muffle: graze, carry: 1 }; }
     if (c === FACE.OVER) return { direct: true, routed: false, pathLen: straight, via: v3.copy(src), apparent: v3.copy(src), muffle: 0.15, carry: 0.9 };
     const sealed = (): Propagation => ({ direct: false, routed: false, pathLen: straight * 1.5, via: v3.copy(src), apparent: v3.copy(src), muffle: 1, carry: 0.25 });
@@ -901,6 +910,7 @@ export class SoundPaths {
     nav.there(M);
     const k = x.hear_route(M.slot, set, ask, BoxFlag.SoundSeal, nav.W, nav.H, cs, src[0], src[1], src[2], dst[0], dst[1], dst[2], straight); if (k === -1) { if (FELL.on) fell('sound', 'the module handed the way round back (a line too long to be one)'); return null; }
     let r: Propagation; SENSED.sound++;
+    if (SENSE_WATCH.see) { const m = f64(), at = M.scratch; SENSE_WATCH.see('sound', k === FACE.SEALED ? [k] : [k, m[at], m[at + 1], m[at + 2], m[at + 3]]); }
     if (k === FACE.SEALED) r = sealed();
     else {
       const m = f64(), at = M.scratch, L = m[at], via: Vec3 = [m[at + 1], m[at + 2], m[at + 3]];
@@ -1069,13 +1079,16 @@ export class NavGrid {
       if (n !== NAV.ASK_HOST) PRICED.n++;
     }
     if (n === NAV.ASK_HOST) { if (FELL.on) fell('paths', 'the module handed the search back (a line too long to be one, a point that is no number)'); return undefined; }
-    SENSED.paths++; if (n === NAV.NO_WAY) return null;
+    SENSED.paths++;
+    if (SENSE_WATCH.see) SENSE_WATCH.see('paths', n === NAV.NO_WAY ? [n] : [n, ...f64().subarray(M.way, M.way + 2 * n)]);
+    if (n === NAV.NO_WAY) return null;
     const m = f64(), out: Vec3[] = []; for (let i = 0, o = M.way; i < n; i++, o += 2) out.push([m[o], 0, m[o + 1]]);
     return out;
   }
   /** the prices the module's search has asked for (`k` cells, listed at the module's own table), from the caller's function, in the order asked */
   priceThese(M: BoxMirror, k: number, penalty: (ix: number, iz: number) => number): void {
     const W = this.W, want = M.navWant, price = M.navPrice;
+    if (SENSE_WATCH.see) SENSE_WATCH.see('paths', u32().slice(want, want + k));   // (the cells the search has come to need, in the order it asks for them)
     for (let i = 0; i < k; i++) { const c = u32()[want + i]; const v = penalty(c % W, (c / W) | 0); f64()[price + c] = v; }   // (the views are taken anew at every cell: the function may ask the module questions of its own)
     PRICED.cells += k;
   }
