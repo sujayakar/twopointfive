@@ -145,9 +145,9 @@ export function samBigWalk(g: Game, dt: number): number {
   const pl = g.player, c = pl.char, K = pl.kick!, M = K.tool!.moves!;
   if (M.arrived) return K.yaw;
   if (M.via && v3.distXZ(M.via, c.pos) < 0.15) M.via = undefined;   // (round the man: the place itself from here)
-  const to = M.via ?? K.spot, dx = to[0] - c.pos[0], dz = to[2] - c.pos[2], L = Math.hypot(dx, dz);
+  const to = M.via ?? K.spot, dx = to[0] - c.posX, dz = to[2] - c.posZ, L = Math.hypot(dx, dz);
   if (!M.via && L < 0.06) { M.arrived = true; BIG_STATS.samWalks++; return K.yaw; }
-  const step = Math.min(L, MOVE_WALK * dt); c.pos = [c.pos[0] + dx / L * step, c.pos[1], c.pos[2] + dz / L * step];
+  const step = Math.min(L, MOVE_WALK * dt); c.pos = [c.posX + dx / L * step, c.posY, c.posZ + dz / L * step];
   return M.via || L > 0.45 ? Math.atan2(dx, dz) : K.yaw;
 }
 /** BIGSLOT.moves — what the animator is told of the beat this frame (character.ts bigTool; null: no tool's beat, or the moves off) */

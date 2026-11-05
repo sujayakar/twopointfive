@@ -74,7 +74,7 @@ export async function byEye(): Promise<boolean> {
         const v0 = g2.visibilityOf.bind(g2); g2.visibilityOf = (E: number) => Math.max(FLOOR, v0(E));   // (what the page's meter reads in an open night shadow, for every meter and every estimate)
         const H = R.hostiles[4], c = H.char, at = R.free([29.5, 0, 11.2]); Object.defineProperty(c, 'chestDir', { get: () => [-1, 0, 0], set: () => { }, configurable: true }); c.headDir = () => [-1, 0, 0];
         let peak = 0, held = 0; const step0 = R.step.bind(R);
-        R.step = (n = 1) => { for (let i = 0; i < n; i++) { SNEAK.byEye = on; c.pos[0] = at[0]; c.pos[2] = at[2]; c.vel[0] = c.vel[2] = 0; H.aimYaw = WEST; step0(1); peak = Math.max(peak, H.awareness ?? 0);
+        R.step = (n = 1) => { for (let i = 0; i < n; i++) { SNEAK.byEye = on; c.posX = at[0]; c.posZ = at[2]; c.velX = c.velZ = 0; H.aimYaw = WEST; step0(1); peak = Math.max(peak, H.awareness ?? 0);
           const m2 = R.mate; if (m2 && SN.sneaking(g2, m2) && SN.sneakWord(g2, m2)) held++; } };
         R.crouch(true); const there = !!R.go(R.free([21, 0, 11.2]), 60); held = 0; R.wait(20); const m2 = R.mate;
         return { there, behind: flat(m2.char.pos, R.pos), eye: flat(m2.char.pos, at), sam: flat(R.pos, at), held: held / 60, peak, word: String(SN.sneakWord(g2, m2)), noticed: !!R.noticed };

@@ -88,8 +88,8 @@ async function rig(seed: number, o: { squad?: 2 | 4; stage?: 'rc' | 'nb'; quiet?
           // fall to it — what CAN be measured is how often a man fires with a friend in his lane)
           if (e.kind !== 'guardShot' || !e.from || !e.to) continue; const sh = R.ops.find((x: any) => x.char.id === e.who); if (!sh) continue; R.rounds++;
           const ax = e.from[0], az = e.from[2], bx = e.to[0] - ax, bz = e.to[2] - az, L2 = bx * bx + bz * bz || 1;
-          for (const m of R.ops) { if (m === sh || m.state === 'dead') continue; const k = ((m.char.pos[0] - ax) * bx + (m.char.pos[2] - az) * bz) / L2; if (k <= 0.02 || k >= 1) continue;
-            const y = e.from[1] + (e.to[1] - e.from[1]) * k - m.char.pos[1]; if (Math.hypot(ax + bx * k - m.char.pos[0], az + bz * k - m.char.pos[2]) < 0.28 && y > 0 && y < 1.8) { R.through.push(`${sh.callsign} through ${m.callsign} at ${f2(game.time)} s`); break; } } }
+          for (const m of R.ops) { if (m === sh || m.state === 'dead') continue; const k = ((m.char.posX - ax) * bx + (m.char.posZ - az) * bz) / L2; if (k <= 0.02 || k >= 1) continue;
+            const y = e.from[1] + (e.to[1] - e.from[1]) * k - m.char.posY; if (Math.hypot(ax + bx * k - m.char.posX, az + bz * k - m.char.posZ) < 0.28 && y > 0 && y < 1.8) { R.through.push(`${sh.callsign} through ${m.callsign} at ${f2(game.time)} s`); break; } } }
         for (const [x, st] of was) if (st !== 'dead' && x.state === 'dead') R.downs.push({ who: x, t: game.time, by: game.guards.find((k: any) => k.char.id === x.killerId) ?? null });
         for (const gd of game.guards) { const b = gd.bubble; if (b && !heard.has(b)) { heard.add(b); R.lines.push({ who: gd.callsign, text: b.text, t: game.time }); } }
         const up = R.ops.filter((x: any) => x.state !== 'dead');
@@ -139,7 +139,7 @@ export const foursquadStage = guarded(async () => {
   verdict(same(ops[0].char.tint2, ops[1].char.tint2) && same(ops[2].char.tint2, ops[3].char.tint2) && red.tint2[0] > 3 * red.tint2[2] && blue.tint2[2] > 3 * blue.tint2[0] && !same(red.tint, blue.tint),
     'the pairs wear their colours: a pair alike, red and blue apart (the look itself is unseen here)', `red ${red.tint.map(f2)} / joints ${red.tint2.map(f2)} · blue ${blue.tint.map(f2)} / joints ${blue.tint2.map(f2)}`);
   const all = [sam, ...ops.map((x: any) => x.char)]; let near = Infinity; for (let a = 0; a < all.length; a++) for (let b = a + 1; b < all.length; b++) near = Math.min(near, dist(all[a].pos, all[b].pos));
-  verdict(near > 0.8 && ops.every((x: any) => !g.col.nav.isBlocked(x.char.pos[0], x.char.pos[2]) && dist(x.char.pos, sam.pos) < 4), 'staged on free floor beside Sam, a body\'s room apart', `${ops.map((x: any) => `${x.callsign} ${at(x.char.pos)}`).join(' · ')} · Sam ${at(sam.pos)} · nearest two ${f2(near)} m`);
+  verdict(near > 0.8 && ops.every((x: any) => !g.col.nav.isBlocked(x.char.posX, x.char.posZ) && dist(x.char.pos, sam.pos) < 4), 'staged on free floor beside Sam, a body\'s room apart', `${ops.map((x: any) => `${x.callsign} ${at(x.char.pos)}`).join(' · ')} · Sam ${at(sam.pos)} · nearest two ${f2(near)} m`);
   verdict(NB.hostiles.length === 5 && RC.rooms.length === 4 && 1 + g.guards.length === 10, 'all five defenders are still dealt into the four rooms: ten characters', `${NB.hostiles.length} defenders · ${RC.rooms.map((r: any) => `${r.def.name} ${r.defenders.length}`).join(' · ')} · ${1 + g.guards.length} characters`);
   verdict(names(O.men()) === names(ops) && names(O.men('red')) === 'Red One, Red Two' && names(O.men('blue')) === 'Blue One, Blue Two' && O.men(2)[0] === ops[2] && O.men(ops[3])[0] === ops[3] && O.men(7).length === 0,
     'men(): the squad, a pair, a man — one call each', `all [${names(O.men())}] · red [${names(O.men('red'))}] · blue [${names(O.men('blue'))}] · men(2) ${names(O.men(2))} · men(Blue Two) ${names(O.men(ops[3]))} · men(7) ${O.men(7).length}`);
@@ -162,7 +162,7 @@ export const foursquadStage = guarded(async () => {
   // T steps the element: everyone (gold) → red → blue → everyone; T with the cursor on a man is that man, and T again goes back to everyone
   R.W.cursorAt([...g.player.char.pos]);
   const cyc: any[] = []; for (let i = 0; i < 4; i++) { R.input.pressed.add(ORDERS.whoKey); R.step(); cyc.push(O.who); }
-  R.W.cursorAt([ops[3].char.pos[0], 1.2, ops[3].char.pos[2]]); R.input.pressed.add(ORDERS.whoKey); R.step(); const onMan = O.who; R.input.pressed.add(ORDERS.whoKey); R.step(); const back = O.who;
+  R.W.cursorAt([ops[3].char.posX, 1.2, ops[3].char.posZ]); R.input.pressed.add(ORDERS.whoKey); R.step(); const onMan = O.who; R.input.pressed.add(ORDERS.whoKey); R.step(); const back = O.who;
   verdict(cyc.join() === 'red,blue,all,red' && onMan === 3 && back === 'all', 'T steps all → red → blue → all; T with the cursor on a man is that man alone, T again is everyone', `who after each tap: ${cyc.join(' ')} · on ${ops[3].callsign}: ${onMan} · again: ${back}`);
   // down and a pair selection
   O.who = 'red'; R.step(2); const kept = O.who; killGuard(g, ops[0], [1, 0, 0], false, 'shot', 'player'); killGuard(g, ops[1], [1, 0, 0], false, 'shot', 'player'); R.step(2);
@@ -193,7 +193,7 @@ export const foursquadFollow = guarded(async () => {
   // the walk: the aisle → the west door → across the break room → out of the north door → along the corridor
   const Wd = R.door('breakroom_w'), Nd = R.door('breakroom_n');
   const legs: number[][] = [[26.6, 0, 17.6], [29.6, 0, 17.6], [30.75, 0, 13.6], [30.75, 0, 11.0], [22, 0, 11.0]];
-  const path: number[][] = [[sam.pos[0], 0, sam.pos[2]]]; let noPath = '';
+  const path: number[][] = [[sam.posX, 0, sam.posZ]]; let noPath = '';
   for (const p of legs) { const leg = g.col.nav.findPath(path[path.length - 1], p); if (!leg) { noPath = `no nav path to ${at(p)}`; break; } for (const q of leg) path.push([q[0], 0, q[2]]); path.push(p); }
   let seg = 0, t = 0; const SPEED = 1.55; let walked = 0, frames = 0, far6 = 0; const worst = men.map(() => 0);
   R.pre = () => {
@@ -223,7 +223,7 @@ export const foursquadFollow = guarded(async () => {
   // It is latched now (orders.ts followWord, ORDERS.wordFarM / wordHoldS). FOLLOWWORD_BREAK=1 = the two numbers at 0, which is the word as it was: must fail
   { const BREAK = (globalThis as any).process.env.FOLLOWWORD_BREAK === '1'; if (BREAK) { ORDERS.wordFarM = 0; ORDERS.wordHoldS = 0; }
     O.give('fallIn', O.targetAt(sam.pos)); R.until(() => men.every((m: any) => O.of(m)?.arrived), 14); R.step(90);
-    const from = [sam.pos[0], 0, sam.pos[2]], to = [6, 0, 11.0], L = dist(from, to), clear = !!g.col.nav.findPath(from, to) && g.col.nav.walkable(from, to);
+    const from = [sam.posX, 0, sam.posZ], to = [6, 0, 11.0], L = dist(from, to), clear = !!g.col.nav.findPath(from, to) && g.col.nav.walkable(from, to);
     const word = men.map((m: any) => O.statusOf(m)), raw = men.map((m: any) => !!O.of(m)?.arrived), words = men.map(() => 0), flips = men.map(() => 0), seen = men.map((_: any, i: number) => [word[i]]);
     let gone = 0; const t0 = g.time;
     R.pre = () => { gone = Math.min(L, gone + SPEED * DT); g.teleportPlayer([from[0] + (to[0] - from[0]) * gone / L, 0, from[2] + (to[2] - from[2]) * gone / L]); };

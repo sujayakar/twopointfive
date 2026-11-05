@@ -87,7 +87,7 @@ async function one(seed: number, plan: Plan, cap: number, verbose: boolean, leve
       if (r.why) throw new Done('stalled', `the quiet mission did not start: ${r.why}`); M = g.level.mission; out.quiet = g.quiet.summary(); }   // (the page's own road for ?hour= / ?sun= / ?weather= on a plain night)
     const pl = () => g.player, pos = (): number[] => g.player.char.pos;
     if (!M) throw new Done('stalled', 'this level has no mission block: nothing to pull, nowhere to leave by');
-    const eyeOf = (c: any): Vec3 => c.bones?.head ?? [c.pos[0], c.pos[1] + 1.6, c.pos[2]], chestOf = (c: any): Vec3 => c.bones?.chest ?? [c.pos[0], c.pos[1] + 1.2, c.pos[2]];
+    const eyeOf = (c: any): Vec3 => c.bones?.head ?? [c.posX, c.posY + 1.6, c.posZ], chestOf = (c: any): Vec3 => c.bones?.chest ?? [c.posX, c.posY + 1.2, c.posZ];
     const everyone = (): any[] => [...g.guards, ...(g.civilians ?? [])];
     /** whose eyes Sam holds short of: everyone but the quiet mission's own partner (he is in g.guards and follows inside 4.5 m — careful Sam waited on his own man) */
     const eyes = (): any[] => { const ops: any[] = g.quiet?.ops ?? []; return ops.length ? everyone().filter(x => !ops.includes(x)) : everyone(); };
@@ -142,7 +142,7 @@ async function one(seed: number, plan: Plan, cap: number, verbose: boolean, leve
      *  partner, who follows at his back */
     const inWay = (wp: number[]): any | null => { if (!GHOST) return null; const me = pos(), ops: any[] = g.quiet?.ops ?? []; let best: any = null, bd = 1.1;
       for (const x of everyone()) { const c = x.char; if (ops.includes(x) || c.alive === false || x.state === 'dead') continue; const d = flat(c.pos, me);
-        if (d < bd && (c.pos[0] - me[0]) * (wp[0] - me[0]) + (c.pos[2] - me[2]) * (wp[2] - me[2]) > 0) { bd = d; best = x; } } return best; };
+        if (d < bd && (c.posX - me[0]) * (wp[0] - me[0]) + (c.posZ - me[2]) * (wp[2] - me[2]) > 0) { bd = d; best = x; } } return best; };
     /** … the walk that keeps a metre off him where the floor has another way (the nav grid's own per-cell price), and how near a walk passes him */
     const pathRound = (p: number[], man: any): number[][] | null => { const c = g.col.nav.cell, m = man.char.pos; return g.col.nav.findPath(pos(), p, 8000, (ix: number, iz: number) => Math.hypot((ix + 0.5) * c - m[0], (iz + 0.5) * c - m[2]) < 1.0 ? 60 : 1); };
     const passes = (path: number[][], m: number[]): number => { let a = pos(), best = Infinity; for (const b of path) { const ux = b[0] - a[0], uz = b[2] - a[2], L2 = ux * ux + uz * uz, k = L2 > 1e-9 ? Math.max(0, Math.min(1, ((m[0] - a[0]) * ux + (m[2] - a[2]) * uz) / L2)) : 0;

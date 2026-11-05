@@ -275,11 +275,11 @@ export const roomfightEyes = guarded(async () => {
   R.plant = () => { h.dazzledUntil = g.time + 5; op.dazzledUntil = 0; };   // (the defender stands behind the teammate's shoulder with his eyes full: nobody fires in this probe)
   order(op, { goal: null, upper: 'aim', stance: 'none', aimAt: [B[0], 1.2, B[2]] });
   R.step(150);
-  const c = op.char, eye = c.bones.head ?? [c.pos[0], 1.65, c.pos[2]], aim = c.aimYaw, look = v3.normalize(v3.lerp(c.chestDir, c.headDir(), 0.5));
+  const c = op.char, eye = c.bones.head ?? [c.posX, 1.65, c.posZ], aim = c.aimYaw, look = v3.normalize(v3.lerp(c.chestDir, c.headDir(), 0.5));
   const lookOff = Math.abs(wrap(Math.atan2(look[0], look[2]) - aim)) * 57.3, boreOff = Math.abs(wrap(Math.atan2(c.gunDir[0], c.gunDir[2]) - aim)) * 57.3;
   verdict(c.anim.longShown === 'shoulder' && boreOff < 30 && lookOff > 25, 'the staging: his rifle is in the shoulder, level along his aim, and the eye between chest and head points well off it', `carriage ${c.anim.longShown} · bore ${boreOff.toFixed(0)}° off the aim · chest-and-head look ${lookOff.toFixed(0)}° off the aim (the cone is 58° either side of THAT)`);
   /** which bearings off his aim (°, a man stood RING m out with a clear line) this eye sees */
-  const fan = (viewer: any, isPlayer = false) => { const out = new Map<number, boolean>(); const e = viewer.char.bones.head ?? [viewer.char.pos[0], 1.65, viewer.char.pos[2]], a0 = viewer === op ? aim : viewer.char.aimYaw;
+  const fan = (viewer: any, isPlayer = false) => { const out = new Map<number, boolean>(); const e = viewer.char.bones.head ?? [viewer.char.posX, 1.65, viewer.char.posZ], a0 = viewer === op ? aim : viewer.char.aimYaw;
     for (let d = -170; d <= 180; d += STEP) { const y = a0 + d / 57.2958, p = [e[0] + Math.sin(y) * RING, 0, e[2] + Math.cos(y) * RING];
       if (g.col.segmentBlocked(e, [p[0], 1.1, p[2]]) && g.col.segmentBlocked(e, [p[0], 1.6, p[2]])) continue;
       const stub: any = isPlayer ? Object.assign(Object.create(g.player.char), { pos: p, bones: {} }) : { pos: p, bones: {}, alive: true, id: 999 };

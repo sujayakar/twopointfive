@@ -44,7 +44,7 @@ grid.forEach((r, iz) => log(String((iz * nav.cell).toFixed(1)).padStart(4) + ' '
 const SR = g.level.scenarios?.roomClear;
 log('\nrooms: ' + SR.rooms.map((r: any) => `${r.id} x ${r.bounds.x0}‥${r.bounds.x1} z ${r.bounds.z0}‥${r.bounds.z1}`).join(' · '));
 log('doors: ' + g.doors.list.map((d: any) => `${d.def.name} (${d.frameCentre[0].toFixed(1)}, ${d.frameCentre[2].toFixed(1)})${d.locked ? ' locked' : ''}${d.def.steel ? ' steel' : ''}`).join(' · '));
-log(`breaker (${g.level.breaker.pos[0]}, ${g.level.breaker.pos[2]}) · Sam (${pl.char.pos[0].toFixed(1)}, ${pl.char.pos[2].toFixed(1)})`);
+log(`breaker (${g.level.breaker.pos[0]}, ${g.level.breaker.pos[2]}) · Sam (${pl.char.posX.toFixed(1)}, ${pl.char.posZ.toFixed(1)})`);
 for (const Q of SQ.squadsReport(g)) { const men: any[] = SQ.squadMen(g, Q.name);
   log(`${Q.name} (${Q.state}): ` + men.map((h: any) => { const D = g.fight?.defs?.find((y: any) => y.gd === h), p = h.char.pos, f = h.char.forward(); return `${h.callsign} (${p[0].toFixed(1)}, ${p[2].toFixed(1)}) faces ${(Math.atan2(f[0], f[2]) * 180 / Math.PI).toFixed(0)}° ${h.state}${h.hold ? ' hold' : ''}${h.pinned ? ' pinned' : ''}${D ? ` ${D.mode} room ${D.room?.id ?? D.room} watch ${D.watch?.def?.name ?? D.watch ?? '-'}` : ''} lit ${g.visibilityOf(lightEstimateAt(g, [p[0], 1.2, p[2]], () => true)).toFixed(2)}${h.flashlight?.enabled ? ' torch' : ''}`; }).join(' · ')); }
 log('fixtures: ' + g.targets.filter((t: any) => t.kind !== 'device' && t.kind !== 'breaker').map((t: any) => `${t.name ?? t.kind}(${t.pos[0].toFixed(0)},${t.pos[2].toFixed(0)})${t.group ? ':' + t.group : ''}`).join(' '));

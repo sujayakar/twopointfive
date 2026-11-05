@@ -52,7 +52,7 @@ export async function fogMatesCheck(o: { verbose?: boolean } = {}): Promise<bool
       if (!mate || !foe || !marks.length) verdict(false, 'bar — The Pass, the squad staged: a teammate, a man hostile to him, and the level\'s thin marks', `teammate ${mate?.callsign} · hostile ${foe?.callsign} · marks ${marks.length}`);
       else {
         const home = [mate, foe].map(x => ({ p: x.char.pos.slice(), yaw: x.char.bodyYaw, aim: x.char.aimYaw }));
-        const chest = (c: any) => c.bones.chest ?? [c.pos[0], c.pos[1] + 1.1, c.pos[2]], head = (c: any) => c.bones.head ?? [c.pos[0], c.pos[1] + 1.65, c.pos[2]];
+        const chest = (c: any) => c.bones.chest ?? [c.posX, c.posY + 1.1, c.posZ], head = (c: any) => c.bones.head ?? [c.posX, c.posY + 1.65, c.posZ];
         /** the fog's own line from the teammate's head to the man, the thin row on, a field all round (the cone is not on trial) */
         const fogLine = () => { FOG.thin = true; const e = { id: mate.char.id, pos: head(mate.char), look: [0, 0, 1], at: head(mate.char), fov: 360 }; return PF.lineToMan(e, foe, chest(foe.char)) as boolean; };
         let pairs = 0, gained = 0, lost = 0, differ = 0, differOff = 0, foeMoved = 0, needsThin = 0, inCone = 0; let first: { m: number[]; f: number[]; at: number[] } | null = null;
@@ -101,7 +101,7 @@ export async function fogMatesCheck(o: { verbose?: boolean } = {}): Promise<bool
     }
     { // ---- played: the squad on the pass under the fog
       const SECS = 20; const play = async (seed: number, mates: boolean, thin: boolean) => { const P = await rig(seed), g = P.g; FOG.mates = mates; FOG.thin = thin; g.fogOfWar.on = true; const ds: string[] = []; let bites = 0, foeBites = 0, told = '';
-        for (let i = 0; i < 60 * SECS; i++) { if (i === 40) { const far = (g.guards as any[]).filter(x => x.char.alive && g.fogOfWar.hidden(x))[0]; told = far ? String(g.orders.give('move', g.orders.targetAt([far.char.pos[0], 0, far.char.pos[2]])) ?? 'given') : 'nobody hidden'; }
+        for (let i = 0; i < 60 * SECS; i++) { if (i === 40) { const far = (g.guards as any[]).filter(x => x.char.alive && g.fogOfWar.hidden(x))[0]; told = far ? String(g.orders.give('move', g.orders.targetAt([far.char.posX, 0, far.char.posZ])) ?? 'given') : 'nobody hidden'; }
           P.W.step(DT); if (i % 30 === 29) ds.push(JSON.stringify(digestGame(g)));
           if (thin && i % 6 === 5) { const men = (g.guards as any[]).filter(x => x.char.alive);   // (the same pairs asked both ways: canSeeChar writes nothing)
             for (const a of men) for (const b of men) { if (a === b || !isHostile(a.team, b.team)) continue; FOG.mates = true; const w = canSeeChar(g, a, b.char, false).visible; FOG.mates = false; const wo = canSeeChar(g, a, b.char, false).visible; if (w !== wo) { if (a.team === 'operative') bites++; else foeBites++; } }

@@ -31,9 +31,9 @@ const NOISE = /""?smoke[A-Za-z0-9_]*""?|\[pipeline\] smoke_|number of storage te
         const pf = g.doors.pullFace(d, off(1, 0.8)) ? 1 : -1, face = pf * (toward ? 1 : -1), dirIn = [uz * face, -ux * face];
         g.teleportPlayer(off(face, 3)); pl.crouch = false; await window.__runFrames(5);
         let yaw = 0, best = -2; for (let i = 0; i < 720; i++) { cam.yaw = i * Math.PI / 360; cam.rebuild(); const f = cam.planarBasis().fwd, dot = f[0] * dirIn[0] + f[2] * dirIn[1]; if (dot > best) { best = dot; yaw = cam.yaw; } }
-        const out = () => (-(c.pos[0] - d.def.hinge[0]) * uz + (c.pos[2] - d.def.hinge[1]) * ux) * face;
-        const S = window.__sd = { d, dirIn, yaw, out, last: [c.pos[0], c.pos[2]], before: 0, slow: 99, cross: -1, i: 0, hit: -1, kick: false };
-        S.step = async () => { cam.yaw = S.yaw; cam.rebuild(); await window.__runFrames(1, 1 / 60, ['KeyW', 'ShiftLeft']); const v = ((c.pos[0] - S.last[0]) * dirIn[0] + (c.pos[2] - S.last[1]) * dirIn[1]) * 60; S.last = [c.pos[0], c.pos[2]]; const o = out(); S.i++;
+        const out = () => (-(c.posX - d.def.hinge[0]) * uz + (c.posZ - d.def.hinge[1]) * ux) * face;
+        const S = window.__sd = { d, dirIn, yaw, out, last: [c.posX, c.posZ], before: 0, slow: 99, cross: -1, i: 0, hit: -1, kick: false };
+        S.step = async () => { cam.yaw = S.yaw; cam.rebuild(); await window.__runFrames(1, 1 / 60, ['KeyW', 'ShiftLeft']); const v = ((c.posX - S.last[0]) * dirIn[0] + (c.posZ - S.last[1]) * dirIn[1]) * 60; S.last = [c.posX, c.posZ]; const o = out(); S.i++;
           S.kick = S.kick || !!pl.kick; if (o > 0.6 && S.hit < 0 && !pl.kick) S.before = v; if (S.hit < 0 && Math.abs(d.angle) > 0.02) S.hit = S.i; if (S.hit >= 0 && S.i - S.hit < 40) S.slow = Math.min(S.slow, v); if (S.cross < 0 && o < -0.5) S.cross = S.i / 60; };
         for (let k = 0; k < 120 && S.hit < 0; k++) await S.step();
         for (let k = 0; k < 3; k++) await S.step();

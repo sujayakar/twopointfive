@@ -40,7 +40,7 @@ async function stand(on: boolean) {
   const R = await rig(SCN, 5), g = R.game;
   TEAMPACE.on = on; for (const k of Object.keys(TEAMPACE_STATS)) (TEAMPACE_STATS as any)[k] = 0;   // (TEAMPACE.pacing is left as the stand has it: the two lines that read a sent man's walk ask standWalk, the rest hold either way — the paced walk's own cases are pacing-check.ts's)
   const marks = R.hostiles.filter((h: any) => h.state !== 'dead').map((h: any) => [...h.char.pos]);
-  for (const h of R.hostiles) if (h.state !== 'dead') R.put(h, [h.char.pos[0] + 400, 0, h.char.pos[2]]);
+  for (const h of R.hostiles) if (h.state !== 'dead') R.put(h, [h.char.posX + 400, 0, h.char.posZ]);
   const home = [...g.player.char.pos]; R.gather(home, 20); R.step(120);
   // a long walk off: the spot one of their men stood on, by the length of the way to it
   // … that 'move there' takes (no locked door on the way): asked, then the four called back
@@ -87,7 +87,7 @@ async function following(on: boolean) {
   const wBehind = dSam(), wStats = TEAMPACE_STATS.follow; R.until(() => men.every(m => R.O.of(m)?.arrived), 12); R.step(60);
   // 3. at a sprint, back the way he came
   const tops = men.map(() => 0); let runF = 0, lowF = 0, far = 0, samTop = 0; const log: string[] = []; TEAMPACE_DEBUG.log = (s: string) => log.push(s);
-  S.go(S.home, true, 30, () => { samTop = Math.max(samTop, Math.hypot(sam.vel[0], sam.vel[2])); far = Math.max(far, dSam()); men.forEach((m, i) => { tops[i] = Math.max(tops[i], m.speed); if (m.speed >= TEAMPACE.runAt) { runF++; if (m.char.anim.upper === 'none') lowF++; } }); });
+  S.go(S.home, true, 30, () => { samTop = Math.max(samTop, Math.hypot(sam.velX, sam.velZ)); far = Math.max(far, dSam()); men.forEach((m, i) => { tops[i] = Math.max(tops[i], m.speed); if (m.speed >= TEAMPACE.runAt) { runF++; if (m.char.anim.upper === 'none') lowF++; } }); });
   let down = -1, near = 9; for (let f = 0; f < 360; f++) { R.step(); near = Math.min(near, ...men.map(m => flat(m.char.pos, sam.pos))); if (down < 0 && men.every(m => m.speed < TEAMPACE.runAt)) down = f / 60; }
   const inPlace = R.until(() => men.every(m => R.O.of(m)?.arrived), 12), runs = TEAMPACE_STATS.follow - wStats;
   // 3b. the silent squad
@@ -101,7 +101,7 @@ async function following(on: boolean) {
 async function grenade(on: boolean, own = true) {
   const S = await stand(on), { R, g } = S, men = S.men(), thrower = g.guards.find((x: any) => x.team !== 'operative' && x.team !== 'civilian');
   TEAMPACE.own = own; { const why = R.O.give('hold', R.O.targetAt([...men[0].char.pos]), 'all'); if (why) throw new Error(`teampace: 'hold' refused — ${why}`); R.step(120); }   // (on posts: no follower's pace under the flee)
-  const c = men.reduce((a, m) => [a[0] + m.char.pos[0] / men.length, 0, a[2] + m.char.pos[2] / men.length], [0, 0, 0]);
+  const c = men.reduce((a, m) => [a[0] + m.char.posX / men.length, 0, a[2] + m.char.posZ / men.length], [0, 0, 0]);
   g.items.spawn('frag', [c[0], 0.05, c[2]], [0, 0, 0], { fuse: 3.2, who: thrower?.char.id ?? 0 });
   let top = 0; for (let f = 0; f < 200; f++) { R.step(); for (const m of men) top = Math.max(top, m.speed); }
   TEAMPACE.own = true;

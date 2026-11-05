@@ -50,7 +50,7 @@ async function stage(S: Stage): Promise<Out> {
   const men = g.guards.filter((m: any) => m.team === 'operative' && m.unit && m.state !== 'dead'), blue = men.find((m: any) => m.callsign === 'Blue One'), red = men.find((m: any) => m.callsign === 'Red One');
   if (!blue || !red) throw new Error(`the staging is not there: ${men.length} men, Blue One ${blue ? 'found' : 'not found'}, Red One ${red ? 'found' : 'not found'}`);
   const rest = men.filter((m: any) => m !== blue && m !== red);
-  const put = (m: any, p: number[]) => { m.char.pos[0] = p[0]; m.char.pos[2] = p[2]; m.char.vel[0] = m.char.vel[2] = 0; if (m.path) m.path.length = 0; m.pathI = 0; };
+  const put = (m: any, p: number[]) => { m.char.posX = p[0]; m.char.posZ = p[2]; m.char.velX = m.char.velZ = 0; if (m.path) m.path.length = 0; m.pathI = 0; };
   let eAt = AWAY, eYaw = 0, lateUntil = -1;
   const gates = g.doors.list.filter((d: any) => GATES.some(q => Math.hypot(d.pos[0] - q[0], d.pos[2] - q[1]) < 0.9)); if (gates.length !== 2) throw new Error(`the yard's two gates are not where the probe has them: ${gates.length} found`);
   const puppet = () => { for (const d of gates) d.angle = 1.5; for (const o of g.fight.ops) o.readyAt = g.time + 1; g.fight.hotT = g.time; put(E, eAt);   // (nobody's round ever goes: the man is there to be looked at for the whole of the run · the floor hot, as it was: a sighting is a man)
@@ -71,7 +71,7 @@ async function stage(S: Stage): Promise<Out> {
   for (let i = 0, n = Math.round((S.secs ?? 4) * 60); i < n; i++) { puppet(); W.step(DT); out.frames++;
     out.maxOff = Math.max(out.maxOff, Math.abs(wrap(c.aimYaw - way)) * DEG); if (O.tgt === E) out.onHim++; if (X.tgt === E && X.blockT < ROOMFIGHT.noShot) out.redOn++; if (X.tgt === E) { out.afterRed++; if (O.tgt === E) out.afterRedOn++; }
     out.seen = Math.max(out.seen, O.meters.get(E)?.m ?? 0); }
-  out.state = `${E.state}${E.wound ? '/wounded' : ''}`; out.line = !g.col.segmentBlocked([c.pos[0], 1.5, c.pos[2]], [S.at[0], 1.2, S.at[2]]);
+  out.state = `${E.state}${E.wound ? '/wounded' : ''}`; out.line = !g.col.segmentBlocked([c.posX, 1.5, c.posZ], [S.at[0], 1.2, S.at[2]]);
   return out;
 }
 

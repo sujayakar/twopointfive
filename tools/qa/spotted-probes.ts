@@ -62,7 +62,7 @@ export async function rig(seed: number, on: boolean, knobs: Record<string, unkno
   const said: string[] = [];
   const seen = new Set<any>(); let pose: null | (() => void) = null, lastLine = '';
   const R = { W, game, said, mate: null as any, foe: null as any, /** (keep) a second defender left up, rooted and calm beside the first: a man to drop */ other: null as any, shots: [] as number[], crouched: 0, frames: 0, post: null as null | (() => void),
-    step(n = 1) { for (let i = 0; i < n; i++) { SILENT.on = true; game.player.visibility = 0.05; pose?.(); { const o = R.other; if (o && o.state !== 'dead') { o.state = 'patrol'; o.awareness = 0; o.pinned = true; o.char.vel[0] = o.char.vel[2] = 0; o.fireCd = Math.max(o.fireCd ?? 0, 0.5); } } W.step(DT); R.frames++;
+    step(n = 1) { for (let i = 0; i < n; i++) { SILENT.on = true; game.player.visibility = 0.05; pose?.(); { const o = R.other; if (o && o.state !== 'dead') { o.state = 'patrol'; o.awareness = 0; o.pinned = true; o.char.velX = o.char.velZ = 0; o.fireCd = Math.max(o.fireCd ?? 0, 0.5); } } W.step(DT); R.frames++;
       for (const e of game.events) { if (seen.has(e)) continue; seen.add(e); if (e.kind === 'guardShot' && R.mate && e.who === R.mate.char.id) R.shots.push(game.time); }
       { const b = R.mate?.bubble, key = b ? `${b.t}|${b.text}` : ''; if (b && key !== lastLine) { lastLine = key; said.push(`${R.mate.callsign}${b.radio ? ' (radio)' : ''}: ${b.text}`); } }
       R.post?.(); } },
@@ -72,13 +72,13 @@ export async function rig(seed: number, on: boolean, knobs: Record<string, unkno
     mode(): string { return SPM.spottedMode(game, R.mate); },
     vis(p: number[]): number { return game.visibilityOf(GDM.lightEstimateAt(game, [p[0], 0.9, p[2]])); },
     /** the walls and furniture between a man's eyes and a body at p (leaves ignored), as spotted.ts asks it */
-    line(h: any, p: number[], low = false): boolean { const col = game.col, dyn = col.dynamicBoxes, eye = h.char.bones.head ?? [h.char.pos[0], 1.6, h.char.pos[2]]; col.dynamicBoxes = [];
+    line(h: any, p: number[], low = false): boolean { const col = game.col, dyn = col.dynamicBoxes, eye = h.char.bones.head ?? [h.char.posX, 1.6, h.char.posZ]; col.dynamicBoxes = [];
       try { return !col.segmentBlocked(eye, [p[0], low ? 0.75 : 1.25, p[2]]) || !col.segmentBlocked(eye, [p[0], low ? 1.05 : 1.6, p[2]]); } finally { col.dynamicBoxes = dyn; } },
     /** write the one defender's state every frame from here on (rooted where he stands, facing `face`) */
     /** the written state once more, now (after a step in which the game's own turn rule moved his facing on from what was written) */
     again() { pose?.(); },
     hold(state: string, aw: number, o: { face?: number[]; eyesOn?: 'sam' | null } = {}) { const h = R.foe, p0 = [...h.char.pos];
-      pose = () => { if (h.state === 'dead') return; h.state = state; h.awareness = aw; h.pinned = true; h.char.pos[0] = p0[0]; h.char.pos[2] = p0[2]; h.char.vel[0] = h.char.vel[2] = 0;
+      pose = () => { if (h.state === 'dead') return; h.state = state; h.awareness = aw; h.pinned = true; h.char.posX = p0[0]; h.char.posZ = p0[2]; h.char.velX = h.char.velZ = 0;
         if (o.face) { const y = Math.atan2(o.face[0] - p0[0], o.face[2] - p0[2]); h.char.aimYaw = h.char.bodyYaw = y; if ('headYaw' in h.char) h.char.headYaw = y; }
         if (o.eyesOn === 'sam') { h.foe = 'player'; h.lastSeenT = game.time; h.lastKnown = [...game.player.char.pos]; } else if (o.eyesOn === null) { h.foe = null; h.lastSeenT = -100; }
         h.fireCd = Math.max(h.fireCd ?? 0, 0.5); }; },   // (he never gets a round off: the probe is about the partner)
@@ -95,7 +95,7 @@ export async function rig(seed: number, on: boolean, knobs: Record<string, unkno
         // Sam a stride ahead of him toward the man and two paces to the side (clear of the lane his gun needs): the partner follows with Sam, and what Sam is going at, in front of him
         const sam = [p[0] - Math.sin(a) * 1.0 + Math.cos(a) * 2.2, 0, p[2] - Math.cos(a) * 1.0 - Math.sin(a) * 2.2]; if (nav.isBlocked(sam[0], sam[2]) || !nav.walkable(p, sam)) continue;
         if (skip-- > 0) continue;
-        game.teleportPlayer(sam); W.cursorAt([hp[0], 1.2, hp[2]]); const c = R.mate.char; c.pos[0] = p[0]; c.pos[2] = p[2]; c.vel[0] = c.vel[2] = 0; if (R.mate.script) R.mate.script.path = undefined;
+        game.teleportPlayer(sam); W.cursorAt([hp[0], 1.2, hp[2]]); const c = R.mate.char; c.posX = p[0]; c.posZ = p[2]; c.velX = c.velZ = 0; if (R.mate.script) R.mate.script.path = undefined;
         return { at: p, sam, vis: v, d: r }; }
       return null; },
   };
@@ -131,7 +131,7 @@ export const spottedSuspicious = guarded(async () => {
   // the leash: Sam walks on while the man is still suspicious
   { const R = await rig(11, true); const st = R.stage({ lit: false })!; R.step(30); R.hold('suspicious', 0.4, { face: st.at, eyesOn: null }); R.step(60 * 2); const still = moved(R, 1.5);
     const g = R.game, c = R.mate.char, nav = g.col.nav; let q: number[] | null = null;
-    for (let r = 9; r <= 13 && !q; r += 1) for (let k = 0; k < 24 && !q; k++) { const a = k * Math.PI / 12, s = [c.pos[0] + Math.sin(a) * r, 0, c.pos[2] + Math.cos(a) * r]; if (!nav.isBlocked(s[0], s[2]) && flat(s, R.foe.char.pos) > st.d && (nav.findPath(c.pos, s)?.length ?? 0) > 0) q = s; }
+    for (let r = 9; r <= 13 && !q; r += 1) for (let k = 0; k < 24 && !q; k++) { const a = k * Math.PI / 12, s = [c.posX + Math.sin(a) * r, 0, c.posZ + Math.cos(a) * r]; if (!nav.isBlocked(s[0], s[2]) && flat(s, R.foe.char.pos) > st.d && (nav.findPath(c.pos, s)?.length ?? 0) > 0) q = s; }
     if (!q) throw new Error('no spot past the leash'); g.teleportPlayer(q); const d0 = flat(c.pos, g.player.char.pos); const m = moved(R, 4);
     verdict(still < 0.3 && d0 > SPOTTED.leashM && m > 1 && crouchOf(R.mate) > 0.5, 'Sam goes on past the leash: the partner follows, still low', `still ${f2(still)} m · Sam ${f2(d0)} m off (leash ${SPOTTED.leashM}) · then moved ${f2(m)} m in 4 s, crouch ${f2(crouchOf(R.mate))}`); }
   return done();
@@ -159,7 +159,7 @@ export const spottedBrace = guarded(async () => {
     if (!st) throw new Error('no lit spot in a kept defender\'s line could be staged');
     const g = R.game, nav = g.col.nav, hp = R.foe.char.pos, o = R.other;
     // the man to drop: a few strides from the mate, on the far side from the partner (nearer than braceM whatever the level dealt)
-    { let put = false; for (let r = 2; r <= 5 && !put; r += 0.5) for (let k = 0; k < 12 && !put; k++) { const a = k * Math.PI / 6, q = [hp[0] + Math.sin(a) * r, 0, hp[2] + Math.cos(a) * r]; if (nav.isBlocked(q[0], q[2]) || flat(q, st.at) < flat(hp, st.at) || flat(q, st.sam) < 2) continue; o.char.pos[0] = q[0]; o.char.pos[2] = q[2]; put = true; }
+    { let put = false; for (let r = 2; r <= 5 && !put; r += 0.5) for (let k = 0; k < 12 && !put; k++) { const a = k * Math.PI / 6, q = [hp[0] + Math.sin(a) * r, 0, hp[2] + Math.cos(a) * r]; if (nav.isBlocked(q[0], q[2]) || flat(q, st.at) < flat(hp, st.at) || flat(q, st.sam) < 2) continue; o.char.posX = q[0]; o.char.posZ = q[2]; put = true; }
       if (!put) throw new Error('no floor for the man to drop beside the mate'); }
     R.hold('patrol', 0, { face: st.at, eyesOn: null }); R.step(40); const s0 = { ...SPM.SPOTTED_STATS }, said0 = R.said.length;
     killGuard(g, o, [0, 0, 1], true, 'struck', 'player'); const t0 = g.time; let lowAt = -1, modeAt = -1, outAt = -1;
@@ -187,7 +187,7 @@ export const spottedClose = guarded(async () => {
     for (const k of [-1, -2, -3, 0, 1, 2, 3, 4, 5, 6, 7]) { R = await rig(11, on, knobs, k); st = R.stage(o); if (st) break; }
     if (!st) throw new Error('no spot that near a defender could be staged');
     const g = R.game, s0 = { ...SPM.SPOTTED_STATS }; R.step(10); const t0 = g.time; let downAt = -1; const ev0 = g.events.length;
-    R.hold(state, state === 'alert' ? 1 : 0.6, { face: st.at, eyesOn: state === 'alert' ? 'sam' : null }); if (state === 'suspicious') R.post = () => { R.foe.char.aimYaw = R.foe.char.bodyYaw = Math.atan2(R.mate.char.pos[0] - R.foe.char.pos[0], R.mate.char.pos[2] - R.foe.char.pos[2]); if (downAt < 0 && R.foe.state === 'dead') downAt = g.time - t0; };
+    R.hold(state, state === 'alert' ? 1 : 0.6, { face: st.at, eyesOn: state === 'alert' ? 'sam' : null }); if (state === 'suspicious') R.post = () => { R.foe.char.aimYaw = R.foe.char.bodyYaw = Math.atan2(R.mate.char.posX - R.foe.char.posX, R.mate.char.posZ - R.foe.char.posZ); if (downAt < 0 && R.foe.state === 'dead') downAt = g.time - t0; };
     else R.post = () => { if (downAt < 0 && R.foe.state === 'dead') downAt = g.time - t0; };
     R.step(60 * 6); R.post = null;
     const loud = g.events.slice(ev0).filter((e: any) => (e.kind === 'guardShot' || e.kind === 'shot') && (e.loud || (e.level ?? 0) >= 1)).length;
@@ -250,7 +250,7 @@ export const spottedFire = guarded(async () => {
     const lw = game.rescue.lastWarning; game.rescue.lastWarning = () => true; const u = holds().mine; game.rescue.lastWarning = lw;
     verdict(!q && !u && holds().mine, 'a quiet gun (the kit\'s Quiet set) is not held; a hostage\'s last warning holds nothing', `quiet gun ${q} · last warning ${u} · the rifle, no warning ${holds().mine}`); }
   // alert, but not on them
-  const away = [h.char.pos[0] * 2 - man.char.pos[0], 0, h.char.pos[2] * 2 - man.char.pos[2]];
+  const away = [h.char.posX * 2 - man.char.posX, 0, h.char.posZ * 2 - man.char.posZ];
   set('search', 1, { face: away, eyesOn: null }); const u1 = holds(); set('alert', 1, { face: away, eyesOn: null }); const u2 = holds();
   set('alert', 1, { face: man.char.pos, eyesOn: null }); const u3 = holds(); set('alert', 1, { face: away, eyesOn: 'sam' }); const u4 = holds();
   set('alert', 1, { face: away, eyesOn: null }); SPOTTED.holdUnaware = false; const u5 = holds(); SPOTTED.holdUnaware = true; const cm = SPOTTED.closeM; SPOTTED.closeM = 30; const u6 = holds(); SPOTTED.closeM = cm;

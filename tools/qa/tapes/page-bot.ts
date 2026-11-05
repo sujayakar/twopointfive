@@ -47,7 +47,7 @@ function run(name: string, o: { cap?: number; pace?: number } = {}): TapeRun {
   const pos = (): Vec => g.player.char.pos;
   const cap = o.cap ?? 600;
   const meter = () => {
-    const c = g.player.char, id = c.id, chest = c.bones?.chest ?? [c.pos[0], c.pos[1] + 1.2, c.pos[2]], eye = c.bones?.head ?? [c.pos[0], c.pos[1] + 1.6, c.pos[2]];
+    const c = g.player.char, id = c.id, chest = c.bones?.chest ?? [c.posX, c.posY + 1.2, c.posZ], eye = c.bones?.head ?? [c.posX, c.posY + 1.6, c.posZ];
     const E = unseen ? 0 : Math.max(hour.est(chest, id), hour.est(eye, id)), R = g.probe.results as Map<string, number[]>;
     R.clear(); R.set('playerChest', [E, E, E]); R.set('playerHead', [E, E, E]);
   };

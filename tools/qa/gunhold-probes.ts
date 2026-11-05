@@ -107,7 +107,7 @@ export async function gunholdVariant() {
     const muzzleToHead = v3.dist(c.muzzle, A.char.bones.head), muzzleToSkull = v3.dist(c.muzzle, sk);
     const fw = c.forward(), left: Vec3 = [fw[2], 0, -fw[0]]; const headOff = v3.dot(v3.sub(c.bones.head, c.pos), left), hisHeadOff = v3.dot(v3.sub(A.char.bones.head, c.pos), left);
     const wristUp = c.bones.handR[1], wristToHisShoulder = v3.dist(c.bones.handR, A.char.bones.upperArmR);
-    const hisHands = [A.char.bones.handL[1] - A.char.pos[1], A.char.bones.handR[1] - A.char.pos[1]];
+    const hisHands = [A.char.bones.handL[1] - A.char.posY, A.char.bones.handR[1] - A.char.posY];
     // L: the light goes dark, the hold goes on
     tapKey(W, 'KeyL'); W.step(DT); const light1 = pl.light.enabled; tapKey(W, 'KeyL'); W.step(DT); const light2 = pl.light.enabled;
     const fails: string[] = [];
@@ -298,7 +298,7 @@ export async function gunholdWhip() {
     if (game.player.char.anim.holdPose) fails.push("Sam's holdPose still set");
     // somebody finds him: out cold
     game.teleportPlayer([37.5, 0, 26.5]); game.player.crouch = false;
-    B.hold = false; B.heardUpTo = game.eventSeq; place(B, [A.char.pos[0] + 5, 0, 11.2], -Math.PI / 2); B.state = 'patrol'; B.awareness = 0; B.wp = 3;
+    B.hold = false; B.heardUpTo = game.eventSeq; place(B, [A.char.posX + 5, 0, 11.2], -Math.PI / 2); B.state = 'patrol'; B.awareness = 0; B.wp = 3;
     let foundAt = -1; for (let f = 0; f < 60 * 30; f++) { W.step(DT); if (foundAt < 0 && A.found) foundAt = game.time; }
     if (foundAt < 0) fails.push('B never found him'); if (!B.witness.sawBody?.breathing) fails.push(`B.witness.sawBody ${JSON.stringify(B.witness.sawBody)} (want breathing)`);
     const ok = fails.length === 0; allPass &&= ok;
@@ -452,7 +452,7 @@ function nanBones(...cs: any[]): number { let n = 0; for (const c of cs) for (co
  *  roots. `each(i)` runs before each step (inputs to try under the lockout). Returns the summary the assertions read. */
 /** the cursor 6 m dead ahead of Sam at chest height: updateHold turns the pair toward the cursor, so this keeps it facing where it faces (his row is THE row while he
  *  holds somebody wherever the cursor is — Space / LMB still land on it); a cursor put 'on' the man reads the floor beyond him off the camera's ray and turns them */
-function ahead(S: any) { const c = S.game.player.char; S.W.cursorAt([c.pos[0] + Math.sin(c.bodyYaw) * 6, 1.1, c.pos[2] + Math.cos(c.bodyYaw) * 6]); }
+function ahead(S: any) { const c = S.game.player.char; S.W.cursorAt([c.posX + Math.sin(c.bodyYaw) * 6, 1.1, c.posZ + Math.cos(c.bodyYaw) * 6]); }
 function swapTrace(S: any, secs: number, each?: (i: number) => void) {
   const { W, game, A } = S; const pc = game.player.char, hc = A.char;
   const p0 = v3.copy(pc.pos), g0 = v3.copy(hc.pos); let prev = v3.copy(pc.bones.handR);

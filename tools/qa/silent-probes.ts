@@ -504,7 +504,7 @@ export const silentStart = guarded(async () => {
 async function minute(o: RigOpts, pre?: (R: any) => void): Promise<string> {
   const R = await rig(11, o); const { game, O } = R; pre?.(R); let h = 0x811c9dc5 >>> 0;
   const eat = (s: string) => { for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 0x01000193) >>> 0; } };
-  const frame = (n: number) => { for (let f = 0; f < n; f++) { R.step(); eat(JSON.stringify(digestGame(game, true))); for (const x of game.guards) eat(`${x.flashlight?.enabled ? 1 : 0}${x.state[0]}${x.char.pos[0].toFixed(4)},${x.char.pos[2].toFixed(4)},${x.char.aimYaw.toFixed(4)},${x.bubble?.radio ? 1 : 0}`); } };
+  const frame = (n: number) => { for (let f = 0; f < n; f++) { R.step(); eat(JSON.stringify(digestGame(game, true))); for (const x of game.guards) eat(`${x.flashlight?.enabled ? 1 : 0}${x.state[0]}${x.char.posX.toFixed(4)},${x.char.posZ.toFixed(4)},${x.char.aimYaw.toFixed(4)},${x.bubble?.radio ? 1 : 0}`); } };
   const sam = game.player.char.pos; O.give('fallIn', O.targetAt([sam[0], 0, sam[2]]), 'all'); frame(120);
   R.giveDoor('stack', 'breakroom_w'); frame(60 * 12); R.giveDoor('openClear', 'breakroom_w'); frame(60 * 25); R.giveDoor('threshold', 'manager'); frame(60 * 25);
   return `${(h >>> 0).toString(16).padStart(8, '0')} · ${game.guards.filter((x: any) => x.state !== 'dead').length} standing at ${game.time.toFixed(2)} s · kicks ${R.kicks} bangs ${R.bangs}`;
@@ -525,7 +525,7 @@ export const silentOff = guarded(async () => {
 const SET_BREAK = process.env.SILENTSET_BREAK === '1';
 export const silentSet = guarded(async () => {
   const { verdict, done } = family('silent-set: a silent man on his stack mark whose round is held on a man is stacked');
-  const off = (o: any, at: number[]) => { const e = Math.atan2(at[0] - o.char.pos[0], at[2] - o.char.pos[2]) - o.char.aimYaw; return Math.abs(Math.atan2(Math.sin(e), Math.cos(e))); };
+  const off = (o: any, at: number[]) => { const e = Math.atan2(at[0] - o.char.posX, at[2] - o.char.posZ) - o.char.aimYaw; return Math.abs(Math.atan2(Math.sin(e), Math.cos(e))); };
   // the break room's west door stood open, Sam inside by the north door, its two men kept unaware: the silent pair is told to stack on the north door from inside
   const run = async (key: boolean, o: RigOpts = {}, locked = false) => { const R = await rig(7, { squad: 2, ...o, silent: { stackSet: key && !SET_BREAK } }); const { game, O, D } = R;
     const d = R.door('breakroom_n'), dw = R.door('breakroom_w'), said: string[] = [], say0 = game.say; game.say = function (this: any, gd: any, text: string, ...r: any[]) { said.push(text); return say0.call(this, gd, text, ...r); };

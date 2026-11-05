@@ -100,7 +100,7 @@ const TICKS = 420;
 /** frame `f` of a fight that rolls: Sam, unkillable, put in front of the first man of the shift at frame 30; he draws, and fires from a second on */
 function drive(W: any, f: number): void {
   const g = W.game, at = 30;
-  if (f === at) { g.godMode = true; const gd = g.guards[0], yaw = gd.char.bodyYaw; g.teleportPlayer([gd.char.pos[0] + Math.sin(yaw) * 3.5, 0, gd.char.pos[2] + Math.cos(yaw) * 3.5]); W.input.pressed.add('KeyE'); }
+  if (f === at) { g.godMode = true; const gd = g.guards[0], yaw = gd.char.bodyYaw; g.teleportPlayer([gd.char.posX + Math.sin(yaw) * 3.5, 0, gd.char.posZ + Math.cos(yaw) * 3.5]); W.input.pressed.add('KeyE'); }
   const on = f >= at + 60; if (on && (f - at) % 10 === 0) W.input.clicked |= 1; W.input.buttons = on ? W.input.buttons | 1 : W.input.buttons & ~1;
 }
 /** every row whose system keeps state in the block (the die, the poses), up or down together */

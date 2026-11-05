@@ -34,7 +34,7 @@ function phase(R: Run, secs: number, dir: number[] | null, settle = 1): Phase {
   for (let i = 0; i < secs * 60; i++) { R.step();
     const E = g.events, i0 = seen ? E.indexOf(seen) : -1; for (const e of E.slice(i0 + 1)) if (e.kind === 'guardShot' && R.ops.some((o: any) => o.char.id === e.who)) rounds++; seen = E[E.length - 1] ?? seen;
     if (i < settle * 60) continue; f++; if (U.unseenLive(g)) live++;
-    for (const o of living(R)) { n++; if (o.char.anim.crouch > 0.5) low++; vmax = Math.max(vmax, Math.hypot(o.char.vel[0], o.char.vel[2])); if (o.flashlight?.enabled) lit++; far = Math.max(far, flat(o.char.pos, R.pos)); } }
+    for (const o of living(R)) { n++; if (o.char.anim.crouch > 0.5) low++; vmax = Math.max(vmax, Math.hypot(o.char.velX, o.char.velZ)); if (o.flashlight?.enabled) lit++; far = Math.max(far, flat(o.char.pos, R.pos)); } }
   R.goal = null;
   return { live: live / Math.max(1, f), low: low / Math.max(1, n), vmax, lit: lit / Math.max(1, n), far, rounds, sam: flat(R.pos, from) / secs };
 }
@@ -95,8 +95,8 @@ async function wall(tag: string, query: string, level?: string) {
       tryFaces(); }
     if (!check(!!pl.wall, `${tag}: Sam is on a wall (Q)`)) return;
     if (process.env.UNSEEN_TRACE) { const w = pl.wall, su = R.pos[0] * w.along[0] + R.pos[2] * w.along[2]; console.log(`   wall: along ${w.along.map((x: number) => x.toFixed(0))} n ${w.n.map((x: number) => x.toFixed(0))} · room lo ${(su - w.lo).toFixed(2)} hi ${(w.hi - su).toFixed(2)} · side ${w.side} · Sam ${R.pos.map((x: number) => x.toFixed(1))}`); }
-    const w = pl.wall, off = (o: any) => o.char.pos[0] * w.n[0] + o.char.pos[2] * w.n[2] - w.d;
-    let offAt = -1; for (let i = 0; i < 480; i++) { R.step(); if (process.env.UNSEEN_TRACE && i % 30 === 0) console.log(`   t${(i / 60).toFixed(1)} ` + living(R).map((o: any) => `${(o.char.pos[0] * w.along[0] + o.char.pos[2] * w.along[2] - (R.pos[0] * w.along[0] + R.pos[2] * w.along[2])).toFixed(2)}/${off(o).toFixed(2)}${o.char.anim.crouch > 0.5 ? 'L' : ''}`).join('  ')); if (!pl.wall && offAt < 0) { offAt = i / 60; console.log(`   (Sam came off the wall after ${offAt.toFixed(1)} s: '${g.messages[g.messages.length - 1]?.text ?? ''}' · he is ${R.pos.map((x: number) => x.toFixed(2))} · teammates ${living(R).map((o: any) => `${o.char.pos[0].toFixed(2)},${o.char.pos[2].toFixed(2)}`).join(' | ')})`); } }
+    const w = pl.wall, off = (o: any) => o.char.posX * w.n[0] + o.char.posZ * w.n[2] - w.d;
+    let offAt = -1; for (let i = 0; i < 480; i++) { R.step(); if (process.env.UNSEEN_TRACE && i % 30 === 0) console.log(`   t${(i / 60).toFixed(1)} ` + living(R).map((o: any) => `${(o.char.posX * w.along[0] + o.char.posZ * w.along[2] - (R.pos[0] * w.along[0] + R.pos[2] * w.along[2])).toFixed(2)}/${off(o).toFixed(2)}${o.char.anim.crouch > 0.5 ? 'L' : ''}`).join('  ')); if (!pl.wall && offAt < 0) { offAt = i / 60; console.log(`   (Sam came off the wall after ${offAt.toFixed(1)} s: '${g.messages[g.messages.length - 1]?.text ?? ''}' · he is ${R.pos.map((x: number) => x.toFixed(2))} · teammates ${living(R).map((o: any) => `${o.char.posX.toFixed(2)},${o.char.posZ.toFixed(2)}`).join(' | ')})`); } }
     const P = phase(R, 1, null, 0), offs = living(R).map(off); P.live = offAt < 0 ? P.live : 0;
     console.log(`   on the wall: ${words(P)} · off the wall face ${offs.map((x: number) => x.toFixed(2)).join(', ')} m · places dealt ${U.UNSEEN_STATS.wallPlaces} · taken back by a door's lane ${U.UNSEEN_STATS.wallLost} · refused past Sam ${U.UNSEEN_STATS.wallPast}`);
     if (P.live < 1) console.log(`   (${U.unseenSummary(g)} · on the wall still: ${!!pl.wall} · Sam ${R.pos.map((x: number) => x.toFixed(1))} · wall lo ${w.lo.toFixed(1)} hi ${w.hi.toFixed(1)} · log ${JSON.stringify(U.UNSEEN_LOG.slice(-4))} · defenders ${R.hostiles.map((h: any) => `${h.state[0]}${h.awareness.toFixed(1)}`).join(' ')})`);
@@ -113,7 +113,7 @@ async function wall(tag: string, query: string, level?: string) {
     if (clean && laned && !past) check(lows === living(R).length, `${tag}: the face behind Sam is in an open doorway's lane, so nobody is put on it: every teammate is off it on a knee (${lows} of ${living(R).length} low)`);
     check(tall === 0, `${tag}: nobody is left standing tall in the open beside him: on the wall, or on a knee (${tall} standing)`);
     check(P.vmax < 0.3, `${tag}: and they settle (fastest ${P.vmax.toFixed(2)} m/s in the last second)`);
-  } catch (e: any) { check(false, `${tag}: the run stopped — ${e?.message ?? e} · at ${R.t.toFixed(1)} s · Sam ${R.pos.map((x: number) => x.toFixed(1))} · ${U.unseenSummary(g)} · defenders ${R.hostiles.map((h: any) => `${h.state[0]}${h.awareness.toFixed(1)}@${h.char.pos[0].toFixed(0)},${h.char.pos[2].toFixed(0)}`).join(' ')} · last words: ${g.messages.slice(-3).map((m: any) => m.text).join(' | ')}`); }
+  } catch (e: any) { check(false, `${tag}: the run stopped — ${e?.message ?? e} · at ${R.t.toFixed(1)} s · Sam ${R.pos.map((x: number) => x.toFixed(1))} · ${U.unseenSummary(g)} · defenders ${R.hostiles.map((h: any) => `${h.state[0]}${h.awareness.toFixed(1)}@${h.char.posX.toFixed(0)},${h.char.posZ.toFixed(0)}`).join(' ')} · last words: ${g.messages.slice(-3).map((m: any) => m.text).join(' | ')}`); }
 }
 
 // ─────────────────────────────── hold: no round at a man who has noticed nothing ───────────────────────────────

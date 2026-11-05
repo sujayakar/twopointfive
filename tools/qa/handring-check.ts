@@ -73,9 +73,9 @@ export async function handRingCheck(): Promise<boolean> {
         `at the door [${r0}], the tap's row ${top}: the leaf ${a0.toFixed(2)} → ${leaf().toFixed(2)}, ring ${!noRing} · open floor [${r1}]: a tap blew ${WHISTLE_STATS.blown - b0}, 'nothing in reach' said ${word1}, after a second tap ${word2} · the rule off: said ${offWord}`); }
     // ---- the ring
     { rule(true); atDoor(); down(HOLD - 4); const early = up(); step(8); const v1 = view(), V = handRingView(g), hasDoor = !!V?.wedges.some((w: any) => w.key === 1), hasWhistle = !!V?.wedges.some((w: any) => w.key === LAST && /whistle/.test(w.text));
-      lift(); const stays = standing(), v2 = view(); const z0 = pl.char.pos[2]; keys('KeyW'); step(30); keys(); const walked = Math.abs(pl.char.pos[2] - z0) > 0.2, still = standing(); tap('Tab'); step(2);
+      lift(); const stays = standing(), v2 = view(); const z0 = pl.char.posZ; keys('KeyW'); step(30); keys(); const walked = Math.abs(pl.char.posZ - z0) > 0.2, still = standing(); tap('Tab'); step(2);
       verdict(!early && hasDoor && hasWhistle && stays && walked && still, 'the key kept down puts the ring up after the hold, the whistle on the last wedge; let go in the middle it stays; he can walk under it',
-        `before the hold: ring ${early} · after: ${v1} · let go: ${v2} · W for half a second under it moved him ${Math.abs(pl.char.pos[2] - z0).toFixed(2)} m, the ring still standing ${still}`); }
+        `before the hold: ring ${early} · after: ${v1} · let go: ${v2} · W for half a second under it moved him ${Math.abs(pl.char.posZ - z0).toFixed(2)} m, the ring still standing ${still}`); }
     // ---- a digit inside the hold
     { rule(true); floor('pistol'); breath(); const s0 = pl.slot, b0 = WHISTLE_STATS.blown; down(6); const notYet = !up(); tap(`Digit${LAST}`); step(2); const blew = WHISTLE_STATS.blown - b0, kept = pl.slot === s0 && !pl.holstered && !pl.setup, gone = !up(); lift(); step(4);
       atDoor(); place(fc[0], fc[2] + 1.0, 180, 'pistol'); step(4); const two = g.nearby[1]?.verb; down(6); tap('Digit1'); step(2); const noSetup = !pl.setup && pl.slot === 'pistol'; lift(); step(4); tap('Tab'); step(2);
@@ -259,7 +259,7 @@ export async function handRingCheck(): Promise<boolean> {
         edge = `its point at ${q[0].toFixed(0)}, ${q[1].toFixed(0)} of ${VW} × ${VH}, the ring at ${C5.ax.toFixed(0)}, ${C5.ay.toFixed(0)}: ${inside ? 'whole inside the edge' : 'NOT HELD INSIDE'}`; } tap('Tab'); step(2);
       // (open floor, the whistle alone: on his own body — and it goes with him as he walks under it; walked up to a thing, it stands on the thing)
       floor(); breath(); cur(...far); step(90); stand(); const R3 = pl.sel.ring, p = pl.char.pos, onBody = (R: any) => { const q = pl.char.pos; return !!R?.at && Math.abs(R.at[0] - q[0]) < 1e-6 && Math.abs(R.at[2] - q[2]) < 1e-6 && R.at[1] > q[1] + 0.5 && R.at[1] < q[1] + 1.8 && off(R, R.at) < 3; }, body = onBody(R3), rows3 = handRingView(g)?.wedges.length;
-      const p0 = [p[0], p[2]]; input.keys.add('KeyW'); step(70); input.keys.delete('KeyW'); step(90); const walked = Math.hypot(pl.char.pos[0] - p0[0], pl.char.pos[2] - p0[1]), withHim = standing() && pl.sel.ring === R3 && onBody(R3);
+      const p0 = [p[0], p[2]]; input.keys.add('KeyW'); step(70); input.keys.delete('KeyW'); step(90); const walked = Math.hypot(pl.char.posX - p0[0], pl.char.posZ - p0[1]), withHim = standing() && pl.sel.ring === R3 && onBody(R3);
       tap('Tab'); step(2);
       // (a step short of the door, where its rows are not his yet: the ring on his body — walked up to the door under it, the ring stands on the door)
       place(fc[0], fc[2] + 1.8, 180); breath(); cur(...far); step(90); stand(); const R6 = pl.sel.ring, rows5 = handRingView(g)?.wedges.length, short6 = onBody(R6);
@@ -361,7 +361,7 @@ export async function handRingCheck(): Promise<boolean> {
       HANDRING.near = false; short(); clr(); tap(KEY); step(20); const old = said(); rule(true);
       floor(); clr(); tap(KEY); step(20); const open = said();
       // sprinting away from inside its reach: the door is near enough, and it is his feet that are wrong
-      place(fc[0], fc[2] + 0.5, 180); clr(); keys('ShiftLeft', 'KeyS'); step(8); const sprinting = pl.sprinting, offR = Math.hypot(pl.char.pos[0] - fc[0], pl.char.pos[2] - fc[2]); tap(KEY); step(2); keys(); step(20); const ran = said();
+      place(fc[0], fc[2] + 0.5, 180); clr(); keys('ShiftLeft', 'KeyS'); step(8); const sprinting = pl.sprinting, offR = Math.hypot(pl.char.posX - fc[0], pl.char.posZ - fc[2]); tap(KEY); step(2); keys(); step(20); const ran = said();
       // a wall between: the nearest door's marker is the level's, a stride and a half off through the plaster
       const walled = (() => { const col = g.col, eyeY = 1.3; for (const d of g.doors.list) { const c = d.frameCentre; for (let a = 0; a < 16; a++) { const q = [c[0] + Math.cos(a * Math.PI / 8) * 1.9, 0, c[2] + Math.sin(a * Math.PI / 8) * 1.9];
         const cut = (to: number[]) => { const k = 1 - 0.7 / Math.hypot(to[0] - q[0], to[2] - q[2]); return col.solidBlocked([q[0], eyeY, q[2]], [q[0] + (to[0] - q[0]) * k, eyeY, q[2] + (to[2] - q[2]) * k]); };   // (blocked well short of the door: a wall, not its own leaf)
@@ -370,8 +370,8 @@ export async function handRingCheck(): Promise<boolean> {
       let wall = 'no such place'; if (walled) { place(walled.q[0], walled.q[2], 180); const lone = !g.interactables.some((it: any) => it.kind !== 'door' && it.kind !== 'light' && it.kind !== 'wall' && Math.hypot(it.pos[0] - walled.q[0], it.pos[2] - walled.q[2]) < 2.3); clr(); tap(KEY); step(20); wall = lone ? said() : 'another thing stands there'; }
       // a living man nearer than the door, not yet his to grab: the tap was for him, and the door does not answer it
       const gd = g.guards.find((x: any) => x.state !== 'dead' && !x.unit), gp = gd ? [...gd.char.pos] : null; let man = 'no man'; short();
-      if (gd) { const put = () => { gd.char.pos[0] = pl.char.pos[0] + 1.25; gd.char.pos[2] = pl.char.pos[2]; }; put(); step(2); put(); clr(); tap(KEY); step(4);
-        const mk = g.interactables.find((it: any) => it.guard === gd); man = mk && !mk.inReach ? said() : 'he has no marker out of reach'; gd.char.pos[0] = gp![0]; gd.char.pos[2] = gp![2]; step(2); }
+      if (gd) { const put = () => { gd.char.posX = pl.char.posX + 1.25; gd.char.posZ = pl.char.posZ; }; put(); step(2); put(); clr(); tap(KEY); step(4);
+        const mk = g.interactables.find((it: any) => it.guard === gd); man = mk && !mk.inReach ? said() : 'he has no marker out of reach'; gd.char.posX = gp![0]; gd.char.posZ = gp![2]; step(2); }
       // (a recording from before the word: the rest of the rule on, this off)
       const snap: any = JSON.parse(JSON.stringify(knobsSnapshot(g))), before = JSON.parse(JSON.stringify(snap)); delete before.tables.HANDRING.near;
       const kept = await quiet(() => { applyKnobs(g, before); const off = HANDRING.near === false && HANDRING.empty === !BRK; applyKnobs(g, snap); return off && HANDRING.near === !BRK; }) && FROZEN_HOLDS['HANDRING.near'] === 'TPS_HANDRING=1';

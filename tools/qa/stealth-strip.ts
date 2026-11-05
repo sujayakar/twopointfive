@@ -33,7 +33,7 @@ export function manOf(c: any, rel: (p: P3) => P3, dir: (d: P3) => P3): Man {
 }
 /** Sam's own frame this moment: origin at his feet, forward his body's */
 export function frameOf(c: any) {
-  const o = [c.pos[0], 0, c.pos[2]], y = c.bodyYaw, f = [Math.sin(y), 0, Math.cos(y)], L = [f[2], 0, -f[0]];
+  const o = [c.posX, 0, c.posZ], y = c.bodyYaw, f = [Math.sin(y), 0, Math.cos(y)], L = [f[2], 0, -f[0]];
   const dir = (d: P3): P3 => [d[0] * L[0] + d[2] * L[2], d[1], d[0] * f[0] + d[2] * f[2]];
   return { dir, rel: (p: P3): P3 => dir([p[0] - o[0], p[1], p[2] - o[2]]) };
 }
@@ -53,7 +53,7 @@ export async function lobby(seed: number, crouch = true, at: P3 = [6.5, 0, 19.5]
   g.guards.forEach((gd: any, i: number) => park(gd, i));
   W.cam.yaw = 0; W.cam.rebuild?.();
   g.teleportPlayer(at); g.player.crouch = crouch; g.player.char.bodyYaw = g.player.char.aimYaw = EAST;
-  const ahead = () => { const c = g.player.char; W.cursorAt([c.pos[0] + 7, 1.0, c.pos[2]]); };
+  const ahead = () => { const c = g.player.char; W.cursorAt([c.posX + 7, 1.0, c.posZ]); };
   const step = (n = 1) => { for (let i = 0; i < n; i++) { ahead(); W.step(DT); g.player.visibility = 0.02; } };
   step(90);
   return { W, g, step };
@@ -81,8 +81,8 @@ async function creep() {
   const S = await lobby(7104, true, [5.6, 0, 19.5]), g = S.g; CLOSE.on = true;
   const A = g.guards[0]; place(A, [10.2, 0, 19.5], EAST); A.hold = true; A.pinned = true;
   const R = recorder(g, A); S.W.input.keys.add('KeyD');
-  let n = 0; while (g.player.char.pos[0] < 10.2 - 2.7 && n++ < 400) S.step(1);
-  for (let i = 0; i <= 9; i++) { if (i) S.step(9); R.snap(`${(i * 0.15).toFixed(2)} s · ${(10.2 - g.player.char.pos[0]).toFixed(1)} m`); }
+  let n = 0; while (g.player.char.posX < 10.2 - 2.7 && n++ < 400) S.step(1);
+  for (let i = 0; i <= 9; i++) { if (i) S.step(9); R.snap(`${(i * 0.15).toFixed(2)} s · ${(10.2 - g.player.char.posX).toFixed(1)} m`); }
   return R.moments;
 }
 /** the office's four-man room clear (fog of war, so the wand's row is offered), Sam at the server room's door */
@@ -101,7 +101,7 @@ export async function atDoor(seed: number, first?: () => void) {
 }
 async function cable() {
   const S = await atDoor(7105), g = S.g, R = recorder(g), c = g.player.char;
-  const dd = () => Math.hypot(S.mid[0] - c.pos[0], S.mid[2] - c.pos[2]);
+  const dd = () => Math.hypot(S.mid[0] - c.posX, S.mid[2] - c.posZ);
   R.snap('at the door', dd()); if (!S.begin()) throw new Error(`cable: the wand's row was not offered (rows ${g.nearby.map((x: any) => `${x.kind}:${x.verb}`).join(' ')})`);
   let f = 0; const to = (t: number, label: string) => { const n = Math.round(t * 60); for (; f < n; f++) S.W.step(DT); R.snap(label, dd()); };
   for (const t of [0.15, 0.3, 0.45, 0.7, 1.2, 2.4]) to(t, `${t.toFixed(2)} s`);

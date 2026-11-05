@@ -428,7 +428,7 @@ const NONE: Guard[] = [];
 export function civilianBodies(g: Game): Guard[] { const P = men(g); return civiliansShown(g).filter(cv => cv.state !== 'dead' && cv.char.alive && !P.some(pl => pl.holding?.g === cv)); }
 /** game.ts updateDoors: their door contacts — a standing civilian pushes a leaf like anybody (no key: a locked one stays a wall) */
 export function civilianDoorContacts(g: Game, contacts: DoorContact[]) {
-  for (const cv of civiliansShown(g)) if (cv.state !== 'dead' && !cv.held) contacts.push({ pos: cv.char.pos, radius: 0.34, bash: false, who: cv.char.id, quiet: cv.civ!.state === 'work' });
+  for (const cv of civiliansShown(g)) if (cv.state !== 'dead' && !cv.held) contacts.push({ pos: cv.char.pos, radius: 0.34, bash: false, who: cv.char.id, quiet: cv.civ!.state === 'work', of: cv.char });
 }
 /** per-Game floor-wide memory: control's evacuation line said; the last greeting anywhere; the words / doings due a beat from now */
 const floors = new SideMap<object, { evacTold: boolean; greetAt: number; pending: Pending[] }>('civilians.floors');
@@ -556,8 +556,8 @@ function updateOne(g: Game, gd: Guard, dt: number) {
   // ---- solidity: the statics and the slab; she gives way to the men, to Sam and to the other civilian (they never feel her: the shift's feet are the shift's) —
   //      but for a man seated at his desk, who is where his chair is and stays there
   if (C.seated) return;
-  g.col.collideCircle(c.pos, c.radius, 0.2, 1.5); g.col.clampToWorld(c.pos, c.radius);
-  const yieldTo = (p: Vec3, r: number) => { const dx = c.pos[0] - p[0], dz = c.pos[2] - p[2]; const l = Math.hypot(dx, dz); if (l < r && l > 1e-4) { c.pos[0] += dx / l * (r - l); c.pos[2] += dz / l * (r - l); } };
+  { const p = c.pos; g.col.collideCircle(p, c.radius, 0.2, 1.5); g.col.clampToWorld(p, c.radius); c.pos = p; }
+  const yieldTo = (p: Vec3, r: number) => { const dx = c.posX - p[0], dz = c.posZ - p[2]; const l = Math.hypot(dx, dz); if (l < r && l > 1e-4) { c.posX += dx / l * (r - l); c.posZ += dz / l * (r - l); } };
   for (const o of g.guards) if (o.state !== 'dead') yieldTo(o.char.pos, 0.6);
   if (!g.player.down) yieldTo(g.player.char.pos, 0.62);
   for (const o of g.civilians) if (o !== gd && o.state !== 'dead' && o.civ!.state !== 'gone') yieldTo(o.char.pos, 0.55);
@@ -688,15 +688,15 @@ function work(g: Game, gd: Guard, dt: number): { move: number } {
     const settled = face === undefined || Math.abs(wrapAngle(c.bodyYaw - face)) < 0.35;
     c.anim.act = K && settled ? { clip: K.clip, loop: K.loop, rate: K.rate, in: K.in, out: K.out } : null;   // (turned to it first, then down to it)
     C.seated = task === 'sit' && settled;
-    if (C.seated) { const f = face ?? c.bodyYaw; const tx = target[0] + Math.sin(f) * SIT_ADVANCE, tz = target[2] + Math.cos(f) * SIT_ADVANCE; const k = 1 - Math.exp(-5 * dt); c.pos[0] += (tx - c.pos[0]) * k; c.pos[2] += (tz - c.pos[2]) * k; }   // onto the chair: the mark is the seat, the clip carries the pelvis SIT_ADVANCE behind the root
+    if (C.seated) { const f = face ?? c.bodyYaw; const tx = target[0] + Math.sin(f) * SIT_ADVANCE, tz = target[2] + Math.cos(f) * SIT_ADVANCE; const k = 1 - Math.exp(-5 * dt); c.posX += (tx - c.posX) * k; c.posZ += (tz - c.posZ) * k; }   // onto the chair: the mark is the seat, the clip carries the pelvis SIT_ADVANCE behind the root
     c.anim.lookYawExtra = task === 'sit' ? Math.sin(gd.lookPhase * 0.4) * 0.12 : task === 'stand' ? Math.sin(gd.lookPhase * 0.9) * 0.4 : 0;
     gd.lookPhase += dt;
     if (gd.wait <= 0) { endTask(gd); gd.wp = (gd.wp + 1) % R.points.length; }
   } else if (C.settleT >= 0) {   // the last hand's breadth: straight onto the mark itself (the path ended on its cell's centre), then the task
     C.settleT += dt; c.anim.act = null;
-    const dx = target[0] - c.pos[0], dz = target[2] - c.pos[2]; const d = Math.hypot(dx, dz);
+    const dx = target[0] - c.posX, dz = target[2] - c.posZ; const d = Math.hypot(dx, dz);
     if (d < 0.04 || C.settleT > 1.5) { C.settleT = -1; gd.speed = 0; c.vel = [0, 0, 0]; gd.wait = R.wait[gd.wp] ?? 0; C.taskT = 0; if (gd.wait <= 0) gd.wp = (gd.wp + 1) % R.points.length; }
-    else { const sp = Math.min(0.8, d / 0.4 + 0.15); gd.speed = sp; const st = Math.min(d, sp * dt); c.pos[0] += dx / d * st; c.pos[2] += dz / d * st; c.vel = [dx / d * sp, 0, dz / d * sp]; move = sp; const face = C.def.face?.[gd.wp]; if (face !== undefined) c.bodyYaw = approachAngle(c.bodyYaw, face, 3 * dt); }
+    else { const sp = Math.min(0.8, d / 0.4 + 0.15); gd.speed = sp; const st = Math.min(d, sp * dt); c.posX += dx / d * st; c.posZ += dz / d * st; c.vel = [dx / d * sp, 0, dz / d * sp]; move = sp; const face = C.def.face?.[gd.wp]; if (face !== undefined) c.bodyYaw = approachAngle(c.bodyYaw, face, 3 * dt); }
   } else {
     c.anim.act = null; c.anim.lookYawExtra = 0;
     goTo(g, gd, target);
@@ -707,7 +707,7 @@ function work(g: Game, gd: Guard, dt: number): { move: number } {
   return { move };
 }
 /** leaving a mark: the clip comes off (its own fade) and a seated / kneeling woman takes a moment to be on her feet */
-function endTask(gd: Guard) { const C = gd.civ!; const K = TASK_CLIP[taskAt(gd)]; gd.char.anim.act = null; C.riseT = C.seated || gd.char.anim.actShown > 0.5 ? K?.rise ?? 0 : 0; C.taskT = 0; C.settleT = -1; if (C.seated) { const f = C.def.face?.[gd.wp] ?? gd.char.bodyYaw; gd.char.pos[0] -= Math.sin(f) * SIT_ADVANCE; gd.char.pos[2] -= Math.cos(f) * SIT_ADVANCE; gd.char.update(0); } C.seated = false; }   // (out of the chair: back onto the mark he stood up from — the seat is a prop his feet cannot stand in)
+function endTask(gd: Guard) { const C = gd.civ!; const K = TASK_CLIP[taskAt(gd)]; gd.char.anim.act = null; C.riseT = C.seated || gd.char.anim.actShown > 0.5 ? K?.rise ?? 0 : 0; C.taskT = 0; C.settleT = -1; if (C.seated) { const f = C.def.face?.[gd.wp] ?? gd.char.bodyYaw; gd.char.posX -= Math.sin(f) * SIT_ADVANCE; gd.char.posZ -= Math.cos(f) * SIT_ADVANCE; gd.char.update(0); } C.seated = false; }   // (out of the chair: back onto the mark he stood up from — the seat is a prop his feet cannot stand in)
 /** back to the loop from wherever she is: the mark nearest by path is the next, walked to */
 function toWork(g: Game, gd: Guard, line: boolean) {
   const C = gd.civ!, c = gd.char, R = gd.route;
@@ -732,7 +732,7 @@ function startled(g: Game, gd: Guard, dt: number) {
   const C = gd.civ!, c = gd.char;
   gd.speed = damp(gd.speed, 0, 8, dt); c.vel = [0, 0, 0]; c.anim.act = null;
   const at = C.seenAt > C.stateAt ? C.seenPos! : C.lookAt;   // her eyes go to him if she has him at all, else to where the noise came from
-  if (at) { const yawTo = Math.atan2(at[0] - c.pos[0], at[2] - c.pos[2]); c.bodyYaw = approachAngle(c.bodyYaw, yawTo, 2.5 * dt); c.anim.lookYawExtra = clamp(wrapAngle(yawTo - c.bodyYaw), -0.9, 0.9); }
+  if (at) { const yawTo = Math.atan2(at[0] - c.posX, at[2] - c.posZ); c.bodyYaw = approachAngle(c.bodyYaw, yawTo, 2.5 * dt); c.anim.lookYawExtra = clamp(wrapAngle(yawTo - c.bodyYaw), -0.9, 0.9); }
   if (gd.awareness >= CIV.spotAt) { toAlarmed(g, gd, C.sawGun ? 'gun' : 'sam', C.seenPos ?? at ?? c.pos, C.sawGun); return; }
   if (g.time >= C.lookUntil && gd.awareness < CIV.glimpseAt * 0.5) { C.shrugAt = g.time; civSay(g, gd, pick(gd, CIV_LINES.shrug)); log(g, gd, 'talked herself out of it'); C.lookAt = null; setState(g, gd, 'work'); gd.wait = Math.max(gd.wait, 0); }
   else if (g.time >= C.lookUntil + 6) { C.shrugAt = g.time; C.lookAt = null; setState(g, gd, 'work'); }   // (a meter that will neither fill nor drain — he stands half-seen at the edge of her lamp: she gives it up uneasily, no line)
@@ -767,7 +767,7 @@ export function toAlarmed(g: Game, gd: Guard, cause: CivCause, at: Vec3, armed: 
 function alarmed(g: Game, gd: Guard, dt: number) {
   const C = gd.civ!, c = gd.char;
   gd.speed = damp(gd.speed, 0, 10, dt); c.vel = [0, 0, 0]; c.anim.act = null;
-  const at = C.causePos; if (at) { const yawTo = Math.atan2(at[0] - c.pos[0], at[2] - c.pos[2]); c.bodyYaw = approachAngle(c.bodyYaw, yawTo, 5 * dt); }   // rooted, staring at it
+  const at = C.causePos; if (at) { const yawTo = Math.atan2(at[0] - c.posX, at[2] - c.posZ); c.bodyYaw = approachAngle(c.bodyYaw, yawTo, 5 * dt); }   // rooted, staring at it
   c.anim.lookYawExtra = 0;
   if (g.time < C.freezeUntil) return;
   const T = pickTarget(g, gd);
@@ -876,7 +876,7 @@ function report(g: Game, gd: Guard, dt: number) {
   const C = gd.civ!, c = gd.char, o = C.reportTo;
   gd.speed = damp(gd.speed, 0, 10, dt); c.vel = [0, 0, 0];
   if (!o || !tellable(g, o) || v3.distXZ(o.char.pos, c.pos) > 6) { c.anim.act = null; C.reportTo = null; if (o) C.badTargets.add(o); const T = C.reported ? null : pickTarget(g, gd); if (T) toFlee(g, gd, T, false); else toCower(g, gd, false); return; }   // (told already, and he ran off on it: nothing more to run for — the corner; review #9)   // he went down / grabbed / ran off to a shot mid-sentence: somebody else
-  const yawTo = Math.atan2(o.char.pos[0] - c.pos[0], o.char.pos[2] - c.pos[2]); c.bodyYaw = approachAngle(c.bodyYaw, yawTo, 5 * dt);   // (he turns to where she points on his own: primeGuard put his fix there)
+  const yawTo = Math.atan2(o.char.posX - c.posX, o.char.posZ - c.posZ); c.bodyYaw = approachAngle(c.bodyYaw, yawTo, 5 * dt);   // (he turns to where she points on his own: primeGuard put his fix there)
   if (o.state !== 'alert') o.reactT = Math.max(o.reactT, 0.5);   // (his feet held while she talks, half a second at a time)
   C.talkT += dt;
   if (C.talkT >= CIV.reportSecs && !C.acked) { C.acked = true; deliverReport(g, gd, o, 'told'); }
@@ -1004,7 +1004,7 @@ function follow(g: Game, gd: Guard, dt: number): { move: number; crouch: number 
     move = gd.speed;
   } else {
     gd.path = []; gd.pathGoal = null; gd.speed = damp(gd.speed, 0, 10, dt); c.vel = [0, 0, 0];
-    c.bodyYaw = approachAngle(c.bodyYaw, Math.atan2(L.pos[0] - c.pos[0], L.pos[2] - c.pos[2]), 3 * dt);
+    c.bodyYaw = approachAngle(c.bodyYaw, Math.atan2(L.posX - c.posX, L.posZ - c.posZ), 3 * dt);
   }
   return { move, crouch: 0 };
 }
@@ -1014,7 +1014,7 @@ function cower(g: Game, gd: Guard, dt: number): { move: number; crouch: number }
   if (d > 0.5 && g.time - C.stateAt < 6) { goTo(g, gd, spot); followPath(g, gd, dt, CIV.creepSpeed); move = gd.speed; }   // the crouched scuttle into the corner
   else {
     gd.speed = damp(gd.speed, 0, 10, dt); c.vel = [0, 0, 0];
-    const away = C.causePos ? Math.atan2(c.pos[0] - C.causePos[0], c.pos[2] - C.causePos[2]) : c.bodyYaw;   // face away from it, into the wall
+    const away = C.causePos ? Math.atan2(c.posX - C.causePos[0], c.posZ - C.causePos[2]) : c.bodyYaw;   // face away from it, into the wall
     c.bodyYaw = approachAngle(c.bodyYaw, away, 2 * dt);
     c.anim.lookYawExtra = Math.sin(g.time * 1.7 + c.id) * 0.5;   // looking over her shoulders
   }

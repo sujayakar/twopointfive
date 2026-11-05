@@ -17,7 +17,7 @@ const PAGES = [['compound', 'levelFile=compound.json&roomclear&squad4'], ['bazaa
     page.on('pageerror', x => errors.push('pageerror: ' + String(x && x.stack || x).slice(0, 400)));
     await page.goto(`http://localhost:${PORT}/?paused&quality=${QUALITY}&mute&${q}`);
     const R = await page.evaluate(async () => { await window.__ready; const g = window.__game;
-      const sig = () => { const r = v => (Math.round(v * 20) / 20).toFixed(2), at = c => `${r(c.char.pos[0])},${r(c.char.pos[2])}`;
+      const sig = () => { const r = v => (Math.round(v * 20) / 20).toFixed(2), at = c => `${r(c.char.posX)},${r(c.char.posZ)}`;
         return [`sam@${at(g.player)}`, ...[...g.guards, ...g.civilians].map(x => `${x.team}:${x.callsign}@${at(x)}`).sort(),
           g.quiet?.active ? `deal ${g.quiet.deal.start}/${g.quiet.deal.spot}/${g.quiet.deal.patrol}` : '', g.rescue?.active ? `clock ${g.rescue.resolveSecs}` : ''].join(' | '); };
       await window.__runFrames(3); const first = sig(); g.restartEncounter(); await window.__runFrames(3);

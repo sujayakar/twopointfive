@@ -133,7 +133,7 @@ export function updateSmokeBreak(g: Game, dt: number) {
       // (the source lives while he smokes AND it is the thread the host's book has for him: an older filing, a book dropped, a row struck from it is a thread let go.
       //  And while he is SEEN: a thread filed in view went on riding his hand into the fog, where nothing live shows — let go there, and filed again when he is seen)
       const at = (): { pos: Vec3; dir: Vec3 } | null => { if (!mine.live || !SMOKEBREAK.on || states.get(g) !== S || S.men.get(c) !== mine || smokeShown(g) !== H || H.men.get(c.id) !== shown || shown.gen !== gen || g.fogOfWar.hidden(gd)) { if (shown.gen === gen) shown.thread = false; return null; }
-        shown.beat = H.frame; const p = tipOf(c); return p ? { pos: p, dir: [c.vel[0] * 0.5, B.speed, c.vel[2] * 0.5] } : null; };
+        shown.beat = H.frame; const p = tipOf(c); return p ? { pos: p, dir: [c.velX * 0.5, B.speed, c.velZ * 0.5] } : null; };
       g.smoke.emit({ pos: tip, dir: [0, 1, 0], speed: B.speed, radius: B.radius, minVoxels: B.cells, density: B.density, temperature: B.temp, ttl: 600, age: 0, kind: 'breath', push: B.push, jitter: B.jitter,
         lattice: 'fine', confined: true, look: true, trackVel: true, tint: K.color, track: at });
       h.thread = true; h.gen = gen; h.beat = H.frame;
@@ -146,7 +146,7 @@ export function updateSmokeBreak(g: Game, dt: number) {
       (m as Man & { outAt?: number }).outAt = undefined; T.breaths++;
       if (drawing) {
         const mine = m, B = K.breath, born = m.outs;
-        const at = (): { pos: Vec3; dir: Vec3 } | null => { if (!mine.live || mine.outs !== born || !SMOKEBREAK.on || states.get(g) !== S || smokeShown(g) !== H) return null; const a = mouthOf(c); return { pos: a.pos, dir: [a.dir[0] * B.speed + c.vel[0] * 0.3, a.dir[1] * B.speed, a.dir[2] * B.speed + c.vel[2] * 0.3] }; };
+        const at = (): { pos: Vec3; dir: Vec3 } | null => { if (!mine.live || mine.outs !== born || !SMOKEBREAK.on || states.get(g) !== S || smokeShown(g) !== H) return null; const a = mouthOf(c); return { pos: a.pos, dir: [a.dir[0] * B.speed + c.velX * 0.3, a.dir[1] * B.speed, a.dir[2] * B.speed + c.velZ * 0.3] }; };
         const a0 = at();
         if (a0) g.smoke.emit({ pos: a0.pos, dir: a0.dir, speed: B.speed, radius: B.radius, minVoxels: B.cells, density: B.density, temperature: B.temp, ttl: K.out, age: 0, kind: 'breath', push: B.push, expand: B.expand,
           attack: B.attack, jitter: B.jitter, lattice: 'fine', confined: true, look: true, trackVel: true, tint: K.color, track: at });

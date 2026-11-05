@@ -329,7 +329,6 @@ export class Player extends PlayerCols {
   /** what Sam is saying right now — his side of an exchange with the man in his arm (player.ts askHeld: his line first, the man's answer when it ends) — drawn
    *  over HIS head like a guard's line, in his own tint (ui/bubbles.ts); the same shape as Guard.bubble */
   bubble: { text: string; t: number; dur: number; radio: boolean } | null = null;
-  speedSm = 0;
   visibility = 0;          // 0..1 from light meter
   irradiance = 0;
   hitFlash = 0;
@@ -455,18 +454,10 @@ export class Player extends PlayerCols {
   wall: WallHold | null = null;
   /** the last spot the collision sweep settled him at (player.ts collidePlayer walks him from here to wherever he has been put since, in short strides; null until the first settle, reset by a teleport) */
   safe: Vec3 | null = null;
-  stepPhase = 0;
-  /** how far the walk cycle has come since the last footfall filed, in turns, either way added up, 1 at the most (player.ts FOOTFALL.once; 1 = far enough,
-   *  which is where it starts, and where it stays while the key has never been on) */
-  stepTravel = 1;
-  /** how far the walk cycle has come at a footfall's speed since the last edge of it passed or footfall filed, in turns, either way added up (player.ts
-   *  FOOTFALL.owed: at half a turn a footfall is owed; 0 where it starts, when he slows, after frames the footfall test was not asked, and while the key
-   *  is down), and the game clock the test was last asked at with the key up (-1: never) */
-  stepOwed = 0; stepAt = -1;
   constructor(men: MenStore, ch: GltfCharacter, pos: Vec3, hasRifle = true, seat = 0) {   // (`men`: his game's rows · `seat`: whose man — seats.ts; the first is PLAYER_ID in the suit he always wore, a second player's wears another trim so the two tell apart)
     super();
     this.char = new Character(ch, { id: seatManId(seat), tint: [0.05, 0.06, 0.07], tint2: seat ? [0.1, 0.2, 0.36] : [0.1, 0.32, 0.18], pos, yaw: Math.PI, men });
-    sameMan(this, this.char);
+    sameMan(this, this.char); this.stepTravel = 1; this.stepAt = -1;
     this.char.muzzleAhead = this.pistol.def.muzzleAhead;   // (the row's: where the round, the flash and the rail light's beam start along the gun)
     this.hasRifle = hasRifle;
   }
@@ -544,7 +535,7 @@ export type DownBy = 'player' | 'guard' | 'world';
  *  this man's muzzle and in the lane his gun points down (gunYaw: the gun's own heading). The stack going through a door, the file behind the lead: the muzzle
  *  goes down past him (character.ts `dip`) and comes back up as they part. Geometry only; no state of the fight is written. */
 function friendBeforeMuzzle(g: Game, gd: Guard): boolean {
-  const c = gd.char, y = c.gunYaw, lane = (p: Vec3) => inDipLane(p[0] - c.pos[0], p[2] - c.pos[2], y);
+  const c = gd.char, y = c.gunYaw, lane = (p: Vec3) => inDipLane(p[0] - c.posX, p[2] - c.posZ, y);
   for (const o of g.guards) if (o !== gd && o.state !== 'dead' && o.team === gd.team && lane(o.char.pos)) return true;
   return !g.player.down && !hostileTo(gd, 'player') && lane(g.player.char.pos);
 }
@@ -703,8 +694,8 @@ export class Guard extends GuardCols {
    *  rate across him, whether he is braking for a shot, the last round's numbers. guards.ts trackGuard feeds it once a frame; the three fire sites read it. */
   aim = new AimState();
   reactT = 0; searchT = 0; lookPhase = simRandom() * 10;
-  speed = 0; flashlight: RtLight; sweep = 0; beamDir: Vec3 = [0, -0.3, 1];
-  stepPhase = 0; heardUpTo = -1; smokeTrans = 1; lightDeadUntil = -1; diedAt = -1;
+  flashlight: RtLight; sweep = 0; beamDir: Vec3 = [0, -0.3, 1];
+  heardUpTo = -1; smokeTrans = 1; lightDeadUntil = -1; diedAt = -1;
   /** a teammate's breaching shotgun out of his big slot and in his hands for a lock (bigkit.ts gunUp / gunDown): the gun he put down for it, to take up again */
   slung: { own: Firearm; ownId: WeaponId | undefined; ahead: number; gun: Firearm; out: boolean; t: number } | null = null;
   /** a teammate's second gun (gunslots.ts GUNSLOTS: his card's other slot) — `gun` / `id` / `ahead` are the one that is NOT in his hands; `out`: that is his
@@ -727,7 +718,7 @@ export class Guard extends GuardCols {
   doorDownUntil = -1;
   /** game time a blast left him hurt (condition.ts: -1 = never; read through isHurt) */
   hurtAt = -1;
-  sawPlayerThisFrame = false; lastPos: Vec3; stuckT = 0; stuckN = 0;
+  sawPlayerThisFrame = false; stuckT = 0; stuckN = 0;
   /** a real sighting of his FOE this frame, whoever that is (teams) — sawPlayerThisFrame stays what its name says: eyes on Sam (what the mission's 'spotted' count
    *  and the witnesses read), which for the staff is the same thing */
   sawFoeThisFrame = false;
@@ -1869,7 +1860,7 @@ export class Game {
       if (near && !pl.down && near.state !== 'alert') {   // the nearest living man: nothing to creep about once he is alert (he has him)
         t = 1 - smoothstep(3, 7, nd);
         if (near.state === 'suspicious' || near.state === 'search') t = Math.max(t, 0.6 * (1 - smoothstep(7, 10, nd)));   // extra care while he is looking into something
-        const spots: Vec3[] = [[pc.pos[0], 0.15, pc.pos[2]], pc.bones.chest ?? v3.add(pc.pos, [0, 1.1, 0])];   // the floor where he is (a patrol torch hangs pitched down: its pool is on the floor) and his chest (a raised one)
+        const spots: Vec3[] = [[pc.posX, 0.15, pc.posZ], pc.bones.chest ?? v3.add(pc.pos, [0, 1.1, 0])];   // the floor where he is (a patrol torch hangs pitched down: its pool is on the floor) and his chest (a raised one)
         if (this.torchOnT > this.time) this.torchOnT = -100;   // (a checkpoint loaded put the clock back: a stamp from the abandoned future is no beam on him)
         torch: for (const gd of this.guards) {   // a lit torch / weapon-light cone on him (inside its cone and 10 m, nothing solid between): half or more, held a beat past the beam moving on
           if (this.time - this.torchOnT < 1.5) break; const fl = gd.flashlight; if (gd.state === 'dead' || !fl.enabled || gd.team === 'operative') continue; const cosO = Math.cos(fl.outerDeg * DEG);
@@ -1964,8 +1955,8 @@ export class Game {
     const stir = lookConfig.on ? Math.max(0, lookConfig.stir) : 0;   // (THE LOOK PROTOTYPE's Stirred smoke row; 0 = the two soft shoves below, as the build has them)
     this.smoke.setStir?.(stir);
     for (const c of all) {
-      const sp = Math.hypot(c.vel[0], c.vel[2]); if (sp < 0.25 || !c.bones.hips) continue;
-      const dirv: Vec3 = [c.vel[0] / sp, 0.05, c.vel[2] / sp];
+      const sp = Math.hypot(c.velX, c.velZ); if (sp < 0.25 || !c.bones.hips) continue;
+      const dirv: Vec3 = [c.velX / sp, 0.05, c.velZ / sp];
       if (stir > 0) {
         // STIRRED SMOKE CURLS (the maintainer, 10-31, of smoke in the yard: "more turbulence or vorticity near the edges, especially when it's driven by player
         // movement", with the smooth flow the wind makes along a wall kept). HIS BODY is a standing capsule from his shins to his shoulders: the air inside it
@@ -2133,9 +2124,9 @@ export class Game {
     const S = this.seats, owns = this.doorOwns, was = this.doorWas; owns.length = 0;
     const contacts: DoorContact[] = [];
     for (let i = 0; i < S.length; i++) { const own = S[i].view.doorContact(); owns.push(own); if (own) contacts.push(own); }   // (each player's own contact, first: a game of one's list is the list it always was)
-    for (const g of this.guards) if (g.state !== 'dead') contacts.push({ pos: g.char.pos, radius: 0.34, bash: g.state === 'alert' && loadGait(this, g, g.speed) > 2.2, who: g.char.id, quiet: silentEase(this, g), key: true, hand: handPress(this, g), round: g.speed > ROUND_PACE && roundsLeaves(g) && !leafStalled(this, g) });   // staff carry keys: locked doors open to them and lock again behind them (closer + latch) — every man, whatever Sam has had off his belt (Guard.keys is what he can hand over, not what the leaves ask)
+    for (const g of this.guards) if (g.state !== 'dead') contacts.push({ pos: g.char.pos, of: g.char, radius: 0.34, bash: g.state === 'alert' && loadGait(this, g, g.speed) > 2.2, who: g.char.id, quiet: silentEase(this, g), key: true, hand: handPress(this, g), round: g.speed > ROUND_PACE && roundsLeaves(g) && !leafStalled(this, g) });   // staff carry keys: locked doors open to them and lock again behind them (closer + latch) — every man, whatever Sam has had off his belt (Guard.keys is what he can hand over, not what the leaves ask)
     const woundedAt: { g: Guard; at: Vec3; x: number; z: number }[] = [];   // (a copy of where his BODY is — the hips of a man on his back lie a stride behind his feet — so what a leaf does to it can be put through the walls before it is his: below, after doors.update)
-    for (const g of this.guards) if (g.wound) { const h = g.wound.pose === 'back' ? g.char.bones.hips : null, at: Vec3 = h ? [h[0], g.char.pos[1], h[2]] : v3.copy(g.char.pos); woundedAt.push({ g, at, x: at[0], z: at[2] }); contacts.push({ pos: at, radius: 0.3, bash: false, who: g.char.id, quiet: true, weak: true }); }   // a man down WOUNDED (wounds.ts — posed, no ragdoll) is in a doorway what a body is: the closer does not latch through him, a leaf somebody pushes moves him aside
+    for (const g of this.guards) if (g.wound) { const h = g.wound.pose === 'back' ? g.char.bones.hips : null, at: Vec3 = h ? [h[0], g.char.posY, h[2]] : v3.copy(g.char.pos); woundedAt.push({ g, at, x: at[0], z: at[2] }); contacts.push({ pos: at, radius: 0.3, bash: false, who: g.char.id, quiet: true, weak: true }); }   // a man down WOUNDED (wounds.ts — posed, no ragdoll) is in a doorway what a body is: the closer does not latch through him, a leaf somebody pushes moves him aside
     civilianDoorContacts(this, contacts);   // the cleaner / the late worker push leaves like anybody standing (no key: a locked one is a wall to them) — civilians.ts
     // bodies: a few of each ragdoll's particles as 'weak' contacts — a corpse in the doorway keeps the closer from latching the leaf, a leaf somebody pushes (or
     // a latched / kicked one) shoves the corpse instead (written back into the particles below, which wakes it)
@@ -2150,9 +2141,11 @@ export class Game {
     const angles = this.doors.list.map(d => d.angle);   // every leaf before this frame's contacts: what moved wakes the bodies near it (below), what turned away from a man is a leaf he is pushing (handsOnDoors)
     for (const s of S) s.view.doorActs(dt, s.input);   // each player's own verb on a door, a body, the breaker, a man in reach — his seat's half (below)
     for (let i = 0; i < S.length; i++) { const p = S[i].view.player.char.pos; was[2 * i] = p[0]; was[2 * i + 1] = p[2]; }
+    for (const c of contacts) if (c.of) c.pos = c.of.pos;   // (where they stand now: his verb may have moved a player since his contact was made)
     this.doors.update(dt, contacts);
+    for (const c of contacts) if (c.of) c.of.pos = c.pos;
     doorThrowAfter(this, contacts);      // …and what a driven leaf did to whoever stood in its swing
-    for (const w of woundedAt) { if (w.at[0] === w.x && w.at[2] === w.z) continue; this.col.collideCircle(w.at, 0.3, 0.2, 1.5); this.col.clampToWorld(w.at, 0.3); let dx = w.at[0] - w.x, dz = w.at[2] - w.z; const d = Math.hypot(dx, dz), k = d > 0.25 ? 0.25 / d : 1; dx *= k; dz *= k; const p = w.g.char.pos; p[0] += dx; p[2] += dz; this.col.collideCircle(p, 0.3, 0.2, 1.5); this.col.clampToWorld(p, 0.3); if (d > 0.005) w.g.char.update(0); }   // (a leaf moved a wounded man aside: he has no ragdoll and no walk to keep him out of the wall behind him, so the statics are asked here — at the body the leaf shoved first (on his back that is his hips, a stride from his feet), then at his feet; no more than 0.25 m a frame, so one flung leaf cannot put his centre past a thin pane; his bones re-baked where he now is, as the player's and the props' paths do)
+    for (const w of woundedAt) { if (w.at[0] === w.x && w.at[2] === w.z) continue; this.col.collideCircle(w.at, 0.3, 0.2, 1.5); this.col.clampToWorld(w.at, 0.3); let dx = w.at[0] - w.x, dz = w.at[2] - w.z; const d = Math.hypot(dx, dz), k = d > 0.25 ? 0.25 / d : 1; dx *= k; dz *= k; const wc = w.g.char; wc.posX += dx; wc.posZ += dz; const p = wc.pos; this.col.collideCircle(p, 0.3, 0.2, 1.5); this.col.clampToWorld(p, 0.3); wc.pos = p; if (d > 0.005) w.g.char.update(0); }   // (a leaf moved a wounded man aside: he has no ragdoll and no walk to keep him out of the wall behind him, so the statics are asked here — at the body the leaf shoved first (on his back that is his hips, a stride from his feet), then at his feet; no more than 0.25 m a frame, so one flung leaf cannot put his centre past a thin pane; his bones re-baked where he now is, as the player's and the props' paths do)
     doorSlabs(this, dt);   // the leaves a blast took off their hinges: each loose slab flown, landed, laid flat (doorblast.ts)
     this.handsOnDoors(angles);   // who is walking which leaf open (or easing it): his free hand goes on it (character.ts doorLayer, posed next frame)
     for (let i = 0; i < S.length; i++) S[i].view.doorAfter(owns[i], was[2 * i], was[2 * i + 1]);   // what the leaves did to each player
@@ -2167,7 +2160,7 @@ export class Game {
   private doorOwns: (DoorContact | null)[] = []; private doorWas: number[] = [];
   /** a seat's half of updateDoors, run over its view (seats.ts): the player's own contact on the leaves this frame (null: he is down) */
   private doorContact(): DoorContact | null { const pl = this.player, pc = pl.char;
-    return pl.down ? null : { pos: pc.pos, radius: 0.34, bash: pl.sprinting, who: pc.id, quiet: pl.crouch && !pl.dash, keys: pl.keys, run: sprintDoorRun(this, pl), solid: DOORWAY.solid && DOORWAY.oneWay && !this.puppet && !this.touring, vel: pc.vel };   // his pocket's keys (Player.keys — none until a questioned man hands his over): a locked leaf whose lock none fits is a wall to you (Doors.update reports it in blockedBy); one that fits, and it pushes open as it does for the staff
+    return pl.down ? null : { pos: pc.pos, of: pc, radius: 0.34, bash: pl.sprinting, who: pc.id, quiet: pl.crouch && !pl.dash, keys: pl.keys, run: sprintDoorRun(this, pl), solid: DOORWAY.solid && DOORWAY.oneWay && !this.puppet && !this.touring, vel: pc.vel };   // his pocket's keys (Player.keys — none until a questioned man hands his over): a locked leaf whose lock none fits is a wall to you (Doors.update reports it in blockedBy); one that fits, and it pushes open as it does for the staff
   }
   /** … this frame's verb of his, done (the lines are updateDoors' own, moved out whole) */
   private doorActs(dt: number, input: Input) {
@@ -2200,12 +2193,12 @@ export class Game {
       const rb = closeRmb(this, CLOSE.on && CLOSE.rmbHold && (two || bare) && pl.holstered && free, input.rmb(), input.rmbHit(), dt, !!inReach, chokeOn, input.hit('Blur') || input.hit('Paused')), blow = knife || ((two || bare) && rb !== null);   // (close.ts CLOSE.noKnife: no knife — the left click is no blow, the right click the knockout; with the two-button blow live the left click is the knife and the right click the knockout)
       const clicked = blow ? inReach : null, viaClick = clicked?.guard ?? null;   // click, hands empty: the man in reach
       const stalked = stalkGrab(this);   // (stalk.ts: the held click has walked him in to the man's back — the grab it ends in is the row's own)
-      if (stalked && free) { startGrab(this, stalked); if (pl.holding?.g === stalked) pl.holding.from = [pl.char.pos[0], pl.char.pos[1], pl.char.pos[2]]; }   // (the way in is read where he stands: behind him, or behind his chair)
+      if (stalked && free) { startGrab(this, stalked); if (pl.holding?.g === stalked) pl.holding.from = [pl.char.posX, pl.char.posY, pl.char.posZ]; }   // (the way in is read where he stands: behind him, or behind his chair)
       else if (viaClick && free && rb === 'hold') {   // (the choke: into the arm — the stalk's own grab where the key's would be — which closes as soon as it has him: player.ts updateHold, `rmbChoke`)
         const keyed = stalkKeyCan(this, viaClick); startGrab(this, viaClick, clicked!.close);
-        if (pl.holding?.g === viaClick) { if (keyed) { stalkKeyTook(this); pl.holding.from = [pl.char.pos[0], pl.char.pos[1], pl.char.pos[2]]; } pl.holding.rmbChoke = 1; pl.holding.rmbT = CLOSE.rmbTapSecs; } }   // (a hold already: letting go eases it off)
+        if (pl.holding?.g === viaClick) { if (keyed) { stalkKeyTook(this); pl.holding.from = [pl.char.posX, pl.char.posY, pl.char.posZ]; } pl.holding.rmbChoke = 1; pl.holding.rmbT = CLOSE.rmbTapSecs; } }   // (a hold already: letting go eases it off)
       else if (viaClick && free) startTakedown(this, viaClick, clicked!.close, two && knife && !viaClick.civ, !knife && rb === 'tap' && chokeOn);   // (close: the way in his row offered — close.ts, undefined with its switch off; the quick knockout is the loud one where the quiet choke was his to choose)
-      else if (act?.kind === 'guard' && verb === 'grab' && act.guard && free) { const keyed = stalkKeyCan(this, act.guard); startGrab(this, act.guard, act.close); if (keyed && pl.holding?.g === act.guard) { stalkKeyTook(this); pl.holding.from = [pl.char.pos[0], pl.char.pos[1], pl.char.pos[2]]; } }   // (stalk.ts STALK.key: the row's key finishes a stalk — the grab is the stalk's own, the step in and all)
+      else if (act?.kind === 'guard' && verb === 'grab' && act.guard && free) { const keyed = stalkKeyCan(this, act.guard); startGrab(this, act.guard, act.close); if (keyed && pl.holding?.g === act.guard) { stalkKeyTook(this); pl.holding.from = [pl.char.posX, pl.char.posY, pl.char.posZ]; } }   // (stalk.ts STALK.key: the row's key finishes a stalk — the grab is the stalk's own, the step in and all)
     }
     // A door in reach, one row per thing it can be made to do: shut → 'push it open' (Doors.use: away from you, its creak) / 'ease it open — silent' (started
     // here, run below: Doors.crack a few degrees a second until it stands open at EASE_MAX, or a step / Space / Esc stops it where it is — interact.ts); open →
@@ -2244,13 +2237,13 @@ export class Game {
   /** … and what the leaves did to him once they have swung */
   private doorAfter(own: DoorContact | null, bx: number, bz: number) {
     const pl = this.player; const pc = pl.char;
-    if (own) { settlePlayer(this); settleHeld(this); if (Math.abs(pc.pos[0] - bx) + Math.abs(pc.pos[2] - bz) > 0.005) pc.update(0); }   // a leaf shoved him (or the man in his arm: the pair gives as one, settleHeld): settle that against the statics now (never drawn inside the wall a held leaf pressed him onto), and re-bake the pose where he ended up
+    if (own) { settlePlayer(this); settleHeld(this); if (Math.abs(pc.posX - bx) + Math.abs(pc.posZ - bz) > 0.005) pc.update(0); }   // a leaf shoved him (or the man in his arm: the pair gives as one, settleHeld): settle that against the statics now (never drawn inside the wall a held leaf pressed him onto), and re-bake the pose where he ended up
     if (pl.doorHead !== 0 && pl.doorHeadT !== this.time) { if (pc.anim.lookYawExtra === pl.doorHead) pc.anim.lookYawExtra = 0; pl.doorHead = 0; }   // (sprintdoor.ts: he stopped running mid-turn — his head is given back, unless something else has taken it since)
     if (own?.run) sprintDoorAfter(this, pl, own);   // a run at a door has weight (sprintdoor.ts): the shoulder through it costs some of the run, the handle ripped toward him most of it
     { const kd = own ? sprintDoorKick(this, pl) : null; if (kd) startKick(this, kd, true); }   // …and the leaf his run is about to meet from the face it opens toward gets his boot (off its hinges: sprintdoor.ts)
     // ran full tilt into a leaf that is locked against you: that is a kick (square on — brushing past the latch edge at a run is not)
     if (own?.blockedBy && pl.sprinting && !pl.kick && !pl.picking && !pl.coding && !pl.takedown && !pl.holding && !this.puppet) {
-      const d = own.blockedBy; const u = d.dir(); const into = -(-u[1] * pc.vel[0] + u[0] * pc.vel[2]) * this.doors.side(d, pc.pos);   // speed INTO the leaf from your side (its normal on your side is (−u.z, u.x)·side)
+      const d = own.blockedBy; const u = d.dir(); const into = -(-u[1] * pc.velX + u[0] * pc.velZ) * this.doors.side(d, pc.pos);   // speed INTO the leaf from your side (its normal on your side is (−u.z, u.x)·side)
       if (into > 1.5 && !this.doors.bootHolds(d, pc.pos)) startKick(this, d);   // (…and never at the face it opens toward: he stops on it as on any locked door — doors.ts DOORWAY.frameHolds)
     }
   }
@@ -2280,11 +2273,11 @@ export class Game {
     for (const { c, can, player, rightFree, gd, pl } of who) {
       let rec = recs.get(c);
       if (can) {
-        let hit: Door | null = null, crack = false, holdOnly = false, move = false; const speed = Math.hypot(c.vel[0], c.vel[2]);
+        let hit: Door | null = null, crack = false, holdOnly = false, move = false; const speed = Math.hypot(c.velX, c.velZ);
         if (player && pl!.doorMove && !pl!.doorMove.d.off) { hit = pl!.doorMove.d; crack = true; move = true; }   // the leaf he is working by hand (hands.ts) has his hand, whichever other leaf he brushes
         for (let k = 0; k < list.length && !hit; k++) {
           const d = list[k]; const hx = d.def.hinge[0], hz = d.def.hinge[1], W = d.def.width; if (d.off) continue;   // (off its hinges: no leaf there for a hand; read by index: this line runs for every man × every leaf, every frame)
-          const vx = c.pos[0] - hx, vz = c.pos[2] - hz; if (vx * vx + vz * vz > (W + 1.2) ** 2) continue;
+          const vx = c.posX - hx, vz = c.posZ - hz; if (vx * vx + vz * vz > (W + 1.2) ** 2) continue;
           if (player && pl!.easing === d) { hit = d; crack = true; break; }
           const u = d.dir(); const along = vx * u[0] + vz * u[1], perp = u[0] * vz - u[1] * vx;
           const t = clamp(along, 0, W); const dist = Math.hypot(vx - u[0] * t, vz - u[1] * t);
@@ -2300,7 +2293,7 @@ export class Game {
           // …or about to: walking at a leaf that will yield to him, his stride crossing it inside 0.4 s — the hand comes up on the way in and is on the wood as he
           // meets it (and the controller has that long to square him to it: player.ts). Not one locked against him, nor one already hard on its stop his way.
           if (!touching && speed > 0.3) {
-            const wx = c.vel[0] / speed, wz = c.vel[2] / speed; const closing = -(wx * -u[1] + wz * u[0]) * Math.sign(perp);   // his speed's share straight into the leaf plane, from his side
+            const wx = c.velX / speed, wz = c.velZ / speed; const closing = -(wx * -u[1] + wz * u[0]) * Math.sign(perp);   // his speed's share straight into the leaf plane, from his side
             if (closing > 0.4) {
               const tHit = (Math.abs(perp) - 0.34 - d.thick / 2) / (closing * speed);                                            // seconds to contact at this rate
               const ah = along + (wx * u[0] + wz * u[1]) * speed * Math.max(0, tHit);                                            // where along the leaf he meets it
@@ -2312,7 +2305,7 @@ export class Game {
         if (!hit && gd) { const th = teamDoorHand(this, gd); if (th) { hit = th; crack = true; move = true; } }   // (hands.ts: a leaf he works from where he stands — the door tools' shove, a leaf he pulls to; the handle end, the long reach)
         if (hit) { if (rec) { if (rec.door !== hit) { rec.hand = -1; rec.t0 = now; } rec.door = hit; rec.t = now; rec.crack = crack; rec.holdOnly = holdOnly; rec.move = move; } else recs.set(c, rec = { door: hit, t: now, t0: now, crack, hand: -1, holdOnly, move }); }
       } else if (rec) { recs.delete(c); rec = undefined; }
-      if (rec && Math.hypot(c.pos[0] - rec.door.def.hinge[0], c.pos[2] - rec.door.def.hinge[1]) > rec.door.def.width + 1.2) { recs.delete(c); rec = undefined; }   // carried off (a teleport, a tour cut, a restart): no easing an arm out toward a door rooms away
+      if (rec && Math.hypot(c.posX - rec.door.def.hinge[0], c.posZ - rec.door.def.hinge[1]) > rec.door.def.width + 1.2) { recs.delete(c); rec = undefined; }   // carried off (a teleport, a tour cut, a restart): no easing an arm out toward a door rooms away
       if (!rec || now - rec.t > FOLLOW + FADE) {
         if (rec) recs.delete(c);
         const wh = can ? workHand(this, c) : null, wj = wh ? workJob(this, c) : null;   // (a thing a teammate has been sent to work, workthings.ts: the working hand pose has it while hands at work is on — handwork.ts — else the door hand as before)
@@ -2321,9 +2314,9 @@ export class Game {
       }   // (no leaf under his hand: null — or the thing a teammate has been sent to work, workthings.ts)
       const d = rec.door; const [hx, hz] = d.def.hinge, W = d.def.width; const k = list.indexOf(d);
       const da = clamp(d.angle - before[k], -0.3, 0.3); const a = d.def.closedDir + clamp(d.angle + da, d.minA, d.maxA); const u: [number, number] = [Math.cos(a), Math.sin(a)];   // the leaf a frame on
-      const px = c.pos[0] - hx, pz = c.pos[2] - hz; const face = u[0] * pz - u[1] * px >= 0 ? 1 : -1; const nx = -u[1] * face, nz = u[0] * face;     // his face of it, and its normal out toward him
+      const px = c.posX - hx, pz = c.posZ - hz; const face = u[0] * pz - u[1] * px >= 0 ? 1 : -1; const nx = -u[1] * face, nz = u[0] * face;     // his face of it, and its normal out toward him
       const rgt: [number, number] = [-Math.cos(c.bodyYaw), Math.sin(c.bodyYaw)];   // his right, on the floor (model −X in the world)
-      const chest = c.bones.chest ?? [c.pos[0], c.pos[1] + 1.25, c.pos[2]];
+      const chest = c.bones.chest ?? [c.posX, c.posY + 1.25, c.posZ];
       const off = d.thick / 2; const fx = hx + nx * off, fz = hz + nz * off;        // the face line on his side, from the hinge corner along u
       const lo = 0.3, hi = W - (rec.crack ? 0.1 : 0.2);
       // The spot for one hand, off that shoulder joint (this frame's pose): chest height under it — the crack a hand lower when he is close, coming up level as
@@ -2357,7 +2350,7 @@ export class Game {
       if (rec.hand === -1 || (rec.hand === 1 && !rightFree)) {
         hand = rightFree && u[0] * rgt[0] + u[1] * rgt[1] > 0 ? 1 : 0; sp = spot(hand);
         if (!sp.reach && (hand === 1 || rightFree)) { const other = (hand ? 0 : 1) as 0 | 1; const so = spot(other); if (so.reach || so.dist < sp.dist - 0.12) { hand = other; sp = so; } }   // (a hand's breadth nearer, not the walk's shoulder swing)
-        const sx = sp.p[0] - c.pos[0], sz = sp.p[2] - c.pos[2], sl = Math.hypot(sx, sz) || 1;
+        const sx = sp.p[0] - c.posX, sz = sp.p[2] - c.posZ, sl = Math.hypot(sx, sz) || 1;
         if (rec.move ? (sx * Math.sin(c.bodyYaw) + sz * Math.cos(c.bodyYaw)) / sl > 0.5 : -nx * Math.sin(c.bodyYaw) - nz * Math.cos(c.bodyYaw) > 0.5 && now - rec.t0 > 0.25) rec.hand = hand;   // (hands.ts, a leaf worked by hand: settled the moment he faces the SPOT — he was turned to it for this, and may stand off its end where the face is side-on)   // settled only once he faces it (within 60°) and his shoulders have had their quarter second to square to it (character.ts dp.tw): met with his back, his flank or his chest twisted off to the aim he is still coming round, and left and right trade places as he does
       } else { hand = rec.hand; sp = spot(hand); }
       c.anim.doorPush = { p: sp.p, n: [nx, 0, nz], w: now - rec.t <= FOLLOW ? 1 : 0, hand: rec.hand === -1 ? -1 : hand, holdOnly: rec.holdOnly, reach: rec.move };   // (unsettled: the layer squares him up to it and raises nothing — no false start with the hand he will not use)
@@ -2372,12 +2365,13 @@ export class Game {
     for (const g of this.guards) if (g.state !== 'dead' && !dozeInChair(g)) chars.push(g.char);   // (doze.ts: a man in, or on his way down into, his chair is no contact for it — false for everybody with its switch off)
     for (const cv of civiliansShown(this)) if (cv.state !== 'dead' && !civilianSeated(cv) && civilianPushesProps(cv)) chars.push(cv.char);   // (a FRIGHTENED civilian shoves a chair aside like anybody; a calm one at work is no contact for the furniture — civilians.ts civilianPushesProps: her loop is authored clear of it and a brushed chair corner must not scrape, roll the dice or move — nor is the man in, or heading for, his own chair)
     const contacts: PropContact[] = chars.map(c => ({ pos: c.pos, vel: c.vel, radius: 0.3, who: c.id, mass: 75, quiet: quietMan(manOf(this, c)) }));
-    const before = chars.map(c => [c.pos[0], c.pos[2]]);
+    const before = chars.map(c => [c.posX, c.posZ]);
     this.props.update(dt, contacts, this.doors.list.some(d => d.off) ? this.doors.list.filter(d => !d.off).map(d => d.box) : this.col.dynamicBoxes);   // (a slab off its hinges is no leaf to furniture: nothing is swept by it, a chair rolls over it)
+    contacts.forEach((k, i) => { chars[i].pos = k.pos; });   // (what the things pushed them by is theirs from here)
     this.rollTick(dt);
     for (const s of this.seats) if (!s.view.player.down) { settlePlayer(s.view); settleHeld(s.view); }   // a chair driven into him by a man or a leaf held him back INTO the wall behind him: the statics win, this frame — and one that would not yield to the man in his arm holds the pair back as one (settleHeld), not him off his station
     // someone held back by a pinned prop was posed (bones, skin, capsules) at the uncorrected spot inside it earlier this frame: re-bake in place (dt 0)
-    chars.forEach((c, i) => { if (Math.abs(c.pos[0] - before[i][0]) + Math.abs(c.pos[2] - before[i][1]) > 0.005) c.update(0); });
+    chars.forEach((c, i) => { if (Math.abs(c.posX - before[i][0]) + Math.abs(c.posZ - before[i][1]) > 0.005) c.update(0); });
   }
 
   dropThrowable(kind: ThrowKind, p: Vec3) { return dropThrowable(this, kind, p); }

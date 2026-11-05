@@ -47,13 +47,13 @@ async function play(SEED: number, on: boolean, o: { shut?: boolean; reach?: numb
   for (const x of foes) if (x !== h) killGuard(g, x, [0, 0, 1], false);
   const ops = (): any[] => NB.ops.filter((m: any) => m.state !== 'dead');
   let spot: number[] | null = null, held: number | null = null;   // (held: the leaf kept where it swung to — on the frozen stand a leaf a defender's hand opened swings to again)
-  const step = (n = 1) => { for (let i = 0; i < n; i++) { g.player.visibility = 0.05; h.dazzledUntil = g.time + 5; const p = spot ?? [37.5, 0, 1]; h.char.pos[0] = p[0]; h.char.pos[2] = p[2]; h.char.vel[0] = h.char.vel[2] = 0; if (held !== null) { d.angle = held; d.vel = 0; d.closing = false; d.latched = false; } W.step(DT); } };
+  const step = (n = 1) => { for (let i = 0; i < n; i++) { g.player.visibility = 0.05; h.dazzledUntil = g.time + 5; const p = spot ?? [37.5, 0, 1]; h.char.posX = p[0]; h.char.posZ = p[2]; h.char.velX = h.char.velZ = 0; if (held !== null) { d.angle = held; d.vel = 0; d.closing = false; d.latched = false; } W.step(DT); } };
   await quiet(() => { step(30); O.give('stack', O.targetAt(d.frameCentre)); for (let i = 0; i < 60 * 70 && !ops().every((m: any) => O.of(m)?.order === 'stack' && O.of(m).arrived); i++) step(); step(120); });
   if (!ops().every((m: any) => O.of(m)?.order === 'stack' && O.of(m).arrived) || ops().length < 4) { R.why = `the stack never formed (${ops().map((m: any) => `${m.callsign} ${O.of(m)?.order ?? '—'}${O.of(m)?.arrived ? ' there' : ''}`).join(', ')})`; return R; }
   // the far side of that wall, and a place behind its jamb nobody outside has a line to
   const fc = d.frameCentre, th = d.def.closedDir, n = [-Math.sin(th), Math.cos(th)], u = [Math.cos(th), Math.sin(th)];
-  const side = Math.sign(ops().reduce((s: number, m: any) => s + (m.char.pos[0] - fc[0]) * n[0] + (m.char.pos[2] - fc[2]) * n[1], 0)) || 1, far = -side;
-  const eye = (m: any) => [m.char.pos[0], 1.55, m.char.pos[2]];
+  const side = Math.sign(ops().reduce((s: number, m: any) => s + (m.char.posX - fc[0]) * n[0] + (m.char.posZ - fc[2]) * n[1], 0)) || 1, far = -side;
+  const eye = (m: any) => [m.char.posX, 1.55, m.char.posZ];
   const hidden = (p: number[], deep: number) => Math.hypot(p[0] - fc[0], p[2] - fc[2]) <= 2.6 && !g.col.segmentBlocked([p[0], 1.1, p[2]], [fc[0] + n[0] * far * deep, 1.1, fc[2] + n[1] * far * deep]) && ops().every((m: any) => g.col.segmentBlocked(eye(m), [p[0], 1.1, p[2]]) && g.col.segmentBlocked(eye(m), [p[0], 1.6, p[2]]));
   // the door opened from inside by his hand (he is not stood there yet), the look a door gets waited out, THEN his place chosen with the leaf where it came to rest
   await quiet(() => { step(2); if (!o.shut) { g.doors.use(d, [fc[0] + n[0] * far * 0.6, 0, fc[2] + n[1] * far * 0.6], h.char.id); let wide = 0; for (let i = 0; i < 90; i++) { step(); if (Math.abs(d.angle) > Math.abs(wide)) wide = d.angle; } if (Math.abs(wide) > 0.3) held = wide; }

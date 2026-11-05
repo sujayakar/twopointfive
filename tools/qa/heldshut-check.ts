@@ -41,7 +41,7 @@ async function arm(on: boolean, shut: boolean): Promise<Arm> {
     const team: any[] = O.squad().filter((x: any) => x.state !== 'dead'), spots: number[][] = [];
     for (const back of [3.2, 4.2, 2.4, 5.2, 6.2]) for (const lat of [1.1, -1.1, 0.4, -0.4, 1.9, -1.9]) { const p = free(outPt(back, lat)); if (p && !g.col.solidBlocked([p[0], 1.1, p[2]], [gate[0], 1.1, gate[2]]) && flat(p, at) > 1.8 && !spots.some(s => flat(s, p) < 0.8)) spots.push(p); }
     if (team.length < 4 || spots.length < team.length + 1) { A.note = `staging: ${team.length} men, ${spots.length} spots outside`; return A; }
-    team.forEach((gd, i) => { const p = spots[i]; gd.char.pos[0] = p[0]; gd.char.pos[2] = p[2]; gd.char.vel = [0, 0, 0]; gd.path = []; gd.pathGoal = null; gd.char.bodyYaw = gd.char.aimYaw = Math.atan2(-ox, -oz); });
+    team.forEach((gd, i) => { const p = spots[i]; gd.char.posX = p[0]; gd.char.posZ = p[2]; gd.char.vel = [0, 0, 0]; gd.path = []; gd.pathGoal = null; gd.char.bodyYaw = gd.char.aimYaw = Math.atan2(-ox, -oz); });
     await quiet(() => g.teleportPlayer(spots[team.length] as any));
     await quiet(() => step(30));
     const op: any = await quiet(() => D.thresholdOn(DOOR, 'all', side, true)); if (typeof op === 'string') { A.note = `refused: ${op}`; return A; }

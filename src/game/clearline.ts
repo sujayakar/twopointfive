@@ -132,9 +132,9 @@ const mem = new SideMap<Guard, Mem>('clearline.mem');
 const memOf = (gd: Guard): Mem => { let M = mem.get(gd); if (!M) { M = { since: -100, seenT: -100, saidT: -100, said: '', doing: null, restUntil: -100, tryT: -100, runT: -100, runOf: null, leadT: -100, leadP: null, leadOf: null, leadFor: null }; mem.set(gd, M); } return M; };
 /** what a LIVING man is doing (a man who dropped mid-step holds no spot against the others and is not on the panel) */
 const liveDoing = (gd: Guard): Doing | null => (gd.state === 'dead' || !gd.script ? null : mem.get(gd)?.doing ?? null);   // (… nor a man the fight AI has: nothing of his is being walked)
-const chestOf = (h: Guard): Vec3 => [h.char.pos[0], 1.2, h.char.pos[2]];
+const chestOf = (h: Guard): Vec3 => [h.char.posX, 1.2, h.char.posZ];
 /** the point on the man this was begun on: his chest, or (the fire gate fell back to it) his head */
-const aimOf = (D: Doing): Vec3 => (D.head ? D.of.char.bones.head ?? [D.of.char.pos[0], D.of.char.pos[1] + 1.6, D.of.char.pos[2]] : chestOf(D.of));
+const aimOf = (D: Doing): Vec3 => (D.head ? D.of.char.bones.head ?? [D.of.char.posX, D.of.char.posY + 1.6, D.of.char.posZ] : chestOf(D.of));
 const flat = (a: Vec3, b: Vec3) => Math.hypot(a[0] - b[0], a[2] - b[2]);
 /** how far `p` is from the segment a → b in plan, and how far along it (0‥1, clamped) */
 function offSeg(p: Vec3, a: Vec3, b: Vec3): [number, number] {
@@ -155,10 +155,10 @@ const LEAD_V = 0.5;
 function leads(g: Game, gd: Guard, M: Mem, by: 'player' | Guard, tgt: Guard, to: Vec3, secs: number): boolean {
   if (M.leadOf !== by || M.leadFor !== tgt) M.leadT = -100;   // (another friend in the line, or another man: what the last was seen doing says nothing of this one)
   M.leadFor = tgt;
-  const t = g.time, f = by === 'player' ? g.player.char : by.char, dx = to[0] - f.pos[0], dz = to[2] - f.pos[2], L = Math.hypot(dx, dz);
+  const t = g.time, f = by === 'player' ? g.player.char : by.char, dx = to[0] - f.posX, dz = to[2] - f.posZ, L = Math.hypot(dx, dz);
   const P = M.leadOf === by ? M.leadP : null, dt = P ? t - P[2] : 0;
-  const vx = P && dt > 0.1 && dt < 1.5 ? (f.pos[0] - P[0]) / dt : f.vel[0], vz = P && dt > 0.1 && dt < 1.5 ? (f.pos[2] - P[1]) / dt : f.vel[2];
-  if (!P || dt > 0.1 || dt < 0) { M.leadP = [f.pos[0], f.pos[2], t]; M.leadOf = by; }
+  const vx = P && dt > 0.1 && dt < 1.5 ? (f.posX - P[0]) / dt : f.velX, vz = P && dt > 0.1 && dt < 1.5 ? (f.posZ - P[1]) / dt : f.velZ;
+  if (!P || dt > 0.1 || dt < 0) { M.leadP = [f.posX, f.posZ, t]; M.leadOf = by; }
   if (L > 0.5 && L < flat(gd.char.pos, to)) {
     const at = (vx * dx + vz * dz) / L, across = Math.abs(vx * dz - vz * dx) / L;
     if (at >= LEAD_V && at >= across) M.leadT = t;
@@ -170,10 +170,10 @@ function leads(g: Game, gd: Guard, M: Mem, by: 'player' | Guard, tgt: Guard, to:
  *  was masked in: a walk into a wall is no walk). One record a game — every man reads the same commander. */
 const samAt = new SideMap<Game, { p: [number, number, number]; moveT: number }>('clearline.samAt');
 function samMoves(g: Game, secs: number): boolean {
-  const t = g.time, f = g.player.char, S = samAt.get(g), asked = () => Math.hypot(f.vel[0], f.vel[2]) >= LEAD_V;
-  if (!S || t < S.p[2]) { samAt.set(g, { p: [f.pos[0], f.pos[2], t], moveT: asked() ? t : -100 }); return asked(); }
+  const t = g.time, f = g.player.char, S = samAt.get(g), asked = () => Math.hypot(f.velX, f.velZ) >= LEAD_V;
+  if (!S || t < S.p[2]) { samAt.set(g, { p: [f.posX, f.posZ, t], moveT: asked() ? t : -100 }); return asked(); }
   const dt = t - S.p[2];
-  if (dt > 0.1) { if (dt < 1.5 ? Math.hypot(f.pos[0] - S.p[0], f.pos[2] - S.p[1]) / dt >= LEAD_V : asked()) S.moveT = t; S.p = [f.pos[0], f.pos[2], t]; }
+  if (dt > 0.1) { if (dt < 1.5 ? Math.hypot(f.posX - S.p[0], f.posZ - S.p[1]) / dt >= LEAD_V : asked()) S.moveT = t; S.p = [f.posX, f.posZ, t]; }
   return t - S.moveT < secs && t >= S.moveT;
 }
 /** the entry assignment each man was first seen on, per door order (`past`: he has been on his point since, or been sent on from it) */
@@ -333,7 +333,7 @@ export function clearLineBlocked(g: Game, gd: Guard, tgt: Guard, to: Vec3, by: '
   //   the mate has this man in his sights   the gun in front has the shot: nothing — the man behind is a file's second man, not a masked gun
   //   the mate has not (flash-blind, on another man)   the step; cover or the knee only for a man planted on his mark
   if (by !== 'player') {
-    if (Math.hypot(by.char.vel[0], by.char.vel[2]) > 0.5) return false;
+    if (Math.hypot(by.char.velX, by.char.velZ) > 0.5) return false;
     if (g.fight.opOf(by)?.tgt === tgt && t >= by.dazzledUntil) return false;
     ladder &&= A.arrived;
   }
@@ -364,7 +364,7 @@ export function clearLineBlocked(g: Game, gd: Guard, tgt: Guard, to: Vec3, by: '
   }
   const who = by === 'player' ? 'Player' : by.callsign, c = gd.char.pos;
   const fresh = (what: What, spot: Vec3, walk: number, until: number): Doing => ({ what, spot, of: tgt, t0: t, onT: t, until, askT: t + K.again, lookT: t + 0.2, from: [c[0], 0, c[2]], orderT: A.t0, eta: t + 2 * walk / Math.max(0.5, K.pace) + 2, goodT: t,
-    head: to[1] - (tgt.char.bones.chest?.[1] ?? tgt.char.pos[1] + 1.1) > 0.2 });
+    head: to[1] - (tgt.char.bones.chest?.[1] ?? tgt.char.posY + 1.1) > 0.2 });
   const S = findSpot(g, gd, to);
   if (S) {
     const walk = Math.hypot(S.along, S.side);

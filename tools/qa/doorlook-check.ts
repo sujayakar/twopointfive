@@ -52,12 +52,12 @@ async function arm(on: boolean, ours: boolean, shut = false, twice = false): Pro
     const team: any[] = O.squad().filter((x: any) => x.state !== 'dead');
     if (team.length < 4 || inside.length < 4 || !outside.length) { A.note = `staging: ${team.length} men, ${inside.length} spots in the garage with a line, ${outside.length} without one`; return A; }
     const spots = [inside[0], inside[1], inside[2], outside[0]];
-    team.slice(0, 4).forEach((gd, i) => { const p = spots[i]; gd.char.pos[0] = p[0]; gd.char.pos[2] = p[2]; gd.char.vel = [0, 0, 0]; gd.path = []; gd.pathGoal = null;
+    team.slice(0, 4).forEach((gd, i) => { const p = spots[i]; gd.char.posX = p[0]; gd.char.posZ = p[2]; gd.char.vel = [0, 0, 0]; gd.path = []; gd.pathGoal = null;
       gd.char.bodyYaw = gd.char.aimYaw = Math.atan2(p[0] - leaf[0], p[2] - leaf[2]); });   // (his back to the door)
     await quiet(() => g.teleportPlayer(inside[3] as any));
     await quiet(() => { for (const gd of team.slice(0, 4)) O.give('hold', { kind: 'none' }, gd); });   // (man by man: a hold told to one man deals him no arc)
     await quiet(() => step(20));
-    const offOf = (gd: any) => Math.abs(wrap(gd.char.aimYaw - Math.atan2(leaf[0] - gd.char.pos[0], leaf[2] - gd.char.pos[2]))) * DEG;
+    const offOf = (gd: any) => Math.abs(wrap(gd.char.aimYaw - Math.atan2(leaf[0] - gd.char.posX, leaf[2] - gd.char.posZ))) * DEG;
     team.slice(0, 4).forEach((gd, i) => { const p = spots[i]; gd.char.bodyYaw = gd.char.aimYaw = Math.atan2(p[0] - leaf[0], p[2] - leaf[2]); });
     await quiet(() => step(6));
     const men: Man[] = team.slice(0, 4).map((gd, i) => ({ name: gd.callsign, line: i < 3, before: offOf(gd), best: 999, at15: 999, after: 999, turned: false }));

@@ -24,7 +24,7 @@ const NOISE = /""?smoke[A-Za-z0-9_]*""?|\[pipeline\] smoke_|number of storage te
       g.godMode = true; g.guards.forEach((o, i) => { if (i) { o.hold = true; o.pinned = true; o.dazzledUntil = 1e9; o.heardUpTo = 1e12; } }); A.hold = true;
       const step = async (n, vis, each) => { for (let i = 0; i < n; i++) { pl.visibility = vis; await window.__runFrames(1); if (each) each(); } };
       g.teleportPlayer([1, 0, 1]); await step(30, 0.02);
-      const calm = A.state === 'patrol', f = c.forward(); g.teleportPlayer([c.pos[0] + f[0] * 4, 0, c.pos[2] + f[2] * 4]);
+      const calm = A.state === 'patrol', f = c.forward(); g.teleportPlayer([c.posX + f[0] * 4, 0, c.posZ + f[2] * 4]);
       const t0 = g.time; let alertAt = NaN, upAt = NaN, saidAt = NaN, shown = 0, shownUntil = NaN;
       await step(240, 0.9, () => { const t = g.time - t0, s = c.anim.startleShown;
         if (isNaN(alertAt) && A.state === 'alert') alertAt = t;

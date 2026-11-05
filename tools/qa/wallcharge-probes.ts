@@ -112,10 +112,10 @@ async function rig(scn: string, seed: number, o: { squad?: boolean; still?: bool
     gather(p: number[], secs = 75, keep?: number[]) { game.teleportPlayer([p[0], 0, p[2]]); R.step(3); O.give('fallIn', O.targetAt(game.player.char.pos), 'all'); const ok = R.until(() => R.up.every((m: any) => flat(m.char.pos, p) < 6 && O.of(m)?.arrived), secs);
       if (keep) for (let round = 0; round < 12; round++) { let moved = false;
         for (const m of R.up) { if (flat(m.char.pos, keep) >= ORDERS.manM + 0.3) continue; const others = [game.player.char.pos, ...R.up.filter((x: any) => x !== m).map((x: any) => x.char.pos)]; let best: Vec3 | null = null;
-          for (let r = 0.5; r <= 3.5 && !best; r += 0.5) for (let a = 0; a < 12 && !best; a++) { const q: Vec3 = [m.char.pos[0] + Math.sin(a * Math.PI / 6) * r, 0, m.char.pos[2] + Math.cos(a * Math.PI / 6) * r];
-            if (R.free(q) && flat(q, keep) >= ORDERS.manM + 0.6 && flat(q, p) <= 5.5 && !others.some(o => flat(o, q) < 0.7) && !game.col.solidBlocked([m.char.pos[0], 0.5, m.char.pos[2]], [q[0], 0.5, q[2]])) best = q; }
+          for (let r = 0.5; r <= 3.5 && !best; r += 0.5) for (let a = 0; a < 12 && !best; a++) { const q: Vec3 = [m.char.posX + Math.sin(a * Math.PI / 6) * r, 0, m.char.posZ + Math.cos(a * Math.PI / 6) * r];
+            if (R.free(q) && flat(q, keep) >= ORDERS.manM + 0.6 && flat(q, p) <= 5.5 && !others.some(o => flat(o, q) < 0.7) && !game.col.solidBlocked([m.char.posX, 0.5, m.char.posZ], [q[0], 0.5, q[2]])) best = q; }
           if (best) { R.put(m, best); O.give('hold', O.targetAt(best), O.squad().indexOf(m)); moved = true; } }
-        const was = R.up.map((m: any) => [m.char.pos[0], 0, m.char.pos[2]]); R.step(30);
+        const was = R.up.map((m: any) => [m.char.posX, 0, m.char.posZ]); R.step(30);
         if (!moved && R.up.every((m: any, k: number) => flat(m.char.pos, was[k]) < 0.05)) break; }
       return ok; },
     /** the cursor held on the world point p while the camera settles on Sam (a teleport leaves it catching up for a few frames) */
@@ -126,7 +126,7 @@ async function rig(scn: string, seed: number, o: { squad?: boolean; still?: bool
         if (a > T) I.keys.add('KeyW'); if (a < -T) I.keys.add('KeyS'); if (b > T) I.keys.add('KeyD'); if (b < -T) I.keys.add('KeyA'); R.step(); }
       for (const k of ['KeyW', 'KeyA', 'KeyS', 'KeyD']) I.keys.delete(k); R.step(); return there(); },
     /** a man set down at p, still */
-    put(gd: any, p: number[]) { gd.char.pos[0] = p[0]; gd.char.pos[2] = p[2]; gd.path = []; gd.pathGoal = null; gd.speed = 0; },
+    put(gd: any, p: number[]) { gd.char.posX = p[0]; gd.char.posZ = p[2]; gd.path = []; gd.pathGoal = null; gd.speed = 0; },
     /** put a DEFENDER, and make the place his post in the room fight too: a man the fight has on a move of its own (falling back out of a room it reads as lost)
      *  walks on to where THAT was going from wherever he is put */
     post(gd: any, p: number[]) { R.put(gd, p); const D = game.fight?.defs?.find((x: any) => x.gd === gd); if (!D) return; D.mode = 'hold'; D.station = [p[0], 0, p[2]]; D.room = game.fight.roomAt(p); D.ev = D.room ? D.room.entries.map(() => 0) : []; D.watch = D.want = D.glanceTo = -1; D.glanceUntil = -1; },
@@ -245,7 +245,7 @@ async function probeSquad(scn: string): Promise<boolean> {
   const hidPts: Vec3[] = []; for (let d = 1.0; d <= 7.5; d += 0.5) for (const du of [3, -3, 4, -4, 5, -5, 6, -6]) { const q = wallPt(W0, du, -(T + d)); if (R.free(q) && col.solidBlocked(inn, [q[0], 1.1, q[2]]) && col.solidBlocked(wallPt(W0, 0, 0.5, 1.1), [q[0], 1.1, q[2]]) && unseen(q) && mouth.every(e => !R.free(e) || col.solidBlocked(e, [q[0], 1.1, q[2]]))) hidPts.push(q); }
   const close = H[0], far = farPts.length ? H[1] : null, hid = hidPts.length ? H[2] : null;
   if (close) R.post(close, wallPt(W0, 0.2, -(T + 1.1))); if (far) R.post(far, farPts[0]); if (hid) R.post(hid, hidPts[0]);
-  for (const h of H) if (h !== close && h !== far && h !== hid && flat(h.char.pos, chargePt(W0)) < DOORTOOLS.stunM + 1) R.put(h, [h.char.pos[0] + 400, 0, h.char.pos[2]]);   // (nobody else in reach of it: the count below is these three's)
+  for (const h of H) if (h !== close && h !== far && h !== hid && flat(h.char.pos, chargePt(W0)) < DOORTOOLS.stunM + 1) R.put(h, [h.char.posX + 400, 0, h.char.posZ]);   // (nobody else in reach of it: the count below is these three's)
   R.step(2);
   const c0 = D.charges; R.pick(P.p, 5, 3); const op = C.ops[0];
   F.verdict(!!op && op.phase === 'place' && op.men.length === R.up.length, 'the order by X, 5, 3: every man on it, one of them to the wall', `${op ? `${op.men.length} men · ${op.lead.callsign} sets it at ${at(op.spot)}` : `no order — ${R.said.slice(-2).join(' / ')} · ${R.spoke.slice(-1)[0]?.text ?? ''}`}`);
@@ -424,7 +424,7 @@ async function probeTrigger(scn: string): Promise<boolean> {
     F.verdict(/^blow the charge( · too close: .+)?( · behind the wall: .+)?$/.test(m?.page?.rows[0]?.text ?? '') && R3.C.set.length === 0 && !!R3.C.holeAt(W3) && (R3.C.ops[0]?.phase === 'wait' || R3.C.ops[0]?.phase === 'enter'), 'with one set, the wall\'s row reads \'blow the charge\' (naming who is too close, under the safety radius), and 5, 3 on the wall\'s menu is the trigger: the squad goes in behind it', `row "${m?.page?.rows[0]?.text}" · set ${R3.C.set.length} · hole ${R3.C.holeAt(W3) ? 'open' : 'none'} · op ${R3.C.ops[0]?.phase}`); }
   // the setter taken off it before it is set (given another order; the same clause as down): the next man sets it — the order does not die with him
   { const R4 = await rig(scn, 11); const P4 = partitions(R4)[0]; R4.gather(P4.near, 75, P4.p); R4.O.give(WALL_ORDER, R4.O.targetAt(P4.p), 'all'); R4.step(20);
-    const op = R4.C.ops[0], first = op?.lead, i = R4.up.indexOf(first), back: Vec3 = [R4.game.player.char.pos[0], 0, R4.game.player.char.pos[2]];
+    const op = R4.C.ops[0], first = op?.lead, i = R4.up.indexOf(first), back: Vec3 = [R4.game.player.char.posX, 0, R4.game.player.char.posZ];
     const why = first && op.phase === 'place' ? R4.O.give('hold', R4.O.targetAt(back), i) : 'no op'; R4.step(3);
     const second = R4.C.ops[0]?.lead, set = R4.until(() => R4.C.set.length === 1, 60), armed = R4.until(() => R4.C.ops[0]?.phase === 'armed', 30);
     F.verdict(!why && !!second && second !== first && set && R4.C.set[0].by === second.callsign && armed && !R4.C.ops[0].men.includes(first) && R4.D.charges === DOORTOOLS.charges - WALLCHARGE.cost,
@@ -534,7 +534,7 @@ async function probeHold(scn: string): Promise<boolean> {
     const dbg = (m: string) => { if (process.env.HOLD_DEBUG) console.log('    [hold] ' + m); }; dbg(`${cands.length} candidate places`);
     for (const S of cands) { if (seenW.has(S.W.index) || seenW.size >= 6) continue; seenW.add(S.W.index);
       if (!R.gather(S.near, 60, S.mid)) { dbg(`gather failed ${at(S.near)}`); continue; }
-      for (const h of R.hostiles) if (flat(h.char.pos, S.mid) < DOORTOOLS.stunM + 2) R.put(h, [h.char.pos[0] + 400, 0, h.char.pos[2]]);
+      for (const h of R.hostiles) if (flat(h.char.pos, S.mid) < DOORTOOLS.stunM + 2) R.put(h, [h.char.posX + 400, 0, h.char.posZ]);
       R.D.charges = DOORTOOLS.charges;   // (a fresh bag for each place tried: a wall takes all of it)
       const why = C.order(S.mid, 'all'); if (why) { dbg(`refused ${why}`); continue; } const op = C.ops[C.ops.length - 1];
       if (!R.until(() => op.phase === 'armed' || !C.ops.includes(op), 45) || op.phase !== 'armed') { dbg(`not armed: ${op.phase} ${op.ended}`); continue; }
@@ -550,7 +550,7 @@ async function probeHold(scn: string): Promise<boolean> {
       const lined = ins.filter((e: any) => pts.some((p: Vec3) => wallOff(op.wall, p) < 0 && flat(p, e.p) >= 0.8 && !game.col.shotBlocked([p[0], 1.2, p[2]], e.p) && !pts.some((o: Vec3) => o !== p && segNear(o, p, e.p) < WALLCHARGE.mateLine)));
       if (!R.until(() => !C.ops.includes(op), WALLCHARGE.enterCap + 6) || op.ended !== 'in') { dbg(`not in: ${op.phase} ${op.ended}`); continue; }
       R.step(90);
-      const holders = men.map((m: any) => { const A = O.of(m), w = A?.watch, e = w ? ins.find((x: any) => flat(x.p, w) < 0.05) : null; return { m, A, e, off: w ? Math.abs(Math.atan2(Math.sin(m.char.aimYaw - Math.atan2(w[0] - m.char.pos[0], w[2] - m.char.pos[2])), Math.cos(m.char.aimYaw - Math.atan2(w[0] - m.char.pos[0], w[2] - m.char.pos[2])))) : NaN }; });
+      const holders = men.map((m: any) => { const A = O.of(m), w = A?.watch, e = w ? ins.find((x: any) => flat(x.p, w) < 0.05) : null; return { m, A, e, off: w ? Math.abs(Math.atan2(Math.sin(m.char.aimYaw - Math.atan2(w[0] - m.char.posX, w[2] - m.char.posZ)), Math.cos(m.char.aimYaw - Math.atan2(w[0] - m.char.posX, w[2] - m.char.posZ)))) : NaN }; });
       if (!ins.length) { dbg(`no inside door: room ${room ? room.entries.length : 'none'}`); continue; }
       const got = { S, op, men, ins, lined, holders };
       if (doors && !(lined.length && men.filter((m: any) => wallOff(op.wall, m.char.pos) < 0).length >= 2)) { dbg('no door with a line, or one man in: the next place'); spare ??= got; continue; }   // (the claim wants a room where a door CAN be held)

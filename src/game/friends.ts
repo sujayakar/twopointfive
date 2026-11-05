@@ -53,7 +53,7 @@ export function friendInSamsLine(g: Game, c: Character): Guard | null {
     if (o.state === 'dead' || !o.char.alive) return;
     const h = o.char.bones.hips ?? o.char.pos; const rx = h[0] - from[0], rz = h[2] - from[2];
     const t = rx * dx + rz * dz; if (t < 0.15 || t > reach || t >= bt) return;   // (behind the shoulder, out of reach, or beyond a nearer friend)
-    const clear = K.clearM + Math.min(K.leadMaxM, K.leadS * Math.hypot(o.char.vel[0], o.char.vel[2]));   // (more room for a man on the move)
+    const clear = K.clearM + Math.min(K.leadMaxM, K.leadS * Math.hypot(o.char.velX, o.char.velZ));   // (more room for a man on the move)
     if (Math.abs(rx * dz - rz * dx) > clear) return;
     const chest: Vec3 = o.char.bones.chest ?? v3.add(o.char.pos, [0, 1.2, 0]);
     if (g.col.segmentBlocked(from, chest)) return;   // (a wall between: nobody is being pointed at; glass is no wall to a muzzle)

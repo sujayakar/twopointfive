@@ -79,7 +79,7 @@ function goLoud(W: any) { const g = W.game, p = g.player.char.pos; g.player.slot
 function sighting(g: any, d: number): { seer: any; spot: Vec3 } { for (const m of staff(g)) { const spot = inFrontOf(g, m, d); if (spot) return { seer: m, spot }; } throw new Error('no man of the shift has free floor in his view'); }
 const staff = (g: any) => g.guards.filter((x: any) => !x.unit && x.team === 'guard' && !x.civ && x.state !== 'dead');
 /** free floor about `d` metres in front of a man, in his view */
-function inFrontOf(g: any, m: any, d: number): Vec3 | null { const f = m.char.forward(); for (const k of [d, d - 1, d + 1, d - 2, d - 2.5]) for (const s of [0, 0.5, -0.5, 1, -1]) { const p: Vec3 = [m.char.pos[0] + f[0] * k - f[2] * s, 0, m.char.pos[2] + f[2] * k + f[0] * s]; if (!g.col.nav.isBlocked(p[0], p[2]) && !g.col.segmentBlocked([m.char.pos[0], 1.5, m.char.pos[2]], [p[0], 1.2, p[2]])) return p; } return null; }
+function inFrontOf(g: any, m: any, d: number): Vec3 | null { const f = m.char.forward(); for (const k of [d, d - 1, d + 1, d - 2, d - 2.5]) for (const s of [0, 0.5, -0.5, 1, -1]) { const p: Vec3 = [m.char.posX + f[0] * k - f[2] * s, 0, m.char.posZ + f[2] * k + f[0] * s]; if (!g.col.nav.isBlocked(p[0], p[2]) && !g.col.segmentBlocked([m.char.posX, 1.5, m.char.posZ], [p[0], 1.2, p[2]])) return p; } return null; }
 
 export async function responseCheck(): Promise<boolean> {
   let all = true; const was = { ...RESPONSE }, picWas = PICTURE.on;   // (put back at the end: a runner that goes on in this process finds its stand as it left it)
@@ -195,10 +195,10 @@ export async function responseCheck(): Promise<boolean> {
   // ---- (11) whoever is against them is their enemy
   { const W = await stand('crossing.json', 11, ON, '?quiet=1&squad=1'); const g = W.game, Q = g.qrf; const mate = g.guards.find((x: any) => x.team === 'operative');
     hideSam(g); RESPONSE.deal = false; requestQrf(g, 'gunfire'); RESPONSE.deal = true;
-    const far: Vec3 = [38.8, 0, 26.6]; if (mate) { mate.char.pos[0] = far[0]; mate.char.pos[2] = far[2]; }
-    steps(W, 110, () => notes(g).includes('fan'), () => { hideSam(g); if (mate) { mate.char.pos[0] = far[0]; mate.char.pos[2] = far[2]; } });
+    const far: Vec3 = [38.8, 0, 26.6]; if (mate) { mate.char.posX = far[0]; mate.char.posZ = far[2]; }
+    steps(W, 110, () => notes(g).includes('fan'), () => { hideSam(g); if (mate) { mate.char.posX = far[0]; mate.char.posZ = far[2]; } });
     const lead = (Q.men as any[])[0]; const p = lead ? inFrontOf(g, lead, 5) : null;
-    const contact = !!mate && !!p && steps(W, 8, () => notes(g).some(n => n.startsWith('contact:')), () => { hideSam(g); mate.char.pos[0] = p[0]; mate.char.pos[2] = p[2]; mate.visibility = 1; });
+    const contact = !!mate && !!p && steps(W, 8, () => notes(g).some(n => n.startsWith('contact:')), () => { hideSam(g); mate.char.posX = p[0]; mate.char.posZ = p[2]; mate.visibility = 1; });
     const on = (Q.men as any[]).filter(m => m.foe === mate).length;
     line(!!mate && contact && on > 0, '(11) the partner in view of the element is contact, and he is the one they turn on (Sam is out of it, unseen)', `partner ${mate ? 'staged' : 'missing'} · element in ${notes(g).includes('fan')} · contact ${contact} · men whose enemy is the partner ${on}/${Q.men.length}`); }
 

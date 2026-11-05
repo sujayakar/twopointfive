@@ -119,7 +119,7 @@ export async function wxSight() {
     for (const [g, W, name] of [[gf, Wf, 'fog'], [gc, Wc, 'clear']] as [any, any, string][]) {
       const gd = g.guards.find((x: any) => x.state !== 'dead'); if (!gd) { f.push('no guard on the level'); continue; }
       g.aiEnabled = false; g.teleportPlayer([2, 0, 2]); gd.char.pos = [27, 0, 2]; W.step(DT); W.step(DT);
-      const eye = gd.char.bones.head ?? [gd.char.pos[0], 1.65, gd.char.pos[2]], chest = g.player.char.bones.chest ?? [2, 1.1, 2];
+      const eye = gd.char.bones.head ?? [gd.char.posX, 1.65, gd.char.posZ], chest = g.player.char.bones.chest ?? [2, 1.1, 2];
       const want = g.weather.airTrans(eye, chest);
       if (Math.abs(gd.smokeTrans - want) > 1e-9) f.push(`${name}: Guard.smokeTrans ${f3(gd.smokeTrans)} ≠ airTrans ${f3(want)}`);
       const o = g.guards.find((x: any) => x !== gd && x.state !== 'dead');

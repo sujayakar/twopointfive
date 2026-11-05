@@ -35,7 +35,7 @@ const stage = async (rule: boolean) => {
   const pt = (along: number, out: number): V => [h[0] + u[0] * along + n[0] * out, 0, h[1] + u[1] * along + n[1] * out];
   const open = () => { d.latched = false; d.closing = false; d.angle = d.swing * Math.min(OPEN, Math.abs(d.swing > 0 ? d.maxA : d.minA) - 0.05); d.vel = 0; d.pullT = 0; d.passers = 0; d.openT = 10; d.place(); };
   const men: any[] = O.squad().filter((x: any) => x.state !== 'dead');
-  const put = (m: any, p: V) => { m.char.pos[0] = p[0]; m.char.pos[2] = p[2]; m.path = []; m.pathGoal = null; };
+  const put = (m: any, p: V) => { m.char.posX = p[0]; m.char.posZ = p[2]; m.path = []; m.pathGoal = null; };
   const inRoom = (p: V) => (p[0] - h[0]) * n[0] + (p[2] - h[1]) * n[1] < -0.3;   // (through the frame by more than his own half breadth)
   await quiet(() => g.teleportPlayer(pt(W / 2 + 1.0, -2.2)));
   return { S, g, O, d, men, pt, open, put, inRoom, W, step: (k = 1) => quiet(() => S.step(k)) };
@@ -67,7 +67,7 @@ const file = async (rule: boolean) => {
   const a = d.angle, th = d.def.closedDir + a, lx = Math.cos(th), lz = Math.sin(th), h = d.def.hinge as V, bx = -lz * d.swing, bz = lx * d.swing;   // (l: along the leaf · b: off its back)
   const spot: V = [h[0] + lx * R.W * 0.5 + bx * 0.36, 0, h[1] + lz * R.W * 0.5 + bz * 0.36];
   R.put(m, spot); const was = lean(d); await quiet(() => O.give('move', O.targetAt(R.pt(R.W / 2 + 0.6, -2.0)), O.squad().indexOf(m)));
-  let heldS = NaN, low = was; for (let f = 0; f < 4 * 60; f++) { m.char.pos[0] = spot[0]; m.char.pos[2] = spot[2]; await R.step(1); low = Math.min(low, lean(d)); if (isNaN(heldS) && lean(d) < was - 0.05) heldS = f / 60; }
+  let heldS = NaN, low = was; for (let f = 0; f < 4 * 60; f++) { m.char.posX = spot[0]; m.char.posZ = spot[2]; await R.step(1); low = Math.min(low, lean(d)); if (isNaN(heldS) && lean(d) < was - 0.05) heldS = f / 60; }
   verdict(!isNaN(heldS) && heldS > 0.8 && heldS < 3, 'a man with no way round has it out of his way as before: the leaf holds a second, then turns under him', `held on the spot at ${at(spot)} behind the leaf with his walk on: it stood at ${f2(was)} rad for ${isNaN(heldS) ? 'all 4' : f2(heldS)} s, least ${f2(low)}`); }
 
 // ---------------------------------------------------------------- stood

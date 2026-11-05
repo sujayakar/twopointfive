@@ -177,7 +177,7 @@ export const doortoolsCharge = guarded(async () => {
   const row = R.menuOn(Wd.frameCentre)?.tools?.rows.find((r: any) => r.key === '3'); const hud = O.hud().status.flatMap((r: any) => r.opts.map((o: any) => o.text));
   verdict(row?.text === 'blow the charge' && !row.off && hud.some((t: string) => /charge set/.test(t)), 'the row on that door now reads "blow the charge", and the HUD says a charge is set and which key blows it', `tools row 3: ${row?.text} · hud: ${hud.join(' / ')}`);
   // the trigger. One of the room's men is stood a stride inside the door first (the probe's staging, at the last moment: where a man IS when it goes is the rule)
-  const near = room.defenders[0], far = room.defenders[1]; near.char.pos[0] = Wd.frameCentre[0] + 1.3; near.char.pos[2] = Wd.frameCentre[2]; R.step(2);
+  const near = room.defenders[0], far = room.defenders[1]; near.char.posX = Wd.frameCentre[0] + 1.3; near.char.posZ = Wd.frameCentre[2]; R.step(2);
   const nearD = dist(near.char.pos, Wd.frameCentre), farD = dist(far.char.pos, Wd.frameCentre), drill0 = NB.drill?.phase, others = R.hostiles.filter((h: any) => !room.defenders.includes(h));
   R.press('KeyF');
   const blown = D.stats.blown === 1 && D.set.length === 0 && R.bangs.length === 1;
@@ -248,7 +248,7 @@ const outsideBody = async () => {
   const R = await rig(1, { door: 'breakroom_w' }); const { O, D, game } = R; const Wd = R.door('breakroom_w'); const room = R.room('breakroom'); const B = room.def.bounds;
   let inside = 0, margin = Infinity, contactT = NaN, contactWho = ''; let watching = true;
   R.post = () => { if (!watching) return;
-    for (const x of R.ops) { if (x.state === 'dead') continue; if (inBounds(B, x.char.pos)) inside++; margin = Math.min(margin, B.x0 - x.char.pos[0]); }
+    for (const x of R.ops) { if (x.state === 'dead') continue; if (inBounds(B, x.char.pos)) inside++; margin = Math.min(margin, B.x0 - x.char.posX); }
     if (isNaN(contactT)) for (const h of room.defenders) { if (h.state === 'dead') continue; const by = game.fight.seenBy(h).filter((x: any) => R.ops.includes(x)); if (by.length) { contactT = game.time; contactWho = `${by[0].callsign} on ${h.callsign}`; break; } } };
   // (the SHIPPED stand plays 'clear from outside' as one plain order that holds the door — DOORTOOLS.outsidePlain, a FROZEN_HOLDS row — and has no 'outside' row:
   // this probe is about the SLICING order, so it asks for the threshold's page as it was; the rows are dealt again on the next frame, `guarded` puts the knob back)
@@ -337,7 +337,7 @@ export const doortoolsLights = guarded(async () => {
   const proto = L.lights.find((l: any) => l.enabled && l.intensity > 0 && l.ttl < 0); let pad = 0;
   while (on() < MAX_LIGHTS) { L.add({ ...proto, name: `pad${pad++}`, pos: [2 + pad * 0.1, 2.5, 2], color: [...proto.color], dir: [...proto.dir], slot: -1 }); }
   L.upload(game.time); const full = L.activeCount;
-  const near = room.defenders[0]; near.char.pos[0] = Wd.frameCentre[0] + 3.2; near.char.pos[2] = Wd.frameCentre[2]; R.step(1);
+  const near = room.defenders[0]; near.char.posX = Wd.frameCentre[0] + 3.2; near.char.posZ = Wd.frameCentre[2]; R.step(1);
   D.set.push({ door: Wd, side: R.target('breakroom_w').side, t: game.time, by: 'probe' });
   let threw = ''; let res: any = null; try { res = D.blow(); L.upload(game.time); } catch (e) { threw = String(e); }
   const flashes = L.lights.filter((l: any) => l.ttl >= 0 || l.transient); const uploaded = flashes.filter((l: any) => l.slot >= 0).length;

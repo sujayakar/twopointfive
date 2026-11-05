@@ -51,9 +51,9 @@ async function stage(way: boolean, cues: boolean): Promise<Row[]> {
   } finally { console.log = log; console.error = err; console.warn = warn; }
   const g = W.game, rows: Row[] = []; CUES.on = cues;
   const say0 = g.say.bind(g);
-  g.say = (gd: any, text: string, ...rest: any[]) => { if (/coming to you/i.test(text) && /^[A-Z]\w+: /.test(text)) rows.push({ t: g.time, gd, text, at: [gd.char.pos[0], gd.char.pos[2]], stood: [] }); return say0(gd, text, ...rest); };
+  g.say = (gd: any, text: string, ...rest: any[]) => { if (/coming to you/i.test(text) && /^[A-Z]\w+: /.test(text)) rows.push({ t: g.time, gd, text, at: [gd.char.posX, gd.char.posZ], stood: [] }); return say0(gd, text, ...rest); };
   const steps = (secs: number) => { for (let i = 0; i < Math.round(secs * 60); i++) { g.player.visibility = 0.05; W.step(1 / 60);
-    for (const r of rows) { if (g.time - r.t > 25 || r.stood.includes(the(room.name))) continue; for (const n of inName(r.gd.char.pos[0], r.gd.char.pos[2])) if (!r.stood.includes(n)) r.stood.push(n); } } };   // (each named floor once, in the order he first stood on it)
+    for (const r of rows) { if (g.time - r.t > 25 || r.stood.includes(the(room.name))) continue; for (const n of inName(r.gd.char.posX, r.gd.char.posZ)) if (!r.stood.includes(n)) r.stood.push(n); } } };   // (each named floor once, in the order he first stood on it)
   steps(2);
   const b = room.bounds as Rect; g.events.push({ kind: 'shot', pos: [(b.x0 + b.x1) / 2, 1, (b.z0 + b.z1) / 2], time: g.time, loud: true, level: 1, who: g.player.char.id });
   steps(30);

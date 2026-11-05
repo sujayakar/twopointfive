@@ -251,10 +251,10 @@ export const onewayPlayer = guarded(async () => {
       // (a) walked through
       for (const x of g.doors.list) fresh(x); let crossed = 0; n++; m0 = marks();
       g.teleportPlayer(S.from); g.puppet = { goal: S.to as any, aim: null }; let t = 0, through = false;
-      for (; t < 7 && !through; t += DT) { W.step(DT); crossed += all(); through = Math.hypot(g.player.char.pos[0] - S.to[0], g.player.char.pos[2] - S.to[2]) < 0.35; }
+      for (; t < 7 && !through; t += DT) { W.step(DT); crossed += all(); through = Math.hypot(g.player.char.posX - S.to[0], g.player.char.posZ - S.to[2]) < 0.35; }
       g.puppet = null;
       if (crossed) crossedAll++;
-      if (!through || crossed) fails.push(`${d.def.name} ${faceWord(d, f)} · walked: ${crossed ? 'a leaf CROSSED its frame' : `not through in 7 s (at ${g.player.char.pos[0].toFixed(1)}, ${g.player.char.pos[2].toFixed(1)}, leaf ${d.angle.toFixed(2)})`}`);
+      if (!through || crossed) fails.push(`${d.def.name} ${faceWord(d, f)} · walked: ${crossed ? 'a leaf CROSSED its frame' : `not through in 7 s (at ${g.player.char.posX.toFixed(1)}, ${g.player.char.posZ.toFixed(1)}, leaf ${d.angle.toFixed(2)})`}`);
       // (b) its row, tapped: the door stands open on the side it opens into
       for (const x of g.doors.list) fresh(x); g.teleportPlayer(off(d, f, 0.75)); W.step(DT); W.step(DT); m0 = marks();
       const rowOf = g.nearby.find((x: any) => x.door === d && x.verb === 'push'), want = f === d.swing ? 'pull it open' : 'push it open';
@@ -279,9 +279,9 @@ export const onewayMen = guarded(async () => {
       const gd = spawnUnit(g, { team, pos: S.from as any, yaw: 0 }); if (team === 'hostile') { gd.hold = false; gd.pinned = false; W.step(DT); }   // (off the room fight's roster — roomfight.ts takes every held hostile for its own and ends his script — and onto his own feet)
       order(gd, { goal: S.to as any });
       let t = 0, through = false, crossed = 0;
-      for (; t < 9 && !through; t += DT) { W.step(DT); crossed += all(); through = Math.hypot(gd.char.pos[0] - S.to[0], gd.char.pos[2] - S.to[2]) < 0.5; }
+      for (; t < 9 && !through; t += DT) { W.step(DT); crossed += all(); through = Math.hypot(gd.char.posX - S.to[0], gd.char.posZ - S.to[2]) < 0.5; }
       if (crossed) crossedAll++;
-      if (!through || crossed) fails.push(`${d.def.name} ${faceWord(d, f)} · ${team}: ${crossed ? 'a leaf CROSSED its frame' : `not through in 9 s (at ${gd.char.pos[0].toFixed(1)}, ${gd.char.pos[2].toFixed(1)}, leaf ${d.angle.toFixed(2)})`}`);
+      if (!through || crossed) fails.push(`${d.def.name} ${faceWord(d, f)} · ${team}: ${crossed ? 'a leaf CROSSED its frame' : `not through in 9 s (at ${gd.char.posX.toFixed(1)}, ${gd.char.posZ.toFixed(1)}, leaf ${d.angle.toFixed(2)})`}`);
       endGuardScript(gd); despawnUnit(g, gd);
     }
     F.verdict(fails.length === 0 && n > 0, `${nameOf(file)}: ${n} walks (${skipped} faces with no floor to stand on)`, fails.length ? fails.slice(0, 8).join('\n    ') + (fails.length > 8 ? `\n    … and ${fails.length - 8} more` : '') : 'through every one, each leaf on its own side throughout');

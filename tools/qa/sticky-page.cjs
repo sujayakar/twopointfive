@@ -70,7 +70,7 @@ const check = (ok, label, detail) => { if (!ok) failed = true; console.log(`- ${
           const K = window.__knobs && typeof window.__knobs.registry === 'function' ? window.__knobs.registry() : null;
           const first = { wand: pl.wand, cams: pl.rifle ? pl.rifle.cams : null, fog: g.fogOfWar ? g.fogOfWar.active : null, time: +g.time.toFixed(2), knobs: !!K, take: K && K.STICKY ? K.STICKY.take : null, qwand: K && K.QUIETFOG ? K.QUIETFOG.wand : null, mark: K && K.STICKY ? K.STICKY.mark : null, peek: K && K.PEEKSIGHT ? K.PEEKSIGHT.on : null };
           // a camera of his own lying stuck a step from him (as one that came to rest on the floor: stickycam.ts StickyCam), then a few frames: the HUD's lens marks (STICKY.mark)
-          pl.cams.push({ pos: [pl.char.pos[0] + 0.8, 0.02, pl.char.pos[2]], n: [0, 1, 0], vel: null, age: 0, si: -1, id: 900 });
+          pl.cams.push({ pos: [pl.char.posX + 0.8, 0.02, pl.char.posZ], n: [0, 1, 0], vel: null, age: 0, si: -1, id: 900 });
           const marksShown = () => [...document.querySelectorAll('.cammark')].filter(e => e.style.display !== 'none');
           for (let k = 0; k < 6 && !marksShown().length; k++) { const t1 = g.time, u = performance.now() + 90000; while (!(g.time > t1) && performance.now() < u) await new Promise(r => setTimeout(r, 250)); }   // (the clock moving is a step, not yet a frame drawn: the mark is up by the third; six with none = none)
           const shown = marksShown();

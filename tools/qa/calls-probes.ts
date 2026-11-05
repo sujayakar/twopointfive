@@ -168,7 +168,7 @@ export const callsRally = guarded(async () => {
   const run = async (k: number | null, seed: number) => { const { R } = await at(E, seed, spot); if (k !== null) ROOMFIGHT.rallyK = k;
     const d = R.g.doors.byName(spot.door), side = R.O.targetUnder(R.input, R.W.cam, R.W.canvas).side ?? 1; R.D.order('bangClear', R.team, d, side);
     await quiet(() => R.step(45 * 60)); ROOMFIGHT.rallyK = 1;
-    return { rallied: R.g.fight.stats.rallied as number, state: R.g.guards.map((x: any) => `${x.callsign}:${x.state}@${x.char.pos[0].toFixed(2)},${x.char.pos[2].toFixed(2)}`).join(' ') }; };
+    return { rallied: R.g.fight.stats.rallied as number, state: R.g.guards.map((x: any) => `${x.callsign}:${x.state}@${x.char.posX.toFixed(2)},${x.char.posZ.toFixed(2)}`).join(' ') }; };
   let seed = 0, base: { rallied: number; state: string } | null = null;
   for (const s of [1, 2, 3, 4, 5, 6]) { const r = await run(null, s); if (r.rallied > 0) { seed = s; base = r; break; } }
   if (!base) { verdict(false, 'a run in which, shipped, a defender goes to the fight next door', 'none of seeds 1 to 6 had one in 45 s behind a bang and clear'); return done(); }

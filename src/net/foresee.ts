@@ -51,7 +51,7 @@ export class Foresee {
     if (this.rest > FORESEE.snap) off[0] = off[1] = off[2] = 0;
     const here = seat.view.followPos(), his = here === ch.pos;   // (the camera's on HIM: not on a man it is watching, not on a lesson's rail — Game.followPos. Elsewhere it is led nowhere)
     this.ms += (performance.now() - t0 - this.ms) * (this.ms ? 0.1 : 1);
-    return this.last = { id: ch.id, from: { pos: [ch.pos[0], ch.pos[1], ch.pos[2]], yaw: ch.aimYaw }, to: { pos: [now.pos[0] + off[0], now.pos[1] + off[1], now.pos[2] + off[2]], yaw: now.aimYaw },
+    return this.last = { id: ch.id, from: { pos: [ch.posX, ch.posY, ch.posZ], yaw: ch.aimYaw }, to: { pos: [now.pos[0] + off[0], now.pos[1] + off[1], now.pos[2] + off[2]], yaw: now.aimYaw },
       by: his ? [now.follow[0] + off[0] - here[0], now.follow[1] + off[1] - here[1], now.follow[2] + off[2] - here[2]] : [0, 0, 0], aim: his && now.aim ? [now.aim[0], now.aim[1], now.aim[2]] : null, n, end: wire.t + n, free: now.free, pos: [now.pos[0], now.pos[1], now.pos[2]] };
   }
 }

@@ -95,9 +95,9 @@ async function toWalk(seed = 77): Promise<ReturnType<typeof stage> extends Promi
   let ahead: Vec3 = [0, 0, 0];
   for (let i = 0; i < 60 * 90; i++) {
     S.step();
-    const M = S.M, c = M.char, sp = Math.hypot(c.vel[0], c.vel[2]);
-    if (M.wp === 2 && M.wait <= 0 && M.civ.state === 'work' && sp > 0.8 && c.pos[2] > 18.6) {
-      ahead = [c.pos[0] + c.vel[0] / sp * 1.5, 0, c.pos[2] + c.vel[2] / sp * 1.5];
+    const M = S.M, c = M.char, sp = Math.hypot(c.velX, c.velZ);
+    if (M.wp === 2 && M.wait <= 0 && M.civ.state === 'work' && sp > 0.8 && c.posZ > 18.6) {
+      ahead = [c.posX + c.velX / sp * 1.5, 0, c.posZ + c.velZ / sp * 1.5];
       if (!nav.isBlocked(ahead[0], ahead[2]) && !nav.isBlocked(ahead[0] + 0.3, ahead[2]) && !nav.isBlocked(ahead[0] - 0.3, ahead[2]) && !nav.isBlocked(ahead[0], ahead[2] + 0.3) && !nav.isBlocked(ahead[0], ahead[2] - 0.3) && nav.walkable(c.pos, ahead) && v3.distXZ(S.N.char.pos, ahead) > 6) break;
     }
   }
@@ -196,7 +196,7 @@ export async function civiliansComply() {
   // and Novak is brought back by hand below exactly as he always was.
   [K, N, R].forEach((g: any, i: number) => { g.hold = true; g.pinned = true; g.dazzledUntil = 1e9; g.heardUpTo = 1e12; g.char.pos = [37.5, 0, 6 + i * 1.5]; g.char.vel = [0, 0, 0]; g.path = []; g.pathGoal = null; g.char.update(0); });
   // behind her at the cabinet (she faces east): Sam a step west of her, hands empty
-  game.playerInvisible = false; game.teleportPlayer([M.char.pos[0] - 0.7, 0, M.char.pos[2]]); pl.char.bodyYaw = Math.PI / 2; pl.holstered = true; S.step(2);
+  game.playerInvisible = false; game.teleportPlayer([M.char.posX - 0.7, 0, M.char.posZ]); pl.char.bodyYaw = Math.PI / 2; pl.holstered = true; S.step(2);
   const rowsBefore = game.nearby.map((r: any) => `${r.verb}`).join(',');
   startGrab(game, M); S.step(1);
   const grabbed = !!pl.holding && pl.holding.g === M && M.held?.by === 'player';
@@ -218,7 +218,7 @@ export async function civiliansComply() {
   const quietReported = M.civ.reported; const quietState = M.civ.state;
   // Novak stood beside her, calm, facing her
   N.hold = false; N.pinned = false; N.dazzledUntil = -1; N.heardUpTo = game.eventSeq;   // (back from the lot: free, seeing and hearing again from now)
-  N.char.pos = [M.char.pos[0], 0, M.char.pos[2] + 1.5]; N.char.bodyYaw = Math.PI; N.char.aimYaw = N.char.bodyYaw; N.path = []; N.pathGoal = null; N.wait = 4; N.state = 'patrol'; N.awareness = 0; N.char.update(0);   // a stride and a half south of her in the east aisle, facing her (nothing between them: the cluster's end partition is west of both)
+  N.char.pos = [M.char.posX, 0, M.char.posZ + 1.5]; N.char.bodyYaw = Math.PI; N.char.aimYaw = N.char.bodyYaw; N.path = []; N.pathGoal = null; N.wait = 4; N.state = 'patrol'; N.awareness = 0; N.char.update(0);   // a stride and a half south of her in the east aisle, facing her (nothing between them: the cluster's end partition is west of both)
   const t0 = game.time; let foundAt = -1, toldAt = -1, novakState = '', esc = 0; const clog0 = S.clog.length;
   for (let f = 0; f < 60 * 20; f++) {
     S.step();
@@ -251,10 +251,10 @@ export async function civiliansScoring() {
     const S = await stage(61); const { game, pl, M, O, N, K } = S;
     game.tune.civilianKillFails = fails;
     S.step(60 * 2);
-    game.playerInvisible = false; game.teleportPlayer([M.char.pos[0] - 0.6, 0, M.char.pos[2]]); pl.char.bodyYaw = Math.PI / 2; pl.holstered = true; S.step(2);
+    game.playerInvisible = false; game.teleportPlayer([M.char.posX - 0.6, 0, M.char.posZ]); pl.char.bodyYaw = Math.PI / 2; pl.holstered = true; S.step(2);
     startTakedown(game, M); S.step(50);
     const D1 = debriefOf(game);
-    game.teleportPlayer([O.char.pos[0] - 2.5, 0, O.char.pos[2] - 1.2]); pl.holstered = false; pl.slot = 'pistol'; S.step(2);
+    game.teleportPlayer([O.char.posX - 2.5, 0, O.char.posZ - 1.2]); pl.holstered = false; pl.slot = 'pistol'; S.step(2);
     fireWeapon(game, pl.char, O.char.bones.chest ?? v3.add(O.char.pos, [0, 0.9, 0]), true); S.step(2);
     const stageAfterShot = game.mission.stage; const D2 = debriefOf(game);
     if (fails) {

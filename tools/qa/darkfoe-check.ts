@@ -58,10 +58,10 @@ export async function darkfoeCheck(): Promise<boolean> {
   const flat = (a: number[], b: number[]) => Math.hypot(a[0] - b[0], a[2] - b[2]);
   // the check's own readings, off the estimate (not the module's functions)
   const floor = (g: any, x: number, z: number, skip: (o: number) => boolean) => g.visibilityOf(lightEstimateAt(g, [x, 1.2, z], skip, true));
-  const ownBlind = (g: any, gd: any) => { const c = gd.char, eye = [c.pos[0], 1.5, c.pos[2]], skip = (o: number) => o === c.id; let n = 0, lit = 0;
+  const ownBlind = (g: any, gd: any) => { const c = gd.char, eye = [c.posX, 1.5, c.posZ], skip = (o: number) => o === c.id; let n = 0, lit = 0;
     for (const off of [0, -DARKFOE.fanRad, DARKFOE.fanRad]) { const fx = Math.sin(c.aimYaw + off), fz = Math.cos(c.aimYaw + off);
       for (let r = DARKFOE.stepM; r <= DARKFOE.lookM + 1e-6; r += DARKFOE.stepM) { const x = eye[0] + fx * r, z = eye[2] + fz * r; if (g.col.segmentBlocked(eye, [x, 1.5, z])) break; n++; if (floor(g, x, z, skip) >= DARKFOE.litAt) lit++; } }
-    return n ? lit / n < DARKFOE.seeShare : floor(g, c.pos[0], c.pos[2], skip) < DARKFOE.litAt; };
+    return n ? lit / n < DARKFOE.seeShare : floor(g, c.posX, c.posZ, skip) < DARKFOE.litAt; };
   const ownSees = (g: any, p: number[]) => { const place = () => true; if (floor(g, p[0], p[2], place) >= DARKFOE.litAt) return true; const eye = [p[0], 1.5, p[2]];
     for (let ring = 1; ring <= 2; ring++) { const r = DARKFOE.edgeM * ring / 2; for (let k = 0; k < 8; k++) { const a = (k + (ring & 1) * 0.5) * Math.PI / 4, qx = p[0] + Math.sin(a) * r, qz = p[2] + Math.cos(a) * r;
       if (!g.col.segmentBlocked(eye, [qx, 1.5, qz]) && floor(g, qx, qz, place) >= DARKFOE.litAt) return true; } }
@@ -110,8 +110,8 @@ export async function darkfoeCheck(): Promise<boolean> {
 
     // (c) the lamps are the word
     for (const byLamp of [true, false]) { const W = await stand(33), g = W.game; Object.assign(DARKFOE, was, { on: true, carry: 1, byLamp }); const men = foes(g);
-      const los = (a: any, b: any) => flat(a.char.pos, b.char.pos) <= DARKFOE.lampM + 0.5 && !g.col.segmentBlocked([a.char.pos[0], 1.5, a.char.pos[2]], [b.char.pos[0], 1.5, b.char.pos[2]]);
-      const inCone = (a: any, b: any) => { let d = Math.atan2(b.char.pos[0] - a.char.pos[0], b.char.pos[2] - a.char.pos[2]) - a.char.aimYaw; d = Math.atan2(Math.sin(d), Math.cos(d)); return Math.abs(d) <= (GUARD_EYE.halfDeg + 8) * Math.PI / 180; };
+      const los = (a: any, b: any) => flat(a.char.pos, b.char.pos) <= DARKFOE.lampM + 0.5 && !g.col.segmentBlocked([a.char.posX, 1.5, a.char.posZ], [b.char.posX, 1.5, b.char.posZ]);
+      const inCone = (a: any, b: any) => { let d = Math.atan2(b.char.posX - a.char.posX, b.char.posZ - a.char.posZ) - a.char.aimYaw; d = Math.atan2(Math.sin(d), Math.cos(d)); return Math.abs(d) <= (GUARD_EYE.halfDeg + 8) * Math.PI / 180; };
       const first = men.filter(gd => ownBlind(g, gd)).sort((a, b) => men.filter(o => o !== b && los(o, b) && inCone(o, b)).length - men.filter(o => o !== a && los(o, a) && inCone(o, a)).length)[0];
       if (!first) { line(false, 'the lamps are the word: no blind man to tell on this staging'); continue; }
       tell(first); const last = new Map<any, number>(), had = new Set<any>(), litToo = new Set<any>(); let unseen = 0, latched = 0;
@@ -139,7 +139,7 @@ export async function darkfoeCheck(): Promise<boolean> {
           const lamp: any = g.engine.lights.add({ name: 'qa_lamp', group: 'qa', kind: 1, pos: [0, 2.3, 0], dir: [0, -1, 0], color: [1, 0.9, 0.75], intensity: 160, range: 5, innerDeg: 45, outerDeg: 60, radius: 0.05, volumetric: 0, owner: 0, enabled: false, fixtureBox: -1, flicker: 0, ttl: -1, age: 0, peakIntensity: 160 });
           const seek = DARKFOE.seek; DARKFOE.seek = true;   // (the search for where to hang it is the same with `seek` off)
           for (const gd of men) { if (lit) break; if (gd.state === 'dead' || darkFoeKept(g, gd) !== null) continue; const D = g.fight.defs.find((d: any) => d.gd === gd), c = gd.char; if (!D?.room) continue;
-            for (let x = Math.floor(c.pos[0] - 9); x <= c.pos[0] + 9 && !lit; x++) for (let z = Math.floor(c.pos[2] - 9); z <= c.pos[2] + 9 && !lit; z++) { const q = [x + 0.5, 0, z + 0.5];
+            for (let x = Math.floor(c.posX - 9); x <= c.posX + 9 && !lit; x++) for (let z = Math.floor(c.posZ - 9); z <= c.posZ + 9 && !lit; z++) { const q = [x + 0.5, 0, z + 0.5];
               if (flat(q, c.pos) < 4 || nav.isBlocked(q[0], q[2]) || !D.room.cells.has(nav.idx(Math.floor(q[0] / cs), Math.floor(q[2] / cs)))) continue;
               lamp.pos[0] = q[0]; lamp.pos[2] = q[2]; lamp.enabled = true;
               if (darkFoeBlind(g, gd) && !ownSees(g, c.pos) && darkFoeSpot(g, D)) lit = gd; else lamp.enabled = false; } }

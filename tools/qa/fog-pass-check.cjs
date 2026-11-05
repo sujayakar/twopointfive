@@ -53,7 +53,7 @@ const STAGE = ([view, w, h]) => {
     const team = [g.player.char.pos, ...g.guards.filter(x => x.team === 'operative').map(x => x.char.pos)];
     window.__stage(fit(team, 21), {}); window.__mouse(w * 0.5, h * 0.22); Q.play(20);
   } else {
-    const ops = g.guards.map((x, i) => ({ x, i })).filter(o => o.x.team === 'operative'), foes = g.guards.filter(x => x.team !== 'operative' && x.state !== 'dead').map(x => [x.char.pos[0], 0, x.char.pos[2]]);
+    const ops = g.guards.map((x, i) => ({ x, i })).filter(o => o.x.team === 'operative'), foes = g.guards.filter(x => x.team !== 'operative' && x.state !== 'dead').map(x => [x.char.posX, 0, x.char.posZ]);
     const pick = [foes[0]]; const d2 = (a, b) => (a[0] - b[0]) ** 2 + (a[2] - b[2]) ** 2;
     while (pick.length < Math.min(ops.length + 1, foes.length)) { let best = null, bd = -1; for (const f of foes) { const m = Math.min(...pick.map(p => d2(p, f))); if (m > bd) { bd = m; best = f; } } pick.push(best); }
     const yawOf = (k) => (k * 137.5) * D;   // each man looks his own way (the golden angle: no two alike)

@@ -77,7 +77,7 @@ async function rig(seed: number, squad: 2 | 4, park = true) {
     step(n = 1) {
       for (let i = 0; i < n; i++) {
         game.player.visibility = 0.05;
-        NB.hostiles.forEach((h: any, k: number) => { if (h.state === 'dead') return; h.dazzledUntil = game.time + 5; if (park) { const p = PARK(k); h.char.pos[0] = p[0]; h.char.pos[2] = p[2]; h.char.vel[0] = h.char.vel[2] = 0; } });
+        NB.hostiles.forEach((h: any, k: number) => { if (h.state === 'dead') return; h.dazzledUntil = game.time + 5; if (park) { const p = PARK(k); h.char.posX = p[0]; h.char.posZ = p[2]; h.char.velX = h.char.velZ = 0; } });
         R.pre?.(); W.step(DT);
         const up = R.ops.filter((x: any) => x.state !== 'dead');
         for (let a = 0; a < up.length; a++) for (let b = a + 1; b < up.length; b++) { const dd = dist(up[a].char.pos, up[b].char.pos); if (dd < R.closest) { R.closest = dd; R.closestWho = `${up[a].callsign} / ${up[b].callsign} at ${f1(game.time)} s`; } }
@@ -89,7 +89,7 @@ async function rig(seed: number, squad: 2 | 4, park = true) {
     fallIn() { O.give('fallIn', O.targetAt(sam.pos)); },
     /** Sam walked (set down a step at a time, his reticle ahead of him) along the nav path through `legs` at `speed`; returns when he is there */
     walk(legs: number[][], speed = 1.55, secs = 120) {
-      const path: number[][] = [[sam.pos[0], 0, sam.pos[2]]];
+      const path: number[][] = [[sam.posX, 0, sam.posZ]];
       for (const p of legs) { const leg = game.col.nav.findPath(path[path.length - 1], p); for (const q of leg ?? []) path.push([q[0], 0, q[2]]); path.push(p); }
       let seg = 0, t = 0; const was = R.pre;
       // (one-way doors: Sam cannot be set down through a latched leaf as he could be walked into a double-acting one — he works a shut door on his way as a
@@ -99,7 +99,7 @@ async function rig(seed: number, squad: 2 | 4, park = true) {
         if (oneWay) {
           if (opened) { if (Math.abs(opened.angle) < 1.2 && ++waited < 180) return; opened = null; }
           const A0 = path[seg], B0 = path[seg + 1], L0 = dist(A0, B0) || 1, hx = (B0[0] - A0[0]) / L0, hz = (B0[2] - A0[2]) / L0;
-          for (const d of game.doors.list) { const fc = d.frameCentre, dx = fc[0] - sam.pos[0], dz = fc[2] - sam.pos[2]; if (d.off || !d.isClosed() || Math.hypot(dx, dz) > 1.1 || dx * hx + dz * hz < 0.5) continue;
+          for (const d of game.doors.list) { const fc = d.frameCentre, dx = fc[0] - sam.posX, dz = fc[2] - sam.posZ; if (d.off || !d.isClosed() || Math.hypot(dx, dz) > 1.1 || dx * hx + dz * hz < 0.5) continue;
             game.doors.use(d, sam.pos, 1, game.player.keys); opened = d; waited = 0; return; }
         }
         while (left > 0 && seg < path.length - 1) { const A = path[seg], B = path[seg + 1], L = dist(A, B); if (L - t <= left) { left -= L - t; seg++; t = 0; } else { t += left; left = 0; } }
@@ -251,7 +251,7 @@ export const coverHalt = guarded(async () => {
     const tag = squad === 4 ? 'the four' : 'the pair';
     const R = await rig(3, squad); const { C, O, sam, game: g } = R;
     R.fallIn(); R.step(120); R.walk([[13, 0, 17.6], [20.6, 0, 17.6]]);
-    const t0 = g.time; R.W.cursorAt([sam.pos[0] + 4, 1.1, sam.pos[2]]);   // Sam looks on down the aisle
+    const t0 = g.time; R.W.cursorAt([sam.posX + 4, 1.1, sam.posZ]);   // Sam looks on down the aisle
     // a man is SET when he is squared up to the opening he was dealt, gun on it, feet still — or has none because nothing with nobody on it is his to take (the
     // file itself is in his line to everything left: cover.ts deals nobody an opening he would have to cover through one of his own)
     const boxed = (m: any) => !C.of(m) && !C.live.some((L: any) => !L.by && !L.sam && L.can.includes(m));
@@ -272,11 +272,11 @@ export const coverHalt = guarded(async () => {
     for (const m of R.ops.slice(0, 3)) {
       const J = C.of(m); if (!J || J.o.kind === 'rear') continue;
       const spare = C.live.some((L: any) => !L.by && !L.sam && L.can.includes(m)); if (!spare) continue;
-      if (g.col.segmentBlocked([sam.pos[0], 1.55, sam.pos[2]], J.o.at)) continue;
+      if (g.col.segmentBlocked([sam.posX, 1.55, sam.posZ], J.o.at)) continue;
       tried++; const was = J.o; R.W.cursorAt([was.at[0], 1.1, was.at[2]]); R.step(120);
       const L = C.live.find((x: any) => x.o === was); if (L?.sam) marked++; const now = C.of(m)?.o ?? null; if (now && now !== was) moved++;
       said.push(`${m.callsign}: ${C.nameOf(was)} → ${now ? C.nameOf(now) : '—'}${L?.sam ? ' (Sam\'s)' : ''}`);
-      R.W.cursorAt([sam.pos[0] + 4, 1.1, sam.pos[2]]); R.step(90);
+      R.W.cursorAt([sam.posX + 4, 1.1, sam.posZ]); R.step(90);
     }
     if (squad === 2) verdict(tried >= 1 && marked === tried && moved === tried, 'Sam\'s own gun on an opening counts as covering it: the man who had it takes one nobody has', `${moved} of ${tried} moved, ${marked} marked as Sam's · ${said.join(' · ')}`);
     else console.log(`    Sam's gun on a covered opening, the four: ${tried ? `${moved} of ${tried} moved · ${said.join(' · ')}` : 'no man here has a spare opening in a clear line to move to'}`);
@@ -361,16 +361,16 @@ async function sideTrial(squad: 2 | 4, on: boolean, side: 'north' | 'south', tri
                     //  walk up, the man who is to step out among them, before the trial starts. What goggles find in the dark is probes.ts nvg-sight / nvg-fight.)
   const R = await rig(seed * 97 + 5, squad, false); COVER.on = on; const { game: g, sam } = R;
   const X = R.hostiles[0]; const S = side === 'north' ? { from: [19.75, 0, 13.3], to: [19.75, 0, 17.0] } : { from: [19.75, 0, 22.7], to: [19.75, 0, 18.9] };
-  let xp: number[] = [...S.from]; R.pre = () => { if (X.state !== 'dead') { X.char.pos[0] = xp[0]; X.char.pos[2] = xp[2]; X.char.vel[0] = X.char.vel[2] = 0; } };
+  let xp: number[] = [...S.from]; R.pre = () => { if (X.state !== 'dead') { X.char.posX = xp[0]; X.char.posZ = xp[2]; X.char.velX = X.char.velZ = 0; } };
   R.fallIn(); R.step(120);
   const walked = R.walk([[13, 0, 17.6], [trig, 0, 17.6]]);
   // Sam walks on while the man comes out
-  const keep = R.pre; let sx = sam.pos[0]; R.pre = () => { keep?.(); sx = Math.min(26.6, sx + 1.55 * DT); g.teleportPlayer([sx, 0, 17.6]); R.W.cursorAt([sx + 4, 1.1, 17.6]); };
+  const keep = R.pre; let sx = sam.posX; R.pre = () => { keep?.(); sx = Math.min(26.6, sx + 1.55 * DT); g.teleportPlayer([sx, 0, 17.6]); R.W.cursorAt([sx + 4, 1.1, 17.6]); };
   const t0 = g.time, r0 = g.fight.stats.opRounds, L = dist(S.from, S.to); let T0 = NaN, eyes = NaN, round = NaN, dead = NaN;
   while (g.time - t0 < 8) {
     const f = Math.min(1, (g.time - t0) * 1.5 / L); xp = [S.from[0] + (S.to[0] - S.from[0]) * f, 0, S.from[2] + (S.to[2] - S.from[2]) * f];
     R.step();
-    if (isNaN(T0) && R.ops.some((m: any) => m.state !== 'dead' && !g.col.segmentBlocked([m.char.pos[0], 1.55, m.char.pos[2]], [X.char.pos[0], 1.1, X.char.pos[2]]))) T0 = g.time;
+    if (isNaN(T0) && R.ops.some((m: any) => m.state !== 'dead' && !g.col.segmentBlocked([m.char.posX, 1.55, m.char.posZ], [X.char.posX, 1.1, X.char.posZ]))) T0 = g.time;
     if (isNaN(eyes) && g.fight.log.some((x: any) => x.t >= t0 && x.what === `eyes on ${X.callsign}`)) eyes = g.time;
     if (isNaN(round) && g.fight.stats.opRounds > r0) round = g.time;
     if (X.state === 'dead') { dead = g.time; break; }
@@ -448,11 +448,11 @@ export const coverSettle = guarded(async () => {
     const R = await rig(3, 4); const { C, O } = R; REAR.settle = settle;
     R.fallIn(); R.step(120); R.walk(LEGS[0].walk); R.step(60);
     O.give('stack', O.targetAt(R.door('server').frameCentre));
-    const on = (m: any) => { const J = C.of(m), A = O.of(m); return !!J && !!A?.spare && !!A.arrived && m.script?.aimAt === J.aim && Math.hypot(m.char.vel[0], m.char.vel[2]) < 0.1; };
+    const on = (m: any) => { const J = C.of(m), A = O.of(m); return !!J && !!A?.spare && !!A.arrived && m.script?.aimAt === J.aim && Math.hypot(m.char.velX, m.char.velZ) < 0.1; };
     R.until(() => R.ops.some(on), 14);
     return { R, on, m: R.ops.find(on) as any };
   };
-  const brg = (m: any, p: number[]) => Math.atan2(p[0] - m.char.pos[0], p[2] - m.char.pos[2]), off = (m: any, p: number[]) => Math.abs(wrap(m.char.aimYaw - brg(m, p))) * 57.3;
+  const brg = (m: any, p: number[]) => Math.atan2(p[0] - m.char.posX, p[2] - m.char.posZ), off = (m: any, p: number[]) => Math.abs(wrap(m.char.aimYaw - brg(m, p))) * 57.3;
   { // (a) let go of and nothing dealt: the gun stays REAR.secs, then the door has it
     const { R, m } = await stood(true); const { C, O, game: g } = R;
     if (!m) verdict(false, 'staged: a rear man stood on his mark with an opening dealt', 'none found');
@@ -497,7 +497,7 @@ async function stepTrial(c: StepCase, on: boolean, order: 'fallIn' | 'hold', the
   R.pre = () => { d.angle = c.ang; d.vel = 0; d.latched = false; d.closing = false; d.quietT = -3600; };
   const away = [c.sam[0] * 2 - d.frameCentre[0], 1.1, c.sam[2] * 2 - d.frameCentre[2]];
   g.teleportPlayer(c.sam); R.W.cursorAt(away);
-  R.ops.forEach((m: any, i: number) => { m.char.pos[0] = c.men[i][0]; m.char.pos[2] = c.men[i][2]; m.char.vel[0] = m.char.vel[2] = 0; });
+  R.ops.forEach((m: any, i: number) => { m.char.posX = c.men[i][0]; m.char.posZ = c.men[i][2]; m.char.velX = m.char.velZ = 0; });
   R.step(2); R.W.cursorAt(away);
   const start = R.ops.map((m: any) => [...m.char.pos]);
   if (order === 'fallIn') R.fallIn(); else O.give('hold', O.targetAt(sam.pos));
@@ -513,7 +513,7 @@ async function stepTrial(c: StepCase, on: boolean, order: 'fallIn' | 'hold', the
     const el = g.time - t0, settled = el > 1.5 && el < 6, unseen = !C.live.some((L: any) => L.o === D), free: any[] = settled && unseen ? R.free() : [];
     if (settled) jobs = R.jobs();
     for (const m of R.ops) { const J = C.of(m), S = C.steps.get(m);
-      if (!S && free.includes(m) && Math.hypot(m.char.vel[0], m.char.vel[2]) < 0.3 && (!J || (J.o === D && J.to !== D.at))) idle = true;
+      if (!S && free.includes(m) && Math.hypot(m.char.velX, m.char.velZ) < 0.3 && (!J || (J.o === D && J.to !== D.at))) idle = true;
       if (g.time - t0 < 0.7 && ((J && J.o === D && J.to !== D.at) || (!J && !C.live.some((L: any) => L.o === D && L.by)))) blind0 = true;
       // (the team fallen in from the staging — startfile.ts START.fallIn, as the page opens — comes to the leaf already dealt: there is no moment between the
       //  order and its first deal in which a man has nothing. The case arises there as the deal itself has it once it has dealt them where they now stand:

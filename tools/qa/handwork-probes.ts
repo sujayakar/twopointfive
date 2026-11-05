@@ -103,19 +103,19 @@ export async function handworkWork(): Promise<boolean> { return keep(async () =>
     let wAt = 0, fB = -1; R.step(120, i => { c.update(0); if (fB < 0 && g.blackout.active) { fB = i; wAt = R.work().w; } });
     verdict(fB >= 0 && wAt > 0.85, 'his pose re-baked every frame of the move (dt 0, as a prop that nudges him does): the hand is still on the lever when the mains go', `tripped at frame ${fB} · hand weight then ${f2(wAt)}`);
     g.endBlackout(); R.step(30);
-    const gd = g.guards[0], stand = () => { gd.char.pos = [c.pos[0] + 0.75, 0, c.pos[2]]; gd.char.bodyYaw = gd.char.aimYaw = Math.PI / 2; };   // (a man a stride to his side, his back to Sam)
+    const gd = g.guards[0], stand = () => { gd.char.pos = [c.posX + 0.75, 0, c.posZ]; gd.char.bodyYaw = gd.char.aimYaw = Math.PI / 2; };   // (a man a stride to his side, his back to Sam)
     stand(); R.step(3, stand); const reach = !!g.nearby.find((r: any) => r.kind === 'guard' && r.inReach);
     g.selectVerb('breaker', 'breakerOff'); R.tap(); stand(); R.step(2, stand); const on = !!pl.breakerMove; R.I.clicked = 1; R.step(1); stand(); const tk = !!pl.takedown; R.step(60, stand);
     verdict(!reach || (on && !tk && g.blackout.active), 'a man in reach of a takedown and a click mid-move: the hand finishes the lever first (no takedown starts under it, the mains go)', reach ? `move on ${on} · takedown started ${tk} · blackout ${g.blackout.active}` : 'NOT STAGED: no guard row in reach — nothing asked'); }
   // ---- the keypad
   { const R = await rig(true), { g, pl, c, W } = R, Kp = g.devices.keypads[0], fc = Kp.door.frameCentre, n = Kp.n, pad: Vec3 = Kp.def.pos;
     learnCode(g, Kp.door.lockId, 'told'); g.teleportPlayer([fc[0] + n[0] * 0.9, 0, fc[2] + n[2] * 0.9]); pl.holstered = true; R.step(20);
-    const row = !!R.row('door', 'code'), off0 = (c.pos[0] - pad[0]) * n[0] + (c.pos[2] - pad[2]) * n[2];
+    const row = !!R.row('door', 'code'), off0 = (c.posX - pad[0]) * n[0] + (c.posZ - pad[2]) * n[2];
     W.audioLog = []; g.selectVerb('door', 'code'); R.tap(); const t0 = g.time;
     const beeps: { t: number; w: number; d: number }[] = []; let seen = 0, tOpen = -1;
     R.step(300, () => { const L = W.audioLog as any[]; for (; seen < L.length; seen++) { if (L[seen].name === 'padBeep') { const d = R.wrists(pad); beeps.push({ t: g.time - t0, w: R.work().w, d: Math.min(d.L, d.R) }); } if (L[seen].name === 'padOpen' && tOpen < 0) tOpen = g.time - t0; } });
     W.audioLog = null;
-    const off1 = (c.pos[0] - pad[0]) * n[0] + (c.pos[2] - pad[2]) * n[2];
+    const off1 = (c.posX - pad[0]) * n[0] + (c.posZ - pad[2]) * n[2];
     verdict(row && beeps.length === 4 && beeps.every(b => b.w > 0.85 && b.d < 0.32), 'a code he knows: four keys beep, each with his hand on the pad (weight > 0.85, wrist inside 0.32 m — a finger\'s length and a bit)', `row ${row} · ${beeps.map(b => `${f2(b.t)} s w ${f2(b.w)} d ${f2(b.d)}`).join(' | ')}`);
     verdict(tOpen > 0 && tOpen <= CODE_SECS + K.waitSecs + 0.9 && !pl.coding && Kp.door.lockBroken !== true, 'the door opens to it, no later than the code\'s own time plus the step in', `open tone ${f2(tOpen)} s after the tap (CODE_SECS ${CODE_SECS})`);
     verdict(off0 > K.standM + 0.2 && Math.abs(off1 - K.standM) < 0.12 && R.work().w < 0.05, 'he stepped in to arm\'s length of the pad to do it, and his hand is back', `stood ${f2(off0)} m off its face → ${f2(off1)} m (standM ${K.standM}) · hand weight ${f2(R.work().w)}`); }
@@ -137,7 +137,7 @@ export async function handworkWork(): Promise<boolean> { return keep(async () =>
   // ---- the drive let go of: the trigger does it, the other button does not
   { const R = await rig(true), { g, pl } = R, rf: Vec3 = g.level.mission.rack.front;
     g.mission.stage = 'drive'; g.teleportPlayer([rf[0] + 0.5, 0, rf[2] + (rf[2] < 14 ? 0.8 : -0.8)]); pl.holstered = true; R.step(20);
-    g.selectVerb('objective', 'drive'); R.tap(); R.step(50); const on0 = g.mission.driveT >= 0, yaw = c2deg(pl.char.bodyYaw), want = c2deg(Math.atan2(0, rf[2] - pl.char.pos[2] > 0 ? 1 : -1));
+    g.selectVerb('objective', 'drive'); R.tap(); R.step(50); const on0 = g.mission.driveT >= 0, yaw = c2deg(pl.char.bodyYaw), want = c2deg(Math.atan2(0, rf[2] - pl.char.posZ > 0 ? 1 : -1));
     R.I.clicked = 4; R.step(1); R.step(5); const afterR = g.mission.driveT >= 0; R.I.clicked = 1; R.step(1); R.step(5); const afterL = g.mission.driveT >= 0;
     verdict(on0 && afterR && !afterL, 'pulling the drive: the right button leaves his hands on it, the trigger lets go', `running ${on0} · after RMB ${afterR} · after LMB ${afterL}`);
     verdict(Math.abs(((yaw - want + 540) % 360) - 180) < 12, 'come at from half a metre off to one side he squares to the rack\'s FACE, not to the line from its middle', `body yaw ${yaw.toFixed(0)}° · the face's ${want.toFixed(0)}°`); }
@@ -158,8 +158,8 @@ export async function handworkWork(): Promise<boolean> { return keep(async () =>
     try { const R = await rig(on, { walls: true }), { g, pl, c, W } = R, C = g.wallCharge, P = partition(g); CLOSE.on = true;
       if (!P) { verdict(false, 'a partition of the office with floor both sides', 'none found'); continue; }
       const gd = g.guards[0], aim = (k: number, each?: () => void) => { for (let i = 0; i < k; i++) { W.cursorAt(P.top); W.step(DT); each?.(); } };
-      g.teleportPlayer(wallPt(P.W, 0, 0.55)); pl.holstered = true; const w0 = wallPt(P.W, 0, 0), ax = Math.abs(c.pos[0] - w0[0]) < Math.abs(c.pos[2] - w0[2]);
-      const stand = () => { gd.hold = true; gd.char.pos = ax ? [c.pos[0] + 0.75, 0, c.pos[2]] : [c.pos[0], 0, c.pos[2] + 0.75]; gd.char.vel = [0, 0, 0]; gd.char.bodyYaw = gd.char.aimYaw = ax ? Math.PI / 2 : 0; };   /* a man a stride to his side along the wall, his back to Sam */
+      g.teleportPlayer(wallPt(P.W, 0, 0.55)); pl.holstered = true; const w0 = wallPt(P.W, 0, 0), ax = Math.abs(c.posX - w0[0]) < Math.abs(c.posZ - w0[2]);
+      const stand = () => { gd.hold = true; gd.char.pos = ax ? [c.posX + 0.75, 0, c.posZ] : [c.posX, 0, c.posZ + 0.75]; gd.char.vel = [0, 0, 0]; gd.char.bodyYaw = gd.char.aimYaw = ax ? Math.PI / 2 : 0; };   /* a man a stride to his side along the wall, his back to Sam */
       aim(40, stand); const tell0 = c.anim.ready, creep0 = c.anim.creep;
       g.selectVerb('wall', 'charge'); R.tap(); let tell = 0, creep = 0, both = 0, frames = 0, i = 0;
       aim(90, () => { stand(); if (!C.setting || i++ < 30) return; frames++; if (c.anim.ready) tell++; if (c.anim.creep) creep++; const wi = R.work(), d = wi.pose ? R.wrists(wi.pose.p) : { L: 9, R: 9 }; if (d.L < 0.32 && d.R < 0.32) both++; });
@@ -186,7 +186,7 @@ export async function handworkWork(): Promise<boolean> { return keep(async () =>
   // ---- the guard sent to the breaker
   { const run = async (on: boolean) => { const R = await rig(on, { ai: true }), { g } = R, bp = g.level.breaker.pos; g.teleportPlayer([8, 0, 17]); R.step(30); g.setBlackout(600, 'ocp');
       let wMax = 0, dMin = 9, off = 9, who = '', upper = '', frames = 0, on2 = 0;
-      for (let i = 0; i < 60 * 150 && g.blackout.active; i++) { R.step(); if (g.breakerFixT > 1.0) { const gd = g.guards.find((x: any) => x.state !== 'dead' && Math.hypot(x.char.pos[0] - bp[0], x.char.pos[2] - (bp[2] - 0.6)) < 1.3); if (!gd) continue;
+      for (let i = 0; i < 60 * 150 && g.blackout.active; i++) { R.step(); if (g.breakerFixT > 1.0) { const gd = g.guards.find((x: any) => x.state !== 'dead' && Math.hypot(x.char.posX - bp[0], x.char.posZ - (bp[2] - 0.6)) < 1.3); if (!gd) continue;
         const ch = gd.char, wi = ch.anim.workInfo(), d = wi.pose ? v3.dist(ch.bones.handL, wi.pose.p) : 9; frames++; if (wi.w > 0.85 && d < 0.25) on2++; wMax = Math.max(wMax, wi.w); dMin = Math.min(dMin, d); off = flat(ch.pos, bp); who = gd.callsign; upper = ch.anim.upper; } }
       return { t: g.time, back: !g.blackout.active, wMax, dMin, off, who, upper, frames, on: on2 }; };
     const A = await run(true), B = await run(false);
@@ -254,7 +254,7 @@ export async function handworkSwap(): Promise<boolean> { return keep(async () =>
   // ---- the first round is no later
   { const first = async (on: boolean) => { const R = await rig(on, { ai: true, seed: 5 }), { g, pl } = R; g.teleportPlayer([8, 0, 17]); R.step(30);
       const gd = pick(g), ch = gd.char, f: Vec3 = [Math.sin(ch.bodyYaw), 0, Math.cos(ch.bodyYaw)]; let at: Vec3 | null = null;
-      for (const d of [4, 3.5, 3, 2.5]) { const p: Vec3 = [ch.pos[0] + f[0] * d, 0, ch.pos[2] + f[2] * d]; if (!g.col.nav.isBlocked(p[0], p[2]) && !g.col.solidBlocked([p[0], 1.2, p[2]], [ch.pos[0], 1.5, ch.pos[2]])) { at = p; break; } }
+      for (const d of [4, 3.5, 3, 2.5]) { const p: Vec3 = [ch.posX + f[0] * d, 0, ch.posZ + f[2] * d]; if (!g.col.nav.isBlocked(p[0], p[2]) && !g.col.solidBlocked([p[0], 1.2, p[2]], [ch.posX, 1.5, ch.posZ])) { at = p; break; } }
       if (!at) return { frames: -2, who: gd.callsign, swaps: 0, mz: [] as number[] };
       const s0 = HANDWORK_STATS.swaps, e0 = g.events.length; g.teleportPlayer(at); pl.holstered = false; g.playerInvisible = false; let frames = -1, seenE = e0; const mz: number[] = [];
       for (let i = 0; i < 60 * 20 && frames < 0; i++) { pl.visibility = 0.9; R.step(); mz.push(ch.muzzle[0], ch.muzzle[1], ch.muzzle[2]); for (; seenE < g.events.length; seenE++) { const e = g.events[seenE]; if (e.kind === 'guardShot') { frames = i; break; } } if (g.events.length < seenE) seenE = g.events.length; }

@@ -162,7 +162,7 @@ export function kitTick(g: Game, late = false) {
   if (late) { /* (the frame's second look, after everything that can change his hands this frame has run: the equip half alone) */ }
   else if (on && KITANIM.close) {
     if (an.creep && an.creepAt) {
-      const d = Math.hypot(an.creepAt[0] - c.pos[0], an.creepAt[2] - c.pos[2]);
+      const d = Math.hypot(an.creepAt[0] - c.posX, an.creepAt[2] - c.posZ);
       an.closeK = kitCloseness(d);
       KITANIM_STATS.closeFrames++;
     } else if (an.closeK < 0) an.closeK = 0;   // (out of the mode: the last closeness stands while the carriage eases off)
