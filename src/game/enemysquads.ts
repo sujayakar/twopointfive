@@ -64,7 +64,6 @@ import { inBounds, order, endGuardScript } from './squad';
 import { PRESSURE, run, loose, boots } from './pressure';
 import { laneBars, laneKnownAt } from './lanes';
 import { digInPhase } from './digin';
-import { lastStandMan } from './laststand';
 import { wayName } from './dialogue';
 import { WORDS, wg } from './words';
 import { netFeedAsked, netFeedBody } from './netquietfeed';   // (a leaf: netquiet.ts itself is not to be imported from here — see that file's head)
@@ -416,7 +415,7 @@ export function inSquadRooms(g: Game, gd: Guard, p: Vec3): boolean { const Q = S
 /** a squad's men at home and free to be told something: fit, holding a post, nobody of the team in their sight these two seconds, not already sent */
 function home(g: Game, Q: Squad): Def[] {
   const out: Def[] = [];
-  for (const m of Q.men) { if (!fit(g, m) || g.time - m.lastSeenT < 2 || Q.sent.some(s => s.gd === m) || lastStandMan(g, m) || Q.rc?.look.some(l => l.gd === m)) continue;   // (laststand.ts: a man of the last stand is not the squad's to send)
+  for (const m of Q.men) { if (!fit(g, m) || g.time - m.lastSeenT < 2 || Q.sent.some(s => s.gd === m) || hasHim(m, OWN.stand) || Q.rc?.look.some(l => l.gd === m)) continue;   // (laststand.ts: a man of the last stand is not the squad's to send)
     if (hasHim(m, OWN.lastMan)) continue;   // (netquiet.ts, through netquietfeed.ts — false on its first line with its switch off: the last man up, at his act, is not the squad's to send to a room nobody of his is left in)
     if (m.script && g.director?.lessonRuns) continue;   // (a staged moment of a tutorial mission's script has him, as roomfight.ts and lanes.ts leave him to it: not at home — sent to look for a mate gone quiet, he walked out of its hand)
     const D = defOf(g, m); if (D && D.mode === 'hold' && D.rallyAt !== Infinity) out.push(D); }

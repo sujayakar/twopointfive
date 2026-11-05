@@ -41,10 +41,7 @@ import { v3 } from '../math/vec';
 import { lightEstimateAt, GUARD_EYE } from './guards';
 import { isHostile } from './teams';
 import { order } from './squad';
-import { lastStandMan } from './laststand';
 import { digInPhase } from './digin';
-import { pressOwns } from './pressure';
-import { buddyOwns } from './buddy';
 import { powerOutWord } from './powerout';
 import { hasHim, OWN } from './owner';
 import { gunKeepsPost } from './gunroles';
@@ -198,9 +195,8 @@ export function darkFoeKept(g: Game, gd: Guard, D: Def | undefined = g.fight.def
   if (digInPhase(g, gd) !== 'idle') return 'dug in';
   if (hasHim(gd, OWN.squadWord)) return 'his squad\'s';
   if (gunKeepsPost(gd) || hasHim(gd, OWN.lane)) return 'holds a lane';
-  const rally = D.rallyAt, press = pressOwns(g, D); D.rallyAt = rally;   // (pressOwns is roomfight's hook and may stop his rally clock as it answers: asked here it changes nothing)
-  if (press || buddyOwns(g, D)) return 'the press\'s';
-  if (g.rescue.captor() === gd || lastStandMan(g, gd)) return 'the captor / last stand';
+  if (hasHim(D.gd, OWN.press | OWN.buddy)) return 'the press\'s';
+  if (g.rescue.captor() === gd || hasHim(gd, OWN.stand)) return 'the captor / last stand';
   return null;
 }
 
