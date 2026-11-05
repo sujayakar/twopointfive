@@ -33,6 +33,7 @@
 // The cross-commit identity (the order never given = the base build) is `bun run tools/qa/nvg-probes.ts digest` and the play-throughs, run here and in a
 // checkout of the base: the same lines.
 import { standUp, ROOT } from './headless.ts';
+import { asProbes, exitCode, wanted } from './holds.ts';   // (run alone, each part runs as the probe the runner calls it by: one stand both ways)
 const { DOORTOOLS } = await import(`${ROOT}/src/game/doortools.ts`);
 const { ROOMCLEAR } = await import(`${ROOT}/src/game/roomclear.ts`);
 const { NIGHTBREACH } = await import(`${ROOT}/src/game/nightbreach.ts`);
@@ -588,7 +589,5 @@ export const silentSet = guarded(async () => {
 
 if (import.meta.main) {
   const all: Record<string, () => Promise<boolean>> = { 'silent-order': silentOrder, 'silent-hud': silentHud, 'silent-walk': silentWalk, 'silent-doors': silentDoors, 'silent-pick': silentPick, 'silent-boot': silentBoot, 'silent-cans': silentCans, 'silent-tools': silentTools, 'silent-fire': silentFire, 'silent-hush': silentHush, 'silent-start': silentStart, 'silent-off': silentOff, 'silent-set': silentSet };
-  const want = process.argv.slice(2).filter(a => !a.startsWith('--')); let ok = true;
-  for (const [name, fn] of Object.entries(all)) if (!want.length || want.includes(name)) ok = (await fn()) && ok;
-  process.exit(ok ? 0 : 1);
+  process.exit(exitCode(await asProbes(all, wanted())));
 }
