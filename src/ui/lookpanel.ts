@@ -15,7 +15,7 @@ const ROWS: readonly [keyof typeof lookAmounts, string, string, number][] = [
   ['clarity', 'Clarity', 'one number over Relief, Cavities, Edges and Snow relief: how hard neighbouring detail is set against each other. Lower = calmer surfaces', 1.5],
   ['paint', 'Paint', 'the colour the maps add to the box paint', 1.5],
   ['relief', 'Relief', 'how deep the normal maps cut', 1.6],
-  ['shine', 'Finish', 'roughness from the maps', 1.5],
+  ['shine', 'Finish', 'roughness from the maps, and how far a lacquer mirrors more than plain paint does (car paint)', 1.5],
   ['cavity', 'Cavities', 'joints and pits hold shadow', 1.5],
   ['weather', 'Weather', 'damp wall feet, bleached tops, runs, trodden ground; on what somebody keeps, use: lanes, chipped and changed pieces, knocked wall feet and worn paint where feet go', 1.5],
   ['untile', 'Break the repeat', 'a stuff made of pieces deals them from its map and is laid in bays; a plain coat is read twice and cross-faded; a kept place drifts a shade over ten metres. Past 1: stronger bays and drift', 2],
