@@ -1482,7 +1482,7 @@ interleaved and filtered to their quiet minimum, and a row whose p75 sits far ab
   the software adapter: the page's boot check reads the sun at midday under 0.5 and 0.9, and one still each of the gate at midday
   (`rebuild/graphics-next/gate-midday-cloud.png`): under 0.9 open snow code 146 / 161 / 184 and the gate's shadow a vague 109 / 127 / 159; under 0.5
   snow 205 / 210 / 219 (not clipped) and a hard-edged shadow 101 / 122 / 159. Never seen on a GPU.
-- **THE LOOK PANEL'S "EYES FOLLOW SAM" ROW** (10-28; `lookConfig.eyes`, 1 on the look page, 0 = the shade row alone as it was; `render/lookeye.ts
+- **THE LOOK PANEL'S "EYES FOLLOW SAM" ROW** (ITS EYE BY SAM'S METER, `render/lookeye.ts` AND `lookeye-check` ARE GONE SINCE 11-04, see THE ROWS THE ONE EXPOSURE MODEL REPLACED ARE DELETED below: the row now says how far the model's own eye goes to his place; what follows is how it was. 10-28; `lookConfig.eyes`, 1 on the look page, 0 = the shade row alone as it was; `render/lookeye.ts
   lookEyeFrame` writes `frame.eyeCfg` @880 (`FRAME_BYTES` 896), `composite.wgsl lookShadeGain` reads it; the maintainer, on a GPU: "overall i think light
   levels looks really good. i wonder if we need to adjust our tone mapping based on where the characters eyes are though. like in this setting on overcast
   the room should probably be a bit brighter (and then it's okay for outside to be a bit overexposed?)", and two minutes later, in a room with every door
@@ -1530,7 +1530,7 @@ interleaved and filtered to their quiet minimum, and a row whose p75 sits far ab
   darkest of Sam's kit 109 / 78 / 46; at 1.6 the shadows are cobalt (the turn is per channel, so it adds colour as a photo editor's contrast
   does; Colour takes it back). Check: `tools/qa/lookgrade-check.ts` (7 lines; `LOOKGRADE_BREAK=1` turns about middle grey and fails 4).
   Never seen on a GPU at the time of writing.
-- **A ROOM OF THE PASS AT MIDDAY, MEASURED (10-30; its points (1) and (3) were WRONG and (2) is not the whole of it, see the next bullet).** The maintainer on a GPU, the look page, the tea room: "lighting still looks
+- **A ROOM OF THE PASS AT MIDDAY, MEASURED (10-30; the rows it measured are gone since 11-04; its points (1) and (3) were WRONG and (2) is not the whole of it, see the next bullet).** The maintainer on a GPU, the look page, the tea room: "lighting still looks
   very flat indoors during midday (see flat shading on chair). also very odd pooling of shadow under window". Read on the software adapter, the same room.
   HOW: debug views 3 (direct), 4 (the gather), 7 (the cache's irradiance) and 8 (both) are LINEAR on screen in a room's range (the Window light row at 0.5
   halves view 3's pixels), so their pixels can be set against each other. Move the squad out first (a man at a window shadows half the room), and a pin's
@@ -1547,7 +1547,7 @@ interleaved and filtered to their quiet minimum, and a row whose p75 sits far ab
   contrast of the room's own (the day's contrast is undone under a roof), the sun's patch left bright, and a window's and an open door's light as an
   opening that sends sky down and the lit ground up. (11-01: a window, an open door and a blown hole ARE openings now, by one rule, each one light of the
   mean of the two: THE LOOK PANEL'S "DAYLIGHT AT OPENINGS" ROW. The two-tone light is still not built.)
-- **A ROOM'S LIGHT IS READ ON THIS SIDE OF ITS WALLS, AND A SUN PATCH INDOORS KEEPS THE ROOM'S CONTRAST** (10-30; `lookConfig.footing`, 1 on the look
+- **A ROOM'S LIGHT IS READ ON THIS SIDE OF ITS WALLS, AND A SUN PATCH INDOORS KEEPS THE ROOM'S CONTRAST** (THE SUN PATCH HALF IS GONE SINCE 11-04 with the rows the model replaced (below); the read on this side of the walls stands. 10-30; `lookConfig.footing`, 1 on the look
   page, `?footing=0` = as it was; `frame.gradeCfg.z`, written by `engine.ts` on the look page whatever the Contrast row says; `composite.wgsl
   lookPlaceHere` and the head of `lookShadeGain`, and the compact twin). The maintainer on a GPU: "very odd pooling of shadow under window". THE BULLET
   ABOVE HAD THE CAUSE WRONG. The window lamp's dead ground only says why no direct light falls there. The black was the SHADE ROW not bringing that floor
@@ -1580,7 +1580,7 @@ interleaved and filtered to their quiet minimum, and a row whose p75 sits far ab
   times. The yard from above, on against off: one pixel in a hundred differs by over 8 of 255, nearly all of them
   brighter: slivers in the lorry's recesses (between cab and bed, under the cab's corners), which are places the old reads took for the open air.
   The final text (a blind point takes the brightest) boots 119 of 119 and drew the yard again; its room stills are the text before that last line.
-- **A ROOM HAS THE DAY'S CONTRAST TOO, ABOUT ITS OWN LEVEL** (10-30; the look panel's "Room contrast" row `roomc`, 0.6 on the look page (the maintainer's number, 10-31, from his GPU: "indoor looks a lot better, i set room contrast to 0.6"; it shipped at 1), 0 = as it
+- **A ROOM HAS THE DAY'S CONTRAST TOO, ABOUT ITS OWN LEVEL** (GONE SINCE 11-04: the Room contrast row, `lookConfig.roomContrast`, `frame.gradeCfg.w`'s use and `lookroom-check` went with the rows the one exposure model replaced (below); what follows is how it was. 10-30; the look panel's "Room contrast" row `roomc`, 0.6 on the look page (the maintainer's number, 10-31, from his GPU: "indoor looks a lot better, i set room contrast to 0.6"; it shipped at 1), 0 = as it
   was, `?look=roomc:0`; `lookConfig.roomContrast` → `frame.gradeCfg.w`; `composite.wgsl` under `lookShadeGain`'s call, and that function's z and w. Off
   too with `?footing=0` and with the Contrast row at 1. PICTURE ONLY, the look page only, so no stand and no knob table). The maintainer on a GPU, the
   tea room of the pass at midday: "lighting still looks very flat indoors during midday (see flat shading on chair)". THE CAUSE, found the long way:
@@ -1604,7 +1604,7 @@ interleaved and filtered to their quiet minimum, and a row whose p75 sits far ab
   or lookPlaceHere. COST: with the row up EVERY pixel in full light takes lookPlaceHere's read (five cache reads, and up to four box rays by a wall),
   the sunlit yard too, where none was made: NEVER TIMED ON A GPU. SEEN, the software adapter only, one page, the tea room at midday, the row at 1
   against 0 on one boot: the chair's seat stands 3.80 times over the face of its back where it stood 3.15; the chair's shadow on the floor is 0.64 of what it was, the floor beside it 0.78, the stone wall 0.81, the dark carpet 0.44, the sun patch 1.09 times; the still's mean pixel goes from 77.7 to 71.2. The room from above: the fall-off from the window, the shadows under the tables and the sun patch read where the picture was even, and it is DARKER, mean pixel 56.8 to 48.1 (most of this room sits under the level). The yard from above: mean pixel 205.7 both ways, 0.7 % of pixels differ by over 8 of 255. The page booted 119 of 119 with no page error. SEEN ON HIS GPU 10-31 ("indoor looks a lot better", the row at 0.6); never timed there, and the stills above are the row at 1.
-- **ONE EXPOSURE: ONE GAIN A PLACE, AND THE ROWS IT REPLACES** (10-31; the look panel's "One exposure" row `expo`, 1 on the look page, 0 = the rows as
+- **ONE EXPOSURE: ONE GAIN A PLACE, AND THE ROWS IT REPLACES** (SINCE 11-04 THE ROWS IT REPLACED ARE DELETED and `expo` at 0 is no gain by the place at all, see the bullet after ONE EXPOSURE AT EVERY HOUR. 10-31; the look panel's "One exposure" row `expo`, 1 on the look page, 0 = the rows as
   they were, `?look=expo:0`; `lookConfig.expo`; `render/lookexpo.ts lookExpoFrame` → `frame.eyeCfg` with w under 0, which is `composite.wgsl
   lookExpoGain`'s word; the place field `render/placeField.ts` + `shaders/place_field.wgsl`. PICTURE ONLY, the look page only, BY DAY ONLY (it rides
   on the shade row), so no stand and no knob table: the guards and the light meter read the light as it is). The maintainer, 10-31, after a fifth day
@@ -1657,13 +1657,13 @@ interleaved and filtered to their quiet minimum, and a row whose p75 sits far ab
   cache (a room whose light spans 2.6 stops has one level to 0.08 of a stop, the room behind its wall keeps its own, an open door moves it 0.06 of a
   stop, a wide opening joins, a window leaves no hole, at rest nothing creeps, a change of light is followed inside half a second, the eye closes
   faster than it opens: 15 of 15), `PLACEFIELD_BREAK=1` (no walls) fails 11. THE SHEET draws old and new on one boot and prints the field's own
-  levels a cell: `node tools/qa/look-sheet.cjs --rows overcast,overcast+expo:0,…`. COST: 9 small compute dispatches a frame and a 28 KB uniform; two
+  levels a cell: `node tools/qa/look-sheet.cjs --rows overcast,overcast+expo:0,…` (`expo:0` drew the rows before the model beside it until 11-04, when they and the row went; `overcast+shade:0` now draws the hour's one exposure with no place brought up). COST: 9 small compute dispatches a frame and a 28 KB uniform; two
   more pipelines, compiled after the page is up, the old rows run until they are: NEVER TIMED ON A GPU. SEEN: software adapter only. One boot of the code as pushed, midday and night
   (picture means; lamp room · yard · room with windows): midday 0.142 · 0.594 · 0.097, night 0.224 · 0.140 · 0.240. On earlier boots of this row: the
   lamp room on the grey day 0.118 and at dusk 0.037. WHAT THE STILLS SAY THAT NOBODY HAS RULED ON: a room with windows at midday is DARK with Sam in it
   (median 0.06, its windows and their patches bright); the lamp room at dusk is about a fifth as bright as at night (Sam's place gain there is 13.6 and
   the night bound 68.87 is not reached). NOT DRAWN on the code as pushed: dawn, dusk, the grey day, the two looking-in and looking-out views, and no
-  before row (`expo:0`) beside any cell. KNOWN AND NOT MENDED (a review of the diff): a wall cell takes its brighter neighbour's level inside half a stop;
+  before row (`expo:0`, gone since 11-04 with the rows it drew) beside any cell. KNOWN AND NOT MENDED (a review of the diff): a wall cell takes its brighter neighbour's level inside half a stop;
   reflections are multiplied by the place gain and then rolled again, and the wet coat's highlight is not rolled; the roll's knee when the Contrast row
   gives no turn; the night bound ignores the Real light values amount; the eye stays as it was when the row goes back to 0, and the field's buffers are
   never released; the cascade overlap is along x only; `placeField.maskKey` walks every box a frame. NEVER SEEN ON A GPU, AND NEVER TIMED ON ONE.
@@ -2035,9 +2035,10 @@ interleaved and filtered to their quiet minimum, and a row whose p75 sits far ab
   lamps; the field has no such block yet, and with it the dim level could be the yard's own and the unlit room could come up further. ROWS AT 0
   ARE THE BASE, and so is a night with the `dark` row at 0: on the software adapter the block's night opening is the head's picture byte for
   byte with the rows as the page opens, and again with `hours` at 1 and `dark` at 0 (the model runs and every gain is 1); a midday with `hours`
-  at 1 is the midday with it at 0, byte for byte. A device that cannot build the field gets the night as it was from the same frame. CHECKS:
+  at 1 is the midday with it at 0, byte for byte. A device that cannot build the field brings no place of a night up (the bound waits for a live
+  field; what else it draws is under THE ROWS THE ONE EXPOSURE MODEL REPLACED ARE DELETED, below). CHECKS:
   `lookexpo-check` on both stands (eleven lines under ONE EXPOSURE AT EVERY HOUR; `HOURS_BREAK=1` leaves the bound out and fails six), with
-  `lookgrade`, `lookroom`, `lookunits`, `frame-layout`, `shaderrows`, `knobs`; all 68 shader texts compile. WHAT MOVES WITH THE ROW ON, the other
+  `lookgrade`, `lookunits`, `frame-layout`, `shaderrows`, `knobs`; all 68 shader texts compile. WHAT MOVES WITH THE ROW ON, the other
   rows as the page opens: a night only where a place is under the dim level; dawn and dusk (the model at its full share, the night's white);
   the grey day in places under the dim level and in the shoulder; midday nothing. (With the Sky light row well under 1 the shade row's fade was
   acting at midday too, and its going moves that.) COST, not measured: at night the frame runs the field's sweeps and the composite's place
@@ -2047,10 +2048,37 @@ interleaved and filtered to their quiet minimum, and a row whose p75 sits far ab
   in a room brought up reads weaker against it; the light debug views are × the gain; on a switch of hour from the panel the field holds the
   old hour's units for the frames it takes to settle; the comments in the composite and the smoke march that say "1 at night" are true of the
   page as it opens and are to be mended when `hours` is its default; the Contrast row still fades by day (`lookgrade.ts`); the Room brightness
-  row's light is not a night's (`lampCfg`); lamps are still the game's by night and real by day (`photometry.ts`); and the rows the model
-  replaced (`composite.wgsl lookShadeGain` after its early return, `render/lookeye.ts`) are still there for `?look=expo:0` alone, at no hour
-  otherwise: deleting them is the One exposure row's own end, not this one's. MEASURED on the software adapter and the CPU only: THE ROWS ON
+  row's light is not a night's (`lampCfg`); lamps are still the game's by night and real by day (`photometry.ts`). (The rows the model
+  replaced went in the step after this one: the next bullet.) MEASURED on the software adapter and the CPU only: THE ROWS ON
   HAVE NEVER BEEN SEEN ON A GPU.
+- **THE ROWS THE ONE EXPOSURE MODEL REPLACED ARE DELETED, AND ITS OWN ROW WITH THEM** (11-04; `composite.wgsl` and `compact/composite.wgsl
+  lookShadeGain`, their caller, `engine.ts`, `ui/lookpanel.ts`; no switch: nothing a page draws with its rows as it opens was touched). The
+  maintainer chose the model over mending the rows it replaced (10-31), and ruled every special case of the light fixed (11-04): the first of the
+  two in the exposure was that two models stood side by side. The older one was reachable only with the One exposure row at 0 (`?look=expo:0`)
+  and on a device that could not build the place field. GONE: the tail of `lookShadeGain` (a gain by the place capped at six and nine times, the
+  roll-off by a pixel's own light, the sun patch indoors, the level a room is turned about) and its head comments; the caller's two lines under
+  it (the day's contrast given back under a roof; the Room contrast turn); the Room contrast row `roomc`, `lookConfig.roomContrast` and
+  `frame.gradeCfg.w`'s use (the slot is spare); the eye by Sam's meter, `render/lookeye.ts`, `lookConfig.eye` and the page's word for it;
+  `lookeye-check` and `lookroom-check`; `frame.shadeCfg.z` (spare, 0); and THE ONE EXPOSURE ROW ITSELF (`expo`, `lookConfig.expo`): with nothing
+  behind it, the row at 0 drew exactly what the Eyes adjust to shade row at 0 draws, the hour's one exposure with no place brought up, so
+  `shade:0` is that word now and `expo` on an address is ignored like any word the page does not know (`roomc` too). `lookShadeGain` is the
+  model's two reads and returns the gain alone: the field's answer, or where the field has none or two (a wall's own cell) the cache's read on
+  this side of the wall. A DEVICE THAT CANNOT BUILD THE FIELD keeps the model on the cache's own read at the pixel, the eyes taken to stand in
+  the open: what every page shows for the frames before its field is live, and what a device whose field pipelines came back invalid already
+  showed (`engine.ts placeDead`: the constructor is asked once and no more; before, the row was put down and the older rows ran). The engine's
+  `lookEye` is `{ snap }` alone (the stills tools and `game/airSim.ts` set it). STILL TWO, and not this step's: `lookPlaceHere`'s five reads
+  behind `?footing=0`; the wall cell's side by what the cache holds where the plan does not say (the floor plan's silent cells, 5.8 % of 48,877
+  wall cells over 60 levels with doors shut, most of them on four levels); the corrections on the model named under ONE EXPOSURE AT EVERY HOUR.
+  CHECKS: `lookexpo-check` (the kernel's text in both writings, that nothing of the rows is left in either, that the model has no row),
+  `lookgrade-check` (its last line is the frame's numbers and the model's own toning line), `shaderrows-check` (the compact twin took the same
+  change; fixture stamped), all 68 shader texts compile, both typechecks, `bench-check`; the checks that read the composite and are red at the
+  base are red on the same lines (`scenetweak`, `snowglow`, `snowsparkle`, `round-check`, `shaderinline`: the composite's kernels read 1072 KB
+  with the every-hour lines and 1070 after this, against a budget now 1030, the Room contrast row's 1.5 KB taken back out of both rows).
+  MEASURED: on the software adapter the look page with its rows as it opens draws the pictures it drew, byte for byte: the block at
+  night and at dusk and the white roof at midday (two boots each, this tree against the one before it: 0 of 2,304,000 bytes), and a grey day on
+  the tree one review before this one. NOBODY HAS SEEN: any of it on a GPU (the model's own lines are untouched, so the default page should not need
+  it); a device that cannot build the field, which is drawn differently than before; the wall cell's side on a native driver's compile of the
+  new kernel text.
 - **LIGHT KEEPS ITS ORDER WHERE TWO PLACES MEET** (11-04; the look panel's row `order` "Light in order", live, 1 on the look's page, 0 = as it was to
   the bit; `frame.placeCfg.x`, a new member, the last of the frame's head; `place_common.wgsl lookGainsOwn`, called by `composite.wgsl` and
   `compact/composite.wgsl lookExpoGain`; the place field's SECOND BLOCK, `render/placeField.ts PLACE_NEAR`, `place_field.wgsl hand`). The
@@ -2238,10 +2266,10 @@ interleaved and filtered to their quiet minimum, and a row whose p75 sits far ab
   read it and their own constants go. Not built. ALSO STILL SPECIAL: a wall built askew between two places knows no line, so its cells read the cache unguarded and their place for the exposure is still
   guessed from their neighbours (25 of the pass's 641 wall cells, the lorry's; `composite.wgsl lookPlaceField`'s last lines); a roofed lamp always asks its shadow ray (the rain leak's mend,
   `reach` masks are a floor plan); Room contrast and Room brightness are taste rows over the place's gain; the older stack of day corrections is still in the
-  modules behind `?look=expo:0` for the A/B; and the four wall guards' text is still in the modules because the build's page reads them: they are deleted when
+  modules behind `?look=expo:0` for the A/B (DELETED 11-04, the row and the Room contrast row with them: THE ROWS THE ONE EXPOSURE MODEL REPLACED ARE DELETED); and the four wall guards' text is still in the modules because the build's page reads them: they are deleted when
   the row goes to the build, not before.
 - **A PLACE SEEN FROM ANOTHER IS THE PICTURE IT IS TO EYES IN IT, SHOWN DARKER** (11-02; look page only, part of the One exposure row `expo`, so
-  `?look=expo:0` is the rows before it; the maintainer on his GPU at midday on the pass, his eyes in the yard: the men in the bulb-lit store white at their
+  `?look=expo:0` is the rows before it (was: they and the row are gone since 11-04); the maintainer on his GPU at midday on the pass, his eyes in the yard: the men in the bulb-lit store white at their
   edges on a near-black floor, "weirdly not able to see where the glow is coming from here by flipping through the debug views", "it subsides a lot once i
   shoot out the one light in the room"; and "weird that smoke looks black indoors but white outside"). Both were one fault: the exposure was a gain on the
   DIFFUSE light of a place, and every other kind of light a place sends the eye was handled apart, or not at all. A room seen from the yard had its floor
