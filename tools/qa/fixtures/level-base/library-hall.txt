@@ -1,3 +1,4 @@
 # 11-05, three kit pieces no longer flicker: a handcart's shafts end at its bed, a van's bumper and step begin at its body, a wash line's cloths do not lap; no box added or removed, and no solid thing is anywhere it was not; before it: the hut wears the kit's four wall fittings (a band, a vent, conduit, a pipe), drawn only, in a group of their own
 # every box says what it does (the does key, src/scene/materials.ts): the words are what its colours said, and nothing else moved
-7290f5c10974431617b3183d38c8763a37b409be
+# the look's stand-ins wear their rows' own numbers: colours only, at most 0.0024 a channel
+b63571bd578d8bb559874f9d051006d5ae8fcc26
