@@ -158,16 +158,22 @@ export async function cutboxesRay(): Promise<boolean> {
     F.verdict(badT === 0 && badN === 0 && badMiss === 0 && hits > 5000 && cutHits > 1000, 'rayBox on a cut box = the world-space half-space clip: same hit or miss, same t, same normal', `${rays} rays · ${hits} hits (${cutHits} on a cut face) · ${badMiss} hit/miss · ${badT} t · ${badN} normal · worst Δt ${worstT.toExponential(1)} · ${planes} planes over 300 boxes (${rotBoxes} fully rotated)`);
     F.verdict(gpuBad === 0 && gpuFace === 0, 'the GPU rule (isectBox + isectCut over the packed f32 rows) lands on the same face at the same t', `${gpuBad} off by > 0.2 mm or missed · ${gpuFace} another face · worst Δt ${gpuWorst.toExponential(1)} m · ${gpuSkip} grazes under 1 mm skipped`);
     // THE BOX TEST HAS NO LOOP (common.wgsl cutFour: a loop inside the test every walk writes into its own loops doubled the fog's march on an NVIDIA card). Two
-    // halves: the text between cutFour and the box test's end holds no loop statement and takes the record as two fours of the eight rows; and the fours give,
+    // halves: no function the box test reaches (itself, the cut test, the round's, the rotations, whatever they call) holds a loop statement; and the fours give,
     // bit for bit in f32, what the planes give one by one (cut-rule.ts cutPlanesLoop: the test as it was, and cutClip's walk) — over seeded records with what a
     // level's own rarely hold: the same plane twice (a tie: the FIRST is the face), a zero normal in the middle (the record ends there, whatever follows), a pad
-    // row carrying an arc, a ray along a plane, on either side of it. NOLOOP_BREAK=1 (must FAIL, both): a loop written back, and a tie given to the last plane.
+    // row carrying an arc, a ray along a plane, on either side of it. NOLOOP_BREAK=1 (must FAIL, both): a loop in a function the cut test calls, and a tie given to the last plane.
     { const BRK = process.env.NOLOOP_BREAK === '1', fr = Math.fround;
-      const cw = readFileSync(`${ROOT}/src/render/shaders/common.wgsl`, 'utf8');
-      const code = (cw.slice(cw.indexOf('fn cutFour('), cw.indexOf('fn boxNormalFromCode(')) + (BRK ? '\nfor (var k = 0u; k < CUT_ROWS; k++) { }' : '')).replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/.*$/gm, '');
-      const loops = (code.match(/\b(for|while|loop)\b/g) ?? []).length;
-      const fours = code.includes('let s = cutFour(bi, 4u, lo, ld, cutFour(bi, 0u, lo, ld, vec4f(tN0, tF0, 7.0, 1.0)));') && code.includes('fn isectBox(') && code.includes('return isectCut(lo, ld, tmn, tN, tF, tmax, bi);');
-      F.verdict(loops === 0 && fours && CUT_ROWS === 8, 'the box test holds no loop: a record\'s eight rows are taken as two fours', `${loops} loop statement${loops === 1 ? '' : 's'} between cutFour and the box test\'s end · two fours of ${CUT_ROWS} rows ${fours}`);
+      const cw = readFileSync(`${ROOT}/src/render/shaders/common.wgsl`, 'utf8').replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/.*$/gm, '') + (BRK ? '\nfn cutPlaneRowBroken(k: u32) -> u32 { var n = 0u; for (var i = 0u; i < k; i++) { n += i; } return n; }' : '');
+      // every function of the shared text by name, and what the box test reaches: itself and all it calls, to the end (the cut test, the round's, the rotations)
+      const fnsW = new Map<string, string>(); for (const m of cw.matchAll(/\bfn\s+(\w+)\s*\(/g)) { let d = 0, e = cw.indexOf('{', m.index!); for (; e < cw.length; e++) { if (cw[e] === '{') d++; else if (cw[e] === '}' && --d === 0) break; } fnsW.set(m[1], cw.slice(m.index!, e + 1)); }
+      const reach = new Set<string>(), walkFns = (n: string) => { if (reach.has(n) || !fnsW.has(n)) return; reach.add(n); for (const m of (fnsW.get(n)! + (BRK && n === 'cutFour' ? ' cutPlaneRowBroken(k0);' : '')).matchAll(/\b(\w+)\s*\(/g)) walkFns(m[1]); }; walkFns('isectBox');
+      const looped = [...reach].filter(n => /\b(for|while|loop)\b/.test(fnsW.get(n)!.slice(fnsW.get(n)!.indexOf('{'))));
+      const hash = (s: string) => { let a = 0x811c9dc5; for (let i = 0; i < s.length; i++) a = Math.imul(a ^ s.charCodeAt(i), 16777619); return (a >>> 0).toString(16).padStart(8, '0'); };
+      // THE SHADER'S OWN TEXT OF THE TEST, pinned: the lines below run cut-rule.ts, the checks' copy of it, so a change to cutFour or isectCut must bring that copy with it, and then its pin moves here
+      const CUT_TEXT = '697345e3', cutText = hash(['cutFour', 'isectCut'].map(n => (fnsW.get(n) ?? '').replace(/\s+/g, ' ')).join('\n'));
+      const fours = (fnsW.get('isectCut') ?? '').includes('let s = cutFour(bi, 4u, lo, ld, cutFour(bi, 0u, lo, ld, vec4f(tN0, tF0, 7.0, 1.0)));') && (fnsW.get('isectBox') ?? '').includes('return isectCut(lo, ld, tmn, tN, tF, tmax, bi);') && cw.includes('const_assert CUT_ROWS == 8u;');
+      F.verdict(looped.length === 0 && reach.has('cutFour') && reach.has('isectCut') && reach.size >= 6 && fours && CUT_ROWS === 8 && cutText === CUT_TEXT, 'the box test holds no loop, in itself or in anything it calls: a record\'s eight rows are taken as two fours, and the test\'s text is the one cut-rule.ts was copied from',
+        `${reach.size} functions reached from isectBox (${[...reach].join(', ')}) · with a loop: ${looped.join(', ') || 'none'} · two fours of ${CUT_ROWS} rows ${fours} · the test's text ${cutText}${cutText === CUT_TEXT ? '' : ` (pinned ${CUT_TEXT}: bring tools/qa/cut-rule.ts with it, then move the pin)`}`);
       const S = seeded(4711), pick = <T,>(a: T[]): T => a[(S() * a.length) | 0];
       let n = 0, differ = 0, hitsN = 0, byPlane = 0, ended = 0;
       for (let it = 0; it < 300000; it++) {

@@ -12,9 +12,11 @@
 // its row raised in the same change; a rewrite that brings one down lowers its row with it (a row with a twentieth to spare is named, not failed; a row
 // that no kernel answers to any more is red).
 // THE CUT TEST IS COUNTED APART (CUT_TEST below). A program compiled with the cut rule carries common.wgsl's cut test once for every copy of the box test, and
-// the test is written with no loop (eight planes straight down, where a loop of one stood: a loop there doubled the fog's march on an NVIDIA card), so the
-// cut set's kernels are a tenth to a fifth bigger than their boot twins by that text alone. A kernel is held to its row WITHOUT it, so the boot twin's row
-// stays as tight as it was and says the same of both; the test itself has one number, its size at one copy of the box test, held to a twentieth like a row.
+// the test is written with no loop (eight planes straight down, where a loop of one stood: a loop there doubled the fog's march on an NVIDIA card), which is
+// 3.1 KB a copy: a fifth to three tenths of a big tracing kernel. Three bars hold it. (1) A kernel is held to its row WITHOUT that text, so a boot kernel's
+// row is as tight as it was. (2) The test has its own number, its size at one copy of the box test, within a twentieth like a row. (3) A kernel of the cut
+// set is held to ITS BOOT TWIN: the twin's text with the round's own test out (the cut set hands a round to the cut test) and the cut test in, and a fiftieth
+// of the twin on top; so a call site that only the cut rule's arms hold is red, and what a cut kernel may come to is its twin's row and its count of box tests.
 // What this is not: a time. DXC's time grows faster than the text and a loop round ONE call site is one copy here as it is there; the order of the list and
 // what a rewrite takes out are what it is for. What it cannot see: a pipeline the page makes on first use, later than its boot (the entry points nobody asked
 // a pipeline for are listed, not sized into the totals), and the switches a URL flag or a trial turns. The fold of constant switches is on, as on the page: a
@@ -75,7 +77,7 @@ const BUDGET_COMPACT: [RegExp, number][] = [
 ];
 const BUDGET = COMPACT.on ? BUDGET_COMPACT : BUDGET_TODAY;
 /** the cut test's own functions (common.wgsl: isectCut and the four planes it takes twice), and the KB one copy of the box test may carry of them */
-const CUT_TEST = ['isectCut', 'cutFour'], CUT_TEST_KB = 3;
+const CUT_TEST = ['isectCut', 'cutFour'], CUT_TEST_KB = 3.2, ROUND_TEST = ['isectRound'], TWIN_ROOM = 0.02;
 const BREAK = process.env.SHADERINLINE_BREAK === '1';
 const argv = process.argv.slice(2);
 const opt = (k: string): string | null => { const i = argv.indexOf('--' + k); if (i < 0) return null; const v = argv[i + 1]; if (v === undefined || v.startsWith('--')) { console.error(`--${k} needs a value`); process.exit(1); } return v; };
@@ -133,7 +135,10 @@ function pasted(fns: Map<string, Fn>, name: string, open = new Set<string>()): M
 
 // ---- THE BREAK: the biggest kernel takes one more call site, of the lightest function it reaches whose call site is a twentieth of it (both as a row holds them: the cut test's text apart)
 const sizeOf = (fns: Map<string, Fn>, copies: Map<string, number>) => { let s = 0; for (const [g, k] of copies) s += k * fns.get(g)!.own; return s; };
-const heldOf = (fns: Map<string, Fn>, copies: Map<string, number>) => { let s = 0; for (const [g, k] of copies) if (!CUT_TEST.includes(g)) s += k * fns.get(g)!.own; return s; };
+/** the text of the functions `names` in a kernel: every copy (0 where the fold took their calls out) */
+const textOf = (fns: Map<string, Fn>, copies: Map<string, number>, names: string[]) => names.reduce((s, g) => s + (copies.get(g) ?? 0) * (fns.get(g)?.own ?? 0), 0);
+/** a kernel as its row holds it: the cut test's text apart */
+const heldOf = (fns: Map<string, Fn>, copies: Map<string, number>) => sizeOf(fns, copies) - textOf(fns, copies, CUT_TEST);
 const entryOf = (m: Mod, stage: Stage, entry: string | undefined): string | null => { const fns = fnsOf(m.code); if (entry !== undefined) return fns.get(entry)?.stage === stage ? entry : null; const own = [...fns.values()].filter(f => f.stage === stage); return own.length === 1 ? own[0].name : null; };
 if (BREAK) {
   let best: { mod: number; entry: string; size: number } | null = null;
@@ -172,8 +177,8 @@ const kb = (n: number) => (n / 1024).toFixed(n < 10240 ? 1 : 0);
 /** the functions pasted more than once into a kernel, by the text their copies come to */
 const most = (r: Row) => [...r.copies].filter(([, k]) => k > 1).map(([g, k]) => ({ fn: g, copies: k, bytes: k * r.fns.get(g)!.own })).sort((a, b) => b.bytes - a.bytes || (a.fn < b.fn ? -1 : 1));
 const nameOf = (r: Row) => `${r.module} / ${r.entry}`;
-/** the text of the cut test in a kernel: every copy of its functions (0 in a program without the rule: the fold takes the call out) */
-const cutOf = (r: Row) => CUT_TEST.reduce((s, g) => s + (r.copies.get(g) ?? 0) * (r.fns.get(g)?.own ?? 0), 0);
+/** the text of the cut test in a kernel, and of the round's own test (which a program with the cut rule does not carry) */
+const cutOf = (r: Row) => textOf(r.fns, r.copies, CUT_TEST), roundOf = (r: Row) => textOf(r.fns, r.copies, ROUND_TEST);
 const rowOfName = (module: string, entry: string) => BUDGET.findIndex(([re]) => re.test(`${module.replace(/Cut$/, '')} / ${entry}`)), rowOf = (r: Row) => rowOfName(r.module, r.entry), REST = BUDGET.length - 1;
 const budgetOf = (r: Row) => BUDGET[rowOf(r)][1];
 console.log(`every kernel with every call pasted into its caller — ${mods.length} modules, ${asked.length} pipelines (${asked.filter(a => a.set === 'boot').length} the boot's, ${asked.filter(a => a.set === 'cut').length} the cut set's), ${list.length} distinct (module text, entry point); KB of WGSL, comments out`);
@@ -204,8 +209,8 @@ if (KERNEL !== null) {
     for (const [g, k] of [...r.copies].sort((a, b) => b[1] * r.fns.get(b[0])!.own - a[1] * r.fns.get(a[0])!.own)) console.log(`${kb(k * r.fns.get(g)!.own).padStart(8)} KB ${(100 * k * r.fns.get(g)!.own / r.pasted).toFixed(1).padStart(5)} %  ${g} ×${k} of ${kb(r.fns.get(g)!.own)} KB (one call site of it: ${kb(sizeOf(r.fns, pasted(r.fns, g)))} KB)`); }
 }
 // ---- the other page: the title's kernels, sized by a second run of this file and held to the same rows (not under --setting, --kernel or the break: those read one page)
-interface Sized { name: string; row: number; pasted: number; where: string }   // (pasted: WITHOUT the cut test's text, which has its own line below)
-let title: { module: string; entry: string; stage: Stage; set: string; pasted: number; once: number; cut?: number }[] = [];
+interface Sized { name: string; row: number; pasted: number; where: string; set: string; raw: number; cut: number; round: number }   // (pasted: as a row holds it, WITHOUT the cut test's text; raw: all of it)
+let title: { module: string; entry: string; stage: Stage; set: string; pasted: number; once: number; cut?: number; round?: number }[] = [];
 if (settingArg(argv) === null && !BREAK && KERNEL === null) {
   const tmp = `${tmpdir()}/shaderinline-title-${process.pid}.json`;
   Bun.spawnSync(['bun', 'run', import.meta.path, '--setting', 'title', '--top', '1', '--json', tmp], { env: process.env as Record<string, string>, stdout: 'ignore', stderr: 'ignore' });
@@ -213,7 +218,7 @@ if (settingArg(argv) === null && !BREAK && KERNEL === null) {
   try { unlinkSync(tmp); } catch { /* never written */ }
   check(title.length >= list.length / 2, `${SETTINGS.title} was sized too, by a second run of this file (${title.length} kernels; ${list.length} here, on ${SETTINGS[SETTING]})`);
 }
-const sized: Sized[] = [...list.map(r => ({ name: nameOf(r), row: rowOf(r), pasted: r.pasted - cutOf(r), where: '' })), ...title.map(k => ({ name: `${k.module} / ${k.entry}`, row: rowOfName(k.module, k.entry), pasted: k.pasted - (k.cut ?? 0), where: ` at ${SETTINGS.title}` }))].sort((x, y) => y.pasted - x.pasted);
+const sized: Sized[] = [...list.map(r => ({ name: nameOf(r), row: rowOf(r), pasted: r.pasted - cutOf(r), where: '', set: r.set, raw: r.pasted, cut: cutOf(r), round: roundOf(r) })), ...title.map(k => ({ name: `${k.module} / ${k.entry}`, row: rowOfName(k.module, k.entry), pasted: k.pasted - (k.cut ?? 0), where: ` at ${SETTINGS.title}`, set: k.set, raw: k.pasted, cut: k.cut ?? 0, round: k.round ?? 0 }))].sort((x, y) => y.pasted - x.pasted);
 const over = sized.filter(k => k.pasted > BUDGET[k.row][1] * 1024);
 // a row of the table by the biggest kernel that answers to it on either page: none = the row is stale, a twentieth under = it has room a new call site would hide in
 const rowsBig = BUDGET.slice(0, REST).map(([re, cap], i) => ({ re, cap, big: sized.find(k => k.row === i) }));
@@ -225,12 +230,18 @@ check(sized.length > 0 && over.length === 0, `every kernel is within its budget,
   const need = list.some(r => r.set === 'cut');   // (a run that sized a cut set must have found the test in it)
   check((!need || per.length > 0) && big <= CUT_TEST_KB * 1024, `the cut test is within its own number at one copy of the box test: ${kb(big)} of ${CUT_TEST_KB} KB (${CUT_TEST.join(' + ')}; in ${per.length} kernels${most1 ? `, the most of it ${kb(most1.all)} KB at ${most1.n} copies in ${most1.name}` : ''})${big > CUT_TEST_KB * 1024 ? ' — not so: the test grew (raise CUT_TEST_KB in this file on purpose)' : ''}`);
   if (per.length && big < CUT_TEST_KB * 1024 * 0.95) console.log(`  the cut test has a twentieth to spare: ${kb(big)} of ${CUT_TEST_KB} KB (lower CUT_TEST_KB to it)`); }
+{ // a kernel of the cut set against its boot twin (the same module and entry point on the same page; a cut-set module's `Cut` off its label)
+  const twinName = (k: Sized) => k.name.replace(/Cut \//, ' /') + k.where, boot = new Map(sized.filter(k => k.set === 'boot').map(k => [twinName(k), k]));
+  const pairs = sized.filter(k => k.set === 'cut').map(k => ({ k, t: boot.get(twinName(k)) })).filter((p): p is { k: Sized; t: Sized } => !!p.t);
+  const overTwin = pairs.filter(({ k, t }) => k.raw > t.raw - t.round + k.cut + TWIN_ROOM * t.raw), most2 = pairs.map(({ k, t }) => ({ k, t, by: (k.raw - (t.raw - t.round + k.cut)) / t.raw })).sort((a, b) => b.by - a.by)[0];
+  const need = sized.some(k => k.set === 'cut');
+  check((!need || pairs.length > 0) && overTwin.length === 0, `every kernel of the cut set is its boot twin with the round's test out and the cut test in, a fiftieth of the twin at most on top (${pairs.length} pairs${most2 ? `; the most: ${most2.k.name}${most2.k.where}, ${(100 * most2.by).toFixed(1)} % of its twin` : ''})${overTwin.length ? ` — not so: ${overTwin.slice(0, 6).map(({ k, t }) => `${k.name}${k.where} ${kb(k.raw)} KB where its twin's ${kb(t.raw)} less ${kb(t.round)} plus ${kb(k.cut)} is ${kb(t.raw - t.round + k.cut)}`).join(', ')} (a call site only the cut rule's arms hold)` : ''}`); }
 check(stale.length === 0, `every row of the budget table has a kernel that answers to it${stale.length ? ` — not so: ${stale.map(x => String(x.re)).join(', ')} (a kernel renamed or gone: its row goes with it)` : ''}`);
 if (spare.length) console.log(`  ${spare.length} rows with a twentieth to spare, by their biggest kernel (lower each to it, or take the row out where it is under ${BUDGET[REST][1]} KB): ${spare.map(x => `${x.big!.name} ${kb(x.big!.pasted)} of ${x.cap}${x.big!.where}`).join(', ')}`);
 if (JSON_OUT) {
   const hash = (s: string) => { let a = 0x811c9dc5, b = 0x1b873593; for (let i = 0; i < s.length; i++) { const c = s.charCodeAt(i); a = Math.imul(a ^ c, 16777619); b = Math.imul(b ^ c, 0x85ebca6b) + (b >>> 13); } return (a >>> 0).toString(36) + (b >>> 0).toString(36); };   // (shader-count-page.cjs's own)
   await Bun.write(JSON_OUT, JSON.stringify({ modules: mods.map(m => ({ label: m.label, h: hash(m.code), chars: m.code.length })),
-    kernels: [...list.map(r => ({ setting: SETTING, module: r.module, entry: r.entry, stage: r.stage, set: r.set, pipelines: r.pipelines, pasted: r.pasted, once: r.once, cut: cutOf(r), budgetKB: budgetOf(r), most: most(r).slice(0, 8) })),
+    kernels: [...list.map(r => ({ setting: SETTING, module: r.module, entry: r.entry, stage: r.stage, set: r.set, pipelines: r.pipelines, pasted: r.pasted, once: r.once, cut: cutOf(r), round: roundOf(r), budgetKB: budgetOf(r), most: most(r).slice(0, 8) })),
       ...title.map(k => ({ ...k, setting: 'title' }))] }, null, 1));   // (the listing's page first, then the title's kernels where this run sized them)
 }
 console.log(red ? `${red} FAILED` : 'all passed');

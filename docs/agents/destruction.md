@@ -504,17 +504,23 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   numbers). The box test is written into every walk's own loops, so a loop inside it sits three or four loops deep in the march; what the driver's compiler
   stops doing there is a guess. THE RULE: no loop statement between `cutFour` and the end of `isectBox`. A record's eight rows are taken as two fours, with no
   loop and no branch, in the order the planes always had (a zero normal ends the record; of the planes that raise the entry the most the FIRST is the face; a
-  ray along a plane on its far side leaves nothing). WITH IT, the two sets pinned in turn on the same card: the tunnel's march 3.33 boot set, 3.40 cut set
-  (was 6.61), all passes 17.0 against 17.55 (was 16.8 against 20.9); the pass road 3.73 against 3.81 (was 3.66 against 5.54). What is left of the rule there
-  is half a millisecond over direct, the gather, the reflections and the cascades. The driver also built the cut set in about the time of the boot's set (27.8 s
-  after a 26.5 s boot, 41.5 after 40.7) where the loop's set took a fifth to two fifths longer (34.6 after 28.7, 35.7 after 25.3, 38.1 after 28.6): one box
-  each, a ratio inside one box. WHAT IT COSTS: text. Eight planes are written out where one stood in a loop, at every copy of the box test: the cut set's
-  kernels are 12 % bigger in the compact writing with separate shadow rays and 13 % in the plain one (`tools/qa/shaderinline-check.ts`, which counts the cut
-  test's text apart from a kernel's row and holds it to its own number, 2.9 of 3 KB at a copy of the box test). CHECKS: `cutboxes-ray` holds the text (no loop
-  statement, two fours of eight rows) and holds the fours bit for bit in f32 to the planes one by one over 300,000 seeded rays with ties, records ended in the
-  middle, an arc on the pad row and rays along a plane (`tools/qa/cut-rule.ts` is the checks' one mirror of the test; `NOLOOP_BREAK=1` fails both lines); the
-  older lines hold it to the CPU's clip, and `round-check` line 9 to the prism. On the software adapter every tracing kernel of the look page (the rule in each)
-  was built and dispatched (`tools/qa/kernel-stack.cjs`; its five froxel rows fail on a layout the tool cannot read, on the tree before this too). NOT SEEN: an
+  ray along a plane on its far side leaves nothing), and `const_assert CUT_ROWS == 8u` stops a build whose records grew. WITH IT, the two sets pinned in
+  turn on the same card: the tunnel's march 2.96 boot set, 3.03 cut set (on the tree before: 3.32 and 6.61), all compute passes 15.40 against 15.83 (16.8
+  against 20.9); the pass road's march 4.29 against 4.41 (3.66 against 5.54). THE LOOK PAGE, where every program carries the rule, on the tunnel at High: 17.3
+  ms with the two fours and 20.5 with the loop written back into the same page (the march 3.67 and 6.93), twice each on one held picture. What is left of the
+  rule on that card is about half a millisecond over direct, the gather, the reflections and the cascades. The driver also built the cut set in about the time
+  of the boot's set (27.8 s after a 26.5 s boot, 41.5 after 40.7, 40.0 after 40.8, 26.6 after 27.5) where the loop's set took a fifth to two fifths longer (34.6
+  after 28.7, 35.7 after 25.3, 38.1 after 28.6): one box each, a ratio inside one box. WHAT IT COSTS: text. Eight planes are written out where one stood in a
+  loop, at every copy of the box test: 3.1 KB a copy, and the cut set's kernels 13 % bigger in the compact writing with separate shadow rays, 14 % in the plain
+  one (`tools/qa/shaderinline-check.ts`). THE SIZE CHECK HOLDS IT THREE WAYS: a kernel to its row without the cut test's text; the test to its own number
+  (3.1 of 3.2 KB at one copy of the box test); and every kernel of the cut set to its boot twin, with the round's own test out and the cut test in and a
+  fiftieth of the twin on top, so a call site only the rule's arms hold is red. CHECKS: `cutboxes-ray` holds that no function the box test reaches has a loop
+  statement (it follows the calls), pins the shader's text of the test so `tools/qa/cut-rule.ts`, the checks' one mirror of it, must move with it, and holds
+  the fours bit for bit in f32 to the planes one by one over 300,000 seeded rays with ties, records ended in the middle, an arc on the pad row and rays along
+  a plane (`NOLOOP_BREAK=1` fails both lines); the older lines hold it to the CPU's clip, and `round-check` line 9 to the prism. A review ran the shader's two
+  forms side by side on the software adapter over 400,000 rays: the same hits, misses, faces and distances. On that adapter every tracing kernel of the look
+  page (the rule in each) was built and dispatched (`tools/qa/kernel-stack.cjs`; its five froxel rows fail on a layout the tool cannot read, on the tree
+  before this too). The timings are of the commit before the last (the last makes the entry's comparison strict and adds the assert). NOT SEEN: an
   Apple chip (graphics read no cost for the loop's set on the M4 Max on 11-04, so nothing may move there), Windows, an AMD card; a picture of a cut piece
   drawn with the new test on any GPU other than the cloud card's four stills; the wait for the cut set on Windows, which follows the text.
 - **Glass that comes apart** (`src/game/glassbreak.ts`, merged 1d6d99e from the physics showcase; `tune.glassBreak` DEFAULT ON since the rebuild (game.ts `tune`; `glassBreakPersisted()` is on unless this machine said off; the harness stands it off — standup.ts; under the master switch `GLASSFX`, the *three parts as one* bullet), persisted `twopointsix.glassbreak`, `?glassbreak` (`?glassbreak=0` off);

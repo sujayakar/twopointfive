@@ -420,8 +420,10 @@ fn cutFour(bi: u32, k0: u32, lo: vec3f, ld: vec3f, s: vec4f) -> vec4f {
   let gone = any(live & (den == vec4f(0.0)) & (num < vec4f(0.0)));
   let kf = f32(k0);
   let face = select(select(select(-4.0 - kf, -3.0 - kf, tIn.z == mIn), -2.0 - kf, tIn.y == mIn), -1.0 - kf, tIn.x == mIn);
-  return vec4f(max(s.x, mIn), select(min(s.y, mOut), -1.0, gone), select(s.z, face, mIn > s.x), select(0.0, 1.0, l3));
+  let up = mIn > s.x;                                                 // (strictly: a plane at the entry the ray already has changes nothing, not even a zero's sign)
+  return vec4f(select(s.x, mIn, up), select(min(s.y, mOut), -1.0, gone), select(s.z, face, up), select(0.0, 1.0, l3));
 }
+const_assert CUT_ROWS == 8u;   // (isectCut takes a record as two fours: more rows want more fours, there and in tools/qa/cut-rule.ts)
 fn isectCut(lo: vec3f, ld: vec3f, tmn: vec3f, tN0: f32, tF0: f32, tmax: f32, bi: u32) -> vec2f {
   let s = cutFour(bi, 4u, lo, ld, cutFour(bi, 0u, lo, ld, vec4f(tN0, tF0, 7.0, 1.0)));   // (CUT_ROWS is 8: two fours)
   let tN = s.x; let tF = s.y; var code = s.z;

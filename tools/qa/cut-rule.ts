@@ -14,7 +14,8 @@ export function cutFour(rows: ArrayLike<number>, k0: number, lo: readonly number
   const mIn = Math.max(Math.max(tIn[0], tIn[1]), Math.max(tIn[2], tIn[3])), mOut = Math.min(Math.min(tOut[0], tOut[1]), Math.min(tOut[2], tOut[3]));
   const gone = live.some((l, i) => l && den[i] === 0 && num[i] < 0);
   const face = tIn[0] === mIn ? -1 - k0 : tIn[1] === mIn ? -2 - k0 : tIn[2] === mIn ? -3 - k0 : -4 - k0;
-  return [Math.max(s[0], mIn), gone ? -1 : Math.min(s[1], mOut), mIn > s[0] ? face : s[2], l3 ? 1 : 0];
+  const up = mIn > s[0];
+  return [up ? mIn : s[0], gone ? -1 : Math.min(s[1], mOut), up ? face : s[2], l3 ? 1 : 0];
 }
 export function cutPlanes(rows: ArrayLike<number>, lo: readonly number[], ld: readonly number[], tN0: number, tF0: number, f: Row): [number, number, number] {
   const s = cutFour(rows, 4, lo, ld, cutFour(rows, 0, lo, ld, [tN0, tF0, 7, 1], f), f);

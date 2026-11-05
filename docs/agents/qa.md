@@ -826,9 +826,10 @@ but synthetic writes still work.
   boot and the cut-box set over a recording stand-in device, always on the shipped stand; two seconds. Exit 1 when a kernel is over its row of the budget table at
   the head of the file, a row has no kernel left, or the stand-in's boot did not finish or came up short; `SHADERINLINE_BREAK=1` must fail. Run it after a change to a `.wgsl` file or to what a module is
   built from, and move the kernel's row in the same change when the growth is meant.
-  THE CUT TEST IS COUNTED APART (2026-11-05): a kernel is held to its row without the text of `isectCut` and `cutFour`, and that text has its own number
-  (`CUT_TEST_KB`, 2.9 of 3 KB at one copy of the box test), so a boot kernel's row is as tight as it was and says the same of its cut twin
-  (`docs/agents/destruction.md`, THE BOX TEST HAS NO LOOP). The JSON's `cut` is that text in a kernel; `SHADERINLINE_BREAK=1` measures the same way.
+  THE CUT TEST IS COUNTED APART (2026-11-05): a kernel is held to its row without the text of `isectCut` and `cutFour`; that text has its own number
+  (`CUT_TEST_KB`, 3.1 of 3.2 KB at one copy of the box test); and every kernel of the cut set is held to its boot twin with the round's own test out and the
+  cut test in, a fiftieth of the twin at most on top (`docs/agents/destruction.md`, THE BOX TEST HAS NO LOOP). The JSON's `cut` and `round` are those texts in
+  a kernel; `SHADERINLINE_BREAK=1` measures the same way.
 - **The night breach's probes on the SHIPPED stand** (2026-10-25; tests only). `nightbreach-stage` and `nightbreach-stop` read 'tune CHANGED' there: the
   rig (`tools/qa/nightbreach-probes.ts rig`) took its `before.tune` and THEN wrote `game.tune.chaos` itself, and the shipped stand stands the game up at
   chaos 0.5 where the frozen one has 0 — the rig's own write read as the staging's. The write is before the snapshot now; both are green on both stands.
