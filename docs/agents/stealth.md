@@ -1837,7 +1837,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   page; `?fogmates=0` = his eye stops at a thin thing, as it was; the debugger's fog page has the row; frozen stand: off, `TPS_FOGMATES=1` raises
   it BUT ACTS ONLY WITH `TPS_FOGTHIN=1` (`FROZEN_HOLDS['FOG.mates']` says so: the frozen stand pins the thin row off too); the journal carries it
   (a recording without the key replays with it off). CHECK: `probes.ts fog-mates` (`tools/qa/fogmates-check.ts`, family `fog`; 5 lines;
-  `FOGMATES_BREAK=1` reds bar, agrees and stood) on both stands. MEASURED, headless: The Pass, one staging seed: across its 16 thin marks, 1168 pairs of
+  `FOGMATES_BREAK=1` reds bar, agrees, stood and switch) on both stands. (THE SWITCH LINE READS ONE LANGUAGE since the senses' TypeScript went: a man's look is handed to the module with his team's mask at the one call there is, and `eyeContact` asks no line of the box world itself. Its red path reads guards.ts with the mask taken off that call.) MEASURED, headless: The Pass, one staging seed: across its 16 thin marks, 1168 pairs of
   a teammate and a defender (sixteen bearings, nine spacings): the row gives him 707 of them, takes none, and his test differs from the fog's
   line on none (on 707 without it); the defender's eye is the same on all 1168; with the thin row off the row gives nothing. Stood: the pair kept across one mark for 30 of the game's own frames: with the row the room fight's
   meter on the man goes to 1.00 and he is the teammate's target on 25 frames; without, meter 0 and no target; the defender never takes the teammate. Played on The Pass,
