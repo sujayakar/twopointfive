@@ -1,4 +1,4 @@
-// The 'litman' family: DARK ON A LIT MAN (guards.ts LIGHTS.litMan — onLitMan / darkOnLitMan / teamLit — and its feet half, roomfight.ts holdShort / short()).
+// The 'litman' family: DARK ON A LIT MAN (guards.ts LIGHTS.litMan — gunOnLitMan / darkOnLitMan / teamLit — and its feet half, roomfight.ts holdShort / short()).
 // The rule's own contract, asked of the functions themselves on a staged night breach; run through probes.ts:
 //   bun run tools/qa/probes.ts litman | litman-rule
 // PASS / FAIL each, headless (bang-tally.ts stage(): the Game of headless.ts started as a click on the scenario's row starts it). A teammate and a hostile are
@@ -49,7 +49,7 @@ export async function litmanRule(): Promise<boolean> {
     const put = (who: any, p: number[]) => { who.char.pos[0] = p[0]; who.char.pos[2] = p[2]; };
     const later = () => { g.time += 0.3; };   // (the rule's answer is kept a quarter of a second per man: every question here is a fresh one)
     const eyes = (tgt: any, kept: any = null, turn: any = null) => { op.tgt = tgt; op.kept = kept; op.turn = turn; later(); };
-    const ask = () => ({ rule: !!GDM.onLitMan(g, gd), light: !!GDM.teamLit(g, gd) });
+    const ask = () => ({ rule: !!GDM.gunOnLitMan(g, gd), light: !!GDM.teamLit(g, gd) });
 
     // ---- the light
     put(gd, dark.p); put(h, lit.p); eyes(h); if (BREAK) LIGHTS.litMan = false;
