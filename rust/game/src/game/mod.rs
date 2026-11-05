@@ -1,0 +1,21 @@
+pub mod types;
+pub use types::*;
+pub mod sig;
+pub use sig::*;
+// the parts' bodies: a named re-export wins over the stubs of sig.rs
+pub mod p_01;
+pub use p_01::{quiet_man, mission_rating, fmt_clock, new_mission};
+pub mod p_02;
+pub use p_02::{player_suppression, player_list_open, player_choosing, player_new, player_firearm, player_gun_in_hand, player_pistol_up, player_rifle_sel, player_rifle_up, player_braced, player_braced_at, player_canister_sel, friend_before_muzzle, is_breathing, new_witness, new_talk};
+pub mod p_03;
+pub use p_03::{guard_track_fix, guard_new, game_rehand, game_sync_snow_look, game_step_snow_tracks, game_light_query, game_light_at, game_light_forget, game_door_swings, game_reach_changed, game_reach_read, game_reach_tick, game_reach_pending};
+pub mod p_04;
+pub use p_04::{game_build_dir_reach, game_blackout, game_breaker_fix_t};
+pub mod p_05;
+pub use p_05::{game_new, game_msg, game_say, game_note, game_on_door_event, game_roll_tick, game_on_prop_event, game_reset_guards, game_tension, game_escalation_summary, game_escalate, game_stand_down, game_clearing_summary, game_search_summary, game_standoff_summary, game_body_light_summary, game_suppression_summary, game_condition_summary, game_aim_summary, game_tactics_summary, game_needs_summary, game_civilians_summary, game_on_floor, game_witness_summary, game_interrogate, game_free_held, game_nearest_living_guard, game_interrogate_nearest, game_dialogue_summary};
+pub mod p_06;
+pub use p_06::{game_clear_queue_summary, game_clear_nearest_room, game_follow_pos, game_teleport_player, game_floor_under_player, game_body_thud, game_repair_lights, game_clear_aftermath, game_set_loadout, game_authored_on, game_reset_level_state, game_crack_test, game_glass_summary, game_wet_summary, game_rain_summary, game_clean_slate, game_restart, game_restart_encounter, game_set_group, game_toggle_target, game_set_blackout, game_end_blackout, game_light_event, game_ocp, game_toggle_drag, game_update, game_host_before, game_host_after, game_step, game_host_seat, game_aside, game_aside_lens, game_step_seats};
+pub mod p_07;
+pub use p_07::{game_threat_tick, game_deal_weapons, game_step_fx_and_dyn_boxes, game_smoke_wake, game_draw_characters, game_view_px, game_fog_lift, game_fog_back, game_draw_men, game_sense_step, game_light_meter, game_meter_read, game_select_verb, game_escape, game_backable, game_visibility_of, game_update_doors, game_door_contact};
+pub mod p_08;
+pub use p_08::{game_door_acts, game_door_after, game_hands_on_doors, game_update_props, game_drop_throwable, game_throw_count, game_objective_pos, game_objective_text};

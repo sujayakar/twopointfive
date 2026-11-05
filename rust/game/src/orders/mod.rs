@@ -1,0 +1,21 @@
+pub mod types;
+pub use types::*;
+pub mod sig;
+pub use sig::*;
+// the parts' bodies: a named re-export wins over the stubs of sig.rs
+pub mod p_01;
+pub use p_01::{digit_of, key_name, compass, hover_store};
+pub mod p_02;
+pub use p_02::{squad_orders_show, squad_orders_new, squad_orders_active, squad_orders_squad, squad_orders_mine, squad_orders_sams, squad_orders_team, squad_orders_ring, squad_orders_recipients, squad_orders_men, squad_orders_big, squad_orders_pair_of, squad_orders_pairs, squad_orders_paired, squad_orders_cycle_who, squad_orders_whole, squad_orders_address, squad_orders_who_words, squad_orders_tone_of, squad_orders_has, squad_orders_of, squad_orders_follow_word, squad_orders_shown_there, squad_orders_register, squad_orders_new_group, squad_orders_unregister, squad_orders_clear, squad_orders_target_at, squad_orders_door_on_ray, squad_orders_target_under};
+pub mod p_03;
+pub use p_03::{squad_orders_target_under_of, squad_orders_scene_hit, squad_orders_rows_for, squad_orders_flat_ring, squad_orders_flat_rows, squad_orders_menu_rows, squad_orders_seat, squad_orders_word_row_of, squad_orders_word_page, squad_orders_wait_digit, squad_orders_why_not, squad_orders_label_of, squad_orders_give, squad_orders_given_line, squad_orders_again, squad_orders_assign, squad_orders_spare_rear, squad_orders_loaded, squad_orders_escape, squad_orders_open, squad_orders_close, squad_orders_turn, squad_orders_page_back, squad_orders_pick, squad_orders_part_give, squad_orders_menu_target, squad_orders_reread, squad_orders_refresh, squad_orders_due, squad_orders_hover, squad_orders_default_for, squad_orders_who_after_t, squad_orders_step_who, squad_orders_host_view, squad_orders_input};
+pub mod p_04;
+pub use p_04::{squad_orders_ring_input, squad_orders_ring_digit, squad_orders_ring_up, squad_orders_goal_part, squad_orders_ring_free, squad_orders_back_free, squad_orders_hint_view, squad_orders_ring_sel, squad_orders_seats, squad_orders_tap_give, squad_orders_twice_on, squad_orders_all_in, squad_orders_quick_give, squad_orders_quick_for, squad_orders_cover_for, squad_orders_quick_words, squad_orders_menu_quick, squad_orders_man_at, squad_orders_ring_keys, squad_orders_ring_view, squad_orders_sync, squad_orders_sam_stopped, squad_orders_drop};
+pub mod p_05;
+pub use p_05::{squad_orders_tick, squad_orders_aside, squad_orders_crumb, squad_orders_ahead, squad_orders_on_top, squad_orders_in_frame, squad_orders_rest_clear, squad_orders_held_wait, squad_orders_rest_short, squad_orders_clear_back, squad_orders_back_of, squad_orders_trail_back, squad_orders_apart_slot, squad_orders_slot, squad_orders_free_spot};
+pub mod p_06;
+pub use p_06::{squad_orders_spots_at, squad_orders_stack_posts, squad_orders_stack_posts_wait, squad_orders_stack_seen, squad_orders_marks_keep, squad_orders_stack_file_on, squad_orders_stack_posts_room, squad_orders_own_mark_first, squad_orders_own_marks, squad_orders_no_room_words, squad_orders_sam_place, squad_orders_sam_stood, squad_orders_stack_posts_marks, squad_orders_stack_posts_as_were, squad_orders_stack_posts_leaf_in, squad_orders_behind_glass, squad_orders_glass_eyes, squad_orders_stack_least_glass, squad_orders_hall_stands, squad_orders_hall_places, squad_orders_stack_posts_on, squad_orders_stack_places};
+pub mod p_07;
+pub use p_07::{squad_orders_worked_marks, squad_orders_held_on, squad_orders_worked_pick, squad_orders_worked_stack, squad_orders_stood_on, squad_orders_on_furniture, squad_orders_rear_posts, squad_orders_for_men, squad_orders_side_for, squad_orders_hold_arcs, squad_orders_route, squad_orders_same_ways, squad_orders_by_door, squad_orders_round_rooms, squad_orders_slot_crumb, squad_orders_trail_way, squad_orders_reach, squad_orders_walk_try, squad_orders_walk_stacks, squad_orders_walk_send, squad_orders_walk_on};
+pub mod p_08;
+pub use p_08::{squad_orders_asked, squad_orders_ask_aside, squad_orders_has_line, squad_orders_file_cross, squad_orders_pair, squad_orders_status_of, squad_orders_who_tag, squad_orders_who_strip, squad_orders_hover_words, squad_orders_hud, squad_orders_mark, squad_orders_summary, prop_way, prop_penalty, far_off, off_line, side_of, door_words, door_id_words};

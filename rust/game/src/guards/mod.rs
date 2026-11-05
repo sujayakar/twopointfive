@@ -1,0 +1,25 @@
+pub mod types;
+pub use types::*;
+pub mod sig;
+pub use sig::*;
+// the parts' bodies: a named re-export wins over the stubs of sig.rs
+pub mod p_01;
+pub use p_01::{glass_heard, hearing_check, gunfire_due, shot_relation, colleague_fire_pos, step_is_threat, ground_fresh, player_ground_vel, motion_factor, motion_core, sight_gain, sight_gain_on, body_in_view, body_seen, body_probe_slot, body_visibility, body_lit, load_body_light, save_body_light, reset_body_light, body_light_summary};
+pub mod p_02;
+pub use p_02::{point_in_view, light_out_seen, witness_kill, alert_cause, witness_summary, body_pos, near_known_body, door_tamper, cover_spot, fan_spot, not_getting_anywhere, drop_to_search, reset_chase, body_aftermath, lead_fix, shot_origin, clear_shot, pane_first, line_geom, colleague_in_line, round_past_colleague, aim_ahead, muzzle_check, line_step};
+pub mod p_03;
+pub use p_03::{shield_up, pair_of, forget_guard_clocks, pair_in_view, pair_sight_rate, forget_held_meter, held_visibility, standoff_perceive, hostage_call, pick_side, axis_to_segment, flank_shot, standoff_bark, step_along_path, orbit_goal_for, approach_point, retreat_goal};
+pub mod p_04;
+pub use p_04::{standoff_alert, standoff_upkeep, hostage_hit_bark, standoff_summary, can_see, can_see_char, eye_reach, reach_for, far_faint, dist_term, team_through, eye_through, eye_blocked, eye_contact, eye_contact_here, stranded_at, leg_clear, free_cell_near, unstick_snap, live_leg, unstick_begin, unstick_step, unstick_first, go_to};
+pub mod p_05;
+pub use p_05::{lit_place, looks_into_dark, place_lit_seen, beam_fan, ray_end, beam_walled, beam_walled_at, beam_ray_end, burns_from, beam_lens, wall_dark, torch_low, torch_low_seen_of, wall_dark_seen, wall_put_out, light_ruled, dark_on_lit_man, on_lit_man, team_lit, team_paced, team_pace, team_legs, team_turn, team_lean, follow_path, door_cells, flood_from};
+pub mod p_06;
+pub use p_06::{deal_spots, search_plan_for, search_probes, score_spots, spot_taken, pick_next_spot, search_summary, frame_of, crosses_door, note_door_crossings, pie_doorway, path_crosses, refresh_crossing, bend_approach, chase_fix};
+pub mod p_07;
+pub use p_07::{update_guard};
+pub mod p_08;
+pub use p_08::{collide_guard, sweep_statics, light_window, light_estimate_at, light_estimate_in, light_field, lamp_asked, write_lamps, carried, steady_lamps, lamps_there, lamps_here, meter_of, unit_light_meter, acquire_foe, rig_of, long_rig_of, hand_carry, gun_back, in_hand, start_reload_beat, tick_reload_beat, burst_trigger, burst_summary, attach_flashlight};
+pub mod p_09;
+pub use p_09::{pose_flashlight, on_screen, in_view, bubble_secs, head_of, say, reset_guards, escalation_of, escalation_name, escalation_summary, clearing_summary, spokesman, raise_escalation, stand_down_escalation, off_net, rollcall_state, rollcall_interval, radio_caller, checker_for, still_looking, pick_checker, send_check_on, check_on_tick, advance_check_on, check_on_done, update_rollcall, partner_watch, plan_clears, clear_queue_summary, force_clear};
+pub mod p_10;
+pub use p_10::{step_down_escalation, update_escalation, supervise_lockdown, assign_lockdown, clear_lockdown, route_length, follow_leader, hold_post, lockdown_doors, tension, spawn_unit, release_unit, despawn_unit, despawn_units, units, engagement_of, arm_for_fight, engage, name_of_id, end_engagement, tick_engagement};
