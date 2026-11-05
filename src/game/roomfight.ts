@@ -66,8 +66,7 @@ import { workPasses } from './workthings';
 import { spottedHolds, spottedKeen } from './spotted';
 import { coverSeen, coverOp } from './coverfire';
 import { lastStandTick, lastStandStop, lastStandMan, lastStandOwns } from './laststand';
-import { moraleOwns } from './morale';
-import { netQuietLook, netQuietHolds } from './netquiet';
+import { netQuietLook } from './netquiet';
 import { laneHolds, laneWarns, laneThrows } from './lanes';
 import { shotEnergy } from './glasspen';
 import { hearPath, airTrans } from './weather';
@@ -611,7 +610,7 @@ export class RoomFight {
     const g = this.g, gd = D.gd;
     gd.skill = FIGHT_SKILL.hostile;
     if (gd.held) { this.blind(D, k); return; }             // in Sam's arm: nothing of his is his own (the burst's clock still runs: its turns are lost, not kept)
-    if (moraleOwns(gd)) return;                            // morale.ts (false with its switch off): a blast has him ducked or broken — that file's sequence has his body and his rounds until it lets him go
+    if (hasHim(gd, OWN.morale)) return;                            // morale.ts (false with its switch off): a blast has him ducked or broken — that file's sequence has his body and his rounds until it lets him go
     if (hasHim(gd, OWN.runner)) return;                            // runner.ts (false with its switch off): he has said he is done — dropping it, running, gone: nothing of the fight's is his
     if ((DIGIN.on || squadsLive(g) || lastStandMan(g, gd)) && g.level.scenarios?.roomClear?.digIn !== false && !laneThrows(g, gd)) digInTick(this, D, dt); // digin.ts (default off): a man who knows they are coming gets ready for them — may put him on the move (enemysquads.ts: a squad that barricades does it through the same file, whatever the switch) — not a man whose grenade is leaving his hand for a covered lane (lanes.ts LANES.fragOwn, false with its switch off): that second is the throw's
     if (D.mode === 'move') { this.tickMove(D, dt); return; }
@@ -912,7 +911,7 @@ export class RoomFight {
     if (DIGIN.on && digInStays(g, gd)) return;             // digin.ts: digging in, he holds his room
     if (laneHolds(g, gd, D.noiseAt) || laneWarns(g, gd, D.noiseAt)) { if (D.rallyAt !== Infinity) D.rallyAt = NaN; return; }   // (lanes.ts: held short of a lane his side knows is covered — he keeps its mouth; and nobody walks over ALONE to a fight at such a lane's guns)
     if (lastStandOwns(g, D)) { D.rallyAt = NaN; return; }   // (laststand.ts, default off: the last stand holds its room — no man of it walks off to a noise next door)
-    if (netQuietHolds(gd)) { D.rallyAt = NaN; return; }   // (netquiet.ts, false on its first line with its switch off: the last man up, who knows nobody answers him, does not walk off to a fight next door)
+    if (hasHim(gd, OWN.lastMan)) { D.rallyAt = NaN; return; }   // (netquiet.ts, false on its first line with its switch off: the last man up, who knows nobody answers him, does not walk off to a fight next door)
     if (buddyOwns(g, D)) { D.rallyAt = NaN; return; }   // (buddy.ts, off by default: a colleague is on his way to him, or the two have just paired up — he waits, and no rally clock is left running to send him the frame he is let go)
     const fresh = g.time - D.noiseT < 1.5 && g.time - gd.lastSeenT > 3;
     if (!fresh) { if (g.time - D.noiseT > 4) D.rallyAt = NaN; return; }
