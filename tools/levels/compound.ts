@@ -85,6 +85,7 @@ import { BoxFlag, type Box } from '../../src/scene/boxes';
 import { livedKit } from './livedKit';
 import { gwotKit, gwotOfOffice } from '../../src/scene/gwotKit';
 import { drawnAs, madeOf, saidAs, PANEL_GREY, CHAIR_GREY } from '../../src/scene/stuff';
+import { feetOn } from '../../src/scene/carShapes';
 
 export const NAME = 'compound';
 export const NOTES = 'The compound: a perimeter wall with a lit main gate and two dark side gates, yard all round a main house of eight rooms off one corridor (three outside doors, two open windows, four loops inside), and a garage, a shed and a guard hut across the yard. Eight held rooms, four squads. For the four man squad, who start outside the wall. One floor, box geometry only, the office\'s kit. Regenerate: bun run map:export compound';
@@ -351,7 +352,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
 
   // ---------------- the garage (x 4..10.5, z 18..24): g_n from the west yard, g_e from the forecourt ----------------
   grp('garage');
-  car(7.2, 22.5, 0, [0.42, 0.4, 0.36]);                                                 // a car against the south wall: the floor north of it is the room
+  const TAXI = car(7.2, 22.5, 0, [0.42, 0.4, 0.36]);                                                 // a car against the south wall: the floor north of it is the room
   desk(5.2, 18.6, 1.8, 0.75, 0); papers(5.5, 0.76, 18.6, 0.2);                          // a workbench on the north wall
   pallet(9.5, 18.8, 1.2, 1.0);
   cardboardBox(4.6, 23.3, 0.5, 0.2); bin(9.9, 23.4); chair(5.3, 19.45, 0);
@@ -517,7 +518,8 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
     // the room's north half (drawn only but the table: they lie in the lane and cost no cover), in colours that stand off the rug's maroon; six glasses. One
     // of theirs: an ammunition tin pulled up at the table's head as a seventh seat. Colour: mustard and teal on maroon
     L.room('sala');
-    // THE TEA TABLE STANDS SOUTH-EAST OF THE ROOM'S MIDDLE, the east row drawn up to it, and a walk is left between it and the west row. It stood in the
+    // THE TEA TABLE STANDS SOUTH-EAST OF THE ROOM'S MIDDLE, the second row of cushions along the rug's north edge at its head, and a walk is left between
+    // it and the west row (the rows sat either side of it; a row east of it where it stands now would lie half off the rug). It stood in the
     // middle (x 16.0 to 17.2, z 16.05 to 16.6), on two lines a man of this room walks when a pair goes round: from the north door across to the east door
     // (to the garage: 23.4 m bare, 25.9 with the table, over its limit) and from his post out by the north door (to the guard hut: 45.2 m of 46, 45.9
     // with it). 0.6 m east and 0.5 south is the least move that gives both back (tools/qa/wayround-check.ts; twenty-five places were tried)
@@ -525,8 +527,8 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
     bx(16.82, 17.5, 16.65, 17.01, 0.35, 0.364, P.brass); L.thing(16.96, 0.364, 16.83, 0.06, 0.07, 0.06, C.black);   // tray and pot
     for (let k = 0; k < 6; k++) L.mug(17.14 + (k % 3) * 0.11, 0.364, 16.76 + (k > 2 ? 0.14 : 0), CREAM);           // six glasses: there are guests
     for (let k = 0; k < 3; k++) cushion(15.15, 15.75, 15.62 + k * 0.47, 16.07 + k * 0.47, [P.brass, TEAL, CREAM][k]);   // the west row
-    for (let k = 0; k < 3; k++) cushion(18.05, 18.65, 16.12 + k * 0.47, 16.57 + k * 0.47, [ORANGE, P.brass, TEAL][k]);  // the east row
-    bx(15.15, 15.3, 15.7, 16.8, 0.075, 0.2, C.chair, true); bx(18.5, 18.65, 16.2, 17.3, 0.075, 0.2, C.chair, true);   // blue bolsters along their backs
+    for (let k = 0; k < 3; k++) cushion(16.5 + k * 0.47, 16.95 + k * 0.47, 15.62, 16.1, [ORANGE, P.brass, TEAL][k]);    // the north row
+    bx(15.15, 15.3, 15.7, 16.8, 0.075, 0.2, C.chair, true); bx(16.6, 17.8, 15.62, 15.77, 0.075, 0.2, C.chair, true);  // blue bolsters along their backs
     yb(17.2, 16.3, 0.17, 0.1, 0, 0.2, P.oliveDrab, 0.1, true);                                                    // the ammunition tin, at the table's head
     { K.prop('chair', 19.0, 16.4, 0, 3, [{ off: [0, 0.1, 0], h: [0.22, 0.1, 0.11], yaw: 0, albedo: C.chair }]); L.own('bolster'); }
     { K.prop('chair', 14.75, 16.4, 0.3, 2.5, [{ off: [0, 0.07, 0], h: [0.24, 0.07, 0.24], yaw: 0, albedo: ORANGE }]); L.own('cushion'); }
@@ -636,7 +638,13 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
     // load), a child's bicycle stood against the pallet stack by the north wall (drawn only: the east door's line is near), a rope bed stood on its side, flattened
     // cardboard under the engine. Colour: the taxi's yellow, echoed on its roof
     L.room('garage');
-    bx(6.0, 7.9, 21.85, 21.9, 1.52, 1.57, C.black); bx(6.0, 7.9, 23.1, 23.15, 1.52, 1.57, C.black);                // the roof rack's rails
+    // the roof rack's rails. With shapes on the roof is bowed and cut back to the glass: each rail stands on two feet on the bow, and the first carries the
+    // rack's two cross bars, the roof sign on the front one — trim, said in the rail's own frame (the taxi stands at (7.2, 22.5), unturned)
+    { const rail = (z0: number, z1: number, bars: boolean) => { const c: Vec3 = [6.95 - 7.2, 1.545, (z0 + z1) / 2 - 22.5], h: Vec3 = [0.95, 0.025, 0.025];
+        // (the front bar reaches forward to the sign's back, 7.92: the sign is bolted to it and stands out over the windscreen as a taxi's does)
+        const trim = [...feetOn(TAXI.tops.roof, c, h, [-0.6, 0.55]), ...(bars ? ([[-0.92, 0.02], [0.94, 0.03]] as const).map(([u, hx]) => ({ off: [u, 0, 0.625] as Vec3, h: [hx, 0.02, 0.645] as Vec3 })) : [])];   // (the bars stop 5 mm short of the rails' outer faces and a centimetre in from their ends: no two faces in one plane)
+        slab(6.0, 1.52, z0, 7.9, 1.57, z1, C.black, trim.length ? { shape: { with: trim } } : {}); };
+      rail(21.85, 21.9, true); rail(23.1, 23.15, false); }
     bx(6.3, 7.5, 21.98, 23.02, 1.52, 1.8, P.canvas, true); for (const x of [6.6, 7.2]) bx(x, x + 0.04, 21.97, 23.03, 1.52, 1.81, BROWN, true);   // the bundle on the roof between them, roped (drawn only)
     bx(7.55, 7.86, 22.2, 22.8, 1.52, 1.7, TEAL, true); bx(7.92, 8.06, 22.3, 22.7, 1.52, 1.64, P.brass);             // a suitcase (drawn only), the roof sign
     for (const x of [9.17, 9.83]) { bx(x - 0.22, x + 0.22, 19.3, 19.33, 0, 0.44, C.black, true); bx(x - 0.11, x + 0.11, 19.33, 19.336, 0.11, 0.33, C.concrete, true); }   // the child's bicycle, upright against the pallet stack: two wheels (their middles the wall's grey) …

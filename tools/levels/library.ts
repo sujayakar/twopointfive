@@ -16,17 +16,18 @@
 // Nothing about a piece is typed here: the one table below says where each kit lives and how to stand it up empty.
 // THE LIBRARY'S RULES (--check): every piece stands in a showroom; every piece says what it is; no piece tops out where a body is stopped on floor the nav
 // grid calls free (0.20 to 0.25 m: tools/qa/lived-check.ts holds the same band on a level); every kit that hands pieces out has its row here; docs/library.md
-// is up to date.
+// is up to date; a piece laid on a wall's face lies the same on all four ways a wall can face (skewOf).
 import { basename, resolve } from 'node:path';
 import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
 import type { Vec3 } from '../../src/math/vec';
-import { BoxFlag, type Box } from '../../src/scene/boxes';
+import { BoxFlag, BoxWorld, type Box } from '../../src/scene/boxes';
 import type { Level, LightDef, PropDef } from '../../src/scene/level';
 import { watchPieces } from '../../src/scene/library';
 import { officeKit, buildOfficeProcedural, OFFICE_PALETTE } from '../../src/scene/officeGen';
 import { KIT_PALETTE } from '../../src/scene/levelKit';
 import { gwotKit, gwotOfOffice } from '../../src/scene/gwotKit';
-import { GWOT_PALETTE, GWOT_FINISH, GWOT_SIM, GWOT_SIM_NAMES, GWOT_SURFACE, SNOW_PALETTE, SNOW_SIM, ROUGH_CLOTH, gwotAs, type GwotMat, type SnowMat } from '../../src/scene/gwotPalette';
+import { GWOT_PALETTE, GWOT_FINISH, GWOT_SURFACE, SNOW_PALETTE, ROUGH_CLOTH, type GwotMat, type SnowMat } from '../../src/scene/gwotPalette';
+import { doesOfName } from '../../src/scene/stuff';
 import { findOctagons } from '../../src/scene/round';
 import { ALL_MISSIONS } from '../../src/scene/scenarioList';
 import { encodePng } from '../qa/png';
@@ -80,7 +81,7 @@ for (const f of readdirSync(HERE).filter(f => f.endsWith('.ts')).sort()) {
     levels.push(name);
   } catch (e) { unbuilt.push({ level: name, why: firstLine(e) }); }
 }
-building = 'office'; open.length = 0; buildOfficeProcedural({ groups: [] }); levels.push('office');   // (the office is built by its own function, not a file under tools/levels)
+building = 'office'; open.length = 0; buildOfficeProcedural({ groups: [] }, { lived: true }); levels.push('office');   // (the office is built by its own function, not a file under tools/levels; `lived`: as its FILE has it, whatever stand this tool runs on — the exporter says the same word)
 building = ''; for (const k of KITS) k.stand();                   // a kit no generator stood up still says its pieces
 watchPieces(null);
 levels.sort();
@@ -92,18 +93,17 @@ const fileOf = (level: string) => level.replace(/^blocksquads/, 'block-squads').
 const key = (a: Vec3) => a.map(v => Number(v).toFixed(4)).join(',');
 interface PaintRow { table: string; name: string; albedo: Vec3; rough?: number; metal?: boolean; sim?: string; surface?: string }
 const PAINT_TABLES: { table: string; file: string; what: string; rows: PaintRow[] }[] = [
-  { table: 'GWOT_PALETTE', file: 'src/scene/gwotPalette.ts', what: 'the look\'s own paints: the only table the look draws as materials', rows: (Object.keys(GWOT_PALETTE) as GwotMat[]).map(n => ({ table: 'GWOT_PALETTE', name: n, albedo: GWOT_PALETTE[n], rough: GWOT_FINISH[n]?.rough ?? ROUGH_CLOTH, metal: GWOT_FINISH[n]?.metal, sim: GWOT_SIM[n], surface: GWOT_SURFACE[n] })) },
-  { table: 'SNOW_PALETTE', file: 'src/scene/gwotPalette.ts', what: 'lying snow as paint, for a level built in winter', rows: (Object.keys(SNOW_PALETTE) as SnowMat[]).map(n => ({ table: 'SNOW_PALETTE', name: n, albedo: SNOW_PALETTE[n], sim: SNOW_SIM[n] })) },
-  { table: 'OFFICE_PALETTE', file: 'src/scene/officeGen.ts', what: 'the office\'s paints: the names the simulation reads a box\'s stuff by', rows: Object.entries(OFFICE_PALETTE).map(([n, a]) => ({ table: 'OFFICE_PALETTE', name: n, albedo: a })) },
-  { table: 'KIT_PALETTE', file: 'src/scene/levelKit.ts', what: 'the map kit\'s copy of the office\'s paints', rows: Object.entries(KIT_PALETTE as Record<string, Vec3>).map(([n, a]) => ({ table: 'KIT_PALETTE', name: n, albedo: a })) },
+  { table: 'GWOT_PALETTE', file: 'src/scene/gwotPalette.ts', what: 'the look\'s own paints: the only table the look draws as materials', rows: (Object.keys(GWOT_PALETTE) as GwotMat[]).map(n => ({ table: 'GWOT_PALETTE', name: n, albedo: GWOT_PALETTE[n], rough: GWOT_FINISH[n]?.rough ?? ROUGH_CLOTH, metal: GWOT_FINISH[n]?.metal, sim: doesOfName(n), surface: GWOT_SURFACE[n] })) },
+  { table: 'SNOW_PALETTE', file: 'src/scene/gwotPalette.ts', what: 'lying snow as paint, for a level built in winter', rows: (Object.keys(SNOW_PALETTE) as SnowMat[]).map(n => ({ table: 'SNOW_PALETTE', name: n, albedo: SNOW_PALETTE[n], sim: doesOfName(n) })) },
+  { table: 'OFFICE_PALETTE', file: 'src/scene/officeGen.ts', what: 'the office\'s paints', rows: Object.entries(OFFICE_PALETTE).map(([n, a]) => ({ table: 'OFFICE_PALETTE', name: n, albedo: a, sim: doesOfName(n) })) },
+  { table: 'KIT_PALETTE', file: 'src/scene/levelKit.ts', what: 'the map kit\'s copy of the office\'s paints', rows: Object.entries(KIT_PALETTE as Record<string, Vec3>).map(([n, a]) => ({ table: 'KIT_PALETTE', name: n, albedo: a, sim: doesOfName(n) })) },
   { table: 'LIVED_PAINT', file: 'tools/levels/livedKit.ts', what: 'colours of the older levels\' lived things that the office has no name for', rows: Object.entries(LIVED_PAINT).map(([n, a]) => ({ table: 'LIVED_PAINT', name: n, albedo: a })) },
   { table: 'INK', file: 'tools/levels/livedPieces.ts', what: 'accents of the older levels\' furniture', rows: Object.entries(INK).map(([n, a]) => ({ table: 'INK', name: n, albedo: a })) },
 ];
 /** a colour two tables hold is the first table's row (the map kit's copies are the office's) */
 const paintByKey = new Map<string, PaintRow>();
 for (const t of PAINT_TABLES) for (const r of t.rows) if (!paintByKey.has(key(r.albedo))) paintByKey.set(key(r.albedo), r);
-// a palette paint standing for another stuff (gwotPalette.ts gwotAs) is the same paint a hair off: it keeps its row
-for (const m of Object.keys(GWOT_PALETTE) as GwotMat[]) for (const s of GWOT_SIM_NAMES) { const k = key(gwotAs(m, s)); if (!paintByKey.has(k)) paintByKey.set(k, paintByKey.get(key(GWOT_PALETTE[m]))!); }
+// (a palette paint on a thing that does something else, gwotPalette.ts gwotAs, is the row's own numbers: it keeps its row)
 /** a row's name as the page writes it: the bare word where one colour has it, `TABLE.word` where two tables give the word to different colours */
 const wordColours = new Map<string, Set<string>>();
 for (const t of PAINT_TABLES) for (const r of t.rows) (wordColours.get(r.name) ?? wordColours.set(r.name, new Set()).get(r.name)!).add(key(r.albedo));   // (over every table: INK.iron is the office's asphalt by its numbers, and still a second colour called iron)
@@ -169,6 +169,8 @@ export interface Piece {
   kit: string; name: string; id: string; section: string; doc: string; params: string; line: number;
   /** the level whose call was laid: a showroom, another level, or none (no level lays it) */
   sample: string | null; error?: string;
+  /** laid on a wall's face, and not the same on all four ways a wall can face: what differs (skewOf) */
+  skew?: string;
   /** the piece this one IS (`officeKit.chair`): it lays nothing of its own, only that one piece of another kit, taken into this kit */
   is?: string;
   /** WHAT IT IS TO A MAN, read off its boxes as laid: 'solid' (feet, sight, rounds and sound meet it, up to `reach` m) · 'raised' (solid, but nothing of it
@@ -240,7 +242,30 @@ function measure(kitName: string, name: string, said: Said | undefined, stand: (
     const word = p.k === undefined ? rowName(p.row) : `${rowName(p.row)} × ${p.k.toFixed(2)}`, w = worn.get(word) ?? { row: p.row, n: 0, k: p.k }; w.n++; worn.set(word, w); }
   piece.paints = [...worn].sort((a, b) => b[1].n - a[1].n || a[0].localeCompare(b[0])).map(([w]) => w); piece.unnamed = [...unnamed].sort();
   piece.rows = [...new Set([...worn.values()].map(w => w.row))];
+  piece.skew = skewOf(name, sample.args, stand);
   return piece;
+}
+/** A PIECE LAID ON A WALL'S FACE (its first words are the wall's axis and its line, and a later one the side it faces: `boards('x', 11, a, b, 1)`) LIES THE
+ *  SAME ON ALL FOUR WAYS A WALL CAN FACE: laid alone with its showroom's own words on each of the four, its boxes reach as far past each end of the stretch
+ *  (in either order: a frame is a turn, so two of the four are the other two seen from behind), as far out from the face and as far into the wall, and
+ *  there are as many of them. Says what differs, or nothing. (11-05: split wood and beam ends were dealt from the stretch's low end in a frame that ran the
+ *  other way on two facings, and lay outside it there; no level had yet asked for those two.) */
+function skewOf(name: string, args: readonly unknown[], stand: () => Stood): string | undefined {
+  const side = args.findIndex((a, i) => i >= 3 && (a === 1 || a === -1));
+  if ((args[0] !== 'x' && args[0] !== 'z') || typeof args[1] !== 'number' || typeof args[2] !== 'number' || side < 0) return undefined;
+  const line = args[1], ends = side > 3 && typeof args[3] === 'number' ? [args[2], args[3]] : [args[2], args[2]], lo = Math.min(...ends), hi = Math.max(...ends), mm = (v: number) => Math.round(v * 1000);
+  const seen: number[][] = [];   // (a facing's five numbers: boxes, past the near end, past the far end, least out, most out; held to 2 mm, a turn's rounding)
+  for (const axis of ['x', 'z'] as const) for (const s of [1, -1]) {
+    const S = stand(), from = S.boxes.length, words = [...args]; words[0] = axis; words[side] = s;
+    try { (S.fns[name] as (...a: unknown[]) => unknown)(...words); } catch (e) { return `${axis} ${s}: ${firstLine(e)}`; }
+    const made = S.boxes.slice(from); if (!made.length) { seen.push([0, 0, 0, 0, 0]); continue; }
+    let a0 = Infinity, a1 = -Infinity, o0 = Infinity, o1 = -Infinity;
+    for (const b of made) { const [fx, fz] = BoxWorld.footprint(b), along = axis === 'x' ? [b.c[0], fx] : [b.c[2], fz], across = axis === 'x' ? [b.c[2], fz] : [b.c[0], fx];
+      a0 = Math.min(a0, along[0] - along[1]); a1 = Math.max(a1, along[0] + along[1]); o0 = Math.min(o0, s * (across[0] - line) - across[1]); o1 = Math.max(o1, s * (across[0] - line) + across[1]); }
+    seen.push([made.length, ...[lo - a0, a1 - hi].sort((p, q) => p - q), o0, o1]);
+  }
+  const say = (v: number[]) => `${v[0]} boxes, ${mm(v[1])} and ${mm(v[2])} mm past the stretch's ends, ${mm(v[3])} to ${mm(v[4])} mm out`;
+  return seen.every(v => v[0] === seen[0][0] && v.every((x, i) => Math.abs(x - seen[0][i]) < 0.002)) ? undefined : `x+ ${say(seen[0])} · x- ${say(seen[1])} · z+ ${say(seen[2])} · z- ${say(seen[3])}`;
 }
 const catalogue: Piece[] = [];
 for (const k of KITS) {
@@ -250,11 +275,12 @@ for (const k of KITS) {
 
 // ------------------------------------------------------------------ the library's rules ----
 const problems: string[] = [], plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`;
-const notShown = catalogue.filter(p => !SHOWROOMS.some(s => s in p.uses)), unsaid = catalogue.filter(p => !p.doc), banded = catalogue.filter(p => p.inBand), broken = catalogue.filter(p => p.error);
+const notShown = catalogue.filter(p => !SHOWROOMS.some(s => s in p.uses)), unsaid = catalogue.filter(p => !p.doc), banded = catalogue.filter(p => p.inBand), broken = catalogue.filter(p => p.error), skewed = catalogue.filter(p => p.skew);
 const noRow = [...pieceNames.keys()].filter(k => !KITS.some(r => r.name === k)), noPieces = KITS.filter(r => !pieceNames.get(r.name)?.size).map(r => r.name);
 if (notShown.length) problems.push(`${plural(notShown.length, 'piece does', 'pieces do')} not stand in a showroom (tools/levels/${SHOWROOMS.join('.ts, ')}.ts): ${notShown.map(p => p.id).join(', ')}`);
 if (unsaid.length) problems.push(`${plural(unsaid.length, 'piece does', 'pieces do')} not say what it is (a /** comment */ over its definition in the kit's file): ${unsaid.map(p => p.id).join(', ')}`);
 if (banded.length) problems.push(`${plural(banded.length, 'piece tops', 'pieces top')} out between 0.20 and 0.25 m, where a body is stopped on floor the nav grid calls free: ${banded.map(p => p.id).join(', ')}`);
+if (skewed.length) problems.push(`${plural(skewed.length, 'piece', 'pieces')} laid on a wall's face ${skewed.length === 1 ? 'does' : 'do'} not lie the same on all four ways a wall can face: ${skewed.map(p => `${p.id} (${p.skew})`).join('; ')}`);
 if (broken.length) problems.push(`${plural(broken.length, 'piece', 'pieces')} could not be laid alone: ${broken.map(p => `${p.id} (${p.error})`).join(', ')}`);
 if (noRow.length) problems.push(`${plural(noRow.length, 'kit hands', 'kits hand')} pieces out and has no row in tools/levels/library.ts KITS: ${noRow.join(', ')}`);
 if (noPieces.length) problems.push(`${plural(noPieces.length, 'row', 'rows')} of KITS named no kit that hands pieces out (a kit renamed, or a name mistyped in its pieces() call): ${noPieces.join(', ')}`);
@@ -313,11 +339,11 @@ function page(): string {
       L.push('');
     }
   }
-  L.push('## Paints', '', 'Every colour with a name, by table. *Stands for* is what the simulation reads the paint as (a round, a charge and a blast go by it); *underfoot* is its footstep surface.',
+  L.push('## Paints', '', 'Every colour with a name, by table. *Does* is what a box of the paint is to a round, a charge and a blast unless the box says its own word: a row of the table of materials (`src/scene/materials.ts`); *underfoot* is its footstep surface.',
     'Pieces counts the catalogue\'s pieces that wear the row, darkened or not, as laid above.', '');
   const wears = new Map<PaintRow, number>(); for (const p of catalogue) for (const r of p.rows) wears.set(r, (wears.get(r) ?? 0) + 1);
   for (const t of PAINT_TABLES) {
-    L.push(`### ${t.table}`, '', `\`${t.file}\`: ${t.what}.`, '', '| Paint | Colour (linear) | Finish | Stands for | Underfoot | Pieces |', '|---|---|---|---|---|---|');
+    L.push(`### ${t.table}`, '', `\`${t.file}\`: ${t.what}.`, '', '| Paint | Colour (linear) | Finish | Does | Underfoot | Pieces |', '|---|---|---|---|---|---|');
     for (const r of t.rows) { const first = paintByKey.get(key(r.albedo))!;
       L.push(`| ${r.name} | ${r.albedo.join(', ')} | ${r.rough === undefined ? '' : `rough ${r.rough}${r.metal ? ', bare metal' : ''}`} | ${r.sim ?? ''} | ${r.surface ?? ''} | ${first === r ? wears.get(r) ?? 0 : `the same colour as ${first.table}.${first.name}`} |`); }
     L.push('');

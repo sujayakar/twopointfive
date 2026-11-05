@@ -12,10 +12,11 @@ import { standUp, ROOT } from './headless.ts';
 const { parseLevelData } = await import(`${ROOT}/src/scene/levelData.ts`);
 const { loadLevel } = await import(`${ROOT}/src/scene/levelLoad.ts`);
 const { placeMask, PLACE_W, PLACE_RES } = await import(`${ROOT}/src/scene/placePlan.ts`);
-const { planOpenings, openAreas, openingRadiance, LOOK_OPENINGS } = await import(`${ROOT}/src/scene/openings.ts`);
+const { planOpenings, openAreas, openingLooks, LOOK_OPENINGS } = await import(`${ROOT}/src/scene/openings.ts`);
+const { WAY } = await import(`${ROOT}/src/scene/wayThrough.ts`);
 const { lookConfig } = await import(`${ROOT}/src/render/frame.ts`);
 const { lightClass, lightDayK } = await import(`${ROOT}/src/render/photometry.ts`);
-const { reachMaskFor } = await import(`${ROOT}/src/render/reach.ts`);
+const { reachMaskFor, buildWallRaster } = await import(`${ROOT}/src/render/reach.ts`);
 const { HOURS } = await import(`${ROOT}/src/game/hours.ts`);
 const { BoxFlag } = await import(`${ROOT}/src/scene/boxes.ts`);
 const { WORLD } = await import(`${ROOT}/src/scene/world.ts`);
@@ -23,8 +24,8 @@ const { DESTRUCTION } = await import(`${ROOT}/src/game/destructionSwitch.ts`);
 const BRK = process.env.OPENINGS_BREAK === '1'; let red = false;
 const check = (ok: boolean, what: string, detail = '') => { red ||= !ok; console.log(`- ${ok ? 'PASS' : 'FAIL'} — ${what}${detail ? `\n    ${detail}` : ''}`); };
 console.log(`\n=== openings: where a level is open to the sky${BRK ? ' (glass taken for wall: must fail)' : ''} ===`);
-type O = { pos: number[]; dir: number[]; area: number; full: number; radius: number };
-const say = (o: O) => `(${o.pos[0].toFixed(2)}, ${o.pos[2].toFixed(2)}) ${o.area.toFixed(2)} m²`;
+type O = { pos: number[]; dir: number[]; ajar: number; mid: [number, number, number]; half: [number, number]; full: number; radius: number };
+const say = (o: O) => `(${o.pos[0].toFixed(2)}, ${o.pos[2].toFixed(2)}) ${o.ajar.toFixed(2)} m²`;
 const stand = async (name: string) => { const l = console.log, w = console.warn; console.log = console.warn = () => { };
   const W: any = await standUp({ level: loadLevel(parseLevelData(readFileSync(`${ROOT}/levels/${name}.json`, 'utf8'))), seed: 1 }); for (let i = 0; i < 10; i++) W.step(1 / 60); console.log = l; console.warn = w;
   const g = W.game, world = g.engine.world; g.godMode = true; g.aiEnabled = false;
@@ -34,7 +35,7 @@ const stand = async (name: string) => { const l = console.log, w = console.warn;
   const read = (): { m: Uint8Array; all: O[]; O: O[] } => { for (let i = 0; i < 2; i++) W.step(1 / 60); const m = placeMask(world.statics, world.dynamics, undefined, gaps()) as Uint8Array;
     const st = BRK ? world.statics.map((b: any) => (b.flags & BoxFlag.Glass) ? { ...b, flags: b.flags & ~BoxFlag.Glass } : b) : world.statics;
     const all = planOpenings(st) as O[]; openAreas(all, world.dynamics);   // (every opening the walls leave, and what is open of each now)
-    return { m, all, O: all.filter(o => o.area >= LOOK_OPENINGS.small) }; };
+    return { m, all, O: all.filter(o => o.ajar > 0) }; };   // (what is open at all: what the engine lights)
   return { W, g, world, hang, shut, read }; };
 const cellOf = (x: number, z: number) => Math.floor((z - WORLD.rcMin[2]) * PLACE_RES) * PLACE_W + Math.floor((x - WORLD.rcMin[0]) * PLACE_RES);
 const roofed = (m: Uint8Array, x: number, z: number) => m[cellOf(x, z)] !== 255 && (m[cellOf(x, z)] & 4) === 0, sky = (m: Uint8Array, x: number, z: number) => m[cellOf(x, z)] !== 255 && (m[cellOf(x, z)] & 4) !== 0;
@@ -48,7 +49,7 @@ const hole = async () => { const was = DESTRUCTION.on; DESTRUCTION.on = true;
     for (let i = 0; i < walls.authored; i++) { const b = boxes[i]; if (Math.abs(b.c[0] - 34) < 0.2 && b.h[0] < 0.2 && b.h[2] > 1 && b.h[1] > 1 && Math.abs(b.c[2] - 8) < b.h[2]) wi = i; }
     const took = wi >= 0 && walls.adopt(wi); if (took) g.destr.blast([34.35, 1.0, 8.0], { who: g.player.char.id, chaos: false, breach: wi }); for (let f = 0; f < 6; f++) W.step(1 / 60);
     const after = S.read(), fresh = after.O.filter(o => !before.O.some(w => Math.hypot(w.pos[0] - o.pos[0], w.pos[2] - o.pos[2]) < 0.3)), h = fresh[0];
-    check(!!took && fresh.length === 1 && Math.abs(h.pos[0] - 34) < 0.4 && Math.abs(h.pos[2] - 8) < 1 && h.dir[0] === -1 && h.area > 1.5 && inward(after.m, h) && before.m[cellOf(34, h.pos[2])] === 255 && after.m[cellOf(34, h.pos[2])] !== 255,
+    check(!!took && fresh.length === 1 && Math.abs(h.pos[0] - 34) < 0.4 && Math.abs(h.pos[2] - 8) < 1 && h.dir[0] === -1 && h.ajar > 1.5 && inward(after.m, h) && before.m[cellOf(34, h.pos[2])] === 255 && after.m[cellOf(34, h.pos[2])] !== 255,
       'a hole a breaching charge blows in the store\'s outer wall is an opening, facing into the store, and the floor plan has the wall open there', `${before.O.length} openings before the charge, ${after.O.length} after · the hole: ${fresh.map(say).join(' · ') || 'none'}`);
   } finally { DESTRUCTION.on = was; } };
 if (process.argv.includes('--hole')) { await hole(); process.exit(red ? 1 : 0); }
@@ -85,7 +86,7 @@ if (process.argv.includes('--hole')) { await hole(); process.exit(red ? 1 : 0); 
   const shed = O.filter(o => o.pos[0] > 2.5 && o.pos[0] < 7.5 && o.pos[2] > 9.5 && o.pos[2] < 14.5);
   check(shed.length === 1 && shed[0].dir[2] === -1 && Math.abs(shed[0].pos[0] - 5) < 0.3 && Math.abs(shed[0].full - 1.55) < 0.2, 'a shed whose walls stop a hand under its roof is open by its doorway alone (a gap a hand high under the eaves is no opening, and the walls still count as walls on both hands)', shed.map(say).join(' · ') || 'none');
   { const leaf = { c: [5, 0.95, 14], h: [0.38, 0.95, 0.02], yaw: 0, flags: BoxFlag.Dynamic }, o2 = planOpenings(st) as O[]; openAreas(o2, [leaf]); const d = o2.filter(o => o.pos[0] > 2.5 && o.pos[0] < 7.5 && o.pos[2] > 9.5 && o.pos[2] < 14.5);
-    check(d.length === 1 && d[0].area === 0 && d[0].full > 1.3, 'a shut leaf a hand shorter than its doorway is a shut door (the strip over its head is a slit, as it is in a wall)', d.map(o => `${o.area.toFixed(2)} of ${o.full.toFixed(2)} m² open`).join(' · ')); }
+    check(d.length === 1 && d[0].ajar === 0 && d[0].full > 1.3, 'a shut leaf a hand shorter than its doorway is a shut door (the strip over its head is a slit, as it is in a wall)', d.map(o => `${o.ajar.toFixed(2)} of ${o.full.toFixed(2)} m² open`).join(' · ')); }
   check(O.length === win.length + high.length + porch.length + shed.length, 'and nothing else is: not a stall\'s awning on four posts, a canopy on posts against a wall, glass between two rooms or glass out of doors', O.map(say).join(' · ')); }
 
 // ---- the pass
@@ -93,29 +94,30 @@ if (process.argv.includes('--hole')) { await hole(); process.exit(red ? 1 : 0); 
   const { m, O, all } = S.read(), glazed = O.filter(o => Math.abs(o.pos[1] - 1.35) < 0.08 && o.full < 2), sides = O.filter(o => !glazed.includes(o));
   // 1. its windows: the four the glass-only rule found, where it hung them (17 cm inside the glass: 5 cm off the wall's inside face)
   { const tea = glazed.filter(o => Math.abs(o.pos[2] - 10.83) < 0.02 && o.pos[0] > 12 && o.pos[0] < 22 && o.dir[2] === -1), kit = glazed.filter(o => Math.abs(o.pos[2] - 10.83) < 0.02 && o.pos[0] > 22 && o.pos[0] < 28 && o.dir[2] === -1);
-    check(glazed.length === 4 && sides.length === 3 && sides.every(o => o.dir[0] === -1 && o.pos[0] < 12.2 && o.full > 6) && O.every(o => inward(m, o)) && all.length - O.length === 4 && all.filter(o => !O.includes(o)).every(o => o.area === 0 && Math.abs(o.full - 1.7) < 0.1),
+    check(glazed.length === 4 && sides.length === 3 && sides.every(o => o.dir[0] === -1 && o.pos[0] < 12.2 && o.full > 6) && O.every(o => inward(m, o)) && all.length - O.length === 4 && all.filter(o => !O.includes(o)).every(o => o.ajar === 0 && Math.abs(o.full - 1.7) < 0.1),
       'with every door shut the pass is open to the sky by its four windows and by the open sides of its bay and its lean-to; its four doors to the yard are doorways with nothing open; the lorry\'s bed under its canvas is none', O.map(say).join(' · '));
-    check(tea.length === 2 && kit.length === 1 && tea.every(o => o.area <= 1.8 * 0.95 + 0.01 && o.area > 1.3) && kit[0].area <= 1.2 * 0.95 + 0.01 && kit[0].area > 0.85 && glazed.every(o => o.radius <= 0.5 && o.radius >= 0.3),
-      'the tea room has two and the kitchen one, each measured as what is open of its glass (the frame\'s bars are not) and a disk no wider than it is tall', `tea ${tea.map(o => o.area.toFixed(2)).join(' and ')} of 1.71 m² of glass · kitchen ${kit[0]?.area.toFixed(2)} of 1.14`); }
+    check(tea.length === 2 && kit.length === 1 && tea.every(o => o.ajar <= 1.8 * 0.95 + 0.01 && o.ajar > 1.3 && o.ajar === o.full) && kit[0].ajar <= 1.2 * 0.95 + 0.01 && kit[0].ajar > 0.85 && glazed.every(o => 4 * o.half[0] * o.half[1] >= o.full - 1e-6 && 4 * o.half[0] * o.half[1] < o.full * 1.3),
+      'the tea room has two and the kitchen one, each measured as what is open of its glass (the frame\'s bars are not), in a rectangle that holds it with little to spare', `tea ${tea.map(o => o.ajar.toFixed(2)).join(' and ')} of 1.71 m² of glass · kitchen ${kit[0]?.ajar.toFixed(2)} of 1.14`); }
   // 2. doors: one at a time, wide open
   { const out: string[] = [], inn: string[] = [], bad: string[] = [];
     for (const d of g.doors.list) { const n = d.def.name; S.shut(); S.hang(n, 1.5); const R = S.read(), fresh = R.O.filter(o => !O.some(w => Math.hypot(w.pos[0] - o.pos[0], w.pos[2] - o.pos[2]) < 0.3));
       const [hx, hz] = d.def.hinge, a = d.def.closedDir, mx = hx + Math.cos(a) * d.def.width * 0.5, mz = hz + Math.sin(a) * d.def.width * 0.5;
       if (fresh.length === 0 && R.O.length === O.length) inn.push(n);
-      else if (fresh.length === 1 && R.O.length === O.length + 1 && R.all.length === all.length && Math.hypot(fresh[0].pos[0] - mx, fresh[0].pos[2] - mz) < 0.5 && fresh[0].area > 1.4 && fresh[0].area < 1.9 && Math.abs(fresh[0].pos[1] - 1.0) < 0.1 && inward(R.m, fresh[0])) out.push(`${n} ${fresh[0].area.toFixed(2)}`);
+      else if (fresh.length === 1 && R.O.length === O.length + 1 && R.all.length === all.length && Math.hypot(fresh[0].pos[0] - mx, fresh[0].pos[2] - mz) < 0.5 && fresh[0].ajar > 1.4 && fresh[0].ajar < 1.9 && Math.abs(fresh[0].pos[1] - 1.0) < 0.1 && inward(R.m, fresh[0])) out.push(`${n} ${fresh[0].ajar.toFixed(2)}`);
       else bad.push(`${n}: ${R.O.length} openings, new ${fresh.map(say).join(' · ') || 'none'}`); }
     S.shut(); const back = S.read().O;
     check(bad.length === 0 && out.length >= 3 && inn.length >= 1 && back.length === O.length, 'a door to the open air, standing open, is an opening the size of its doorway, facing into its room; a door between two rooms is none; shut, it is none again',
       `to the air: ${out.join(' · ')} m² · between rooms: ${inn.join(', ')}${bad.length ? ` — WRONG: ${bad.join('; ')}` : ''}`);
-    // … and as it swings: what is open grows with the leaf, from nothing, and the light hangs where it hung
+    // … and as it swings: what is open grows with the leaf from the first hand's width, and the light hangs where it hung
     const name = out[0]?.split(' ')[0] ?? g.doors.list[0].def.name, door = (R: { all: O[] }) => R.all.filter(o => !O.some(w => Math.hypot(w.pos[0] - o.pos[0], w.pos[2] - o.pos[2]) < 0.3) && Math.abs(o.pos[1] - 1.0) < 0.1);
-    const at = (a: number) => { S.shut(); S.hang(name, a); const R = S.read(), d = door(R).filter(o => o.area > 0 || a < 0.2); return { area: d.reduce((s, o) => s + o.area, 0), pos: JSON.stringify(R.all.map(o => o.pos)) }; };
-    const sw = [0.05, 0.4, 0.8, 1.2, 1.5].map(at);
-    check(sw[0].area === 0 && sw.every((v, i) => i === 0 || v.area >= sw[i - 1].area - 0.02) && sw[2].area > 0.4 && sw[2].area < sw[4].area - 0.2 && sw.every(v => v.pos === sw[0].pos),
-      `the ${name} door ajar is no opening, it grows as the leaf swings (by how much at each angle depends on which way the leaf swings: light goes straight through a doorway or not at all), and no light moves while it does`, sw.map((v, i) => `${[0.05, 0.4, 0.8, 1.2, 1.5][i]} rad ${v.area.toFixed(2)}`).join(' · ') + ' m²'); S.shut(); }
-  // 3. the light can reach its own room (render/reach.ts: the mask the engine decides for it)
-  { const R = S.read(); let dark = 0, asked = 0;
-    if (g.reachSolid) for (const o of R.all) { const mask = reachMaskFor(g.reachSolid, o.pos, o.dir, o.radius, g.reachInterior) as Uint32Array; asked++;
+    const at = (a: number) => { S.shut(); S.hang(name, a); const R = S.read(), d = door(R); return { area: d.reduce((s, o) => s + o.ajar, 0), pos: JSON.stringify(R.all.map(o => o.pos)) }; };
+    const sw = [0, 0.3, 0.8, 1.2, 1.5].map(at);
+    check(sw[0].area === 0 && sw[1].area > 0 && sw[1].area < 0.2 * sw[4].area && sw.every((v, i) => i === 0 || v.area >= sw[i - 1].area - 0.02) && sw[2].area > 0.4 && sw[2].area < sw[4].area - 0.2 && sw[4].area > 1.4 && sw.every(v => v.pos === sw[0].pos),
+      `the ${name} door shut is no opening, a hand\'s width ajar it is one by that hand\'s width, it grows as the leaf swings to nearly its whole doorway, and no light moves while it does`, sw.map((v, i) => `${[0, 0.3, 0.8, 1.2, 1.5][i]} rad ${v.area.toFixed(2)}`).join(' · ') + ' m²'); S.shut(); }
+  // 3. the light can reach its own room (render/reach.ts: the mask the engine decides for it, from the rectangle's middle and half width on the engine's
+  //    own raster of the walls: engine.ts lookOpeningLights)
+  { const R = S.read(); let dark = 0, asked = 0; const solid = buildWallRaster(S.world.statics, g.doors.list.map((d: any) => ({ hinge: d.def.hinge, closedDir: d.def.closedDir, width: d.def.width })));
+    for (const o of R.all) { const mask = reachMaskFor(solid, o.mid, o.dir, o.half[0], null) as Uint32Array; asked++;
       const cx = Math.floor((o.pos[0] + o.dir[0] * 1.5 - WORLD.min[0]) / WORLD.gridCell), cz = Math.floor((o.pos[2] + o.dir[2] * 1.5 - WORLD.min[2]) / WORLD.gridCell), ci = cz * WORLD.gridW + cx;
       if (((mask[ci >> 4] >>> ((ci & 15) * 2)) & 3) === 0) dark++; }
     check(asked >= 8 && dark === 0, 'each opening\'s light reaches the floor a step inside it by the lamps\' own reach masks (it does not hang inside a wall)', `${asked} asked, ${dark} that reach nothing there`); }
@@ -126,7 +128,7 @@ if (process.argv.includes('--hole')) { await hole(); process.exit(red ? 1 : 0); 
   // (the harness's engine is a stand-in with the real light list and world: the real method is run on one that borrows both)
   { const { Engine } = await import(`${ROOT}/src/engine.ts`), { REACH_PACE, REACH_WORK } = await import(`${ROOT}/src/render/reach.ts`), { spawnUnit } = await import(`${ROOT}/src/game/guards.ts`), { stateHash } = await import(`${ROOT}/src/game/rollback.ts`);
     const LS = g.engine.lights;
-    const mk = () => Object.assign(Object.create(Engine.prototype), { lights: LS, world: g.engine.world, settings: { skyZenith: HOURS.overcast.sky.zenith, skyHorizon: HOURS.overcast.sky.horizon }, viewFocus: [20, 0, 10], openRecs: [], dayLights: [], openLevel: null, openSerial: -1, openTick: 0, openSeen: NaN, openPlanned: NaN, openWait: 0, openLeaves: NaN, openWalls: null }) as any;
+    const mk = () => Object.assign(Object.create(Engine.prototype), { lights: LS, world: g.engine.world, settings: { skyZenith: HOURS.overcast.sky.zenith, skyHorizon: HOURS.overcast.sky.horizon, exposure: HOURS.overcast.exposure }, viewFocus: [20, 0, 10], openRecs: [], dayLights: [], openLevel: null, openSerial: -1, openTick: 0, openSeen: NaN, openPlanned: NaN, openWait: 0, openLeaves: NaN, openWalls: null }) as any;
     const E = mk();
     const was = { on: lookConfig.on, windows: lookConfig.windows, rooms: lookConfig.rooms, eye: lookConfig.eyeAt, gaps: lookConfig.doorGaps, lit: LOOK_OPENINGS.lit };
     const quiet = <T>(f: () => T): T => { const l = console.log, w = console.warn; console.log = console.warn = () => { }; try { return f(); } finally { console.log = l; console.warn = w; } };
@@ -143,10 +145,27 @@ if (process.argv.includes('--hole')) { await hole(); process.exit(red ? 1 : 0); 
       const tea = g.doors.byName('tea'), [hx, hz] = tea.def.hinge, mx = hx + Math.cos(tea.def.closedDir) * tea.def.width * 0.5, mz = hz + Math.sin(tea.def.closedDir) * tea.def.width * 0.5, doorL = used0.find(l => Math.hypot(l.pos[0] - mx, l.pos[2] - mz) < 0.5);
       S.hang('tea', 1.5); quiet(() => S.W.step(1 / 60)); frames(1); const open = !!doorL?.enabled, I = doorL?.intensity ?? 0, mask = doorL?.reach, range1 = doorL?.range, pos1 = JSON.stringify(doorL?.pos);
       S.hang('tea', 0); quiet(() => S.W.step(1 / 60)); frames(1); const shutOut = !!doorL && !doorL.enabled && doorL.range === range1 && doorL.reach === mask && JSON.stringify(doorL.pos) === pos1 && REACH_WORK.steps === sAll;
-      const big = lit0.filter(l => l.intensity > 0).map(l => l.intensity), top = Math.max(...big), least = Math.min(...big);
-      check(used0.length === all.length && lit0.length === O.length && first === O.length && firstMasks === O.length && most <= REACH_PACE.steps * 1.6 && quietAfter && !!doorL && !lit0.includes(doorL) && open && I > 0.3 && !!mask && shutOut && top / least < LOOK_OPENINGS.most / 0.9,
-        `the engine keeps one light an opening: those open are lit on a level\'s first frame with their reach masks whole, the rest get theirs a frame\'s share of the work at a time (the game\'s own pace for a lamp\'s), with the game standing still as it does behind the start card; a door\'s comes on as it opens and goes out as it shuts, and neither moves it, its range or its mask; no light counts more than ${LOOK_OPENINGS.most} m²`,
-        `${used0.length} openings · ${first} lit on the first frame (${s1 - s0} sight-line steps) · all ${used0.length} masks whole ${n} frames on, ${most} steps in the longest of them (the pace is ${REACH_PACE.steps}) and none after · the tea door open: ${I.toFixed(2)} · strongest over weakest ${(top / least).toFixed(2)}`);
+      check(used0.length === all.length && lit0.length === O.length && first === O.length && firstMasks === O.length && most <= REACH_PACE.steps * 1.6 && quietAfter && !!doorL && !lit0.includes(doorL) && open && I > 0.3 && !!mask && shutOut,
+        `the engine keeps one light an opening: those open are lit on a level\'s first frame with their reach masks whole, the rest get theirs a frame\'s share of the work at a time (the game\'s own pace for a lamp\'s), with the game standing still as it does behind the start card; a door\'s comes on as it opens and goes out as it shuts, and neither moves it, its range or its mask`,
+        `${used0.length} openings · ${first} lit on the first frame (${s1 - s0} sight-line steps) · all ${used0.length} masks whole ${n} frames on, ${most} steps in the longest of them (the pace is ${REACH_PACE.steps}) and none after · the tea door open: ${I.toFixed(2)}`);
+      // DAYLIGHT COUNTED ONCE (render/lights.ts LIGHT_PORTAL; tools/qa/portal-check.ts asks what the light is): each light is the whole rectangle its
+      // walls leave with the sky's reference divided back out, lit under a night's sky too. The only way since 11-04 (the disks and their row are gone)
+      { const lumOf = (c: number[]) => 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2], daySky = E.settings, recs = E.openRecs as any[], sunL = (LS.lights as any[]).find(l => l.kind === 2 && l.enabled && !l.transient && l.intensity > 0), refLum = lumOf(openingLooks(daySky.skyZenith, daySky.skyHorizon, lookConfig.sky, sunL));
+        frames(1); const P = lit(), masked = day().every(l => !!l.reach);
+        // a door's leaf: lit from the first hand's width, as bright to a pass whose ray stops short as what is open, the whole rectangle written beside it
+        const shareOf = (l: any) => l.portal.share as number, leafAt = (a: number) => { S.hang('tea', a); quiet(() => S.W.step(1 / 60)); frames(1); return { on: !!doorL.enabled, I: doorL.intensity as number, E: doorL.intensity * lumOf(doorL.color), share: doorL.enabled && doorL.portal ? shareOf(doorL) : 0 }; };
+        const ajar = leafAt(0.3), half = leafAt(0.7), wide = leafAt(1.5), shut = leafAt(0), oT = recs.find(r => r.l === doorL).o, rectT = 4 * oT.half[0] * oT.half[1];
+        const leaf = ajar.on && half.on && wide.on && !shut.on && ajar.I > 0 && ajar.I < 0.2 * wide.I && half.I > ajar.I && half.I < wide.I && [ajar, half, wide].every(x => Math.abs(x.E - refLum * x.share * rectT) < 1e-6) && ajar.share < half.share && half.share < wide.share && wide.share <= 1;
+        const shaped = P.every(l => { const o = recs.find(r => r.l === l).o; return !!l.portal && Math.abs(l.portal.halfWide - o.half[0]) < 1e-9 && Math.abs(l.radius - Math.hypot(o.half[0], o.half[1])) < 1e-9 && o.half[0] > 0 && o.half[1] > 0 && Math.abs(l.pos[0] - o.mid[0]) + Math.abs(l.pos[1] - o.mid[1]) + Math.abs(l.pos[2] - o.mid[2]) < 1e-9
+          && Math.abs(l.intensity * lumOf(l.color) - refLum * l.portal.share * 4 * o.half[0] * o.half[1]) < 1e-6 && l.portal.share > 0 && l.portal.share <= 1 && 4 * o.half[0] * o.half[1] >= o.full - 1e-6; });
+        E.settings = { skyZenith: [0.012, 0.016, 0.03], skyHorizon: [0.02, 0.022, 0.03], exposure: 1.9 }; frames(1); const night = lit().length;
+        const sunWas = sunL ? sunL.intensity : 0; if (sunL) sunL.intensity = 0;   // (… and no sun or moon on the ground outside: an opening looks out on that too)
+        E.settings = { skyZenith: [0.0004, 0.0005, 0.001], skyHorizon: [0.0006, 0.0007, 0.001], exposure: 1.9 }; frames(1); const black = lit().length; if (sunL) sunL.intensity = sunWas;   // (a sky the picture would show nothing of)
+        E.settings = { skyZenith: [0.012, 0.016, 0.03], skyHorizon: [0.02, 0.022, 0.03], exposure: 1.9 };
+        E.settings = daySky; frames(1); const back = lit().length;
+        check(P.length === O.length && shaped && masked && leaf && night === O.length && black === 0 && back === O.length,
+          'each opening is a portal: the rectangle that holds all its walls leave open, as bright as what is open of it with that share of the rectangle written beside it; a door\'s is lit from the first hand\'s width between its leaf and the jamb and grows with the gap, with no step a disk\'s quarter of a square metre makes; lit under a night\'s sky as by day and out only where the picture would show nothing of what it looks out on',
+          `${P.length} portals of ${O.length} open · every record a rectangle no smaller than its opening: ${shaped} · every one with its reach mask: ${masked} · the tea door at 0.3, 0.7 and 1.5 rad: ${ajar.I.toFixed(3)}, ${half.I.toFixed(3)}, ${wide.I.toFixed(3)} (a fifth of wide open or less at 0.3, and beside each the share of its rectangle that is: ${leaf}), out when shut: ${!shut.on} · lit under a night's sky: ${night}, ${black} under a black one, ${back} by day again`); }
       // the game cannot tell: its light list, its reach lists and its count of steady lights are what they were, and a man can still be spawned
       { let spawned = false, why = ''; try { quiet(() => { const u = spawnUnit(g, { team: 'hostile', pos: [30, 0, 20], yaw: 0 } as any); spawned = !!u; }); } catch (e) { why = String(e).slice(0, 120); }
         const steady = (LS.lights as any[]).filter(l => l.ttl < 0).length;
@@ -191,18 +210,36 @@ else { const r = Bun.spawnSync(['bun', 'run', import.meta.path, '--hole'], { cwd
 { const S = await stand('smoke-lab'); S.shut(); const a = S.read();
   for (const d of S.g.doors.list) S.hang(d.def.name, 1.5); const b = S.read();
   const hole = a.O.find(o => o.full < 2), mouth = b.O.filter(o => Math.abs(o.pos[2] - 22) < 0.5 && o.pos[0] > 6 && o.pos[0] < 8.6);
-  check(a.O.length === 2 && !!hole && Math.abs(hole.area - 0.8) < 0.06 && Math.abs(hole.pos[0] - 16) < 0.1 && Math.abs(hole.pos[1] - 1.5) < 0.06 && hole.dir[2] === -1 && inward(a.m, hole), 'a window hole with no glass is an opening by the same rule, measured as the hole (0.8 by 1.0 m, its middle 1.5 m up)', a.O.map(say).join(' · '));
+  check(a.O.length === 2 && !!hole && Math.abs(hole.ajar - 0.8) < 0.06 && Math.abs(hole.pos[0] - 16) < 0.1 && Math.abs(hole.pos[1] - 1.5) < 0.06 && hole.dir[2] === -1 && inward(a.m, hole), 'a window hole with no glass is an opening by the same rule, measured as the hole (0.8 by 1.0 m, its middle 1.5 m up)', a.O.map(say).join(' · '));
   check(b.O.length === 6 && mouth.length === 1 && mouth[0].dir[2] === -1 && Math.abs(mouth[0].full - 7.2) < 0.4 && b.O.every(o => inward(b.m, o)), 'with every door open the lab has six (the hole, four doors to the yard and the tunnel\'s mouth between its two walls); the door between its rooms is none', b.O.map(say).join(' · ')); }
 
 // ---- how bright, by the hour
 { const sunOf = (h: any) => ({ intensity: h.sun.intensity, dir: [0, -Math.sin(h.sun.elevDeg * Math.PI / 180), 0], color: h.sun.color }), lum = (r: readonly number[]) => 0.2126 * r[0] + 0.7152 * r[1] + 0.0722 * r[2];
-  const of = (id: string, amount = 1) => lum(openingRadiance(HOURS[id].sky.zenith, HOURS[id].sky.horizon, 1, sunOf(HOURS[id]), amount));
-  const L = JSON.parse(readFileSync(`${ROOT}/levels/pass.json`, 'utf8')), night = lum(openingRadiance(L.sky.zenith, L.sky.horizon, 1, { intensity: 0.3, dir: [0, -0.6, 0], color: [0.6, 0.7, 1] }, 1));   // (the level's own night, under its moon)
+  const of = (id: string) => lum(openingLooks(HOURS[id].sky.zenith, HOURS[id].sky.horizon, 1, sunOf(HOURS[id])));
+  const L = JSON.parse(readFileSync(`${ROOT}/levels/pass.json`, 'utf8')), night = lum(openingLooks(L.sky.zenith, L.sky.horizon, 1, { intensity: 0.3, dir: [0, -0.6, 0], color: [0.6, 0.7, 1] }));   // (the level's own night, under its moon)
   const grey = of('overcast'), noon = of('midday'), dusk = of('dusk');
-  check(grey > 0.3 && grey < 1.2 && noon > grey && dusk > 0.15 && night === 0 && grey > 50 * LOOK_OPENINGS.least, 'an opening is as bright as what it looks out on, and by night it is no light at all', `${grey.toFixed(2)} under the grey sky, ${noon.toFixed(2)} at midday, ${dusk.toFixed(2)} at dusk, ${night} at night`);
-  check(of('overcast', 0.5) === grey * 0.5 && of('overcast', 0) === 0, 'the row is × its light, and 0 is none');
+  check(grey > 0.3 && grey < 1.2 && noon > grey && dusk > 0.15 && night > 0 && night < 0.2 * dusk, 'an opening is as bright as what it looks out on, at every hour: a night\'s sky is a sky, and a small one', `${grey.toFixed(2)} under the grey sky, ${noon.toFixed(2)} at midday, ${dusk.toFixed(2)} at dusk, ${night.toFixed(4)} at night`);
   const l = { name: 'opening0', group: 'sky', kind: 3, ttl: -1, intensity: 0.6, peakIntensity: 0.6 };
   check(lightClass(l) === 'none' && lightDayK(l, 0.05, 1) === 1 && lightClass({ ...l, group: 'interior' }) === 'face' && lightDayK({ ...l, group: 'interior' }, 0.0002, 1) < 0.02, 'an opening\'s light is the hour\'s own: the day\'s rescale of lamps leaves it as it is (a lamp of the same strength is taken down)'); }
 
+// EVERY LEVEL'S DOORS, TO A PORTAL (scene/openings.ts ajarOf: what is open of an opening is the narrowest way through it past what hangs in it). A shut
+// leaf must read shut whatever the wall's thickness and wherever its jambs stand on the samples (one that read open would light a room through a shut
+// door for every pass whose ray stops short of it), a leaf swung wide must leave most of its doorway, and every such opening must have found the box
+// that ends it on each hand.   AJAR_BREAK=1 bun run tools/qa/openings-check.ts = no play allowed a shut leaf: this line must FAIL
+{ const AJAR_BRK = process.env.AJAR_BREAK === '1', playWas = WAY.play; if (AJAR_BRK) WAY.play = 0;   // (AJAR_BREAK=1: a shut leaf is allowed no play in its frame: must FAIL)
+  const { readdirSync } = await import('node:fs'); const names = readdirSync(`${ROOT}/levels`).filter(f => f.endsWith('.json') && !f.includes('.lint')).map(f => f.replace('.json', ''));
+  let doors = 0, openShut = 0, lowWide = 0, jambless = 0; const worst: string[] = [];
+  for (const name of names) { const S = await stand(name), { g, world } = S, set = (a: number) => { for (const d of g.doors.list) S.hang(d.def.name, a); for (let i = 0; i < 2; i++) { S.W.step(1 / 60); for (const d of g.doors.list) { d.vel = 0; d.angle = a; d.latched = a === 0; } } };
+    const l = console.log, w = console.warn; console.log = console.warn = () => { };
+    try { set(0); const plan = planOpenings(world.statics) as any[]; openAreas(plan, world.dynamics); const shut = plan.map(o => o.ajar as number);
+      set(1.5); openAreas(plan, world.dynamics);
+      plan.forEach((o, i) => { if (shut[i] >= o.full - 1e-6 && o.ajar >= o.full - 1e-6) return; doors++;   // (nothing hangs in it)
+        if (!o.cut.jambs[0] || !o.cut.jambs[1]) jambless++;
+        if (shut[i] > 0) { openShut++; worst.push(`${name} (${o.pos[0].toFixed(1)}, ${o.pos[2].toFixed(1)}) reads ${shut[i].toFixed(3)} m² open when shut`); }
+        if (o.ajar < 0.6 * o.full) { lowWide++; worst.push(`${name} (${o.pos[0].toFixed(1)}, ${o.pos[2].toFixed(1)}) reads ${o.ajar.toFixed(2)} of ${o.full.toFixed(2)} m² at 1.5 rad`); } });
+    } finally { console.log = l; console.warn = w; } }
+  check(names.length >= 40 && doors >= 150 && openShut === 0 && lowWide === 0 && jambless === 0, 'to a portal every level\'s shut door is shut and its open door open: no leaf in its frame reads as a gap, a leaf swung wide leaves three fifths of its doorway or more, and every doorway found the boxes that end it',
+    `${AJAR_BRK ? '(AJAR_BREAK) ' : ''}${names.length} levels, ${doors} openings a leaf hangs in · read open when shut: ${openShut} · under three fifths at 1.5 rad: ${lowWide} · with no box for a jamb: ${jambless}${worst.length ? ' · ' + worst.slice(0, 4).join('; ') : ''}`); 
+  WAY.play = playWas; }
 console.log(red ? '=== openings: FAILED ===' : '=== openings: ALL PASS ===');
 process.exit(red ? 1 : 0);

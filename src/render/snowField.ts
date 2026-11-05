@@ -18,6 +18,7 @@ import type { Box } from '../scene/boxes';
 import { BoxFlag } from '../scene/boxes';
 import { WORLD } from '../scene/world';
 import { SNOW_PALETTE } from '../scene/gwotPalette';
+import { doesOf, type SnowKind } from '../scene/materials';
 
 export const SNOW_RES = 10;           // texels per metre
 /** The look's numbers (judged on software-rendered stills only — the maintainer's to move: `__snow.look` on the console, then `__snow.relook()`). Authored data. */
@@ -65,16 +66,17 @@ export interface SnowField {
   stats: { mounds: number; lays: number; bare: number; roofs: number; quads: number; maxMound: number };
 }
 
-const near = (a: readonly number[], b: readonly number[]) => Math.abs(a[0] - b[0]) < 2e-3 && Math.abs(a[1] - b[1]) < 2e-3 && Math.abs(a[2] - b[2]) < 2e-3;
-/** which snow paint a box wears, by its albedo (a runtime box has no material name: gwotPalette.ts tells paints apart the same way) */
+
 /** is this box a THIN LAY on the ground — a strip of trodden or old snow, swept earth, a mat: at the ground, a finger thick at most, not glass and not the
  *  deep snow's own paint (so never the slab). The bake's rule below and game/snowBog.ts's: one reading of the level's boxes. `bare` = it is ground somebody
  *  CLEARED (any paint that is not snow's, and not a lit thing lying on the snow) */
 export function snowThinLay(b: Box): boolean { const top = b.c[1] + b.h[1]; return !(b.flags & BoxFlag.Glass) && top <= 0.03 && top > 0 && b.c[1] - b.h[1] >= -0.02 && snowPaintOf(b) !== 'snow'; }
 export function snowLayBare(b: Box): boolean { return snowPaintOf(b) === null && b.emissive[0] + b.emissive[1] + b.emissive[2] <= 0; }
-export function snowPaintOf(b: Box): 'snow' | 'snowPacked' | 'snowOld' | null {
-  return near(b.albedo, SNOW_PALETTE.snow) ? 'snow' : near(b.albedo, SNOW_PALETTE.snowPacked) ? 'snowPacked' : near(b.albedo, SNOW_PALETTE.snowOld) ? 'snowOld' : null;
-}
+/** which lying snow a box is, by its word (scene/materials.ts, Box.does: the rows 'snow', 'packed snow' and 'old snow'), or null. THE SNOW FIELD IS ONE
+ *  MODEL THE PICTURE AND THE GAME BOTH READ (game/snowBog.ts wades in what is drawn), so this file of the renderer's asks what a box DOES: the one render
+ *  file that does. Never by the colour. (THE SHADER still knows the three snow paints by their numbers, shaders/snow.wgsl snowIsPaint: so a level's snow
+ *  wears the palette's whites until that reads a word too, or it is snow to the game and plain paint to the picture.) */
+export function snowPaintOf(b: { does?: string }): SnowKind | null { return doesOf(b).snow ?? null; }
 
 // position-seeded value noise (0‥1, C1) — the bake's only irregularity: the same level, the same field
 function hash2(x: number, z: number): number { let h = (Math.imul(x | 0, 73856093) ^ Math.imul(z | 0, 19349663)) >>> 0; h = Math.imul(h ^ (h >>> 15), 0x2c1b3c6d) >>> 0; h = Math.imul(h ^ (h >>> 12), 0x297a2d39) >>> 0; return ((h ^ (h >>> 15)) >>> 0) / 4294967296; }
