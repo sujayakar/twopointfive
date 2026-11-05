@@ -42,7 +42,7 @@ import { zfight, type Pair } from '../qa/zfight-check';
 import { bitsToFlags } from '../../src/scene/levelData';
 
 const ROOT = resolve(import.meta.dir, '../..'), HERE = import.meta.dir;
-const SHOWROOMS = ['gwot-yard', 'library-hall', 'coast-yard'], PAGE = 'docs/library.md';
+const SHOWROOMS = ['gwot-yard', 'library-hall'], PAGE = 'docs/library.md';
 const argv = process.argv.slice(2), flag = (f: string) => argv.includes(f);
 const valueOf = (f: string) => { const i = argv.indexOf(f); if (i < 0) return undefined; const v = argv[i + 1]; if (!v || v.startsWith('--')) { console.error(`${f} wants a path`); process.exit(2); } return v; };
 const firstLine = (e: unknown) => String((e as Error).message ?? e).split('\n')[0];

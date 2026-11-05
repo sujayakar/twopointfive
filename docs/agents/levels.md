@@ -1317,28 +1317,6 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   in their lived things only and keep theirs.
   SEEN on the software adapter only (Chromium 141, midday): the pass's fuel pocket on the look page, before and after, two views. NEVER SEEN ON A
   GPU, and nobody has played any of these levels since.
-- **THE COAST SKIN, A PROPOSAL (2026-11-05; a draft on the library's branch, no level but its showroom wears it, nothing of it is in a mission).** The
-  maintainer left the 2010s setting for a neutral, sunlit one ("Western Europe or California", "urban settings ... but maybe also with mountains and
-  with beaches", "quite stylized", "quite neutral"). WHAT IT IS: a SECOND SKIN, so that a kit piece is written once and has two.
-  `gwotPalette.ts COAST_PALETTE`: 33 paints in a table of its own (as the snow's: the kit's palette is written whole into every kit level), each
-  with a finish, what it is to a round (`COAST_SIM`), and a word that is a stuff THE LOOK HAS (`stuff.ts COAST_STUFF`: stucco, skim, board
-  concrete, cast panel, block, paver, tarmac, slab, gravel, earth, grass, wood, sheet, paint, enamel, brushed, steel, plastic, rubber, cloth). Two
-  wait for a stuff graphics has agreed to add and say the nearest meanwhile: `sand` (earth) and `roofTile` (sheet); `foliage` is drawn plain.
-  `tools/levels/coastSkin.ts`: `COAST_OF`, which coast row each row of the kit wears (one line a row, held to every row by the compiler), and
-  `coastHost(host)`, a host the kit builds over: `gwotKit(coastHost(gwotOfOffice(K)))`. Every box, trim, marking and prop part the kit hands it in
-  one of its own rows goes on in its coast row: standing for what the kit's paint stood for to a round (`coastAs`), at the same tone, saying what
-  it said itself where that was not its row's word (a vehicle's body: carpaint), with the coast row's finish unless it wrote its own. NO KIT
-  FUNCTION KNOWS. A generator lays its own ground and roofs in coast rows directly.
-  SEVEN NEW KIT PIECES, of no one setting (both skins lay them): `planter`, `tub`, `bollard`, `wheelieBin`, `parasol`, `bicycle`, `lounger`.
-  THE SHOWROOM: `tools/levels/coast-yard.ts` (`?look&solo&levelFile=coast-yard.json&hour=midday`), a sea front that stands them and the kit's
-  setting-neutral pieces; `library.ts` counts it a showroom (189 pieces). `build(false)` is the same place in the kit's own paint.
-  CHECK: `bun run tools/qa/coast-check.ts` (the 1,254 coast paints and stand-ins have numbers no other palette's has, and read back as laid; every
-  row says a stuff the look has and none of the old setting's; the showroom in both skins is one level box for box and every kit box is the same
-  to the simulation's table, a hit and a blast; nothing skinned is left in the kit's paint or says mud wall; `COAST_BREAK=1`, every coast row laid
-  as itself, fails line 3). THE LOOK'S STUFFS NO COAST ROW SAYS: mud wall, plaster, metal, veneer, fabric, carpaint, gloss block, louvre, carpet.
-  The coast rows join the table a round reads (`gwotSimOf`) only where a key is free, and every key was: no run of any other level can move.
-  SEEN on the software adapter only (the look page, midday, eight views, three boots, no page or GPU error). NEVER SEEN ON A GPU; nobody has played
-  it; the palette's colours are a first proposal for the maintainer to judge.
 - **A word and its finish are said with the paint, by one way** (the look's skin, five generators and the material check; no switch, no level file
   moves; 2026-11-05; asked by the dress goal after the question "is saying a word one way or three?"). The one way is `scene/stuff.ts`: `madeOf` for a
   colour written as numbers, `saidAs` for a kit's row that is another thing here, each taking the thing's FINISH with its word. THE SKIN
