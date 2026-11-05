@@ -865,6 +865,20 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   closes, 2.4 m tall: pass, gwot-yard, police-post, tut-sky, tut-pair) and from two cloths hung in one thin plane (bazaar, tut-squad). The mend is the
   level's own numbers (sink one face a few millimetres, or end one box at the other); none was made here, and the check is in no gate and no
   level-needs row yet. Nobody has watched any of the 289 on a GPU but the pass's gate.
+  THREE PIECES' OWN PATCHES ARE MENDED IN THE KIT (11-05; the first of two steps: this one moves nothing a body, a round or a sight line meets). Of 334
+  seen on 59 files, 113 were four pieces of `gwotKit.ts`, found by building every generator with the library's door watched and tagging each box with the
+  piece that laid it. Mended here: the HANDCART (34: each shaft's top lay in the bed's top and lapped it; the shafts now END at the bed), the VAN'S BUMPER
+  AND STEP (they ran two centimetres into the body with their sides in its sides; each now BEGINS at the body's end; `carShapes.ts vanShapes` says the
+  same two sizes) and the WASH LINE (20: cloths are sheets in one plane and some lines dealt two that lapped; two that would lap are cut back to 2 cm short
+  of where they would meet, a cloth nothing reaches keeps its own numbers, there are never fewer cloths than asked, and a line too short for its cloths
+  THROWS). The cloths are drawn only. The shafts, bumper and step are solid, and each gives up only the part of itself that lay INSIDE another solid of
+  its own piece: no solid thing is anywhere it was not, and none has left a place (asked of all 50 such boxes, point by point). 20 level files
+  re-exported; in each only boxes' `c` / `h` (and the van's two shapes) moved, 70 boxes, none added or removed, no light moved; 248 seen after. LEFT FOR THE SECOND STEP,
+  because a solid box has to move: a van's bay sides round its tail lamps, and a gate's posts in the end of the wall they close (the patch the maintainer
+  saw on the pass).
+  A LOOSE THING'S OWN PATCH (11-05, with the first step: it moves nothing either). `livedPieces.armchair`'s arms ran three centimetres into its back with
+  their outer faces in the back's sides. An arm now ENDS at the back's front; it gives up only what lay inside the back, so the chair fills the space it
+  filled. Seven files re-exported (consulate, defuse, registry, their looks, the showroom): 13 chairs, a line each, nothing added or removed.
 - **THE SMOKE LAB'S FLOOR** (11-01; `levels/smoke-lab.json` from `tools/levels/smoke-lab.ts`, the GWOT kit; opened by the dev server's `/smokelab`, in no
   mission list, nobody on it but Sam; the lab's panel is `docs/agents/render.md`, THE SMOKE LAB). The maintainer asked for "a separate smoke lab that's more
   suited to playing with it". Each place shows one thing smoke does and is there for nothing else: the YARD (open ground under the sky and a low wall of
@@ -1173,6 +1187,13 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   A PLAY MOVE, DECLARED. New cover stands in the pass's yard (three fuel drums and one on its side in the pocket by the lean-to, pipes in the far
   corner south of the bunk room, split wood under the first window's sill, a bench, a ladder; the chopping block is round) and on the block's west
   wall (split wood under a sill), so the missions on those floors may play otherwise.
+  THE PIPES ARE OUT OF THE PASS AGAIN (11-05, the same day): the 'far corner' is the pocket, 6 m by 2.5 m between the bunk room's south wall and the yard
+  wall, that the squad bunches in to breach that wall, and the pile lay two metres straight behind the man who sets the charge. `menclear-check` (the men
+  with Sam step back from a set wall charge: the maintainer's own case, on this wall) read red on its lines 3 and 3s from that step on: one man of the four
+  was dealt no mark he could reach, straight back was the pile, and he stood IN the blast. The check was not in the step's list. Without the pipes the
+  lines read as they did before the dressing (clear after 2.5 s, three marks west along the wall). WHAT IT TEACHES A LEVEL'S AUTHOR: floor within a
+  charge's stand-off of a wall the squad breaches is the squad's, though no stack mark and no place for a charge is on it; run `menclear-check` and the
+  wall charge's family on both stands after standing anything in a yard. `pipes` stays a piece of the kit and stands in the showroom.
   MEASURED 2026-11-05, the joined head `dd81d0de` against this step, by the scripted play-through's digest (`PT_DIGEST=1 tools/qa/playthrough.ts`):
   21 missions x seeds 1 and 2, the frozen stand 40 of 42 runs the same (the two that move are the pass's); the shipped stand 36 of 42 (the six are
   the pass's, the block's and the three-squad block's); the shipped stand with lived rooms off 37 of 42 (the same six less one, and the block's four
@@ -1354,7 +1375,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   clear turns at the side door between the server room and the manager's office (thirteen of thirty-one men fell within two and a half metres of it) and
   nothing in the picture said that door was there; the defenders come out of the break room by two doors; nobody, either side, enters the conference room;
   and the day's people (sixteen desks, a printer, a counter) had no way written to anything. THREE KINDS OF THING, each through the system that owns it.
-  WORN PATHS are data: 30 named marks where a person stands to use a thing (`Level.marks`, attached at load beside the scenarios by `withOfficeScript`, a
+  WORN PATHS are data: 31 named marks where a person stands to use a thing (`Level.marks`, attached at load beside the scenarios by `withOfficeScript`, a
   copy a Level: the level file has no slot for a mark yet) and 75 `walked` rows between them, each name one thing (a mark, a door's id, or a room's name that no door
   shares); the look's page wears the floor by the ways field (`?walked=0` = the lanes as they were). Nothing in play reads a mark: `ways.ts` and the
   Director's lookup by a script's own id are the only readers, and the office has no script. The walked check's two count files for the office are gone:
@@ -1398,3 +1419,94 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   rows). An outside review of those stills said the same and its ideas are held for the next pass. The first cut was priced twice before and twice
   after on rented boxes: no cost that shows over what two boxes differ by. The maintainer played the first cut and his word on it is above. Never
   seen on an Apple or an AMD GPU.
+- **FOUR MENDS TO THE OFFICE'S HAND PASS, FROM A REVIEW** (11-05; no level file moves, no box, no rule of play). (1) THE WAYS THROUGH THE SERVER
+  ROOM END AT A MARK. Three `walked` rows named the room, and a room's name is the middle of its floor, which a bank of racks stands on: the walk
+  grid stepped each way aside to the racks' near face, and the row's comment said "between the racks". They now name a mark, `racks`, on free floor
+  at the rack the plain night's drive is pulled from (31 marks). A ROOM'S NAME IS A FAIR END ONLY WHERE THE ROOM'S MIDDLE IS FLOOR. (2) THE FOUR
+  DESK CLUSTERS STAND WHERE ONE LIST SAYS: `levels/office.scenarios.ts DESK_CLUSTERS`, read by the desks' marks and by the generator, which had
+  the same four places written again. Left: the offsets of a desk and its chair inside a cluster are still said twice (the generator's
+  `cubicleCluster` and the marks' arithmetic); they are one writing when a mark is the level file's own and the cluster lays its desks' marks.
+  (3) THE CATALOGUE COUNTS THE OFFICE AS ITS FILE HAS IT: `tools/levels/library.ts` builds the office with its lived tier (the exporter's word),
+  and the kit's two tools, `bandRuns` and `conduitRuns`, lay through the kit's door (`pieces`), so a band or a length of conduit a tool lays is
+  counted as the piece it is. The uses page (`library.ts --uses`) had the office at 193 pieces with no band, vent, conduit or pipe of the hand
+  pass; it is 228 with 19 bands, 11 lengths of conduit, 3 vents and 2 pipes. The catalogue in the repo does not move. (4) ONE FLOOR FOR THE
+  RULE THAT EVERY WAY HAS A PATH: `ways-check`'s sweep over every level now opens each as the page walks it (`walked-check.ts pageWays`, the lived
+  rooms and the dressing in), where it opened each as the caller's stand does. NOT A FAULT, read and left: the kit view's set path loads a level
+  without the office's marks, but that level is a SET (its own boxes and doors, its scenarios the kit view's, the room clear's and the issue's
+  only): it carries no `walked` row, and the office's block has no set. CHECKS, both stands: `ways-check` (and its break path), `walked-check`,
+  `probes.ts level`, both export checks, `library.ts --check`, the exporter's check on the white roof and the showroom, both type checks.
+- **THE OFFICE SAYS IT IS KEPT** (11-05; the builder's `kept: 1` in `src/scene/officeGen.ts`, so `meta.kept` in `levels/office.json` and
+  `levels/office-relief.json`; the rule is the look's, `docs/agents/render.md` A LEVEL SAYS HOW KEPT IT IS). The first level to say the word. WHY 1 AND
+  NOT PART WAY: it is a let office with a cleaner on contract, and the paint its hand pass laid (door numbers and bay numbers a hand high) was drawn as
+  every mark was before the word, rubbed and gone a shade into its wall, which at that size reads as dirt on the picture and not as a number. At 1 a
+  mark is whole and its own colour and a plaster wall is one shade with its knocked foot. A part-way word is the one the look has never been priced
+  at. WHAT MOVES: the look's page's picture of the office and nothing else. No rule of play reads the word, the level's fingerprint is taken over its
+  boxes, and a checkpoint or a recording loads as before. `&kept=0` on the address is the office as it was drawn, for the visit. WHAT IT DOES NOT
+  DO: the worn lanes are where feet go and do not ask the word, so they are as faint at night as they were.
+  CHECKS, both stands: `probes.ts kept` (and its break path fails), `probes.ts level`, `level-export.ts --check` and `--relief --check`, and the
+  hand pass's own list in the bullet above. The office's four missions, seeds 1 and 2, on the frozen stand, the page's and the page's with its
+  lived tier off: 8 of 8 run digests the same as the step before, each. The page opened on a software adapter with the word read off the level (1)
+  and nothing in the console.
+  PRICED on a rented NVIDIA A10G, the office alone at night on high, twice a side: what the look adds over its layers off was +21.1% and +21.3% of the
+  frame before and +21.1% and +23.0% after, and two boxes of one kind differ by more than that. No cost that shows.
+  SEEN on that GPU in stills only, seven cameras at the play camera's resting view, before and after on one base: a door's number draws whole (`01`
+  was two broken strokes), the lobby sign's lines and the bays' numbers are a shade stronger, and nothing else reads as changed. Of the picture's
+  pixels 0.1 to 0.6% move by more than 8 of 255 indoors and 1.5% on the lot; two draws of one commit differ by 0.01%. Never seen on an Apple or an
+  AMD GPU, and nobody has played it.
+- **NO TWO DRAWN FACES OF THE OFFICE LIE IN ONE PLANE** (11-05; `src/scene/officeGen.ts` `HAIR`; `tools/qa/zfight-check.ts office` went from 8 seen
+  patches to none, its 186 noted pairs as they were). The eight were the office's own: the lobby's corner planter, whose plant was exactly its pot's
+  footprint and stood 5 cm into it (four sides), and the four desk clusters, where the cross partition met the spine at one height in another cloth
+  (four tops). THE MEND is the check's own, a face sunk a hair (4 mm, one named number): the plant's sides stand inside the pot's and the cross
+  partition's top is under the spine's. Five boxes are a hair smaller; none is added, removed or moved in the list, and none moves at the centimetre
+  the level's fingerprint reads, so a checkpoint or a recording still loads on either stand. BOTH STANDS' OFFICE CHANGES (these are boxes of the base,
+  not of a tier): a ray that grazed the top 4 mm of a cross partition, or the plant's outer 4 mm above its pot, now passes. No switch: it is level
+  data, and off is the file before. WHAT IS LEFT for a later hand: the noted pairs are drawn alike today and flicker only under a look that paints a
+  box by its own size or place. CHECKS, both stands: the hand pass's own list (`wallfurn-check` still 669 and 669), `probes.ts kept`, `probes.ts
+  level`, both export checks, and `zfight-check office` (its break path fails). The office's four missions, seeds 1 to 4, on the frozen stand, the
+  page's and the page's with its lived tier off: 16 of 16 run digests the same as the step before, each. The page opened on a software adapter with
+  the five boxes at their new sizes and nothing in the console. Never seen on a GPU: the check reads the file, and nobody has watched the eight
+  places for a flicker before or after.
+- **A named coat's finish goes wherever its word goes: a vehicle's body is a clear coat** (`scene/stuff.ts COATFINISH`, `coatRough`, `NAMED_COATS`; read
+  by `scene/boxes.ts matWord`; 11-05; the maintainer, playing the preview: "how reflective is the car material, btw? it does feel like it should reflect
+  more of the environment and be quite dynamic as we move around it"). WHAT WAS WRONG, read from the code: a vehicle's body took its finish from the
+  paint's ROW. The truck enamels are satin (0.35, 0.4: a cot's and a locker's finish too), so on High the traced mirror was part faded (it fades over
+  the 0.12 under `rtMaxRough` 0.45) and wide, and on Medium (0.35) there was none; the plain car and the office's van had no finish at all (matte, 1.0:
+  no reflection ray); a twin's skinned car wore its new row's (0.35 to 0.75); the bazaar's cab a 0.5 written by hand. THE RULE: a named coat's row in
+  the table of coats says how smooth it is (carpaint 0.2: under every preset's mirror cut-off less its fade, the number agreed with the look's car
+  paint map, render.md "CAR PAINT IS A STUFF"), and the ONE function that hands a box's finish to the GPU (`matWord`) sends a box that says a named
+  coat no rougher than the coat, whatever row painted it and whatever number stands beside the word. So it holds for a level's statics, a shape's
+  pieces, a piece blown off a car (which copies the word and no finish) and anything made later that says the word. NO BOX IS CHANGED AND NO LEVEL FILE
+  CHANGES: `Box.rough` is the file's, always. THE WORD DECIDES: a thing that should not shine like a car does not say it is car paint (the tanker's
+  burnt cab says plastic). Smoother stays smoother (a body wet with rain). ROUGHNESS ONLY: `metal` stays the paint's, because the game reads that flag
+  (`wallpen.ts`, `wallcharge.ts`) and reads no roughness. (Three cuts were thrown away on review, so nobody tries them again: 0.2 written beside the
+  word on 507 boxes in 40 level files; a rule in the level file's reader and writer; a pass over the level's boxes at stand-up that kept each box's own
+  number in a side table, which no snapshot can list.)
+  THE SWITCH: ON in the page (`?coatfinish=0` = every box sent the finish its file gives it, as it was: the A/B for its cost), OFF in the module and on
+  the frozen stand (`TPS_COATFINISH=1`), a `FROZEN_HOLDS` row (a picture only), `STAND_ENV`, pinned in `standup.ts` beside the shapes' word, in the
+  registry and the journal (a recording with no table plays with it down). It can be flipped on a live page: the statics' packed slice is compared by
+  this float each frame.
+  UNDER THE LOOK the car paint map varies the number (`rough + dr`, its delta taken against the look's own row 0.26): about 0.11 where the coat is
+  clean, 0.37 under road dust.
+  WHAT IT LOOKS LIKE, and it is LITTLE BY ITSELF. Stills on the software adapter (11-05, the yard's white pickup at midday and at night, High): the
+  body at its file's 0.35, at 0.2 and at 0.12 are the same picture to the eye (mean difference 0.08 to 0.22 of 255 a pixel). A non-metal mirrors 4 % face
+  on (`reflect.wgsl` F0), and a sharper 4 % does not show over a bright paint. What the maintainer asked for needs a clear coat as a term of its own
+  in the shader (the renderer's part took it, 11-05), which can key on this word. What this rule gives by itself: Medium traces the bodies at all, the
+  plain cars and the twins' stop being matte, and one number is the coat's. NEVER SEEN ON A GPU.
+  THE CHECK: `bun run tools/qa/probes.ts coatfinish` (`tools/qa/coatfinish-check.ts`, in the `shapes` family), both stands: the stand; the yard as
+  stood, up and down (every box and piece that says car paint sent at the coat's, nothing else moved, no box's own number or metal touched); the
+  cases by hand (a twin's skin-written number, a body smoother than the coat, a bare-metal row, a piece off a car, a plain paint, a word that is no
+  stuff); every level file through the rule (507 boxes in 40 files on the shipped stand); the same seeded run by digest up as down; the rows and an
+  old recording. `COATFINISH_BREAK=1` fails four lines on both stands.
+  NOT DONE: a plain car's and the office van's GLASS says no finish (matte glass; the kits' dark glass is 0.1); the plough lorry's tipper sides are
+  plain orange beside a coated cab; the editor's finish panel shows the file's number, not what is sent. COST: smooth finishes are what the reflection
+  pass traces, and the plain cars are new to it: NOT MEASURED ON A GPU.
+- **A LEVEL FILE NAMES ITS MARKS** (the format, no switch, no rule of play; 2026-11-05). A mark is a named place on the floor where a person stands to
+  use a thing: the end of a `walked` way and a script's place, read by name (`scene/ways.ts`, `game/director.ts`). Until now only the office had any, and
+  only as code joined on at load (`scene/level.ts withMarks`, which is GONE). The file has a slot: top-level `marks: [{ id, pos, yaw? }]`
+  (`levelData.ts MarkData`, validated: an id once, `pos` a Vec3, `yaw` a number), loaded to `Level.marks` and written back by `levelToData`, as `volumes`
+  are. A GENERATOR RETURNS `marks` ON ITS LEVEL and the exporter writes them; absent = none, and no other file changes. THE OFFICE IS THE FIRST: its
+  builder puts `OFFICE_MARKS` (31) on its Level and both its files carry them; a Level's marks are an ordinary key now. An office saved in the editor
+  before the key has no marks until it is saved from a file that has them. DO NOT USE A `scenarios.places` AREA AS A MARK: the game reads places.
+  CHECK: `walked-check` is red on a mark standing where the walk grid is shut; `probes.ts ways` already is on a name that is two things. As measured on
+  the step: the office's two files differ from before by the `marks` key alone, and loaded with the office's script each gives the same 31 marks, the
+  same scenarios and every other key of the Level the same as the build before it. Nothing a page draws moves.

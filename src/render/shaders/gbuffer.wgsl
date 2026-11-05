@@ -157,7 +157,7 @@ fn cubeNormal(vi: u32) -> vec3f {
   }
   var lookTilt = false;
   if (LOOK && !cap) {                                                    // THE LOOK PROTOTYPE (look.wgsl; the page /look — dead code on every other): the paint drawn off its material's maps, weathered as the building is, a small box's edges rounded
-    let lk = lookSurface(v.look, v.wp, n, bi, v.lc, v.hf, albedo, rough, dwx, dwy, distance(v.wp, frame.camPos) * 2.0 * frame.post.w * frame.invScreen.y, lookW);
+    let lk = lookSurface(v.look, v.wp, n, bi, v.lc, v.hf, albedo, rough, dwx, dwy, distance(v.wp, frame.camPos) * 2.0 * frame.post.w * frame.invScreen.y, lookW, true);
     albedo = lk.albedo; rough = lk.rough;
     n = lk.n; lookTilt = lk.tilted;
   }

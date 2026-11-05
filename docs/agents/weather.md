@@ -690,7 +690,23 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
     another lamp of its class lights the snow); the stencil is on the screen, so its reach in metres shrinks on a steep view of a slope; the mark has two bits, so the term
     steps once (at half) across a dusting's edge; the reach masks (full-height walls only) are the only cull by place. Two skips that leave the picture as it is
     (the cost owner's a and b, 10-14): no light is scored where the stencil's unshadowed sums are zero for both classes, and a light is passed over when its own class's
-    sum is zero. Still untimed on a GPU.
+    sum is zero.
+  - **Timed, and the walk asks a lamp's range first (2026-11-05)**. On a rented NVIDIA card (an A10G through Vulkan, headless Chrome: relative only, never a
+    frame rate), the tunnel under `?look`, High at 1368 by 770 resolved to 1777 by 1000, the world running, 21 lamps of the level's and the carried ones, 4 s medians: the
+    composite (`compS`, the picture's full size, so the render scale cannot pay for it) 1.72 ms with the glow and the sparkle, 1.15 with both words off, 1.56 with the
+    sparkle off, 1.66 with the glow off (either alone walks the lamps: the walk is what costs, not the stencil's sixteen reads nor the facet's hashes). Rebuilt in the
+    page with no walk: 1.16. So the walk was 0.55 ms, a third of the composite. Of it about a quarter was the reach table read for lamps out of range anyway: with
+    `evalLight`'s own first exit (`dist > li.range`, the same subtraction, dot and square root, read from the lamp's three fields) put BEFORE the table, 1.59; the
+    table first and the range after gave nothing back (1.71), range and cone together less than range alone (1.62), and a fixed list of the twelve lamps that matter
+    there, which is the most a list by tile or by cell could give, 1.57. The rest (0.4 ms) is the term itself for the lamps that do light the snow. NO SWITCH: the
+    line only passes over a lamp `evalLight` was about to refuse, and at a range's edge the lamp's own window is zero, so the picture is the build's.
+    The commit against its base, a box each: `compS` 1.73 and 1.72 before (two boxes), 1.59 after; at half scale 1.72 and 1.70, then 1.57; all passes 14.5 to 14.4.
+    Three stills with the world held at 75 s of game time, the base twice and the commit once: the commit's differs from either base still by no more than the two
+    base stills differ from each other (mean difference a channel 1.22 and 1.30 of 255 against 1.24; in 64-pixel blocks 0.16 and 0.18 against 0.18), falling snow and grain.
+    `snowglow-check`'s fog line holds the line where it stands, written as `evalLightRaw` writes it, and that `shaders/compact/composite.wgsl` has the term word
+    for word (`GLOWRANGE_BREAK=1` must fail, both stands). The wet coat's and the panes' walks in the same file have the table first too and were left: no scene
+    with either was timed. NOT TIMED: any Apple chip, Windows, an AMD card, another level. The maintainer's M4 Max read `compS` 3.09 ms on the same spot at
+    1481 by 1000, but a single row of that read-out is stretched where Metal runs passes side by side (its rows summed to 20.45 ms, their union was 15.84).
   - **The fog's leak watch on the pass** (`node tools/qa/fog-lit-stills.cjs --level pass.json --torches --frames 12 --w 640 --h 400`, SwiftShader, low, once with the term
     and once with `--q 'snowglow=0'`): 106 pipelines, none failed, no GPU error either way. The full picture: 399 fog px moved in patches with the enemy's torches forced
     on against 1236 with nothing changed (422 / 1248 without the term): under the noise. The lit rung: 3720 with the term, 3736 without, and the tool's own rule (any
@@ -915,7 +931,13 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   tools/qa/probes.ts rainwalls` (family `weather`), 4 lines; the rule written again in the check and the shader's function held to it by its text;
   asked over every level's roofs as the renderer has them. The depot: 19 outer walls, every outer face shown, every inner face and the floor 10 cm
   inside dry. All 50 levels: 663 outer walls (the bare rectangles hid every face), 657 faces shown, 663 inner faces dry; ground newly in front of
-  the rain with nothing standing on it 13.7 m² in all, most on quiet-relay 3.1 m². `RAINWALLS_BREAK=1` fails 2 on both stands. KNOWN LEFT: a third or
+  the rain with nothing standing on it 13.7 m² in all, most on quiet-relay 3.1 m². `RAINWALLS_BREAK=1` fails 2 on both stands. THE BARE GROUND IS
+  COUNTED IN TWO (2026-11-05): that line had gone red as levels gained shelters (59 levels, 35.4 m², sneak-lab 4.52 against a bar of 4), and every
+  square metre over the bar was the rim of a roof on no wall, which the lines below already call known. So the check now parts the ground by what
+  stands at the roof's edge there: floor AT A WALL (a ceiling-high box within half a metre: a threshold, the strip past a packed roof's wall) keeps
+  the two bars (15.5 m² over 59 levels, most on quiet-relay 1.56 m²); ground under an OPEN EDGE is barred by its DEPTH and not its amount (19.9 m², most on sneak-lab
+  3.82 m²; the ground counted over the metres of edge with no wall and no other roof, less a tenth of a square metre for corners, may not pass the rule's
+  0.2 m and a tenth: a rule that reached further in under a shelter fails here, a level that gains a shelter does not). The rule and the picture are as they were; the break now fails 3. KNOWN LEFT: a third or
   fourth roof is packed to 0.2 m rounded outward, so some of its walls' faces stay hidden (the barracks: 3 of 33) and a strip of yard up to 0.2 m at
   such a wall's foot is as it was; the rim of a roof that stands on no wall (quiet-relay's shelter) shows streaks 0.2 m in; a ray that ends on a far
   wall's top over the building shows only the rain it met before the roofs' columns; `snow-check walls` still reads the rain's old line in
