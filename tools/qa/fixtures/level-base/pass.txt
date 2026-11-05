@@ -1,2 +1,2 @@
-# the kits' vehicles say their shapes: the boxes of each vehicle carry a shape, and a pickup's bonnet no longer carries its two panel lines
-1fb85288712a39db258abb7a51ee820dc3ce3005
+# 11-05, the pass's dressing is the kit's: its house front (boards, shutters and a blanket put aside, mends, a spout, beam ends, split wood, a ladder, a bench) and its yard's round things (pipes, logs, a chopping block, drums) are laid by the generator from the library's pieces
+931ef43ac72c54074339f892db86ca7b9be076a6

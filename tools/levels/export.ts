@@ -107,3 +107,12 @@ if (!CHECK && !name.endsWith('-gwot') && (data.scenarios?.roomClear || data.scen
   if (p.exitCode === 1) { console.error(`second way in: FAILED on ${basename(OUT)} (the file is written)\n${p.stdout.toString()}${p.stderr.toString()}`); process.exit(1); }
   console.log(p.exitCode === 0 ? '  second way in: every room they can shut has another way in' : `  second way in: NOT ASKED (${p.stderr.toString().trim().split('\n').pop() ?? 'the check did not run'})`);
 }
+// A DEFENDER SEES WHAT HE WATCHES: the same day, every man the file stands with a `pos` and an `aimAt` is asked for his line and for the ground he watches,
+// against the level's own count file (tools/qa/marksight-check.ts, on the shipped stand; the look twin with it). The file is written either way; a red check
+// fails the export: something was stood in a man's view, or a level new to the check has no count file yet (the check's --write, once on each stand).
+// MARKSIGHT=0 in front skips it for a level still in the making.
+if (!CHECK && !name.endsWith('-gwot') && process.env.MARKSIGHT !== '0') {
+  const twin = OUT.replace(/\.json$/, '-gwot.json'), p = Bun.spawnSync(['bun', 'run', resolve(import.meta.dir, '../qa/marksight-check.ts'), basename(OUT), ...(existsSync(twin) ? [basename(twin)] : [])], { stdout: 'pipe', stderr: 'pipe', env: { ...process.env, TPS_PROFILE: 'shipped' } });
+  if (p.exitCode === 1) { console.error(`a defender sees what he watches: FAILED on ${basename(OUT)} (the file is written)\n${p.stdout.toString()}${p.stderr.toString()}`); process.exit(1); }
+  console.log(p.exitCode === 0 ? '  marks\' sight: no man the file stands sees less than its count file says (or it stands none)' : `  marks' sight: NOT ASKED (${p.stderr.toString().trim().split('\n').pop() ?? 'the check did not run'})`);
+}

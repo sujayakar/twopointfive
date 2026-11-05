@@ -1,2 +1,2 @@
-# the kits' vehicles say their shapes: the boxes of each vehicle carry a shape, and a pickup's bonnet no longer carries its two panel lines
-6c502672efc89dc9778ddb2dddbf1bfc05659a9d
+# 11-05, the showroom stands the kit's new pieces: pipes, logs and a chopping block in bays, and a wall's face with each window piece shut and open, mends, a spout, beam ends, split wood, a ladder, a bench, a pot and bricks
+b1e4395be4c5b48bf38a76c7e2ee90c68052fc2c

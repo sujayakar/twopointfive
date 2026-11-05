@@ -1,6 +1,6 @@
 // A LORRY WITH CURVES, A TRIAL (the look page only: main.ts lorryTryOn; ?lorry=0 = the lorry as its file has it). Asked 2026-10-24 on a picture of the pass's
 // yard: "some curved surfaces on the truck would go a long way". The pass's lorry is twenty plain boxes under four flat slabs of snow; from above every
-// line of it is straight. Here it is gone over by hand after the level loads (as the house front is, scene/frontTry.ts; levels/pass.json is not touched):
+// line of it is straight. Here it is gone over by hand after the level loads (levels/pass.json is not touched):
 //   · the canvas tilt is BOWED over its hoops, and its snow lies on the bow;
 //   · the cab's roof is an arch from the windscreen back, the windscreen leans, and the roof's snow lies on the arch;
 //   · the bonnet is a narrow engine cover with a rounded top between two FENDERS that arch over the front wheels; snow on each;

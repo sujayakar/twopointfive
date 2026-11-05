@@ -347,7 +347,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   [--quiet] [--md f] [--json f]` asks the nineteen needs a file can answer about what stands AROUND a level (generator · mission · row · music · picture ·
   kit picture · look · lived · floor · ground · leak · key · lamps · moon · doorway · roof · kit · response · said) of one level or all, in about a second, a look twin with its plain file.
   The floor itself stays `tools/qa/map-check.ts`'s (structure, size, nav, the scripted runs): `--run` runs that with `--no-runs` and the level's other own
-  checks as they stand (export `--check`, level-lint, door-size, second-way-check, lived-check, kitview-plan, level-names-check, floor-order-check,
+  checks as they stand (export `--check`, level-lint, door-size, second-way-check, marksight-check, lived-check, kitview-plan, level-names-check, floor-order-check,
   quiet-check, lesson-check), four at a time: about 13 s for one level, 90 to 120 s for all. Exit 1 on a FAIL; a NOTE never fails. `NEEDS_BREAK=1` plants
   gaps in seventeen needs on one level in memory (the kit's by emptying every card, whatever the issue table gives) and must find each by its own words
   (exit 1; a MISSED one exits 0). THREE NEEDS ARE NEW CHECKS: `doorway` (a wall decal across a door's opening: the dado rule had no check), `roof` (a drawn
@@ -1037,7 +1037,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   THE LORRY IS A PIECE OF THE KIT (`gwotKit.lorry`, box for box what the pass's generator wrote) and so stands in a showroom: on the road of
   `gwot-yard` (its lamp count file says six head lamps; `docs/library.md` has its row). Its tanks hang from the bed in two bands.
   THE LOOK PAGE'S LORRY TRIAL STANDS DOWN on a level whose lorry says its own shapes (`scene/lorryTry.ts dressLorry`: the trial was their first drawing;
-  gone over by hand as well the lorry would be shaped twice), and `stuff-check` line 12 counts the house front's and the yard's pieces without it.
+  gone over by hand as well the lorry would be shaped twice), and `stuff-check` line 12 holds it to making nothing there (from 11-05 that line asks the kit's wall-face and yard pieces, as the pass's generator lays them, for their words).
   THE PLAIN BOXES ARE UNCHANGED in every level file (compared box for box against the step before, 39 files), but for a pickup's bonnet, which gave up
   its two painted panel lines ON EVERY STAND (a box that says a form carries no markings; the run digest does not see a marking). Each of the 39 files
   has its base file (`tools/qa/fixtures/level-base/`). `levels/office-relief.json` holds vehicles and says no shape (it has no generator).
@@ -1082,3 +1082,77 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   (frozen; shipped with lived rooms off; shipped) are the step before's, 42 of 42 each. SEEN on the software adapter only (stills of the lot, the cubicles, the
   break room, the server room and the whole floor, the step before against this one); never on a GPU: whether the pavers' joints and the panels' fixing holes
   read at 60 frames, and the lino's shine as enamel, nobody knows.
+- **The pass's dressing is the kit's: what is done to a wall's face, round things that lie, and a window's two forms** (the library, 2026-11-05; no
+  switch: kit pieces and the level files that lay them, on every stand; the shapes among them are the shape rule's, `SHAPES`). The maintainer, of
+  dressing the levels: "I'd love for us to have a library of objects, materials, etc. that we reuse across them". The pass's house front and its yard's
+  round things were two hand-built trials on the look page (`docs/agents/render.md`, the two "WAS A TRIAL" bullets). They are fourteen pieces of
+  `src/scene/gwotKit.ts` now, laid by `tools/levels/pass.ts`, each stood in the showroom `library-hall`, and the trials' files, address words and
+  buttons are gone.
+  WHAT IS DONE TO A WALL'S FACE is written once for all four ways a wall can face (`onFace`: a frame whose X runs along the wall and whose Z points out
+  of the face; `onStretch` for what is dealt along a stretch a to b, its origin at the end the frame's X runs in from): `boards`, `shutters`,
+  `windowBlanket` (a window's dressing), `wallPatch` (a mend with a rough outline, over a dado or a skirt), `spout` (and the streak its water left),
+  `beamEnds`, `splitWood`, `ladder`. What stands by it: `plankBench`, `pot`, `bricks`. ROUND THINGS THAT LIE are one box that says `round: 1` (`lying`):
+  `pipes`, `log`; `choppingBlock` is the kit's standing round. Snow or dust along a lying round is laid by the one rule for a bowed top
+  (`scene/carShapes.ts layOn`, through the kit's `lay`: a lying round is a bowed top). TRIM IN A PAINT OF ITS OWN says what that paint is made of
+  (`trimIn`: a log's end is wood, a pipe's bore metal), as a box does.
+  A WINDOW'S DRESSING HAS TWO FORMS, `'shut'` and `'open'`, and the level picks. The dress goal's rule, 11-05: "a window a mark watches through, or a
+  covered lane crosses, stays see-through" (the maintainer: "we don't want them to feel dumb"). Shut, the boards, a shut leaf and the blanket are real:
+  a look, a round and the room's lamp stop at them. Open, the boards hang beside the jambs, the leaves are folded back on the wall and the blanket is
+  rolled over the lintel: nothing on the ground, nothing in the opening. THE PASS LAYS ALL THREE OPEN: every window of its front is in some defender's
+  view (measured with them shut: the tea room's two men at the glass kept 9 and 15 of the 18 lines they have to the yard, and the kitchen's man on its
+  yard door 12 of 16).
+  THE CHECK: `bun run tools/qa/marksight-check.ts [level …] [--write]` (`probes.ts marksight`, family `missions`, on the page's stand;
+  `tools/levels/export.ts` asks it of a level the day it is written, `MARKSIGHT=0` skips; `level-needs.ts --run` lists it). It asks EVERY MAN A LEVEL
+  FILE STANDS WITH SOMETHING TO WATCH, whatever says a `pos` and an `aimAt` outside the boxes and props (a room clear's marks, a rescue's captor, door
+  men, guards and roamers, a plan's hostiles: 536 men in 41 level files; 18 files stand none and are named NOT JUDGED), with every door's leaf taken
+  out of the world (a man whose gun rests on a door looks at the doorway): line 1, his eye's line to his aim is open; line 2, of a fan of 21 lines to a man's shin, belt and head across 3 m of the ground he watches, no fewer are open than his level's count
+  file says (`tools/qa/fixtures/marksight/<level>.txt`, a count for each stand). THE COUNT FILES WERE WRITTEN ON THE UNDRESSED HEAD, on both stands,
+  and the dressed levels are held to them. They are PER-LEVEL FIXTURES: whoever moves a level so that a man sees less carries that level's file with the
+  move and says why on a `#` line in it (`--write` keeps such lines and says aloud every count it lowers). `MARKSIGHT_BREAK=1` stands a post in the
+  middle of each level's first line: red on both lines on 41 of 41 levels, both stands (a level it does not bite is named, and the run then exits 0:
+  a break word that passes). AS FIRST RUN, on the head before any level was dressed for it: every one of the 536 lines open, on both stands.
+  A SECOND LEVEL LAYS THEM: the block (`tools/levels/block.ts`, so `block`, `block-gwot`, `block-squads` and `block-squads-gwot`: one floor) has its
+  west flat's long window (x 4, z 16.5 to 19.5) with its shutters folded back and split wood stacked under the sill. No man watches through that pane,
+  no man's line crosses that wall, and the nearest stands 13.7 m from it (8.2 m in the three-squad file, the workshop's third man, his gun on the
+  hall door).
+  A SHUT WINDOW COSTS THE TEAM TOO, MEASURED. That window was first laid with one leaf SHUT, since no defender needs it. On the page's stand the
+  scripted team then took the block 3 times in 24 seeds with 8 of 96 teammates up, against 7 in 24 and 13 up on the head before, and 7 in 24 and 12
+  up with the same shutters folded back (the same boxes but for the leaves' places; the frozen stand never met the shutter: 8 of 8 runs the same to
+  the digest). Why is not traced: a look, a shot and the window's daylight all stop at a shut leaf. So the rule for a shut form is two rules: no man
+  the file stands watches through it, AND its mission's tally is read with it shut before it is laid. Today no level file lays a shut form; the
+  showroom stands each.
+  A PLAY MOVE, DECLARED. New cover stands in the pass's yard (three fuel drums and one on its side in the pocket by the lean-to, pipes in the far
+  corner south of the bunk room, split wood under the first window's sill, a bench, a ladder; the chopping block is round) and on the block's west
+  wall (split wood under a sill), so the missions on those floors may play otherwise.
+  MEASURED 2026-11-05, the joined head `dd81d0de` against this step, by the scripted play-through's digest (`PT_DIGEST=1 tools/qa/playthrough.ts`):
+  21 missions x seeds 1 and 2, the frozen stand 40 of 42 runs the same (the two that move are the pass's); the shipped stand 36 of 42 (the six are
+  the pass's, the block's and the three-squad block's); the shipped stand with lived rooms off 37 of 42 (the same six less one, and the block's four
+  end at the tenth of a second they ended at). No other mission moves on any stand. ON MORE SEEDS, before to after: pass-four, seeds 1 to 8: frozen
+  6 to 5 of 8 taken and 18 to 15 of 32 teammates up; shipped 8 to 8 taken and 25 to 27 up. The block on the frozen stand is the same run to the
+  digest (8 of 8, both files). On the shipped stand: block-four, seeds 1 to 24, 7 to 7 of 24 taken and 13 to 12 of 96 up; block-squads, seeds 1 to 8,
+  1 to 0 of 8 taken and 1 to 0 of 32 up. The scripted player is not a person: these say the floors were not broken, not that they play well.
+  NO DOOR'S STACK MOVED: every door of the pass and the block, both faces, a stack of one to four, deals the marks it dealt before, to the
+  centimetre, on both stands (`tools/qa/lived-stack-check.ts --ask pass-four,block-four,block-squads` on the head and on the cut, compared). The trial
+  had the pipes along the bunk room's wall, on the three places a stack takes south of its yard door, and the wood under the second window, where the
+  third and fourth men of a stack on the tea room's door stand: both moved for that.
+  WALL-CHARGE PLACES on the pass: 598 and 384 (frozen, shipped) are 588 and 374, on purpose (`tools/qa/fixtures/wallcharge/pass.txt` says it): five
+  spots on the lean-to's south wall, both faces, behind the drums. The lean-to is no room of the fight, and every room of the fight keeps every place
+  it had: the bench was moved to the wall's west end for that. The block's places are as they were. `second-way-check` (the five files) and
+  `wayround-check pass-four`: green on both stands.
+  COUNTS CARRIED: `fixtures/round/pass.txt` (13 round things as the file has it, 24 with the lived rooms in; were 8 and 19) and `library-hall.txt` (2
+  and 12), `fixtures/geotry/` for the same two, the level-base files of the six level files. `stuff-check` line 12 asks the kit's wall-face and yard
+  pieces for their words (it asked the trials). `look-check` learnt that a shape's trim wears paint as a box does (two shapes that differ only in what
+  their pieces wear differ in paint), and finds `block-squads.json`'s generator. `tools/qa/round-lib.ts` holds a tilted box to the rectangle round
+  both things the world makes of it, not to a square round its longest reach (a ladder leaned on a wall 3 m off crowded the pass's brazier).
+  THE LIBRARY'S RULE FOR A WALL'S FACE (`tools/levels/library.ts --check`, `skewOf`): a piece whose words are a wall's axis, its line and a side is
+  laid alone on all four facings and must lie the same on each. Red on the kit as first written: split wood and beam ends were dealt from the
+  stretch's low end in a frame that ran the other way on two facings, and lay outside it there.
+  KNOWN. A TILTED BOX IS TWO THINGS: a line and a round meet it as it is turned, a walking body meets the same box only yawed
+  (`collision.ts collideCircle` reads no `rot`). So a body meets the ladder's stiles as two posts 0.4 m out from the wall, not as leaning rails.
+  `drumDown` and `woodPile` are still stacks of plain boxes: the kit's stores say their shapes in a step of their own. A wall charge leaves what
+  hangs above a hand's height on a face (`scene/lookTidy.ts` takes a decal with its wall only from the foot). Split wood's billets step through
+  small tables, not a die, so that no two that touch share a face's plane with shapes off.
+  SEEN on the software adapter only (Chromium 141, midday, 960 x 600): the pass on the look page (five views) and as the page opens (two), the block's
+  window on the look page; six boots, every program compiled (119 of 119; the block's 118 of 118), no page, console or GPU error. The front's pieces
+  stand where the trial's stood but for the pipes, the wood and the bench; the windows are open; lying rounds, billets and beam ends draw round;
+  `drumDown` draws as the two boxes it is. NEVER SEEN ON A GPU, and nobody has played either level since.

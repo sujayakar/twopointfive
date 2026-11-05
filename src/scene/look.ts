@@ -92,7 +92,7 @@ export function lookPageRows(q: URLSearchParams): string[] { return q.getAll('lo
 /** the page is the look's: a row on the address, or the tag a one-file build of it carries (where the address takes no flags) */
 export function lookPageOn(q: URLSearchParams): boolean { return lookPageRows(q).length > 0 || (typeof document !== 'undefined' && !!document.querySelector?.('meta[name="tps-look"]')); }
 /** ITS TRIALS: the address's word of each, and the key under which the look panel's button keeps it on this machine */
-export const LOOK_TRIALS = { geo: 'twopointsix.geotry', hills: 'twopointsix.hillrays', front: 'twopointsix.fronttry', lorry: 'twopointsix.lorrytry', dress: 'twopointsix.passtry' } as const;
+export const LOOK_TRIALS = { geo: 'twopointsix.geotry', hills: 'twopointsix.hillrays', lorry: 'twopointsix.lorrytry' } as const;
 export type LookTrial = keyof typeof LOOK_TRIALS;
 /** a trial's switch: the address's own word wins; else what the panel's button last kept on this machine (on, where it kept nothing) */
 export function lookTrialOn(q: URLSearchParams, word: LookTrial): boolean { if (q.has(word)) return q.get(word) !== '0'; try { return localStorage.getItem(LOOK_TRIALS[word]) !== '0'; } catch { return true; } }
