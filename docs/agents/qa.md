@@ -636,7 +636,7 @@ but synthetic writes still work.
   `--counts` gives a level's row for its dressing file, `--write-base` the baseline (`fixtures/level-audit-base.json`: the levels before they were
   dressed). `node tools/qa/level-cost-page.cjs <level>` is one boot of the look page on the software adapter: what it compiled, layers off against on, a
   still; a relative read, and the GPU's particles are never stepped in it, so a snow or rain level is read without what is in its air.
-  `bun run tools/qa/level-table.ts --dir <folder>` makes one page of every level from those files, a GPU's price file and each dressing row (the folder's `notice.txt` is printed first and marks a level whose price no longer stands). "Which levels
+  `bun run tools/qa/level-table.ts --dir <folder>` makes one page of every level from those files, a GPU's price file and each dressing row (the folder's `notice.txt` is printed first and marks a level whose price no longer stands; `cloud/before/` holds the run the newest one takes the place of, printed beside it). "Which levels
   the list draws" is one answer (`scene/scenarioList.ts listedLevels`) and the render passes are one list (`gpu/timer.ts RENDER_PASSES`): both tools ask those.
 - **A picture fault is debugged from a frame capture** (F6 on the page: every render target over 8 frames and the trace of what the renderer changed;
   `tools/qa/capture-read.ts` reads it; `docs/agents/render.md`, "A CAPTURE IS EVERY TARGET OF A FEW FRAMES").
