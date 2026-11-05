@@ -1237,7 +1237,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   `STALK_STATS` is a tally (rollback-exempt). CHECK: `bun run tools/qa/stalk-check.ts` (probe `stalk`, family stealth), both stands; `STALK_BREAK=1` must
   fail grab, still, steer and let. Measured there, three seeds: 2.6 m behind a man walking away at 1.15 m/s he is in the arm in 4.22 s, top speed 1.60 m/s,
   the largest change of speed in a frame 0.15 m/s; behind a man who stands, 2.48 s; begun 60° off dead astern it ends 42.6° off. Older probes that read the
-  grab's row or its key run with the stalk held off (`probes.ts` `GRAB_ROW_AS_IT_WAS`). WHAT IT COSTS: no grab with a gun out in one press; an alert man
+  grab's row or its key run with the stalk held off (`tools/qa/holds.ts` `GRAB_ROW_AS_IT_WAS`). WHAT IT COSTS: no grab with a gun out in one press; an alert man
   cannot be stalked (nor grabbed before it); the creep makes the crouch's own footfalls and moves under their eyes as any crouched Sam does. NOT DONE: the
   pose does not yet change over the creep (the arm comes up at the grab, as before); nothing at a corner. Driven in the real page on the software adapter
   (`tools/qa/stalk-page.cjs`); never played by a person, never seen on a GPU.
@@ -1570,7 +1570,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   row's words; with the stalk as the page has it the held button's grab is the stalk's own, counted once; with the click the only way
   and with the knife back the row says it and both halves work; off; the harness line. One seed: these are timings of a fixed beat.
   `stalk-page.cjs` drives both on the real page. The probes that read the build before it (the `close-` family, `heldclicks`, the
-  grab's and the knife's: `KNIFE_AS_IT_WAS` in probes.ts) hold the key down as they hold the knife. WHAT IT COSTS: behind a man, a tap's knockout waits for the button to come up (a frame or five later than the
+  grab's and the knife's: `KNIFE_AS_IT_WAS` in tools/qa/holds.ts) hold the key down as they hold the knife. WHAT IT COSTS: behind a man, a tap's knockout waits for the button to come up (a frame or five later than the
   press). NOT DONE: the choke out of a held button has no pose of its own (it is the grab, then the hold's choke); no sound of its
   own. Nobody has played it or seen it on a GPU.
 - **He watches the man who matters, and gives a man room as he passes (10-23; `SAMLOOK` in `samlook.ts`, the poses `WATCH` in

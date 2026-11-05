@@ -889,7 +889,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   a light, and a post and a wall's end are both solid. 12 level files re-exported (gwot-yard, library-hall, pass, police-post, snatch, train-move, tut-kit,
   tut-pair, tut-road, tut-sky, tut-solo, tut-team): 48 boxes, 32 posts (`h` only) and 16 bay sides, none added or removed, no light moved. 206 seen after
   (ONE grew over the check's centimetre: tut-road's hand-built lamp head already bit a centimetre into a gate post with a face in the post's, and is
-  1.6 cm there now; it is one of the lamps owed a piece).
+  1.6 cm there now; it is a sodium lamp on a post's face, not the yard lamp below, and is still owed its own mend).
   TWO RULES of `bun run tools/levels/library.ts --check` keep it so. NO PIECE FLICKERS BY ITSELF: every call a generator makes that lays a box is laid
   alone on a stand of its own and asked by `zfight`: of each CALL, not of each piece once, because the wash line's fault depended on where the line stood
   and its showroom call was clean; and a patch a call shows alone is asked again with everything its generator BUILT round it, in this run and never
@@ -899,7 +899,26 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   on the kit as it was before the first step: the three pieces by name, the armchair, and gwot-yard 6, library-hall 4.
   PLAY MOVES, measured in the step's own notes on both stands: a van's bay sides and a gate's posts are solid, so runs on levels that stand them can
   differ by a step. What is left is each level's own: a wall laid THROUGH the wall it meets to its far face (end it at the near face), a lamp's arm in
-  its head's top (four generators build that lamp by hand: it is owed a piece), two things laid over each other. Never seen on a GPU: the check reads files.
+  its head's top (that lamp was built by hand in five generators: it is a piece now, below), two things laid over each other. Never seen on a GPU: the check reads files.
+  THE YARD LAMP IS A PIECE (11-05, `gwotKit yardLamp`; shown in library-hall's north-east corner, where a piece the look's kit gains is stood). A pole,
+  an arm, a shaded head and a lens with a spot under it were written out by hand in five generators (train-ground's `lamp`, which the vault, Lights out
+  and the two trains lay; tut-pair, tut-quiet, tut-solo and tut-kit, the last two with a tall mast as well) and copied as plain boxes into the two trains'
+  Team & kit sets, each with the arm run on INTO the head with its top in the head's top. The piece's arm ENDS at the pole's face and at the head's
+  (it throws, by the lamp's name, where a pole stands too near its head for an arm). Its options are what the five differed in: the lens's height, which
+  way and how far the pole stands from the head (`axis`, `reach`: the HEAD hangs at the piece's x and z, not the pole), the pole's thickness, the cone,
+  strength, reach of the light, colour, haze, group, and `mains`, which is its own supply unless said, as the floodLight's. train-ground's `lamp` IS the
+  piece now; the tutorials call it. Eight level files (lights-out, train-move, train-silent, tut-kit, tut-pair, tut-quiet, tut-solo, vault): 23 arms' `c`
+  and `h`, no box added or removed, no id moved, and every LIGHT what it was to the byte but three: tut-kit's lamps on poles said nothing of the mains
+  and now say `mains: true`, which is what every reader of the word already took silence to mean (`mains !== false`). The two trains' kit sets' copies
+  of the arm are the new one. What an arm gave up lay INSIDE its head (and, on the two masts, inside the pole), so the solid a round, a ray or a foot
+  meets is the same everywhere but one place: a mast's arm used to stick five centimetres out past its pole, 4.7 m up, on tut-kit and tut-solo, and no
+  longer does. 183 seen after. NOT THIS PIECE: a floodlight on a pole is `floodLight`; the sodium lamps of tut-road and tut-sky hang off a wall or a
+  post's face and are another shape, still written in their generators (tut-road's head in a gate post, above, is theirs and stays); the depot's mast and
+  its red lamp, four patches, are the depot's own. NO SWITCH (a picture's mend). MEASURED on the step's own base, before against after, on both stands,
+  by what loads the eight: the nine lessons (tut-kit, tut-pair, tut-quiet and tut-solo are four of them; tut-kit's has the breaker thrown), each the same
+  run by digest; the vault's scripted runs (five plans, the breaker's among them, seeds 1 and 2) and Lights out's (three plans), each record the same.
+  No mission of the list's 21 loads one of the eight, so the 42 say nothing of them (they are the same too). A checkpoint or a recording made on one of
+  the eight before this is refused after it: the level's fingerprint reads every box to the centimetre. Never seen on a GPU and not played.
 - **THE SMOKE LAB'S FLOOR** (11-01; `levels/smoke-lab.json` from `tools/levels/smoke-lab.ts`, the GWOT kit; opened by the dev server's `/smokelab`, in no
   mission list, nobody on it but Sam; the lab's panel is `docs/agents/render.md`, THE SMOKE LAB). The maintainer asked for "a separate smoke lab that's more
   suited to playing with it". Each place shows one thing smoke does and is there for nothing else: the YARD (open ground under the sky and a low wall of
@@ -1524,6 +1543,35 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   NOT DONE: a plain car's and the office van's GLASS says no finish (matte glass; the kits' dark glass is 0.1); the plough lorry's tipper sides are
   plain orange beside a coated cab; the editor's finish panel shows the file's number, not what is sent. COST: smooth finishes are what the reflection
   pass traces, and the plain cars are new to it: NOT MEASURED ON A GPU.
+- **A LEVEL IN OTHER CLOTHES** (2026-11-05; no switch, no level wears one yet, every level file byte for byte as it was). Three small things let a
+  level wear a palette that is not the kit's own, each written once. (1) THE KIT IS HANDED ITS PAINTS BY ITS HOST: `GwotHost.paints` (a `KitPaints`: a
+  colour and a finish for every row the kit names; absent = the kit's palette). Every row a piece names is looked up there, so a piece is written once,
+  in the kit's row names, and no piece knows which clothes it is laid in. `gwotPalette.ts paintsOf(palette, finish, of, words?)` makes such a set from
+  another palette: `of` says which of its rows each kit row wears (data, one line a row, held by the compiler to every row of the kit), and each answer
+  is that row's numbers as a paint of its own, known by the palette row's name, drawn as that name is (or as `words` says), with its finish, DOING WHAT
+  THE KIT'S ROW DOES (`stuff.ts PAINT_DOES`; a stand-in is made one way, `stuff.ts doingAs`, for the kit's own palette and a host's alike): a drum is steel to a round in any enamel and a partition is cut by a charge in any plaster. Many kit rows
+  may wear one row; each is its own paint because they do different things, and in the file each box wears the row by its numbers and says its own
+  `does` where that differs from the row's. (2) A LOOK FILE'S SKIN TAKES THE SAME SET: `Skin.of` (`tools/levels/gwotSkin.ts`). The skin's rules still
+  answer in the kit's row names; `of` says what a row is in this file, for the boxes repainted, the props' parts and the decals the kit lays. A repaint
+  never touched what a box does, so nothing else is asked. WHAT A SKIN DOES NOT REACH: a box the plain file's own generator laid with the kit (a lived
+  room's things: 972 boxes over the 14 plain levels that have a look file) is left as laid, in the kit's paint, under any skin; a level that is to
+  wear a second palette lays those over a host that hands the kit its paints. (3) A FILE KEEPS ONLY THE ROWS IT WEARS: a generator's `PALETTE` export
+  (rows as `MATERIALS` has them, each free to say its own `stuff` and `does`) is written through `tools/levels/wornRows.ts`, which drops a row no box,
+  shape's piece, prop's part or scenario's own box names. So a row added to such a palette moves no file that does not wear it. `MATERIALS` is still
+  written whole, which is why a new row of the kit's palette makes every look file stale; moving it to the same rule is one step that rewrites those
+  files' materials blocks, not taken here. NOT HERE: any second palette. The check makes a small one of its own.
+  THREE THINGS A SECOND PALETTE'S AUTHOR MEETS. (a) A LAMP'S LENS IS NOT CLOTHES: a vehicle's head lamps are laid in the kit's own white and its tail
+  lamps in its own red whatever the host hands over, because `game/carlamps.ts` finds a lamp by those two paints (the one rule of the game that still
+  knows a thing by a colour; its mend is a word on the box and is the cars'). (b) A TONE THAT LANDS ON ANOTHER ROW'S COLOUR STILL THROWS (`toned`: a
+  file's writer names a row by its numbers), but two kit rows that wear ONE row are not each other's clash; the tones are the pieces' own numbers, so
+  a palette whose rows sit within 0.006 of a tone of another is the palette's to move. (c) THE PAGE'S OWN LOOK STEPS DO NOT KNOW IT YET: whether a
+  level "wears the look" is asked of its boxes' colours against the kit's palette (`scene/lookTidy.ts`, `lookDoors`' accent, and the checks
+  `look-check` and `wetground-check`), so a level wholly in a second palette is tidied as a plain one and a level partly in it takes the kit's accent
+  for its doors. That question wants a word in the level file (which palette it wears) and belongs to the first level that wears one.
+  CHECK: `bun run tools/qa/palette-check.ts` (the same on both stands; no game is stood up), three lines, one a thing: every call the two showrooms
+  make of a piece of the kit (all 79 pieces, so tomorrow's too), laid alone in the kit's palette and again over a host's paints, is box for box and
+  part for part the same, every box and part does what it did, the game finds the same lamps, and but for a lens nothing is left in a row of the kit's; a skin handed the paints repaints the boxes the first skin repaints and no others, on the 14 plain levels that have a look file;
+  the worn rows. `PALETTE_BREAK=1`, `=2`, `=3` each turn their own line red. Never seen on a GPU: nothing is drawn differently until a level wears one.
 - **A LEVEL FILE NAMES ITS MARKS** (the format, no switch, no rule of play; 2026-11-05). A mark is a named place on the floor where a person stands to
   use a thing: the end of a `walked` way and a script's place, read by name (`scene/ways.ts`, `game/director.ts`). Until now only the office had any, and
   only as code joined on at load (`scene/level.ts withMarks`, which is GONE). The file has a slot: top-level `marks: [{ id, pos, yaw? }]`

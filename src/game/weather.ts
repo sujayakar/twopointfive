@@ -30,12 +30,10 @@ import { isDaylight } from './lighting';
 import { onScreen } from './guards';
 import { WORLD } from '../scene/world';
 import { hourWeatherChanged } from './hours';   // (called inside setKind only)
-import { WEATHER_BOOT, WX_OWN, WEATHER_PRESETS, isAnyKind, snowLevel, packFog, unpackFog, fogGlowWord, packRect, unpackRect, inRect } from './weatherKinds';
+import { WEATHER_BOOT, WX_OWN, WEATHER_PRESETS, MAX_ROOFS, isAnyKind, snowLevel, packFog, unpackFog, fogGlowWord, fogTau, packRect, unpackRect, inRect } from './weatherKinds';
 import type { WeatherKind, Rect, FogSpec } from './weatherKinds';
 import { WORDS, wg } from './words';   // (a leaf: the dialogue pass's one switch)
 import { levelNameOf } from '../scene/levelLoad';   // (asked inside levelKind only)
-import { sim, f64 } from '../sim/sim';
-import { WX_BIT, WX, WX_KNOBS, WX_WATCH, roofsCounted, wxAt, wxCap, wxGet, wxOut, wxScratch, wxSet } from '../sim/weatherhome';
 
 // ---- WEATHER KINDS (weatherKinds.ts; `?weather=<kind>`, the mission list's Weather row). `Weather.kind` null = everything in this file exactly as it was: the night
 // storm, the two office footprints below, and NOTHING of the simulation touched (hearMask and airTrans answer exactly 1). With a kind set:
@@ -61,15 +59,20 @@ export const WX_SIM = { rainK: 1.2, thunderK: 1.5, thunderSecs: 1.4, thunderLoud
   loudDry: true };
 /** the storm's numbers when no kind is picked (the fields' initialisers below — setKind(null) puts them back) */
 const LEGACY = { storm: 0.7, rain: 0.55, wind: [1.1, 0.45] as [number, number], cloud: 0.95 };
+const ROOF_PAD = 0.06;   // a roof reaches this far past its slab: two slabs a couple of centimetres apart (the office's stair tower and its main roof) leave no strip of sky between them
 const NO_RECT: Rect = [1e6, 1e6, -1e6, -1e6];   // a footprint nothing is inside (and no ray crosses)
 /** the level's roofs as footprints: its ceiling slabs (render/reach.ts buildInteriorCells's own test), biggest first, at most MAX_ROOFS (four: no level has more) */
 export function roofsOf(boxes: readonly Box[]): Rect[] {
-  const x = sim(), Y = WORLD.ceilingY; x.weather_roofs_begin();
-  for (const b of boxes) x.weather_roofs_box(b.c[0], b.c[1], b.c[2], b.h[0], b.h[1], b.h[2], Y);
-  const n = x.weather_roofs_end(), v = wxOut(n * 4), out: Rect[] = []; for (let i = 0; i < n; i++) out.push([v[i * 4], v[i * 4 + 1], v[i * 4 + 2], v[i * 4 + 3]]);
-  if (WX_WATCH.on) WX_WATCH.saidMany('weather.roofsOf', v, []);
-  return out;
+  const out: Rect[] = [];
+  for (const b of boxes) {
+    const y0 = b.c[1] - b.h[1], y1 = b.c[1] + b.h[1];
+    if (!(y0 >= WORLD.ceilingY - 0.25 && y1 <= WORLD.ceilingY + 0.45) || b.h[0] < 0.45 || b.h[2] < 0.45) continue;
+    out.push([b.c[0] - b.h[0] - ROOF_PAD, b.c[2] - b.h[2] - ROOF_PAD, b.c[0] + b.h[0] + ROOF_PAD, b.c[2] + b.h[2] + ROOF_PAD]);
+  }
+  const area = (r: Rect) => (r[2] - r[0]) * (r[3] - r[1]);
+  return out.sort((a, b) => area(b) - area(a)).slice(0, MAX_ROOFS);
 }
+
 /** a ground slab a picked rain wets: its top is the ground everybody stands on (the lot's y = 0, or the base a level's houses stand on a millimetre over it —
  *  room floors lie at 4 mm, grass at a centimetre: neither), it is drawn, it is not small, and some of it has no roof over it (the footprints the rain is drawn by) */
 export function openGround(b: Box, roofs: readonly Rect[]): boolean {
@@ -105,18 +108,27 @@ export const INTERIOR: [number, number, number, number] = [4, 4, 36, 24];
 export const ANNEX: [number, number, number, number] = [1.1, 9.33, 4.0, 12.87];
 const RAIN_TOP = 7.0;            // streaks below this (m): over the sodium heads (5 m), well under the camera
 const RAIN_V = 9.0;              // fall speed the shader animates with (m/s) — −wind ÷ this = the streaks' shear (see update())
+const WET_SECS = 20;             // dry → fully wet (and back) over this long
 export const WET_ROUGH = 0.22;          // wet asphalt for the RT reflection pass (Box.rough while it rains; the dry slab keeps whatever the level gave it — 0.92 in the office): a water film over aggregate, glossy but not a mirror
 export const WET_ALBEDO = 0.5;          // wet asphalt: darker (the water film kills the diffuse scatter off the aggregate) — and glossy (BoxFlag.Gloss; fgather.wgsl boosts the coat outdoors by the wetness)
+const SPEED_OF_SOUND = 343;
+/** lightning: peak irradiance of the first return stroke on a surface square to it (the daylight sun is 8; a close stroke outshines it for its few milliseconds) */
+const FLASH_PEAK = 18;
 const FLASH_COLOR: Vec3 = [0.78, 0.86, 1.0];   // ≈ 9000 K
 const FLASH_SECS = 0.5;          // envelope support: two return strokes and the odd third flicker (below) are under 0.1 % of peak by then
 /** the sky the stroke lights, as radiance added to outdoor air / rain per unit of stroke irradiance (volumetrics.wgsl weatherB) */
 const SKY_FLASH_K = 0.045;
+/** mean seconds between strokes at storm intensity 1 (÷ intensity below; clamped to the brief's 8‥25 s band, jittered ×0.5‥1.5) */
+const FLASH_MEAN_GAP = 11;
 const THUNDER_LINES = ['lovely night for it.', 'that one was close.', "glad I'm not out in that.", "it's really coming down.", 'storm\'s right on top of us.'];
 /** in place of "glad I'm not out in that." from a man who IS out in it (words.ts) */
 const THUNDER_OUT = 'no let-up, is there.', THUNDER_OUT_GUIDE = "it's not letting up, huh.";
 const BARK_COOLDOWN = 45;        // seconds between any two weather remarks on the floor
 const BARK_CHANCE = 0.35;        // per thunder loud enough to remark on
 
+/** mulberry32: the weather's own dice (never Math.random — the QA harness seeds that one for the game, and a storm must not shift its sequence). Its one word of
+ *  state is readable / writable so a checkpoint carries the storm's schedule on exactly (game/savestate.ts → Weather.snapshot / restore). */
+function rng32(seed: number) { const R = { a: seed >>> 0, next: () => { R.a = (R.a + 0x6D2B79F5) >>> 0; const a = R.a; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; } }; return R; }
 /** the storm in a checkpoint: the knobs, the wetness, the schedule (game time of the next stroke, thunder on its way, the last remark) and the dice's state */
 export interface WeatherSnap { kind?: WeatherKind | null; thunderUntil?: number; on: boolean; storm: number; rainRate: number; wind: [number, number]; wetGloss: boolean; wet: number; nextFlashAt: number; thunders: Thunder[]; lastBarkT: number; rng: number; stats: { flashes: number; thunders: number; barks: number }; }
 
@@ -124,10 +136,12 @@ export interface WeatherSnap { kind?: WeatherKind | null; thunderUntil?: number;
 export interface Stroke { pulses: { t0: number; amp: number; tau: number }[]; }
 /** mean of the stroke's envelope over [a, b] (what a frame spanning that interval should show — exact for any frame length) */
 export function strokeMean(s: Stroke, a: number, b: number): number {
-  const m = f64(), o = wxScratch(), n = s.pulses.length; for (let i = 0; i < n; i++) { const p = s.pulses[i]; m[o + i * 3] = p.t0; m[o + i * 3 + 1] = p.amp; m[o + i * 3 + 2] = p.tau; }
-  const r = sim().weather_stroke_mean(n, a, b);
-  return WX_WATCH.on ? WX_WATCH.said('weather.strokeMean', r, [n, a, b]) : r;
+  if (b <= a) return strokeAt(s, a);
+  let e = 0;
+  for (const p of s.pulses) { const lo = Math.max(a, p.t0); if (b <= lo) continue; e += p.amp * p.tau * (Math.exp(-(lo - p.t0) / p.tau) - Math.exp(-(b - p.t0) / p.tau)); }
+  return e / (b - a);
 }
+export function strokeAt(s: Stroke, t: number): number { let e = 0; for (const p of s.pulses) if (t >= p.t0) e += p.amp * Math.exp(-(t - p.t0) / p.tau); return e; }
 
 export interface Flash { light: RtLight; stroke: Stroke; t: number; peak: number; dir: Vec3; bearing: number; distKm: number; }
 export interface Thunder { at: number; distKm: number; bearing: number; loud: number; }
@@ -138,62 +152,39 @@ export class Weather {
   set enabled(v: boolean) { this.setEnabled(v); }
   private on = true;
   /** the weather the level was STARTED in (weatherKinds.ts), or null = as it has always been. Set at birth from WEATHER_BOOT, by a checkpoint, or setKind(). */
-  get kind(): WeatherKind | null { return this.kindNow; }
-  set kind(k: WeatherKind | null) { this.kindNow = k; wxSet(this.g.sim, WX.live, k ? 1 : 0); }
-  private kindNow: WeatherKind | null = null;
-  /** the no-rain footprints in force: the office's two when no kind is picked, else the level's own roofs (≤ 4; the 3rd and 4th at the renderer's 0.2 m). The table the
-   *  rules read is the module's (rust/sim/src/weather.rs roofs): one writer, here */
-  get roofs(): Rect[] { return this.roofRects; }
-  set roofs(r: Rect[]) {
-    const st = this.g.sim, n = r.length, q = wxAt(WX.roofs) >>> 3; if (n > wxCap(0)) throw new Error(`weather: ${n} roofs, and the table holds ${wxCap(0)}`);
-    for (let i = 0; i < n; i++) for (let k = 0; k < 4; k++) st.d[q + i * 4 + k] = r[i][k];
-    wxSet(st, WX.roofsN, n); this.roofRects = r;
-  }
-  private roofRects: Rect[] = [];
-  /** the fog in the air, as the renderer's 32 bits decode it (null = none) — the one set of numbers picture and simulation share; the module's table holds what an eye reads of it */
-  get fog(): FogSpec | null { return this.fogSpec; }
-  private fogSpec: FogSpec | null = null;
+  kind: WeatherKind | null = null;
+  /** the no-rain footprints in force: the office's two when no kind is picked, else the level's own roofs (≤ 4; the 3rd and 4th at the renderer's 0.2 m) */
+  roofs: Rect[] = [INTERIOR, ANNEX];
+  /** the fog in the air, as the renderer's 32 bits decode it (null = none) — the one set of numbers picture and simulation share */
+  fog: FogSpec | null = null;
   private fogWord = 0;
-  private setFog(word: number) { const st = this.g.sim, f = unpackFog(word); this.fogWord = word; this.fogSpec = f; wxSet(st, WX.fogOn, f ? 1 : 0); wxSet(st, WX.fogSigma, f ? f.sigma : 0); wxSet(st, WX.fogH, f ? f.H : 0); wxSet(st, WX.fogLeak, f ? f.leak : 0); }
   /** the fog's glow in the PICTURE as a factor of the frame's sky horizon (1 = as packed). hours.ts writes it under an hour: a cloud deck brightens the sky
    *  it scales, and the veil would glow with that instead of with the daylight left. Nothing the simulation reads. */
   fogGlow = 1;
   /** game time until which a thunderclap is drowning the floor's small noises (kinds only) */
-  get thunderUntil(): number { return wxGet(this.g.sim, WX.thunderUntil); }
-  set thunderUntil(v: number) { wxSet(this.g.sim, WX.thunderUntil, v); }
+  thunderUntil = -1e9;
   /** CLOUD COVER 0‥1: how much of the sky's own light this weather takes. A number to READ — nothing in this file dims the moon or the sun (when no kind is
    *  picked the lights must stay as they are: test `kind` before applying it). */
   get cloud(): number { return !this.on ? 0 : this.kind ? WEATHER_PRESETS[this.kind].cloud : LEGACY.cloud; }
   /** storm intensity 0‥1: stroke frequency (mean gap FLASH_MEAN_GAP ÷ this, clamped 8‥25 s) and nearness, wind, the rain bed's level */
-  get storm(): number { return wxGet(this.g.sim, WX.storm); }
-  set storm(v: number) { wxSet(this.g.sim, WX.storm, v); }
+  storm = 0.7;
   /** rain rate 0‥1: the fraction of the streak lattice falling (0 = a dry storm: lightning without rain) */
-  get rainRate(): number { return wxGet(this.g.sim, WX.rainRate); }
-  set rainRate(v: number) { wxSet(this.g.sim, WX.rainRate, v); }
+  rainRate = 0.55;
   /** wind (m/s, x / z): the streaks lean by wind ÷ RAIN_V */
   wind: [number, number] = [1.1, 0.45];
   /** switch the glossy-floor experiment on with the wet lot (and back off after) — the wet asphalt then mirrors the lamps, the bollards, the lit facade (not the
    *  strokes: transient lights stay out of the gloss term's light loops like out of every accumulated signal), and the polished floors indoors reflect too */
   wetGloss = true;
   /** current wetness 0‥1 (eases toward rainRate > 0 ? 1 : 0) */
-  get wet(): number { return wxGet(this.g.sim, WX.wet); }
-  set wet(v: number) { wxSet(this.g.sim, WX.wet, v); }
+  wet = 0;
   /** the stroke in progress (its light is in the LightSet while this is set), the thunder still on its way, when the next stroke is due (game time) */
   flash: Flash | null = null;
-  /** the thunder on its way, the module's list as it stands */
-  get thunders(): readonly Thunder[] { const st = this.g.sim, n = wxGet(st, WX.thundersN), q = wxAt(WX.thunders) >>> 3, out: Thunder[] = []; for (let i = 0; i < n; i++) out.push({ at: st.d[q + i * 4], distKm: st.d[q + i * 4 + 1], bearing: st.d[q + i * 4 + 2], loud: st.d[q + i * 4 + 3] }); return out; }
-  private set thundersAre(L: readonly Thunder[]) { const st = this.g.sim; wxSet(st, WX.thundersN, 0); for (const t of L) sim().weather_thunder_add(st.bind(), t.at, t.distKm, t.bearing, t.loud); }
-  /** a thunder put on its way by hand (a check's) */
-  thunder(t: Thunder) { sim().weather_thunder_add(this.g.sim.bind(), t.at, t.distKm, t.bearing, t.loud); }
-  get nextFlashAt(): number { return wxGet(this.g.sim, WX.nextFlashAt); }
-  set nextFlashAt(v: number) { wxSet(this.g.sim, WX.nextFlashAt, v); }
+  thunders: Thunder[] = [];
+  nextFlashAt = -1;
   /** counters for the probes / panel: strokes fired, thunder played, remarks made, the last thunder's numbers */
   stats = { flashes: 0, thunders: 0, barks: 0, lastThunder: null as (Thunder & { playedAt: number; name: string; gain: number }) | null };
-  /** the storm's own die: a word of the module's table */
-  private get die(): number { return this.g.sim.w[wxAt(WX.dice) >>> 2]; }
-  private set die(v: number) { this.g.sim.w[wxAt(WX.dice) >>> 2] = v; }
-  private get lastBarkT(): number { return wxGet(this.g.sim, WX.lastBarkT); }
-  private set lastBarkT(v: number) { wxSet(this.g.sim, WX.lastBarkT, v); }
+  private dice = rng32(20260809); private rnd = () => this.dice.next();
+  private lastBarkT = -1e9;
   private suspended = false;         // day (the breach showcase): the storm holds — no strokes, no rain; back as it was when night returns
   private touched: { box: Box; albedo: Vec3; flags: number; rough: number | undefined; aniso: boolean | undefined }[] = [];   // boxes the wet lot changed, with what to put back (the finish too: the RT reflection pass reads Box.rough / aniso)
   /** the paint a box had before the wet lot darkened it, if it is one of those. Read only (a check asks it to find the wet lot; the look does not: what a
@@ -201,9 +192,7 @@ export class Weather {
   dryPaint(b: Box): Readonly<Vec3> | undefined { for (const t of this.touched) if (t.box === b) return t.albedo; return undefined; }
   private glossWas: boolean | null = null;   // settings.gloss before the storm switched it on (null = we have not touched it)
 
-  constructor(private g: Game) { g.sim.keep(WX_BIT, 'weather');
-    { const has = roofsCounted(g.level.boxes, WORLD.ceilingY), most = wxCap(0); if (has > most) console.warn(`the level has ${has} ceiling slabs and the weather's table holds ${most}: the biggest ${most} are its roofs, and rain and wind pass the rest`); }   // (content is never an error)
-    this.storm = LEGACY.storm; this.rainRate = LEGACY.rain; this.thunderUntil = -1e9; this.nextFlashAt = -1; this.lastBarkT = -1e9; this.die = 20260809; this.roofs = [INTERIOR, ANNEX]; const born = this.levelKind() ?? (WEATHER_BOOT.kind === 'snow' ? null : WEATHER_BOOT.kind); if (!born && ownFloor(g)) this.ownNight(); this.wet = this.rainRate > 0 ? 1 : 0; if (born) this.setKind(born); else this.syncRoofs(); }   // (wet from the first frame: it has been raining all night — the lot starts wet, not drying in front of the player over the first twenty seconds)
+  constructor(private g: Game) { const born = this.levelKind() ?? (WEATHER_BOOT.kind === 'snow' ? null : WEATHER_BOOT.kind); if (!born && ownFloor(g)) this.ownNight(); this.wet = this.rainRate > 0 ? 1 : 0; if (born) this.setKind(born); else this.syncRoofs(); }   // (wet from the first frame: it has been raining all night — the lot starts wet, not drying in front of the player over the first twenty seconds)
   /** A LEVEL BUILT FOR SNOW (weatherKinds.ts SNOW_LEVELS, the switch SNOW.on) is born in the kind 'snow' and stays in it: the level's own weather, whatever a
    *  URL or a tool picked for the visit. null = any other level (and every level with the switch off): the rules below, untouched. */
   private levelKind(): WeatherKind | null { return snowLevel(levelNameOf(this.g.level)) && (!WEATHER_BOOT.locked || WEATHER_BOOT.kind === 'snow') ? 'snow' : null; }   // (a page — locked — that was not opened on the snow level has no flake in its shaders: a level of that name loaded into it later stands under the weather any level has)
@@ -212,7 +201,7 @@ export class Weather {
   /** NO WEATHER PICKED ON A FLOOR THAT IS NONE OF THE OFFICE'S (ownFloor): the legacy storm rains by the office's two rectangles, which are another building's —
    *  so such a level's own night is DRY AND STILL (no rain, no strokes, no wind: nothing drawn, nobody wet, nothing blown), under its own roofs for whoever asks.
    *  A picked weather (the mission's row, ?weather=) is the level's own roofs and that kind, as on any level. */
-  private ownNight() { this.storm = 0; this.rainRate = 0; this.wind = [0, 0]; this.setFog(0); this.roofs = this.ownRoofs(); }
+  private ownNight() { this.storm = 0; this.rainRate = 0; this.wind = [0, 0]; this.fogWord = 0; this.fog = null; this.roofs = this.ownRoofs(); }
   /** NO WEATHER PICKED ON A SQUAD LEVEL THAT IS NOT THE OFFICE'S SHELL (weatherKinds.ts WX_OWN.roofs): the level's own storm, every number of it as ever, cut by
    *  the level's OWN roofs — the rain drawn, the wet men, the wind, the rain bed, the wet ground — where it used to be cut by the office's two rectangles (the
    *  records office: no rain on its car park, which lies inside the office's footprint). True while that is in force. The office, and every level whose roofs ARE
@@ -252,16 +241,16 @@ export class Weather {
     if (WEATHER_BOOT.locked && kind !== WEATHER_BOOT.kind) { console.warn(`weather: this page was opened in '${WEATHER_BOOT.kind ?? 'the level\'s own'}' — open it with ?weather=${kind ?? ''} for another (the renderer's half is compiled at boot)`); return false; }
     const g = this.g; this.setWet(false); this.kind = kind; this.own = false; this.snowRate = 0;   // (what is wet depends on the kind: put the ground back, the next update wets it by the new rule; the footprints are dealt afresh below)
     if (kind && !this.on) this.on = true;   // (a picked weather IS on: the simulation follows it, so the picture must)
-    this.endFlash(); this.thundersAre = []; this.nextFlashAt = -1; this.thunderUntil = -1e9;
+    this.endFlash(); this.thunders.length = 0; this.nextFlashAt = -1; this.thunderUntil = -1e9;
     if (kind) {
       const P = WEATHER_PRESETS[kind];
       this.storm = P.storm; this.rainRate = P.rain; this.wind = [P.wind[0], P.wind[1]]; this.snowRate = P.snow ?? 0;
-      this.setFog(packFog(P.fog));
+      this.fogWord = packFog(P.fog); this.fog = unpackFog(this.fogWord);
       this.roofs = this.ownRoofs();
     } else if (ownFloor(g)) { this.ownNight(); }
     else {
       this.storm = LEGACY.storm; this.rainRate = LEGACY.rain; this.wind = [LEGACY.wind[0], LEGACY.wind[1]];
-      this.setFog(0); this.roofs = [INTERIOR, ANNEX];
+      this.fogWord = 0; this.fog = null; this.roofs = [INTERIOR, ANNEX];
     }
     this.wet = this.on && this.rainRate > 0 ? 1 : 0;
     this.syncRoofs(true);   // (the wind is told the footprints in force — wind.ts is built after this object: its constructor asks for the roofs itself; no kind on a level of another shape than the office = its own roofs, WX_OWN)
@@ -277,37 +266,34 @@ export class Weather {
   }
   /** the footprints in force now, as underRoof reads them (for a rule that asks many points of them elsewhere: the thrown things' walk in the Rust module) */
   roofsNow(): readonly Rect[] { this.syncRoofs(); return this.roofs; }
-  /** is (x, z) under one of the footprints the rain is cut by (rust/sim/src/weather.rs under_roof) */
-  underRoof(x: number, z: number): boolean {
-    this.syncRoofs();
-    const r = sim().weather_under_roof(this.g.sim.bind(), x, z);
-    return (WX_WATCH.on ? WX_WATCH.said('weather.underRoof', r, [x, z]) : r) !== 0;
-  }
+  /** is (x, z) under one of the footprints the rain is cut by */
+  underRoof(x: number, z: number): boolean { this.syncRoofs(); for (const r of this.roofs) if (inRect(r, x, z)) return true; return false; }
   /** the rain bed's level at a listener (0‥1): what the mixer plays there, and what hearMask drowns small noises by */
-  rainBed(x: number, z: number): number {
-    this.syncRoofs(); WX_KNOBS.here();
-    const r = sim().weather_rain_bed(this.g.sim.bind(), x, z);
-    return WX_WATCH.on ? WX_WATCH.said('weather.rainBed', r, [x, z]) : r;
-  }
-  /** HEARING under this weather: the factor (≥ 1) a sound's path is stretched by for a listener at `ear` — exactly 1 with no kind picked. A number of the ear alone; the
-   *  sound's own answer is the module's sound.rs, and the product is the asker's (hearPath) */
+  rainBed(x: number, z: number): number { return this.rainRate > 0.001 ? (0.35 + 0.65 * this.rainRate) * (this.underRoof(x, z) ? WX_SIM.roofBed : 1) : 0; }
+  private get simLive(): boolean { return !!this.kind; }   // (a kind is never off and never held for the day: setKind / setEnabled / update)
+  /** HEARING under this weather: the factor (≥ 1) a sound's path is stretched by for a listener at `ear` — exactly 1 with no kind picked */
   hearMask(ear: Vec3): number {
-    if (this.kindNow) WX_KNOBS.here();   // (no kind picked reads no knob: exactly 1)
-    const r = sim().weather_hear_mask(this.g.sim.bind(), this.g.time, ear[0], ear[2]);
-    return WX_WATCH.on ? WX_WATCH.said('weather.hearMask', r, [this.g.time, ear[0], ear[2]]) : r;
+    if (!this.simLive) return 1;
+    let k = 1 + WX_SIM.rainK * this.rainBed(ear[0], ear[2]);
+    if (this.g.time < this.thunderUntil) k += WX_SIM.thunderK * (this.underRoof(ear[0], ear[2]) ? 0.6 : 1);
+    return k;
   }
   /** SIGHT under this weather: the fog's transmittance along a → b (the field composite.wgsl draws: fogTau × the roof leak, the leak averaged over four points of
-   *  the line) — exactly 1 with no kind picked or no fog in it. The smoke's own answer is the module's smoke.rs, and the product is the asker's */
+   *  the line) — exactly 1 with no kind picked or no fog in it */
   airTrans(a: Vec3, b: Vec3): number {
-    if (this.fog && this.kind) { const air = this.g.airDust; if (air) air.ready(); }   // (the field stands before it is read: it is built when first asked)
-    const r = sim().weather_air_trans(this.g.sim.bind(), a[0], a[1], a[2], b[0], b[1], b[2]);
-    return WX_WATCH.on ? WX_WATCH.said('weather.airTrans', r, [...a, ...b]) : r;
+    const f = this.fog; if (!f || !this.simLive) return 1;
+    let leak = 0;
+    const air = this.g.airDust;
+    if (air?.live) { const n = Math.min(24, Math.max(4, Math.ceil(Math.hypot(b[0] - a[0], b[2] - a[2]) / 0.75))); for (let i = 0; i < n; i++) { const t = (i + 0.5) / n; leak += air.shareAt(a[0] + (b[0] - a[0]) * t, a[2] + (b[2] - a[2]) * t); } return Math.exp(-fogTau(f, a, b) * leak / n); }   // (airDust.ts: the dust where it actually stands — thick on an open door's threshold, the leak in a shut room)
+    for (let i = 0; i < 4; i++) { const t = (i + 0.5) / 4; leak += this.underRoof(a[0] + (b[0] - a[0]) * t, a[2] + (b[2] - a[2]) * t) ? f.leak : 1; }
+    return Math.exp(-fogTau(f, a, b) * leak / 4);
   }
+
   /** the weather's dice, reseeded (probes: same seed → same strokes, bearings, distances, remarks) */
-  seed(n: number) { this.die = n >>> 0; this.nextFlashAt = -1; }
+  seed(n: number) { this.dice = rng32(n); this.nextFlashAt = -1; }
 
   /** for a checkpoint (game/savestate.ts): everything the storm's next minutes hang on — a stroke in progress is not carried (a quarter second of light: the load ends any) */
-  snapshot(): WeatherSnap { return { ...(this.kind ? { kind: this.kind, thunderUntil: this.thunderUntil } : {}), on: this.on, storm: this.storm, rainRate: this.rainRate, wind: [this.wind[0], this.wind[1]], wetGloss: this.wetGloss, wet: this.wet, nextFlashAt: this.nextFlashAt, thunders: this.thunders.map(t => ({ ...t })), lastBarkT: this.lastBarkT, rng: this.die, stats: { flashes: this.stats.flashes, thunders: this.stats.thunders, barks: this.stats.barks } }; }
+  snapshot(): WeatherSnap { return { ...(this.kind ? { kind: this.kind, thunderUntil: this.thunderUntil } : {}), on: this.on, storm: this.storm, rainRate: this.rainRate, wind: [this.wind[0], this.wind[1]], wetGloss: this.wetGloss, wet: this.wet, nextFlashAt: this.nextFlashAt, thunders: this.thunders.map(t => ({ ...t })), lastBarkT: this.lastBarkT, rng: this.dice.a, stats: { flashes: this.stats.flashes, thunders: this.stats.thunders, barks: this.stats.barks } }; }
   restore(s: WeatherSnap) {
     const f = (x: number, d: number) => Number.isFinite(x) ? x : d;
     this.endFlash();   // (on / off stays the SESSION's — ?noweather, the panel — the file's `on` is kept for the record only)
@@ -315,8 +301,8 @@ export class Weather {
     { const own = this.levelKind(); if (own && (isAnyKind(s.kind) ? s.kind : null) !== own) return; }   // (a file made in other weather on a level that keeps its own — refuses() said so: none of its rain, wind or wet comes in)
     this.thunderUntil = f(s.thunderUntil ?? -1e9, -1e9);
     this.storm = f(s.storm, this.storm); this.rainRate = f(s.rainRate, this.rainRate); this.wind = [f(s.wind?.[0], this.wind[0]), f(s.wind?.[1], this.wind[1])]; this.wetGloss = s.wetGloss !== false; this.wet = f(s.wet, this.wet);
-    this.nextFlashAt = f(s.nextFlashAt, -1); this.thundersAre = (s.thunders ?? []).map(t => ({ at: f(t.at, 0), distKm: f(t.distKm, 1), bearing: f(t.bearing, 0), loud: f(t.loud, 0.5) })); this.lastBarkT = f(s.lastBarkT, -1e9);
-    if (Number.isFinite(s.rng)) this.die = s.rng >>> 0;
+    this.nextFlashAt = f(s.nextFlashAt, -1); this.thunders = (s.thunders ?? []).map(t => ({ at: f(t.at, 0), distKm: f(t.distKm, 1), bearing: f(t.bearing, 0), loud: f(t.loud, 0.5) })); this.lastBarkT = f(s.lastBarkT, -1e9);
+    if (Number.isFinite(s.rng)) this.dice.a = s.rng >>> 0;
     if (s.stats) { this.stats.flashes = s.stats.flashes | 0; this.stats.thunders = s.stats.thunders | 0; this.stats.barks = s.stats.barks | 0; }
     this.syncRoofs();   // (a replay's knobs are put in after this object was made: the footprints follow the rule now in force)
   }
@@ -332,16 +318,14 @@ export class Weather {
   strike(opts: { bearing?: number; elevDeg?: number; distKm?: number; peak?: number } = {}): Flash | null {
     if (!this.on || this.suspended) return null;
     if (this.flash) this.endFlash();
-    // (the dice and the thunder are the module's: rust/sim/src/weather.rs strike. What was given is a number, what was not is thrown for)
-    const asked = [opts.bearing ?? NaN, opts.elevDeg ?? NaN, opts.distKm ?? NaN, opts.peak ?? NaN];
-    sim().weather_strike(this.g.sim.bind(), this.g.time, asked[0], asked[1], asked[2], asked[3]);
-    const said = wxOut(8);
-    if (said[5] === 0) { said[6] = 0; said[7] = 0; }
-    if (WX_WATCH.on) WX_WATCH.saidMany('weather.strike', said, [this.g.time, ...asked]);
-    const [bearing, elev, distKm, peak] = said;
+    const r = this.rnd;
+    const bearing = opts.bearing ?? r() * Math.PI * 2;
+    const elev = (opts.elevDeg ?? (24 + r() * 30)) * Math.PI / 180;
+    const distKm = opts.distKm ?? (0.3 + Math.pow(r(), 1.3) * 3.7 * (1.15 - 0.5 * this.storm));   // a heavier storm sits closer
+    const peak = opts.peak ?? FLASH_PEAK * (0.55 + 0.9 * r()) * clamp(1.25 - distKm * 0.18, 0.45, 1.2);
     // two return strokes, sometimes a third flicker: instant rise, 22 ms and 50 ms decays, 85 ms apart (the brief's ~60 + 120 ms)
-    const stroke: Stroke = { pulses: [{ t0: 0, amp: 1, tau: 0.022 }, { t0: 0.085, amp: said[4], tau: 0.05 }] };
-    if (said[5] !== 0) stroke.pulses.push({ t0: said[6], amp: said[7], tau: 0.03 });
+    const stroke: Stroke = { pulses: [{ t0: 0, amp: 1, tau: 0.022 }, { t0: 0.085, amp: 0.35 + 0.45 * r(), tau: 0.05 }] };
+    if (r() < 0.3) stroke.pulses.push({ t0: 0.2 + 0.05 * r(), amp: 0.25 + 0.25 * r(), tau: 0.03 });
     const dir = dirOf(bearing, elev);
     const light: RtLight = {
       name: 'lightning', group: 'weather', kind: 2, pos: [0, 0, 0], dir, color: v3.copy(FLASH_COLOR), intensity: 0, range: 1e6, innerDeg: 0, outerDeg: 0,
@@ -352,51 +336,41 @@ export class Weather {
     };
     this.g.engine.lights.add(light);
     this.flash = { light, stroke, t: 0, peak, dir, bearing, distKm };
+    this.thunders.push({ at: this.g.time + distKm * 1000 / SPEED_OF_SOUND, distKm, bearing, loud: clamp(1.15 - distKm * 0.22, 0.25, 1) });
     this.stats.flashes++;
     this.applyFlash(0, 1 / 60);   // lit from this very frame (update() has already run, or runs next and re-integrates)
     return this.flash;
   }
 
-  /** one thunder, asked: due and gone from the list (its numbers and four dice), or null */
-  private thunderDue(i: number): number[] | null {
-    const g = this.g;
-    WX_KNOBS.here();
-    if (sim().weather_thunder_due(g.sim.bind(), i, g.time) === 0) return null;
-    const said = wxOut(8);
-    if (WX_WATCH.on) WX_WATCH.saidMany('weather.thunder', said, [g.time, i]);
-    return said;
-  }
   private camYaw = 0;
   /** once a frame from Game.update (after the fixtures, before the light-meter queries); camYaw = the follow camera's yaw (which ear the thunder leans to) */
   update(dt: number, camYaw = 0) {
     const g = this.g; this.camYaw = camYaw;
     this.syncRoofs();
     const frame: WeatherFrame = ((g.engine as { weather?: WeatherFrame }).weather ??= noWeather());   // (the QA harness's engine stand-in has none until now)
-    if (!this.on) { zero(frame); this.rainNow = 0; return; }
+    if (!this.on) { zero(frame); return; }
     // day (the breach): the storm holds still and shows nothing — no stroke, no thunder, no wet lot, no rain bed; the night gets it back as it was
     const day = isDaylight(g) && !this.kind;   // (a PICKED weather is the level's by day too: only the level's own night storm waits for the night)
-    if (day !== this.suspended) { this.suspended = day; if (day) { if (this.flash) this.endFlash(); this.thundersAre = []; this.setWet(false); g.audio.rain?.(0); } this.nextFlashAt = -1; }
-    if (this.suspended) { zero(frame); this.rainNow = 0; return; }
+    if (day !== this.suspended) { this.suspended = day; if (day) { if (this.flash) this.endFlash(); this.thunders.length = 0; this.setWet(false); g.audio.rain?.(0); } this.nextFlashAt = -1; }
+    if (this.suspended) { zero(frame); return; }
     const raining = this.rainRate > 0.001;
     // wetness eases in / out; the lot's boxes follow it past a threshold (one flip each way, not a per-frame albedo animation the grid would not notice anyway)
-    { let soaked = sim().weather_lot_step(g.sim.bind(), dt);   // (rust/sim/src/weather.rs lot_step)
-      if (WX_WATCH.on) { this.wet = WX_WATCH.said('weather.lot', this.wet, [dt]); soaked = this.wet > 0.02 ? 1 : 0; }
-      this.setWet(soaked !== 0); }
+    this.wet = clamp(this.wet + (raining ? dt : -dt) / WET_SECS, 0, 1);
+    this.setWet(this.wet > 0.02);
     // ---- strokes
-    { const due = sim().weather_stroke_due(g.sim.bind(), g.time);   // (rust/sim/src/weather.rs stroke_due: the first stroke's time set, and whether one is due now)
-      if (WX_WATCH.on) WX_WATCH.saidMany('weather.strokeDue', [due, this.nextFlashAt], [g.time]);
-      if (due !== 0) { this.strike(); this.nextFlashAt = g.time + this.gap(false); } }
+    if (this.nextFlashAt < 0) this.nextFlashAt = g.time + this.gap(true);
+    if (this.storm > 0.01 && g.time >= this.nextFlashAt) { this.strike(); this.nextFlashAt = g.time + this.gap(false); }
     // the stroke in progress: THIS frame shows the envelope over [t, t + dt] (a stroke fired just above starts at t = 0, so its first, brightest interval is the
     // one drawn), then the clock moves on; once t has passed FLASH_SECS every interval worth drawing has been drawn and the light leaves the set
     if (this.flash) { const f = this.flash; if (f.t >= FLASH_SECS) this.endFlash(); else { this.applyFlash(f.t, dt); f.t += dt; } }
     // ---- thunder
-    for (let i = wxGet(g.sim, WX.thundersN) - 1; i >= 0; i--) { const said = this.thunderDue(i); if (said) this.playThunder({ at: said[7], distKm: said[0], bearing: said[1], loud: said[2] }, said); }
+    for (let i = this.thunders.length - 1; i >= 0; i--) { const th = this.thunders[i]; if (g.time >= th.at) { this.thunders.splice(i, 1); this.playThunder(th); } }
     // ---- the rain bed follows the rate and where the listener stands (outdoors full, indoors a third — the mixer has no windows to open); indoors = the building OR
     //      the roofed stair tower, the two rectangles the rain itself is drawn by (= wet.ts underRoofRect — inlined, wet.ts imports this module; review U9.9)
     const pp = g.hostSeat().view.player.char.pos;   // (the listener: the player this host shows — seats.ts; the mix is nobody's simulation)
     g.audio.rain?.(this.rainBed(pp[0], pp[2]));   // (the footprints in force: INTERIOR / ANNEX unless a kind was picked)
     // ---- what the frame draws
-    frame.rain = this.rainNow = raining ? this.rainRate : 0;
+    frame.rain = raining ? this.rainRate : 0;
     frame.snow = this.snowRate;   // (a snow level's flakes: game/snowFx.ts — no rain is drawn there, the rate above is 0)
     frame.shearX = -this.wind[0] / RAIN_V; frame.shearZ = -this.wind[1] / RAIN_V;   // MINUS: a lattice column stands at base + K·y and its drop slides DOWN it toward −K, so for the drop to be carried WITH the wind K = −wind ÷ fall speed (it was +, and the far-field rain drifted against the storm that moves the smoke and the paper — found by the particle-rain lane, 08-12)
     frame.wet = this.wet;
@@ -407,35 +381,34 @@ export class Weather {
     else { const R = this.roofs; frame.interior = R[0] ?? NO_RECT; frame.annex = R[1] ?? NO_RECT; frame.roofC = packRect(R[2]) || 1; frame.roofD = packRect(R[3]); frame.fog = this.kind ? fogGlowWord(this.fogWord, this.fogGlow) : 0; }   // (roofC is never 0 while the level's own roofs are in force: 1 = an empty footprint — the shaders' 'all four roofs' test; the fog is a picked kind's alone)
   }
 
-  /** seconds to the next stroke: mean FLASH_MEAN_GAP ÷ storm clamped to 8‥25 s, ×0.5‥1.5; the first one of a night comes sooner (6‥12 s) so a visitor standing at the windows is not kept waiting (rust/sim/src/weather.rs gap) */
+  /** seconds to the next stroke: mean FLASH_MEAN_GAP ÷ storm clamped to 8‥25 s, ×0.5‥1.5; the first one of a night comes sooner (6‥12 s) so a visitor standing at the windows is not kept waiting */
   private gap(first: boolean): number {
-    const r = sim().weather_gap(this.g.sim.bind(), first ? 1 : 0);
-    return WX_WATCH.on ? WX_WATCH.said('weather.gap', r, [first ? 1 : 0]) : r;
+    if (first) return 6 + 6 * this.rnd();
+    const mean = clamp(FLASH_MEAN_GAP / Math.max(this.storm, 0.05), 8, 25);
+    return mean * (0.5 + this.rnd());
   }
-  /** the rain falling on the game this tick, the module's table (what the frame draws, and what soaks a man) */
-  private set rainNow(v: number) { wxSet(this.g.sim, WX.rainNow, v); }
   private applyFlash(t: number, dt: number) {
     const f = this.flash!; f.light.intensity = f.peak * strokeMean(f.stroke, t, t + Math.max(dt, 1e-4)); f.light.enabled = f.light.intensity > 1e-3 * f.peak;
   }
   private endFlash() { const f = this.flash; if (!f) return; this.g.engine.lights.remove(f.light); this.flash = null; }
 
-  /** a thunder that came due (`dice`: rust/sim/src/weather.rs thunder_due threw its four and its clap drowned the small noises): the sound of it, and somebody's remark */
-  private playThunder(th: Thunder, dice: readonly number[]) {
+  private playThunder(th: Thunder) {
     const g = this.g;
     // near: the crack and the clap on top of the roll; far: the roll alone, darker and slower. Low-passed further with every kilometre, leaned toward the bearing.
     const near = th.distKm < 1.3;
     const name = near ? 'thunderNear' : 'thunderFar';
     const gain = (near ? 1.0 : 0.85) * th.loud * (0.6 + 0.4 * this.storm);
     const lowpass = clamp(9000 * Math.exp(-th.distKm * 0.75), 500, 9000);
-    const rate = clamp(1.02 - th.distKm * 0.06, 0.78, 1.02) * (0.96 + 0.08 * dice[3]);
+    const rate = clamp(1.02 - th.distKm * 0.06, 0.78, 1.02) * (0.96 + 0.08 * this.rnd());
     const cy = Math.cos(this.camYaw), sy = Math.sin(this.camYaw);         // pan: the bearing against where the camera faces this frame
     const bx = Math.sin(th.bearing), bz = -Math.cos(th.bearing);           // unit vector TOWARD the storm cell (flat; dirOf's convention: bearing 0 = north = −z)
     const right = bx * cy - bz * sy;                                        // (camera right = (cos yaw, 0, −sin yaw) for forward (−sin, ·, −cos))
     g.audio.play(name, null, gain, { lowpass, rate, pan: clamp(right * 0.6, -0.6, 0.6), wet: near ? 0.35 : 0.55 });
     this.stats.thunders++; this.stats.lastThunder = { ...th, playedAt: g.time, name, gain };
+    if (this.kind && th.loud > WX_SIM.thunderLoud) this.thunderUntil = g.time + WX_SIM.thunderSecs;   // a clap near enough to remark on drowns the small noises under it (hearMask)
     // somebody passes a remark: a calm, free man of the staff whose head is on screen — a bubble, never the log — not too often. The three dice for it are thrown
     // on EVERY thunder, whoever is on screen, so the stroke schedule after it never depends on where the camera happened to be (same seed → same storm).
-    const rBark = dice[4], rWho = dice[5], rLine = dice[6];
+    const rBark = this.rnd(), rWho = this.rnd(), rLine = this.rnd();
     if (th.loud > 0.45 && g.time - this.lastBarkT > BARK_COOLDOWN && rBark < BARK_CHANCE) {
       const cands = g.guards.filter((gd: Guard) => gd.state === 'patrol' && !gd.held && !gd.script && !gd.unit && gd.awareness < 0.2 && onScreen(g, gd.char.bones.head ?? v3.add(gd.char.pos, [0, 1.7, 0])));
       if (cands.length) {
@@ -483,7 +456,7 @@ export class Weather {
 
   /** everything off and put back: the stroke's light out of the set, thunder forgotten, boxes restored, gloss as it was, the frame zeroed, the rain bed silent */
   private teardown() {
-    this.endFlash(); this.thundersAre = []; this.nextFlashAt = -1; this.setWet(false); this.wet = 0; this.rainNow = 0;
+    this.endFlash(); this.thunders.length = 0; this.nextFlashAt = -1; this.setWet(false); this.wet = 0;
     const frame = (this.g.engine as { weather?: WeatherFrame }).weather; if (frame) zero(frame);
     this.g.audio.rain?.(0);
   }
