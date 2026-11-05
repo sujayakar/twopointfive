@@ -2324,7 +2324,8 @@ interleaved and filtered to their quiet minimum, and a row whose p75 sits far ab
   VIEW ALONE at midday the sun's glint on the floor by the door has a speckled band at its upper flank and scalloped edges (one sample a texel
   of a sharp lobe): the played picture hides it in the burnt patch; not chased. NOT SEEN: any of it in motion, by anyone; on an Apple or an AMD
   card; Medium and Ultra.
-- **AN OPENING'S DAYLIGHT IS ADDED UP PIECE BY PIECE, NOT POINT BY POINT** (11-04; the look's page, where the openings' lights are; no switch
+- **AN OPENING'S DAYLIGHT IS ADDED UP PIECE BY PIECE, NOT POINT BY POINT** (SINCE 11-05 THE PIECES ARE THREE, the sky one stretch along the wall and
+  not two halves: AN OPENING'S LIGHT IS ADDED UP IN THREE PIECES, below; this bullet is as written with five. 11-04; the look's page, where the openings' lights are; no switch
   and no second path: `common.wgsl portalFlux`, `portalFaces`, with `portalPiece`, `portalCorners`, `portalQuad`, `portalEdge`, `portalEnds`,
   `portalMean`, `portalSolid`, `portalAbove`; `direct_common.wgsl shadowSample`). The maintainer on his M4 at dusk: "orange door has horizontal
   banding when open, not when closed". DRAWN FIRST: the white roof's service door at dusk, its leaf swung into the room, on the software adapter:
@@ -2550,6 +2551,34 @@ interleaved and filtered to their quiet minimum, and a row whose p75 sits far ab
   row's `untiles` now, and stucco, skim and carpet have it. CHECK `lookmaps-check` line 11: the four older stuffs still untile and no other of the
   sixteen; nothing made of pieces untiles; a bay is of whole pieces; a bonded map has an even count of courses. Shader texts compile. NEVER SEEN ON A
   GPU; a software draw of the white roof's deck with the row off and on is what was looked at.
+- **AN OPENING'S LIGHT IS ADDED UP IN THREE PIECES, WHERE IT WAS FIVE** (11-05; `common.wgsl PORTAL_PIECES` 3, `portalPiece`; every pass that
+  asks an opening's sum: the direct estimators, the sharp upscale, the cache's dice. THE DAY'S HALF of the openings' cost, after the reach
+  below. NO WORD ON THE ADDRESS, and why: the five-piece text would have to stay in every direct kernel beside the three, which is the second
+  path the shaders' rule forbids and what their size rows are about; the two were held side by side by a timing-only commit and by the check.)
+  The sum cut the part of an opening a point sees into the ground's piece and the sky's in two halves along the wall, each half at its ramp's
+  end: five. IT IS A TRADE, AND THE NUMBERS ARE ITS PRICE. Against a sum over the opening's own points at 2,778 places (eight kinds of face: a
+  floor, a table top, a wall facing the opening, faces that lean and tilt along the wall, a diagonal wall, a side wall; 0.4 to 12 m in and to
+  6 m either side of a door, a window, a glass wall and a long strip of high glass) the error goes as the sky's unevenness: under an even sky
+  both are exact; under the most uneven sky an hour has (dusk, its horizon 2.28 times its zenith by luminance; a night is 2.03, midday 1.70,
+  a grey day 1.07) THREE pieces are off by 1.18% of a place's own light on the mean, nineteen places in twenty under 4.8%, the worst 13.8% (a
+  side wall); FIVE were 0.59%, 2.3% and 11.8%. So the halves halved an error of about a hundredth, on every kind of face alike (the first
+  sample here had no leaning faces and only one side of the opening and read "bought nothing": a review caught it). The error is smooth: a
+  shade, never a band or an edge. WHAT THE HALVES COST, a cloud NVIDIA card, High, 1368 by 770, one box flipping the piece count in the
+  running page (a timing-only commit that still walked five and returned two empty, so the build's own is a little better), at the reach every
+  opening had before the rule below: the office at MIDDAY, direct 10.5 to 9.1 ms, the sharp upscale 2.85 to 1.94, all passes 24.9 to 22.5;
+  the consulate's night, direct 10.6 to 9.6, the upscale 1.64 to 1.25, all passes 20.7 to 19.3. At a quarter of that reach (about the rule's
+  own on a night) it is 0.3 ms. NOT TIMED: the two mends together on one box, by day. TRIED AND DROPPED on the way, so nobody builds them: the
+  sky as ONE piece with no cut at its ramp's end (five times the error); a piece taken as its middle point from far off (20 to 100% off
+  wherever a face's own horizon cuts the piece: a side wall, a table's top); a slanted cut along the ramp's end (worse: the ramp's end is a
+  hollow curve along the wall and a straight edge across it overshoots in the middle); an opening that a wall hides from a pixel's cell scored
+  the cheap way or not at all (timed: 0.2 ms, the pixels behind walls are not the cost); the eight points a ray is aimed by left unweighed
+  (timed: nothing). IF DUSK EVER SHOWS IT (a shade on a leaning face by a long window): the slanted cut SPLIT AT THE RECEIVER'S OWN FOOT where
+  the foot lies inside the stretch measured 0.70%, 2.7% and 9.8% on the same places, at three pieces' cost for every pixel that is not
+  straight in front of the opening; not built. WHAT IS STILL OWED BY DAY and is not waste: the class's rays (two for four a pixel is 2.0 ms)
+  and the sum itself for every pixel in plain sight of an opening; with both mends the office at midday is still some 5 ms over the row off.
+  Check: `bun run tools/qa/probes.ts portal` (the line above by its numbers beside five's, the shader's text, and every older line of the sum,
+  which hold as they did; `PORTALPIECES_BREAK=1` is the sky as one piece, asked of that line alone, and fails it), both stands. NOT SEEN on a
+  GPU as this text: the timing-only twin drew without error; stills of the build's own are asked.
 - **AN OPENING'S OWN LIGHT REACHES AS FAR AS IT IS WORTH A RAY** (11-05; the look's page, wherever an opening is a portal: `scene/openings.ts
   openingReach`, `LOOK_OPENINGS.worth` 0.04, `.near` 3 m, `.far` 26 m, `.past` 2 m; `engine.ts lookOpeningLights` sets the light's range by it. ONE
   RULE AT EVERY HOUR, no test of the hour and no second path: the address's `&portalworth=<number>` is the same rule with another worth for the
@@ -2576,9 +2605,9 @@ interleaved and filtered to their quiet minimum, and a row whose p75 sits far ab
   5.05 ms (3.05 off), all passes 20.0 to 13.9 (10.8 off); the office's night, direct 9.2 to 5.85 (4.2 off), all passes 19.6 to 15.3 (12.9
   off); THE OFFICE AT MIDDAY, direct 10.2 to 9.1 (3.9 off), all passes 24.4 to 21.6 (14.05 off): by day what an opening looks out on is twenty
   times a night's, a glass wall still reaches 25 m, and the rooms' light IS the openings'. WHAT IS LEFT, in the order it would pay: the sum made
-  as fine as the angle the opening covers from the pixel (five pieces by a doorway, fewer from across a room: up to the 3.3 ms and 1.4 above,
-  with no change to the picture); the sky ray no further than the level's roofs (0.6); and the class's rays, which by day are the room's light
-  and are owed. THE PICTURE, stills on the cloud card at the reach as it was, a half, a quarter, and at three worths: the consulate's and the
+  as fine as the angle the opening covers from the pixel (DONE the same day as three pieces for five, the bullet above: by measure it is the sky's unevenness
+  and not the angle that asks for pieces); the sky ray no further than the level's roofs (0.6); and the class's rays, which by day are the
+  room's light and are owed. THE PICTURE, stills on the cloud card at the reach as it was, a half, a quarter, and at three worths: the consulate's and the
   office's night starts are the same picture at every one (their floors' pools are the moon's); the office at midday and the white roof's
   service room with its door open are the same at this worth, and at two and a half times it the white roof room's far wall goes a step greyer
   (the hand-over above). KNOWN, LEFT: a dark place's own gain (up to four times) is not in the rule; dragging the sky's or the sun's sliders by

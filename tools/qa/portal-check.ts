@@ -35,7 +35,7 @@ export async function portalCheck(): Promise<boolean> {
   box([19, 1.5, 12.5], [T, 1.5, 3.5]);                                                  // the wall across the yard
   type Hole = { pos: V3; mid: V3; dir: V3; half: [number, number]; full: number; deep: number; rims: number };
   const plan = planOpenings(B) as Hole[]; let o = plan[0];   // (`o`: the opening every helper below asks of; the line on a long strip of glass puts its own in its place for a while)
-  const ZEN = 0.12, HOR = 1.0;   // (a sky much brighter low down than overhead: a light that took one radiance for every direction would be far off)
+  let ZEN = 0.12, HOR = 1.0;   // (a sky much brighter low down than overhead: a light that took one radiance for every direction would be far off)
   // how near the portal's must be to the reference: a fifth at any point, and a third a hand from the sill, where a point of the sum stands for a patch as wide as the distance
   const within = (name: string, k: number) => name.includes('sill') ? k > 0.66 && k < 1.34 : k > 0.8 && k < 1.2;
   const skyL = (y: number) => { const t = Math.min(1, Math.max(0, y * 2.5)), below = Math.min(1, Math.max(0, -y * 8)), up = HOR + (ZEN - HOR) * t; return up + (HOR * 0.15 - up) * below; };   // common.wgsl skyRadiance, by luminance
@@ -83,12 +83,13 @@ export async function portalCheck(): Promise<boolean> {
     return hx <= lx || hy <= ly ? [0, 0, 0, 0] : [(lx + hx) / 2 / hw, (ly + hy) / 2 / hh, (hx - lx) / 2 / hw, (hy - ly) / 2 / hh]; };
   const into = (see: [number, number, number, number], a: [number, number]): [number, number] => [see[0] + a[0] * see[2], see[1] + a[1] * see[3]];
   // common.wgsl portalEdge, portalQuad, portalPiece, portalCorners, portalEnds, portalMean, portalFlux: THE OPENING'S LIGHT ADDED UP PIECE BY PIECE. The
-  // part a point sees is cut into PIECES that are each nearly even: the ground's, below the point's own height, and the sky above it in two halves
-  // along the wall (by angle from the point), each cut where the sky's ramp ends over its middle. A piece, cut at the face's own horizon, is the sum
+  // part a point sees is cut into PIECES that are each nearly even: the ground's, below the point's own height, and the sky above it, cut where
+  // its ramp ends over the stretch's middle by angle from the point (until 11-05 also in two halves along the wall: PIECES 5 below). A piece, cut at the face's own horizon, is the sum
   // over its edges of half the angle the edge subtends about its plane's normal (a polygon's vector irradiance; the angle over its sine by the
   // shader's fit). A sky piece counts as bright as the mean of its foot's and its head's brightness weighed by how the face takes each, read where
   // the part the face sees lies. `points` = the mean of the eight points it was until 11-04 (PORTALBANDS_BREAK=1 asks every line of it)
-  const PIECES = 5, RAMP = 0.4364, points = process.env.PORTALBANDS_BREAK === '1', sky = (y: number) => { const up = HOR + (ZEN - HOR) * Math.min(1, Math.max(y, 0) * 2.5); return up + (HOR * 0.15 - up) * Math.min(1, Math.max(-y * 8, 0)); };   // (sky: common.wgsl skyRadiance, by luminance)
+  let PIECES = 3, ONESKY = false;   // (PIECES 5 = the sky in two halves along the wall as well, as it was until 11-05; ONESKY = no cut at the ramp's end: both asked only by the line on three pieces, which puts them back)
+  const RAMP = 0.4364, points = process.env.PORTALBANDS_BREAK === '1', sky = (y: number) => { const up = HOR + (ZEN - HOR) * Math.min(1, Math.max(y, 0) * 2.5); return up + (HOR * 0.15 - up) * Math.min(1, Math.max(-y * 8, 0)); };   // (sky: common.wgsl skyRadiance, by luminance)
   const crs = (a: V3, b: V3): V3 => [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]], unit = (a: V3): V3 => { const l = len(a); return [a[0] / l, a[1] / l, a[2] / l]; }, add = (a: V3, b: V3): V3 => [a[0] + b[0], a[1] + b[1], a[2] + b[2]];
   const edge = (a: V3, b: V3): V3 => { const x = dot(a, b), y = Math.abs(x), v = (0.8543985 + (0.4965155 + 0.0145206 * y) * y) / (3.4175940 + (4.1616724 + y) * y), c = crs(a, b), k = Math.PI * (x > 0 ? v : 0.5 / Math.max(len(c), 1e-7) - v); return [c[0] * k, c[1] * k, c[2] * k]; };
   const quad = (c: V3[], N: V3): V3 => { let F: V3 = [0, 0, 0], under: V3 = [0, 0, 0], back: V3 = [0, 0, 0], cuts = 0;
@@ -99,9 +100,11 @@ export async function portalCheck(): Promise<boolean> {
   const piece = (d: V3, see: [number, number, number, number], i: number): [number, number, number, number] => { const pz = -dot(d, o.dir), px = dot(d, along);
     const X0 = (see[0] - see[2]) * o.half[0] + px, X1 = (see[0] + see[2]) * o.half[0] + px, y0 = (see[1] - see[3]) * o.half[1] + d[1], y1 = (see[1] + see[3]) * o.half[1] + d[1];
     if (i === 0) return [X0, X1, y0, Math.min(y1, 0)];
-    const r0 = Math.hypot(X0, pz), r1 = Math.hypot(X1, pz), Xs = (X0 * r1 + X1 * r0) / (r0 + r1), rs = Math.hypot(Xs, pz), [xa, xb, ra, rb] = i > 2 ? [Xs, X1, rs, r1] : [X0, Xs, r0, rs];
-    const lo = Math.max(y0, 0), cut = Math.min(Math.max(RAMP * Math.hypot((xa * rb + xb * ra) / (ra + rb), pz), lo), y1);
-    return (i & 1) === 1 ? [xa, xb, lo, cut] : [xa, xb, cut, y1]; };
+    const r0 = Math.hypot(X0, pz), r1 = Math.hypot(X1, pz);
+    if (PIECES === 5) { const Xs = (X0 * r1 + X1 * r0) / (r0 + r1), rs = Math.hypot(Xs, pz), [xa, xb, ra, rb] = i > 2 ? [Xs, X1, rs, r1] : [X0, Xs, r0, rs];   // (the five pieces it was until 11-05: the last line holds the three against them)
+      const lo = Math.max(y0, 0), cut = Math.min(Math.max(RAMP * Math.hypot((xa * rb + xb * ra) / (ra + rb), pz), lo), y1); return (i & 1) === 1 ? [xa, xb, lo, cut] : [xa, xb, cut, y1]; }
+    const lo = Math.max(y0, 0), cut = ONESKY ? y1 : Math.min(Math.max(RAMP * Math.hypot((X0 * r1 + X1 * r0) / (r0 + r1), pz), lo), y1);
+    return i === 1 ? [X0, X1, lo, cut] : i === 2 ? [X0, X1, cut, y1] : [0, 0, 0, 0]; };
   const from = (pz: number, x: number, y: number): V3 => [-o.dir[0] * pz + along[0] * x, y, -o.dir[2] * pz + along[2] * x];
   const corners = (q: number[], pz: number): V3[] => [unit(from(pz, q[0], q[2])), unit(from(pz, q[0], q[3])), unit(from(pz, q[1], q[3])), unit(from(pz, q[1], q[2]))];
   const ends = (q: number[], pz: number, F: V3): [V3, V3] => { const fz = -dot(F, o.dir), x = Math.min(Math.max(fz > 1e-9 ? pz * dot(F, along) / fz : 0.5 * (q[0] + q[1]), q[0]), q[1]); return [unit(from(pz, x, q[2])), unit(from(pz, x, q[3]))]; };
@@ -305,8 +308,8 @@ export async function portalCheck(): Promise<boolean> {
         && common.includes('fn portalSoft(li: Light, high: f32) -> f32 { return li.cosOuter * high * (2.0 / (3.14159265 * f32(PORTAL_POINTS))); }')
         && common.includes('  let x = dot(a, b); let y = abs(x); let v = (0.8543985 + (0.4965155 + 0.0145206 * y) * y) / (3.4175940 + (4.1616724 + y) * y); let c = cross(a, b);\n  return c * (3.14159265 * select(0.5 / max(length(c), 1e-7) - v, v, x > 0.0));')
         && common.includes('    if (da >= 0.0 && db >= 0.0) { F += portalEdge(a, b); }\n    else if (da >= 0.0) { under = normalize(a + (b - a) * (da / (da - db))); F += portalEdge(a, under); cuts++; }\n    else if (db >= 0.0) { back = normalize(a + (b - a) * (da / (da - db))); F += portalEdge(back, b); cuts++; }\n  }\n  if (cuts == 2) { F += portalEdge(under, back); }')
-        && common.includes(`const PORTAL_PIECES: i32 = ${PIECES};`) && common.includes(`const PORTAL_RAMP: f32 = ${RAMP};`) && Math.abs(RAMP - 0.4 / Math.sqrt(1 - 0.16)) < 1e-4 && common.includes('let t = clamp(rd.y * 2.5, 0.0, 1.0);')
-        && common.includes('  let r0 = length(vec2f(X0, pz)); let r1 = length(vec2f(X1, pz)); let Xs = (X0 * r1 + X1 * r0) / (r0 + r1); let rs = length(vec2f(Xs, pz));') && common.includes('  let lo = max(y0, 0.0); let cut = min(max(PORTAL_RAMP * length(vec2f((xa * rb + xb * ra) / (ra + rb), pz)), lo), y1);')
+        && common.includes('const PORTAL_PIECES: i32 = 3;') && common.includes(`const PORTAL_RAMP: f32 = ${RAMP};`) && Math.abs(RAMP - 0.4 / Math.sqrt(1 - 0.16)) < 1e-4 && common.includes('let t = clamp(rd.y * 2.5, 0.0, 1.0);')
+        && common.includes('  let r0 = length(vec2f(X0, pz)); let r1 = length(vec2f(X1, pz));\n  let lo = max(y0, 0.0); let cut = min(max(PORTAL_RAMP * length(vec2f((X0 * r1 + X1 * r0) / (r0 + r1), pz)), lo), y1);') && common.includes('  if (i == 1) { return vec4f(X0, X1, lo, cut); }\n  return vec4f(X0, X1, cut, y1);')
         && common.includes('return array<vec3f, 4>(normalize(o + T * q.x + vec3f(0.0, q.z, 0.0)), normalize(o + T * q.x + vec3f(0.0, q.w, 0.0)), normalize(o + T * q.y + vec3f(0.0, q.w, 0.0)), normalize(o + T * q.y + vec3f(0.0, q.z, 0.0)));')
         && common.includes('  let x = clamp(select(0.5 * (q.x + q.y), pz * dot(F, T) / max(fz, 1e-9), fz > 1e-9), q.x, q.y); let o = -li.dir * pz + T * x;')
         && common.includes('  if (d0 <= 0.0 && d1 <= 0.0) { return select(L0, L1, d1 >= d0); }\n  var a = L0; var b = L1; var wa = d0; var wb = d1;\n  if (d0 < 0.0) { a = mix(L0, L1, d0 / (d0 - d1)); wa = 0.0; }\n  if (d1 < 0.0) { b = mix(L1, L0, d1 / (d1 - d0)); wb = 0.0; }\n  return (a * (2.0 * wa + wb) + b * (wa + 2.0 * wb)) / (3.0 * (wa + wb));')
@@ -341,6 +344,28 @@ export async function portalCheck(): Promise<boolean> {
         && text('src/render/lights.ts').includes('(l.portal ? LIGHT_PORTAL | portalHoleBits(l.portal.deep, l.portal.rims) : 0) | (!l.portal && l.markRef !== undefined') && text('src/engine.ts').includes('l.portal!.deep = this.settings.portalHole ? o.deep : 0; l.portal!.rims = o.rims;') && text('src/main.ts').includes("if (q.get('holedepth') === '0') engine.settings.portalHole = false;") && /VISIT_FLAGS = \[[^\]]*'holedepth'/.test(text('src/ui/replaykey.ts')) && /LOOK_PAGE_WORDS[^\n]*'holedepth'/.test(text('src/scene/look.ts')) && text('src/scene/openings.ts').includes('half: [hw, hh], deep: holeDeep, rims: ((lowS0 ? first : last) ? 1 : 0) | ((lowS0 ? last : first) ? 2 : 0),') && text('src/scene/openings.ts').includes('const lowS0 = r.axis === 1 ? r.sign > 0 : r.sign < 0;')],
       ['the table still knows where an opening looks', LOOK_OPENINGS.up > 0 && LOOK_OPENINGS.up < 1 && (BoxFlag.Glass | 0) !== 0] ];
     verdict(pins.every(p => p[1]), 'the light\'s record and the shaders say the same rule', pins.map(p => `${p[1] ? 'ok' : 'NOT'}: ${p[0]}`).join(' · ')); }
+  // THREE PIECES, WHERE THERE WERE FIVE (common.wgsl portalPiece, PORTAL_PIECES). Until 11-05 the sky above the receiver's height was also cut in two halves
+  // along the wall. Held here against a sum over the opening's own points (80 a side, nothing in the way) at eight kinds of face (a floor, a table top, a wall
+  // facing the opening, faces that lean and tilt along the wall, a diagonal wall, a side wall), 0.4 to 12 m in and to 6 m either side of four openings (a
+  // door, a window, a glass wall, a long strip of high glass), wherever the light is at least a two-hundredth of the brightest floor, UNDER THE MOST
+  // UNEVEN SKY AN HOUR HAS (game/hours.ts: dusk's horizon is 2.28 times its zenith by luminance; a night's 2.03, midday's 1.70, a grey day's 1.07). The
+  // error goes as the sky's unevenness. WHAT THE HALVES BOUGHT is said by the numbers and not hidden: in three pieces the mean error is about a
+  // hundredth of a place's own light where five had half that, nineteen places in twenty are under a twentieth where five had a fortieth.
+  // PORTALPIECES_BREAK=1 = the sky as ONE piece with no cut at its ramp's end, asked of this line alone: five times the error, and the line fails
+  { const keep = o, keepG = G, keepSky = [ZEN, HOR]; G = groundOf; ZEN = 1; HOR = 2.28;
+    const hole = (hw: number, hh: number, midY: number): Hole => ({ pos: [0, midY, 0], mid: [0, midY, 0], dir: [1, 0, 0], half: [hw, hh], full: 4 * hw * hh, deep: 0, rims: 0 });
+    const holes: Hole[] = [hole(0.45, 1.025, 1.025), hole(1, 0.6, 1.5), hole(3, 1.25, 1.25), hole(3.75, 0.3, 2.2)], u3 = (a: V3): V3 => { const l = Math.hypot(a[0], a[1], a[2]); return [a[0] / l, a[1] / l, a[2] / l]; };
+    const sumOver = (P: V3, N: V3, n = 80) => { let t = 0; for (let i = 0; i < n; i++) for (let j = 0; j < n; j++) { const q: V3 = [o.mid[0] + along[0] * ((i + 0.5) / n * 2 - 1) * o.half[0] - P[0], o.mid[1] + ((j + 0.5) / n * 2 - 1) * o.half[1] - P[1], o.mid[2] + along[2] * ((i + 0.5) / n * 2 - 1) * o.half[0] - P[2]], d2 = dot(q, q), ql = Math.sqrt(d2), L: V3 = [q[0] / ql, q[1] / ql, q[2] / ql];
+      t += outside(L[1]) * Math.max(-dot(L, o.dir), 0) * Math.max(dot(N, L), 0) / d2; } return t * area / (n * n); };
+    const faces: [V3, number][] = [[[0, 1, 0], 0], [[0, 1, 0], 0.8], [[-1, 0, 0], 1.2], [u3([-1, 1, 0]), 0.5], [u3([0, 1, -0.31]), 0.3], [u3([0, 1, -1]), 0.3], [u3([-1, 0, -1]), 1.2], [[0, 0, -1], 1.2]], e3: number[] = [], e5: number[] = [];
+    for (const h of holes) { use(h); const ref = sumOver([1, 0, 0], [0, 1, 0]);
+      for (const [N, y] of faces) for (const x of [0.4, 0.7, 1, 1.5, 2.2, 3.2, 5, 8, 12]) for (const z of [-6, -4, -2.5, -1.5, -0.8, 0, 0.8, 1.5, 2.5, 4, 6]) { const P: V3 = [x, y, z], b = sumOver(P, N); if (!(b > ref * 0.005)) continue;
+        ONESKY = process.env.PORTALPIECES_BREAK === '1'; e3.push(Math.abs(area * flux(P, N) - b) / b); ONESKY = false; PIECES = 5; e5.push(Math.abs(area * flux(P, N) - b) / b); PIECES = 3; } }
+    use(keep); G = keepG; ZEN = keepSky[0]; HOR = keepSky[1];
+    const st = (a: number[]) => { const t = [...a].sort((p, q) => p - q); return { mean: t.reduce((p, q) => p + q, 0) / t.length, p95: t[Math.floor(t.length * 0.95)], worst: t[t.length - 1] }; }, s3 = st(e3), s5 = st(e5), pc = (v: number) => (v * 100).toFixed(2);
+    verdict(e3.length > 2000 && s3.mean < 0.015 && s3.p95 < 0.055 && s3.worst < 0.16 && s3.mean < s5.mean + 0.008 && s5.mean < 0.008,
+      'an opening\'s light in three pieces is within a hundredth and a half of the sum over its own points on the mean under the most uneven sky an hour has, nineteen places in twenty within a twentieth',
+      `${e3.length} places, of each place's own light · three pieces: mean ${pc(s3.mean)} %, nineteen in twenty under ${pc(s3.p95)} %, worst ${pc(s3.worst)} % · five pieces, as it was: mean ${pc(s5.mean)} %, ${pc(s5.p95)} %, ${pc(s5.worst)} %`); }
   // HOW FAR AN OPENING'S OWN LIGHT REACHES (scene/openings.ts openingReach, LOOK_OPENINGS.worth): one rule at every hour, where what it alone would show on
   // a floor facing it straight out falls to `worth`; past it the bounce has the sky (the window and skyKeep above). PORTALREACH_BREAK=1 = the worth it had
   // until 11-05 (0.003): a night's opening reaches the far side of a building again
