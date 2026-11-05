@@ -32,22 +32,8 @@ const PALETTE_STUFF = {
   prodOrange: 'plain', prodGreen: 'plain', prodRed: 'plain', prodYellow: 'plain', straw: 'waits', scrub: 'waits',
 } as const satisfies Record<GwotMat, Stuff>;
 
-/** the coast skin's palette (scene/gwotPalette.ts COAST_PALETTE): every row a stuff the look HAS. Two wait for one it does not have yet and say the
- *  nearest honest stuff meanwhile: `sand` waits for sand (earth), `roofTile` for roof tile (sheet). Fired clay (`terracotta`) is drawn as rough render. */
-const COAST_STUFF = {
-  stuccoWhite: 'stucco', stuccoSand: 'stucco', terracotta: 'stucco', skimWhite: 'skim', fairConcrete: 'board concrete', castPanel: 'cast panel', paleBlock: 'block',
-  paverWarm: 'paver', paverGrey: 'paver', roadTarmac: 'tarmac', paleSlab: 'slab', paleGravel: 'gravel', sand: 'earth', soil: 'earth', lawn: 'grass',
-  deck: 'wood', deckGrey: 'wood', roofTile: 'sheet',
-  paintTeal: 'paint', paintCoral: 'paint', paintSun: 'paint', paintNavy: 'paint', enamelWhite: 'enamel',
-  brushedSteel: 'brushed', darkSteel: 'steel', binGreen: 'plastic', plasticPale: 'plastic', plasticDark: 'plastic',
-  tyreRubber: 'rubber', canvasWhite: 'cloth', canvasBlue: 'cloth', towelStripe: 'cloth', foliage: 'waits',
-  stonePale: 'paver', stoneShade: 'skim', stoneBand: 'skim', dryEarth: 'earth', timber: 'wood', bronze: 'steel', cypress: 'waits', sage: 'waits', poolDark: 'enamel', clay: 'skim', saffron: 'cloth',
-  limestone: 'skim', cream: 'skim', rubble: 'block', cedar: 'veneer', poolPale: 'enamel', stoneSlab: 'skim',
-} as const satisfies Record<CoastMat, Stuff>;
-
 export const PAINT_STUFF: Readonly<Record<string, Stuff>> = {
   ...PALETTE_STUFF,
-  ...COAST_STUFF,
   // ---- the office's paints (scene/officeGen.ts OFFICE_PALETTE: the names the simulation knows a paint by, game/particleFx.ts MAT_SURF)
   wood: 'wood', woodDark: 'wood',   // (planks: the name is a bench, a crate and a pallet as well as a desk. A desk's smooth board is 'veneer', and the desk says so itself)
   carpet: 'cloth', carpetBlue: 'cloth', carpetRed: 'cloth', chair: 'fabric',   // (a carpet is the coarse weave; a seat's cloth the fine one)
