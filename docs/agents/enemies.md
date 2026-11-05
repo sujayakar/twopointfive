@@ -40,7 +40,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
 - **The difficulty switch + the harder defenders (10-07;** record rebuild/harder-defenders/numbers.md, the two parts' own pages beside it):
   `src/game/difficulty.ts` is ONE row — the start card's *Defenders: standard | hard* over the scenario picker (ui/menu.ts `difficultyRow`), Tab ▸ Sandbox ▸
   Difficulty, `?hard` / `?hard=0` / `?difficulty=hard|standard` — over two tables that both ship OFF: `pressure.ts PRESSURE` (defenders come to a held room
-  TOGETHER after a think beat, some sent round by a second door, a failed push or a last man falls back; `pressOwns` at the head of roomfight.ts `rally()`,
+  TOGETHER after a think beat, some sent round by a second door, a failed push or a last man falls back; `OWN.press` at the head of roomfight.ts `rally()`,
   `pressTick`) and `digin.ts DIGIN` (men who stay home shut, wedge and cover their doors, drag furniture, radio it; five one-clause seams in roomfight.ts:
   `digInTick / digInStays / digInReset / digInBraced / digInLook`). STANDARD = both off = the room fight of 8a7961e run for run (digest-identical; nothing in
   either file runs). HARD = both on at the build's rows, joined by `HARD.reachM` (0: the press takes whom it wants; in b8ffda2 only the men it left at home dug in —
@@ -88,8 +88,8 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   there, one man left a room). The choice is the SITUATION, no extra die: `mayLeave` false / under two spare / men still out / two squads already out →
   barricade; a holding ally with ≥ 2 up → the first answerer goes round, the second does the other thing; an ally at its last man → help; no answer → a
   strong squad's pair, else lock down; noise on open floor with nobody in contact → nobody is sent at it: every squad gets on its doors and STANDS TO (`Squad.ready`: the next contact call on the net is answered after `SQUADS.readyBeat` 0.4 s, no thinking beat, no settle wait — losing surprise buys the defenders a faster answer; `SQUADS.openPair` = the first cut, a pair sent round to the noise, which walked onto the team's guns in 42 of 144 scripted runs). Seams (each returns on its first line
-  with no squads staged — a level without a block replays digest for digest): roomfight.ts `rally` (`squadOwns`) + `breakOff` (`squadRally`, `squadStaysIn`),
-  pressure.ts `consider` / `lastMan`, digin.ts 'think' (`squadDefers`), `startBrace` (`squadMayWedge`) and its own net call. HEARD positions are jittered
+  with no squads staged — a level without a block replays digest for digest): roomfight.ts `rally` (`OWN.squad`) + `breakOff` (`squadRally`, `gd.staysInRooms`),
+  pressure.ts `consider` / `lastMan`, digin.ts 'think' (`OWN.squadWord`), `startBrace` (`squadMayWedge`) and its own net call. HEARD positions are jittered
   metres off the source: every ears-based room test uses the room's bounds with NO margin. `arrive` squads validate and load but nobody comes (16 skinned
   characters = Sam + 4 + 11). `SQUADS.way` (on; words only, needs the cues on): a hit squad's man answering 'coming to you' names the room or place his walk comes in by (dialogue.ts `wayName`, off the plain nav path: 'coming to you through the north gallery'; `bun run tools/qa/squad-way-check.ts`, `--off` must fail). `SQUADS` knobs: Tab ▸ Sandbox ▸ Enemy squads, `?nosquads` = one pool for the visit. QA: `probes.ts enemysquads` (stage / noise /
   contact), playthrough.ts `--scn block-squads` (+ `PT_NOISE=1`, `PT_FIRST=<room id>`, `--set '{"SQUADS":{"on":false}}'`; the JSON's `squads` = each squad's
@@ -141,8 +141,8 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   line!"); what they know of the guns is where rounds that cost them left the muzzle. It lapses `secs` 150 (× the men lost there, ≤ 3) after it last cost them, or `movedSecs` 20 after every gun
   that made it has cost them from more than `movedM` 15 away, or is down (the guns have moved). THEN: its floor is `dear` in every walk the side plans (guards.ts goTo → `lanePenalty`: a way
   round wherever the level has one); a man whose way still lies down it is STOPPED SHORT out of the guns' sight (followPath → `laneGate` → `RoomFight.laneStop`: planted with his gun on its
-  mouth; while he is held no press and no noise AT THOSE GUNS takes him off it — `laneHolds(g, gd, to)` in pressure.ts `consider` and roomfight.ts `rally`); NOBODY who knows of the lane walks
-  over alone to a fight at its guns, held or not (`laneWarns` in `rally` — the one-at-a-time feed; a press may still take a man who is not held: together, by its own way); a man caught
+  mouth; while he is held no press and no noise AT THOSE GUNS takes him off it — `laneBars(g, gd, to)` in pressure.ts `consider` and roomfight.ts `rally`); NOBODY who knows of the lane walks
+  over alone to a fight at its guns, held or not (`laneKnownAt` in `rally` — the one-at-a-time feed; a press may still take a man who is not held: together, by its own way); a man caught
   standing in it backs out to cover (`backOut`); a doorway drill is not stacked on a jamb the guns see (tactics.ts tryEngage → `laneCovers`) nor run through a doorway whose far side is in
   their line unless the charge that goes in first will burst on those guns (`laneDoor`); a hunter is not planted in it (pressure.ts `standAndFight` → `laneExposed`). Within
   max(`closeM`, `ROOMFIGHT.moveEngageM`) of a man he can see, or with a man in sight, the fight is his own: no gate, no plant. WHAT THEY DO INSTEAD OF WAITING: GO ROUND (`round`: of the men
@@ -151,7 +151,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   holders' own sends nobody) that bursts within `bangM` of a known lane's guns with nothing solid between, the lane's or the doorway drill's, sends the men held within `pushM` in behind it at
   a run for `pushSecs`: "they're blind — go, go!") and A LOOK ROUND THE CORNER (`peek`, the maintainer: "they can try peeking corners to see if their information is up to date"; off =
   a lane ends only by time or by the guns turning up elsewhere): a known lane quiet `peekQuiet` 10 s sends ONE man held within `peekReachM` of its mouth (`peekStart`: in 'hold', fit, nobody
-  in his sights, a nav walk ≤ 1.4 × that) up to the corner at `peekPace`, his eye taken `peekLean` 0.35 m ahead of his feet (`peekStep`, every frame; `st.peek`, in `laneHolds`, skipped by the
+  in his sights, a nav walk ≤ 1.4 × that) up to the corner at `peekPace`, his eye taken `peekLean` 0.35 m ahead of his feet (`peekStep`, every frame; `st.peek`, in `laneBars`, skipped by the
   gate). One of the team within `peekNearM` of a gun spot in his GEOMETRIC sight (`gunsManned`: never the light meter — darkness must not make a held lane look empty) → "they're still on it — stay
   back!", `until` +`peekKeep`, back at a run and held again, the next look `peekGap` × 2ⁿ (≤ `peekMax`) later. The place round EVERY gun spot in view (`spotSeen`: the spot + the ring a
   man there could stand on, one miss) with nobody there for `peekLook` and nobody on their net with eyes on them there (`netSees`) → the lane is FORGOTTEN on the frame; with a mate held on
@@ -247,7 +247,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   10-19: line 13 is also played with the defenders' gun deal held off (`AS_ARMED` = `GUNROLES.on` false): as dealt, seed 11's off arm no longer keeps a grenade (away 2, kept 0),
   so the line was red with the rule intact on the build that brought the gun roles in. Lines 7 and 8 are green with the gun roles on and are left as dealt.
   THE SEAM WITH THE HOSTAGE RESCUE'S FLUSH (10-19, `rescueflush.ts`, check line 15). The flush sends the men left for the hostages; it asks this rule only which door
-  (`laneCovers` on the floor outside each) and whether the rule already holds the man at a corridor's mouth for that place (`laneHolds`), never whether he is warned off —
+  (`laneCovers` on the floor outside each) and whether the rule already holds the man at a corridor's mouth for that place (`laneBars`), never whether he is warned off —
   where he is sent is where the team's guns are, and asked that way nobody ever came (8 of 8 scripted rescues barred, 5 of 8 stalled, on the build before its mend). Sent, he
   is this rule's on the walk: `corridor-check.ts` line 15 stages a rescue floor with the room fallen and no team (the office and the registry, as `rescueflush-check.ts`
   stages its own), plants a lane over the floor outside every door of the room (`lanesRestore`), and asks that the men sent are stopped short (none in its line before a
@@ -326,7 +326,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   5 m) plants, and once Sam has FIRED from behind the man takes single aimed rounds down it (`GUNHOLD.fire`; false = cover and the way round, the line silent) — never before Sam's
   first round, never when the one he holds is a civilian. No man, hit point or steadier hand is added. ONE MODEL: `Known.sam` is where a man of the side last SAW the pair, never where it is. Their
   words are four small pools (`LINES`: gun / shot / round / gone, one line per 1.5 s a hold, through `g.say`; they say 'he' of the man with the gun — the night staff's voice; a DEFENDER — teams.ts `defenderWords`: a room fight's man who has left his post is neither held nor pinned and comes into a standoff like anybody — has his own four pools, `GUNHOLD_DEFENDER_LINES`: the man with the pistol is still 'he', as in the standoff's own lines, the one in his arm is never called theirs (he can be a civilian), and the news is where the gun is, not that there is one; picked by `gunHoldPool()` where the line is read, the one roll of the die drawn either way, so under `?oldwords` and on the frozen stand he says the staff's; no key of its own: a page tape with a defender in such a standoff parts there, the bubble's time being its length; `probes.ts words-lint` holds the pools and the pick). Seams in guards.ts: `standoffPerceive` (`gunHoldSee`), `standoffAlert` (`gunHoldFeet`, `gunHoldFree`),
-  `standoffUpkeep` (`gunHoldKeeps`), updateGuard's suppression line (`gunHoldRuns`). State in WeakMaps per hold and per man, nothing saved (no checkpoint is written with a man in
+  `standoffUpkeep` (`standoffFixKept`), updateGuard's suppression line (`standoffOnFeet`). State in WeakMaps per hold and per man, nothing saved (no checkpoint is written with a man in
   Sam's arm); its die is `simRandom`. Tab ▸ Enemy AI ▸ 'Gun in a hold (they take cover and go round)' (not kept per machine); `gunHoldStats(g)`, `gunHoldSummary`, `GUNHOLD_DEBUG.log`.
   QA: `bun run tools/qa/gunhold-check.ts [front|line|knife|all] [--verbose]` (`probes.ts gunhold-cover`, in family `gunhold` beside the pistol-to-the-head hold's own four; the
   standoff probes' staging run with the rule off, then on; by name on the shipped stand, under probes.ts the runner's own; `GUNHOLD_BREAK=1` must fail all but knife, which is an identity). Never seen on
@@ -352,7 +352,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   tour / QRF / Sam down / switch off): `cancelTrip` drops the record where he stands, level → `afterCancel` 0.5, nothing resumed. guards.ts seam: ONE line in the
   patrol branch's chain after post — `else if (T.needs && needsPatrol(g, gd, dt, walk)) moveSpeed = gd.speed;` (+ the import); character.ts `TellKind` /
   `TELL_DUR` / `tell()` / `telling` / `tellShown` / `tellLayer` (left arm IK + head, staggered dynMask like the signals; the gaze stabiliser leaves it alone);
-  dialogue.ts `NEEDS_LINES` + `needsLines()` + `chatty` skips `needsBusy`; chronicle 'needBreak' rows (left / back with `away` s / cancelled with why); overlay's
+  dialogue.ts `NEEDS_LINES` + `needsLines()` + `chatty` skips `OWN.needs`; chronicle 'needBreak' rows (left / back with `away` s / cancelled with why); overlay's
   debug label shows kind:phase. Knobs `NEEDS` (rateK, maxAway, announceLead, dwell.* persisted with the switch: `twopointsix.needs`, Tab ▸ Sandbox ▸ needs rows +
   'send <name> for a coffee' = `needsSend(g, gd, kind)`: the full telegraph from wherever he stands, over the slot; `__needs.send(i, kind)` / `.trip(i)` / `.log`).
   QA: `probes.ts needs` (determinism / telegraph / one-away / interrupts incl. a whole headless tour lap / frozen-up / identity; telegraph + interrupts also in
@@ -434,7 +434,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   stretched to `reloadSecs` 3.2 s — a real empty gun, so every fire site of his waits on it and no gate was added anywhere. A second throw draws `baitShort`
   5, a third a frightened word and no round. A staff guard (`team 'guard'`) is a man of it too: the frame his awareness crosses the alert line is left to
   `updateGuard`'s own promotion (CONTACT, the alarm), and a driven man is `drawn`. Seams, one gated line each: guards.ts `updateGuard` (`moraleScript`, posed
-  through `runGuardScript` for the frame, as `fragFlee` is), roomfight.ts `tickDef` (`moraleOwns`), game.ts `update` after the room fight's tick, dialogue.ts
+  through `runGuardScript` for the frame, as `fragFlee` is), roomfight.ts `tickDef` (`OWN.morale`), game.ts `update` after the room fight's tick, dialogue.ts
   agitation (`shakenOf`: dread only while shock is live — a man merely alone in the dark does not talk faster). No new animation (the crouch and the `clutch`
   fold), no HUD mark, no loud-noise bait yet, nobody runs or drops anything. Check `tools/qa/morale-check.ts` (`probes.ts morale`), `MORALE_BREAK=1` (the
   alone and dark terms count for nothing) red on both stands; 18 lines green frozen and shipped, ONE staging a case on fixed seeds, measured headless: stagger
@@ -496,7 +496,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   row under morale's, `runnerSnapshot` / `runnerRestore` in the checkpoint). No surrender, nobody's hands go up (the maintainer, 10-13). WHO: a man morale.ts
   has BROKEN (rung 2), ALONE, DRY (its bait burst spent and he is mid-change, or the gun empty by its own count), with an enemy plainly in his eyes inside
   `closeM` 5 m — never on dread alone, never the rescue's cast, the response team, a choreographed man; `runnerBreak(g, gd)` starts it directly for a later
-  slice. SAY THEN DO: he shouts it (spoken; the magazine change he was in is cancelled, count and clip), holds low for `beatSecs` 0.6, then `dropFromHand` puts his weapon on the floor and he is FLED (`runnerFled`):
+  slice. SAY THEN DO: he shouts it (spoken; the magazine change he was in is cancelled, count and clip), holds low for `beatSecs` 0.6, then `dropFromHand` puts his weapon on the floor and he is FLED (`gd.fled`):
   the gun's own count is held at nothing and no change is ever his (so no fire site needed a gate), `inHand` says empty (so `killGuard` drops nothing more),
   his light is put out, he is `state 'patrol'` with no fix and no foe, and guards.ts runs this file's script before any sense of his own. DRAWN: the existing
   empty-hands branch of `guardProps` — a rifleman keeps the sidearm on his thigh, a pistol man's holster is left empty (one line); no new pose, the arms are
@@ -520,8 +520,8 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   list restarted the encounter — its clear line, `objective`), breach.ts (`allDown`, the target queue's head, `seen`, the let-go of a man on the sights,
   both `guaranteeDowns`), director.ts drill `cleared`, verdict.ts nightbreach, laststand.ts `up`, guards.ts (both `living` of an engagement, `acquireFoe`'s
   pick and its keep, `poseFlashlight`: no light in Sam's arm or after a grenade's flee), enemysquads.ts `alive` (his squad counts him out; `lying` asks
-  `state === 'dead'`, so no body is "found"), frag.ts (a wind-up ends, `runnerOwns`), stress.ts top-up; rescue.ts's own cast test is untouched (its cast
-  never runs). roomfight.ts `tickDef` yields (`runnerOwns`) and `tickOp`'s eyes pass over him. THE PLAYER may still shoot him: a kill like any other,
+  `state === 'dead'`, so no body is "found"), frag.ts (a wind-up ends, `OWN.runner`), stress.ts top-up; rescue.ts's own cast test is untouched (its cast
+  never runs). roomfight.ts `tickDef` yields (`OWN.runner`) and `tickOp`'s eyes pass over him. THE PLAYER may still shoot him: a kill like any other,
   tallied and witnessed. NOT DONE: never re-arms; the roll call says nothing for a fled staff man; breach.ts's queue filters at staging still list him (the
   head shift drops him). Check `tools/qa/runner-check.ts` (`probes.ts runner`), `RUNNER_BREAK=1` = the fled mark wiped before every frame (the run goes on,
   every seam that asks is told no), red on both stands; `morale-check.ts` holds `RUNNER.on` off for itself (its case (5) is a dry man with the player in his
@@ -546,7 +546,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   'Enemy nerve' ('broken men drop the gun and run'); no reset — a fled man stays empty-handed with the switch put off. Headless only, never seen, never played.
   AFTER A PAGE DRIVE (10-13, the hut's man baited dry with the player 3 m off: "I'm out!" and "I'm done!" a frame apart, then "Yard: contact" over the
   shout two frames on): `outSecs` 0.8 — `ripe` waits out morale.ts's bait and gives its 'out' line that long before the shout (still dry, the enemy still in
-  his eyes, or no run); and enemysquads.ts `fit` / `contact()` pass over a man `runnerOwns`, so from his shout on he puts nothing on the squad's net.
+  his eyes, or no run); and enemysquads.ts `fit` / `contact()` pass over a man `OWN.runner`, so from his shout on he puts nothing on the squad's net.
   runner-check (17), squads staged: the shout 0.78 s after "I'm out!", no line of his after it to the frame he is gone (5.78 s); on the tree before the
   change both lines are red (0.00 s; "Gate: contact — guard hut!"). 33 lines green on both stands.
   WHO HE PLANS ROUND (10-18, `PICTURE.run`, picture.ts; `?picrun=0`): with the picture on, the way, the reachable floor, the outside he picks, the corner
@@ -576,7 +576,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   `darkAt`, kept `askSecs` 0.5; by day a cell `workLit` says daylight reaches is not dark (the estimate has no sun). The man is tested green BEFORE the
   room is read. GREEN was a STAND-IN (now morale.ts's training: the foot of this bullet), `greenMan`, dealt ONCE a man and kept, `DARKDOOR.who` 'rest' | 'all' | 'none' (`TODO(merge)`:
   morale.ts `trainingOf`): every squad man but `Q.men[0]`, of the squadless staff every second man dealt — the office's is Novak. NEVER: a scripted man,
-  `gd.trained`, the rescue's cast, a man `moraleOwns` has, a man held / pinned (so a room fight's defenders ON THEIR POSTS are not in it: only once they
+  `gd.trained`, the rescue's cast, a man `OWN.morale` has, a man held / pinned (so a room fight's defenders ON THEIR POSTS are not in it: only once they
   are loose), a standoff, an errand (`task`, `bodyDuty`), a man called or going in as a pair. No die, no health / aim / reaction number. Seams, one gated
   line each: guards.ts `followPath` (`darkDoorGate`), guards.ts `updateGuard` after `tacticsLook` (`darkDoorLook`, not with eyes on a foe), game.ts
   `update` after `moraleTick`. Check `tools/qa/darkdoor-check.ts` (`probes.ts darkdoor`): 17 lines, all on the DEFAULT numbers, green frozen and shipped;
@@ -596,7 +596,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   JOINED TO TRAINING (10-13): `greenMan` IS morale.ts `trainingOf(g, gd) === 'green'`, asked fresh and kept nowhere (the stand-in, its per-man flag and the
   `dealt` count are gone; an old checkpoint's flag slot and `dealt` are read past, the slot is written -1); `DARKDOOR.who` 'all' / 'none' still override. With
   `MORALE.training` 'none' `trainingOf` calls every man steady, so NOBODY balks (a recording from before training replays with no balk; one from before this
-  rule has it off anyway). guards.ts `followPath`: the gate passes a man `runnerFled`. The panel row moved to Missions ▸ 'Enemy nerve' ('green men wait at a
+  rule has it off anyway). guards.ts `followPath`: the gate passes a man `gd.fled`. The panel row moved to Missions ▸ 'Enemy nerve' ('green men wait at a
   dark doorway'); no reset — the switch off leaves a stopped man's record, which the tick ends `keepSecs` after it is on again. darkdoor-check stages
   `MORALE.training` 'mixed' and holds `RUNNER.on` off after every stand-up; 17 lines green on both stands, headless, never on a GPU, never played.
 - **An enemy on alert does not sit blind in the dark** (`src/game/darkfoe.ts`, `DARKFOE.on`; page on, `?nodarkfoe`; frozen stand off, `TPS_DARKFOE=1`; on
@@ -615,7 +615,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   or searching defender the room fight has merely holding (`darkFoeKept` = null: not dug in, not his squad's, no lane, no press, not the captor / last stand,
   nobody seen for `quietSecs`, no shot for `calmSecs`) walks, at `stumbleK` of the investigate pace, to the nearest floor IN HIS ROOM he can see from (the dark
   edge of the light first, `edge`), by the room fight's own 'move' leg; `roam` (off) lets him out by a doorway. Exports for neighbours: `darkFoeBlind(g, gd)`,
-  `darkFoeCarries(gd)`, `darkFoeLit(g, gd)`, `darkFoeKept`, `darkFoeOf`, `darkFoeSnapshot / Restore`. Tab ▸ Sandbox ▸ Detection & movement: the toggle, the
+  `carriesDarkLamp(gd)`, `darkFoeLit(g, gd)`, `darkFoeKept`, `darkFoeOf`, `darkFoeSnapshot / Restore`. Tab ▸ Sandbox ▸ Detection & movement: the toggle, the
   carry select, 'suspicious enemies light it too', 'walk to where they can see', '…and may leave their room for it', a read-only summary line. CHECK
   `probes.ts darkfoe` (`tools/qa/darkfoe-check.ts`, 16 lines, both stands; `DARKFOE_BREAK=1` fails the off = base digest line and the only-suspicious line
   on both: a blind man held suspicious for 8 s burns his lamp 0 frames, and 374 of 480 with `suspect` on). MEASURED headless (CPU light estimate,
@@ -812,7 +812,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   out of him is that line; a line owed is waited out; what he has just learned has `askBeat` first), `lastBeat` 1.5 s, then he backs (2 m/s, facing them)
   to the spot of his room with the most entries in view inside the narrowest arc (any arc ≤ `arcDeg` 40 as good as another; then far from the doors, near
   him, a wall at his back), goes low, is roused as `plant()` leaves any defender at a new post; a man his squad has out hunting comes back for it. He does
-  not rally and his squad does not send him (roomfight.ts rally → `netQuietHolds`; enemysquads.ts home → `netFeedHolds`) — unless he has waited `giveUp`
+  not rally and his squad does not send him (roomfight.ts rally → `OWN.lastMan`; enemysquads.ts home → `OWN.lastMan`) — unless he has waited `giveUp`
   8 s for the fight to hand him back. A living mate at his side `calmSecs` and he is up, the act dropped (a man walking past does not do it). `alertSecs`
   15 s of nothing seen or heard and he is no longer 'alert': 'suspicious', held at `wary` 0.35, still low on the spot; anything he hears rouses him again.
   THE FLOOR'S EYE, found by walking Sam in (guards.ts canSeeChar / eyeContact, not changed): a man's eyes look half way between his chest and his head, in
@@ -820,9 +820,9 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   way: past the near field (`nearM` 3.5) such a man does not see the man he is aiming at (measured: Sam walked 2.4 m into the room unseen; seen at the
   threshold, the sighting flickered and no round came in 6 s). So LOW is `crouch` 0.4 (41° round, 49° either way), and what he watches is the arc's middle
   moved round until every door is inside his eyes (`eyeDeg` 58 = GUARD_EYE.halfDeg, `eyeSlack` 4): his gun rests off the middle. A man the room fight or
-  morale crouches right down has the same blind aim — not this file's to fix. A man `moraleOwns` is morale's. IMPORT CYCLE: enemysquads.ts must not
+  morale crouches right down has the same blind aim — not this file's to fix. A man `OWN.morale` is morale's. IMPORT CYCLE: enemysquads.ts must not
   import netquiet.ts (it pulls morale.ts forward and the headless boot throws in wind.ts) — its three seams go through the leaf `netquietfeed.ts`, read by
-  netquiet's tick. UNSEEN / SILENT (unseen.ts `found`, silent.ts `silentHolds` read a defender 'alert' or 'search'): the last man is 'alert' from the frame
+  netquiet's tick. UNSEEN / SILENT (unseen.ts `found`, silent.ts `the silent hold (roundheld.ts)` read a defender 'alert' or 'search'): the last man is 'alert' from the frame
   he is low until `alertSecs` of quiet, never 'search'. Measured on the shipped stand, ten men dropped quietly: rule on he is alert at 13.4 s for 15 s; rule
   off his squad has him alert at about 31 s (one run, by hand, not a check line) — so the team's modes end sooner with the rule on (by 18 s there), and can come back.
   With the squads off an ordinary last man is never alert on his own: there the rule ends those modes where nothing did. An ordinary planted man with the
@@ -853,12 +853,12 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   the check takes the slice and puts it back by hand; open floor with doors all round (arc > 180°) is left to the room fight's own watch; the
   drop-and-run slice's man is not excluded by name (that rule is not in this tree); the walk-in is Sam moved by hand, silent and lit; no tour, soak or
   tally was run with it on.
-  JOINED (10-13) to the run and doorway rules: a man runner.ts has (`runnerOwns`: shout, drop, run, gone) is OFF THE NET — `onNet` — he hears no check, takes
+  JOINED (10-13) to the run and doorway rules: a man runner.ts has (`OWN.runner`: shout, drop, run, gone) is OFF THE NET — `onNet` — he hears no check, takes
   no shock from one, files none and finds no body; asked for by name he is a silence like a dead man's (`unanswered` to the asker); the tick drops any whip,
   owed line or last-man act of his and `free` keeps new ones off him: never whipped, never the last man. To the man he left he is gone (`lostTo`: dead, taken,
   run, or off the floor) once that man KNOWS it (asked for and silent — nobody is told by this file that a man ran: not wired), so the last of a squad whose
-  other man ran does settle as the last man. `moraleOwns` already yields (`free`). THE LAST MAN'S HOLD WINS over the dark doorway: darkdoor.ts `own` asks
-  `netFeedHolds` (the leaf), so he is never stopped at a doorway nor called to one, a balk of his ends on the frame he is the last man, and its sweep gives
+  other man ran does settle as the last man. `OWN.morale` already yields (`free`). THE LAST MAN'S HOLD WINS over the dark doorway: darkdoor.ts `own` asks
+  `OWN.lastMan` (the leaf), so he is never stopped at a doorway nor called to one, a balk of his ends on the frame he is the last man, and its sweep gives
   his aim back. Training: `trainingOf` / `sawLeaderFall` read as 39bc0d45 has them; under 'none' every man is steady (× `steadyK`) and nobody is a leader —
   no case of the check runs on it. The panel row stands in Enemy nerve with the rest. netquiet-check (Q13): Tango 4 run, deaf to the check for a dead mate,
   silent when asked for (+0.07 to the steady asker), never the last man, no line; Tango 5 then says his squad's line and is low at 9.37 s; the control (the
@@ -1039,7 +1039,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   senses on the walk, never on where the team is. SWITCH: ON in the page (`?nopowerout` off; the debugger row 'a blackout sends enemies to the
   breaker'), OFF in the module and on the frozen stand (`FROZEN_HOLDS` `'POWEROUT.on': 'TPS_POWEROUT=1'`), in the knob registry and the journal (a
   recording from before the key replays with it off), state in the checkpoint (`powerOutSnapshot` / `powerOutRestore` through savestate.ts; the
-  debugger's timeline is not kept). SEAMS in others' files, one clause each: lighting.ts (`setBlackout` tells it; the re-arm reads `powerOutMan`),
+  debugger's timeline is not kept). SEAMS in others' files, one clause each: lighting.ts (`setBlackout` tells it; the re-arm reads `powerOutRules`),
   game.ts (the tick, the reset), guards.ts (`powerOutLit` in the torch pose), darkfoe.ts (the word). CHECK: `tools/qa/powerout-check.ts` (probe
   `powerout`, 18 lines (a)–(n): word before step, who goes and who does not, boots and lamps, mains back at the lever, home again, the second cut, a
   garrison that knows, a shot breaker, a fight while out, the snapshot round trip, a breaker in a man's own room, the glasshouse's floor-dark notice with
@@ -1112,7 +1112,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   is (the places are their own posts); no dice or state of its own. SWITCH: ON in the page (`?nostayask`; the debugger row 'squads staying put
   miss a silent room'), OFF in the module and on the frozen stand (`'STAYASK.on': 'TPS_STAYASK=1'`), in the registry and `JOURNAL_KNOBS`.
   SEAMS in enemysquads.ts (another goal's file): `State.stayAsk`, `netAsks(g)` in place of seven reads of `SQUADS.netAsk`, and `netSend` (a squad
-  that stays may send `STAYASK.men` on such a floor). KNOWN SHAPE: the man sent ends in another squad's room while `squadStaysIn` still answers yes
+  that stays may send `STAYASK.men` on such a floor). KNOWN SHAPE: the man sent ends in another squad's room while `gd.staysInRooms` still answers yes
   for him (wallreact.ts, darkfoe.ts, laststand.ts judge him by his home room); nothing was seen to go wrong, nothing was run to find out. CHECK:
   `tools/qa/stayask-check.ts` (probe `stayask`), 6 lines: (a) (b) the block and Mousehole — roll call, the silent squad asked for by name, "one
   moving" in that order, ONE man off his post before any contact, his word 1.5 s or more before he is there (the block: 33.9 / 37.9 / 41.9 s, there
@@ -1135,7 +1135,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   he's gone!" and he walks back. Nobody free: "nothing from the break room — nobody to spare. Stay on your doors!". A fight, a loud thing, or
   anything of the team in his ears on the way sends him home at a run. A man down in the hostage room is never asked for and nobody is walked into it: that room is the
   rescue's own (its clock, its hand-over). THE MAN WHO WENT AND DID NOT COME BACK is asked for at the next check where he was going, and the post he never reached is a
-  question again. THE CLOCKS ARE THE RESCUE'S: a man walking to look who has noticed nothing has not learned of the team (`rescueCheckOwns`, one
+  question again. THE CLOCKS ARE THE RESCUE'S: a man walking to look who has noticed nothing has not learned of the team (`OWN.walk`, one
   clause in rescue.ts's learned test; what he hears on the way he learns like any man) and the captor's clock is not touched. THE ROAMER'S WORD:
   `wordSecs` before the rescue lets a roamer off his post he says where he is going — "heard that — moving to cover it!" with a loud thing of the
   team's known, else "on my way — moving to the hostage door!" (not a man with the team in his eye; a noise that comes after his word is said as he
@@ -1224,7 +1224,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   room's` when the gun, not the room seen, decided); `enter()` and `wallcharge.ts enter()` send the Mk 12 and Mk 46 men last (`gunTurn`, `gunLast`);
   `cover.ts`'s deal adds `gunLane` (± `laneK` 0.6 by distance: the far opening to the long gun, away from a man with a pistol alone, half that for an
   MP7); `roomfight.ts tickOp` and `coverfire.ts`'s trigger fire the Mk 46 in strings of its row's own length at its own rate and the Mk 12 one aimed round
-  a beat (`gunString`; the pair for every other gun); the belt-fed DEFENDER is not taken from his line (`gunKeepsPost`: `lanes.ts laneHolds` answers true
+  a beat (`gunString`; the pair for every other gun); the belt-fed DEFENDER is not taken from his line (`gunKeepsPost`: `lanes.ts laneBars` answers true
   for him, so no rally, press, errand or dark hunt, and `digin.ts` lets a noise next door lie); a blinded defender fires blind at his own gun's rate
   (`gunBlindGap`: a pistol a round a pull, not twelve in 1.2 s). A squad of issue carbines stacks, enters and fires exactly as with the switch off.
   NOT BUILT, on purpose: no gun holds its fire for range (a man who will not shoot reads as dumb; range is the rows' own spread and the cover's deal);
@@ -1262,7 +1262,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   a roamer is let go to the noise (the room fight's 'free': his own eyes, grenades and pursuit drills; he fights whoever he meets). THE COVERED LANES ONLY
   CHOOSE HIS DOOR (`RESCUEFLUSH.lanesChoose`, 10-19, the mend below): the floor outside his turn's door in the line of guns his side knows of and the other
   door's not (`laneCovers`), he takes the other ('flush:lane:<name>', once a man); nobody is kept back for being warned off; his walk is priced and gated by
-  the lanes as any walk is, and a man they already hold at a corridor's mouth is not taken off it for what lies at that corridor's guns (`laneHolds(g, gd,
+  the lanes as any walk is, and a man they already hold at a corridor's mouth is not taken off it for what lies at that corridor's guns (`laneBars(g, gd,
   to)`, as the press and the rally ask it) — he stays the lanes' own man (their look, their grenade, their way round). A man come to rest with nobody
   in his sights is sent again `againSecs` after his last word. THEY'RE GONE: the first to stand in the room and find no hostage says so, and from then on they
   go to the team's last loud thing and to the way out, in turn. THE GUN ON HER: a man of theirs inside `reachM` of a living hostage with a line a ROUND can fly (`shotBlocked`: a
@@ -1282,8 +1282,8 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   and the check's floor has no team on it to hold one.
   THE MEND OF 10-19 (`lanesChoose`: module default true, inert wherever `RESCUEFLUSH.on` is off, so the frozen stand needs no word; a recording whose
   RESCUEFLUSH row has no such key replays with it off — `journal.ts applyKnobs`; no URL flag and no debugger row: off is the stall below). AS BUILT ON 10-18
-  the rule asked `laneHolds` / `laneWarns` about the spot it sent a man TO. For the room that spot is a hostage, which is where the team's guns are, and
-  `laneWarns` is true within 16 m of a known lane's guns: once their side knew of ANY lane (the entry fight nearly always opens one) both doors were
+  the rule asked `laneBars` / `laneKnownAt` about the spot it sent a man TO. For the room that spot is a hostage, which is where the team's guns are, and
+  `laneKnownAt` is true within 16 m of a known lane's guns: once their side knew of ANY lane (the entry fight nearly always opens one) both doors were
   barred and no man was ever sent. With the new ending that was a rescue that never ended by the clear. Found by the held-corridor work with
   `rescue-tally.ts` on the shipped stand. THE TALLIES' PLAYERS LEARNED THE PAGE'S ENDING with it (`rescue-tally.ts` `Run.hold()` / `leadOut()`, used by
   the office tally's `finish()` and the registry tally's; a plain step on the frozen stand): the room held `LEAD_AFTER` 20 s with no man of theirs shown and
@@ -1368,7 +1368,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   floor under `Guard.reactT` laid every frame of it (`startleLeft`, beside the blinded man's floor in `updateGuard`), so where the fight's own clock is longer (the room fight's surprise) the start plays at its head. His 'CONTACT!' bubble
   waits for the end of it (the log row and the net's click do not). THEN he draws — the gun comes up and the shout goes at the beat's end, and for `draw` seconds more no round leaves (the same floor, so a man does not fire off the frame his hands start to move), then the fight as it was — or RUNS: a GREEN man (`morale.ts trainingOf`; only with `MORALE.on`) who is ALONE (`morale.ts hasMate`) with the man he saw between
   `nearM` and `runM`. A room-fight post man goes by that file's own break-off (`RoomFight.bolt`: out by a door nothing has come at, else cover; for `clearSecs` the man he ran from does not stop him); any other man runs on a per-frame
-  order beside the nerve rule's (`startleScript`: bent low, hands down, to `suppression.ts coverFrom`, then holds it as a man shifted under fire holds his). Nowhere to go: he draws. THE SHARED START: `startleMan(g, gd, at, secs?, torch?)` is
+  order beside the nerve rule's (`startleScript`: bent low, hands down, to `suppression.ts coverFrom`, then holds it as a man shifted under fire holds his). Nowhere to go: he draws. THE SHARED START: `giveStartle(g, gd, at, secs?, torch?)` is
   the jolt and the gun-down beat alone, for another rule to give (a door opened into a man); it asks no switch of this file's, decides nothing after, and roots only a man who is suspicious or alert (rousing a calm one is the caller's).
   State per man in the side table `startle.stateOf`, checkpoint slice `startle`. CHECK: `bun run tools/qa/probes.ts startle` (17 lines; `STARTLE_BREAK=1` = 11 FAIL) on BOTH stands; on the real page `PORT=<port> node
   tools/qa/startle-page.cjs` (software adapter: the jolt shows, the gun and the shout wait the beat; `?startle=0` as it was). MEASURED (headless, 10-22): the plain night on the office, a calm guard with Sam put lit in front of him at 4 m and at 8 m, two guards x seeds 1 to 6 (24 pairs a stand, the rule off against on): the gun comes up 0.52 s later in all 24; the first round leaves 0.37 to 0.47 s later (median 0.47). On the page's stand the green guard of the two, alone at 4 m, RUNS in all six seeds and his first round comes 2.4 to 2.5 s later than with the rule off; at 8 m he draws. The room fight (`roomclear-tally.ts`, the page's stand, seeds 1 to 30, the tool's rush and careful players, 60 runs each way, off = `TPS_STARTLE=0`): rush 14 taken, 14 wiped, 2 stalled both ways (teammates standing at the end 25 of 60 off, 26 on); careful 20 taken both ways, 4 wiped and 6 stalled off, 3 wiped and 7 stalled on (standing 41 of 60 off, 45 on). 16 of the 60 runs are a different run (a run that parts from its twin parts for good, so single seeds swing: careful 6, 21 and 29 turn from lost or stalled to taken, 3, 24 and 27 the other way). No difference is shown at that size. `soak.ts --seeds 1,2,3 --minutes 12` on the page's stand: the same one old violation kind (`interact-row`) on and off, no exception, no new kind. `tour.ts --runs 3`: 3 of 3 on the frozen stand; on the page's stand 0 of 3 both on and off, the same three stops red (an old red, not this rule).
@@ -1401,10 +1401,10 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   has a mate, any cost to a trained man beyond the dip itself.
 - **A man who has run leads no radio check** (10-23, from a kept run on the block: the last three defenders, one of them broke, dropped his gun and
   went low in a corner; four seconds on HE called "radio check — who's still up? sound off!" and nine seconds after that counted himself among the
-  three). laststand.ts counted the few with `runnerFled` (line 572, the 10-13 join) but its own `alive` and `fitGd` asked only for a man not dead, so
+  three). laststand.ts counted the few with `gd.fled` (line 572, the 10-13 join) but its own `alive` and `fitGd` asked only for a man not dead, so
   the runner was still a man of the stand: he could call the check, answer it, be asked for by name and be sent to regroup. Both now ask
-  `runnerOwns` (off the net from the shout on, as netquiet.ts and enemysquads.ts have it); the two places that mean a BODY (the fallback fix "a man of
-  theirs lies here", the mover's "down on the way" tally) ask `state === 'dead'` as before. NO SWITCH: `runnerOwns` is false with `RUNNER.on` off, so
+  `OWN.runner` (off the net from the shout on, as netquiet.ts and enemysquads.ts have it); the two places that mean a BODY (the fallback fix "a man of
+  theirs lies here", the mover's "down on the way" tally) ask `state === 'dead'` as before. NO SWITCH: `OWN.runner` is false with `RUNNER.on` off, so
   the frozen stand cannot move; ON THE PAGE'S STAND IT CHANGES any run where a man has fled — who leads the check and the count that is spoken.
   CHECK: `probes.ts laststand-fled` (family laststand; the block, seed 2, three left, one made to run by `runnerBreak`, forty seconds): the check is
   called by one of the two who fight, `up0` 2, the runner says nothing and is not named, no count above 2 — green on both stands (the frozen one with
@@ -1496,7 +1496,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   counts); frag.ts's first caller of "grenade!"; roomfight.ts `cue()` (a teammate still turns his muzzle to a fled man's footfalls, `stepBy`); needs.ts
   `partnerFor` / `partnerReply`; qrf.ts `staffVoice` / `silentNet`; buddy.ts `alive`; cues.ts `note()`'s callsign and the 'calm' cue; and the suspected
   ones nobody has read to the end (digin.ts, roomfight.ts `lost`, morale.ts's feed, civilians.ts, spotted.ts, sneak.ts, squad40.ts, verdict.ts). THREE
-  SPELLINGS STAND SIDE BY SIDE and were left so: flinch.ts `mateBy`, enemysquads.ts `fit` and laststand.ts `fitGd` ask `runnerOwns` with no key (from
+  SPELLINGS STAND SIDE BY SIDE and were left so: flinch.ts `mateBy`, enemysquads.ts `fit` and laststand.ts `fitGd` ask `OWN.runner` with no key (from
   the shout, always), the readers above ask under this key; for the 0.6 s between his shout and his drop a mate is company to morale and not to flinch.
   NOT SEEN: never seen on a GPU and never played. The page was only booted on the software adapter (`PORT=<port> node tools/qa/runanyway-page.cjs`: its key-on run, which opens the page as it ships and so with this key on, passes
   with no page error; its second load was cut by the time cap on a loaded machine and proves nothing).
@@ -1516,4 +1516,20 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   `bun run tools/qa/owner-check.ts` on both stands (`OWNER_BREAK=1` red on every line): at every read and at every tick's end, each man's word against what each rule's own state says
   (`ownerWitness`, one line in the rule's file). A rule the runs never put a man in says so in its line. `bun run tools/qa/fights-check.ts` on both stands (`FIGHTS_BREAK=1` red): a new pair of
   modules setting one deciding field of one man to different values in a tick is red until someone says who has him or why it is meant; the pairs known today are listed in it with their reason.
+  THE OTHERS OF THE FORTY: of the questions the review counted (40 names by its count, 125 question and asker pairs), 15 were who has him and are the record's now (`OWN.runner`, `.morale`, `.stand`,
+  `.squad`, `.squadLeg`, `.squadWord`, `.lastMan`, `.lane`, `.press`, `.walk`, `.breaker`, `.buddy`, `.needs`, with `.frag` and `.startle` added for `updateGuard`'s order). 3 are fields of the man
+  (`gd.fled`, `gd.staysInRooms`, `gd.handleGateT`). 6 are about a round at a target and are one read (`roundheld.ts`). The rest answer something else and are named for it (`laneBars`, `laneKnownAt`,
+  `inSquadRooms`, `powerOutRules`, `underSilence`, `underUnseen`, `standoffFixKept`, `standoffOnFeet`, `carriesDarkLamp`, `fallingInYields`, `gunOnLitMan`, `inSeat`, `handsAtWork`, `doorGateStopped`,
+  `handleGateStopped`, `startleGunDown`, `rearWatcherWaits`, `giveStartle`). Of the 77 side tables keyed by a man, 2 held nothing but "mine" and are gone (`netquietfeed.holding`, `handleside.feet`); the
+  other 75 hold a rule's state, for each port to say what becomes of.
+  WHERE THE RULES DISAGREE TODAY, KEPT, FOR THE MAINTAINER TO RULE ON (each with its counts in the note above): each gives way to the other so first come keeps him: last stand and squad, last stand and
+  press, dig-in and squad, dig-in and press. One rule gives way in some places and not others: a squad's man at rest (the rally and the press count him the squad's, buddy calls, the dark-room walk, the
+  breaker party, the last stand and dig-in only once it has spoken), a man shaken by a blast (squads, the last stand, the reaction force, grenades, flinches and startles do not ask), a man who has run
+  (the lanes do not ask), the last man at his act (the press, the last stand, the dark-room walk and buddy calls do not ask), a lane holder (buddy calls and the last stand do not ask), script over
+  startle (`updateGuard`'s order says the other way, `startleScript` stops itself), script and dig-in (`tickDef` runs dig-in before it looks at the script), and the rally's own order, which is play
+  because its first three excuses leave the clock running.
+  OWNERSHIP STILL HIDDEN IN A VALUE: `D.rallyAt === Infinity` (the mission's man) and `D.lostAt` ahead of the clock. Not in the record yet; look at them when the rescue ports. A QUESTION THAT WRITES,
+  KEPT: `pressStopsClock`, called where `pressOwns` used to stop a man's rally clock as it answered. THE LAST MAN'S TWO ANSWERS WERE ONE TICK APART in one run of the 42 with switches up; they agree now.
+  WHAT THE 42 DO NOT SHOW: nobody is ever walking for a silent mate, out for the breaker or off for a coffee in them, even with switches up, nor is a squad silent or unseen, so `owner-check` also runs the
+  rules' own families under the same audit.
   NOT SEEN: nothing here changes what is on screen but the debugger's line. Never seen on a GPU.
