@@ -80,7 +80,7 @@ import { wg } from './words';   // (a leaf: the dialogue pass's one switch)
 import { simRandom } from '../math/dice';   // the simulation's die (math/dice.ts): the Game's own when it has one, Math.random otherwise
 import { railsDown } from './rails';   // (a spared teammate on his knee stops no defender on the move: asked inside tickMove only)
 import { hasHim, OWN } from './owner';
-import { roundHeld, roundHeldGlass } from './roundheld';
+import { silentHoldsGlass, roundHeld } from './silent';
 
 /** The module's switches and the few numbers that are not a side's. */
 /** the check's own break word (tools/qa coverkeep-probes.ts): the cover rule's switch reads on and the rule does nothing */
@@ -312,7 +312,7 @@ interface Def {
 }
 /** how long a man held for the glass stays passed over for anybody else his teammate may shoot (the scoring in tickOp; re-stamped every frame the hold lasts) */
 const GLASS_LOOK = 4;
-interface Meter { m: number; seenT: number; /** when he last held a round at this man for the standing glass in the way (silent.ts silentGlassHolds; unset = never) */ glassT?: number }
+interface Meter { m: number; seenT: number; /** when he last held a round at this man for the standing glass in the way (silent.ts silentHoldsGlass; unset = never) */ glassT?: number }
 interface Op {
   gd: Guard; meters: Map<Guard, Meter>;
   tgt: Guard | null; turn: { to: Guard; at: number; until: number; pt?: Vec3 | null; t0?: number; door?: Door | null } | null; pass: { h: Guard; until: number; noShot?: boolean } | null; kept: { h: Guard; track: number; t: number } | null; track: number; pre: boolean; readyAt: number; n: number; next: number; lostAt: number; fell?: boolean; first: boolean;
@@ -1074,7 +1074,7 @@ export class RoomFight {
     let to = chest;
     if (!clearShot(g, c, to)) { const head = hc.bones.head ?? v3.add(hc.pos, [0, 1.6, 0]); if (clearShot(g, c, head)) to = head; else if (!coverSeen(g, gd, h, chest)) { O.heldForLine++; O.blockT += dt; this.walkOn(O); return; } }   // (coverfire.ts: no line, and what blocks it is breakable and worth the rounds — they go into it)
     O.blockT = 0;
-    if (roundHeldGlass(g, gd, h, c, to)) { const M = O.meters.get(h); if (M) { if (M.glassT === undefined || g.time - M.glassT > GLASS_LOOK) this.speak(O, 'eyes on, behind glass. holding.', 8); M.glassT = g.time; } return; }   // (silent.ts: the round would have to break a pane on its way to a man who has raised no alarm — held, the gun on him, said once a hold; glassT on HIS meter of that man: … who is not a man to stay on while there is anybody he may shoot — the scoring above)
+    if (silentHoldsGlass(g, gd, h, c, to)) { const M = O.meters.get(h); if (M) { if (M.glassT === undefined || g.time - M.glassT > GLASS_LOOK) this.speak(O, 'eyes on, behind glass. holding.', 8); M.glassT = g.time; } return; }   // (silent.ts: the round would have to break a pane on its way to a man who has raised no alarm — held, the gun on him, said once a hold; glassT on HIS meter of that man: … who is not a man to stay on while there is anybody he may shoot — the scoring above)
     const R = gd.weapon.def.aiSpread; const hands = (R.base + Math.max(0, dist - R.rangeFrom) * R.rangeK) * S.spreadK;
     const supK = g.tune.suppression && conditionSup(g, gd, gd.sup.v) >= SUPPRESSION.flinch ? 1.6 : 1;
     const str = gunString(gd);   // (gunroles.ts: a belt-fed gun's string, the Mk 12's single aimed round — 0: the controlled pair, as ever)
