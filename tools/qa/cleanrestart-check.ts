@@ -9,6 +9,7 @@
 // checkpoint laid over a restart (a load is not a restart: a file saved in the dark, far from the start, loads dark with the camera on its man), the switch
 // off (the fault as it was), the stands and a recording from before the table.
 //   bun run tools/qa/cleanrestart-check.ts          (probes.ts cleanrestart; CLEANRESTART_BREAK=1 must FAIL — the switch is left down where the check raises it)
+//   CLEANRESTART_BREAK=men                          one man's one column nudged in the restarted game before line 5's compare: line 5 must FAIL, naming the man and the column
 // Both stands: the check raises the switch itself, and gives the stand the words that make a wall switch and a vehicle's lamp things to break on either.
 // Nothing here is a picture: the restart's first frames have not been seen on a GPU by this check (cleanrestart-page.cjs counts them on the software adapter).
 import { readFileSync } from 'node:fs';
@@ -24,7 +25,7 @@ const { VENT_DEFAULTS } = await import(`${ROOT}/src/scene/levelData.ts`);
 const { startFromQuery } = await import(`${ROOT}/src/game/scenarioRun.ts`);
 const { v3 } = await import(`${ROOT}/src/math/vec.ts`);
 
-const DT = 1 / 60, BREAK = process.env.CLEANRESTART_BREAK === '1', VERBOSE = !!process.env.CLEANRESTART_VERBOSE;
+const DT = 1 / 60, BREAK = process.env.CLEANRESTART_BREAK === '1', BREAK_MEN = process.env.CLEANRESTART_BREAK === 'men', VERBOSE = !!process.env.CLEANRESTART_VERBOSE;
 function seeded(seed: number) { let a = seed >>> 0; return () => { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
 async function hushed<T>(f: () => T | Promise<T>): Promise<T> { const log = console.log, warn = console.warn, err = console.error; if (!VERBOSE) console.log = console.warn = console.error = () => { }; try { return await f(); } finally { console.log = log; console.warn = warn; console.error = err; } }
 const { MEN_FIELDS } = await import(`${ROOT}/src/sim/men/schema.ts`);
@@ -167,7 +168,8 @@ export async function cleanrestartCheck(): Promise<boolean> {
         `wrecked ${JSON.stringify(a)} · fresh ${JSON.stringify(f)} · smoke cleared ${smokeCleared}× · the host told ${pictures.length}× (${pictures[0] ?? '-'}) · the camera ${camA.toFixed(3)} m from a fresh boot's (${did.far.toFixed(1)} m before) · ${vents.length} vents (${ventsSlow} run down by the blackout before), ${ventsOff} off their cycle after (${ventsRest} at rest in it), one turned round by hand put back: ${ventsWrong === 0} · tally ${JSON.stringify(st1)}`); }
 
     // ---- the whole state, one tick and ten seconds on; the run by digest
-    { const one = audit(g, gb); const hashes: string[] = []; let split = -1, splitAt = '';
+    { const nudged = BREAK_MEN ? g.guards[0] : null; if (nudged) nudged.lastSeenT += 1;   // (the red path of the field-by-field compare: nothing but this column of this man is touched)
+      const one = audit(g, gb); if (nudged) { console.log(`      CLEANRESTART_BREAK=men: ${one.left.filter(d => d.includes('.lastSeenT')).join(' · ') || 'the nudged column was NOT named'}`); nudged.lastSeenT -= 1; } const hashes: string[] = []; let split = -1, splitAt = '';
       const run = (x: any) => { const d: any = digestGame(x, true); delete d.seq; for (const cv of d.civilians ?? []) delete cv.heard; return d; };   // (the digest less the event serial and each civilian's place in it: a number that counts up through a restart and names nothing that stands)
       for (let s = 0; s <= 10; s++) { const da = run(g), db = run(gb), ha = hashDigest(da) as string, hb = hashDigest(db) as string; hashes.push(ha); if (ha !== hb && split < 0) { split = s; splitAt = Object.keys(da).filter(k => JSON.stringify(da[k]) !== JSON.stringify(db[k])).join(', '); if (VERBOSE) for (const k of splitAt.split(', ')) console.log(`      digest ${k}:\n        ${JSON.stringify(da[k]).slice(0, 700)}\n        ${JSON.stringify(db[k]).slice(0, 700)}`); } if (s < 10) await hushed(() => steps([A, B], 60)); }
       const ten = audit(g, gb);
