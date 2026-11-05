@@ -10,7 +10,7 @@ import { leafWrote, MIRRORED, type BoxMirror } from '../scene/boxMirror';
 import { BOTH, type StaticCollision } from '../scene/collision';
 import { WORLD } from '../scene/world';
 import { EXACT } from '../math/exact';
-import { RUST } from '../sim/sim';
+import { RUST, ruleFell, ruleRed } from '../sim/sim';
 import { DoorStore, DC, DD, DO, DK, KF, DE, DOOR_EV, DP, DF, MAN_UNASKED, DOOR_CAP, DOOR_COLS, DOOR_OUTS, DOOR_CONS, DOOR_PARS, DRIVE_KINDS, DOOR_SOUNDS, STRIKE_TIERS, DOORS_STEPPED, doorIo, doorMem } from '../sim/doorshome';
 import { SlabStore, SLF, type SLAB_F64, type SlabNow } from '../sim/slabshome';
 
@@ -406,7 +406,7 @@ export class Door {
     this.leafH = leafH;
     this.box = makeBox({ c: [0, 0, 0], h: leafH, albedo: def.albedo ?? [0.42, 0.3, 0.19], flags: BoxFlag.Dynamic, name: 'door_' + def.name, ...(def.steel ? { rough: 0.3, metal: true } : { rough: 0.55, marks: doorLeafMarks(leafH) }) });   // finish for the reflection pass (Box.rough): a painted steel fire door has a satin sheen, the veneered leaves only just (ultra); MARKINGS: kick plates both faces + a push plate by the latch (the markings lane — a steel door is its own plate)
     // push plate + lever handle (raster only)
-    this.handleBoxes = [0, 1].map(() => makeBox({ c: [0, 0, 0], h: [0.06, 0.012, 0.012], albedo: [0.55, 0.55, 0.52], flags: BoxFlag.Dynamic | BoxFlag.NoShadow, rough: 0.25, metal: true }));
+    this.handleBoxes = [0, 1].map(() => makeBox({ c: [0, 0, 0], h: [0.06, 0.012, 0.012], albedo: [0.55, 0.55, 0.52], stuff: 'paint', flags: BoxFlag.Dynamic | BoxFlag.NoShadow, rough: 0.25, metal: true }));   // (`stuff`: what the look made of this grey by its COLOUR until 11-04, kept so the picture did not move; nobody chose it. scene/stuff.ts drawnAs)
     this.leafMarks = this.box.marks;
     this.frameCentre = [def.hinge[0] + Math.cos(def.closedDir) * def.width * 0.5, 1.0, def.hinge[1] + Math.sin(def.closedDir) * def.width * 0.5];
     this.place();
@@ -646,11 +646,16 @@ export class Doors {
    *  check that puts its own over one gets ITS step); the box world's copy standing with the game's own leaves in it, a door's leaf at the door's index; and
    *  no more contacts than the hand-over holds. → the copy to step over, or null: this file steps, on the same columns. */
   private there(contacts: DoorContact[]): BoxMirror | null {
-    const H = this.host;
-    if (!RUST.doors || this.store.home === null || !EXACT.on || H === null || this.standable !== H.standable || this.settle !== H.settle || this.updateHere !== Doors.prototype.updateHere) return null;
-    if (contacts.length > doorIo().maxContacts) return null;
-    const dyn = H.col.dynamicBoxes, L = this.list, n = L.length; if (dyn.length !== n) return null;
-    for (let i = 0; i < n; i++) if (dyn[i] !== L[i].box) return null;
+    const H = this.host; if (!RUST.doors || this.list.length === 0) return null;   // (a level with no door has no step, here or there: its columns are no tenant of the block)
+    // (each way back to this file's step is said, for the count of questions the TypeScript took: sim.ts FELL)
+    if (!EXACT.on) return null;   // (idle: a row that works lengths out answers under the game's own maths alone — sim.ts OWN_MATHS)
+    if (ruleRed('doors')) return null;
+    if (this.store.home === null) return ruleFell('doors', 'the leaves are not at home in a block of the module');
+    if (H === null) return ruleFell('doors', 'no game stands behind these doors');
+    if (this.standable !== H.standable || this.settle !== H.settle || this.updateHere !== Doors.prototype.updateHere) return ruleFell('doors', 'a check\'s own step in the rule\'s place');
+    if (contacts.length > doorIo().maxContacts) return ruleFell('doors', 'more men at the doors than a step is handed');
+    const dyn = H.col.dynamicBoxes, L = this.list, n = L.length; if (dyn.length !== n) return ruleFell('doors', 'the leaves in the box world are not this level\'s doors');
+    for (let i = 0; i < n; i++) if (dyn[i] !== L[i].box) return ruleFell('doors', 'the leaves in the box world are not this level\'s doors');
     return H.col.rulesWorld(dyn);
   }
   /** the step's hand-over written (the level's doors, the contacts, the rules' numbers) and the step taken: how many noises it listed. Nothing of the game

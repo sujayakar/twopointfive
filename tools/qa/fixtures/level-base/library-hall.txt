@@ -1,3 +1,2 @@
-# the hall as meant: the showroom of the older kits, as tools/levels/library-hall.ts gives it (git hash-object -w levels/library-hall.json)
-# its hearth's ash is the ground's own paint darker and its stain lies under ruts (gwotKit.ts hearth, stain)
-753d8ad1112589f70b213359d82e725abf208f3a
+# the vehicles say what they are made of: car paint on their bodies, glass and rubber on their windows and tyres; no box, colour or number moved
+3c580eecbe9a188922d41fd1d4875d2ec601a68f

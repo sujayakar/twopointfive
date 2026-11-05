@@ -4,7 +4,7 @@
 // Read off the level FILES and the tables: no game is stood up, nothing is played.
 //   bun run tools/qa/level-needs.ts [name …] [--run] [--jobs 4] [--skip need,…] [--quiet] [--md out.md] [--json out.json]
 //     name      levels to ask (levels/<name>.json; a look twin `<name>-gwot.json` is asked with its plain file, never by itself); none = every level file
-//     --run     also run the level's OWN checks as they stand (export --check, map-check --no-runs, level-lint, door-size, second-way-check, lived-check,
+//     --run     also run the level's OWN checks as they stand (export --check, map-check --no-runs, level-lint, door-size, second-way-check, marksight-check, lived-check,
 //               kitview-plan, level-names-check, floor-order-check, quiet-check, lesson-check), each a line with its exit code, `--jobs` at a time
 //     --skip    needs left out (their names below): to see the exit code of the rest while one is red everywhere
 //     --quiet   FAIL and NOTE lines only, and the tally
@@ -495,6 +495,7 @@ const OWN: Own[] = [
   { name: 'level-lint', some: l => ['tools/qa/level-lint.ts', ...twins(l, n => `levels/${n}.json`), '--quiet'] },
   { name: 'door-size', all: ['tools/qa/door-size.ts'], some: l => ['tools/qa/door-size.ts', ...twins(l, n => n)] },
   { name: 'second-way-check', all: ['tools/qa/second-way-check.ts'], some: l => { const f = l.filter(n => rowsOf(n).some(e => e.kind !== 'quiet')); return f.length ? ['tools/qa/second-way-check.ts', ...twins(f, n => `${n}.json`)] : null; } },
+  { name: 'marksight-check', all: ['tools/qa/marksight-check.ts'], some: l => ['tools/qa/marksight-check.ts', ...twins(l, n => n)] },   // (a level that stands no man with something to watch is named NOT JUDGED and passes)
   { name: 'lived-check', all: ['tools/qa/lived-check.ts', '--quiet'], some: l => ['tools/qa/lived-check.ts', ...twins(l, n => n), '--quiet'] },
   { name: 'kitview-plan', all: ['tools/qa/kitview-plan.ts', '--quiet'], some: l => ['tools/qa/kitview-plan.ts', ...l, '--quiet'] },
   { name: 'level-names-check', all: ['tools/qa/level-names-check.ts', '--no-play'], some: l => { const f = l.filter(n => !/^office/.test(n) && Object.keys(read(n).scenarios ?? {}).length); return f.length ? ['tools/qa/level-names-check.ts', '--levels', f.join(','), '--no-play'] : null; } },
