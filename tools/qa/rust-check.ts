@@ -423,7 +423,7 @@ let wordOwn = '', wordRust = '';
   for (const [k, t] of [['PROP_CAP', 'CAP'], ['PROP_EV', 'NEV'], ['PROP_PARS', 'NPAR']]) { shared++; const h = Number(new RegExp(`export const ${k} = (\\d+)`).exec(home)?.[1]); if (h !== there(t)) off.push(`${k} ${h} here, ${t} ${there(t)} there`); }
   { const sounds = /PROP_SOUNDS = \[([^\]]*)\]/.exec(home)?.[1].replace(/['\s]/g, '').split(',') ?? []; ['SCRAPE', 'THUD', 'ROLL'].forEach(k => { shared++; if (sounds[there(k)] !== k.toLowerCase()) off.push(`sound ${k}`); }); }
   const here = (name: string): number => Number(new RegExp(`\\b${name} = (-?[\\d.]+)`).exec(ts)?.[1] ?? NaN);
-  for (const k of ['MAX_V', 'MAX_W', 'SLEEP_V', 'SLEEP_W', 'SLEEP_T', 'DOOR_GUIDE', 'Y_MIN', 'NEAR']) { shared++; if (here(k) !== there(k)) off.push(`${k} ${here(k)} in props.ts, ${there(k)} in props.rs`); }
+  for (const k of ['MAX_V', 'MAX_W', 'SLEEP_V', 'SLEEP_W', 'SLEEP_T', 'DOOR_GUIDE', 'Y_MIN', 'NEAR', 'SETTLE_PASSES']) { shared++; if (here(k) !== there(k)) off.push(`${k} ${here(k)} in props.ts, ${there(k)} in props.rs`); }
   const ok = r.status === 0 && rows.length >= 4 && rows.every(l => / PASS /.test(l)) && /=== prop-ident: PASS/.test(r.out) && off.length === 0 && shared > 70;
   verdict(ok, 'props: every thing the Rust module steps ends where the TypeScript\'s step leaves it — its columns, the clock, the men, the noises, its boxes — and the two sides name their numbers alike',
     (rows.length ? rows.map(l => l.replace(/\s+/g, ' ').trim()).join('\n    ') + '\n    ' + sum.slice(0, 600) : `the differential left nothing (exit ${r.status}): ${(r.err || r.out).trim().split('\n').slice(-2).join(' / ').slice(0, 300)}`)

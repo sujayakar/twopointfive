@@ -1640,6 +1640,25 @@ first system across (the game's own maths). No rule of play has changed and noth
     room for, a pose not at home, the module not answering posing questions — each only with the `poses` row up, since a row put down by its
     own word (`?rustposes=0`) makes every layer the TypeScript's by that word, which is no way back in. `layer-ident`'s `whole` line walks
     those ways out on purpose and holds the count down while it does.
+  WHAT STILL LEANED ON A TWIN'S BODY WITH NO CHOICE MADE, MOVED BEFORE ANY TWIN IS DELETED (2026-11-05). Sealing the rows proved that no RUN reaches a
+  twin's STEP through the place a rule chooses its side. It could not see a twin's body reached where nothing chooses: no `ruleFell` says it, so
+  no count has it. Such a place is counted under a row of its own, `sim.ts TWIN_ROW` ("a twin's body, no choice made"), until it has a choice like
+  any other; the 42, the soak and the tour must read none of it before a twin goes.
+  - THE FURNITURE'S SETTLE AS A LEVEL IS STOOD UP IS THE MODULE'S (`props.ts settle`, `props.rs settle`, export `props_settle(g, w)`). The twelve
+    passes that resolve a level's furniture out of its authoring overlaps (every thing against the statics, then thing against thing, nothing
+    answered and nothing heard), and make where it comes to stand HOME, were the step's own two halves called straight (`solveStatics(r, false)`,
+    `solvePairs(false)`) on every load of every level. They are those halves in `props.rs` with the same word (`dynamic`), over the things' columns
+    in the game's block and the box world's copy, proven once for the lot (`collision.ts rulesStatics`: the statics alone, no leaf is asked for).
+    The way back (no window on the copy: the red path, a level that does not fit) is `ruleFell('props', …)`, a sealed row. `SETTLE_PASSES` is one
+    number in both sources. HELD BY `prop-ident`: for each of its five levels a second set of the furniture is made over the same statics with the
+    both-ways switch up, and EVERY LEVEL FILE'S furniture is settled both ways, as it loads and as it loads lived in (111 settles; 99 things moved
+    and a thing pushed out of a static 2,292 times; 0 differ); `PROPS_BREAK=1` hands the module every thing a hair wider for its settle and
+    `settles differ` must not be 0 (4). The 42 by digest on both stands. A step while a level is still being settled cannot happen and throws.
+  - A RAY INTO THE FURNITURE IS COUNTED, AND STILL ANSWERED HERE (`props.ts PropSystem.raycast`, about thirty callers: rounds, a device's beam, the
+    launcher, debris, marks, morale, cover fire, the sticky camera, a throw's plan). The one place known to `TWIN_ROW` today: 35,135 over four
+    missions on the page's stand, 1,533 on the frozen one. `lines_ray_things` is the module's and is only compared under the both-ways switch.
+    Next: it asks the module.
+
   WHAT WAS CLOSED FOR THE RULES OF THE THINGS (doors, what falls, furniture, a leaf off its hinges, thrown things; 2026-11-04):
   - EVERY WAY BACK IS SAID. Each rule's choice between the module and this side (`doors.ts there`, `props.ts there`, `doorblast.ts slabThere` and
     `flySlab`, `throwables.ts world` and its walk, `fallshome.ts rule`) names its reason through `sim.ts ruleFell(row, why)`. Not counted, because

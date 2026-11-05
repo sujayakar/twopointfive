@@ -117,7 +117,10 @@ export const propMem = f64;
 /** COUNTS FOR THE CHECKS (the host's: no game reads them): steps the module took and the TypeScript took, noises the module listed, steps answered both
  *  ways (collision.ts BOTH) and how many of those differed, with the first in words; and what the module's steps met (leaves that swept a thing, frames
  *  that guided one, things knocking each other, a thing against a static, men held back, substeps), so a check can say its run was a fair one */
-export const PROPS_STEPPED = { there: 0, here: 0, noises: 0, asked: 0, differ: 0, first: '', swept: 0, guided: 0, pairs: 0, walls: 0, held: 0, substeps: 0 };
+export const PROPS_STEPPED = { there: 0, here: 0, noises: 0, asked: 0, differ: 0, first: '', swept: 0, guided: 0, pairs: 0, walls: 0, held: 0, substeps: 0,
+  /** a level's settle (game/props.ts PropSystem.settle): taken in the module, taken in TypeScript, how often the module pushed a thing out of a static, and
+   *  — both ways — how many things the settle moved at all */
+  settled: 0, settledHere: 0, settleWalls: 0, settleMoved: 0 };
 
 /** WHERE TWO TAKES OF A STORE'S BYTES DIFFER, in words (`bytes()` of the same store, twice): the clock, the counts, then column by column and row by
  *  row — the doubles by their value (a NaN is a NaN), the words by theirs. → at most `most` lines, none if they are the same state */
