@@ -1,4 +1,4 @@
-//! knobs_to_rust (src/game/rustknobs.ts): WRITTEN BY blitz/bu2/gen_knobs.py from rust/sim/src/knobs.rs's list of paths and the skeleton's types. Do not edit: run it again.
+//! knobs_to_rust (src/game/rustknobs.ts): WRITTEN BY tools/blitz/gen-knobs.py from rust/sim/src/knobs.rs's list of paths and the game's types. Do not edit: run it again.
 //! rustknobs.ts finds each path of the module's list in the knob registry (or, under ANIM, in character.ts animTables) as the list is first read, and writes every value
 //! as a tick opens. Rust has no registry to walk at run time, so the walk is the generator's and each path is its own line here; the list the lines were made from is
 //! held against the module's own the first time (the TypeScript's error for a path that is not a number is a compile error here).
@@ -20,7 +20,7 @@ pub fn knobs_to_rust(g: &mut Game) {
     if g.m.rustknobs.rust_knobs.lines.is_none() {
         // (rustknobs.ts rustKnobLines: the list is read once and each path proven; here the proof is that the lines below were made from this very list)
         let names = unsafe { core::slice::from_raw_parts(::sim::knobs::addr(1) as *const u8, ::sim::knobs::len(1)) };
-        if names != MADE_FROM.as_bytes() || n != 1305 { panic!("rust knobs: the module's list of paths is not the one knobs_to_rust was written from: run blitz/bu2/gen_knobs.py again"); }
+        if names != MADE_FROM.as_bytes() || n != 1305 { panic!("rust knobs: the module's list of paths is not the one knobs_to_rust was written from: run tools/blitz/gen-knobs.py again"); }
         g.m.rustknobs.rust_knobs.lines = Some(Vec::new());
         g.m.rustknobs.rust_knobs.at = (::sim::knobs::addr(0) / 8) as f64;
     }

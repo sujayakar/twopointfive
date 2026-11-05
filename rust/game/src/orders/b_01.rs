@@ -11,6 +11,7 @@ use alloc::{boxed::Box, string::String, vec, vec::Vec};
 // BRING-UP, ROUND TWO: AN ORDER'S CLOSURES AFTER AN IMPORT. The bridge cannot carry OrderDef.label / can / only / valid / issue / tick / gone (closures made enums:
 // not-carried.json), so a row the import brought has `issue: Nothing` and an order given does nothing (the two sides first parted there, at tick 21).
 // BRIDGE-ASK: on import, deal each row its enums by `def.id` (the tables are static), as this does by hand from the parts' own registrations.
+/// HARNESS STAND-IN FOR A BRIDGE GAP (tools/blitz/README.md "Host steps"): called by the tick loop's runner after an import, never by the game.
 /// Every imported order row dealt its enums again by its id, as the part that registers it writes them (orders p_02 squad_orders_new; doortools p_02 door_tools_new /
 /// thr_rows / sync; shutdoor p_01; workthings p_01; wallcharge p_01). A row registered by the Rust game itself is whole already and is written the same again.
 /// Not dealt (no variant in the skeleton): 'held' beyond its label, 'thrWord'. Answers the ids it did not know.

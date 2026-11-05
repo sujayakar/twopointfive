@@ -1,4 +1,4 @@
-//! THE HOST'S SETTINGS BY NAME, for a host that fills them from outside (written by blitz/bu2/gen_host.py from RenderSettings' fields; run it again)
+//! THE HOST'S SETTINGS BY NAME, for a host that fills them from outside (written by tools/blitz/gen-settings.py from RenderSettings' fields; run it again)
 #![allow(unused_imports, unused_variables)]
 use super::*;                      // your own module: its types, its other parts' functions
 use crate::game::Game;

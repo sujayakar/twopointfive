@@ -1,0 +1,18 @@
+# THE RUST GAME'S NATIVE RUNNER: a test binary for tools/blitz/run.sh. It imports a state the TypeScript game exported, steps the translated tick over it and writes
+# the state after each tick, so the two games can be held side by side tick by tick. A native debug build: a panic has a message, a place and a backtrace.
+# Its own workspace, like game and game_face; it builds into rust/game_run/target (ignored).
+[workspace]
+
+[package]
+name = "game_run"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+[dependencies]
+game = { path = "../game" }
+sim = { path = "../sim" }
+
+[profile.dev]
+opt-level = 0
+debug = false

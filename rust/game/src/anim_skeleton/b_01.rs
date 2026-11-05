@@ -12,6 +12,7 @@ use alloc::{boxed::Box, string::String, vec, vec::Vec};
 // rig and the roles on the bench are statics of the module, written by the host as it goes, and the game's own state remembers THAT it wrote them
 // (pose_bench.rig, layers.roles, clip_side[..].at). A game imported into a fresh module remembers writes this module never had.
 
+/// HARNESS STAND-IN FOR A BRIDGE GAP (tools/blitz/README.md "Host steps"): called by the tick loop's runner after an import, never by the game.
 /// AFTER AN IMPORT INTO A FRESH MODULE, before the first tick. `knobs` (table 0 of the TypeScript module's knobs, raw bytes) is only for checking
 /// rustknobs::knobs_to_rust against: a tick writes them itself. The furniture's facts by row are written from the state. The clip store, the bench's rig
 /// and the roles need nothing since skeleton 5.1 (the bridge leaves their marks blank, so the first use writes them).

@@ -32,6 +32,7 @@ pub fn host_api_probe(g: &mut crate::game::Game) {}
 // ---- BRING-UP, ROUND TWO: WHAT THE HOST HOLDS THAT A TICK READS AND THE BRIDGE DOES NOT CARRY (`Game.engine` is "the picture's or the host's" to it).
 // BRIDGE-ASK: carry g.engine.lights (lights and ir as lists of LightId in the set's own order, fog_team), g.engine.world's lists and counts (statics, max_boxes,
 // geom_serial, glass_statics, glass_statics_n, glass_list) and g.engine.settings (plain numbers), or have the host fill them through a call like this one.
+/// HARNESS STAND-IN FOR A BRIDGE GAP (tools/blitz/README.md "Host steps"): called by the tick loop's runner after an import, never by the game.
 /// The engine's lists and settings from a host's text: a line an item, `<name> <numbers…>`. Names: lights, ir, fog_team (on), fog_owners, fog_lights, world_statics
 /// (how many: the level's own list), max_boxes, geom_serial, glass_statics, glass_statics_n, glass_list, effective_scale, and `set <key> <numbers…>` for a setting.
 /// Answers the lines it did not know. Give `max_boxes` before `world_statics`.
@@ -48,7 +49,7 @@ pub fn host_engine_fill(g: &mut crate::game::Game, text: &str) -> Vec<String> {
             continue;
         }
         if name == "light_new" {
-            // a light of the engine's list that the bridge carried no row of (its walk never reached it): name, group, then its numbers in tc2.ts's order
+            // a light of the engine's list that the bridge carried no row of (its walk never reached it): name, group, then its numbers in the order tools/blitz/host.ts writes them
             let (nm, gp) = (w.next().unwrap_or("-"), w.next().unwrap_or("-"));
             let v: Vec<f64> = w.filter_map(|x| x.parse().ok()).collect();
             let mut l = crate::render_lights::RtLight::zeroed();
@@ -81,5 +82,6 @@ pub fn host_engine_fill(g: &mut crate::game::Game, text: &str) -> Vec<String> {
     unknown
 }
 
+/// HARNESS STAND-IN FOR A BRIDGE GAP (tools/blitz/README.md "Host steps"): called by the tick loop's runner between two ticks, never by the game.
 /// The headless host's `engine.world.upload()` between two ticks, as much of it as the game reads: the boxes listed again (boxes.ts relist; the pack is the picture's).
 pub fn host_world_upload(g: &mut crate::game::Game) { crate::scene_boxes::box_world_list(g); }
