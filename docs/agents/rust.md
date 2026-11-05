@@ -1698,6 +1698,14 @@ first system across (the game's own maths). No rule of play has changed and noth
     two night people), `frames` and `sweeps` (a door each) 27 of 256 and of 512, `men` 12 of 16 as the fullest level stands (`COPYFIT_BREAK=1`
     reddens them with the rest). Behind it the ways back are throws by name
     (`doors.ts there`, `props.ts there`), as is furniture the copy would not take (`throwables.ts world`: a level of more is not loaded).
+  - THE TWO CHECKS THAT STEPPED FURNITURE WITH NO GAME STEP IT IN THE MODULE (`tools/qa/door-chair.ts`, `tools/qa/chair-roll-check.ts`: a lone
+    `PropSystem` over a level's statics, a man's circle shoving one chair). They loaded no stand, so every row was down and the TypeScript
+    stepped the chair: a check of the twin. Each stands a game up once (the stand in force: the rows up, the game's own maths) and steps each
+    case inside a window on its own statics' copy, so the chair is stepped by `props.rs` as a chair in play is; each says how many steps the
+    module took and FAILS if the TypeScript took one. Their numbers did not move: 2,730 cases, 0 plugged, over 241,097 steps (`--off`: 1,033
+    plugged, as before); the chair's coasts and its `roll` events to the digit, over 5,760 steps (`CHAIRROLL_BREAK=1`: 4 FAILED, as before).
+    No other tool steps a system with no game (`leafway-check` and the level editor make `Doors` to deal swings and step nothing; the model
+    viewer's stage lives under the workbench and goes with it).
 
   WHAT WAS CLOSED FOR THE RULES OF THE THINGS (doors, what falls, furniture, a leaf off its hinges, thrown things; 2026-11-04):
   - EVERY WAY BACK IS SAID. Each rule's choice between the module and this side (`doors.ts there`, `props.ts there`, `doorblast.ts slabThere` and
