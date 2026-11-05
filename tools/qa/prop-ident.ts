@@ -12,10 +12,15 @@
 //          collision.ts BOTH does in a played mission: tools/qa/rust-check.ts --both)
 //   twin   the step as the game takes it with the row on (the module's, taken back into the game: the men moved, the noises heard, the boxes placed), then
 //          everything put back as it was and the TypeScript's own step taken, and what each left compared here
+// THE LEVEL'S SETTLE is held too (PropSystem.settle: the twelve passes that resolve a level's furniture out of its authoring overlaps as the level is
+// stood up, and make where it comes to stand home — props.rs settle): for each level a second set of its furniture is made over the same statics with the
+// both-ways switch up, so the module's passes and the TypeScript's start from the same columns and every column they leave is compared. AND EVERY LEVEL
+// FILE'S (levels/*.json, each as it loads and as it loads lived in): its statics and its furniture alone, no game stood up, the same way.
 // A run is FAIR only if it met every kind of thing the step does: each noise, a leaf's sweep, a frame's guide, things knocking each other and the statics,
-// a man held back, a tick of more than one substep, a thing out of the level, the system frozen, a leaf off its hinges. A level that does not stand up is a
-// FAIL, not a level left out.
-// PROPS_BREAK=1 (or RUST_BREAK=1) is the red path: the module is handed a tick one unit in the last place too long, and the run must FAIL.
+// a man held back, a tick of more than one substep, a thing out of the level, the system frozen, a leaf off its hinges — and a settle that moved a thing
+// and pushed one out of a static. A level that does not stand up is a FAIL, not a level left out.
+// PROPS_BREAK=1 (or RUST_BREAK=1) is the red path: the module is handed a tick one unit in the last place too long, and every thing a hair wider for its
+// settle, and the run must FAIL (the steps differ, and the settles: `settles differ` must not be 0).
 process.env.TPS_PROFILE ??= 'shipped'; process.env.TPS_CPUSENSE ??= '1'; process.env.TPS_EXACT = '1'; process.env.TPS_RUSTPROPS = '1';   // (the game's own maths: the step runs in the module under no other)
 import { resolve } from 'path';
 const { standUp } = await import('./headless.ts');   // (not a static import: those load before this file's first line, and the harness reads the stand as it loads)
@@ -32,12 +37,15 @@ let s32 = SEED >>> 0; const rnd = () => { s32 = (s32 + 0x6D2B79F5) >>> 0; let t 
 const pick = <T,>(a: readonly T[]): T => a[Math.floor(rnd() * a.length)];
 { const no = SIM.simWhyNot(); if (no) { console.log(`=== prop-ident: the module does not run here (${no}) — FAIL ===`); process.exit(1); } }
 const log = console.log, err = console.error; const hush = (on: boolean) => { console.log = on ? () => {} : log; console.error = on ? () => {} : err; };
-if (BREAK) { const P = PR.PropSystem.prototype, hand = P.handOver; P.handOver = function (this: unknown, dt: number, c: unknown, T: unknown) { return hand.call(this, dt * (1 + 2 ** -52), c, T); }; }   // (the red path: a tick a hair too long for the module alone)
+if (BREAK) { const P = PR.PropSystem.prototype, hand = P.handOver; P.handOver = function (this: unknown, dt: number, c: unknown, T: unknown) { return hand.call(this, dt * (1 + 2 ** -52), c, T); };   // (the red path: a tick a hair too long for the module alone)
+  const there = P.settleThere, facts = P.facts; let settling = false;   // (…and for its settle every thing a hair wider than the level says)
+  P.settleThere = function (this: unknown, M: unknown) { settling = true; try { return there.call(this, M); } finally { settling = false; } };
+  P.facts = function (this: any) { facts.call(this); if (!settling) return; const io = PH.propIo(), m = PH.propMem(); for (let r = 0; r < this.props.length; r++) m[io.def + PH.PD.hx * PH.PROP_CAP + r] *= 1 + 2 ** -52; }; }
 const is = Object.is;
 
 interface Man { pos: Vec3; vel: Vec3; left: number; who: number; quiet: boolean }
-const MET = { asked: 0, scrape: 0, thud: 0, rollStart: 0, rollStop: 0, swept: 0, guided: 0, pairs: 0, walls: 0, held: 0, substeps: 0, gone: 0, frozen: 0, offLeaf: 0, rounds: 0, parked: 0, bare: 0 };
-let bad = 0, steps = 0, differ = 0, why: string | undefined; const firsts: string[] = [];
+const MET = { asked: 0, scrape: 0, thud: 0, rollStart: 0, rollStop: 0, swept: 0, guided: 0, pairs: 0, walls: 0, held: 0, substeps: 0, gone: 0, frozen: 0, offLeaf: 0, rounds: 0, parked: 0, bare: 0, settles: 0, settleMoved: 0, settleWalls: 0 };
+let bad = 0, steps = 0, differ = 0, settlesDiffer = 0, why: string | undefined; const firsts: string[] = [];
 // enough other games to put any game's block out of the module (a listener below binds them: whoever hears a noise may do as much)
 const others: any[] = Array.from({ length: ST.simLayout().games + 1 }, () => new ST.SimState());
 for (const entry of files) {
@@ -49,6 +57,12 @@ for (const entry of files) {
   const g = W.game, col = g.col, P = g.props, doors = g.doors, DL: any[] = doors.list, S = P.store, n: number = S.total;
   if (bare) { DL.length = 0; col.dynamicBoxes.length = 0; }
   if (!X.EXACT.on || !SIM.RUST.props || !n) { log(`${entry.padEnd(22)} FAIL — ${!n ? 'the level has no furniture' : 'the stand left the row or the game\'s own maths down'}: nothing was stepped`); bad++; continue; }
+  // THE LEVEL'S SETTLE, BOTH WAYS: the level's furniture made a second time over the same statics (a block of its own), the both-ways switch up as it is made
+  { const T = PH.PROPS_STEPPED, t0 = { ...T }, was = C.BOTH.on; let threw = ''; C.BOTH.on = true; hush(true);
+    try { new PR.PropSystem(g.level.props, col, () => {}); } catch (e) { threw = String((e as Error).message).split('\n')[0].slice(0, 200); } finally { C.BOTH.on = was; hush(false); }
+    const asked = T.settled - t0.settled, off = T.differ - t0.differ, here = T.settledHere - t0.settledHere;
+    MET.settles += asked; MET.settleMoved += T.settleMoved - t0.settleMoved; MET.settleWalls += T.settleWalls - t0.settleWalls;
+    if (off || threw || here || asked !== 1) { settlesDiffer++; if (firsts.length < 6) firsts.push(`${file} settle: ${threw ? 'threw: ' + threw : here ? 'the module could not take it' : asked !== 1 ? `taken both ways ${asked} times, not once` : String(T.first).slice(0, 700)}`); T.first = ''; T.differ = t0.differ; C.BOTH.first = ''; } }
   const ids: number[] = [g.player.char.id, ...g.guards.map((x: any) => x.char.id)];
   // a man made up near a thing, walking at it or past it
   const man = (): Man => {
@@ -122,7 +136,21 @@ for (const entry of files) {
 { const T = PH.PROPS_STEPPED; MET.swept = T.swept; MET.guided = T.guided; MET.pairs = T.pairs; MET.walls = T.walls; MET.held = T.held; MET.substeps = Math.max(0, T.substeps - T.there - T.asked); }   // (substeps past the first of a tick)
 for (const f of firsts) log(`    ${f}`);
 const thin = (Object.keys(MET) as (keyof typeof MET)[]).filter(k => MET[k] === 0);
-log(`prop-ident: ${steps} steps over ${files.length} levels, ${differ} differ · met: ${(Object.keys(MET) as (keyof typeof MET)[]).map(k => `${k} ${MET[k]}`).join(', ')}`);
+// EVERY LEVEL FILE'S SETTLE, BOTH WAYS: the level's statics and its furniture alone (a block of its own), as it loads and as it loads lived in
+let every = 0, everyBad = 0, bareLevels = 0;
+{ const { readdirSync } = await import('fs'), T = PH.PROPS_STEPPED, t00 = { ...T };
+  for (const file of readdirSync(resolve(ROOT, 'levels')).filter((f: string) => f.endsWith('.json') && !f.endsWith('.lint.json')).sort()) for (const lived of [false, true]) {
+    const t0 = { ...T }, was = C.BOTH.on; let threw = '', n = 0; C.BOTH.on = true; hush(true);
+    try { const level = loadLevel(JSON.parse(await Bun.file(resolve(ROOT, 'levels', file)).text()), { validate: false, lived }); n = level.props.length; if (n) new PR.PropSystem(level.props, new C.StaticCollision(level.boxes), () => {}); }
+    catch (e) { threw = String((e as Error).message).split('\n')[0].slice(0, 200); } finally { C.BOTH.on = was; hush(false); }
+    if (!n && !threw) { bareLevels++; continue; }
+    every++; const asked = T.settled - t0.settled, off = T.differ - t0.differ, here = T.settledHere - t0.settledHere;
+    if (off || threw || here || asked !== 1) { everyBad++; if (firsts.length < 6) firsts.push(`${file}${lived ? ' (lived in)' : ''} settle: ${threw ? 'threw: ' + threw : here ? 'the module could not take it' : asked !== 1 ? `taken both ways ${asked} times, not once` : String(T.first).slice(0, 700)}`); T.first = ''; C.BOTH.first = ''; } }
+  MET.settles += T.settled - t00.settled; MET.settleMoved += T.settleMoved - t00.settleMoved; MET.settleWalls += T.settleWalls - t00.settleWalls;
+  log(`every level's settle  ${everyBad || every < 40 ? 'FAIL' : 'PASS'} — ${every} levels with furniture (as they load, and lived in; ${bareLevels} with none), each settled both ways: ${everyBad} differ`);
+  if (everyBad || every < 40) bad++; }
+if (settlesDiffer) bad++;
+log(`prop-ident: ${steps} steps over ${files.length} levels, ${differ} differ · ${files.length + every} settles, ${settlesDiffer + everyBad} settles differ · met: ${(Object.keys(MET) as (keyof typeof MET)[]).map(k => `${k} ${MET[k]}`).join(', ')}`);
 if (thin.length && !BREAK) { log(`    NOT A FAIR RUN: never met ${thin.join(', ')}${why ? ` (a rule worked between steps threw: ${why.slice(0, 120)})` : ''}`); bad++; }
 log(`=== prop-ident: ${bad ? 'FAIL' : 'PASS'}${BREAK ? ' (the red path: FAIL is what it must say)' : ''} ===`);
 process.exit(bad ? 1 : 0);
