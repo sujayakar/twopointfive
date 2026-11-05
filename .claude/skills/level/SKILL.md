@@ -177,40 +177,6 @@ like that."
   because of one rack. **check** `bun run tools/qa/lived-check.ts <name>`.
 - **Measure a loud level after furnishing it**, and say the seeds: under 144 paired seeds a difference is noise.
 
-### A hand pass (after a level is dressed)
-
-The maintainer: "wear, paths in the ground, different materials can all tell a story for how people walk through the level, its logic, leading
-the player for game play", and of the look he wants: "it's all quite intentionally dressed". A hand pass adds worn paths, paint and fittings to a
-level that already has its rooms, and moves nobody's fight. The office was the first (`docs/agents/levels.md`, "the office is hand-finished").
-
-- **Read the level first, and tie every item to the read.** Three sources, all headless: the level's marks and routes (`map-plan.ts <mission>
-  --png`), where its ways run (`src/scene/ways.ts`), and six seeds of each mission traced on the page's stand with everybody's place twice a
-  second (`TPS_PROFILE=shipped PT_WHERE=0-600 PT_FOES=<their call signs> bun run tools/qa/playthrough.ts --trace <mission>:<seed>`). Count
-  where men fall. **seen** on the office thirteen of thirty-one fell at one side door that nothing in the picture said was there.
-- **Worn paths are data.** `scenarios.walked` rows between names (a door, a route, a room, a named mark), each with a weight beside one lap of a
-  patrol. Use a name that is one thing: **seen** `storage` was a door and a room, so the row took the door; a mark inside the room says which.
-  Draw the ways after and look: **seen** a row to a machine at the end of a walkway ran right round the building, because a parked car and a
-  bollard shut the walkway on the walk grid. **check** `bun run tools/qa/ways-check.ts`, then `bun run tools/qa/walked-check.ts <level>`: a
-  start or a door your rows now reach leaves its count file with `--write`, and the hand-over says which names left.
-- **No word names a room.** The maintainer, playing the office's first cut: "i don't like the "lobby" and "conference" labels in the level,
-  pretty lame". A room is shown by what is in it. Paint what a building carries without telling the player anything: a number over a door, a
-  bay's number, hatching where a floor is kept clear, a line on a floor, an arrow.
-- **Paint on a surface that is there is a marking on that box** (`markingDefaults.ts` `stencilMarks`, `hazardMarks`, the painter's tins
-  `TIN`): four a box, 1.6 m a bitmap. The office kit has the tools: `boxOn(face, x, y, z)` finds the box by where its face is, never by its
-  number; `stencilS` / `stencilTop` lay a word with its middle at a place of the world; `keepClear` hatches a bay on a floor; `bandRuns` paints
-  a band along a wall door to door with names on it; `conduitRuns` lays conduit in lengths. Centre on the box: a doorway is not the middle of
-  its slot. Hand every paint a colour array of its own: **seen** a band took another paint's finish because both were made from one array.
-- **A new thing is a kit piece, drawn only, in the lived tier.** The office kit's `band`, `vent`, `conduit` and `pipe` lie on a wall's face
-  and are drawn only unless told they are solid; a band of paint is the wall's own stuff in another colour (`saidAs`). Groups `lived.<room>`
-  at the generator's tail, so the frozen stand's level is the level it was. Lay conduit in lengths of under two metres: a breach takes what
-  hangs over the hole and leaves the rest. A band from the floor stays across a breach, as every painted dado in the game does today.
-  **check** `lived-check` (it prints "0 solid"), `wallfurn-check`, `marksight-check`, `second-way-check` and `zfight-check <level>` (no more
-  seen than before) on both stands, and the three play-through reads against the step before: none moves.
-- **Put paint where the camera reads.** It looks from the south and down, so a wall hides about two metres of floor to its north. **seen** paint
-  on a corridor's floor was all but hidden and read well on the wall's foot; a keep-clear bay behind a parked van was never seen; a line
-  to a door under a wall had to run along the far side of the room. What reads: the south faces of north walls, floor with nothing tall to its
-  south, floor seen through an opening. **By eye**, on a real card, at the mission's own hour and once at a brighter one.
-
 ## 5. Light, hour, weather
 
 **How the light should look.** The maintainer, of a yard under a midday sun: "this tutorial level just looks really
