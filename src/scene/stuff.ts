@@ -132,7 +132,17 @@ export function worded<T extends { albedo?: readonly number[]; stuff?: BoxStuff 
   const w = wordFor(o.albedo, o.stuff).stuff; if (w !== undefined) o.stuff = w; else delete o.stuff;
   return o;
 }
-/** a box painted again: the new paint, and the new paint's word (whoever repaints a box does not keep the old paint's) */
+/** A NAMED COAT IS A KIND OF A PLAIN ONE: 'carpaint' is paint, on a vehicle. One row a named coat (the look's own material for it, and one thing to a round:
+ *  game/particleFx.ts STUFF_SURF), beside the plain coat it is a kind of — which is a coat on anything and says nothing of what is under it. */
+export const COAT_KIND: Partial<Record<BoxStuff, BoxStuff>> = { carpaint: 'paint' };
+/** the word of a thing that said `was` and is painted again with a paint that says `now`: the new paint's (whoever repaints a thing does not keep the
+ *  old paint's word) — but A NAMED COAT STAYS UNDER A PLAIN ONE: a car's body given another enamel is still a car's body. */
+export const repaintWord = (was: BoxStuff | undefined, now: BoxStuff | undefined): BoxStuff | undefined =>
+  was !== undefined && now !== undefined && Object.hasOwn(COAT_KIND, was) && COAT_KIND[was] === now ? was : now;
+/** A BOX PAINTED AGAIN, the one place it is done (the default look's skin, for boxes and for props' parts: tools/levels/gwotSkin.ts): the new paint, and
+ *  the word repaintWord gives. Returns it. */
 export function repainted<T extends { albedo?: readonly number[]; stuff?: BoxStuff }, A extends NonNullable<T['albedo']>>(o: T, albedo: A): T {
-  o.albedo = albedo; delete o.stuff; return worded(o);
+  const was = o.stuff; o.albedo = albedo; delete o.stuff; worded(o);
+  const w = repaintWord(was, o.stuff); if (w !== undefined) o.stuff = w; else delete o.stuff;
+  return o;
 }

@@ -23,7 +23,7 @@ import { paletteName, surfOf } from '../../src/game/particleFx';
 import { breakClassOf, steelGrey } from '../../src/game/furnblast';
 import { DRESS_GROUP } from '../../src/game/destructionSwitch';
 import { isLived } from '../../src/scene/lived';
-import { tonedAs, worded } from '../../src/scene/stuff';
+import { tonedAs, worded, repainted } from '../../src/scene/stuff';
 import { flatsOverlap, isFlat, layFlats } from './flatLayers';
 
 export const LOOK_GROUP = 'look';
@@ -156,9 +156,7 @@ export function skinLevel(level: Level, groups: string[], S: Skin = {}): SkinSta
     if (!m) { st.kept++; continue; }
     const sim: GwotSim = (name ?? (steel ? (surf0 === 'drywall' ? '~steelPale' : '~steel') : '~' + surf0)) as GwotSim;
     const before = { name, surf: surf0, cls: breakClassOf(b.albedo), steel: steelGrey(b.albedo), dark: lum(b.albedo) > 0.1, pale: lum(b.albedo) > 0.7 };
-    const old = b.albedo, car = b.stuff === 'carpaint'; b.albedo = gwotAs(m, sim); b.rough = GWOT_FINISH[m]?.rough ?? ROUGH_CLOTH; delete b.stuff; worded(b);
-    if (car && b.stuff === 'paint') b.stuff = 'carpaint';   // (A COAT STAYS THE COAT IT WAS: a car's body given one of the skin's enamels is still a car's body — 'paint' is a coat on anything, and says nothing of what is under it)
-      // (a word belongs to the paint it was said with: the old paint's goes, and the box is made of what the skin's paint is. scene/stuff.ts)
+    const old = b.albedo; repainted(b, gwotAs(m, sim)); b.rough = GWOT_FINISH[m]?.rough ?? ROUGH_CLOTH;   // (a word belongs to the paint it was said with: the old paint's goes, and the box is made of what the skin's paint is — but a named coat stays under a plain one, so a car in the skin's enamel is still a car. scene/stuff.ts repainted)
     if (!c.full) { if (GWOT_FINISH[m]?.metal) b.metal = true; else delete b.metal; }
     // THE CHECK: the game's own classifiers say the same of the box as before (a round, a charge, a blast and the destruction index read nothing else of a paint)
     const after = { name: paletteName(b.albedo), surf: surfOf(b.albedo), cls: breakClassOf(b.albedo), steel: steelGrey(b.albedo), dark: lum(b.albedo) > 0.1, pale: lum(b.albedo) > 0.7 };
@@ -177,7 +175,7 @@ export function skinLevel(level: Level, groups: string[], S: Skin = {}): SkinSta
       // (a prop that a blast takes apart is classed by its parts' paint like any box: the new paint stands for the old)
       const next = gwotAs(m, (name ?? (steel ? (surf === 'drywall' ? '~steelPale' : '~steel') : '~' + surf)) as GwotSim);
       if (paletteName(next) !== name || surfOf(next) !== surf || breakClassOf(next) !== breakClassOf(a) || steelGrey(next) !== steelGrey(a)) throw new Error(`skinLevel: prop ${k} (${p.kind}) part ${a.join(',')} → ${m} would change what the simulation reads`);
-      part.albedo = next; delete part.stuff; worded(part); any = true; }   // (the part's word went with its old paint, and the new paint says its own)
+      repainted(part, next); any = true; }   // (the part's word went with its old paint, and the new paint says its own: scene/stuff.ts repainted)
     if (any) st.props++;
   });
 
