@@ -229,7 +229,7 @@ export class GBuffer {
     const tex = this.lookTex;
     // ON WORKERS WHERE THERE ARE ANY (render/lookWorkers.ts): every layer of the batch is asked for at once and taken here in the batch's own order, so the
     // slots, the order of lookMade and the moment a stuff is pointed at its slot are what they were. A layer no worker made is made here, in slices, as before
-    const pool = LookPool.open(make.length), asked = pool ? make.map(l => pool.make(l, LOOK_N, this.lookEven)) : null;
+    const pool = await LookPool.open(make.length), asked = pool ? make.map(l => pool.make(l, LOOK_N, this.lookEven)) : null;
     asked?.forEach(p => p.catch(() => { /* taken below, where the layer is then made here */ }));
     try { for (let k = 0; k < make.length; k++) {
       const l = make[k];

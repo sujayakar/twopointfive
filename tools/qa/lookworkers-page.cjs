@@ -23,8 +23,11 @@ process.on('exit', stop); for (const s of ['SIGINT', 'SIGTERM', 'SIGHUP']) proce
   page.on('console', m => { if (m.type() === 'error') { errors.push(m.text().slice(0, 500)); log('console', m.text().slice(0, 600)); } });
   await page.goto(`http://127.0.0.1:${port}/`); await page.waitForFunction(() => !!window.__lookWorkers, null, { timeout: 30000 });
   const cores = await page.evaluate(() => window.__lookWorkers.cores);
-  const r = await page.evaluate(most => window.__lookWorkers.run(most), MOST);
-  const ok = !r.error && r.bad.length === 0 && r.workers >= 1 && errors.length === 0;
-  console.log(`${ok ? '- PASS' : '- FAIL'} — in Chromium, all ${r.layers ?? '?'} layers made on ${r.workers ?? 0} workers (the page says ${cores} cores) are the maps made on the page's own thread, byte for byte${r.error ? `: ${r.error}` : r.bad.length ? `: NOT ${r.bad.slice(0, 6).join(', ')}` : ''}${errors.length ? ` · ${errors.length} page errors: ${errors[0]}` : ''} · ${((r.onWorkers ?? 0) / 1000).toFixed(1)} s on the workers, ${((r.here ?? 0) / 1000).toFixed(1)} s here (this machine's)`);
+  let ok = errors.length === 0;
+  for (const exact of [false, true]) {
+    const r = await page.evaluate(([most, ex]) => window.__lookWorkers.run(most, ex), [MOST, exact]);
+    const good = !r.error && r.bad.length === 0 && r.workers >= 1 && errors.length === 0; ok = ok && good;
+    console.log(`${good ? '- PASS' : '- FAIL'} — in Chromium, on ${exact ? 'the game\'s own maths (the page\'s)' : 'the engine\'s maths'}, all ${r.layers ?? '?'} layers made on ${r.workers ?? 0} workers (the page says ${cores} cores) are the maps made on the page's own thread, byte for byte${r.error ? `: ${r.error}` : r.bad.length ? `: NOT ${r.bad.slice(0, 6).join(', ')}` : ''}${errors.length ? ` · ${errors.length} page errors: ${errors[0]}` : ''} · ${((r.onWorkers ?? 0) / 1000).toFixed(1)} s on the workers, ${((r.here ?? 0) / 1000).toFixed(1)} s here (this machine's)`);
+  }
   stop(); process.exit(ok ? 0 : 1);
 })().catch(e => { console.error(e); stop(); process.exit(1); });
