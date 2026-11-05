@@ -990,7 +990,7 @@ export function kitViewStart(d: KitViewDeps): KitView {
       if (Q && lamps.porch) { const c = lightK.porch.color, g = lightK.porch.fixture?.glow ?? 0, T2 = kitViewPoolTarget(lamps.porch, -1, [c[0] * g, c[1] * g, c[2] * g], lightK.porch.intensity);
         const fresh = !poolKept; poolKept ??= game.lightHome.add(T2); const P2 = poolKept;
         if (!fresh) { P2.pos = T2.pos; P2.light = T2.light; P2.baseEmissive = T2.baseEmissive; game.lightHome.in(LIGHT_IN.base, P2, T2.baseIntensity); game.lightHome.in(LIGHT_IN.on, P2, 1); if (i < 0) { game.lightHome.in(LIGHT_IN.mend, P2); game.lightHome.in(LIGHT_IN.blind, P2, -1); } }   // (a fixture of the module's stays one for the page's life, on the list or off it; back on the list it is a new lamp)
-        game.lightHome.in(LIGHT_IN.authored, P2, 1); pool = P2; if (i < 0) game.targets.push(P2);
+        game.lightHome.in(LIGHT_IN.authored, P2, 1); pool = P2; if (i < 0) game.targets.push(P2); game.standLights();
         poolSync(); }
       else { if (i >= 0) game.targets.splice(i, 1); pool = null; }
       const O2 = QK.own, wantOwn = Q && A.kind !== 'wall', hung = qOwn && engine.lights.lights.includes(qOwn) ? qOwn : null;
