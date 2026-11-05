@@ -41,13 +41,13 @@ import { v3 } from '../math/vec';
 import { lightEstimateAt, GUARD_EYE } from './guards';
 import { isHostile } from './teams';
 import { order } from './squad';
-import { lastStandMan } from './laststand';
 import { digInPhase } from './digin';
-import { squadDefers, squadStaysIn } from './enemysquads';
-import { laneHolds, laneWarns } from './lanes';
-import { pressOwns } from './pressure';
-import { buddyOwns } from './buddy';
 import { powerOutWord } from './powerout';
+import { hasHim, OWN } from './owner';
+import { gunKeepsPost } from './gunroles';
+import { laneKnownAt } from './lanes';
+import { pressKeepsHome } from './pressure';
+import { buddyPaired } from './buddy';
 
 /** the switch and its numbers: off in the module, raised by the page (host/profile.ts pageSwitches; ?nodarkfoe = defenders leave their lights alone and stand
  *  where they were put, as they did) and by the shipped stand; the harness's frozen stand leaves it off (TPS_DARKFOE=1 turns it on). `litAt` is on the meter's
@@ -80,7 +80,7 @@ const frac = (x: number) => x - Math.floor(x);
 /** his id's share of 0‥1: spread so that neighbours in the roster differ (no dice) */
 const idShare = (gd: Guard, salt = 0) => frac((gd.char.id + salt) * 0.6180339887);
 /** does this man carry a light of his own to switch on (a unit the mission dealt a dark weapon light: `carry` of them by id) */
-export function darkFoeCarries(gd: Guard): boolean { return !!gd.unit && idShare(gd) < DARKFOE.carry; }
+export function carriesDarkLamp(gd: Guard): boolean { return !!gd.unit && idShare(gd) < DARKFOE.carry; }
 /** is he this rule's: a living enemy unit whose light the mission left off, in live play */
 export function darkFoeRuled(g: Game, gd: Guard): boolean {
   return DARKFOE.on && !!gd.unit && !gd.unit.light && gd.state !== 'dead' && gd.char.alive && isHostile(gd.team, 'player') && !g.touring && !g.director.showing && !g.quietUtility
@@ -88,7 +88,7 @@ export function darkFoeRuled(g: Game, gd: Guard): boolean {
 }
 /** THE SEAM (guards.ts poseFlashlight): his lamp burns by this rule this frame — a read, nothing counted; never for a man the rule has let go of (a show taken
  *  the floor, a light the mission has since dealt him) */
-export function darkFoeLit(g: Game, gd: Guard): boolean { return DARKFOE.on && stateOf.get(gd)?.lit === true && darkFoeCarries(gd) && darkFoeRuled(g, gd); }
+export function darkFoeLit(g: Game, gd: Guard): boolean { return DARKFOE.on && stateOf.get(gd)?.lit === true && carriesDarkLamp(gd) && darkFoeRuled(g, gd); }
 
 const mine = (gd: Guard) => (owner: number) => owner === gd.char.id;
 const placeOnly = () => true;
@@ -148,7 +148,7 @@ function threatOf(g: Game, D: Def): Vec3 {
   return bi >= 0 && D.room ? D.room.entries[bi].at : D.pt;
 }
 /** his room is his fence: always, unless `roam` — and then still for a man of a squad that may not leave (enemysquads.ts mayLeave false) */
-const fenced = (g: Game, gd: Guard) => !DARKFOE.roam || squadStaysIn(g, gd);
+const fenced = (g: Game, gd: Guard) => !DARKFOE.roam || gd.staysInRooms;
 /** a way of no more than `walkM` to a spot — never by way of a doorway of his room, nor out of it (digin.ts's own rule) — or nothing */
 function wayTo(g: Game, D: Def, q: Vec3): boolean {
   const c = D.gd.char, path = g.col.nav.findPath(c.pos, q, 6000); if (!path?.length) return false;
@@ -163,7 +163,7 @@ export function darkFoeSpot(g: Game, D: Def): { spot: Vec3; mate: boolean } | nu
   const K = DARKFOE, gd = D.gd, c = gd.char, nav = g.col.nav, cs = nav.cell, threat = threatOf(g, D), far = v3.distXZ(c.pos, threat) - 0.5;
   const free = (p: Vec3) => { const x = p[0], z = p[2];
     return !nav.isBlocked(x, z) && !nav.isBlocked(x + cs, z) && !nav.isBlocked(x - cs, z) && !nav.isBlocked(x, z + cs) && !nav.isBlocked(x, z - cs)   // (room for his shoulders)
-      && (!fenced(g, gd) || inRoom(g, D, p)) && !laneWarns(g, gd, p) && !(D.room?.entries.some(e => v3.distXZ(p, e.at) < 1.2)) && v3.distXZ(p, threat) >= far   // (his own room, off its doorways, no nearer the trouble than he stands)
+      && (!fenced(g, gd) || inRoom(g, D, p)) && !laneKnownAt(g, gd, p) && !(D.room?.entries.some(e => v3.distXZ(p, e.at) < 1.2)) && v3.distXZ(p, threat) >= far   // (his own room, off its doorways, no nearer the trouble than he stands)
       && !g.guards.some(o => { if (o === gd || o.state === 'dead') return false; const t = stateOf.get(o)?.to; return v3.distXZ(o.char.pos, p) < 0.9 || (!!t && v3.distXZ(t, p) < 0.9); }); };   // (nor where another man stands or was sent)
   for (const edge of K.edge ? [true, false] : [false]) { let tries = 0;   // the dark edge of the light first, then any floor he can see from
     for (let r = 2; r <= K.seekM + 1e-6 && tries < WAY_TRIES; r += 1.5) { const n = Math.max(8, Math.round(r * 2.5));   // rings outward: the first that passes is the nearest
@@ -195,11 +195,10 @@ export function darkFoeKept(g: Game, gd: Guard, D: Def | undefined = g.fight.def
   if (gd.state !== 'alert') return 'not alert';   // (the walk ends in the room fight's plant(), which makes a man alert: only one who is already is sent)
   if (g.time - gd.lastSeenT < DARKFOE.quietSecs || g.time - gd.witness.heard.lastShotT < DARKFOE.calmSecs || gd.sup.v > 0.05) return 'in a fight';
   if (digInPhase(g, gd) !== 'idle') return 'dug in';
-  if (squadDefers(g, gd)) return 'his squad\'s';
-  if (laneHolds(g, gd)) return 'holds a lane';
-  const rally = D.rallyAt, press = pressOwns(g, D); D.rallyAt = rally;   // (pressOwns is roomfight's hook and may stop his rally clock as it answers: asked here it changes nothing)
-  if (press || buddyOwns(g, D)) return 'the press\'s';
-  if (g.rescue.captor() === gd || lastStandMan(g, gd)) return 'the captor / last stand';
+  if (hasHim(gd, OWN.squadWord)) return 'his squad\'s';
+  if (gunKeepsPost(gd) || hasHim(gd, OWN.lane)) return 'holds a lane';
+  if (hasHim(D.gd, OWN.press | OWN.buddy) || pressKeepsHome(g, D, false) || buddyPaired(g, D)) return 'the press\'s';
+  if (g.rescue.captor() === gd || hasHim(gd, OWN.stand)) return 'the captor / last stand';
   return null;
 }
 
@@ -213,8 +212,8 @@ export function darkFoeTick(g: Game, dt: number) {
     if (!S) { S = { knows: false, word: false, blind: false, ask: idShare(gd, 7) * K.askSecs, lit: false, against: 0, held: K.holdSecs, blindFor: 0, moves: 0, since: K.againSecs, to: null }; stateOf.set(gd, S); }
     S.held = Math.min(S.held + dt, 60); S.since = Math.min(S.since + dt, 600); S.ask += dt;
     if (S.ask >= K.askSecs) { S.ask = 0; if (!S.knows) S.knows = learns(gd); S.word = !S.knows && hasWord(g, gd); S.blind = (S.knows || S.word) && darkFoeBlind(g, gd); }
-    if (!darkFoeCarries(gd)) S.lit = false;   // (`carry` turned down under a burning lamp)
-    if (darkFoeCarries(gd)) {
+    if (!carriesDarkLamp(gd)) S.lit = false;   // (`carry` turned down under a burning lamp)
+    if (carriesDarkLamp(gd)) {
       if (S.blind === S.lit) S.against = 0;   // (the reading agrees with the lamp)
       else { S.against += dt; if (S.against >= (S.lit ? K.offSecs * (1 + idShare(gd, 9) * K.offJitter) : K.onSecs + idShare(gd, 3) * K.onJitter) && S.held >= K.holdSecs) { S.lit = !S.lit; S.against = 0; S.held = 0; click(g, gd, S.lit); } }
       continue;
@@ -238,7 +237,7 @@ export function darkFoeOf(gd: Guard): Readonly<FoeState> | null { return stateOf
 export function darkFoeSummary(g: Game): string {
   if (!DARKFOE.on) return 'dark ▸ defenders leave their lights alone (off)';
   const men = g.guards.filter(gd => darkFoeRuled(g, gd));
-  return 'dark ▸ ' + (men.map(gd => { const S = stateOf.get(gd), has = darkFoeCarries(gd);
+  return 'dark ▸ ' + (men.map(gd => { const S = stateOf.get(gd), has = carriesDarkLamp(gd);
     return `${gd.callsign} ${!S || !(S.knows || S.word) ? 'does not know' : S.lit ? 'lamp ON' : !S.blind ? 'can see' : has ? 'blind, lamp coming' : S.moves ? 'no light, walked' : `no light, blind${darkFoeSees(g, gd.char.pos) ? ' by lit floor' : darkFoeKept(g, gd) ? ` (${darkFoeKept(g, gd)})` : ''}`}`; }).join(' · ') || 'no defender with a dark light');
 }
 

@@ -29,7 +29,7 @@
 //   · A fight anywhere on their side, or a shot, a boot or a charge in his ears on the way: back to his post at a run, and the rule stands down while it lasts.
 //     Men who went down while their side was roused are known down: nobody is asked for after a fight.
 // THE CLOCK IS NOT TOUCHED: nothing here starts it, speeds it or stops it. A man walking to a post has learned nothing of the team (rescue.ts asks
-// `rescueCheckOwns` before it reads his walk as that); what he SEES there is his own.
+// `OWN.walk` before it reads his walk as that); what he SEES there is his own.
 // No man is added and nobody's eyes, aim or health change; the post he walks to is his mate's own, not where the team is. No dice (the beats are the cast's
 // ids), no camera, no graphics setting, no wall clock. State per Game with its pair (rescueCheckSnapshot / rescueCheckRestore through savestate.ts).
 // Type-only game imports but for functions used inside calls (src/game is one import cycle).
@@ -46,9 +46,9 @@ import { chronRadio, chronBodyFound } from './chronicle';
 import { placeName } from './dialogue';
 import { tally } from './mission';
 import { isBreathing } from './game';
-import { runnerFled } from './runner';
 import { RESCUE } from './rescue';
 import { wg } from './words';   // (a leaf: the dialogue pass's one switch)
+import { claimMan, releaseMan, hasHim, ownerWitness, OWN } from './owner';
 import { word } from './belief';
 
 /** the switch and its numbers: off in the module, raised by the page (host/profile.ts pageSwitches; ?norescuecheck = a rescue's men never miss each other,
@@ -78,10 +78,11 @@ interface State { nextAt: number; n: number; stage: 'idle' | 'called' | 'asked';
   /** where a man who went out was going (he is looked for there, not on the post he left) */ where: Map<Guard, Vec3>;
   /** what a roamer has said of where he is going · the roamers whose letting-go this rule has seen */ worded: Map<Guard, 'noise' | 'door'>; kept: Set<Guard>; out: Out | null; events: RescueCheckEvent[] }
 const STATES = new SideMap<Game, State>('rescuecheck.STATES');
+ownerWitness<Game>('walk', (gd, g) => walking(g, gd), true);
 
 const flat = (a: Vec3, b: Vec3) => Math.hypot(a[0] - b[0], a[2] - b[2]);
 const frac = (x: number) => x - Math.floor(x);
-const alive = (gd: Guard) => gd.state !== 'dead' && gd.char.alive && !runnerFled(gd);
+const alive = (gd: Guard) => gd.state !== 'dead' && gd.char.alive && !gd.fled;
 const fit = (g: Game, gd: Guard) => alive(gd) && !gd.held && g.time >= gd.dazzledUntil && g.time >= gd.staggerUntil;
 const roused = (gd: Guard) => gd.state === 'alert' || gd.state === 'search';
 const loudHeard = (gd: Guard) => { const H = gd.witness.heard; return H.shots + H.kick + H.bang; };
@@ -104,7 +105,9 @@ function ruled(g: Game): boolean {
 
 /** rescue.ts defenders(): this man is out on the check's errand and has noticed nothing — his walk is not word of the team (a thing he hears on the way is:
  *  the rescue's own test, a man no longer on patrol or with something in his ears, reads him then as it reads any man) */
-export function rescueCheckOwns(g: Game, gd: Guard): boolean { return RESCUECHECK.on && STATES.get(g)?.out?.gd === gd && !roused(gd) && gd.state !== 'suspicious' && gd.awareness < 0.3; }
+const walking = (g: Game, gd: Guard) => RESCUECHECK.on && STATES.get(g)?.out?.gd === gd && !roused(gd) && gd.state !== 'suspicious' && gd.awareness < 0.3;
+/** said as the rescue's tick opens, the frame's senses all in (rescue.ts, rescueflush.ts read it there) */
+export function rescueCheckSay(g: Game): void { for (const gd of g.guards) { if (walking(g, gd)) claimMan(gd, OWN.walk, g.time); else releaseMan(gd, OWN.walk, g.time); } }
 /** the check's and the debugger's timeline */
 export function rescueCheckTimeline(g: Game): RescueCheckEvent[] { return STATES.get(g)?.events ?? []; }
 /** a staging, a restart (game.ts resetGuards) */
@@ -125,7 +128,8 @@ const unseen = (g: Game, c: Cast[number]) => !(c.gd.lastSeenT > (isNaN(c.learned
 function walk(g: Game, D: Def, to: Vec3) { run(g, D, to, null); order(D.gd, { speed: g.tune.guardInvestigate }); }
 
 /** once a frame, before the room fight's own tick (game.ts) — a return on its first line with the switch off or no rescue on the floor */
-export function rescueCheckTick(g: Game, _dt: number) {
+export function rescueCheckTick(g: Game, dt: number) { stepCheck(g, dt); rescueCheckSay(g); }
+function stepCheck(g: Game, _dt: number) {
   if (!ruled(g)) { const st = STATES.get(g); if (st) { letGo(g, st); STATES.delete(g); } return; }
   const K = RESCUECHECK, cast = g.rescue.cast(); if (cast.length < 2) return;
   let st = STATES.get(g);

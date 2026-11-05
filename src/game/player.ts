@@ -45,7 +45,7 @@ import { ocpable, lensClear } from './lighting';
 import { deadLamp } from './carlamps';
 import { GUNWALL, breachAim, gunWalled, gunWallIs, gunClearFrom, woodBetween, gunWallPose, gunWallStance } from './gunwall';
 import { friendNoSnap, friendOnRay, samOffFriend } from './friends';
-import { noShoveBegin, noShoveMan, noShoveBack, noShoveNote, type Shoved } from './noshove';
+import { noShoveBegin, fallingInYields, noShoveBack, noShoveNote, type Shoved } from './noshove';
 import { samStaggered, samRooted, samBlind, samStunPose } from './samstun';
 import { SPRINTDOOR, SPRINTDOOR_STATS, sprintDoorPace, sprintDoorLean, sprintDoorHead, type DoorStamps } from './sprintdoor';
 import { tearOff } from './doorblast';
@@ -861,7 +861,7 @@ function keepOffGuards(g: Game, dt: number, y1: number, m: Legs = g.player) {   
     if (gd.state === 'dead' || gd.held) continue;   // (the man in his arm is placed off him, not kept off him: updateHold)
     const dx = p[0] - gd.char.pos[0], dz = p[2] - gd.char.pos[2]; const l = Math.hypot(dx, dz);
     if (l >= KEEP_OFF) continue;
-    if (noShoveMan(g, gd)) {   // (noshove.ts: a man of his own falling in is the one who yields — only what his own legs closed on the man is taken back)
+    if (fallingInYields(g, gd)) {   // (noshove.ts: a man of his own falling in is the one who yields — only what his own legs closed on the man is taken back)
       const back = l > 1e-4 ? noShoveBack(g, gd.char.pos[0], gd.char.pos[2], l, m) : 0;
       if (back > 0) { const bx = p[0], bz = p[2]; p[0] += dx / l * back; p[2] += dz / l * back; collideMan(g, m, y1); noShoveNote(g, p[0] - bx, p[2] - bz, m); }
       continue;
@@ -1894,7 +1894,7 @@ function keepHeldOffGuards(g: Game, dt: number) {
     if (o === H.g || o.state === 'dead' || o.held) continue;
     const dx = hx - o.char.pos[0], dz = hz - o.char.pos[2]; const l = Math.hypot(dx, dz);
     if (l >= KEEP_OFF || l < 1e-4) continue;
-    if (noShoveMan(g, o)) continue;   // (noshove.ts: a man of his own falling in does not move the pair either)
+    if (fallingInYields(g, o)) continue;   // (noshove.ts: a man of his own falling in does not move the pair either)
     const bx = c.pos[0], bz = c.pos[2];
     const push = Math.min(KEEP_OFF - l, 6 * dt); c.pos[0] += dx / l * push; c.pos[2] += dz / l * push;
     collidePlayer(g, 1.7); noShoveNote(g, c.pos[0] - bx, c.pos[2] - bz);

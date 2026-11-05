@@ -43,7 +43,7 @@
 // WHAT HE KNOWS: a defender's state within `waryM` of him (the man says 'huh?' aloud and squares up to the noise — that is the cue the player has too), and,
 // for 'caught', the alert the man shouts ('CONTACT!'). He does not read awareness numbers, and a man in a far room is nothing to him.
 //
-// Scope: the squad under Sam's orders while it is SILENT (silent.ts silentMan). A loud squad, a show, the tour, a man a drill owns: untouched. Feet are only
+// Scope: the squad under Sam's orders while it is SILENT (silent.ts underSilence). A loud squad, a show, the tour, a man a drill owns: untouched. Feet are only
 // ever changed for a man who is FOLLOWING (fall in); a man posted by an order (hold, cover, move there, a stack) keeps his feet and only gets low.
 // State is per Guard in a WeakMap: nothing on the Game, nothing in the digest, nothing in a checkpoint.
 // Probes: tools/qa/spotted-probes.ts. Tallies: tools/qa/pair-sneak.ts with SPOTTED=1 in the environment.
@@ -53,7 +53,7 @@ import { SideMap, SideSet } from '../math/side';
 import type { Vec3 } from '../math/vec';
 import type { Game, Guard } from './game';
 import { isHostile } from './teams';
-import { SILENT, silentMan, squadSilent, silentReached, silentUrgent, quietGun } from './silent';
+import { SILENT, underSilence, squadSilent, silentReached, silentUrgent, quietGun } from './silent';
 import { lightEstimateAt } from './guards';
 import { PAIRUP, keptOn } from './pairup';
 import { killGuard } from './combat';
@@ -135,7 +135,7 @@ const litAt = (g: Game, q: ArrayLike<number>) => g.visibilityOf(lightEstimateAt(
 const ours = (g: Game, h: Guard) => h.foe === 'player' ? !g.player.down : !!h.foe && h.foe.team === 'operative' && h.foe.state !== 'dead';
 /** an alert man with a real sighting of one of them inside `freshSecs` */
 const hasThem = (g: Game, h: Guard) => h.state === 'alert' && g.time - h.lastSeenT >= 0 && g.time - h.lastSeenT < SPOTTED.freshSecs && ours(g, h);
-const live = (g: Game, gd: Guard) => SPOTTED.on && silentMan(g, gd) && gd.state !== 'dead';
+const live = (g: Game, gd: Guard) => SPOTTED.on && underSilence(g, gd) && gd.state !== 'dead';
 
 // ------------------------------------------------------------ what the rest of the game asks (each a return on its first line with the switch off)
 /** his mode this frame (calm with the switch off, the squad loud, or nobody ever asked) */
@@ -143,8 +143,8 @@ export function spottedMode(g: Game, gd: Guard): SpottedMode { return live(g, gd
 /** the alert man who has them, while this teammate is caught (pairorders.ts: where his gun goes when a take job ends on it) — null: not caught, or nobody in particular */
 export function spottedBy(g: Game, gd: Guard): Guard | null { const M = men.get(gd); return live(g, gd) && M && M.mode === 'caught' && M.by && M.by.state !== 'dead' ? M.by : null; }
 /** roomfight.ts's fire gate, beside silent.ts's own: this round is held */
-export function spottedHolds(g: Game, gd: Guard, h: Guard): boolean {
-  if (!SPOTTED.on || !silentMan(g, gd) || silentReached(g, gd) || quietGun(gd) || silentUrgent(g)) return false;
+export function spottedHoldsRound(g: Game, gd: Guard, h: Guard): boolean {
+  if (!SPOTTED.on || !underSilence(g, gd) || silentReached(g, gd) || quietGun(gd) || silentUrgent(g)) return false;
   if (men.get(gd)?.take?.foe === h) return true;   // (his hands are going onto this man: no round)
   if (h.state === 'suspicious') { if (!SPOTTED.hold) return false; SPOTTED_STATS.held++; return true; }
   if (!SPOTTED.holdUnaware || (h.state !== 'alert' && h.state !== 'search')) return false;
@@ -162,14 +162,14 @@ function dangerNow(g: Game, h: Guard, gd: Guard): boolean {
 }
 /** roomfight.ts's eyes: caught, he shoots on a sighting */
 export function spottedKeen(g: Game, gd: Guard): boolean {
-  if (!SPOTTED.on || !SPOTTED.keen || men.get(gd)?.mode !== 'caught' || !silentMan(g, gd)) return false;
+  if (!SPOTTED.on || !SPOTTED.keen || men.get(gd)?.mode !== 'caught' || !underSilence(g, gd)) return false;
   SPOTTED_STATS.keen++; return true;
 }
 /** orders.ts, as it poses him: where his feet go and how he carries himself while this lasts — null: as ordered. `follower`: he is on 'fall in';
  *  `aside`: he is stepping out of Sam's way this frame (that step is never taken from him). A man posted by an order only ever gets low. */
 export function spottedFeet(g: Game, gd: Guard, follower: boolean, aside: boolean): { goal: Vec3 | null; speed: number | null; crouch: boolean; watch: Vec3 | null } | null {
   if (!SPOTTED.on) return null;
-  const M = men.get(gd); if (!M || !silentMan(g, gd)) return null;
+  const M = men.get(gd); if (!M || !underSilence(g, gd)) return null;
   // AT ARM'S LENGTH: he closes on the man his hands are for, whatever order his feet were on (the one case a posted man's feet are taken)
   if (M.take && !aside) { const c = M.take.foe.char.pos; return { goal: M.take.spot, speed: SILENT.pace > 0 ? SILENT.pace : 1.6, crouch: false, watch: [c[0], 1.2, c[2]] }; }
   if (M.mode === 'calm') return null;
@@ -294,7 +294,7 @@ function hands(g: Game, gd: Guard, M: Man) {
  *  the floor loud in his ears or a quiet gun in his hands). True: his hands are going on (the caller leaves his feet to spottedFeet). Nothing in this file
  *  calls it. */
 export function spottedTake(g: Game, gd: Guard, foe: Guard): boolean {
-  const K = SPOTTED; if (!K.on || !K.close || !silentMan(g, gd)) return false;
+  const K = SPOTTED; if (!K.on || !K.close || !underSilence(g, gd)) return false;
   const M = men.get(gd); if (!M) return false; if (M.take) return M.take.foe === foe;
   if (foe.state === 'dead' || !!foe.held || !isHostile(gd.team, foe.team) || silentReached(g, gd) || quietGun(gd) || M.takeNo?.foe === foe) return false;
   const p = gd.char.pos, c = foe.char.pos;
@@ -306,7 +306,7 @@ export function spottedTake(g: Game, gd: Guard, foe: Guard): boolean {
  *  pairup.ts's 'hands' rule — nothing in this file reads it, and alone the part is as it was) */
 export function spottedGripped(g: Game, h: Guard): boolean { if (!SPOTTED.on) return false;
   // (bounded like the order's own grip: hands nobody is tending any more — he was shot with them on, the squad went loud under them — do not blind the man for ever)
-  for (const gd of g.guards) { if (gd.state === 'dead' || !silentMan(g, gd)) continue; const T = men.get(gd)?.take; if (T && T.foe === h && T.t0 >= 0 && g.time >= T.t0 && g.time - T.t0 < SPOTTED.takeSecs + 0.5) return true; }
+  for (const gd of g.guards) { if (gd.state === 'dead' || !underSilence(g, gd)) continue; const T = men.get(gd)?.take; if (T && T.foe === h && T.t0 >= 0 && g.time >= T.t0 && g.time - T.t0 < SPOTTED.takeSecs + 0.5) return true; }
   return false; }
 /** the men dropped in the last `braceSecs`: where each fell and when (per Game; the first tick only learns who is already down) */
 const drops = new SideMap<Game, { down: WeakSet<Guard>; at: { pos: Vec3; t: number }[]; seen: boolean; t: number }>('spotted.drops');
@@ -326,7 +326,7 @@ export function spottedTick(g: Game) {
   if (P && !wrapped.has(P)) { wrapped.add(P); const word = P.word.bind(P); P.word = () => { const w = word(); return w === 'SILENT' ? spottedWord(g) ?? w : w; }; }
   const fell = K.brace ? fresh(g) : NONE as { pos: Vec3; t: number }[];
   for (const gd of g.orders.squad()) {
-    if (gd.state === 'dead' || !silentMan(g, gd)) continue;
+    if (gd.state === 'dead' || !underSilence(g, gd)) continue;
     let M = men.get(gd); if (!M) men.set(gd, M = { mode: 'calm', since: t, wary: [], by: null, eyes: null, waryT: -100, caughtT: -100, spot: null, what: null, askT: -1, exposed: false, trail: false, saidT: -100, real: false, told: false, take: null, takeNo: null, realT: -1, tickT: t });
     if (t - M.tickT > 0.25 || t < M.tickT) { M.take = null; M.takeNo = null; }   // (not read for a while — the squad went loud and back, the switch — or the clock went back: no hands half-on)
     M.tickT = t; M.wary.length = 0; M.real = false; let by: Guard | null = null, bd = Infinity;

@@ -117,8 +117,8 @@ export async function netquietCheck(): Promise<boolean> {
   const M = await import(`${ROOT}/src/game/morale.ts`);
   const { MORALE, moraleOf, rungOf, trainingOf, leaderOf, moraleShock } = M;
   const NQ = await import(`${ROOT}/src/game/netquiet.ts`);
-  const { NETQUIET, NETQUIET_STATS, NETQUIET_LOG, NETQUIET_QA, netQuietAsked, netQuietClosed, netQuietBody, netQuietFall, netQuietLook, netQuietPose, netQuietTick, netQuietOf, netQuietLines, netQuietSnapshot, netQuietRestore, netQuietSummary, netQuietHolds } = NQ;
-  const { NETFEED, netFeedAsked, netFeedTake, netFeedHolds } = await import(`${ROOT}/src/game/netquietfeed.ts`);
+  const { NETQUIET, NETQUIET_STATS, NETQUIET_LOG, NETQUIET_QA, netQuietAsked, netQuietClosed, netQuietBody, netQuietFall, netQuietLook, netQuietPose, netQuietTick, netQuietOf, netQuietLines, netQuietSnapshot, netQuietRestore, netQuietSummary } = NQ;
+  const { NETFEED, netFeedAsked, netFeedTake } = await import(`${ROOT}/src/game/netquietfeed.ts`);
   const { PLAYER_ID } = await import(`${ROOT}/src/game/consts.ts`);
   const { parseLevelData } = await import(`${ROOT}/src/scene/levelData.ts`);
   const { loadLevel } = await import(`${ROOT}/src/scene/levelLoad.ts`);
@@ -130,7 +130,8 @@ export async function netquietCheck(): Promise<boolean> {
   const { FIGHT_SKILL } = await import(`${ROOT}/src/game/roomfight.ts`);
   const { LASTSTAND } = await import(`${ROOT}/src/game/laststand.ts`);
   const D = await import(`${ROOT}/src/game/dialogue.ts`);
-  const { RUNNER, runnerBreak, runnerFled, runnerOwns } = await import(`${ROOT}/src/game/runner.ts`);
+  const { RUNNER, runnerBreak } = await import(`${ROOT}/src/game/runner.ts`);
+  const { hasHim, OWN } = await import(`${ROOT}/src/game/owner.ts`);
   const { DARKDOOR } = await import(`${ROOT}/src/game/darkdoor.ts`);
   const BREAK = process.env.NETQUIET_BREAK === '1'; let all = true;
   const later = { runner: RUNNER.on, door: DARKDOOR.on };
@@ -200,7 +201,7 @@ export async function netquietCheck(): Promise<boolean> {
       netQuietAsked(g, A, C, men); netQuietClosed(g, A, [C], [B]); netQuietBody(g, B, men); netQuietFall(g, C); netFeedAsked(g, A, C, men); netQuietLook(A, pt as any); const pose = netQuietPose(g, A, DT, false); netQuietTick(g, DT);
       R.step(240);
       const met = g.guards.filter((x: any) => netQuietOf(x)).length, s1 = [A, B, C].map(shockOf), filed = netFeedTake(g).length;
-      line(met === 0 && s0.every((s, i) => s === s1[i]) && NETQUIET_STATS.lines === lines0 && pose === null && pt.join() === '1,2,3' && !NETFEED.live && filed === 0 && netQuietSnapshot(g) === undefined && netQuietSummary(g) === '' && !netQuietHolds(A) && !netFeedHolds(A),
+      line(met === 0 && s0.every((s, i) => s === s1[i]) && NETQUIET_STATS.lines === lines0 && pose === null && pt.join() === '1,2,3' && !NETFEED.live && filed === 0 && netQuietSnapshot(g) === undefined && netQuietSummary(g) === '' && !hasHim(A, OWN.lastMan) && !hasHim(A, OWN.lastMan),
         '(Q0) switch off: every seam called (asked, closed, body, fall, the squads\' feed, look, pose, holds, tick) and four seconds run — no man met, no shock, no line, nothing filed, no checkpoint key',
         `men met ${met} · shock ${s0.map(f2).join('/')} → ${s1.map(f2).join('/')} · lines ${NETQUIET_STATS.lines - lines0} · pose ${pose} · pt ${pt.join()} · feed on ${NETFEED.live}, filed ${filed}`); }
 
@@ -399,8 +400,8 @@ export async function netquietCheck(): Promise<boolean> {
         g.events.push({ kind: 'door', pos: [eA.at[0] + eA.out[0] * 0.6, 1, eA.at[2] + eA.out[1] * 0.6], time: g.time, loud: true, level: 0.9, who: PLAYER_ID });
         for (let i = 0; i < 900 && (netQuietOf(T)?.last ?? 0) < 1; i++) R.step();   // (to the frame his line is out: the act saved mid-way)
         const at = netQuietOf(T)?.last ?? -1; let hold = false, feed = false, act = -1, keyed = false, wiped = false;
-        if (load) { const snap = copy(netQuietSnapshot(g) ?? null); keyed = !!snap; netQuietRestore(g, undefined); wiped = g.guards.every((x: any) => !netQuietOf(x)) && !netFeedHolds(T); NETFEED.live = false;
-          netQuietRestore(g, snap); hold = netFeedHolds(T); feed = NETFEED.live; act = netQuietOf(T)?.last ?? -1; }
+        if (load) { const snap = copy(netQuietSnapshot(g) ?? null); keyed = !!snap; netQuietRestore(g, undefined); wiped = g.guards.every((x: any) => !netQuietOf(x)) && !hasHim(T, OWN.lastMan); NETFEED.live = false;
+          netQuietRestore(g, snap); hold = hasHim(T, OWN.lastMan); feed = NETFEED.live; act = netQuietOf(T)?.last ?? -1; }
         let lowAt = NaN; for (let i = 1; i <= 480; i++) { R.step(); if (Number.isNaN(lowAt) && netQuietOf(T)?.last === 3) lowAt = i * DT; }
         const N = netQuietOf(T); return { at, lowAt, last: N?.last ?? -1, spot: N?.spot ? [...N.spot] : null, crouch: T.char.anim.crouch ?? 0, quiet: N?.quiet ?? -1, hold, feed, act, keyed, wiped };
       };
@@ -419,15 +420,15 @@ export async function netquietCheck(): Promise<boolean> {
       const knows = men.filter(m => netQuietOf(T)?.known.has(m.char.id)).length, up = hostiles(g).length - 1;
       let lowAt = NaN; const said = listen(R, [T], 14, t => { if (Number.isNaN(lowAt) && netQuietOf(T)?.last === 3) lowAt = t; });
       const l = said.find(s => inPool('alone', s.text)), lastLines = said.filter(s => inPool('last', s.text)).length, N = netQuietOf(T), crouch = T.char.anim.crouch ?? 0;
-      line(knows === men.length && up > 0 && NETQUIET_STATS.asks === a0 && !!l && l.radio && lastLines === 0 && N?.last === 3 && lowAt >= l.t + K.lastBeat - 0.1 && crouch > LOWC && netFeedHolds(T),
+      line(knows === men.length && up > 0 && NETQUIET_STATS.asks === a0 && !!l && l.radio && lastLines === 0 && N?.last === 3 && lowAt >= l.t + K.lastBeat - 0.1 && crouch > LOWC && hasHim(T, OWN.lastMan),
         '(Q10) the last of his squad, every mate seen to fall and nobody ever asked for (other squads still up): he knows — his line (his own squad\'s, not "somebody talk to me"), the beat, low; his squad sends him nowhere meanwhile',
-        `mates known gone ${knows} of ${men.length}, checks asked ${NETQUIET_STATS.asks - a0}, ${up} of other squads up · ${l ? `"${l.text}" at ${f2(l.t)} s` : words(said)} · low at ${f2(lowAt)} s (act ${N?.last}), crouch ${f2(crouch)}, walked ${f2(flat(T.char.pos, p0))} m · held from his squad: ${netFeedHolds(T)}`);
+        `mates known gone ${knows} of ${men.length}, checks asked ${NETQUIET_STATS.asks - a0}, ${up} of other squads up · ${l ? `"${l.text}" at ${f2(l.t)} s` : words(said)} · low at ${f2(lowAt)} s (act ${N?.last}), crouch ${f2(crouch)}, walked ${f2(flat(T.char.pos, p0))} m · held from his squad: ${hasHim(T, OWN.lastMan)}`);
       // (Q11) a man of another squad walks past (a second inside mateM), then one comes and stays
       const O = hostiles(g).find((x: any) => x !== T), home = [...O.char.pos], by = R.beside(T.char.pos, [T.char.pos[0] + 2, 0, T.char.pos[2] + 2], 2), rel0 = NETQUIET_STATS.released;
       R.put(O, by); R.step(60); R.put(O, home); R.step(90); const past = { act: netQuietOf(T)?.last, crouch: T.char.anim.crouch ?? 0 };
       let upAt = NaN; for (let i = 1; i <= 360; i++) { R.put(O, by); R.step();   // (he STAYS: stood there every frame — left to himself a man of another squad is off home through the door inside four seconds)
         if (Number.isNaN(upAt) && netQuietOf(T)?.last === 0) upAt = i * DT; }
-      const after = { act: netQuietOf(T)?.last, crouch: T.char.anim.crouch ?? 0, holds: netFeedHolds(T) || netQuietHolds(T) };
+      const after = { act: netQuietOf(T)?.last, crouch: T.char.anim.crouch ?? 0, holds: hasHim(T, OWN.lastMan) || hasHim(T, OWN.lastMan) };
       line(past.act === 3 && past.crouch > LOWC && near(upAt, K.calmSecs, 0.15) && after.act === 0 && after.crouch < 0.3 && !after.holds && NETQUIET_STATS.released === rel0 + 1,
         '(Q11) a living man of his side walking past (one second inside mateM) leaves him low; one who comes and stays has him up after calmSecs, the act dropped, his squad\'s to send again',
         `walked past: act ${past.act}, crouch ${f2(past.crouch)} · stayed: up at ${f2(upAt)} s (calmSecs ${K.calmSecs}), act ${after.act}, crouch ${f2(after.crouch)}, still held ${after.holds} · released ${NETQUIET_STATS.released - rel0}`); }
@@ -439,13 +440,13 @@ export async function netquietCheck(): Promise<boolean> {
         R.step(30); for (const t of g.targets) if (!t.on) g.toggleTarget(t);
         const spots: number[][] = []; for (let a = 0; a < 12 && spots.length < dead.length; a++) { const y = a * Math.PI / 6, q = [T.char.pos[0] + Math.sin(y) * 1.7, 0, T.char.pos[2] + Math.cos(y) * 1.7]; if (!g.col.nav.isBlocked(q[0], q[2]) && !g.col.segmentBlocked([T.char.pos[0], 1.5, T.char.pos[2]], [q[0], 1.2, q[2]]) && spots.every(o => flat(o, q) > 0.8)) spots.push(q); }
         const took = run && runnerBreak(g, M); R.step(60);   // (the shout, the beat, the drop: he has run before the others fall)
-        const fled = runnerFled(M), mShock0 = shockOf(M), mLines0 = NETQUIET_LOG.filter((l: any) => l.id === M.char.id).length;
+        const fled = M.fled, mShock0 = shockOf(M), mLines0 = NETQUIET_LOG.filter((l: any) => l.id === M.char.id).length;
         dead.forEach((m, i) => { R.put(m, spots[i] ?? T.char.pos); R.face(T, m.char.pos); R.step(1); R.put(m, spots[i] ?? T.char.pos); R.face(T, m.char.pos); killGuard(g, m, [0, 0, 1], true, 'shot', 'player'); });
         // the squad's check, as enemysquads.ts files it: T asks for a dead mate by name on the squad's net (does the man who ran hear it?), then for M himself
         netQuietAsked(g, T, dead[0], squad); const heard = !!netQuietOf(M)?.asked.has(dead[0].char.id), mShock1 = shockOf(M);
         const q0 = netQuietOf(T)?.quiet ?? 0, s0 = shockOf(T); netQuietAsked(g, T, M, squad); const silent = !!netQuietOf(T)?.asked.has(M.char.id), dq = (netQuietOf(T)?.quiet ?? 0) - q0, ds = shockOf(T) - s0;
-        let lowAt = NaN, mineM = 0, actM = 0; const said = listen(R, [T], 14, t => { if (Number.isNaN(lowAt) && netQuietOf(T)?.last === 3) lowAt = t; if (netQuietHolds(M) || netFeedHolds(M)) mineM++; actM = Math.max(actM, netQuietOf(M)?.last ?? 0); });
-        return { T, M, took, fled, owned: runnerOwns(M), onFloor: g.guards.includes(M), alive: M.state !== 'dead', heard, mShock: mShock1 - mShock0, silent, dq, ds, want: K.unanswered * kOf(g, T), lowAt, act: netQuietOf(T)?.last, crouch: T.char.anim.crouch ?? 0, mineM, actM, mLines: NETQUIET_LOG.filter((l: any) => l.id === M.char.id).length - mLines0, alone: said.find(s => inPool('alone', s.text) || inPool('last', s.text)) };
+        let lowAt = NaN, mineM = 0, actM = 0; const said = listen(R, [T], 14, t => { if (Number.isNaN(lowAt) && netQuietOf(T)?.last === 3) lowAt = t; if (hasHim(M, OWN.lastMan) || hasHim(M, OWN.lastMan)) mineM++; actM = Math.max(actM, netQuietOf(M)?.last ?? 0); });
+        return { T, M, took, fled, owned: hasHim(M, OWN.runner), onFloor: g.guards.includes(M), alive: M.state !== 'dead', heard, mShock: mShock1 - mShock0, silent, dq, ds, want: K.unanswered * kOf(g, T), lowAt, act: netQuietOf(T)?.last, crouch: T.char.anim.crouch ?? 0, mineM, actM, mLines: NETQUIET_LOG.filter((l: any) => l.id === M.char.id).length - mLines0, alone: said.find(s => inPool('alone', s.text) || inPool('last', s.text)) };
       };
       const A = await left(true), C = await left(false);
       line(A.took && A.fled && A.alive && !A.heard && near(A.mShock, 0) && A.silent && A.dq === 1 && near(A.ds, A.want, 1e-6) && A.mineM === 0 && A.actM === 0 && A.mLines === 0 && !!A.alone && A.act === 3 && A.crouch > LOWC,

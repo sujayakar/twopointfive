@@ -23,7 +23,7 @@ import { tally } from './mission';
 import { chronShot, chronLightShot, chronDown, chronHit } from './chronicle';
 import { plainShort } from './gear';   // (a leaf: a weapon's name as a chronicle row writes it — the same on and off the 2010s kit)
 import { witnessKill, hostageHitBark, inHand, rigOf } from './guards';
-import { runnerFled, runnerBare } from './runner';
+import { runnerBare } from './runner';
 import { handworkOn, swapHeld, beltTorch, workProps } from './handwork';
 import { tacticsManDown } from './tactics';
 import { moraleManDown } from './morale';
@@ -534,7 +534,7 @@ function guardKit(g: Game, gd: Guard, out: Box[], hang: boolean) {
   const rule = inHand(gd), held = swapHeld(gd, rule);   // (handwork.ts: for the frames of a torch ↔ sidearm swap the hand shows what it really has — the rule's own answer otherwise)
   if (handworkOn('swap') && rule !== null && held !== 'torch' && rk === 'pistol' && !kitPistol(gd) && gd.torchLostAt < 0) beltTorch(gd.char, out);
   if (!held && gd.gunLostAt >= 0 && rk === 'pistol' && !kitPistol(gd) && gd.torchLostAt < 0 && handworkOn('swap')) beltTorch(gd.char, out);   // (HOLD.dropGun: the pistol went to the floor at the grab; the torch he was not carrying is still on his belt)   // …and the torch hangs on his belt whenever it is not in his hand (nor on the floor)
-  if (!held && ((runnerFled(gd) && (!carbine || runnerBare(gd))) || (rk === 'pistol' && gd.gunLostAt >= 0))) return;   // (runner.ts, false with its switch off: the sidearm he dropped is on the floor — empty hands and an empty holster; a rifleman who ran keeps the sidearm he never drew, below — unless it went to the floor too: runnerBare, RUNNER.anyway)
+  if (!held && ((gd.fled && (!carbine || runnerBare(gd))) || (rk === 'pistol' && gd.gunLostAt >= 0))) return;   // (runner.ts, false with its switch off: the sidearm he dropped is on the floor — empty hands and an empty holster; a rifleman who ran keeps the sidearm he never drew, below — unless it went to the floor too: runnerBare, RUNNER.anyway)
   if (!held) { holsterBoxes(gd.char, out, { slide: RIG.guardPistol.slide, grip: RIG.guardPistol.grip }, undefined, HR); return; }   // his torch is on the floor (knocked out at the grab) and the pistol stays holstered: empty hands
   if (hang) {   // (bigkit.ts: his hands are on the hammer — the three rows below with the gun let go of)
     if (rk === 'sc20k') rigBoxes(gd.char, { goggles: nvgWorn(g, gd), nv: nvgDown(g, gd), slot: 0, lightOn: false, isGuard: false, holster: true, rifle: 'slung', slingFront: true, rifleBlack: sneakSuit(g, gd.char) }, out);

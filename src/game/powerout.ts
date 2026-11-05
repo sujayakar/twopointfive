@@ -50,20 +50,18 @@ import type { RoomFight } from './roomfight';
 import { Vec3, v3 } from '../math/vec';
 import { isHostile } from './teams';
 import { order, endGuardScript } from './squad';
-import { run, boots, pressOwns } from './pressure';
+import { run, boots } from './pressure';
 import { breakerErrand } from './workthings';
 import { breakerResetNear } from './lighting';
 import { cover } from './belief';
 import { lightEstimateAt } from './guards';
-import { darkFoeCarries } from './darkfoe';
-import { squadDefers, squadStaysIn } from './enemysquads';
-import { laneHolds } from './lanes';
+import { carriesDarkLamp } from './darkfoe';
 import { digInPhase } from './digin';
-import { lastStandMan } from './laststand';
-import { buddyOwns } from './buddy';
-import { runnerFled } from './runner';
-import { netQuietHolds } from './netquiet';
 import { wg } from './words';   // (a leaf: the dialogue pass's one switch)
+import { gunKeepsPost } from './gunroles';
+import { claimMan, releaseMan, hasHim, ownerWitness, OWN } from './owner';
+import { pressKeepsHome } from './pressure';
+import { buddyPaired } from './buddy';
 
 /** the switch and its numbers: off in the module, raised by the page (host/profile.ts pageSwitches; ?nopowerout = the garrison stands in the dark, as it did)
  *  and by the shipped stand; the harness's frozen stand leaves it off (TPS_POWEROUT=1 turns it on). UNTUNED by play: nobody has played against it. */
@@ -111,12 +109,13 @@ interface State {
   events: PowerOutEvent[];
 }
 const STATES = new SideMap<Game, State>('powerout.STATES');
+ownerWitness<Game>('breaker', (gd, g) => POWEROUT.on && !!STATES.get(g)?.men.some(m => m.gd === gd));
 
 const flat = (a: Vec3, b: Vec3) => Math.hypot(a[0] - b[0], a[2] - b[2]);
 const frac = (x: number) => x - Math.floor(x);
 /** his id's share of 0‥1 (no dice) */
 const idShare = (gd: Guard) => frac(gd.char.id * 0.6180339887);
-const alive = (gd: Guard) => gd.state !== 'dead' && gd.char.alive && !runnerFled(gd);
+const alive = (gd: Guard) => gd.state !== 'dead' && gd.char.alive && !gd.fled;
 const fit = (g: Game, gd: Guard) => alive(gd) && !gd.held && g.time >= gd.dazzledUntil && g.time >= gd.staggerUntil;
 const roused = (gd: Guard) => gd.state === 'alert' || gd.state === 'search';
 const loudHeard = (gd: Guard) => { const H = gd.witness.heard; return H.shots + H.kick + H.bang; };
@@ -166,13 +165,12 @@ export function powerOutKept(g: Game, D: Def): string | null {
   if (D.rallyAt === Infinity) return 'the mission\'s man';   // (roomfight's word for a man a mission placed and keeps: rescue's crew, a last stand)
   if (gd.script) return 'on a script';
   if (roused(gd)) return 'in a fight';
-  if (g.rescue.crewHides(gd) || g.rescue.captor() === gd || lastStandMan(g, gd)) return 'the captor / lying in wait / last stand';
+  if (g.rescue.crewHides(gd) || g.rescue.captor() === gd || hasHim(gd, OWN.stand)) return 'the captor / lying in wait / last stand';
   if (digInPhase(g, gd) !== 'idle') return 'dug in';
-  if (squadDefers(g, gd)) return 'his squad\'s';
-  if (!POWEROUT.stayers && squadStaysIn(g, gd)) return 'his squad stays in its rooms';
-  if (laneHolds(g, gd) || netQuietHolds(gd)) return 'holds a lane / the last man';
-  const rally = D.rallyAt, press = pressOwns(g, D); D.rallyAt = rally;   // (pressOwns is roomfight's hook and may stop his rally clock as it answers: asked here it changes nothing)
-  if (press || buddyOwns(g, D)) return 'the press\'s';
+  if (hasHim(gd, OWN.squadWord)) return 'his squad\'s';
+  if (!POWEROUT.stayers && gd.staysInRooms) return 'his squad stays in its rooms';
+  if (gunKeepsPost(gd) || hasHim(gd, OWN.lane | OWN.lastMan)) return 'holds a lane / the last man';
+  if (hasHim(D.gd, OWN.press | OWN.buddy) || pressKeepsHome(g, D, false) || buddyPaired(g, D)) return 'the press\'s';
   return null;
 }
 /** where the man at the lever stands (workthings.ts: the panel's own face; the fixed spot with that rule off, as lighting.ts has it) */
@@ -225,7 +223,8 @@ export const calmSave = (c: Calm): CalmSnap => ({ ...c, station: v3.copy(c.stati
 export const calmLoad = (g: Game, c: CalmSnap): Calm => ({ ...c, station: v3.copy(c.station), home: v3.copy(c.home), ev: [...c.ev], pt: v3.copy(c.pt), room: g.fight.defs.map(D => D.room).find(R => R?.id === c.room) ?? null });
 
 /** lighting.ts setBlackout, on a trip that found the mains up: the answer's clock starts (a return on its first line with the switch off or no defenders) */
-export function powerOut(g: Game) {
+export function powerOut(g: Game) { decideOut(g); breakerSay(g); }
+function decideOut(g: Game) {
   const defs = ruled(g); if (!defs.length) return;
   const prev = STATES.get(g), first = defs.find(D => fit(g, D.gd) && sawThemDie(g, D.gd));
   const out = prev?.men.length ? prev : null;   // (a party of the last blackout still out — the lights back and gone again inside its walk: it is this one's answer too)
@@ -252,19 +251,20 @@ function nobody(g: Game, st: State) {
   event(g, st, 'nobody', null, 'no defender had a burning mains fixture in his view or lost the light on his floor: nobody knows the power is out');
 }
 /** lighting.ts setBlackout: is the walk to the breaker this rule's to hand out (so the stock errand passes this man over)? */
-export function powerOutMan(g: Game, gd: Guard): boolean { return POWEROUT.on && !!gd.unit && ruled(g).some(D => D.gd === gd); }
+export function powerOutRules(g: Game, gd: Guard): boolean { return POWEROUT.on && !!gd.unit && ruled(g).some(D => D.gd === gd); }
 /** guards.ts poseFlashlight: a man out for the lights burns his own while the mains are down */
 export function powerOutLit(g: Game, gd: Guard): boolean {
   if (!POWEROUT.on || !g.blackout.active) return false;
-  const M = STATES.get(g)?.men.find(m => m.gd === gd); return !!M && M.phase !== 'wait' && darkFoeCarries(gd);   // (a man the mission dealt no lamp at all has none to burn: darkfoe.ts `carry`)
+  const M = STATES.get(g)?.men.find(m => m.gd === gd); return !!M && M.phase !== 'wait' && carriesDarkLamp(gd);   // (a man the mission dealt no lamp at all has none to burn: darkfoe.ts `carry`)
 }
 /** darkfoe.ts hasWord: their side holds this dark for the team's doing */
 export function powerOutWord(g: Game, gd: Guard): boolean { return POWEROUT.on && g.blackout.active && !!STATES.get(g)?.word && isHostile(gd.team, 'player'); }
 /** is he out for the lights (or about to step off)? */
-export function powerOutOwns(g: Game, gd: Guard): boolean { return POWEROUT.on && !!STATES.get(g)?.men.some(m => m.gd === gd); }
 /** what was said and done, oldest first (the check and the debugger read it; nothing in the game does) */
 export function powerOutTimeline(g: Game): PowerOutEvent[] { return STATES.get(g)?.events ?? []; }
-export function powerOutReset(g: Game) { STATES.delete(g); }
+export function powerOutReset(g: Game) { STATES.delete(g); breakerSay(g); }
+/** WHO THE BREAKER'S PARTY HAS (src/game/owner.ts): out for the lights, or waiting to be sent */
+function breakerSay(g: Game): void { const men = POWEROUT.on ? STATES.get(g)?.men : undefined; for (const gd of g.guards) { if (men?.some(m => m.gd === gd)) claimMan(gd, OWN.breaker, g.time); else releaseMan(gd, OWN.breaker, g.time); } }
 
 /** their word: who goes, or why nobody does */
 function decide(g: Game, st: State, defs: Def[]) {
@@ -301,7 +301,8 @@ function decide(g: Game, st: State, defs: Def[]) {
 
 /** once a frame, before the room fight's own tick (game.ts): their word when it is due, and every man out a step on — a return on its first line with the
  *  switch off or no blackout answered */
-export function powerOutTick(g: Game, _dt: number) {
+export function powerOutTick(g: Game, dt: number) { stepPowerOut(g, dt); breakerSay(g); }
+function stepPowerOut(g: Game, _dt: number) {
   const st = STATES.get(g); if (!st) return;
   const defs = ruled(g); if (!defs.length) { if (st.men.length) standDown(g, st); return; }   // (the switch thrown off, or a show taking the floor, in the middle of a walk)
   const bo = g.blackout;
@@ -410,10 +411,11 @@ export function powerOutSnapshot(g: Game): PowerOutSnap | undefined {
       calm: M.calm ? calmSave(M.calm) : null })) };
 }
 export function powerOutRestore(g: Game, s: PowerOutSnap | null | undefined) {
-  if (!s) { STATES.delete(g); return; }
+  if (!s) { STATES.delete(g); breakerSay(g); return; }
   const men: Man[] = [];
   for (const m of s.men) { const gd = g.guards[m.i]; if (!gd) continue;
     men.push({ gd, role: m.role, phase: m.phase, goal: v3.copy(m.goal), from: v3.copy(m.from), watch: m.watch ? v3.copy(m.watch) : null, tries: m.tries, stepT: m.stepT, heard0: m.heard0, thereT: m.thereT,
       calm: m.calm ? calmLoad(g, m.calm) : null }); }
   STATES.set(g, { since: s.since, decideAt: s.decideAt ?? Infinity, goAt: s.goAt, wayM: s.wayM, overdueAt: s.overdueAt, fell: s.fell ? v3.copy(s.fell) : null, seen: s.seen.map(x => ({ ...x })), lookAt: s.lookAt, men, decided: s.decided, word: s.word, parties: s.parties, lost: s.lost, events: [] });   // (decideAt: Infinity is null in a file)
+  breakerSay(g);
 }

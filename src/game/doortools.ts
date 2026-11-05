@@ -60,7 +60,7 @@
 // (src/game is one import cycle: nothing below is built from another game module's exports at module load.)
 import { eachSeat, seatShare } from './seats';
 import { SideMap, SideSet } from '../math/side';
-import { HOLDFIRE, holdFireOrder, holdFireOnMan } from './holdfire';   // (called / read inside blow / goMen / testStacks only)
+import { HOLDFIRE, holdFireOrder, holdFireHoldsTarget } from './holdfire';   // (called / read inside blow / goMen / testStacks only)
 import { FRAG, exposedTo, fragRunning } from './frag';
 import { moraleBlast } from './morale';
 import { Vec3, v3, clamp, lerp, wrapAngle } from '../math/vec';
@@ -102,7 +102,7 @@ import { SQUADNET, inFlood, plainCall, roomCall } from './squadnet';   // (calle
 import { inSight } from './autopilot';
 import { STACKROOM, stackRoomFix, stackRoomHas, stackRoomKeeps, stackViewReach, stackViewOpen } from './stackroom';
 import { SAMSTUN, dazzlePlayer } from './samstun';
-import { rearHolds, rearLast, rearWatcher } from './rearwatch';
+import { rearWatcherWaits, rearLast, rearWatcher } from './rearwatch';
 import { gunFirst, gunTurn, gunBefore } from './gunroles';   // (called inside firstIn / enter only)
 import { OWNCHARGE } from './owncharge';   // (a leaf: the player's own charges' one switch)
 import { OWNBLOW, SAM_BY, blowKeyWord, blowTail } from './ownblow';   // (called inside rows, notes and the key's press only: his own charge is his own actions' to set off — ownblow.ts)
@@ -1045,7 +1045,7 @@ export class DoorTools {
     const g = this.g, S = g.orders;
     for (const gd of this.roster) { if (gd.state === 'dead') continue; const A = S.of(gd);
       if (!A || A.order !== 'stack' || !A.door || !A.arrived || A.stance !== 'stack' || !A.post || flat(gd.char.pos, A.post) > 0.6) continue;
-      if (HOLDFIRE.stackSet && (holdFireOnMan(g, gd) || (HOLDFIRE.stackWait && this.stackHeld(A.door)))) continue;   // (HOLDFIRE.stackSet, off: the handle is tried as before the key; stackWait off: the lead's own fresh answer only. holdfire.ts: stacked with his gun held on a man nobody may shoot yet — no hand goes to the handle, and no handle's noise to that man, until his gun is the door's; false with its switch off. … or the stamp of the orders' last tick says so of ANY man of this stack: the frame his man is lost the fresh answer is 'no' beside last frame's `arrived`, and a rattle is heard by the man the SECOND is held on as well)
+      if (HOLDFIRE.stackSet && (holdFireHoldsTarget(g, gd) || (HOLDFIRE.stackWait && this.stackHeld(A.door)))) continue;   // (HOLDFIRE.stackSet, off: the handle is tried as before the key; stackWait off: the lead's own fresh answer only. holdfire.ts: stacked with his gun held on a man nobody may shoot yet — no hand goes to the handle, and no handle's noise to that man, until his gun is the door's; false with its switch off. … or the stamp of the orders' last tick says so of ANY man of this stack: the frame his man is lost the fresh answer is 'no' beside last frame's `arrived`, and a rattle is heard by the man the SECOND is held on as well)
       if (A.heldSet) continue;   // (silent.ts SILENT.stackSet: a silent man likewise — read off the answer his `arrived` was counted by, not asked afresh: this runs before the orders' tick, and the frame his man is lost a fresh 'no' beside last frame's `arrived` would put his hand on the handle with his gun still off the door)
       this.test(A.door, sideOf(A.door, gd.char.pos), gd, true); }
     for (const it of g.nearby) if (it.kind === 'door' && it.door && it.inReach && !isOpen(it.door) && (it.verb === 'pick' || it.verb === 'kick' || it.verb === 'rattle' || it.verb === 'nocode' || it.verb === 'code')) this.learn(it.door, sideOf(it.door, g.player.char.pos), false);
@@ -2340,7 +2340,7 @@ export class DoorTools {
       }
       case 'enter': {
         if (K.threatFirst) this.threatDeal(op);
-        for (let i = op.queue.length - 1; i >= 0; i--) { const q = op.queue[i]; if (rearHolds(g, op, q.gd) || (DOORPATH.on ? !g.doorPath.mayGo(op, q, i) : t < q.at)) continue; op.queue.splice(i, 1);   // (doorpath.ts: let go by the room the man before him has, not by the clock)
+        for (let i = op.queue.length - 1; i >= 0; i--) { const q = op.queue[i]; if (rearWatcherWaits(g, op, q.gd) || (DOORPATH.on ? !g.doorPath.mayGo(op, q, i) : t < q.at)) continue; op.queue.splice(i, 1);   // (doorpath.ts: let go by the room the man before him has, not by the clock)
           if (op.men.includes(q.gd)) { op.pod.set(q.gd, q.pod); this.assign(op, q.gd, { post: q.pod.pos, face: q.pod.face, watch: null, shy: null, thru: op.door, pace: g.orders.knobs.entry, stance: 'none', upper: 'aim', light: this.lights ?? NIGHTBREACH.opLights, search: true, going: `entering · ${name}`, there: 'holding the room' }); if (DOORPATH.on) g.doorPath.sent(op, q.gd, q.pod); } }   // (weapon light on as he takes the frame, as the breach drill's man)
         // Through the frame: his CORNERS first (near, then deep, on his own side of the door), then on his point the muzzle to one hand, to the other — and then
         // the room's floor LOOKED OVER until none of it is left unseen (the room fight takes the muzzle off any of these for a man he sees)
