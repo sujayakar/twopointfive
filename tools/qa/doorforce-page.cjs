@@ -29,9 +29,9 @@ const URL = extra => `http://localhost:${PORT}/?paused&quality=${QUALITY}&mute&f
     const c = d.def.closedDir, ux = Math.cos(c), uz = Math.sin(c), W = d.def.width, mx = d.def.hinge[0] + ux * W * 0.5, mz = d.def.hinge[1] + uz * W * 0.5;
     const at = (s, off) => [mx - uz * s * off, 0, mz + ux * s * off], sPull = g.doors.pullFace(d, at(1, 1)) ? 1 : -1, pAt = at(sPull, 0.9), gAt = at(-sPull, 3.0);
     const G = g.guards[0], cc = G.char;
-    g.guards.forEach((o, i) => { if (o === G) return; o.hold = true; o.pinned = true; o.dazzledUntil = 1e9; o.heardUpTo = 1e12; o.char.posX = 37.5; o.char.posZ = 25 + i * 1.2; o.char.velX = o.char.velZ = 0; o.path = []; o.pathGoal = null; o.flashlight.enabled = false; });
+    g.guards.forEach((o, i) => { if (o === G) return; o.hold = true; o.pinned = true; o.dazzledUntil = 1e9; o.heardUpTo = 1e12; o.char.pos[0] = 37.5; o.char.pos[2] = 25 + i * 1.2; o.char.vel[0] = o.char.vel[2] = 0; o.path = []; o.pathGoal = null; o.flashlight.enabled = false; });
     d.angle = 0; d.vel = 0; d.latched = true; g.teleportPlayer(pAt.slice());
-    cc.posX = gAt[0]; cc.posZ = gAt[2]; cc.velX = cc.velZ = 0; cc.bodyYaw = cc.aimYaw = Math.atan2(pAt[0] - gAt[0], pAt[2] - gAt[2]);
+    cc.pos[0] = gAt[0]; cc.pos[2] = gAt[2]; cc.vel[0] = cc.vel[2] = 0; cc.bodyYaw = cc.aimYaw = Math.atan2(pAt[0] - gAt[0], pAt[2] - gAt[2]);
     G.hold = false; G.pinned = false; G.state = 'alert'; G.awareness = 1; G.foe = 'player'; G.reactT = 0; G.fireCd = 0.3; G.reloadT = -1; G.lastSeenT = -100; G.lastKnown = [pAt[0], 0, pAt[2]]; G.path = []; G.pathGoal = null; G.heardUpTo = g.eventSeq; G.dazzledUntil = -1; G.script = null; G.flashlight.enabled = false;
     let f = 0, shutShots = 0, mag = G.weapon.roundsReady, openedAt = -1, brokeAt = -1;
     step(12 * 60, () => { f++; if (f % 18 === 1) g.events.push({ kind: 'step', pos: pAt.slice(), time: g.time, loud: false, level: 0.26 });

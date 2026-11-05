@@ -33,8 +33,8 @@ const check = (ok, label, detail) => { if (!ok) failed = true; console.log(`- ${
   const read = () => page.evaluate(() => { const g = window.__game, el = document.getElementById('railprompt'), P = g.player, mate = g.guards.find(x => x.unit && x.team === 'operative');
     return { i: g.lesson.i, id: g.lesson.step?.id ?? null, done: g.lesson.finished, line: el?.querySelector('.line')?.textContent ?? '', keys: [...(el?.querySelectorAll('kbd') ?? [])].map(k => k.textContent), up: !!el && getComputedStyle(el).display !== 'none',
       note: el?.querySelector('.note')?.textContent ?? '', row: document.getElementById('objective')?.textContent ?? '', fatal: document.getElementById('fatal')?.textContent || '', rails: g.rails.live, sum: g.rails.summary(), script: !!g.director.running,
-      at: [+P.char.posX.toFixed(2), +P.char.posZ.toFixed(2)], crouch: !!P.crouch, holding: !!P.holding, nv: !!P.nv, lit: +P.visibility.toFixed(2), dark: !!g.blackout.active,
-      mate: mate ? [+mate.char.posX.toFixed(1), +mate.char.posZ.toFixed(1)] : null, mateSays: mate ? g.orders.statusOf(mate) : '', men: g.guards.filter(x => !x.unit && x.state !== 'dead').length,
+      at: [+P.char.pos[0].toFixed(2), +P.char.pos[2].toFixed(2)], crouch: !!P.crouch, holding: !!P.holding, nv: !!P.nv, lit: +P.visibility.toFixed(2), dark: !!g.blackout.active,
+      mate: mate ? [+mate.char.pos[0].toFixed(1), +mate.char.pos[2].toFixed(1)] : null, mateSays: mate ? g.orders.statusOf(mate) : '', men: g.guards.filter(x => !x.unit && x.state !== 'dead').length,
       roused: g.guards.filter(x => !x.unit && x.state !== 'dead' && x.state !== 'patrol' && !x.held).map(x => `${x.callsign} ${x.state}`).join(', '),
       orders: g.orders.log.length, last: g.orders.log.length ? `${g.orders.log[g.orders.log.length - 1].order}@${g.orders.log[g.orders.log.length - 1].target}` : '', menu: !!window.__orders?.menu, stage: g.mission.stage, t: +g.time.toFixed(1) }; });
   // (a picture, as tut-page.cjs takes one: the frame is drawn and read back in the page and stood under the HUD as a still)
@@ -84,12 +84,12 @@ const check = (ok, label, detail) => { if (!ok) failed = true; console.log(`- ${
     check(w.watch && w.caps === 0, `step '${id}': with the order out the line is a thing to watch, not the ask again`, `"${w.line}" · watch style ${w.watch} · key caps ${w.caps}`); };
   const low = async () => { if (!(await read()).crouch) await tap('KeyC'); };
   /** the place a stride behind a man, off the way he faces now */
-  const backOf = (name, off = 0.85) => page.evaluate(([name, off]) => { const g = window.__game, h = g.guards.find(x => !x.unit && g.level.routes[x.routeI]?.name === name), c = h.char; return [c.posX - Math.sin(c.bodyYaw) * off, 0, c.posZ - Math.cos(c.bodyYaw) * off]; }, [name, off]);
+  const backOf = (name, off = 0.85) => page.evaluate(([name, off]) => { const g = window.__game, h = g.guards.find(x => !x.unit && g.level.routes[x.routeI]?.name === name), c = h.char; return [c.pos[0] - Math.sin(c.bodyYaw) * off, 0, c.pos[2] - Math.cos(c.bodyYaw) * off]; }, [name, off]);
   const chest = p => [p[0], 1.2, p[2]];
   /** the grab on the man of route `name` (posted at `w`): the key on the line's cap while the line has one. With the held click the only way to a man
    *  (src/game/stalk.ts STALK.only) the line names no key, and the grab is the left button pressed ON him and kept down until he is in Sam's arm */
   const grab = async (name, w) => { const k = await lineKey(); if (k) { await point(chest(w)); return tap(k); }
-    const at = await page.evaluate(name => { const g = window.__game, h = g.guards.find(x => !x.unit && g.level.routes[x.routeI]?.name === name); return h ? [h.char.posX, 0, h.char.posZ] : null; }, name);
+    const at = await page.evaluate(name => { const g = window.__game, h = g.guards.find(x => !x.unit && g.level.routes[x.routeI]?.name === name); return h ? [h.char.pos[0], 0, h.char.pos[2]] : null; }, name);
     await point(chest(at || w)); await page.mouse.down(); let held = false; for (let n = 0; n < 36 && !(held = (await read()).holding); n++) await run(10); await page.mouse.up(); await run(3);
     log(`  no key on the line: the left button held on '${name}' ${held ? 'has him' : 'never took him'}`); };
   const ground = async () => { const s = await read(); return [s.at[0] + 1.3, 0, s.at[1] + 0.7]; };

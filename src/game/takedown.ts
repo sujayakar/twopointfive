@@ -83,7 +83,7 @@ const fwd = (c: Character): Vec3 => [Math.sin(c.bodyYaw), 0, Math.cos(c.bodyYaw)
  *  the blow lands: a man who turns his head or takes a step in the quarter second of the wind-up is hit where he is) */
 function marks(by: Character, vic: Character, style: BlowStyle): [Vec3, Vec3 | null] {
   const b = vic.bones, f = fwd(vic), neck = b.neck ?? v3.add(vic.pos, [0, 1.5, 0]), head = b.head ?? v3.add(neck, [0, 0.12, 0]);
-  const to = v3.normalize([by.posX - vic.posX, 0, by.posZ - vic.posZ + 1e-6]);   // from him toward the attacker
+  const to = v3.normalize([by.pos[0] - vic.pos[0], 0, by.pos[2] - vic.pos[2] + 1e-6]);   // from him toward the attacker
   const left: Vec3 = [Math.cos(by.bodyYaw), 0, -Math.sin(by.bodyYaw)];                   // the attacker's own left
   if (style === 'chop') return [v3.add(v3.mad(neck, to, 0.07), [0, 0.05, 0]), v3.add(v3.mad(v3.mad(neck, to, 0.11), left, 0.13), [0, -0.2, 0])];   // the base of the skull · his left shoulder blade
   if (style === 'palm') return [v3.add(v3.mad(v3.mad(head, f, 0.07), to, 0.05), [0, -0.06, 0]), null];                                            // under the point of the chin (his own front), from the attacker's side

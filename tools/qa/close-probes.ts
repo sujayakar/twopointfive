@@ -75,7 +75,7 @@ function park(gd: any, i: number) { gd.hold = true; place(gd, [37.5, 0, 6 + i * 
 /** the nearest thing a ray meets from `p` at shin, chest and head height, 24 ways round (m; 9 = nothing inside 4 m) */
 function clearance(g: any, p: Vec3): number { let m = 9; for (let i = 0; i < 24; i++) { const a = i / 24 * Math.PI * 2, d: Vec3 = [Math.sin(a), 0, Math.cos(a)]; for (const h of [0.3, 1.0, 1.6]) { const r = g.col.raycast([p[0], h, p[2]], d, 4); if (r) m = Math.min(m, r.t); } } return m; }
 /** a spot off a man: bearing `bDeg` off HIS facing (0 = dead ahead of him, + = toward his left), `d` out, centre to centre */
-function off(gd: any, bDeg: number, d: number): Vec3 { const a = gd.char.bodyYaw + bDeg * DEG; return [gd.char.posX + Math.sin(a) * d, 0, gd.char.posZ + Math.cos(a) * d]; }
+function off(gd: any, bDeg: number, d: number): Vec3 { const a = gd.char.bodyYaw + bDeg * DEG; return [gd.char.pos[0] + Math.sin(a) * d, 0, gd.char.pos[2] + Math.cos(a) * d]; }
 const bearingOf = (gp: ArrayLike<number>, yaw: number, p: ArrayLike<number>) => wrapAngle(Math.atan2(p[0] - gp[0], p[2] - gp[2]) - yaw);
 const distXZ = (a: ArrayLike<number>, b: ArrayLike<number>) => Math.hypot(a[0] - b[0], a[2] - b[2]);
 /** The one staging: A (Kowalski) planted at `at` facing `yaw` on the scripted hold (he walks nowhere), calm; B and C parked deaf on the lot; Sam's hands empty, dark,
@@ -109,7 +109,7 @@ const kindAt = (bDeg: number) => Math.cos(bDeg * DEG) < -0.25 ? 'behind' : Math.
 const LINE = 240 * DEG;
 const far = (S: any, frames = 1) => { S.g.teleportPlayer([LOBBY[0], 0, LOBBY[2] - 6]); for (let i = 0; i < frames; i++) { S.W.step(DT); S.g.player.visibility = 0.02; } };
 /** Sam's meter fed as game.ts feeds it from the GPU's answer (visibilityOf of the brighter of chest and head, eased 6/s) — from the CPU's direct-light estimate */
-function feedMeter(g: any) { const pl = g.player, c = pl.char; const pc = c.bones.chest ?? [c.posX, 1.0, c.posZ], ph = c.bones.head ?? [c.posX, 1.4, c.posZ]; const E = Math.max(lightEstimateAt(g, pc), lightEstimateAt(g, ph)); pl.visibility += (g.visibilityOf(E) - pl.visibility) * Math.min(1, DT * 6); }
+function feedMeter(g: any) { const pl = g.player, c = pl.char; const pc = c.bones.chest ?? [c.pos[0], 1.0, c.pos[2]], ph = c.bones.head ?? [c.pos[0], 1.4, c.pos[2]]; const E = Math.max(lightEstimateAt(g, pc), lightEstimateAt(g, ph)); pl.visibility += (g.visibilityOf(E) - pl.visibility) * Math.min(1, DT * 6); }
 
 // ================================================================ (1) the table
 export async function closeWindowsProbe(): Promise<boolean> { return keepClose(async () => {
@@ -342,7 +342,7 @@ function blow(S: any, bDeg: number, d: number, button: 1 | 4, who: any = S.A, pr
   let minD = distXZ(pl.char.pos, p0), deadAt = -1, f = 0, knife0 = -1, knife1 = -1, yawErr = NaN;
   const look = () => { minD = Math.min(minD, distXZ(pl.char.pos, p0)); for (const e of g.events) if (e.kind === 'prop' && e.who === PLAYER_ID && !seen.has(e)) { seen.add(e); ev.push({ level: e.level, f }); }
     if (an.knifeShown) { if (knife0 < 0) knife0 = f; knife1 = f; }
-    if (deadAt < 0 && A.state === 'dead') { deadAt = f; yawErr = wrapAngle(Math.atan2(p0[0] - pl.char.posX, p0[2] - pl.char.posZ) - pl.char.bodyYaw); } };
+    if (deadAt < 0 && A.state === 'dead') { deadAt = f; yawErr = wrapAngle(Math.atan2(p0[0] - pl.char.pos[0], p0[2] - pl.char.pos[2]) - pl.char.bodyYaw); } };
   look(); for (f = 1; f <= 100; f++) { W.step(DT); pl.visibility = 0.02; look(); }
   const takes: Record<string, number> = {}; for (const k of Object.keys(takes0)) takes[k] = (CLOSE_STATS.takes as any)[k] - (takes0 as any)[k];
   const rows = g.chronicle.events.slice(ev0).map((e: any) => ({ kind: e.kind as string, weapon: e.data?.weapon as string | undefined, text: fmtEvent(e) as string }));
@@ -465,15 +465,15 @@ async function heldWalk(mode: boolean) {
   const Z = LOBBY[2] + 1.2, from: Vec3 = [LOBBY[0] - 1.9, 0, Z], goal: Vec3 = [LOBBY[0] + 1.8, 0, Z], STOPS = [-1.2, -0.6, 0, 0.6].map(x => LOBBY[0] + x);
   g.teleportPlayer(from); const exact = distXZ(c.pos, from) < 1e-6; c.bodyYaw = c.aimYaw = EAST; pl.crouch = true; an.crouchTarget = 1;
   g.puppet = { goal: null, aim: [goal[0] + 2, 1, Z], crouch: true };
-  const snap = () => ({ ph: an.phase as number, rel: HELD_KEYS.map(k => [c.bones[k][0] - c.posX, c.bones[k][1], c.bones[k][2] - c.posZ]) });
+  const snap = () => ({ ph: an.phase as number, rel: HELD_KEYS.map(k => [c.bones[k][0] - c.pos[0], c.bones[k][1], c.bones[k][2] - c.pos[2]]) });
   let frames = 0, inMode = 0, ready = 0;
   const step = () => { const p = an.phase; W.step(DT); pl.visibility = 0.02; frames++; if (closeMode(g) === A && an.creep) inMode++; if (an.ready) ready++; let d = an.phase - p; if (d < -0.5) d += 1; return d as number; };
   const stops: any[] = []; let ref = 0;
   const walk = (until: (n: number) => boolean) => { const adv: number[] = []; g.puppet.goal = goal; for (let n = 0; n < 400 && !until(n); n++) adv.push(step()); return adv; };
-  for (const sx of STOPS) { const adv = walk(() => c.posX >= sx); if (!stops.length) ref = Math.max(...adv.slice(20)); else stops[stops.length - 1].resume = adv.slice(0, 30);
-    g.puppet.goal = null; const ph0 = an.phase, x0 = c.posX; let rest = -1; for (let i = 1; i <= 150 && rest < 0; i++) { const q = v3.copy(c.pos); step(); if (distXZ(q, c.pos) < 1e-9) rest = i; }
-    const coast = c.posX - x0; let coastPh = an.phase - ph0; if (coastPh < -0.5) coastPh += 1; const s0 = snap(); for (let i = 0; i < 10; i++) step(); const s10 = snap(); for (let i = 0; i < 20; i++) step(); const s30 = snap(); for (let i = 0; i < 60; i++) step(); const s90 = snap();
-    stops.push({ sx, x: c.posX, rest, coast, coastPh, s0, s10, s30, s90, resume: [] as number[] }); }
+  for (const sx of STOPS) { const adv = walk(() => c.pos[0] >= sx); if (!stops.length) ref = Math.max(...adv.slice(20)); else stops[stops.length - 1].resume = adv.slice(0, 30);
+    g.puppet.goal = null; const ph0 = an.phase, x0 = c.pos[0]; let rest = -1; for (let i = 1; i <= 150 && rest < 0; i++) { const q = v3.copy(c.pos); step(); if (distXZ(q, c.pos) < 1e-9) rest = i; }
+    const coast = c.pos[0] - x0; let coastPh = an.phase - ph0; if (coastPh < -0.5) coastPh += 1; const s0 = snap(); for (let i = 0; i < 10; i++) step(); const s10 = snap(); for (let i = 0; i < 20; i++) step(); const s30 = snap(); for (let i = 0; i < 60; i++) step(); const s90 = snap();
+    stops.push({ sx, x: c.pos[0], rest, coast, coastPh, s0, s10, s30, s90, resume: [] as number[] }); }
   stops[stops.length - 1].resume = walk(n => n >= 30);
   g.puppet = null;
   return { stops, ref, frames, inMode, ready, exact, crouched: pl.crouch };
@@ -518,7 +518,7 @@ async function darkCross(o: { dark: boolean; lights: boolean; path: 'front' | 's
   const pl = g.player, c = pl.char; pl.slot = 'pistol'; pl.holstered = true; pl.pistol.lightOn = false; pl.nvOn = false;
   { const dw = g.doors.byName('breakroom_w'); if (dw) { dw.angle = 0; dw.vel = 0; dw.latched = true; dw.closing = false; } }   // the room's west door shut for the walk: the shipped stand's one-way leaves (doors.ts oneWay) open this one INTO the room, across Sam's start on the front path — teleported into its sweep he knocks it shut, and that slam (a 'door' event, 0.58, two metres off) is what the man then hears. Shut on both stands, so both walk the same room
   const [A, B, C] = g.guards; for (const [i, gd] of [B, C].entries()) { gd.hold = true; gd.pinned = true; gd.char.pos = [-40, 0, -40 - i]; gd.heardUpTo = 1e12; }
-  const mx = 31.2, mz = 16.0, yaw = 0, d = 1.2; const put = () => { A.char.posX = mx; A.char.posZ = mz; A.char.bodyYaw = A.char.aimYaw = yaw; if (!o.torch) A.flashlight.enabled = false; };
+  const mx = 31.2, mz = 16.0, yaw = 0, d = 1.2; const put = () => { A.char.pos[0] = mx; A.char.pos[2] = mz; A.char.bodyYaw = A.char.aimYaw = yaw; if (!o.torch) A.flashlight.enabled = false; };
   A.hold = true; A.pinned = true; A.state = 'patrol'; A.awareness = 0; A.wait = 1e6; put();
   const fx = Math.sin(yaw), fz = Math.cos(yaw), rx = Math.cos(yaw), rz = -Math.sin(yaw);
   const P = (s: number): Vec3 => o.path === 'side' ? [mx + rx * d - fx * s, 0, mz + rz * d - fz * s] : [mx + fx * d + rx * s, 0, mz + fz * d + rz * s];
@@ -545,7 +545,7 @@ async function slither(dark: boolean) {
   for (let i = 0; i < 30; i++) { feedMeter(g); W.step(DT); }
   let leg = 0, st = 0, t0 = 0, f = 0, done = false, seen = '', modeF = 0, heldF = 0, maxVis = 0; const maxAw = men.map(() => 0), minD = men.map(() => 9), an = c.anim; let phHeld = NaN, phMoved = 0;
   for (; f < 3600 && !done; f++) { const p = c.pos;
-    men.forEach((gd: any, k: number) => { const m = K.men[k]; gd.char.posX = m.x; gd.char.posZ = m.z; let yaw = m.yaw;
+    men.forEach((gd: any, k: number) => { const m = K.men[k]; gd.char.pos[0] = m.x; gd.char.pos[2] = m.z; let yaw = m.yaw;
       if (k === P.man && st >= 1) { const t = f - t0, u = t < P.lead ? t / P.lead : t < P.lead + P.hold ? 1 : Math.max(0, 1 - (t - P.lead - P.hold) / P.lead); yaw += P.turnDeg * (u * u * (3 - 2 * u)); }
       gd.char.bodyYaw = gd.char.aimYaw = yaw * DEG; maxAw[k] = Math.max(maxAw[k], gd.awareness); if (!seen && gd.state !== 'patrol') seen = `${gd.callsign} ${gd.state} at frame ${f}`; });
     if (leg >= K.path.length) { g.puppet.goal = null; if (st !== 9) { st = 9; t0 = f; } done = f - t0 > 50; }
@@ -725,7 +725,7 @@ async function offWalk(reads: boolean) {
   const x0 = LOBBY[0] - 1.6; g.teleportPlayer([x0, 0, LOBBY[2] + 0.75]); W.cam.yaw = 0; W.cam.rebuild?.(); W.step(DT);
   const digests: string[] = [], raw: any[] = []; let told = 0, nearest = 9, readN = 0, reach = 9, east = 0; const st0 = JSON.stringify(CLOSE_STATS);
   for (let f = 1; f <= 1200; f++) { const key = Math.floor((f - 1) / 150) % 2 === 0 ? 'KeyD' : 'KeyA'; W.input.keys.delete('KeyD'); W.input.keys.delete('KeyA'); W.input.keys.add(key);
-    W.step(DT); pl.visibility = 0.02; if (an.ready || an.creep || an.knifeShown || an.reachShown > 0 || an.creepShown > 0 || an.creepAt) told++; nearest = Math.min(nearest, distXZ(pl.char.pos, A.char.pos)); east = Math.max(east, pl.char.posX - x0);
+    W.step(DT); pl.visibility = 0.02; if (an.ready || an.creep || an.knifeShown || an.reachShown > 0 || an.creepShown > 0 || an.creepAt) told++; nearest = Math.min(nearest, distXZ(pl.char.pos, A.char.pos)); east = Math.max(east, pl.char.pos[0] - x0);
     if (reads) readN += readAll(g, A);
     if (f % 120 === 0) { const d = digestGame(g, true); raw.push(d); digests.push(JSON.stringify(d)); } }
   W.input.keys.delete('KeyD'); W.input.keys.delete('KeyA');
@@ -820,17 +820,17 @@ export async function closeDuo(): Promise<boolean> { return keepClose(async () =
   { // (2, 4) the grab, the held gait, the menu's right button
     const S = await duoStage(), { R, g, pl, m, T1 } = S, an = pl.char.anim, fails: string[] = [];
     // the held gait: crouched, east along z 14.8 (1.2 m behind his back — past the rear reach: no tell in the arms), by the keys (a puppet would switch the squad's orders off)
-    g.teleportPlayer([29.8, 0, 14.8]); pl.crouch = true; R.W.cam.yaw = 0; R.W.cam.rebuild?.(); R.step(20); const x0 = pl.char.posX; let inMode = 0, tell = 0, n = 0; const tick = () => { R.step(); pl.crouch = true; n++; if (closeMode(g) === T1 && an.creep) inMode++; if (an.ready) tell++; };
-    R.W.input.keys.add('KeyD'); for (let i = 0; i < 70; i++) tick(); R.W.input.keys.delete('KeyD'); const went = pl.char.posX - x0;
+    g.teleportPlayer([29.8, 0, 14.8]); pl.crouch = true; R.W.cam.yaw = 0; R.W.cam.rebuild?.(); R.step(20); const x0 = pl.char.pos[0]; let inMode = 0, tell = 0, n = 0; const tick = () => { R.step(); pl.crouch = true; n++; if (closeMode(g) === T1 && an.creep) inMode++; if (an.ready) tell++; };
+    R.W.input.keys.add('KeyD'); for (let i = 0; i < 70; i++) tick(); R.W.input.keys.delete('KeyD'); const went = pl.char.pos[0] - x0;
     let rest = -1; for (let i = 1; i <= 150 && rest < 0; i++) { const q = v3.copy(pl.char.pos); tick(); if (distXZ(q, pl.char.pos) < 1e-9) rest = i; }
-    const rel = () => HELD_KEYS.map(k => [pl.char.bones[k][0] - pl.char.posX, pl.char.bones[k][1], pl.char.bones[k][2] - pl.char.posZ]); for (let i = 0; i < 10; i++) tick(); const ph0 = an.phase, r0 = rel(); for (let i = 0; i < 80; i++) tick(); const ph1 = an.phase, moved = boneGap(rel(), r0);
+    const rel = () => HELD_KEYS.map(k => [pl.char.bones[k][0] - pl.char.pos[0], pl.char.bones[k][1], pl.char.bones[k][2] - pl.char.pos[2]]); for (let i = 0; i < 10; i++) tick(); const ph0 = an.phase, r0 = rel(); for (let i = 0; i < 80; i++) tick(); const ph1 = an.phase, moved = boneGap(rel(), r0);
     R.W.input.keys.add('KeyD'); let adv = 0; for (let i = 0; i < 30; i++) { const p = an.phase; tick(); let d = an.phase - p; if (d < -0.5) d += 1; adv += d; } R.W.input.keys.delete('KeyD'); for (let i = 0; i < 90; i++) tick();
     if (went < 0.8 || rest < 0) fails.push(`staging: he walked ${f2(went)} m, at rest after ${rest} frames`); if (inMode !== n || tell) fails.push(`in the mode on ${inMode} of ${n} frames, a tell on ${tell}`); if (Math.abs(ph1 - ph0) > 1e-6 || moved > 0.02) fails.push(`stopped: the phase moved ${Math.abs(ph1 - ph0).toExponential(1)}, a foot / hand ${(moved * 100).toFixed(1)} cm, over 80 frames`); if (!(adv > 0.02)) fails.push(`resumed: the stride moved on ${f3(adv)} in 30 frames`);
     verdict(!fails.length, 'the held sneak beside a partner: Sam stopped mid-stride 1.2 m behind the defender stays in that stride (phase to 1e-6, feet and hands inside 2 cm over 80 frames), and walks on out of it', `walked ${f2(went)} m by the keys · at rest ${rest} frames after the key is let go · phase ${ph0.toFixed(6)} → ${ph1.toFixed(6)} · bones moved ${(moved * 100).toFixed(2)} cm · resumed +${f3(adv)} in 30 frames · partner ${S.order()} (${R.status()})${bad(fails)}`);
     // the grab: only from behind
     const f2s: string[] = []; pl.crouch = false; S.at(90, 0.8); const sideSel = g.selectVerb('guard', 'grab'); R.W.input.pressed.add(IK); R.step(); const sideHeld = !!pl.holding || !!pl.takedown; S.at(0, 0.8); const frontSel = g.selectVerb('guard', 'grab'); R.W.input.pressed.add(IK); R.step(); const frontHeld = !!pl.holding || !!pl.takedown;
     // the menu's right button, a defender in reach of Sam's empty hands
-    S.at(180, 0.8); const f4: string[] = [], inReach = g.nearby.some((x: any) => x.kind === 'guard' && x.inReach && x.guard === T1), opened = R.O.open(R.O.targetAt([pl.char.posX - 1.2, 0, pl.char.posZ - 0.6])), up = !!R.O.menu, bl0 = { ...CLOSE_STATS.blows };
+    S.at(180, 0.8); const f4: string[] = [], inReach = g.nearby.some((x: any) => x.kind === 'guard' && x.inReach && x.guard === T1), opened = R.O.open(R.O.targetAt([pl.char.pos[0] - 1.2, 0, pl.char.pos[2] - 0.6])), up = !!R.O.menu, bl0 = { ...CLOSE_STATS.blows };
     R.W.input.clicked |= 4; R.step(); const menuAfter = !!R.O.menu, tdMenu = !!pl.takedown; for (let i = 0; i < 30; i++) R.step(); const stillUp = T1.state !== 'dead' && !pl.takedown && CLOSE_STATS.blows.knockout === bl0.knockout;
     if (!inReach || !opened || !up) f4.push(`staging: in reach ${inReach}, the menu opened ${opened} / up ${up}`); if (menuAfter) f4.push('the right click left the menu up'); if (tdMenu || !stillUp) f4.push(`the right click with the menu up started a knockout (takedown ${tdMenu}, he is ${T1.state})`);
     verdict(!f4.length, 'the order menu keeps the right button: the menu open, a defender in reach of Sam\'s empty hands — the right click puts the menu away and starts NO knockout', `in reach ${inReach} · menu up ${up} → ${menuAfter ? 'still up' : 'gone'} · takedown that frame ${tdMenu} · he is ${T1.state} 30 frames on${bad(f4)}`);
@@ -852,7 +852,7 @@ export async function closeDuo(): Promise<boolean> { return keepClose(async () =
     const SPOT: Vec3 = [BR.man[0], 0, BR.man[2] + 1.2], fails: string[] = [];
     const alone = async (who: 'partner' | 'sam') => { const S = await duoStage({ calm: false, room: false }), { R, g, pl, m, T1, T2 } = S; g.setGroup('breakroom', false); R.pin(T1, { at: BR.man, yaw: BR.yaw }); T1.flashlight.enabled = false; R.pin(T2, { at: [20, 0, 11], yaw: EAST });
       if (who === 'partner') g.teleportPlayer([11, 0, 18.5]); else R.put(m, [11, 0, 18.5], 0); R.O.give('hold', R.O.targetAt(m.char.pos), 'all'); const dp = CLOSE_STATS.darkPasses; let maxAw = 0, first = '';
-      for (let f = 0; f < 180; f++) { T1.flashlight.enabled = false; if (who === 'partner') { R.put(m, SPOT, Math.PI); m.char.velX = m.char.velZ = 0; } else { g.teleportPlayer(SPOT); pl.crouch = true; } R.step(); maxAw = Math.max(maxAw, T1.awareness); if (!first && T1.state !== 'patrol') first = `${T1.state} at frame ${f}`; }
+      for (let f = 0; f < 180; f++) { T1.flashlight.enabled = false; if (who === 'partner') { R.put(m, SPOT, Math.PI); m.char.vel[0] = m.char.vel[2] = 0; } else { g.teleportPlayer(SPOT); pl.crouch = true; } R.step(); maxAw = Math.max(maxAw, T1.awareness); if (!first && T1.state !== 'patrol') first = `${T1.state} at frame ${f}`; }
       return { maxAw, first, passes: CLOSE_STATS.darkPasses - dp, foe: T1.foe === m ? 'the partner' : T1.foe === 'player' ? 'Sam' : String(T1.foe), lit: R.lit(SPOT) as number, samD: distXZ(pl.char.pos, T1.char.pos) }; };
     const p = await alone('partner'), s = await alone('sam');
     if (!(p.lit < CLOSE.darkAt)) fails.push(`staging: the spot reads ${f3(p.lit)} on the meter (not dark)`); if (p.passes) fails.push(`CLOSE_STATS.darkPasses moved by ${p.passes} with only the partner inside 1.8 m of the man (Sam ${f1(p.samD)} m off)`); if (!p.first || p.foe !== 'the partner') fails.push(`the partner 1.2 m in front of him in the dark: ${p.first || `never roused (awareness ${f2(p.maxAw)})`}, his eyes on ${p.foe}`);

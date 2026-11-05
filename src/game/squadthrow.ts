@@ -280,7 +280,7 @@ function walkSpot(g: Game, men: Guard[], at: Vec3, kind: SquadThrowKind, forced 
     const i = X.q[head++], d = X.dep[i], k = X.who[i], gd = who[k], x = i % W, z = (i - x) / W, px = (x + 0.5) * C, pz = (z + 0.5) * C;
     eye[0] = hand[0] = px; eye[2] = hand[2] = pz; SQUADTHROW_STATS.cells++;
     const dist = Math.hypot(px - at[0], pz - at[2]);
-    const free = d > 0 && dist >= K.minM && dist <= K.maxM && !ours.some(o => !v3.same(o, gd.char.pos) && Math.hypot(o[0] - px, o[2] - pz) < 0.6);
+    const free = d > 0 && dist >= K.minM && dist <= K.maxM && !ours.some(o => o !== gd.char.pos && Math.hypot(o[0] - px, o[2] - pz) < 0.6);
     // (a line at head height and one from the hand down to the spot: measured over the office, 92 % of such cells have the straight arc and under 6 m no other cell does;
     //  the worked flood: … or a line from the hand to over the spot, or to a wall that stands by it)
     const straight = free && !col.solidBlocked(eye, to) && !col.solidBlocked(hand, floor);
@@ -352,7 +352,7 @@ export function squadThrowPlan(g: Game, men: Guard[], at: Vec3, kind: SquadThrow
   if (K.lob ? th && clean(th) : th || !K.walk) return th;
   // (one kept answer a kind, and the PICTURE's kept apart from the menu's and the order's: what is drawn never decides what the game reads)
   const s = state(g), slot = (view ? 'v' : 's') + kind + (K.lob && men.length === 1 ? '1' : ''), c = s.kept.get(slot);   // (lob: a question put of one man is kept apart from the squad's — the row asks both, every frame)
-  const key = `${kind}|${keyOf(at)}|${men.map(m => `${m.char.id}:${Math.floor(m.char.posX * 2)},${Math.floor(m.char.posZ * 2)}`).join(';')}`;
+  const key = `${kind}|${keyOf(at)}|${men.map(m => `${m.char.id}:${Math.floor(m.char.pos[0] * 2)},${Math.floor(m.char.pos[2] * 2)}`).join(';')}`;
   if (!fresh && c && c.key === key && g.time >= c.t && g.time - c.t < (K.lob ? K.lobKeepSecs : K.keepSecs)) return c.th;
   // (SQUADTHROW.lob: … then a throw one of them works out from where he stands, then a walk to the straight arc, then a walk to a worked-out throw — the first
   //  that catches nobody of ours; a search's flights are counted (`lobSims`, and half as many again for the men where they stand: half a search between them,
@@ -530,7 +530,7 @@ export function squadThrowPlans(g: Game, V?: SquadThrowKept): SquadThrowPlan[] {
     if (th && !(kind === 'frag' && squadFragCatches(g, th.rest, t.at, { gd: th.gd, at: th.post ?? th.gd.char.pos }, !samCalls(), true))) {   // (the row's own question, word for word: drawn where the row is live)
       let walk: Vec3[] | undefined;
       if (th.post) { const c = s.kept.get('v' + kind + (SQUADTHROW.lob && M.men.length === 1 ? '1' : '')); walk = c && c.th === th ? (c.line ??= walkLine(g, th.gd, th.post)) : walkLine(g, th.gd, th.post); }
-      out.push({ gd: th.gd, from: th.post ?? [th.gd.char.posX, 0, th.gd.char.posZ], points: th.sol.points, land: th.rest, kind, preview: true, walk });
+      out.push({ gd: th.gd, from: th.post ?? [th.gd.char.pos[0], 0, th.gd.char.pos[2]], points: th.sol.points, land: th.rest, kind, preview: true, walk });
     }
   });
   return out;

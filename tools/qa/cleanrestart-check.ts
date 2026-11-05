@@ -123,7 +123,7 @@ export async function cleanrestartCheck(): Promise<boolean> {
       let nb = 0; const blast = (p: number[]) => { FR.blast(g, [p[0], 0.2, p[2]], { who: 0, serial: 900 + nb++, name: 'frag grenade', destr: { radius: FR.FRAG.destrM, power: 1 } }); steps([A, B], 20); };
       for (const d of g.doors.list.slice(0, 6)) blast([d.def.hinge[0] + 0.4, 0, d.def.hinge[1] + 0.4]);
       for (const d of g.doors.list.slice(6, 12)) { g.doors.use(d, c.pos, 0); did.opened++; }
-      for (const gd of g.guards.slice(0, 4)) blast([gd.char.posX + 0.5, 0, gd.char.posZ]);
+      for (const gd of g.guards.slice(0, 4)) blast([gd.char.pos[0] + 0.5, 0, gd.char.pos[2]]);
       g.setBlackout(86400, 'hand'); steps([A, B], 60); g.setBlackout(Infinity, 'shot'); steps([A, B], 60);   // the mains by hand, then the breaker shot
     });
     did.doorsOff = g.doors.list.filter((d: any) => d.off).length; did.dead = g.guards.filter((x: any) => x.state === 'dead').length; did.decals = g.decals.count; did.items = g.items.items.length;

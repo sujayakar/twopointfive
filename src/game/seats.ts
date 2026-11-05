@@ -154,7 +154,7 @@ export function playerName(g: Game, pl: Player): string { return g.seats.length 
 /** the living man nearest a place (null: every player is down) — what a rule that is about "the player near here" asks */
 export function nearestMan(g: Game, at: ArrayLike<number>): Player | null {
   let best: Player | null = null, bd = Infinity;
-  for (const s of g.seats) { const p = s.view.player; if (p.down) continue; const d = Math.hypot(p.char.posX - at[0], p.char.posZ - at[2]); if (d < bd) { bd = d; best = p; } }
+  for (const s of g.seats) { const p = s.view.player; if (p.down) continue; const d = Math.hypot(p.char.pos[0] - at[0], p.char.pos[2] - at[2]); if (d < bd) { bd = d; best = p; } }
   return best;
 }
 

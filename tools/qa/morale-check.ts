@@ -97,7 +97,7 @@ export async function moraleCheck(): Promise<boolean> {
     return said;
   };
   const fired = (gd: any) => gd.weapon.shotsFired;
-  const facing = (gd: any, at: number[]) => Math.abs(wrap(Math.atan2(at[0] - gd.char.posX, at[2] - gd.char.posZ) - gd.char.bodyYaw));
+  const facing = (gd: any, at: number[]) => Math.abs(wrap(Math.atan2(at[0] - gd.char.pos[0], at[2] - gd.char.pos[2]) - gd.char.bodyYaw));
   /** every round that leaves `who`'s gun from here on, as the sim fires it: the muzzle and the direction of the round's own ray (combat.ts fireWeapon's cast down
    *  the bore, the first cast from his muzzle after his weapon counts a round off) — the shot itself, not this file's log of what it meant to do */
   const shots = (g: any, who: any) => { const out: { from: number[]; dir: number[] }[] = []; let owed = 0;
@@ -225,7 +225,7 @@ export async function moraleCheck(): Promise<boolean> {
     // (8) the hostage rescue's cast
     { Math.random = seeded(42); MORALE.on = false; const W: any = await quiet(() => standUp()), g = W.game, Rs = g.rescue; g.godMode = true; const why = Rs.start(); MORALE.on = true; MORALE.training = 'none'; MORALE.nerve = 'normal'; held();
       for (let i = 0; i < 30; i++) W.step(DT); const cap = Rs.captor(), fed0 = MORALE_STATS.fed, filed0 = MORALE_STATS.blasts, cast: any[] = Rs.hostiles;
-      const at: V3 = cap ? [cap.char.posX + 1.2, 0, cap.char.posZ] : [0, 0, 0];
+      const at: V3 = cap ? [cap.char.pos[0] + 1.2, 0, cap.char.pos[2]] : [0, 0, 0];
       if (cap) blast(g, at, { who: PLAYER_ID, name: 'frag grenade', lethalM: 0.05, woundM: 0.1, fx: false });
       let owned = 0; for (let i = 0; i < 120; i++) { W.step(DT); if (cast.some(x => moraleOwns(x))) owned++; }
       line(!!cap && Rs.active && MORALE_STATS.blasts - filed0 === 1 && MORALE_STATS.fed === fed0 && cast.every(x => !moraleOf(x)) && owned === 0,

@@ -493,16 +493,16 @@ class Watcher {
       if (!T) { T = { door: null, mark: [p[0], 0, p[2]], markT: t, stuckT: -100, wantT: t, wantOf: null, hungOrder: null, hungT: t, hungSaid: false, stillT: t, doorT: t, doorSaid: -100, flagT: t, flagSaid: -100, wallT: t, wallSaid: -100, behindT: t, behindSaid: -100, lastYaw: gd.char.aimYaw, turns: [], dir: 0, ext: gd.char.aimYaw, twitchSaid: -100, snapSaid: -100, was: gd.state, last: '', blind: false, yaws: [], yawT: 0, op: null, mark2: false, own: [], jobId: null, jobT: -100 }; this.tr.set(gd, T); }
       if (gd.state === 'dead') {
         if (T.was !== 'dead') { const k = g.guards.find((x: any) => x.char.id === gd.killerId); if (gd.killerId === PLAYER_ID || (k && k.team === 'operative')) this.add('friendly', gd.callsign, p, `killed by ${k?.callsign ?? 'Sam'}`);
-          const off = k ? Math.abs(wrap(Math.atan2(k.char.posX - p[0], k.char.posZ - p[2]) - T.lastYaw)) * 180 / Math.PI : 0;
+          const off = k ? Math.abs(wrap(Math.atan2(k.char.pos[0] - p[0], k.char.pos[2] - p[2]) - T.lastYaw)) * 180 / Math.PI : 0;
           this.say(`   ✗ ${gd.callsign} down ${at(p)} · by ${k ? `${k.callsign} ${at(k.char.pos)} ${f1(flat(k.char.pos, p))} m, ${Math.round(off)}° off his muzzle` : gd.killerId === PLAYER_ID ? 'Sam' : '?'} · he was: ${T.last}`);
           if (k && k.team !== 'operative') { const O = g.fight?.opOf?.(gd), M = O?.meters?.get(k), kp = k.char.pos;
             this.deaths.push({ t: +t.toFixed(1), who: gd.callsign, by: k.callsign, d: +flat(kp, p).toFixed(1), off: Math.round(off), order: T.last, door: T.door, tgt: T.op?.tgt?.callsign ?? (T.op?.turn ? `(looking for ${T.op.turn.callsign})` : null), onKiller: T.op?.tgt === k, meter: +(M?.m ?? 0).toFixed(2), seenAge: M ? +(t - M.seenT).toFixed(1) : 99,
               track: +(T.op?.track ?? 0).toFixed(2), readyIn: +((T.op?.readyAt ?? 0) - t).toFixed(2), muzzleDown: !!T.op?.muzzleDown, light: !!gd.flashlight?.enabled, killerLit: +(k.visibility ?? 0).toFixed(2), blind: T.blind, kBlind: g.time < (k.dazzledUntil ?? -1), held: T.op?.held ?? 0,
-              los: !col.segmentBlocked([p[0], 1.55, p[2]], [kp[0], 1.1, kp[2]]), moving: +Math.hypot(gd.char.velX, gd.char.velZ).toFixed(1), kOff: Math.round(Math.abs(wrap(Math.atan2(p[0] - kp[0], p[2] - kp[2]) - k.char.aimYaw)) * 180 / Math.PI),
+              los: !col.segmentBlocked([p[0], 1.55, p[2]], [kp[0], 1.1, kp[2]]), moving: +Math.hypot(gd.char.vel[0], gd.char.vel[2]).toFixed(1), kOff: Math.round(Math.abs(wrap(Math.atan2(p[0] - kp[0], p[2] - kp[2]) - k.char.aimYaw)) * 180 / Math.PI),
               nUp: team.filter((m: any) => m.state !== 'dead').length, nFoes: this.g.guards.filter((h: any) => h.team === 'hostile' && h.state !== 'dead' && flat(h.char.pos, p) < 9).length,
               ...(() => { const o = g.entry?.riskAt?.(p, null, true) ?? null, sd = (q: number[]) => (q[0] - o.at[0]) * o.n[0] + (q[2] - o.at[2]) * o.n[1]; const c = this.foeCame.get(k), came = !!c && c.unknown && t - c.t <= 8; return { open: o ? o.id : null, beyond: !!o && sd(p) * sd(kp) < 0, onMark: T.mark2, thru: this.thru(p, kp), hole: this.holeAt(p), came: came ? c!.id : null, cameAgo: came ? +(t - c!.t).toFixed(1) : -1 }; })(), other: this.otherAt(gd, p, k),
               ...(() => { const c = gd.char, m = g.fight?.friendInLine?.(c.bones.upperArmR ?? [p[0], 1.4, p[2]], k.char.bones.chest ?? [kp[0], 1.1, kp[2]], gd) ?? null, r = g.fight?.roomAt?.(p) ?? null;
-                return { mask: m === 'player' ? 'Sam' : m ? m.callsign : null, job: T.jobId, jobAgo: T.jobId ? +(t - T.jobT).toFixed(1) : -1, samRoom: !!r && r === g.fight.roomAt(sam.pos), samD: +flat(sam.pos, p).toFixed(1), at: [+p[0].toFixed(1), +p[2].toFixed(1)], kAt: [+kp[0].toFixed(1), +kp[2].toFixed(1)], samAt: [+sam.posX.toFixed(1), +sam.posZ.toFixed(1)] }; })() }); }
+                return { mask: m === 'player' ? 'Sam' : m ? m.callsign : null, job: T.jobId, jobAgo: T.jobId ? +(t - T.jobT).toFixed(1) : -1, samRoom: !!r && r === g.fight.roomAt(sam.pos), samD: +flat(sam.pos, p).toFixed(1), at: [+p[0].toFixed(1), +p[2].toFixed(1)], kAt: [+kp[0].toFixed(1), +kp[2].toFixed(1)], samAt: [+sam.pos[0].toFixed(1), +sam.pos[2].toFixed(1)] }; })() }); }
           if (k && k.team !== 'operative' && off > 75 && !T.blind) this.add('unaware', gd.callsign, p, `killed by ${k.callsign} ${f1(flat(k.char.pos, p))} m off, ${Math.round(off)}° from where his gun pointed · ${T.last}`); }
         T.was = gd.state; continue; }
       T.was = gd.state; T.last = `${this.order(gd)} · ${g.cover?.words?.(gd) || 'covering nothing'}`; { const A = O.of(gd); T.mark2 = !!A?.post && flat(p, A.post) < 0.8; } T.door = g.doorTools?.ops?.find((o: any) => o.men.includes(gd))?.phase ?? null;
@@ -556,9 +556,9 @@ class Watcher {
     for (let a = 0; a < bodies.length; a++) for (let b = a + 1; b < bodies.length; b++) { const k = `${bodies[a].name}/${bodies[b].name}`;
       if (flat(bodies[a].pos, bodies[b].pos) < 0.3) { const t0 = this.pairT.get(k) ?? t; this.pairT.set(k, t0); if (t - t0 > 0.75 && t - (this.pairSaid.get(k) ?? -100) > 10) { this.pairSaid.set(k, t); this.add('overlap', k, bodies[a].pos, `${f1(flat(bodies[a].pos, bodies[b].pos) * 100)} cm apart for 0.75 s`); } } else this.pairT.delete(k); }
     // block
-    if (samGoal && flat(sam.pos, samGoal) > 0.5) { if (flat(sam.pos, this.samMark) > 0.2) { this.samMark = [sam.posX, 0, sam.posZ]; this.samMarkT = t; }
+    if (samGoal && flat(sam.pos, samGoal) > 0.5) { if (flat(sam.pos, this.samMark) > 0.2) { this.samMark = [sam.pos[0], 0, sam.pos[2]]; this.samMarkT = t; }
       else if (t - this.samMarkT > 1.5 && t - this.blockSaid > 10) { const near = alive.find(x => flat(x.char.pos, sam.pos) < 0.9); if (near) { this.blockSaid = t; this.add('block', near.callsign, sam.pos, `Sam walking and stopped 1.5 s with him ${f1(flat(near.char.pos, sam.pos) * 100)} cm off · ${this.order(near)}`); } } }
-    else { this.samMark = [sam.posX, 0, sam.posZ]; this.samMarkT = t; }
+    else { this.samMark = [sam.pos[0], 0, sam.pos[2]]; this.samMarkT = t; }
   }
 }
 
@@ -672,15 +672,15 @@ class DefWatch {
   private homeOf(h: any): any | null { return this.g.roomClear?.rooms?.find((r: any) => r.defenders.includes(h))?.def ?? null; }
   private modeOf(h: any): string { return this.g.fight?.defs?.find((d: any) => d.gd === h)?.mode ?? 'none'; }
   private atHome(h: any, R: DefOut): boolean { const H = this.homeOf(h), p = h.char.pos; return H ? p[0] >= H.bounds.x0 && p[0] <= H.bounds.x1 && p[2] >= H.bounds.z0 && p[2] <= H.bounds.z1 : Math.hypot(p[0] - R.mark[0], p[2] - R.mark[1]) < 4; }
-  private fromMark(h: any, R: DefOut): number { return +Math.hypot(h.char.posX - R.mark[0], h.char.posZ - R.mark[1]).toFixed(1); }
+  private fromMark(h: any, R: DefOut): number { return +Math.hypot(h.char.pos[0] - R.mark[0], h.char.pos[2] - R.mark[1]).toFixed(1); }
   tick(t: number, team: any[], hostiles: any[], entries: EntryRec[]) {
     const g = this.g, off = g.time - t;
     if (this.loudAt === null && (g.events as any[]).some(e => !e.ptNoise && (e.kind === 'shot' || e.kind === 'guardShot' || e.kind === 'bang' || e.kind === 'kick'))) this.loudAt = +t.toFixed(1);
     for (const h of hostiles) {
       let R = this.rows.get(h);
-      if (!R) { R = { who: h.callsign ?? '?', home: this.homeOf(h)?.id ?? null, mark: [+h.char.posX.toFixed(2), +h.char.posZ.toFixed(2)], notes: [], far: 0, leftAt: null, alertAt: null, kills: [], dead: null }; this.rows.set(h, R); }
+      if (!R) { R = { who: h.callsign ?? '?', home: this.homeOf(h)?.id ?? null, mark: [+h.char.pos[0].toFixed(2), +h.char.pos[2].toFixed(2)], notes: [], far: 0, leftAt: null, alertAt: null, kills: [], dead: null }; this.rows.set(h, R); }
       if (R.dead) continue;
-      if (h.state === 'dead') { R.dead = { t: +t.toFixed(1), at: [+h.char.posX.toFixed(1), +h.char.posZ.toFixed(1)], fromMark: this.fromMark(h, R), mode: this.modeOf(h), home: this.atHome(h, R) }; continue; }
+      if (h.state === 'dead') { R.dead = { t: +t.toFixed(1), at: [+h.char.pos[0].toFixed(1), +h.char.pos[2].toFixed(1)], fromMark: this.fromMark(h, R), mode: this.modeOf(h), home: this.atHome(h, R) }; continue; }
       const d = this.fromMark(h, R); if (d > R.far) R.far = d;
       if (R.leftAt === null && !this.atHome(h, R)) R.leftAt = +t.toFixed(1);
       if (R.alertAt === null && h.state === 'alert') R.alertAt = +t.toFixed(1);
@@ -697,7 +697,7 @@ class DefWatch {
   private snap(t: number, door: string, when: 'order' | 'cross', hostiles: any[]) {
     const g = this.g, d = g.doors.byName(door); if (!d) return;
     const F = frameOf(d), mx = F.hx + F.ux * F.W / 2, mz = F.hz + F.uz * F.W / 2, rooms = (g.roomClear?.rooms ?? []) as any[];
-    const men = hostiles.filter(h => h.state !== 'dead' && (rooms.length ? rooms.some(r => r.defenders.includes(h) && r.def.doors.some((x: any) => x.id === door)) : Math.hypot(h.char.posX - mx, h.char.posZ - mz) < 12)).map(h => {
+    const men = hostiles.filter(h => h.state !== 'dead' && (rooms.length ? rooms.some(r => r.defenders.includes(h) && r.def.doors.some((x: any) => x.id === door)) : Math.hypot(h.char.pos[0] - mx, h.char.pos[2] - mz) < 12)).map(h => {
       const R = this.rows.get(h)!, p = h.char.pos; let a = Math.atan2(mx - p[0], mz - p[2]) - h.char.aimYaw; a = Math.atan2(Math.sin(a), Math.cos(a));
       return { who: R.who, state: h.state as string, aw: +(+h.awareness).toFixed(2), off: Math.round(Math.abs(a) * 57.3), fromMark: this.fromMark(h, R), home: this.atHome(h, R), mode: this.modeOf(h) }; });
     this.doors.push({ t: +t.toFixed(1), door, when, men });
@@ -788,7 +788,7 @@ class Player {
         const m = d as any; for (const x of m.guards) delete x.bubble; for (const x of m.civilians) delete x.bubble; if (m.player) delete m.player.bubble;   // …and `digestMove`: the same word with nobody's speech bubble in it (a build that only words a line differently agrees on this one)
         this.digestMove = hashStr(this.digestMove + hashDigest(d)).toString(16);
         if (process.env.PT_DIGEST === 'series') this.series.push(String(hashDigest(d))); if (Number(process.env.PT_DIGEST_AT) === this.frames / 30) this.digestAt = d; }
-      if (WHERE && this.verbose && this.t >= WHERE[0] && this.t <= WHERE[1] && Math.round(this.t * 60) % 30 === 0) this.say(`   @ Sam ${at(this.pos)} · ${this.team.map((m: any) => { const A = this.O.of(m), F = g.rescue?.flow?.jobOf?.(m); return `${m.callsign} ${m.state === 'dead' ? 'down' : `${at(m.char.pos)} ${A ? A.order + (A.arrived ? '✓' : '') : m.script ? 'scripted' : m.state}${F ? ` flow:${F.kind ?? F.what ?? 'job'}` : ''}${process.env.PT_WAYPTS && m.state !== 'dead' ? ` [goal ${m.script?.goal ? at(m.script.goal) : '—'} · post ${A?.post ? at(A.post) : '—'}${A?.via?.length ? ' via ' + A.via.map(at).join(' ') : ''} · path ${m.pathI}/${m.path.length} ${m.path.slice(m.pathI, m.pathI + 4).map(at).join(' ')} · v ${Math.hypot(m.char.velX, m.char.velZ).toFixed(2)}]` : ''}`}`; }).join(' · ')}`);   // (PT_WAYPTS=1: each man's script goal, his order's post and corners, the next waypoints of his path, his speed)
+      if (WHERE && this.verbose && this.t >= WHERE[0] && this.t <= WHERE[1] && Math.round(this.t * 60) % 30 === 0) this.say(`   @ Sam ${at(this.pos)} · ${this.team.map((m: any) => { const A = this.O.of(m), F = g.rescue?.flow?.jobOf?.(m); return `${m.callsign} ${m.state === 'dead' ? 'down' : `${at(m.char.pos)} ${A ? A.order + (A.arrived ? '✓' : '') : m.script ? 'scripted' : m.state}${F ? ` flow:${F.kind ?? F.what ?? 'job'}` : ''}${process.env.PT_WAYPTS && m.state !== 'dead' ? ` [goal ${m.script?.goal ? at(m.script.goal) : '—'} · post ${A?.post ? at(A.post) : '—'}${A?.via?.length ? ' via ' + A.via.map(at).join(' ') : ''} · path ${m.pathI}/${m.path.length} ${m.path.slice(m.pathI, m.pathI + 4).map(at).join(' ')} · v ${Math.hypot(m.char.vel[0], m.char.vel[2]).toFixed(2)}]` : ''}`}`; }).join(' · ')}`);   // (PT_WAYPTS=1: each man's script goal, his order's post and corners, the next waypoints of his path, his speed)
       if (WHERE && process.env.PT_FOES && this.verbose && this.t >= WHERE[0] && this.t <= WHERE[1] && Math.round(this.t * 60) % 30 === 0) { const names = process.env.PT_FOES.split(',').map(s => s.replace(/_/g, ' ')), dn = (process.env.PT_LEAVES ?? '').split(',').filter(Boolean); this.say(`   @@ ${this.hostiles.filter((h: any) => names.includes(h.callsign)).map((h: any) => `${h.callsign} ${h.state === 'dead' ? 'down' : `${at(h.char.pos)} ${h.state} aw ${(h.awareness ?? 0).toFixed(2)} yaw ${Math.round((h.char.aimYaw ?? 0) * 57.3)}${h.script ? ' scripted' : ''}${h.task ? ' task:' + (h.task.kind ?? h.task) : ''}${h.lastKnown ? ' lk ' + at(h.lastKnown) : ''}`}`).join(' · ')} · ${g.doors.list.filter((d: any) => dn.includes(d.def?.name ?? d.name ?? d.id)).map((d: any) => `${d.def?.name ?? d.name ?? d.id} ${(d.angle ?? 0).toFixed(2)}${d.latched ? 'L' : ''}`).join(' ')}`); }
       for (; this.dtSeen < this.D.log.length; this.dtSeen++) this.say(`   · ${this.D.log[this.dtSeen].what}`);
       if (this.D.log.length < this.dtSeen) this.dtSeen = this.D.log.length;
@@ -813,11 +813,11 @@ class Player {
       if (AIM_WIN && this.verbose && this.t >= AIM_WIN[0] && this.t <= AIM_WIN[1] && Math.floor(this.t * 20) !== Math.floor((this.t - DT) * 20)) {   // PT_AIM=a-b[:callsign]: whose the gun is at 20 Hz — his order, his spare eyes, the cover's job, where the script points it
         for (const m of this.up as any[]) { if (AIM_WHO && m.callsign !== AIM_WHO) continue; const A = g.orders.of(m), J0 = g.cover?.jobs?.get(m), J = J0 ?? g.cover?.keptJob?.(m), s = m.script, c = m.char;
           const op = g.doorTools.ops.find((o: any) => o.men.includes(m));
-          this.say(`   @ ${m.callsign} ${at(c.pos)} aim ${Math.round(c.aimYaw * 57.3)} body ${Math.round(c.bodyYaw * 57.3)} · ${A ? `${A.order}${A.arrived ? '*' : ''}${A.spare ? ' spare' : ''} d ${A.post ? f1(flat(c.pos, A.post)) : '—'}${A.low ? ' low' : ''}` : 'no order'} · op ${op ? op.phase : '—'} · job ${J ? `${J0 ? '' : 'kept '}${J.o.id}${J.off ? ' off' : ''}${J.back ? ' back' : ''}` : '—'} · aimAt ${s?.aimAt ? `${Math.round(Math.atan2(s.aimAt[0] - c.posX, s.aimAt[2] - c.posZ) * 57.3)}${J && s.aimAt === J.aim ? ' (cover)' : A && s.aimAt === A.watch ? ' (order)' : ''}` : '—'} · ${m.state}${g.fight.engaged(m) ? ' engaged' : ''} v ${f1(Math.hypot(c.velX, c.velZ))}`); } }
+          this.say(`   @ ${m.callsign} ${at(c.pos)} aim ${Math.round(c.aimYaw * 57.3)} body ${Math.round(c.bodyYaw * 57.3)} · ${A ? `${A.order}${A.arrived ? '*' : ''}${A.spare ? ' spare' : ''} d ${A.post ? f1(flat(c.pos, A.post)) : '—'}${A.low ? ' low' : ''}` : 'no order'} · op ${op ? op.phase : '—'} · job ${J ? `${J0 ? '' : 'kept '}${J.o.id}${J.off ? ' off' : ''}${J.back ? ' back' : ''}` : '—'} · aimAt ${s?.aimAt ? `${Math.round(Math.atan2(s.aimAt[0] - c.pos[0], s.aimAt[2] - c.pos[2]) * 57.3)}${J && s.aimAt === J.aim ? ' (cover)' : A && s.aimAt === A.watch ? ' (order)' : ''}` : '—'} · ${m.state}${g.fight.engaged(m) ? ' engaged' : ''} v ${f1(Math.hypot(c.vel[0], c.vel[2]))}`); } }
       if (FIGHT_WIN && this.verbose && this.t >= FIGHT_WIN[0] && this.t <= FIGHT_WIN[1] && Math.floor(this.t * 10) !== Math.floor((this.t - DT) * 10)) {   // PT_FIGHT=a-b: the room fight's own state at 10 Hz
         const deg = (r: number) => Math.round(r * 57.3), RF = g.fight;
         for (const m of this.up) { const O = RF.opOf(m); if (!O) continue;
-          this.say(`   ¦ ${m.callsign} ${at(m.char.pos)} aim ${deg(m.char.aimYaw)} body ${deg(m.char.bodyYaw)} · tgt ${O.tgt?.callsign ?? '-'} turn ${O.turn?.to.callsign ?? '-'} · track ${O.track.toFixed(2)} ready ${(O.readyAt - g.time).toFixed(2)}${m.muzzleDown ? ' · MUZZLE DOWN' : ''}${m.flashlight?.enabled ? ' · LIGHT' : ''} · lit ${m.visibility.toFixed(2)} · w ${(() => { const A = g.orders.of(m); return A?.watch ? at(A.watch) + (A.low ? ' LOW' : '') : '-'; })()} sam ${at(g.player.char.pos)}${m.script?.over ? ' · over' : ''} · step ${(g.time - O.stepT).toFixed(1)}${O.stepBy ? ' by ' + O.stepBy.by.callsign + ' ' + (g.time - O.stepBy.t).toFixed(1) + (g.col.segmentBlocked([m.char.posX, 1.55, m.char.posZ], [O.stepBy.by.char.posX, 1.1, O.stepBy.by.char.posZ]) ? ' NOLINE' : '') : ''} lost ${(g.time - O.lostAt).toFixed(1)} · held friend ${O.heldForFriend} line ${O.heldForLine} · sees ${[...O.meters].filter(([h]: any) => h.state !== 'dead').map(([h, M]: any) => { const V = g.fight.sightOn(m, h); return `${h.callsign} ${M.m.toFixed(2)}${g.time - M.seenT < 0.25 ? '*' : ''}${flat(m.char.pos, h.char.pos) < 9 ? `(${V.visible ? 'r' + V.rate.toFixed(2) : g.col.segmentBlocked([m.char.posX, 1.55, m.char.posZ], [h.char.posX, 1.1, h.char.posZ]) ? 'no line' : (() => { const C = canSeeChar(g, m, h.char, false); return C.inCone ? g.time < m.dazzledUntil ? 'dazzled' : 'hidden' : 'out of cone'; })()})` : ''}`; }).join(' ')}${NVGM.nvgDown(g, m) ? ' · NVG' : ''}`); }
+          this.say(`   ¦ ${m.callsign} ${at(m.char.pos)} aim ${deg(m.char.aimYaw)} body ${deg(m.char.bodyYaw)} · tgt ${O.tgt?.callsign ?? '-'} turn ${O.turn?.to.callsign ?? '-'} · track ${O.track.toFixed(2)} ready ${(O.readyAt - g.time).toFixed(2)}${m.muzzleDown ? ' · MUZZLE DOWN' : ''}${m.flashlight?.enabled ? ' · LIGHT' : ''} · lit ${m.visibility.toFixed(2)} · w ${(() => { const A = g.orders.of(m); return A?.watch ? at(A.watch) + (A.low ? ' LOW' : '') : '-'; })()} sam ${at(g.player.char.pos)}${m.script?.over ? ' · over' : ''} · step ${(g.time - O.stepT).toFixed(1)}${O.stepBy ? ' by ' + O.stepBy.by.callsign + ' ' + (g.time - O.stepBy.t).toFixed(1) + (g.col.segmentBlocked([m.char.pos[0], 1.55, m.char.pos[2]], [O.stepBy.by.char.pos[0], 1.1, O.stepBy.by.char.pos[2]]) ? ' NOLINE' : '') : ''} lost ${(g.time - O.lostAt).toFixed(1)} · held friend ${O.heldForFriend} line ${O.heldForLine} · sees ${[...O.meters].filter(([h]: any) => h.state !== 'dead').map(([h, M]: any) => { const V = g.fight.sightOn(m, h); return `${h.callsign} ${M.m.toFixed(2)}${g.time - M.seenT < 0.25 ? '*' : ''}${flat(m.char.pos, h.char.pos) < 9 ? `(${V.visible ? 'r' + V.rate.toFixed(2) : g.col.segmentBlocked([m.char.pos[0], 1.55, m.char.pos[2]], [h.char.pos[0], 1.1, h.char.pos[2]]) ? 'no line' : (() => { const C = canSeeChar(g, m, h.char, false); return C.inCone ? g.time < m.dazzledUntil ? 'dazzled' : 'hidden' : 'out of cone'; })()})` : ''}`; }).join(' ')}${NVGM.nvgDown(g, m) ? ' · NVG' : ''}`); }
         for (const h of this.hostiles) if (h.state !== 'dead' && this.up.some((m: any) => flat(m.char.pos, h.char.pos) < 10)) this.say(`   ¦   ${h.callsign} ${at(h.char.pos)} aim ${deg(h.char.aimYaw)} ${h.state} · lit ${h.visibility.toFixed(2)}${h.flashlight?.enabled ? ' · LIGHT' : ''}${h.foe ? ' · on ' + (h.foe === 'player' ? 'Sam' : h.foe.callsign) : ''}`);
       }
       const e = this.ended(); if (e) throw e;
@@ -1100,7 +1100,7 @@ function hallLead(P: Player) {
   const near = Math.abs((alongX ? P.pos[0] : P.pos[2]) - lo) <= Math.abs((alongX ? P.pos[0] : P.pos[2]) - hi) ? lo : hi, far = near === lo ? hi : lo, s = Math.sign(far - near);
   const pt = (along: number): Vec3 => alongX ? [near + s * along, 0, mid] : [mid, 0, near + s * along];
   const fl = (p: Vec3) => ({ kind: 'floor', at: P.O.freeSpot(p) ?? p }), len = Math.abs(far - near);
-  const home = () => P.hostiles.filter((h: any) => h.state !== 'dead' && h.char.posX > b.x0 && h.char.posX < b.x1 && h.char.posZ > b.z0 && h.char.posZ < b.z1);
+  const home = () => P.hostiles.filter((h: any) => h.state !== 'dead' && h.char.pos[0] > b.x0 && h.char.pos[0] < b.x1 && h.char.pos[2] > b.z0 && h.char.pos[2] < b.z1);
   const over = () => c.state === 'dead' || !home().length;
   const tell = (id: string, to: Vec3, m: any, label: string): boolean => { const why = P.O.give(id, fl(to), m); P.orders++; if (why) { P.refused.push(`${id} ${label}: ${why}`); P.say(`order ${id} · ${label} — REFUSED: ${why}`); return false; } P.say(`order ${id} · ${label}`); P.step(); return true; };
   const run = (pred: () => boolean, secs: number, sam: Vec3 | null) => { for (let i = 0; i < secs * 60 && !pred(); i++) { if (sam) P.goal = flat(P.pos, sam) > 0.4 ? sam : null; P.step(); } P.goal = null; };
@@ -1192,7 +1192,7 @@ function playRescue(P: Player) {
     const cover = () => {
       const m = [...P.up].sort((a: any, b: any) => flat(b.char.pos, P.pos) - flat(a.char.pos, P.pos))[0];
       const by = (g.doors.list as any[]).filter(d => other(d) && flat(d.frameCentre, m.char.pos) < 6).sort((a, b) => flat(a.frameCentre, m.char.pos) - flat(b.frameCentre, m.char.pos))[0] ?? null;
-      const give = (d: any | null) => { const t = d ? { kind: 'door', at: [d.frameCentre[0], 0, d.frameCentre[2]], door: d, side: Math.sign((m.char.posX - d.frameCentre[0]) * -Math.sin(d.def.closedDir) + (m.char.posZ - d.frameCentre[2]) * Math.cos(d.def.closedDir)) || 1 } : { kind: 'floor', at: S.team.sam };
+      const give = (d: any | null) => { const t = d ? { kind: 'door', at: [d.frameCentre[0], 0, d.frameCentre[2]], door: d, side: Math.sign((m.char.pos[0] - d.frameCentre[0]) * -Math.sin(d.def.closedDir) + (m.char.pos[2] - d.frameCentre[2]) * Math.cos(d.def.closedDir)) || 1 } : { kind: 'floor', at: S.team.sam };
         const why = P.O.give('cover', t, m); P.orders++; P.say(`order cover · ${m.callsign} · ${d ? d.def.name : 'the way we came'}${why ? ` — REFUSED: ${why}` : ''}`); if (why) P.refused.push(`cover ${d ? d.def.name : 'back'}: ${why}`); P.step(); if (!why) cov = m; return !why; };
       if (!give(by) && by) give(null);
     };
@@ -1308,7 +1308,7 @@ class EndWatch {
   tick(t: number, team: any[], hostiles: any[]) {
     const g = this.g, O = this.out, live = hostiles.filter(h => h.state !== 'dead'), up = team.filter(m => m.state !== 'dead').length, off = g.time - t;
     if (hostiles.length > O.n) O.n = hostiles.length;
-    const start = (men: EndMan[]) => { for (const h of live) { const M = this.snap(h, team); men.push(M); this.names.add(M.who); this.track.push({ h, M, last: [h.char.posX, 0, h.char.posZ], room: M.in ?? M.home }); } };
+    const start = (men: EndMan[]) => { for (const h of live) { const M = this.snap(h, team); men.push(M); this.names.add(M.who); this.track.push({ h, M, last: [h.char.pos[0], 0, h.char.pos[2]], room: M.in ?? M.home }); } };
     if (O.n >= 4 && O.t3 === null && live.length <= 3) { O.t3 = +t.toFixed(2); O.up3 = up; start(O.men3); }
     if (O.n >= 3 && O.t2 === null && live.length <= 2) { O.t2 = +t.toFixed(2); O.up2 = up; start(O.men2); }
     if (O.n >= 2 && O.t1 === null && live.length <= 1) { O.t1 = +t.toFixed(2); O.up1 = up; }
@@ -1400,7 +1400,7 @@ class Searcher {
     const P = this.P, g = P.g, t = g.time, sam = g.player.char.pos;
     for (const h of P.hostiles) { if (h.state === 'dead') { const s = this.sight.get(h);   // a man seen to drop: the shots heard from round there were his
         if (s) { if (t - s.t < 2) this.shots = this.shots.filter(x => flat(x.at, s.at) > 6 && !(x.R && this.inRoom(x.R, s.at))); this.sight.delete(h); } continue; }
-      if (this.sees(h)) this.sight.set(h, { at: [h.char.posX, 0, h.char.posZ], t }); }
+      if (this.sees(h)) this.sight.set(h, { at: [h.char.pos[0], 0, h.char.pos[2]], t }); }
     for (const e of g.events as any[]) { if (e.kind !== 'guardShot' || this.evSeen.has(e)) continue; this.evSeen.add(e);
       const k = g.guards.find((x: any) => x.char.id === e.who); if (!k || k.team !== 'hostile' || flat(e.pos, sam) > SK.hear) continue;
       const R = this.roomOf(e.pos), b = R?.def.bounds; let c: Vec3 = b ? [(b.x0 + b.x1) / 2, 0, (b.z0 + b.z1) / 2] : [Math.floor(e.pos[0] / 4) * 4 + 2, 0, Math.floor(e.pos[2] / 4) * 4 + 2];

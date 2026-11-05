@@ -615,7 +615,7 @@ export class FogOfWar {
   /** a man as an eye: off his head, looking where he looks (the cone: his gaze — gazeOf; all round or fovDeg's wedge: between his chest and his head, as it was) */
   private eyeOf(c: Character): FogEye {
     return { id: c.id, pos: c.bones.head ?? v3.add(c.pos, [0, 1.65, 0]), look: FOG.cone ? gazeOf(c) : v3.normalize(v3.lerp(c.chestDir, c.headDir(), 0.5)),
-      at: [c.posX, c.posY + (c.alive ? EYE_STAND + (EYE_CROUCH - EYE_STAND) * Math.min(1, Math.max(0, c.anim.crouch)) : EYE_CROUCH), c.posZ] };
+      at: [c.pos[0], c.pos[1] + (c.alive ? EYE_STAND + (EYE_CROUCH - EYE_STAND) * Math.min(1, Math.max(0, c.anim.crouch)) : EYE_CROUCH), c.pos[2]] };
   }
 
   // ---------------------------------------------------------------- 7 · what the cone hides is called
@@ -629,7 +629,7 @@ export class FogOfWar {
   /** the player a call is worded for: with two, the first one up */
   private caller(): Player { const g = this.g; return g.seats.length === 1 ? g.player : menUp(g)[0] ?? players(g)[0]; }
   sideOf(p: Vec3): 'front' | 'left' | 'right' | 'behind' {
-    const c = this.caller().char, l = gazeOf(c), dx = p[0] - c.posX, dz = p[2] - c.posZ, d = Math.hypot(dx, dz) || 1;
+    const c = this.caller().char, l = gazeOf(c), dx = p[0] - c.pos[0], dz = p[2] - c.pos[2], d = Math.hypot(dx, dz) || 1;
     const dot = (dx * l[0] + dz * l[2]) / d, cross = (dx * l[2] - dz * l[0]) / d;   // (cross > 0: on his left hand — the probe holds it against his own shoulders)
     return dot > COS_FRONT ? 'front' : dot < COS_BEHIND ? 'behind' : cross > 0 ? 'left' : 'right';
   }
@@ -762,7 +762,7 @@ export class FogOfWar {
         }
         // (a door the squad works: a teammate at it sees it move, whatever he is looking at — his head, not the fog's eye)
         for (const c of this.mates) {
-          const dx = c.posX - p[0], dz = c.posZ - p[2]; if (dx * dx + dz * dz > FOG.squadDoorsM * FOG.squadDoorsM) continue;
+          const dx = c.pos[0] - p[0], dz = c.pos[2] - p[2]; if (dx * dx + dz * dz > FOG.squadDoorsM * FOG.squadDoorsM) continue;
           const from = c.bones.head ?? v3.add(c.pos, [0, 1.6, 0]); const L = v3.dist(from, p); if (L < 0.3) return true;
           if (!this.sightBlocked(from, v3.lerp(from, p, 1 - 0.12 / L))) return true;
         }

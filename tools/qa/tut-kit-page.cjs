@@ -34,13 +34,13 @@ const check = (ok, label, detail) => { if (!ok) failed = true; console.log(`- ${
   const run = n => page.evaluate(n => window.__runFrames(n, 1 / 60, [], 'none'), n);   // (stepped, never drawn: a drawn frame is half a minute here)
   const read = () => page.evaluate(() => { const g = window.__game, P = g.player, el = document.getElementById('railprompt'), up = x => x.state !== 'dead', M = g.orders.menu, l = g.orders.log;
     const sq = g.guards.filter(x => x.unit && x.team === 'operative' && up(x)), foes = g.guards.filter(x => x.team !== 'operative');
-    const room = id => { const r = g.roomClear.rooms.find(x => x.def.id === id); if (!r) return false; const b = r.def.bounds; return !!r.cleared || sq.filter(m => m.char.posX > b.x0 && m.char.posX < b.x1 && m.char.posZ > b.z0 && m.char.posZ < b.z1).length >= 3; };
+    const room = id => { const r = g.roomClear.rooms.find(x => x.def.id === id); if (!r) return false; const b = r.def.bounds; return !!r.cleared || sq.filter(m => m.char.pos[0] > b.x0 && m.char.pos[0] < b.x1 && m.char.pos[2] > b.z0 && m.char.pos[2] < b.z1).length >= 3; };
     const lamp = g.targets.find(t => t.name === 'lamp_shop'), w = P.slot === 'rifle' ? P.rifle : P.pistol;
     return { i: g.lesson.i, id: g.lesson.step?.id ?? null, done: !!g.lesson.finished, line: (el?.querySelector('.line')?.textContent ?? '').replace(/\s+/g, ' ').trim(), keys: [...(el?.querySelectorAll('.line kbd') ?? [])].map(k => k.textContent), note: el?.querySelector('.note')?.textContent ?? '',
       up: !!el && getComputedStyle(el).display !== 'none', fatal: document.getElementById('fatal')?.textContent || '', rails: g.rails.live, sum: g.rails.summary(), script: !!g.director.running, t: +g.time.toFixed(1),
-      at: [+P.char.posX.toFixed(2), +P.char.posZ.toFixed(2)], crouch: !!P.crouch, down: !!P.down, slot: P.slot ?? null, equipT: P.equipT, dry: w ? w.roundsReady === 0 && !w.reloading : false, reloading: !!w?.reloading, charging: !!P.charging || !!P.kick,
+      at: [+P.char.pos[0].toFixed(2), +P.char.pos[2].toFixed(2)], crouch: !!P.crouch, down: !!P.down, slot: P.slot ?? null, equipT: P.equipT, dry: w ? w.roundsReady === 0 && !w.reloading : false, reloading: !!w?.reloading, charging: !!P.charging || !!P.kick,
       kit: `${P.canisters}/${P.flashbangs}/${P.frags}/${P.rifle?.shells} ${P.rifle?.attachment}`, ownRing: !!P.sel?.open && !!P.sel?.ring, nv: !!P.nv, dark: !!g.blackout.active, lampLit: !!lamp && lamp.on && !lamp.broken && lamp.factor > 0.05,
-      men: foes.filter(up).length, downed: foes.filter(x => !up(x)).length, gunners: foes.filter(x => x.callsign === 'Novak').length, mates: sq.length, squad: sq.map(m => ({ c: m.callsign, x: +m.char.posX.toFixed(1), z: +m.char.posZ.toFixed(1), o: g.orders.of(m)?.order ?? '-', low: !!g.orders.of(m)?.crouch, set: !!g.orders.of(m)?.arrived })),
+      men: foes.filter(up).length, downed: foes.filter(x => !up(x)).length, gunners: foes.filter(x => x.callsign === 'Novak').length, mates: sq.length, squad: sq.map(m => ({ c: m.callsign, x: +m.char.pos[0].toFixed(1), z: +m.char.pos[2].toFixed(1), o: g.orders.of(m)?.order ?? '-', low: !!g.orders.of(m)?.crouch, set: !!g.orders.of(m)?.arrived })),
       orders: l.length, last: l.length ? l[l.length - 1].order : null, menu: !!M, flat: !!M?.flat, ring: !!g.orders.cmdRing, kind: M?.target?.kind ?? null,
       doorSet: g.doorTools.set.length, wallSet: g.wallCharge?.set.length ?? 0, wallClear: (g.wallCharge?.set.length ?? 0) > 0 && !g.wallCharge.tooClose(g.wallCharge.set[0]).length,
       doors: Object.fromEntries(['inner', 'shop', 'store'].map(n => [n, +(g.doors.byName(n)?.angle ?? 0).toFixed(2)])), bunk: room('bunk'), fuel: room('fuel'), state: window.__roomclear?.state ?? null }; });
@@ -94,9 +94,9 @@ const check = (ok, label, detail) => { if (!ok) failed = true; console.log(`- ${
   /** the can in the air until it has gone off */
   const landed = async (kind, secs) => { let seen = false; for (let k = 0; k < secs * 10; k++) { const it = await page.evaluate(kind => window.__game.items.items.some(x => x.kind === kind && !x.fired), kind); if (seen && !it) break; seen = seen || it; await run(6); } await run(20); };
   /** the nearest man still up that he has a line to (of `names`, or anybody): his chest, and whether it is on the picture */
-  const mark = names => page.evaluate(names => { const g = window.__game, P = g.player.char, a = P.bones?.head ?? [P.posX, 1.5, P.posZ], chest = x => x.char.bones?.chest ?? [x.char.posX, 1.25, x.char.posZ];
-    const all = g.guards.filter(x => x.team !== 'operative' && x.state !== 'dead' && (!names || names.includes(x.callsign))), seen = all.filter(x => !g.col.shotBlocked(a, chest(x))).sort((p, q) => Math.hypot(p.char.posX - P.posX, p.char.posZ - P.posZ) - Math.hypot(q.char.posX - P.posX, q.char.posZ - P.posZ));
-    const far = all.find(x => !x.script) ?? all[0]; return { n: all.length, c: seen.length ? [...chest(seen[0])] : null, who: seen[0]?.callsign ?? null, next: far ? [far.char.posX, 0, far.char.posZ] : null }; }, names || null);
+  const mark = names => page.evaluate(names => { const g = window.__game, P = g.player.char, a = P.bones?.head ?? [P.pos[0], 1.5, P.pos[2]], chest = x => x.char.bones?.chest ?? [x.char.pos[0], 1.25, x.char.pos[2]];
+    const all = g.guards.filter(x => x.team !== 'operative' && x.state !== 'dead' && (!names || names.includes(x.callsign))), seen = all.filter(x => !g.col.shotBlocked(a, chest(x))).sort((p, q) => Math.hypot(p.char.pos[0] - P.pos[0], p.char.pos[2] - P.pos[2]) - Math.hypot(q.char.pos[0] - P.pos[0], q.char.pos[2] - P.pos[2]));
+    const far = all.find(x => !x.script) ?? all[0]; return { n: all.length, c: seen.length ? [...chest(seen[0])] : null, who: seen[0]?.callsign ?? null, next: far ? [far.char.pos[0], 0, far.char.pos[2]] : null }; }, names || null);
   /** shoot whoever he has a line to until `want`, going after the rest if `chase` (the left button: held for the rifle, a press a round for the pistol) */
   const fight = async (want, secs, names, chase) => { const t0 = (await read()).t;
     for (;;) { await card(); const s = await read(); if (want(s) || s.t - t0 > secs) return want(s);
@@ -161,7 +161,7 @@ const check = (ok, label, detail) => { if (!ok) failed = true; console.log(`- ${
     leave: async () => { await go(K.LAUNCH_FROM, 40, 0.15, s => s.id !== 'leave'); },   // (he stops as the line changes: the ring's near edge)
     behind: async () => { await until(s => s.id !== 'behind', 12); },
     launch: async () => {
-      for (let k = 0; k < 24; k++) { const near = await page.evaluate(L => ['Brandt', 'Marsh'].map(n => window.__game.guards.find(x => x.callsign === n)).filter(Boolean).every((x, i) => x.state === 'dead' || Math.hypot(x.char.posX - L[i][0], x.char.posZ - L[i][2]) < 0.8), K.LAST_MEN); if (near) break; await run(30); }
+      for (let k = 0; k < 24; k++) { const near = await page.evaluate(L => ['Brandt', 'Marsh'].map(n => window.__game.guards.find(x => x.callsign === n)).filter(Boolean).every((x, i) => x.state === 'dead' || Math.hypot(x.char.pos[0] - L[i][0], x.char.pos[2] - L[i][2]) < 0.8), K.LAST_MEN); if (near) break; await run(30); }
       await run(30); const at = K.LAST_COVER, before = await read();   // (the step's own mark, where its ring is drawn: the doorway they stand in) // (the cursor on the doorway first, as the line before had him look there: a press while the gun is still swinging past the arch's wall begins nothing,
       //  and a hand whose press gave no arc presses again)
       for (let n = 0; n < 3 && /\/1 he40$/.test((await read()).kit); n++) { await point(at); await run(40); await point(at); await page.mouse.down({ button: 'right' }); for (let k = 0; k < 6; k++) { await point(at); await run(5); }

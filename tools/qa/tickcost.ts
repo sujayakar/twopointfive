@@ -47,7 +47,7 @@ async function one(scn: string, seed: number): Promise<Row> {
     if (ticks === WARM) rust = Object.keys(RUST).filter(k => (RUST as Record<string, boolean>)[k]).join(' ') || 'none';   // (read while it runs: the play-through puts every knob table back at its end)
     if (ticks > WARM) { stp.push(upMs); } upMs = 0;   // (the upload that followed the LAST update: the harness packs the box list after the game's step)
     const t0 = performance.now(); const r = (update as (...x: unknown[]) => unknown).apply(this, a); const ms = performance.now() - t0;
-    if (BREAK && ticks === WARM) { const f = new Float64Array([this.player.char.posX]); new BigUint64Array(f.buffer)[0] ^= 1n; this.player.char.posX = f[0]; }   // (the red path: one float, its last bit)
+    if (BREAK && ticks === WARM) { const f = new Float64Array([this.player.char.pos[0]]); new BigUint64Array(f.buffer)[0] ^= 1n; this.player.char.pos[0] = f[0]; }   // (the red path: one float, its last bit)
     if (EACH) packNow();   // (a networked game's tick: the list is made again after every update)
     h = rawBits(this as never, h); if (++ticks > WARM) upd.push(ms); return r; } as typeof update;
   const r = await (PT as any).play(scn, seed, 300, false, {}) as any;

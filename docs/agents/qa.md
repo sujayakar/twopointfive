@@ -935,3 +935,23 @@ but synthetic writes still work.
   No tool lays a function over the line test any more (a grep of `tools/` for `segmentBlocked = ` and `solidBlocked = ` finds two comments), and once
   the senses' TypeScript sides are deleted `ownLines` false is an error said by name, so that a sixth tool that tries it is told. NOT TOUCHED:
   `morale-check` lays a function over `col.raycast`, which is the rays' and no part of that guard.
+- **Two measuring tools for a machine with a GPU: a page's repeat visits, and where a frame's CPU goes** (2026-11-05; neither is a check, neither has a
+  PASS line, no probe runs them; both want `PORT=<a dev server's port>` and the Playwright the other page tools use).
+  `node tools/qa/warmboot-page.cjs [--query …] [--plan '<name>:<visits>:<stay>[:<cache KB>][:restart] …'] [--out file.json]` opens one address again and
+  again in ONE browser the way a player comes back to it (a new tab each visit, the old one closed; `restart` closes the browser itself between visits and
+  starts it again on the same profile) and prints each visit's boot record: ms to interactive, the three slowest pipelines by name, every pipeline group
+  over a second. `stay` is `full` (until every shader built behind the start is in) or seconds after interactive; `cache KB` is Chrome's own size for its
+  store of compiled shaders. Each scenario starts on a fresh browser profile.
+  `node tools/qa/cpuprofile-page.cjs --query … --do '<js>'` (or the script in `PAGE_DO`) runs a script in the page and takes Chrome's own sampling CPU
+  profile over the stretches the script names (`await __prof.start()` … `await __prof.stop('a name')`): the call tree from the top down, every branch
+  over 2 % in ms, and the functions that cost most themselves, by the names the dev server's bundle keeps (it is not minified). What a frame recorder
+  cannot say: WHAT in `engine.render` or `game.update` a dear frame was. First used on the frames a wall comes down under the look.
+  WHAT THE FIRST TOOL FOUND ABOUT THE RENTED CLOUD CARD, a caution for every "warm" number taken there (an NVIDIA A10G, Vulkan, headless Chrome 157;
+  five boxes of this tool, after eight of a rig that reloaded the page in a frame of itself and showed the same three programs): (1) what makes a second visit fast there is THE CARD DRIVER'S OWN CACHE on the box's disk, not Chrome's store. With the driver's cache
+  switched off (its own environment word) every one of five later visits compiled for 24 to 28 s, as the cold one did, with Chrome's store at its own
+  size and at 100 MB alike. With it on, a brand new browser profile's first visit was 4.1 to 4.2 s. (2) THREE PROGRAMS ARE COMPILED A SECOND TIME before
+  that cache keeps them: `compositeR`, `compositeS` and `particlesUpdate`, 7 to 9 s each, each once more after the cold visit, on whichever later visit
+  it falls (the first, second or third; with Chrome's store at 100 MB too). After that every visit was 3.9 to 4.7 s, in a new tab or after a restart of
+  the browser, short stays or full. Why those three, nobody knows; it is the driver's and nothing of the game's. So: A WARM BOOT TIMED ON A CLOUD BOX
+  IS NOT TO BE TRUSTED BEFORE ITS FOURTH VISIT, and it says how the driver's cache behaves there, NOT whether a player's browser keeps its shaders. On
+  Windows Chrome's own store is what has to hold them and is too small for this game (the shader rows above); on an Apple chip nobody has looked.

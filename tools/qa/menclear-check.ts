@@ -59,10 +59,10 @@ export async function menclearCheck(): Promise<boolean> {
       if (silent) { SILENT.on = true; SNEAK.on = true; setSilent(g, true); }   // (the squad silent, as his was: the sneak's own carriage)
       const O = g.orders, C = g.wallCharge, nav = g.col.nav, men: any[] = O.men('all'), peak = new Map<any, number>();
       /** stepped a 60th at a time, each man's fastest metre a second kept (over a tenth of a second: a shove is not his pace) */
-      const step = (secs: number) => { for (let i = 0; i < Math.round(secs * 6); i++) { const was = men.map(m => [m.char.posX, 0, m.char.posZ]);
+      const step = (secs: number) => { for (let i = 0; i < Math.round(secs * 6); i++) { const was = men.map(m => [m.char.pos[0], 0, m.char.pos[2]]);
         for (let k = 0; k < 10; k++) W.step(1 / 60); men.forEach((m, j) => peak.set(m, Math.max(peak.get(m) ?? 0, flat(m.char.pos, was[j]) * 6))); } };
-      const put = (gd: any, p: number[]) => { gd.char.posX = p[0]; gd.char.posZ = p[2]; gd.path = []; gd.pathGoal = null; gd.speed = 0; };
-      for (const h of g.guards.filter((h: any) => h.team === 'hostile')) put(h, [h.char.posX + 400, 0, h.char.posZ]);
+      const put = (gd: any, p: number[]) => { gd.char.pos[0] = p[0]; gd.char.pos[2] = p[2]; gd.path = []; gd.pathGoal = null; gd.speed = 0; };
+      for (const h of g.guards.filter((h: any) => h.team === 'hostile')) put(h, [h.char.pos[0] + 400, 0, h.char.pos[2]]);
       const Wl = wallAt(g, CHARGE), spot: Vec3 | null = Wl ? (C as any).setSpot(Wl) : null; if (!Wl || !Wl.ok || !spot) return null;
       const bunch = () => men.forEach((m, i) => { const b = BUNCH[i % BUNCH.length], q = nav.nearestFreePoint(spot[0] + b[0], spot[2] + b[1]); put(m, [q[0], 0, q[2]]); });
       const sam = (p: Vec3) => { g.teleportPlayer(p); };
@@ -104,7 +104,7 @@ export async function menclearCheck(): Promise<boolean> {
       S.sam(S.spot); S.step(9); const close2: string[] = S.C.tooClose(c);
       line(close2.join() === 'you' && S.men.every(m => !S.hit(m.char.pos)), 'Sam back at the foot of the wall: nine seconds later the row names nobody but him', `too close: ${close2.join(', ') || 'nobody'} · ${S.where()}`);
       // (5b) a second charge on the wall beside their marks: the marks are dealt again, out of both
-      { let at2: Vec3 = [S.men[0].char.posX, 0, CHARGE[2]], W2 = wallAt(S.g, at2); const was = S.C.stats.cleared;
+      { let at2: Vec3 = [S.men[0].char.pos[0], 0, CHARGE[2]], W2 = wallAt(S.g, at2); const was = S.C.stats.cleared;
         for (let x = at2[0]; x < CHARGE[0] - 1.5 && !(W2 && W2.ok); x += 0.3) { at2 = [x, 0, CHARGE[2]]; W2 = wallAt(S.g, at2); }   // (the first place along the wall from their marks that takes one)
         if (!W2 || !W2.ok) line(false, 'a second place on the wall, by the men\'s marks, takes a charge', `wall at ${at(at2)}: ${W2 ? `${W2.index} ok ${W2.ok} ${W2.why ?? ''}` : 'none'}`);
         else { const c2 = { wall: W2, t: S.g.time, by: 'Sam', paid: 0 }, in2 = S.men.filter(m => S.C.blastShare(W2, m.char.pos, undefined, false) > 0).length; S.C.set.push(c2); S.step(9);

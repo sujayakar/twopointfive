@@ -124,7 +124,7 @@ export const fragPlayer = guarded(async () => {
   // a burst that does not put him down STUNS him (FRAG.samStun): no round for the seconds a man there is folded, the frame flashes, his aim is thrown wide
   for (const on of [true, false]) { FRAG.samStun = on; g.godMode = true; pl.fireCd = 0; pl.hitFlash = 0; pl.sup.v = 0; R.said.length = 0;
     input.pressed.add('Digit1'); R.step(2); if (!pl.pistolUp) { input.pressed.add('KeyE'); R.step(); } R.step(50); R.W.cursorAt(target);
-    const hits0 = pl.hitsLeft, n0r = pl.pistol.roundsReady, logs0 = FRAG_LOG.length, st0 = FRAG_STATS.samStunned; R.frag([pl.char.posX + 1, 0, pl.char.posZ], 0.1); R.until(() => FRAG_LOG.length > logs0, 1);
+    const hits0 = pl.hitsLeft, n0r = pl.pistol.roundsReady, logs0 = FRAG_LOG.length, st0 = FRAG_STATS.samStunned; R.frag([pl.char.pos[0] + 1, 0, pl.char.pos[2]], 0.1); R.until(() => FRAG_LOG.length > logs0, 1);
     const cd = pl.fireCd, flash = pl.hitFlash, sup = pl.sup.v, line = R.said.join(' | ');
     let firedAt = -1; for (let i = 0; i < 300 && firedAt < 0; i++) { R.W.cursorAt(target); input.buttons |= 1; input.clicked |= 1; R.step(); input.buttons = 0; if (pl.pistol.roundsReady < n0r) firedAt = i / 60; }
     if (on) F.verdict(pl.pistolUp && !pl.down && pl.hitsLeft === hits0 && cd > 2.4 && cd <= FRAG.stagger[0] && flash > 0.5 && sup >= 0.9 && /stunned/.test(line) && firedAt > 2.3 && FRAG_STATS.samStunned === st0 + 1,
@@ -134,8 +134,8 @@ export const fragPlayer = guarded(async () => {
     R.step(120); }
   FRAG.samStun = true;
   // his own grenade at his feet
-  { g.godMode = true; const hits0 = pl.hitsLeft; R.frag([pl.char.posX + 1, 0, pl.char.posZ], 0.1); R.step(20);
-    const safe = !pl.down && pl.hitsLeft === hits0; g.godMode = false; R.frag([pl.char.posX + 1, 0, pl.char.posZ], 0.1); R.step(20);
+  { g.godMode = true; const hits0 = pl.hitsLeft; R.frag([pl.char.pos[0] + 1, 0, pl.char.pos[2]], 0.1); R.step(20);
+    const safe = !pl.down && pl.hitsLeft === hits0; g.godMode = false; R.frag([pl.char.pos[0] + 1, 0, pl.char.pos[2]], 0.1); R.step(20);
     F.verdict(safe && pl.down, '(h) his own grenade a metre off: nothing in god mode, down without it', `god: ${safe ? 'up' : 'DOWN'} · plain: ${pl.down ? 'down' : 'UP'}`); }
   // a checkpoint keeps the count
   { const R2 = await rig(22); const g2 = R2.game; g2.aiEnabled = false; g2.player.frags = 1; R2.step(5); const s = R2.W.snapshot('frag', true); g2.player.frags = 0; R2.W.restore(s);
@@ -696,14 +696,14 @@ export const fragTheirs = guardedOrder(async () => {
     }
     const rep = FRAG_LOG[0] ?? null; const shout = said.find(s => s.who === C.callsign && /frag out|grenade out|fire in the hole/.test(s.text));
     const lift = rep ? [rep.at[0], rep.at[1] + FRAG.lift, rep.at[2]] : null;
-    const team = R.ops.map((m: any) => ({ who: m.callsign, d: rep ? dist(m.char.pos, rep.at) : NaN, e: lift ? exposure(g, lift, m.char.pos, m.char.bones.head ?? [m.char.posX, 1.6, m.char.posZ]) : NaN }));
+    const team = R.ops.map((m: any) => ({ who: m.callsign, d: rep ? dist(m.char.pos, rep.at) : NaN, e: lift ? exposure(g, lift, m.char.pos, m.char.bones.head ?? [m.char.pos[0], 1.6, m.char.pos[2]]) : NaN }));
     const pc = g.player.char; const sam = { down: g.player.down, d: rep ? dist(pc.pos, rep.at) : NaN, moved: dist(pc.pos, samFrom) };
     return { R, g, C, deal, said, item, tOut, fuse0, cueT, markN, rep, shout, team, sam, t0, heard: R.said.filter(s => /grenade/i.test(s)), calls: said.filter(s => /grenade!/.test(s.text) && s.who !== C.callsign) };
   };
   const SEEDS = [3, 5, 8, 11];
   let threw = 0, cued = 0, wound = 0, fuseOk = 0, called = 0, clear = 0, of = 0, lived = 0, ownHit = 0, marks = 0; const lines: string[] = [];
   for (const s of SEEDS) {
-    const a = await stage(s, true, true); if (!a.item || !a.rep) { lines.push(`seed ${s}: no throw (${a.deal.length} carriers · ${a.C.callsign} ${a.C.state} at (${f1(a.C.char.posX)}, ${f1(a.C.char.posZ)}) · team lit ${a.R.ops.map((m: any) => f2(m.visibility)).join(' / ')} · why not ${JSON.stringify(FRAG_WHY)} · said ${a.said.slice(-3).map(x => x.text).join(' / ')})`); continue; }
+    const a = await stage(s, true, true); if (!a.item || !a.rep) { lines.push(`seed ${s}: no throw (${a.deal.length} carriers · ${a.C.callsign} ${a.C.state} at (${f1(a.C.char.pos[0])}, ${f1(a.C.char.pos[2])}) · team lit ${a.R.ops.map((m: any) => f2(m.visibility)).join(' / ')} · why not ${JSON.stringify(FRAG_WHY)} · said ${a.said.slice(-3).map(x => x.text).join(' / ')})`); continue; }
     threw++; const lead = a.shout ? a.tOut - a.shout.t : NaN;
     if (a.shout && lead > FRAG.defWind - 0.1) wound++; if (Math.abs(a.fuse0 - FRAG.defFuse) < 0.06) fuseOk++; if (!isNaN(a.cueT) || a.heard.length) cued++; if (a.calls.length) called++; if (a.markN) marks++;
     for (const m of a.team) { of++; if (m.d > FRAG.lethalM || m.e === 0) clear++; }

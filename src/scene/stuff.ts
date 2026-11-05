@@ -117,15 +117,40 @@ type Finish = { rough?: number; metal?: boolean };
  *  that is plain */
 const record = (name: string, finish: Finish | undefined, stuff: BoxStuff | undefined, does?: DoesWord): Paint =>
   ({ name, ...(finish?.rough !== undefined ? { rough: finish.rough, ...(finish.metal ? { metal: true } : {}) } : {}), ...(stuff !== undefined && stuff !== 'plain' ? { stuff } : {}), ...(does !== undefined ? { does } : {}) });
+const fin = (p: Paint): string => `${p.stuff ?? 'plain'}${p.rough !== undefined ? ` at ${p.rough}${p.metal ? ', metal' : ''}` : ''}${p.does !== undefined ? `, doing ${p.does}` : ''}`;
+/** ONE ARRAY IS ONE PAINT, FOR GOOD. A paint is known by its ARRAY (above), so saying a second thing of an array that already is a paint would change
+ *  what every box painted from it is made of AND WHAT IT DOES (the rules read that word), wherever it was handed: `madeOf('steel', C.black)` would turn
+ *  a kit's every black thing to steel, and the last module to load would win. So THE FIRST SAYING STANDS, its name with it, and a second saying that
+ *  differs from it in its stuff, its finish or what it does is REFUSED (no finish is a finish, no word a word: a paint that has none cannot be given
+ *  one in place). The same thing said twice is nothing (a module evaluated again, a helper called per level). A second thing in the same colour is
+ *  another array: `saidAs`, or the numbers written out again. ONE THING IS ADDED IN PLACE, by its own function: what a colour WRITTEN AS NUMBERS does
+ *  (`doing` below, after `madeOf` or alone), once; a kit's NAMED row does what the table of names says and nothing else.
+ *  HOW IT IS REFUSED (ONE_PAINT.refuses): OUT LOUD, a throw, wherever a level is MADE or checked: the exporters, the generators, every tool and the
+ *  headless harness, which all run under bun. IN THE PAGE it is told once to the console for that paint and the first saying is kept: the page never
+ *  stops on a writer's slip. Check: tools/qa/stuff-check.ts, the line that builds every generator in one process. */
+export const ONE_PAINT = { refuses: (globalThis as { Bun?: unknown }).Bun !== undefined };
+const told = new WeakSet<readonly number[]>();
+/** the saying is refused: thrown, or in the page told once and passed over (false = the caller leaves the paint as it was) */
+function refuse(row: readonly number[], was: Paint, next: Paint): false {
+  const what = `stuff: the paint [${row.join(', ')}]${was.name ? ` '${was.name}'` : ''} is ${fin(was)} and cannot also be ${fin(next)}${next.name && next.name !== was.name ? ` ('${next.name}')` : ''}: one array is one paint. A second thing in the same colour is its own array (saidAs, or the numbers written again)`;
+  if (ONE_PAINT.refuses) throw new Error(what);
+  if (!told.has(row)) { told.add(row); console.error(`${what}. The first saying is kept.`); }
+  return false;
+}
+function keep(row: readonly number[], next: Paint): void {
+  const was = PAINTS.get(row);
+  if (was === undefined) { PAINTS.set(row, next); return; }
+  if (was.stuff !== next.stuff || was.rough !== next.rough || !!was.metal !== !!next.metal || was.does !== next.does) refuse(row, was, next);
+}
 export function namePaints(palette: Readonly<Record<string, readonly number[]>>, finish: Readonly<Record<string, { rough: number; metal?: boolean } | undefined>> = {}): void {
-  for (const [name, row] of Object.entries(palette)) PAINTS.set(row, record(name, finish[name], wordOfName(name), doesOfName(name)));
+  for (const [name, row] of Object.entries(palette)) keep(row, record(name, finish[name], wordOfName(name), doesOfName(name)));
 }
 /** … and one paint that is a named paint to the eye in other numbers (gwotPalette.ts gwotAs: the same paint standing for something else to a round): the
  *  name's stuff, and the finish only if `finish` is given (a stand-in's finish is written by whoever lays it) */
-export function namePaint(row: readonly number[], name: string, finish?: { rough: number; metal?: boolean }, does?: DoesWord): void { PAINTS.set(row, record(name, finish, wordOfName(name), does ?? doesOfName(name))); }   // (`does`: what the stand-in stands for to a round, where that is another thing than the name's)
+export function namePaint(row: readonly number[], name: string, finish?: { rough: number; metal?: boolean }, does?: DoesWord): void { keep(row, record(name, finish, wordOfName(name), does ?? doesOfName(name))); }   // (`does`: what the stand-in stands for to a round, where that is another thing than the name's)
 /** … and a paint of a kit's OWN that the table of names does not know (its names are its own, or its name there is another kit's paint): what it is
  *  made of and its finish, said outright */
-export function sayPaint(row: readonly number[], name: string, said: { stuff?: BoxStuff; does?: DoesWord } & Finish): void { PAINTS.set(row, record(name, said, said.stuff, said.does)); }
+export function sayPaint(row: readonly number[], name: string, said: { stuff?: BoxStuff; does?: DoesWord } & Finish): void { keep(row, record(name, said, said.stuff, said.does)); }
 /** ONE PAINT, ANOTHER THING: the same paint to the eye (its numbers, its name, its finish) said to be made of `stuff` where a kit paints two things with
  *  it and the row can say only one: `saidAs('earth', C.asphalt)` is the compound's mud at the pump, laid in the car park's paint for its darkness.
  *  `finish` = the thing's own, where its stuff has another than the paint's row (as `madeOf` takes one: the word and its finish are said together, so
@@ -139,7 +164,12 @@ export function madeOf(stuff: BoxStuff, colour: [number, number, number], finish
 /** … AND WHAT IT DOES, the same way (scene/materials.ts): `doing('steel', [0.58, 0.58, 0.56])` is those numbers, known from here on as a paint a box of
  *  which does what steel does, whatever else was said of them (madeOf first, then this, or either alone). A colour nobody says this of is brought forward
  *  by the exporter with the word its tone had (tools/levels/doesWas.ts). Returns the colour. */
-export function doing<T extends readonly number[]>(does: DoesWord, colour: T): T { const was = PAINTS.get(colour); PAINTS.set(colour, { ...(was ?? { name: '' }), does }); return colour; }
+export function doing<T extends readonly number[]>(does: DoesWord, colour: T): T {
+  const was = PAINTS.get(colour), next: Paint = { ...(was ?? { name: '' }), does };
+  // (ONE ARRAY IS ONE PAINT, above: said once, of numbers written out. A kit's named row, or a colour that already does another thing, is refused)
+  if (was !== undefined && was.does !== does && (was.does !== undefined || was.name !== '')) refuse(colour, was, next); else if (was?.does !== does) PAINTS.set(colour, next);
+  return colour;
+}
 /** … and the same, where NOBODY CHOSE the word: `drawnAs('metal', [0.08, 0.08, 0.09])` is what the look made of those numbers by their COLOUR until 11-04
  *  (a dark grey is iron's grey, darkened: a monitor's bezel was drawn as bare iron), written beside them so that no box moved the day the colour rule went.
  *  Every call is a place a choice is still owed: when somebody makes it, the call becomes a named paint or madeOf. (`grep drawnAs` is the list.) */
@@ -158,7 +188,7 @@ export const paintOf = (albedo: readonly number[] | undefined): Paint | undefine
  *  named. NOT WHAT IT DOES: a tone was never its paint to the rules (they knew a paint by its exact numbers, and a tone was classed by how bright it
  *  was), so a toned paint says nothing of what it does, as measured; whoever means the toned thing to do what its paint does says so (`doing`). Returns `out`. */
 export function tonedAs<T extends readonly number[]>(from: readonly number[], out: T): T {
-  const was = PAINTS.get(from); if (was) PAINTS.set(out, { name: was.name, ...(was.stuff !== undefined ? { stuff: was.stuff } : {}) });
+  const was = PAINTS.get(from); if (was) keep(out, { name: was.name, ...(was.stuff !== undefined ? { stuff: was.stuff } : {}) });
   return out;
 }
 /** … `paint` × k, a number or one a channel */
@@ -189,8 +219,8 @@ export const namedCoat = (word: BoxStuff | undefined): NamedCoat | undefined => 
 /** A NAMED COAT'S FINISH GOES WHEREVER ITS WORD GOES: a box that says a named coat is drawn no rougher than that coat, whatever row painted it and
  *  whatever number a kit, a skin or a hand wrote beside the word (a vehicle's body took a truck enamel's satin, a cot's and a locker's too, or nothing at
  *  all: it showed next to nothing of what stands round it). The word decides; a thing that should not shine like a car does not say it is car paint.
- *  Smoother stays smoother (a body wet with rain). ROUGHNESS ONLY: whether a thing is bare metal stays its paint's (the game reads that flag —
- *  game/wallpen.ts, wallcharge.ts — and reads no roughness).
+ *  Smoother stays smoother (a body wet with rain). ROUGHNESS ONLY: whether a thing is bare metal stays its paint's (a piece the game breaks off a thing
+ *  is given the thing's own finish and flag, game/breakTable.ts; what a thing DOES is its other word, scene/materials.ts, and reads neither).
  *  WHERE: read by the one function that hands a box's finish to the GPU (scene/boxes.ts matWord), so it holds for a level's statics, a shape's pieces, a
  *  piece blown off a car and anything made later that says the word. No box is changed and no level file carries the number: `Box.rough` is what the file
  *  gave, always.
@@ -200,6 +230,23 @@ export const namedCoat = (word: BoxStuff | undefined): NamedCoat | undefined => 
 export const COATFINISH = { on: false };
 /** the roughness a named coat lends the thing that says `word`, or nothing (the rule down, no word, a word that is no named coat) */
 export const coatRough = (word: BoxStuff | undefined): number | undefined => COATFINISH.on && word !== undefined ? namedCoat(word)?.rough : undefined;
+/** A THING OF SOLID GLASS IS DARK AND SMOOTH: a box that says 'glass' and is no pane (a vehicle's window, a display case's top, a handset's screen:
+ *  nothing is modelled behind them) is sent to the GPU as a neutral near black and polished, whatever grey its row or its maker gave it — glass is dark
+ *  because what is seen through it is an unlit inside, and it is what mirrors most on a car. A PANE (BoxFlag.Glass) is the glass engine's and is not
+ *  touched; nor is a face that carries MARKINGS (a mark is laid out in its own colours on the colour under it: a panel's grid, a screen's picture).
+ *  THE COLOUR IS NOT REPAINTED: `Box.albedo` stays the file's. This is a rule of the PICTURE, keyed on the word a box is DRAWN as (Box.stuff): what a
+ *  box DOES is its other word (Box.does, scene/materials.ts: a kit vehicle's window does what 'dark glass' does) and is neither asked nor touched. So it
+ *  goes wherever the word goes, whoever painted the box (the kits' dark glass, a plain car's own grey), and the game still finds the box's own colour
+ *  where it takes one (what a piece broken off it is painted, a chip's tint, a lamp known by its tone). The pack sends it dark, in the one place it
+ *  sends a wet box darker (scene/boxes.ts sentAlbedo), and no rougher than `rough` (matWord). Darker and smoother stay as they are. NEUTRAL, not the
+ *  row's hue scaled down: under about 0.03 a hue does not survive the 8-bit albedo target (render/shaders/gbuffer.wgsl), and a channel on a rounding
+ *  edge would flicker.
+ *  `lum` and `rough` ride in the table, so the page's knobs and a recording carry them.
+ *  THE SWITCH: SOLIDGLASS.on — ON in the page (`?solidglass=0` = every such box as its file gives it, as it was), OFF in the module and on the frozen
+ *  stand (FROZEN_HOLDS; TPS_SOLIDGLASS=1 raises it there); in the registry (game/knobs.ts) and the journal. A picture only on the harness; on a GPU page
+ *  the light meter's bounce sees the darker glass, as it sees a wet box's darker ground (Box.wetK).
+ *  CHECK: tools/qa/coatfinish-check.ts lines 6 and 7 (SOLIDGLASS_BREAK=1 fails both), on both stands. */
+export const SOLIDGLASS = { on: false, lum: 0.02, rough: 0.05 };
 /** the word of a thing that said `was` and is painted again with a paint that says `now`: the new paint's (whoever repaints a thing does not keep the
  *  old paint's word) — but A NAMED COAT STAYS UNDER A PLAIN ONE, whichever plain coat the look has: a car's body given another paint or another enamel is
  *  still a car's body. */

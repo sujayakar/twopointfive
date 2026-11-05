@@ -34,7 +34,7 @@ export async function aimweightCheck(): Promise<boolean> {
   const was = { ...AIMWEIGHT }; AIMWEIGHT.on = !BREAK;
   const wrap = (a: number) => { a = (a + Math.PI) % (2 * Math.PI); if (a <= 0) a += 2 * Math.PI; return a - Math.PI; };
   const AHEAD = [AT[0] + 5, 1.2, AT[2]], BEHIND = [AT[0] - 5, 1.2, AT[2]];
-  const wishYaw = () => Math.atan2(game.aimPoint[0] - c.posX, game.aimPoint[2] - c.posZ);
+  const wishYaw = () => Math.atan2(game.aimPoint[0] - c.pos[0], game.aimPoint[2] - c.pos[2]);
   const errNow = () => wrap(wishYaw() - c.aimYaw);
   const hold = (p: number[], n: number, click = false) => { for (let i = 0; i < n; i++) { W.cursorAt(p); if (click && i === 0) input.clicked |= 1; W.step(DT); } };
   const settle = (p: number[]) => { hold(p, 150); };
@@ -80,10 +80,10 @@ export async function aimweightCheck(): Promise<boolean> {
       line(!!sh && offGun < 0.2 && offCur > 1 && !!sh2 && off2 < 0.12, 'a round fired mid-swing goes where the circle is, not where the cursor is; fired once the circle has landed it goes at the cursor',
         `mid-swing: the round left ${deg(offGun)}° off the gun's heading and ${deg(offCur)}° off the cursor's bearing · landed: ${deg(off2)}° off the cursor's bearing`); }
     // (9) the shot rule itself: landed = the very point the build would have fired at, lead and all; mid-swing = that point turned by what the gun still owes
-    { settle(BEHIND); const far = [c.posX - 20, 1.3, c.posZ], lead = [c.posX - 12, 1.4, c.posZ + 1.42];   // (a level round 20 m out; a launcher's lead on a man crossing at 12 m)
+    { settle(BEHIND); const far = [c.pos[0] - 20, 1.3, c.pos[2]], lead = [c.pos[0] - 12, 1.4, c.pos[2] + 1.42];   // (a level round 20 m out; a launcher's lead on a man crossing at 12 m)
       const same = aimWeighShot(game, far) === far && aimWeighShot(game, lead) === lead && aimGunOn(game);
       settle(AHEAD); hold(BEHIND, 4); const w = pl.aimw, on = aimGunOn(game); const tgt = [game.aimPoint[0], 1.3, game.aimPoint[2] + 1.0]; const out = aimWeighShot(game, tgt);
-      const yawOf = (p: number[]) => Math.atan2(p[0] - c.posX, p[2] - c.posZ), rng = (p: number[]) => Math.hypot(p[0] - c.posX, p[2] - c.posZ);
+      const yawOf = (p: number[]) => Math.atan2(p[0] - c.pos[0], p[2] - c.pos[2]), rng = (p: number[]) => Math.hypot(p[0] - c.pos[0], p[2] - c.pos[2]);
       const turned = wrap(yawOf(tgt) - yawOf(out)), keepsLead = Math.abs(wrap((yawOf(out) - c.aimYaw) - (yawOf(tgt) - wishYaw())));
       line(same && !on && out !== tgt && Math.abs(turned - w.err) < 1e-9 && Math.abs(rng(out) - rng(tgt)) < 1e-9 && out[1] === tgt[1] && keepsLead < 1e-9 && Math.abs(w.err) > 0.5,
         'the shot rule: with the circle on the cursor a target is handed back untouched (a far level round, a launcher\'s lead on a crossing man); mid-swing it is turned about him by exactly what the gun still has to swing, range, height and lead kept',
@@ -99,7 +99,7 @@ export async function aimweightCheck(): Promise<boolean> {
     // (6) a sprint is not weighed
     { settle(AHEAD); input.keys.add('ShiftLeft'); input.keys.add('KeyD'); let weighed = 0;
       for (let i = 0; i < 30; i++) { W.cursorAt(BEHIND); W.step(DT); if (aimGunPoint(game)) weighed++; }
-      input.keys.delete('ShiftLeft'); input.keys.delete('KeyD'); const sprinted = Math.hypot(c.posX - AT[0], c.posZ - AT[2]);
+      input.keys.delete('ShiftLeft'); input.keys.delete('KeyD'); const sprinted = Math.hypot(c.pos[0] - AT[0], c.pos[2] - AT[2]);
       W.cursorAt(BEHIND); W.step(DT);
       game.teleportPlayer(AT); hold(AHEAD, 150);
       line(sprinted > 0.5 && weighed === 0 && pl.aimw.live, 'a sprint drives his facing itself: nothing is weighed while it runs (the circle is the cursor\'s), and the frame he stops it is weighed again',
@@ -132,7 +132,7 @@ export async function aimweightCheck(): Promise<boolean> {
           if (rf.shells < 3) {   // sent (read off the count: a round that met something inside its first step is already gone from the list)
             const s = game.shells[0]; waited = i; on = aimGunOn(game);
             const ap = game.aimPoint;   // the cursor's own point (what a settled round is sent at)
-            off = s ? Math.abs(wrap(brg(s.vel) - brg([ap[0] - s.pos[0], 0, ap[2] - s.pos[2]]))) : Math.abs(wrap(cc.aimYaw - brg([ap[0] - cc.posX, 0, ap[2] - cc.posZ])));   // (its own heading against the cursor's bearing from where it is; no round left to read = the gun's)
+            off = s ? Math.abs(wrap(brg(s.vel) - brg([ap[0] - s.pos[0], 0, ap[2] - s.pos[2]]))) : Math.abs(wrap(cc.aimYaw - brg([ap[0] - cc.pos[0], 0, ap[2] - cc.pos[2]])));   // (its own heading against the cursor's bearing from where it is; no round left to read = the gun's)
           }
           else if (p.launchHeld !== 'he40') dropped = i;   // let go unsent
           else { kept++; if (p.throwPreview) arc++; else down++; }   // (kept with no arc = the gun is down for a wall it is swinging past: nothing is sent or drawn)
@@ -156,7 +156,7 @@ export async function aimweightCheck(): Promise<boolean> {
     // (8) the switch off = the build
     { AIMWEIGHT.on = BREAK; const p2 = game.player, c2 = p2.char; settle(AHEAD); p2.fireCd = 0; p2.rifle.chamber = 1; p2.rifle.mag = 20; const tap = eventTap(game); tap.evs.length = 0;
       const y0 = c2.aimYaw; W.cursorAt(BEHIND); input.clicked |= 1; W.step(DT);
-      const want = Math.atan2(game.aimPoint[0] - c2.posX, game.aimPoint[2] - c2.posZ); const e0 = wrap(want - y0), step = wrap(c2.aimYaw - y0), old = e0 * (1 - Math.exp(-16 * DT));
+      const want = Math.atan2(game.aimPoint[0] - c2.pos[0], game.aimPoint[2] - c2.pos[2]); const e0 = wrap(want - y0), step = wrap(c2.aimYaw - y0), old = e0 * (1 - Math.exp(-16 * DT));
       tap.pump(); const sh = tap.evs.filter((e: any) => e.kind === 'shot' && e.from && e.to).at(-1); const shotYaw = sh ? Math.atan2(sh.to[0] - sh.from[0], sh.to[2] - sh.from[2]) : NaN;
       const offCur = Math.abs(wrap(shotYaw - want)); const none = aimGunPoint(game) === null && aimGunOn(game);
       line(Math.abs(step - old) < 1e-12 && !!sh && offCur < 0.12 && none, 'the switch off: the gun eases onto the cursor by the build\'s own rule, there is no circle apart from the cursor, and a click on the frame of a flick is aimed at the cursor',

@@ -105,7 +105,7 @@ async function answer0(E: any, plan: Plan, before: ((g: any, W: any, at: { noise
   out.noise = noise ? [...noise] : null;
   if (before) await quiet(async () => before(g, W, { noise }));
   // the plan
-  const t0 = g.time, inside: number[] | null = noise && front ? (() => { const c = front.men.reduce((a: number[], gd: any) => [a[0] + gd.char.posX / front.men.length, 0, a[2] + gd.char.posZ / front.men.length], [0, 0, 0]), d = Math.max(0.01, flat(noise!, c)), k = Math.min(1.5, d) / d; return [noise![0] + (c[0] - noise![0]) * k, 0, noise![2] + (c[2] - noise![2]) * k]; })() : null;
+  const t0 = g.time, inside: number[] | null = noise && front ? (() => { const c = front.men.reduce((a: number[], gd: any) => [a[0] + gd.char.pos[0] / front.men.length, 0, a[2] + gd.char.pos[2] / front.men.length], [0, 0, 0]), d = Math.max(0.01, flat(noise!, c)), k = Math.min(1.5, d) / d; return [noise![0] + (c[0] - noise![0]) * k, 0, noise![2] + (c[2] - noise![2]) * k]; })() : null;
   if (plan === 'lights') g.setBlackout(86400, 'hand');
   if (plan === 'loud') g.events.push({ kind: 'bang', pos: [...noise!], time: g.time, loud: true, charge: true });
   const trace: string[] = []; let frame = 0, lastEv = g.time; const movers = new Set<any>(), near = { noise: Infinity, post: Infinity, lever: Infinity }; let dug = NaN, pullAt = NaN; const dug0 = new Map<any, string>(), setAt = new Map<any, number>();

@@ -110,7 +110,7 @@ function carry(S: Strip, sam: Character): void {
 /** let go of: it falls from where it is with the pair's own motion and a little push out to that man's right — dead, no spin; never from inside a wall (a
  *  hand can be posed through one: the item is brought back to the near face) */
 function letGo(g: Game, it: Item, by: Character, fall = 0): void {
-  const K = HOLD.strip, y = by.bodyYaw, from: Vec3 = [by.posX, Math.max(0.3, it.pos[1]), by.posZ];
+  const K = HOLD.strip, y = by.bodyYaw, from: Vec3 = [by.pos[0], Math.max(0.3, it.pos[1]), by.pos[2]];
   const d: Vec3 = [it.pos[0] - from[0], 0, it.pos[2] - from[2]], L = Math.hypot(d[0], d[2]);
   let push = K.push[0];
   if (L > 1e-3) { const dir: Vec3 = [d[0] / L, 0, d[2] / L], hit = g.col.raycast(from, dir, L + it.radius + 0.05); if (hit) { it.pos = v3.mad(from, dir, Math.max(0, hit.t - it.radius - 0.03)); push = 0; } }
@@ -119,7 +119,7 @@ function letGo(g: Game, it: Item, by: Character, fall = 0): void {
   // go (a pistol or a carbine, Sam crouched or standing, either stand's poses) — and the knock is a beat. He throws it down just hard enough to be on what
   // lies under its landing place `fall` seconds on, from wherever the hand is; no dice. A gun stopped at a wall, rapped out, or let fall with no hold: as before.
   // With the disarm leading (HOLD.stripFirst) he lets go sooner by `strip.drop - first.drop`, and the fall is longer by that in whole steps: the knock stays on its frame
-  let down = K.push[1], vx = by.velX - Math.cos(y) * push, vz = by.velZ + Math.sin(y) * push;
+  let down = K.push[1], vx = by.vel[0] - Math.cos(y) * push, vz = by.vel[2] + Math.sin(y) * push;
   if (fall > 0 && push > 0) {
     // (…and never INTO a wall: one in the way of the throw within its reach, and he throws it that much shorter — a gun that rubs down a wall is slowed, and its knock late)
     const T = fall, sp = Math.hypot(vx, vz), wall = sp > 1e-3 ? g.col.raycast(it.pos, [vx / sp, 0, vz / sp], sp * T + it.radius + 0.08) : null;

@@ -189,7 +189,7 @@ function take(g: Game, gd: Guard, path: Vec3[], goal: Vec3) { gd.path = g.doors.
  *  `edge` = the open cell he came off to get there (where he looks from). null = none in reach. */
 function pickCover(g: Game, gd: Guard, S: Standoff, K: Known, st: St, round: boolean): { spot: Vec3; low: boolean; edge: Vec3 | null } | null {
   const n = g.col.nav, W = n.W, c = gd.char; let s = cellOf(g, c.pos); if (s < 0) return null;
-  if (n.blocked[s]) { const f = n.nearestFreePoint(c.posX, c.posZ); if (!f) return null; s = cellOf(g, f); }
+  if (n.blocked[s]) { const f = n.nearestFreePoint(c.pos[0], c.pos[2]); if (!f) return null; s = cellOf(g, f); }
   const mates: Vec3[] = [], rivals: Vec3[] = [];   // (rivals: mates of the standoff with no cover of their own yet — a spot nearer one of them is his)
   for (const o of g.guards) { if (o === gd || o.state === 'dead') continue; const os = o.standoff && states.get(o.standoff); if (os?.spot) mates.push(os.spot); else { mates.push(o.char.pos); if (o.standoff && o.standoff.pair === S.pair) rivals.push(o.char.pos); } }
   const d0 = flat(c.pos, K.sam), rear = K.facing + Math.PI, near = GUNHOLD.nearM;
@@ -254,7 +254,7 @@ function planRound(g: Game, gd: Guard, S: Standoff, K: Known, st: St): boolean {
  *  cannot face two ways: whichever he turns to, the other has his back), the rest go round, opposite ways where guards.ts pickSide dealt them so */
 function goesRound(g: Game, gd: Guard, S: Standoff, K: Known): boolean {
   const men = menOn(g, S.pair); if (men.length <= 1) return true;
-  if (!K.talker || !men.includes(K.talker)) { let b = Infinity; K.talker = null; for (const m of men) { const a = Math.abs(wrapAngle(Math.atan2(m.char.posX - K.sam[0], m.char.posZ - K.sam[2]) - K.facing)); if (a < b) { b = a; K.talker = m; } } }
+  if (!K.talker || !men.includes(K.talker)) { let b = Infinity; K.talker = null; for (const m of men) { const a = Math.abs(wrapAngle(Math.atan2(m.char.pos[0] - K.sam[0], m.char.pos[2] - K.sam[2]) - K.facing)); if (a < b) { b = a; K.talker = m; } } }
   return K.talker !== gd;
 }
 
@@ -312,9 +312,9 @@ export function gunHoldFeet(g: Game, gd: Guard, dt: number, P: Pair, S: Standoff
   const stand = () => { gd.speed = damp(gd.speed, 0, 8, dt); c.vel = [0, 0, 0]; gd.stallRef = null; };
   const alongPath = (): Vec3 | null => {   // a run: eyes and gun on where Sam is while the way keeps him anywhere ahead, else up the way
     if (gd.pathI >= gd.path.length) return look;
-    const wp = gd.path[gd.pathI]; const yaw = Math.atan2(wp[0] - c.posX, wp[2] - c.posZ);
+    const wp = gd.path[gd.pathI]; const yaw = Math.atan2(wp[0] - c.pos[0], wp[2] - c.pos[2]);
     if (S.seenT === now && !front(K, c.pos)) return look;   // (come out at Sam's back with eyes on him: the gun is on him from the first stride, so it is lined up by the time his feet stop)
-    return Math.abs(wrapAngle(Math.atan2(look[0] - c.posX, look[2] - c.posZ) - yaw)) > 75 * DEG ? [c.posX + Math.sin(yaw) * 4, look[1], c.posZ + Math.cos(yaw) * 4] : look;
+    return Math.abs(wrapAngle(Math.atan2(look[0] - c.pos[0], look[2] - c.pos[2]) - yaw)) > 75 * DEG ? [c.pos[0] + Math.sin(yaw) * 4, look[1], c.pos[2] + Math.cos(yaw) * 4] : look;
   };
   const low = flinching(g, gd) ? SUPPRESSION.displaceCrouch : 0;
   const hereE = (() => { const i = cellOf(g, c.pos); return i >= 0 ? expo(g, K, i) : 0; })();   // what the floor under him shows Sam's gun: behind something low he moves bent double
@@ -355,7 +355,7 @@ export function gunHoldFeet(g: Game, gd: Guard, dt: number, P: Pair, S: Standoff
     // The first strides: cover is mostly BEHIND a man who was facing the pair, and followPath will not carry him above a creep until he has come about — most of
     // a second stood in front of the pistol. He sets off at once the way he has to go (backwards, sideways) and turns into it as he runs.
     let scramble = false;
-    if (now - st.runT < 1.2 && gd.pathI < gd.path.length) { const wp = gd.path[gd.pathI]; const yawTo = Math.atan2(wp[0] - c.posX, wp[2] - c.posZ); if (Math.abs(wrapAngle(yawTo - c.bodyYaw)) > 50 * DEG) { scramble = true; c.bodyYaw = approachAngle(c.bodyYaw, yawTo, 5.5 * dt); } }
+    if (now - st.runT < 1.2 && gd.pathI < gd.path.length) { const wp = gd.path[gd.pathI]; const yawTo = Math.atan2(wp[0] - c.pos[0], wp[2] - c.pos[2]); if (Math.abs(wrapAngle(yawTo - c.bodyYaw)) > 50 * DEG) { scramble = true; c.bodyYaw = approachAngle(c.bodyYaw, yawTo, 5.5 * dt); } }
     const arrived = scramble ? stepAlongPath(g, gd, dt, T.guardChase) : followPath(g, gd, dt, T.guardChase);
     if (arrived) { st.phase = 'cover'; st.peekT = now + GUNHOLD.peekEvery * (0.6 + 0.8 * simRandom()); st.checkT = now + 0.4; st.planT = Math.max(st.planT, now + 0.3); gd.path = []; gd.pathGoal = null; }
     else if (notGettingAnywhere(gd, dt, 1.5)) { st.bad = st.spot; st.spot = null; st.phase = 'plan'; gd.path = []; gd.pathGoal = null; gd.stallRef = null; }
@@ -365,7 +365,7 @@ export function gunHoldFeet(g: Game, gd: Guard, dt: number, P: Pair, S: Standoff
   if (st.phase === 'cover') {
     // (the walk here stops within a quarter metre of the spot — on the edge of its cell, where cover one cell deep does not reach: the last step onto it)
     const off = st.spot ? flat(c.pos, st.spot) : 0;
-    if (st.spot && off > 0.06 && off < 0.6 && dt > 0) { const k = Math.min(1, 1.2 * dt / off); c.vel = [(st.spot[0] - c.posX) * k / dt, 0, (st.spot[2] - c.posZ) * k / dt]; c.pos = [c.posX + (st.spot[0] - c.posX) * k, c.posY, c.posZ + (st.spot[2] - c.posZ) * k]; gd.speed = 1.2; gd.stallRef = null; }
+    if (st.spot && off > 0.06 && off < 0.6 && dt > 0) { const k = Math.min(1, 1.2 * dt / off); c.vel = [(st.spot[0] - c.pos[0]) * k / dt, 0, (st.spot[2] - c.pos[2]) * k / dt]; c.pos = [c.pos[0] + (st.spot[0] - c.pos[0]) * k, c.pos[1], c.pos[2] + (st.spot[2] - c.pos[2]) * k]; gd.speed = 1.2; gd.stallRef = null; }
     else stand();
     if (now >= st.checkT) {   // twice a second: has Sam walked the pair round his cover
       st.checkT = now + 0.5;

@@ -51,7 +51,7 @@ export interface Shell { pos: Vec3; vel: Vec3; age: number; flown: number; shoot
 export function arcLength(sol: ThrowSolution): number { let L = 0; for (let i = 1; i < sol.points.length; i++) L += v3.dist(sol.points[i - 1], sol.points[i]); return L; }
 export function arcArmed(sol: ThrowSolution): boolean { return arcLength(sol) >= HE40.armM; }
 /** the crown test both the flight and the preview hand combat.ts bodyHit: a round that starts inside a man's column, below his crown, has met him */
-const insideAt = (pos: Vec3) => (c: Character) => pos[1] < (c.bones.headTop?.[1] ?? c.posY + 1.75) + HE40.radius;
+const insideAt = (pos: Vec3) => (c: Character) => pos[1] < (c.bones.headTop?.[1] ?? c.pos[1] + 1.75) + HE40.radius;
 /** The living man under the reticle that a round can MEET: the puppet's target or the snapped man — never one of Sam's own side, whom a round in flight
  *  passes as his bullets do (updateShells): with a teammate under the reticle the round is aimed at, and previewed to, whatever is beyond him. */
 export function shellMan(g: Game): Guard | null {
@@ -92,7 +92,7 @@ export function shellAimPoint(g: Game, from: Vec3): Vec3 {
   if (gd) {
     const chest = v3.add(gd.char.bones.chest ?? v3.add(gd.char.pos, [0, 1.2, 0]), [0, 0, 0]);
     const tof = v3.dist(from, chest) / (HE40.speed * 0.97);
-    return v3.mad(chest, [gd.char.velX, 0, gd.char.velZ], tof);
+    return v3.mad(chest, [gd.char.vel[0], 0, gd.char.vel[2]], tof);
   }
   if (g.aimTarget) return v3.copy(g.aimTarget.pos);
   const ap = g.aimPoint; return [ap[0], ap[1] + 0.03, ap[2]];
@@ -187,7 +187,7 @@ function dudHitsCharacter(g: Game, r: Shell, c: Character, gd: Guard | null, dir
   if (!gd) { c.anim.hit(); g.audio.play('bodyHit', at, 0.6, { rate: 0.9 }); g.msg('a 40 mm round in the ribs — unarmed, luckily'); }
   else if (gd.civ) {
     c.anim.hit(); g.audio.play('bodyHit', v3.add(c.pos, [0, 1.1, 0]), 0.6, { rate: 0.9 });
-    if (!gd.held) toAlarmed(g, gd, 'noise', [c.posX - dir[0] * 4, 0, c.posZ - dir[2] * 4], false);
+    if (!gd.held) toAlarmed(g, gd, 'noise', [c.pos[0] - dir[0] * 4, 0, c.pos[2] - dir[2] * 4], false);
   } else staggerGuard(g, gd, dir, r.shooter);
   dud(g, r, v3.mad(at, dir, -0.06), [-dir[0] * 1.2, 0.8, -dir[2] * 1.2], 'man', gd && !gd.civ ? 0 : R.dudHitNoise, r.shooter.id);   // (a guard's fold is already the one noise of it: staggerGuard's, as a ring's)
 }

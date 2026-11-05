@@ -292,7 +292,7 @@ export class PairOrders {
     for (const h of g.guards) { if (h.state === 'dead' || h.team === 'operative' || !HOSTILE.player[h.team]) continue;
       const [fx, fz] = lookOf(h), H = this.habit.get(h);
       if (!H) { this.habit.set(h, [fx, fz]); this.glance.set(h, { on: false, endT: -1e9 }); continue; }
-      const st = Math.hypot(h.char.velX, h.char.velZ) > 0.3 ? 0 : (this.stood.get(h) ?? 0) + dt; this.stood.set(h, st);
+      const st = Math.hypot(h.char.vel[0], h.char.vel[2]) > 0.3 ? 0 : (this.stood.get(h) ?? 0) + dt; this.stood.set(h, st);
       // (a man who has just stopped mostly faces the way he faces NOW: the walk that brought him here is not where his back is)
       const k = Math.min(1, dt / (PAIR.habitStood && st > 0 ? Math.max(0.5, Math.min(6, st)) : 6)); H[0] += (fx - H[0]) * k; H[1] += (fz - H[1]) * k;
       const G = this.glance.get(h)!, L = Math.hypot(H[0], H[1]) || 1, c = (fx * H[0] + fz * H[1]) / L;
@@ -343,7 +343,7 @@ export class PairOrders {
   /** the bodies-by-light bar from `o`'s eye, met by the light now on the man (his meter where he has one, the floor's own estimate where he does not: staff
    *  carry no meter. Smoke between them is not asked: he errs to holding) */
   private bodyLit(o: Guard, foe: Guard, at: Vec3): boolean { const B = BODY_LIGHT;
-    const eye = o.char.bones.head ?? [o.char.posX, o.char.posY + 1.65, o.char.posZ], d = Math.hypot(eye[0] - at[0], eye[1] - at[1], eye[2] - at[2]);   // (eye to the body, as bodyLit measures it)
+    const eye = o.char.bones.head ?? [o.char.pos[0], o.char.pos[1] + 1.65, o.char.pos[2]], d = Math.hypot(eye[0] - at[0], eye[1] - at[1], eye[2] - at[2]);   // (eye to the body, as bodyLit measures it)
     const bar = !this.g.tune.bodyLight || d <= B.nearM ? -1 : B.litNear + (B.lit - B.litNear) * Math.min(1, (d - B.nearM) / Math.max(0.1, B.farM - B.nearM));
     return Math.max(foe.visibility, this.litAt(at)) >= bar; }
   /** HE'LL LOOK BACK (PAIR.lookBack): the man who was watching has only turned his head — he is up, calm, standing where he stood, and what he would see
@@ -353,7 +353,7 @@ export class PairOrders {
   private looksBack(w: Guard, foe: Guard, gd: Guard): boolean {
     if (!PAIR.lookBack || w.state === 'dead' || w.held || (this.stood.get(w) ?? 0) < 0.5) return false;
     const H = this.habit.get(w), L = H ? Math.hypot(H[0], H[1]) : 0; if (!H || L < 0.3) return false;
-    const eye = w.char.bones.head ?? [w.char.posX, w.char.posY + 1.65, w.char.posZ], half = GUARD_EYE.halfDeg * Math.PI / 180 + (this.swept.get(w) ?? 0);
+    const eye = w.char.bones.head ?? [w.char.pos[0], w.char.pos[1] + 1.65, w.char.pos[2]], half = GUARD_EYE.halfDeg * Math.PI / 180 + (this.swept.get(w) ?? 0);
     const swept = (x: number, y: number, z: number): number => { const dx = x - eye[0], dz = z - eye[2], d = Math.hypot(dx, dz); if (d > GUARD_EYE.range || d < 0.05) return -1;
       return Math.acos(Math.max(-1, Math.min(1, (dx * H[0] + dz * H[1]) / (d * L)))) < half && !this.g.col.segmentBlocked([eye[0], eye[1], eye[2]], [x, y, z]) ? d : -1; };
     const hp = foe.char.bones.hips ?? foe.char.pos, at: Vec3 = [hp[0], 0.35, hp[2]];
@@ -366,7 +366,7 @@ export class PairOrders {
   /** off the job, onto a plain hold where he stands — with his gun on `aim` when the job ended in the man being roused */
   private stand(S: SquadOrders, gd: Guard, words: string, aim: Guard | null) {
     const p = gd.char.pos, here: Vec3 = [p[0], 0, p[2]]; this.jobs.delete(gd);
-    S.assign(gd, aim ? { order: 'hold', post: here, face: yawTo(p, aim.char.pos), watch: [aim.char.posX, 1.1, aim.char.posZ], stance: 'none', upper: 'aim', going: words, there: words }
+    S.assign(gd, aim ? { order: 'hold', post: here, face: yawTo(p, aim.char.pos), watch: [aim.char.pos[0], 1.1, aim.char.pos[2]], stance: 'none', upper: 'aim', going: words, there: words }
       : { order: 'hold', post: here, face: gd.char.bodyYaw, stance: 'lowReady', upper: 'none', going: words, there: words });
   }
 
@@ -432,14 +432,14 @@ export class PairOrders {
     }
     if (J.watcher && !J.force && g.time - J.seenT < 0.4) return;   // (a head that turned away this frame may be on its way back: he gives it a moment)
     if (J.watcher) { J.watcher = null; if (J.cued) g.say(gd, 'clear. moving.'); J.cued = false; J.backSaid = false; J.born = g.time; J.waitT = J.heelT = -1; /* (the seconds he was held up are not the job's: its clocks start over) */ this.note(`clear:${gd.callsign} on ${name}`); if (flat(A.post ?? here, here) < 0.05) A.movedT = A.markT = g.time; }
-    if (J.go && d < PAIR.reach + (on ? 0.4 : 0) && (on || behindHim) && !g.col.solidBlocked([p[0], 1.0, p[2]], [fc.posX, 1.0, fc.posZ])) {
+    if (J.go && d < PAIR.reach + (on ? 0.4 : 0) && (on || behindHim) && !g.col.solidBlocked([p[0], 1.0, p[2]], [fc.pos[0], 1.0, fc.pos[2]])) {
       if (!on) { J.t0 = g.time; gd.char.anim.strike(); partnerBegin(g, gd, foe, false); this.note(`hands:${gd.callsign} on ${name}`); }
       if (PAIR.scuffle > 0 && !J.scuffled) { J.scuffled = true; g.events.push({ kind: 'prop', pos: v3.copy(fc.pos), time: g.time, loud: false, level: PAIR.scuffle, who: 0 }); }
       // (he stays ON the man while his hands work: one who is walking does not stroll out of them)
       const to: Vec3 = d > 0.7 ? this.behind(foe) : here; A.post = to; A.goal = [to[0], 0, to[2]]; A.via.length = 0; A.arrived = false; A.pace = PAIR.goPace; A.face = yawTo(p, fc.pos); A.crouch = false;
       if (g.time - J.t0 >= PAIR.secs) {
         partnerFall(g, foe, false, gd);
-        killGuard(g, foe, v3.normalize([fc.posX - p[0], 0, fc.posZ - p[2]]), true, 'struck', 'guard', `${gd.callsign} — ${name} is out cold`);
+        killGuard(g, foe, v3.normalize([fc.pos[0] - p[0], 0, fc.pos[2] - p[2]]), true, 'struck', 'guard', `${gd.callsign} — ${name} is out cold`);
         PAIR_STATS.taken++; this.note(`down:${name} by ${gd.callsign}`);
         if (!rejoin()) { g.say(gd, "he's down."); this.stand(S, gd, 'holding', null); }
       }
@@ -497,7 +497,7 @@ export class PairOrders {
     // way found is `exposed` when walking it would add more to the most stirred watcher than the sneak's budget allows a crossing (sneak.ts sneakWalk)
     if (pairUp('oneEye')) {
       const W = sneakWalk(g, gd, PAIR.crouch, h => { const H = this.habit.get(h), L = H ? Math.hypot(H[0], H[1]) : 0; return H && L > 0.3 ? [H[0] / L, H[1] / L] : null; });
-      const from: Vec3 = [gd.char.posX, 0, gd.char.posZ];
+      const from: Vec3 = [gd.char.pos[0], 0, gd.char.pos[2]];
       // THE SWEEP'S RING (PAIR.sweep): standing men whose look swings, each with the half angle off the way he mostly faces that his near field reaches
       // at the sweep's end — never the last 25° astern. A PRICE on the search only: whether the way found is `exposed` is still the sneak's read of him as he
       // looks now and as he mostly looks (judged as exposed too, the partner waited from sixteen metres out and one start in twelve never set)
@@ -506,7 +506,7 @@ export class PairOrders {
         if (e === gd || e.state === 'dead' || e.held || e.team === 'operative' || !HOSTILE.player[e.team]) continue;
         const sw = this.swept.get(e) ?? 0, H = this.habit.get(e), L = H ? Math.hypot(H[0], H[1]) : 0;
         if (sw < 0.1 || !H || L < 0.3) continue;
-        ring.push({ e, x: e.char.posX, z: e.char.posZ, hx: H[0] / L, hz: H[1] / L, half: Math.min(Math.PI * 155 / 180, Math.PI * 104 / 180 + sw) });
+        ring.push({ e, x: e.char.pos[0], z: e.char.pos[2], hx: H[0] / L, hz: H[1] / L, half: Math.min(Math.PI * 155 / 180, Math.PI * 104 / 180 + sw) });
       }
       const ringAt = (x: number, z: number): boolean => {
         for (const r of ring) {
@@ -552,7 +552,7 @@ export class PairOrders {
       return { path, exposed, by: W.by };
     }
     const eyes: { x: number; z: number; fx: number; fz: number }[] = [];
-    for (const h of g.guards) { if (h.state === 'dead' || h.team === 'operative' || !HOSTILE.player[h.team]) continue; const x = h.char.posX, z = h.char.posZ, H = this.habit.get(h);
+    for (const h of g.guards) { if (h.state === 'dead' || h.team === 'operative' || !HOSTILE.player[h.team]) continue; const x = h.char.pos[0], z = h.char.pos[2], H = this.habit.get(h);
       const [lx, lz] = lookOf(h); eyes.push({ x, z, fx: lx, fz: lz }); if (H) { const L = Math.hypot(H[0], H[1]); if (L > 0.3) eyes.push({ x, z, fx: H[0] / L, fz: H[1] / L }); } }
     const C = PAIR.coneM, seen = new Map<number, boolean>();
     const front = (x: number, z: number, k: number) => { const key = (Math.floor(x / 0.25) + 4096 * Math.floor(z / 0.25)) * 2 + (k > 0.3 ? 1 : 0), was = seen.get(key); if (was !== undefined) return was;
@@ -563,7 +563,7 @@ export class PairOrders {
     // (the priced search can run out of its budget on a long way: the plain way is then read for eyes like any other — and only no way at all is 'no way')
     const path = nav.findPath(gd.char.pos, to, 6000, (ix, iz) => front((ix + 0.5) * c, (iz + 0.5) * c, 0.5) ? 14 : 1) ?? nav.findPath(gd.char.pos, to);
     if (!path) return { path: [], exposed: true };   // (no way found is not a safe way found)
-    let exposed = false, a: Vec3 = [gd.char.posX, 0, gd.char.posZ];
+    let exposed = false, a: Vec3 = [gd.char.pos[0], 0, gd.char.pos[2]];
     for (const b of path) { const n = Math.max(1, Math.ceil(flat(a, b) / 0.25)); for (let i = 1; i <= n && !exposed; i++) { const x = a[0] + (b[0] - a[0]) * i / n, z = a[2] + (b[2] - a[2]) * i / n; if (flat([x, 0, z], to) > 0.3 && front(x, z, 0.2)) exposed = true; } a = b; }
     return { path, exposed };
   }

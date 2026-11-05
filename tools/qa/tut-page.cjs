@@ -22,7 +22,7 @@ const run = (page, n) => page.evaluate(n => window.__runFrames(n, 1 / 60, [], 'n
 const read = page => page.evaluate(() => { const g = window.__game, L = window.__lesson, el = document.getElementById('railprompt'), vis = id => { const e = document.getElementById(id); return !!e && getComputedStyle(e).display !== 'none'; };
   return { i: L.i, id: g.lesson.step?.id ?? null, done: g.lesson.finished, line: el?.querySelector('.line')?.textContent ?? '', keys: [...(el?.querySelectorAll('kbd') ?? [])].map(k => k.textContent), up: !!el && getComputedStyle(el).display !== 'none',
     row: document.getElementById('objective')?.textContent ?? '', sky: document.body.classList.contains('skyseat'), equip: vis('equip'), meters: vis('meters'), fatal: document.getElementById('fatal')?.textContent || '',
-    rails: { live: g.rails.live, sum: g.rails.summary() }, t: +g.time.toFixed(1), team: g.guards.filter(x => x.team === 'operative').map(x => `${x.callsign}${x.state === 'dead' ? '†' : ''}@${x.char.posX.toFixed(0)},${x.char.posZ.toFixed(0)}`).join(' '),
+    rails: { live: g.rails.live, sum: g.rails.summary() }, t: +g.time.toFixed(1), team: g.guards.filter(x => x.team === 'operative').map(x => `${x.callsign}${x.state === 'dead' ? '†' : ''}@${x.char.pos[0].toFixed(0)},${x.char.pos[2].toFixed(0)}`).join(' '),
     foes: g.guards.filter(x => x.team !== 'operative' && x.state !== 'dead').length, orders: g.orders.log.length, state: window.__roomclear?.state ?? null }; });
 const at = (page, p) => page.evaluate(p => { const c = document.getElementById('view'), r = c.getBoundingClientRect(), [x, y, vis] = window.__cam.project(p, r.width, r.height, 1); return { x: r.left + x, y: r.top + y, vis: !!vis && x > 8 && y > 8 && x < r.width - 8 && y < r.height - 8 }; }, p);
 

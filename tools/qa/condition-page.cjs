@@ -53,10 +53,10 @@ const URL = extra => `http://localhost:${PORT}/?paused&quality=${QUALITY}&mute&r
   const c = await A.page.evaluate(() => { const { g, step, mate, foe, pl } = window.__cd;
     const stars = () => [...document.querySelectorAll('.marker')].filter(el => el.style.display !== 'none' && (el.textContent || '').includes('✹')).length;
     const fog = g.fogOfWar, hid = fog.hidden; fog.hidden = () => false; const was = [...foe.char.pos], at = pl.char.pos;
-    foe.char.posX = at[0] + 2; foe.char.posZ = at[2]; foe.char.velX = foe.char.velZ = 0;
+    foe.char.pos[0] = at[0] + 2; foe.char.pos[2] = at[2]; foe.char.vel[0] = foe.char.vel[2] = 0;
     for (const x of g.guards) x.dazzledUntil = -1; mate.state = 'patrol'; mate.dazzledUntil = g.time + 5; step(3); const own = stars();
     foe.state = 'patrol'; foe.dazzledUntil = g.time + 5; step(3); const both = stars();
-    fog.hidden = hid; foe.char.posX = was[0]; foe.char.posZ = was[2]; mate.dazzledUntil = foe.dazzledUntil = -1; return { own, both, dazzle: window.__knobs.registry().MOVES?.dazzle }; });
+    fog.hidden = hid; foe.char.pos[0] = was[0]; foe.char.pos[2] = was[2]; mate.dazzledUntil = foe.dazzledUntil = -1; return { own, both, dazzle: window.__knobs.registry().MOVES?.dazzle }; });
   line(c.own === 0 && c.both === 1 && !A.errors.length, 'a stunned teammate carries no \'✹\' on the page; a stunned defender beside Sam does',
     `'✹' marks shown: the teammate stunned ${c.own} · the defender stunned too ${c.both} · MOVES.dazzle ${c.dazzle} · errors ${JSON.stringify(A.errors.slice(0, 3))}`);
   await A.page.close();

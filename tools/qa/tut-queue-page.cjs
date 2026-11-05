@@ -30,7 +30,7 @@ const check = (ok, label, detail) => { if (!ok) failed = true; console.log(`- ${
     const M = O.menu;
     return { i: g.lesson.i, id: g.lesson.step?.id ?? null, at: g.lesson.step?.at ?? null, line: el?.querySelector('.line')?.textContent ?? '', keys: [...(el?.querySelectorAll('kbd') ?? [])].map(k => k.textContent), note: el?.querySelector('.note')?.textContent ?? '',
       up: !!el && getComputedStyle(el).display !== 'none', fatal: document.getElementById('fatal')?.textContent || '', rails: g.rails.live, sum: g.rails.summary(), script: !!g.director.running,
-      pos: [+g.player.char.posX.toFixed(1), +g.player.char.posZ.toFixed(1)], mates: g.guards.filter(x => x.team === 'operative' && x.state !== 'dead').length, men: g.guards.filter(x => x.team === 'hostile' && x.state !== 'dead').length,
+      pos: [+g.player.char.pos[0].toFixed(1), +g.player.char.pos[2].toFixed(1)], mates: g.guards.filter(x => x.team === 'operative' && x.state !== 'dead').length, men: g.guards.filter(x => x.team === 'hostile' && x.state !== 'dead').length,
       plan: !!O.plan?.up, by, watch, following: O.men('all').filter(m => { const A = O.of(m); return !A || A.post === null; }).length, ops: g.doorTools.ops.map(o => `${o.kind} ${o.door.def.name}`), orders: O.log.length,
       ring: M ? { part: !!M.part, flat: !!M.flat, men: (M.men ?? []).map(m => m.callsign), rows: M.rows.map(r => r.id) } : null,
       markOn: (() => { const p = g.lesson.step?.at; if (!p) return null; const v = document.getElementById('view').getBoundingClientRect(), sc = window.__cam.project(p, v.width, v.height, 1); return sc[0] > 20 && sc[0] < v.width - 20 && sc[1] > 20 && sc[1] < v.height - 20; })(),

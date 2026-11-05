@@ -49,7 +49,7 @@ export async function freshStartCheck(levelFile = 'compound.json'): Promise<bool
     const why = await quiet(async () => rc.start(seed)); if (why) throw new Error(`the room clear did not start on ${file}: ${why}`);
     await quiet(async () => { for (let i = 0; i < 3; i++) W.step(1 / 60); });
     return { W, g, rc, seed: rc.seed as number, attempt: rc.attempt as number, marks: marks(rc.placement), n: g.dice ? g.dice.n - n0 : -1, knob: ROOMCLEAR.seed as number, structure: rc.structure,
-      way: rc.way as number, sam: [g.player.char.posX, g.player.char.posZ] as [number, number] };
+      way: rc.way as number, sam: [g.player.char.pos[0], g.player.char.pos[2]] as [number, number] };
   }
   try {
     const A = await deal(7, false);

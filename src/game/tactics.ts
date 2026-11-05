@@ -506,7 +506,7 @@ function advance(g: Game, gd: Guard, dt: number, goal: Vec3, pace: number, out: 
 function kneelToward(g: Game, gd: Guard, dt: number, at: Vec3, out: TacMove, crouch = 1) {
   const c = gd.char; gd.speed = damp(gd.speed, 0, 8, dt); c.vel = [0, 0, 0]; gd.stallRef = null;
   out.move = 0; out.crouch = crouch; out.aim = [at[0], 1.05, at[2]];
-  c.bodyYaw = approachAngle(c.bodyYaw, Math.atan2(at[0] - c.posX, at[2] - c.posZ), 4 * dt);
+  c.bodyYaw = approachAngle(c.bodyYaw, Math.atan2(at[0] - c.pos[0], at[2] - c.pos[2]), 4 * dt);
 }
 /** the flankers of a plan are all set (or there are none), or somebody has eyes on the man */
 function readyToGo(g: Game, plan: Plan): boolean {
@@ -555,7 +555,7 @@ function moveRole(g: Game, gd: Guard, role: Role, dt: number): TacMove {
     case 'presser': {
       const hold = role.holdAt ?? fix;
       if (!role.holding) {
-        if (advance(g, gd, dt, hold, jog, out) || flat(c.pos, hold) < 0.5) { role.holding = true; gd.path = []; gd.pathGoal = null; TACTICS_DEBUG.log?.(`${g.time.toFixed(2)}s ${gd.callsign} (presser) at his corner (${c.posX.toFixed(1)}, ${c.posZ.toFixed(1)})`); }
+        if (advance(g, gd, dt, hold, jog, out) || flat(c.pos, hold) < 0.5) { role.holding = true; gd.path = []; gd.pathGoal = null; TACTICS_DEBUG.log?.(`${g.time.toFixed(2)}s ${gd.callsign} (presser) at his corner (${c.pos[0].toFixed(1)}, ${c.pos[2].toFixed(1)})`); }
         else if (notGettingAnywhere(gd, dt, ROLE_STALL_SECS)) { role.holding = true; role.holdAt = v3.copy(c.pos); gd.path = []; gd.pathGoal = null; }   // (the corner as near as he gets to it)
         if (!out.aim) out.aim = [fix[0], 1.1, fix[2]];
       } else {
@@ -571,7 +571,7 @@ function moveRole(g: Game, gd: Guard, role: Role, dt: number): TacMove {
       if (!role.saidSet && (flat(c.pos, setAt) <= SET_M || role.holding)) { role.saidSet = true; role.set = true; g.say(gd, 'set', true); plan.lastRadioT = g.time; }
       if (!role.holding) {
         role.ground = (role.ground ?? 0) * Math.exp(-dt / 1.5) + flat(c.pos, role.lastPos ?? c.pos); role.lastPos = v3.copy(c.pos);   // (metres covered lately, ~1.5 s window: the presser's clock reads it)
-        if (advance(g, gd, dt, setAt, run, out) || flat(c.pos, setAt) < 0.5) { role.holding = true; role.set = true; gd.path = []; gd.pathGoal = null; TACTICS_DEBUG.log?.(`${g.time.toFixed(2)}s ${gd.callsign} (flanker) set at (${c.posX.toFixed(1)}, ${c.posZ.toFixed(1)})`); }
+        if (advance(g, gd, dt, setAt, run, out) || flat(c.pos, setAt) < 0.5) { role.holding = true; role.set = true; gd.path = []; gd.pathGoal = null; TACTICS_DEBUG.log?.(`${g.time.toFixed(2)}s ${gd.callsign} (flanker) set at (${c.pos[0].toFixed(1)}, ${c.pos[2].toFixed(1)})`); }
         else if (notGettingAnywhere(gd, dt, ROLE_STALL_SECS)) { role.holding = true; role.set = true; role.holdAt = v3.copy(c.pos); gd.path = []; gd.pathGoal = null; if (!role.saidSet) { role.saidSet = true; g.say(gd, wg('set — can\'t get any farther around', 'set — as far round as I get'), true); } }
         if (!out.aim) out.aim = [fix[0], 1.1, fix[2]];
       } else { kneelToward(g, gd, dt, fix, out); role.holdT += dt; }
@@ -656,7 +656,7 @@ function moveLone(g: Game, gd: Guard, L: Lone, dt: number): TacMove | null {
     if (!out.aim) out.aim = [L.fix[0], 1.1, L.fix[2]];
     return out;
   }
-  if (L.holdT <= 0) { L.holdT = 1e-3; gd.path = []; gd.pathGoal = null; TACTICS_STATS.loneHolds++; TACTICS_DEBUG.log?.(`${g.time.toFixed(2)}s ${gd.callsign} LONE hold at (${c.posX.toFixed(1)}, ${c.posZ.toFixed(1)}), fix (${L.fix[0].toFixed(1)}, ${L.fix[2].toFixed(1)}) ${flat(c.pos, L.fix).toFixed(1)} m, los ${L.los}`); }
+  if (L.holdT <= 0) { L.holdT = 1e-3; gd.path = []; gd.pathGoal = null; TACTICS_STATS.loneHolds++; TACTICS_DEBUG.log?.(`${g.time.toFixed(2)}s ${gd.callsign} LONE hold at (${c.pos[0].toFixed(1)}, ${c.pos[2].toFixed(1)}), fix (${L.fix[0].toFixed(1)}, ${L.fix[2].toFixed(1)}) ${flat(c.pos, L.fix).toFixed(1)} m, los ${L.los}`); }
   kneelToward(g, gd, dt, L.fix, out); L.holdT += dt;
   if (!L.called && L.holdT > 0.4) loneCall(g, gd, L);
   if (L.holdT >= T.loneWait || (L.holdT > 1.0 && !alone(g, gd))) { L.released = true; L.releasedWhy = L.holdT >= T.loneWait ? 'waited' : 'a second man is up'; TACTICS_STATS.loneReleases++; gd.path = []; gd.pathGoal = null; resetChase(gd); TACTICS_DEBUG.log?.(`${g.time.toFixed(2)}s ${gd.callsign} LONE release: ${L.releasedWhy}`); }
@@ -763,10 +763,10 @@ function stepGate(g: Game, gd: Guard, G: Gate, dt: number, target: Vec3, speed: 
   if (!G.path || G.pathFor !== target) { G.path = nav.findPath(c.pos, target) ?? [v3.copy(target)]; const last = G.path[G.path.length - 1]; if (!last || flat(last, target) > 0.05) G.path.push(v3.copy(target)); G.pathI = 0; G.pathFor = target; }
   let arrived = false;
   while (G.pathI < G.path.length) {
-    const wp = G.path[G.pathI]; const dx = wp[0] - c.posX, dz = wp[2] - c.posZ; const d = Math.hypot(dx, dz);
+    const wp = G.path[G.pathI]; const dx = wp[0] - c.pos[0], dz = wp[2] - c.pos[2]; const d = Math.hypot(dx, dz);
     if (d < (G.pathI === G.path.length - 1 ? 0.12 : 0.4)) { G.pathI++; continue; }
     gd.speed = damp(gd.speed, speed * clamp(d / 0.6, 0.3, 1), 6, dt);
-    const step = Math.min(d, gd.speed * dt); c.posX += dx / d * step; c.posZ += dz / d * step; c.vel = [dx / d * gd.speed, 0, dz / d * gd.speed];
+    const step = Math.min(d, gd.speed * dt); c.pos[0] += dx / d * step; c.pos[2] += dz / d * step; c.vel = [dx / d * gd.speed, 0, dz / d * gd.speed];
     c.bodyYaw = approachAngle(c.bodyYaw, face ?? Math.atan2(dx, dz), 6 * dt);
     break;
   }
@@ -906,7 +906,7 @@ function runGate(g: Game, gd: Guard, G: Gate, dt: number): boolean {
         G.t = 0;
         if (G.role === 'lead') { gateCall(g, gd, G); G.phase = 'wait'; }
         else G.phase = 'stacked';
-        TACTICS_DEBUG.log?.(`${now.toFixed(2)}s GATE ${d.def.name}: ${gd.callsign} stacked (${G.role}) at (${c.posX.toFixed(2)}, ${c.posZ.toFixed(2)})${there ? '' : ' — short of the mark'}`);
+        TACTICS_DEBUG.log?.(`${now.toFixed(2)}s GATE ${d.def.name}: ${gd.callsign} stacked (${G.role}) at (${c.pos[0].toFixed(2)}, ${c.pos[2].toFixed(2)})${there ? '' : ' — short of the mark'}`);
       }
       return true;
     }
@@ -958,7 +958,7 @@ function runGate(g: Game, gd: Guard, G: Gate, dt: number): boolean {
     case 'slice': {   // across the opening station by station, muzzle into the room, a quarter second on each
       G.crouch = 0.35;
       const i = Math.min(G.sliceI, G.slicePts.length - 1); const p = G.slicePts[i], look = G.sliceLook[i]; G.look = look;
-      const faceIn = Math.atan2(look[0] - c.posX, look[2] - c.posZ);
+      const faceIn = Math.atan2(look[0] - c.pos[0], look[2] - c.pos[2]);
       const there = stepGate(g, gd, G, dt, p, SLICE_PACE, faceIn);
       if (there) { G.sliceT += dt; if (G.sliceT >= SLICE_DWELL) { G.sliceI++; G.sliceT = 0; } }
       if (G.sliceI >= G.slicePts.length) {

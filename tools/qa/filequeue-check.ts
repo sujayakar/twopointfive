@@ -34,7 +34,7 @@ interface Case { why: string | null; why2: string | null; deal: string; behind: 
  *  0.45 m off a mark he had reached (a mark his order moved while he stood on it is a new mark) · `allT`: seconds until all four are on their marks and stay (30 = never) */
 async function garage(on: boolean, thr: boolean): Promise<Case> {
   const R = await rig('compound-four', 5), g = R.game, O = R.O as any; DOORMANNERS.on = true; ORDERS.knownFace = false; ORDERS.fileQueue = on;
-  for (const h of R.hostiles) if (h.state !== 'dead') R.put(h, [h.char.posX + 400, 0, h.char.posZ]);
+  for (const h of R.hostiles) if (h.state !== 'dead') R.put(h, [h.char.pos[0] + 400, 0, h.char.pos[2]]);
   const men: any[] = g.guards.filter((x: any) => AT[x.callsign]), d = g.doors.list.find((x: any) => x.def.name === 'g_e');
   g.teleportPlayer([4.6, 0, 20.0]); for (const m of men) R.put(m, [AT[m.callsign][0], 0, AT[m.callsign][1]]); R.step(5);
   const T = O.targetAt(d.frameCentre), why = O.give('stack', T); R.step(1);

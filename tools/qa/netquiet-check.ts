@@ -414,7 +414,7 @@ export async function netquietCheck(): Promise<boolean> {
     { const R = await stage(67, { on: true, training: 'trained', squads: true }), g = R.g, T = R.of('shed', 2), men: any[] = squadOf(g, T).men.filter((m: any) => m !== T), K = NETQUIET;   // (the Yard's man in the middle of the shed)
       R.step(30); for (const t of g.targets) if (!t.on) g.toggleTarget(t);
       const p0 = [...T.char.pos], a0 = NETQUIET_STATS.asks;
-      const spots: number[][] = []; for (let a = 0; a < 12 && spots.length < men.length; a++) { const y = a * Math.PI / 6, q = [T.char.posX + Math.sin(y) * 1.7, 0, T.char.posZ + Math.cos(y) * 1.7]; if (!g.col.nav.isBlocked(q[0], q[2]) && !g.col.segmentBlocked([T.char.posX, 1.5, T.char.posZ], [q[0], 1.2, q[2]]) && spots.every(o => flat(o, q) > 0.8)) spots.push(q); }
+      const spots: number[][] = []; for (let a = 0; a < 12 && spots.length < men.length; a++) { const y = a * Math.PI / 6, q = [T.char.pos[0] + Math.sin(y) * 1.7, 0, T.char.pos[2] + Math.cos(y) * 1.7]; if (!g.col.nav.isBlocked(q[0], q[2]) && !g.col.segmentBlocked([T.char.pos[0], 1.5, T.char.pos[2]], [q[0], 1.2, q[2]]) && spots.every(o => flat(o, q) > 0.8)) spots.push(q); }
       men.forEach((m, i) => { R.put(m, spots[i] ?? T.char.pos); R.face(T, m.char.pos); R.step(1); R.put(m, spots[i] ?? T.char.pos); R.face(T, m.char.pos); killGuard(g, m, [0, 0, 1], true, 'shot', 'player'); });
       const knows = men.filter(m => netQuietOf(T)?.known.has(m.char.id)).length, up = hostiles(g).length - 1;
       let lowAt = NaN; const said = listen(R, [T], 14, t => { if (Number.isNaN(lowAt) && netQuietOf(T)?.last === 3) lowAt = t; });
@@ -423,7 +423,7 @@ export async function netquietCheck(): Promise<boolean> {
         '(Q10) the last of his squad, every mate seen to fall and nobody ever asked for (other squads still up): he knows — his line (his own squad\'s, not "somebody talk to me"), the beat, low; his squad sends him nowhere meanwhile',
         `mates known gone ${knows} of ${men.length}, checks asked ${NETQUIET_STATS.asks - a0}, ${up} of other squads up · ${l ? `"${l.text}" at ${f2(l.t)} s` : words(said)} · low at ${f2(lowAt)} s (act ${N?.last}), crouch ${f2(crouch)}, walked ${f2(flat(T.char.pos, p0))} m · held from his squad: ${netFeedHolds(T)}`);
       // (Q11) a man of another squad walks past (a second inside mateM), then one comes and stays
-      const O = hostiles(g).find((x: any) => x !== T), home = [...O.char.pos], by = R.beside(T.char.pos, [T.char.posX + 2, 0, T.char.posZ + 2], 2), rel0 = NETQUIET_STATS.released;
+      const O = hostiles(g).find((x: any) => x !== T), home = [...O.char.pos], by = R.beside(T.char.pos, [T.char.pos[0] + 2, 0, T.char.pos[2] + 2], 2), rel0 = NETQUIET_STATS.released;
       R.put(O, by); R.step(60); R.put(O, home); R.step(90); const past = { act: netQuietOf(T)?.last, crouch: T.char.anim.crouch ?? 0 };
       let upAt = NaN; for (let i = 1; i <= 360; i++) { R.put(O, by); R.step();   // (he STAYS: stood there every frame — left to himself a man of another squad is off home through the door inside four seconds)
         if (Number.isNaN(upAt) && netQuietOf(T)?.last === 0) upAt = i * DT; }
@@ -437,7 +437,7 @@ export async function netquietCheck(): Promise<boolean> {
     { const left = async (run: boolean) => {
         const R = await stage(67, { on: true, training: 'trained', squads: true, runner: true }), g = R.g, T = R.of('shed', 2), squad: any[] = squadOf(g, T).men, others: any[] = squad.filter((m: any) => m !== T), M = others[others.length - 1], dead = others.filter(m => m !== M), K = NETQUIET;
         R.step(30); for (const t of g.targets) if (!t.on) g.toggleTarget(t);
-        const spots: number[][] = []; for (let a = 0; a < 12 && spots.length < dead.length; a++) { const y = a * Math.PI / 6, q = [T.char.posX + Math.sin(y) * 1.7, 0, T.char.posZ + Math.cos(y) * 1.7]; if (!g.col.nav.isBlocked(q[0], q[2]) && !g.col.segmentBlocked([T.char.posX, 1.5, T.char.posZ], [q[0], 1.2, q[2]]) && spots.every(o => flat(o, q) > 0.8)) spots.push(q); }
+        const spots: number[][] = []; for (let a = 0; a < 12 && spots.length < dead.length; a++) { const y = a * Math.PI / 6, q = [T.char.pos[0] + Math.sin(y) * 1.7, 0, T.char.pos[2] + Math.cos(y) * 1.7]; if (!g.col.nav.isBlocked(q[0], q[2]) && !g.col.segmentBlocked([T.char.pos[0], 1.5, T.char.pos[2]], [q[0], 1.2, q[2]]) && spots.every(o => flat(o, q) > 0.8)) spots.push(q); }
         const took = run && runnerBreak(g, M); R.step(60);   // (the shout, the beat, the drop: he has run before the others fall)
         const fled = runnerFled(M), mShock0 = shockOf(M), mLines0 = NETQUIET_LOG.filter((l: any) => l.id === M.char.id).length;
         dead.forEach((m, i) => { R.put(m, spots[i] ?? T.char.pos); R.face(T, m.char.pos); R.step(1); R.put(m, spots[i] ?? T.char.pos); R.face(T, m.char.pos); killGuard(g, m, [0, 0, 1], true, 'shot', 'player'); });

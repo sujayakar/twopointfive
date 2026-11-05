@@ -73,7 +73,7 @@ const IDS: string[] = (SCENARIOS as any[]).map(e => e.id);
 const mates = (g: any): any[] => g.orders.squad().filter((x: any) => x.state !== 'dead');
 const doorsOf = (S: any): any[] => { const sam = S.g.player.char.pos; const c: { ent: any; dist: number }[] = []; for (const d of S.defs) for (const e of d.room.entries) if (!c.some(q => q.ent === e)) c.push({ ent: e, dist: flat(sam, e.at) }); c.sort((a, b) => a.dist - b.dist); return c.map(q => q.ent); };
 function fnv() { let h = 0x811c9dc5 >>> 0; return { eat: (s: string) => { for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 0x01000193) >>> 0; } }, hex: () => (h >>> 0).toString(16).padStart(8, '0') }; }
-const headOf = (c: any): number[] => c.bones.head ?? [c.posX, c.posY + 1.62, c.posZ];
+const headOf = (c: any): number[] => c.bones.head ?? [c.pos[0], c.pos[1] + 1.62, c.pos[2]];
 const f2 = (x: number) => x.toFixed(2);
 /** a scenario as its row starts it with the light as asked, the team fallen in on Sam, Sam's goggles as asked, four seconds on */
 async function settled(id: string, on: boolean, team: boolean, nv: boolean, auto = false) {
@@ -144,11 +144,11 @@ async function play(id: string, on: boolean, team: boolean, nv: boolean): Promis
     if (BREAK) for (const l of L.ir) if (!L.lights.includes(l)) L.lights.push(l);   // (the red path: the infrared lights in the list everybody sums)
     step(); R.frames++;
     H.eat(JSON.stringify(digestGame(g, true)));
-    for (const x of g.guards) H.eat(`${x.callsign}:${x.state}:${x.awareness.toFixed(5)}:${x.flashlight?.enabled ? 1 : 0}:${x.char.posX.toFixed(4)},${x.char.posZ.toFixed(4)},${x.char.aimYaw.toFixed(4)}:${(x.irradiance ?? 0).toFixed(5)}:${(x.visibility ?? 0).toFixed(5)}|`);
+    for (const x of g.guards) H.eat(`${x.callsign}:${x.state}:${x.awareness.toFixed(5)}:${x.flashlight?.enabled ? 1 : 0}:${x.char.pos[0].toFixed(4)},${x.char.pos[2].toFixed(4)},${x.char.aimYaw.toFixed(4)}:${(x.irradiance ?? 0).toFixed(5)}:${(x.visibility ?? 0).toFixed(5)}|`);
     for (const c of g.devices?.cameras ?? []) H.eat(`cam:${c.seen.toFixed(5)}:${c.state}|`);
     for (const l of L.lights) if (!L.ir.includes(l)) H.eat(`${l.name}:${l.kind}:${l.enabled ? 1 : 0}:${l.intensity.toFixed(4)}:${l.pos[0].toFixed(3)},${l.pos[1].toFixed(3)},${l.pos[2].toFixed(3)}|`);
     // the floor in front of Sam, where his flood falls: what every eye and lens without goggles would read there
-    const c = g.player.char, P = [c.posX + Math.sin(c.aimYaw) * 3, 1.2, c.posZ + Math.cos(c.aimYaw) * 3];
+    const c = g.player.char, P = [c.pos[0] + Math.sin(c.aimYaw) * 3, 1.2, c.pos[2] + Math.cos(c.aimYaw) * 3];
     H.eat(`sam:${g.player.visibility.toFixed(5)}:${GDM.lightEstimateAt(g, P).toFixed(6)}|`);
     const flood = ILM.irLightAt(g, P); if (flood > 0) R.flood++;
     if (L.ir.length) R.irFrames++; R.irMax = Math.max(R.irMax, L.ir.length);
@@ -190,20 +190,20 @@ export const irlTeam = guarded(async () => {
     const S = await settled(id, true, true, false); const { g } = S; const L = g.engine.lights, team = mates(g);
     const m = team.find((x: any) => NVM.nvgDown(g, x) && L.ir.some((l: any) => l.owner === x.char.id)); if (!m) { reset(); continue; }
     const mine = L.ir.find((l: any) => l.owner === m.char.id), all = [...L.ir], c = m.char, fx = Math.sin(c.aimYaw), fz = Math.cos(c.aimYaw);
-    let r = 0; for (const d of [4, 3, 2, 1.5]) if (!g.col.segmentBlocked(mine.pos, [c.posX + fx * d, 1.2, c.posZ + fz * d])) { r = d; break; }
+    let r = 0; for (const d of [4, 3, 2, 1.5]) if (!g.col.segmentBlocked(mine.pos, [c.pos[0] + fx * d, 1.2, c.pos[2] + fz * d])) { r = d; break; }
     if (!r) { reset(); continue; }
     asked++;
     const man = (x: number, z: number) => ({ char: { pos: [x, 0, z], bones: {}, id: 9000 + (manId++) }, irradiance: 0, visibility: 0, callsign: 'nobody' });
     const foe = g.guards.find((x: any) => x.team === 'hostile' && x.state !== 'dead');
     L.ir.length = 0; L.ir.push(mine);   // (his own flood alone: the others' must not light the man behind him)
-    const ahead = NVM.nvgSight(g, m, man(c.posX + fx * r, c.posZ + fz * r)), behind = NVM.nvgSight(g, m, man(c.posX - fx * 3, c.posZ - fz * 3));
-    const E = ILM.irLightAt(g, [c.posX + fx * r, 1.2, c.posZ + fz * r]), own = ILM.irLightAt(g, [c.posX + fx * r, 1.2, c.posZ + fz * r], m.char.id);
-    const byFoe = foe ? NVM.nvgSight(g, foe, man(c.posX + fx * r, c.posZ + fz * r)) : 0;
+    const ahead = NVM.nvgSight(g, m, man(c.pos[0] + fx * r, c.pos[2] + fz * r)), behind = NVM.nvgSight(g, m, man(c.pos[0] - fx * 3, c.pos[2] - fz * 3));
+    const E = ILM.irLightAt(g, [c.pos[0] + fx * r, 1.2, c.pos[2] + fz * r]), own = ILM.irLightAt(g, [c.pos[0] + fx * r, 1.2, c.pos[2] + fz * r], m.char.id);
+    const byFoe = foe ? NVM.nvgSight(g, foe, man(c.pos[0] + fx * r, c.pos[2] + fz * r)) : 0;
     const bare = NVM.tubeVis(g, 0);
-    IRLIGHT.team = false; const teamOff = NVM.nvgSight(g, m, man(c.posX + fx * r, c.posZ + fz * r)); IRLIGHT.team = true;
-    IRLIGHT.on = false; const off = NVM.nvgSight(g, m, man(c.posX + fx * r, c.posZ + fz * r)); IRLIGHT.on = true;
+    IRLIGHT.team = false; const teamOff = NVM.nvgSight(g, m, man(c.pos[0] + fx * r, c.pos[2] + fz * r)); IRLIGHT.team = true;
+    IRLIGHT.on = false; const off = NVM.nvgSight(g, m, man(c.pos[0] + fx * r, c.pos[2] + fz * r)); IRLIGHT.on = true;
     // behind a wall: the first floor past the nearest wall along his aim
-    let walled: number | null = null; for (let d = r + 0.5; d < 20; d += 0.5) { const P = [c.posX + fx * d, 1.2, c.posZ + fz * d]; if (g.col.segmentBlocked(mine.pos, P) && g.col.segmentBlocked(P, mine.pos) && !g.col.segmentBlocked([P[0], 0.1, P[2]], [P[0], 2, P[2]])) { walled = NVM.nvgSight(g, m, man(P[0], P[2])); break; } }   // (blocked both ways: a point INSIDE the wall's own box is blocked only from outside it, and no man stands there)
+    let walled: number | null = null; for (let d = r + 0.5; d < 20; d += 0.5) { const P = [c.pos[0] + fx * d, 1.2, c.pos[2] + fz * d]; if (g.col.segmentBlocked(mine.pos, P) && g.col.segmentBlocked(P, mine.pos) && !g.col.segmentBlocked([P[0], 0.1, P[2]], [P[0], 2, P[2]])) { walled = NVM.nvgSight(g, m, man(P[0], P[2])); break; } }   // (blocked both ways: a point INSIDE the wall's own box is blocked only from outside it, and no man stands there)
     L.ir.length = 0; for (const l of all) L.ir.push(l);
     F.verdict(ahead > 0.4 && behind === 0 && byFoe === 0 && teamOff === 0 && off === 0 && bare === 0 && E > 0 && own === 0 && (walled === null || walled === 0), `${id}: a man with no light on him ${f2(r)} m in front of ${m.callsign}, whose goggles are down`,
       `${m.callsign}'s tube reads him ${f2(ahead)} (the infrared light on him ${E.toFixed(3)} W/m²; with no light at all a tube reads ${f2(bare)}) · three metres behind ${m.callsign}: ${f2(behind)} · past the first wall along his aim: ${walled === null ? 'no wall inside 20 m' : f2(walled)} · the team half off: ${f2(teamOff)} · the switch off: ${f2(off)} · to an enemy's eye (${foe?.callsign ?? 'none standing'}): ${f2(byFoe)} · the carrier's own light on himself: ${own.toFixed(3)}`);
@@ -224,7 +224,7 @@ export const irlTeam = guarded(async () => {
 export const irlOff = guarded(async () => {
   const F = family('irl-off: the switch, and the two stands');
   { const S = await settled(IDS[0], false, true, true); const { g, step } = S; const L = g.engine.lights; let most = 0; for (let f = 0; f < 120; f++) { step(); most = Math.max(most, L.ir.length); }
-    const m = mates(g)[0], o = { char: { pos: [m.char.posX + 2, 0, m.char.posZ], bones: {}, id: 9001 }, irradiance: 0.03, visibility: 0 };
+    const m = mates(g)[0], o = { char: { pos: [m.char.pos[0] + 2, 0, m.char.pos[2]], bones: {}, id: 9001 }, irradiance: 0.03, visibility: 0 };
     const withIt = NVM.nvgDown(g, m) ? NVM.nvgSight(g, m, o) : NVM.tubeVis(g, 0.03), plain = NVM.tubeVis(g, 0.03);
     F.verdict(most === 0 && withIt === plain && ILM.irOnMan(g, o) === 0 && !ILM.irCarried(), 'IRLIGHT.on off: no infrared light anywhere, the tube\'s term as it was', `most infrared lights in 120 frames with Sam's goggles down: ${most} · a man at E 0.03 through the tube: ${f2(withIt)} (nvg.ts alone: ${f2(plain)}) · ${ILM.irLightSummary(g)}`);
     IRLIGHT.on = true; step(2); const on = L.ir.length; IRLIGHT.on = false; step(1);
@@ -265,7 +265,7 @@ export const irlAuto = guarded(async () => {
     for (let f = 0; f < 240; f++) { step();
       for (const x of mates(g)) { const gog = NVM.nvgDown(g, x), has = L.ir.some((l: any) => l.owner === x.char.id);
         if (!gog) { since.delete(x); litSince.delete(x); if (has) fails.push(`${x.callsign}: goggles up and a light burning`); continue; }
-        const blackFloor = tubeAt(g, x.char.posX, x.char.posZ) < D;
+        const blackFloor = tubeAt(g, x.char.pos[0], x.char.pos[2]) < D;
         if (!blackFloor) { since.delete(x); if (!has) teamOut++; }
         else { litSince.delete(x); if (!since.has(x)) since.set(x, g.time); if (g.time - since.get(x)! > 0.4) { teamDark++; if (!has) fails.push(`${x.callsign}: on black floor ${f2(g.time - since.get(x)!)} s with his goggles down and no light`); } }
         // a goggled man who can look at no black floor (asked every quarter second: it is the slow question) keeps no light past its hold and its fade
@@ -274,9 +274,9 @@ export const irlAuto = guarded(async () => {
       if (fails.length > 3) break; }
     // ---- Sam, stood where the level is light and where it is black
     g.godMode = true;
-    const cands: number[][] = [[...pl.char.pos], ...doorsOf(S).map((e: any) => [e.at[0], 0, e.at[2]]), ...g.guards.filter((x: any) => x.team === 'hostile').map((x: any) => [x.char.posX, 0, x.char.posZ])];
+    const cands: number[][] = [[...pl.char.pos], ...doorsOf(S).map((e: any) => [e.at[0], 0, e.at[2]]), ...g.guards.filter((x: any) => x.team === 'hostile').map((x: any) => [x.char.pos[0], 0, x.char.pos[2]])];
     const lit = cands.find(P => leastSeen(g, P, D * 1.2) >= D * 1.2), dark = cands.find(P => tubeAt(g, P[0], P[2]) < D * 0.8);
-    const litNow = () => leastSeen(g, pl.char.pos, D * 1.2) >= D * 1.2, blackNow = () => tubeAt(g, pl.char.posX, pl.char.posZ) < D;   // (asked of where he IS: a stand is nudged to free floor, and a door a teammate opens shows a room that was not in the picture)
+    const litNow = () => leastSeen(g, pl.char.pos, D * 1.2) >= D * 1.2, blackNow = () => tubeAt(g, pl.char.pos[0], pl.char.pos[2]) < D;   // (asked of where he IS: a stand is nudged to free floor, and a door a teammate opens shows a room that was not in the picture)
     const stand = async (P: number[], n: number) => { await quiet(() => g.teleportPlayer(P)); pl.nv = true; step(n); };
     if (lit) { await stand(lit, 150); }
     if (lit && litNow()) {   // (where he IS is still a light place: a stand is nudged to free floor)
@@ -300,7 +300,7 @@ export const irlAuto = guarded(async () => {
       { const c = pl.char, gain = Math.max(g.engine.settings.nvGain, 1), sig = (E: number) => Math.log(1 + E * X * 0.4 / Math.PI * gain) / Math.log(1 + gain); const all = [...L.ir]; let most = 0, at = 0;
         if (l2) { L.ir.length = 0; L.ir.push(l2);
           for (let a = 0; a < 16; a++) { const fx = Math.sin(a * Math.PI / 8), fz = Math.cos(a * Math.PI / 8);
-            for (let r = 1.5; r <= 10; r += 0.5) { const Q = [c.posX + fx * r, 0.05, c.posZ + fz * r]; if (g.col.segmentBlocked([c.posX, 1.5, c.posZ], [Q[0], 1.2, Q[2]])) break; const v = sig(ILM.irLightAt(g, Q) * 1); if (v > most) { most = v; at = r; } } }
+            for (let r = 1.5; r <= 10; r += 0.5) { const Q = [c.pos[0] + fx * r, 0.05, c.pos[2] + fz * r]; if (g.col.segmentBlocked([c.pos[0], 1.5, c.pos[2]], [Q[0], 1.2, Q[2]])) break; const v = sig(ILM.irLightAt(g, Q) * 1); if (v > most) { most = v; at = r; } } }
           L.ir.length = 0; for (const l of all) L.ir.push(l);
           if (most > 0.75) fails.push(`one light puts open floor ${at} m off at ${f2(most)} of the tube's range (its hot shoulder starts at 0.75)`); if (most > 0) hot.push(`${id} ${f2(most)} at ${at} m`); } }
       said.push(`black floor at ${dark[0].toFixed(1)},${dark[2].toFixed(1)} (tube ${f2(tubeAt(g, dark[0], dark[2]))}): burning inside 0.1 s, full by 0.5 s`);
@@ -335,7 +335,7 @@ export const irlMeter = guarded(async () => {
     const S = await settled(id, true, true, true, true); const { g, step } = S; const L = g.engine.lights, pl = g.player, fails: string[] = [], said: string[] = [];
     g.godMode = true; const X = g.engine.settings.exposure > 0 ? g.engine.settings.exposure : 1, scale0 = g.engine.settings.indirectScale;
     const samLit = () => L.ir.find((l: any) => l.owner === pl.char.id);
-    const cands: number[][] = [[...pl.char.pos], ...doorsOf(S).map((e: any) => [e.at[0], 0, e.at[2]]), ...g.guards.filter((x: any) => x.team === 'hostile').map((x: any) => [x.char.posX, 0, x.char.posZ])];
+    const cands: number[][] = [[...pl.char.pos], ...doorsOf(S).map((e: any) => [e.at[0], 0, e.at[2]]), ...g.guards.filter((x: any) => x.team === 'hostile').map((x: any) => [x.char.pos[0], 0, x.char.pos[2]])];
     const dark = cands.find(P => tubeAt(g, P[0], P[2]) < D * 0.8), lit = cands.find(P => leastSeen(g, P, D * 1.2) >= D * 1.2);
     // ---- the hooks: what the renderer answers (undefined = nothing, as headless) to Sam's own meter, to the team's own meters and to this rule's keys; what the rule asks and forgets
     let own: number | undefined, plant: number | undefined; let frameAsks = 0, firstAsk = -1, forgot = 0;
@@ -349,7 +349,7 @@ export const irlMeter = guarded(async () => {
     const carriersNow = () => 1 + mates(g).filter((x: any) => NVM.nvgDown(g, x)).length;
     // (the budget is each frame's own, asked of the carriers of that frame: a teammate's goggles are down for part of a run)
     const fresh = async (P: number[], n: number) => { pl.nv = false; step(40); await quiet(() => g.teleportPlayer(P)); firstAsk = -1; pl.nv = true; let burn = 0, first = -1, firstQ = -1, k0 = 0, most = 0, mateBurn = 0, sum = 0, black = true, downAt = -1, over = 0, carriers = 0, carrierSum = 0;
-      for (let f = 0; f < n; f++) { frameAsks = 0; const c0 = carriersNow(); step(); const c = Math.max(c0, carriersNow()); most = Math.max(most, frameAsks); sum += frameAsks; over = Math.max(over, frameAsks - SLOTS * c); carriers = Math.max(carriers, c); carrierSum += c; black &&= tubeAt(g, pl.char.posX, pl.char.posZ) < D; if (downAt < 0 && pl.nvAmount > 0.5) downAt = g.time;
+      for (let f = 0; f < n; f++) { frameAsks = 0; const c0 = carriersNow(); step(); const c = Math.max(c0, carriersNow()); most = Math.max(most, frameAsks); sum += frameAsks; over = Math.max(over, frameAsks - SLOTS * c); carriers = Math.max(carriers, c); carrierSum += c; black &&= tubeAt(g, pl.char.pos[0], pl.char.pos[2]) < D; if (downAt < 0 && pl.nvAmount > 0.5) downAt = g.time;
         const l = samLit(); if (l) { burn++; if (first < 0) { first = downAt < 0 ? 0 : g.time - downAt; firstQ = firstAsk < 0 ? -1 : g.time - firstAsk; k0 = l.intensity * X / IRLIGHT.power; } }
         if (f > 100) mateBurn += L.ir.filter((l: any) => l.owner !== pl.char.id).length; }   // (a teammate lit by the CPU's word before the switch came on is out its hold and its fade later: 2 s, and 40 frames went before these)
       return { burn, first, firstQ, k0, most, mateBurn, mean: sum / n, black, asks: firstAsk >= 0, over, carriers, carrierMean: carrierSum / n }; };
@@ -435,7 +435,7 @@ export const irlNear = guarded(async () => {
       dn = Math.min(dn, h.t); e = Math.max(e, l.intensity * w2(h.t, l.range) / Math.max(h.t * h.t, l.radius * l.radius) / ref); }
     return { e, d: dn }; };
   // the nearest wall and the longest clear way from where Sam stands, by a ring of rays at brow height
-  const p0 = [c.posX, 0, c.posZ], eye = [p0[0], 1.5, p0[2]]; let near = { t: Infinity, yaw: 0 }, far = { t: 0, yaw: 0 };
+  const p0 = [c.pos[0], 0, c.pos[2]], eye = [p0[0], 1.5, p0[2]]; let near = { t: Infinity, yaw: 0 }, far = { t: 0, yaw: 0 };
   for (let i = 0; i < 48; i++) { const yaw = i / 48 * Math.PI * 2, t = Math.min(...[0, -0.2, 0.2].map(a => col.raycast(eye, [Math.sin(yaw + a), -0.1, Math.cos(yaw + a)], 30)?.t ?? 30)); if (t < near.t) near = { t, yaw }; if (t > far.t) far = { t, yaw }; }
   const face = async (yaw: number, at: number[] | null, n: number) => { if (at) await quiet(() => g.teleportPlayer(at)); for (let f = 0; f < n; f++) { c.bodyYaw = c.aimYaw = yaw; pl.nv = true; step(1); } };
   const wallAt = [p0[0] + Math.sin(near.yaw) * Math.max(0, near.t - 0.8), 0, p0[2] + Math.cos(near.yaw) * Math.max(0, near.t - 0.8)];

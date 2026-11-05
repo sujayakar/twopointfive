@@ -270,7 +270,7 @@ async function leafWedge() {
       if (gd.path.length > lastPathLen + 0 && gd.path.length !== lastPathLen) { if (gd.path.length === lastPathLen + 1) sidesteps++; lastPathLen = gd.path.length; }
       maxFromStart = Math.max(maxFromStart, v3.distXZ(gd.char.pos, p0));
       if (arrivedAt < 0 && (gd.state === 'search' || v3.distXZ(gd.char.pos, c.goal) < 1.0)) arrivedAt = game.time;
-      if (f % 120 === 0) angles.push(`${(f / 60).toFixed(0)}s:door ${d.angle.toFixed(2)} guard (${gd.char.posX.toFixed(2)},${gd.char.posZ.toFixed(2)}) ${gd.state} spd ${gd.speed.toFixed(2)} stuckT ${gd.stuckT.toFixed(2)} path ${gd.pathI}/${gd.path.length}`);
+      if (f % 120 === 0) angles.push(`${(f / 60).toFixed(0)}s:door ${d.angle.toFixed(2)} guard (${gd.char.pos[0].toFixed(2)},${gd.char.pos[2].toFixed(2)}) ${gd.state} spd ${gd.speed.toFixed(2)} stuckT ${gd.stuckT.toFixed(2)} path ${gd.pathI}/${gd.path.length}`);
     }
     console.log(`\n- ${c.door} @ ${c.angle} — ${c.note}`);
     console.log(`  guard from (${p0[0]}, ${p0[2]}) toward (${c.goal[0]}, ${c.goal[2]}): ${arrivedAt >= 0 ? `got there / gave up chasing at ${arrivedAt.toFixed(1)} s` : 'NEVER got past in 25 s'}; furthest from start ${maxFromStart.toFixed(2)} m; sidestep insertions ~${sidesteps}; door now ${d.angle.toFixed(2)} (stop ${d.angle > 0 ? d.maxA : d.minA})`);
@@ -320,7 +320,7 @@ async function crush() {
       const d = v3.distXZ(p, gp); minD = Math.min(minD, d);
       if (d < 0.56 && contactAt < 0) { contactAt = game.time; guardAtContact = v3.copy(gp); }
       if (guardAtContact) guardTravelAfter = Math.max(guardTravelAfter, v3.distXZ(gp, guardAtContact));
-      const gs = Math.hypot(gd.char.velX, gd.char.velZ); if (gs > 0.2 && d < 0.7) carried += ((p[0] - prev[0]) * gd.char.velX + (p[2] - prev[2]) * gd.char.velZ) / gs;   // player motion along the man's travel while in contact
+      const gs = Math.hypot(gd.char.vel[0], gd.char.vel[2]); if (gs > 0.2 && d < 0.7) carried += ((p[0] - prev[0]) * gd.char.vel[0] + (p[2] - prev[2]) * gd.char.vel[2]) / gs;   // player motion along the man's travel while in contact
       maxOff = Math.max(maxOff, v3.distXZ(p, start));
       if (!through && game.col.segmentBlocked([start[0], 0.6, start[2]], [p[0], 0.6, p[2]]) && game.col.segmentBlocked([start[0], 1.2, start[2]], [p[0], 1.2, p[2]])) { through = true; trace.push(`    ${game.time.toFixed(2)}s: player now on the FAR side of static geometry at (${p[0].toFixed(2)}, ${p[2].toFixed(2)})`); }
       if (f % 60 === 0 || (step > 0.05)) trace.push(`    ${game.time.toFixed(2)}s player (${p[0].toFixed(2)}, ${p[2].toFixed(2)}) guard (${gp[0].toFixed(2)}, ${gp[2].toFixed(2)}) ${gd.script ? 'scripted' + (gd.script.arrived ? ' arrived' : '') : gd.state} d=${d.toFixed(2)}${step > 0.05 ? `  ← ${step.toFixed(3)} m this frame` : ''}`);
@@ -529,8 +529,8 @@ async function teleportCancel() {
     const pl = game.player; const fails: string[] = [];
     if (pl.picking || pl.kick || pl.takedown || pl.dragging || pl.pendingThrow || pl.throwHeld || pl.fHeld || pl.easing || pl.sel.open || pl.sel.downT >= 0 || pl.crouch || pl.sprinting || pl.char.anim.lockpick || pl.char.anim.kicking) fails.push(`fresh player carries state: picking ${!!pl.picking} kick ${!!pl.kick} fHeld ${pl.fHeld} easing ${!!pl.easing} sel ${JSON.stringify(pl.sel)} crouch ${pl.crouch} lockpick ${pl.char.anim.lockpick}`);
     if (d.pick !== 0 || !d.locked || d.picking) fails.push(`server door not restored: pick ${d.pick} locked ${d.locked} picking ${d.picking}`);
-    if (v3.distXZ(pl.char.pos, game.level.playerSpawn) > 0.05) fails.push(`player not at the spawn: (${pl.char.posX.toFixed(2)}, ${pl.char.posZ.toFixed(2)})`);
-    report('restartEncounter() 2 s into a pick with F held', fails, `door pick ${d.pick}, player at (${pl.char.posX.toFixed(2)}, ${pl.char.posZ.toFixed(2)})`);
+    if (v3.distXZ(pl.char.pos, game.level.playerSpawn) > 0.05) fails.push(`player not at the spawn: (${pl.char.pos[0].toFixed(2)}, ${pl.char.pos[2].toFixed(2)})`);
+    report('restartEncounter() 2 s into a pick with F held', fails, `door pick ${d.pick}, player at (${pl.char.pos[0].toFixed(2)}, ${pl.char.pos[2].toFixed(2)})`);
   }
   console.log(`=== teleport-cancel: ${allPass ? 'ALL PASS' : 'FAILURES above'} ===`);
   return allPass;
@@ -568,14 +568,14 @@ async function silentRepair() {
   leader.char.pos = [33, 0, 20]; leader.char.bodyYaw = leader.char.aimYaw = Math.PI; leader.path = []; leader.pathGoal = null; leader.wait = 3; leader.char.update(0);
   follower.char.pos = [33, 0, 21.6]; follower.char.bodyYaw = follower.char.aimYaw = Math.PI; follower.path = []; follower.pathGoal = null; follower.char.update(0);
   for (let i = 0; i < 20; i++) W.step(DT);
-  console.log(`  before: ${game.escalationSummary()} — follower ${game.level.routes[follower.routeI].name} ${follower.state} at (${follower.char.posX.toFixed(1)}, ${follower.char.posZ.toFixed(1)}), leader at (${leader.char.posX.toFixed(1)}, ${leader.char.posZ.toFixed(1)}), post man at (${postman?.char.posX.toFixed(1)}, ${postman?.char.posZ.toFixed(1)})`);
+  console.log(`  before: ${game.escalationSummary()} — follower ${game.level.routes[follower.routeI].name} ${follower.state} at (${follower.char.pos[0].toFixed(1)}, ${follower.char.pos[2].toFixed(1)}), leader at (${leader.char.pos[0].toFixed(1)}, ${leader.char.pos[2].toFixed(1)}), post man at (${postman?.char.pos[0].toFixed(1)}, ${postman?.char.pos[2].toFixed(1)})`);
   const tKill = game.time; killGuard(game, follower, [Math.sin(follower.char.bodyYaw), 0, Math.cos(follower.char.bodyYaw)], true);
   lines.push(`${game.time.toFixed(2)}s --- follower taken down silently ---`);
-  let foundAt = -1; const postStart = postman ? [postman.char.posX, postman.char.posZ] : null; let postLeftAt = -1;
+  let foundAt = -1; const postStart = postman ? [postman.char.pos[0], postman.char.pos[2]] : null; let postLeftAt = -1;
   for (let i = 0; i < 60 * 40; i++) {
     W.step(DT);
     if (foundAt < 0 && follower.found) { foundAt = game.time; lines.push(`${game.time.toFixed(2)}s --- body discovered (Guard.found) ---`); }
-    if (postman && postLeftAt < 0 && postStart && Math.hypot(postman.char.posX - postStart[0], postman.char.posZ - postStart[1]) > 1.5) { postLeftAt = game.time; lines.push(`${game.time.toFixed(2)}s --- the post man has left his junction (now trailing ${postman.leader ? game.level.routes[postman.leader.routeI].name : 'nobody'}) ---`); }
+    if (postman && postLeftAt < 0 && postStart && Math.hypot(postman.char.pos[0] - postStart[0], postman.char.pos[2] - postStart[1]) > 1.5) { postLeftAt = game.time; lines.push(`${game.time.toFixed(2)}s --- the post man has left his junction (now trailing ${postman.leader ? game.level.routes[postman.leader.routeI].name : 'nobody'}) ---`); }
   }
   console.log('  ' + lines.filter(l => parseFloat(l) >= tKill - 0.1).join('\n  '));
   console.log(`  after: ${game.escalationSummary()}; body found ${foundAt >= 0 ? `at +${(foundAt - tKill).toFixed(1)} s` : 'never (40 s)'}; re-pair ordered at +0.0 s if the "close up" line is stamped at the kill time`);
@@ -671,7 +671,7 @@ async function corpse() {
       const C = game.clearing; if (!third || !C) { console.log('  (no approach / no third man)'); return null; }
       const a = C.a; let q: Vec3; let dir: Vec3;
       if (where === 'corridor') {   // three and a half metres ahead of the point man along the corridor toward the stack, kept inside the corridor strip
-        const sx = Math.sign(C.cur.stack[0][0] - a.char.posX) || 1; dir = [sx, 0, 0]; q = [a.char.posX + sx * 3.5, 0, Math.min(11.8, Math.max(10.6, a.char.posZ))];
+        const sx = Math.sign(C.cur.stack[0][0] - a.char.pos[0]) || 1; dir = [sx, 0, 0]; q = [a.char.pos[0] + sx * 3.5, 0, Math.min(11.8, Math.max(10.6, a.char.pos[2]))];
       } else { const B = C.cur.bounds; dir = [0, 0, -1]; q = [(B.x0 + B.x1) / 2 - 1.2, 0, B.z1 - 2.2]; }   // a couple of metres inside the door, off centre
       if (game.col.nav.isBlocked(q[0], q[2])) { console.log(`  (spot (${q[0].toFixed(1)}, ${q[2].toFixed(1)}) blocked)`); return null; }
       third.post = null; third.char.pos = q; third.char.vel = [0, 0, 0]; third.char.bodyYaw = Math.atan2(dir[0], dir[2]); third.path = []; third.pathGoal = null; third.char.update(0); third.char.update(DT);   // (two pose bakes at the new spot: the ragdoll seeds its momentum from the last two, and a 10 m 'stride' would fling the corpse across the corridor)
@@ -738,7 +738,7 @@ async function pickedDoor() {
     const name = (gd: any) => game.level.routes[gd.routeI].name;
     for (let i = 0; i < 30; i++) W.step(DT);
     c.setup(game);
-    const lines: string[] = []; const origSay = game.say.bind(game); game.say = (gd: any, text: string, radio = false) => { lines.push(`${game.time.toFixed(1)}s ${name(gd)} @(${gd.char.posX.toFixed(1)}, ${gd.char.posZ.toFixed(1)}): ${text}`); return origSay(gd, text, radio); };
+    const lines: string[] = []; const origSay = game.say.bind(game); game.say = (gd: any, text: string, radio = false) => { lines.push(`${game.time.toFixed(1)}s ${name(gd)} @(${gd.char.pos[0].toFixed(1)}, ${gd.char.pos[2].toFixed(1)}): ${text}`); return origSay(gd, text, radio); };
     game.teleportPlayer(v3.copy(c.fix)); game.clearNearestRoom(); game.teleportPlayer([4.9, 0, 23.2]);
     const plannedRooms: string[] = game.clearing ? game.clearing.rooms.map((r: any) => r[0].room) : []; const planned = plannedRooms.join(' ▸ ') || 'none';
     const drilled: string[] = []; let lastQ = ''; const queues: string[] = [];
@@ -796,7 +796,7 @@ async function followerCorpse() {
       W.step(DT);
       if (foundAt < 0 && leader.found) foundAt = game.time;
       if (redealt < 0 && follower.leader !== leader) redealt = game.time;
-      if (f % 30 === 0 && game.time - tKill < 14) trace.push(`+${(game.time - tKill).toFixed(1)}s ${name(follower)} ${follower.state}${follower.bodyDuty ? '/' + follower.bodyDuty.stage : ''} at (${follower.char.posX.toFixed(1)}, ${follower.char.posZ.toFixed(1)}) gap ${v3.distXZ(follower.char.pos, leader.char.pos).toFixed(2)} m yaw ${follower.char.bodyYaw.toFixed(2)} (to body ${Math.atan2(leader.char.posX - follower.char.posX, leader.char.posZ - follower.char.posZ).toFixed(2)}) stillT ${follower.leaderStillT.toFixed(1)} leader=${follower.leader ? name(follower.leader) + (follower.leader.state === 'dead' ? '(dead)' : '') : 'none'}`);
+      if (f % 30 === 0 && game.time - tKill < 14) trace.push(`+${(game.time - tKill).toFixed(1)}s ${name(follower)} ${follower.state}${follower.bodyDuty ? '/' + follower.bodyDuty.stage : ''} at (${follower.char.pos[0].toFixed(1)}, ${follower.char.pos[2].toFixed(1)}) gap ${v3.distXZ(follower.char.pos, leader.char.pos).toFixed(2)} m yaw ${follower.char.bodyYaw.toFixed(2)} (to body ${Math.atan2(leader.char.pos[0] - follower.char.pos[0], leader.char.pos[2] - follower.char.pos[2]).toFixed(2)}) stillT ${follower.leaderStillT.toFixed(1)} leader=${follower.leader ? name(follower.leader) + (follower.leader.state === 'dead' ? '(dead)' : '') : 'none'}`);
     }
     console.log('');
     check(foundAt > 0, `${tag}: the body is found within 40 s`, `${foundAt > 0 ? `+${(foundAt - tKill).toFixed(1)} s after the kill` : 'NEVER'}; follower re-dealt off the corpse ${redealt > 0 ? `at +${(redealt - tKill).toFixed(1)} s` : 'never'}; now: ${game.escalationSummary()}`);
@@ -817,9 +817,9 @@ async function followerCorpse() {
     const sample: string[] = [];
     for (let f = 0; f <= 60 * 12; f++) {
       W.step(DT);
-      if (f % 120 === 0) { const toL = Math.atan2(leader.char.posX - follower.char.posX, leader.char.posZ - follower.char.posZ); sample.push(`+${(f / 60).toFixed(0)}s gap ${v3.distXZ(follower.char.pos, leader.char.pos).toFixed(2)} stillT ${follower.leaderStillT.toFixed(1)} |yaw − to leader| ${Math.abs(wrap(follower.char.bodyYaw - toL)).toFixed(2)} |yaw − (leader yaw + 0.45)| ${Math.abs(wrap(follower.char.bodyYaw - leader.char.bodyYaw - 0.45)).toFixed(2)}`); }
+      if (f % 120 === 0) { const toL = Math.atan2(leader.char.pos[0] - follower.char.pos[0], leader.char.pos[2] - follower.char.pos[2]); sample.push(`+${(f / 60).toFixed(0)}s gap ${v3.distXZ(follower.char.pos, leader.char.pos).toFixed(2)} stillT ${follower.leaderStillT.toFixed(1)} |yaw − to leader| ${Math.abs(wrap(follower.char.bodyYaw - toL)).toFixed(2)} |yaw − (leader yaw + 0.45)| ${Math.abs(wrap(follower.char.bodyYaw - leader.char.bodyYaw - 0.45)).toFixed(2)}`); }
     }
-    const toL = Math.atan2(leader.char.posX - follower.char.posX, leader.char.posZ - follower.char.posZ);
+    const toL = Math.atan2(leader.char.pos[0] - follower.char.pos[0], leader.char.pos[2] - follower.char.pos[2]);
     const faces = Math.abs(wrap(follower.char.bodyYaw - toL)) < 0.25;
     console.log('');
     check(faces, '(c) living leader held still: after 12 s the follower has turned to face him (the still-leader fallback fired)', `|yaw − to leader| ${Math.abs(wrap(follower.char.bodyYaw - toL)).toFixed(2)} rad\n  ` + sample.join('\n  '));
@@ -851,7 +851,7 @@ async function heldLeader() {
   const leader = follower.leader;
   if (game.clearing) { game.clearing.cancel(); game.clearing = null; }   // (a clear would walk them off; this is about the refs)
   // Sam behind the follower and the arm goes on (the call: the row's gate is the grab family's business)
-  const f = follower.char.forward(); game.teleportPlayer([follower.char.posX - f[0] * 0.75, 0, follower.char.posZ - f[2] * 0.75]); game.player.char.bodyYaw = follower.char.bodyYaw; game.player.holstered = true; W.step(DT);
+  const f = follower.char.forward(); game.teleportPlayer([follower.char.pos[0] - f[0] * 0.75, 0, follower.char.pos[2] - f[2] * 0.75]); game.player.char.bodyYaw = follower.char.bodyYaw; game.player.holstered = true; W.step(DT);
   startGrab(game, follower);
   for (let i = 0; i < 90 && game.player.holding?.phase !== 'held'; i++) W.step(DT);
   const held = game.player.holding?.g === follower && follower.held; const leaderWhileHeld = name(follower.leader);
@@ -1161,7 +1161,7 @@ async function wallClipMoves(opts: { verbose?: boolean } = {}) {
       for (let f = 0; f < 8; f++) { W.step(dt); watch.frame(' (standing up)'); }
       game.puppet = null;
       const pop = v3.distXZ(game.player.char.pos, p0);
-      tally(`stand up @${hz}`, watch.bad() || pop > 0.3, `crouched at (${p0[0].toFixed(2)}, ${p0[2].toFixed(2)}) → (${game.player.char.posX.toFixed(2)}, ${game.player.char.posZ.toFixed(2)})${pop > 0.3 ? ` POPPED ${pop.toFixed(2)} m` : ''}${game.player.crouch ? ' (stayed crouched)' : ''} ${watch.line()}`);
+      tally(`stand up @${hz}`, watch.bad() || pop > 0.3, `crouched at (${p0[0].toFixed(2)}, ${p0[2].toFixed(2)}) → (${game.player.char.pos[0].toFixed(2)}, ${game.player.char.pos[2].toFixed(2)})${pop > 0.3 ? ` POPPED ${pop.toFixed(2)} m` : ''}${game.player.crouch ? ' (stayed crouched)' : ''} ${watch.line()}`);
     }
   }
   // --- takedown lunges: a held man planted near walls at assorted facings; the player offered the takedown from 16 bearings × 3 ranges, crouched and standing
@@ -1397,7 +1397,7 @@ async function wallSnapEngage(hz = 60) {
         const wantOther = c.side ? c.side[1] : p0[other];
         if (Math.abs(p[other] - wantOther) > 0.02) fails.push(`station along the wall ${'xz'[other >> 1]} ${p[other].toFixed(3)}, expected ${wantOther.toFixed(3)}${c.side ? ' (the sidestep onto the wall end)' : ' (his own — Q must not carry him along the wall)'}`);
         if (pl.crouch !== !!c.crouch || pl.wall.crouched !== !!c.crouch) fails.push(`crouch ${pl.crouch} / wall.crouched ${pl.wall.crouched}, expected ${!!c.crouch}`);
-        if (Math.hypot(pl.char.velX, pl.char.velZ) > 0.02) fails.push(`still moving at ${Math.hypot(pl.char.velX, pl.char.velZ).toFixed(2)} m/s parked`);
+        if (Math.hypot(pl.char.vel[0], pl.char.vel[2]) > 0.02) fails.push(`still moving at ${Math.hypot(pl.char.vel[0], pl.char.vel[2]).toFixed(2)} m/s parked`);
       }
     } else {
       if (can) fails.push('canWallSnap said yes');
@@ -1465,9 +1465,9 @@ async function wallSnapSlide(hz = 60) {
       const F = Math.round(leg.secs * hz);
       for (let f = 0; f < F; f++) {
         W.step(dt); watch.frame(` (${leg.key})`);
-        const w = game.player.wall; if (!w) { lost = `let go at ${game.time.toFixed(2)} s at (${pl.char.posX.toFixed(2)}, ${pl.char.posZ.toFixed(2)}): ${game.messages.slice(-1).map((m: any) => m.text)}`; break; }
-        const off = pl.char.posX * w.n[0] + pl.char.posZ * w.n[2] - (w.d + 0.45); maxOff = Math.max(maxOff, Math.abs(off));
-        peak = Math.max(peak, Math.hypot(pl.char.velX, pl.char.velZ));   // (commanded speed; the per-frame displacement is bounded below through the watcher's worst step)
+        const w = game.player.wall; if (!w) { lost = `let go at ${game.time.toFixed(2)} s at (${pl.char.pos[0].toFixed(2)}, ${pl.char.pos[2].toFixed(2)}): ${game.messages.slice(-1).map((m: any) => m.text)}`; break; }
+        const off = pl.char.pos[0] * w.n[0] + pl.char.pos[2] * w.n[2] - (w.d + 0.45); maxOff = Math.max(maxOff, Math.abs(off));
+        peak = Math.max(peak, Math.hypot(pl.char.vel[0], pl.char.vel[2]));   // (commanded speed; the per-frame displacement is bounded below through the watcher's worst step)
         peekMax = Math.max(peekMax, w.peek);
         if (pl.char.anim.stance !== 'wall' && !badStance) badStance = `stance '${pl.char.anim.stance}' at ${game.time.toFixed(2)} s`;
         if ((pl.crouch !== !!r.crouch || pl.sprinting) && !badCrouch) badCrouch = `crouch ${pl.crouch} sprint ${pl.sprinting} at ${game.time.toFixed(2)} s`;
@@ -1483,7 +1483,7 @@ async function wallSnapSlide(hz = 60) {
       if (w && w.atEdge !== leg.edge) fails.push(`${leg.note}: atEdge ${w.atEdge} at the end of the leg, expected ${leg.edge}`);
       if (leg.edge !== 0 && peekMax < 0.99) fails.push(`${leg.note}: peek only reached ${peekMax.toFixed(2)} with the key held into the open end`);
       if (leg.edge === 0 && peekMax > 0.01) fails.push(`${leg.note}: peek rose to ${peekMax.toFixed(2)} at a walled end / an obstacle`);
-      if (w && Math.hypot(pl.char.velX, pl.char.velZ) > 0.02) fails.push(`${leg.note}: parked but still commanding ${Math.hypot(pl.char.velX, pl.char.velZ).toFixed(2)} m/s`);
+      if (w && Math.hypot(pl.char.vel[0], pl.char.vel[2]) > 0.02) fails.push(`${leg.note}: parked but still commanding ${Math.hypot(pl.char.vel[0], pl.char.vel[2]).toFixed(2)} m/s`);
       if (badStance) fails.push(`${leg.note}: ${badStance}`); if (badCrouch) fails.push(`${leg.note}: ${badCrouch}`);
       legNotes.push(`${leg.key} ${leg.secs}s → (${p[0].toFixed(2)}, ${p[2].toFixed(2)}) atEdge ${w?.atEdge} peek≤${peekMax.toFixed(2)} peak ${peak.toFixed(2)} m/s, max off ${maxOff.toFixed(3)}, worst step ${watch.S.worstStep.toFixed(4)} m, corner cuts ${watch.S.cornerCut}`);
     }
@@ -1521,19 +1521,19 @@ async function wallSnapRelease() {
   };
   // Q again   (THE OLD WAY OFF — this line, the stick held away and the short tap — is asked with the feel pass's switch OFF wherever the stand has it on:
   //   with WALLSNAP.on Q alone leaves a push, the stick away lets go at 0.1 s and a 0.17 s tap away lets go, by design; `probes.ts wallsnap-off` holds that way off)
-  { const ws = WALLSNAP.on; WALLSNAP.on = false; const f: string[] = []; if (!hold()) f.push('staging: no hold'); input.pressed.add('KeyQ'); W.step(dt); f.push(...freed('Q')); const v = game.player.char.vel; if (Math.hypot(v[0], v[2]) > 1e-6) f.push(`velocity (${v[0].toFixed(2)}, ${v[2].toFixed(2)}) left over`); for (let i = 0; i < 30; i++) W.step(dt); if (v3.distXZ(game.player.char.pos, [20, 0, 10.51]) > 0.01) f.push(`drifted to (${game.player.char.posX.toFixed(2)}, ${game.player.char.posZ.toFixed(2)}) after letting go with no key down`); report('Q again, parked', f); WALLSNAP.on = ws; }
+  { const ws = WALLSNAP.on; WALLSNAP.on = false; const f: string[] = []; if (!hold()) f.push('staging: no hold'); input.pressed.add('KeyQ'); W.step(dt); f.push(...freed('Q')); const v = game.player.char.vel; if (Math.hypot(v[0], v[2]) > 1e-6) f.push(`velocity (${v[0].toFixed(2)}, ${v[2].toFixed(2)}) left over`); for (let i = 0; i < 30; i++) W.step(dt); if (v3.distXZ(game.player.char.pos, [20, 0, 10.51]) > 0.01) f.push(`drifted to (${game.player.char.pos[0].toFixed(2)}, ${game.player.char.pos[2].toFixed(2)}) after letting go with no key down`); report('Q again, parked', f); WALLSNAP.on = ws; }
   // Q again mid-slide: no coasting on along the wall
-  { const f: string[] = []; hold(); input.keys.add('KeyD'); for (let i = 0; i < 60; i++) W.step(dt); input.keys.delete('KeyD'); const x0 = game.player.char.posX; input.pressed.add('KeyQ'); W.step(dt); f.push(...freed('Q mid-slide')); for (let i = 0; i < 30; i++) W.step(dt); const dx = game.player.char.posX - x0; if (Math.abs(dx) > 0.03) f.push(`coasted ${dx.toFixed(3)} m along the wall after Q with the key up`); report('Q again at full sidle, key released the same frame', f, `drift ${(game.player.char.posX - x0).toFixed(3)} m`); }
+  { const f: string[] = []; hold(); input.keys.add('KeyD'); for (let i = 0; i < 60; i++) W.step(dt); input.keys.delete('KeyD'); const x0 = game.player.char.pos[0]; input.pressed.add('KeyQ'); W.step(dt); f.push(...freed('Q mid-slide')); for (let i = 0; i < 30; i++) W.step(dt); const dx = game.player.char.pos[0] - x0; if (Math.abs(dx) > 0.03) f.push(`coasted ${dx.toFixed(3)} m along the wall after Q with the key up`); report('Q again at full sidle, key released the same frame', f, `drift ${(game.player.char.pos[0] - x0).toFixed(3)} m`); }
   // stick away (S = south = +z = away from the north wall): lets go after 0.25 s, then walks off
-  { const ws = WALLSNAP.on; WALLSNAP.on = false; const f: string[] = []; hold(); input.keys.add('KeyS'); let offAt = -1; for (let i = 0; i < 60; i++) { W.step(dt); if (!game.player.wall && offAt < 0) offAt = (i + 1) * dt; } input.keys.delete('KeyS'); if (offAt < 0.24 || offAt > 0.31) f.push(`let go after ${offAt.toFixed(3)} s of 'away' (want ≈ 0.25‥0.28)`); f.push(...freed('walk off')); if (game.player.char.posZ < 10.51 + 0.5) f.push(`only got to z ${game.player.char.posZ.toFixed(2)} in the second after (should be walking south)`); report('stick held away (S)', f, `off the wall at +${offAt.toFixed(3)} s, a second later at z ${game.player.char.posZ.toFixed(2)}`); WALLSNAP.on = ws; }
+  { const ws = WALLSNAP.on; WALLSNAP.on = false; const f: string[] = []; hold(); input.keys.add('KeyS'); let offAt = -1; for (let i = 0; i < 60; i++) { W.step(dt); if (!game.player.wall && offAt < 0) offAt = (i + 1) * dt; } input.keys.delete('KeyS'); if (offAt < 0.24 || offAt > 0.31) f.push(`let go after ${offAt.toFixed(3)} s of 'away' (want ≈ 0.25‥0.28)`); f.push(...freed('walk off')); if (game.player.char.pos[2] < 10.51 + 0.5) f.push(`only got to z ${game.player.char.pos[2].toFixed(2)} in the second after (should be walking south)`); report('stick held away (S)', f, `off the wall at +${offAt.toFixed(3)} s, a second later at z ${game.player.char.pos[2].toFixed(2)}`); WALLSNAP.on = ws; }
   // a tap away shorter than the hold time: stays
   { const ws = WALLSNAP.on; WALLSNAP.on = false; const f: string[] = []; hold(); input.keys.add('KeyS'); for (let i = 0; i < 10; i++) W.step(dt); input.keys.delete('KeyS'); for (let i = 0; i < 30; i++) W.step(dt); if (!game.player.wall) f.push('a 0.17 s tap of S let go'); else f.push(...wallCheck(game, { n: [0, 1] })); report('a 0.17 s tap away: stays on', f); WALLSNAP.on = ws; }
   // stick INTO the wall (W): nothing
   { const f: string[] = []; hold(); const p0 = v3.copy(game.player.char.pos); input.keys.add('KeyW'); for (let i = 0; i < 90; i++) W.step(dt); input.keys.delete('KeyW'); if (!game.player.wall) f.push('W (into the wall) let go'); else { f.push(...wallCheck(game, { n: [0, 1] })); if (v3.distXZ(game.player.char.pos, p0) > 0.005) f.push(`moved ${v3.distXZ(game.player.char.pos, p0).toFixed(3)} m pushing into the wall`); } report('stick held into the wall (W) 1.5 s: stays put', f); }
   // diagonal into-and-along (W+D): slides east, stays
-  { const f: string[] = []; hold(); const x0 = game.player.char.posX; input.keys.add('KeyW'); input.keys.add('KeyD'); for (let i = 0; i < 60; i++) W.step(dt); input.keys.delete('KeyW'); input.keys.delete('KeyD'); if (!game.player.wall) f.push('W+D let go'); else if (game.player.char.posX - x0 < 1.0) f.push(`W+D slid only ${(game.player.char.posX - x0).toFixed(2)} m east in 1 s`); report('W+D (into and along): sidles east, stays on', f, `${(game.player.char.posX - x0).toFixed(2)} m in 1 s`); }
+  { const f: string[] = []; hold(); const x0 = game.player.char.pos[0]; input.keys.add('KeyW'); input.keys.add('KeyD'); for (let i = 0; i < 60; i++) W.step(dt); input.keys.delete('KeyW'); input.keys.delete('KeyD'); if (!game.player.wall) f.push('W+D let go'); else if (game.player.char.pos[0] - x0 < 1.0) f.push(`W+D slid only ${(game.player.char.pos[0] - x0).toFixed(2)} m east in 1 s`); report('W+D (into and along): sidles east, stays on', f, `${(game.player.char.pos[0] - x0).toFixed(2)} m in 1 s`); }
   // sprint (Shift + D): off at once, running east
-  { const f: string[] = []; hold(); const x0 = game.player.char.posX; input.keys.add('ShiftLeft'); input.keys.add('KeyD'); W.step(dt); if (game.player.wall) f.push('still holding a frame into the sprint'); for (let i = 0; i < 59; i++) W.step(dt); input.keys.delete('ShiftLeft'); input.keys.delete('KeyD'); f.push(...freed('sprint')); if (!(game.player.char.posX - x0 > 2.5)) f.push(`ran only ${(game.player.char.posX - x0).toFixed(2)} m in the second`); const q = v3.copy(game.player.char.pos); game.col.collideCircle(q, PR, 0.2, 1.7, 1); report('Shift + D from the wall: sprints off along it', f, `${(game.player.char.posX - x0).toFixed(2)} m east in 1 s, z ${game.player.char.posZ.toFixed(2)}`); }
+  { const f: string[] = []; hold(); const x0 = game.player.char.pos[0]; input.keys.add('ShiftLeft'); input.keys.add('KeyD'); W.step(dt); if (game.player.wall) f.push('still holding a frame into the sprint'); for (let i = 0; i < 59; i++) W.step(dt); input.keys.delete('ShiftLeft'); input.keys.delete('KeyD'); f.push(...freed('sprint')); if (!(game.player.char.pos[0] - x0 > 2.5)) f.push(`ran only ${(game.player.char.pos[0] - x0).toFixed(2)} m in the second`); const q = v3.copy(game.player.char.pos); game.col.collideCircle(q, PR, 0.2, 1.7, 1); report('Shift + D from the wall: sprints off along it', f, `${(game.player.char.pos[0] - x0).toFixed(2)} m east in 1 s, z ${game.player.char.pos[2].toFixed(2)}`); }
   // crouch toggled on the wall: stays, wall.crouched follows, still on the plane
   { const f: string[] = []; hold(); input.pressed.add('KeyC'); W.step(dt); for (let i = 0; i < 30; i++) W.step(dt); const w = game.player.wall; if (!w) f.push('C let go'); else { if (!game.player.crouch || !w.crouched) f.push(`crouch ${game.player.crouch} wall.crouched ${w.crouched}`); f.push(...wallCheck(game, { n: [0, 1] })); } input.pressed.add('KeyC'); W.step(dt); for (let i = 0; i < 30; i++) W.step(dt); if (!game.player.wall || game.player.crouch) f.push(`after standing back up: wall ${!!game.player.wall} crouch ${game.player.crouch}`); report('C on the wall: down and up again, holding throughout', f); }
   // a click on the wall: the pistol is on his thigh for as long as he is on it (wallSnap holsters it, releaseWall hands it back) — nothing fires, nothing dry-fires, he stays on, and Q gives the gun back
@@ -1552,41 +1552,41 @@ async function wallSnapRelease() {
     if (!game.player.wall) f.push('staging: the man planted 0.84 m off knocked him off the wall before the takedown'); startTakedown(game, gd); f.push(...freed('takedown')); for (let i = 0; i < 60; i++) W.step(dt); if (gd.state !== 'dead') f.push(`the takedown did not land (guard ${gd.state})`); f.push(...freed('after the takedown')); if (!game.player.holstered) f.push('the pistol came back into his hand for a takedown started from the wall (went on drawn; a takedown leaves the hands empty)');
     report('LMB takedown on a man in reach in front of the wall (went on drawn): lands, and leaves him holstered', f, `guard ${gd.state}, holstered ${game.player.holstered}`); game.clearAftermath(); game.resetGuards(); for (const o of game.guards) { o.hold = true; o.char.pos = [38.5, 0, 1.5 + game.guards.indexOf(o) * 1.2]; o.char.update(0); } }
   // kick / pick started from the wall right beside the server door (Q at x 18.5 sidesteps him onto the wall's end at the jamb, x 18.62)
-  for (const act of ['kick', 'pick'] as const) { const f: string[] = []; const d = game.doors.byName('server'); for (const dd of game.doors.list) dd.reset(); hold(18.5, act === 'pick'); const held = !!game.player.wall && Math.abs(game.player.char.posX - 18.62) < 0.02; if (!held) f.push(`staging: not parked at the jamb (x ${game.player.char.posX.toFixed(2)})`);
+  for (const act of ['kick', 'pick'] as const) { const f: string[] = []; const d = game.doors.byName('server'); for (const dd of game.doors.list) dd.reset(); hold(18.5, act === 'pick'); const held = !!game.player.wall && Math.abs(game.player.char.pos[0] - 18.62) < 0.02; if (!held) f.push(`staging: not parked at the jamb (x ${game.player.char.pos[0].toFixed(2)})`);
     if (act === 'kick') startKick(game, d); else { startPicking(game, d); input.keys.add(IK); } f.push(...freed(act)); const watch = clipWatch(game); watch.frame(); for (let i = 0; i < 90; i++) { W.step(dt); watch.frame(` (${act})`); } input.keys.delete(IK); if (watch.bad()) f.push(watch.line()); if (act === 'kick' && !d.lockBroken) f.push('the kick never landed'); if (act === 'pick' && d.pick <= 0) f.push('the pick never started turning'); f.push(...freed(`after the ${act}`)); game.player.picking = null;
     report(`${act} on the server door started from the wall beside its jamb`, f, act === 'kick' ? `lockBroken ${d.lockBroken}` : `pick ${d.pick.toFixed(2)}`); }
   // drag: a body by the wall, F from the wall
   { const f: string[] = []; game.clearAftermath(); game.resetGuards(); const v = game.guards[0]; for (const o of game.guards.slice(1)) { o.hold = true; o.char.pos = [38.5, 0, 3 + game.guards.indexOf(o)]; o.char.update(0); } v.char.pos = [21.2, 0, 11.0]; v.char.bodyYaw = Math.PI / 2; v.char.update(0); v.char.update(dt); killGuard(game, v, [1, 0, 0], true); for (let i = 0; i < 90; i++) W.step(dt);
     hold(20.6, true); if (!game.player.wall) f.push('staging: no hold beside the body'); game.toggleDrag(v); const got = game.player.dragging === v; if (!got) f.push(`never got hold of the body (bodyDist ${(game as any).player ? '' : ''})`); f.push(...freed('drag')); for (let i = 0; i < 30; i++) W.step(dt); if (game.player.dragging) game.toggleDrag(); report('F drag on a body lying by the wall, from the wall', f, `got hold ${got}`); game.clearAftermath(); game.resetGuards(); for (const o of game.guards) { o.hold = true; o.char.pos = [38.5, 0, 1.5 + game.guards.indexOf(o) * 1.2]; o.char.update(0); } }
   // teleport
-  { const f: string[] = []; hold(); input.keys.add('KeyD'); for (let i = 0; i < 30; i++) W.step(dt); game.teleportPlayer([6.5, 0, 19.0]); input.keys.delete('KeyD'); f.push(...freed('teleport')); for (let i = 0; i < 30; i++) W.step(dt); if (v3.distXZ(game.player.char.pos, [6.5, 0, 19.0]) > 0.05) f.push(`reeled to (${game.player.char.posX.toFixed(2)}, ${game.player.char.posZ.toFixed(2)}) after the teleport`); f.push(...freed('after the teleport')); report('teleported off the wall mid-sidle', f); }
+  { const f: string[] = []; hold(); input.keys.add('KeyD'); for (let i = 0; i < 30; i++) W.step(dt); game.teleportPlayer([6.5, 0, 19.0]); input.keys.delete('KeyD'); f.push(...freed('teleport')); for (let i = 0; i < 30; i++) W.step(dt); if (v3.distXZ(game.player.char.pos, [6.5, 0, 19.0]) > 0.05) f.push(`reeled to (${game.player.char.pos[0].toFixed(2)}, ${game.player.char.pos[2].toFixed(2)}) after the teleport`); f.push(...freed('after the teleport')); report('teleported off the wall mid-sidle', f); }
   // restartEncounter while peeking
-  { const f: string[] = []; hold(24.3); input.keys.add('KeyD'); for (let i = 0; i < 60; i++) W.step(dt); const peeking = (game.player.wall?.peek ?? 0) > 0.9 && !!W.cam.peekOffset; if (!peeking) f.push(`staging: not peeking at the manager jamb (peek ${game.player.wall?.peek?.toFixed(2)}, x ${game.player.char.posX.toFixed(2)})`); game.restartEncounter(); input.keys.delete('KeyD'); W.step(dt); f.push(...freed('restart')); const pl = game.player; if (pl.wall || pl.char.anim.stance !== 'none' || v3.distXZ(pl.char.pos, game.level.playerSpawn) > 0.05) f.push('fresh player not clean'); report('restartEncounter() at full peek', f); for (const o of game.guards) { o.hold = true; o.char.pos = [38.5, 0, 1.5 + game.guards.indexOf(o) * 1.2]; o.char.update(0); } game.aiEnabled = false; }
+  { const f: string[] = []; hold(24.3); input.keys.add('KeyD'); for (let i = 0; i < 60; i++) W.step(dt); const peeking = (game.player.wall?.peek ?? 0) > 0.9 && !!W.cam.peekOffset; if (!peeking) f.push(`staging: not peeking at the manager jamb (peek ${game.player.wall?.peek?.toFixed(2)}, x ${game.player.char.pos[0].toFixed(2)})`); game.restartEncounter(); input.keys.delete('KeyD'); W.step(dt); f.push(...freed('restart')); const pl = game.player; if (pl.wall || pl.char.anim.stance !== 'none' || v3.distXZ(pl.char.pos, game.level.playerSpawn) > 0.05) f.push('fresh player not clean'); report('restartEncounter() at full peek', f); for (const o of game.guards) { o.hold = true; o.char.pos = [38.5, 0, 1.5 + game.guards.indexOf(o) * 1.2]; o.char.update(0); } game.aiEnabled = false; }
   // going down on the wall (god mode off, one round)
   { const f: string[] = []; hold(); game.godMode = false; hitPlayer(game, [0, 0, 1]); W.step(dt); if (!game.player.down) f.push('staging: not down'); f.push(...freed('down')); for (let i = 0; i < 60; i++) W.step(dt); f.push(...freed('a second after going down')); report('shot off the wall (down)', f); game.godMode = true; game.restartEncounter(); W.step(dt); for (const o of game.guards) { o.hold = true; o.char.pos = [38.5, 0, 1.5 + game.guards.indexOf(o) * 1.2]; o.char.update(0); } game.aiEnabled = false; }
   // a leaf flung into him: parked at the manager door's west jamb peeking (x 24.58), the leaf — authored ajar into the corridor — is kicked from inside the office
   // through the rest of its arc, which sweeps his spot: shoved west along the wall / off it — never into it; holding cleanly or let go cleanly
   { const f: string[] = []; for (const dd of game.doors.list) dd.reset(); const d = game.doors.byName('manager'); hold(24.3); input.keys.add('KeyD'); for (let i = 0; i < 60; i++) W.step(dt);
-    const w = game.player.wall; if (!w || Math.abs(game.player.char.posX - (game.doors.byName('manager').def.hinge[0] - 0.02 - PR)) > 0.02 || w.peek < 0.9) f.push(`staging: not peeking at the manager jamb (wall ${!!w}, x ${game.player.char.posX.toFixed(2)}, peek ${w?.peek.toFixed(2)})`);
+    const w = game.player.wall; if (!w || Math.abs(game.player.char.pos[0] - (game.doors.byName('manager').def.hinge[0] - 0.02 - PR)) > 0.02 || w.peek < 0.9) f.push(`staging: not peeking at the manager jamb (wall ${!!w}, x ${game.player.char.pos[0].toFixed(2)}, peek ${w?.peek.toFixed(2)})`);
     const p0 = v3.copy(game.player.char.pos); const watch = clipWatch(game); watch.frame(); game.doors.kickIn(d, [25.5, 0, 9.0], 10); let offAt = -1, maxOff = 0;
-    for (let i = 0; i < 120; i++) { W.step(dt); watch.frame(' (leaf)'); const ww = game.player.wall; if (ww) maxOff = Math.max(maxOff, game.player.char.posZ - 10.51); else if (offAt < 0) offAt = game.time; }
+    for (let i = 0; i < 120; i++) { W.step(dt); watch.frame(' (leaf)'); const ww = game.player.wall; if (ww) maxOff = Math.max(maxOff, game.player.char.pos[2] - 10.51); else if (offAt < 0) offAt = game.time; }
     input.keys.delete('KeyD');
     if (watch.bad()) f.push(watch.line()); if (game.player.wall) f.push(...wallCheck(game, { n: [0, 1], yawTol: 60 }).map(s => 'still holding but ' + s)); else f.push(...freed('leaf'));
     if (Math.abs(d.angle - d.maxA) < 0.05 && v3.distXZ(game.player.char.pos, p0) < 0.05 && game.player.wall) f.push(`staging: the leaf swung clean through to its stop without touching him (door at ${d.angle.toFixed(2)}, he has not moved)`);
-    report('the manager\'s door kicked through its arc onto him peeking at its jamb', f, `${offAt >= 0 ? `let go at +${(offAt - (game.time - 2)).toFixed(2)} s ("${game.messages.slice(-1).map((m: any) => m.text)}")` : `held on, moved ${v3.distXZ(game.player.char.pos, p0).toFixed(2)} m along, off the plane ≤ ${maxOff.toFixed(2)} m`}; door now ${d.angle.toFixed(2)} (stop ${d.maxA}); player at (${game.player.char.posX.toFixed(2)}, ${game.player.char.posZ.toFixed(2)})`); }
+    report('the manager\'s door kicked through its arc onto him peeking at its jamb', f, `${offAt >= 0 ? `let go at +${(offAt - (game.time - 2)).toFixed(2)} s ("${game.messages.slice(-1).map((m: any) => m.text)}")` : `held on, moved ${v3.distXZ(game.player.char.pos, p0).toFixed(2)} m along, off the plane ≤ ${maxOff.toFixed(2)} m`}; door now ${d.angle.toFixed(2)} (stop ${d.maxA}); player at (${game.player.char.pos[0].toFixed(2)}, ${game.player.char.pos[2].toFixed(2)})`); }
   // the same leaf with a man behind it: an alert man runs out of the office through the ajar door while Sam peeks at its jamb — his key holds the leaf, his shoulder bashes it, and a held leaf moves the player
   { const f: string[] = []; for (const dd of game.doors.list) dd.reset(); const d = game.doors.byName('manager'); game.clearAftermath(); game.resetGuards(); const gd = game.guards[0]; for (const o of game.guards.slice(1)) { o.hold = true; o.char.pos = [38.5, 0, 3 + game.guards.indexOf(o)]; o.char.update(0); } game.aiEnabled = false;
     hold(24.3); input.keys.add('KeyD'); for (let i = 0; i < 60; i++) W.step(dt);
-    if (!game.player.wall || Math.abs(game.player.char.posX - (game.doors.byName('manager').def.hinge[0] - 0.02 - PR)) > 0.02) f.push(`staging: not parked at the manager jamb (x ${game.player.char.posX.toFixed(2)})`);
+    if (!game.player.wall || Math.abs(game.player.char.pos[0] - (game.doors.byName('manager').def.hinge[0] - 0.02 - PR)) > 0.02) f.push(`staging: not parked at the manager jamb (x ${game.player.char.pos[0].toFixed(2)})`);
     const p0 = v3.copy(game.player.char.pos); const watch = clipWatch(game); watch.frame();
     gd.hold = false; gd.state = 'alert'; gd.awareness = 0; gd.char.pos = [25.6, 0, 8.3]; gd.char.vel = [0, 0, 0]; gd.char.bodyYaw = gd.char.aimYaw = 0; gd.path = []; gd.pathGoal = null; gd.char.update(0); gd.char.update(dt);
     gd.script = { goal: [25.4, 0, 12.9], speed: 2.7, upper: 'relaxed' };
     let offAt = -1, maxOff = 0, minD = 9;
-    for (let i = 0; i < 60 * 5; i++) { W.step(dt); watch.frame(' (man + leaf)'); minD = Math.min(minD, v3.distXZ(gd.char.pos, game.player.char.pos)); const ww = game.player.wall; if (ww) maxOff = Math.max(maxOff, game.player.char.posZ - 10.51); else if (offAt < 0) offAt = game.time; }
+    for (let i = 0; i < 60 * 5; i++) { W.step(dt); watch.frame(' (man + leaf)'); minD = Math.min(minD, v3.distXZ(gd.char.pos, game.player.char.pos)); const ww = game.player.wall; if (ww) maxOff = Math.max(maxOff, game.player.char.pos[2] - 10.51); else if (offAt < 0) offAt = game.time; }
     input.keys.delete('KeyD'); gd.script = null; gd.hold = true;
     if (watch.bad()) f.push(watch.line()); if (game.player.wall) f.push(...wallCheck(game, { n: [0, 1], yawTol: 60 }).map(s => 'holding afterwards but ' + s)); else f.push(...freed('man + leaf'));
-    if (!(v3.distXZ(gd.char.pos, [25.4, 0, 12.9]) < 0.8)) f.push(`the man never got out (now at (${gd.char.posX.toFixed(2)}, ${gd.char.posZ.toFixed(2)}), door ${d.angle.toFixed(2)})`);
-    report('an alert man runs out through the manager\'s door onto him peeking at its jamb', f, `${offAt >= 0 ? `let go ("${game.messages.slice(-1).map((m: any) => m.text)}")` : `held on, moved ${v3.distXZ(game.player.char.pos, p0).toFixed(2)} m, off the plane ≤ ${maxOff.toFixed(2)} m`}; door ${d.angle.toFixed(2)}; closest ${minD.toFixed(2)} m; player at (${game.player.char.posX.toFixed(2)}, ${game.player.char.posZ.toFixed(2)})`);
+    if (!(v3.distXZ(gd.char.pos, [25.4, 0, 12.9]) < 0.8)) f.push(`the man never got out (now at (${gd.char.pos[0].toFixed(2)}, ${gd.char.pos[2].toFixed(2)}), door ${d.angle.toFixed(2)})`);
+    report('an alert man runs out through the manager\'s door onto him peeking at its jamb', f, `${offAt >= 0 ? `let go ("${game.messages.slice(-1).map((m: any) => m.text)}")` : `held on, moved ${v3.distXZ(game.player.char.pos, p0).toFixed(2)} m, off the plane ≤ ${maxOff.toFixed(2)} m`}; door ${d.angle.toFixed(2)}; closest ${minD.toFixed(2)} m; player at (${game.player.char.pos[0].toFixed(2)}, ${game.player.char.pos[2].toFixed(2)})`);
     gd.char.pos = [38.5, 0, 1.5]; gd.char.update(0); }
   // a scripted man walking THROUGH his spot along the wall, and one brushing past a foot out: pushed along / held off then settling back — never into the wall; either still holding cleanly or let go cleanly
   for (const lane of [10.75, 11.05]) { const f: string[] = []; game.clearAftermath(); game.resetGuards(); const gd = game.guards[0]; for (const o of game.guards.slice(1)) { o.hold = true; o.char.pos = [38.5, 0, 3 + game.guards.indexOf(o)]; o.char.update(0); } game.aiEnabled = false;
@@ -1594,12 +1594,12 @@ async function wallSnapRelease() {
     gd.hold = false; gd.state = 'patrol'; gd.awareness = 0; gd.char.pos = [23.5, 0, lane]; gd.char.vel = [0, 0, 0]; gd.char.bodyYaw = gd.char.aimYaw = -Math.PI / 2; gd.path = []; gd.pathGoal = null; gd.char.update(0); gd.char.update(dt);
     gd.script = { goal: [16.0, 0, lane], speed: 1.3, upper: 'relaxed' };
     const watch = clipWatch(game); watch.frame(); let maxOff = 0, offAt = -1, minD = 9;
-    for (let i = 0; i < 60 * 8; i++) { W.step(dt); watch.frame(' (man)'); const w = game.player.wall; minD = Math.min(minD, v3.distXZ(gd.char.pos, game.player.char.pos)); if (w) maxOff = Math.max(maxOff, game.player.char.posZ - 10.51); else if (offAt < 0) offAt = game.time; }
+    for (let i = 0; i < 60 * 8; i++) { W.step(dt); watch.frame(' (man)'); const w = game.player.wall; minD = Math.min(minD, v3.distXZ(gd.char.pos, game.player.char.pos)); if (w) maxOff = Math.max(maxOff, game.player.char.pos[2] - 10.51); else if (offAt < 0) offAt = game.time; }
     gd.script = null; gd.hold = true;
     if (watch.bad()) f.push(watch.line()); if (minD > 0.9) f.push(`staging: the man never came within ${minD.toFixed(2)} m`);
     if (game.player.wall) { f.push(...wallCheck(game, { n: [0, 1] }).map(s => 'holding afterwards but ' + s)); } else f.push(...freed('man'));
-    if (!(v3.distXZ(gd.char.pos, [16, 0, lane]) < 0.8)) f.push(`the man never got past (now at (${gd.char.posX.toFixed(2)}, ${gd.char.posZ.toFixed(2)}))`);
-    report(`a scripted man walks west along z ${lane} ${lane < 10.9 ? 'THROUGH his spot' : 'brushing his shoulder'}`, f, `${game.player.wall ? `still holding, displaced ${v3.distXZ(game.player.char.pos, p0).toFixed(2)} m along, held off the plane ≤ ${maxOff.toFixed(2)} m` : `let go at ${offAt.toFixed(2)} s`}; closest ${minD.toFixed(2)} m; man got to (${gd.char.posX.toFixed(1)}, ${gd.char.posZ.toFixed(1)})`);
+    if (!(v3.distXZ(gd.char.pos, [16, 0, lane]) < 0.8)) f.push(`the man never got past (now at (${gd.char.pos[0].toFixed(2)}, ${gd.char.pos[2].toFixed(2)}))`);
+    report(`a scripted man walks west along z ${lane} ${lane < 10.9 ? 'THROUGH his spot' : 'brushing his shoulder'}`, f, `${game.player.wall ? `still holding, displaced ${v3.distXZ(game.player.char.pos, p0).toFixed(2)} m along, held off the plane ≤ ${maxOff.toFixed(2)} m` : `let go at ${offAt.toFixed(2)} s`}; closest ${minD.toFixed(2)} m; man got to (${gd.char.pos[0].toFixed(1)}, ${gd.char.pos[2].toFixed(1)})`);
     gd.char.pos = [38.5, 0, 1.5]; gd.char.update(0); }
   console.log(`=== wall-snap/release: ${allPass ? 'ALL PASS' : 'FAILURES above'} ===`);
   return allPass;
@@ -1630,7 +1630,7 @@ async function wallSnapSweep(hz = 60, opts: { verbose?: boolean } = {}) {
     const watch = clipWatch(game); watch.frame();
     for (let i = 0; i < Math.round(0.6 * hz); i++) { W.step(dt); watch.frame(' (settling)'); }
     const fails: string[] = [];
-    if (!game.player.wall) fails.push(`let go while settling: ${game.messages.slice(-1).map((m: any) => m.text)} (props within a metre: ${game.props.props.filter((pr: any) => Math.hypot(pr.x - game.player.char.posX, pr.z - game.player.char.posZ) < 1.0).map((pr: any) => `${pr.def.kind}@${pr.x.toFixed(2)},${pr.z.toFixed(2)}${Math.hypot(pr.x - pr.home[0], pr.z - pr.home[1]) > 0.05 ? ' (moved ' + Math.hypot(pr.x - pr.home[0], pr.z - pr.home[1]).toFixed(2) + ' m from home)' : ''}`).join(', ') || 'none'})`);
+    if (!game.player.wall) fails.push(`let go while settling: ${game.messages.slice(-1).map((m: any) => m.text)} (props within a metre: ${game.props.props.filter((pr: any) => Math.hypot(pr.x - game.player.char.pos[0], pr.z - game.player.char.pos[2]) < 1.0).map((pr: any) => `${pr.def.kind}@${pr.x.toFixed(2)},${pr.z.toFixed(2)}${Math.hypot(pr.x - pr.home[0], pr.z - pr.home[1]) > 0.05 ? ' (moved ' + Math.hypot(pr.x - pr.home[0], pr.z - pr.home[1]).toFixed(2) + ' m from home)' : ''}`).join(', ') || 'none'})`);
     else { fails.push(...wallCheck(game, { board: true })); if (v3.distXZ(game.player.char.pos, p0) > 0.35 + 0.7 + 0.05) fails.push(`carried ${v3.distXZ(game.player.char.pos, p0).toFixed(2)} m from where Q was pressed`); }
     let maxOff = 0;
     const alongZ = Math.abs(w0.n[0]) > Math.abs(w0.n[2]);   // the wall runs along z (normal mostly ±x): W / S sidle, else D / A; then the key INTO the wall (nothing), last the key AWAY from it (lets go — allowed, checked clean)
@@ -1640,7 +1640,7 @@ async function wallSnapSweep(hz = 60, opts: { verbose?: boolean } = {}) {
       if (ki === 2) for (let i = 0; i < Math.round(0.4 * hz); i++) { W.step(dt); watch.frame(' (coasting)'); }   // let the sidle's coast run out before judging the key INTO the wall
       const pk = v3.copy(game.player.char.pos);
       input.keys.add(kname);
-      for (let i = 0; i < Math.round(1.2 * hz); i++) { W.step(dt); watch.frame(` (${kname})`); const w = game.player.wall; if (!w) break; maxOff = Math.max(maxOff, game.player.char.posX * w.n[0] + game.player.char.posZ * w.n[2] - (w.d + 0.45)); }
+      for (let i = 0; i < Math.round(1.2 * hz); i++) { W.step(dt); watch.frame(` (${kname})`); const w = game.player.wall; if (!w) break; maxOff = Math.max(maxOff, game.player.char.pos[0] * w.n[0] + game.player.char.pos[2] * w.n[2] - (w.d + 0.45)); }
       input.keys.delete(kname);
       if (ki === 2 && (!game.player.wall || v3.distXZ(game.player.char.pos, pk) > 0.02)) fails.push(`${kname} (into the wall) ${game.player.wall ? `moved him ${v3.distXZ(game.player.char.pos, pk).toFixed(3)} m` : 'let go'}`);
       if (ki === 3 && game.player.wall && Math.abs(alongZ ? w0.n[0] : w0.n[2]) > 0.9) fails.push(`${kname} (away from the wall) held 1.2 s did not let go`);
@@ -1694,7 +1694,7 @@ async function wallPush() {
   const endState = (): string[] => {
     const f: string[] = []; const pl = game.player, c = pl.char, w = pl.wall;
     const q = v3.copy(c.pos); if (col.collideCircle(q, prAt(game, c.pos), 0.2, pl.crouch ? 1.0 : 1.7, 1) && v3.distXZ(q, c.pos) > 0.02) f.push(`${v3.distXZ(q, c.pos).toFixed(3)} m inside static geometry at the end`);
-    if (w) { const off = c.posX * w.n[0] + c.posZ * w.n[2] - (w.d + PR + 0.03); if (off < -0.07 || off > 0.27) f.push(`holding, but ${off.toFixed(3)} m off the plane`); if (c.anim.stance !== 'wall') f.push(`holding in stance '${c.anim.stance}'`); }
+    if (w) { const off = c.pos[0] * w.n[0] + c.pos[2] * w.n[2] - (w.d + PR + 0.03); if (off < -0.07 || off > 0.27) f.push(`holding, but ${off.toFixed(3)} m off the plane`); if (c.anim.stance !== 'wall') f.push(`holding in stance '${c.anim.stance}'`); }
     else { if (c.anim.stance !== 'none') f.push(`free but stance '${c.anim.stance}'`); if (Math.abs(c.anim.lookYawExtra) > 1e-6 || W.cam.peekOffset) f.push('free but the neck / camera still peeking'); }
     return f;
   };
@@ -1733,7 +1733,7 @@ async function wallPush() {
       const fails = judge(r, dt);
       if (!took && !/can't get to the wall|nothing to put your back/.test(line)) fails.push(`refused without a line (log: ${game.messages.map((m: any) => m.text).join(' | ') || 'empty'})`);
       if (took && r.dropped && !/can't get to the wall|pushed off the wall/.test(r.dropped)) fails.push(`let go without a line (${r.dropped})`);
-      report(`(a) @${hz} Q · ${c.note}`, fails, `${took ? (game.player.wall ? `holding at (${game.player.char.posX.toFixed(2)}, ${game.player.char.posZ.toFixed(2)}), ${v3.distXZ(game.player.char.pos, p0).toFixed(2)} m from the press` : `took hold, then let go: "${r.dropped}"`) : `refused: "${line}"`}; worst frame step ${r.worst.toFixed(3)} m (on the wall ${r.worstHeld.toFixed(3)}); fastest prop ${r.propV.toFixed(2)} m/s${r.propV > 0.05 ? ' (' + r.propWhich + ')' : ''}`);
+      report(`(a) @${hz} Q · ${c.note}`, fails, `${took ? (game.player.wall ? `holding at (${game.player.char.pos[0].toFixed(2)}, ${game.player.char.pos[2].toFixed(2)}), ${v3.distXZ(game.player.char.pos, p0).toFixed(2)} m from the press` : `took hold, then let go: "${r.dropped}"`) : `refused: "${line}"`}; worst frame step ${r.worst.toFixed(3)} m (on the wall ${r.worstHeld.toFixed(3)}); fastest prop ${r.propV.toFixed(2)} m/s${r.propV > 0.05 ? ' (' + r.propWhich + ')' : ''}`);
       if (game.player.wall) { input.pressed.add('KeyQ'); W.step(dt); }
     }
     // ---- (b) settled on the corridor's north wall (face z 10.06, station z 10.51), then shoved
@@ -1992,7 +1992,7 @@ async function aimDoor() {
     const shots = (W.audioCounts.get('pistolLoud') ?? 0) - shots0;
     const positive = c.expect === 'hit' ? firstHitAt >= 0 : enteredAt >= 0 || firstHitAt >= 0;   // (dark cases: in there with him — or already on him, which at arm's length he is even in the dark)
     const pass = maxPlantSeeing < 3 && maxAlertNearDoor < 3 && positive; allPass &&= pass;
-    console.log(`\n- ${pass ? 'PASS' : 'FAIL'} [${ci}] ${c.label}\n  Sam stood at (${sam[0].toFixed(2)}, ${sam[2].toFixed(2)})${reach ? '' : ' — NO NAV PATH from the guard to him'}; ${shots} rounds fired, ${hits} reached Sam${firstHitAt >= 0 ? ` (first at ${firstHitAt.toFixed(1)} s)` : ''}; states reached: ${[...stateAt.entries()].map(([s, t]) => `${s}@${t.toFixed(1)}s`).join(' ')}; entered the room: ${enteredAt >= 0 ? enteredAt.toFixed(1) + ' s' : 'never'}\n  longest spell alert + planted with eyes on Sam and nothing reaching him: ${maxPlantSeeing.toFixed(1)} s${maxPlantSeeing >= 3 ? ' ✗' : ''}; alert + planted within 2.2 m of the doorway with nothing reaching him: ${maxAlertNearDoor.toFixed(1)} s${maxAlertNearDoor >= 3 ? ' ✗' : ''}; planted in 'alert' without even firing: ${maxPlanted.toFixed(1)} s${positive ? '' : `; ✗ expected ${c.expect === 'hit' ? 'a round to reach Sam' : 'him inside the room'} and it never happened`}; ends ${gd.state} at (${gd.char.posX.toFixed(2)}, ${gd.char.posZ.toFixed(2)})`);
+    console.log(`\n- ${pass ? 'PASS' : 'FAIL'} [${ci}] ${c.label}\n  Sam stood at (${sam[0].toFixed(2)}, ${sam[2].toFixed(2)})${reach ? '' : ' — NO NAV PATH from the guard to him'}; ${shots} rounds fired, ${hits} reached Sam${firstHitAt >= 0 ? ` (first at ${firstHitAt.toFixed(1)} s)` : ''}; states reached: ${[...stateAt.entries()].map(([s, t]) => `${s}@${t.toFixed(1)}s`).join(' ')}; entered the room: ${enteredAt >= 0 ? enteredAt.toFixed(1) + ' s' : 'never'}\n  longest spell alert + planted with eyes on Sam and nothing reaching him: ${maxPlantSeeing.toFixed(1)} s${maxPlantSeeing >= 3 ? ' ✗' : ''}; alert + planted within 2.2 m of the doorway with nothing reaching him: ${maxAlertNearDoor.toFixed(1)} s${maxAlertNearDoor >= 3 ? ' ✗' : ''}; planted in 'alert' without even firing: ${maxPlanted.toFixed(1)} s${positive ? '' : `; ✗ expected ${c.expect === 'hit' ? 'a round to reach Sam' : 'him inside the room'} and it never happened`}; ends ${gd.state} at (${gd.char.pos[0].toFixed(2)}, ${gd.char.pos[2].toFixed(2)})`);
     console.log(rows.join('\n'));
   }
   console.log(`\n=== aim-door: ${allPass ? 'ALL PASS' : 'FAILURES above'} ===`);
@@ -2048,7 +2048,7 @@ async function aimDoorSweep() {
   console.log(`  ${configs} stagings, ${seenN} with Sam in plain sight inside 9 m, ${traps.length} of those with NO line of fire from where the man stands (${(100 * traps.length / Math.max(1, seenN)).toFixed(1)} %${unroutable ? `; ${unroutable} more with no route to him at all, left to door-rules` : ''}) — by door: ${[...new Set(traps.map(t => t.door))].map(n => `${n} ${traps.filter(t => t.door === n).length}`).join(', ')}`);
   // live: each trap from a fresh sighting, Sam lit and rooted where he is
   let pass = 0, fail = 0; const failures: string[] = []; let worstPlant = 0; const firstHits: number[] = []; let shotsTotal = 0, twistedShots = 0; let worstTwist = 0;
-  { const play = game.audio.play; game.audio.play = (n: string, ...rest: unknown[]) => { if (n === 'pistolLoud') { shotsTotal++; const tw = Math.abs(Math.atan2(Math.sin(gd.char.bodyYaw - gd.char.aimYaw), Math.cos(gd.char.bodyYaw - gd.char.aimYaw))); if (Math.hypot(gd.char.velX, gd.char.velZ) > 0.3) { worstTwist = Math.max(worstTwist, tw); if (tw > 0.9 + 1e-6) twistedShots++; } } return play(n, ...rest); }; }   // (7: moving = his feet actually carrying him this frame, not the walk-blend value easing out after he plants; read at the very moment the round leaves — fireWeapon plays the shot from inside the guard's update — so these are the yaws the fire gate saw)
+  { const play = game.audio.play; game.audio.play = (n: string, ...rest: unknown[]) => { if (n === 'pistolLoud') { shotsTotal++; const tw = Math.abs(Math.atan2(Math.sin(gd.char.bodyYaw - gd.char.aimYaw), Math.cos(gd.char.bodyYaw - gd.char.aimYaw))); if (Math.hypot(gd.char.vel[0], gd.char.vel[2]) > 0.3) { worstTwist = Math.max(worstTwist, tw); if (tw > 0.9 + 1e-6) twistedShots++; } } return play(n, ...rest); }; }   // (7: moving = his feet actually carrying him this frame, not the walk-blend value easing out after he plants; read at the very moment the round leaves — fireWeapon plays the shot from inside the guard's update — so these are the yaws the fire gate saw)
   for (const t of traps) {
     const d = game.doors.byName(t.door); const a = t.angle ?? d.def.angle ?? 0;
     for (const dd of game.doors.list) dd.reset();
@@ -2065,7 +2065,7 @@ async function aimDoorSweep() {
     }
     worstPlant = Math.max(worstPlant, maxPlant); if (firstHit >= 0) firstHits.push(firstHit);
     const ok = (firstHit >= 0 && firstHit < 5) || (maxPlant < 2.5 && ground > 1.0);   // a round on him inside five seconds — or, failing that, never planted with eyes on him AND actually on the move (a metre of ground: closing for a line, or in through the door after losing him) — not merely 'did nothing wrong standing still'
-    if (ok) pass++; else { fail++; if (failures.length < 12) failures.push(`${t.door} @ ${t.angle === null ? 'authored' : t.angle}: guard (${t.g[0].toFixed(2)}, ${t.g[2].toFixed(2)}) Sam (${t.s[0].toFixed(2)}, ${t.s[2].toFixed(2)}) — ${firstHit >= 0 ? `first hit ${firstHit.toFixed(1)} s` : 'nothing reached Sam in 6 s'}, planted seeing him ${maxPlant.toFixed(1)} s, covered ${ground.toFixed(1)} m, ends ${gd.state} at (${gd.char.posX.toFixed(2)}, ${gd.char.posZ.toFixed(2)}) spd ${gd.speed.toFixed(2)} path ${gd.pathI}/${gd.path.length}`); }
+    if (ok) pass++; else { fail++; if (failures.length < 12) failures.push(`${t.door} @ ${t.angle === null ? 'authored' : t.angle}: guard (${t.g[0].toFixed(2)}, ${t.g[2].toFixed(2)}) Sam (${t.s[0].toFixed(2)}, ${t.s[2].toFixed(2)}) — ${firstHit >= 0 ? `first hit ${firstHit.toFixed(1)} s` : 'nothing reached Sam in 6 s'}, planted seeing him ${maxPlant.toFixed(1)} s, covered ${ground.toFixed(1)} m, ends ${gd.state} at (${gd.char.pos[0].toFixed(2)}, ${gd.char.pos[2].toFixed(2)}) spd ${gd.speed.toFixed(2)} path ${gd.pathI}/${gd.path.length}`); }
   }
   game.puppet = null;
   firstHits.sort((x, y) => x - y); const med = firstHits.length ? firstHits[Math.floor(firstHits.length / 2)] : NaN; const p90 = firstHits.length ? firstHits[Math.floor(firstHits.length * 0.9)] : NaN; const mx = firstHits.length ? firstHits[firstHits.length - 1] : NaN;
@@ -2129,7 +2129,7 @@ async function aimDoorChase() {
       const tRef = c.holdLeaf ? samSet : samIn;   // from Sam being inside — or, for (c), from Sam being planted behind the latched leaf
       const hitAfter = tRef >= 0 ? hitTimes.find(h => h >= tRef) ?? -1 : -1;   // a round that tagged him on the corridor before the door was between them says nothing about the door
       const pass = tRef >= 0 && (!c.holdLeaf || shutAt >= 0) && ((guardIn >= tRef && guardIn - tRef < 8) || (hitAfter >= 0 && hitAfter - tRef < 8)); casePass &&= pass;
-      results.push(`    seed ${seed}: ${pass ? 'PASS' : 'FAIL'} — Sam inside at ${samIn >= 0 ? samIn.toFixed(1) + ' s' : 'never'}, door pulled to at ${shutAt >= 0 ? shutAt.toFixed(1) + ' s' : 'never'}${c.holdLeaf ? `, behind the latched leaf at ${samSet >= 0 ? samSet.toFixed(1) + ' s' : 'NEVER (staging)'}` : ''}; guard inside at ${guardIn >= 0 ? `${guardIn.toFixed(1)} s (+${(guardIn - tRef).toFixed(1)} s)` : 'NEVER'}; ${shots} rounds fired, ${hits} reached Sam${firstHit >= 0 ? ` (first at ${firstHit.toFixed(1)} s)` : ''}; longest spell planted alert on the corridor side of the doorway ${maxCover.toFixed(1)} s; ends ${gd.state} at (${gd.char.posX.toFixed(2)}, ${gd.char.posZ.toFixed(2)})`);
+      results.push(`    seed ${seed}: ${pass ? 'PASS' : 'FAIL'} — Sam inside at ${samIn >= 0 ? samIn.toFixed(1) + ' s' : 'never'}, door pulled to at ${shutAt >= 0 ? shutAt.toFixed(1) + ' s' : 'never'}${c.holdLeaf ? `, behind the latched leaf at ${samSet >= 0 ? samSet.toFixed(1) + ' s' : 'NEVER (staging)'}` : ''}; guard inside at ${guardIn >= 0 ? `${guardIn.toFixed(1)} s (+${(guardIn - tRef).toFixed(1)} s)` : 'NEVER'}; ${shots} rounds fired, ${hits} reached Sam${firstHit >= 0 ? ` (first at ${firstHit.toFixed(1)} s)` : ''}; longest spell planted alert on the corridor side of the doorway ${maxCover.toFixed(1)} s; ends ${gd.state} at (${gd.char.pos[0].toFixed(2)}, ${gd.char.pos[2].toFixed(2)})`);
       if (!firstRows.length) firstRows = rows;
     }
     allPass &&= casePass;
@@ -2167,7 +2167,7 @@ async function farRefix() {
     W.step(DT);
     closest = Math.min(closest, v3.distXZ(gd.char.pos, NEW));
     if (searchAt < 0 && gd.state !== 'alert') { searchAt = game.time - t0; searchPos = v3.copy(gd.char.pos); }
-    if (f % 60 === 59) rows.push(`    ${(game.time - t0).toFixed(0).padStart(3)}s ${gd.state.padEnd(6)} (${gd.char.posX.toFixed(1)}, ${gd.char.posZ.toFixed(1)}) fix (${gd.lastKnown?.[0].toFixed(1)}, ${gd.lastKnown?.[2].toFixed(1)}) best ${gd.alertBest > 1e8 ? '—' : gd.alertBest.toFixed(1)} stallT ${gd.alertStallT.toFixed(1)} spd ${gd.speed.toFixed(2)}`);
+    if (f % 60 === 59) rows.push(`    ${(game.time - t0).toFixed(0).padStart(3)}s ${gd.state.padEnd(6)} (${gd.char.pos[0].toFixed(1)}, ${gd.char.pos[2].toFixed(1)}) fix (${gd.lastKnown?.[0].toFixed(1)}, ${gd.lastKnown?.[2].toFixed(1)}) best ${gd.alertBest > 1e8 ? '—' : gd.alertBest.toFixed(1)} stallT ${gd.alertStallT.toFixed(1)} spd ${gd.speed.toFixed(2)}`);
   }
   const shortBy = searchPos ? v3.distXZ(searchPos, NEW) : closest;   // where he let the chase go (or how near he got if he never did)
   const pass = shortBy < 3;
@@ -2200,7 +2200,7 @@ async function doorRules() {
     placeGuard(gd, [30.6, 0, 11.83], game.player.char.pos); armAlert(gd, game, game.player.char.pos, 0, 0, 99); gd.pinned = true;
     stageLeaf(d, 0.08); d.closing = true;   // pulled to and all but home, off the latch: a full panel between them
     for (let i = 0; i < 30; i++) { gd.lastSeenT = game.time; W.step(DT); d.angle = 0.08; d.latched = false; d.place(); }   // (held there: aim comes up onto Sam through it)
-    const ax = Math.hypot(gd.char.muzzle[0] - game.player.char.posX, gd.char.muzzle[2] - game.player.char.posZ);
+    const ax = Math.hypot(gd.char.muzzle[0] - game.player.char.pos[0], gd.char.muzzle[2] - game.player.char.pos[2]);
     const chest = () => v3.add(game.player.char.pos, [0, 1.25, 0]);
     let shut = 0; for (let k = 0; k < 12; k++) { fireWeapon(game, gd.char, chest(), false); if (game.player.hitFlash > 0.99) shut++; game.player.hitFlash = 0; }
     stageLeaf(d, 1.35); let open = 0; for (let k = 0; k < 12; k++) { fireWeapon(game, gd.char, chest(), false); if (game.player.hitFlash > 0.99) open++; game.player.hitFlash = 0; }
@@ -2364,7 +2364,7 @@ async function wallShelfPop() {
     prev = v3.copy(p);
   }
   game.puppet = null; input.keys.delete('ShiftLeft');
-  console.log(`- ${!pop && phase === 'q' ? 'PASS' : 'FAIL'} — wedged at ${wedged || 'nowhere (the sprint never stuck: staging drifted)'}; ${pop ? 'POPPED ' + pop : `no pop, ends at (${game.player.char.posX.toFixed(2)}, ${game.player.char.posZ.toFixed(2)}) holding ${!!game.player.wall}`}`);
+  console.log(`- ${!pop && phase === 'q' ? 'PASS' : 'FAIL'} — wedged at ${wedged || 'nowhere (the sprint never stuck: staging drifted)'}; ${pop ? 'POPPED ' + pop : `no pop, ends at (${game.player.char.pos[0].toFixed(2)}, ${game.player.char.pos[2].toFixed(2)}) holding ${!!game.player.wall}`}`);
 }
 if (on('wall-shelf-pop', 'wall-snap', 'player', 'all')) await run('wall-shelf-pop', () => wallShelfPop());   // (green since the wall-hold lane's settle fix: in the wall-snap / player sets so it stays that way)
 // ---------------------------------------------------------------- Sam's low whistle, V (whistle-probes.ts): 'whistle' = the family; its keys / cooldown / meter card is the player-side set's business too
@@ -2873,6 +2873,8 @@ if (on('highlights', 'render', 'all')) await run('highlights', async () => (awai
 if (on('kept', 'render', 'all')) await run('kept', async () => (await import('./kept-check.ts')).keptCheck());   // how kept a place is, one word a level: the file's meta.kept, the page's rule, the weather's rules and a mark's old paint
 if (on('rolled', 'render', 'all')) await run('rolled', async () => (await import('./rolled-check.ts')).rolledCheck());   // a pressed thing's arrises are rolled and a lacquer mirrors more than paint: the stuff's two words, the look's rule, the reflection pass's coat
 if (on('lookcells', 'render', 'all')) await run('lookcells', async () => (await import('./lookcells-check.ts')).lookCellsCheck());   // a look map's lattices hash each cell once and root only the two nearest points: held to the plain nine-cell way, to the bit (render/lookTex.ts cells2; LOOKCELLS_BREAK=1 must fail)
+if (on('draworder', 'render', 'all')) await run('draworder', async () => (await import('./draworder-check.ts')).drawOrderCheck());   // the static boxes are handed to the g-buffer tops falling, so what lies under a thing is not shaded (scene/boxes.ts drawRank; DRAWORDER_BREAK=1 must fail)
+if (on('lookworkers', 'render', 'all')) await run('lookworkers', async () => (await import('./lookworkers-check.ts')).lookWorkersCheck());   // the look's maps on workers are the maps made on the page's own thread, to the byte, all thirty; a place with no worker, or a worker that fails, still gets its maps
 if (on('rainscale', 'weather', 'all')) await run('rainscale', async () => (await import('./rainscale-check.ts')).rainScaleCheck());   // a splash ring keeps its light at every zoom (the prelude's RAIN_SCALE, volumetrics.wgsl splashAt): the shader's own scalar lines run over a floor of rings as the pass's texel grows — close in unchanged, pulled back the same light a square metre, the floor constant, the boot flag (RAINSCALE_BREAK=1 must fail)
 if (on('wetground', 'weather', 'all')) await run('wetground', async () => (await import('./wetground-check.ts')).wetGroundCheck());   // what lies flat under open sky is wet while the ground is (src/game/wetGround.ts, a dressing step: slabs, finishes laid on them, sheets on those; a soaking thing takes no film; put back to the bit) — WETGROUND_BREAK=1 fails three
 if (on('ownroofs', 'weather', 'all')) await run('ownroofs', async () => (await import('./ownroofs-check.ts')).ownRoofsCheck());   // a level's own night storm rains by that level's own roofs, not the office's two rectangles (src/game/weather.ts syncRoofs, WX_OWN.roofs / ?ownroofs=0)

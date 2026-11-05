@@ -101,7 +101,7 @@ const hollowsOf = (b: Uint8Array) => { let s = 0; for (let i = 3; i < b.length; 
     'a paint worn dark in one piece (a trodden patch, a door\'s wear) is still its stuff, however dark it is worn; a worn colour whose numbers are another paint\'s own is still the paint it was worn from; a tone made by arithmetic alone, with nobody saying what it is a tone of, is nobody\'s paint',
     `${taken.length} pairs the colour rule confused, ${kept} now their own: ${taken.join(' · ')}`);
   // on a real level, through the real pack: the word above the finish, the finish under it, what moves, and a number that is the box's own
-  const { parseLevelData } = await import(`${ROOT}/src/scene/levelData.ts`), { loadLevel } = await import(`${ROOT}/src/scene/levelLoad.ts`), { standUp } = await import('./headless.ts'), { matWord, makeBox, MAT_STRIDE } = await import(`${ROOT}/src/scene/boxes.ts`);
+  const { parseLevelData } = await import(`${ROOT}/src/scene/levelData.ts`), { loadLevel } = await import(`${ROOT}/src/scene/levelLoad.ts`), { standUp } = await import('./headless.ts'), { matWord, makeBox, MAT_STRIDE, sentAlbedo } = await import(`${ROOT}/src/scene/boxes.ts`);
   const stand = async (file: string) => { const l0 = console.log, w0 = console.warn; console.log = console.warn = () => { };
     const W: any = await standUp({ level: loadLevel(parseLevelData(readFileSync(`${ROOT}/levels/${file}.json`, 'utf8'))), seed: 1 }); for (let i = 0; i < 4; i++) W.step(1 / 60);
     console.log = l0; console.warn = w0; return W; };
@@ -137,7 +137,7 @@ const hollowsOf = (b: Uint8Array) => { let s = 0; for (let i = 3; i < b.length; 
     const dryOf = (b: any) => BRK ? lookStuffOf(paintOf(b.albedo.map((v: number) => v * b.wetK))?.stuff) : dryWord.get(b);
     const wetStuff = wetOnly.filter(b => (dryWord.get(b) ?? 0) > 0), wetOff = wetOnly.filter(b => { const c = cls2(st2.indexOf(b)); return c !== dryOf(b) || c !== lookStuffOf(b.stuff); }).length;
     const bare = wetOnly.filter(b => lookStuffOf(b.stuff) === 0), bareGround = bare.filter(b => b.c[1] < 0).length, ground = wetOnly.filter(b => b.c[1] < 0).length;
-    const darker = wetOnly.filter(b => { const m = st2.indexOf(b) * MAT_STRIDE; return Math.abs(w2.matData[m] - b.albedo[0] * b.wetK) < 1e-4 && (b.metal ? b.wetK === 1 : b.wetK < 1); }).length;
+    const darker = wetOnly.filter(b => { const m = st2.indexOf(b) * MAT_STRIDE; return Math.abs(w2.matData[m] - sentAlbedo(b, 0)) < 1e-4 && (b.metal ? b.wetK === 1 : b.wetK < 1); }).length;
     const soaked = !!dry && lot.albedo.some((v: number, c: number) => Math.abs(v - dry[c]) > 0.01);
     check(li >= 0 && soaked && lot.stuff === 'gravel' && told === lookStuffOf('gravel') && wetStuff.length > 0 && ground > 0 && wetOff === 0 && bareGround === 0 && darker === wetOnly.length,
       'rain does not change what a thing is made of: the game\'s own weather darkens a gravel lot in place, and the lot is still gravel because it SAYS gravel (nobody is asked the paint it had dry: no colour is read); and each thing a picked rain wets for the picture alone is handed to the shader darker and carries the word it carried dry, the one it says; a wet thing of no stuff is a thing that says nothing laid on the ground, and never the ground itself',
@@ -182,7 +182,7 @@ const hollowsOf = (b: Uint8Array) => { let s = 0; for (let i = 3; i < b.length; 
     createCommandEncoder: () => ({ copyTextureToTexture: (_s: any, _d: any, size: number[]) => { copies++; copiedSlots = size[2]; }, finish: () => ({}) }),
     queue: { submit: () => { }, writeTexture: (t: any) => { if (t.mipLevel === 0 && t.texture.label === 'lookA') firstAt.push(yields); writes.push({ tex: t.texture.label, mip: t.mipLevel, layer: t.origin[2] }); }, writeBuffer: (b: any, _o: number, data: Float32Array) => { if (b.label === 'lookCfg') bufs.push(new Float32Array(data)); } } };
   let yields = 0; const firstAt: number[] = [];   // (how many messages the fill had waited on when each layer's first texel was written. A message is a task of its own in a browser: the card draws and a compiled pipeline lands before it. Counting the loop's turns from here says nothing under bun, which hands a port a thousand messages in one go)
-  const G: any = Object.create(GBuffer.prototype); G.device = dev; G.lookFillMs = 0; G.lookMen = [1, 0]; G.lookSlot = new Int8Array(LOOK_LAYERS).fill(-1); G.lookSlots = 0; G.lookSeenAt = -1; G.lookMips = 1; G.lookRoom = 1; G.lookEven = !BRK; G.lookJob = Promise.resolve(); G.lookMade = []; G.objBG = {};
+  const G: any = Object.create(GBuffer.prototype); G.device = dev; G.lookFillMs = 0; G.lookMen = [1, 0]; G.lookSlot = new Int8Array(LOOK_LAYERS).fill(-1); G.lookSlots = 0; G.lookSeenAt = -1; G.lookMips = 1; G.lookRoom = 1; G.lookEven = !BRK; G.lookJob = Promise.resolve(); G.lookMade = []; G.lookBy = { workers: 0, here: 0 }; G.objBG = {};
   lookForget(); G.makeLook();
   const atMake = writes.length, block = bufs[0]?.length ?? 0, first = bufs[0]?.slice(28, 30), slotsOf = (d: Float32Array | undefined) => d ? [...d.slice(32, 32 + LOOK_LAYERS)] : [];
   const src = readFileSync(`${ROOT}/src/render/shaders/look.wgsl`, 'utf8'), struct = /struct LookCfg \{([^}]*)\}/.exec(src)?.[1] ?? '', rows = (struct.match(/: vec4f/g) ?? []).length + Number(/array<vec4f, (\d+)>/.exec(struct)?.[1] ?? 0);

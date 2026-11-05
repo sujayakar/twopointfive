@@ -45,8 +45,8 @@ export async function samstunCheck(): Promise<boolean> {
   /** W held `n` frames with the trigger held: how far he went and the first frame a round left */
   const walkFire = (R: any, n: number, aim: number[], fire = true) => { const g = R.game, pl = g.player, p0 = [...pl.char.pos], r0 = pl.pistol.roundsReady; let fired = -1, moved = -1, stance = '';
     for (let i = 0; i < n; i++) { if (i === 10) stance = String(pl.char.anim.stance); R.W.cursorAt(aim); for (const k of ['KeyW']) R.input.keys.add(k); if (fire) { R.input.buttons |= 1; R.input.clicked |= 1; } R.step(); R.input.buttons = 0;
-      if (fired < 0 && pl.pistol.roundsReady < r0) fired = i / 60; if (moved < 0 && Math.hypot(pl.char.posX - p0[0], pl.char.posZ - p0[2]) > 0.05) moved = i / 60; }
-    R.input.keys.delete('KeyW'); return { fired, moved, stance, went: Math.hypot(pl.char.posX - p0[0], pl.char.posZ - p0[2]) }; };
+      if (fired < 0 && pl.pistol.roundsReady < r0) fired = i / 60; if (moved < 0 && Math.hypot(pl.char.pos[0] - p0[0], pl.char.pos[2] - p0[2]) > 0.05) moved = i / 60; }
+    R.input.keys.delete('KeyW'); return { fired, moved, stance, went: Math.hypot(pl.char.pos[0] - p0[0], pl.char.pos[2] - p0[2]) }; };
   const can = (g: any, at: number[], who: number, fight = false) => { const lv = g.fight.live; g.fight.live = fight; try { detonateStun(g, { kind: 'flash', pos: [at[0], 0.05, at[2]], who } as any); } finally { g.fight.live = lv; } };
   try {
     // (1) a frag in the wound band, both in the open at the same distance
@@ -65,7 +65,7 @@ export async function samstunCheck(): Promise<boolean> {
       if (!done) line(false, '(1) a frag in the wound band', 'no seed left both men wounded'); }
     // (2) a wall between
     { const R = await stand(44); const g = R.game, pl = g.player, gd = g.guards[0]; SAMSTUN.on = ON; const from = [P[0], 0.044 + FRAG.lift, P[2]]; const a = R.spot(P, 3.2, false); let b: number[] | null = null; const tried: number[][] = a ? [a] : [];
-      for (let k = 0; a && k < 40 && !b; k++) { const q = R.spot(P, 3.2 + (k % 4) * 0.6, false, tried); if (!q) continue; tried.push(q); sam(R, q, P); const c = pl.char; if (exposure(g, from, c.pos, c.bones.head ?? [c.posX, 1.65, c.posZ]) === 0 && exposure(g, [P[0], 0.05 + FRAG.lift, P[2]], c.pos, c.bones.head ?? [c.posX, 1.65, c.posZ]) === 0) b = q; }   // (a spot the standing model's head does not peek out of)
+      for (let k = 0; a && k < 40 && !b; k++) { const q = R.spot(P, 3.2 + (k % 4) * 0.6, false, tried); if (!q) continue; tried.push(q); sam(R, q, P); const c = pl.char; if (exposure(g, from, c.pos, c.bones.head ?? [c.pos[0], 1.65, c.pos[2]]) === 0 && exposure(g, [P[0], 0.05 + FRAG.lift, P[2]], c.pos, c.bones.head ?? [c.pos[0], 1.65, c.pos[2]]) === 0) b = q; }   // (a spot the standing model's head does not peek out of)
       if (!a || !b) line(false, '(2) a frag with a wall between', 'no covered spots found'); else { R.put(gd, a, P); sam(R, b, P); const n0 = FRAG_LOG.length; R.frag(P, 0.05); R.until(() => FRAG_LOG.length > n0, 1); R.step(2);
         line(gd.state !== 'dead' && !(gd.staggerUntil > g.time) && !(pl.staggerUntil > g.time) && !pl.down, '(2) the same frag with a wall between it and each of them: neither is touched', `guard ${gd.state}, folded ${f2(left(g, gd.staggerUntil))} s · Sam folded ${f2(left(g, pl.staggerUntil))} s`); } }
     // (3) a stun canister with a line to both, the night game's rule
@@ -77,10 +77,10 @@ export async function samstunCheck(): Promise<boolean> {
         const owed = (B.dazzleMin - B.dazzleSeconds) / B.dazzleRadius * (mg - ms);
         // the reticle: a man stood in plain view under the cursor is not taken while he is blind
         if (other) { R.put(other, [b[0] + (P[0] - b[0]) * 0.5, 0, b[2] + (P[2] - b[2]) * 0.5], b); other.dazzledUntil = -1; }
-        const tgt = other ? [other.char.posX, 1.2, other.char.posZ] : P; R.W.cursorAt(tgt); R.step(2); const snapBlind = g.aimGuard;
+        const tgt = other ? [other.char.pos[0], 1.2, other.char.pos[2]] : P; R.W.cursorAt(tgt); R.step(2); const snapBlind = g.aimGuard;
         const w = walkFire(R, 40, tgt, false);
-        SAMSTUN.blindRoots = true; const p1 = [...pl.char.pos]; R.step(15); const p2 = [...pl.char.pos]; R.input.keys.add('KeyW'); R.step(20); R.input.keys.delete('KeyW'); const held = Math.hypot(pl.char.posX - p2[0], pl.char.posZ - p2[2]); void p1; SAMSTUN.blindRoots = false;
-        R.until(() => samBlind(g) === 0, 8); R.W.cursorAt(other ? [other.char.posX, 1.2, other.char.posZ] : P); R.step(3); const snapAfter = g.aimGuard;
+        SAMSTUN.blindRoots = true; const p1 = [...pl.char.pos]; R.step(15); const p2 = [...pl.char.pos]; R.input.keys.add('KeyW'); R.step(20); R.input.keys.delete('KeyW'); const held = Math.hypot(pl.char.pos[0] - p2[0], pl.char.pos[2] - p2[2]); void p1; SAMSTUN.blindRoots = false;
+        R.until(() => samBlind(g) === 0, 8); R.W.cursorAt(other ? [other.char.pos[0], 1.2, other.char.pos[2]] : P); R.step(3); const snapAfter = g.aimGuard;
         line(Math.abs((dg - ds) - owed) < 0.03 && ds > fx.bang.dazzleMin && white === 1 && !fold && snapBlind === null && w.went > 0.3 && held < 0.05 && (!other || snapAfter === other),
           '(3) a stun canister 4 m off in plain view (the night game): the guard and Sam are blind for the same seconds; Sam\'s picture is white, the reticle takes nobody, his feet are his own (rooted with blindRoots), and the reticle is back when it clears',
           `guard ${f2(mg)} m: blind ${f2(dg)} s · Sam ${f2(ms)} m: ${f2(ds)} s (the distance owes ${f2(owed)} s) · white ${f2(white)} · folded ${fold} · reticle blind ${snapBlind ? snapBlind.callsign : 'nobody'} → after ${snapAfter ? snapAfter.callsign : 'nobody'} · walked ${f2(w.went)} m blind · with blindRoots ${f2(held)} m`); } }
@@ -106,7 +106,7 @@ export async function samstunCheck(): Promise<boolean> {
           `own can 4 m: Sam blind ${f2(own)} s, folded ${f2(ownFold)} s · the defender ${f2(defFar)} s, ${f2(defFold)} s (their distances owe ${f2(owedB)} / ${f2(owedF)} s) · a defender's can 4 m: Sam ${f2(theirs)} s, ${f2(theirFold)} s · ownSeen off: 4 m ${f2(oldFar)} s, ${f2(Math.hypot(near[0] - b[0], near[2] - b[2]))} m ${f2(oldNear)} s, folded ${f2(oldFold)} s`); } }
     // (6) the switch off
     { const R = await stand(48, true); const g = R.game, pl = g.player; SAMSTUN.on = false; sam(R, [P[0] - 6.5, 0, P[2]], P); R.step(2); can(g, [P[0] - 3, 0, P[2]], 1); const blind = left(g, pl.dazzledUntil);
-      const n0 = FRAG_LOG.length; R.frag([pl.char.posX + 1, 0, pl.char.posZ], 0.05); R.until(() => FRAG_LOG.length > n0, 1); const stamp = left(g, pl.staggerUntil); const w = walkFire(R, 60, [P[0], 0.1, P[2]]);
+      const n0 = FRAG_LOG.length; R.frag([pl.char.pos[0] + 1, 0, pl.char.pos[2]], 0.05); R.until(() => FRAG_LOG.length > n0, 1); const stamp = left(g, pl.staggerUntil); const w = walkFire(R, 60, [P[0], 0.1, P[2]]);
       line(blind === 0 && samBlind(g) === 0 && !samRooted(g) && stamp > 2 && w.moved >= 0 && w.moved < 0.3 && w.fired < 0, '(6) the switch off: a stun canister in plain view does nothing to him, and a frag a metre off (god mode) leaves his feet free — the trigger alone is dead, as FRAG.samStun has it',
         `blind ${f2(blind)} s · stagger stamp ${f2(stamp)} s read by nothing · first step after ${f2(w.moved)} s · round in the first second: ${w.fired >= 0}`); }
     // (7) a checkpoint keeps both
@@ -133,7 +133,7 @@ export async function samstunCheck(): Promise<boolean> {
     // own-side rule, and nothing at all where the entry spares its own men
     { const R = await stand(53); const g = R.game, pl = g.player, gd = g.guards[0]; SAMSTUN.on = ON; SAMSTUN.ownSeen = true; gd.team = 'operative';
       const B = fx.bang, at = [P[0], 0.05 + B.height, P[2]], from = [at[0], at[1] + 0.3, at[2]], over = [at[0], at[1] + FLASH.lift, at[2]];
-      const eyeOf = () => pl.char.bones.head ?? [pl.char.posX, 1.6, pl.char.posZ];
+      const eyeOf = () => pl.char.bones.head ?? [pl.char.pos[0], 1.6, pl.char.pos[2]];
       const b = R.spot(P, 4, true); let h: number[] | null = null; const tried: number[][] = b ? [b] : [];   // h: no line to the fireball, but he shares its air (the concussion's reach) and it is not on top of him
       for (let k = 0; b && k < 80 && !h; k++) { const q = R.spot(P, 2.9 + (k % 5) * 0.4, false, tried); if (!q) continue; tried.push(q); g.teleportPlayer([q[0], 0, q[2]]); R.step(3); const e = eyeOf();
         if (!g.col.segmentBlocked(from, e) || !g.col.segmentBlocked(over, e)) continue; const pr = g.col.sound.propagate(at, e); if (pr.muffle <= 0.6 && pr.pathLen <= FLASH.concussM && Math.hypot(e[0] - at[0], e[1] - at[1], e[2] - at[2]) > FLASH.ownM + 0.2) h = q; }
@@ -188,15 +188,15 @@ export async function samstunCheck(): Promise<boolean> {
           return { S, hidden: [CX - 0.5, 1.2, 8.4] as [number, number, number], seen: [CX - 4, 1.2, 11.2] as [number, number, number] }; };
         // parked, then folded, then the cursor round the corner
         const A = await park(); let g = A.S.g, pl = g.player, c = pl.char, w = pl.wall;
-        const stagedA = !!w && w.kind === 'stack' && w.atEdge === 1 && !(w.lean > 0); const xA = c.posX;
+        const stagedA = !!w && w.kind === 'stack' && w.atEdge === 1 && !(w.lean > 0); const xA = c.pos[0];
         staggerPlayer(g, 2, [1, 0, 0]); A.S.setCursor(A.hidden); let outF = 0, upF = 0, movedA = 0, nA = 0; const r0 = pl.rifle.roundsReady;
-        while (g.time + 0.05 < pl.staggerUntil && nA < 200) { if (nA % 20 === 10) A.S.click(); A.S.step(1); nA++; if (pl.wall?.lean > 0) outF++; if (c.anim.longStance === 'shoulder') upF++; movedA = Math.max(movedA, Math.abs(c.posX - xA)); }
+        while (g.time + 0.05 < pl.staggerUntil && nA < 200) { if (nA % 20 === 10) A.S.click(); A.S.step(1); nA++; if (pl.wall?.lean > 0) outF++; if (c.anim.longStance === 'shoulder') upF++; movedA = Math.max(movedA, Math.abs(c.pos[0] - xA)); }
         const firedA = r0 - pl.rifle.roundsReady; let outAfter = -1; A.S.step(60, (f: number) => { if (outAfter < 0 && pl.wall?.lean >= 1) outAfter = f; });
         // out round the corner first, then folded, then the cursor back in plain view
         const B = await park(); g = B.S.g; pl = g.player; c = pl.char; w = pl.wall; B.S.setCursor(B.hidden); B.S.step(40);
-        const stagedB = !!w && w.kind === 'stack' && w.lean >= 1; const xB = c.posX;
+        const stagedB = !!w && w.kind === 'stack' && w.lean >= 1; const xB = c.pos[0];
         staggerPlayer(g, 2, [1, 0, 0]); B.S.setCursor(B.seen); let inF = 0, upB = 0, movedB = 0, nB = 0;
-        while (g.time + 0.05 < pl.staggerUntil && nB < 200) { B.S.step(1); nB++; if (!(pl.wall?.lean >= 1)) inF++; if (nB > 12 && c.anim.longStance === 'shoulder') upB++; movedB = Math.max(movedB, Math.abs(c.posX - xB)); }   // (the rifle is given a fifth of a second to come down)
+        while (g.time + 0.05 < pl.staggerUntil && nB < 200) { B.S.step(1); nB++; if (!(pl.wall?.lean >= 1)) inF++; if (nB > 12 && c.anim.longStance === 'shoulder') upB++; movedB = Math.max(movedB, Math.abs(c.pos[0] - xB)); }   // (the rifle is given a fifth of a second to come down)
         let inAfter = -1; B.S.step(90, (f: number) => { if (inAfter < 0 && pl.wall && !(pl.wall.lean > 0)) inAfter = f; });
         line(stagedA && stagedB && outF === 0 && upF === 0 && movedA < 0.02 && firedA === 0 && outAfter >= 0 && inF === 0 && upB === 0 && movedB < 0.02 && inAfter >= 0,
           '(13) folded on the rifle stack: parked at an open corner, the cursor round it does not step him out and the rifle stays low, no round on a click; folded while out he stands where it caught him, rifle low; up again, he steps out / back in as the cursor says',

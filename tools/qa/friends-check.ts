@@ -32,9 +32,9 @@ export async function friendsCheck(): Promise<boolean> {
   const msgs: string[] = R.said;
   game.aiEnabled = false;   // (nobody's senses: the floor stays calm and the men stay where they are put)
   const mate = R.ops[0], other = R.ops[1], foe = R.hostiles.find((h: any) => h.state !== 'dead');
-  const chest = (gd: any): [number, number, number] => gd.char.bones.chest ?? [gd.char.posX, gd.char.posY + 1.2, gd.char.posZ];
+  const chest = (gd: any): [number, number, number] => gd.char.bones.chest ?? [gd.char.pos[0], gd.char.pos[1] + 1.2, gd.char.pos[2]];
   /** put a man somewhere and keep him there, facing `yaw` */
-  const put = (gd: any, p: number[], yaw = 0) => { gd.char.posX = p[0]; gd.char.posZ = p[2]; gd.char.velX = gd.char.velZ = 0; gd.char.bodyYaw = gd.char.aimYaw = yaw; };
+  const put = (gd: any, p: number[], yaw = 0) => { gd.char.pos[0] = p[0]; gd.char.pos[2] = p[2]; gd.char.vel[0] = gd.char.vel[2] = 0; gd.char.bodyYaw = gd.char.aimYaw = yaw; };
   // open floor: the middle aisle of the cubicles. Sam at A, the teammate 3 m east of him, the other teammate and the defender parked away
   const A = [15, 0, 17.6], B = [18, 0, 17.6], AWAY = [15, 0, 21.5], FOE = [12, 0, 17.6];
   const park: [any, number[]][] = [[mate, B], [other, AWAY]];
@@ -44,7 +44,7 @@ export async function friendsCheck(): Promise<boolean> {
   const idle = (n: number, click = false) => { for (let i = 0; i < n; i++) { hold(); W.cursorAt(aimAt as any); if (click && i === 0) input.clicked |= 1; R.step(); } };
   /** the gun's own heading come round to the cursor's bearing (a degree), or `max` frames: with the aim's weight on (aimweight.ts, the page's stand) a swing
    *  from one side to the other takes longer than the few frames an eased aim did, and a line asked mid-swing is asked of a gun that is not on it yet */
-  const settle = (max = 120) => { for (let i = 0; i < max; i++) { idle(1); const want = Math.atan2(aimAt[0] - c.posX, aimAt[2] - c.posZ); let d = c.aimYaw - want; d = Math.atan2(Math.sin(d), Math.cos(d)); if (Math.abs(d) < 0.0175) return i + 1; } return max; };
+  const settle = (max = 120) => { for (let i = 0; i < max; i++) { idle(1); const want = Math.atan2(aimAt[0] - c.pos[0], aimAt[2] - c.pos[2]); let d = c.aimYaw - want; d = Math.atan2(Math.sin(d), Math.cos(d)); if (Math.abs(d) < 0.0175) return i + 1; } return max; };
   game.teleportPlayer(A); idle(30);
   const rifleUp = () => { if (!pl.rifleUp) { input.pressed.add('Digit2'); idle(1); if (!pl.rifleUp) { input.pressed.add('KeyE'); idle(1); } idle(90); } };
   const pistolUp = () => { if (!pl.pistolUp) { input.pressed.add('Digit1'); idle(1); if (!pl.pistolUp) { input.pressed.add('KeyE'); idle(1); } idle(90); } };
@@ -59,7 +59,7 @@ export async function friendsCheck(): Promise<boolean> {
       line(lineOpen && on === null && snap === null && off === mate, 'the cursor on a teammate\'s chest: the reticle takes nobody and has no snap point; with the switch off it took him',
         `line to him open ${lineOpen} · on: aimGuard ${on ? on.callsign : 'none'}, snap ${snap ? 'set' : 'none'} · off: aimGuard ${off ? off.callsign : 'none'}`); }
     // (2) a defender is still the reticle's
-    { put(foe, FOE, 0); park.push([foe, FOE]); idle(4); aimAt = chest(foe); const open = !game.col.segmentBlocked([c.posX, 1.3, c.posZ], chest(foe));
+    { put(foe, FOE, 0); park.push([foe, FOE]); idle(4); aimAt = chest(foe); const open = !game.col.segmentBlocked([c.pos[0], 1.3, c.pos[2]], chest(foe));
       FRIENDS.noSnap = true; idle(4); const on = game.aimGuard; const living = game.guards.filter((g: any) => g.state !== 'dead'); const passed = living.filter((g: any) => friendNoSnap(g));
       FRIENDS.noSnap = false; idle(4); const off = game.aimGuard;
       line(open && on === foe && off === foe, 'the cursor on a defender he has a line to: the reticle takes him, switch on or off', `line open ${open} · on: ${on?.callsign ?? 'none'} · off: ${off?.callsign ?? 'none'}`);
@@ -73,7 +73,7 @@ export async function friendsCheck(): Promise<boolean> {
         'the rifle up, a teammate three metres ahead in its line, nobody in a fight: the low ready, and a click fires nothing and names him', `in a fight ${fight} · lowered ${low} · ${car} · rounds on the click ${fired} · the gun came round in ${swing} frames · ${JSON.stringify(msgs.slice(-2))}`); }
     // (4b) the cursor ON him: the free aim lands on the floor beyond him as the lens sees it, the gun's own line passes beside him — it is down all the same
     { calm(); aimAt = [A[0] + 0.5, 1.2, A[2] - 6]; idle(40); const up0 = !pl.friendLow; aimAt = chest(mate); idle(20); const low = pl.friendLow;
-      const dx = Math.sin(c.aimYaw), dz = Math.cos(c.aimYaw), h = mate.char.bones.hips ?? mate.char.pos, off = Math.abs((h[0] - c.posX) * dz - (h[2] - c.posZ) * dx);
+      const dx = Math.sin(c.aimYaw), dz = Math.cos(c.aimYaw), h = mate.char.bones.hips ?? mate.char.pos, off = Math.abs((h[0] - c.pos[0]) * dz - (h[2] - c.pos[2]) * dx);
       line(up0 && low && game.aimFriend === mate && game.aimGuard === null, 'the cursor on the teammate\'s body: known to be on him, no snap, and the gun is down though its own line passes beside him', `up before ${up0} · lowered ${low} · under the cursor ${game.aimFriend?.callsign ?? 'nobody'} · the gun's line passes ${off.toFixed(2)} m from his hips`); }
     // (5) the aim turned off him
     { calm(); aimAt = [A[0] + 0.5, 1.2, A[2] - 6]; let up = -1; for (let i = 0; i < 90 && up < 0; i++) { idle(1); if (!pl.friendLow) up = i; } idle(20); const car = carriage();

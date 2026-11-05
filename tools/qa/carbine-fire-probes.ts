@@ -56,7 +56,7 @@ async function stage(seed: number, range: number, o: { othersHear?: boolean; sup
   /** one frame; the rounds Reyes let go in it. Anything logged from INSIDE the step (game.say) belongs to frame `frame + 1` — the number this step's rounds get. */
   const step = (): Round[] => {
     pl.visibility = 0.9; pl.hitFlash = 0;
-    const aim: Vec3 = [pl.char.bones.spine2?.[0] ?? pl.char.posX, pl.char.posY + (pl.crouch ? 0.8 : 1.25), pl.char.bones.spine2?.[2] ?? pl.char.posZ];   // the alert branch's aim point on him this step (trunk at chest height, read before the step as the guard reads it: Sam stands still)
+    const aim: Vec3 = [pl.char.bones.spine2?.[0] ?? pl.char.pos[0], pl.char.pos[1] + (pl.crouch ? 0.8 : 1.25), pl.char.bones.spine2?.[2] ?? pl.char.pos[2]];   // the alert branch's aim point on him this step (trunk at chest height, read before the step as the guard reads it: Sam stands still)
     W.step(DT); frame++;
     const out: Round[] = [];
     for (const e of game.events) {
@@ -173,7 +173,7 @@ export async function carbineFire(verbose = process.argv.includes('--verbose')) 
   {
     const S = await stage(4702, 8); const { game, reyes, others } = S; const pl = game.player;
     const novak = others.find((o: any) => o.callsign === 'Novak') ?? others[0];
-    novak.hold = true; novak.pinned = false; novak.state = 'patrol'; novak.awareness = 0; place(novak, [pl.char.posX + 2.0, 0, 10.6], Math.PI / 2); novak.heardUpTo = 1e12; novak.dazzledUntil = 1e9;   // a calm, deaf, blind colleague two metres on past Sam by the north wall, his back to it all — well out of Reyes' line and its margins
+    novak.hold = true; novak.pinned = false; novak.state = 'patrol'; novak.awareness = 0; place(novak, [pl.char.pos[0] + 2.0, 0, 10.6], Math.PI / 2); novak.heardUpTo = 1e12; novak.dazzledUntil = 1e9;   // a calm, deaf, blind colleague two metres on past Sam by the north wall, his back to it all — well out of Reyes' line and its margins
     const fails: string[] = []; const notes: string[] = [];
     let grabbedAt = -1, leftAtGrab = -1, roundsBefore = 0, roundsAfter = 0, burstGoneAt = -1, tries = 0;
     for (let f = 0; f < 60 * 30 && grabbedAt < 0; f++) {

@@ -112,7 +112,7 @@ function nearLamp(t: LightTarget, legs: readonly RoundLeg[], slack: number): boo
  *  everybody else as it always passed through a colleague (discipline keeps those rounds in, not luck; Sam's own rounds pass through an operative the same way). */
 function aiWide(g: Game, sg: Guard | null, shooter: Character, def: WeaponDef): number {
   const tc = (sg ? foeChar(g, sg) : null) ?? g.player.char;   // (off the man he is firing at: Sam for the staff — the expression it always was — his hostile man for a unit)
-  const tv = Math.hypot(tc.velX, tc.velZ); const range = v3.dist(shooter.pos, tc.pos); const S = def.aiSpread;
+  const tv = Math.hypot(tc.vel[0], tc.vel[2]); const range = v3.dist(shooter.pos, tc.pos); const S = def.aiSpread;
   return S.base + Math.min(S.moveCap, tv * S.moveK) + Math.max(0, range - S.rangeFrom) * S.rangeK;
 }
 /** (the round's sparks, chips and dust are its shooter's doing — fogofwar.ts FOG.ours: a teammate's are drawn under the fog) */
@@ -193,7 +193,7 @@ function fireWeaponRaw(g: Game, shooter: Character, target: Vec3, isPlayer: bool
   /** where the round enters this man, in metres of its path, or −1 — one straight test as ever, or leg by leg through the glass */
   const scan = (c: Character, own = false): number => {   // (own, friendlyfire.ts: a man of the shooter's own side — the entering hit only, a muzzle past his shoulder is past him)
     if (!pen) return bodyHit(c, muzzle, dir, tHit, own ? false : contact);
-    for (let k = 0; k < pen.segs.length; k++) { const s = pen.segs[k]; if (s.t0 >= tHit) break; const t = bodyHit(c, s.o, s.d, Math.min(s.len, tHit - s.t0), k === 0 ? (own ? false : contact) : () => s.o[1] <= (c.bones.headTop?.[1] ?? c.posY + 1.8)); if (t >= 0) return s.t0 + t; }   // (a later leg born INSIDE a man — he stands against the far face of the pane — is in him there; not one born over his crown: bodyHit's contact column is padded for a muzzle pressed DOWN onto a crouched man, which a round off the glass is not)
+    for (let k = 0; k < pen.segs.length; k++) { const s = pen.segs[k]; if (s.t0 >= tHit) break; const t = bodyHit(c, s.o, s.d, Math.min(s.len, tHit - s.t0), k === 0 ? (own ? false : contact) : () => s.o[1] <= (c.bones.headTop?.[1] ?? c.pos[1] + 1.8)); if (t >= 0) return s.t0 + t; }   // (a later leg born INSIDE a man — he stands against the far face of the pane — is in him there; not one born over his crown: bodyHit's contact column is padded for a muzzle pressed DOWN onto a crouched man, which a round off the glass is not)
     return -1;
   };   // a contact shot (the muzzle already inside him, bodyHit) counts only with nothing solid nearer along the bore than his middle and no panel between the two chests
   // The man in Sam's arm (player.ts Hold — the human shield): a colleague's round meets whichever of the two bodies it reaches first (from in front of the pair that
@@ -415,7 +415,7 @@ export function killGuard(g: Game, gd: Guard, dir: Vec3, quiet = false, how: Dow
  *  offers no row for it). */
 export function dropFromHand(g: Game, c: Character, kind: 'torch' | DropKind, along: Vec3, dir: Vec3, suppressed = false, quiet = false, from?: Vec3): Item {
   const h = from ?? c.bones.handR ?? v3.add(c.pos, [0, 1.0, 0]);   // (`from`: a thing that was not in his hand — runner.ts, the sidearm off his thigh)
-  const v: Vec3 = [c.velX * 0.6 + dir[0] * 1.1 + (simRandom() - 0.5) * 0.6, 0.9 + simRandom() * 0.6, c.velZ * 0.6 + dir[2] * 1.1 + (simRandom() - 0.5) * 0.6];
+  const v: Vec3 = [c.vel[0] * 0.6 + dir[0] * 1.1 + (simRandom() - 0.5) * 0.6, 0.9 + simRandom() * 0.6, c.vel[2] * 0.6 + dir[2] * 1.1 + (simRandom() - 0.5) * 0.6];
   const it = g.items.spawn(kind, [h[0], Math.max(0.25, h[1]), h[2]], v, { who: c.id, fill: suppressed ? 1 : 0, heading: v3.yawOf(along), yaw: v3.yawOf(along), life: kind === 'torch' ? 90 : GUN_ITEM_LIFE });
   if (kind === 'rifle') { it.tumbleRate *= 0.55; it.spin *= 0.5; }   // 0.7 m and 2.7 kg of it: it turns over on the way down, it does not flick round like a pistol
   it.onBounce = (sp, p, g, it) => { if (sp < 0.7) return; g.audio.play('magDrop', p, Math.min(1, sp / 3) * (quiet ? 0.5 : 1), { rate: kind === 'pistol' ? 0.72 : kind === 'rifle' ? 0.6 : 0.85 }); if (!quiet && (it.clatters = (it.clatters ?? 0) + 1) <= 2) g.events.push({ kind: 'prop', pos: v3.copy(p), time: g.time, loud: false, level: Math.min(0.5, 0.2 + sp * 0.08), who: 0 }); };   // who 0: nobody living made it — a clatter the room cannot explain (a guard-attributed noise would be shrugged off)

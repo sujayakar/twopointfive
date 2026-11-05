@@ -49,14 +49,14 @@ export async function startleCheck(): Promise<boolean> {
     let vis = 0.02; const step = (n = 1, each?: () => void) => { for (let i = 0; i < n; i++) { g.player.visibility = vis; W.step(DT); each?.(); } };
     g.teleportPlayer(FAR); step(30);
     /** a free spot `m` metres in front of him with nothing between */
-    const ahead = (m: number): Vec3 => { const c = A.char, f = c.forward(); return [c.posX + f[0] * m, 0, c.posZ + f[2] * m]; };
+    const ahead = (m: number): Vec3 => { const c = A.char, f = c.forward(); return [c.pos[0] + f[0] * m, 0, c.pos[2] + f[2] * m]; };
     const light = () => { vis = 0.9; }, show = (m = 4) => { g.teleportPlayer(ahead(m)); light(); }, hide = () => { g.teleportPlayer(FAR); vis = 0.02; };
     return { W, g, A, step, show, light, hide, ahead };
   };
   type Run = { alertAt: number; upAt: number; roundAt: number; startAt: number; held: number; torchHeld: boolean; raisedEarly: boolean; movedInBeat: number; shown: number; saidIn: boolean; saidAt: number };
   /** Sam shown in front of him for `secs`: when he went to alert, when the gun was first up after that, his first round, and what the start held */
   const watch = (s: Awaited<ReturnType<typeof world>>, secs: number): Run => {
-    const { g, A } = s, c = A.char, t0 = g.time, n0 = A.weapon.shotsFired, p0: Vec3 = [c.posX, 0, c.posZ];
+    const { g, A } = s, c = A.char, t0 = g.time, n0 = A.weapon.shotsFired, p0: Vec3 = [c.pos[0], 0, c.pos[2]];
     const r: Run = { alertAt: NaN, upAt: NaN, roundAt: NaN, startAt: NaN, held: 0, torchHeld: true, raisedEarly: false, movedInBeat: 0, shown: 0, saidIn: false, saidAt: NaN };
     s.step(Math.round(secs * 60), () => {
       const t = g.time - t0, st = startled(g, A);
@@ -118,11 +118,11 @@ export async function startleCheck(): Promise<boolean> {
         for (const o of g.guards) if (o.team === 'operative') o.dazzledUntil = 1e9;
         let vis = 0.02; const step = (n = 1, each?: () => void) => { for (let i = 0; i < n; i++) { g.player.visibility = vis; W.step(DT); each?.(); } };
         g.teleportPlayer(FAR); step(20);
-        const men = g.guards.filter((x: any) => x.team === 'hostile' && x.state !== 'dead'), M = men[0], c = M.char, f = c.forward(), p0: Vec3 = [c.posX, 0, c.posZ];
-        const line2 = (q: number[]) => !g.col.segmentBlocked([c.posX, 1.6, c.posZ], [q[0], 1.2, q[2]]);
+        const men = g.guards.filter((x: any) => x.team === 'hostile' && x.state !== 'dead'), M = men[0], c = M.char, f = c.forward(), p0: Vec3 = [c.pos[0], 0, c.pos[2]];
+        const line2 = (q: number[]) => !g.col.segmentBlocked([c.pos[0], 1.6, c.pos[2]], [q[0], 1.2, q[2]]);
         const lone = !men.some((o: any) => o !== M && flat(o.char.pos, c.pos) < MORALE.aloneM && line2(o.char.pos));
-        if (mate) { const o = men[men.length - 1], q = ([[-f[2], f[0]], [f[2], -f[0]]] as const).map(([x, z]): Vec3 => [c.posX + x * 1.3, 0, c.posZ + z * 1.3]).find(line2)!; o.char.pos = q; o.char.vel = [0, 0, 0]; o.path = []; o.pathGoal = null; o.char.update(0); step(5); }
-        g.teleportPlayer([c.posX + f[0] * 3.5, 0, c.posZ + f[2] * 3.5]); vis = 1; const n0 = M.weapon.shotsFired; let started = false, far = 0, t0 = NaN, first = NaN;
+        if (mate) { const o = men[men.length - 1], q = ([[-f[2], f[0]], [f[2], -f[0]]] as const).map(([x, z]): Vec3 => [c.pos[0] + x * 1.3, 0, c.pos[2] + z * 1.3]).find(line2)!; o.char.pos = q; o.char.vel = [0, 0, 0]; o.path = []; o.pathGoal = null; o.char.update(0); step(5); }
+        g.teleportPlayer([c.pos[0] + f[0] * 3.5, 0, c.pos[2] + f[2] * 3.5]); vis = 1; const n0 = M.weapon.shotsFired; let started = false, far = 0, t0 = NaN, first = NaN;
         step(240, () => { if (startled(g, M)) { started = true; if (isNaN(t0)) t0 = g.time; } if (isNaN(first) && M.weapon.shotsFired > n0) first = g.time - t0; far = Math.max(far, flat(c.pos, p0)); });
         return { lone, started, far, first, rounds: M.weapon.shotsFired - n0, ran: STARTLE_STATS.ran, drew: STARTLE_STATS.drew, seen: STARTLE_STATS.seen };
       };
@@ -133,7 +133,7 @@ export async function startleCheck(): Promise<boolean> {
       MORALE.training = train0; MORALE.on = nerve0; }
     // …and a man on no post (the night staff): he turns and runs for cover with his hands down, and fights from there
     { MORALE.training = 'green'; MORALE.on = true; const s = await world(true), { g, A } = s, c = A.char; MORALE.training = 'green'; MORALE.on = true; A.hold = false;
-      const p0: Vec3 = [c.posX, 0, c.posZ], n0 = A.weapon.shotsFired; s.show(); let far = 0, runFor = 0, up = false, rounds = 0, ranAt = NaN;
+      const p0: Vec3 = [c.pos[0], 0, c.pos[2]], n0 = A.weapon.shotsFired; s.show(); let far = 0, runFor = 0, up = false, rounds = 0, ranAt = NaN;
       s.step(360, () => { if (STARTLE_STATS.ran && isNaN(ranAt)) ranAt = g.time; if (startleRunning(A)) { runFor += DT; if (c.anim.upper === 'aim') up = true; rounds = A.weapon.shotsFired - n0; } far = Math.max(far, flat(c.pos, p0)); });
       const off = MORALE.on; MORALE.on = false; const t = await world(true); MORALE.training = 'green'; t.A.hold = false; zero(); t.show(); t.step(240); const steady = STARTLE_STATS.ran === 0 && STARTLE_STATS.drew === 1;
       line(STARTLE_STATS.seen === 1 && !isNaN(ranAt) && far > 1.2 && runFor > 0.3 && !up && rounds === 0 && off && steady,

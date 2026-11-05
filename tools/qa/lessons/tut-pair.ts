@@ -27,7 +27,7 @@ const at = (p: ArrayLike<number>) => `${p[0].toFixed(1)}, ${p[2].toFixed(1)}`;
 const lit = (B: Bot) => B.g.player.visibility.toFixed(2);
 const mate = (B: Bot) => B.g.guards.find((x: any) => x.unit && x.team === 'operative');
 const man = (B: Bot, route: string) => B.g.guards.find((x: any) => !x.unit && B.g.level.routes[x.routeI]?.name === route);
-const chest = (h: any): number[] => [h.char.posX, 1.2, h.char.posZ];
+const chest = (h: any): number[] => [h.char.pos[0], 1.2, h.char.pos[2]];
 const under = (B: Bot): Target => B.g.orders.targetUnder(B.I, B.cam, B.W.canvas);
 const last = (B: Bot) => { const l = B.g.orders.log; return l.length ? l[l.length - 1] : null; };
 /** how many times the shift has had eyes on the pair so far (the chronicle's own rows) */
@@ -99,7 +99,7 @@ export const steps: Record<string, (B: Bot) => void> = {
   //  the two parts the pair's rules stand on, or the frozen run would be of a mission whose own line is false)
   crouch: B => { CLOSE.on = true; CLOSE.heldClicks = true; WORK.on = true; B.say(`  at the start: lit ${lit(B)}; the partner ${flat(mate(B).char.pos, B.pos()).toFixed(1)} m off`); B.crouch(true); },
   // a few strides in, the partner behind
-  lead: B => { const n0 = seen(B); B.go(TP.first, 20, { near: 0.3 }); together(B, 4.2, 20, 'follow to the first mark'); B.wait(0.5); B.say(`  on the first mark: lit ${lit(B)}; the partner at ${mate(B).char.posX.toFixed(1)}, ${mate(B).char.posZ.toFixed(1)} (${B.g.orders.statusOf(mate(B))})`);
+  lead: B => { const n0 = seen(B); B.go(TP.first, 20, { near: 0.3 }); together(B, 4.2, 20, 'follow to the first mark'); B.wait(0.5); B.say(`  on the first mark: lit ${lit(B)}; the partner at ${mate(B).char.pos[0].toFixed(1)}, ${mate(B).char.pos[2].toFixed(1)} (${B.g.orders.statusOf(mate(B))})`);
     if (!mate(B).char.anim.crouch) B.fail('the partner is on his feet behind a player who is low'); calm(B, n0, 'on the way to the first mark'); },
   // (one step: the order, then the line is what he is doing until he says "set")
   // (…and until the word is taught nothing on the floor names its key: the maintainer's play, "what is F here", was the key's mark by the partner at this step)
@@ -127,7 +127,7 @@ export const steps: Record<string, (B: Bot) => void> = {
   hands: B => { const b = man(B, 'near'), c = man(B, 'far');
     B.wait(REACT);
     if (!closeIn(B, b)) B.fail(`could not get behind the near man (${flat(B.pos(), b.char.pos).toFixed(2)} m off, ${b.state})`);
-    if (!tap(B, 'guard', 'grab', [b.char.posX, 1.35, b.char.posZ])) B.fail('no grab row behind the near man');
+    if (!tap(B, 'guard', 'grab', [b.char.pos[0], 1.35, b.char.pos[2]])) B.fail('no grab row behind the near man');
     const t0 = B.t();
     if (!B.until(() => c.state === 'dead', 15)) B.fail(`the grab did not send the partner (${B.g.orders.statusOf(mate(B))})`);
     B.say(`  the far man down ${(B.t() - t0).toFixed(1)} s after the grab; the near man ${B.g.player.holding ? 'in the arm' : `NOT held (${b.state})`}`);
@@ -141,7 +141,7 @@ export const steps: Record<string, (B: Bot) => void> = {
   hold: B => { const d = man(B, 'gate'), n0 = seen(B);
     if (!closeIn(B, d)) B.fail(`could not get behind the man at the far gate (${flat(B.pos(), d.char.pos).toFixed(2)} m off, he stands at ${at(d.char.pos)}, ${d.state})`);
     calm(B, n0, 'coming up behind the man at the far gate');
-    if (!tap(B, 'guard', 'grab', [d.char.posX, 1.35, d.char.posZ])) B.fail('no grab row behind the man at the far gate');
+    if (!tap(B, 'guard', 'grab', [d.char.pos[0], 1.35, d.char.pos[2]])) B.fail('no grab row behind the man at the far gate');
     if (!B.until(() => B.g.player.holding?.phase === 'held', 4)) B.fail('the grab did not take'); },
   ask: B => { const P = B.g.player; let n = 0;
     for (; n < 8 && !P.codes.has('pad_office'); n++) { if (!tap(B, 'held', 'question')) B.fail('no question row with a man held'); B.until(() => P.codes.has('pad_office'), 5); }

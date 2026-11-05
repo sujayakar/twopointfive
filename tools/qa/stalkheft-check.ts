@@ -40,13 +40,13 @@ async function world(heft: boolean) {
   for (const [i, gd] of rest.entries()) { gd.char.pos = [37.5, 0, 4.5 + i * 1.5]; gd.path = []; gd.pathGoal = null; gd.hold = true; gd.heardUpTo = 1e12; }
   A.char.pos = [...AT]; A.char.bodyYaw = A.char.aimYaw = EAST; A.char.vel = [0, 0, 0]; A.path = []; A.pathGoal = null; A.hold = true; A.pinned = true; A.awareness = 0; A.heardUpTo = 1e12;
   W.cam.yaw = 0; W.cam.rebuild?.(); g.teleportPlayer([AT[0] - 3.2, 0, AT[2]]); g.player.crouch = true;
-  const step = (n = 1) => { for (let i = 0; i < n; i++) { STALK.heft = heft; STALK.wide = true; A.char.vel = [0, 0, 0]; W.cursorAt([A.char.posX, 1.2, A.char.posZ]); W.step(DT); g.player.visibility = 0.02; } };
+  const step = (n = 1) => { for (let i = 0; i < n; i++) { STALK.heft = heft; STALK.wide = true; A.char.vel = [0, 0, 0]; W.cursorAt([A.char.pos[0], 1.2, A.char.pos[2]]); W.step(DT); g.player.visibility = 0.02; } };
   step(40);
-  const c = g.player.char, gap = () => Math.hypot(c.posX - A.char.posX, c.posZ - A.char.posZ);
+  const c = g.player.char, gap = () => Math.hypot(c.pos[0] - A.char.pos[0], c.pos[2] - A.char.pos[2]);
   /** his body this frame, along the way he is facing (`f`) and across it to his left (`l`): the feet's stride, the shoulders' turn, the hands' swing, the hips over his feet */
   const read = () => { const b = c.bones, fx = Math.sin(c.bodyYaw), fz = Math.cos(c.bodyYaw), lx = fz, lz = -fx, f = (p: number[]) => p[0] * fx + p[2] * fz, l = (p: number[]) => p[0] * lx + p[2] * lz;
     const sL = b.upperArmL, sR = b.upperArmR, h = b.hips, hL = b.handL, hR = b.handR;
-    return { stride: f(b.footL) - f(b.footR), turn: Math.atan2(f(sL) - f(sR), l(sL) - l(sR)) * 180 / Math.PI, swing: (f(hL) - f(hR)), side: l(h) - (l(b.footL) + l(b.footR)) / 2, lift: b.footR[1] - b.footL[1], shoulder: (sL[1] + sR[1]) / 2 - c.posY,
+    return { stride: f(b.footL) - f(b.footR), turn: Math.atan2(f(sL) - f(sR), l(sL) - l(sR)) * 180 / Math.PI, swing: (f(hL) - f(hR)), side: l(h) - (l(b.footL) + l(b.footR)) / 2, lift: b.footR[1] - b.footL[1], shoulder: (sL[1] + sR[1]) / 2 - c.pos[1],
       hL: [hL[0] - h[0], hL[1] - h[1], hL[2] - h[2]], hR: [hR[0] - h[0], hR[1] - h[1], hR[2] - h[2]], footL: [...b.footL], footR: [...b.footR],
       ahead: Math.max(f(hL), f(hR)) - f(b.head), stretch: Math.max(Math.hypot(hL[0] - sL[0], hL[1] - sL[1], hL[2] - sL[2]) / (Math.hypot(b.forearmL[0] - sL[0], b.forearmL[1] - sL[1], b.forearmL[2] - sL[2]) + Math.hypot(hL[0] - b.forearmL[0], hL[1] - b.forearmL[1], hL[2] - b.forearmL[2])), Math.hypot(hR[0] - sR[0], hR[1] - sR[1], hR[2] - sR[2]) / (Math.hypot(b.forearmR[0] - sR[0], b.forearmR[1] - sR[1], b.forearmR[2] - sR[2]) + Math.hypot(hR[0] - b.forearmR[0], hR[1] - b.forearmR[1], hR[2] - b.forearmR[2]))) }; };
   return { W, g, A, c, step, gap, read };
@@ -54,7 +54,7 @@ async function world(heft: boolean) {
 /** the click held from 3.2 m all the way in to where he waits, a read of each frame he moves under 1.9 m */
 async function walk(heft: boolean) {
   const C = await world(heft), { W, c } = C, near: any[] = []; W.input.buttons |= 1; W.input.clicked |= 1; let throwM = 0, last: any = null, slip = 0, slipN = 0;
-  for (let i = 0; i < 1500; i++) { C.step(); W.input.clicked &= ~1; const r = C.read(), v = Math.hypot(c.velX, c.velZ); if (C.gap() < 1.9 && v > 0.03) near.push(r); if (C.gap() < 1.1 && v < 0.02) break;
+  for (let i = 0; i < 1500; i++) { C.step(); W.input.clicked &= ~1; const r = C.read(), v = Math.hypot(c.vel[0], c.vel[2]); if (C.gap() < 1.9 && v > 0.03) near.push(r); if (C.gap() < 1.1 && v < 0.02) break;
     if (last) { throwM = Math.max(throwM, Math.hypot(...(r.hL as number[]).map((x, k) => x - last.hL[k])), Math.hypot(...(r.hR as number[]).map((x, k) => x - last.hR[k])));
       for (const [now, was] of [[r.footL, last.footL], [r.footR, last.footR]] as number[][][]) if (now[1] < 0.14 && was[1] < 0.14) { const m = Math.hypot(now[0] - was[0], now[2] - was[2]); if (m < 0.02) { slip += m; slipN++; } } }
     last = r; }
@@ -96,7 +96,7 @@ async function moves() {
 async function grab() {
   console.log('\n=== grab: the key takes the man out of the stance ===');
   const go = async (heft: boolean) => { const C = await world(heft), { W, g, A } = C, c = g.player.char; W.input.buttons |= 1; W.input.clicked |= 1;
-    for (let n = 0; n < 1200; n++) { C.step(); W.input.clicked &= ~1; if (n > 30 && Math.hypot(c.velX, c.velZ) < 0.02 && C.gap() < 0.95) break; }
+    for (let n = 0; n < 1200; n++) { C.step(); W.input.clicked &= ~1; if (n > 30 && Math.hypot(c.vel[0], c.vel[2]) < 0.02 && C.gap() < 0.95) break; }
     C.step(30); g.selectVerb('guard', 'grab'); W.input.pressed.add('Space'); let held = -1;
     for (let f = 1; f <= 90 && held < 0; f++) { C.step(); if (g.player.holding?.phase === 'held') held = f; }
     return { held, who: g.player.holding?.g === A }; };

@@ -152,14 +152,14 @@ function mateNearer(g: Game, gd: Guard, to: Vec3): boolean {
   const ux = dx / L, uz = dz / L, ap = (pl[0] - c[0]) * ux + (pl[2] - c[2]) * uz;
   for (const o of g.guards) {
     if (o === gd || o.state === 'dead' || o.team !== gd.team) continue;
-    const x = o.char.posX - c[0], z = o.char.posZ - c[2], a = x * ux + z * uz; if (a > 0.2 && a < ap && Math.abs(x * uz - z * ux) < SHOWWHY.mateHalf) return true;
+    const x = o.char.pos[0] - c[0], z = o.char.pos[2] - c[2], a = x * ux + z * uz; if (a > 0.2 && a < ap && Math.abs(x * uz - z * ux) < SHOWWHY.mateHalf) return true;
   }
   return false;
 }
 /** the side of his line to his man the player stands on: 1 his left, -1 his right (the way the wave sends him: the short way out) */
 function lineSide(g: Game, gd: Guard): 1 | -1 {
   const h = g.fight.opOf(gd)?.tgt, c = gd.char.pos, pl = g.player.char.pos; if (!h) return 1;
-  const dx = h.char.posX - c[0], dz = h.char.posZ - c[2];   // (his left of that line is (dz, -dx): the model's +x under a yaw of atan2(dx, dz))
+  const dx = h.char.pos[0] - c[0], dz = h.char.pos[2] - c[2];   // (his left of that line is (dz, -dx): the model's +x under a yaw of atan2(dx, dz))
   return ((pl[0] - c[0]) * dz - (pl[2] - c[2]) * dx) / Math.max(1e-3, Math.hypot(dx, dz)) >= -0.15 ? 1 : -1;   // (on the line itself, or a hand off it: the wide push out to his left, the one that reads from overhead)
 }
 /** a mate has "you're in my line." up as this rule's right now (one man says it; three at once is a chorus) */
@@ -191,7 +191,7 @@ function manAhead(op: DoorOp, gd: Guard): boolean {
   for (const o of op.men) {
     if (o === gd || o.state === 'dead') continue;
     const d = flat(c.pos, o.char.pos); if (d < 0.3 || d > K.squeezeReach || flat(o.char.pos, door) > d0 - 0.1) continue;
-    if (Math.abs(wrapAngle(Math.atan2(o.char.posX - c.posX, o.char.posZ - c.posZ) - c.bodyYaw)) < 1.0) return true;
+    if (Math.abs(wrapAngle(Math.atan2(o.char.pos[0] - c.pos[0], o.char.pos[2] - c.pos[2]) - c.bodyYaw)) < 1.0) return true;
   }
   return false;
 }
@@ -250,7 +250,7 @@ export function showWhyTick(g: Game): void {
     }
 
     // ---- DOOR (never in a fight: a man with somebody in his sights, or on a hot floor, has other things to say)
-    const heldNow = K.door && !A.arrived && !pl.down && doorwayHeldBy(g, gd) === 'Player' && Math.hypot(pl.char.velX, pl.char.velZ) < 0.6 && !g.fight.opOf(gd)?.tgt && !g.fight.hotFor(gd);   // (doorway.ts's own answer: the frame is the player's, and he stands in it)
+    const heldNow = K.door && !A.arrived && !pl.down && doorwayHeldBy(g, gd) === 'Player' && Math.hypot(pl.char.vel[0], pl.char.vel[2]) < 0.6 && !g.fight.opOf(gd)?.tgt && !g.fight.hotFor(gd);   // (doorway.ts's own answer: the frame is the player's, and he stands in it)
     if (heldNow) { if (t - M.doorSeenT > 0.3) { M.doorT0 = t; M.doorShown = false; } M.doorSeenT = t; }
     if (heldNow && !M.doorShown && t - M.doorT0 >= K.doorAfter && t >= M.doorT && c.anim.signalFree) {
       M.doorShown = true; M.doorT = t + K.doorEvery; sign(g, st, gd, 'door', 'go'); st.stats.ways++;

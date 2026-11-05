@@ -61,7 +61,7 @@ for (const F of faces.slice(0, 3)) { const S = await fresh(), g = S.g, O = g.ord
   for (const back of [1.0, 1.6, 2.4, 3.2, 4.2]) for (const lat of [3.5, -3.5, 4.5, -4.5, 2.6, -2.6, 5.5, -5.5, 1.5, -1.5, 0.4]) { const p = X.at(back, lat); if (nav.isBlocked(p[0], p[2]) || spots.some(s => flat(s, p) < 0.8)) continue;
     const path = nav.findPath(p, gate); if (!path || !path.length) continue; let len = 0, q = p; for (const w of path) { len += flat(q, w); q = w; } if (len < 9) spots.push(p); }
   if (spots.length < team.length + 1) { log(`    (${F.name}: no floor to put the team on that face — skipped)`); continue; }
-  team.forEach((gd, i) => { const p = spots[i]; gd.char.posX = p[0]; gd.char.posZ = p[2]; gd.char.vel = [0, 0, 0]; gd.path = []; gd.pathGoal = null; });
+  team.forEach((gd, i) => { const p = spots[i]; gd.char.pos[0] = p[0]; gd.char.pos[2] = p[2]; gd.char.vel = [0, 0, 0]; gd.path = []; gd.pathGoal = null; });
   await quiet(() => g.teleportPlayer(spots[team.length] as any));
   setLeaf(g, d, openAngles(d)[1] ?? openAngles(d)[0]); await quiet(() => S.step(20));
   const why = await quiet(() => D.order('openClear', team, d, F.side)); let ended = -1;
@@ -81,7 +81,7 @@ for (const F of faces.slice(0, 3)) { const S = await fresh(), g = S.g, O = g.ord
     const posts0 = O.stackPosts(d, F.side, team); if (!posts0) return 'no stack on a fresh level';
     const far = X.at(7, 0), away = nav.isBlocked(far[0], far[2]) ? nav.nearestFreePoint(far[0], far[2]) : far; if (!away) return 'no floor to stand Sam away on';
     await quiet(() => g.teleportPlayer([away[0], 0, away[2]] as any));
-    posts0.forEach((P: any, i: number) => { const gd = team[i]; gd.char.posX = P.pos[0]; gd.char.posZ = P.pos[2]; gd.char.vel = [0, 0, 0]; gd.path = []; gd.pathGoal = null; });
+    posts0.forEach((P: any, i: number) => { const gd = team[i]; gd.char.pos[0] = P.pos[0]; gd.char.pos[2] = P.pos[2]; gd.char.vel = [0, 0, 0]; gd.path = []; gd.pathGoal = null; });
     const w0 = await quiet(() => O.give('stack', { kind: 'door', at: [d.frameCentre[0], 0, d.frameCentre[2]], door: d, side: F.side }, 'all')); if (w0) return `the stack order was refused (${w0})`;
     await quiet(() => { for (let i = 0; i < 60 * 12 && !team.every(x => O.of(x)?.arrived); i++) S.step(1); });
     if (!team.every(x => O.of(x)?.arrived && O.of(x)?.post && flat(x.char.pos, O.of(x).post) < 0.3)) return 'the men did not settle on their marks';
@@ -102,7 +102,7 @@ for (const F of faces.slice(0, 3)) { const S = await fresh(), g = S.g, O = g.ord
     // Sam half a metre off each man's mark, every bearing with free floor that is not inside another man (nothing is stepped: his place is written, then asked about)
     for (let m = 0; m < team.length; m++) for (let k = 0; k < 16; k++) { const a = k * Math.PI / 8, p = [own[m][0] + Math.sin(a) * 0.5, 0, own[m][2] + Math.cos(a) * 0.5];
       if (nav.isBlocked(p[0], p[2]) || team.some((x, i) => i !== m && flat(x.char.pos, p) < 0.6)) continue;
-      g.player.char.posX = p[0]; g.player.char.posZ = p[2]; asks++;
+      g.player.char.pos[0] = p[0]; g.player.char.pos[2] = p[2]; asks++;
       rules(true, false); const off = D.stackPosts(d, F.side, team), soA = D.standoffPosts(d, F.side, team.length, team);
       rules(true, true); const on = D.stackPosts(d, F.side, team), soB = D.standoffPosts(d, F.side, team.length, team);
       if (onSam(own, off, p)) onSamOff++;

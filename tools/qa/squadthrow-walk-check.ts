@@ -47,7 +47,7 @@ export async function squadthrowWalkCheck(): Promise<boolean> {
     R.press(key); R.step(2);
     const man = R.team.find((m: any) => O.of(m)?.order === id), home = man ? [...man.char.pos] : [0, 0, 0], post = man ? [...O.of(man).post] : [0, 0, 0];
     const live = ST.squadThrowPlans(game), early = R.items(item).length, spentEarly = n0 - count(), saidGo = R.lines.slice(lines0).some((l: any) => /moving to throw/.test(l.text));
-    let maxV = 0; const thrown = R.until(() => { if (man) maxV = Math.max(maxV, Math.hypot(man.char.velX, man.char.velZ)); return SQUADTHROW_LOG.length > log0; }, 25);
+    let maxV = 0; const thrown = R.until(() => { if (man) maxV = Math.max(maxV, Math.hypot(man.char.vel[0], man.char.vel[2])); return SQUADTHROW_LOG.length > log0; }, 25);
     const L = SQUADTHROW_LOG[SQUADTHROW_LOG.length - 1], from = thrown ? dist(L.from, post) : NaN, after = ST.squadThrowPlans(game).length, spent = n0 - count();
     const said = R.lines.slice(lines0).map((l: any) => `${l.who}: ${l.text}`).join(' / '), end = man ? [...man.char.pos] : [0, 0, 0];
     return { rows, row, pre, man, home, post, live, early, spentEarly, saidGo, thrown, L, from, after, spent, maxV, id, item, said, end };

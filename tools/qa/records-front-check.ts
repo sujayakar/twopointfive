@@ -71,7 +71,7 @@ const fail = (s: string) => { failed = true; console.log(`- FAIL — ${s}`); }, 
   else if (team.length !== 2) nov(`the scenario stood ${team.length} teammates, not the pair`);
   else {
     const th = d.def.closedDir, u = [Math.cos(th), Math.sin(th)], H = d.def.hinge, w = d.def.width, K = ORDERS;
-    const cx = team.reduce((a: number, m: any) => a + m.char.posX, 0) / 2 - d.frameCentre[0], cz = team.reduce((a: number, m: any) => a + m.char.posZ, 0) / 2 - d.frameCentre[2];
+    const cx = team.reduce((a: number, m: any) => a + m.char.pos[0], 0) / 2 - d.frameCentre[0], cz = team.reduce((a: number, m: any) => a + m.char.pos[2], 0) / 2 - d.frameCentre[2];
     const side: 1 | -1 = cx * -u[1] + cz * u[0] >= 0 ? 1 : -1, n = [-u[1] * side, u[0] * side];   // (the face the team starts on: the outside)
     const along = (p: number[]) => (p[0] - H[0]) * u[0] + (p[2] - H[1]) * u[1], offW = (p: number[]) => (p[0] - H[0]) * n[0] + (p[2] - H[1]) * n[1];
     const at = (a: number) => [H[0] + u[0] * a + n[0] * K.jambOut, 0, H[1] + u[1] * a + n[1] * K.jambOut];

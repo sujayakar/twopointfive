@@ -42,7 +42,7 @@ interface Out { ok: boolean; moved: number[]; movers: number; nearGoals: number;
 async function stand(scn: string, at: number[], on: boolean, hold = on && !HOLD_BREAK, corner: { door?: number[]; men: [number, number[]][] } | null = null): Promise<Out> {
   const R = await rig(scn, 5), g = R.game, O = R.O;
   DOORMANNERS.on = true; ORDERS.fileSpread = on; ORDERS.fileHold = hold; if (corner?.door) DOORSTAY.on = true;   // (after the stand-up: the frozen stand pins them off — and shuts a door behind the men, which the staged corner needs standing open)
-  for (const h of R.hostiles) if (h.state !== 'dead') R.put(h, [h.char.posX + 400, 0, h.char.posZ]);
+  for (const h of R.hostiles) if (h.state !== 'dead') R.put(h, [h.char.pos[0] + 400, 0, h.char.pos[2]]);
   R.gather(at, 20); R.step(600);
   if (corner) { const cd = corner.door; if (cd) for (const d of g.doors.list as any[]) if (flat(d.frameCentre, cd) < 0.5) { d.latched = false; d.angle = -1.92; }   // (the leaf as the page's own walk in leaves it)
     for (const [i, p] of corner.men) if (R.up[i]) R.put(R.up[i], p); R.step(600); }

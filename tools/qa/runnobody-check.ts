@@ -84,13 +84,13 @@ export async function runnobodyCheck(): Promise<boolean> {
         `a mate three metres from him with a line: not alone with the key off (${a.mate}), alone with it on (${!b.mate}) · beside a man who has NOT broken, the key on, he has his mate (${c.mate})`); }
     // ------------------------------------------------------------ bark
     { const bark = async (open: boolean) => { const s = await world(open), { g, A } = s; const t0 = A.sup.barkT, c = A.char;
-        for (let i = 0; i < 12; i++) { const C: Vec3 = c.bones.chest ?? [c.posX, c.posY + 1.1, c.posZ]; noteRound(g, g.player.char, [C[0] + 0.3, C[1], C[2] + 8], [C[0] + 0.3, C[1], C[2] - 6], null); s.step(6); }
+        for (let i = 0; i < 12; i++) { const C: Vec3 = c.bones.chest ?? [c.pos[0], c.pos[1] + 1.1, c.pos[2]]; noteRound(g, g.player.char, [C[0] + 0.3, C[1], C[2] + 8], [C[0] + 0.3, C[1], C[2] - 6], null); s.step(6); }
         s.step(120); return { barked: A.sup.barkT !== t0 || !!A.sup.pending, v: A.sup.v as number, mute: runnerMute(A) as boolean }; };
       const a = await bark(false), b = await bark(true);
       line(a.barked && !a.mute && !b.barked && b.mute, `twelve rounds a hand's breadth past his chest: with the key off he barks about the fire (${a.barked}); with it on he says nothing (${!b.barked})`); }
     // ------------------------------------------------------------ pinned (the mate's line, with him as the other man of the 'us')
     { const pinned = async (open: boolean) => { const s = await world(open), { g, A, B } = s; s.stand(B, MATE, HIS); B.hold = false; B.pinned = false; B.script = null; let us = false; const all = new Set<string>();
-        const past = (c: any) => { const C: Vec3 = c.bones.chest ?? [c.posX, c.posY + 1.1, c.posZ]; noteRound(g, g.player.char, [C[0] + 0.3, C[1], C[2] + 8], [C[0] + 0.3, C[1], C[2] - 6], null); };
+        const past = (c: any) => { const C: Vec3 = c.bones.chest ?? [c.pos[0], c.pos[1] + 1.1, c.pos[2]]; noteRound(g, g.player.char, [C[0] + 0.3, C[1], C[2] + 8], [C[0] + 0.3, C[1], C[2] - 6], null); };
         for (let i = 0; i < 30 && !us; i++) { past(A.char); past(B.char); s.step(4, () => { const b = B.bubble; if (b) { all.add(b.text); if (/got us pinned/.test(b.text)) us = true; } }); }
         return { us, bPinned: g.time - B.sup.pinnedAt < 60, aPinned: g.time - A.sup.pinnedAt < 60, all: [...all].join(' | ') }; };
       const a = await pinned(false), b = await pinned(true);

@@ -222,8 +222,8 @@ function scheduleTrip(g: Game, gd: Guard, M: NeedMem, kind: NeedKind, forced: bo
   const path = g.col.nav.findPath(c.pos, spot.pos, 6000);
   if (!path || !path.length) { const n = M.needs.find(x => x.kind === kind); if (n) n.level = 0; log(g, gd, `${kind}: no way to ${spot.name} from here — dropped`); return false; }
   // the way OUT: the bearing of the path's first stretch (a few metres along it, so a first node at his feet does not point him at the floor)
-  let q = path[0]; for (const p of path) { q = p; if (Math.hypot(p[0] - c.posX, p[2] - c.posZ) > 2.5) break; }
-  const outYaw = Math.atan2(q[0] - c.posX, q[2] - c.posZ);
+  let q = path[0]; for (const p of path) { q = p; if (Math.hypot(p[0] - c.pos[0], p[2] - c.pos[2]) > 2.5) break; }
+  const outYaw = Math.atan2(q[0] - c.pos[0], q[2] - c.pos[2]);
   const now = g.time; const F = floor(g);
   M.trip = { kind, spot, phase: 'telegraph', forced, t0: now, departAt: now + NEEDS.announceLead, leftAt: -1, arrivedAt: -1, dwellUntil: -1, backAt: -1, wp: gd.wp, outYaw,
     watched: false, told: false, partner: null, radio: false, replyAt: -1, replied: false, necked: false, loopI: -1, line: '', gapBefore: F.lastDepartAt };

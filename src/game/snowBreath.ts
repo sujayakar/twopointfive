@@ -135,7 +135,7 @@ function manOf(s: BreathState, c: Character): Man {
 function shows(g: Game, c: Character): boolean {
   if (!c.alive) return false;
   const h = c.bones.head; if (!h) return false;
-  if (h[1] - c.posY < SNOWBREATH.minHead) return false;
+  if (h[1] - c.pos[1] < SNOWBREATH.minHead) return false;
   return !g.weather?.underRoof(h[0], h[2]);
 }
 
@@ -169,13 +169,13 @@ export function updateSnowBreath(g: Game, dt: number) {
     const m = manOf(st, c); men++; m.at = st.tick;
     const h0 = H.men.get(c.id); if (h0) { if (h0.who === c) h0.at = st.tick; else H.men.delete(c.id); }   // (the book holds no man who is gone: a fresh man under an old id strikes the old row here, the rest are struck below)
     // his wind: up while he runs, back slowly once he stops
-    const sp = Math.hypot(c.velX, c.velZ);
+    const sp = Math.hypot(c.vel[0], c.vel[2]);
     const want = clamp((sp - K.runLo) / Math.max(0.01, K.runHi - K.runLo), 0, 1);
     m.effort = want > m.effort ? Math.min(want, m.effort + dt / Math.max(0.1, HB ? HB.up : K.effortUp)) : Math.max(want, m.effort - dt / Math.max(0.1, HB ? HB.down : K.effortDown));
     const every = Math.max(0.3, (K.every + ((HB ? HB.every : K.everyHard) - K.every) * m.effort) * m.pace * (0.9 + 0.2 * h01(st.seed, c.id, 16 + m.n)));
     m.shows = seen && shows(g, c); if (m.shows) shown++;
-    const inReach = steam && (!focus || Math.hypot(c.posX - focus[0], c.posZ - focus[2]) <= B.reach), near = inReach && m.shows;
-    if (near) { steaming++; if (B.wake > 0 && sp >= 0.25) g.smoke.push({ pos: c.bones.head!, dir: [c.velX / sp, 0.05, c.velZ / sp], speed: sp * 1.1, radius: B.wake, lattice: 'fine' }); }   // (a man walking through steam that hangs at head height stirs it: his hips and chest are Game.smokeWake's. The fine lattice alone — breath and gun gas: a canister's screen, which sight lines read, is shoved as it always was)
+    const inReach = steam && (!focus || Math.hypot(c.pos[0] - focus[0], c.pos[2] - focus[2]) <= B.reach), near = inReach && m.shows;
+    if (near) { steaming++; if (B.wake > 0 && sp >= 0.25) g.smoke.push({ pos: c.bones.head!, dir: [c.vel[0] / sp, 0.05, c.vel[2] / sp], speed: sp * 1.1, radius: B.wake, lattice: 'fine' }); }   // (a man walking through steam that hangs at head height stirs it: his hips and chest are Game.smokeWake's. The fine lattice alone — breath and gun gas: a canister's screen, which sight lines read, is shoved as it always was)
     // the rhythm runs whether or not it shows (a man who steps out from under a roof is in mid breath, not at the start of one)
     m.ph += dt / every;
     if (m.ph >= 1) { m.ph = m.ph >= 2 ? 0 : m.ph - 1; m.n++; m.of = m.left = Math.max(1, Math.round(K.puffs + (HB ? (HB.puffs - K.puffs) * m.effort : 0))); m.gap = 0; m.step = Math.min(K.out, every * 0.4) / m.left; if (m.shows) S.breaths++; }
@@ -196,7 +196,7 @@ export function updateSnowBreath(g: Game, dt: number) {
       const born = m.n, v = B.speed * jet, cv = carry * B.carryK;
       const at = (): { pos: Vec3; dir: Vec3 } | null => {
         if (!c.alive || !m.shows || m.n !== born || st.tick - m.at > 1 || states.get(g) !== st || E.hostBooks?.breath !== H || !SNOW_LOOK.steam) { if (hm.src === born) hm.src = -1; return null; }
-        const a = mouthOf(c); return { pos: a.pos, dir: [a.dir[0] * v + c.velX * cv, a.dir[1] * v, a.dir[2] * v + c.velZ * cv] };
+        const a = mouthOf(c); return { pos: a.pos, dir: [a.dir[0] * v + c.vel[0] * cv, a.dir[1] * v, a.dir[2] * v + c.vel[2] * cv] };
       };
       const a0 = at(); if (!a0) return;
       g.smoke.emit({ pos: a0.pos, dir: a0.dir, speed: Math.hypot(a0.dir[0], a0.dir[1], a0.dir[2]), radius: B.radius * Math.sqrt(hard), minVoxels: B.cells, density: B.density * hard, temperature: B.temp * hard,
@@ -208,7 +208,7 @@ export function updateSnowBreath(g: Game, dt: number) {
     const tail = 1 - 0.3 * (1 - (m.left + 1) / (HB ? m.of : Math.max(1, Math.round(K.puffs))));   // (the last of a breath leaves slower than the first)
     const n = P.emit('dust', a.pos, a.dir, Math.max(1, Math.round(K.count + (HB ? (HB.count - K.count) * m.effort : 0))), {
       shape: 'cone', speed: K.speed * tail * jet, speedJit: 0.35, spread: K.spread, life: K.life, lifeJit: K.lifeJit, size: K.size * hard, sizeJit: K.sizeJit, posJit: 0.012,
-      vadd: [c.velX * carry, 0, c.velZ * carry], owner: c.id, color: K.color, steam: clamp(K.opacity * hard, 0, 1), seed: recSeed(st, c.id, m.n, m.left) });
+      vadd: [c.vel[0] * carry, 0, c.vel[2] * carry], owner: c.id, color: K.color, steam: clamp(K.opacity * hard, 0, 1), seed: recSeed(st, c.id, m.n, m.left) });
     if (n > 0) { H.records++; H.births += n; H.by[c.id] = (H.by[c.id] ?? 0) + 1; }
   };
   one(g.player.char, true);

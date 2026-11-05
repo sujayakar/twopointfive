@@ -92,17 +92,17 @@ export function noShoveOwn(g: Game, dx: number, dz: number): [number, number] | 
 export function noShoveKeep(g: Game, gd: Guard, x0: number, z0: number, dt: number): boolean {
   if (!noShoveMan(g, gd)) return false;
   const K = NOSHOVE, c = gd.char, s = g.player.char.pos;
-  const x1 = c.posX, z1 = c.posZ, l1 = Math.hypot(x1 - s[0], z1 - s[2]); if (l1 >= K.ring) return false;
+  const x1 = c.pos[0], z1 = c.pos[2], l1 = Math.hypot(x1 - s[0], z1 - s[2]); if (l1 >= K.ring) return false;
   const bx = x0 - s[0], bz = z0 - s[2], l0 = Math.hypot(bx, bz);
   const settle = (min: number, back: [number, number]): boolean => {   // the walls have their say; left nearer the player than `min` by them, he is put at `back` (true)
-    c.pushOut(g.col, 0.2, 1.5);
-    if (Math.hypot(c.posX - s[0], c.posZ - s[2]) >= min - 1e-6) return false;
-    c.posX = back[0]; c.posZ = back[1]; return true; };
+    g.col.collideCircle(c.pos, c.radius, 0.2, 1.5);
+    if (Math.hypot(c.pos[0] - s[0], c.pos[2] - s[2]) >= min - 1e-6) return false;
+    c.pos[0] = back[0]; c.pos[2] = back[1]; return true; };
   const stand = (): true => { gd.speed = 0; c.vel = [0, 0, 0]; return true; };   // (held: his legs stop — a man walking on the spot wakes followPath's stuck side-step)
   if (l1 >= l0 - 1e-6) {   // not closing on him (standing, or on his way out): inside the player's own keep-off he steps back out
     if (l1 >= KEEP_OFF - 0.005) return false;
     const ux = l1 > 1e-4 ? (x1 - s[0]) / l1 : -Math.sin(c.bodyYaw), uz = l1 > 1e-4 ? (z1 - s[2]) / l1 : -Math.cos(c.bodyYaw), step = Math.min(KEEP_OFF - l1, K.back * dt);
-    c.posX += ux * step; c.posZ += uz * step; settle(l1, [x1, z1]); NOSHOVE_STATS.back++; return false;
+    c.pos[0] += ux * step; c.pos[2] += uz * step; settle(l1, [x1, z1]); NOSHOVE_STATS.back++; return false;
   }
   // closing on him inside the ring. A corner of his way that lies under the player is not walked to: the one after it, where that is a straight walk
   const under = (q: number[]) => Math.hypot(q[0] - s[0], q[2] - s[2]) < K.ring + 0.05;
@@ -115,8 +115,8 @@ export function noShoveKeep(g: Game, gd: Guard, x0: number, z0: number, dt: numb
   const fx = wp && wl > 0.3 ? (wp[0] - x0) / wl : mx / ml, fz = wp && wl > 0.3 ? (wp[2] - z0) / wl : mz / ml;   // the way he is going: the leg to his next corner (steady while he turns onto it), else this frame's step
   const rad = Math.min(K.ring, l0), ux = l0 > 1e-4 ? bx / l0 : -fx, uz = l0 > 1e-4 ? bz / l0 : -fz;   // (never nearer than he stood: the ring, for a man who came from outside it)
   const short = () => {   // held off: straight back out to where he may be
-    const l = Math.hypot(c.posX - s[0], c.posZ - s[2]), vx = l > 1e-4 ? (c.posX - s[0]) / l : ux, vz = l > 1e-4 ? (c.posZ - s[2]) / l : uz;
-    c.posX = s[0] + vx * rad; c.posZ = s[2] + vz * rad; settle(rad, [x0, z0]); NOSHOVE_STATS.short++; return stand(); };
+    const l = Math.hypot(c.pos[0] - s[0], c.pos[2] - s[2]), vx = l > 1e-4 ? (c.pos[0] - s[0]) / l : ux, vz = l > 1e-4 ? (c.pos[2] - s[2]) / l : uz;
+    c.pos[0] = s[0] + vx * rad; c.pos[2] = s[2] + vz * rad; settle(rad, [x0, z0]); NOSHOVE_STATS.short++; return stand(); };
   if (goal && Math.hypot(goal[0] - s[0], goal[2] - s[2]) < K.ring) return short();   // his place is where the player stands: he stops short of it
   if (wp && wp !== goal && under(wp)) return short();   // (a corner under the player that he cannot cut: he waits for it)
   // which side of the player he passes: the one his way already lies on (square on: his right), if his body has the room there — else the other
@@ -127,7 +127,7 @@ export function noShoveKeep(g: Game, gd: Guard, x0: number, z0: number, dt: numb
   const ahead = Math.max(0, -(ux * fx + uz * fz)); let dx = fx + fz * side * ahead, dz = fz - fx * side * ahead; const dl = Math.hypot(dx, dz) || 1;
   let qx = x0 + dx / dl * ml - s[0], qz = z0 + dz / dl * ml - s[2]; const ql = Math.hypot(qx, qz);
   if (ql < rad) { if (ql > 1e-4) { qx *= rad / ql; qz *= rad / ql; } else { qx = ux * rad; qz = uz * rad; } }
-  c.posX = s[0] + qx; c.posZ = s[2] + qz; NOSHOVE_STATS.round++;
+  c.pos[0] = s[0] + qx; c.pos[2] = s[2] + qz; NOSHOVE_STATS.round++;
   return settle(rad, K.through ? [x1, z1] : [x0, z0]) && !K.through && stand();   // (the walls eat the turn: he squeezes past after all — or stays)
 }
 

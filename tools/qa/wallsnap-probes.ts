@@ -71,12 +71,12 @@ async function take() {
     S.place(21, z, yaw);
     const p0 = v3.copy(c.pos), y0 = c.bodyYaw; const feet0 = { L: v3.copy(c.bones.footL), R: v3.copy(c.bones.footR) };
     let fp = { L: v3.copy(c.bones.footL), R: v3.copy(c.bones.footR) };
-    S.tap('KeyQ'); let frames = 0, first = 0, yawMid = 0, posMid = 0, firstMoveL = -1, firstMoveR = -1, prev = c.posZ, back = false; const T = { t: 0 };
+    S.tap('KeyQ'); let frames = 0, first = 0, yawMid = 0, posMid = 0, firstMoveL = -1, firstMoveR = -1, prev = c.pos[2], back = false; const T = { t: 0 };
     for (let f = 0; f < 40; f++) {
       S.step(1); const w = pl.wall; if (!w) { fails.push(`from z ${z} yaw ${yaw}: no hold`); break; }
-      if (f === 0) { T.t = w.takeT; first = Math.abs(c.posZ - p0[2]); }
-      if (c.posZ > prev + 1e-6) back = true; prev = c.posZ;
-      const dist = Math.abs(p0[2] - WALL.station) || 1, done = 1 - Math.abs(c.posZ - WALL.station) / dist, turn = Math.abs(w.yawD) > 1e-3 ? wrapA(c.bodyYaw - y0) / w.yawD : 1;
+      if (f === 0) { T.t = w.takeT; first = Math.abs(c.pos[2] - p0[2]); }
+      if (c.pos[2] > prev + 1e-6) back = true; prev = c.pos[2];
+      const dist = Math.abs(p0[2] - WALL.station) || 1, done = 1 - Math.abs(c.pos[2] - WALL.station) / dist, turn = Math.abs(w.yawD) > 1e-3 ? wrapA(c.bodyYaw - y0) / w.yawD : 1;
       if (w.settle < 1 && Math.abs(w.settle - 0.5) < 0.5 * DT / T.t + 1e-9) { yawMid = turn; posMid = done; }
       const mb = S.minBone(); if (mb.m < through) { through = mb.m; throughAt = `${mb.name} from z ${z} yaw ${yaw} f${f}`; }
       const mL = v3.distXZ(c.bones.footL, feet0.L), mR = v3.distXZ(c.bones.footR, feet0.R);
@@ -87,7 +87,7 @@ async function take() {
       fp = { L: v3.copy(c.bones.footL), R: v3.copy(c.bones.footR) };
       if (w.settle >= 1 && !frames) {
         frames = f + 1;
-        const offS = Math.abs(c.posZ - WALL.station), yawErr = Math.abs(wrapA(c.bodyYaw - 0)) / DEG;
+        const offS = Math.abs(c.pos[2] - WALL.station), yawErr = Math.abs(wrapA(c.bodyYaw - 0)) / DEG;
         if (offS > 0.005) fails.push(`from z ${z} yaw ${yaw}: ${f3(offS)} m off the station when the take ended`);
         if (yawErr > 1) fails.push(`from z ${z} yaw ${yaw}: back ${yawErr.toFixed(1)}° off square when the take ended`);
       }
@@ -148,7 +148,7 @@ async function reach() {
     S.place(RW.x, RW.z + 0.42 + 2.4, 180); S.keys('KeyW');
     let pressed = false, took = -1;
     for (let f = 0; f < 200 && took < 0; f++) {
-      if (!pressed && c.posZ - RW.z - 0.42 <= gap + lead * 1.55) { S.tap('KeyQ'); pressed = true; var at = c.posZ - RW.z - 0.42, f0 = f; }
+      if (!pressed && c.pos[2] - RW.z - 0.42 <= gap + lead * 1.55) { S.tap('KeyQ'); pressed = true; var at = c.pos[2] - RW.z - 0.42, f0 = f; }
       S.step(1); if (pressed && pl.wall) took = f - f0!;
       if (pressed && f - f0! > 30) break;
     }
@@ -178,15 +178,15 @@ async function reach() {
   // for the moment before it — when the beat ends there is no late hold and no late 'nothing to put your back to here'
   { const { startTakedown, startGrab, freeHeld } = await import(`${ROOT}/src/game/player.ts`);
     const stage = async (gz: number) => { const S = await world(true); const { pl, g, c } = S; S.place(RW.x, RW.z + 0.42 + 2.0, 180); S.keys('KeyW'); S.step(8); S.tap('KeyQ'); S.step(2);
-      const gd = g.guards[0]; gd.char.pos = [c.posX, 0, c.posZ + gz]; gd.char.bodyYaw = Math.PI; gd.char.update(0); return { S, pl, g, c, gd, m0: g.messages.length as number, early: !!pl.wall }; };
+      const gd = g.guards[0]; gd.char.pos = [c.pos[0], 0, c.pos[2] + gz]; gd.char.bodyYaw = Math.PI; gd.char.update(0); return { S, pl, g, c, gd, m0: g.messages.length as number, early: !!pl.wall }; };
     const late = (g: any, m0: number) => g.messages.slice(m0).map((m: any) => m.text as string).filter((t: string) => /put your back to|get to the wall/.test(t));
     { const { S, pl, g, gd, m0, early } = await stage(-0.8); startTakedown(g, gd); const began = !!pl.takedown; S.keys(); let over = -1, took = false;
       for (let f = 0; f < 90; f++) { S.step(1); if (over < 0 && !pl.takedown) over = f; if (pl.wall) took = true; }
       if (early || !began || over < 9) fails.push(`(staging) Q then a takedown: ${early ? 'the wall was taken at the key' : !began ? 'no takedown began' : `the takedown was over in ${over} frames, inside the buffer`}`);
       else if (took || late(g, m0).length) fails.push(`Q, then a takedown inside the buffer: ${took ? 'he took a wall' : `'${late(g, m0)[0]}' was said`} once the beat was over (${over} frames on: the buffer's clock stood still through it)`);
       else rows.push(`Q then a takedown (${over} frames): no late hold, no late line`); }
-    { const { S, pl, g, c, gd, m0, early } = await stage(-0.7); startGrab(g, gd); const began = !!pl.holding; S.keys('KeyW'); let f = 0; for (; f < 400 && c.posZ - RW.z > 0.75; f++) S.step(1);
-      S.keys(); S.step(20); const zOff = c.posZ - RW.z; if (pl.holding) freeHeld(g, 'cancel'); let took = false; for (let k = 0; k < 40; k++) { S.step(1); if (pl.wall) took = true; }
+    { const { S, pl, g, c, gd, m0, early } = await stage(-0.7); startGrab(g, gd); const began = !!pl.holding; S.keys('KeyW'); let f = 0; for (; f < 400 && c.pos[2] - RW.z > 0.75; f++) S.step(1);
+      S.keys(); S.step(20); const zOff = c.pos[2] - RW.z; if (pl.holding) freeHeld(g, 'cancel'); let took = false; for (let k = 0; k < 40; k++) { S.step(1); if (pl.wall) took = true; }
       if (early || !began || zOff > 0.75) fails.push(`(staging) Q then a man in his arm: ${early ? 'the wall was taken at the key' : !began ? 'no hold began' : `the pair stopped ${f2(zOff)} m off the wall`}`);
       else if (took || late(g, m0).length) fails.push(`Q, then a man taken in his arm inside the buffer, walked to ${f2(zOff)} m off the wall and let go ${f + 20} frames on: ${took ? 'he snapped to the wall' : `'${late(g, m0)[0]}' was said`} on the stale key`);
       else rows.push(`Q then a man in his arm, let go ${f2(zOff)} m off the wall ${f + 20} frames on: no late hold, no late line`); } }
@@ -202,7 +202,7 @@ async function offIt() {
   // Q, nothing held
   if (hold()) {
     const p0 = v3.copy(c.pos); S.tap('KeyQ'); let w9 = 1; S.step(40, f => { if (f === 9) w9 = c.anim.stance === 'none' ? stW() : 0; });   // (a stance another rule put him in meanwhile — the pistol lowered at the wall he turned to — is that rule's weight, not the wall pose's)
-    const d = v3.distXZ(c.pos, p0), dz = c.posZ - p0[2];
+    const d = v3.distXZ(c.pos, p0), dz = c.pos[2] - p0[2];
     if (pl.wall) fails.push('Q did not let go');
     if (!(d >= 0.02 && d <= 0.07 && dz > 0)) fails.push(`Q with nothing held moved him ${f3(d)} m (want 0.02‥0.07 off the plaster: he chose that shadow)`);
     if (w9 > wOut) fails.push(`the pose still at ${f2(w9)} ten frames after Q (want < ${wOut})`);
@@ -211,24 +211,24 @@ async function offIt() {
     rows.push(`Q, nothing held: ${f3(d)} m off the plaster, pose ${f2(w9)} at frame 10, pistol back in hand`);
   }
   // Q with a direction held along the wall: walking that frame
-  if (hold()) { S.keys('KeyD'); S.step(30); const v = Math.abs(pl.wall.v); S.tap('KeyQ'); S.step(1); const sp = Math.hypot(c.velX, c.velZ);
+  if (hold()) { S.keys('KeyD'); S.step(30); const v = Math.abs(pl.wall.v); S.tap('KeyQ'); S.step(1); const sp = Math.hypot(c.vel[0], c.vel[2]);
     if (pl.wall) fails.push('Q while sidling did not let go'); if (sp < Math.min(1.2, v - 0.05)) fails.push(`Q while sidling at ${f2(v)} m/s left him at ${f2(sp)} m/s (the momentum is kept)`);
     rows.push(`Q while sidling at ${f2(v)} m/s: ${f2(sp)} m/s the frame he lets go`); }
   // the stick square away
-  if (hold()) { S.keys('KeyS'); let at = -1, sp = 0; S.step(30, f => { if (at < 0 && !pl.wall) { at = f; sp = Math.hypot(c.velX, c.velZ); } });
+  if (hold()) { S.keys('KeyS'); let at = -1, sp = 0; S.step(30, f => { if (at < 0 && !pl.wall) { at = f; sp = Math.hypot(c.vel[0], c.vel[2]); } });
     if (at < 5 || at > 7) fails.push(`walking square away let go after ${at} frames (want 6 ± 1: a tenth of a second)`);
     if (sp < 1.2) fails.push(`…at ${f2(sp)} m/s (want ≥ 1.2: walking from the first frame)`);
     rows.push(`stick square away: off at frame ${at}, ${f2(sp)} m/s that frame`); }
   // a diagonal: a sidle, and it stays one (WALLSNAP.alongDeg: half the stick along the wall is a man moving along it) — with the rule off, the older answer: off in 0.18 s
-  if (hold()) { const x0 = c.posX; S.keys('KeyS', 'KeyD'); S.step(60);
-    if (!pl.wall) fails.push('a diagonal (half along, half away) let go of the wall: it sidles'); else if (Math.abs(c.posX - x0) < 0.8) fails.push(`a diagonal held a second moved him ${f2(Math.abs(c.posX - x0))} m along (want ≥ 0.8)`);
-    rows.push(`diagonal: still on the wall after a second, ${f2(Math.abs(c.posX - x0))} m along it`); }
+  if (hold()) { const x0 = c.pos[0]; S.keys('KeyS', 'KeyD'); S.step(60);
+    if (!pl.wall) fails.push('a diagonal (half along, half away) let go of the wall: it sidles'); else if (Math.abs(c.pos[0] - x0) < 0.8) fails.push(`a diagonal held a second moved him ${f2(Math.abs(c.pos[0] - x0))} m along (want ≥ 0.8)`);
+    rows.push(`diagonal: still on the wall after a second, ${f2(Math.abs(c.pos[0] - x0))} m along it`); }
   if (hold()) { const was = WALLSNAP.alongDeg; WALLSNAP.alongDeg = 0; S.keys('KeyS', 'KeyD'); let at = -1; S.step(30, f => { if (at < 0 && !pl.wall) at = f; }); WALLSNAP.alongDeg = was;
     if (at < 9 || at > 12) fails.push(`alongDeg 0, a diagonal away let go after ${at} frames (want 10‥12: 0.18 s, the rule as it was)`); rows.push(`alongDeg 0 (as it was), diagonal away: off at frame ${at}`); }
   // into the wall: nothing
-  if (hold()) { S.keys('KeyW'); S.step(40); if (!pl.wall) fails.push('pushing INTO the wall let go of it'); if (Math.abs(c.posZ - WALL.station) > 0.005) fails.push('pushing into the wall moved him'); }
+  if (hold()) { S.keys('KeyW'); S.step(40); if (!pl.wall) fails.push('pushing INTO the wall let go of it'); if (Math.abs(c.pos[2] - WALL.station) > 0.005) fails.push('pushing into the wall moved him'); }
   // breaking into a run
-  if (hold()) { S.keys('KeyS', 'ShiftLeft'); S.step(1); const sp = Math.hypot(c.velX, c.velZ); if (pl.wall) fails.push('Shift + a direction did not let go'); if (sp < 1.2) fails.push(`breaking into a run started at ${f2(sp)} m/s`); rows.push(`Shift + away: off that frame at ${f2(sp)} m/s`); }
+  if (hold()) { S.keys('KeyS', 'ShiftLeft'); S.step(1); const sp = Math.hypot(c.vel[0], c.vel[2]); if (pl.wall) fails.push('Shift + a direction did not let go'); if (sp < 1.2) fails.push(`breaking into a run started at ${f2(sp)} m/s`); rows.push(`Shift + away: off that frame at ${f2(sp)} m/s`); }
   S.keys();
   verdict(fails.length === 0, 'the way off keeps his momentum; Q alone leaves him where he chose to stand', fails.length ? fails.join('\n    ') : rows.join('\n    '));
 }
@@ -249,18 +249,18 @@ async function stack() {
   const along = Math.atan2(w.n[0], w.n[2]) - w.side * Math.PI / 2, yawErr = Math.abs(wrapA(c.bodyYaw - along)) / DEG;
   if (yawErr > 3) fails.push(`he faces ${yawErr.toFixed(1)}° off the wall's line`);
   if (w.side !== 1) fails.push(`he faces the lo end (side ${w.side}); he was facing the hi end when he took it`);
-  if (Math.abs(c.posZ - WALL.station) > 0.005) fails.push(`${f3(Math.abs(c.posZ - WALL.station))} m off the station`);
+  if (Math.abs(c.pos[2] - WALL.station) > 0.005) fails.push(`${f3(Math.abs(c.pos[2] - WALL.station))} m off the station`);
   if (through < -0.02) fails.push(`${tb} ${f3(-through)} m through the plaster`);
   const muz = S.off(c.muzzle); if (muz < 0.02) fails.push(`the muzzle is ${f3(muz)} m off the plane (in the wall)`);
   const sh = Math.min(S.off(c.bones.upperArmL), S.off(c.bones.upperArmR)); if (sh > 0.25) fails.push(`the wall-side shoulder is ${f2(sh)} m off the plaster (want ≤ 0.25: shoulder TO the wall)`);
   rows.push(`taken: stance stack · carriage lowLong · ${yawErr.toFixed(1)}° off the wall's line · lowest joint ${f3(through)} m (${tb}) · muzzle ${f2(muz)} m · wall-side shoulder ${f2(sh)} m off the plaster`);
   // walks along it the way he faces; turns about to go the other way
-  S.keys('KeyA'); S.setCursor(null); let vmax = 0; S.step(50, () => { vmax = Math.max(vmax, -c.velX); });
+  S.keys('KeyA'); S.setCursor(null); let vmax = 0; S.step(50, () => { vmax = Math.max(vmax, -c.vel[0]); });
   if (vmax < 1.2) fails.push(`walking along the wall he reached ${f2(vmax)} m/s (want the wall's pace, ≥ 1.2)`);
-  if (Math.abs(c.posZ - WALL.station) > 0.02) fails.push('he came off the plane walking along it');
+  if (Math.abs(c.pos[2] - WALL.station) > 0.02) fails.push('he came off the plane walking along it');
   if (pl.wall?.kind !== 'stack' || c.anim.longStance !== 'lowLong') fails.push('walking along it lost the stack / the low ready');
   // (his hips against his feet, in his body's own frame, frame to frame)
-  const hipOff = () => { const h = c.bones.hips, dx = h[0] - c.posX, dz = h[2] - c.posZ, cy = Math.cos(c.bodyYaw), sy = Math.sin(c.bodyYaw); return [dx * cy - dz * sy, dx * sy + dz * cy]; }; let hp = hipOff(), jump = 0;
+  const hipOff = () => { const h = c.bones.hips, dx = h[0] - c.pos[0], dz = h[2] - c.pos[2], cy = Math.cos(c.bodyYaw), sy = Math.sin(c.bodyYaw); return [dx * cy - dz * sy, dx * sy + dz * cy]; }; let hp = hipOff(), jump = 0;
   const watch = () => { const h = hipOff(); jump = Math.max(jump, Math.hypot(h[0] - hp[0], h[1] - hp[1])); hp = h; };
   S.keys('KeyD'); S.step(50, watch); const y2 = Math.abs(wrapA(c.bodyYaw - (Math.atan2(0, 1) + Math.PI / 2))) / DEG;
   if (pl.wall?.side !== -1 || y2 > 25) fails.push(`going the other way he did not turn about (side ${pl.wall?.side}, ${y2.toFixed(0)}° off)`);
@@ -271,9 +271,9 @@ async function stack() {
   // a click with a clear line: a round that frame, the rifle up; then back down
   S.place(21.5, 10.9, 270, 'rifle'); S.setCursor([15, 1.2, 10.9]); S.step(10); S.tap('KeyQ'); S.step(50);
   S.setCursor([21.5, 1.2, 11.9]);   // straight out into the corridor
-  S.step(20); const n0 = pl.rifle.roundsReady, lowH = c.muzzle[1] - c.posY; S.click();
+  S.step(20); const n0 = pl.rifle.roundsReady, lowH = c.muzzle[1] - c.pos[1]; S.click();
   let upAt = -1, downAt = -1, firedAt = -1, fireH = 0;
-  S.step(140, f => { if (firedAt < 0 && pl.rifle.roundsReady < n0) { firedAt = f; fireH = c.muzzle[1] - c.posY; } if (upAt < 0 && c.anim.longStance === 'shoulder') upAt = f; if (upAt >= 0 && downAt < 0 && c.anim.longStance === 'lowLong') downAt = f; });
+  S.step(140, f => { if (firedAt < 0 && pl.rifle.roundsReady < n0) { firedAt = f; fireH = c.muzzle[1] - c.pos[1]; } if (upAt < 0 && c.anim.longStance === 'shoulder') upAt = f; if (upAt >= 0 && downAt < 0 && c.anim.longStance === 'lowLong') downAt = f; });
   const fired = n0 - pl.rifle.roundsReady;
   if (fired !== 1) fails.push(`one click with a clear line fired ${fired} round(s)`);
   if (firedAt < 0 || firedAt > 11) fails.push(`the round left ${firedAt} frames after the click (want ≤ 11: the rise, a sixth of a second)`);
@@ -310,8 +310,8 @@ async function cover() {
   S.keys('KeyA'); S.step(60); S.keys(); S.step(20);
   const w = pl.wall;
   if (!w || w.kind !== 'stack') { verdict(false, 'cover at an open end', '(staging) no stack hold'); return; }
-  if (w.atEdge !== 1) { verdict(false, 'cover at an open end', `(staging) not parked at the open end (atEdge ${w.atEdge}, x ${f2(c.posX)})`); return; }
-  const x0 = c.posX;
+  if (w.atEdge !== 1) { verdict(false, 'cover at an open end', `(staging) not parked at the open end (atEdge ${w.atEdge}, x ${f2(c.pos[0])})`); return; }
+  const x0 = c.pos[0];
   // the cursor down the corridor, in plain view: he stays in
   S.setCursor([CX - 4, 1.2, 11.2]); S.step(40);
   if (w.lean > 0) fails.push('the cursor on a point in plain view stepped him out');
@@ -319,20 +319,20 @@ async function cover() {
   // line to it stays clear of the door's open leaf whatever the doorway's width (a point behind the leaf is one stepping out buys no line to: he stays in)
   const hidden: Vec3 = [CX - 0.5, 1.2, 8.4];
   S.setCursor(hidden); let outAt = -1, upAt = -1; S.step(40, f => { if (outAt < 0 && w.lean >= 1) outAt = f; if (upAt < 0 && c.anim.longStance === 'shoulder') upAt = f; });
-  const dx = x0 - c.posX;
+  const dx = x0 - c.pos[0];
   if (outAt < 0) fails.push('the cursor round the corner did not step him out');
   else if (outAt > 20) fails.push(`he was out after ${outAt} frames (want ≤ 20: 0.06 s dwell + 0.18 s)`);
   if (!(dx > 0.4 && dx < 0.7)) fails.push(`he stands ${f2(dx)} m past his station (want ~0.6)`);
   if (upAt < 0) fails.push('the rifle did not come up as he stepped out');
-  if (Math.abs(c.posZ - WALL.station) > 0.03) fails.push(`he came ${f3(Math.abs(c.posZ - WALL.station))} m off the wall's line stepping out`);
-  const sees = !g.col.shotBlocked([c.posX, 1.3, c.posZ], hidden); if (!sees) fails.push('stepped out, the point is still hidden from him');
+  if (Math.abs(c.pos[2] - WALL.station) > 0.03) fails.push(`he came ${f3(Math.abs(c.pos[2] - WALL.station))} m off the wall's line stepping out`);
+  const sees = !g.col.shotBlocked([c.pos[0], 1.3, c.pos[2]], hidden); if (!sees) fails.push('stepped out, the point is still hidden from him');
   const n0 = pl.rifle.roundsReady; S.step(10); S.click(); S.step(1); if (pl.rifle.roundsReady !== n0 - 1) fails.push('stepped out, a click fired nothing');
   rows.push(`cursor round the corner: out in ${outAt} frames, ${f2(dx)} m past his station, rifle up at frame ${upAt}, the point in view, a click fires`);
   // back in when the cursor returns — not during the beat after the round
   S.setCursor([CX - 4, 1.2, 11.2]); let inAt = -1; S.step(80, f => { if (inAt < 0 && w.lean <= 0) inAt = f; });
   if (inAt < 0) fails.push('the cursor back in plain view did not bring him in');
   else if (inAt < 24) fails.push(`he stepped back in ${inAt} frames after a round (want ≥ 0.4 s after it)`);
-  if (Math.abs(c.posX - x0) > 0.01) fails.push(`back in, he is ${f3(Math.abs(c.posX - x0))} m off the station he left`);
+  if (Math.abs(c.pos[0] - x0) > 0.01) fails.push(`back in, he is ${f3(Math.abs(c.pos[0] - x0))} m off the station he left`);
   if (!pl.wall) fails.push('stepping out and back took him off the wall');
   rows.push(`cursor back: in again after ${inAt} frames, on the station he left`);
   // the threshold: a cursor wobbling ±1° about the step-out angle must not flutter him
@@ -353,7 +353,7 @@ async function cover() {
     rows.push(`mouse held still over ${pts.length} points round the corner, 5 s each: changes ${out.join(' · ')}`); }
   // …AND WITH THE STEP CUT SHORT: a man standing just past the corner stops him part way. The camera gives back the step he really took, not the one he asked
   // for — given back whole, the look-at slid a tenth of a metre the other way and the point under a still mouse left the hidden side again, for ever
-  { const gd = g.guards[0], home: Vec3 = [...gd.char.pos] as Vec3, gp: Vec3 = [x0 - 0.75, 0, c.posZ], pin = () => { gd.char.pos = [...gp] as Vec3; gd.char.vel = [0, 0, 0]; }; const out: string[] = [];
+  { const gd = g.guards[0], home: Vec3 = [...gd.char.pos] as Vec3, gp: Vec3 = [x0 - 0.75, 0, c.pos[2]], pin = () => { gd.char.pos = [...gp] as Vec3; gd.char.vel = [0, 0, 0]; }; const out: string[] = [];
     const keep = [WALLSNAP.leanKeepDeg, WALLSNAP.leanKeepDist]; WALLSNAP.leanKeepDeg = 0; WALLSNAP.leanKeepDist = 0;   // (the limits' give would hide it at these points: this case is the camera's alone)
     for (const p of [[9.9, 1.2, 9.0], [10.2, 1.2, 7.65], [9.3, 1.2, 8.55]] as Vec3[]) {
       const r: Vec3 = [CX - 4, 1.2, 11.9]; S.setCursor(r); S.step(90, pin); if (w.lean > 0 || w.leanWant) { fails.push('(staging) not back in before a cut-short case'); break; }
@@ -427,12 +427,12 @@ async function duo() {
     if (order() !== 'fallIn') fails.push(`(staging) the partner's order is '${order()}', not fall in`);
     const sneak0 = SNM.sneaking(g, m);
     // ---- quiet: the take with him at Sam's shoulder
-    const said0 = R.said.length; tap('KeyQ'); let off = 0, near = Infinity; step(150, () => { if (pl.wall && pl.wall.settle >= 1) off = Math.max(off, Math.abs(c.posZ - WALL.station)); near = Math.min(near, flat(c.pos, m.char.pos)); });
+    const said0 = R.said.length; tap('KeyQ'); let off = 0, near = Infinity; step(150, () => { if (pl.wall && pl.wall.settle >= 1) off = Math.max(off, Math.abs(c.pos[2] - WALL.station)); near = Math.min(near, flat(c.pos, m.char.pos)); });
     if (!pl.wall) fails.push('with the partner following, Q took no hold');
     else { if (off > 0.01) fails.push(`on the wall with the partner beside him Sam was pushed ${f3(off)} m off his station`);
       if (near < 0.55) fails.push(`the partner stood ${f2(near)} m from Sam on the wall (inside his body)`);
       if (order() !== 'fallIn') fails.push(`taking the wall changed the partner's order to '${order()}'`);
-      const v = Math.hypot(m.char.velX, m.char.velZ); if (v > 0.2) fails.push(`2.5 s after the take the partner is still walking (${f2(v)} m/s): he never settles beside a man on a wall`);
+      const v = Math.hypot(m.char.vel[0], m.char.vel[2]); if (v > 0.2) fails.push(`2.5 s after the take the partner is still walking (${f2(v)} m/s): he never settles beside a man on a wall`);
       if (SNM.sneaking(g, m) !== sneak0) fails.push(`the sneak went ${sneak0 ? 'off' : 'on'} when Sam took the wall`);
       rows.push(`quiet take, partner following: on the station to ${f3(off)} m, the partner ${f2(flat(c.pos, m.char.pos))} m off and still, his order fall in, sneaking ${SNM.sneaking(g, m)}`); }
     // crouched on the wall, the partner goes low with him
@@ -441,8 +441,8 @@ async function duo() {
     if (pl.wall) { tap('KeyX'); step(3); const up = !!R.O.menu; tap('KeyX'); step(3); tap('KeyT'); step(3); tap('KeyT'); step(3); tap('KeyF'); step(3);
       if (!pl.wall) fails.push('X / T / F with the hold on took him off the wall'); if (!up) fails.push('X on the wall did not open the orders menu'); rows.push(`X opens the menu on the wall (${up}), T and F leave the hold alone`); }
     // sidling back at the partner (he stands up the corridor, +x): he lets Sam by or Sam stops against him — never off the plane, never through him
-    if (pl.wall) { const x0 = c.posX; keys('KeyD'); let offS = 0, nearS = Infinity; step(150, () => { if (pl.wall) offS = Math.max(offS, Math.abs(c.posZ - WALL.station)); nearS = Math.min(nearS, flat(c.pos, m.char.pos)); }); keys(); step(30);
-      const went = c.posX - x0;
+    if (pl.wall) { const x0 = c.pos[0]; keys('KeyD'); let offS = 0, nearS = Infinity; step(150, () => { if (pl.wall) offS = Math.max(offS, Math.abs(c.pos[2] - WALL.station)); nearS = Math.min(nearS, flat(c.pos, m.char.pos)); }); keys(); step(30);
+      const went = c.pos[0] - x0;
       if (!pl.wall) fails.push('sidling toward the partner took Sam off the wall');
       if (offS > 0.03) fails.push(`sidling past the partner Sam came ${f3(offS)} m off the plane`);
       if (nearS < 0.5) fails.push(`sidling at the partner Sam came within ${f2(nearS)} m of him (through him)`);
@@ -456,7 +456,7 @@ async function duo() {
     tap('KeyQ'); step(40); keys('KeyA'); step(70); keys(); step(40);
     const w = pl.wall;
     if (!w || w.kind !== 'stack' || w.atEdge !== 1) fails.push(`(staging) no stack parked at the doorway (kind ${w?.kind}, atEdge ${w?.atEdge})`);
-    else { cursor = [9.7, 1.2, 8.4]; let nearK = Infinity, offK = 0, inFront = 0; step(120, () => { nearK = Math.min(nearK, flat(c.pos, m.char.pos)); offK = Math.max(offK, Math.abs(c.posZ - WALL.station)); if (m.char.posX < c.posX - 0.2) inFront++; });
+    else { cursor = [9.7, 1.2, 8.4]; let nearK = Infinity, offK = 0, inFront = 0; step(120, () => { nearK = Math.min(nearK, flat(c.pos, m.char.pos)); offK = Math.max(offK, Math.abs(c.pos[2] - WALL.station)); if (m.char.pos[0] < c.pos[0] - 0.2) inFront++; });
       if (!(w.lean >= 1)) fails.push('with the partner behind him the cursor round the corner did not step Sam out');
       if (offK > 0.03) fails.push(`stepped out with the partner behind, Sam came ${f3(offK)} m off the plane`);
       if (nearK < 0.5) fails.push(`the partner came within ${f2(nearK)} m of Sam on the stack`);
@@ -485,9 +485,9 @@ async function camera() {
     const b = W.cam.planarBasis(); let mx = 0, mz = 0; for (const k of ks) { const s = k === 'KeyW' || k === 'KeyD' ? 1 : -1, v = k === 'KeyW' || k === 'KeyS' ? b.fwd : b.right; mx += s * v[0]; mz += s * v[2]; }
     const l = Math.hypot(mx, mz); mx /= l; mz /= l; const w = pl.wall, along = mx * w.along[0] + mz * w.along[2], away = mx * w.n[0] + mz * w.n[2];
     const deg = Math.acos(Math.min(1, Math.abs(along))) / DEG;   // the stick's angle off the wall's own line
-    const x0 = c.posX, z0 = c.posZ; S.keys(...ks); let offAt = -1; S.step(45, f => { cam(yaw); if (offAt < 0 && !pl.wall) offAt = f; }); S.keys();
+    const x0 = c.pos[0], z0 = c.pos[2]; S.keys(...ks); let offAt = -1; S.step(45, f => { cam(yaw); if (offAt < 0 && !pl.wall) offAt = f; }); S.keys();
     if (offAt >= 0) gotOff.set(hk, true);
-    const moved = (c.posX - x0) * w.along[0] + (c.posZ - z0) * w.along[2], tag = `${hk} ${ks.map(k => k[3]).join('+')} (${deg.toFixed(0)}° off the wall's line, ${away > 0 ? 'outward' : 'inward'})`;
+    const moved = (c.pos[0] - x0) * w.along[0] + (c.pos[2] - z0) * w.along[2], tag = `${hk} ${ks.map(k => k[3]).join('+')} (${deg.toFixed(0)}° off the wall's line, ${away > 0 ? 'outward' : 'inward'})`;
     if (Math.abs(deg - 55) < 3) continue;   // (on the boundary itself either answer is the rule's)
     if (deg < 55) { sidles++; if (offAt >= 0) { fails.push(`${tag}: let go after ${offAt} frames — it should sidle`); if (!worst) worst = tag; } else if (moved * Math.sign(along) < 0.5) fails.push(`${tag}: moved ${f2(moved)} m along in 0.75 s (want ≥ 0.5 the stick's way)`); }
     else if (away > 0) { offs++; if (offAt < 0 || offAt > 8) fails.push(`${tag}: ${offAt < 0 ? 'never let go' : `let go after ${offAt} frames`} (want within 8: a tenth of a second)`); }
@@ -503,7 +503,7 @@ async function camera() {
     S.place(21.5, 10.9, 180); S.tap('KeyQ'); S.step(40, () => cam(yaw)); const w = pl.wall; if (!w) continue;
     const along = mx * w.along[0] + mz * w.along[2], away = mx * w.n[0] + mz * w.n[2], deg = Math.acos(Math.min(1, Math.abs(along))) / DEG;
     if (!(away > 0.55 && deg > 35 && deg < 50)) { S.tap('KeyQ'); S.step(12); continue; }   // (only the outward diagonals: ~45° off the wall's line)
-    const u0 = c.posX * w.along[0] + c.posZ * w.along[2]; S.keys(...ks); let offAt = -1, uOff = 0; S.step(300, f => { cam(yaw); if (offAt < 0 && !pl.wall) { offAt = f; uOff = c.posX * w.along[0] + c.posZ * w.along[2]; } }); S.keys(); ends++;
+    const u0 = c.pos[0] * w.along[0] + c.pos[2] * w.along[2]; S.keys(...ks); let offAt = -1, uOff = 0; S.step(300, f => { cam(yaw); if (offAt < 0 && !pl.wall) { offAt = f; uOff = c.pos[0] * w.along[0] + c.pos[2] * w.along[2]; } }); S.keys(); ends++;
     const tag = `camera ${yaw}° ${ks.map(k => k[3]).join('+')} held from mid-run (an outward diagonal)`;
     if (offAt < 0) fails.push(`${tag}: parked at the end of the wall for five seconds — the diagonal should take him off round the corner`);
     else if (Math.abs(uOff - u0) < 1) fails.push(`${tag}: let go after ${f2(Math.abs(uOff - u0))} m (want it to sidle him to the end first)`);
@@ -550,8 +550,8 @@ async function kit() {
   } else fails.push('(staging) no back hold');
   if (hold('empty', 'pistol')) { want(press('KeyE'), 'E on the back hold, the pistol selected', 'back', false, /comes out when you leave the wall/); }
   if (hold('rifle')) { if (pl.wall.kind !== 'stack') fails.push('(staging) Q with the rifle up is not the stack');
-    const x0 = c.posX; S.keys('KeyD'); S.step(40); S.tap('Digit1'); let off = false; S.step(40, () => { off ||= !pl.wall; }); S.keys();
-    if (off || !pl.wall || pl.wall.kind === 'stack') fails.push(`1 pressed while walking the stack: ${off ? 'he came off the wall' : `hold '${pl.wall?.kind ?? 'back'}'`}`); else rows.push(`1 while walking the stack: stayed on, back hold, ${f2(Math.abs(c.posX - x0))} m along`); msgs.length = 0; }
+    const x0 = c.pos[0]; S.keys('KeyD'); S.step(40); S.tap('Digit1'); let off = false; S.step(40, () => { off ||= !pl.wall; }); S.keys();
+    if (off || !pl.wall || pl.wall.kind === 'stack') fails.push(`1 pressed while walking the stack: ${off ? 'he came off the wall' : `hold '${pl.wall?.kind ?? 'back'}'`}`); else rows.push(`1 while walking the stack: stayed on, back hold, ${f2(Math.abs(c.pos[0] - x0))} m along`); msgs.length = 0; }
   // 2 with the rifle already in his hands on the stack is still the attachment's key, and he stays put. With the gun's setup on (slotsetup.ts) that 2 opens the
   // setup and changes nothing, and 2 again inside it is the launcher's load: both presses leave him stacked where he stands
   if (hold('rifle')) { S.step(40); const a0 = pl.rifle.attIdx; const { SLOTSETUP } = await import(`${ROOT}/src/game/slotsetup.ts`);

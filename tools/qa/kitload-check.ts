@@ -121,11 +121,11 @@ async function walk(you: Record<string, unknown>, o: { sprint?: boolean; secs?: 
   R.step(20); R.W.input.keys.add('KeyW'); if (o.sprint) R.W.input.keys.add('ShiftLeft');
   let top = 0, first = NaN; const seen = new Set<any>();
   for (let f = 0; f < Math.round((o.secs ?? 1.5) / DT); f++) {
-    R.step(1); top = Math.max(top, Math.hypot(pl.char.velX, pl.char.velZ));
+    R.step(1); top = Math.max(top, Math.hypot(pl.char.vel[0], pl.char.vel[2]));
     for (const e of g.events) if (e.kind === 'step' && e.who === undefined && !seen.has(e)) { seen.add(e); if (!Number.isFinite(first)) first = e.level; }
   }
   R.W.input.keys.delete('KeyW'); R.W.input.keys.delete('ShiftLeft');
-  return { top, first, went: Math.hypot(pl.char.posX - from[0], pl.char.posZ - from[2]), digest: hashDigest(digestGame(g)) as string, load: pl.kitLoad as { mob: number; con: number } | null };
+  return { top, first, went: Math.hypot(pl.char.pos[0] - from[0], pl.char.pos[2] - from[2]), digest: hashDigest(digestGame(g)) as string, load: pl.kitLoad as { mob: number; con: number } | null };
 }
 export async function kitloadYou(): Promise<boolean> {
   const F = family('kitload-you: your card is your pace, your footfall and the notice you build');
@@ -169,7 +169,7 @@ export async function kitloadMates(): Promise<boolean> {
     // a path leg WALKED: the heavy man sent down a path at 2.0 m/s tops out at 2.0 × his factor — once, not twice
     { const to = foe.char.pos, was = [...heavy.char.pos]; let most = 0; Gd.goTo(g, heavy, to);
       await hushed(() => { for (let f = 0; f < 150 && heavy.pathI < heavy.path.length; f++) { Gd.followPath(g, heavy, DT, 2.0); most = Math.max(most, heavy.speed); } });
-      F.verdict(heavy.path.length > 0 && Math.abs(most - 2.0 * kh) < 0.04, 'the heavy man walked down a path asked at 2.0 m/s: his top speed is 2.0 × his factor — the card weighed once', `top ${f3(most)} m/s · his factor ×${f3(kh)} → ${f3(2.0 * kh)} (twice would be ${f3(2.0 * kh * kh)}) · ${f2(Math.hypot(heavy.char.posX - was[0], heavy.char.posZ - was[2]))} m walked`); }
+      F.verdict(heavy.path.length > 0 && Math.abs(most - 2.0 * kh) < 0.04, 'the heavy man walked down a path asked at 2.0 m/s: his top speed is 2.0 × his factor — the card weighed once', `top ${f3(most)} m/s · his factor ×${f3(kh)} → ${f3(2.0 * kh)} (twice would be ${f3(2.0 * kh * kh)}) · ${f2(Math.hypot(heavy.char.pos[0] - was[0], heavy.char.pos[2] - was[2]))} m walked`); }
     F.verdict((L.loadGait(g, light, 2.0 * kl) as number) <= 2 && (L.loadGait(g, light, 2.2 * kl) as number) > 2 && L.loadGait(g, foe, 2.0) === 2.0,
       'whether a step is a walk\'s or a run\'s is read off the pace he was asked for: the light man made quicker at the brisk walk (2.0) is not running; at 2.2 he is, as anybody', `his gait at ${f3(2.0 * kl)} m/s reads ${f3(L.loadGait(g, light, 2.0 * kl))} · at ${f3(2.2 * kl)}: ${f3(L.loadGait(g, light, 2.2 * kl))}`);
     const sl = L.loadSeen(g, light) as number, sh = L.loadSeen(g, heavy) as number, hl = L.loadHeard(g, light) as number, hh = L.loadHeard(g, heavy) as number;
@@ -196,9 +196,9 @@ export async function kitloadOff(): Promise<boolean> {
       const E = (SCENARIOS as any[]).find(e => e.id === 'room-clear-four'), W: any = await hushed(() => standUp({ seed: 2, uploadEvery: 4 })), g = W.game; g.godMode = true; rules(); KITLOAD.on = on;
       for (let i = 0; i < K.KIT_MEMBERS; i++) K.KIT.members[i] = K.kitDefault(i); if (cut) K.KIT.members[1] = card(1, { weapon: 'pistol', bangs: 0, charges: 0, frags: 0, smoke: 0 });
       const { why } = await hushed(() => startFromQuery(g, new URLSearchParams(scenarioQuery(E)))); if (why) throw new Error(`room-clear-four: start refused — ${why}`);
-      const no = await hushed(() => g.orders.give('fallIn', { kind: 'none', at: [g.player.char.posX, 0, g.player.char.posZ] })); if (no) throw new Error(`fall in refused — ${no}`);
+      const no = await hushed(() => g.orders.give('fallIn', { kind: 'none', at: [g.player.char.pos[0], 0, g.player.char.pos[2]] })); if (no) throw new Error(`fall in refused — ${no}`);
       W.input.keys.add('KeyA'); await hushed(() => { for (let f = 0; f < 600; f++) W.step(DT); }); W.input.keys.delete('KeyA');
-      const red = (teamOf(g) as any[]).find(t => K.kitIndex(t) === 1); return { d: hashDigest(digestGame(g)) as string, at: red ? `${f2(red.char.posX)}, ${f2(red.char.posZ)}` : 'none' }; };
+      const red = (teamOf(g) as any[]).find(t => K.kitIndex(t) === 1); return { d: hashDigest(digestGame(g)) as string, at: red ? `${f2(red.char.pos[0])}, ${f2(red.char.pos[2])}` : 'none' }; };
     const sOff = await four(false, false), sOn = await four(true, false), sCut = await four(true, true);
     F.verdict(sOn.d === sOff.d && !!sOn.d, 'FOUR AS ISSUED, told to fall in and led ten seconds: the switch on digests as the switch off — every man is his own reference', `on ${sOn.d} · off ${sOff.d} · Red One at ${sOn.at}`);
     F.verdict(sCut.d !== sOn.d, 'Red One cut to a pistol and nothing else, the switch on: the run moves', `${sCut.d} against ${sOn.d} · Red One at ${sCut.at} against ${sOn.at}`);

@@ -45,7 +45,7 @@ const DRAW = async (n) => {
     return { page, errors };
   };
   const still = async (page, name, who, dist = 2.4, yaw = 0.6) => { if (!OUT || !STILLS) return;
-    await page.evaluate(({ who, dist, yaw }) => { const g = window.__game, c = who < 0 ? g.player.char : g.guards.filter(x => x.unit && x.team === 'operative')[who].char; window.__stage({ look: [c.posX, 1.0, c.posZ], yaw: Math.atan2(c.forward()[0], c.forward()[2]) + yaw, pitch: 0.7, dist }, {}); }, { who, dist, yaw });
+    await page.evaluate(({ who, dist, yaw }) => { const g = window.__game, c = who < 0 ? g.player.char : g.guards.filter(x => x.unit && x.team === 'operative')[who].char; window.__stage({ look: [c.pos[0], 1.0, c.pos[2]], yaw: Math.atan2(c.forward()[0], c.forward()[2]) + yaw, pitch: 0.7, dist }, {}); }, { who, dist, yaw });
     const cap = await page.evaluate(DRAW, 3); if (cap.url) fs.writeFileSync(path.join(OUT, name + '.png'), Buffer.from(cap.url.split(',')[1], 'base64')); log('still', name, cap.err || `${cap.w}x${cap.h}`); };
   const look = () => { const g = window.__game, pl = g.player; pl.slot = 'rifle'; pl.holstered = false; window.__glStep(45);
     const mates = g.guards.filter(x => x.unit && x.team === 'operative');
