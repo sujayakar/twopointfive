@@ -335,7 +335,7 @@ export class AudioEngine implements GameAudioLike {
       b.setVoice(v.v, { gain: t - f.seen > 0.2 ? 0 : occludedGain(f.gain * (trim?.gain ?? 1), f.occ) * followGain(s.k), rate: f.rate * (trim?.rate ?? 1) * followRate(s.k) }, 0.07);
     }
     // environment probe (4×/s): mean free path around the listener → reverb amount; outdoor → less
-    if (time - this.lastEnvT > 0.25 || this.lastEnvT === 0) {
+    if (time - this.lastEnvT > 0.25 || this.lastEnvT === 0) this.col.window(() => {   // (a dozen questions of the box world between ticks: one proof of the module's copy for all of them)
       let sum = 0; const N = 10;
       for (let i = 0; i < N; i++) { const a = (i / N) * Math.PI * 2; const hit = this.col.raycast(this.listener, [Math.cos(a), 0, Math.sin(a)], 16); sum += hit ? hit.t : 16; }
       const mfp = sum / N; const outdoors = this.listener[0] < 4 || this.listener[0] > 36 || this.listener[2] < 4 || this.listener[2] > 24;
@@ -349,7 +349,7 @@ export class AudioEngine implements GameAudioLike {
         if (g > 0.01) { const pr = this.col.sound.propagate(a.pos, this.listener); g *= 1 - 0.6 * pr.muffle; b.setVoice(a.v, { pos: pr.apparent, cutoffHz: Math.min(a.f0, 300 + cutoffOf(pr.muffle)) }, 0.4); }   // (BiquadFilter.frequency.defaultValue is the spec's 350 Hz, not what we set — clamp against the authored f0)
         b.setVoice(a.v, { gain: g }, 0.5);
       }
-    }
+    });
     void dt;
   }
 

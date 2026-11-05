@@ -312,12 +312,16 @@ export const RUST = {
  *  shape it knows. Everywhere else the TypeScript still answers, which is why it cannot be deleted yet. This is the list of those places, by row and by
  *  reason, as a run met them: zero for a row is what lets its TypeScript go. Off (the default) it costs one test at a place that was falling back anyway.
  *  A tool of the build's, never a rule of play: it counts and changes no answer. */
+/** who asked: the first `n` callers on the stack from frame `skip` on (of the next `span` frames, if given), outside the files `not` names — for the
+ *  count below and for the box world's count of questions asked alone (scene/collision.ts) */
+export function callers(skip: number, n: number, not: RegExp, span = Infinity): string {
+  return (new Error().stack ?? '').split('\n').slice(skip, skip + span).map(l => l.trim().replace(/^at /, '').replace(/\(?[^()\s]*\/(src|tools)\//, '($1/').replace(/:\d+\)?$/, '')).filter(l => !not.test(l)).slice(0, n).join(' < ');
+}
 export const FELL = { on: false, hard: false, who: 0, n: {} as Record<string, number>, red: false, reds: {} as Record<string, number> };
 export function fell(row: string, why: string): void {
   let k = row + ' · ' + why;
   if (FELL.who) {   // (`=who`: …and who asked — the first two callers outside the box world's own files, `=who6` the first six, so the count says which code still asks outside a tick)
-    const st = (new Error().stack ?? '').split('\n').slice(2).map(l => l.trim().replace(/^at /, '').replace(/\(?[^()\s]*\/(src|tools)\//, '($1/').replace(/:\d+\)?$/, '')).filter(l => !/scene\/(collision|boxMirror)\.ts/.test(l));
-    k += ' · asked by ' + st.slice(0, FELL.who).join(' < ');
+    k += ' · asked by ' + callers(3, FELL.who, /scene\/(collision|boxMirror)\.ts/);
   }
   FELL.n[k] = (FELL.n[k] ?? 0) + 1;
   if (FELL.hard) throw new Error(`rust: the TypeScript answered for the row "${row}": ${why}`);
@@ -348,8 +352,9 @@ export function ruleRed(row: string): boolean {
 }
 /** the sealed rows the count has met */
 export const fellSealed = (): string[] => SEALED.filter(r => Object.keys(FELL.n).some(k => k.startsWith(r + ' · ')));
-/** the count's switches from a word (`1`, `throw`, `who`, `who6`): the harness's TPS_FELL, the page's ?fell */
-export function fellWord(w: string): void { FELL.on = true; FELL.hard = w === 'throw'; const m = /^who(\d*)$/.exec(w); FELL.who = m ? Number(m[1] || 2) : 0; }
+/** the count's switches from a word (`1`, `throw`, `who`, `who6`; `0` = off): the harness's TPS_FELL, the page's ?fell */
+export function fellWord(w: string): void { if (w === '0') { FELL.on = false; return; }   // (`0` is off, as every word of this family reads it)
+  FELL.on = true; FELL.hard = w === 'throw'; const m = /^who(\d*)$/.exec(w); FELL.who = m ? Number(m[1] || 2) : 0; }
 /** the count so far, the busiest first, as one line a row and reason */
 export const fellLines = (): string[] => Object.entries(FELL.n).sort((a, b) => b[1] - a[1]).map(([k, v]) => `${v} × ${k}`);
 /** the rows that work their lengths and angles out in the module, and so answer only where the game's own maths stand in Math's place (EXACT.on) */
