@@ -1179,8 +1179,9 @@ fn rtHiFade(maxR: f32) -> vec2f { return mix(vec2f(maxR - 0.12, maxR + 0.001), R
 const LIGHT_IR: u32 = 0x8000000u;
 // AN OPENING TO THE OUTSIDE (lights.ts LIGHT_PORTAL; engine.ts lookOpeningLights makes them on the look page, none anywhere else): an area light (kind 3)
 // that is no lamp but a hole the outside is seen through. DAYLIGHT IS COUNTED ONCE: the sky's light that comes through an opening is THIS light's, with a
-// direct light's direction and shadows, and the bounce takes none of it (skyThrough below, at every ray of the gather that would have, and the cache's
-// dice: rc.wgsl rcDice).
+// direct light's direction and shadows, and the bounce takes none of it WITHIN THE LIGHT'S REACH (skyKeep below, at every ray of the gather that would have, and the cache's
+// dice: rc.wgsl rcDice). The reach is where the light alone stops being worth a ray (scene/openings.ts openingReach): past it the bounce has the sky,
+// as far as its own rays find the opening and its firefly bound lets them carry it.
 //   what it sends   WHAT THE RECEIVER LOOKS OUT ON through it (portalOutside): above the horizon the sky (skyRadiance, the one function a ray that
 //                   misses asks), under it the ground outside, as bright as the record says (portalGround) × the receiver's and the opening's
 //                   cosines ÷ the distance squared, per m² of the opening, added up piece by piece over its rectangle (portalFlux: a floor

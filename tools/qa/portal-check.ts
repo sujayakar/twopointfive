@@ -341,6 +341,24 @@ export async function portalCheck(): Promise<boolean> {
         && text('src/render/lights.ts').includes('(l.portal ? LIGHT_PORTAL | portalHoleBits(l.portal.deep, l.portal.rims) : 0) | (!l.portal && l.markRef !== undefined') && text('src/engine.ts').includes('l.portal!.deep = this.settings.portalHole ? o.deep : 0; l.portal!.rims = o.rims;') && text('src/main.ts').includes("if (q.get('holedepth') === '0') engine.settings.portalHole = false;") && /VISIT_FLAGS = \[[^\]]*'holedepth'/.test(text('src/ui/replaykey.ts')) && /LOOK_PAGE_WORDS[^\n]*'holedepth'/.test(text('src/scene/look.ts')) && text('src/scene/openings.ts').includes('half: [hw, hh], deep: holeDeep, rims: ((lowS0 ? first : last) ? 1 : 0) | ((lowS0 ? last : first) ? 2 : 0),') && text('src/scene/openings.ts').includes('const lowS0 = r.axis === 1 ? r.sign > 0 : r.sign < 0;')],
       ['the table still knows where an opening looks', LOOK_OPENINGS.up > 0 && LOOK_OPENINGS.up < 1 && (BoxFlag.Glass | 0) !== 0] ];
     verdict(pins.every(p => p[1]), 'the light\'s record and the shaders say the same rule', pins.map(p => `${p[1] ? 'ok' : 'NOT'}: ${p[0]}`).join(' · ')); }
+  // HOW FAR AN OPENING'S OWN LIGHT REACHES (scene/openings.ts openingReach, LOOK_OPENINGS.worth): one rule at every hour, where what it alone would show on
+  // a floor facing it straight out falls to `worth`; past it the bounce has the sky (the window and skyKeep above). PORTALREACH_BREAK=1 = the worth it had
+  // until 11-05 (0.003): a night's opening reaches the far side of a building again
+  { const { openingReach } = await import(`${ROOT}/src/scene/openings.ts`); const K = LOOK_OPENINGS, common = text('src/render/shaders/common.wgsl'), count = (t: string, w: string) => t.split(w).length - 1, old = process.env.PORTALREACH_BREAK === '1' ? 0.003 : undefined;
+    // (the consulate's widest opening on its night as a cloud card listed it: it looks out on 0.0853, exposure 2, 5.65 m², half diagonal 2.04 m. A door at
+    // midday: 0.97 by the hour's sky and sun, exposure 1.7. A slit at dusk. A wide opening on a dim night. A glass wall by day. A strip of glass in five pieces)
+    const night = openingReach(0.0853 * 2, 5.65, 2.04, old), noon = openingReach(0.97 * 1.7, 1.85, 1.12, old), slit = openingReach(0.02 * 2, 0.3, 0.6, old), wide = openingReach(0.01 * 2, 12.25, 2.75, old), wall = openingReach(0.6 * 2, 30, 4, old);
+    const was = openingReach(0.0853 * 2, 5.65, 2.04, 0.003), piece = openingReach(0.0853 * 2, 1.2, 1.04, old), strip = openingReach(0.0853 * 2, 5 * 1.2, 1.04, old);
+    let mono = true; for (let m = 0.01; m < 2; m *= 1.3) for (let w = 0.2; w < 30; w *= 1.4) { const r = openingReach(m, w, 1, old); if (openingReach(m * 1.3, w, 1, old) < r || openingReach(m, w * 1.4, 1, old) < r || openingReach(m, w, 1.5, old) < r) mono = false; }
+    const eng = text('src/engine.ts'), op = text('src/scene/openings.ts');
+    verdict(night > 4 && night < 6 && noon > 8 && noon < 9.5 && slit === K.near && Math.abs(wide - (2.75 + K.past)) < 1e-9 && wall === K.far && mono && Math.abs(was - 17.9) < 0.1 && piece < 3.1 && strip > 4.5
+      && eng.includes('l.range = openingReach(m * this.settings.exposure, Math.max(whole, o.of), l.radius, this.settings.portalWorth > 0 ? this.settings.portalWorth : undefined);') && count(eng, 'l.range = ') === 1
+      && op.includes('for (let i = first0; i < out.length; i++) out[i].of = sum;')
+      && text('src/main.ts').includes("{ const pw = Number(q.get('portalworth')); if (pw > 0) engine.settings.portalWorth = pw; }")
+      && /VISIT_FLAGS = \[[^\]]*'portalworth'/.test(text('src/ui/replaykey.ts')) && /LOOK_PAGE_WORDS[^\n]*'portalworth'/.test(text('src/scene/look.ts'))
+      && common.includes('keep = 1.0 - lightWindow(distance(O, lights[i].pos), lights[i].range); break;'),
+      'an opening\'s own light reaches as far as it is worth a ray, by one rule at every hour, and the bounce has the sky past it',
+      `the consulate's widest opening on its night ${night.toFixed(1)} m (it was ${was.toFixed(1)}), a door at midday ${noon.toFixed(1)} m, a slit at dusk ${slit} m, a wide opening on a dim night ${wide.toFixed(2)} m (never short of its own corners), a glass wall ${wall} m; one piece of a strip of glass alone ${piece} m, as a piece of its strip ${strip.toFixed(1)} m; never shorter for a brighter sky, a larger opening or a longer rectangle`); }
   console.log(all ? 'portal: all passed' : 'portal: FAILED');
   return all;
 }
