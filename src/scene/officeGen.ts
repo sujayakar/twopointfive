@@ -17,7 +17,7 @@ import * as MD from './markingDefaults';
 import { fitOpenings, fitDoorDef, exitThrough, JAMB_FACE, DOOR_HEAD, LEAF_H } from './doorSize';
 import { fitPropFootprint } from './levelLoad';
 import { pieces } from './library';
-import { DESK_CLUSTERS } from '../../levels/office.scenarios';
+import { DESK_CLUSTERS, OFFICE_MARKS } from '../../levels/office.scenarios';   // the desks' four places, and the office's named marks (plain literals; the builder puts them on its Level and the exporter writes them into the file)
 
 /** what the exporter asks the generator to record on the side: the editor group of every box, in box order */
 export interface GeneratorTrace { groups: string[]; }
@@ -386,7 +386,7 @@ export function buildOfficeProcedural(trace?: GeneratorTrace, opts: GeneratorOpt
   // rendered wall that blotches and takes a damp foot, a poured slab that cracks, a coarse cloth. Drawn that way the office's partitions peeled at the skirting
   // and its carpet was stained from wall to wall. Here a partition is skimmed and painted, the shell is cast in panels, the carpet is a loop pile, the lobby's
   // stone and the server room's raised floor are laid in tiles, the lino is one waxed sheet (the look's plain gloss coat), and what is red is enamel.
-  // NOT SAID: the lot (no stuff the look has is tarmac: gravel drew it as cobbles and a slab as cracked paving, so it stays plain) and the lawn (it waits).
+  // THE LOT AND THE LAWN are said at their paints' rows, not here (scene/stuff.ts PAINT_STUFF: tarmac and grass, since 11-05).
   const K = { wall: saidAs('skim', C.wall), sill: saidAs('skim', C.wallDark), shell: saidAs('cast panel', C.concrete), landing: saidAs('board concrete', C.concrete),
     carpet: saidAs('carpet', C.carpet), carpetBlue: saidAs('carpet', C.carpetBlue), carpetRed: saidAs('carpet', C.carpetRed),
     stone: saidAs('paver', C.stone), lino: saidAs('enamel', C.lino), red: saidAs('enamel', C.red),
@@ -1274,6 +1274,7 @@ export function buildOfficeProcedural(trace?: GeneratorTrace, opts: GeneratorOpt
     beacons,
     playerSpawn: [5.1, 0, 15.2],
     routes, chokepoints, clearPlans, civilians,
+    marks: OFFICE_MARKS.map(m => ({ ...m, pos: [m.pos[0], m.pos[1], m.pos[2]] as Vec3 })),   // where a person stands to use each thing (levels/office.scenarios.ts): written into the file by the exporter, as any level's marks are
     sky: { zenith: [0.015, 0.025, 0.05], horizon: [0.04, 0.05, 0.08] },
     mission: { serverRoom: { x0: 14.12, x1: 21.88, z0: 4.12, z1: 9.94 }, entryDoor: 'server', rack: { index: DRIVE_RACK, front: rackFront, halfW: 0.33 }, exfilDoor: 'fire_exit', exfilX: 36.5, exfilZ: exitThrough(doorDefs.find(d => d.name === 'fire_exit')!, 36.5, 20.6)[1] },   // room = inside its partitions; exfilX = clear of the east wall (x 36 ± 0.12): past it you are in the lot
     kept: 1,   // (a let office with a cleaner on contract: its paint is whole and its walls one shade. The word is the level's own, the file's meta.kept: docs/agents/render.md, A LEVEL SAYS HOW KEPT IT IS)

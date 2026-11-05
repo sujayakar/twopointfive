@@ -121,11 +121,11 @@ const PROP_SURF: Record<string, Surf> = { chair: 'fabric', cardboard: 'cardboard
 export const HITSTUFF = { on: false };
 /** what each stuff a box may say is to a round ('cloth', the look's coarse weave, is a carpet, a rug, a sandbag and a tarpaulin: the soft thing that gives
  *  its own colour's tufts and dust and never a spark; 'fabric', the fine weave, is a seat or a screen on a frame) — only the stuffs that are ONE thing to a round: 'paint' and 'enamel' are a coat on a door, a drum, a pipe
- *  or a line on a floor, 'plain' and 'waits' say nothing, and the ground (earth, gravel) is what its paint already says */
+ *  or a line on a floor, 'plain' and 'waits' say nothing, and the ground (earth, gravel) is what its paint already says; a lot's tarmac is stone wet or dry (its wet paint's tone read as metal; the row the cars' part asked for), and a lawn's grass has no row: no round meets a lawn, a strip no ray meets */
 const STUFF_SURF: Partial<Record<BoxStuff, Surf>> = {
   carpaint: 'metal', steel: 'metal', metal: 'metal', sheet: 'metal', brushed: 'metal', louvre: 'metal',
   glass: 'glass', rubber: 'plastic', plastic: 'plastic', wood: 'wood', veneer: 'wood', fabric: 'fabric', cloth: 'carpet', carpet: 'carpet',
-  plaster: 'drywall', skim: 'drywall', stucco: 'concrete', 'mud wall': 'concrete', block: 'concrete', 'gloss block': 'concrete', 'board concrete': 'concrete', 'cast panel': 'concrete', slab: 'concrete', paver: 'concrete',
+  plaster: 'drywall', skim: 'drywall', stucco: 'concrete', 'mud wall': 'concrete', block: 'concrete', 'gloss block': 'concrete', 'board concrete': 'concrete', 'cast panel': 'concrete', slab: 'concrete', paver: 'concrete', tarmac: 'concrete',
 };
 /** the words the picture of a hit reads (the check holds each to be a stuff a box may say) */
 export const HIT_STUFFS: readonly string[] = Object.keys(STUFF_SURF);

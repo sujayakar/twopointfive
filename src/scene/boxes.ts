@@ -45,6 +45,7 @@ export const MAX_GLASS = 32;
  *  with the round's GPU half up it is not sent (BoxWorld.packBox). */
 export const BOX_ROUND_BIT = 8;
 
+import { coatRough } from './stuff';   // (stuff.ts reaches only the look's table of names, a module with no imports of its own: no cycle)
 export type BoxStuff = import('./stuff').BoxStuff;
 export interface Box {
   c: Vec3;            // center
@@ -195,7 +196,7 @@ export const ROUGH_DEFAULT = 1.0;
 /** The finish as the one f32 the GPU gets (boxMat[3i+1].w): roughness clamped to 0‥1, + 2 if metal, + 4 if anisotropic — three plain floats' worth in
  *  disjoint ranges, so common.wgsl boxFinish() peels them off with two compares (no bit tricks on a float the driver may renormalise). */
 export function matWord(b: Box): number {
-  const r = b.rough ?? ROUGH_DEFAULT;
+  const own = b.rough ?? ROUGH_DEFAULT, coat = coatRough(b.stuff), r = coat !== undefined && coat < own ? coat : own;   // (a box that says a named coat is no rougher than the coat: scene/stuff.ts COATFINISH)
   return (r < 0 ? 0 : r > 1 ? 1 : r) + (b.metal ? 2 : 0) + (b.aniso ? 4 : 0);
 }
 

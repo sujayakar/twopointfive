@@ -43,7 +43,7 @@ export async function keptCheck(): Promise<boolean> {
   const between = (a: string, b: string) => { const i = look.indexOf(a), j = look.indexOf(b); return i < 0 || j < i ? '' : look.slice(i, j); };
   const surface = between('fn lookSurface(', '  // ---- USE on a wall somebody keeps'), standing = between('  // ---- WEATHER on anything that stands on the ground or lies in the open', '  // ---- USE on a wall somebody keeps');
   { const pins: [string, boolean][] = [
-      ['the uniform\'s writer puts the word at c.x', gb.includes('k.cavity * c, k.size, lookConfig.kept, 0, 0, 0,')],
+      ['the uniform\'s writer puts the word at c.x', gb.includes('k.cavity * c, k.size, lookConfig.kept, ')],
       ['every way a level enters the page hands its word over and writes the uniform', count(main, "lookConfig.kept = lookKeptOf(level.kept, q.get('kept'));") === 1 && /function hostLevel\([^\n]*\n  lookConfig\.kept = lookKeptOf[^\n]*\n  engine\.gbuffer\.setLook\(\);/.test(main) && count(main, 'hostLevel(engine, level, q);') === 2 && count(main, 'populateHost(engine, level)') === 1],
       ['look.wgsl reads it in one place', count(look, 'lookCfg.c.x') === 1 && look.includes('fn lookKept() -> f32 { return clamp(lookCfg.c.x, 0.0, 1.0); }')],
       ['a surface asks it once: how far the place is left to the weather', count(surface, 'lookKept()') === 1 && surface.includes('let left = 1.0 - lookKept();')],

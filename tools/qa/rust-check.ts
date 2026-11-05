@@ -334,11 +334,22 @@ let wordOwn = '', wordRust = '';
   //  exit 1. Not under RUST_BREAK, which is another red path of the same tool)
   const order = BREAK ? null : child(['bun', 'run', 'tools/qa/sense-ident.ts', '--n', '3000', '--levels', 'office.json,compound.json'], { PRICED_BREAK: '1' });
   const orderRed = !order || (order.status === 1 && /the paths differed and nothing else/.test(order.out));
-  const off = pairs.filter(q => q.here !== q.there), ok = r.status === 0 && rows.length > 0 && rows.every(l => / PASS /.test(l)) && pairs.length >= 18 && off.length === 0 && orderRed;
+  // (…and the lamps in parts: the same check with every part beginning its sum again must end with the lamps in parts differing and nothing else)
+  const parts = BREAK ? null : child(['bun', 'run', 'tools/qa/sense-ident.ts', '--n', '300', '--levels', 'office.json,compound.json'], { LAMPS_BREAK: '1' });
+  const partsRed = !parts || (parts.status === 1 && /the lamps in parts differed and nothing else/.test(parts.out));
+  // (…and the smoke's shadow where the grid cannot answer: the same check with the module handed no blobs must end with those two cases differing and nothing else)
+  const shade = BREAK ? null : child(['bun', 'run', 'tools/qa/sense-ident.ts', '--n', '300', '--levels', 'office.json,compound.json'], { LAMPS_BREAK: 'shade' });
+  const shadeRed = !shade || (shade.status === 1 && /the smoke's shadow where the grid cannot answer differed and nothing else/.test(shade.out));
+  // (…and the blobs: a game keeps no more than the module's table holds — sense.ts CpuSmoke.emit — so the knob as it ships must fit it: a build's mistake otherwise)
+  const SE: any = await import(`${ROOT}/src/game/sense.ts`), BMF: any = (await import(`${ROOT}/src/scene/boxMirror.ts`)).FACE, blobsFit = SE.SENSE.smoke.cap <= BMF.MAX_BLOBS;
+  const off = pairs.filter(q => q.here !== q.there), ok = r.status === 0 && rows.length > 0 && rows.every(l => / PASS /.test(l)) && pairs.length >= 20 && off.length === 0 && orderRed && partsRed && shadeRed && blobsFit;
   { const d = marked(r.out, 'SENSE-IDENT '); for (const k of [...SENSES, 'fog']) red[k] = !!d && d[k] > 0; }
   verdict(ok, 'senses: an eye on a man, the light on a point, the smoke along a line, a sound\'s way, a way across the floor and what a team\'s eyes see get the TypeScript\'s answer from the Rust module', (rows.length ? rows.map(l => l.replace(/\s+/g, ' ').trim().slice(0, 420)).join('\n    ') : `the differential left nothing (exit ${r.status}): ${(r.err || r.out).trim().split('\n').slice(-2).join(' / ').slice(0, 300)}`)
     + `\n    ${pairs.length} numbers shared with the Rust sources (boxMirror.ts FACE, NAV)${off.length ? ` — NOT THE SAME: ${off.map(q => `${q.name} ${q.here} here, ${q.there} there`).join(', ')}` : ', each the same'}`
-    + (order ? `\n    a priced search's prices asked for last first (PRICED_BREAK=1): ${orderRed ? 'the paths differ and nothing else, as they must' : `NOT RED AS IT MUST BE (exit ${order.status}): ${order.out.trim().split('\n').slice(-1)[0].slice(0, 200)}`}` : ''));
+    + (order ? `\n    a priced search's prices asked for last first (PRICED_BREAK=1): ${orderRed ? 'the paths differ and nothing else, as they must' : `NOT RED AS IT MUST BE (exit ${order.status}): ${order.out.trim().split('\n').slice(-1)[0].slice(0, 200)}`}` : '')
+    + (parts ? `\n    the lamps of a question in parts, every part beginning its sum again (LAMPS_BREAK=1): ${partsRed ? 'the lamps in parts differ and nothing else, as they must' : `NOT RED AS IT MUST BE (exit ${parts.status}): ${parts.out.trim().split('\n').slice(-1)[0].slice(0, 200)}`}` : '')
+    + (shade ? `\n    a lamp's shadow with the module handed no blobs (LAMPS_BREAK=shade): ${shadeRed ? 'the two cases where the grid cannot answer differ and nothing else, as they must' : `NOT RED AS IT MUST BE (exit ${shade.status}): ${shade.out.trim().split('\n').slice(-1)[0].slice(0, 200)}`}` : '')
+    + `\n    the smoke's blobs: the game keeps ${SE.SENSE.smoke.cap} at most and the module's table holds ${BMF.MAX_BLOBS}${blobsFit ? '' : ' — THE KNOB IS PAST THE TABLE'}`);
 }
 
 // ---- poses

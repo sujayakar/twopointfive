@@ -15,12 +15,13 @@ import { BoxFlag, type Box } from './boxes';
 import { cutPlane, cutRecord, type CutPlane } from './cut';
 import type { Vec3 } from '../math/vec';
 import { GWOT_PALETTE, gwotAs } from './gwotPalette';
+import { onExact } from '../math/exact';
 import { toned, worded } from './stuff';
 
 const D = Math.PI / 180;
 type More = Partial<Box>;
 // where the pass's lorry stands (tools/levels/pass.ts LORRY): its nose toward local +x, local z across it
-const LX = 17.1, LZ = 17.0, YAW = Math.PI * 0.75, CS = Math.cos(YAW), SN = Math.sin(YAW);
+const LX = 17.1, LZ = 17.0, YAW = Math.PI * 0.75; let CS = 0, SN = 0; onExact(() => { CS = Math.cos(YAW); SN = Math.sin(YAW); });   // (made in onExact, not as the module loads: a constant worked out at load is the engine's whatever the maths switch says — math/exact.ts)
 const at = (lx: number, y: number, lz: number): Vec3 => [LX + lx * CS + lz * SN, y, LZ - lx * SN + lz * CS];
 // the level palette's rows it is made of (scene/gwotPalette.ts): a piece's paint is a row, or a row toned (scene/stuff.ts toned: the row's stuff), and each
 // box made here says what its paint is made of (worded), which is all the look reads
