@@ -1,12 +1,12 @@
 // THE LOOK PROTOTYPE — THE PLACE FIELD (render/placeField.ts has the why; composite.wgsl lookExpoGain is its reader). One number a cell of the level's floor
 // plan: log2 of the light that falls on the floor of the PLACE, where a place is what walls, windows and shut doors enclose. Each free cell is pulled toward what the radiance
 // cache holds over it (the probes it can see) and toward its free neighbours, hard: the answer is the cache's light smoothed over PLACE.reach metres but never through a
-// wall and hardly through a doorway, so a room has one level from its window to its far end and the yard outside it has another.
+// wall or a doorway, so a room has one level from its window to its far end and the yard outside it has another.
 // The solve is red-black successive over-relaxation in place: a sweep takes the cells of one colour, each reading its four neighbours of the other.
 struct PlaceU {
   parity: u32, snap: u32, kappa: f32, omega: f32,
   sam: vec2f, eyeOpen: f32, eyeClose: f32,
-  y: f32, dark: f32, link: f32, skyEase: f32,
+  y: f32, dark: f32, spare: f32, skyEase: f32,
   skyShare: f32, near: f32, nearDoor: f32, pad2: f32,
 };
 const PLACE_W: i32 = 100;
@@ -23,15 +23,18 @@ const DOOR_PER_STOP: f32 = 6.0;
 fn maskAt(c: vec2i) -> u32 { if (c.x < 0 || c.y < 0 || c.x >= PLACE_W || c.y >= PLACE_H) { return 255u; } return textureLoad(maskTex, c, 0).r; }
 /** a cell's level, or PLACE_SOLID: off the map, in a wall, or free since a moment ago with no answer yet */
 fn cellAt(c: vec2i) -> f32 { if (maskAt(c) == 255u) { return PLACE_SOLID; } return field[c.y * PLACE_W + c.x]; }
-/** WHAT ONE NEIGHBOUR HANDS A CELL whose own map value is `m`, read once: xy = its pull (its level × the link, the link), z = THE BRIGHTEST PLACE A STRIDE
+/** WHAT ONE NEIGHBOUR HANDS A CELL whose own map value is `m`, read once: xy = its pull (its level × the pull's weight, the weight), z = THE BRIGHTEST PLACE A STRIDE
  *  AWAY as it hands it on (under −500 = it has none to hand).
- *  THE PULL: the link is whole between two cells of a place and U.link of that when either is a doorway's cell (the map's low bits 1, render/placeField.ts
- *  placeMask): two rooms through an open door stay two places, with a soft step at the threshold.
- *  A DOOR OPENS BY DEGREES (doorShut: the map's bits above, scene/placePlan.ts placeMask `steps`): the pull across a doorway's cell is × the share of
- *  the doorway that is open, and the brightest place a stride away is handed out of the doorway DIMMER BY THAT SHARE, ONCE, on the hand that leaves the
+ *  THE PULL is between two cells of one place and never through a doorway: A DOORWAY'S CELL HOLDS NO LEVEL (placeSweep; the map's low bits 1,
+ *  scene/placePlan.ts placeMask), so it hands none on. Two rooms through an open door are two places, each with the level its own floor holds, and what one
+ *  takes from the other is the light that comes through the door, which is in its reading already. (Until 11-04 a doorway's cell held a level of its own
+ *  and passed a hundredth of the pull: a threshold was then a third place with a number between its two rooms', and it drew as a dark band across the
+ *  doorway from the dark side and a pale one from the bright side.)
+ *  A DOOR OPENS BY DEGREES (doorShut: the map's bits above, scene/placePlan.ts placeMask `steps`): the brightest place a stride away is handed out of the
+ *  doorway DIMMER BY THE SHARE OF THE DOORWAY THAT IS SHUT, ONCE, on the hand that leaves the
  *  door's line (two doors whose lines touch in a row are charged as the more shut of the two; a stop for each halving: a door a quarter open passes a quarter of the yard, so the room is held to the yard's level less two stops),
  *  on top of U.nearDoor. So the floor inside a door, which gets that share of the yard's light, is shown by the level of that share, and what a room
- *  takes from the yard comes in with the swing with no number of its own. A map with no such bits (the row at 0) is every doorway wide open, to the bit.
+ *  takes from the yard comes in with the swing with no number of its own.
  *  THE BRIGHTEST PLACE A STRIDE AWAY (the field's second block; place_common.wgsl lookGainsOwn is its reader): the neighbour's own answer, U.near stops
  *  dimmer for the cell of floor between them and only U.nearDoor dimmer when either is a doorway's cell: so the first cell of a room inside its door holds
  *  the yard's level all but whole, and each cell further in a step less, never through a wall. Each cell then keeps the most of its own level and what
@@ -43,8 +46,8 @@ fn hand(c: vec2i, m: u32) -> vec3f {
   let i = c.y * PLACE_W + c.x; let door = (m & 3u) == 1u || (mn & 3u) == 1u;
   let v = field[i]; let nv = field[PLACE_NEAR + i];
   var o = vec3f(0.0, 0.0, PLACE_SOLID);
-  let sm = doorShut(m); let sn = doorShut(mn); let shut = max(sm, sn);   // (stops under wide open; 0 = wide, or the map does not say)
-  if (v > -500.0) { let k = U.kappa * select(1.0, select(U.link * exp2(-shut), U.link, shut == 0.0), door); o = vec3f(v * k, k, PLACE_SOLID); }
+  let sm = doorShut(m); let sn = doorShut(mn);   // (stops under wide open; 0 = wide, or the cell is no doorway's)
+  if (v > -500.0) { o = vec3f(v * U.kappa, U.kappa, PLACE_SOLID); }
   if (nv > -500.0) { o.z = nv - select(U.near, U.nearDoor + max(0.0, sn - sm), door); }   // (… + what the giver's door is shut by over the taker's: 0 inside one door's line and into it, the door's stops out of it)
   return o;
 }
@@ -86,8 +89,9 @@ fn placeSweep(@builtin(global_invocation_id) gid: vec3u) {
   if (c.x >= PLACE_W || c.y >= PLACE_H || ((gid.x + gid.y) & 1u) != U.parity) { return; }
   let i = c.y * PLACE_W + c.x; let m = textureLoad(maskTex, c, 0).r;
   if (m == 255u) { field[i] = PLACE_SOLID; field[PLACE_NEAR + i] = PLACE_SOLID; return; }
-  let t = reading(c);
   let h0 = hand(c + vec2i(1, 0), m); let h1 = hand(c - vec2i(1, 0), m); let h2 = hand(c + vec2i(0, 1), m); let h3 = hand(c - vec2i(0, 1), m);
+  if ((m & 3u) == 1u) { field[i] = PLACE_SOLID; field[PLACE_NEAR + i] = max(max(h0.z, h1.z), max(h2.z, h3.z)); return; }   // (a doorway's cell: no level, hand above; the brightest place a stride away goes through it)
+  let t = reading(c);
   let s = h0.xy + h1.xy + h2.xy + h3.xy;
   let w = t.y;
   let den = w + s.y; if (den <= 0.0) { return; }   // (no reading and no neighbour with an answer yet: it waits)
@@ -108,7 +112,10 @@ const SKY_BINS: i32 = 64;        // a quarter of a stop each, from 12 stops unde
 fn placeEye() {
   let c = clamp(vec2i(floor(U.sam)), vec2i(0), vec2i(PLACE_W - 1, PLACE_H - 1));
   var v = cellAt(c);
-  if (v < -500.0) { for (var dy = -1; dy <= 1; dy++) { for (var dx = -1; dx <= 1; dx++) { v = max(v, cellAt(c + vec2i(dx, dy))); } } }   // (he stands in a doorway under its leaf, or against a wall: the brightest beside him)
+  // (his cell holds no level: he stands on a threshold, in a short passage, or against a wall. The eye takes THE NEAREST CELL THAT HOLDS ONE, by where he
+  //  stands in his cell: through a doorway that changes about its middle, as the picture's own line does (composite.wgsl lookPlaceLevels), and against a
+  //  wall it is his own side's. The brightest beside him, as it was, shut the eye on a dark room he had not yet left)
+  if (v < -500.0) { var best = 1e9; for (var dy = -3; dy <= 3; dy++) { for (var dx = -3; dx <= 3; dx++) { let cc = c + vec2i(dx, dy); let l = cellAt(cc); if (l > -500.0) { let dd = distance(vec2f(cc) + 0.5, U.sam); if (dd < best) { best = dd; v = l; } } } } }
   let k = PLACE_W * PLACE_H; field[k + 1] = 1.0;
   var hist: array<u32, 64>; var nSky = 0u; var top = -1000.0;
   for (var j = 0; j < PLACE_H; j++) { for (var i = 0; i < PLACE_W; i++) {

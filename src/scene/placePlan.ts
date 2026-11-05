@@ -16,7 +16,6 @@ export const PLACE_RES = 2.5;
 export const PLACE_W = Math.round(WORLD.rcSize[0] * PLACE_RES), PLACE_H = Math.round(WORLD.rcSize[2] * PLACE_RES);
 export const PLACE = {
   reach: 8,        // m: how far a place's light is smoothed (never through a wall): a room this size or smaller has one level
-  link: 0.01,      // … and what of that pull crosses a doorway's cells: two rooms through an open door stay two places, with a soft step at the threshold
   doorCells: 4,    // an opening this many cells wide or less (1.6 m) is a doorway …
   doorDepth: 3,    // … when the way through it opens out within this many cells on both sides (a passage that stays narrow is a corridor, one place along its length)
   near: 0.5,       // stops a cell (1.25 a metre): how fast THE BRIGHTEST PLACE A STRIDE AWAY dims over floor. Slower than a doorway's own light falls off into the room, or the gain would rise inward faster than the light falls and a strip of floor a stride in would be drawn brighter than the threshold (at 1 a software draw had that strip). At a half, a room five stops under its yard is its own again four metres in
@@ -35,8 +34,6 @@ export const PLACE = {
   y: 1.1,          // m: the height the cache's light on a face that looks up is read at: the layer a table top is in (the cache's second of four, 0.75 to 1.5 m; the third holds the cell a hanging bulb is in, and read a bulb's room several times too bright)
   open: 0.9,       // s for the eye to open (Sam walks into the dark) …
   close: 0.35,     // … and to close: faster, as an eye is
-  shutNear: 0.08,  // m: a leaf whose two ends are both this near its door's line is shut, and the line is a wall from jamb to jamb (placeMask)
-  leafStep: 0.04,  // rad: a leaf must have swung this far for the map to be drawn again
 };
 const HIDDEN = BoxFlag.NoPrimary | BoxFlag.NoShadow;
 
@@ -49,7 +46,7 @@ export function placeSolid(b: Box): boolean {
 /** which slices of the height between PLACE.maxFoot and PLACE.minTop a box fills, as bits (0 = it is no part of a wall). A wall fills them all; a window is
  *  a sill, a pane and a lintel that fill them between them, so the map adds boxes up cell by cell. Glass counts (a window is a wall to the light of a
  *  place, whole or shot out: the light that comes through it is the room's own reading). Not a tilted box, not one a blast has hidden, not a decal or a
- *  glow card, not a post. A door's leaf is the one dynamic box that counts, whole, where it hangs (thin, wide and a door's height: a man is none of the three). */
+ *  glow card, not a post. A door's leaf is the one dynamic box that counts as a whole wall's height (thin, wide and a door's height: a man is none of the three): it is never drawn into the map where it hangs, and it is what says how far its door's line stands open (doorSteps). */
 export function placeWall(b: Box): number {
   if (b.rot || (b.flags & HIDDEN) === HIDDEN) return 0;
   const y0 = b.c[1] - b.h[1], y1 = b.c[1] + b.h[1], wide = Math.max(b.h[0], b.h[2]);
@@ -124,13 +121,12 @@ export function doorSteps(statics: readonly Box[], dynamics: readonly Box[], gap
   const leaves = leafOutlines(dynamics); return gaps.map((g, n) => doorStep(doorwayOpen(g, leaves, jambs[n])));
 }
 /** the map of a list of boxes: 255 = wall; a free cell is 1 (a doorway's cell) or 2 (any other), + 4 when no roof is over it (row-major, j * PLACE_W + i).
- *  BY DEGREES (`steps` given: each door's doorSteps, the look panel's "Doors open by degrees" row): A LEAF IS NEVER A WALL WHERE IT HANGS, and a door's
- *  cells carry HOW OPEN IT IS in the bits above (× 8: its step, 1‥DOOR_STEPS; 0 there = a doorway by its shape alone, wide open). A door at step 0 is
- *  shut: a wall from jamb to jamb.
- *  THE CALLER'S PART: `steps` has one entry a gap, and `gaps` names every door whose leaf is among `dynamics` (a leaf with no gap is then nowhere in
- *  the map, its doorway open by its shape; a gap with no step is shut).
- *  Without it a leaf is stamped as wall cells where it stands, as it was: a leaf swinging through 54 degrees walled off the cell inside its own door for a
- *  moment, and the place's bound to the yard's level came and went in a frame (the maintainer's videos of 11-04: "some odd brightness swinging").
+ *  DOORS OPEN BY DEGREES: A LEAF IS NEVER A WALL WHERE IT HANGS, and a door's cells carry HOW OPEN IT IS in the bits above (× 8: its step,
+ *  1‥DOOR_STEPS, `steps`: each door's doorSteps; 0 there = a doorway by its shape alone, wide open). A door at step 0 is shut: a wall from jamb to jamb.
+ *  THE CALLER'S PART: `gaps` names every door whose leaf is among `dynamics` (a leaf with no gap is nowhere in the map, its doorway open by its shape).
+ *  (Until 11-04 a leaf was stamped as wall cells where it stood, behind a row: a leaf swinging through 54 degrees walled off the cell inside its own door
+ *  for a moment, and the place's bound to the yard's level came and went in a frame, the maintainer's videos of that day: "some odd brightness swinging".
+ *  He kept the row; the stamping and the row are gone.)
  *  Pure: the check's too.
  *  A DOORWAY is a free run of PLACE.doorCells cells or fewer between two walls, where the way through it opens out wider within PLACE.doorDepth cells on
  *  both sides: the gap in a wall, however thick the wall. A corridor is as narrow but stays narrow, so it is not one, and neither is a niche. */
@@ -138,10 +134,9 @@ export type PlaceGap = readonly [number, number, number, number];
 /** `gaps` = the level's DOORS as it knows them, each the line of its opening on the floor plan (hinge x, z to the far jamb x, z): the free cells on that line
  *  are doorway cells outright. The shapes alone could not say (the maintainer on his GPU, 11-01: "easy to get into a state where the exposure is off, like
  *  moving between these two rooms"): a leaf hanging at some angle beside its own opening made the gap a niche or a bend, and the two places it joins one. */
-export function placeMask(statics: readonly Box[], dynamics: readonly Box[], out = new Uint8Array(PLACE_W * PLACE_H), gaps: readonly PlaceGap[] = [], steps: readonly number[] | null = null): Uint8Array {
+export function placeMask(statics: readonly Box[], dynamics: readonly Box[], out = new Uint8Array(PLACE_W * PLACE_H), gaps: readonly PlaceGap[] = [], steps: readonly number[] = doorSteps(statics, dynamics, gaps)): Uint8Array {
   const W = PLACE_W, H = PLACE_H; out.fill(0);
   for (const b of statics) { const bits = placeWall(b); if (bits) stamp(out, bits, b.c[0], b.c[2], b.h[0], b.h[2], b.yaw); }
-  if (!steps) for (const b of dynamics) { const bits = placeWall(b); if (bits) stamp(out, bits, b.c[0], b.c[2], b.h[0], b.h[2], b.yaw); }
   // the cells on a door's line, between its jambs (PLACE.gapNear)
   const onLine = (g: PlaceGap, each: (k: number) => void): void => { const [ax, az, bx, bz] = g, dx = bx - ax, dz = bz - az, len = Math.hypot(dx, dz); if (!(len > 1e-3)) return;
     const ux = dx / len, uz = dz / len, pad = PLACE.gapNear, cell = 1 / PLACE_RES, ox = WORLD.rcMin[0], oz = WORLD.rcMin[2];
@@ -149,8 +144,8 @@ export function placeMask(statics: readonly Box[], dynamics: readonly Box[], out
     const j0 = Math.max(0, Math.floor((Math.min(az, bz) - pad - oz) * PLACE_RES)), j1 = Math.min(H - 1, Math.floor((Math.max(az, bz) + pad - oz) * PLACE_RES));
     for (let j = j0; j <= j1; j++) for (let i = i0; i <= i1; i++) { const px = ox + (i + 0.5) * cell - ax, pz = oz + (j + 0.5) * cell - az, t = px * ux + pz * uz;
       if (t >= -cell * 0.5 && t <= len + cell * 0.5 && Math.abs(px * uz - pz * ux) <= pad) each(j * W + i); } };
-  // BY DEGREES: a shut door's line is a wall BEFORE the shapes are read (as a leaf stamped in its frame was)
-  if (steps) gaps.forEach((g, n) => { if (!steps[n]) onLine(g, k => { out[k] = FULL; }); });
+  // a shut door's line is a wall BEFORE the shapes are read
+  gaps.forEach((g, n) => { if (!steps[n]) onLine(g, k => { out[k] = FULL; }); });
   for (let k = 0; k < W * H; k++) out[k] = out[k] === FULL ? 255 : 2;
   const roof = new Uint8Array(W * H); for (const b of statics) if (placeRoof(b)) stamp(roof, 1, b.c[0], b.c[2], b.h[0], b.h[2], b.yaw);
   // how wide the free run through each cell is, across x and across z (a run that reaches the map's edge is open: 255)
@@ -161,24 +156,14 @@ export function placeMask(statics: readonly Box[], dynamics: readonly Box[], out
   const opens = (wide: Uint8Array, i: number, j: number, di: number, dj: number, w: number): boolean => {
     for (let k = 1; k <= PLACE.doorDepth; k++) { const x = i + di * k, z = j + dj * k; if (x < 0 || z < 0 || x >= W || z >= H) return true; if (out[z * W + x] === 255) return false; if (wide[z * W + x] > w) return true; }
     return false; };
-  const door = new Uint8Array(W * H), deg = steps ? new Uint8Array(W * H) : null;
+  const door = new Uint8Array(W * H), deg = new Uint8Array(W * H);
   for (let j = 0; j < H; j++) for (let i = 0; i < W; i++) { const k = j * W + i; if (out[k] === 255) continue;
     if ((wx[k] <= PLACE.doorCells && opens(wx, i, j, 0, 1, wx[k]) && opens(wx, i, j, 0, -1, wx[k])) || (wz[k] <= PLACE.doorCells && opens(wz, i, j, 1, 0, wz[k]) && opens(wz, i, j, -1, 0, wz[k]))) door[k] = 1; }
-  gaps.forEach((g, n) => {
-    const [ax, az, bx, bz] = g, dx = bx - ax, dz = bz - az, len = Math.hypot(dx, dz); if (!(len > 1e-3)) return; const ux = dx / len, uz = dz / len;
-    // A SHUT DOOR IS A WALL FROM JAMB TO JAMB. A leaf is a hand narrower than its opening, and where that crack lay over a cell's centre the map had a free
-    // cell in the wall's own line beside the shut leaf: a doorway by its shape, cut off from both rooms, holding a level of its own, and shown as a pale block
-    // on the floor and the wall there (the maintainer on his GPU, 11-01: "weird artifacts to the left of the door in overcast too", "doesn't show up in night
-    // but does for dawn and dusk"; at night no place has a gain). A leaf that lies in its own line (both its ends within PLACE.shutNear of it) shuts the line.
-    // BY DEGREES shut is what the way through says, the same measure that says how open (and its line is a wall already, above).
-    if (deg) { if (steps![n]) onLine(g, k => { door[k] = 1; deg[k] = steps![n]; }); return; }
-    let shut = false;
-    for (const b of dynamics) { if (placeWall(b) !== FULL) continue; const c = Math.cos(b.yaw), sn = Math.sin(b.yaw), long = b.h[0] >= b.h[2], hl = long ? b.h[0] : b.h[2], lx = long ? c : sn, lz = long ? -sn : c;
-      const off = (x: number, z: number) => Math.abs((x - ax) * uz - (z - az) * ux), t = (b.c[0] - ax) * ux + (b.c[2] - az) * uz;
-      if (t > 0 && t < len && off(b.c[0] + lx * hl, b.c[2] + lz * hl) <= PLACE.shutNear && off(b.c[0] - lx * hl, b.c[2] - lz * hl) <= PLACE.shutNear) { shut = true; break; } }
-    onLine(g, k => { if (shut) out[k] = 255; else door[k] = 1; });
-  });
-  for (let k = 0; k < W * H; k++) if (out[k] !== 255) out[k] = (door[k] ? 1 : 2) | (roof[k] ? 0 : 4) | (deg && door[k] ? deg[k] << 3 : 0);
+  // A DOOR'S OWN CELLS, by its line: doorway cells outright, with its step. (A shut door's are a wall already, above. The leaf's own shape is not asked:
+  // where the crack beside a shut leaf lay over a cell's centre the shapes made a free cell in the wall's line, cut off from both rooms and shown as a
+  // pale block, the maintainer on his GPU, 11-01: "weird artifacts to the left of the door in overcast too".)
+  gaps.forEach((g, n) => { if (steps[n]) onLine(g, k => { door[k] = 1; deg[k] = steps[n]; }); });
+  for (let k = 0; k < W * H; k++) if (out[k] !== 255) out[k] = (door[k] ? 1 : 2) | (roof[k] ? 0 : 4) | (door[k] ? deg[k] << 3 : 0);
   return out;
 }
 /** "is this spot free floor under the open sky?" on the plan of a list of boxes as they stand, for a rule that asks before the world is filled (scene/geoTry.ts:
@@ -187,22 +172,21 @@ export function skyPlan(statics: readonly Box[]): (x: number, z: number) => bool
   const m = placeMask(statics, []);
   return (x, z) => { const i = Math.floor((x - WORLD.rcMin[0]) * PLACE_RES), j = Math.floor((z - WORLD.rcMin[2]) * PLACE_RES); if (i < 0 || j < 0 || i >= PLACE_W || j >= PLACE_H) return true; const v = m[j * PLACE_W + i]; return v !== 255 && (v & 4) !== 0; };
 }
-/** a number that changes when the map would: every box that is part of a wall, and each leaf's swing */
-export function maskKey(statics: readonly Box[], dynamics: readonly Box[]): number {
+/** a number that changes when the map's walls would: every box that is part of a wall or a roof */
+function wallsKey(statics: readonly Box[]): number {
   let key = statics.length * 31 | 0;
   for (const b of statics) { const bits = placeWall(b) || (placeRoof(b) ? 256 : 0); if (!bits) continue; key = (Math.imul(key, 33) + bits + Math.round((b.c[0] + b.h[0] * 3 + b.c[2] * 7 + b.h[2] * 13 + b.yaw * 23) * 50)) | 0; }
-  for (const b of dynamics) { if (!placeWall(b)) continue; key = (Math.imul(key, 33) + Math.round(b.yaw / PLACE.leafStep) * 7 + Math.round((b.c[0] * 3 + b.c[2] * 7) * 10)) | 0; }
   return key;
 }
 
-/** a number that changes when a leaf has moved at all (to a quarter of a hundredth of a radian, half a centimetre): PlaceMap's, by degrees, for "are the steps still the steps" */
+/** a number that changes when a leaf has moved at all (to a quarter of a hundredth of a radian, half a centimetre): PlaceMap's, for "are the steps still the steps" */
 function leafKey(dynamics: readonly Box[]): number {
   let key = 17; for (const b of dynamics) { if (placeWall(b) !== FULL) continue; key = (Math.imul(key, 33) + Math.round(b.yaw * 400) * 7 + Math.round((b.c[0] * 3 + b.c[2] * 7) * 200)) | 0; }
   return key;
 }
-/** … and each door's line (the map's whole key: PlaceMap's, and the part of wallSides.ts sidesKey that is not a leaf) */
-export function placeKey(statics: readonly Box[], dynamics: readonly Box[], gaps: readonly PlaceGap[]): number {
-  let key = maskKey(statics, dynamics); for (const g of gaps) key = (Math.imul(key, 33) + Math.round((g[0] * 3 + g[1] * 7 + g[2] * 13 + g[3] * 23) * 50)) | 0; return key;
+/** … and each door's line: the map's key but for how far each door stands open */
+function placeKey(statics: readonly Box[], gaps: readonly PlaceGap[]): number {
+  let key = wallsKey(statics); for (const g of gaps) key = (Math.imul(key, 33) + Math.round((g[0] * 3 + g[1] * 7 + g[2] * 13 + g[3] * 23) * 50)) | 0; return key;
 }
 /** the map of the level as it stands, drawn again only when its key moves. ONE a frame, whoever reads it (the field below, render/wallSides.ts): each
  *  kept its own, keyed and drawn twice. */
@@ -210,17 +194,22 @@ export class PlaceMap {
   readonly mask = new Uint8Array(PLACE_W * PLACE_H);
   /** times it was drawn */
   drawn = 0;
-  private key = NaN;
+  /** times its SHAPE changed: which cells are a wall's and which a doorway's (the walls, the doors' lines, and which doors stand open at all; not how
+   *  far). What a reader that asks no more than that is keyed by (render/wallSides.ts WallSides). */
+  shape = 0;
+  private key = NaN; private shapeKey = NaN;
   private wallKey = NaN; private jambs: Pt[][][] = []; private leafKey = NaN; private steps: number[] = [];
-  /** `byDegrees`: no leaf is a wall and each door's line says how open it is (placeMask `steps`). The map is then its walls, its doors' lines and their
-   *  steps, so it is drawn again when one of those moves and not for a leaf's swing between two steps. The jambs are found again only with the walls,
-   *  and the steps worked out again only when a leaf has moved (a level at rest costs its two keys). */
-  update(statics: readonly Box[], dynamics: readonly Box[], gaps: readonly PlaceGap[] = [], byDegrees = false): boolean {
-    let key = placeKey(statics, byDegrees ? [] : dynamics, gaps), steps: number[] | null = null;
-    if (byDegrees) { if (key !== this.wallKey) { this.wallKey = key; this.jambs = doorJambs(statics, gaps); this.leafKey = NaN; }
-      const lk = leafKey(dynamics); if (lk !== this.leafKey) { this.leafKey = lk; this.steps = doorSteps(statics, dynamics, gaps, this.jambs); }
-      steps = this.steps; key = (Math.imul(key, 33) + 7) | 0; for (const s of steps) key = (Math.imul(key, 33) + s) | 0; }
+  /** No leaf is a wall and each door's line says how open it is (placeMask `steps`). The map is its walls, its doors' lines and their steps, so it is
+   *  drawn again when one of those moves and not for a leaf's swing between two steps. The jambs are found again only with the walls, and the steps
+   *  worked out again only when a leaf has moved (a level at rest costs its two keys). */
+  update(statics: readonly Box[], dynamics: readonly Box[], gaps: readonly PlaceGap[] = []): boolean {
+    let key = placeKey(statics, gaps);
+    if (key !== this.wallKey) { this.wallKey = key; this.jambs = doorJambs(statics, gaps); this.leafKey = NaN; }
+    const lk = leafKey(dynamics); if (lk !== this.leafKey) { this.leafKey = lk; this.steps = doorSteps(statics, dynamics, gaps, this.jambs); }
+    const steps = this.steps; key = (Math.imul(key, 33) + 7) | 0; for (const st of steps) key = (Math.imul(key, 33) + st) | 0;
     if (key === this.key) return false;
-    this.key = key; placeMask(statics, dynamics, this.mask, gaps, steps); this.drawn++; return true;
+    this.key = key; placeMask(statics, dynamics, this.mask, gaps, steps); this.drawn++;
+    let sk = (Math.imul(this.wallKey, 33) + 5) | 0; for (const st of steps) sk = (Math.imul(sk, 33) + (st ? 1 : 0)) | 0; if (sk !== this.shapeKey) { this.shapeKey = sk; this.shape++; }
+    return true;
   }
 }

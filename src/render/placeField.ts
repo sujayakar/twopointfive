@@ -1,11 +1,11 @@
 // THE LOOK PROTOTYPE'S PLACE FIELD — which PLACE every point of the floor plan is in, as one number: the light that falls on its floor (log2), the same
 // from a room's window to its far end and another on the other side of its wall. The one exposure model (render/lookexpo.ts, shaders/place_common.wgsl)
-// shows every place by that number against the number of the place Sam stands in. Before it the composite asked the radiance cache at each PIXEL (lookPlaceHere,
-// four cells and their sight lines): a room's own fall-off from its window was then part of "the place", and bringing each spot up by its own darkness
+// shows every place by that number against the number of the place Sam stands in. Before it the composite asked the radiance cache at each PIXEL (four cells
+// and their sight lines; that read is gone from the kernel since 11-04, composite.wgsl lookPlaceLevels): a room's own fall-off from its window was then part of "the place", and bringing each spot up by its own darkness
 // flattened the room, which is what the rows this model replaces kept correcting (the maintainer, 10-31: "i worry that we're finding these cases one by one
 // and not fixing them systematically").
 // WHAT LIVES HERE: the field's buffer and its solve (shaders/place_field.wgsl), and Sam's eye, eased on the GPU from the field under his feet. THE MAP it
-// is solved on (which cells are wall: the level's tall boxes and the door leaves where they hang) is scene/placePlan.ts's since 11-04: plain arithmetic
+// is solved on (which cells are wall: the level's tall boxes and each shut door's line; an open door's cells say how far it has swung) is scene/placePlan.ts's since 11-04: plain arithmetic
 // that the game's CPU light may read too. PICTURE ONLY, this file: nothing in the simulation reads the field, it takes no die and no wall clock, and it
 // imports nothing from src/game.
 // THE BUFFER IS READ AS A UNIFORM by the composite: the fragment stage has no sampled texture left to bind (render/passes.ts compEntries).
@@ -26,7 +26,7 @@ export const PLACE_NEAR = PLACE_W * PLACE_H + PLACE_WORDS;
 export const PLACE_BYTES = Math.ceil((PLACE_NEAR + PLACE_W * PLACE_H) / 4) * 16;
 const U_BYTES = 64;
 export class PlaceField {
-  /** what the composite binds as a uniform: PLACE_W × PLACE_H levels (log2; −1000 = wall), then PLACE_WORDS words: the eye's level, 1 once the field is live,
+  /** what the composite binds as a uniform: PLACE_W × PLACE_H levels (log2; −1000 = a wall's cell or a doorway's: no level), then PLACE_WORDS words: the eye's level, 1 once the field is live,
    *  THE OPEN AIR's LOW level on this map (PLACE.skyShare: the level a tenth of the cells under the open sky are darker than; a walled yard's and not open
    *  country's) and its MIDDLE (the level half of them are darker than) */
   readonly buffer: GPUBuffer;
@@ -55,8 +55,8 @@ export class PlaceField {
       computePipelineAsync(device, { label: 'place eye', layout, compute: { module, entryPoint: 'placeEye' } }).then(p => { this.eye = p; }),
     ]).then(() => {
       // a compile the device refused comes back as an INVALID pipeline (gpu/device.ts computePipelineAsync), and setting one on the frame's encoder would void
-      // the whole frame. So each is set once on an encoder of its own, under an error scope: an error there leaves the field off (the kernel's read by the
-      // cache answers, as it does before this) and the frame is never handed either.
+      // the whole frame. So each is set once on an encoder of its own, under an error scope: an error there leaves the field off (every place is then the open
+      // air and none takes a gain, composite.wgsl lookPlaceLevels) and the frame is never handed either.
       const scoped = typeof device.pushErrorScope === 'function' && typeof device.popErrorScope === 'function' && typeof GPUValidationError !== 'undefined';
       if (!scoped) { this.ready = true; return; }
       device.pushErrorScope('validation');
@@ -79,7 +79,7 @@ export class PlaceField {
   }
 
   /** the map follows the level as it stands: drawn again only when a wall, a pane's box or a leaf has changed. True when it was drawn. */
-  setBoxes(statics: readonly Box[], dynamics: readonly Box[], gaps: readonly PlaceGap[] = [], byDegrees = false): boolean { this.own.update(statics, dynamics, gaps, byDegrees); return this.setMap(this.own); }
+  setBoxes(statics: readonly Box[], dynamics: readonly Box[], gaps: readonly PlaceGap[] = []): boolean { this.own.update(statics, dynamics, gaps); return this.setMap(this.own); }
   /** … from a map the caller keeps (the engine's, which the wall sides read too). True when it was sent. */
   setMap(map: PlaceMap): boolean {
     if (this.dead || (map === this.sentMap && map.drawn === this.sentDrawn)) return false;
@@ -97,7 +97,7 @@ export class PlaceField {
     for (let k = 0; k < 2; k++) {
       const f = this.uf, u = this.uu; u[0] = k; u[1] = first ? 1 : 0; f[2] = kappa; f[3] = P.omega;
       f[4] = sam ? (sam[0] - WORLD.rcMin[0]) * PLACE_RES : -1; f[5] = sam ? (sam[1] - WORLD.rcMin[2]) * PLACE_RES : -1; f[6] = ease(P.open); f[7] = ease(P.close);
-      f[8] = Math.min(0.95, Math.max(0.05, (P.y - WORLD.rcMin[1]) / WORLD.rcSize[1])); f[9] = P.dark; f[10] = P.link; f[11] = ease(P.skyEase); f[12] = P.skyShare; f[13] = P.near; f[14] = P.nearDoor;
+      f[8] = Math.min(0.95, Math.max(0.05, (P.y - WORLD.rcMin[1]) / WORLD.rcSize[1])); f[9] = P.dark; f[10] = 0; f[11] = ease(P.skyEase); f[12] = P.skyShare; f[13] = P.near; f[14] = P.nearDoor;
       this.device.queue.writeBuffer(this.ubo[k], 0, this.u);
     }
     const n = first ? P.settle : P.sweeps, gx = Math.ceil(PLACE_W / 8), gy = Math.ceil(PLACE_H / 8);
