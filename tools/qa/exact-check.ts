@@ -56,6 +56,10 @@ if (args[0] === '--load') {
   process.exit(0);
 }
 
+// (a retired word in THIS tool's environment stops it by name, as it stops every tool that stands a game up: this one stands none itself, and the word
+//  would only reach its children, whose stopping would read here as red load and stand lines with no name on them — seen 2026-11-05)
+{ const { retiredEnvWord } = await import(`${ROOT}/src/sim/sim.ts`); const w = Object.keys(process.env).find(k => retiredEnvWord(k));
+  if (w) { console.error(`${w}=${process.env[w]}: the Rust module's rows and the game's own maths are not switches any more (src/sim/sim.ts rowsUp). Take the word out; this check's red path is EXACT_BREAK=1`); process.exit(2); } }
 const X: any = await import(`${ROOT}/src/math/exact.ts`);
 const SYS: Record<string, (...a: number[]) => number> = X.SYS;
 
