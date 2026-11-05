@@ -106,8 +106,8 @@ export const COAST_PALETTE = {
   timber: [0.24, 0.175, 0.12] as Vec3, bronze: [0.07, 0.06, 0.05] as Vec3, cypress: [0.05, 0.075, 0.03] as Vec3, sage: [0.17, 0.2, 0.12] as Vec3,
   poolDark: [0.02, 0.07, 0.075] as Vec3, clay: [0.36, 0.13, 0.07] as Vec3, saffron: [0.52, 0.31, 0.07] as Vec3,
   // the hotel corner's second laying (tools/levels/hotel-corner.ts): a smooth coursed stone for a house, a cream for its columns, a rough stone for a garden
-  // wall, a warm timber for rafters and shutters, pale shallow water
-  limestone: [0.525, 0.5, 0.445] as Vec3, cream: [0.53, 0.506, 0.436] as Vec3, rubble: [0.33, 0.276, 0.206] as Vec3, cedar: [0.36, 0.2, 0.096] as Vec3, poolPale: [0.17, 0.31, 0.276] as Vec3,
+  // wall, a smooth warm timber for rafters and shutters, pale shallow water, a paving slab
+  limestone: [0.525, 0.5, 0.445] as Vec3, cream: [0.53, 0.506, 0.436] as Vec3, rubble: [0.33, 0.276, 0.206] as Vec3, cedar: [0.32, 0.2, 0.11] as Vec3, poolPale: [0.17, 0.31, 0.276] as Vec3, stoneSlab: [0.445, 0.42, 0.375] as Vec3,
 };
 export type CoastMat = keyof typeof COAST_PALETTE;
 namePaints(COAST_PALETTE);
@@ -120,7 +120,7 @@ export const COAST_FINISH: Readonly<Record<CoastMat, { rough: number; metal?: bo
   tyreRubber: { rough: 0.85 }, canvasWhite: { rough: 0.95 }, canvasBlue: { rough: 0.95 }, towelStripe: { rough: 0.95 }, foliage: { rough: 1 },
   stonePale: { rough: 0.6 }, stoneShade: { rough: 0.5 }, stoneBand: { rough: 0.5 }, dryEarth: { rough: 1 }, timber: { rough: 0.85 }, bronze: { rough: 0.45, metal: true }, cypress: { rough: 1 }, sage: { rough: 1 },
   poolDark: { rough: 0.06 }, clay: { rough: 0.5 }, saffron: { rough: 0.95 },
-  limestone: { rough: 0.7 }, cream: { rough: 0.6 }, rubble: { rough: 0.95 }, cedar: { rough: 0.8 }, poolPale: { rough: 0.06 },
+  limestone: { rough: 0.7 }, cream: { rough: 0.6 }, rubble: { rough: 0.95 }, cedar: { rough: 0.5 }, poolPale: { rough: 0.06 }, stoneSlab: { rough: 0.55 },
 };
 export const COAST_MATERIALS: Readonly<Record<string, { albedo: Vec3; rough: number; metal?: boolean }>> = Object.fromEntries(
   (Object.keys(COAST_PALETTE) as CoastMat[]).map(n => [n, { albedo: COAST_PALETTE[n], rough: COAST_FINISH[n].rough, ...(COAST_FINISH[n].metal ? { metal: true } : {}) }]));
@@ -134,7 +134,7 @@ export const COAST_SIM: Readonly<Record<CoastMat, GwotSim>> = {
   tyreRubber: '~plastic', canvasWhite: 'chair', canvasBlue: 'chair', towelStripe: 'chair', foliage: 'plant',
   stonePale: 'stone', stoneShade: 'stone', stoneBand: 'stone', dryEarth: 'asphalt', timber: 'wood', bronze: 'metal', cypress: 'plant', sage: 'plant',
   poolDark: 'concrete', clay: 'wall', saffron: 'chair',
-  limestone: 'concrete', cream: 'concrete', rubble: 'concrete', cedar: 'wood', poolPale: 'concrete',
+  limestone: 'concrete', cream: 'concrete', rubble: 'concrete', cedar: 'wood', poolPale: 'concrete', stoneSlab: 'stone',
 };
 /** the palette + finishes as the exporter's `materials` rows (tools/levels/export.ts: a generator's `MATERIALS` export) */
 export const GWOT_MATERIALS: Readonly<Record<string, { albedo: Vec3; rough: number; metal?: boolean }>> = Object.fromEntries(

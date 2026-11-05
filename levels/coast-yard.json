@@ -80,8 +80,9 @@
     "limestone": { "albedo": [0.525, 0.5, 0.445], "rough": 0.7, "stuff": "cast panel" },
     "cream": { "albedo": [0.53, 0.506, 0.436], "rough": 0.6, "stuff": "skim" },
     "rubble": { "albedo": [0.33, 0.276, 0.206], "rough": 0.95, "stuff": "block" },
-    "cedar": { "albedo": [0.36, 0.2, 0.096], "rough": 0.8, "stuff": "wood" },
-    "poolPale": { "albedo": [0.17, 0.31, 0.276], "rough": 0.06, "stuff": "enamel" }
+    "cedar": { "albedo": [0.32, 0.2, 0.11], "rough": 0.5, "stuff": "veneer" },
+    "poolPale": { "albedo": [0.17, 0.31, 0.276], "rough": 0.06, "stuff": "enamel" },
+    "stoneSlab": { "albedo": [0.445, 0.42, 0.375], "rough": 0.55, "stuff": "skim" }
   },
   "surfaces": {
     "building": { "x0": 26, "x1": 33, "z0": 9, "z1": 15 },
