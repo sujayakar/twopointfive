@@ -27,7 +27,7 @@ import { simRandom } from '../math/dice';   // the simulation's die (math/dice.t
 import { hyp3 } from '../math/vec';
 import { EXACT } from '../math/exact';
 import { RUST, ruleFell, ruleRed } from '../sim/sim';
-import { BOTH } from '../scene/collision';
+import { BOTH, noNumber } from '../scene/collision';
 import type { BoxMirror } from '../scene/boxMirror';
 import { ItemStore, ITF, IC, ITEM_KINDS, ITEM_CAP, ITEM_ROWS, ITEM_ROOFS, IP, IE, IEK, ITEM_EV, ITEMS_HOST, ITEMS_STEPPED, itemIo, itemMem, itemDiff } from '../sim/itemshome';
 import { SimState } from '../sim/state';
@@ -296,11 +296,10 @@ export class Throwables {
     if (M !== null) ITEMS_STEPPED.stepsThere++; else ITEMS_STEPPED.stepsHere++;
     while (r >= 0) {
       if (M !== null) {
-        // the module walks from row r down as far as it can: to the bottom (−1), or to a row only this side can judge, which is stepped here
+        // the module walks from row r down to the bottom (−1). A row it hands back met a ray that is no number: a mistake, said by name
         r = BOTH.on ? this.walkBoth(dt, M, r, ev) : this.walkThere(dt, M, r, ev);
         if (r < 0) break;
-        ruleFell('items', 'the module handed a row back');
-        ITEMS_STEPPED.host++;
+        ITEMS_STEPPED.host++; throw noNumber();
       }
       this.stepRow(r, dt, ev); ITEMS_STEPPED.here++;
       r--;
@@ -321,7 +320,7 @@ export class Throwables {
   /** THE MODULE'S WALK from row `from` down (rust/sim/src/items.rs update): the hand-over written, the walk asked, the tallies kept, what it listed
    *  copied out of the module's memory onto `ev`. → the row it hands back for this side to step, or −1 */
   private walkThere(dt: number, M: BoxMirror, from: number, ev: number[]): number {
-    const ask = this.col.rulesPanes(); if (ask < 0) return from;   // (a row this side stepped broke more glass than the copy holds: every row from here is this side's)
+    const ask = this.col.rulesPanes(); if (ask < 0) throw new Error('the pane\'s rule was the module\'s to ask as this walk\'s world was taken and is not as its hand-over is written: nothing runs between the two (throwables.ts world)');   // (cannot happen)
     const io = itemIo(), m = itemMem(), P = io.par, B = this.bog;
     const bog = B !== null && B.may();
     m[P + IP.dt] = dt; m[P + IP.from] = from; m[P + IP.ask] = ask; m[P + IP.bog] = bog ? 1 : 0; m[P + IP.rifleShare] = RIFLE_ITEM.propShare;

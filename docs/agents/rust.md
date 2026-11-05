@@ -1667,6 +1667,21 @@ first system across (the game's own maths). No rule of play has changed and noth
     2,241 things moved under one; 0 differ; `PROPS_BREAK=1` asks the module from a hair to one side: 2,052 of 12,000 differ) — and by
     `rust-check --both` over the missions as before. No question more is asked alone: the missions' count of lone proofs did not move (17,270
     over four on the page's stand). `TWIN_ROW` has no place left and is SEALED: a place found later is red from the day it is counted.
+  - NO RAY IS HANDED BACK. Two kinds were (`lines.rs ray_rule`, `collision.ts raycastAsk`; a slab's step and a thrown thing's walk handed their
+    whole step or row back with them): a ray "a thousand kilometres long or longer", and a ray that is no number.
+    NO LENGTH IS TOO LONG: the walk of the cells ends where the ray has left the level for good — the cells round a sample lie off the grid on
+    the side the ray is going, or it does not go that way at all, and a sample's cell moves one way only along a ray — the same statement in
+    `lines.rs ray_but` and `collision.ts raycastHere`. The samples are where they were, so every answer is the same to the bit; a long ray that
+    misses is walked as far as the level reaches (it was walked to its end, half a metre a sample). A ray that goes nowhere in plan (straight up
+    or down) never leaves that way, and ends after its first sample: every later sample's cells are the first's, whose statics have each been
+    asked the whole ray. One that crawls in plan is walked until it has left: long, never wrong. The gate at 1e6 is gone from both sides.
+    A RAY THAT IS NO NUMBER HAS NO ANSWER, here or there: where it starts, the way it goes, or a length that is not finite (its samples are none).
+    The TypeScript walk never answered one: it reads a cell that is no cell and fails. So the module still reports it (`RAY_HOST`, a rule writing
+    nothing of its step), and the host NAMES THE MISTAKE where it is reported (`collision.ts noNumber`: a level ray, a slab's step, a thrown
+    thing's walk) instead of handing it to a walk that fails on it without a name. `flySlab`, `runOn` and the pool's walk have no second half
+    behind the module's step any more. Nothing of play asks either kind (the count over the missions, the soak and the tour read none).
+    HELD BY `segment-ident --rust`: one ray in twenty-five with plan to it is asked for two thousand or a million kilometres (7,672 on the
+    office alone), each the same answer both ways, and a run with none is not a fair run; the 42 by digest.
 
   WHAT WAS CLOSED FOR THE RULES OF THE THINGS (doors, what falls, furniture, a leaf off its hinges, thrown things; 2026-11-04):
   - EVERY WAY BACK IS SAID. Each rule's choice between the module and this side (`doors.ts there`, `props.ts there`, `doorblast.ts slabThere` and
