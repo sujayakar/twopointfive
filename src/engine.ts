@@ -16,7 +16,7 @@ import { PowderField, powderDrawWord } from './render/powderField';
 import { PlaceField } from './render/placeField';
 import { PlaceMap } from './scene/placePlan';
 import { WallSides } from './render/wallSides';
-import { lookGrade, lookGradeFrame } from './render/lookgrade';
+import { lookGrade, lookGradeFrame, lookDay, LOOK_DAY } from './render/lookgrade';
 import { lookExpoFrame, lookExpoBound, lookNightSkyE } from './render/lookexpo';
 import { planOpenings, openAreas, openingLooks, openingReach, openingsKey, leavesKey, LOOK_OPENINGS, type Opening } from './scene/openings';
 import { buildWallRaster, wallRasterDiff, reachMaskSome, REACH_WORK, REACH_PACE, type ReachJob } from './render/reach';
@@ -618,8 +618,13 @@ export class Engine {
     let eyesWidest: [number, number] | null = null;   // (frame.placeCfg's z and w, render/lookexpo.ts lookExpoBound)
     if (placeOn) { const own = hourExp < 1 ? lookConfig.nightSky?.() ?? null : null;   // (with an hour up, the level's own sky by the page's word: a night's unless the level is its own day, which lookExposure says of it as it does of any sky)
       eyesWidest = lookExpoBound(lookConfig.dark, lookNightSkyE(hourExp, shadeCfg?.[3], own && lookExposure(null, own.zenith, own.horizon) >= 1 ? Math.PI * lookConfig.sky * lookSkyLum(own.zenith, own.horizon, 0.947) : null), this.settings.nvAmount); }
-    { const P = this.passes, on = lookConfig.on; P.gradeH = on ? lookConfig.gradeH : 0; P.gradeS = on ? lookConfig.gradeS : 0; P.gradeSat = on ? lookConfig.gradeSat : 1; P.gradeC = 1; this.lookGradeCfg = null;   // (THE LOOK PROTOTYPE's grading rows, post.wgsl agx)
-      if (on && lookConfig.gradeC !== 1) { const zen = this.settings.skyZenith, hor = this.settings.skyHorizon, g = lookGrade(lookConfig.sky * lookSkyLum(zen, hor, 0.8), Math.PI * lookConfig.sky * lookSkyLum(zen, hor, 0.947), this.lights.lights, this.settings.exposure * lookConfig.gradeExp, lookConfig.gradeC); P.gradeC = g[0]; P.gradeP = g[1]; this.lookGradeCfg = lookGradeFrame(g, this.settings.exposure * lookConfig.gradeExp); } }
+    { const P = this.passes, on = lookConfig.on; P.gradeH = on ? lookConfig.gradeH : 0; P.gradeS = on ? lookConfig.gradeS : 0; P.gradeSat = on ? lookConfig.gradeSat : 1; P.gradeC = 1; P.gradeD = 0; this.lookGradeCfg = null;   // (THE LOOK PROTOTYPE's grading rows, post.wgsl agx)
+      if (on && (lookConfig.gradeC !== 1 || lookConfig.gradeDay > 0)) { const zen = this.settings.skyZenith, hor = this.settings.skyHorizon, g0 = lookGrade(lookConfig.sky * lookSkyLum(zen, hor, 0.8), Math.PI * lookConfig.sky * lookSkyLum(zen, hor, 0.947), this.lights.lights, this.settings.exposure * lookConfig.gradeExp, lookConfig.gradeC);
+        // THE DAY'S CURVE (render/lookgrade.ts lookDay): by as much as it stands in, the Contrast row's turn stands down. The turn was made to give a day
+        // its blacks on the night's curve; the day's curve has them of itself, and the two together crush the shade twice. Row at 0: g is g0, untouched.
+        const d = lookConfig.gradeDay > 0 ? lookDay(g0[1], lookConfig.gradeDay) : null, g: [number, number] = d && d[0] > 0 ? [1 + (g0[0] - 1) * (1 - d[0]), g0[1]] : g0;
+        if (d && d[0] > 0) { P.gradeD = d[0]; P.gradeW = d[1]; P.gradeSl = LOOK_DAY.slope; P.gradeCs = LOOK_DAY.chroma; P.gradeKn = LOOK_DAY.knee; }
+        P.gradeC = g[0]; P.gradeP = g[1]; this.lookGradeCfg = lookGradeFrame(g, this.settings.exposure * lookConfig.gradeExp); } }
     this.glassLightMasks();   // (glass: which listed panes each light can reach at all → RtLight.glassMask, packed by the upload below; all 0 with the experiment off)
     const restir = this.settings.restir || this.passes.restirStandsIn;   // (the estimator this frame's direct pass runs: the setting, or ReSTIR standing in while the old estimator — a LATER twin with the row 'Start on first frame shaders' on — is not in yet; the row off = the setting, always)
     this.lights.dirMasks = restir;   // the moon's / sun's directional reach masks ride only with the ReSTIR estimator (render/reach.ts reachMaskForDirectional; the OFF path's rows stay as they were)

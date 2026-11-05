@@ -2,7 +2,7 @@
 // dither → LDR. Debug views that are not scene-referred (albedo, normals, depth, hints) pass straight through.
 @group(1) @binding(0) var hdrTex: texture_2d<f32>;
 @group(1) @binding(1) var bloomTex: texture_2d<f32>;     // half-res, top of the upsampled chain
-struct PostParams { bloom: f32, saturation: f32, smokeDiffuse: f32, nvPhosphor: f32, invOut: vec2f, diffuseMode: f32, diffuseTau0: f32, nvOval: f32, gradeC: f32, gradeH: f32, gradeS: f32, gradeP: f32, smokeKeep: f32 };   // smokeKeep: the smoke lab's row, how much of a plume's own light is kept out of the diffusion's blur (0 = the mix as it was; passes.smokeDiffuseKeep)     // nvOval: how much of the tube's dark eyepiece edge is drawn (0 = none, the whole screen is picture; 1 = the oval; passes.nvOval)   // diffuseTau0: the optical depth under which the diffusion does nothing (thin edges keep what is behind them crisp)   // diffuseMode: 0 = weight from the MOST transparent of the four texels, 1 = a plain bilinear (EXPERIMENT settings.smokeDiffuseWeight)   // smokeDiffuse: how strongly smoke BLURS what stands behind it (0 = off; passes.smokeDiffuse)   // invOut = 1 / the OUTPUT size this pass runs at (= frame.invScreen without TAAU; the internal size is smaller with it)
+struct PostParams { bloom: f32, saturation: f32, smokeDiffuse: f32, nvPhosphor: f32, invOut: vec2f, diffuseMode: f32, diffuseTau0: f32, nvOval: f32, gradeC: f32, gradeH: f32, gradeS: f32, gradeP: f32, smokeKeep: f32, gradeD: f32, gradeW: f32, gradeSl: f32, gradeCs: f32, gradeKn: f32 };   // gradeD…: THE DAY'S CURVE (dayCurve below; render/lookgrade.ts LOOK_DAY, lookDay): how far it stands in for the night's curve (0 = not run), the stop of its white, its slope for brightness and for colour, its knee   // smokeKeep: the smoke lab's row, how much of a plume's own light is kept out of the diffusion's blur (0 = the mix as it was; passes.smokeDiffuseKeep)     // nvOval: how much of the tube's dark eyepiece edge is drawn (0 = none, the whole screen is picture; 1 = the oval; passes.nvOval)   // diffuseTau0: the optical depth under which the diffusion does nothing (thin edges keep what is behind them crisp)   // diffuseMode: 0 = weight from the MOST transparent of the four texels, 1 = a plain bilinear (EXPERIMENT settings.smokeDiffuseWeight)   // smokeDiffuse: how strongly smoke BLURS what stands behind it (0 = off; passes.smokeDiffuse)   // invOut = 1 / the OUTPUT size this pass runs at (= frame.invScreen without TAAU; the internal size is smaller with it)
 @group(1) @binding(2) var<uniform> post: PostParams;
 @group(1) @binding(3) var volTexP: texture_2d<f32>;    // the volumetric pass's react texture at half the internal size — .g = the SMOKE-ONLY transmittance of the pixel's ray (haze excluded: a far wall in clear air stays sharp)
 @group(1) @binding(4) var blur1Tex: texture_2d<f32>;   // this frame plainly box-downsampled to a quarter size then Gaussian-blurred there (passes.diffBlur[1]: energy-conserving, band-limited — its texel lattice cannot print through a bilinear read)
@@ -26,6 +26,18 @@ fn agxContrast(x: vec3f) -> vec3f {
   let x2 = x * x; let x4 = x2 * x2;
   return 15.5 * x4 * x2 - 40.14 * x4 * x + 31.96 * x4 - 6.868 * x2 * x + 0.4298 * x2 + 0.1191 * x - 0.00232;
 }
+/** THE DAY'S CURVE (the look panel's Day curve row; render/lookgrade.ts has the why and the numbers): a camera's curve where agxContrast is a night's. `v` =
+ *  the picture's stops (0‥1 of the tone map's range, per channel). Under the white (the stop post.gradeW: a sixth of a stop over sunlit snow) the screen's
+ *  linear light falls by gradeSl of a stop for each stop of BRIGHTNESS, and a colour's channels keep gradeCs of the stops between them, so a paint keeps
+ *  its colour where a curve run channel by channel would grey it; over the knee it rolls off toward white, which is where a channel that would pass white
+ *  joins the others and a glint goes white. Then the screen's 2.2, as agxContrast's own answer has it. */
+fn dayCurve(v: vec3f) -> vec3f {
+  let g = dot(v, vec3f(0.2126, 0.7152, 0.0722));
+  let x = exp2(((g - post.gradeW) * post.gradeSl + (v - g) * post.gradeCs) * 16.5);
+  let k = post.gradeKn;
+  let y = select(k + (1.0 - k) * (1.0 - exp(-(x - k) / (1.0 - k))), x, x < vec3f(k));
+  return pow(clamp(y, vec3f(0.0), vec3f(1.0)), vec3f(1.0 / 2.2));
+}
 fn agx(cin: vec3f) -> vec3f {
   let inset = mat3x3f(vec3f(0.842479062253094, 0.0423282422610123, 0.0423756549057051),
                       vec3f(0.0784335999999992, 0.878468636469772, 0.0784336),
@@ -45,7 +57,7 @@ fn agx(cin: vec3f) -> vec3f {
     v = post.gradeP + (v - post.gradeP) * post.gradeC + post.gradeH * smoothstep(0.64, 0.82, g) + post.gradeS * (1.0 - smoothstep(0.36, 0.58, g));
     v = clamp(v, vec3f(0.0), vec3f(1.0));
   }
-  v = agxContrast(v);
+  if (post.gradeD > 0.0) { v = mix(agxContrast(v), dayCurve(v), post.gradeD); } else { v = agxContrast(v); }   // (THE DAY'S CURVE by as much as the hour's light and the row say; 0 = the night's curve alone, and the day's is not run)
   // look: a touch of punch so mid-tones do not go flat/grey (slope 1, power 1.15, sat from params)
   let lum = dot(v, vec3f(0.2126, 0.7152, 0.0722));
   v = pow(v, vec3f(1.15));
