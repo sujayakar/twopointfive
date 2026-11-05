@@ -23,8 +23,8 @@ use crate::doors::Doors;
 use crate::falls::Falls;
 use crate::props::Props;
 use crate::items::Items;
+use crate::men::Men;
 use crate::slabs::Slabs;
-use crate::weather::Weather;
 use core::mem::{offset_of, size_of};
 
 /// games whose blocks the module holds at once
@@ -52,7 +52,7 @@ pub struct State {
     pub props: Props,
     pub slabs: Slabs,
     pub items: Items,
-    pub weather: Weather,
+    pub men: Men,
     pub smoke: Smoke,
     pub poses: Poses,
 }
@@ -76,7 +76,7 @@ pub const PARTS: [Part; 10] = [
     Part { off: offset_of!(State, props), len: size_of::<Props>(), ver: 1, pool: false },
     Part { off: offset_of!(State, slabs), len: size_of::<Slabs>(), ver: 1, pool: false },
     Part { off: offset_of!(State, items), len: size_of::<Items>(), ver: 1, pool: false },
-    Part { off: offset_of!(State, weather), len: size_of::<Weather>(), ver: 1, pool: false },
+    Part { off: offset_of!(State, men), len: size_of::<Men>(), ver: crate::men::SCHEMA, pool: false },
     Part { off: offset_of!(State, smoke), len: size_of::<Smoke>(), ver: 1, pool: true },
     Part { off: offset_of!(State, poses), len: size_of::<Poses>(), ver: 2, pool: true },   // (2: a pose is ten columns of whole vectors, where it was ten singles a node)
 ];
@@ -93,6 +93,8 @@ const _: () = {
         i += 1;
     }
     assert!(at == LEN);
+    // (a man's columns are whole vectors from a 16-byte boundary: men.rs)
+    assert!(offset_of!(State, men) % 16 == 0);
     // (a pose starts on a 16-byte boundary: the block does, the pool's head is 16 bytes, and a pose is whole vectors — skeleton.rs `rows`)
     assert!(offset_of!(State, poses) % 16 == 0);
 };

@@ -21,50 +21,59 @@
 //              the first time, and the die stands where the take left it
 //   another game  …and the same snapshot put into a FRESH game (its own block, its own slot) plays that second to the same raw bits
 //   across a row change  a snapshot holds WHERE the die was: one taken before the row moved it into the block and one taken after are each put back over
-//              a game that has since gone the other way, and play on as they did
+//              a game that has since gone the other way, and play on as they did (a game has a block from the moment it is made, for the families
+//              whose columns are parts of it; what a take from before the die moved in holds of the die is its bit down and its part zeros)
 //   no views   a typed array over the module's memory kept in the state is named by the snapshot (`simViews`): state is reached through `game.sim` alone
-//   doors      the second tenant, and the first whose RULES run in the module (RUST.doors: the leaves' columns, src/sim/doorshome.ts; their step,
-//              rust/sim/src/doors.rs — where the game's own maths stand; on the frozen stand the columns are at home and the TypeScript steps them): a
-//              game whose doors are worked every half second, with the row on, off, and flipped every 40 ticks under it, is one game after every tick;
-//              a snapshot put back, put into a fresh game, and put back across a change of the row plays as it did
+//   doors      the first family whose RULES run in the module (RUST.doors: the leaves' columns, src/sim/doorshome.ts; their step, rust/sim/src/doors.rs —
+//              where the game's own maths stand). ITS COLUMNS ARE A PART OF THE GAME'S BLOCK FROM THE MOMENT THE GAME IS MADE, whichever side steps
+//              them: a game whose doors are worked every half second, with the row on, off, and flipped every 40 ticks under it, is one game after
+//              every tick, and its columns are in its block at every one; a snapshot put back, put into a fresh game, and put back across a change of
+//              the row plays as it did
 //   pieces     two pools at home (the smoke grid's part, then the poses): a take since a take shares every unchanged piece of EACH part, though the part
 //              before grew by a piece between the two (an earlier take is walked a part at a time by its own lengths, as a put walks one)
 //   furniture  the same three lines for the next family of things whose step runs in the module (RUST.props: each thing's columns, src/sim/propshome.ts;
 //              their step, rust/sim/src/props.rs): a game whose chairs and cartons are shoved every half second (tenantLines holds any such family)
 //   slabs      …and for the leaves off their hinges (RUST.slabs: each slab's row, src/sim/slabshome.ts; their step, rust/sim/src/slabs.rs): a game whose doors
 //              are blown out of their frames one after another and hung again
+//   a crowd    one game more than the module has slots, every one of those families worked in each and the games stepped turn about: a game's block
+//              is its columns from the moment it is made, so each gives its slot up and comes back every tick, and is the game one is alone after
+//              every tick. ITS OWN RED PATH, SIMSTATE_BREAK=park: a block parked to make room is left behind and nothing else is broken (the whole
+//              red path above ends in a throw before this line is reached) — `slots`, `parked poses` and `a crowd` must FAIL
 // Not game code; nothing here needs a GPU, and nothing here has been seen on one.
-// THE STAND THIS CHECK STANDS ON HAS NO ROW UP: it raises and drops the rows it asks about itself, and a system's columns are only its own again in a game no
-// other row keeps them at home for. (The weather's table has no row: every game has a block for it, so a row going down never shuts one.) Said as the stand's own word, before the harness loads: a stand-up puts every row where its stand has it, and both stands
-// have every row but the maths up (src/sim/sim.ts RUST_ON). A row's own word in the caller's shell still raises that row (the red paths use it).
-process.env.TPS_RUST = '0';
-export {};   // (a module, for the top-level awaits: the one import below is no longer an `import` statement)
-const { standUp, ROOT } = await import('./headless.ts');   // (after the word: an `import` statement would load the harness before the line above ran)
+// THE STAND THIS CHECK STANDS ON HAS NO ROW UP: it raises and drops the rows it asks about itself. This check's own arm (tools/qa/headless.ts hold), held
+// before a game is stood: a stand-up puts every row where the build has it, which is up (src/sim/sim.ts RUST_ON).
+export {};   // (a module, for the top-level awaits)
+const { standUp, ROOT, hold } = await import('./headless.ts');
+hold({ rows: false });
 const S: any = await import(`${ROOT}/src/sim/sim.ts`), ST: any = await import(`${ROOT}/src/sim/state.ts`), D: any = await import(`${ROOT}/src/math/dice.ts`);
 const RB: any = await import(`${ROOT}/src/game/rollback.ts`), DG: any = await import(`${ROOT}/src/game/digest.ts`);
-const BREAK = process.env.SIMSTATE_BREAK === '1', DT = 1 / 60;
+const BREAK = process.env.SIMSTATE_BREAK === '1', BREAK_PARK = process.env.SIMSTATE_BREAK === 'park', DT = 1 / 60;
 let fails = 0;
 const verdict = (ok: boolean, label: string, detail: string) => { if (!ok) fails++; console.log(`- ${ok ? 'PASS' : 'FAIL'} — ${label}\n    ${detail}`); };
 const F = new Float64Array(1), U = new Uint32Array(F.buffer), same = (a: number, b: number): boolean => { F[0] = a; const l = U[0], h = U[1]; F[0] = b; return l === U[0] && h === U[1]; };
 
 const no = S.simWhyNot();
 if (no) { console.log(`- FAIL — the module does not start here: ${no}`); process.exit(1); }
-console.log(`state in the Rust module · profile ${process.env.TPS_PROFILE ?? 'frozen'}${BREAK ? ' · SIMSTATE_BREAK=1 (the red path)' : ''}`);
+console.log(`state in the Rust module · profile ${process.env.TPS_PROFILE ?? 'frozen'}${BREAK ? ' · SIMSTATE_BREAK=1 (the red path)' : BREAK_PARK ? ' · SIMSTATE_BREAK=park (the red path of a parked block alone)' : ''}`);
+if (BREAK_PARK) { const P = ST.SimState.prototype; P.park = function (this: any) { this.own = new ArrayBuffer(this.w.length * 4); this.slot = -1; this.view(); }; }   // (what stood in the slot is left there: zeros come back)
 if (BREAK) {
   const P = ST.SimState.prototype, put = P.put;
   P.park = function (this: any) { this.own = new ArrayBuffer(this.w.length * 4); this.slot = -1; this.view(); };   // (what stood in the slot is left there: zeros come back)
   P.put = function (this: any, c: unknown[]) { if (c.length === 0) put.call(this, c); };   // (a take put back writes nothing)
-  // (and a system at home in a bound block is not tended as a tick opens: the men who came or left since it moved in are not seen)
-  const settle = P.settle; P.settle = function (this: any, g: object) { if (this.where >= 0 && this.w[1] !== 0) return; settle.call(this, g); };
+  // (and a system at home in a bound block is not tended as a tick opens: the men who came or left since it moved in are not seen. `BORN`: the bits a
+  //  game's block has from the moment the game is made — the families whose columns are parts of it for its life, which nothing moves or tends; on this
+  //  check's stand, with no row up, a game just stood up has those and no other)
+  const BORN = (await standUp({ seed: 7 }) as any).game.sim.w[1];
+  const settle = P.settle; P.settle = function (this: any, g: object) { if (this.where >= 0 && (this.w[1] & ~BORN) !== 0) return; settle.call(this, g); };
 }
 const x = S.sim(), L = ST.simLayout();
 
 // ---- layout
 { let at = 0, tight = true; for (const p of L.parts) { if (p.off !== at || p.len % 8) tight = false; at += p.len; }
   let trap = false; try { x.dice_roll(L.games); } catch { trap = true; }   // (a slot that is not one: the module traps, it does not answer for slot 0)
-  const none = new ST.SimState(); S.RUST.dice = true; none.settle({ dice: null }); S.RUST.dice = false;   // (a game with no die of its own has nothing to move: its bit among the head's homes stays down)
-  verdict(L.parts.length === ST.SIM_PARTS.length && tight && at === L.bytes && L.word !== 0 && L.games >= 2 && trap && !(none.w[1] & 1), 'layout: the module\'s parts are the ones src/sim/state.ts names, end to end; a slot that is not one traps; a game with no die has none at home',
-    `${L.parts.map((p: any) => `${p.name} ${p.off}+${p.len}`).join(' · ')} · ${L.bytes} bytes a block · ${L.games} slots · layout ${L.word.toString(16)} (state.ts names ${ST.SIM_PARTS.join(' ')}) · slot ${L.games} traps: ${trap} · no die, none at home: ${!(none.w[1] & 1)}`); }
+  const none = new ST.SimState(); S.RUST.dice = true; none.settle({ dice: null }); S.RUST.dice = false;   // (a game with no die of its own has nothing to move: no block)
+  verdict(L.parts.length === ST.SIM_PARTS.length && tight && at === L.bytes && L.word !== 0 && L.games >= 2 && trap && !none.open, 'layout: the module\'s parts are the ones src/sim/state.ts names, end to end; a slot that is not one traps; a game with no die gets no block',
+    `${L.parts.map((p: any) => `${p.name} ${p.off}+${p.len}`).join(' · ')} · ${L.bytes} bytes a block · ${L.games} slots · layout ${L.word.toString(16)} (state.ts names ${ST.SIM_PARTS.join(' ')}) · slot ${L.games} traps: ${trap} · no die, no block: ${!none.open}`); }
 
 /** a die at home in a block of its own (as a game's is once its tick has opened with the row on) */
 function homed(seed: number): any { const d = D.newDice(seed), st = new ST.SimState(), g = { dice: d }; S.RUST.dice = true; st.settle(g); S.RUST.dice = false; return { d, st, g }; }
@@ -142,11 +151,11 @@ const firstOff = (a: number[], b: number[]): number => { for (let i = 0; i < a.l
   { rows(false); const W3: any = await standUp({ seed: 7 }), g3 = W3.game; let f3 = 0; const go = (n: number): string[] => { const ws: string[] = []; for (let k = 0; k < n; k++) { drive(W3, f3++); W3.step(DT); ws.push(RB.stateHash(g3)); } return ws; };
     go(150); const out = RB.takeSnapshot(g3), fOut = f3, kOut = W3.input.buttons, sOut = g3.dice.s; const refOut = go(40);
     rows(true); go(40); const inn = RB.takeSnapshot(g3), fIn = f3, kIn = W3.input.buttons, sIn = g3.dice.s; const refIn = go(40), homeIn = !!g3.dice.home;
-    RB.restoreSnapshot(out); f3 = fOut; W3.input.buttons = kOut; rows(false); const a = !g3.dice.home && g3.dice.s === sOut && g3.player.char.anim.pose.home === null && g3.poseSets.length === 0, againOut = go(40);
+    RB.restoreSnapshot(out); f3 = fOut; W3.input.buttons = kOut; rows(false); const a = !g3.dice.home && (g3.sim.w[1] & 1) === 0 && g3.dice.s === sOut && g3.player.char.anim.pose.home === null && g3.poseSets.length === 0, againOut = go(40);   // (word 1 of a block is its head's homes, bit 1 the die's: sim/state.ts)
     RB.restoreSnapshot(inn); f3 = fIn; W3.input.buttons = kIn; rows(true); const b = !!g3.dice.home && g3.dice.home.st === g3.sim && g3.dice.s === sIn && g3.player.char.anim.pose.home === g3.sim, againIn = go(40);
     const same = (x: string[], y: string[]) => x.every((w, i) => w === y[i]);
     verdict(a && b && homeIn && same(refOut, againOut) && same(refIn, againIn), 'across a row change: a snapshot from before the die moved in, and one from after, each put back under the row it was taken under, play as they did',
-      `taken out of the block, put back over a game with a block: the die in its fields: ${a}, 40 ticks the same word: ${same(refOut, againOut)} · taken in the block, put back over a game without: at home again: ${b}, 40 ticks the same word: ${same(refIn, againIn)}`); }
+      `taken before the die moved in, put back over a game whose die is in the block: the die in its fields, its bit in the block's head down: ${a}, 40 ticks the same word: ${same(refOut, againOut)} · taken in the block, put back over a game whose die is not: at home again: ${b}, 40 ticks the same word: ${same(refIn, againIn)}`); }
   // a view over the module's memory kept in the state
   g.strayView = new Uint32Array(x.memory.buffer, x.state_addr(0), 4); const s3 = RB.takeSnapshot(g), s4 = RB.takeSnapshot(g, s3); delete g.strayView;
   let refused = false; try { RB.restoreSnapshot(s3); } catch { refused = true; }
@@ -204,12 +213,13 @@ const FIXED: number = ST.simLayout().parts.reduce((n: number, q: any) => n + (q.
   verdict(parked && short && kept && still && stray && grew && there && back && quiet && moved && s2 !== s1 && st.stamp !== s2, 'parked poses: a block with poses in it, parked, is read and written where it stands and is not moved by it; it is as long as what is in use; a longer take put into it fits; its stamp is a new one each time it changes place or is put back, and not for a write',
     `parked by ${L.games} other games: ${parked}, ${before} bytes of a block of ${L.bytes} · read: ${kept}, written and still parked: ${still} · a pose made meanwhile is its own array, to go in later: ${stray} · a longer take put back: it grew ${grew}, the poses right ${there} · bound again, the same: ${back} · the stamp: a write leaves it ${quiet}, parked a new one ${moved}, put back a new one ${s2 !== s1}`); }
 
-// ---- the things of a level: tenants whose STEP runs in the module (the doors, the furniture), each held the same three ways
-/** a family of things at home in the block: its row, what it is called and what it keeps there, where its columns are, how a game works it, whether it is
+// ---- the things of a level: families whose columns are a part of the game's block for the game's life and whose STEP runs in the module while their
+// row is up (the doors, the furniture, the slabs, the thrown things), each held the same three ways
+/** a family of things in the block: its row, what it is called and what it keeps there, where its columns are, how a game works it, whether it is
  *  moving, and the counts of its steps taken in the module and here */
 interface Family { row: 'doors' | 'props' | 'slabs' | 'items'; name: string; cols: string; turn: string; store: (g: any) => any; work: (g: any, k: number) => void; moving: (g: any) => boolean; counts: () => { there: number; here: number }; /** the family's own numbers folded into a tick's word, where the game's raw bits (digest.ts rawBits) do not carry them */ fold?: (g: any, word: number) => number }
 const FOLDF = new Float64Array(1), FOLDU = new Uint32Array(FOLDF.buffer);
-async function tenantLines(F: Family) { const R = S.RUST, at = (g: any) => F.store(g).home;
+async function tenantLines(F: Family) { const R = S.RUST, at = (g: any) => F.store(g).home === g.sim && g.sim.open ? g.sim : null;
   /** frame `f` of a game whose things are worked: the fight above, and every 25 frames the family's own writes on the next thing round */
   const work = (W: any, f: number): void => { drive(W, f); if (f % 25 === 5) F.work(W.game, f / 25 | 0); };
   const bitsOf = (g: any, word: number = DG.RAW_BITS_SEED): number => { const w = DG.rawBits(g, word); return F.fold ? F.fold(g, w) : w; };
@@ -218,9 +228,9 @@ async function tenantLines(F: Family) { const R = S.RUST, at = (g: any) => F.sto
     R[F.row] = false; return { words, homed, moving, digest: DG.hashDigest(DG.digestGame(g)) }; };
   const c0 = F.counts(), off = await play(() => false), c1 = F.counts(), on = await play(() => true), c2 = F.counts(), flip = await play(f => (f / 40 | 0) % 2 === 0);
   const a = firstOff(off.words, on.words), b = firstOff(off.words, flip.words), exact = (await import(`${ROOT}/src/math/exact.ts`) as any).EXACT.on, inModule = c2.there - c1.there, stepsOff = c1.here - c0.here, hereOn = c2.here - c1.here;   // (a tick steps its things once, or not at all: a mission that has ended)
-  verdict(a < 0 && b < 0 && on.homed === TICKS && off.homed === 0 && flip.homed > 0 && flip.homed < TICKS && off.moving > 100 && on.digest === off.digest && flip.digest === off.digest && c1.there === c0.there && stepsOff > 0.9 * TICKS && (exact ? inModule + hereOn === stepsOff && inModule > 0.9 * stepsOff : inModule === 0 && hereOn === stepsOff),
-    `${F.name}, row: a game whose ${F.name} is shoved or swung, with ${F.cols} in the module, is the game without after every tick — and with the row raised and dropped under it`,
-    `${TICKS} ticks, ${F.turn} in ${off.moving} of them · on: ${a < 0 ? 'the same bits' : 'parts at tick ' + a}, the columns at home for ${on.homed} ticks (off: ${off.homed}), ${inModule} of the ${stepsOff} steps taken in the module, ${hereOn} in TypeScript (${exact ? 'the game\'s own maths stand: every step there but in a tick whose box world had changed shape under it — a wall broken, a static added — where the TypeScript steps the columns where they are' : 'the engine\'s maths: none there, the TypeScript steps the columns where they are'}) · flipped every 40: ${b < 0 ? 'the same bits' : 'parts at tick ' + b}, at home for ${flip.homed} · the digests ${on.digest} / ${off.digest} / ${flip.digest}`);
+  verdict(a < 0 && b < 0 && on.homed === TICKS && off.homed === TICKS && flip.homed === TICKS && off.moving > 100 && on.digest === off.digest && flip.digest === off.digest && c1.there === c0.there && stepsOff > 0.9 * TICKS && (exact ? inModule + hereOn === stepsOff && inModule > 0.9 * stepsOff : inModule === 0 && hereOn === stepsOff),
+    `${F.name}, row: a game whose ${F.name} is shoved or swung, with the module stepping ${F.cols}, is the game the TypeScript steps after every tick — and with the row raised and dropped under it; the columns are in the game's block at every tick, whoever steps`,
+    `${TICKS} ticks, ${F.turn} in ${off.moving} of them · on: ${a < 0 ? 'the same bits' : 'parts at tick ' + a}, the columns in the game's block for ${on.homed} ticks (off: ${off.homed}), ${inModule} of the ${stepsOff} steps taken in the module, ${hereOn} in TypeScript (${exact ? 'the game\'s own maths stand: every step there but in a tick whose box world had changed shape under it — a wall broken, a static added — where the TypeScript steps the columns where they are' : 'the engine\'s maths: none there, the TypeScript steps the columns where they are'}) · flipped every 40: ${b < 0 ? 'the same bits' : 'parts at tick ' + b}, in the block for ${flip.homed} · the digests ${on.digest} / ${off.digest} / ${flip.digest}`);
   // a snapshot put back, put into a fresh game, and across a change of the row
   { const W: any = await standUp({ seed: 7 }), g = W.game; R[F.row] = true; let f = 0; for (; f < 180; f++) { work(W, f); W.step(DT); }
     const snap = RB.takeSnapshot(g), h0 = RB.stateHash(g), keys = W.input.buttons, first: string[] = [], bits: number[] = []; let word = DG.RAW_BITS_SEED, moved = 0;
@@ -236,23 +246,24 @@ async function tenantLines(F: Family) { const R = S.RUST, at = (g: any) => F.sto
   { R[F.row] = false; const W3: any = await standUp({ seed: 7 }), g3 = W3.game; let f3 = 0; const go = (n: number): string[] => { const ws: string[] = []; for (let k = 0; k < n; k++) { work(W3, f3++); W3.step(DT); ws.push(DG.hashDigest(DG.digestGame(g3)) + ':' + bitsOf(g3)); } return ws; };
     go(130); const out = RB.takeSnapshot(g3), fOut = f3, kOut = W3.input.buttons; const refOut = go(60);
     R[F.row] = true; go(40); const inn = RB.takeSnapshot(g3), fIn = f3, kIn = W3.input.buttons; const refIn = go(60), homeIn = !!at(g3);
-    RB.restoreSnapshot(out); f3 = fOut; W3.input.buttons = kOut; R[F.row] = false; const a2 = !at(g3), againOut = go(60);
+    RB.restoreSnapshot(out); f3 = fOut; W3.input.buttons = kOut; R[F.row] = false; const a2 = at(g3) === g3.sim, againOut = go(60);
     RB.restoreSnapshot(inn); f3 = fIn; W3.input.buttons = kIn; R[F.row] = true; const b2 = at(g3) === g3.sim, againIn = go(60);
     const alike = (x: string[], y: string[]) => x.every((w, i) => w === y[i]);
-    verdict(a2 && b2 && homeIn && alike(refOut, againOut) && alike(refIn, againIn), `${F.name}, across a row change: a snapshot from before ${F.cols} moved in, and one from after, each put back under the row it was taken under, play as they did`,
-      `taken out of the block, put back over a game with one: the columns the game\'s own: ${a2}, 60 ticks the same game: ${alike(refOut, againOut)} · taken in the block, put back over a game without: at home again: ${b2}, 60 ticks the same game: ${alike(refIn, againIn)}`); }
+    verdict(a2 && b2 && homeIn && alike(refOut, againOut) && alike(refIn, againIn), `${F.name}, across a row change: a snapshot from while the TypeScript stepped ${F.cols}, and one from while the module did, each put back under the row it was taken under, play as they did`,
+      `taken with the row down, put back over a game the module has stepped since: the columns in the game\'s block: ${a2}, 60 ticks the same game: ${alike(refOut, againOut)} · taken with the row up, put back over a game the TypeScript has stepped since: in the block: ${b2}, 60 ticks the same game: ${alike(refIn, againIn)}`); }
   R[F.row] = false; }
 { const DH: any = await import(`${ROOT}/src/sim/doorshome.ts`), PH: any = await import(`${ROOT}/src/sim/propshome.ts`), SH: any = await import(`${ROOT}/src/sim/slabshome.ts`), DB: any = await import(`${ROOT}/src/game/doorblast.ts`);
+  const FAMILIES: Family[] = [];
   // the doors: every 25 frames a hand, a boot, a pull or a pull-to on the next door round
-  await tenantLines({ row: 'doors', name: 'doors', cols: 'the leaves\' columns', turn: 'a leaf turning', store: g => g.doors.store, moving: g => g.doors.list.some((d: any) => d.vel !== 0), counts: () => ({ there: DH.DOORS_STEPPED.there, here: DH.DOORS_STEPPED.here }),
+  FAMILIES.push({ row: 'doors', name: 'doors', cols: 'the leaves\' columns', turn: 'a leaf turning', store: g => g.doors.store, moving: g => g.doors.list.some((d: any) => d.vel !== 0), counts: () => ({ there: DH.DOORS_STEPPED.there, here: DH.DOORS_STEPPED.here }),
     work: (g, k) => { const L = g.doors.list; if (!L.length) return; const d = L[(k * 7) % L.length], [hx, hz] = d.def.hinge, a = d.def.closedDir + d.angle, s = k % 2 ? 1 : -1, from = [hx + Math.cos(a) * d.def.width * 0.6 - Math.sin(a) * 0.7 * s, 0, hz + Math.sin(a) * d.def.width * 0.6 + Math.cos(a) * 0.7 * s];
       if (k % 4 === 0) g.doors.use(d, from, 10); else if (k % 4 === 1) g.doors.kickIn(d, from, 10); else if (k % 4 === 2) g.doors.pull(d, 10); else g.doors.pullTo(d, 10); } });
   // the furniture: every 25 frames a round's worth of shove into the next two things round, one of them heard
-  await tenantLines({ row: 'props', name: 'furniture', cols: 'the things\' columns', turn: 'a thing moving', store: g => g.props.store, moving: g => g.props.props.some((p: any) => !p.asleep), counts: () => ({ there: PH.PROPS_STEPPED.there, here: PH.PROPS_STEPPED.here }),
+  FAMILIES.push({ row: 'props', name: 'furniture', cols: 'the things\' columns', turn: 'a thing moving', store: g => g.props.store, moving: g => g.props.props.some((p: any) => !p.asleep), counts: () => ({ there: PH.PROPS_STEPPED.there, here: PH.PROPS_STEPPED.here }),
     work: (g, k) => { const L = g.props.props; if (!L.length) return; for (const j of [0, 1]) { const p = L[(k * 7 + j * 3) % L.length], a = k * 1.3 + j * 2.1, J = 60 + (k % 5) * 50; g.props.applyImpulse(p, [p.x + 0.1, 0.5, p.z - 0.07], [Math.cos(a) * J, 0, Math.sin(a) * J], 10, j === 0); } } });
   // the leaves off their hinges: every 25 frames the next hung wooden leaf is torn out of its frame, from one face then the other, hard then weakly; with
   // most of them off, every door is hung again
-  await tenantLines({ row: 'slabs', name: 'slabs', cols: 'the slabs\' rows', turn: 'a slab in the air', store: g => g.doors.slabs, moving: g => g.doors.slabs.fly > 0, counts: () => ({ there: SH.SLABS_STEPPED.there, here: SH.SLABS_STEPPED.here }),
+  FAMILIES.push({ row: 'slabs', name: 'slabs', cols: 'the slabs\' rows', turn: 'a slab in the air', store: g => g.doors.slabs, moving: g => g.doors.slabs.fly > 0, counts: () => ({ there: SH.SLABS_STEPPED.there, here: SH.SLABS_STEPPED.here }),
     fold: (g, word) => { const T = g.doors.slabs, d = T.d, u = T.u, O = T.O; let h = word;   // (every slab's row: the raw bits fold a door's angle and nothing of its slab)
       for (let q = 0, n = T.n; q < n; q++) { for (const k of SH.SLAB_F64) { FOLDF[0] = d[T.b8 + O[k] + q]; h = Math.imul(h ^ FOLDU[0], 0x01000193) >>> 0; h = Math.imul(h ^ FOLDU[1], 0x01000193) >>> 0; } h = Math.imul(h ^ u[T.b4 + O.flags + q], 0x01000193) >>> 0; h = Math.imul(h ^ u[T.b4 + O.door + q], 0x01000193) >>> 0; } return h; },
     work: (g, k) => { const L = g.doors.list.filter((d: any) => !d.def.steel), hung = L.filter((d: any) => !d.off); if (!L.length) return;
@@ -261,13 +272,35 @@ async function tenantLines(F: Family) { const R = S.RUST, at = (g: any) => F.sto
       const on = DB.DOORBLAST.on; DB.DOORBLAST.on = true; try { DB.tearOff(g, d, from, 10, k % 3 ? 1 : 0.2); } finally { DB.DOORBLAST.on = on; } } });
   // the thrown things: every 25 frames a can, a magazine and a gun go from beside Sam — lobbed, dropped, thrown flat at the next thing of furniture round
   const IH: any = await import(`${ROOT}/src/sim/itemshome.ts`);
-  await tenantLines({ row: 'items', name: 'thrown things', cols: 'the things\' rows', turn: 'a thing in the air', store: g => g.items.store, moving: g => g.items.items.some((it: any) => !it.settled), counts: () => ({ there: IH.ITEMS_STEPPED.stepsThere, here: IH.ITEMS_STEPPED.stepsHere }),
+  FAMILIES.push({ row: 'items', name: 'thrown things', cols: 'the things\' rows', turn: 'a thing in the air', store: g => g.items.store, moving: g => g.items.items.some((it: any) => !it.settled), counts: () => ({ there: IH.ITEMS_STEPPED.stepsThere, here: IH.ITEMS_STEPPED.stepsHere }),
     fold: (g, word) => { const T = g.items.store, d = T.d, u = T.u, O = T.O; let h = word;   // (every row of the pool: the raw bits fold where a thing is and nothing else of it)
       for (let q = 0, n = T.n; q < n; q++) { for (const k of IH.ITEM_F64) { FOLDF[0] = d[T.b8 + O[k] + q]; h = Math.imul(h ^ FOLDU[0], 0x01000193) >>> 0; h = Math.imul(h ^ FOLDU[1], 0x01000193) >>> 0; } for (const k of IH.ITEM_U32) h = Math.imul(h ^ u[T.b4 + O[k] + q], 0x01000193) >>> 0; } return h; },
     work: (g, k) => { const c = g.player.char.pos, L = g.props.props, p = L.length ? L[(k * 7) % L.length] : null, a = k * 1.7;
       g.items.spawn(k % 2 ? 'smoke' : 'frag', [c[0], 1.4, c[2]], [Math.cos(a) * 4, 3 + (k % 3), Math.sin(a) * 4], { who: 10, fuse: 60 });
       g.items.spawn('mag', [c[0] + 0.2, 1.1, c[2]], [Math.cos(a) * 0.4, -0.2, Math.sin(a) * 0.4], { who: 10 });
-      if (p) { const dx = p.x - c[0], dz = p.z - c[2], l = Math.hypot(dx, dz) || 1, T = Math.max(0.3, l / 9); g.items.spawn('rifle', [c[0], 1.2, c[2]], [dx / T, 0.5 * 9.81 * T, dz / T], { who: 10 }); } } }); }
+      if (p) { const dx = p.x - c[0], dz = p.z - c[2], l = Math.hypot(dx, dz) || 1, T = Math.max(0.3, l / 9); g.items.spawn('rifle', [c[0], 1.2, c[2]], [dx / T, 0.5 * 9.81 * T, dz / T], { who: 10 }); } } });
+  for (const F of FAMILIES) await tenantLines(F);
+  // ---- MORE GAMES THAN SLOTS, EVERY FAMILY WORKED IN EACH, STEPPED TURN ABOUT: a game's block is its columns from the moment it is made, so a game that
+  // gives its slot up carries them with it and brings them back as its next tick opens — and is the game it is alone after every tick
+  { const R = S.RUST, L = ST.simLayout(), N = L.games + 1, T = 150, was = FAMILIES.map(F => R[F.row]);
+    // (the work is done under the game's own die, as its tick is: with several games alive the die in force is the last game's that stepped)
+    const work = (W: any, f: number): void => { D.useDice(W.game.dice); drive(W, f); if (f % 25 === 5) for (const F of FAMILIES) F.work(W.game, f / 25 | 0); };
+    const bitsOf = (g: any, word: number): number => { let w = DG.rawBits(g, word); for (const F of FAMILIES) if (F.fold) w = F.fold(g, w); return w; };
+    const run = async (n: number): Promise<{ words: number[][]; where: number[]; digests: string[] }> => { for (const F of FAMILIES) R[F.row] = true;
+      const Ws: any[] = []; for (let k = 0; k < n; k++) Ws.push(await standUp({ seed: 7 }));
+      const words: number[][] = Ws.map(() => []), last = Ws.map(() => DG.RAW_BITS_SEED), where = Ws.map(() => 0);
+      for (let f = 0; f < T; f++) for (let k = 0; k < n; k++) { const W = Ws[k]; if (W.game.sim.where < 0) where[k]++; work(W, f); W.step(DT); last[k] = bitsOf(W.game, last[k]); words[k].push(last[k]); }
+      return { words, where, digests: Ws.map(W => DG.hashDigest(DG.digestGame(W.game))) }; };
+    const label = `a crowd: ${N} games in a module of ${L.games} slots, their doors, furniture, slabs and thrown things worked and stepped turn about, are each the game one is alone`;
+    const alone = await run(1), t0 = { ...ST.SIM_STATE_TALLY }; let crowd: Awaited<ReturnType<typeof run>> | null = null, threw = '';
+    try { crowd = await run(N); } catch (e) { threw = String((e as Error)?.message ?? e); }   // (a game whose columns did not come back with it says so itself, by name: that is this line's FAIL, not the check's crash)
+    const parked = ST.SIM_STATE_TALLY.parked - t0.parked, bound = ST.SIM_STATE_TALLY.bound - t0.bound;
+    FAMILIES.forEach((F, i) => { R[F.row] = was[i]; });
+    if (crowd === null) verdict(false, label, `a game of the crowd threw as it stepped: ${threw} · blocks parked ${parked} times and bound ${bound}`);
+    else { const parts = crowd.words.map(w => firstOff(alone.words[0], w)), ok = parts.every(p => p < 0) && crowd.digests.every(d => d === alone.digests[0]);
+      verdict(ok && parked >= T && crowd.where.every(n => n > T / 2), label,
+        `${T} ticks a game · ${parts.every(p => p < 0) ? 'every game the same bits as the one alone after every tick' : 'games part from the one alone at ticks ' + parts.join(', ')} · digests ${[...new Set(crowd.digests)].join(' / ')} (alone ${alone.digests[0]}) · blocks parked ${parked} times and bound ${bound}; each game opened its tick parked ${crowd.where.join(', ')} times`); } }
+}
 
 console.log(fails ? `\n${fails} FAILED` : '\nall pass');
 process.exit(fails ? 1 : 0);

@@ -4,13 +4,14 @@
 //                                                    as it stood): lines 2, 3, 4, 7, 13, 14, 15 and 17 must FAIL
 //   KITWORDS_BREAK=1 bun run tools/qa/stuff-check.ts  the kits' trim is read with its words struck out (a piece of trim that says nothing): line 12 must FAIL
 //   COAT_BREAK=1 bun run tools/qa/stuff-check.ts      the table of named coats (scene/stuff.ts NAMED_COATS) is emptied: line 8 must FAIL
+//   (line 18 builds every level generator in this process: a second or so; it reads no level file, so neither word above changes it)
 // No game is stood up and no picture is looked at: what a box is drawn as is decided on the CPU (the loader puts a word on the box, lookWordOf reads it) and
 // this asks it. What a material LOOKS like on a desk is a page's still and then a GPU's. The same on both stands: nothing here is a rule of play and no
 // stand's word reaches it. What every box WAS drawn as before the colour rule went, against what it is now, is tools/qa/stuff-audit.ts.
 import { readFileSync, readdirSync } from 'node:fs';
 import { ROOT } from './headless.ts';
 import { fromBefore, paintUsers, rowOf } from '../levels/paintUsers.ts';
-const ST = await import(`${ROOT}/src/scene/stuff.ts`), { PAINT_STUFF, stuffOfName, rowWord, BOX_STUFFS, saidFor, namePaints, paintOf, toned, tonedAs, madeOf, drawnAs, wordFor, worded, repainted, repaintWord, NAMED_COATS } = ST;
+const ST = await import(`${ROOT}/src/scene/stuff.ts`), { PAINT_STUFF, stuffOfName, rowWord, BOX_STUFFS, saidFor, namePaints, paintOf, toned, tonedAs, madeOf, drawnAs, saidAs, wordFor, worded, repainted, repaintWord, NAMED_COATS } = ST;
 const { LOOK_NAMES, LOOK_PAINTED, lookStuffOf } = await import(`${ROOT}/src/render/lookTex.ts`);
 const GB = await import(`${ROOT}/src/render/gbuffer.ts`), { lookWordOf, lookCoreOf, LOOK_WORD } = GB;
 const { GWOT_PALETTE, gwotAs } = await import(`${ROOT}/src/scene/gwotPalette.ts`);
@@ -259,14 +260,14 @@ const plainIs = (w: string | undefined) => w === undefined || w === 'plain' ? un
 //       · a literal that writes `stuff: '<word>'` beside a paint it names (a kit's row, numbers written out, a paint that has said its word), or with no
 //         paint of its own at all (a word kept apart to spread into boxes, or handed in a call's options beside the paint);
 //       · a `rough` or `metal` written beside a paint that has said its word (a helper's call, or one of the paints named once: PANEL_GREY, CHAIR_GREY,
-//         KERB_GREY, RACK_BLACK, the office's K table), in the same literal or in the options that follow it in the call.
+//         KERB_GREY, RACK_BLACK, KEY_BLACK, PHONE_BLACK, the office's K table), in the same literal or in the options that follow it in the call.
 //     NOT ASKED: a piece that says its word for whatever paint it is HANDED (`albedo, stuff: 'cloth'`: a rug is cloth in any colour), the level format's
 //     own data written as data (a gear screen's set: a literal with an `id`), a skin's Said (a literal with a `paint`), and the modules that ARE the way
 //     or only read files (livedKit, livedPieces, gwotSkin; export, library, libraryDraw, paintUsers, stuff-bake, stuffWas).
 //     WHAT A FINDER OVER LINES CANNOT SEE, said so that nobody takes its green for more: a call split over lines; a finish assigned afterwards
 //     (`b.rough = …`); and a generator that keeps a paint record of its own and passes `stuff: P.stuff` on at every call (white-roof.ts, 11-05: owed
 //     by its owner). RED PATH: eight made-up lines, five that must be found and three that must not; and the step before this line was red on 17.
-{ const HELP = /\b(?:madeOf|saidAs|drawnAs)\((?:[^(){}]|\([^()]*\)|\{[^{}]*\})*\)/g, NAMED = /\b(?:PANEL_GREY|CHAIR_GREY|KERB_GREY|RACK_BLACK)\b|\bK\.[a-z]\w*\b(?!\()/g;
+{ const HELP = /\b(?:madeOf|saidAs|drawnAs)\((?:[^(){}]|\([^()]*\)|\{[^{}]*\})*\)/g, NAMED = /\b(?:PANEL_GREY|CHAIR_GREY|KERB_GREY|RACK_BLACK|KEY_BLACK|PHONE_BLACK)\b|\bK\.[a-z]\w*\b(?!\()/g;
   /** every `{…}` of a line, innermost first, each with what is nested in it struck out: its own keys */
   const literals = (code: string): string[] => { const out: string[] = []; for (let s = code, n = 0; n < 60; n++) { const m = /\{[^{}]*\}/.exec(s); if (!m) break; out.push(m[0]); s = s.slice(0, m.index) + '⟨⟩' + s.slice(m.index + m[0].length); } return out; };
   /** what a line of a generator writes by hand beside a paint: nothing, or what it is */
@@ -314,5 +315,72 @@ const plainIs = (w: string | undefined) => w === undefined || w === 'plain' ? un
     '17 tarmac and grass are worn by the ground only: in every level file each box that takes one of the two words from its paint\'s row is a flat box of the `ground` or `floors` group (a thing laid in the car park\'s dark paint that is no lot says its own word); a mat and a kerb in the car park\'s paint are found, a slab, a strip of lawn and a mat that says earth are not; and a lot is concrete to the picture of a hit',
     `${lots} lots and ${lawns} strips of lawn in ${FILES.length} files · made up: ${made.bad.length} of 2 found, ${made.lots} lot, ${made.lawns} lawn · a round on tarmac: ${lot}${bad.length ? ` · NOT GROUND: ${bad.slice(0, 20).join(' · ')}` : ''}`); }
 
+// 18. ONE ARRAY IS ONE PAINT. A paint is known by its array (scene/stuff.ts PAINTS), so a second saying on an array that already is a paint would change what
+//     every box painted from it is made of, in every module that holds it, and the last to load would win. It is refused out loud (stuff.ts keep): by
+//     madeOf, drawnAs, sayPaint, namePaint, namePaints, doing and tonedAs, wherever the stuff, the finish or what it DOES differs (no finish is a finish;
+//     the rules read what a paint does, scene/materials.ts, so since 11-05 the slip would move play and not only a picture); the same thing said
+//     again is nothing and the first saying stands, its name with it; and a second thing in the same colour is its own array (saidAs).
+//     OUT LOUD is a throw under bun, where levels are made and checked (ONE_PAINT.refuses: this check, the exporters, the harness); in the page it is one
+//     line on the console for that paint and the first saying kept, so the page never stops on it.
+//     Then EVERY GENERATOR IS BUILT IN THIS ONE PROCESS, after everything above has loaded the kits, the editor and the game's props, as the exporter
+//     hands a level over (the same hand-over as tools/levels/library.ts: a look file's skin run over its level with the scenario block on it, the office
+//     with its lived tier): none may be refused, alone or by what another has said. The only two sayings refused on 11-05 stood in two skins (a road
+//     paint said over a toned plastic's white).
+//     NOT REACHED, and said so: a generator's branches its default build() does not take (a build(opts) variant, a quiet variant), and the exporter's
+//     dressing step, which each export's --check runs in a process a level. The refusal is raised where such a path runs.
+//     RED PATH: the sayings written here must be refused, each by the refusal's own words (another throw is no refusal), and are counted.
+{ const REFUSAL = /one array is one paint/, why = (f: () => unknown): 'said' | 'refused' | 'threw' => { try { f(); return 'said'; } catch (e) { return REFUSAL.test(String((e as Error).message)) ? 'refused' : 'threw'; } };
+  const refused = (f: () => unknown) => why(f) === 'refused', said = (f: () => unknown) => why(f) === 'said';
+  const grey: [number, number, number] = [0.31, 0.32, 0.33]; madeOf('steel', grey);
+  const again = said(() => madeOf('steel', grey)), other = refused(() => madeOf('plastic', grey)), finish = refused(() => madeOf('steel', grey, { rough: 0.3 })), stays = paintOf(grey)?.stuff === 'steel' && paintOf(grey)?.rough === undefined;
+  const twin = saidAs('plastic', grey), apart = twin !== grey && paintOf(twin)?.stuff === 'plastic' && paintOf(grey)?.stuff === 'steel';
+  const kits = refused(() => madeOf('steel', KIT_PALETTE.black)) && refused(() => drawnAs('metal', KIT_PALETTE.wood)) && paintOf(KIT_PALETTE.black)?.stuff === undefined && paintOf(KIT_PALETTE.wood)?.stuff === 'wood';
+  const pal = { aThingOfTheChecks: [0.2, 0.21, 0.2] as readonly number[] }; namePaints(pal, { aThingOfTheChecks: { rough: 0.5 } });
+  const named = refused(() => namePaints(pal, { aThingOfTheChecks: { rough: 0.6 } })) && said(() => namePaints(pal, { aThingOfTheChecks: { rough: 0.5 } })) && refused(() => tonedAs(KIT_PALETTE.wood, pal.aThingOfTheChecks))
+    && refused(() => ST.namePaint(pal.aThingOfTheChecks, 'wood')) && refused(() => ST.sayPaint(pal.aThingOfTheChecks, '', { rough: 0.5, metal: true }));   // (… by another name's stuff; and by the metal flag alone)
+  const first = said(() => ST.sayPaint(pal.aThingOfTheChecks, 'another name', { rough: 0.5 })) && paintOf(pal.aThingOfTheChecks)?.name === 'aThingOfTheChecks';   // (the same thing under another name: let through, and the first name stands)
+  // … and WHAT A PAINT DOES is the same paint's (the rules read it): a colour written as numbers says it once, after madeOf or alone (stuff.ts doing); a second,
+  // other word is refused, and so is any word said in place of a kit's named row (its row does what the table of names says)
+  const tin: [number, number, number] = [0.52, 0.53, 0.5]; madeOf('sheet', tin);
+  const does = said(() => ST.doing('steel', tin)) && paintOf(tin)?.does === 'steel' && paintOf(tin)?.stuff === 'sheet' && said(() => ST.doing('steel', tin)) && refused(() => ST.doing('wood', tin)) && paintOf(tin)?.does === 'steel'
+    && refused(() => ST.doing('steel', KIT_PALETTE.black)) && paintOf(KIT_PALETTE.black)?.does === ST.doesOfName('black') && refused(() => ST.sayPaint(tin, '', { stuff: 'sheet', does: 'wood' }));
+  // … and AS THE PAGE HAS IT (ONE_PAINT.refuses down): nothing is thrown, the paint is told of once on the console however often it is said, the first saying is kept
+  const page = (() => { const was = ST.ONE_PAINT.refuses, err = console.error, heard: string[] = []; ST.ONE_PAINT.refuses = false; console.error = (...a: unknown[]) => { heard.push(String(a[0])); };
+    try { const a = said(() => madeOf('plastic', grey)), b = said(() => madeOf('cloth', grey)); return ST.ONE_PAINT.refuses === false && was === true && a && b && heard.length === 1 && REFUSAL.test(heard[0]) && paintOf(grey)?.stuff === 'steel'; }
+    finally { ST.ONE_PAINT.refuses = was; console.error = err; } })();
+  const GEN = `${ROOT}/tools/levels`, has = (f: string, re: RegExp) => re.test(readFileSync(`${GEN}/${f}`, 'utf8'));
+  const gens = readdirSync(GEN).filter(f => f.endsWith('.ts') && has(f, /^export (?:function|const) build\b/m)).sort(), skins = gens.filter(f => has(f, /^export (?:function|const) finish\b/m));
+  const trips: string[] = [], threw: string[] = []; let built = 0, skinned = 0;
+  const one = async (f: string, make: () => unknown) => { try { await make(); built++; } catch (e) { (REFUSAL.test(String((e as Error).message)) ? trips : threw).push(`${f}: ${String((e as Error).message).slice(0, 220)}`); } };
+  for (const f of gens) await one(f, async () => { const g = await import(`${GEN}/${f}`), made = await g.build(); if (typeof g.finish === 'function') { if (made.scenarios) made.level.scenarios = made.scenarios; g.finish(made.level, made.groups); skinned++; } });
+  await one('officeGen.ts', async () => (await import(`${ROOT}/src/scene/officeGen.ts`)).buildOfficeProcedural({ groups: [] }, { lived: true }));
+  check(again && other && finish && stays && apart && kits && named && first && does && page && trips.length === 0 && threw.length === 0 && gens.length > 50 && built === gens.length + 1 && skinned === skins.length && skins.length > 10,
+    '18 one array is one paint: a second saying on an array that already is a paint is refused where its stuff, its finish or what it does differs (madeOf, drawnAs, sayPaint, namePaint, namePaints, tonedAs; a kit\'s black cannot be made steel; the metal flag alone is a difference; what a paint does is said once, of numbers written out, never of a kit\'s named row), the same thing said again is nothing and the first saying stands with its name, and saidAs gives the second thing an array of its own; with the refusal as the page has it nothing is thrown, the console is told once and the first saying is kept; and every generator builds in this one process as the exporter hands it over, each look file\'s skin run and the office with its lived tier, with none refused',
+    `said again ${again} · another stuff refused ${other} · another finish refused ${finish} · the first stands ${stays}, its name ${first} · saidAs apart ${apart} · a kit's paints refused ${kits} · a named row refused ${named} · what it does: said once, another refused, a kit's row refused ${does} · as the page has it ${page} · ${built} of ${gens.length + 1} generators built, ${skinned} of ${skins.length} look files' skins run, ${trips.length} refused${trips.length ? `: ${trips.slice(0, 6).join(' · ')}` : ''}${threw.length ? ` · ${threw.length} THREW OTHERWISE: ${threw.slice(0, 4).join(' · ')}` : ''}`); }
+
+// 19. A KEPT PLACE HAS NO IRON LEFT OUT AND NO CHIPPED PAINT. Two of the look's stuffs are what nobody keeps: `metal` is bare iron and its map has the rust
+//     in it, `paint` is a coat gone chalky and chipped. A level that says it is kept (meta.kept of a half or more: the office) is drawn clean everywhere
+//     else by that word, and a rack, a keyboard or a vending machine that says `metal` stands in it speckled with rust (seen on a GPU, 11-05). So in a kept
+//     level nothing says either word, by its own word or by its row: a coated thing says what is under the coat or the coat's kept cousin (steel, enamel,
+//     brushed, plastic). Asked of a level's own boxes, a shape's pieces that say a paint or a word of their own, and its props' parts; a gear screen's set
+//     is not asked (line 15's rule). NOT A LEVEL'S, and not asked: what the game itself makes in any level (a door's handles say paint, a keypad's block
+//     and the tools say metal: src/game). The look draws those by the same words; they are the game's to say, or the look's to keep clean by the
+//     level's kept word.
+//     RED PATH: in a level written here as kept, a rack that says metal, a door whose ROW says paint, a chair's part and a shape's piece must be found;
+//     the same things in a level that says nothing of keeping must not.
+{ const LEFT_OUT = ['metal', 'paint'];
+  const leftOut = (d: any): { kept: boolean; asked: number; bad: string[] } => { const kept = (d.meta?.kept ?? 0) >= 0.5; let asked = 0; const bad: string[] = []; if (!kept) return { kept, asked, bad };
+    const ask = (o: any, where: string) => { asked++; const row = rowOf(d, o), w = o.stuff ?? (row !== undefined ? d.materials[row]?.stuff : undefined); if (LEFT_OUT.includes(w)) bad.push(`${o.id ?? where} says ${w}`); };
+    for (const { o, where, kind } of paintUsers(d)) { if (kind === 'set') continue; ask(o, where); for (const [k, piece] of ((o as any).shape?.with ?? []).entries()) if (piece.albedo !== undefined || piece.material !== undefined || piece.stuff !== undefined) ask(piece, `${where}.shape.with[${k}]`); }   // (… and a shape's pieces that say a paint or a word of their own)
+    return { kept, asked, bad }; };
+  let keptFiles = 0, asked = 0; const bad: string[] = [];
+  for (const f of FILES) { const r = leftOut(dataOf(f)); if (!r.kept) continue; keptFiles++; asked += r.asked; for (const k of r.bad) bad.push(`${f} ${k}`); }
+  const rack = { id: 'rack', group: 'server', c: [3, 1.05, 3], h: [0.33, 1.05, 0.5], albedo: [0.06, 0.06, 0.07], stuff: 'metal' }, shelf = { id: 'shelf', group: 'server', c: [5, 1, 3], h: [0.5, 1, 0.2], material: 'metal' };
+  const door = { id: 'door', group: 'server', c: [7, 1, 3], h: [0.45, 1, 0.03], material: 'oldBlue' }, chairPart = { off: [0, 0.4, 0], h: [0.2, 0.02, 0.2], albedo: [0.5, 0.5, 0.48], stuff: 'paint' }, drum = { id: 'drum', group: 'server', c: [9, 0.4, 3], h: [0.3, 0.4, 0.3], material: 'metal', shape: { with: [{ albedo: [0.2, 0.2, 0.2], stuff: 'metal' }] } };
+  const lvl = (kept?: number) => ({ meta: kept === undefined ? {} : { kept }, materials: { metal: { albedo: [0.4, 0.4, 0.42], stuff: 'steel' }, oldBlue: { albedo: [0.1, 0.2, 0.4], stuff: 'paint' } }, props: [{ parts: [chairPart] }], boxes: [rack, shelf, door, drum] });
+  const madeKept = leftOut(lvl(1)), madeNot = leftOut(lvl());
+  check(bad.length === 0 && keptFiles > 0 && asked > 1000 && madeKept.bad.length === 4 && madeKept.asked === 6 && !madeNot.kept && madeNot.bad.length === 0,
+    '19 a kept place has no iron left out and no chipped paint: in every level file that says it is kept nothing says `metal` or `paint`, by its own word or its row\'s; in a level written here as kept a rack that says metal, a door whose ROW says paint, a chair\'s part that says paint and a shape\'s piece that says metal are found, a steel shelf beside them is not, and the same things in a level that says nothing of keeping are not asked',
+    `${keptFiles} kept files, ${asked} boxes and parts asked · made up: ${madeKept.bad.length} of 4 found in the kept one, ${madeNot.bad.length} in the other${bad.length ? ` · LEFT OUT: ${bad.slice(0, 20).join(' · ')}` : ''}`); }
 console.log(`=== stuff: ${red ? 'FAILURES above' : 'ALL PASS'} ===`);
 process.exit(red ? 1 : 0);

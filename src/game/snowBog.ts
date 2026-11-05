@@ -14,8 +14,6 @@ import { BoxFlag } from '../scene/boxes';
 import { snowLevel } from './weatherKinds';
 import { levelNameOf } from '../scene/levelLoad';
 import { snowLayBare, snowPaintOf, snowThinLay } from '../render/snowField';
-import { sim } from '../sim/sim';
-import { WX_KNOBS, WX_WATCH } from '../sim/weatherhome';
 
 export const SNOWBOG = {
   on: false,
@@ -60,23 +58,12 @@ const over = (b: Box, x: number, z: number) => { const cs = Math.cos(b.yaw ?? 0)
 export function snowBogMay(g: Game): boolean { return SNOWBOG.on && snowLevel(levelNameOf(g.level)); }
 /** the level's snow as a byte a box (SNOW_KIND): what the Rust module's copy of the box world is told */
 export function snowBogKinds(g: Game): Uint8Array { return ground(g).kinds; }
-/** how boggy the ground is where a thing touched down at (x, y, z), 0‥1 (0 = a floor: the bounce as it was). 0 with the switch off. The rule is the module's
- *  (rust/sim/src/items.rs bog_of, by snow.rs), over the one table of the snow in its copy of the box world and the weather's roofs. */
+/** how boggy the ground is where a thing touched down at (x, y, z), 0‥1 (0 = a floor: the bounce as it was). 0 with the switch off. */
 export function snowBogAt(g: Game, x: number, y: number, z: number): number {
-  if (!SNOWBOG.on || !snowLevel(levelNameOf(g.level))) return 0;
-  g.weather.roofsNow(); WX_KNOBS.here();
-  return g.col.window(() => {
-    const own = WX_WATCH.both ? snowBogAtOwn(g, x, y, z) : null;
-    const M = g.col.ruleOpen(); M.snow(ground(g).kinds);
-    const r = sim().snow_bog_at(g.sim.bind(), M.slot, x, y, z);
-    return WX_WATCH.on ? WX_WATCH.said('snow.bog', r, [x, y, z], own) : r;
-  });
-}
-function snowBogAtOwn(g: Game, x: number, y: number, z: number): number {
   const K = SNOWBOG; if (!K.on || !snowLevel(levelNameOf(g.level))) return 0;
   const G = ground(g), B = (g.level as unknown as { boxes: Box[] }).boxes, n = B.length;
   if (!(y < K.top)) { for (const bi of G.banks) { if (bi >= n) break; const b = B[bi]; if (Math.abs(b.c[1] + b.h[1] - y) <= K.bankM && over(b, x, z)) return 1; } return 0; }   // (up on something: only standing or capping snow bogs)
-  if (g.weather.underRoofOwn(x, z)) return 0;
+  if (g.weather.underRoof(x, z)) return 0;
   let k = 1;
   for (const bi of G.lays) {
     if (bi >= n) break; if (!over(B[bi], x, z)) continue;

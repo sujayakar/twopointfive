@@ -17,10 +17,10 @@
 //! share of momentum for a thing of furniture (PropSystem.applyImpulse), a thing whose time is up (the host takes its row out). None of the three is
 //! read by a later row's step: furniture is met by where it STANDS, which an impulse does not move.
 //!
-//! WHAT ONLY THE HOST CAN JUDGE HANDS A ROW BACK. The step works on a copy of the row, and where it comes to a question this module has no answer
-//! to — a ray that is no number, or longer than any level — it writes nothing of that row, lists nothing of it, and returns HOST with the row: the
-//! TypeScript takes that row's step and calls again for the rows under it. Nothing of play is such a question any more: a pane of glass is judged
-//! here (glass.rs), lying snow is asked here (`bog_at`, over the world's table of what snow each static is), and a ray of no length meets nothing.
+//! A QUESTION WITH NO ANSWER HANDS A ROW BACK. The step works on a copy of the row, and where it comes to a ray that is no number it writes nothing
+//! of that row, lists nothing of it, and returns HOST with the row: the host names the mistake. Nothing of play is such a question: a pane of glass
+//! is judged here (glass.rs), lying snow is asked here (`bog_at`, over the world's table of what snow each static is), a ray of no length meets
+//! nothing, and no length is too long.
 use crate::lines::{ray_rule, ray_things, RAY_HOST};
 use crate::maths::{atan2, hypot2, hypot3, round_half_up};
 use crate::state::state;
@@ -206,16 +206,16 @@ const GRAVITY: f64 = 9.81;
 const SUB: f64 = 2.0;
 
 /// lying snow as the host said it for this walk (P_SNOW_*, P_ROOFS, P_ROOF)
-pub(crate) struct Snow {
-    pub(crate) top: f64,
-    pub(crate) bank: f64,
-    pub(crate) packed: f64,
-    pub(crate) old: f64,
-    pub(crate) dead: f64,
-    pub(crate) grip: f64,
-    pub(crate) stick: f64,
-    pub(crate) roofs: usize,
-    pub(crate) roof: [f64; MAX_ROOFS * 4],
+struct Snow {
+    top: f64,
+    bank: f64,
+    packed: f64,
+    old: f64,
+    dead: f64,
+    grip: f64,
+    stick: f64,
+    roofs: usize,
+    roof: [f64; MAX_ROOFS * 4],
 }
 /// the snow of a walk's hand-over (read where the ground may be snow: `bog`; else nothing of it is). → None: more roofs than a walk is handed
 fn snow_of(p: &[f64; NPAR], bog: bool) -> Option<Snow> {
@@ -240,12 +240,8 @@ fn over(rec: &[f64], q: usize, x: f64, z: f64) -> bool {
 /// caps as high bogs; at the ground, nothing under a roof does, and a thin lay over the spot says how much: trodden, old, or bare. The statics that
 /// are snow are named by the world's table `snow`; where each is and how it is turned are its own row's.
 fn bog_at(d: &Walk, x: f64, y: f64, z: f64) -> f64 {
-    bog_of(d.w, &d.snow, x, y, z)
-}
-/// …the one rule, as whoever asks it hands it the world and the snow (snow.rs: the weather's roofs and the rule's numbers as they stand)
-pub(crate) fn bog_of(w: usize, s: &Snow, x: f64, y: f64, z: f64) -> f64 {
-    let o = world(w);
-    let n = o.boxes as usize;
+    let o = world(d.w);
+    let (n, s) = (o.boxes as usize, &d.snow);
     if !(y < s.top) {
         for bi in 0..n {
             if o.snow[bi] == SNOW_BANK {
@@ -315,7 +311,7 @@ fn hit_of(d: &mut Walk, x: f64, y: f64, z: f64, dx: f64, dy: f64, dz: f64, tmax:
     d.rays += 1.0;
     let k = ray_rule(d.w, x, y, z, dx, dy, dz, tmax, 0, -1, d.ask, &mut out);
     if k == RAY_HOST {
-        d.host = true; // (a ray collision.ts walks itself: the host's question — lines.rs ray_rule)
+        d.host = true; // (a ray that is no number: lines.rs ray_rule)
         return None;
     }
     let st = if k >= 0 { Some((out[0], out[1], out[2], out[3])) } else { None };

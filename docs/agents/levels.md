@@ -880,6 +880,26 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   A LOOSE THING'S OWN PATCH (11-05, with the first step: it moves nothing either). `livedPieces.armchair`'s arms ran three centimetres into its back with
   their outer faces in the back's sides. An arm now ENDS at the back's front; it gives up only what lay inside the back, so the chair fills the space it
   filled. Seven files re-exported (consulate, defuse, registry, their looks, the showroom): 13 chairs, a line each, nothing added or removed.
+  THE SECOND STEP (11-05): TWO SOLIDS MOVE, AND THE LIBRARY HOLDS EVERY PIECE. The VAN'S BAY SIDES each ran a centimetre round a tail lamp with a face in the
+  lamp's; a bay side now ENDS at its lamp. The lamp is not moved or resized: a level hangs a light on its centre and `game/carlamps.ts` finds it by its
+  size (`carShapes.ts vanShapes` says the side's new size). A GATE'S POSTS stood flush in the end of the wall they close (the patch the maintainer saw on
+  the pass); a post is now 6 mm fatter each way along the wall than the 0.34 m it stands in, its middle where it was, so what a level caps or lights it
+  with stays centred and an opening of 3 m is 2.988 m between the posts. Six millimetres is off the centimetre grid levels are laid on: at a whole
+  centimetre a post grew into the plane of a lamp a tutorial hangs on it. Neither could be spared a solid move: the lamp is found by its size and carries
+  a light, and a post and a wall's end are both solid. 12 level files re-exported (gwot-yard, library-hall, pass, police-post, snatch, train-move, tut-kit,
+  tut-pair, tut-road, tut-sky, tut-solo, tut-team): 48 boxes, 32 posts (`h` only) and 16 bay sides, none added or removed, no light moved. 206 seen after
+  (ONE grew over the check's centimetre: tut-road's hand-built lamp head already bit a centimetre into a gate post with a face in the post's, and is
+  1.6 cm there now; it is one of the lamps owed a piece).
+  TWO RULES of `bun run tools/levels/library.ts --check` keep it so. NO PIECE FLICKERS BY ITSELF: every call a generator makes that lays a box is laid
+  alone on a stand of its own and asked by `zfight`: of each CALL, not of each piece once, because the wash line's fault depended on where the line stood
+  and its showroom call was clean; and a patch a call shows alone is asked again with everything its generator BUILT round it, in this run and never
+  from the file on disk, because a piece on a wall's face has a back that only being alone uncovers (the office kit's conduit and its clips lie in the
+  wall's plane in two paints; 46 such patches in all, none a player can see). A LOOSE THING'S PARTS are asked too, each thing in its own frame with nothing round it (it is
+  carried and shoved about). NO SHOWROOM HAS A SEEN PATCH (its file, where pieces made to meet, a gate in its yard wall, stand as they are meant to). Red
+  on the kit as it was before the first step: the three pieces by name, the armchair, and gwot-yard 6, library-hall 4.
+  PLAY MOVES, measured in the step's own notes on both stands: a van's bay sides and a gate's posts are solid, so runs on levels that stand them can
+  differ by a step. What is left is each level's own: a wall laid THROUGH the wall it meets to its far face (end it at the near face), a lamp's arm in
+  its head's top (four generators build that lamp by hand: it is owed a piece), two things laid over each other. Never seen on a GPU: the check reads files.
 - **THE SMOKE LAB'S FLOOR** (11-01; `levels/smoke-lab.json` from `tools/levels/smoke-lab.ts`, the GWOT kit; opened by the dev server's `/smokelab`, in no
   mission list, nobody on it but Sam; the lab's panel is `docs/agents/render.md`, THE SMOKE LAB). The maintainer asked for "a separate smoke lab that's more
   suited to playing with it". Each place shows one thing smoke does and is there for nothing else: the YARD (open ground under the sky and a low wall of
@@ -912,7 +932,8 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   boxes (`tools/levels/libraryDraw.ts`: the boxes and their markings under one fixed light, NOT the game's picture; `tools/qa/png.ts encodePng` writes the
   file); `--json FILE` is all of it as data.
   THE RULES (`--check`, exit 1): every piece stands in a showroom, says what it is (a `/** comment */` over its definition), does not top out between 0.20 and
-  0.25 m where that is the piece's top (lived-check's band and probes, asked of the piece), every kit that hands pieces out has its row in the script, and
+  0.25 m where that is the piece's top (lived-check's band and probes, asked of the piece), every kit that hands pieces out has its row in the script,
+  no piece flickers by itself in any call a generator makes and no showroom has a patch that flickers (FACES THAT FLICKER, above), and
   `docs/library.md` is what the kits give now. TWO SHOWROOMS: `levels/gwot-yard.json` (the look's kit in a lived compound, untouched: `lived-check` holds its
   kept part, so a piece the look's kit gains is stood in the hall, or in the yard as a lived thing) and `levels/library-hall.json`
   (`tools/levels/library-hall.ts`, new: a hut furnished with the office's kit, the pieces of the look's kit the yard does not stand (one drum, the van, a
@@ -1632,3 +1653,73 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   glass with a 4 % mirror (it wants a mirror's own word); the workbench does not raise this or any page switch, so the editor shows the file's grey;
   the renderer has no layer for glass. SEEN ON A CLOUD NVIDIA CARD in the renderer's study build, stills only (the yard at midday, a red pickup at the
   crossing, the showroom; no fog of war, nobody shot a window): it reads as glass and not as a hole, and no glint showed at 0.05. Nobody has played it.
+- **One array is one paint** (`scene/stuff.ts keep`; a guard for whoever writes a level, no rule of play; 2026-11-05; the office's
+  pilot hit the trap twice and the dress goal asked for the guard). A paint is known by its ARRAY, so a second saying on an array that already is a
+  paint changed what every box painted from it is made of, in every module that held it: a break room's band took a floor panel's finish, a shared
+  signal yellow became enamel for every level made after it, and the last module to load won. NOW REFUSED OUT LOUD, where it is written: `madeOf`,
+  `drawnAs`, `sayPaint`, `namePaint`, `namePaints`, `doing` and `tonedAs` refuse when the array already is a paint of another stuff, another finish
+  or ANOTHER WORD FOR WHAT IT DOES (no finish is a finish: a paint that has none is not given one in place). SINCE THE RULES READ WHAT A PAINT DOES
+  (`scene/materials.ts`, the same day) the slip would move play and not only a picture: the registry by array carries that word too. One thing is
+  added in place, by its own function: what a colour written as numbers does (`doing`, after `madeOf` or alone), once; a kit's named row does what
+  the table of names says, and `doing` on it is refused. The same thing said again is nothing and THE FIRST SAYING STANDS, its name
+  with it (a module evaluated twice, a helper called once a level, a kit giving its own palette's paint its word: the lived kit's canvas, the
+  fixtures' tray). A second thing in the same colour is its own array: `saidAs`, or the numbers written out again.
+  WHAT TRIPPED: two look files' skins said a road paint over a toned plastic's white with `madeOf` (the floodlit yard's pad lines, the killhouse's
+  tape); they say it with `saidAs` now. Nothing else in the tree trips. NO LEVEL FILE MOVES: every export's `--check` is up to date.
+  HOW IT IS REFUSED (`ONE_PAINT.refuses`): a THROW wherever a level is made or checked, which is everything that runs under bun: the generators, the
+  exporters, every tool and the headless harness. IN THE PAGE it is one line on the console for that paint and the first saying is kept: the page
+  never stops on it (the dress goal's ruling for a release that must not be risked). Every caller under `src/` was read all the same (here and by a
+  review): each says its paint as its module loads, on its own literal arrays (the four palettes, the rig's three, a fixture's tray, the named
+  greys), or on an array it has just made (a look paint's stand-in, a tone); the editor, the loader, `ui/` and `render/` call none of them. One
+  difference from before in the page, which nothing reaches today: where two sayings on one array differ, the FIRST is kept, where the last won.
+  CHECK: `stuff-check` line 18: the refusals themselves (another stuff, another finish, the metal flag alone, a kit's black made steel, a named row
+  by `namePaint`, `sayPaint`, `namePaints` and a tone; what a paint does said once, another word and a kit's row refused), each by the refusal's own words; the same saying twice let through and the first name left
+  standing; `saidAs` apart; and as the page has it (the word put down): nothing thrown, the console told once, the first saying kept. Then EVERY GENERATOR IS BUILT IN THAT ONE PROCESS as the exporter hands it over, after the check's earlier lines have
+  loaded the kits, the editor and the game's props: 58 of 58 built, 14 of 14 look files' skins run over their levels, the office with its lived
+  tier, none refused, none thrown otherwise. With one of the two mends taken back the line is red and names the file. NOT REACHED by the line: a
+  generator's branches its default build does not take, and the exporter's dressing step (each export's `--check` runs that, a process a level).
+  MEASURED, on the tip that holds the table of materials (step 1477): the play-through's 42 runs (21 missions, seeds 1 and 2) on the frozen stand, the
+  page's, and the page's with its lived tier off, the step against the tip: 42 of 42 run digests the same, each; and every one of those runs loads
+  its level under bun, where a refusal throws: none did. `stuff`, `hitstuff`, `marksight`, `lived`, `lookmaps`, `look-check`, `coatfinish`,
+  `glassreal`, `kit-stores`, `does-check`, `does-audit` and `probes.ts materials` green on both stands. NOT SEEN: the refusal's console line in a
+  real page (the check hears it through a stand-in console).
+- **A kept thing is drawn as what it is, not as iron** (DRESSING: the drawn word `stuff` on 232 boxes and parts in 35 level files; what a thing
+  DOES is not touched; no switch; 2026-11-05; the dress goal's ask, from graphics' card: the office's server racks stood speckled with rust). The
+  look's `metal` is bare iron with the rust in its map and its `paint` is a coat gone chalky and chipped: the two stuffs of things nobody keeps.
+  Until 11-04 the look read a dark grey as iron by its COLOUR, and the words written down that day (`scene/stuff.ts drawnAs`: a choice still owed)
+  kept every dark thing a desk has as iron. CHOSEN NOW, each named once: a server rack's body is drawn as STEEL under its powder coat (`RACK_BLACK`,
+  four generators and the kit's `rack`; its sheen 0.3 as it was); a keyboard and a telephone as PLASTIC (`KEY_BLACK`, `PHONE_BLACK`: the office's
+  builder and its handsets, the kit's desk, the dressing's phone, set and handset); and in the office the conference phone, a keypad, the coffee machine, a rubbish bag and
+  the breakroom's stacking chairs' shells as plastic, the cable cover across the server aisle as rubber, the crash cart's spare unit and both vending
+  machines as steel, in the office's two files and the smoke lab (the blue said old paint, the red said nothing; their sheen 0.5 is said with the
+  paint now, `vendingSpec`).
+  WHAT DOES NOT MOVE: since the table of materials (`scene/materials.ts`, the same day) a box says two words kept apart, and the rules read `does`
+  alone. NOT ONE `does` MOVES here: every rack, keyboard and telephone still does `unnamed dark` and the chairs `unnamed grey`, the answer their tone
+  gave, brought forward by the exporter. With the drawn word struck out each of the 35 files is byte for byte the step before (proved box by box).
+  No number, colour, finish or box moves. OWED, and another step: what these things DO (a keyboard that does what plastic does) is a play move
+  with its own play-through compares.
+  WHAT A ROUND'S PICTURE GETS, on the page only (HITSTUFF still reads the drawn word, `particleFx.ts STUFF_SURF`): a thing drawn as plastic or
+  rubber throws plastic where it threw a metal's sparks; steel is metal as before; the office's four chairs throw plastic where a chair's kind made
+  them cloth; the red vending machine sparks. Nobody has seen it.
+  LEFT AS BARE OLD IRON, ON PURPOSE: every thing in the look kit's `iron` and `rust` paints (stoves, drums, gates: the places they stand say nothing
+  of being kept); the lived kit's iron fittings (`livedPieces.ts INK.iron`); the depot's batteries and aerial feet. NOT CHOSEN, still `drawnAs`: the
+  block's manhole lid and the barracks' floor grate (iron by any reading), and the stacking chair's grey itself (`CHAIR_GREY` says old paint: the
+  compound's, the barracks' and the warehouse's chairs keep it; the office's say their own word over it). NOT A LEVEL'S, and still drawn as old iron
+  and old paint in a kept place too: what the game makes itself (a door's handles say `paint`, a keypad's block, the suppressor and the tools say
+  `metal`: `src/game`). THE GENERAL CURE IS THE LOOK'S, and is put to graphics: the rust in the `metal` map and the chipping in `paint` scaled by the
+  level's kept word, as its fading already is; then a kept place is clean whoever made the box, and this bullet's check is a belt beside it.
+  WHERE IT IS DRAWN: on the look's page. The office changes most (46 boxes and parts); a keyboard, a telephone or a rack changes with it in the
+  look files of the compound, the consulate, the depot and Mousehole (on the mission list) and of the barracks, the block and its squads, the
+  records, the registry, the warehouse, the hall, the killhouse and the floodlit yard, and in the plain files of the labs.
+  CHECK: `stuff-check` line 19, new: a level that says it is kept (`meta.kept` of a half or more: the office's two files) has nothing drawn as
+  `metal` or `paint`, by its own word or its row's WORD (never a paint's name), among its boxes, a shape's pieces and its props'
+  parts; in a level written as kept a rack that says metal, a door whose row says paint, a chair's part and a shape's piece are found, and in one
+  that says nothing of keeping none is asked. It found the breakroom's chairs, which nobody had listed. Line 16's finder knows the two new named
+  paints. `hitstuff-check` line 5 borrowed an office box that said old paint for its soft stand-in: it borrows one that says any plain coat now
+  (`PLAIN_COATS`), no bar moved. `does-check` and `does-audit` green: every box does by its word what it did by its colour.
+  MEASURED, on a base made of the merge's tip at step 1505 with this part's mend and the library's second flicker step merged in: the
+  play-through's 42 runs (21 missions, seeds 1 and 2) on the frozen stand, the page's, and the page's with its lived tier off, the step against
+  that base: 42 of 42 run digests the same, each. Box by box over the 35 files: 232 drawn words moved, no `does`, and nothing else. Green on both
+  stands: `stuff`, `rollback-check --static`, `hitstuff` (its break path fails 5), `marksight`, `lived`, `lookmaps`, `walked` (no `--write`),
+  `probes.ts kept` and `materials`, `wallfurn`, `wayround`, `look-check`, `coatfinish`, `glassreal`, `kit-stores`, `does-check`, `does-audit`; the
+  senses' error tool on the office on the page's stand; every export's `--check`. NOT SEEN: a rack, a keyboard or a hit on one, on a GPU.

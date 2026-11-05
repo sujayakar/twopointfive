@@ -19,12 +19,10 @@ import { SideMap, rollbackVar, rollbackRoot, GameSideMap } from '../math/side';
 import { Vec3, v3, clamp } from '../math/vec';
 import type { Game } from './game';
 import type { Character } from './character';
+import type { WeatherFrame } from '../render/frame';
 import type { Decal } from '../render/decals';
 import { INTERIOR, ANNEX } from './weather';
 import { gpuFx } from './particleFx';
-import { lookDecal } from './lookDecals';
-import { sim, f64 } from '../sim/sim';
-import { WX, WX_KNOBS, WX_WATCH, wxGet, wxScratch } from '../sim/weatherhome';
 
 /** The knobs (Tab ▸ Weather ▸ wet characters; kept per machine like the whistle's). The first block is the model's, the second the look's — those ride to the
  *  GPU per character instance (anim/characters.ts setInstance) so the shaders need no uniform of their own. */
@@ -69,80 +67,52 @@ export function underRoofRect(p: Vec3, g?: Game): boolean {
 /** Is `c` standing (or lying) under the open sky: outside both no-rain rectangles and with no ROOF over him — upward rays through the level's collision boxes
  *  (statics and door leaves) from just over head height to well above the street lamps, one over his head and four a forearm out round him: he is sheltered
  *  only if most of that footprint is covered (a canopy, a slab, a landing — not the cobra head of the lamp he happens to stand under, which would otherwise
- *  be a 40 cm umbrella). Cached WET_SKY_SECS per character: a handful of rays a second per outdoor man. The rule is rust/sim/src/weather.rs open_sky. */
+ *  be a 40 cm umbrella). Cached WET_SKY_SECS per character: a handful of rays a second per outdoor man. */
 const WET_SKY_SECS = 0.25, SKY_TOP = 9, SKY_RING = 0.35;
 const SKY_OFFSETS: [number, number][] = [[0, 0], [SKY_RING, 0], [-SKY_RING, 0], [0, SKY_RING], [0, -SKY_RING]];
-/** how high his head is, as the rule reads it (a call's number until the men's columns stand) */
-const headOf = (c: Character): number => c.ragdoll ? Math.max(0.3, (c.bones.head?.[1] ?? 0.3)) : (c.bones.head?.[1] ?? c.pos[1] + 1.6);
 export function openSky(g: Game, c: Character): boolean {
-  const p = c.pos, m = memOf(c);
-  g.weather.roofsNow();
-  return g.col.window(() => {
-    const own = WX_WATCH.both ? openSkyOwn(g, c, m) : null;
-    const M = g.col.ruleOpen(), x = sim(), d = f64(), a = wxScratch(); d[a] = m.skyT; d[a + 1] = m.open ? 1 : 0;
-    const r = x.wet_open_sky(g.sim.bind(), M.slot, M.ruleSet, M.rulePanes, g.time, p[0], p[2], headOf(c));
-    const said = [r & 1, d[a], d[a + 1]]; if (r & 2) WET_STATS.skyTests++;
-    if (WX_WATCH.on) WX_WATCH.saidMany('wet.openSky', said, [g.time, p[0], p[2], headOf(c)], own);
-    m.skyT = said[1]; m.open = said[2] !== 0;
-    return said[0] !== 0;
-  });
-}
-/** the rain rate actually being drawn this tick (0 with the storm off, held by day, or a dry storm): the weather's table */
-export function rainNow(g: Game): number { return Math.max(0, wxGet(g.sim, WX.rainNow)); }
-/** is `c` being rained on right now */
-export function inRain(g: Game, c: Character): boolean { return rainNow(g) > 0.001 && openSky(g, c); }
-
-/** every character the game draws: Sam, then the guards (shift, units, the breach's cast — whoever is in Game.guards), living or not */
-export function everyCharacter(g: Game): Character[] { return [...men(g).map(pl => pl.char), ...g.guards.map(gd => gd.char)]; }
-
-/** Once a frame (game.ts, after the weather has written this frame's rain): soak / dry everybody (rust/sim/src/weather.rs wet_step, a man's coat handed in and back as
- *  a call's numbers until the men's columns stand), and Sam's drips + print budget. */
-export function updateWetness(g: Game, dt: number) {
-  if (dt <= 0) return;
-  g.weather.roofsNow(); WX_KNOBS.here();
-  g.col.window(() => {
-    const M = g.col.ruleOpen(), x = sim(), d = f64(), a = wxScratch(), st = g.sim.bind();
-    for (const c of everyCharacter(g)) {
-      const m = memOf(c), own = WX_WATCH.both ? wetStepOwn(g, c, m, dt) : null, head = headOf(c);
-      d[a] = c.wet; d[a + 1] = c.beads; d[a + 2] = c.wetRain; d[a + 3] = c.wetLine; d[a + 4] = m.skyT; d[a + 5] = m.open ? 1 : 0;
-      x.wet_step(st, M.slot, M.ruleSet, M.rulePanes, g.time, dt, c.pos[0], c.pos[2], head);
-      if (d[a + 6] !== 0) WET_STATS.skyTests++;
-      if (WX_WATCH.on) { const said = [d[a], d[a + 1], d[a + 2], d[a + 3], d[a + 4], d[a + 5]]; WX_WATCH.saidMany('wet.step', said, [g.time, dt, c.pos[0], c.pos[2], head], own); for (let i = 0; i < 6; i++) d[a + i] = said[i]; }
-      c.wet = d[a]; c.beads = d[a + 1]; c.wetRain = d[a + 2]; c.wetLine = d[a + 3]; m.skyT = d[a + 4]; m.open = d[a + 5] !== 0;
-    }
-  });
-  eachSeat(g, v => samAftermath(v, dt));
-  agePrints(g);
-}
-// ---------------------------------------------------------------- THE TYPESCRIPT BESIDE THE MODULE, for the check that runs both (tools/qa/weather-ident.ts); goes with the deletion commit
-function openSkyOwn(g: Game, c: Character, m0: WetMem): number[] {
-  const p = c.pos, m = { skyT: m0.skyT, open: m0.open };
-  if (g.weather.underRoofOwn(p[0], p[2])) return [0, m.skyT, m.open ? 1 : 0];
+  const p = c.pos;
+  if (underRoofRect(p, g)) return false;
+  const m = memOf(c);
   if (g.time - m.skyT >= WET_SKY_SECS || m.skyT < 0 || g.time < m.skyT) {
     m.skyT = g.time;
     const headY = c.ragdoll ? Math.max(0.3, (c.bones.head?.[1] ?? 0.3)) : (c.bones.head?.[1] ?? p[1] + 1.6);
     let covered = 0;
     for (const [dx, dz] of SKY_OFFSETS) if (g.col.solidBlocked([p[0] + dx, headY + 0.15, p[2] + dz], [p[0] + dx, SKY_TOP, p[2] + dz], 0.02)) covered++;
     m.open = covered < 3;
+    WET_STATS.skyTests++;
   }
-  return [m.open ? 1 : 0, m.skyT, m.open ? 1 : 0];
+  return m.open;
 }
-function wetStepOwn(g: Game, c0: Character, m0: WetMem, dt: number): number[] {
-  const rain = rainNow(g), c = { wet: c0.wet, beads: c0.beads, wetRain: c0.wetRain, wetLine: c0.wetLine }; let sky = [0, m0.skyT, m0.open ? 1 : 0];
-  const wetting = rain > 0.001 && (sky = openSkyOwn(g, c0, m0))[0] !== 0;
-  if (wetting) {
-    c.wetLine = Infinity;   // the rain wets all of him (a man wet to the knee who steps out into it is simply wet)
-    c.wet = clamp(c.wet + WET.soakPerSec * (0.4 + 0.6 * rain) * dt, 0, 1);
-    const beadsTo = clamp(0.35 + 0.65 * rain, 0, 1);
-    c.beads = c.beads < beadsTo ? Math.min(beadsTo, c.beads + 3 * WET.soakPerSec * (0.4 + 0.6 * rain) * dt) : Math.max(beadsTo, c.beads - dt / Math.max(WET.beadRunoffSecs, 0.1));
-    c.wetRain = c.wetRain + (rain - c.wetRain) * Math.min(1, dt * 2);   // the rate the drops on him were fed at (their density and pace on the GPU) — eased, so a gust on the slider does not repattern him in a frame
-  } else {
-    c.wet = clamp(c.wet - WET.dryPerSec * dt, 0, 1);
-    c.beads = clamp(c.beads - dt / Math.max(WET.beadRunoffSecs, 0.1), 0, 1);
-    // (wetRain holds: the last drops run off at the pace they came at)
+/** the rain rate actually being drawn this frame (0 with the storm off, held by day, or a dry storm) — engine.weather is what weather.ts wrote for the renderer */
+export function rainNow(g: Game): number { return Math.max(0, (g.engine as { weather?: WeatherFrame }).weather?.rain ?? 0); }
+/** is `c` being rained on right now */
+export function inRain(g: Game, c: Character): boolean { return rainNow(g) > 0.001 && openSky(g, c); }
+
+/** every character the game draws: Sam, then the guards (shift, units, the breach's cast — whoever is in Game.guards), living or not */
+export function everyCharacter(g: Game): Character[] { return [...men(g).map(pl => pl.char), ...g.guards.map(gd => gd.char)]; }
+
+/** Once a frame (game.ts, after the weather has written this frame's rain): soak / dry everybody, and Sam's drips + print budget. */
+export function updateWetness(g: Game, dt: number) {
+  if (dt <= 0) return;
+  const rain = rainNow(g);
+  for (const c of everyCharacter(g)) {
+    const wetting = rain > 0.001 && openSky(g, c);
+    if (wetting) {
+      c.wetLine = Infinity;   // the rain wets all of him (a man wet to the knee who steps out into it is simply wet)
+      c.wet = clamp(c.wet + WET.soakPerSec * (0.4 + 0.6 * rain) * dt, 0, 1);
+      const beadsTo = clamp(0.35 + 0.65 * rain, 0, 1);
+      c.beads = c.beads < beadsTo ? Math.min(beadsTo, c.beads + 3 * WET.soakPerSec * (0.4 + 0.6 * rain) * dt) : Math.max(beadsTo, c.beads - dt / Math.max(WET.beadRunoffSecs, 0.1));
+      c.wetRain = c.wetRain + (rain - c.wetRain) * Math.min(1, dt * 2);   // the rate the drops on him were fed at (their density and pace on the GPU) — eased, so a gust on the slider does not repattern him in a frame
+    } else {
+      c.wet = clamp(c.wet - WET.dryPerSec * dt, 0, 1);
+      c.beads = clamp(c.beads - dt / Math.max(WET.beadRunoffSecs, 0.1), 0, 1);
+      // (wetRain holds: the last drops run off at the pace they came at)
+    }
+    if (c.wet <= 0 && c.beads <= 0) { c.wetRain = 0; c.wetLine = Infinity; }   // dry: the next wetting starts from a whole man again unless whoever wets him says otherwise
   }
-  if (c.wet <= 0 && c.beads <= 0) { c.wetRain = 0; c.wetLine = Infinity; }   // dry: the next wetting starts from a whole man again unless whoever wets him says otherwise
-  return [c.wet, c.beads, c.wetRain, c.wetLine, sky[1], sky[2]];
+  eachSeat(g, v => samAftermath(v, dt));
+  agePrints(g);
 }
 
 // ---------------------------------------------------------------- Sam indoors after the rain: drips and prints (presentation only)
@@ -184,7 +154,7 @@ export function wetFootfall(g: Game, leftHint: boolean) {
   // onto whatever he stands on: the floor under the sole (a rug, a runner, the raised floor — the nearest static top face under it)
   const hit = g.col.raycast([centre[0], 0.4, centre[2]], [0, -1, 0], 0.8);
   const y = hit ? 0.4 - hit.t : 0; centre[1] = y + 0.003;
-  const d = lookDecal(g.decals.add('wetprint', centre, [0, 1, 0], 0.17, { tangent: dir, param: k, seed: (left ? 0 : 1) | ((WET_STATS.prints * 37) & 0xffe) }));   // seed bit 0 = which foot (the sole is mirrored), the rest = look. A mark for the picture alone: nothing in play reads a wet print, so it is out of the digest's count of decals (lookDecals.ts)
+  const d = g.decals.add('wetprint', centre, [0, 1, 0], 0.17, { tangent: dir, param: k, seed: (left ? 0 : 1) | ((WET_STATS.prints * 37) & 0xffe) });   // seed bit 0 = which foot (the sole is mirrored), the rest = look
   if (!d) return;
   printsOf(g).list.push({ d, t0: g.time, k0: k }); WET_STATS.prints++;
 }

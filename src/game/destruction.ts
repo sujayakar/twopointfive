@@ -437,7 +437,7 @@ export class Destruction {
    *  It hurts nobody, flashes nothing and files no hearing event: the caller does its own. With THE ONE SWITCH off it is the old bang(at, who) and nothing else
    *  (returns zeros; nothing at all with `chaos: false` or at chaos 0), so a grenade that calls this is the grenade it was before the engine;
    *  with only tune.wallBreak off, steps 1 and 3 still run. */
-  blast(at: Vec3, opts: BlastOpts = {}): BlastResult { return this.g.fogOfWar.doing(opts.who, () => this.blastRaw(at, opts)); }   // (what it throws is its cause's doing: fogofwar.ts FOG.ours)
+  blast(at: Vec3, opts: BlastOpts = {}): BlastResult { return this.g.col.window(() => this.g.fogOfWar.doing(opts.who, () => this.blastRaw(at, opts))); }   // (ONE WINDOW ROUND THE BLOW, scene/collision.ts window: in play it is entered inside a tick and this is nothing; entered between ticks — a tool, a page's hook, the debugger's button — its hundreds of lines would each prove the module's copy of the box world for itself)   // (what it throws is its cause's doing: fogofwar.ts FOG.ours)
   private blastRaw(at: Vec3, opts: BlastOpts): BlastResult {
     const g = this.g; const chaos = chaosOf(g); const res: BlastResult = { walls: 0, cover: 0, doors: 0, panes: 0, opened: 0, serial: this.walls.serial };
     if (chaos <= 0 || !DESTRUCTION.on) { if (opts.chaos !== false) this.bang(at, opts.who); return res; }   // (off: a caller that used to call bang() and now calls blast() — a grenade — gets exactly the bang() it had; at chaos 0 that returns on its first line)

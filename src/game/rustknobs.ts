@@ -8,7 +8,6 @@
 // its name. Nothing here is a rule of play.
 import { sim, f64, u8, RUST } from '../sim/sim';
 import { LAYERS } from '../anim/skeleton';
-import { WX_KNOBS } from '../sim/weatherhome';
 import { knobRegistry } from './knobs';
 import { animTables } from './character';
 
@@ -50,4 +49,3 @@ export function knobsToRust(): void {
  *  is written. */
 export function knobsNow(): void { if (RUST.walk && !RUST_KNOBS.tick) knobsToRust(); }
 LAYERS.knobs = knobsNow;
-WX_KNOBS.here = () => { if (!RUST_KNOBS.tick || !RUST.walk) knobsToRust(); };   // (the weather's questions are asked outside a tick too, and whatever row is up: the list as it stands, unless this tick has handed it)

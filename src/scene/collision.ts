@@ -91,6 +91,12 @@ const shotPanes: { bi: number; t: number }[] = [];   // shotBlocked's scratch (t
 /** THE CHECK'S SWITCH OVER THE RUST ROWS OF THIS FILE (tools/qa/rust-check.ts raises it; nothing else does): on = every question a row sends to the module is
  *  ALSO answered here, the two compared, and every row of the module's copy compared with its box (boxMirror.ts stale) — `asked` questions, `differ` of them
  *  answered differently, `stale` rows that were not their box, and the first of either in words. The game plays on the TypeScript's answer while it is on. */
+/** A RAY THAT IS NO NUMBER (where it starts, the way it goes, or a length that is not finite): there is no answer to give — the walk of the cells reads a
+ *  cell that is no cell — so it is the caller's mistake, said by name wherever the module reports one (a level ray: raycast; a rule's ray: a slab's step,
+ *  a thrown thing's walk). Nothing of play asks one. */
+export function noNumber(ro?: Vec3, rd?: Vec3, tmax?: number): Error {
+  return new Error(`a ray that is no number${ro && rd ? `: from [${ro.join(', ')}] along [${rd.join(', ')}] for ${tmax}` : ''} — where it starts, the way it goes and how far are numbers, and how far is finite (a way worked out of two points that are one point is none)`);
+}
 export const BOTH = { on: false, asked: 0, differ: 0, stale: 0, first: '', things: 0 };
 /** A QUESTION ASKED OUTSIDE A TICK IS ASKED OF THE MODULE TOO (the window below): `on` = it is (off = outside a tick this file's own walk answers, as it
  *  did while a row could only be asked inside a tick); `proofs` = how many times a question outside every window had the copy proven for itself alone,
@@ -124,7 +130,8 @@ export class StaticCollision {
   /** shared sound-propagation policy (audio engine + guard hearing) */
   sound!: SoundPaths;
 
-  constructor(public boxes: Box[]) {
+  constructor(public boxes: Box[], of: string | null = null) {
+    this.mirror.of = of;   // (the level's name, where there is one, for the one thing the copy may have to say of it: boxMirror.ts outgrown)
     this.cells = Array.from({ length: this.W * this.H }, () => []);
     boxes.forEach((b, i) => {
       if (b.flags & (BoxFlag.NoShadow | BoxFlag.Dynamic)) return;
@@ -147,13 +154,21 @@ export class StaticCollision {
   addStatic(b: Box, footprint: Box = b): number {
     const i = this.boxes.length; this.boxes.push(b); this.mirror.wroteGrid();
     if (this.stamp.length <= i) { const s = new Int32Array(Math.max(i + 1, this.stamp.length * 2)); s.set(this.stamp); this.stamp = s; }
-    const f = footprint; const cs = Math.abs(Math.cos(f.yaw)), sn = Math.abs(Math.sin(f.yaw));
-    const ex = cs * f.h[0] + sn * f.h[2], ez = sn * f.h[0] + cs * f.h[2];
-    const x0 = Math.max(0, Math.floor((f.c[0] - ex) / this.cs)), x1 = Math.min(this.W - 1, Math.floor((f.c[0] + ex) / this.cs));
-    const z0 = Math.max(0, Math.floor((f.c[2] - ez) / this.cs)), z1 = Math.min(this.H - 1, Math.floor((f.c[2] + ez) / this.cs));
+    const [x0, x1, z0, z1] = this.footCells(footprint);
     for (let z = z0; z <= z1; z++) for (let x = x0; x <= x1; x++) this.cells[z * this.W + x].push(i);
     return i;
   }
+  /** the cells a static appended over `f` is filed in (addStatic's own: the plan's rectangle round f as it is turned, inside the grid): x0, x1, z0, z1 */
+  footCells(f: Box): [number, number, number, number] {
+    const cs = Math.abs(Math.cos(f.yaw)), sn = Math.abs(Math.sin(f.yaw));
+    const ex = cs * f.h[0] + sn * f.h[2], ez = sn * f.h[0] + cs * f.h[2];
+    return [Math.max(0, Math.floor((f.c[0] - ex) / this.cs)), Math.min(this.W - 1, Math.floor((f.c[0] + ex) / this.cs)),
+      Math.max(0, Math.floor((f.c[2] - ez) / this.cs)), Math.min(this.H - 1, Math.floor((f.c[2] + ez) / this.cs))];
+  }
+  /** the grid by its counts, as the Rust module's copy holds it in three tables: its cells, the entries filed in them, the tilted statics' own list */
+  gridCount(): { cells: number; entries: number; tilted: number } { let entries = 0; for (const c of this.cells) entries += c.length; return { cells: this.W * this.H, entries, tilted: this.tiltedAt.length / 5 }; }
+  /** …and how many entries of the cells that is (none for a box wholly off the grid) */
+  footEntries(f: Box): number { const [x0, x1, z0, z1] = this.footCells(f); return Math.max(0, x1 - x0 + 1) * Math.max(0, z1 - z0 + 1); }
   /** …and the level's list cut back to its first `n` statics (the authored ones: a restart): every later index leaves the cells. */
   truncateStatics(n: number) {
     if (this.boxes.length <= n) return;
@@ -165,28 +180,22 @@ export class StaticCollision {
   readonly mirror = new BoxMirror();
   /** A TICK OPENS (Game.stepSeats): with a row of RUST on that asks the box world, the copy is made the boxes as they stand and the questions of this tick go
    *  to the module; with none, nothing happens here at all. */
-  tickOpen(): void { this.noFit = false; this.stand(); }
+  tickOpen(): void { this.stand(); this.mirror.played = true; }   // (…and from its first tick a box world is a level in play: what the copy says of a table outgrown — boxMirror.ts outgrown)
   /** …the copy made the boxes as they stand, for whoever opens a stretch of questions: a tick, a window, a question alone (below) */
   private stand(): void { const M = this.mirror, S = EXACT.on ? senseRows() : 0;   // (the senses answer under the game's own maths alone: senseSet)
      if (RUST.lines || RUST.rays || RUST.circles || RUST.fog || S || ((RUST.doors || RUST.props || RUST.slabs || RUST.items) && EXACT.on)) M.open(this.boxes, this.cells, this.tiltedAt, this.W, this.H, this.cs, this.dynamicBoxes, this.glassWalkable, this.glassPanes, RUST.lines, RUST.circles, RUST.fog, S, RUST.rays); else if (M.live) M.shut(); }
   /** THE WORLD A RULE OF THE MODULE'S MAY STEP OVER NOW (the doors' step: game/doors.ts; the furniture's: game/props.ts): the copy, standing, with the game's own leaves `dyn` in it as they
-   *  are — or null (no tick, no copy, a level too big for it, another list in the leaves' place): the TypeScript steps. */
+   *  are — or null (no tick, no copy, another list in the leaves' place): the TypeScript steps. */
   rulesWorld(dyn: Box[]): BoxMirror | null { if (ruleRed(RULES_ROW)) return null; const M = this.ready(); if (M.rules(dyn)) return M;
     if (FELL.on) fell(RULES_ROW, !M.live ? this.fellWhy() : 'another list in the leaves\' place, or leaves that do not fit a list'); return null; }
-  /** THE COPY AS A RULE IN THE MODULE THAT ASKS ITS OWN LINES TAKES IT (the weather's: rust/sim/src/weather.rs, air.rs): standing, whatever row is up, with the game's
-   *  leaves in it as they are; `ruleSet` and `rulePanes` on it say which list of leaves and which pane rule to hand it (the module judges a pane wherever it holds the
-   *  panes; a rule a check hung alone, which it cannot judge, is none to these lines). Inside a tick or a window. A level the copy cannot hold has no such rule to ask, so that is a mistake and said. */
-  ruleOpen(): BoxMirror {
-    const M = this.ready(); if (!M.live) M.open(this.boxes, this.cells, this.tiltedAt, this.W, this.H, this.cs, this.dynamicBoxes, this.glassWalkable, this.glassPanes, RUST.lines, RUST.circles, RUST.fog, EXACT.on ? senseRows() : 0, RUST.rays);
-    if (!M.live) throw new Error('a rule of the module was asked about a level its copy of the box world cannot hold');
-    const set = M.leaves(this.dynamicBoxes); if (set === -2) throw new Error('a rule of the module was asked with more door leaves than its copy holds');
-    M.ruleSet = set; M.rulePanes = this.paneRule !== null && M.glassIn ? 1 : 0; return M;
-  }
+  /** …and THE WORLD A RULE MAY ASK THE STATICS OF ALONE (the furniture's settle as a level is stood up, game/props.ts: no leaf is asked for, and the game's
+   *  own leaves need not be in it yet): the copy, standing with what it owed paid — or null (no window on it: the TypeScript's, and counted by the caller) */
+  rulesStatics(): BoxMirror | null { const M = this.ready(); return M.live ? M : null; }
   /** …and THE PANE RULE AS A RULE'S STEP TAKES IT (a slab's and a thrown thing's rays ask it; `paneAsk` below): 0 or 1 to hand the module, or −1 — the step
    *  is the TypeScript's, and counted as its own here, once for every rule that asks */
   rulesPanes(): number { const ask = this.paneAsk; if (ask < 0) this.paneFell(RULES_ROW, ask); return ask; }
   /** why the copy is not answering now, for the count of questions the TypeScript took (sim.ts FELL) */
-  private fellWhy(): string { const M = this.mirror; return M.live ? 'the row was not up when the tick opened' : !M.fit ? 'the level does not fit the copy' : 'outside a tick'; }
+  private fellWhy(): string { const M = this.mirror; return M.live ? 'the row was not up when the tick opened' : 'outside a tick'; }
   /** the foot of a span as the statics are asked it (footBand), for a rule that asks them in the module */
   footOf(y0: number): number { return footBand(y0); }
   /** …and shuts */
@@ -201,20 +210,17 @@ export class StaticCollision {
    *  probe, a tool's driver). A window is proven by the first question asked in it: one that asks nothing costs nothing. */
   window<T>(fn: () => T): T {
     const M = this.mirror; if (M.live || this.windowed || !ANYTIME.on) return fn();
-    this.windowed = true; this.noFit = false;
+    this.windowed = true;
     try { return fn(); } finally { this.windowed = false; if (M.live) M.shut(); }
   }
   /** inside `window(fn)`, outside a tick: the copy is proven by the first question `fn` asks and stands until `fn` returns (a window nobody asks in costs nothing) */
   private windowed = false;
-  /** the copy did not stand when it was last asked for, because the level does not fit it: nobody asks again until the next tick or window opens (a
-   *  level that does not fit is the TypeScript's, slower and never wrong; a failed copy a question would be slower than that) */
-  private noFit = false;
   /** THE COPY MADE READY FOR A QUESTION OF THE MODULE'S, where every asker passes: inside a window that no question has proven yet it is proven now, and
    *  a debt of the tick (a static written and said, the grid written) is paid */
   private ready(): BoxMirror { const M = this.mirror; if (!M.live && this.windowed) this.lone(); if (M.owes) M.again(this.boxes, this.glassWalkable); return M; }
   /** a question outside a tick: is the copy now standing for it ALONE (true: the caller shuts it behind the answer; false with the copy standing: a
    *  window's, which shuts it) */
-  private lone(): boolean { if (!ANYTIME.on || this.noFit) return false; this.stand(); if (!this.mirror.live) { if (!this.mirror.fit) this.noFit = true; return false; }
+  private lone(): boolean { if (!ANYTIME.on) return false; this.stand(); if (!this.mirror.live) return false;   // (no row up that asks the box world: a level the copy cannot hold is no case — boxMirror.ts outgrown)
     if (this.windowed) { ANYTIME.windows++; return false; }
     ANYTIME.proofs++; if (ANYTIME.who || FELL.who) { const W = ANYTIME.who ?? (ANYTIME.who = {}), st = callers(4, 2, /scene\/(collision|boxMirror)\.ts/, 3); W[st] = (W[st] ?? 0) + 1; }   // (who asked alone, wherever the count asks who: TPS_FELL=who, ?fell=who)
     return true; }
@@ -428,8 +434,25 @@ export class StaticCollision {
     if (FELL.on && RUST.lines) fell('lines', M.lines ? 'the leaves alone: a flag or a length the copy does not keep' : this.fellWhy());
     return this.dynamicHit(a, d0 * il, d1 * il, d2 * il, len, needFlags);
   }
-  /** THE FURNITURE'S RAY, ANSWERED BOTH WAYS (the check's: BOTH; game/props.ts PropSystem.raycast calls this with what it answered): the module is asked the
-   *  same ray over its copy of the furniture's parts (lines.rs ray_things), the two answers are compared, and the copy with the furniture as it stands. */
+  /** THE FURNITURE'S RAY, ASKED OF THE MODULE (game/props.ts PropSystem.raycast: a round, a beam, a piece of debris, a mark, a thrown thing's plan): the
+   *  nearest part of any thing of `P` the ray meets within tmax, over the copy's own list of the furniture's parts as they stand (lines.rs ray_things;
+   *  the parts are copied where one was written since: boxMirror.ts things). Inside a tick or a window the copy stands; outside both it is proven for
+   *  this one question and shut behind it (`lone`). → the hit (which row of `P.props`, how far along, the face's normal, the part's box), null = nothing
+   *  met, or UNDEFINED = the module cannot answer it now (no copy standing, or more furniture than it holds): the caller answers, and says so. */
+  thingsRay(P: Furniture, ro: Vec3, rd: Vec3, tmax: number): { row: number; t: number; n: Vec3; box: Box } | null | undefined {
+    if (!this.mirror.live && this.lone()) { try { return this.thingsAsk(P, ro, rd, tmax); } finally { this.mirror.shut(); } }
+    return this.thingsAsk(P, ro, rd, tmax);
+  }
+  private thingsAsk(P: Furniture, ro: Vec3, rd: Vec3, tmax: number): { row: number; t: number; n: Vec3; box: Box } | null | undefined {
+    const M = this.ready(); if (!M.live || !M.things(P)) return undefined;
+    const k = M.x.lines_ray_things(M.slot, ro[0], ro[1], ro[2], rd[0], rd[1], rd[2], tmax);
+    if (k < 0) return null;
+    const m = f64(), at = M.scratch, box = M.thingBox(P, m[at + 4]);
+    if (box === null) throw new Error(`the Rust module's ray into the furniture met part ${m[at + 4]} of its list, which is no part of the furniture as it stands (${P.props.length} things)`);
+    return { row: k, t: m[at], n: [m[at + 1], m[at + 2], m[at + 3]], box };
+  }
+  /** …AND ANSWERED BOTH WAYS (the check's: BOTH; PropSystem.raycast calls this with what its own walk answered): the module is asked the same ray over
+   *  its copy of the furniture's parts, the two answers are compared, and the copy with the furniture as it stands. */
   thingsBoth(P: Furniture, ro: Vec3, rd: Vec3, tmax: number, t: { t: number; n: Vec3; prop: unknown; box: Box } | null): void {
     const M = this.mirror; if (!M.live || M.owesBoxes || !M.things(P)) return;   // (a debt is paid by the game's own questions, never by the check's)
     const k = M.x.lines_ray_things(M.slot, ro[0], ro[1], ro[2], rd[0], rd[1], rd[2], tmax), m = f64(), at = M.scratch;
@@ -784,14 +807,14 @@ export class StaticCollision {
   }
   private raycastAsk(ro: Vec3, rd: Vec3, tmax: number): { t: number; index: number; n: Vec3 } | null {
     const M = this.ready();
-    if (!M.rays || !(tmax < 1e6)) { if (FELL.on && RUST.rays) fell('rays', M.rays ? 'a ray a thousand kilometres long or longer' : this.fellWhy()); return this.raycastHere(ro, rd, tmax); }
+    if (!M.rays) { if (FELL.on && RUST.rays) fell('rays', this.fellWhy()); return this.raycastHere(ro, rd, tmax); }
     // RUST.rays, inside a tick (rust/sim/src/lines.rs ray: the walk below, statement for statement, over the module's copy of the boxes and of whichever
     // leaves stand in dynamicBoxes now). A pane met where it is open is passed there (glass.rs, the game's own rule over the copy's panes), and the ray
     // flies on to what stands beyond, as the walk below does.
     const ask = this.paneAsk; if (ask < 0) { this.paneFell('rays', ask); return this.raycastHere(ro, rd, tmax); }
     const set = M.leaves(this.dynamicBoxes); if (set === -2) { if (FELL.on) fell('rays', 'the leaves do not fit a list'); return this.raycastHere(ro, rd, tmax); }
     const k = M.x.lines_ray(M.slot, ro[0], ro[1], ro[2], rd[0], rd[1], rd[2], tmax, set, ask);
-    if (k === -2) { RAYS.host++; if (FELL.on) fell('rays', 'the module handed the ray back'); return this.raycastHere(ro, rd, tmax); }
+    if (k === -2) throw noNumber(ro, rd, tmax);   // (the walk below has no answer to it either: it reads a cell that is no cell, and fails there)
     let hit: { t: number; index: number; n: Vec3 } | null = null;
     if (k >= 0) { const m = f64(), at = M.scratch; hit = { t: m[at], index: k, n: [m[at + 1], m[at + 2], m[at + 3]] }; }
     RAYS.n++;
@@ -807,6 +830,11 @@ export class StaticCollision {
     for (let i = 0; i <= steps; i++) {
       const t = (i / steps) * tmax; if (t > best + 1.5) break;
       const x = Math.floor((ro[0] + rd[0] * t) / this.cs), z = Math.floor((ro[2] + rd[2] * t) / this.cs);
+      // THE RAY HAS LEFT THE LEVEL FOR GOOD (so no length is too long): the cells round this sample lie off the grid on the side the ray is going, or it
+      // does not go that way at all, and so does every later sample's — a sample's cell moves one way only along a ray. Nothing more can be met.
+      // …OR IT GOES NOWHERE IN PLAN (straight up or down): every later sample's cells are the first's, whose statics have each been asked the whole ray.
+      // (A ray that crawls in plan is walked until it has left, a sample every half metre of its length: long, never wrong.)
+      if ((rd[0] >= 0 && x - 1 >= this.W) || (rd[0] <= 0 && x + 1 < 0) || (rd[2] >= 0 && z - 1 >= this.H) || (rd[2] <= 0 && z + 1 < 0) || (i > 0 && rd[0] === 0 && rd[2] === 0)) break;
       for (let dz = -1; dz <= 1; dz++) for (let dx = -1; dx <= 1; dx++) {
         const cx = x + dx, cz = z + dz; if (cx < 0 || cz < 0 || cx >= this.W || cz >= this.H) continue;
         const cell = this.cells[cz * this.W + cx];

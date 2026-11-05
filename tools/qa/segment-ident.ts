@@ -70,10 +70,9 @@ const N = Number(flag('--n') ?? 200000), SEED = Number(flag('--seed') ?? 1);
 const files = (flag('--levels') ?? readdirSync(resolve(ROOT, 'levels')).filter(f => f.endsWith('.json') && !f.endsWith('.lint.json')).join(',')).split(',');
 let s32 = SEED >>> 0; const rnd = () => { s32 = (s32 + 0x6D2B79F5) >>> 0; let t = s32; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
 const RUSTED = argv.includes('--rust'), UNSAID = RUSTED && process.env.RUST_BREAK === '1';
-if (RUSTED) process.env.TPS_EXACT = '1';   // (the game's own maths: the module judges a pane's pieces by angles of its own, and answers a line that may meet one under no other)
 const SIM: any = await import(`${ROOT}/src/sim/sim.ts`), GLASS: any = await import(`${ROOT}/src/game/glass.ts`);
 if (RUSTED) { const no = SIM.simWhyNot(); if (no) { console.log(`=== segment-ident --rust: the module does not run here (${no}) — FAIL ===`); process.exit(1); } }
-const RAYED = { n: 0, there: 0, hit: 0, leaf: 0, tilted: 0, round: 0, cut: 0, roundT: 0, cutT: 0, swapped: 0, turned: 0 };   // (the rays over every level: asked, the module's, and what they hit)
+const RAYED = { n: 0, there: 0, hit: 0, leaf: 0, tilted: 0, round: 0, cut: 0, roundT: 0, cutT: 0, swapped: 0, turned: 0, long: 0 };   // (the rays over every level: asked, the module's, and what they hit)
 let bad = 0; const ever = { lines: 0, rays: 0, circles: 0 };   // (answers that differed over every level, by the row that gave them: the red path must turn BOTH red)
 const log = console.log, err = console.error; const hush = (on: boolean) => { console.log = on ? () => {} : log; console.error = on ? () => {} : err; };
 for (const file of files) {
@@ -148,13 +147,13 @@ for (const file of files) {
     if (now) blockedN++; paneN += pn.length;
     if (RUSTED && (here !== now || (!now && (ph.length !== pn.length || ph.some((p, k) => p.bi !== pn[k].bi || !Object.is(p.t, pn[k].t)))))) { diff++; diffL++; first ||= `a ${a.map(n => n.toFixed(4))} b ${b.map(n => n.toFixed(4))} shrink ${shrink} through ${through}: this file's walk ${here} with ${ph.length} pane(s), the module's ${now} with ${pn.length}`; }
     if (RUSTED && now) { pn.length = pr.length = 0; asked.length = askedRef.length = 0; }   // (blocked: the list and the questions asked on the way to the wall are nobody's answer)
-    if (RUSTED) {   // THE RAY along the same segment — short of its end, to it, or past it — by the module and by this file's own walk
+    if (RUSTED) {   // THE RAY along the same segment — short of its end, to it, or past it, and now and then (`long`) for two thousand or a million kilometres, walked as far as the level reaches (one straight up or down among them: a single sample) — by the module and by this file's own walk
       const d = v3.sub(b, a), L = v3.len(d);
-      if (L > 1e-4) { const rd = v3.scale(d, 1 / L), tm = L * [1, 1, 0.4, 2.5, 6][Math.floor(rnd() * 5)], all = col.dynamicBoxes, out = all.length > 1 && rnd() < 0.12 ? Math.floor(rnd() * all.length) : -1;
+      if (L > 1e-4) { const rd = v3.scale(d, 1 / L), plan = Math.hypot(rd[0], rd[2]), long = (plan > 0.05 || plan === 0) && rnd() < 0.04, tm = long ? [2e6, 1e9][Math.floor(rnd() * 2)] : L * [1, 1, 0.4, 2.5, 6][Math.floor(rnd() * 5)], all = col.dynamicBoxes, out = all.length > 1 && rnd() < 0.12 ? Math.floor(rnd() * all.length) : -1;
         sink = [];
         if (out >= 0) { col.dynamicBoxes = all.filter((_: unknown, j: number) => j !== out); RAYED.swapped++; }
         const hereR = col.raycastHere(a, rd, tm), n0 = RAYS.n, nowR = col.raycast(a, rd, tm); col.dynamicBoxes = all;
-        RAYED.n++; if (RAYS.n > n0) RAYED.there++;
+        RAYED.n++; if (RAYS.n > n0) RAYED.there++; if (long) RAYED.long++;
         if (nowR) { RAYED.hit++; if (nowR.index >= 1e6) RAYED.leaf++; else { const hb = boxes[nowR.index]; if (hb.round === true) { RAYED.round++; if (hb.rot) RAYED.roundT++; } else if (hb.cut && hb.cut.length) { RAYED.cut++; if (hb.rot) RAYED.cutT++; } else if (hb.rot) RAYED.tilted++; } }
         if ((hereR === null) !== (nowR === null) || (hereR && nowR && (hereR.index !== nowR.index || !Object.is(hereR.t, nowR.t) || !Object.is(hereR.n[0], nowR.n[0]) || !Object.is(hereR.n[1], nowR.n[1]) || !Object.is(hereR.n[2], nowR.n[2])))) {
           diff++; diffR++; first ||= `a ray from ${a.map(n => n.toFixed(4))} along ${rd.map((n: number) => n.toFixed(5))} for ${tm.toFixed(4)}${out >= 0 ? ` (leaf ${out} out of the list)` : ''}: this file's walk ${hereR ? `box ${hereR.index} at ${hereR.t} by ${hereR.n}` : 'nothing'}, the module ${nowR ? `box ${nowR.index} at ${nowR.t} by ${nowR.n}` : 'nothing'}`; } } }
@@ -194,7 +193,8 @@ for (const file of files) {
 const blind = UNSAID ? (['lines', 'rays', 'circles'] as const).filter(k => !ever[k]) : [];   // (the red path must turn each row's answers red on some level, as sense-ident's must each sense)
 if (RUSTED) log('SEGMENT-IDENT ' + JSON.stringify(ever));
 if (RUSTED) { const R = RAYED, thin = (['leaf', 'tilted', 'round', 'cut', 'roundT', 'cutT', 'swapped'] as const).filter(k => R[k] === 0);
-  log(`rays: ${R.n} asked, ${R.there} the module's (the rest the host's: a ray of no length) · ${R.hit} hit: ${R.leaf} a leaf, ${R.tilted} a tilted static, ${R.round} a round piece (${R.roundT} of them on a tumbled one), ${R.cut} a cut one (${R.cutT}) · ${R.swapped} with a leaf out of the list`);
+  log(`rays: ${R.n} asked, ${R.there} the module's (the rest the host's: a ray of no length) · ${R.hit} hit: ${R.leaf} a leaf, ${R.tilted} a tilted static, ${R.round} a round piece (${R.roundT} of them on a tumbled one), ${R.cut} a cut one (${R.cutT}) · ${R.swapped} with a leaf out of the list · ${R.long} of two thousand kilometres or longer${RUSTED && R.long === 0 ? ' — NOT A FAIR RUN: no long ray was asked' : ''}`);
+  if (RUSTED && R.long === 0) bad++;
   if (!UNSAID && files.length >= 4 && (thin.length || R.there < R.n * 0.9)) { log(`    NOT A FAIR RUN OF RAYS: ${thin.length ? `never met ${thin.join(', ')}` : 'under nine in ten were the module\'s'}`); bad++; } }
 log(bad ? `=== segment-ident${RUSTED ? ' --rust' : ''}: ${bad} level(s) FAIL${UNSAID ? blind.length ? ` — AND THE RED PATH IS NOT RED FOR ${blind.join(', ')}` : ' — lines, rays and circles each differed somewhere, as the red path must' : ''} ===` : UNSAID ? `=== segment-ident --rust: ALL PASS — AND THE RED PATH IS NOT RED FOR ${blind.join(', ')} ===` : `=== segment-ident${RUSTED ? ' --rust' : ''}: ALL PASS ===`);
 process.exit(blind.length ? 3 : bad ? 1 : 0);
