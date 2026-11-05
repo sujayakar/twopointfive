@@ -46,14 +46,14 @@ import { Vec3, v3 } from '../math/vec';
 import { dieOf, roll, type Die } from '../math/dice';
 import type { Game, Guard } from './game';
 import type { RoomFight } from './roomfight';
-import { run, boots, pressOwns } from './pressure';
+import { run, boots, pressStopsClock } from './pressure';
 import { CUES } from './cues';
 import { placeIn } from './dialogue';
 import { WORDS, wg } from './words';
 import { digInOrder, digInPhase, digInEntered, digInWedged, digInRelease } from './digin';
 import { NETQUIET, netQuietClosed } from './netquiet';
-import { hasHim, OWN } from './owner';
 import { inSquadRooms } from './enemysquads';
+import { claimMan, releaseMan, hasHim, ownerWitness, OWN } from './owner';
 
 export const LASTSTAND = {
   /** REGROUP AND DIG IN LOUDLY (shipped off): the last defenders gather in one room on a spoken order, wedge it and hold it to the end */
@@ -167,6 +167,7 @@ interface Spot { name: string; pos: Vec3 }
 interface Said { key: string; the: string; offT: number; stillAt: Vec3; stillT: number; saidT: number }
 export interface Hint { key: string; rooms: Set<string>; /** `places`: named places that are no room of the list, first named first */ spots: Spot[] }
 const STATES = new SideMap<Game, State>('laststand.STATES');
+ownerWitness<Game>('stand', (gd, g) => { if (!LASTSTAND.regroup) return false; const S = STATES.get(g)?.stand; return !!S && ofStand(S, gd); });
 
 const flat = (a: Vec3, b: Vec3) => Math.hypot(a[0] - b[0], a[2] - b[2]);
 const alive = (D: Def) => D.gd.state !== 'dead' && !hasHim(D.gd, OWN.runner);   // (runner.ts: a man who has broken and run is off the net from his shout on — he leads no check, answers none and is not one of the few)
@@ -181,7 +182,7 @@ const fit = (g: Game, D: Def) => fitGd(g, D.gd);
 const calm = (g: Game, D: Def) => fit(g, D) && g.time - D.gd.lastSeenT > LASTSTAND.quiet;
 /** … and free to be sent somewhere: holding a post, and nobody else's man (his squad's word or leg, the press, the rescue's men with the hostages), his hands
  *  not on a door or its furniture this moment (a man SET behind a door he has wedged may leave it for the stand: one room held by all of them, not three by one each) */
-const movable = (g: Game, D: Def) => calm(g, D) && D.mode === 'hold' && D.rallyAt !== Infinity && !hasHim(D.gd, OWN.squadWord) && !hasHim(D.gd, OWN.squadLeg) && !pressOwns(g, D) && (digInPhase(g, D.gd) === 'idle' || digInPhase(g, D.gd) === 'set');
+const movable = (g: Game, D: Def) => calm(g, D) && D.mode === 'hold' && D.rallyAt !== Infinity && !hasHim(D.gd, OWN.squadWord) && !hasHim(D.gd, OWN.squadLeg) && (pressStopsClock(g, D), !hasHim(D.gd, OWN.press)) && (digInPhase(g, D.gd) === 'idle' || digInPhase(g, D.gd) === 'set');
 
 /** where a point is, by the structure's own rooms (dialogue.ts placeName's rule, whatever the cues' switch says) */
 function where(g: Game, p: Vec3): { id: string | null; the: string; at: string } {
@@ -561,9 +562,13 @@ const fresh = (g: Game): State => {
   return { post, key, die, nextAt: 0, check: null, known: new Set(), named: new Map(), spots: new Map(), at: new Map(), stand: null, loneSaid: false, fewN: 0, told: new Set(), hint: null, said: [], stats: newStats(), stale: false, rot: new Map<LineKind, number>([['movedAt', 0], ['movedFree', 0]]), clsAt: [], later: [] };   // (`places`' own lines start on their first wording: they draw nothing from the die, so the checks fall on the same beats with it on and off)
 };
 /** `regroup` switched off with a stand made: every man lets go of what the stand told him to do, and the room fight has him as it had */
-function dissolve(g: Game, st: State, S: Stand) { for (const D of [...S.in, ...S.out, ...S.movers.map(m => m.D)]) digInRelease(g, D.gd); st.stand = null; }
+function dissolve(g: Game, st: State, S: Stand) { for (const D of [...S.in, ...S.out, ...S.movers.map(m => m.D)]) digInRelease(g, D.gd); st.stand = null; standSay(g); }
+/** WHO THE STAND HAS (src/game/owner.ts): in the room, on his way to it, or told to hold where he is. The dig-in runs for him on any level, wedges any door of his room and does not stand down; the squads do not send him, the press does not take him */
+const ofStand = (S: Stand, gd: Guard) => { for (const D of S.in) if (D.gd === gd) return true; for (const D of S.out) if (D.gd === gd) return true; return S.movers.some(m => m.D.gd === gd); };
+function standSay(g: Game): void { const S = STATES.get(g)?.stand; for (const gd of g.guards) { if (S && ofStand(S, gd)) claimMan(gd, OWN.stand, g.time); else releaseMan(gd, OWN.stand, g.time); } }
 /** once a frame from RoomFight.tick, after the defenders', the press's and the buddy call's own ticks */
-export function lastStandTick(g: Game, F: RoomFight) {
+export function lastStandTick(g: Game, F: RoomFight) { stepStand(g, F); if (LASTSTAND.regroup) standSay(g); }
+function stepStand(g: Game, F: RoomFight) {
   const K = LASTSTAND; if (!K.regroup) { const S = STATES.get(g)?.stand; if (S) dissolve(g, STATES.get(g)!, S); if (!K.callOut) return; }   // (the switch flipped mid-stand)
   const rc = g.roomClear; if (!rc?.active || rc.end || g.rescue?.active) return;
   let st = STATES.get(g);
@@ -584,18 +589,7 @@ export function lastStandTick(g: Game, F: RoomFight) {
   if (S) tickStand(g, F, st, S);
 }
 /** the fight is over (RoomFight.stop): everything forgotten but the counts and the lines, which stay for whoever reads them after the run */
-export function lastStandStop(g: Game) { const st = STATES.get(g); if (!st) return; st.check = null; st.stand = null; st.known.clear(); st.named.clear(); st.spots.clear(); st.at.clear(); st.later.length = 0; st.hint = null; st.stale = true; }
-/** this man is one of a last stand (in the room, on his way to it, or told to hold where he is): the dig-in runs for him on any level, wedges any door of his
- *  room and does not stand down; the squads do not send him, the press does not take him. False on its first line with `regroup` off */
-export function lastStandMan(g: Game, gd: Guard): boolean {
-  if (!LASTSTAND.regroup) return false;
-  const S = STATES.get(g)?.stand; if (!S) return false;
-  for (const D of S.in) if (D.gd === gd) return true;
-  for (const D of S.out) if (D.gd === gd) return true;
-  return S.movers.some(m => m.D.gd === gd);
-}
-/** roomfight.ts rally() and lost(): … and he does not walk off to a noise next door, or give his room up through a door (cover inside it he still takes) */
-export function lastStandOwns(g: Game, D: Def): boolean { return lastStandMan(g, D.gd); }
+export function lastStandStop(g: Game) { const st = STATES.get(g); if (!st) return; st.check = null; st.stand = null; standSay(g); st.known.clear(); st.named.clear(); st.spots.clear(); st.at.clear(); st.later.length = 0; st.hint = null; st.stale = true; }
 /** roomclear.ts objective(): the rooms their net has named (STRUCTURE ids), the named places that are no room of it (`places`), and a key that changes when
  *  they do — null with both switches off or nothing said */
 export function lastStandHint(g: Game): Hint | null {
