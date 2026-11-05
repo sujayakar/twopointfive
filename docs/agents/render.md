@@ -2135,6 +2135,30 @@ interleaved and filtered to their quiet minimum, and a row whose p75 sits far ab
   the Walls have two sides row at 0. A wall top between two indoor rooms takes the brighter room's level whatever light is on it: by eye. NOT THIS
   STEP'S, seen in its stills before and after alike: a cell-sized grey square on the floor at a door's jamb (the maintainer's still of 11-04). It
   is in the light, not the exposure: the cache's read by place (`lighting_common.wgsl diceTaps`) at the cells beside a doorway. Open.
+- **THE HUE SPLIT ASKS THE BELIEF THE HUE WAS BUILT BY** (11-04; EVERY PAGE, no switch: it is the direct light estimator's own rule put right.
+  `shaders/restir.wgsl` and `compact/restir.wgsl`: the per-pixel dark memory `darkSlot` is moved AFTER the shade). The maintainer on his M4, the
+  depot at midday: "red rim on shadow also looks odd". Every shadow the sun threw, a man's and a wall's, was edged in saturated red. FOUND BY
+  SWAPPING ONE THING AT A TIME on software stills of one shadow edge, in the direct light's own debug view: the rim stayed with a pure white sun,
+  with the contrast row at rest, with the temporal resolve's clip opened and its sharpening off, with the spatial reuse off and with the other
+  shadow denoiser; it went with the mast's red obstruction lamp's colour set to black, and with every sample shaded in its own lamp's hue
+  (`settings.restirSampleHue`). That lamp is some 26 m off: at its night strength it would send that ground under a ten-thousandth of the sun's
+  light, and by day a fixture is drawn at a share of that. THE FAULT: the estimator shades a class's light in the hue of the lamps the pixel BELIEVES visible (`Uv`), and a
+  pixel leaves out the lamp its own ray last found dark (`darkSlot`, six bits a pixel). The HUE SPLIT lets a sample of a lamp that is not
+  believed keep its own hue. `Uv` was summed by the memory as the frame found it, and the memory was then moved by this frame's rays BEFORE the
+  split asked it. In a half shadow a pixel's ray is blocked one frame and through the next: `Uv` had left the sun out, the ray came through and
+  cleared the memory, the split called the sun's sample believed, and the sun's light was painted in the hue of what was left in `Uv`. So ANY far
+  dim lamp of another colour edged every half shadow of a strong one in its own colour, at any hour; the split had thinned the fringes it was
+  written for (the green exit sign's) and not ended them. THE MEND IS AN ORDER, not a second word: the memory's two lines run after both classes
+  are shaded, for the next frame, so the sum and the split read one value. Nothing else read the moved value (the blur hint's gate asks the tile's
+  belief; `U.a` is `Uv`'s). WHAT ELSE IT MOVES: a pixel one lamp reaches, on the frame its fresh ray is first blocked while its history's sample is
+  lit, is shaded by `Uv` where it was shaded by the lamp's nominal hue; the same to rounding for a lamp, and for an opening's daylight the exact
+  hue of what it sends in place of its record's. Check: `bun run tools/qa/probes.ts huesplit` (family `render`; the order held by its text in
+  both writings, and a one-ray model of the half shadow that takes its order from that text; `HUESPLIT_BREAK=1` moves the memory first and must
+  fail; with the kernel's text as it was both lines fail), `shaderrows-check` (the compact estimator re-stamped), all 69 shader texts compile.
+  DRAWN, software adapter, the depot at midday, one wall's shadow on the dust: across its edge in the direct light's view red over green ran
+  from 1.00 up to 1.6 and 2.7 before, and stays at 1.00 to 1.02 with the mend; in the picture the edge peaked at 1.63 on dust that is 1.25 lit and
+  1.28 in shade, and peaks at 1.39 now (what the tone curve does to a tan as it darkens, and no more). NEVER SEEN ON A GPU, and not timed there:
+  the kernel does the same work in another order.
 - **THE ROWS THE ONE EXPOSURE MODEL REPLACED ARE DELETED, AND ITS OWN ROW WITH THEM** (11-04; `composite.wgsl` and `compact/composite.wgsl
   lookShadeGain`, their caller, `engine.ts`, `ui/lookpanel.ts`; no switch: nothing a page draws with its rows as it opens was touched). The
   maintainer chose the model over mending the rows it replaced (10-31), and ruled every special case of the light fixed (11-04): the first of the
