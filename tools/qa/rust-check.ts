@@ -501,7 +501,9 @@ let wordOwn = '', wordRust = '';
     const world = fs.readFileSync(resolve(ROOT, 'rust/sim/src/world.rs'), 'utf8'), bog = fs.readFileSync(resolve(ROOT, 'src/game/snowBog.ts'), 'utf8');
     const kinds = [.../export const SNOW_KIND = \{([^}]*)\}/.exec(bog)?.[1].matchAll(/(\w+):\s*(\d+)/g) ?? []]; if (kinds.length !== 5) off.push('SNOW_KIND not found in snowBog.ts');
     for (const q of kinds) { if (q[1] === 'none') continue; shared++; const t = Number(new RegExp(`pub const SNOW_${q[1].toUpperCase()}: u8 = (\\d+);`).exec(world)?.[1]); if (t !== Number(q[2])) off.push(`SNOW_KIND.${q[1]} ${q[2]} in snowBog.ts, ${t} in world.rs`); }
-    shared++; const roofs = Number(/\bITEM_ROOFS = (\d+)/.exec(home)?.[1]); if (roofs !== there('MAX_ROOFS')) off.push(`ITEM_ROOFS ${roofs} here, MAX_ROOFS ${there('MAX_ROOFS')} there`); }
+    shared++; const roofs = Number(/\bITEM_ROOFS = (\d+)/.exec(home)?.[1]); if (roofs !== there('MAX_ROOFS')) off.push(`ITEM_ROOFS ${roofs} here, MAX_ROOFS ${there('MAX_ROOFS')} there`);
+    // (…and the weather's own: the roofs it keeps in force are the roofs a walk is handed — one number in three places)
+    shared++; const wx = Number(/export const MAX_ROOFS = (\d+)/.exec(fs.readFileSync(resolve(ROOT, 'src/game/weatherKinds.ts'), 'utf8'))?.[1]); if (wx !== roofs) off.push(`MAX_ROOFS ${wx} in weatherKinds.ts, ITEM_ROOFS ${roofs} in itemshome.ts`); }
   { shared += 2; const g = Number(/export const GRAVITY = ([\d.]+)/.exec(ts)?.[1]); if (g !== there('GRAVITY')) off.push(`GRAVITY ${g} in throwables.ts, ${there('GRAVITY')} in items.rs`);
     if (!/const sub = 2;/.test(ts) || there('SUB') !== 2) off.push('the substeps, sub'); }
   { // THE NUMBERS WRITTEN IN THE RULE ITSELF, function by function (as the slabs' are held): the step, the pose's key, and the furniture's ray
