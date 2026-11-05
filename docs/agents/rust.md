@@ -44,16 +44,17 @@ first system across (the game's own maths). No rule of play has changed and noth
     in a whole game and not only on a stream of inputs; the Rust systems that follow call the Rust maths with no crossing.
   - `lines` — the box world's line tests (`collision.ts segmentBlocked`, `segmentBlockedDynamic`: every sight line, round and reach) from `rust/sim/src/lines.rs`,
     over the module's copy of the boxes (next bullet), inside a tick. `?rustlines`, `TPS_RUSTLINES=1`. The length is worked out in TypeScript and handed
-    over, so the row answers under either maths. Glass: the module imports nothing, so where the host has a question about a pane (`glassOpen`, a line of
-    fire counting panes) the walk LISTS the glass it crosses and TypeScript judges the list. THE RAY IS A ROW OF ITS OWN, `rays` (`?rustrays`, `TPS_RUSTRAYS=1`; `collision.ts raycast` →
+    over, so the row answers under either maths wherever no pane's rule stands. GLASS: whether a pane is open where a line crosses it is answered in
+    the module (`glass.rs`, the bullet "A pane's open question" below), by the game's own maths, so with glass breaking on the row answers under the
+    game's own maths alone (`collision.ts paneAsk`; under the engine's the TypeScript walks any line that may meet a pane). Only a line of fire still
+    has the walk LIST the glass it crosses that is not open, for the penetration rule (`glasspen.ts`), which is TypeScript. THE RAY IS A ROW OF ITS OWN, `rays` (`?rustrays`, `TPS_RUSTRAYS=1`; `collision.ts raycast` →
     `lines.rs ray`, 2026-11-03: the nearest thing a ray meets, how far along, and the normal of the face it enters by — `boxes.ts rayBox` whole, over
     plain, tilted, round and cut boxes; the leaves standing in `dynamicBoxes` first, then the grid in the same half-metre steps). Every rule of the
     things that flies something through a level asks it (a round, a thrown can, a torn leaf, a piece of debris: 102 callers), so it had to be in the
-    module before any of them could be. THE MODULE'S RAY TAKES EVERY PANE AS SHUT and says the nearest thing it meets. If that
-    is no pane, no pane stood nearer, open or shut, and the TypeScript's walk ends on the same thing. If it is a pane, the host asks its one
-    question of it (`glassOpen`, which only reads): shut, and it is the answer; open, and the ray flies on to what stands beyond, which only the
-    host's own walk can follow, so the ray is asked again in TypeScript whole. `raycastHere` is the TypeScript's own. `RAYS.n` counts the
-    module's, `RAYS.host` the ones walked again (an open pane; a ray that is not a number, which the host's walk fails on loudly). The ray rode the lines' row for a
+    module before any of them could be. A PANE MET WHERE IT IS OPEN IS PASSED IN THE MODULE and the ray flies on to what stands beyond, as the
+    TypeScript's walk does (until the pane's open question moved there the module took every pane as shut and the host walked the ray again:
+    6,500 rays in twelve mission runs). `raycastHere` is the TypeScript's own. `RAYS.n` counts the
+    module's, `RAYS.host` the ones the host walks (a ray that is not a number, which the host's walk fails on loudly). The ray rode the lines' row for a
     day, on no named build; it has its own so that the lines' row can be on in the page while the ray waits its turn, and a rule stepped in the
     module (a slab, a thrown thing) asks its rays there whatever this row says. THE LINES ARE ON IN THE PAGE AND ON THE SHIPPED STAND since 2026-11-03
     (`RUST_ON`: the bullet "Rows that are on"), off on the frozen stand; THE RAY'S ROW IS OFF EVERYWHERE. Measured 2026-11-03 on a 4-core cloud
@@ -148,8 +149,8 @@ first system across (the game's own maths). No rule of play has changed and noth
     - A PATH OF KEYS A LAYER IS HANDED (the stations of a magazine change: `gunreload.ts feedPath`, the game's own timing, which the sound
       beats read too and which is not posing) rides the bench after the hand pass's columns: `LAYER_KEYS_AT` 264, `LAYER_KEY` 7 doubles a
       key, `LAYER_KEYS_MAX` 48 (`skeleton.ts`; `KEYS_AT`, `KEY`, `KEYS_MAX` in `layers.rs`; the bench's `ARGS` is 1,024). A path longer
-      than the room is the TypeScript's to pose: the dispatcher asks for no slot. Two more things ride the same place: the times of the
-      blows of a big tool's beat (one double each, `BIG_BLOWS_MAX` 64) and the throw's seventeen tables of keys (`throwLayerAsk`:
+      than the room is a mistake, said by name where the layer is asked (`skeleton.ts layerFits`): no second way poses it. Two more things ride the same place: the times of the
+      blows of a big tool's beat that the layer reads (one double each, at most two: the last landed and the next coming, `character.ts blowsNear`) and the throw's seventeen tables of keys (`throwLayerAsk`:
       seventeen counts, then eleven tables of two doubles a key and six of four, `THROW_KEYS_MAX` 16 keys a table), which are the
       TypeScript's own `THR` / `THR_LOW` handed over at each ask, so there is one copy of every key.
     - A CLIP A LAYER NEEDS it samples itself (`sample_on_rest`: the rest pose copied into a scratch pose and the clip over it; `clip_at`: the
@@ -168,11 +169,23 @@ first system across (the game's own maths). No rule of play has changed and noth
     - KNOBS OUTSIDE A TICK. The module's copy of the knobs is written as a tick opens. A pose made outside one (a teleport's re-pose) would
       read the last tick's: `CharacterAnimator.update` begins with `LAYERS.knobs?.()` (`rustknobs.ts knobsNow`: hands them over unless a tick
       already has). Found by the wall hold's probe, which flips a knob and teleports. `layer-ident`'s `changed` line holds it.
-    - WHO IS ASKED: `layerSlot` answers a slot only for a man whose every pose stands in the module (`PoseSet.stray` is 0: a layer is handed
-      its other poses by their places) and whose rig's lists and tables fit there; any other man is posed by the TypeScript, the same
-      game. A name the animator lacks is a mistake and throws, before a word of the rig is written. A layer that answers 0 was handed
-      something the module does not hold, which the dispatcher's own tests are there to prevent (`reloadArm` and `knifePose` fall back
-      on too many keys, `bigLayer` on a beat of more than 64 blows, `throwLayer` on a table of more than 16 keys): it throws. `layer-ident`'s `whole` line holds the first three.
+    - WHO IS ASKED: `layerSlot` answers a slot for a man whose every pose stands in the module (`PoseSet.stray` is 0: a layer is handed
+      its other poses by their places; the stage sees to it for an update outside a tick). A name the animator lacks, or a list of the
+      rig's nodes or a table of its numbers longer than the module holds, is a mistake and throws by name, before a word of the rig is
+      written (`layerFits`). So does everything else of a fixed length a layer is handed: a clip the module does not hold or one that
+      writes a node its pose lacks (`clipNo`), a reload of more stations than `LAYER_KEYS_MAX` (where
+      the layer is asked), a knife blow of more than 4 keys or a table of a throw outside 2 to 16 (`character.ts layerTablesFit`, read
+      as an animator is made, so a table that grew is found as the game loads; `throwTables` names a swing's tables once, for the layer
+      and for this). NO QUIET WAY ROUND ANY OF THEM: until 2026-11-04 each was a man or a layer the TypeScript posed instead (the rig
+      and the clip counted under `walk`, the other four not counted at all). A layer that answers 0 was handed something the module
+      does not hold all the same: it throws. `layer-ident`'s `whole` line holds the pose astray, the rig's table and the clips (each of
+      the character file's is held; one of no tracks and one that writes a node past the pose are refused by name); `caps` holds the
+      knife's and the throw's tables, the check's own edges and every gun's reload. A RECORD THAT PLAY MAKES IS NOT A TABLE: a teammate's
+      hammer keeps every blow it landed until it is stowed (`bigkit.ts hammerOut`), over as many doors as he breaks, and a layer that
+      took the whole record had room for 64. So the big tool's layer is handed what it reads, in both languages: the last blow landed
+      and the next one coming (`character.ts blowsNear`), two at most whatever the record holds. `layer-ident`'s `blows` line holds it:
+      on every call of the big tool's drills the module handed the whole record leaves the pose the two blows leave, and a hammer's
+      record of 70 blows is one more drill of `both` (`BLOWS_BREAK=1`, the coming blow not handed over, is red). A layer that reads a record takes the part it reads, never the record.
     - THE CHECK: `bun run tools/qa/layer-ident.ts` (shipped stand; `rust-check`'s `layers` section runs it). `both` plays `warehouse-four:1`
       and then the drives a mission deals too little of: a quiet walk round a guard (80 s, crouch and close-in coming and going, with and without the knife and with the kit's close-in pose
       off for a part), four kicks,
@@ -202,17 +215,17 @@ first system across (the game's own maths). No rule of play has changed and noth
       carried close (`RUNARMS` raised for the drive, the animator's ground speed HELD: up from a walk through the jog to a full sprint and
       back, a jog held, a sprint that comes and goes; nothing drawn, the pistol out, the rifle coming up into both arms and put away
       mid-run) and the wall-pose probe's two drives. Every call both ways from the same start: pose singles, bones, columns, answers and
-      the scratch poses compared. A layer asked under 100 times fails the line. Measured 2026-11-04, one seed, bun, 0 differ of:
-      standPose 509,533 · lifeLayer 509,533 · mvPre 509,533 · handsPass 509,533 · gazeKeep 509,533 · turnWeigh 282,391 ·
-      mvPostBody 109,378 · longBody 87,904 · longArms 87,739 · mvTrunk 86,989 · stealthLayer 84,262 · crouchPose 74,159 · toesUp
-      73,805 · clutchArm 63,227 · actPose 62,301 · watchSlip 35,967 · watchLook 35,967 · stanceBody 23,823 · wallBody 15,591 ·
-      wallArms 15,591 · sneakBody 15,306 · carryArms 15,249 · sneakArms 13,607 · runPlant 10,376 · holdLayer 10,044 · heldLayer
-      9,972 · softKnees 8,460 · creepBody 8,162 · steadyLayer 5,970 · runArms 4,007 · creepArms 3,606 · workLayer 3,595 ·
-      doorLayer 3,528 · readyLayer 3,234 · radioPose 3,229 · bigLayer 2,764 · throwLayer 2,267 · reloadArm 1,608 · mvPostArms
-      1,076 · watchArm 1,070 · kitLayer 1,026 · swapPose 742 · lockpickLayer 716 · blowLegs 610 · blowTrunk 610 · blowArms 610 ·
-      woundBody 600 · tellLayer 580 · knifePose 556 · haulLayer 540 · woundLimbs 534 · boundArms 522 · signalLayer 450 · cablePose
-      446 · catchArm 317 · pistolReloadArm 297 · smokePose 271 · kickBody 240 · takenLayer 236 · leanBody 234 · nvPose 216 ·
-      torchUpLayer 174.
+      the scratch poses compared. A layer asked under 100 times fails the line. Measured 2026-11-04, every row on, one seed, 0 differ of:
+      standPose 495,915 · lifeLayer 495,915 · mvPre 495,915 · handsPass 495,915 · gazeKeep 495,915 · turnWeigh 273,404 ·
+      mvPostBody 109,340 · stealthLayer 79,577 · longBody 73,198 · longArms 73,044 · mvTrunk 72,665 · crouchPose 69,724 ·
+      toesUp 69,377 · clutchArm 63,227 · actPose 62,301 · watchSlip 35,967 · watchLook 35,967 · stanceBody 24,791 · wallBody
+      15,591 · wallArms 15,591 · carryArms 15,247 · sneakBody 15,144 · sneakArms 13,490 · runPlant 10,072 · holdLayer 10,044
+      · heldLayer 9,972 · softKnees 8,208 · creepBody 8,162 · steadyLayer 5,924 · runArms 4,112 · creepArms 3,606 ·
+      workLayer 3,595 · radioPose 3,391 · readyLayer 3,234 · bigLayer 2,764 · throwLayer 2,267 · reloadArm 1,608 · doorLayer
+      1,601 · mvPostArms 1,092 · watchArm 1,070 · kitLayer 1,026 · swapPose 742 · lockpickLayer 716 · blowLegs 610 ·
+      blowTrunk 610 · blowArms 610 · woundBody 600 · tellLayer 580 · knifePose 556 · haulLayer 540 · woundLimbs 534 ·
+      boundArms 522 · signalLayer 450 · cablePose 446 · catchArm 317 · pistolReloadArm 297 · smokePose 271 · kickBody 240 ·
+      takenLayer 236 · leanBody 234 · nvPose 216 · torchUpLayer 174.
       WHAT NO DRIVE REACHES (counted once with a counter on each branch, then taken out): a thing in the right fist during the close-in
       carriage and its wide pose's own pole; a magazine change with the gear rows off (the marks from the hip) and with the hip line off;
       in the hand pass, a layer's note smaller than 0.03; a smoke or a goggle flip with no twist on the head; a haul with no twist.
@@ -222,20 +235,30 @@ first system across (the game's own maths). No rule of play has changed and noth
       For the last five (the hold, the held man, the big tool, the throw) the counters named every input the drives above list, by phase
       and variant, and each was reached with the layer live and easing out; what they did NOT split, and so nobody counted: the hold's
       inner tests on its own clocks (the sway, a spring's rest), the big tool's point exactly on his pelvis, a chest pitched but not
-      turned, and the two fall-backs to the TypeScript (a beat of more than 64 blows, a throw table of more than 16 keys). `runArms`,
+      turned, and what was once a fall-back to the TypeScript (a hammer's record longer than the module's room; a throw table of more than 16 keys is refused as the game loads). `runArms`,
       counted the same way: the jog alone, the sprint's share part and whole, the run's share part and whole, each hand behind, through
       and past its lift, a long gun part of the way up; unreached, the two shoulder joints on one spot (no rig has them there). A review
       read two more that the counters had not split, each driven since: the disarm begun WITH the grab (the game begins every one
       there; the pistol hand's rap on his gun) and a blast's fold with `THROW_BY` off.
       `caps`: a size both languages write down (the most keys of a knife blow, blows of a beat, keys of a throw table; where the keys
-      ride the bench) is the same number in `character.ts` / `skeleton.ts` and in `layers.rs`, read from the sources; the crate
-      itself refuses to build if the blows or the throw's tables at their caps would not fit the bench's own numbers.
+      ride the bench, how many keys a path may be) is the same number in `character.ts` / `skeleton.ts` and in `layers.rs`, read from the
+      sources; the crate itself refuses to build if the blows or the throw's tables at their caps would not fit the bench's own numbers.
+      Its second line holds the game to them: the knife's blows and the throw's swings fit as they stand, a jab lengthened to one key
+      past its layer is refused by name, and every row of the weapons table with a model of its own, at every count of rounds its gun
+      holds and one more, makes no more stations than a path may be (34 of 48 at the most: the M1014, eight shells and the bolt run);
+      `layerFits` refuses a length under its least, over its most, or that is no number; a door's blows by the kit's own numbers
+      (`BIGSLOT.swings`, `.shells`) are within a beat's 64.
       `RUST_BREAK=1`: every knob handed a hundredth large AND the first of each layer's own numbers bent the same way: every layer differs
       somewhere, `rust-check` wants each to.
       THE MISSIONS, all of the above in: `rust-check --missions --rows poses,walk`, five runs, 38,634 ticks, the same game after every
       update with the rows on and off, under bun and under node (and every quick section green beside them). THE ROW OFF is the build
       before the layers to the bit, and the row on is too (`tickcost.ts --compare`, the five runs: 3.85 ms a tick before, 3.83 with the
-      row off, 3.68 with `poses` and `walk` on, one round each on a shared box, so no more than "no slower seen"). SNAPSHOTS with the
+      row off, 3.68 with `poses` and `walk` on, one round each on a shared box, so no more than "no slower seen"). WITH 61 OF THE 62 LAYERS
+      IN (2026-11-04, the build to play before the run's arms joined it, `tickcost.ts --each --list --rounds 2`, the five runs, 30,071
+      ticks, every run the same game to the bit): rows off 6.35 ms a tick, `poses` and `walk` on 6.40; a run by itself lies between 5 %
+      under and 9 % over (compound-four 5.91 → 6.07, warehouse-four 6.47 → 6.60, pass-four 6.20 → 5.86, hostage-rescue 6.06 → 5.76,
+      block-squads 7.95 → 8.63), which is the box's own noise. So the layers buy NO time while each ask crosses to the bench and back
+      (the next item); the box was slower than at the first measure, so the two sittings do not compare. SNAPSHOTS with the
       rows up: `TPS_RUSTPOSES=1 TPS_RUSTWALK=1 bun run tools/qa/rollback-check.ts` on both stands (a layer's state is the animator's own
       fields, so this is what holds that no layer keeps anything a snapshot cannot reach).
     - WHAT THE ROW COSTS WHILE THE ANIMATOR'S STATE IS STILL TYPESCRIPT'S (all of it goes when `update` moves): a layer's columns cross to the
@@ -260,7 +283,7 @@ first system across (the game's own maths). No rule of play has changed and noth
     block headed "THE SENSES IN THE MODULE"; `senseSet(bit)` is the one gate: inside a tick, the copy standing, the row on, `EXACT.on`, and the
     instance's line tests the class's own: a check that puts its own `segmentBlocked` over one instance gets ITS lines, from the TypeScript). Each works its
     lengths and angles out in the module, so each answers only where the game's own maths stand. Each returns "ask the TypeScript" for what it cannot
-    judge (a length that is no length of this world's, a line that must ask the host about an open pane), and the caller's own statements, kept whole as
+    judge (a length that is no length of this world's; until the pane's open question moved to the module, a line that met a pane), and the caller's own statements, kept whole as
     `…Here`, then answer. What they write to is SCRATCH of one question (the lamps, the blobs, the nav grid's shut cells, a way's waypoints): nothing of the
     game is kept in the module by any of them. The numbers the host shares with these files (doubles a lamp, the answers' codes) are `boxMirror.ts FACE`,
     under the Rust's own names; `rust-check` reads the Rust sources and is red where one differs.
@@ -275,14 +298,15 @@ first system across (the game's own maths). No rule of play has changed and noth
       `?rustsmoke`, `TPS_RUSTSMOKE=1`. Idle where the senses are the renderer's (nothing asks it).
     - `sound` — how a sound reaches a listener (`collision.ts SoundPaths.propagate`) from `hear.rs`, in two questions with the TypeScript's half-second
       memory of routed answers between them: the straight lines (clear, grazed, over the top, walled off, too far), then the way round by the floor (the
-      search of `nav.rs`, each leg measured, the last waypoint the listener has a straight run to, a shut leaf across it). Sound stops at glass, so where
-      glass breaking is on (`glassOpen`) a line that meets a pane and nothing solid is the host's to judge and the whole question goes back to TypeScript.
+      search of `nav.rs`, each leg measured, the last waypoint the listener has a straight run to, a shut leaf across it). Sound stops at glass and
+      passes a hole in it: the lines' own answer in the module (`glass.rs`); before that a line that met a pane sent the whole question back to TypeScript.
       `?rustsound`, `TPS_RUSTSOUND=1`.
     - `paths` — a way across the floor (`collision.ts NavGrid.findPath` with NO penalty: the A* over the half-metre grid, `nearestFree`, the greedy
       smoothing and `walkable`) from `nav.rs`. The grid of shut cells stays the host's (it bakes and re-bakes it) and is written to the module for each
       question, as it stands. The scores are KEPT in singles as the TypeScript keeps them in Float32Arrays (`single.rs`), and the search's tables stand
       blank between searches on both sides, so a search the module ran leaves the TypeScript's tables as it found them. A search under a penalty
-      (`tactics.ts`) is TypeScript's. `?rustpaths`, `TPS_RUSTPATHS=1`.
+      (`tactics.ts`) was TypeScript's until the senses' one-way-in car (below: the search waits for the caller's prices). `?rustpaths`,
+      `TPS_RUSTPATHS=1`.
     OFF EVERYWHERE, all five senses. Measured 2026-11-03 on a 4-core cloud box under bun; never seen on a GPU, and in a browser only by the page check below.
     A QUESTION (`sense-ident --bench`, TypeScript → the module, µs): on the office sight 1.87 → 1.51, light 16.9 → 12.9, smoke 4.44 → 3.41, sound 164 →
     188, paths 108 → 121; on the compound sight 2.07 → 1.34, light 13.5 → 11.4, smoke 4.94 → 4.02, sound 82 → 92, paths 46 → 54. So `sound` and `paths`
@@ -381,8 +405,8 @@ first system across (the game's own maths). No rule of play has changed and noth
     (`Throwables.sync`), and an item out of the list keeps its numbers as they were. ONE CALL WALKS THE POOL; what a thing does to anything else
     (a bounce said by its callback, a share of momentum for a thing of furniture, its time up) is LISTED and done by the host when the whole
     pool has been stepped, in both languages: a callback is handed what the item was at the bounce, and the item as the step left it. A ROW
-    WHOSE RAY ENDS ON A PANE, OR THAT BOUNCES ON GROUND THAT MAY BE LYING SNOW, IS HANDED BACK (the pane's open question and the snow's map are
-    the host's): the module writes and lists nothing of that row and the TypeScript steps it. A POOL PAST THIRTY-TWO ROWS (every one a can on
+    THAT BOUNCES ON GROUND THAT MAY BE LYING SNOW IS HANDED BACK (the snow's map is the host's; a ray that ended on a pane was too, until the
+    pane's open question moved to the module): the module writes and lists nothing of that row and the TypeScript steps it. A POOL PAST THIRTY-TWO ROWS (every one a can on
     its fuse: never, in play) grows wider columns and is stepped in TypeScript from there on. THE FURNITURE'S RAY came with it
     (`props.ts PropSystem.raycast` | `lines.rs ray_things`, over the box world's copy of the furniture's parts: the bullet "The box world's copy").
     OFF EVERYWHERE. What it taught: "WHAT THE THROWN THINGS ADDED" below.
@@ -459,6 +483,10 @@ first system across (the game's own maths). No rule of play has changed and noth
     the statics again first. `addStatic` / `truncateStatics` say it themselves (the grid changed: TypeScript answers until the next tick). Leaves: the
     three places that write a leaf say so themselves (`boxMirror.ts leafWrote`, called by `Door.place`, and so `Door.reset`, and by `doorblast.ts
     poseSlab`), whoever calls them and when; a list a question swaps in for itself is copied at every question.
+    THE GLASS IS SAID BY ITS WORK, NOT BY ITS WRITES (`col.glassBegin()` / `glassEnd()` round a blow, a blast and the whole of the glass's step):
+    the rule that breaks a pane asks lines and rays of its own between its writes (a fragment's way out), so from begin to end
+    every question writes the panes' rows again first, and so does the first one after. A mark at each write was tried first and was wrong
+    within a day's check: a question in the middle paid the debt and the writes after it went unsaid.
     Today's writers of statics: `destruction.ts`, `furnblast.ts`, `wallbreak.ts`, `winbars.ts`, `glassbreak.ts`. THIS IS THE ONE PART THAT RESTS ON EVERY
     WRITER REMEMBERING, and it ends when those rules are Rust and write the rows themselves. Until then `rust-check --both` is the net: it found the three
     writers nobody had listed (door leaves, a flag weather writes, the breakers' hides).
@@ -488,6 +516,77 @@ first system across (the game's own maths). No rule of play has changed and noth
   plays, and the frozen stand runs `lines` and `circles` only (the other two need the game's own maths). Probe families with the rows up: destruction,
   furnblast, breaks, winbars, wallbreak and wallcharge were run both ways before the last review's mends (3.3 million questions, none different); the
   door, glass and frag families were not.
+- **A pane's open question** (`rust/sim/src/glass.rs`; the copy's panes, `boxMirror.ts panes` / `PaneSource`; 2026-11-04). Whether a pane of glass
+  is open where a line or a ray meets it (`glassbreak.ts openAt(bi, X) || also(bi, X)`, what `col.glassOpen` answers) is answered IN THE MODULE.
+  Before it, every rule there that met a pane stopped and handed the question back: the ray was walked again in TypeScript (6,500 rays in twelve
+  mission runs), a slab's or a thrown thing's step was handed back whole, a sound's line that met glass sent the whole question back, and a line
+  listed its panes for the host to judge. One move ended all of them, where a loop in the host that asks again with the pane left out would have
+  ended one. It is no row of `RUST`: the lines' and the ray's rows answer by it, and the TypeScript rule is its twin until the twins go.
+  - THE STATE IS STILL TYPESCRIPT'S. Breaking glass (`glassbreak.ts`) owns each pane's cracks and pieces. The copy holds a ROW A PANE THAT IS NO
+    LONGER WHOLE (a piece out, a piece queued to leave, toughened glass coming down, gone): eighty doubles (nine a site: where it is, the bearing of
+    radial 0, the four base radii, the ring zone, the merged share; then the dice's blow, half sides, and the key and number of the last clump out) and
+    sixty-four words (the static, flags and site count, the dice's lattice and seed, each site's radials and seed, a bit a piece that is out, a bit
+    a piece queued to leave, a bit a site whose crater is). A pane with cracks and nothing out answers as a whole one and has no row. The rows are
+    written WHOLE every time the copy is proven: a row is a few hundred numbers, a level's broken panes are few, and nobody has to say which pane
+    changed (a put-back and a pane made whole are no case). 256 rows; past that `paneAsk` is −1 and the TypeScript answers what may meet a pane
+    (counted: `fell`, with the reason).
+  - THE RULE AND ITS ROWS ARE HUNG TOGETHER, in one call (`col.glassRule(rule, rows)`; `glassbreak.ts` hangs itself as both). A rule hung alone
+    (`col.glassOpen = …`: a check's made-up closure, a mode's own) has no rows, and the TypeScript answers by it (`paneAsk` −1): the module
+    never judges by rows that were another rule's. The collision keeps the rows' source and hands it to the copy each time it is stood up, as it
+    hands the walk; a copy that is shut holds nothing of the game (a world outlives its game). The source is hung as a FUNCTION, like every hook
+    the game hangs on the collision: an object kept there was a second road to the game's glass, and the restart check, which names what may
+    differ by its road from the game, went red on it.
+  - A DICING PANE NEEDS NO BIT A CLUMP. The clumps of toughened glass let go in one order (their keys, a tie by clump number: the list
+    `glassbreak.ts` sorted once), so "this clump is out" is "(its key, its number) is no later than the last one out": the row holds that one
+    pair and the module works a clump's key out again (`gpDiceKey`, the same arithmetic). The row is written from the clumps that ARE out, not
+    from the step's counter: a clump's release is heard by the game before the counter moves, and a question asked from inside that hearing (a
+    shard's ray, a sound's line) must find the clump out. A review found the first version one clump late there; `glass-ident` now asks from
+    inside every release.
+  - A BURST'S VIEW IS DATA. A blast judges its lines by glass as it is to a burst (`frag.ts throughGlass`), which was a closure hung on the glass
+    for the length of one judgment. `GlassBreak.seeThrough(view, from, size, fn)` now says it twice: the closure for this side's walks, and rows
+    for the module's (`boxMirror.ts PaneView`). The rows are made WHEN THE MODULE IS FIRST ASKED under the view (`GlassBreak.view`, kept for the
+    judgment's length), so a view under which nothing is asked of the module costs nothing. `blown` is answered there from the pieces queued to
+    leave; for `wary` and `counted` the rule that would break the glass is worked out for every sheet of the level at once and handed over as
+    "this pane gives whole" or "it gives within this far of its nearest point". That rule is stated ONCE (`glassbreak.ts give`): `wouldGive`
+    asks it of a point and the view's rows are its answers for a pane, so the two cannot drift. THE PRICE, measured by review on the office (22
+    sheets) before the rows were made from the level's glass alone and not from every box: a burst's line by a pane 10 µs wary and 8 µs
+    counted, against 0.9 µs blown, because a view's rows are worked out for every sheet where the closure asked only the pane the line met. A
+    man scoring spots to flee to asks one view a spot. If that shows in a tick, keep the rows for the same burst across the questions of a tick.
+  - THE GLASS IS SAID BY ITS WORK (`col.glassBegin()` / `glassEnd()`; the bullet "The box world's copy"). The copy's debt names WHAT is owed
+    (the boxes, the panes, the view), so glass at work has only the panes written again before each question and a view only its own rows; the
+    whole of glass's step is one piece of work, and a question from inside it finds the rows as the glass stands at that statement. A write
+    with no question of its own between (a pane made another glass, every pane made whole) says `col.glassWrote()`. THE PRICE, measured by
+    review on the office with 15 broken panes: a solid line asked while the glass is worked on is 2.3 µs against 0.53, and once a pane is
+    touched every tick writes the rows once more (the glass's step is bracketed whole). A count bumped at each write of the glass, as the
+    leaves and the furniture have, would write nothing when nothing changed, but rests on every write site being found, which the bracket does
+    not; the tick's cost did not move (below), so the bracket stands until the glass's rule is Rust and writes the rows itself.
+  - IT NEEDS THE GAME'S OWN MATHS WHERE AN ANGLE OR A LENGTH DECIDES. A piece is found by an angle and a clump by a length, so there the answer is
+    the TypeScript's only where both sides have the same `atan2`, `cos`, `sin` and `hypot`. `paneAsk` is 1 under `EXACT.on`, and under the
+    engine's maths while no row holds a site or a dice and no view gives by a length (`glassPlain`: panes gone and nothing else). A sight line
+    that passes glass by its flag never meets the question and is the module's under either maths. Otherwise, under the engine's maths, the
+    pane's question is IDLE and the TypeScript answers what may meet a pane (`paneAsk` −2). That is the rule of the rows that work a length or
+    an angle out (`sim.ts OWN_MATHS`), kept at the question because the rows that ask it, `lines` and `rays`, answer boxes under either maths;
+    an idle question's reach of the TypeScript is NOT counted as a fall (`paneFell` counts −1 alone: no rows behind the rule, or more than the
+    tables hold), so the sealed rows stay sealed on a stand whose maths are the engine's.
+  - MEASURED 2026-11-04 on a 4-core cloud box under bun, against the tree before it: the twelve mission runs of both stands (`playthrough.ts
+    --seeds 1-2`, `PT_DIGEST=1`) the same by digest, 42 of 42 on each; with `TPS_FELL=1` the count "rays · the nearest thing is a pane"
+    (10,638 over the shipped stand's runs) is gone and no line names a pane. The tick (`tickcost.ts --each --list --rounds 2`, five missions,
+    30,071 ticks): 2.11 → 2.11 ms mean, every run to the bit; the same tree measured twice differs by 1 %. Never seen on a GPU; the page was
+    driven in headless Chromium on the software adapter (`rust-page.cjs`).
+  - A RULE'S STEP ASKS ONCE (`col.rulesPanes()`): a slab's and a thrown thing's rays ask the pane's rule, so their step takes the answer
+    (0 or 1) from one place, which also counts a −1 as the TypeScript's under the rules' own row. The thrown things ask again before each walk:
+    a row this side stepped in between may have broken more glass than the copy holds.
+  - WHAT HOLDS IT: `tools/qa/glass-ident.ts` (`GLASS_BREAK=1` must fail it; the section `glass` of `rust-check`, which runs it ON BOTH STANDS:
+    toughened glass comes down in a wave on the frozen stand and drops after a beat on the page's, and the two reach different rows). The glass
+    of four levels, and one block of solid glass a level, broken by the game's own entry points (rounds hard and soft, pellets, blasts, the
+    glass's step, a pane made another glass, every pane made whole); points on and off every pane asked of the rule and of the module with no
+    view and under each of the three; a solid line and a ray through each asked of both walks; the same asked FROM INSIDE A RELEASE (a piece
+    leaving, a clump leaving, the game hearing either); the copy's rows compared with the glass after every round. Fair only if it met float
+    glass holed and with pieces queued, cracks run, a pane part way down, panes gone, a web, a pane with all eight sites, open and shut under
+    every view, glass on its way out, a pane that gives whole and one that gives near, solid glass, and a question from inside each kind of
+    release. The tool takes its stand from `TPS_PROFILE` given OUTSIDE it (a default written in the tool's first line is read after the harness
+    has stood up, and gives a half stand: the pins lifted, the page's switches not written). `segment-ident --rust` breaks real glass too (it
+    runs under the game's own maths for that), and `slab-ident` / `item-ident` say their made-up panes as rows as well as a rule.
 - **A rule in the module WRITES the box world: whose a row is, for every writer** (decided 2026-11-03 with the doors' step as its first tenant; agreed
   with the senses' owner, whose smoke grid reads the leaves). The families still to move (blasts, breaks, cuts, glass, props) follow this, not a way of
   their own:
@@ -573,11 +672,11 @@ first system across (the game's own maths). No rule of play has changed and noth
       behind the ones in the air (`SlabStore.rest`), a leaf torn off enters in its door's place among them (`enter`), a door hung again gives its
       row up and the row is zeros (`leave`). `row[door]` is the row PLUS ONE: a part of zeros is no slab at all, which is what a part nobody is at
       home in must mean. The host moves rows, on both roads; no rule in the module does.
-    - **A rule that asks the ray may end on a pane, and a pane is the host's.** The module's ray takes every pane as shut; whether one is open
-      where the ray meets it is `glassOpen`, the host's. So a step in the module whose ray ends on a pane cannot go on: IT WORKS ON A COPY OF ITS
-      ROW, writes the row back only if the whole step was its to take, and otherwise answers HOST with nothing written, and the TypeScript takes
-      that slab's step for that tick (`SLABS_STEPPED.host`). The TypeScript step works on the row read out and written back in the same way, so
-      nothing reads a slab half stepped. Whoever moves the next rule that flies something through a level (thrown things, debris) takes this as it is.
+    - **A step that may have to be handed back works on a copy of its row.** Until the pane's open question was in the module a ray that ended
+      on a pane was the host's, so a step whose ray met one could not go on: IT WORKS ON A COPY OF ITS ROW, writes the row back only if the whole
+      step was its to take, and otherwise answers HOST with nothing written, and the TypeScript takes that slab's step for that tick
+      (`SLABS_STEPPED.host`). The pane is no such case any more (a ray flies on through a hole in the module); what is left is a ray of no
+      length or no number. The TypeScript step works on the row read out and written back in the same way, so nothing reads a slab half stepped.
     - **A memo keyed on an object is a column, and WHAT THE KEY WAS is part of the rule.** `wedged` (a slab with no clear spot in reach is not
       searched for again for a quarter second) was a side table keyed on the slab OBJECT. The checkpoint's run-on stepped a COPY, another object,
       which therefore had no memory. It is a column now, and the copy starts with it at 0, as it always in effect did.
@@ -592,10 +691,10 @@ first system across (the game's own maths). No rule of play has changed and noth
       the differential meets some of them once in ten thousand steps. `rust-check`'s slabs section reads the numbers out of each function's body on
       both sides (`stepSlab` | `step`, `pushOut` | `push_out`, …) and is red where the two lists differ.
     - **The differential has to MAKE what play rarely does**: `slab-ident` throws slabs at panes, flags three statics in ten as panes with a quarter of
-      their cells open (`:panes`), buries slabs in the widest walls (the settling's whole ladder, the doorway it falls back to) and ages one to its
+      them gone (`:panes`: a made-up state of the glass, said twice as the game's own is, as the rule its walk asks and as the rows the copy holds), buries slabs in the widest walls (the settling's whole ladder, the doorway it falls back to) and ages one to its
       six-second cap. A one-sided change to any of those was invisible before it did.
-    - LEAD, not done: the module hands a step back for ANY pane a ray ends on, since only the host knows whether a cell has fallen out. If the box
-      world's copy carried "this pane has a hole" (as it carries the walkable kind), an intact pane could answer there and HOST would be rare.
+    - The lead that stood here (the copy should carry a pane's holes, so that a step need not be handed back for a pane) is done: "A pane's open
+      question" below.
     - **A mission set must DO the thing a row moves**: see `@frag` above. A row whose rule no run reaches is held by its differential alone, and
       `rust-check` now says so of the slabs if its set has no such run.
     A CHANGE TO `stepSlab`, `pushOut`, `unstick`, `settle`, `overlaps`, `freeSpot`, `reachAlong`, `support` OR `acrossOf` IS A CHANGE TO `slabs.rs` TOO.
@@ -618,7 +717,7 @@ first system across (the game's own maths). No rule of play has changed and noth
     - **What the module does not have is asked for by handing the row back, and the host says up front whether it can come up**: the snow's map
       is the host's, so a bounce on ground is the host's wherever `BogGround.may()` says snow may lie, and nowhere else. ONE hook answers both
       questions (`may`, `at`), so the two cannot disagree.
-    - **One helper asks a rule's ray** (`lines.rs ray_rule`: a pane with the host's rule standing, a ray of no length or no number → the host's).
+    - **One helper asks a rule's ray** (`lines.rs ray_rule`: a ray of no length or no number → the host's; a pane is judged where it is met).
       The slabs' step and the pool's walk both call it; the next thing that flies does too.
     - **The furniture's parts are a third list of the box world's copy** (the bullet "The box world's copy"): copied row by row where a part
       differs, at the tick's first question that needs them and after `thingWrote` (said by `Prop.place`, the one place a part is written, and
@@ -1469,6 +1568,106 @@ first system across (the game's own maths). No rule of play has changed and noth
   THE PAGE (`rust-page.cjs`, headless Chromium on the software adapter; never seen on a GPU): `plain` and `systems` play with the seventeen rows up,
   240 frames, the game in TypeScript to the bit; `nojit` still boots and plays with every row off. THE DAY THE TWINS GO, A PAGE WITH NO WEBASSEMBLY
   CANNOT PLAY, and says so on a card instead.
+- **One way in** (2026-11-04; the maintainer: "let's get the rust merged asap and delete the typescript"). A row that is on sends its questions to the
+  module only where the module can answer; everywhere else the TypeScript still did, quietly, which is why a twin could not be deleted. This is the step
+  that finds those places and closes them, a family at a time. NO RULE OF PLAY MOVES: every answer is the same answer, by digest (the 42 on both stands).
+  THE COUNT (`src/sim/sim.ts FELL`, `fell(row, why)`): `TPS_FELL=1` in front of any headless tool counts every question the TypeScript answered while its
+  row was up and prints `FELL <n> × <row> · <why>` as the tool ends (`FELL none`); a play-through prints the sum of its runs. `TPS_FELL=who` adds the
+  first two callers (`who6`: six), `=throw` stops at the first. On the page: `?fell`, read by `window.__sim.fell()`. Off it costs one test at a place that
+  was falling back anyway. A fallback site calls `if (FELL.on) fell('<row>', '<why in plain words>')`: A FALLBACK THAT IS NOT COUNTED IS NOT KNOWN.
+  THE SEAL (`sim.ts SEALED`): the rows no run may reach the TypeScript of. A tool that counted one prints `FELL SEALED ROW REACHED` and exits 1, and
+  `rust-page.cjs`'s `systems` job fails on one in the real page. `FELL_BREAK=1` with `TPS_FELL=1` is the red path (questions outside a tick go back to
+  the TypeScript; it must end red), and `FELL_BREAK=<row>` counts one question of that row by hand as the tool opens: red for a sealed row, not red
+  for another (a family's proof that its row is on the list; a name that is no row of `RUST` is refused, and under `TPS_FELL=throw` the count
+  throws like any other). SEALED TODAY: `lines`, `circles`, `fog`, `poses`, `rays`, `walk`, and the senses' `sight`, `light`, `smoke`, `sound`, `paths`. A family adds its row in the step that closes its last fallback,
+  and its TypeScript can go in the step after. `rays` joined with "A pane's open question": until then a ray whose nearest thing was a pane the
+  host said was open there flew on in the TypeScript walk (some five hundred a mission with glass in it).
+  WHAT WAS CLOSED FOR THE SEALED ROWS:
+  - A QUESTION OUTSIDE A TICK. The module answers only over a copy of the box world that has been PROVEN (every static compared with its row), and a
+    tick was the only stretch with a proof. `StaticCollision.window(fn)` proves the copy once and runs `fn` with its questions going to the module; a
+    single line, circle or ray asked outside every window proves the copy for itself and shuts it behind the answer (`collision.ts lone`; `ANYTIME.proofs`
+    counts those: code that asks many in a row opens a window). A tick's open is still a tick's: the window and the lone question stand the copy by
+    a step of their own (`stand`), so a check that counts ticks by `tickOpen` counts ticks.
+  - THE GRID WRITTEN INSIDE A TICK (`boxMirror.ts wroteGrid`). A wall holed (`addStatic`) or the list cut back used to SHUT the copy for what was
+    left of the tick, and every later question of that tick, the senses' and the rules' steps among them, was the TypeScript's. It is a debt now, as
+    `wrote` is, and the compare that pays it copies the cells first.
+  - A RAY OF NO LENGTH meets nothing, said once at the top of `collision.ts raycast` for both walks.
+  - THE STAGE (`anim/skeleton.ts stageOpen`, `stageShut`; `Character.update` and `CharacterAnimator.update` open it). An animator's layers are handed
+    their poses by their places in one pool of the module, so an update's poses must STAND IN A BLOCK. A man of a ticking game has his in the game's
+    block. Every other update had none and was posed by the TypeScript: a man posed as he is spawned, before any tick has opened over him; a menu's
+    figure, who is in no game; a game whose block another game's tick has parked. Now a set at home has its block bound as the update opens, and a set
+    with no home is lent the stage, a block of that file's own, for the one update. The same floats either way. A pool with no room is an error.
+  - THE ANIMATOR'S LAYERS (the row `walk`, sealed with them). What was left under it after the stage were sizes: a rig with a list or a table
+    longer than the module holds, a layer's clip the module does not hold, a reload of more stations than a path may be, a knife blow of more
+    than 4 keys, a big tool's record of more than 64 blows, a table of a throw outside 2 to 16 keys. Each was a quiet "the TypeScript poses this one", and
+    the last four were not even counted. None of them happens in the game (the count read none over the 42, and `layer-ident`'s `caps` holds
+    the tables and every gun's reload to their sizes), so each is now a mistake said by name through one check (`anim/skeleton.ts layerFits`;
+    the row's bullet, "WHO IS ASKED"), but for the big tool's record, which play makes and no table bounds: its layer is handed the two blows it reads
+    (`character.ts blowsNear`), so no size is left to it. What `layerSlot` still counts: a pose the pool had no
+    room for, a pose not at home, the module not answering posing questions — each only with the `poses` row up, since a row put down by its
+    own word (`?rustposes=0`) makes every layer the TypeScript's by that word, which is no way back in. `layer-ident`'s `whole` line walks
+    those ways out on purpose and holds the count down while it does.
+  EVERY LEVEL AGAINST THE COPY'S CAPS: `bun run tools/qa/copyfit-check.ts` (`COPYFIT_BREAK=1` its red path) stands each level of `levels/` up and reads
+  what it holds against the module's tables: statics (the fullest level 16 % of 8,192 on the page's stand), cells, the cells' entries, tilted statics,
+  the cut rows the copy spent, leaves, furniture (61 of 128, the tightest). A level that does not fit would be a level every question of which is the
+  TypeScript's, and the count says so by its reason.
+  WHAT THE COUNT READS, the 42 on the page's stand (the frozen stand has only the first): `paths · a search with a penalty has no Rust` (some 8,500);
+  `light · outside a tick` (5,730, one caller: an order given between ticks places the calm torch); `rays` at an open pane. Each is its family's.
+  WHAT WAS RUN: the 42 on both stands with the count, digests equal to the build before; `rust-check` quick on both stands and its red path; `--both` on
+  runs that hole walls inside ticks (0 answers differ, 0 stale rows); layer-ident, simstate, rollback static, knobs, dice; the page check with `?fell`
+  (headless Chromium, software adapter; never seen on a GPU).
+  THE SENSES' CAR (sight, light, smoke, sound, paths; the same day). No rule of play moves: the 42 on both stands are the build before, whole result
+  files the same.
+  - A SEARCH WITH A PENALTY IS THE MODULE'S (`rust/sim/src/nav.rs find_priced`; `collision.ts findPathThere`, `priceThese`). A penalty is a function
+    of the caller's (a guard's plan, an order's cost, a lane's stepper: 31 call sites, 17 of them reached over the 42) and the module imports
+    nothing, so THE SEARCH WAITS. It is written once over a source of prices (`trait Prices`: `Flat`, every price 1, is the search with no penalty;
+    `Asked` reads a table the host fills). Where it comes to a cell it has no price for, it stops (`NAV.NEED`), lists the cells (the neighbours of
+    the cell it is about to open, eight at most; a leg's cells in the smoothing), and goes on from where it stood once the host has written them
+    (`nav_need`, `nav_resume`; `nav_drop` when the price throws). So the caller's function is called for exactly the cells this file's search
+    reads, in the order it first reads them, ONCE a cell where the TypeScript calls it at every visit. That is the same search only because every
+    penalty gives a cell one price all through a search: A NEW PENALTY OWES THAT, and the both-ways check holds it (below). A search that waits is
+    scratch of the one call (`STATICS` rows; no snapshot can fall inside one) and the module holds one: a way or a sound asked from inside a price
+    is an error while the module's search waits (`PRICED.waits`; `findPath` and `propagate` say so at their top). No penalty in the game asks one.
+    A price the search finds missing where it has asked for it is the host's search (a counted hand-back), never a guess of 1.
+  - BETWEEN TICKS: the light estimate (`guards.ts lightEstimateAt`: an order given between ticks places the calm torch) and the smoke's line
+    (`sense.ts CpuSmoke.along`), each one question in several calls, stand in a `col.window`; an eye on a man (`collision.ts eyeContact`) is one
+    call and proves the copy for itself, as a line does. Inside a tick each is as it was.
+  - EVERY HAND-BACK OF THE FIVE IS COUNTED where its caller's own statements then run: a sight line that stops at glass or names a flag the copy
+    does not keep, an eye handed back; more lamps in reach of a point than a question carries (256; counted at the estimate, `lampsFell`, not at
+    the writer the smoke grid's sweep shares), the lamps handed back; more blobs than a question carries (64; the game keeps 48 at most,
+    `sense.ts`), the smoke's line handed back; the sound's straight lines and its way round handed back, a floor larger than the module's table;
+    a search's cap that is no whole number, the search handed back.
+  WHAT THE COUNT READS NOW, the 42: `paths · a search with a penalty` and `light · outside a tick` are GONE (8,962 and 5,688 on the page's stand).
+  Of the five senses: NOTHING on either stand, in the tour or in the soak, and ALL FIVE ARE SEALED (the soak's watcher asks two eyes between
+  ticks: that was `sight · outside a tick` until the eye proved the copy for itself). `sound` and `paths` were counted for the first time by this
+  car on a tree without the panes in the copy (the straight lines handed back 493, frozen stand 1,989; the way round 102, 178; the search 32, 5):
+  each was a line that came to a pane, and behind "A pane's open question" (`collision.ts paneAsk`) each reads zero. What the module can still
+  hand back of them is a line too long to be one, a point that is no number, a way of more waypoints than its table; none is met. The senses'
+  TypeScript (`eyeContactHere`, `lampsHere`, the smoke's own loop, `propagateHere`, `findPathHere`) can go in the step after.
+  THE CHECKS: `tools/qa/sense-ident.ts` asks half its ways with a price a cell (1, 6, 20, 0.5 or 200 by a hash, in blocks of one cell or four) and
+  compares the way AND the cells each side priced in the order it first asked for them; `PRICED_BREAK=1` prices the module's cells last first and
+  must end with `paths` differing and nothing else (`rust-check` runs it and is red if it is not). `rust-check --both` holds the same in the
+  missions (`collision.ts findPathAsk`): there this file's search asks the caller's function at every visit, as it does with the row off, and a
+  price that is not the one the module was given for that cell is a differ, which is the one-price rule as a standing check (`sense-ident` runs
+  its two paths on every level: an honest price is the same answer, a price that changes at every ask is caught). The numbers a search answers
+  that are no count (`boxMirror.ts NAV`) are held to `nav.rs` with `FACE`. `TPS_FELL=1` prints `PRICED <n> searches … came back for prices <k>
+  times … <c> cells`.
+  WHAT IT COSTS: 8,962 priced searches over the 42 came back for prices 1.42 million times for 2.08 million cells (232 cells a search; the frozen
+  stand 2,746 searches, 608 cells each). A tick: no difference `tickcost` can see (five runs, base then car, measured three times: the mean of all five +5 %, +2 %, −2 %, and on the car as it went 3.77 → 3.78 ms with each
+  run between −2 % and +3 %; the same tree
+  measured twice differs by 3 %).
+  WHAT WAS RUN (headless, a cloud box, no GPU; NEVER SEEN ON A GPU and nobody has played it). ON THE CAR BEFORE THE PANES WERE UNDER IT: the 42 on
+  both stands with the count, each stand's result file the base's to the byte; `sense-ident` on every level, ALL PASS, `RUST_BREAK=1` red for
+  every sense, `PRICED_BREAK=1` red for the paths and nothing else, the two together refused; `FELL_BREAK=1` red; `rust-check` on both stands and
+  `RUST_BREAK=1` red for every section; `rust-check --both`, 8 runs, 28.0 million questions, 0 differ, 0 stale; `rollback-check` whole and
+  `--static`, `simstate-check`, `knobs-check`, `dice-check`, `copyfit-check`, both typechecks, `build.ts --check`; the tour (3 runs) and the soak
+  (seeds 1,2,3, 12 minutes) on both stands with the count: green on the frozen stand, and on the page's stand the reds of the base, the same ones
+  (the tour's fire exit, stun and smoke stops; the soak's 15 violations). The page itself in headless Chromium on the software adapter
+  (`rust-page.cjs`, the jobs loads, plain and systems; its frames are not drawn): the game in TypeScript to the bit with every row up, and with
+  `?fell` the TypeScript answered none. BEHIND THE PANES, AS IT IS CUT: the 42 on both stands with the count, the same result files to the byte and
+  `FELL none` on both; the tour and the soak on both stands, nothing of a sense counted (the soak's one line is a rule's step, 22 on the page's
+  stand and 6 on the frozen one); a run on the stand as it was recorded (`TPS_EXACT=0 TPS_RUST=0`) counts nothing; `FELL_BREAK=sound` and
+  `FELL_BREAK=paths` each end red; `sense-ident` and its two red paths; both typechecks.
 - **The data's layout** (2026-11-03; the maintainer: "we should also start changing our data layout to be more cache and simd friendly"). MEASURED
   FIRST, one blend of two 55-node poses in a module, an x86 cloud box, bun 1.4 | node 24: as it stood (ten singles a node, worked in doubles) 1334 |
   1391 ns · the same arithmetic over columns 1334 | 1390 · columns, two lanes of doubles, THE SAME BITS 1204 | 964 · doubles, the length a plain root

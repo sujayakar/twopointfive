@@ -251,7 +251,12 @@ export class CpuSmoke {
    *  is the module's (rust/sim/src/smoke.rs: trans's statements over the same blobs, written there for the one question). */
   along(col: StaticCollision, a: Vec3, b: Vec3): number {
     if (this.grid) { const t = this.grid.along(a, b); if (t !== -1) return t; }
-    const B = this.blobs; if (!B.length) return 1;
+    if (!this.blobs.length) return 1;
+    // (the blobs are one question in several calls: asked between ticks, the whole of it stands in one window over the module's copy, collision.ts window)
+    return col.mirror.live ? this.alongIn(col, a, b) : col.window(() => this.alongIn(col, a, b));
+  }
+  private alongIn(col: StaticCollision, a: Vec3, b: Vec3): number {
+    const B = this.blobs;
     if (col.blobsBegin(B.length)) {
       for (let i = 0; i < B.length; i++) { const bl = B[i]; col.blob(bl.x, bl.y0, bl.z, bl.r2, bl.age, bl.mass); }
       const K = SENSE.smoke, r = col.blobsAlong(a, b, K.sigma, K.spread, K.widest, K.rise, K.riseRate);
