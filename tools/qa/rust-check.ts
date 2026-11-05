@@ -365,9 +365,9 @@ let wordOwn = '', wordRust = '';
   const WD: any = (await import(`${ROOT}/src/scene/world.ts`)).WORLD, navCell = Number(/class NavGrid \{\s*cell = ([\d.]+);/.exec(fs.readFileSync(resolve(ROOT, 'src/scene/collision.ts'), 'utf8'))?.[1] ?? NaN);
   const floorCells = Math.round(WD.gridW * WD.gridCell / navCell) * Math.round(WD.gridH * WD.gridCell / navCell), holds: number = S.sim().nav_cap(0), ways: number = S.sim().nav_cap(1);
   const floorFits = holds === Math.min(table('MAX_NAV'), table('MAX_WAY'), Math.floor((table('MAX_OPEN') - 1) / 8)) && ways === table('MAX_WAY') && floorCells <= holds;
-  // (…and THE PIN: the same questions over a box world of the tool's own, on the frozen stand, every word the recording's — tools/qa/fixtures/sense-words.json.
+  // (…and THE PIN: the same questions over a box world of the tool's own, on the page's stand, every word the recording's — tools/qa/fixtures/sense-words.json.
   //  Under RUST_BREAK the child plays its own red path and must end red)
-  const made = child(['bun', 'run', 'tools/qa/sense-ident.ts', '--made'], { TPS_PROFILE: 'frozen', TPS_CPUSENSE: undefined });
+  const made = child(['bun', 'run', 'tools/qa/sense-ident.ts', '--made'], { TPS_PROFILE: 'shipped', TPS_CPUSENSE: undefined });
   const madeSay = made.out.split('\n').filter(l => /^- (PASS|FAIL) — (reach|asked|same)/.test(l)).map(l => l.replace(/^- /, '').slice(0, 260)), madeOk = made.status === 0 && madeSay.some(l => /^PASS — same: every count and word is that of the recording/.test(l));
   red['the senses'] = levelsRed && made.status === 1 && /every one: the break reaches each/.test(made.out);   // (…and every word of the made-up world's pin: the family's red rule, as a row has one)
   const off = pairs.filter(q => q.here !== q.there), ok = r.status === 0 && rows.length > 0 && rows.every(l => / PASS /.test(l)) && pairs.length >= 20 && off.length === 0 && orderRed && partsRed && shadeRed && rowedRed && blobsFit && floorFits && madeOk;
@@ -379,7 +379,7 @@ let wordOwn = '', wordRust = '';
     + (shade ? `\n    a lamp's shadow with the module handed no blobs (SHADE_BREAK=1): ${shadeRed ? 'the words of the two cases where the grid cannot answer move and nothing else, as they must' : `NOT RED AS IT MUST BE (exit ${shade.status}): ${shade.out.trim().split('\n').slice(-1)[0].slice(0, 200)}`}` : '')
     + (rowed ? `\n    the level's rows with their order dropped from the lamps the host writes (ROWS_BREAK=1): ${rowedRed ? 'a light word moves and none that is not the light\'s, as it must' : `NOT RED AS IT MUST BE (exit ${rowed.status}): ${rowed.out.trim().split('\n').slice(-1)[0].slice(0, 200)}`}` : '')
     + `\n    the smoke's blobs: the game keeps ${SE.SENSE.smoke.cap} at most and the module's table holds ${BMF.MAX_BLOBS}${blobsFit ? '' : ' — THE KNOB IS PAST THE TABLE'}`
-    + `\n    the pin (a made-up box world, the frozen stand): ${madeOk ? '' : `NOT HELD (exit ${made.status}) · `}${madeSay.length ? madeSay.join(' · ') : (made.err || made.out).trim().split('\n').slice(-2).join(' / ').slice(0, 300)}`);
+    + `\n    the pin (a made-up box world, the page's stand): ${madeOk ? '' : `NOT HELD (exit ${made.status}) · `}${madeSay.length ? madeSay.join(' · ') : (made.err || made.out).trim().split('\n').slice(-2).join(' / ').slice(0, 300)}`);
 }
 
 // ---- poses
