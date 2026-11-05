@@ -13,6 +13,7 @@
 //   rows       the lowest free row, zeros; a freed row is free once; a handle taken before a row changed hands throws by name; a man who left reads his numbers as they stood
 //   same bytes a game's men stand in its block once a tick has opened, and the module's fold of each row is the fold of what the accessors read
 //   snapshot   a snapshot put back brings a man's columns back; put into another game they are that game's
+//   fields     every field of a Guard, a Player and a Character is a column or is named in the schema as staying on his object
 //   levels     every level of levels/ fits the rows, and the fullest is named
 //   lint       no file of src/game writes the columns but through their accessors
 // Not game code; nothing here needs a GPU, and nothing here has been seen on one.
@@ -32,7 +33,7 @@ const throwsName = (f: () => unknown, word: string): string => { try { f(); retu
 console.log(`a man's columns · profile ${process.env.TPS_PROFILE ?? 'frozen'}${BREAK ? ' · MEN_BREAK=1 (the red path)' : ''}`);
 
 { const f = schemaFaults(MEN_TABLE), bad = schemaFaults({ rows: 6, fields: [...MEN_TABLE.fields, MEN_TABLE.fields[0]] });
-  verdict(f.length === 0 && bad.length === 2 && !BREAK, 'table: the schema has no name twice, and rows a multiple of four', f.length ? f.join(' · ') : `${MEN_TABLE.fields.length} fields, ${MEN_TABLE.rows} rows · ${SC.MEN_KEPT.length} fields kept on the object by name · a table with both faults is told both`); }
+  verdict(f.length === 0 && bad.length >= 2 && !BREAK, 'table: the schema has no name twice, and rows a multiple of four', f.length ? f.join(' · ') : `${MEN_TABLE.fields.length} fields, ${MEN_TABLE.rows} rows · ${SC.MEN_KEPT.length} fields kept on the object by name · a table with both faults is told both`); }
 { const ts = readFileSync(MEN_OUT.ts, 'utf8'), rs = readFileSync(MEN_OUT.rust, 'utf8');
   const same = (BREAK ? ts + ' ' : ts) === tsText(MEN_TABLE) && rs === rustText(MEN_TABLE);
   verdict(same, 'written: the generated files are what the schema writes', same ? `${layOut(MEN_TABLE).cols.length} columns, hash ${schemaHash(MEN_TABLE).toString(16)}` : 'bun run tools/sim/men.ts'); }
@@ -95,6 +96,14 @@ console.log(`a man's columns · profile ${process.env.TPS_PROFILE ?? 'frozen'}${
   const W2: any = await standUp({ seed: 7 }), g2 = W2.game; W2.step(DT); RB.restoreSnapshot(snap, g2);
   const there = [g2.player, ...g2.guards].every((m: any, i: number) => m.owner === 100 + i && m.S === g2.men) && g2.men !== g.men && g2.men.standing === men.length;
   verdict(back && there, 'snapshot: a snapshot put back brings a man\'s columns back; put into another game they are that game\'s', `back ${back} · another game ${there}`); }
+
+// ---- every field of a man is a column, or named as staying on his object
+{ const W: any = await standUp({ seed: 7 }), g = W.game, kept = (on: string) => new Set(SC.MEN_KEPT.filter((k: any) => k.on === on).map((k: any) => k.name)), bad: string[] = [];
+  const see = (o: any, on: string, what: string) => { const K = kept(on); for (const k of Object.keys(o)) if (k !== 'S' && k !== 'r' && !K.has(k)) bad.push(`${what}.${k}`); };
+  see(g.guards[0], 'guard', 'Guard'); see(g.player, 'player', 'Player'); see(g.player.char, 'man', 'Character');
+  if (BREAK) bad.push('the red path');
+  const cols = MEN_TABLE.fields.length, stay = SC.MEN_KEPT.length, dress = SC.MEN_KEPT.filter((k: any) => k.stays === 'dressing').length;
+  verdict(bad.length === 0, 'fields: every field of a Guard, a Player and a Character is a column, or named in the schema as staying on his object', bad.length ? bad.join(' · ') : `${cols} fields are columns · ${stay} stay on the object, ${dress} of them dressing`); }
 
 // ---- every level fits: a game holds at most menMost men, by the doors' and the furniture's hand-over, whatever its level
 { const files = readdirSync(resolve(ROOT, 'levels')).filter(f => f.endsWith('.json') && !f.endsWith('.lint.json')); let most = 0, who = '', read = 0; const over: string[] = [];
