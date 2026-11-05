@@ -139,7 +139,7 @@ class Clear {
       for (const e of g.events) { if (this.seenEv.has(e)) continue; this.seenEv.add(e); if (e.kind === 'guardShot') this.lastShotT = this.t; }
       if (this.seenEv.size > 4000) this.seenEv = new Set(g.events);
       for (const o of this.NB.ops) { if (o.state === 'dead') continue; this.walked.set(o, Math.max(this.walked.get(o) ?? 0, flat(o.char.pos, this.from.get(o)!))); for (const r of this.rooms) if (inRect(o.char.pos, r.def.bounds)) this.entered.add(r.def.id); }
-      for (const x of [...this.NB.ops, ...this.NB.hostiles]) if (x.state === 'dead' && !this.fallen.has(x)) { this.fallen.add(x); this.lastFallT = this.t; if (this.NB.ops.includes(x)) this.fell.push(`${x.callsign} (${f1(x.char.posX)}, ${f1(x.char.posZ)}) at ${f1(this.t)} s`); this.say(`DOWN ${x.callsign} (${x.team})`); }
+      for (const x of [...this.NB.ops, ...this.NB.hostiles]) if (x.state === 'dead' && !this.fallen.has(x)) { this.fallen.add(x); this.lastFallT = this.t; if (this.NB.ops.includes(x)) this.fell.push(`${x.callsign} (${f1(x.char.pos[0])}, ${f1(x.char.pos[2])}) at ${f1(this.t)} s`); this.say(`DOWN ${x.callsign} (${x.team})`); }
       if (this.RC.end) throw new Done(this.RC.end, this.RC.endWhy);
       if (this.t >= this.cap) throw new Done('stalled', 'time cap');
     }
@@ -325,7 +325,7 @@ class Walk {
   inWay(to: Vec3): string {
     if (process.env.WALKMET_BREAK === '1') return '';
     const o = this.pos, dx = to[0] - o[0], dz = to[2] - o[2], L = Math.hypot(dx, dz) || 1;
-    const h = up(this.R.hostiles).filter((x: any) => flat(x.char.pos, o) < 1 && ((x.char.posX - o[0]) * dx + (x.char.posZ - o[2]) * dz) / L > 0.2).sort((a: any, b: any) => flat(a.char.pos, o) - flat(b.char.pos, o))[0];
+    const h = up(this.R.hostiles).filter((x: any) => flat(x.char.pos, o) < 1 && ((x.char.pos[0] - o[0]) * dx + (x.char.pos[2] - o[2]) * dz) / L > 0.2).sort((a: any, b: any) => flat(a.char.pos, o) - flat(b.char.pos, o))[0];
     return h?.callsign ?? '';
   }
   F() { this.I.pressed.add('KeyF'); this.presses++; this.lastF = this.t; this.say('F — the hostage room'); this.step(); }

@@ -59,7 +59,7 @@ async function rig(stage: (g: any) => string | null | undefined, on = true, squa
         if (R.aim) W.cursorAt([R.aim[0], R.aim[1], R.aim[2]]);
         R.held = Math.max(R.held, input.keys.size + (input.buttons ? 1 : 0));
         W.step(DT);
-        for (const gd of O.squad()) { R.fastest = Math.max(R.fastest, Math.hypot(gd.char.velX, gd.char.velZ)); // (the hand as the module gives it out — whichever layer of the animator poses it — and the read that goes with it)
+        for (const gd of O.squad()) { R.fastest = Math.max(R.fastest, Math.hypot(gd.char.vel[0], gd.char.vel[2])); // (the hand as the module gives it out — whichever layer of the animator poses it — and the read that goes with it)
           const wh = workHand(g, gd.char), wj = workJob(g, gd.char);
           if (wh && wh.w > 0 && g.work.working(gd)) R.handUp.add(gd.callsign);
           if (!!wh !== !!wj) { const o = R.jobs.get(gd.callsign) ?? { verb: '', secs: 0, need: 0, bad: 0 }; o.bad++; R.jobs.set(gd.callsign, o); }
@@ -161,7 +161,7 @@ export const workHeld = () => keep(async () => {
     for (let r = 3; r <= 6 && !at; r += 0.5) for (let k = 0; k < 24 && !at; k++) { const q = [st[0] + Math.cos(k * Math.PI / 12) * r, 0, st[2] + Math.sin(k * Math.PI / 12) * r]; if (ok(q)) at = q; }
     const X = at ? foes(g).sort((a, b) => flat(a.char.pos, at!) - flat(b.char.pos, at!))[0] : null, away = at ? Math.atan2(at[0] - st[0], at[2] - st[2]) : 0;
     let fr = 0;   // (`steps`: he shifts his feet where he stands — a walking man's footfall filed twice a second, as guards.ts files one, for the squad's ears)
-    const pin = (alert = false) => { if (!X || !at || X.state === 'dead') return; X.char.posX = at[0]; X.char.posZ = at[2]; X.char.vel = [0, 0, 0]; X.char.bodyYaw = X.char.aimYaw = away; if (alert) { X.state = 'alert'; X.awareness = 1; }
+    const pin = (alert = false) => { if (!X || !at || X.state === 'dead') return; X.char.pos[0] = at[0]; X.char.pos[2] = at[2]; X.char.vel = [0, 0, 0]; X.char.bodyYaw = X.char.aimYaw = away; if (alert) { X.state = 'alert'; X.awareness = 1; }
       if (steps && fr++ % 30 === 0) g.events.push({ kind: 'step', pos: [at[0], 0, at[2]], time: g.time, loud: false, level: 0.33, who: X.char.id }); };
     pin(); R.step(30);
     const why = O.give('work', { kind: 'floor', at: st, thing: th }, 'all'), ops: any[] = O.squad(), worker = ops.find(o => g.work.working(o)), mate = ops.find(o => o !== worker);
@@ -224,9 +224,9 @@ export const workWalk = () => keep(async () => {
       SNEAK.on = true; SPOTTED.on = true; WORK.offWalk = rule; g.godMode = true;
       const asked = (h: any) => { const w = WORK.offWalk; WORK.offWalk = true; try { return workComing(g, b, h); } finally { WORK.offWalk = w; } };   // (the geometry, whichever way the key is)
       let at = [...WAY[0]], seg = 0, along = 0;
-      const step = (n = 1) => { const l = console.log; if (!VERBOSE) console.log = () => { }; try { for (let i = 0; i < n; i++) { pl.crouch = true; pl.char.posX = at[0]; pl.char.posZ = at[1]; W.step(DT); } } finally { console.log = l; } };
+      const step = (n = 1) => { const l = console.log; if (!VERBOSE) console.log = () => { }; try { for (let i = 0; i < n; i++) { pl.crouch = true; pl.char.pos[0] = at[0]; pl.char.pos[2] = at[1]; W.step(DT); } } finally { console.log = l; } };
       if (!b) return { ok: false as const, why: `${R.why} no partner` };
-      g.teleportPlayer([at[0], 0, at[1]]); b.char.posX = 9.9; b.char.posZ = 17.3; b.path = []; b.pathGoal = null; step(60);
+      g.teleportPlayer([at[0], 0, at[1]]); b.char.pos[0] = 9.9; b.char.pos[2] = 17.3; b.path = []; b.pathGoal = null; step(60);
       const th = g.work.things().find((x: any) => x.kind === 'breaker'); if (!th?.stand) return { ok: false as const, why: 'no breaker to work' };
       const gave = O.give('work', { kind: 'floor', at: th.stand, thing: th }, 'all'); for (let i = 0; i < 25 * 60 && !g.blackout.active; i++) step();
       const t0 = g.time, man: any = g.guards.find((x: any) => x.task?.kind === 'breaker'); if (!g.blackout.active || !man) return { ok: false as const, why: `order ${gave} · mains ${g.blackout.active ? 'out' : 'on'} · errand ${man?.callsign ?? 'nobody'}` };
@@ -237,7 +237,7 @@ export const workWalk = () => keep(async () => {
           for (let L = Math.hypot(WAY[seg + 1][0] - WAY[seg][0], WAY[seg + 1][1] - WAY[seg][1]); seg < WAY.length - 1 && along >= L;) { along -= L; seg++; if (seg < WAY.length - 1) L = Math.hypot(WAY[seg + 1][0] - WAY[seg][0], WAY[seg + 1][1] - WAY[seg][1]); }
           if (seg < WAY.length - 1) { const L = Math.hypot(WAY[seg + 1][0] - WAY[seg][0], WAY[seg + 1][1] - WAY[seg][1]), k = along / L; at = [WAY[seg][0] + (WAY[seg + 1][0] - WAY[seg][0]) * k, WAY[seg][1] + (WAY[seg + 1][1] - WAY[seg][1]) * k]; } else at = [...WAY[seg]]; }
         step();
-        const v = Math.hypot(b.char.velX, b.char.velZ), coming = man.state !== 'dead' && asked(man), gap = flat(b.char.pos, pl.char.pos); fastest = Math.max(fastest, v);
+        const v = Math.hypot(b.char.vel[0], b.char.vel[2]), coming = man.state !== 'dead' && asked(man), gap = flat(b.char.pos, pl.char.pos); fastest = Math.max(fastest, v);
         if (coming) { on++; if (workComing(g, b, man)) never = false; if (b.char.anim.crouch > 0.5) low++; } else off++;
         if (coming && v < 0.1 && gap > 3) { still += DT; stillMax = Math.max(stillMax, still); } else still = 0;
         if (man.state !== 'dead') nearest = Math.min(nearest, flat(b.char.pos, man.char.pos));
@@ -387,7 +387,7 @@ export const workFace = () => keep(async () => {
     for (let i = 0; i < secs * 60 && back < 0; i++) {
       g.player.visibility = 0; W.step(DT); who ??= g.guards.find((x: any) => x.task?.kind === 'breaker') ?? null;
       const at = g.guards.filter((gd: any) => g.blackout.active && breakerResetNear(g, gd));
-      for (const gd of at) { by = gd; from = [...gd.char.pos]; if (g.col.solidBlocked([gd.char.posX, 1.0, gd.char.posZ], P.at)) through++; }
+      for (const gd of at) { by = gd; from = [...gd.char.pos]; if (g.col.solidBlocked([gd.char.pos[0], 1.0, gd.char.pos[2]], P.at)) through++; }
       if (!g.blackout.active) back = g.time - t0;
     }
     const side = from ? (from[0] - P.face[0]) * P.n[0] + (from[2] - P.face[2]) * P.n[2] : 0;

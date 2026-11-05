@@ -168,7 +168,7 @@ export const smokeIssued = guarded(async () => {
     `start ${R.why} · floor menu: ${m.rows.map(r => `${r.key || '·'} ${r.text}`).join(' | ')} · ${SM.squadSmokeSummary(game)}`);
   // one scripted minute — the menu opened and H pressed along the way — digests the same, frame for frame, with the table on (as issued) and off
   const minute = async (on: boolean, smoke = 0, traded = 0, free = false) => { issued(); if (free) K.kitLoad(null, '?noslots'); KIT.on = on; giveUp(traded); if (smoke && !K.kitSet(3, 'smoke', smoke)) throw new Error('the card refused the smoke'); const Q = await rig(23); const out: string[] = [];
-    for (let f = 0; f < 60 * 60; f++) { if (f === 200) { Q.cursor([Q.game.player.char.posX + 1.8, 0, Q.game.player.char.posZ + 0.4]); Q.input.pressed.add(ORDERS.key); } if (f === 206 && !smoke) Q.input.pressed.add(SQUADSMOKE.orderKey); if (f === 230) Q.input.pressed.add('Escape');
+    for (let f = 0; f < 60 * 60; f++) { if (f === 200) { Q.cursor([Q.game.player.char.pos[0] + 1.8, 0, Q.game.player.char.pos[2] + 0.4]); Q.input.pressed.add(ORDERS.key); } if (f === 206 && !smoke) Q.input.pressed.add(SQUADSMOKE.orderKey); if (f === 230) Q.input.pressed.add('Escape');
       Q.step(); if (f % 30 === 0) out.push(JSON.stringify(digestGame(Q.game))); }
     // (`defs`: the table as it is held, in the order its parts seated their rows · `menu`: the same rows page by page, each page's in their order — what a menu
     //  lists. The two part ways on the page's stand: with the kit table on, Sam's own charge (kit.ts kitAlone) has the wall charge seat its rows at stand-up, ahead

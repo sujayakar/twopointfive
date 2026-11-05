@@ -85,19 +85,19 @@ export function samSlipMan(g: Game): { gd: Guard; k: number } | null {
 function slipNow(g: Game): { k: number; lean: number; at: Vec3 } | null {
   if (!slips(g)) return null;
   const p = g.player.char.pos; let vx = 0, vz = 0, top = 0;
-  for (const gd of g.guards) { const k = slipOf(g, gd); if (k <= 0) continue; const dx = gd.char.posX - p[0], dz = gd.char.posZ - p[2], L = Math.hypot(dx, dz) || 1; vx += k * dx / L; vz += k * dz / L; if (k > top) top = k; }
+  for (const gd of g.guards) { const k = slipOf(g, gd); if (k <= 0) continue; const dx = gd.char.pos[0] - p[0], dz = gd.char.pos[2] - p[2], L = Math.hypot(dx, dz) || 1; vx += k * dx / L; vz += k * dz / L; if (k > top) top = k; }
   if (top <= 0) return null;
   const L = Math.hypot(vx, vz), u = L > 1e-3 ? 1 / L : 0;
   return { k: top, lean: Math.min(1, L / top), at: [p[0] + vx * u, p[1] + 1.1, p[2] + vz * u] };
 }
-const headOf = (gd: Guard, up: number): Vec3 => [gd.char.posX, gd.char.posY + up, gd.char.posZ];
+const headOf = (gd: Guard, up: number): Vec3 => [gd.char.pos[0], gd.char.pos[1] + up, gd.char.pos[2]];
 /** ONCE A STEP, after the player's own update: what his animator is handed for the next frame's pose */
 export function samLookStep(g: Game) {
   const an = g.player.char.anim; an.watchAt = null; an.watchK = 0; an.slipAt = null; an.slipK = 0; an.slipLean = 1;
   if (!SAMLOOK.on && !SAMLOOK.slip) return;
   if (SAMLOOK.on) {
     const gd = pick(g);
-    if (gd) { const p = g.player.char.pos, d = Math.hypot(gd.char.posX - p[0], gd.char.posZ - p[2]); const h = gd.char.bones.head; an.watchAt = h ? [h[0], h[1], h[2]] : headOf(gd, 1.6);   // (his head as posed: a man sat down, crouched or on the floor is looked at where he is)
+    if (gd) { const p = g.player.char.pos, d = Math.hypot(gd.char.pos[0] - p[0], gd.char.pos[2] - p[2]); const h = gd.char.bones.head; an.watchAt = h ? [h[0], h[1], h[2]] : headOf(gd, 1.6);   // (his head as posed: a man sat down, crouched or on the floor is looked at where he is)
       an.watchK = STALK.on && stalkOn(g) === gd ? 1 : 1 - smooth(Math.min(SAMLOOK.fullM, SAMLOOK.nearM * 0.7), SAMLOOK.nearM, d); }   // (whole inside `fullM` — or 0.7 of a range brought in under it)
   }
   const sl = slipNow(g); if (sl) { an.slipAt = sl.at; an.slipK = sl.k; an.slipLean = sl.lean; }

@@ -102,7 +102,7 @@ async function level(E: any): Promise<void> {
       // both arms; with the rule off Red Two never gets nearer than 0.38 m (so never 'reached' it: 0.00) and his mark comes to him 0.42 m off the wall, with it
       // on he is on it (0.28 m) and is put 0.52 m off, to step back. A shoved man is still read man for man by the stopped-short line below
       const F = frameOf(d), spanOf = (p: V) => { const a = (p[0] - F.hx) * F.ux + (p[2] - F.hz) * F.uz; return a > 0 && a < F.W ? Math.min(a, F.W - a) : 0; }, reached = new Map<any, V>(), shoved = new Set<any>();
-      const walking = (x: any) => { const A = O.of(x); return !!A?.post && !A.arrived && Math.hypot(x.char.velX, x.char.velZ) > 0.3; };
+      const walking = (x: any) => { const A = O.of(x); return !!A?.post && !A.arrived && Math.hypot(x.char.vel[0], x.char.vel[2]) > 0.3; };
       const track = () => { for (const m of men) { const post = O.of(m)?.post as V | undefined, p = m.char.pos as V; if (!post) { reached.delete(m); shoved.delete(m); continue; }
         const at = reached.get(m); if (at && flat(at, post) > 0.05) { reached.delete(m); shoved.delete(m); }
         const k = flat(p, post); if (k < STACKLINE.onMark && !reached.has(m)) reached.set(m, [...post] as V); if (!reached.has(m)) continue;

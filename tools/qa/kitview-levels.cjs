@@ -168,7 +168,7 @@ async function one(browser, L) {
       return { state: k.state, dress, props, locked: !!A.locked, level: g.level.name || '', kind: A.kind, door: A.door, set: P.set, face: P.wall.face, reachIn: P.reachIn, hole: P.hole, sunk: P.sunk, hand: P.hand, indoors: P.indoors, men,
         apart: (() => { let m = 99, a = '', b = ''; for (let i = 0; i < k.men.length; i++) for (let j = i + 1; j < k.men.length; j++) { const d = Math.hypot(k.men[i].x - k.men[j].x, k.men[i].z - k.men[j].z); if (d < m) { m = d; a = k.men[i].name; b = k.men[j].name; } } return { m, a, b }; })(),   // (the two men nearest each other, as they stand)
         offMax: Math.max(0, ...men.map(m => m.off)), hurt: team.filter(x => x.wound || x.state === 'dead').length + (g.player.down ? 1 : 0), alive: team.filter(x => x.state !== 'dead').length,
-        others: g.guards.concat(g.civilians).filter(x => x.team !== 'operative' && x.char.posX > -30).length,
+        others: g.guards.concat(g.civilians).filter(x => x.team !== 'operative' && x.char.pos[0] > -30).length,
         leaf: d ? { ajar: Math.abs(d.angle - (d.def.angle || 0) - (k.quiet && k.quiet.on ? k.quiet.leaf : 0)), off: !!d.off } : null, problems: P.problems || [],   // (the quiet picture's leaf rests a hand ajar: measured from its rest)
         quiet: k.quiet ? JSON.parse(JSON.stringify(k.quiet)) : null, cost: k.cost ? JSON.parse(JSON.stringify(k.cost)) : null, life: k.life ? JSON.parse(JSON.stringify(k.life)) : null,
         // (a wall anchor STANDS when every point along its span — a quarter metre apart, a tenth in from each end — is shut on the game's own nav grid)

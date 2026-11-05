@@ -282,7 +282,7 @@ export class Runtime {
     this.msg(`tossed: ${kind === 'rifle' ? (suppressed ? gearText('FN2000') : 'AKS-74U') : kind}${suppressed && kind === 'pistol' ? ' (suppressed)' : ''}`);
   }
   /** the floor mark 1.6 m ahead of the figure where the canisters go off */
-  dropPoint(): Vec3 { const c = this.char, f = c.forward(); return [c.posX + f[0] * 1.6, 0.05, c.posZ + f[2] * 1.6]; }
+  dropPoint(): Vec3 { const c = this.char, f = c.forward(); return [c.pos[0] + f[0] * 1.6, 0.05, c.pos[2] + f[2] * 1.6]; }
   smokeCan() {
     const at = this.dropPoint(); const yaw = this.char.bodyYaw;
     if (this.st.cans.plume) this.smoke.spawnCanister(at);                       // the shipped plume (upward jet: the Smoke panel numbers)
@@ -370,7 +370,7 @@ export class Runtime {
         if (!moving && tIn > legS + 0.8 && this.legDir === (Math.floor(this.legT / cyc) % 2 === 0 ? 1 : -1)) this.legDir = -this.legDir;
         const yawWant = legYaw + (this.legDir > 0 ? 0 : Math.PI); c.bodyYaw = wrapAngle(c.bodyYaw + clamp(wrapAngle(yawWant - c.bodyYaw), -7 * cdt, 7 * cdt));
         const f = c.forward(); c.vel = [f[0] * nv, 0, f[2] * nv]; c.pos = v3.mad(c.pos, c.vel, cdt);
-        { const ax: Vec3 = [Math.sin(legYaw), 0, Math.cos(legYaw)]; const along = (c.posX - this.home[0]) * ax[0] + (c.posZ - this.home[2]) * ax[2]; if (Math.abs(along) > legM + 0.5) { const cl = Math.sign(along) * (legM + 0.5); c.pos = [this.home[0] + ax[0] * cl, c.posY, this.home[2] + ax[2] * cl]; } }   // (never past the leg's ends, whatever the turn took)
+        { const ax: Vec3 = [Math.sin(legYaw), 0, Math.cos(legYaw)]; const along = (c.pos[0] - this.home[0]) * ax[0] + (c.pos[2] - this.home[2]) * ax[2]; if (Math.abs(along) > legM + 0.5) { const cl = Math.sign(along) * (legM + 0.5); c.pos = [this.home[0] + ax[0] * cl, c.pos[1], this.home[2] + ax[2] * cl]; } }   // (never past the leg's ends, whatever the turn took)
         st.bodyYawDeg = Math.round(c.bodyYaw / DEG);
       } else if (st.path === 3) {   // turn on the spot: 90° every 2 s at the player's standing turn rate (7 rad/s)
         this.turnT += cdt; if (this.turnT > 2) { this.turnT = 0; this.turnTarget = wrapAngle(this.turnTarget + Math.PI / 2); } speed = 0; c.vel = [0, 0, 0]; c.pos = v3.copy(this.home);
@@ -403,7 +403,7 @@ export class Runtime {
           const f = c.forward(); const rgt: Vec3 = [-Math.cos(c.bodyYaw), 0, Math.sin(c.bodyYaw)];   // his right on the floor (model −X)
           const sh = (D.hand ? c.bones.upperArmR : c.bones.upperArmL) ?? v3.add(c.pos, [0, 1.4, 0]);
           const face = st.door.dist - 0.02; const side = D.hand ? 0.16 : -0.16;
-          const p: Vec3 = [c.posX + f[0] * face + rgt[0] * side, clamp(sh[1] - 0.1, 0.85, 1.36), c.posZ + f[2] * face + rgt[2] * side];
+          const p: Vec3 = [c.pos[0] + f[0] * face + rgt[0] * side, clamp(sh[1] - 0.1, 0.85, 1.36), c.pos[2] + f[2] * face + rgt[2] * side];
           c.anim.doorPush = { p, n: [-f[0], 0, -f[2]], w: D.w, hand: D.hand };
         } else c.anim.doorPush = null;
       }

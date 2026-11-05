@@ -43,11 +43,11 @@ async function world(look: boolean, slip: boolean, men: number[][], o: { crouch?
     if (i < men.length) { gd.char.pos = [SAM[0] + men[i][0], 0, SAM[2] + men[i][1]]; gd.char.bodyYaw = gd.char.aimYaw = 0; M.push(gd); } else gd.char.pos = [37.5, 0, 4.5 + i * 1.5]; }
   W.cam.yaw = 0; W.cam.rebuild?.(); g.teleportPlayer([...SAM]); g.player.crouch = o.crouch ?? true; const c = g.player.char; c.bodyYaw = c.aimYaw = 0;
   const C = { W, g, pl: g.player, c, M,
-    step: (n = 1) => { for (let i = 0; i < n; i++) { W.cursorAt([c.posX, 1, c.posZ + 6]); W.step(DT); g.player.visibility = 0.02; } },
+    step: (n = 1) => { for (let i = 0; i < n; i++) { W.cursorAt([c.pos[0], 1, c.pos[2] + 6]); W.step(DT); g.player.visibility = 0.02; } },
     /** where his head looks, ° off +z (his aim's line here) */
     gaze: () => { const d = quat.rotate(quat.mul(quat.yaw(c.bodyYaw), c.skel.globalRot[c.anim.nodes.head]), c.anim.gazeLocal); return Math.atan2(d[0], d[2]) * R2D; },
-    bearing: (gd: any) => Math.atan2(gd.char.posX - c.posX, gd.char.posZ - c.posZ) * R2D,
-    clear: (gd: any) => !g.col.solidBlocked([c.posX, 1.2, c.posZ], [gd.char.posX, 1.4, gd.char.posZ]),
+    bearing: (gd: any) => Math.atan2(gd.char.pos[0] - c.pos[0], gd.char.pos[2] - c.pos[2]) * R2D,
+    clear: (gd: any) => !g.col.solidBlocked([c.pos[0], 1.2, c.pos[2]], [gd.char.pos[0], 1.4, gd.char.pos[2]]),
     who: () => { const m = samLookMan(g); return m ? M.indexOf(m) : -1; } };
   C.step(40); return C;
 }
@@ -71,8 +71,8 @@ async function lookAndNoticed() {
 async function stickyAndNobody() {
   console.log('\n=== sticky: two men at one distance do not trade him back and forth ===');
   const S = await world(up(), false, [[-1.5, 3.0], [1.5, 3.0]]), first = S.who(), other = 1 - first, o = S.M[other];
-  if (first >= 0) { o.char.posZ -= 0.4; } S.step(30); const little = S.who();
-  if (first >= 0) { o.char.posZ -= 0.9; } S.step(30); const lot = S.who();
+  if (first >= 0) { o.char.pos[2] -= 0.4; } S.step(30); const little = S.who();
+  if (first >= 0) { o.char.pos[2] -= 0.9; } S.step(30); const lot = S.who();
   verdict(first >= 0 && little === first && lot === other && SAMLOOK.swapM > 0.4 && SAMLOOK.swapM < 1.2,
     'with two men at the same distance he watches one; the other coming 0.4 m nearer does not take him, and coming a further 0.9 m nearer does',
     `he watches man ${first} · the other 0.4 m nearer: man ${little} · 1.3 m nearer: man ${lot} (the man he has counts as ${f2(SAMLOOK.swapM)} m nearer)`);
@@ -89,7 +89,7 @@ async function stickyAndNobody() {
 async function stalkAndSlip() {
   console.log('\n=== stalk: the man a held click creeps up on is the man he watches ===');
   const K = await world(up(), false, [[1.5, 1.5], [0, 2.8]]); STALK.on = true; STALK.only = true; const near = K.who(), far = K.M[1];
-  for (let i = 0; i < 40; i++) { K.W.cursorAt([far.char.posX, 1.2, far.char.posZ]); if (i === 0) K.W.input.clicked |= 1; K.W.input.buttons |= 1; K.W.step(DT); K.g.player.visibility = 0.02; }
+  for (let i = 0; i < 40; i++) { K.W.cursorAt([far.char.pos[0], 1.2, far.char.pos[2]]); if (i === 0) K.W.input.clicked |= 1; K.W.input.buttons |= 1; K.W.step(DT); K.g.player.visibility = 0.02; }
   const on = stalkOn(K.g), w = samLookMan(K.g); K.W.input.buttons &= ~1; STALK.on = false;
   verdict(near === 0 && on === far && w === far, 'with a nearer man off to one side, a held click on the back of the further one begins the creep, and the man crept up on is the man he watches',
     `before the click he watches the ${near === 0 ? 'nearer' : 'other'} · the creep is on ${on === far ? 'the further man' : on ? 'another' : 'nobody'} · he watches ${w === far ? 'the further man' : w ? 'another' : 'nobody'}`);

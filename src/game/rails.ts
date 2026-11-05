@@ -573,7 +573,7 @@ export class Rails {
   look(): Vec3 | null {
     if (!this.skyOn) return null;
     const men = this.squad(), g = this.g;
-    if (men.length) { const c: Vec3 = [0, 0, 0]; for (const m of men) { c[0] += m.char.posX / men.length; c[2] += m.char.posZ / men.length; }
+    if (men.length) { const c: Vec3 = [0, 0, 0]; for (const m of men) { c[0] += m.char.pos[0] / men.length; c[2] += m.char.pos[2] / men.length; }
       const m = this.sky.mid; if (!m || this.sky.midT !== g.time) { if (!m) this.sky.mid = c; else { const dt = Math.max(0, g.time - this.sky.midT), a = 1 - Math.exp(-dt * 2.5); m[0] += (c[0] - m[0]) * a; m[2] += (c[2] - m[2]) * a; } this.sky.midT = g.time; } }
     const mid = this.sky.mid ?? g.player.char.pos, o = this.sky.off;
     return [Math.min(WORLD.max[0], Math.max(WORLD.min[0], mid[0] + o[0])), 0, Math.min(WORLD.max[2], Math.max(WORLD.min[2], mid[2] + o[2]))];

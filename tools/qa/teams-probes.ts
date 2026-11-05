@@ -138,7 +138,7 @@ export async function teamsFight() {
     if (winners.length) allPass = verdict(winners.every((u: any) => u.state !== 'alert' && u.state !== 'search'), 'the side left standing comes off the alert when the last enemy drops (no search dealt round a room just won)', winners.map((u: any) => `${u.callsign}:${u.state} aw ${f2(u.awareness)}`).join(' ')) && allPass;
     const unitLines = R.lines.filter((l: any) => l.team !== 'guard');
     console.log(`    (the units said: ${unitLines.slice(0, 10).map((l: any) => `${l.who} "${l.text}"`).join(' | ')}${unitLines.length > 10 ? ' …' : ''})`);
-    if (VERBOSE) for (const u of [...R.ops, ...R.hos]) console.log(`    ${u.callsign} (${u.team}): ${u.state}${u.state === 'dead' ? ` killer #${u.killerId}` : ''} at ${f1(u.char.posX)},${f1(u.char.posZ)} · rounds ready ${u.weapon.roundsReady} · sup ${f2(u.sup.v)}`);
+    if (VERBOSE) for (const u of [...R.ops, ...R.hos]) console.log(`    ${u.callsign} (${u.team}): ${u.state}${u.state === 'dead' ? ` killer #${u.killerId}` : ''} at ${f1(u.char.pos[0])},${f1(u.char.pos[2])} · rounds ready ${u.weapon.roundsReady} · sup ${f2(u.sup.v)}`);
     allPass = verdict(game.guards.length === R.guards0 + 4, 'all four still in the guards list (bodies stay until despawned)', `${game.guards.length} guards`) && allPass;
   }
   allPass = verdict((agg.operative ?? 0) > 0 && (agg.hostile ?? 0) > 0, 'across the seeds rounds went BOTH ways (shot events by the side of `who`)', `${JSON.stringify(agg)} · outcomes ${outcomes.join(' ')}`) && allPass;
@@ -291,7 +291,7 @@ export async function teamsDespawn() {
       if (game.player !== lastPlayer) { lastPlayer = game.player; game.player.visibility = 0.05; prevHit = game.player.hitFlash; }
       const p = demo.update(DT); W.step(DT, p);
       const hf = game.player.hitFlash; if (hf > prevHit + 1e-9) hits++; prevHit = hf;
-      if (!nan) { const pp = game.player.char.pos; if (![pp[0], pp[2], cam.yaw, cam.distance].every(Number.isFinite)) nan = `NaN at frame ${frames}`; for (const gd of game.guards) if (!Number.isFinite(gd.char.posX) || !Number.isFinite(gd.awareness)) nan = `guard NaN at frame ${frames}`; }
+      if (!nan) { const pp = game.player.char.pos; if (![pp[0], pp[2], cam.yaw, cam.distance].every(Number.isFinite)) nan = `NaN at frame ${frames}`; for (const gd of game.guards) if (!Number.isFinite(gd.char.pos[0]) || !Number.isFinite(gd.awareness)) nan = `guard NaN at frame ${frames}`; }
     }
   } catch (e: any) { exc = String(e?.stack ?? e).split('\n').slice(0, 3).join(' ⏎ '); }
   allPass = verdict(!exc && finished && !demo.active && hits === 0 && !nan && units(game).length === 0 && game.guards.length === g0, 'the tour after: ran all its stops to the hand-over by itself, no exception, nothing NaN, Sam never hit, no unit anywhere', `${exc ? `EXCEPTION ${exc}` : `${frames} frames (${f1(frames / 60)} s sim)`} · finished ${finished} · hits ${hits} · ${nan || 'finite'} · guards ${game.guards.length}`) && allPass;

@@ -147,14 +147,14 @@ export async function autocamCheck(): Promise<boolean> {
           if (clear && !spot) spot = { d, n: [n[0] * s, n[1] * s], at: [fc[0] + n[0] * s * 4.5, 0, fc[2] + n[1] * s * 4.5] }; } }
       if (!spot) line(false, '9 a door', 'no door on this floor has five clear metres square to it');
       else {
-        const put = (m: number) => { const fc = spot!.d.frameCentre; c.posX = fc[0] + spot!.n[0] * m; c.posZ = fc[2] + spot!.n[1] * m; c.velX = c.velZ = 0; W.cam.target = [c.posX, 0, c.posZ]; W.cam.desired = [c.posX, 0, c.posZ]; };
+        const put = (m: number) => { const fc = spot!.d.frameCentre; c.pos[0] = fc[0] + spot!.n[0] * m; c.pos[2] = fc[2] + spot!.n[1] * m; c.vel[0] = c.vel[2] = 0; W.cam.target = [c.pos[0], 0, c.pos[2]]; W.cam.desired = [c.pos[0], 0, c.pos[2]]; };
         const toDoor = () => Math.atan2(spot!.n[0], spot!.n[1]);   // (the yaw of a view that looks from him at the door: the camera's yaw 0 looks toward −Z, and the door lies along −n)
         put(4.5); W.cam.yaw = toDoor() + 0.2; W.cam.rebuild(); I.keys.clear(); run(ctx, 5); T.tap(); run(ctx, 5); ctx.behind = null; W.cam.yaw = toDoor() + 0.2; run(ctx, 30);
         const turns0 = ST.turns; I.keys.add('KeyW'); let lead = 0, had = false; run(ctx, 70, () => { const S = ctx.auto?.scene; if (S?.door) had = true; });
-        { const L = W.cam.desired, toward = -((L[0] - c.posX) * spot.n[0] + (L[2] - c.posZ) * spot.n[1]); lead = toward; }
-        const walkTurns = ST.turns - turns0, sy = W.cam.project([c.posX, 0, c.posZ], 1600, 1000)[1];
+        { const L = W.cam.desired, toward = -((L[0] - c.pos[0]) * spot.n[0] + (L[2] - c.pos[2]) * spot.n[1]); lead = toward; }
+        const walkTurns = ST.turns - turns0, sy = W.cam.project([c.pos[0], 0, c.pos[2]], 1600, 1000)[1];
         // standing by it with the lens on the door's side of him: the view comes round, and he looks where he looked
-        I.keys.clear(); put(1.6); W.cam.yaw = toDoor() + Math.PI - 0.3; W.cam.rebuild(); run(ctx, 2); ctx.carry = null; W.cursorAt([c.posX + spot.n[0] * 3.2 + spot.n[1] * 0.3, 0, c.posZ + spot.n[1] * 3.2 - spot.n[0] * 0.3]); if (ctx.auto) ctx.auto.turnT = 0; run(ctx, 120);   // (the cursor on open floor on his own side — a point past the wall is aimed at through whichever face the view shows — and his aim at rest on it before anything turns)
+        I.keys.clear(); put(1.6); W.cam.yaw = toDoor() + Math.PI - 0.3; W.cam.rebuild(); run(ctx, 2); ctx.carry = null; W.cursorAt([c.pos[0] + spot.n[0] * 3.2 + spot.n[1] * 0.3, 0, c.pos[2] + spot.n[1] * 3.2 - spot.n[0] * 0.3]); if (ctx.auto) ctx.auto.turnT = 0; run(ctx, 120);   // (the cursor on open floor on his own side — a point past the wall is aimed at through whichever face the view shows — and his aim at rest on it before anything turns)
         const aim0 = c.aimYaw, yaw0 = W.cam.yaw, t0 = ST.turns; if (ctx.auto) { ctx.auto.way = { at: [spot.d.frameCentre[0], 0, spot.d.frameCentre[2]], beyond: [spot.d.frameCentre[0] - spot.n[0] * 2.5, 0, spot.d.frameCentre[2] - spot.n[1] * 2.5] }; ctx.auto.turnT = 1e9; }
         let aimAt = aim0, prev = aim0, most = 0; run(ctx, 150, () => { if (ST.turns === t0) aimAt = prev; else most = Math.max(most, Math.abs(wrap(c.aimYaw - aimAt)) * 180 / Math.PI); prev = c.aimYaw; });
         const turned = ST.turns - t0, B = W.cam.planarBasis(), upDot = -(B.fwd[0] * spot.n[0] + B.fwd[2] * spot.n[1]), swung = Math.abs(wrap(c.aimYaw - aimAt)) * 180 / Math.PI;   // (from where he looked as the turn began; `most`: the furthest from it on any tick of the turn)
@@ -164,22 +164,22 @@ export async function autocamCheck(): Promise<boolean> {
     // 10 a man
     { F.setAutoView(false); FIXEDSTEP.on = true; const W = await stand(5), T = tapper(), ctx = ctxOf(W, T), g = W.game, c = g.player.char; K.on = !BREAK; run(ctx, 10); T.tap(); run(ctx, 90);
       const gd = g.guards.find((x: any) => x.state !== 'dead' && x.team !== 'operative' && x.team !== 'civilian'); let at: number[] | null = null;
-      for (let a = 0; a < 16 && !at; a++) { const q = [c.posX + Math.sin(a * Math.PI / 8) * 6, 0, c.posZ + Math.cos(a * Math.PI / 8) * 6]; if (!g.col.nav.isBlocked(q[0], q[2]) && !g.col.segmentBlocked([c.posX, 1.5, c.posZ], [q[0], 1.3, q[2]])) at = q; }
+      for (let a = 0; a < 16 && !at; a++) { const q = [c.pos[0] + Math.sin(a * Math.PI / 8) * 6, 0, c.pos[2] + Math.cos(a * Math.PI / 8) * 6]; if (!g.col.nav.isBlocked(q[0], q[2]) && !g.col.segmentBlocked([c.pos[0], 1.5, c.pos[2]], [q[0], 1.3, q[2]])) at = q; }
       if (!gd || !at) line(false, '10 a man', 'no hostile man, or no clear six metres round the start');
       else {
-        for (const o of g.guards) if (o !== gd && o.state !== 'dead') { o.char.posX = 1; o.char.posZ = 1; }   // (everybody else out of his line)
-        const hold = () => { gd.char.posX = at![0]; gd.char.posZ = at![2]; }; run(ctx, 120, hold);
-        const seen = ctx.auto?.scene?.threats.length ?? 0, L = W.cam.desired, d = Math.hypot(at[0] - c.posX, at[2] - c.posZ), toward = ((L[0] - c.posX) * (at[0] - c.posX) + (L[2] - c.posZ) * (at[2] - c.posZ)) / d;
+        for (const o of g.guards) if (o !== gd && o.state !== 'dead') { o.char.pos[0] = 1; o.char.pos[2] = 1; }   // (everybody else out of his line)
+        const hold = () => { gd.char.pos[0] = at![0]; gd.char.pos[2] = at![2]; }; run(ctx, 120, hold);
+        const seen = ctx.auto?.scene?.threats.length ?? 0, L = W.cam.desired, d = Math.hypot(at[0] - c.pos[0], at[2] - c.pos[2]), toward = ((L[0] - c.pos[0]) * (at[0] - c.pos[0]) + (L[2] - c.pos[2]) * (at[2] - c.pos[2])) / d;
         const fog = g.fogOfWar, hidden0 = fog.hidden; fog.hidden = (x: any) => x === gd; run(ctx, 150, hold); fog.hidden = hidden0;
-        const seenFog = ctx.auto?.scene?.threats.length ?? 0, L2 = W.cam.desired, toward2 = ((L2[0] - c.posX) * (at[0] - c.posX) + (L2[2] - c.posZ) * (at[2] - c.posZ)) / d;
+        const seenFog = ctx.auto?.scene?.threats.length ?? 0, L2 = W.cam.desired, toward2 = ((L2[0] - c.pos[0]) * (at[0] - c.pos[0]) + (L2[2] - c.pos[2]) * (at[2] - c.pos[2])) / d;
         line(seen === 1 && toward > 1 && seenFog === 0 && toward2 < toward - 1, '10 a hostile man in his line takes the frame; the same man hidden by the fog takes nothing',
           `${gd.callsign ?? 'a guard'} six metres off in his line: ${seen} framed, the look-at ${f2(toward)} m toward him · the fog hides him: ${seenFog} framed, the look-at ${f2(toward2)} m toward where he is`); } }
     // 11 others'
     { F.setAutoView(false); FIXEDSTEP.on = true; const W = await stand(5), T = tapper(), ctx = ctxOf(W, T), g = W.game, c = g.player.char; K.on = !BREAK; run(ctx, 10); T.tap(); run(ctx, 90);
-      const far = () => Math.hypot(W.cam.desired[0] - c.posX, W.cam.desired[2] - c.posZ);
-      const lean = () => { if (ctx.auto) ctx.auto.way = { at: [c.posX + 1, 0, c.posZ], beyond: [c.posX + 4, 0, c.posZ] }; };
+      const far = () => Math.hypot(W.cam.desired[0] - c.pos[0], W.cam.desired[2] - c.pos[2]);
+      const lean = () => { if (ctx.auto) ctx.auto.way = { at: [c.pos[0] + 1, 0, c.pos[2]], beyond: [c.pos[0] + 4, 0, c.pos[2]] }; };
       run(ctx, 90, lean); const on = far(), r0 = ST.reads;
-      W.cam.setPin({ look: [c.posX, 0, c.posZ], yaw: 0.3, pitch: 0.9, dist: 20 }); run(ctx, 30, lean); const pinReads = ST.reads - r0; W.cam.setPin(null); run(ctx, 2);
+      W.cam.setPin({ look: [c.pos[0], 0, c.pos[2]], yaw: 0.3, pitch: 0.9, dist: 20 }); run(ctx, 30, lean); const pinReads = ST.reads - r0; W.cam.setPin(null); run(ctx, 2);
       const r1 = ST.reads, other = g.guards.findIndex((x: any) => x.state !== 'dead'); g.spectate = other; run(ctx, 30, lean); const planReads = ST.reads - r1, gp = g.guards[other].char.pos, planOn = Math.hypot(W.cam.desired[0] - gp[0], W.cam.desired[2] - gp[2]) < 1e-6; g.spectate = -1;
       const free = A.autoFree(g);
       run(ctx, 90, lean); const again = far();
@@ -243,12 +243,12 @@ export async function autocamCheck(): Promise<boolean> {
       for (const on of [true, false]) {
         F.setAutoView(false); FIXEDSTEP.on = true; const W = await stand(5), T = tapper(), ctx = ctxOf(W, T), g = W.game, c = g.player.char; K.on = !BREAK; K.turn = false; K.sway = on && !SWAYBREAK; run(ctx, 10); T.tap(); run(ctx, 90);
         const gd = g.guards.find((x: any) => x.state !== 'dead' && x.team !== 'operative' && x.team !== 'civilian'); let at: number[] | null = null;
-        for (let a = 0; a < 32 && !at; a++) { const q = [c.posX + Math.sin(a * Math.PI / 16) * 6, 0, c.posZ + Math.cos(a * Math.PI / 16) * 6], round = Math.abs(wrap(Math.atan2(q[0] - c.posX, q[2] - c.posZ) + Math.PI - W.cam.yaw));
-          if (round > 0.7 && round < 2.2 && !g.col.nav.isBlocked(q[0], q[2]) && !g.col.segmentBlocked([c.posX, 1.5, c.posZ], [q[0], 1.3, q[2]])) at = q; }
+        for (let a = 0; a < 32 && !at; a++) { const q = [c.pos[0] + Math.sin(a * Math.PI / 16) * 6, 0, c.pos[2] + Math.cos(a * Math.PI / 16) * 6], round = Math.abs(wrap(Math.atan2(q[0] - c.pos[0], q[2] - c.pos[2]) + Math.PI - W.cam.yaw));
+          if (round > 0.7 && round < 2.2 && !g.col.nav.isBlocked(q[0], q[2]) && !g.col.segmentBlocked([c.pos[0], 1.5, c.pos[2]], [q[0], 1.3, q[2]])) at = q; }
         if (!gd || !at) { ok = false; rows.push('no hostile man, or no clear six metres to one side of the view'); continue; }
-        for (const o of g.guards) if (o !== gd && o.state !== 'dead') { o.char.posX = 1; o.char.posZ = 1; }
-        const y0 = W.cam.yaw, cap = K.swayRate * DT + 1e-12, up = () => { const B = W.cam.planarBasis(); return ((at![0] - c.posX) * B.fwd[0] + (at![2] - c.posZ) * B.fwd[2]) / 6; }, u0 = up();
-        let most = 0, prev = y0; const hold = () => { gd.char.posX = at![0]; gd.char.posZ = at![2]; most = Math.max(most, Math.abs(wrap(W.cam.yaw - prev))); prev = W.cam.yaw; };
+        for (const o of g.guards) if (o !== gd && o.state !== 'dead') { o.char.pos[0] = 1; o.char.pos[2] = 1; }
+        const y0 = W.cam.yaw, cap = K.swayRate * DT + 1e-12, up = () => { const B = W.cam.planarBasis(); return ((at![0] - c.pos[0]) * B.fwd[0] + (at![2] - c.pos[2]) * B.fwd[2]) / 6; }, u0 = up();
+        let most = 0, prev = y0; const hold = () => { gd.char.pos[0] = at![0]; gd.char.pos[2] = at![2]; most = Math.max(most, Math.abs(wrap(W.cam.yaw - prev))); prev = W.cam.yaw; };
         run(ctx, 480, hold); const lean = Math.abs(wrap(W.cam.yaw - y0)), u1 = up(), seen = ctx.auto?.scene?.threats.length ?? 0;
         // a second out of his line (a wall the level does not have, put between them): still a man of the fight, and the yaw does not start back
         const yl = W.cam.yaw, down = standWall(g, [wallBetween(c.pos, at)]); run(ctx, 60, hold); down();   // (standwall.ts: a box, half way between them)
@@ -346,14 +346,14 @@ export async function autocamCheck(): Promise<boolean> {
           let stepUp = false, after = 0; for (let i = 0; i < 120; i++) { y = W.cam.yaw; stepFrame(ctx, DT); if (i === 2) I.buttons = 0; const s = Math.abs(wrap(W.cam.yaw - y)); if (s > pv + 1e-9) stepUp = true; pv = s; after += s; } return { before, left0, stepUp, after, still: pv < 1e-9, short: Math.abs(wrap(W.cam.yaw - want)) > 0.05 }; })();
         // a wall hides him (one the level does not have, a metre toward the lens): the view comes round by the eased turn, the mouse moved in the middle of it
         F.setAutoView(false); FIXEDSTEP.on = fixed; const W = await stand(5), T = tapper(), ctx = ctxOf(W, T), g = W.game, c = g.player.char, I = W.input; K.on = !BREAK; K.turn = true; K.tune = !TUNEBREAK; A.setAutoMode('gentle'); A.setAutoTune('swing', false);
-        for (const o of g.guards) { o.char.posX = 1; o.char.posZ = 1; } run(ctx, 10); T.tap(); run(ctx, 5);
+        for (const o of g.guards) { o.char.pos[0] = 1; o.char.pos[2] = 1; } run(ctx, 10); T.tap(); run(ctx, 5);
         // (the wall: a box 0.9 m from him toward `yaw`, square to it, as wide as hides everything within acos 0.9 of that way from where he stands — standwall.ts)
-        const hide = (yaw: number) => standWall(g, [wallBetween(c.pos, [c.posX + Math.sin(yaw), 0, c.posZ + Math.cos(yaw)], 0.9, 0.9 * Math.tan(Math.acos(0.9)))]);
+        const hide = (yaw: number) => standWall(g, [wallBetween(c.pos, [c.pos[0] + Math.sin(yaw), 0, c.pos[2] + Math.cos(yaw)], 0.9, 0.9 * Math.tan(Math.acos(0.9)))]);
         const y0 = W.cam.yaw, turns0 = ST.turns; let down = hide(y0);
         const cap = K.turnCap * DT + 1e-12; let most = 0, prev = y0, jerk = 0, ps = 0, f = 0, atMouse = -1; const each = () => { const s = Math.abs(wrap(W.cam.yaw - prev)); most = Math.max(most, s); jerk = Math.max(jerk, Math.abs(s - ps)); ps = s; prev = W.cam.yaw; if (atMouse < 0 && Math.abs(wrap(W.cam.yaw - y0)) > 0.15) { atMouse = f; I.mouseX += 240; I.mouseY += 60; } f++; };   // (the hand moves the mouse a fifth of the way round)
         run(ctx, 60 * 10, each); each(); const round = Math.abs(wrap(W.cam.yaw - y0)), turns = ST.turns - turns0;
         // …again, and a walk key a second into it
-        down(); g.teleportPlayer([c.posX, 0, c.posZ]); const y1 = W.cam.yaw; down = hide(y1);
+        down(); g.teleportPlayer([c.pos[0], 0, c.pos[2]]); const y1 = W.cam.yaw; down = hide(y1);
         let began = -1; for (let i = 0; i < 60 * 6 && began < 0; i++) { run(ctx, 1, each); if (Math.abs(wrap(W.cam.yaw - y1)) > 1e-4) began = i; } run(ctx, 45, each); const mid = Math.abs(wrap(W.cam.yaw - y1)), v = ps;
         I.keys.add('KeyW'); let stepUp = false, pv = v, after = 0, c1 = -1; for (let i = 0; i < 90; i++) { const yb = W.cam.yaw; stepFrame(ctx, DT); const s = Math.abs(wrap(W.cam.yaw - yb)); if (c1 < 0) c1 = s; if (s > pv + 1e-9) stepUp = true; pv = s; after += s; } I.keys.clear(); const stopped = pv < 1e-6;
         // …and he stops again, still hidden: the next turn waits out the gap from where that one ended, not from where it began
@@ -429,14 +429,14 @@ export async function autocamCheck(): Promise<boolean> {
     { const rows: string[] = []; let ok = true;
       for (const fixed of [false, true]) {
         F.setAutoView(false); F.setFindMe('behind', false); FIXEDSTEP.on = fixed; const W = await stand(5), T = tapper(), ctx = ctxOf(W, T), g = W.game, c = g.player.char, I = W.input; K.on = !BREAK; K.turn = false; K.lock = !LOCKBREAK; g.fogOfWar.hidden = () => false;
-        const men = g.guards.filter((x: any) => x.state !== 'dead' && !x.civ && isHostile('player', x.team)), gd = men[0]; for (const o of g.guards) if (o !== gd) { o.char.posX = 1; o.char.posZ = 1; }
+        const men = g.guards.filter((x: any) => x.state !== 'dead' && !x.civ && isHostile('player', x.team)), gd = men[0]; for (const o of g.guards) if (o !== gd) { o.char.pos[0] = 1; o.char.pos[2] = 1; }
         // a clear line of 8.5 m from where he stands, floor he can stand on for the first 6.5 m of it, and the man 8 m along it
-        const p0: [number, number, number] = [c.posX, 0, c.posZ]; let dir: [number, number] | null = null;
+        const p0: [number, number, number] = [c.pos[0], 0, c.pos[2]]; let dir: [number, number] | null = null;
         for (let i = 0; i < 16 && !dir; i++) { const a = i * Math.PI / 8, dx = Math.sin(a), dz = Math.cos(a); let clear = true; for (let m = 0.5; m <= 8.5 && clear; m += 0.5) if (m <= 6.5 && g.col.nav.isBlocked(p0[0] + dx * m, p0[2] + dz * m) || g.col.segmentBlocked([p0[0], 1.3, p0[2]], [p0[0] + dx * m, 1.3, p0[2] + dz * m]) || g.col.segmentBlocked([p0[0], 0.4, p0[2]], [p0[0] + dx * m, 0.4, p0[2] + dz * m])) clear = false; if (clear) dir = [dx, dz]; }
         if (!dir) { ok = false; rows.push(`${fixed ? 'fixed' : 'free'} step: no clear line of 8.5 m from where he stands ✗`); continue; }
         // (a man on a round walks it with the AI off, and one onto him goes to search: each is put back where and how the line wants him before every frame)
         const gp: [number, number] = [p0[0] + dir[0] * 8, p0[2] + dir[1] * 8]; const o2 = men[1]; let p2: [number, number] | null = null, onto: any = null;
-        const pin = () => { for (const o of g.guards) { const q = o === gd ? gp : o === o2 && p2 ? p2 : [1, 1]; o.char.posX = q[0]; o.char.posZ = q[1]; if (o === gd || o === o2) o.state = 'patrol'; } if (onto) { onto.state = 'alert'; onto.awareness = 1; onto.lastSeenT = g.time; onto.lastKnown = [g.player.char.posX, 0, g.player.char.posZ]; } }; pin(); const at = (m: number) => g.teleportPlayer([gd.char.posX - dir![0] * m, 0, gd.char.posZ - dir![1] * m]);
+        const pin = () => { for (const o of g.guards) { const q = o === gd ? gp : o === o2 && p2 ? p2 : [1, 1]; o.char.pos[0] = q[0]; o.char.pos[2] = q[1]; if (o === gd || o === o2) o.state = 'patrol'; } if (onto) { onto.state = 'alert'; onto.awareness = 1; onto.lastSeenT = g.time; onto.lastKnown = [g.player.char.pos[0], 0, g.player.char.pos[2]]; } }; pin(); const at = (m: number) => g.teleportPlayer([gd.char.pos[0] - dir![0] * m, 0, gd.char.pos[2] - dir![1] * m]);
         at(8); run(ctx, 10, pin); T.tap(); run(ctx, 240, pin); if (!ctx.auto) { ok = false; rows.push(`${fixed ? 'fixed' : 'free'} step: the mode never came on ✗`); continue; }
         const base = ctx.auto.base, d9 = W.cam.desiredDistance;
         let most = 0, prev = W.cam.desiredDistance; const each = () => { pin(); most = Math.max(most, Math.abs(W.cam.desiredDistance - prev)); prev = W.cam.desiredDistance; };

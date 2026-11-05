@@ -68,7 +68,7 @@ async function taken(file: string | null, ask = false, frames = 0): Promise<{ g:
       cands.push({ i, at }); n++;
     }
   });
-  const asked = (g: any) => { for (const m of attentionMarks(g)) { attentionWay(g, m); attentionWay(g, { ...m, gd: Object.create(m.gd, { pathGoal: { value: null, writable: true } }) }); } };
+  const asked = (g: any) => { for (const m of attentionMarks(g)) { attentionWay(g, m); attentionWay(g, { ...m, gd: Object.assign(Object.create(m.gd), { pathGoal: null }) }); } };
   for (const c of cands.slice(0, 16)) {
     const s = await world(file), g = s.g, A = g.guards[c.i];
     g.events.push({ kind: 'prop', pos: [c.at[0], 0, c.at[2]], time: g.time, loud: false, level: RING.clackNoise, who: 0, lure: true });
@@ -97,7 +97,7 @@ async function ways() {
     // walk: he goes; the thread he set off with is the way he goes
     ATTENTION.way = true; const way0: P[] = attentionWay(g, M); let far = 0, blocked = 0, walls = 0, threads = 0, frames = 0, arrived = false, atThing: P[] | null = null;
     // …and beside it the same walk with the nav grid asked all the way (a stand-in for him with no path of his own): how often it is asked, and whether the thread ever grows
-    const ghost = Object.create(A, { pathGoal: { value: null, writable: true } }), fp = nav.findPath; let asks = 0, inWay = false, grew = 0, lastL = -1, ownN = 0, ownBad = 0, gridN = 0;
+    const ghost = Object.assign(Object.create(A), { pathGoal: null }), fp = nav.findPath; let asks = 0, inWay = false, grew = 0, lastL = -1, ownN = 0, ownBad = 0, gridN = 0;
     nav.findPath = function (this: any, ...a: any[]) { if (inWay) asks++; return fp.apply(this, a); };
     for (let f = 0; f < 60 * 40 && !arrived; f++) {
       step(); const m = attentionMarks(g).find((x: any) => x.gd === A); if (!m) break; frames++;

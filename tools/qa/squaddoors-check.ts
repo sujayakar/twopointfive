@@ -61,7 +61,7 @@ async function check(): Promise<boolean> {
   const mid = (d: any) => [d.def.hinge[0] + Math.cos(d.def.closedDir) * d.def.width / 2, d.def.hinge[1] + Math.sin(d.def.closedDir) * d.def.width / 2];
   const fresh = (cone: boolean, own: boolean, rule: boolean) => quiet(() => { Math.random = dice(seed); g.restartEncounter(); FW.on = true; FOG.cone = cone; FOG.own = own; FOG.squadDoors = rule; step(30); });
   const holdFoes = () => { for (const gd of g.guards) if (gd.team !== 'operative') { gd.hold = true; gd.pinned = true; gd.heardUpTo = 1e12; } };
-  const samAway = (d: any) => { const [mx, mz] = mid(d), c = g.player.char; c.posX = spawn[0]; c.posZ = spawn[2]; c.aimYaw = c.bodyYaw = Math.atan2(-(mx - spawn[0]), -(mz - spawn[2])); };
+  const samAway = (d: any) => { const [mx, mz] = mid(d), c = g.player.char; c.pos[0] = spawn[0]; c.pos[2] = spawn[2]; c.aimYaw = c.bodyYaw = Math.atan2(-(mx - spawn[0]), -(mz - spawn[2])); };
 
   // ---- played: the order, Sam's back turned
   // A leaf drawn stale is counted twice: IN ALL (any frame the picture has it somewhere it no longer stands) and AT THE DOORWAY (those frames with a living
@@ -69,7 +69,7 @@ async function check(): Promise<boolean> {
   // out of the passing man's sight sat a hundredth of a radian off for a fifth of a second and was counted as the fault). The bound is on the second. The first also counts a leaf that moves with nobody of the team in
   // reach — a closer swinging it to behind men who have gone on into the room — which is the fog remembering a door as it should, for as long as nobody looks.
   /** (--trace) has this man a line from his head to a point of the leaf, where it stands or where the picture has it: the rule's own question, asked for the log only */
-  const sees = (m: any, d: any) => { const from = m.char.bones?.head ?? [m.char.posX, 1.6, m.char.posZ];
+  const sees = (m: any, d: any) => { const from = m.char.bones?.head ?? [m.char.pos[0], 1.6, m.char.pos[2]];
     for (const ang of [d.angle, FW.doorShown(d)]) { const a = d.def.closedDir + ang; for (const f of [0.95, 0.6, 0.25]) for (const y of [1.0, 1.8]) {
       const p = [d.def.hinge[0] + Math.cos(a) * d.def.width * f, y, d.def.hinge[1] + Math.sin(a) * d.def.width * f]; const L = Math.hypot(p[0] - from[0], p[1] - from[1], p[2] - from[2]); if (L < 0.3) return true;
       const k = 1 - 0.12 / L; if (!g.col.segmentBlocked(from, [from[0] + (p[0] - from[0]) * k, from[1] + (p[1] - from[1]) * k, from[2] + (p[2] - from[2]) * k])) return true; } }
@@ -87,12 +87,12 @@ async function check(): Promise<boolean> {
       await quiet(() => { for (let f = 0; f < 60 * 30; f++) { holdFoes(); samAway(d); W.step(DT);
         if (Math.abs(d.angle) > 0.3) opened = true;
         const h = FW.doorHeld(d); if (h) { held++; run++; worst = Math.max(worst, run); } else run = 0;
-        const near = h && Math.abs(d.angle - FW.doorShown(d)) > OFF_RAD ? men.filter((m: any) => m.state !== 'dead' && Math.hypot(m.char.posX - mx, m.char.posZ - mz) < AT_M) : [];
+        const near = h && Math.abs(d.angle - FW.doorShown(d)) > OFF_RAD ? men.filter((m: any) => m.state !== 'dead' && Math.hypot(m.char.pos[0] - mx, m.char.pos[2] - mz) < AT_M) : [];
         if (near.length) { at++; atRun++; atWorst = Math.max(atWorst, atRun);
-          if (trace && (atRun === 1 || atRun % 6 === 0)) notes.push(`f ${f} (run ${atRun}) leaf ${d.angle.toFixed(2)} drawn ${FW.doorShown(d).toFixed(2)} vel ${(d.vel ?? 0).toFixed(2)} · ` + near.map((m: any) => `${m.callsign ?? m.name} ${Math.hypot(m.char.posX - mx, m.char.posZ - mz).toFixed(2)} m side ${g.doors.side(d, m.char.pos) >= 0 ? '+' : '-'}${g.time < m.dazzledUntil ? ' DAZZLED' : ''} line ${sees(m, d) ? 'yes' : 'no'}`).join(', ')); }
+          if (trace && (atRun === 1 || atRun % 6 === 0)) notes.push(`f ${f} (run ${atRun}) leaf ${d.angle.toFixed(2)} drawn ${FW.doorShown(d).toFixed(2)} vel ${(d.vel ?? 0).toFixed(2)} · ` + near.map((m: any) => `${m.callsign ?? m.name} ${Math.hypot(m.char.pos[0] - mx, m.char.pos[2] - mz).toFixed(2)} m side ${g.doors.side(d, m.char.pos) >= 0 ? '+' : '-'}${g.time < m.dazzledUntil ? ' DAZZLED' : ''} line ${sees(m, d) ? 'yes' : 'no'}`).join(', ')); }
         else atRun = 0;
         for (const m of men) { const s = g.doors.side(d, m.char.pos) >= 0 ? 1 : -1;
-          if (s !== was.get(m) && Math.hypot(m.char.posX - mx, m.char.posZ - mz) < AT_M && h && Math.abs(FW.doorShown(d)) < 0.3) cross++;
+          if (s !== was.get(m) && Math.hypot(m.char.pos[0] - mx, m.char.pos[2] - mz) < AT_M && h && Math.abs(FW.doorShown(d)) < 0.3) cross++;
           was.set(m, s); } } });
       if (!opened) continue;
       T.opened++; T.stale += held; T.worst = Math.max(T.worst, worst); T.at += at; T.atWorst = Math.max(T.atWorst, atWorst); T.crossed += cross;
@@ -127,10 +127,10 @@ async function check(): Promise<boolean> {
     const stage = async (d: any, rule: boolean, place: number[] | null, yaw = 0, wall: WallSpec | null = null, dazzled = false) => { await fresh(true, true, rule); const men = g.orders.men('all'); samAway(d);
       const down = wall ? standWall(g, [wall]) : null;   // (a wall the level does not have, between him and the leaf: a box, met by the fog's eyes in either language — standwall.ts)
       await quiet(() => { for (let f = 0; f < 8; f++) { holdFoes(); samAway(d); if (f === 2) { d.angle = openA(d); d.vel = 0; }
-        if (place) { const c = men[0].char; c.posX = place[0]; c.posZ = place[1]; c.aimYaw = c.bodyYaw = yaw; if (dazzled) men[0].dazzledUntil = g.time + 5; }
+        if (place) { const c = men[0].char; c.pos[0] = place[0]; c.pos[2] = place[1]; c.aimYaw = c.bodyYaw = yaw; if (dazzled) men[0].dazzledUntil = g.time + 5; }
         W.step(DT); } });
       const held = FW.doorHeld(d) as boolean; down?.();
-      const near = Math.min(...men.map((m: any) => Math.min(...leafPts(d, d.angle).concat(leafPts(d, 0)).map(p => Math.hypot(m.char.posX - p[0], m.char.posZ - p[2])))));
+      const near = Math.min(...men.map((m: any) => Math.min(...leafPts(d, d.angle).concat(leafPts(d, 0)).map(p => Math.hypot(m.char.pos[0] - p[0], m.char.pos[2] - p[2])))));
       return { held, angle: d.angle as number, near, men }; };
     // a door none of the team stands within 4 m of at the start
     const far = all.map((n: string) => g.doors.byName(n)).filter((d: any) => Math.abs(d.angle) < 0.05);

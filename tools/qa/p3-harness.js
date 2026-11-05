@@ -196,7 +196,7 @@
           gd.char.pos = [x0 + speed * f / 60, 0, z];
           await __perf.step(1);
           if (at.includes(f)) {
-            const fr = await __perf.readback(); const p = __perf.project([gd.char.posX, 0.9, gd.char.posZ]);
+            const fr = await __perf.readback(); const p = __perf.project([gd.char.pos[0], 0.9, gd.char.pos[2]]);
             const sx = fr.w / __engine.width, sy = fr.h / __engine.height;   // project() is in internal px; the readback is the OUTPUT frame under TAAU
             const cx = Math.round(p[0] * sx), cy = Math.round(p[1] * sy);
             const x = Math.max(0, Math.min(fr.w - tileW, cx - Math.round(tileW * 0.55))), y = Math.max(0, Math.min(fr.h - tileH, cy - Math.round(tileH * 0.45)));

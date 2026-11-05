@@ -28,7 +28,9 @@ const proc = (): Proc => (globalThis as { process?: Proc }).process;
  *  here, at the game's first step: a tool that changed its stand by hand after loading the harness is not followed) */
 const standNow = (): 'page' | 'shipped' | 'frozen' => { const P = proc(); return !P?.versions?.bun && !P?.versions?.node ? 'page' : P.env?.TPS_PROFILE === 'shipped' ? 'shipped' : 'frozen'; };
 /** the stand's own env words a tool was started with (TPS_GEAR=1 …: the harness writes some of them before the game is built, where no table put back later reaches) */
-const wordsNow = (): Record<string, string> => { const E = proc()?.env ?? {}, out: Record<string, string> = {}; for (const w of STAND_ENV) if (w !== 'TPS_PROFILE' && w !== 'TPS_SEED' && E[w] !== undefined) out[w] = E[w]!; return out; };
+const wordsNow = (): Record<string, string> => { const E = proc()?.env ?? {}, out: Record<string, string> = {}; for (const w of STAND_ENV) if (w !== 'TPS_PROFILE' && w !== 'TPS_SEED' && E[w] !== undefined) out[w] = E[w]!;
+  if (E.QA_HOLD !== undefined) out.QA_HOLD = E.QA_HOLD;   // (a check's own arm, tools/qa/headless.ts hold: a run made under one says so, and the re-run refuses it — it is no recording of the game as it is played)
+  return out; };
 /** every registered knob table as JSON text, by name (the journal's knobTables() is a subset: a switch the page has on and a recording does not carry — the rear
  *  watch, the fresh deal of a room clear's placement, every Team feel row — is exactly what a re-run on another stand would get wrong) */
 const tableKey = (k: string, T: Record<string, unknown>): string => { const skip = NOT_KNOBS[k]; return JSON.stringify(skip ? Object.fromEntries(Object.entries(T).filter(([key]) => !skip.includes(key))) : T); };
@@ -48,8 +50,8 @@ export function putPose(g: Game, data: unknown): void {
   const at = (data as TapeVal[]).slice(0, POSE_N).map(e => tapeNum(e)) as number[], now = poseOf(g, []);
   if (at.some(v => typeof v !== 'number' || !Number.isFinite(v)) || at.every((v, i) => Object.is(v, now[i]))) return;
   const pl = g.player, c = pl.char;
-  if (!Object.is(at[0], now[0]) || !Object.is(at[1], now[1]) || !Object.is(at[2], now[2])) { g.teleportPlayer([at[0], at[1], at[2]]); c.posX = at[0]; c.posY = at[1]; c.posZ = at[2]; pl.safe = [at[0], 0, at[2]]; }
-  c.velX = at[3]; c.velY = at[4]; c.velZ = at[5]; c.bodyYaw = at[6]; c.aimYaw = at[7]; pl.holstered = at[8] === 1; pl.crouch = at[9] === 1;
+  if (!Object.is(at[0], now[0]) || !Object.is(at[1], now[1]) || !Object.is(at[2], now[2])) { g.teleportPlayer([at[0], at[1], at[2]]); c.pos[0] = at[0]; c.pos[1] = at[1]; c.pos[2] = at[2]; pl.safe = [at[0], 0, at[2]]; }
+  c.vel[0] = at[3]; c.vel[1] = at[4]; c.vel[2] = at[5]; c.bodyYaw = at[6]; c.aimYaw = at[7]; pl.holstered = at[8] === 1; pl.crouch = at[9] === 1;
 }
 /** Game.restart wrapped on this Game's instance: `after` runs once the restart — and whatever a page had already wrapped round it — is done. Not an enumerable
  *  key: nothing that walks the game's fields (rollback.ts) meets it. */

@@ -172,7 +172,7 @@ const WHY: Record<string, string> = { '': 'nothing yet', grab: 'the grab', let: 
 
 /** is this page the lab (the word on its address) */
 export const sneakLabAsked = (q: URLSearchParams): boolean => q.has('sneaklab');
-const nearest = (g: Game): Guard | null => { const p = g.player.char.pos; let best: Guard | null = null, bd = 1e9; for (const x of g.guards) { if (x.state === 'dead' || x.civ) continue; const d = Math.hypot(x.char.posX - p[0], x.char.posZ - p[2]); if (d < bd) { best = x; bd = d; } } return best; };
+const nearest = (g: Game): Guard | null => { const p = g.player.char.pos; let best: Guard | null = null, bd = 1e9; for (const x of g.guards) { if (x.state === 'dead' || x.civ) continue; const d = Math.hypot(x.char.pos[0] - p[0], x.char.pos[2] - p[2]); if (d < bd) { best = x; bd = d; } } return best; };
 /** the man who stands (the first route of the lab's level), for the chair */
 const stander = (g: Game): Guard | null => g.guards.find(x => x.state !== 'dead' && !x.civ) ?? null;
 
@@ -200,8 +200,8 @@ export function sneakLabBoot(game: Game, panel: Panel) {
   panel.system(SNEAKLAB_SYSTEM, { icon: '◔', short: 'sneak', title: 'play the close-in on a man and move its numbers while you play' });
   const now = panel.section('Right now', { open: true });
   panel.text(now, () => { const on = stalkOn(game), gd = on ?? nearest(game), p = game.player.char; if (!gd) return 'nobody left on the floor';
-    const d = Math.hypot(p.posX - gd.char.posX, p.posZ - gd.char.posZ), b = Math.atan2(p.posX - gd.char.posX, p.posZ - gd.char.posZ) - gd.char.bodyYaw, round = Math.abs(Math.atan2(Math.sin(b), Math.cos(b))) * 180 / Math.PI;
-    return `${game.player.holding ? 'you have him' : on ? 'creeping in' : 'not creeping'} · ${d.toFixed(2)} m from him · ${round.toFixed(0)}° round from his nose · you ${Math.hypot(p.velX, p.velZ).toFixed(2)} m/s, he ${Math.hypot(gd.char.velX, gd.char.velZ).toFixed(2)} m/s`; });
+    const d = Math.hypot(p.pos[0] - gd.char.pos[0], p.pos[2] - gd.char.pos[2]), b = Math.atan2(p.pos[0] - gd.char.pos[0], p.pos[2] - gd.char.pos[2]) - gd.char.bodyYaw, round = Math.abs(Math.atan2(Math.sin(b), Math.cos(b))) * 180 / Math.PI;
+    return `${game.player.holding ? 'you have him' : on ? 'creeping in' : 'not creeping'} · ${d.toFixed(2)} m from him · ${round.toFixed(0)}° round from his nose · you ${Math.hypot(p.vel[0], p.vel[2]).toFixed(2)} m/s, he ${Math.hypot(gd.char.vel[0], gd.char.vel[2]).toFixed(2)} m/s`; });
   panel.text(now, () => TAPSTEP.on ? `${TAPSTEP_STATS.steps} steps · ${TAPSTEP_STATS.beats} on the beat · ${TAPSTEP_STATS.scuffs} scuffs · ${TAPSTEP_STATS.masked} under his step · the last one: ${TAPSTEP_STATS.last || 'none yet'}` : 'keys walk');
   panel.text(now, () => `${STALK_STATS.grabs} grabs from ${STALK_STATS.begun} holds · the last one ended with: ${WHY[STALK_STATS.last] ?? STALK_STATS.last}`);
   const dark = new Set<Game['targets'][number]>();   // (the lamps the 'lights out' box put out: only those come back on)
@@ -242,7 +242,7 @@ function hands(game: Game) { game.player.holstered = true; game.player.crouch = 
 export function stage(game: Game) {
   const c = SCENES[SNEAKLAB.scene], p = game.player.char; SNEAKLAB.unseen = !c.seen;
   const gd = c.behind ? game.guards.find(x => game.level.routes[x.routeI]?.name === c.behind) : null, y = gd?.char.bodyYaw ?? 0;
-  const at: Vec3 = gd ? [gd.char.posX - Math.sin(y) * 3, 0, gd.char.posZ - Math.cos(y) * 3] : [...c.sam], free = !game.col.nav.isBlocked(at[0], at[2]);
+  const at: Vec3 = gd ? [gd.char.pos[0] - Math.sin(y) * 3, 0, gd.char.pos[2] - Math.cos(y) * 3] : [...c.sam], free = !game.col.nav.isBlocked(at[0], at[2]);
   game.teleportPlayer(free ? at : [...c.sam]); p.bodyYaw = p.aimYaw = gd && free ? y : c.yaw; p.vel = [0, 0, 0]; hands(game);
 }
 /** ONCE A PAGE FRAME, before the game's update: the lab's two flags */

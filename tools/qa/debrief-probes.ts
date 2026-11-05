@@ -137,7 +137,7 @@ export async function debriefRun() {
     // under the tour's flag nothing lands: a shot, a generic row, the path
     game.quietUtility = true; const n0 = C.events.length, p0 = C.pathN, shots0 = game.mission.stats.shots;
     game.player.slot = 'pistol'; game.player.holstered = false; steps(W, 0.2);
-    fireWeapon(game, game.player.char, [game.player.char.posX + 3, 0.5, game.player.char.posZ], true);
+    fireWeapon(game, game.player.char, [game.player.char.pos[0] + 3, 0.5, game.player.char.pos[2]], true);
     CH.chronicle(game, 'checkpoint', { what: 'save' }); steps(W, 2.0);
     if (C.events.length !== n0 || C.pathN !== p0 || game.mission.stats.shots !== shots0) fails.push(`under quietUtility: rows ${n0} → ${C.events.length}, path ${p0} → ${C.pathN}, shots ${shots0} → ${game.mission.stats.shots} (want nothing to move)`);
     game.quietUtility = false; steps(W, 1.2);
@@ -176,7 +176,7 @@ export async function debriefRun() {
     W.cursorAt(M.rack.front); steps(W, DT);
     let pressed = false;
     for (let i = 0; i < Math.round((DRIVE_SECS + 2.5) / DT) && !game.mission.pulled; i++) { W.cursorAt(M.rack.front); if (!pressed && game.selectVerb('objective', 'drive')) { W.input.pressed.add('Space'); pressed = true; } W.step(DT); }
-    if (!game.mission.pulled) fails.push(`the drive did not come out (pressed ${pressed}, driveT ${f1(game.mission.driveT)}, stage ${game.mission.stage}, Sam ${f1(Math.hypot(game.player.char.posX - M.rack.front[0], game.player.char.posZ - M.rack.front[2]))} m off the rack)`);
+    if (!game.mission.pulled) fails.push(`the drive did not come out (pressed ${pressed}, driveT ${f1(game.mission.driveT)}, stage ${game.mission.stage}, Sam ${f1(Math.hypot(game.player.char.pos[0] - M.rack.front[0], game.player.char.pos[2] - M.rack.front[2]))} m off the rack)`);
     game.teleportPlayer([36.9, 0, 20.6]); steps(W, 0.3);
     if (game.mission.stage !== 'done') fails.push(`past the fire exit the stage is ${game.mission.stage} (want done)`);
     if (!game.mission.debrief) fails.push('mission.debrief was not raised for the end card');

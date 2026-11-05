@@ -76,7 +76,7 @@ export class HandsOff {
   private get hostiles(): Guard[] { return this.g.guards.filter(x => x.team === 'hostile'); }
   /** defenders still up */
   get left(): Guard[] { return this.hostiles.filter(h => h.state !== 'dead'); }
-  private chest(x: Guard): Vec3 { return x.char.bones.chest ?? [x.char.posX, 1.2, x.char.posZ]; }
+  private chest(x: Guard): Vec3 { return x.char.bones.chest ?? [x.char.pos[0], 1.2, x.char.pos[2]]; }
   private screen(p: Vec3): [number, number, boolean] { const w = this.view.clientWidth, h = this.view.clientHeight; const [sx, sy, front] = this.cam.project(p, w, h); return [sx, sy, front && sx > 30 && sx < w - 30 && sy > 30 && sy < h - 30]; }
   private onScreen(p: Vec3): boolean { return this.screen(p)[2]; }
 
@@ -84,7 +84,7 @@ export class HandsOff {
   private hands() {
     const g = this.g, pl = g.player, c = pl.char, I = this.I; this.target = null;
     if (pl.down) return;
-    { const eye: Vec3 = [c.posX, 1.45, c.posZ]; let best: Guard | null = null, bd = 1e9;   // he shoots only a man the fog shows, on the screen, on a clear line, a beat after he shows
+    { const eye: Vec3 = [c.pos[0], 1.45, c.pos[2]]; let best: Guard | null = null, bd = 1e9;   // he shoots only a man the fog shows, on the screen, on a clear line, a beat after he shows
       for (const h of this.hostiles) {
         if (h.state === 'dead') { this.seen.delete(h); continue; }
         const ch = this.chest(h), d = flat(c.pos, h.char.pos);
@@ -97,9 +97,9 @@ export class HandsOff {
       this.target = best; }
     let ahead: Vec3 | null = null;
     if (this.goal) {
-      const dx = this.goal[0] - c.posX, dz = this.goal[2] - c.posZ, d = Math.hypot(dx, dz);
+      const dx = this.goal[0] - c.pos[0], dz = this.goal[2] - c.pos[2], d = Math.hypot(dx, dz);
       if (d > 0.2) {
-        ahead = [c.posX + dx / d * 6, 1.1, c.posZ + dz / d * 6];
+        ahead = [c.pos[0] + dx / d * 6, 1.1, c.pos[2] + dz / d * 6];
         if (!this.target) { const { fwd, right } = this.cam.planarBasis(); const a = (dx * fwd[0] + dz * fwd[2]) / d, b = (dx * right[0] + dz * right[2]) / d, T = 0.3827;
           if (a > T) I.keys.add('KeyW'); if (a < -T) I.keys.add('KeyS'); if (b > T) I.keys.add('KeyD'); if (b < -T) I.keys.add('KeyA'); }
       }
@@ -256,7 +256,7 @@ export class HandsOff {
       yield* this.fallIn();
       const path: Vec3[] = [[this.pos[0], 0, this.pos[2]], ...way, [hp[0], 0, hp[2]]]; let back = 5, p: Vec3 | null = null;
       for (let i = path.length - 1; i > 0 && !p; i--) { const a = path[i - 1], b = path[i], L = flat(a, b); if (L >= back) { const k = back / (L || 1); p = [b[0] + (a[0] - b[0]) * k, 0, b[2] + (a[2] - b[2]) * k]; } else back -= L; }
-      const near = this.slow(() => this.onScreen([h.char.posX, 0.05, h.char.posZ]) && this.pathLen(this.pos, h.char.pos) < 14);
+      const near = this.slow(() => this.onScreen([h.char.pos[0], 0.05, h.char.pos[2]]) && this.pathLen(this.pos, h.char.pos) < 14);
       if (p) yield* this.go(this.free(p) ?? p, 40, () => h.state === 'dead' || near());   // (… from where his floor first comes into the picture: a commander does not walk onto him)
       if (h.state !== 'dead' && this.up.length) { const now = h.char.pos; this.look = [now[0], 0.05, now[2]]; yield* this.ticks(2); const n = g.orders.log.length; yield* this.key(ORDERS.quickKey); this.say(`B · floor by ${h.callsign} → ${this.orderGiven(n)}`); this.look = null; yield* this.until(() => h.state === 'dead', 14); }
     }

@@ -45,8 +45,8 @@ async function chokeRun(keyAt: (t: number) => boolean, secs = 3, breakAt = -1): 
   const place = (gd: any, p: P3) => { gd.char.pos = [...p]; gd.char.vel = [0, 0, 0]; gd.speed = 0; gd.char.bodyYaw = gd.char.aimYaw = EAST; gd.char.aimPitch = 0; gd.path = []; gd.pathGoal = null; gd.hold = true; gd.pinned = true; gd.char.update(0); gd.char.update(DT); };
   const [A, ...rest] = g.guards; rest.forEach((gd: any, i: number) => { place(gd, [37.5, 0, 6 + i * 1.5]); gd.heardUpTo = 1e12; }); place(A, LOBBY); A.wp = 1;
   W.cam.yaw = 0; W.cam.rebuild?.();
-  const pl = g.player.char, step = (n = 1) => { for (let i = 0; i < n; i++) { W.cursorAt([pl.posX + Math.sin(pl.bodyYaw) * 6, 1.0, pl.posZ + Math.cos(pl.bodyYaw) * 6]); W.step(DT); g.player.visibility = 0.02; } };
-  g.teleportPlayer([A.char.posX - 0.8, 0, A.char.posZ]); g.player.crouch = true; pl.bodyYaw = pl.aimYaw = EAST; W.cursorAt([A.char.posX, 1.2, A.char.posZ]); for (let i = 0; i < 60; i++) { W.cursorAt([A.char.posX, 1.2, A.char.posZ]); W.step(DT); g.player.visibility = 0.02; }
+  const pl = g.player.char, step = (n = 1) => { for (let i = 0; i < n; i++) { W.cursorAt([pl.pos[0] + Math.sin(pl.bodyYaw) * 6, 1.0, pl.pos[2] + Math.cos(pl.bodyYaw) * 6]); W.step(DT); g.player.visibility = 0.02; } };
+  g.teleportPlayer([A.char.pos[0] - 0.8, 0, A.char.pos[2]]); g.player.crouch = true; pl.bodyYaw = pl.aimYaw = EAST; W.cursorAt([A.char.pos[0], 1.2, A.char.pos[2]]); for (let i = 0; i < 60; i++) { W.cursorAt([A.char.pos[0], 1.2, A.char.pos[2]]); W.step(DT); g.player.visibility = 0.02; }
   startGrab(g, A); step(90);
   const at = (c: any, node: string): P3 => { const p = c.skel.nodePos(c.anim.nodes[node]), w = c.world; return [w[0] * p[0] + w[4] * p[1] + w[8] * p[2] + w[12], w[1] * p[0] + w[5] * p[1] + w[9] * p[2] + w[13], w[2] * p[0] + w[6] * p[1] + w[10] * p[2] + w[14]]; };
   const frames: Frame[] = []; let outAt = -1, t = -1, broke = -1, again = -1;
@@ -60,7 +60,7 @@ async function chokeRun(keyAt: (t: number) => boolean, secs = 3, breakAt = -1): 
     step();
     if (t < 0) continue; t += DT; if (outAt < 0 && !g.player.holding) outAt = t;
     const hn = at(pl, 'head'), hh = at(A.char, 'head'), nk = at(A.char, 'neck'), wr = at(pl, 'handL'), sn = at(pl, 'neck'), hl = at(A.char, 'handL'), hr = at(A.char, 'handR'), dist = (a: P3, b: P3) => Math.hypot(a[0] - b[0], a[1] - b[1], a[2] - b[2]);
-    frames.push({ t, feet: [at(A.char, 'footL')[1], at(A.char, 'footR')[1]], head: hh[1], samBack: pl.posX - sn[0], apart: Math.hypot(hn[0] - hh[0], hn[1] - hh[1], hn[2] - hh[2]), wrist: Math.hypot(wr[0] - nk[0], wr[1] - nk[1], wr[2] - nk[2]), hands: [dist(hl, wr), dist(hr, wr)],
+    frames.push({ t, feet: [at(A.char, 'footL')[1], at(A.char, 'footR')[1]], head: hh[1], samBack: pl.pos[0] - sn[0], apart: Math.hypot(hn[0] - hh[0], hn[1] - hh[1], hn[2] - hh[2]), wrist: Math.hypot(wr[0] - nk[0], wr[1] - nk[1], wr[2] - nk[2]), hands: [dist(hl, wr), dist(hr, wr)],
       roots: [...pl.pos, ...A.char.pos], joints: [Float32Array.from(pl.skel.jointData), Float32Array.from(A.char.skel.jointData)], bones: [pl, A.char].map((c: any) => Object.fromEntries(Object.keys(c.anim.nodes).filter(k => typeof c.anim.nodes[k] === 'number').map(k => [k, at(c, k)]))) });
     if (t > secs) break;
   }

@@ -87,8 +87,8 @@ export async function calmtorchCheck(): Promise<boolean> {
       let awOn = false, stOn = false;
       if (man) { const snap = W.snapshot('calm', true);
         man.awareness = TORCH.calmAw + 0.05; W.step(DT); awOn = burns(man);   // something has his attention
-        Math.random = seeded(13); W.restore(snap); const m2 = staff(g).find((x: any) => x.callsign === man.callsign); const lit = workLit(g, m2.char.posX, m2.char.posZ);
-        const dark2 = !burns(m2); m2.state = 'suspicious'; m2.awareness = 0.6; m2.lastKnown = [m2.char.posX + 2, 0, m2.char.posZ]; W.step(DT); stOn = dark2 && lit && burns(m2); }
+        Math.random = seeded(13); W.restore(snap); const m2 = staff(g).find((x: any) => x.callsign === man.callsign); const lit = workLit(g, m2.char.pos[0], m2.char.pos[2]);
+        const dark2 = !burns(m2); m2.state = 'suspicious'; m2.awareness = 0.6; m2.lastKnown = [m2.char.pos[0] + 2, 0, m2.char.pos[2]]; W.step(DT); stOn = dark2 && lit && burns(m2); }
       line(!!man && awOn && stOn, 'a man walking dark through a lit place: his light is on the frame something has his attention, and the frame he is suspicious', man ? `${man.callsign} · awareness up → ${awOn ? 'burning' : 'DARK'} · suspicious (restored dark from the checkpoint) → ${stOn ? 'burning' : 'DARK'}` : 'nobody walked dark inside a minute');
       // a run in which Sam is seen: every frame of every man who is not on a calm patrol
       // (the shipped stand's close-in rule lets a calm man pass Sam unseen in the dark short of touching him — `CLOSE.dark`, close.ts closeNearK — and Novak's waypoint is dark: nobody

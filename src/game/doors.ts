@@ -216,7 +216,7 @@ export interface DoorStrike { door: Door; by: number; tier: 'open' | 'slam' | 'b
  *  blame for what it does, are let through one a colleague is pulling shut). keys: the keys a keyless body carries all the same (the player, off a man he
  *  questioned — Player.keys): a locked leaf whose lock one of them fits (Door.lockId) is no wall to him; nothing else about how leaves treat him changes.
  *  blockedBy (out): the locked leaf that stopped this contact this frame. */
-export interface DoorContact { pos: Vec3; /** the man this contact is, whose place is read as the step opens and written back as it ends (none: `pos` is a place of the caller's own) */ of?: { pos: Vec3 }; radius: number; bash: boolean; who: number; quiet: boolean; weak?: boolean; key?: boolean; keys?: ReadonlySet<string>; blockedBy?: Door | null;
+export interface DoorContact { pos: Vec3; radius: number; bash: boolean; who: number; quiet: boolean; weak?: boolean; key?: boolean; keys?: ReadonlySet<string>; blockedBy?: Door | null;
   /** a man of the AI who opens doors by the HANDLE (handleside.ts — game.ts sets it): his body against a leaf on the face it opens into is not his hand on it — the
    *  leaf is a wall to him, as it is to anyone for PRESS_SECS, until he has leaned on it this many seconds (wedged against it with no other way: then as before) */
   hand?: number;

@@ -33,13 +33,13 @@ const NOISE = /""?smoke[A-Za-z0-9_]*""?|\[pipeline\] smoke_|number of storage te
       sys: document.querySelector('#panel .prail .sys.on')?.getAttribute('title') || '', panel: !document.getElementById('panel').classList.contains('hidden'), sliders: document.querySelectorAll('#panel input[type=range]').length }; });
   /** Sam `gap` m dead behind the first man, crouched, hands empty; the frames run so the list is this frame's */
   const behind = gap => page.evaluate(async gap => { const g = window.__game, A = g.guards[0], yaw = A.char.bodyYaw; if (g.player.holding) { g.restart(); await window.__runFrames(90, 1 / 60, [], 'none'); }
-    const B = window.__game.guards[0]; window.__game.player.holstered = true; window.__game.teleportPlayer([B.char.posX - Math.sin(B.char.bodyYaw) * gap, 0, B.char.posZ - Math.cos(B.char.bodyYaw) * gap]); window.__game.player.crouch = true;
+    const B = window.__game.guards[0]; window.__game.player.holstered = true; window.__game.teleportPlayer([B.char.pos[0] - Math.sin(B.char.bodyYaw) * gap, 0, B.char.pos[2] - Math.cos(B.char.bodyYaw) * gap]); window.__game.player.crouch = true;
     await window.__runFrames(20, 1 / 60, [], 'none'); }, gap);
   /** the first man's chest on the page, in the mouse's own coordinates */
-  const chest = () => page.evaluate(() => { const g = window.__game, A = g.guards[0], v = document.getElementById('view'), r = v.getBoundingClientRect(), [x, y] = window.__cam.project([A.char.posX, 1.2, A.char.posZ], r.width, r.height); return [r.left + x, r.top + y]; });
+  const chest = () => page.evaluate(() => { const g = window.__game, A = g.guards[0], v = document.getElementById('view'), r = v.getBoundingClientRect(), [x, y] = window.__cam.project([A.char.pos[0], 1.2, A.char.pos[2]], r.width, r.height); return [r.left + x, r.top + y]; });
   const frames = (n, until) => page.evaluate(async ([n, until]) => { const g = window.__game; let f = 0; for (; f < n; f++) { await window.__runFrames(1, 1 / 60, [], 'none'); if (until && g.player.holding) break;
-      if (until === 'reach' && f > 30) { const c = g.player.char, A = g.guards[0].char.pos; if (Math.hypot(c.velX, c.velZ) < 0.02 && Math.hypot(c.posX - A[0], c.posZ - A[2]) < 0.95) break; } }   // ('reach': …or he has come to a stop inside the grab's reach — the key the finish)
-    const c = g.player.char; return { f, held: !!g.player.holding, speed: Math.hypot(c.velX, c.velZ), gap: Math.hypot(c.posX - g.guards[0].char.posX, c.posZ - g.guards[0].char.posZ), list: g.nearby.map(r => Object.values(r).filter(v => typeof v === 'string').join(' ')).join(' | '), marks: g.interactables.filter(r => r.kind === 'guard' && r.guard === g.guards[0]).map(r => r.line2).join(' | '), page: document.body.innerText.replace(/\s+/g, ' ') }; }, [n, until]);
+      if (until === 'reach' && f > 30) { const c = g.player.char, A = g.guards[0].char.pos; if (Math.hypot(c.vel[0], c.vel[2]) < 0.02 && Math.hypot(c.pos[0] - A[0], c.pos[2] - A[2]) < 0.95) break; } }   // ('reach': …or he has come to a stop inside the grab's reach — the key the finish)
+    const c = g.player.char; return { f, held: !!g.player.holding, speed: Math.hypot(c.vel[0], c.vel[2]), gap: Math.hypot(c.pos[0] - g.guards[0].char.pos[0], c.pos[2] - g.guards[0].char.pos[2]), list: g.nearby.map(r => Object.values(r).filter(v => typeof v === 'string').join(' ')).join(' | '), marks: g.interactables.filter(r => r.kind === 'guard' && r.guard === g.guards[0]).map(r => r.line2).join(' | '), page: document.body.innerText.replace(/\s+/g, ' ') }; }, [n, until]);
   const tap = async code => { await page.keyboard.down(code); await frames(3); await page.keyboard.up(code); await frames(20); };
   await page.evaluate(() => window.__runFrames(150, 1 / 60, [], 'none'));   // (the man who stands is on his mark)
   if (OFF) {
@@ -62,7 +62,7 @@ const NOISE = /""?smoke[A-Za-z0-9_]*""?|\[pipeline\] smoke_|number of storage te
       const dragUp = await page.evaluate(() => !!window.__knobs.registry().STALK.drag);
       if (dragUp && !NOKEY) {
         await behind(3.0); const [x, y] = await chest(); await page.mouse.move(x, y); await frames(2); await page.mouse.down(); const s0 = await frames(60);
-        const [sx, sy] = await page.evaluate(() => { const g = window.__game, v = document.getElementById('view'), r = v.getBoundingClientRect(), [a, b] = window.__cam.project([g.player.char.posX, 0.6, g.player.char.posZ], r.width, r.height); return [r.left + a, r.top + b]; });
+        const [sx, sy] = await page.evaluate(() => { const g = window.__game, v = document.getElementById('view'), r = v.getBoundingClientRect(), [a, b] = window.__cam.project([g.player.char.pos[0], 0.6, g.player.char.pos[2]], r.width, r.height); return [r.left + a, r.top + b]; });
         const L = Math.hypot(x - sx, y - sy) || 1, full = await page.evaluate(() => window.__knobs.registry().STALK.dragFull);
         await page.mouse.move(x + (x - sx) / L * full, y + (y - sy) / L * full, { steps: 6 }); const s1 = await frames(45), stick = await page.evaluate(([x, y]) => { const I = window.__input, v = document.getElementById('view').getBoundingClientRect(); return Math.hypot(I.mouseX + v.left - x, I.mouseY + v.top - y); }, [x, y]); await page.mouse.move(x, y, { steps: 6 }); const s2 = await frames(40); await page.mouse.up(); await frames(5);
         say(Math.abs(s0.gap - 3.0) < 0.1 && s0.speed < 0.05 && s1.gap < s0.gap - 0.5 && s1.speed > 1 && s2.speed < 0.1, `the lab has drag to steer up: pressed on him 3 m behind, he holds still (${s0.gap.toFixed(2)} m, ${s0.speed.toFixed(2)} m/s); the mouse dragged toward him, he closes (${s1.gap.toFixed(2)} m, ${s1.speed.toFixed(2)} m/s, the game read the stick ${stick.toFixed(0)} px of ${full}); back to the press, he stops (${s2.speed.toFixed(2)} m/s)`);
@@ -71,7 +71,7 @@ const NOISE = /""?smoke[A-Za-z0-9_]*""?|\[pipeline\] smoke_|number of storage te
     }
     { // (stalk.ts STALK.orbit: the real button held on him and a real move key down — the one that takes him most round the man, of the four)
       const orbitUp = await page.evaluate(() => !!window.__knobs.registry().STALK.orbit);
-      const pose = () => page.evaluate(() => { const g = window.__game, c = g.player.char, A = g.guards[0].char; const dx = c.posX - A.posX, dz = c.posZ - A.posZ, to = Math.atan2(-dx, -dz), f = Math.atan2(Math.sin(c.aimYaw - to), Math.cos(c.aimYaw - to));
+      const pose = () => page.evaluate(() => { const g = window.__game, c = g.player.char, A = g.guards[0].char; const dx = c.pos[0] - A.pos[0], dz = c.pos[2] - A.pos[2], to = Math.atan2(-dx, -dz), f = Math.atan2(Math.sin(c.aimYaw - to), Math.cos(c.aimYaw - to));
         return { gap: Math.hypot(dx, dz), round: Math.atan2(dx, dz), face: Math.abs(f) * 180 / Math.PI }; });
       let best = null; const all = [];
       for (const code of ['KeyA', 'KeyD', 'KeyW', 'KeyS']) {
@@ -133,7 +133,7 @@ const NOISE = /""?smoke[A-Za-z0-9_]*""?|\[pipeline\] smoke_|number of storage te
         let best = { v: 0, down: false, dash: false, spr: false };
         for (const code of ['KeyW', 'KeyS', 'KeyA', 'KeyD']) {   // (whichever way the lab's floor is open from where he starts)
           await page.keyboard.down('ShiftLeft'); await page.keyboard.down(code);
-          const r = await page.evaluate(async () => { const g = window.__game; let v = 0, down = true, dash = false, spr = false; for (let f = 0; f < 50; f++) { await window.__runFrames(1, 1 / 60, [], 'none'); const c = g.player.char; v = Math.max(v, Math.hypot(c.velX, c.velZ)); down = down && g.player.crouch; dash = dash || g.player.dash; spr = spr || g.player.sprinting; } return { v, down, dash, spr }; });
+          const r = await page.evaluate(async () => { const g = window.__game; let v = 0, down = true, dash = false, spr = false; for (let f = 0; f < 50; f++) { await window.__runFrames(1, 1 / 60, [], 'none'); const c = g.player.char; v = Math.max(v, Math.hypot(c.vel[0], c.vel[2])); down = down && g.player.crouch; dash = dash || g.player.dash; spr = spr || g.player.sprinting; } return { v, down, dash, spr }; });
           await page.keyboard.up(code); await page.keyboard.up('ShiftLeft'); await frames(20); if (r.v > best.v) best = r; if (best.v > 2.2) break;
         }
         say(best.down && best.dash && !best.spr && best.v > 2.2 && best.v < K.pace + 0.2, `crouched with Shift and a move key held: still down ${best.down}, the fast crouch walk ${best.dash}, a sprint ${best.spr}, up to ${best.v.toFixed(2)} m/s (its pace ${K.pace})`);
@@ -146,16 +146,16 @@ const NOISE = /""?smoke[A-Za-z0-9_]*""?|\[pipeline\] smoke_|number of storage te
         const L = await page.evaluate(() => { const g = window.__game, an = g.player.char.anim; return { w: an.watchShown.w, at: !!an.watchAt }; });
         say(L.at && L.w > 0.5, `2.2 m behind the man with the cursor a radian off his line: his head has the man (a point to watch ${L.at}, the look ${L.w.toFixed(2)} of whole)`);
         if (K.slip) {
-          await page.evaluate(async () => { const g = window.__game, B = g.guards[0], y = B.char.bodyYaw; g.player.holstered = true; g.teleportPlayer([B.char.posX + Math.cos(y) * 1.0, 0, B.char.posZ - Math.sin(y) * 1.0]); g.player.crouch = true; await window.__runFrames(60, 1 / 60, [], 'none'); });
+          await page.evaluate(async () => { const g = window.__game, B = g.guards[0], y = B.char.bodyYaw; g.player.holstered = true; g.teleportPlayer([B.char.pos[0] + Math.cos(y) * 1.0, 0, B.char.pos[2] - Math.sin(y) * 1.0]); g.player.crouch = true; await window.__runFrames(60, 1 / 60, [], 'none'); });
           const P = await page.evaluate(() => { const an = window.__game.player.char.anim; return { slip: an.watchShown.slip, at: !!an.slipAt }; });
           say(P.at && P.slip > 0.5, `a metre off the man's side, crouched with empty hands: he gives the man room (${P.at}, the lean ${P.slip.toFixed(2)} of whole)`);
         }
         if (K.slip) {   // (the lab's own button: two walkers stood a gap apart, and Sam dead between them)
           const G = await page.evaluate(async () => { const b = [...document.querySelectorAll('#panel button')].find(x => /two men, a gap/.test(x.textContent)); if (!b) return { found: false };
             window.__game.restart(); await window.__runFrames(90, 1 / 60, [], 'none'); b.click(); await window.__runFrames(150, 1 / 60, [], 'none');
-            const g = window.__game, [A, B] = g.guards.filter(x => x.state !== 'dead' && !x.civ).slice(1, 3), a = A.char, c = B.char, apart = Math.hypot(a.posX - c.posX, a.posZ - c.posZ), still = Math.hypot(a.velX, a.velZ) + Math.hypot(c.velX, c.velZ);
+            const g = window.__game, [A, B] = g.guards.filter(x => x.state !== 'dead' && !x.civ).slice(1, 3), a = A.char, c = B.char, apart = Math.hypot(a.pos[0] - c.pos[0], a.pos[2] - c.pos[2]), still = Math.hypot(a.vel[0], a.vel[2]) + Math.hypot(c.vel[0], c.vel[2]);
             const turn = Math.abs(Math.atan2(Math.sin(a.bodyYaw - c.bodyYaw), Math.cos(a.bodyYaw - c.bodyYaw)));
-            g.player.holstered = true; g.teleportPlayer([(a.posX + c.posX) / 2, 0, (a.posZ + c.posZ) / 2]); g.player.crouch = true; await window.__runFrames(80, 1 / 60, [], 'none');
+            g.player.holstered = true; g.teleportPlayer([(a.pos[0] + c.pos[0]) / 2, 0, (a.pos[2] + c.pos[2]) / 2]); g.player.crouch = true; await window.__runFrames(80, 1 / 60, [], 'none');
             const an = g.player.char.anim; return { found: true, apart, still, turn, slip: an.watchShown.slip, lean: an.watchShown.lean }; });
           say(G.found && Math.abs(G.apart - 2.4) < 0.3 && G.still < 0.05 && G.turn < 0.5 && G.slip > 0.8 && G.lean < 0.35, G.found ? `the lab's 'stand two men a gap apart': two walkers stand ${G.apart.toFixed(2)} m apart, at rest (${G.still.toFixed(2)} m/s), facing within ${(G.turn * 57.3).toFixed(0)}° of each other; Sam dead between them is small (${G.slip.toFixed(2)}) with ${G.lean.toFixed(2)} of the lean left` : `the lab has no 'stand two men a gap apart' button`);
         }
@@ -178,7 +178,7 @@ const NOISE = /""?smoke[A-Za-z0-9_]*""?|\[pipeline\] smoke_|number of storage te
     }
     { // (src/game/tapstep.ts: the keyboard's own events in the dark corridor; a move key is a step, and between steps he stands)
       await page.evaluate(async () => { [...document.querySelectorAll('#panel button')].find(x => x.textContent.trim() === 'dark corridor').click(); await window.__runFrames(60, 1 / 60, [], 'none'); });
-      const at = () => page.evaluate(() => { const g = window.__game, c = g.player.char; return { x: c.posX, z: c.posZ, v: Math.hypot(c.velX, c.velZ) }; }); let best = 0, stopped = false;
+      const at = () => page.evaluate(() => { const g = window.__game, c = g.player.char; return { x: c.pos[0], z: c.pos[2], v: Math.hypot(c.vel[0], c.vel[2]) }; }); let best = 0, stopped = false;
       for (const code of ['KeyW', 'KeyS', 'KeyA', 'KeyD']) { const a = await at(); await page.keyboard.down(code); await frames(4); await page.keyboard.up(code); await frames(50); const b = await at(), d = Math.hypot(b.x - a.x, b.z - a.z); if (d > best) { best = d; stopped = b.v < 0.01; } if (best > 0.2) break; }
       say(best > 0.2 && best < 0.45 && stopped, `in the dark corridor a tap of a move key is one short step and he stops dead (${best.toFixed(2)} m)`);
     }

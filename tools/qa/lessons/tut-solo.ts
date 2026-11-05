@@ -47,9 +47,9 @@ const trigger = (B: Bot, at: () => number[], secs: number, stop?: () => boolean)
   B.aim(at()); B.step(); B.I.clicked |= 1;
   try { for (let i = 0; i < secs * 60; i++) { B.aim(at()); B.I.buttons |= 1; if (i % 14 === 13) B.I.clicked |= 1; B.step(); if (stop && stop()) break; } } finally { B.I.buttons &= ~1; B.step(); }   // (a fresh press every quarter second: the pistol fires a round a press)
 };
-const chest = (x: any): number[] => x.char.bones?.chest ?? [x.char.posX, 1.25, x.char.posZ];
+const chest = (x: any): number[] => x.char.bones?.chest ?? [x.char.pos[0], 1.25, x.char.pos[2]];
 const up = (x: any) => x.state !== 'dead';
-const line = (B: Bot, x: any) => { const P = B.g.player.char, a = P.bones?.head ?? [P.posX, 1.5, P.posZ]; return !B.g.col.shotBlocked(a, chest(x)); };
+const line = (B: Bot, x: any) => { const P = B.g.player.char, a = P.bones?.head ?? [P.pos[0], 1.5, P.pos[2]]; return !B.g.col.shotBlocked(a, chest(x)); };
 const gun = (B: Bot) => B.g.player.slot === 'rifle' ? B.g.player.rifle : B.g.player.pistol;
 const downed = (B: Bot) => B.g.guards.filter((x: any) => !up(x)).length;
 /** shoot every man he has a line to until `n` are down (reloading as the gun runs dry), for `secs` at most */
@@ -57,7 +57,7 @@ const fight = (B: Bot, n: number, secs: number, move?: () => void, who?: any[]) 
   const g = B.g, P = g.player, t0 = B.t();
   while (downed(B) < n && B.t() - t0 < secs && !P.down) {
     const w = gun(B); if (w.roundsReady === 0 && !w.reloading) { B.press('KeyR'); continue; }
-    const x = (who ?? g.guards).filter((y: any) => up(y) && line(B, y)).sort((a: any, b: any) => Math.hypot(a.char.posX - B.pos()[0], a.char.posZ - B.pos()[2]) - Math.hypot(b.char.posX - B.pos()[0], b.char.posZ - B.pos()[2]))[0];
+    const x = (who ?? g.guards).filter((y: any) => up(y) && line(B, y)).sort((a: any, b: any) => Math.hypot(a.char.pos[0] - B.pos()[0], a.char.pos[2] - B.pos()[2]) - Math.hypot(b.char.pos[0] - B.pos()[0], b.char.pos[2] - B.pos()[2]))[0];
     if (!x) { if (move) move(); else B.step(); continue; }
     if (P.slot === 'pistol') { for (let i = 0; i < 16 && up(x); i++) { B.aim(chest(x)); B.step(); } B.click(1, chest(x)); B.step(6); }   // (a round a press, once the gun has come round to the cursor: the page's aim has weight)
     else trigger(B, () => chest(x), 1.2, () => !up(x) || !line(B, x));
@@ -285,17 +285,17 @@ export const steps: Record<string, (B: Bot) => void> = {
   // the line that only has him look: it goes by once the two stand in the shop's doorway, and not before
   behind: B => {
     B.until(() => !stepIs(B, 'behind'), 9); if (stepIs(B, 'behind')) return;
-    const men = B.g.guards.slice(5).filter(up), off = men.filter((x: any, k: number) => Math.hypot(x.char.posX - LAST_MEN[k][0], x.char.posZ - LAST_MEN[k][2]) > 0.8);
+    const men = B.g.guards.slice(5).filter(up), off = men.filter((x: any, k: number) => Math.hypot(x.char.pos[0] - LAST_MEN[k][0], x.char.pos[2] - LAST_MEN[k][2]) > 0.8);
     if (men.length < 2 || off.length) B.fail(`the shot is asked for before the two stand in the doorway (${men.length} up, ${off.length} still on the way)`);
   },
   // the two in the shop's doorway behind him: the grenade into it, once both stand there (8.5 m and more: armed)
   launch: B => {
     const men = () => B.g.guards.slice(5);
-    B.until(() => men().length >= 2 && men().every((x: any, k: number) => !up(x) || Math.hypot(x.char.posX - LAST_MEN[k][0], x.char.posZ - LAST_MEN[k][2]) < 0.8), 12);
+    B.until(() => men().length >= 2 && men().every((x: any, k: number) => !up(x) || Math.hypot(x.char.pos[0] - LAST_MEN[k][0], x.char.pos[2] - LAST_MEN[k][2]) < 0.8), 12);
     if (brk() === 'again' && !once.has('launch')) { once.add('launch');
       handBack(B, 'take'); if (men().length) B.fail(`again: ${men().length} of the last men are on the floor before their line (the checkpoint is from before they came)`);
       replay(B, ['take', 'rifle', 'leave', 'behind']); B.until(() => stepIs(B, 'launch'), 4); B.step(30);
-      B.until(() => men().length >= 2 && men().every((x: any, k: number) => !up(x) || Math.hypot(x.char.posX - LAST_MEN[k][0], x.char.posZ - LAST_MEN[k][2]) < 0.8), 12);
+      B.until(() => men().length >= 2 && men().every((x: any, k: number) => !up(x) || Math.hypot(x.char.pos[0] - LAST_MEN[k][0], x.char.pos[2] - LAST_MEN[k][2]) < 0.8), 12);
       if (men().length !== 2) B.fail(`again: ${men().length} last men after the checkpoint (two come, once)`); }
     const x = men().find(up); if (!x) B.fail('nobody came out through the shop');
     // (they come by the store's back door, from the lane outside: it was shut and locked on him until now)

@@ -47,7 +47,7 @@ export async function flinchCheck(): Promise<boolean> {
   const FAR: Vec3 = [1, 0, 1];
   /** a round that passes `off` metres beside `c`'s chest, from eight metres in front of him to six behind (the strike is out of reach: only the pass weighs) */
   const pass = (g: any, shooter: any, c: any, off: number, from = 8) => {
-    const C: Vec3 = c.bones.chest ?? [c.posX, c.posY + 1.1, c.posZ], f = c.forward(), sx = -f[2], sz = f[0];
+    const C: Vec3 = c.bones.chest ?? [c.pos[0], c.pos[1] + 1.1, c.pos[2]], f = c.forward(), sx = -f[2], sz = f[0];
     noteRound(g, shooter, [C[0] + f[0] * from + sx * off, C[1], C[2] + f[2] * from + sz * off], [C[0] - f[0] * 6 + sx * off, C[1], C[2] - f[2] * 6 + sz * off], null);
   };
   /** a fresh office night, the rule as asked, every man but the first parked blind and deaf; the first holds where he stands, calm; Sam far off in the dark */
@@ -121,9 +121,9 @@ export async function flinchCheck(): Promise<boolean> {
     { /** `secs` of a round every quarter second 0.4 m past the first man (`burst`: three rounds and then quiet): when the runner took him, the most seconds under fire on his record */
       const fire = async (training: string, o: { mate?: boolean; run?: boolean; burst?: boolean; own?: 'too' | 'only'; fled?: boolean } = {}, secs = 5) => {
         const s = await world(true, training), { g, A, P } = s; T.run = o.run !== false; const c = A.char;
-        if (o.mate) { const m = g.guards[1], f = c.forward(), q = [0, 1, 2, 3, 4, 5, 6, 7].map((i): Vec3 => { const a = i * Math.PI / 4, x = f[0] * Math.cos(a) - f[2] * Math.sin(a), z = f[0] * Math.sin(a) + f[2] * Math.cos(a); return [c.posX + x * 1.5, 0, c.posZ + z * 1.5]; }).find(p => !g.col.segmentBlocked([c.posX, 1.6, c.posZ], [p[0], 1.2, p[2]]) && !g.col.segmentBlocked([c.posX, 0.4, c.posZ], [p[0], 0.4, p[2]])); if (q) { m.char.pos = q; m.char.vel = [0, 0, 0]; m.path = []; m.pathGoal = null; m.char.update(0); s.step(5); } }
+        if (o.mate) { const m = g.guards[1], f = c.forward(), q = [0, 1, 2, 3, 4, 5, 6, 7].map((i): Vec3 => { const a = i * Math.PI / 4, x = f[0] * Math.cos(a) - f[2] * Math.sin(a), z = f[0] * Math.sin(a) + f[2] * Math.cos(a); return [c.pos[0] + x * 1.5, 0, c.pos[2] + z * 1.5]; }).find(p => !g.col.segmentBlocked([c.pos[0], 1.6, c.pos[2]], [p[0], 1.2, p[2]]) && !g.col.segmentBlocked([c.pos[0], 0.4, c.pos[2]], [p[0], 0.4, p[2]])); if (q) { m.char.pos = q; m.char.vel = [0, 0, 0]; m.path = []; m.pathGoal = null; m.char.update(0); s.step(5); } }
         const fledOk = o.fled ? runnerBreak(g, g.guards[1]) && runnerOwns(g.guards[1]) : false;
-        const lone = !hasMate(g, A), p0: Vec3 = [c.posX, 0, c.posZ]; let tookAt = NaN, most = 0, far = 0; const said0 = RUNNER_STATS.said, t0 = g.time;
+        const lone = !hasMate(g, A), p0: Vec3 = [c.pos[0], 0, c.pos[2]]; let tookAt = NaN, most = 0, far = 0; const said0 = RUNNER_STATS.said, t0 = g.time;
         for (let i = 0; i < secs * 60; i++) {
           if (i % 15 === 0 && (!o.burst || i < 45) && !runnerOwns(A) && o.own !== 'only') pass(g, P, c, 0.4);
           if (o.own && i % 15 === (o.own === 'too' ? 1 : 0) && !runnerOwns(A)) pass(g, g.guards[2].char, c, 0.2);   // (a colleague's round, the frame after the enemy's: the last on his suppression record)

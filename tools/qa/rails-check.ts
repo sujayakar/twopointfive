@@ -80,7 +80,7 @@ export async function railsCheck(): Promise<boolean> {
         `live ${g.rails.live} · lesson ${g.lesson.data ? 'live' : 'none'} · the player ${flat(p0, start).toFixed(2)} m from the start · orders ${n0} → ${g.orders.log.length} · program ${g.director.run && !g.director.run.ended ? 'running' : 'none'}`); }
     // ---- 3, 4, 5
     { const R = await rig(true), g = R.g, d0 = RAILS_STATS.dropped; R.run(0.5);
-      const park = g.level.scenarios.lesson.rails.sky.park, mid = R.squad().reduce((c: V, m: any) => [c[0] + m.char.posX / 4, 0, c[2] + m.char.posZ / 4], [0, 0, 0]);
+      const park = g.level.scenarios.lesson.rails.sky.park, mid = R.squad().reduce((c: V, m: any) => [c[0] + m.char.pos[0] / 4, 0, c[2] + m.char.pos[2] / 4], [0, 0, 0]);
       const look = g.followPos(), n0 = g.orders.log.length, crew = g.guards.filter((x: any) => /^Tango (8|9|10)$/.test(x.callsign)).length;
       const p0 = [...g.player.char.pos]; R.command(YARD); R.run(0.3, ['KeyW']);
       const A = g.rails.allowed();
@@ -140,7 +140,7 @@ export async function railsCheck(): Promise<boolean> {
     { const R = await rig(true), g = R.g, I = R.I; R.run(0.5); R.turn(1.0); R.run(0.3); R.zoom(); R.run(1.0); R.run(2.6, ['KeyD']);   // (the fourth step: its mark is on the yard)
       const at = g.lesson.step?.at as [number, number, number] | undefined, cv = R.W.canvas, cam = R.W.cam; const [sx, sy] = at ? cam.project(at, cv.clientWidth, cv.clientHeight) : [0, 0];
       I.mouseX = sx + 12; I.mouseY = sy - 9; const on = g.rails.markUnder(I, cam, cv); I.mouseX = sx + 140; const off = g.rails.markUnder(I, cam, cv);
-      const foes = g.guards.filter((x: any) => x.team !== 'operative' && x.state !== 'dead'), road = foes.filter((x: any) => x.char.posZ > 22), house = foes.filter((x: any) => x.char.posZ < 18);
+      const foes = g.guards.filter((x: any) => x.team !== 'operative' && x.state !== 'dead'), road = foes.filter((x: any) => x.char.pos[2] > 22), house = foes.filter((x: any) => x.char.pos[2] < 18);
       const seenRoad = road.filter((x: any) => g.fogOfWar.drawn(x)).length, seenHouse = house.filter((x: any) => g.fogOfWar.drawn(x)).length;
       verdict(!!at && on === at && off === null && !g.fogOfWar.active && road.length > 0 && seenRoad === road.length && house.length > 0 && seenHouse === house.length,
         'the ring on the screen is the place it marks (the cursor on it is on that place, off it is not), and the mission is played with no fog of war: the men on the road and the men in the rooms are all in the picture',
@@ -183,7 +183,7 @@ export async function railsCheck(): Promise<boolean> {
       let empty = false, noFire = false, named = false, said = false, saidAgain = true, saidNone = true, both = false, inFrame = -1, asBuilt = -1, sum = '', shut = { left: true, use: false }, again = { left: false, use: false }, none = { left: false, use: false }, can = { shut: true, again: false, none: false };
       const near = { key: { said: '?', grab: false }, click: { said: '?', grab: false }, open: { said: '', grab: true }, armed: { said: '?', grab: false }, rifle: false, away: false, keyCan: false, onWall: true, held: false, from: false }, dead = /LMB|RMB|\bE {2}/, wall0 = g.player.wall;
       try {
-        for (let i = 0; i < 30; i++) W.step(DT); g.lesson.i = at('corner'); if (H) { g.player.crouch = true; g.teleportPlayer([H.char.posX - Math.sin(H.char.bodyYaw) * 1.6, 0, H.char.posZ - Math.cos(H.char.bodyYaw) * 1.6]); }
+        for (let i = 0; i < 30; i++) W.step(DT); g.lesson.i = at('corner'); if (H) { g.player.crouch = true; g.teleportPlayer([H.char.pos[0] - Math.sin(H.char.bodyYaw) * 1.6, 0, H.char.pos[2] - Math.cos(H.char.bodyYaw) * 1.6]); }
         empty = !!g.player.holstered; noFire = g.rails.locks('fire'); named = !!deny0?.includes('stalk'); can.shut = could(); shut = ask(); said = g.rails.shuts('stalk'); sum = g.rails.summary();
         if (C) C.allow = [...(allow0 ?? []), 'stalk']; can.again = could(); again = ask(); saidAgain = g.rails.shuts('stalk');
         if (C) C.deny = [...(C.deny ?? []), 'stalk']; both = g.rails.shuts('stalk') && !g.rails.allowed().has('stalk'); if (C) { C.allow = allow0; delete C.deny; }   // (named both ways on one step: shut, as `allowed` folds the pair)
@@ -193,7 +193,7 @@ export async function railsCheck(): Promise<boolean> {
         // his names a button the gate holds, whichever way the grab is given (the row's key, or the held click alone: `?stalkkey=0`, and any wall hold);
         // the row that grabs is there; and the key's grab is still the stalk's own, the step in and all (`stalkKeyCan`, the place he came from kept)
         if (N) N.deny = deny0;
-        if (H) { const lines = (key: boolean) => { STALK.only = true; STALK.key = key; CLOSE.noKnife = true; g.teleportPlayer([H.char.posX - Math.sin(H.char.bodyYaw) * 0.6, 0, H.char.posZ - Math.cos(H.char.bodyYaw) * 0.6]); for (let i = 0; i < 12; i++) { W.cursorAt([H.char.posX, 1.2, H.char.posZ]); W.step(DT); }
+        if (H) { const lines = (key: boolean) => { STALK.only = true; STALK.key = key; CLOSE.noKnife = true; g.teleportPlayer([H.char.pos[0] - Math.sin(H.char.bodyYaw) * 0.6, 0, H.char.pos[2] - Math.cos(H.char.bodyYaw) * 0.6]); for (let i = 0; i < 12; i++) { W.cursorAt([H.char.pos[0], 1.2, H.char.pos[2]]); W.step(DT); }
             const rows = g.nearby.filter((r: any) => r.guard === H); return { said: rows.map((r: any) => r.line2 ?? '').filter(Boolean).join(' | '), grab: rows.some((r: any) => r.verb === 'grab') }; };
           near.key = lines(true); near.keyCan = stalkKeyCan(g, H); near.click = lines(false); STALK.key = true; try { g.player.wall = {} as any; near.onWall = stalkClickOnly(g); } finally { g.player.wall = wall0; }   // (the question alone, asked as on a wall hold: nobody is put on a wall)
           if (N) N.deny = (deny0 ?? []).filter(a => a !== 'stalk'); near.open = lines(false); if (N) N.deny = deny0;   // (the same place with the click his: the line is the click's, and no row grabs)
@@ -299,7 +299,7 @@ export async function railsCheck(): Promise<boolean> {
       try {
         const stage = async (rule: boolean, two: boolean) => { const R = await rig(true), g = R.g, secs = g.level.scenarios.lesson.rails.respawn as number; RAILS.spareDown = rule; R.run(0.5);
           const men = R.squad(), mate = men[0], other = men[1]; let by: any = null, at: V = [], at2: V = [];
-          const stand = () => { mate.char.posX = at[0]; mate.char.posZ = at[2]; if (two) { other.char.posX = at2[0]; other.char.posZ = at2[2]; } };
+          const stand = () => { mate.char.pos[0] = at[0]; mate.char.pos[2] = at[2]; if (two) { other.char.pos[0] = at2[0]; other.char.pos[2] = at2[2]; } };
           // (a place a defender sees: tried round each man who is not the script's, the teammate held there a few frames so that his bones are)
           find: for (const h of g.guards as any[]) { if (h.team !== 'hostile' || h.script || h.state === 'dead') continue;
             for (let k = 0; k < 8; k++) for (const d of [3.5, 5]) { const yaw = k * Math.PI / 4, hp = h.char.pos, p = [hp[0] + Math.sin(yaw) * d, hp[1], hp[2] + Math.cos(yaw) * d], q = [p[0] + Math.cos(yaw) * 1.2, hp[1], p[2] - Math.sin(yaw) * 1.2];
@@ -315,7 +315,7 @@ export async function railsCheck(): Promise<boolean> {
           for (let i = 0; i < Math.round((secs + 3) * 60); i++) { const was = g.time; R.run(1 / 60); stand();
             const down = g.rails.isSpared(mate); if (!down) first = false;
             // (up again, he is put back in the defender's eye: by then the defender has turned to the squad's fire from the trucks, and what is asked is that a man who is up CAN be taken)
-            if (!first && back < 0 && !by.script) by.char.bodyYaw = by.char.aimYaw = Math.atan2(mate.char.posX - by.char.posX, mate.char.posZ - by.char.posZ);
+            if (!first && back < 0 && !by.script) by.char.bodyYaw = by.char.aimYaw = Math.atan2(mate.char.pos[0] - by.char.pos[0], mate.char.pos[2] - by.char.pos[2]);
             if (first) { for (const e of g.events as any[]) if (e.time > was && e.kind === 'guardShot' && e.who === by.char.id) { fired++; if (by.foe === mate) rounds++; } if (by.foe === mate) onHim++;
               if (by.state !== 'alert') calm = true; if (!next && by.foe && by.foe !== 'player' && by.foe !== mate) next = by.foe.callsign; }
             else if (back < 0 && by.foe === mate) back = g.time - t0; }
@@ -505,7 +505,7 @@ export async function railsCheck(): Promise<boolean> {
           // (THE WORD'S OWN GUARD, away from this floor's roads: what lanes.ts prices a walk at for a man the script sent, with the word and without it —
           //  with it never a price; without it, on a stand with covered lanes, the lanes' price while his side knows one)
           if (plain) for (const gd of seen as Set<any>) { if (!gd.script || gd.state === 'dead') continue; gd.script.direct = true; const a = lanePenalty(g, gd, undefined); gd.script.direct = false; const b = lanePenalty(g, gd, undefined); if (a !== undefined) unpriced = -1e9; else if (typeof b === 'function') priced++; else unpriced++; }
-          if (how === 'kept') for (const gd of g.guards as any[]) if (/^Tango (8|9|10)$/.test(gd.callsign ?? '')) { const at = home.get(gd) ?? [gd.char.posX, gd.char.posZ]; home.set(gd, at); gd.char.posX = at[0]; gd.char.posZ = at[1]; }   // (alive, armed, and where they stood)
+          if (how === 'kept') for (const gd of g.guards as any[]) if (/^Tango (8|9|10)$/.test(gd.callsign ?? '')) { const at = home.get(gd) ?? [gd.char.pos[0], gd.char.pos[2]]; home.set(gd, at); gd.char.pos[0] = at[0]; gd.char.pos[2] = at[1]; }   // (alive, armed, and where they stood)
           R.run(1 / 60); if (t0 < 0 && g.lesson.i === kg) { t0 = g.time; guard(false); } if (t0 >= 0 && g.lesson.i > kg) t1 = g.time; }
         return { secs: t0 < 0 ? -1 : t1 < 0 ? 99 : t1 - t0, up: R.squad().length, nav: g.col.nav, sent: seen.size, priced, unpriced }; };
       const { LANES, lanePenalty } = await import(`${ROOT}/src/game/lanes.ts`);   // (covered lanes are a newer rule: where the stand holds them off there is no price to take the word off)
@@ -565,11 +565,11 @@ export async function railsCheck(): Promise<boolean> {
       // (the first place down the eye's own line that is a room's floor with nothing between)
       const at = (m: number): [number, number, number] => [s.pos[0] + s.look[0] * m, 0, s.pos[2] + s.look[2] * m];
       const m = s ? [1.5, 2.5, 3.5, 4.5, 5.5, 6.5, 7.5, 8.5, 9.5].find(d => g.cleared.roomAt(at(d)) > 0 && !g.col.nav.isBlocked(at(d)[0], at(d)[2]) && !g.col.segmentBlocked(s.pos, [at(d)[0], 1.1, at(d)[2]])) : undefined;
-      const stand = (n: number) => { for (let i = 0; i < n; i++) { if (m && foe) { foe.char.posX = at(m)[0]; foe.char.posZ = at(m)[2]; } R.run(1 / 60); } };
+      const stand = (n: number) => { for (let i = 0; i < n; i++) { if (m && foe) { foe.char.pos[0] = at(m)[0]; foe.char.pos[2] = at(m)[2]; } R.run(1 / 60); } };
       stand(8); g.doorTools.bangs = 1;
       const room = foe ? g.cleared.roomAt(foe.char.pos) : 0, sides = [1, -1] as const;
       const way = g.doors.list.flatMap((d: any) => sides.map(side => ({ d, side }))).find((w: any) => g.cleared.roomBy(w.d, w.side > 0 ? -1 : 1) === room && g.cleared.isKnown(g.cleared.roomBy(w.d, w.side)));
-      const read = () => ({ seen: !!foe && F.seen(foe), drawn: !!foe && F.drawn(foe), hidden: !foe || F.hidden(foe), known: !!foe && !!F.sighting(foe), lit: !!foe && F.spotSeen(foe.char.posX, foe.char.posZ),
+      const read = () => ({ seen: !!foe && F.seen(foe), drawn: !!foe && F.drawn(foe), hidden: !foe || F.hidden(foe), known: !!foe && !!F.sighting(foe), lit: !!foe && F.spotSeen(foe.char.pos[0], foe.char.pos[2]),
         pick: way ? autoEntries(g, { kind: 'door', at: way.d.frameCentre, door: way.d, side: way.side }) : { ids: [] as string[], why: 'no door' } });
       const on = read(); let off = on; RAILS.eyeView = false; try { stand(8); off = read(); } finally { RAILS.eyeView = true; }   // (put back whatever the stand throws: every line after this one is read with the rule on)
       const word = (r: ReturnType<typeof read>) => `seen ${r.seen}, a sighting ${r.known}, drawn ${r.drawn}, hidden ${r.hidden}, his floor lit ${r.lit}, the entry ${r.pick.ids.join(' then ') || 'none'} (${r.pick.why})`;
@@ -688,7 +688,7 @@ export async function railsCheck(): Promise<boolean> {
         const g = W.game, quiet = <T,>(f: () => T): T => { if (VERBOSE) return f(); const l = console.log, w = console.warn; console.log = console.warn = () => { }; try { return f(); } finally { console.log = l; console.warn = w; } };
         const run = (secs: number) => quiet(() => { for (let i = 0; i < Math.round(secs * 60); i++) W.step(DT); });
         const men = (): any[] => g.guards.filter((x: any) => x.unit && x.team === 'operative' && x.state !== 'dead');
-        return { g, run, men, at: () => men().map((m: any) => [m.char.posX, 0, m.char.posZ] as V), orders: () => men().map((m: any) => g.orders.of(m)?.order ?? '-').join(' ') }; };
+        return { g, run, men, at: () => men().map((m: any) => [m.char.pos[0], 0, m.char.pos[2]] as V), orders: () => men().map((m: any) => g.orders.of(m)?.order ?? '-').join(' ') }; };
       const far = (a: V[], b: V[]) => Math.max(...a.map((p, k) => flat(p, b[k])));
       const R = await stand(true), { g } = R, L = g.level.scenarios.lesson, call = (L.steps as any[]).findIndex(T => T.allow?.includes('order')), AWAY: V = [11.5, 0, 9.25];
       // (the four are put on fall in by hand, as the page's opening leaves them: on the frozen stand a squad starts with no order at all and would stand there either way)
@@ -696,8 +696,8 @@ export async function railsCheck(): Promise<boolean> {
       R.run(0.5); const p0 = R.at(); fall(); g.teleportPlayer(AWAY); R.run(10);
       const stayed = far(p0, R.at()), held = R.orders(), low = R.men().every((m: any) => !!g.orders.of(m)?.crouch);
       // (an order of his own: the last man is sent three metres down the road, as a level's script or a later step would send him)
-      const one = R.men()[R.men().length - 1], post: V = [one.char.posX + 3, 0, one.char.posZ]; g.orders.assign(one, { order: 'hold', post, face: 0, going: 'moving', there: 'holding' }); R.run(6);
-      const sent = flat([one.char.posX, 0, one.char.posZ], post), others = far(p0.slice(0, -1), R.at().slice(0, -1));
+      const one = R.men()[R.men().length - 1], post: V = [one.char.pos[0] + 3, 0, one.char.pos[2]]; g.orders.assign(one, { order: 'hold', post, face: 0, going: 'moving', there: 'holding' }); R.run(6);
+      const sent = flat([one.char.pos[0], 0, one.char.pos[2]], post), others = far(p0.slice(0, -1), R.at().slice(0, -1));
       // (the step that hands him the key: fall in is fall in again)
       g.lesson.i = call; R.run(2 / 60); const p1 = R.at(); fall(); R.run(6); const came = far(p1, R.at()), free = R.orders();
       // (put back before it: held again, where they now are)

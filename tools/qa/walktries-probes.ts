@@ -76,7 +76,7 @@ interface Opts { squad?: 2 | 4; who?: any; mids?: Mid[]; testDoor?: boolean; /**
 async function play(mode: 'locked' | 'known' | 'ring' | 'open', key: boolean, o: Opts = {}): Promise<Run> {
   const who = o.who ?? 'all', mids = [...(o.mids ?? [])], R = await rig(key, o.squad ?? 2, o.testDoor ?? true), { g, O, D, said } = R, d = R.door('manager'), samSide = sideOf(d, g.player.char.pos), spot = mode === 'open' ? CONF : INSIDE;
   const team: any[] = O.men('all'), sent: any[] = O.men(who);
-  const men = (l: any[] = team): Man[] => l.map((m: any) => { const A = O.of(m); return { c: m.callsign, order: String(A?.order ?? '-'), door: String(A?.door?.def.name ?? '-'), there: String(A?.there ?? '-'), post: A?.post ? [A.post[0], 0, A.post[2]] : null, pos: [m.char.posX, 0, m.char.posZ], side: sideOf(d, m.char.pos), tries: !!A?.tries, arrived: !!A?.arrived, dead: m.state === 'dead' }; });
+  const men = (l: any[] = team): Man[] => l.map((m: any) => { const A = O.of(m); return { c: m.callsign, order: String(A?.order ?? '-'), door: String(A?.door?.def.name ?? '-'), there: String(A?.there ?? '-'), post: A?.post ? [A.post[0], 0, A.post[2]] : null, pos: [m.char.pos[0], 0, m.char.pos[2]], side: sideOf(d, m.char.pos), tries: !!A?.tries, arrived: !!A?.arrived, dead: m.state === 'dead' }; });
   /** the menu opened on that spot as the player opens it: its 'move there' row — greyed or not, and its words */
   const row = (): Row | null => { const was = O.who; O.who = who; try { if (!O.open(O.targetAt(spot))) return null; const r = O.hud().menu?.rows.find((x: any) => String(x.opts[0]?.text ?? '').startsWith('move there')); return r ? { off: !!r.off, text: String(r.opts[0].text) } : null; } finally { O.close(); O.who = was; } };
   if (mode === 'known') await quiet(() => { O.give('stack', O.targetAt(d.frameCentre), who); for (let i = 0; i < 60 * 30 && !D.knownShut(d, samSide); i++) R.step(); R.step(60); });
@@ -108,7 +108,7 @@ async function second(key: boolean) {
   const why = await quiet(() => O.give('move', O.targetAt(INSIDE), 'all')); let keyed = false, inMgr = 0;
   const going = () => !keyed || team.some((m: any) => { const A = O.of(m); return A?.order === 'move' && !A.arrived; });
   await quiet(() => { for (let i = 0, still = 0; i < 60 * 40 && still < 30; i++) { if (!keyed && i >= 15) { g.player.keys.add('probe'); keyed = true; } R.step(); still = going() ? 0 : still + 1;
-    for (const m of team) if (m.char.posZ < mg.frameCentre[2] - 0.3 && Math.abs(m.char.posX - mg.frameCentre[0]) < 3.2) inMgr++; } R.step(180); });
+    for (const m of team) if (m.char.pos[2] < mg.frameCentre[2] - 0.3 && Math.abs(m.char.pos[0] - mg.frameCentre[0]) < 3.2) inMgr++; } R.step(180); });
   const men = team.map((m: any) => { const A = O.of(m); return { c: m.callsign, order: String(A?.order ?? '-'), door: String(A?.door?.def.name ?? '-'), there: String(A?.there ?? '-'), on: !!A?.post && dist(m.char.pos, A.post) < 0.6, side: sideOf(mg, m.char.pos), pos: [...m.char.pos] }; });
   return { inStore, why: why ?? null, said: said.slice(n0), log: D.log.slice(log0).map((l: any) => String(l.what)), tested: D.stats.tested - tested0, men, corridor, inMgr, mgShut: !!mg.locked && !!mg.latched, name: doorWords(mg) };
 }
@@ -122,7 +122,7 @@ async function wedge(key: boolean) {
   const d = g.doors.list.find((x: any) => x.def.name === 'store'), c = d.frameCentre, th = d.def.closedDir, spot = [c[0] - Math.sin(th) * -1.5, 0, c[2] + Math.cos(th) * -1.5];   // (a stride and a half in on the leaf's −1 face: the store)
   d.locked = true; d.keySide = 1; d.lockId = `wedge:${d.def.name}`;
   const said: string[] = [], say = g.say.bind(g); g.say = (gd: any, text: string, ...rest: any[]) => { said.push(`${gd.callsign}: ${text}`); return say(gd, text, ...rest); };
-  const team: any[] = O.men('all'), def = O.defs.find((x: any) => x.id === 'move'), pos = () => team.map((m: any) => [m.char.posX, 0, m.char.posZ]);
+  const team: any[] = O.men('all'), def = O.defs.find((x: any) => x.id === 'move'), pos = () => team.map((m: any) => [m.char.pos[0], 0, m.char.pos[2]]);
   const row0 = O.whyNot(def, O.targetAt(spot), team), at0 = pos(), why = await quiet(() => O.give('move', O.targetAt(spot), 'all'));
   // (played until the line is said — 30 s at most — and three seconds more: the file's last man is still coming onto his mark as the first tries the handle)
   await quiet(() => { for (let i = 0; i < 60 * 30 && !said.some(x => SHUT_LINE.test(x)); i++) S.step(1); S.step(180); });

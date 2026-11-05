@@ -75,7 +75,7 @@ const watch = (g: any) => { const P = g.probe, C = { asks: 0 }, q = P.query, s =
   const spots: { p: [number, number, number]; E: number }[] = [];
   for (const l of g.engine.lights.lights) for (const [ox, oz] of [[0, 0], [1.5, 0], [0, 1.5], [-1.5, 0], [0, -1.5], [6, 6], [-6, 6]]) { const p: [number, number, number] = [l.pos[0] + ox, 0, l.pos[2] + oz]; spots.push({ p, E: Math.max(lightEstimateAt(g, [p[0], 1.2, p[2]]), lightEstimateAt(g, [p[0], 1.6, p[2]])) }); }
   spots.sort((a, b) => b.E - a.E); const lit = spots[0], dark = spots[spots.length - 1];
-  const stand = (p: number[]) => { const c = g.player.char; c.posX = p[0]; c.posY = 0; c.posZ = p[2]; if (c.vel) c.velX = c.velY = c.velZ = 0; for (let k = 0; k < 90; k++) { c.posX = p[0]; c.posZ = p[2]; W.step(DT); } return { vis: g.player.visibility as number, E: g.player.irradiance as number }; };
+  const stand = (p: number[]) => { const c = g.player.char; c.pos[0] = p[0]; c.pos[1] = 0; c.pos[2] = p[2]; if (c.vel) c.vel[0] = c.vel[1] = c.vel[2] = 0; for (let k = 0; k < 90; k++) { c.pos[0] = p[0]; c.pos[2] = p[2]; W.step(DT); } return { vis: g.player.visibility as number, E: g.player.irradiance as number }; };
   const a = stand(lit.p), b = stand(dark.p);
   verdict(a.vis > b.vis + 0.3 && a.E > b.E, 'light: Sam\'s own meter reads the lamps with no probe',
     `under the brightest of ${spots.length} places (estimate ${lit.E.toFixed(2)} W/m²): irradiance ${a.E.toFixed(2)}, visibility ${a.vis.toFixed(2)} · in the darkest (${dark.E.toFixed(3)}): ${b.E.toFixed(3)}, ${b.vis.toFixed(2)}${BREAK ? '' : ' (off, on a machine with no GPU, it never moves: both read the same)'}`);
@@ -85,7 +85,7 @@ const watch = (g: any) => { const P = g.probe, C = { asks: 0 }, q = P.query, s =
 {
   Math.random = mulberry32(3);
   const W: any = await standUp({ seed: 5 }), g = W.game; g.aiEnabled = false; g.godMode = true; raise(true);
-  const pc = g.player.char, a: [number, number, number] = [pc.posX, 1.3, pc.posZ];
+  const pc = g.player.char, a: [number, number, number] = [pc.pos[0], 1.3, pc.pos[2]];
   let b: [number, number, number] | null = null, away: [number, number, number] | null = null, len = 0;
   for (const L of [9, 7, 5]) { for (let k = 0; k < 24 && !b; k++) { const th = k * Math.PI / 12, q: [number, number, number] = [a[0] + L * Math.cos(th), 1.3, a[2] + L * Math.sin(th)], o: [number, number, number] = [a[0] - 2 * Math.cos(th), 1.3, a[2] - 2 * Math.sin(th)];
     if (!g.col.segmentBlocked(a, q)) { b = q; away = o; len = L; } } if (b) break; }
@@ -95,7 +95,7 @@ const watch = (g: any) => { const P = g.probe, C = { asks: 0 }, q = P.query, s =
     const before = g.sensors.segment('chkLine', a, b) ?? 1;
     W.step(DT);   // (the game's own smoke is in front of the solver from the first step under the switch)
     g.smoke.emit({ pos: mid, dir: [0, 1, 0], speed: P.canisterSpeed, radius: P.canisterRadius, density: P.canisterDensity, temperature: P.canisterTemp, ttl: P.canisterDuration, age: 0, kind: 'canister' });
-    const hold = () => { pc.posX = a[0]; pc.posZ = a[2]; };
+    const hold = () => { pc.pos[0] = a[0]; pc.pos[2] = a[2]; };
     for (let k = 0; k < 12 * 60; k++) { hold(); W.step(DT); }
     const shut = g.sensors.segment('chkLine', a, b) ?? 1, side = g.sensors.segment('chkAway', a, away) ?? 1, blobs = g.cpuSmoke.blobs.length;
     const walled = BREAK ? 1 : (() => { const S = new CpuSmoke(); S.blobs.push(...g.cpuSmoke.blobs.map((x: object) => ({ ...x }))); return S.trans(a, b, () => true); })();
@@ -114,7 +114,7 @@ const watch = (g: any) => { const P = g.probe, C = { asks: 0 }, q = P.query, s =
 // ---- same
 {
   const dir = mkdtempSync(join(tmpdir(), 'sense-')), path = join(dir, 'tape.json');
-  const env = { ...process.env, TPS_PROFILE: 'shipped', TPS_CPUSENSE: BREAK ? '0' : '1' } as Record<string, string>; delete env.TPS_EXACT;
+  const env = { ...process.env, TPS_PROFILE: 'shipped', TPS_CPUSENSE: BREAK ? '0' : '1' } as Record<string, string>;
   const made = spawnSync(process.execPath, ['run', 'tools/qa/sense-check.ts', '--tape-to', path], { cwd: ROOT, env, encoding: 'utf8', maxBuffer: 1 << 26 });
   let F: any = null; try { F = JSON.parse(readFileSync(path, 'utf8')); } catch { /* said below */ }
   if (!F) verdict(false, 'same: a taped fight re-run on its own senses', `the tape was not made (exit ${made.status}): ${(made.stderr || made.stdout || '').trim().split('\n').slice(-3).join(' / ').slice(0, 400)}`);

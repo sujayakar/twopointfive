@@ -24,10 +24,10 @@ const URL = extra => `http://localhost:${PORT}/?paused&quality=${QUALITY}&mute&r
     const g = window.__game, e = window.__engine, real = e.render, K = window.__knobs.registry(); window.__menu.close(); window.__smoke.params.enabled = false;
     const SAM = [13, 0, 18], TO = [19.5, 0, 14.6], pl = g.player, O = g.orders; g.godMode = true;
     const ops = g.guards.filter(x => x.team === 'operative' && x.state !== 'dead'), foes = g.guards.filter(x => x.team !== 'operative' && !x.civ && x.state !== 'dead');
-    const home = new Map(foes.map(h => [h, [h.char.posX, 0, h.char.posZ]]));
-    const put = (gd, p) => { gd.char.posX = p[0]; gd.char.posZ = p[2]; gd.char.velX = gd.char.velZ = 0; gd.path = []; gd.pathGoal = null; };
+    const home = new Map(foes.map(h => [h, [h.char.pos[0], 0, h.char.pos[2]]]));
+    const put = (gd, p) => { gd.char.pos[0] = p[0]; gd.char.pos[2] = p[2]; gd.char.vel[0] = gd.char.vel[2] = 0; gd.path = []; gd.pathGoal = null; };
     const calm = () => { for (const h of foes) if (h.state !== 'dead') { h.state = 'patrol'; h.awareness = 0; put(h, home.get(h)); } };
-    const v = gd => Math.hypot(gd.char.velX, gd.char.velZ);
+    const v = gd => Math.hypot(gd.char.vel[0], gd.char.vel[2]);
     const step = (n = 1, keys = [], each = () => { }) => { e.render = () => { e.world.upload(); }; try { for (let i = 0; i < n; i++) { calm(); window.__runFrames(1, 1 / 60, keys); each(); } } finally { e.render = real; } };
     // the order: all four across the floor, the player standing
     g.teleportPlayer(SAM); ops.forEach((o, i) => put(o, [11 + i * 0.9, 0, 22.4])); step(30);
@@ -39,7 +39,7 @@ const URL = extra => `http://localhost:${PORT}/?paused&quality=${QUALITY}&mute&r
     for (const key of ['KeyW', 'KeyD', 'KeyS', 'KeyA']) {
       g.teleportPlayer(SAM); step(4 * 60);
       const tops = ops.map(() => 0); let sprinted = 0; step(150, [key, 'ShiftLeft'], () => { if (pl.sprinting) sprinted++; ops.forEach((o, i) => { tops[i] = Math.max(tops[i], v(o)); }); });
-      const ran = Math.hypot(pl.char.posX - SAM[0], pl.char.posZ - SAM[2]);
+      const ran = Math.hypot(pl.char.pos[0] - SAM[0], pl.char.pos[2] - SAM[2]);
       if (ran > best.ran) best = { ran, tops, key, sprinted };
     }
     const r2 = x => +x.toFixed(2);

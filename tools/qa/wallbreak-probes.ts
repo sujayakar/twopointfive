@@ -220,7 +220,7 @@ export async function wallbreakPressed(): Promise<boolean> {
     for (let i = 0; i < 90; i++) W.step(DT); return armThrough(game, game.player.char); };
   const shoot = (W: any, k: number) => { for (let r = 0; r < k; r++) { fireWeapon(W.game, W.game.player.char, tgt, true, { weapon: WEAPONS.fn2000 }); for (let f = 0; f < 6; f++) W.step(DT); } };
   const poked = press(on.W);
-  F.verdict(poked, 'walked up against it with the rifle up, his muzzle is beyond the wall (armThrough)', `player (${f2(on.game.player.char.posX)}, ${f2(on.game.player.char.posZ)}) · muzzle (${f2(on.game.player.char.muzzle[0])}, ${f2(on.game.player.char.muzzle[2])}) · wall at (${f2(mid[0])}, ${f2(mid[2])})`);
+  F.verdict(poked, 'walked up against it with the rifle up, his muzzle is beyond the wall (armThrough)', `player (${f2(on.game.player.char.pos[0])}, ${f2(on.game.player.char.pos[2])}) · muzzle (${f2(on.game.player.char.muzzle[0])}, ${f2(on.game.player.char.muzzle[2])}) · wall at (${f2(mid[0])}, ${f2(mid[2])})`);
   shoot(on.W, 1);
   F.verdict(WALL_STATS.rounds === 1 && on.game.destr.walls.serial === 0, 'one round fired there is counted on the partition and opens nothing', `engine rounds ${WALL_STATS.rounds}, serial ${on.game.destr.walls.serial}`);
   let rounds = 1; while (rounds < 40 && on.game.destr.walls.serial === 0) { shoot(on.W, 1); rounds++; }

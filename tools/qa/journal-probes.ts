@@ -62,7 +62,7 @@ export async function recordScripted(seed = 6011, page = false, seconds = 90): P
   setHold('KeyD'); stepN(150);
   // crouch, creep north-east a little
   press('KeyC'); setHold('KeyD', 'KeyW'); stepN(90); setHold(); stepN(20);
-  notes.push(`t ${game.time.toFixed(1)}: Sam at (${game.player.char.posX.toFixed(1)}, ${game.player.char.posZ.toFixed(1)}) crouched ${game.player.crouch}`);
+  notes.push(`t ${game.time.toFixed(1)}: Sam at (${game.player.char.pos[0].toFixed(1)}, ${game.player.char.pos[2].toFixed(1)}) crouched ${game.player.crouch}`);
   // whistle (Kowalski walks the corridor's west end a few metres north), then slip away south-west
   press('KeyV'); stepN(20); setHold('KeyS', 'KeyA'); stepN(110); setHold(); stepN(40);
   notes.push(`t ${game.time.toFixed(1)}: whistled; ${game.guards.map((g: any) => `${g.callsign} ${g.state} ${g.awareness.toFixed(2)}`).join(', ')}`);

@@ -44,8 +44,8 @@ async function world(on: boolean | null, seed: number): Promise<Ctx> {
   const [A, ...rest] = g.guards; for (const [i, gd] of [A, ...rest].entries()) { gd.char.pos = [37.5, 0, 4.5 + i * 1.5]; gd.path = []; gd.pathGoal = null; gd.hold = true; gd.heardUpTo = 1e12; }
   W.cam.yaw = 0; W.cam.rebuild?.(); g.teleportPlayer([...START]);
   const pl = g.player.char, seen = new Set<object>();
-  const C: Ctx = { W, g, f: 0, levels: [], A, speed: () => Math.hypot(pl.velX, pl.velZ), keys: (...k) => { W.input.keys.clear(); for (const x of k) W.input.keys.add(x); }, step: () => {
-    W.cursorAt([pl.posX + 4, 1.0, pl.posZ]); W.step(DT); g.player.visibility = 0.02; C.f++;
+  const C: Ctx = { W, g, f: 0, levels: [], A, speed: () => Math.hypot(pl.vel[0], pl.vel[2]), keys: (...k) => { W.input.keys.clear(); for (const x of k) W.input.keys.add(x); }, step: () => {
+    W.cursorAt([pl.pos[0] + 4, 1.0, pl.pos[2]]); W.step(DT); g.player.visibility = 0.02; C.f++;
     for (const e of g.events) if (e.kind === 'step' && !seen.has(e)) { seen.add(e); C.levels.push(e.level); }
   } };
   for (let i = 0; i < 30; i++) C.step();
@@ -90,9 +90,9 @@ async function tailSecs(on: boolean, seed: number): Promise<number> {
   try {
     A.char.pos = [START[0] + GAP, 0, START[2]]; A.char.bodyYaw = A.char.aimYaw = Math.PI / 2; A.awareness = 0; A.pinned = true; g.player.crouch = true; C.keys(FWD);   // (pinned: he goes where the check walks him, his back to Sam)
     for (let i = 0; i < 1500; i++) {
-      A.char.posX += g.tune.guardWalk * DT; C.step();
-      if (A.char.posX - pl.posX <= CLOSE.reach.behind) return i * DT;
-      if (A.char.posX > 21) break;   // (the lobby's end: he was not caught on this floor)
+      A.char.pos[0] += g.tune.guardWalk * DT; C.step();
+      if (A.char.pos[0] - pl.pos[0] <= CLOSE.reach.behind) return i * DT;
+      if (A.char.pos[0] > 21) break;   // (the lobby's end: he was not caught on this floor)
     }
     return Infinity;
   } finally { CLOSE.on = was; }

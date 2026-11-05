@@ -145,7 +145,7 @@ export function wetFootfall(g: Game, leftHint: boolean) {
   if (m.printsLeft <= 0 || c.wet < 0.15) return;
   if (rainNow(g) > 0.001 && openSky(g, c)) return;          // still out in it: the ground is wetter than his soles
   let left = leftHint;
-  { const fl = c.bones.footL, fr = c.bones.footR; if (fl && fr && (Math.abs(c.velX) + Math.abs(c.velZ) > 0.2)) left = (fl[0] - fr[0]) * c.velX + (fl[2] - fr[2]) * c.velZ > 0; }
+  { const fl = c.bones.footL, fr = c.bones.footR; if (fl && fr && (Math.abs(c.vel[0]) + Math.abs(c.vel[2]) > 0.2)) left = (fl[0] - fr[0]) * c.vel[0] + (fl[2] - fr[2]) * c.vel[2] > 0; }
   const foot = c.bones[left ? 'footL' : 'footR'], toe = c.bones[left ? 'toeL' : 'toeR']; if (!foot || !toe) return;
   const k = (m.printsLeft / Math.max(1, WET.prints)) * clamp(c.wet * 1.3, 0, 1);   // strength: the budget left × how wet he still is
   m.printsLeft--;

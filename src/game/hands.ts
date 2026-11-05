@@ -135,11 +135,11 @@ export function haulBegin(g: Game, gd: Guard) {
   const pl = g.player, c = pl.char, rag = gd.char.ragdoll; pl.haul = null; if (!bodyOn() || !rag || g.puppet) return;
   if (HANDS.carry && standRoom(g, c.pos)) {   // over the shoulder: taken by the hips, from whichever side he is at
     const hl = rag.point(RAG.hipL), hr = rag.point(RAG.hipR), pm = mid(hl, hr);
-    if (!g.col.solidBlocked([c.posX, 0.5, c.posZ], [pm[0], 0.5, pm[2]])) {
+    if (!g.col.solidBlocked([c.pos[0], 0.5, c.pos[2]], [pm[0], 0.5, pm[2]])) {
       const dim: [number, number, number, number] = [v3.dist(hl, hr), v3.dist(pm, rag.point(RAG.spine)), v3.dist(hl, rag.point(RAG.kneeL)), v3.dist(hr, rag.point(RAG.kneeR))];
       // he lifts it from BESIDE its hips (not stood on its legs or its chest): the spot a grip's length off them square to its trunk, on his side
-      const ax = v3.sub(rag.point(RAG.spine), pm), n = unit([-ax[2], 0, ax[0]], [1, 0, 0]), sgn = n[0] * (c.posX - pm[0]) + n[2] * (c.posZ - pm[2]) < 0 ? -1 : 1;
-      let spot: Vec3 | null = [pm[0] + n[0] * sgn * HANDS.gripM, c.posY, pm[2] + n[2] * sgn * HANDS.gripM];
+      const ax = v3.sub(rag.point(RAG.spine), pm), n = unit([-ax[2], 0, ax[0]], [1, 0, 0]), sgn = n[0] * (c.pos[0] - pm[0]) + n[2] * (c.pos[2] - pm[2]) < 0 ? -1 : 1;
+      let spot: Vec3 | null = [pm[0] + n[0] * sgn * HANDS.gripM, c.pos[1], pm[2] + n[2] * sgn * HANDS.gripM];
       if (g.col.solidBlocked([pm[0], 0.5, pm[2]], [spot[0], 0.5, spot[2]]) || !standRoom(g, spot)) spot = null;
       pl.haul = { end: 'feet', phase: 'reach', t: 0, iL: RAG.hipL, iR: RAG.hipR, half: 0.1, from: [v3.copy(hl), v3.copy(hr)], trunk: 0.45, carry: { dim, lie: lieOf(rag), to: null, yaw: c.bodyYaw, spot } };
       return;
@@ -155,7 +155,7 @@ function dragHaul(g: Game, gd: Guard): Haul {
   let iL: number = end === 'feet' ? RAG.ankL : RAG.shoL, iR: number = end === 'feet' ? RAG.ankR : RAG.shoR;
   const a = rag.point(iL), b = rag.point(iR), m = mid(a, b);
   // the limb on his right goes to his right hand (seen from where he stands, facing the grip)
-  const fx = m[0] - c.posX, fz = m[2] - c.posZ;   // his line to it; his right on the floor is (−fz, fx)
+  const fx = m[0] - c.pos[0], fz = m[2] - c.pos[2];   // his line to it; his right on the floor is (−fz, fx)
   if ((a[0] - m[0]) * -fz + (a[2] - m[2]) * fx > 0) { const k = iL; iL = iR; iR = k; }
   const trunk = Math.max(0.45, v3.dist(rag.point(RAG.pelvis), mid(rag.point(RAG.shoL), rag.point(RAG.shoR))));
   return { end, phase: 'reach', t: 0, iL, iR, half: end === 'feet' ? 0.1 : clamp(v3.dist(a, b) / 2, 0.1, 0.24), from: [v3.copy(rag.point(iL)), v3.copy(rag.point(iR))], trunk };
@@ -202,7 +202,7 @@ function liePins(rag: { setPin(i: number, p: Vec3): void }, dim: [number, number
 /** over his left shoulder, face down: hips on the shoulder, its right hip toward his left, trunk back and down, thighs ahead and down */
 function shoulderLie(g: Game): Lie {
   const c = g.player.char, f = c.forward(), L: Vec3 = [f[2], 0, -f[0]];
-  const p: Vec3 = [c.posX + L[0] * HANDS.carrySide + f[0] * HANDS.carryFwd, c.posY + HANDS.carryUp, c.posZ + L[2] * HANDS.carrySide + f[2] * HANDS.carryFwd];
+  const p: Vec3 = [c.pos[0] + L[0] * HANDS.carrySide + f[0] * HANDS.carryFwd, c.pos[1] + HANDS.carryUp, c.pos[2] + L[2] * HANDS.carrySide + f[2] * HANDS.carryFwd];
   const k = v3.normalize([f[0] * HANDS.carryLegs, -1, f[2] * HANDS.carryLegs]);
   return { p, u: L, t: v3.normalize([-f[0] * HANDS.carryBack, -1, -f[2] * HANDS.carryBack]), kl: k, kr: k };
 }
@@ -210,15 +210,15 @@ function shoulderLie(g: Game): Lie {
  *  `yaw`), head to that side's right then left. A side is free when he can reach it and the body's line (0.95 m each way from its hips) meets no static.
  *  null = no clear floor round him at all. */
 function layLie(g: Game): { lie: Lie; yaw: number } | null {
-  const c = g.player.char, at: Vec3 = [c.posX, c.posY + 0.3, c.posZ];
+  const c = g.player.char, at: Vec3 = [c.pos[0], c.pos[1] + 0.3, c.pos[2]];
   for (const turn of [0, 0.785, -0.785, 1.571, -1.571, 2.356, -2.356, 3.1416]) {   // (in front of him first, then round both ways to behind him: he turns to the side that has the floor)
-    const yaw = c.bodyYaw + turn, d: Vec3 = [Math.sin(yaw), 0, Math.cos(yaw)], p0 = v3.mad(c.pos, d, HANDS.layAhead), m: Vec3 = [p0[0], c.posY + 0.3, p0[2]];
+    const yaw = c.bodyYaw + turn, d: Vec3 = [Math.sin(yaw), 0, Math.cos(yaw)], p0 = v3.mad(c.pos, d, HANDS.layAhead), m: Vec3 = [p0[0], c.pos[1] + 0.3, p0[2]];
     if (g.col.solidBlocked(at, m)) continue;
     for (const side of [1, -1]) {
       const t: Vec3 = [-d[2] * side, 0, d[0] * side];
       if (g.col.solidBlocked(m, v3.mad(m, t, 0.95)) || g.col.solidBlocked(m, v3.mad(m, t, -0.95))) continue;
       const k = v3.normalize([-t[0], -0.06, -t[2]]);
-      return { lie: { p: [p0[0], c.posY + 0.11, p0[2]], u: v3.cross(Y, t), t: v3.normalize([t[0], 0.17, t[2]]), kl: k, kr: k }, yaw };
+      return { lie: { p: [p0[0], c.pos[1] + 0.11, p0[2]], u: v3.cross(Y, t), t: v3.normalize([t[0], 0.17, t[2]]), kl: k, kr: k }, yaw };
     }
   }
   return null;
@@ -233,7 +233,7 @@ export function haulYaw(g: Game): number | null { const h = g.player.haul; retur
 /** the two spots in front of him the held limbs are carried at (left hand's, right hand's) */
 function carrySpots(g: Game, h: Haul): [Vec3, Vec3] {
   const c = g.player.char, f = c.forward(), y = h.end === 'feet' ? HANDS.carryFeet : HANDS.carryHead;
-  const ahead = h.end === 'feet' ? HANDS.ahead : HANDS.aheadHead, hx = c.posX + f[0] * ahead, hz = c.posZ + f[2] * ahead;
+  const ahead = h.end === 'feet' ? HANDS.ahead : HANDS.aheadHead, hx = c.pos[0] + f[0] * ahead, hz = c.pos[2] + f[2] * ahead;
   return [[hx + f[2] * h.half, y, hz - f[0] * h.half], [hx - f[2] * h.half, y, hz + f[0] * h.half]];
 }
 
@@ -285,11 +285,11 @@ function feed(g: Game, h: Haul) {
     // his left hand on its thighs (it ends up round them, the arm over the legs that hang down his chest), his right on its back until it is nearly up
     const f = c.forward(), Lf: Vec3 = [f[2], 0, -f[0]], km = mid(rag.point(RAG.kneeL), rag.point(RAG.kneeR)), hm = mid(rag.point(RAG.hipL), rag.point(RAG.hipR));
     const on = h.phase === 'carry' ? 1 : h.phase === 'rise' ? smoothstep(0.35, 0.9, h.t / HANDS.hoistSecs) : h.phase === 'set' ? 1 - smoothstep(0.1, 0.6, h.t / HANDS.lowerSecs) : 0;   // how far it is on his shoulder
-    const th = v3.lerp(hm, km, 0.75), l: Vec3 = [th[0] + Lf[0] * 0.06 * on, th[1] + 0.085, th[2] + Lf[2] * 0.06 * on], r = up(RAG.spine), y = l[1] - c.posY;
+    const th = v3.lerp(hm, km, 0.75), l: Vec3 = [th[0] + Lf[0] * 0.06 * on, th[1] + 0.085, th[2] + Lf[2] * 0.06 * on], r = up(RAG.spine), y = l[1] - c.pos[1];
     c.anim.haul = { l, r, rw: 1 - on, look: 0.7 * (1 - on), tilt: 0.1 * on, bow: lerp(0.12 + 0.5 * (1 - smoothstep(0.2, 0.7, y)), 0.07, on), grip: h.phase === 'reach' ? 0.25 : 0.8 };
     return;
   }
-  const l = up(h.iL), r = up(h.iR), y = (l[1] + r[1]) / 2 - c.posY;
+  const l = up(h.iL), r = up(h.iR), y = (l[1] + r[1]) / 2 - c.pos[1];
   // (hauling: he watches where he goes, not his hands, and stands as tall as the hold lets him — with the old stoop, the look at his hands and the bow all at
   //  once his head hung at his chest and bobbed there with every step)
   const hauling = h.phase === 'carry' ? smoothstep(0, 0.4, h.t) : 0;
@@ -482,8 +482,8 @@ export function handsStep(g: Game, own: boolean, dt: number): [number, number] |
     if (h.phase === 'reach') {
       const rag = pl.dragging.char.ragdoll; if (!rag || pl.listOpen) return [0, 0];
       if (own && !h.carry) { h.t = Math.max(h.t, HANDS.stepSecs); return null; }   // a step of his own: no walking him in — the pins gather it to him from where he goes, as they always did (not so on the way to lift it: he gets under it first, and only a sprint calls that off)
-      if (h.carry?.spot) { const sp = h.carry.spot, dx = sp[0] - c.posX, dz = sp[2] - c.posZ, dl = Math.hypot(dx, dz); return dl > 0.06 ? [dx / dl, dz / dl] : [0, 0]; }
-      const m = mid(rag.point(h.iL), rag.point(h.iR)), dx = m[0] - c.posX, dz = m[2] - c.posZ, dl = Math.hypot(dx, dz);
+      if (h.carry?.spot) { const sp = h.carry.spot, dx = sp[0] - c.pos[0], dz = sp[2] - c.pos[2], dl = Math.hypot(dx, dz); return dl > 0.06 ? [dx / dl, dz / dl] : [0, 0]; }
+      const m = mid(rag.point(h.iL), rag.point(h.iR)), dx = m[0] - c.pos[0], dz = m[2] - c.pos[2], dl = Math.hypot(dx, dz);
       return dl > HANDS.gripM ? [dx / dl, dz / dl] : [0, 0];
     }
     return null;
@@ -493,7 +493,7 @@ export function handsStep(g: Game, own: boolean, dt: number): [number, number] |
     const done = () => { m.goal = null; return null; };
     if (own) return done();   // a step of his own: his feet are his again (the leaf still will not go into him)
     if (pl.listOpen) return [0, 0];   // (choosing a row: feet still, the leaf waits)
-    const dx = m.goal[0] - c.posX, dz = m.goal[2] - c.posZ, dl = Math.hypot(dx, dz);
+    const dx = m.goal[0] - c.pos[0], dz = m.goal[2] - c.pos[2], dl = Math.hypot(dx, dz);
     if (dl < m.stepBest - 0.002) { m.stepBest = dl; m.stepStall = 0; } else m.stepStall += dt;   // (his real way made — a chair, a man in the way of the step ends it where he got to)
     if (dl < 0.06 || m.stepStall > 0.25) return done();
     return [dx / dl, dz / dl];
@@ -506,7 +506,7 @@ export function handsStep(g: Game, own: boolean, dt: number): [number, number] |
  *  turns him to it, gun lowered, for the move's length. */
 export function doorMoveLowers(g: Game): boolean {
   const pl = g.player, m = pl.doorMove, c = pl.char; if (!m || g.time - pl.lastFireT <= 0.6) return false;
-  const u = m.d.dir(), W = m.d.def.width * 0.6, x = m.d.def.hinge[0] + u[0] * W - c.posX, z = m.d.def.hinge[1] + u[1] * W - c.posZ;
+  const u = m.d.dir(), W = m.d.def.width * 0.6, x = m.d.def.hinge[0] + u[0] * W - c.pos[0], z = m.d.def.hinge[1] + u[1] * W - c.pos[2];
   let off = Math.atan2(x, z) - c.aimYaw; off = Math.atan2(Math.sin(off), Math.cos(off));
   return Math.abs(off) > HANDS.aimArc;
 }
@@ -520,8 +520,8 @@ export function doorMoveLowers(g: Game): boolean {
 export function teamDoorHand(g: Game, gd: Guard): Door | null {
   if (!doorOn() || !HANDS.team || g.touring) return null;
   const c = gd.char; if (c.anim.kicking) return null;
-  for (const op of viewOf(g, gd).doorTools.ops) { const k = op.kick; if (op.lead === gd && op.phase === 'kick' && k && k.hand && !op.door.off && Math.hypot(c.posX - k.pos[0], c.posZ - k.pos[2]) < HANDS.teamPreM) return op.door; }
-  const slow = Math.hypot(c.velX, c.velZ) < HANDS.teamPace;
+  for (const op of viewOf(g, gd).doorTools.ops) { const k = op.kick; if (op.lead === gd && op.phase === 'kick' && k && k.hand && !op.door.off && Math.hypot(c.pos[0] - k.pos[0], c.pos[2] - k.pos[2]) < HANDS.teamPreM) return op.door; }
+  const slow = Math.hypot(c.vel[0], c.vel[2]) < HANDS.teamPace;
   for (const d of g.doors.list) {
     if (d.off || d.lastWho !== c.id || Math.abs(d.vel) < HANDS.teamVel) continue;
     const opening = d.vel * d.angle > 0 || Math.abs(d.angle) < 0.05;

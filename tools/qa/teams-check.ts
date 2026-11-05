@@ -129,7 +129,7 @@ try {
   // ---- once
   // (one or two teammates on a plain stack wait on the key under DOORTOOLS.wordSmall: the page's rule, held off on the frozen stand, raised here for this line)
   { const small0 = DOORTOOLS.wordSmall; DOORTOOLS.wordSmall = true;
-    const door = [...g.doors.list].map((d: any) => ({ d, t: v0.orders.targetAt(d.frameCentre) })).filter(x => x.t.kind === 'door').sort((x, y) => Math.hypot(x.d.frameCentre[0] - p0.char.posX, x.d.frameCentre[2] - p0.char.posZ) - Math.hypot(y.d.frameCentre[0] - p0.char.posX, y.d.frameCentre[2] - p0.char.posZ));
+    const door = [...g.doors.list].map((d: any) => ({ d, t: v0.orders.targetAt(d.frameCentre) })).filter(x => x.t.kind === 'door').sort((x, y) => Math.hypot(x.d.frameCentre[0] - p0.char.pos[0], x.d.frameCentre[2] - p0.char.pos[2]) - Math.hypot(y.d.frameCentre[0] - p0.char.pos[0], y.d.frameCentre[2] - p0.char.pos[2]));
     let w0 = 'no door', w1 = 'no door', at: any = null;
     for (const x of door) { w0 = v0.orders.give('stack', x.t, 'all') || ''; if (w0) continue; w1 = v1.orders.give('stack', v1.orders.targetAt(x.d.frameCentre), 'all') || ''; at = x.d; break; }
     let both2 = false, n0 = -1, n1 = -1, keyed = false, bare = false;
@@ -173,7 +173,7 @@ try {
   // is `g.player.char.id` on the SEAT's view. The afterglow light itself, BLAST.glow, is off in every build, so no charge is blown here to light one.)
   { const { FOG } = await import(`${ROOT}/src/game/fogofwar.ts`) as typeof import('../../src/game/fogofwar.ts'), FW = g.fogOfWar, L = g.engine.lights, was = { ours: FOG.ours, full: FOG.full, on: FW.on };
     FW.on = true; FOG.full = true; FOG.ours = !BREAK; for (let i = 0; i < 40; i++) W.step(DT);   // (the red path: the row left off while it is asked about on)
-    const made = (id: number) => { const l = FW.lightBy(L.flash([p0.char.posX, 1.2, p0.char.posZ], [1, 1, 1], 5, 5, 0.3, 0), id); const c = L.fogClass(l); l.ttl = 0; l.age = 1; return c; };
+    const made = (id: number) => { const l = FW.lightBy(L.flash([p0.char.pos[0], 1.2, p0.char.pos[2]], [1, 1, 1], 5, 5, 0.3, 0), id); const c = L.fogClass(l); l.ttl = 0; l.age = 1; return c; };
     const ids = g.seats.map((s: any) => s.view.player.char.id as number), ours = ids.map((id: number) => FW.oursId(id) as boolean), cls = ids.map(made), nobody = made(0);
     FOG.ours = false; const off = ids.map(made); FOG.ours = was.ours; FOG.full = was.full; FW.on = was.on;
     say(two && FW.active !== false && ids.length === 2 && ids[0] !== ids[1] && ours.every(Boolean) && cls.every((c: number) => c === 0) && nobody === 1 && off.every((c: number) => c === 1),

@@ -87,11 +87,11 @@ async function rig(seed: number, o: { fog?: boolean; breach?: boolean; chaos?: n
     /** Sam put somewhere in the aisle west of the plan's door from where he has a line to `h` through the opening (the door must be open): candidates on a grid
      *  pre-checked with the collision's own segment test (and a quarter metre of slack round the spot), the first one where the module then really sees the man wins. Null = no such spot. */
     spotFor(h: any): number[] | null {
-      const chest = h.char.bones.chest ?? [h.char.posX, 1.1, h.char.posZ];
+      const chest = h.char.bones.chest ?? [h.char.pos[0], 1.1, h.char.pos[2]];
       for (let x = 27.0; x >= 23.5; x -= 0.5) for (let z = 15.5; z <= 21.0; z += 0.25) {
         if ([[0, 0], [0.25, 0], [-0.25, 0], [0, 0.25], [0, -0.25]].some(([ox, oz]) => game.col.segmentBlocked([x + ox, 1.5, z + oz], chest))) continue;   // (with room to turn his head in)
         game.teleportPlayer([x, 0, z]); R.step(6);
-        if (Math.hypot(game.player.char.posX - x, game.player.char.posZ - z) < 0.3 && FW.seen(h)) return [x, 0, z];
+        if (Math.hypot(game.player.char.pos[0] - x, game.player.char.pos[2] - z) < 0.3 && FW.seen(h)) return [x, 0, z];
       }
       return null;
     },
@@ -102,7 +102,7 @@ async function rig(seed: number, o: { fog?: boolean; breach?: boolean; chaos?: n
  *  a line clear of statics and leaves to his chest or his head (collision.ts segmentBlocked — the sight test, glass passed). Returns who sees him. */
 function oracle(game: any, gd: any): { any: boolean; sam: boolean; mates: boolean } {
   const head = (c: any) => c.bones.head ?? [c.pos[0], c.pos[1] + 1.65, c.pos[2]];
-  const chest = gd.char.bones.chest ?? [gd.char.posX, gd.char.posY + 1.1, gd.char.posZ], hd = gd.char.bones.head ?? [gd.char.posX, gd.char.posY + 1.6, gd.char.posZ];
+  const chest = gd.char.bones.chest ?? [gd.char.pos[0], gd.char.pos[1] + 1.1, gd.char.pos[2]], hd = gd.char.bones.head ?? [gd.char.pos[0], gd.char.pos[1] + 1.6, gd.char.pos[2]];
   const line = (eye: number[]) => !(game.col.segmentBlocked(eye, chest) && game.col.segmentBlocked(eye, hd));
   const sam = line(head(game.player.char));
   let mates = false; for (const o of game.guards) if (o.team === 'operative' && o.state !== 'dead' && !(game.time < o.dazzledUntil) && line(head(o.char))) mates = true;
@@ -189,7 +189,7 @@ export async function fogSmoke(): Promise<boolean> {
   verdict(maxAsk > 0 && maxAsk <= 6, 'the asks: only for lines already clear of walls, at most six a frame', `most in a frame ${maxAsk}`);
   { // THE BUDGET: three eyes, three men, everybody in the open with a line to everybody (18 pairs wanted, 6 asks a frame), a probe that answers only what is asked
     const R2 = await rig(15, { fog: true }); const g2 = R2.game, F2 = R2.FW; g2.aiEnabled = false;
-    const put = (gd: any, x: number, z: number) => { gd.char.posX = x; gd.char.posZ = z; };
+    const put = (gd: any, x: number, z: number) => { gd.char.pos[0] = x; gd.char.pos[2] = z; };
     const hs2 = [...(R2.NB.hostiles as any[]), spawnUnit(g2, { team: 'hostile', pos: [17, 0, 19], yaw: 0, name: 'Tango 4', light: false }), spawnUnit(g2, { team: 'hostile', pos: [17, 0, 20], yaw: 0, name: 'Tango 5', light: false })];   // (five men × their two nearest eyes = ten pairs wanted, six asked a frame: the turn-taking is exercised)
     const stage = () => { g2.teleportPlayer([9.6, 0, 20.3]); hs2.forEach((h, i) => put(h, 14 + i * 0.9, 18.4 + (i % 3) * 0.8)); };
     let most = 0; const run2 = (n: number) => { for (let i = 0; i < n; i++) { stage(); R2.step(); most = Math.max(most, R2.askedFrame); } };
@@ -250,15 +250,15 @@ export async function fogRules(): Promise<boolean> {
     if (!h) verdict(false, 'the field: a living man in the line to test it on', 'no spot in the aisle with a line to a living defender through the open door');
     else {
       const pc = game.player.char;
-      const lookDot = () => { const e = FW.eyes[0]; const dx = h.char.posX - e.pos[0], dz = h.char.posZ - e.pos[2]; const d = Math.hypot(dx, dz), L = Math.hypot(e.look[0], e.look[2]); return (dx * e.look[0] + dz * e.look[2]) / (d * L); };
+      const lookDot = () => { const e = FW.eyes[0]; const dx = h.char.pos[0] - e.pos[0], dz = h.char.pos[2] - e.pos[2]; const d = Math.hypot(dx, dz), L = Math.hypot(e.look[0], e.look[2]); return (dx * e.look[0] + dz * e.look[2]) / (d * L); };
       // (headless the cursor steers Sam's aim: it is held ten degrees to one side of the man while he settles, so his eye — the mean of a bladed chest and his
       //  head, some forty degrees round from his rifle's line — comes to rest a few tens of degrees off him. Left to the cursor's place at stand-up it rests wherever
       //  that stand's camera leaves it, and on the shipped stand that was 174° off, where no wedge wider than the angle is still under 360°. The test then reads which
       //  way his eye REALLY looks, and sets the wedge a little wider, then a little narrower, than the angle the man stands off that look — in, then out, on the
       //  same line of sight; `aimed` holds the staging: far enough off his look to narrow the wedge inside it, near enough that the wider one is a wedge)
       const SIDE = -10 * Math.PI / 180, sc = Math.cos(SIDE), ss = Math.sin(SIDE);
-      for (let i = 0; i < 60; i++) { const dx = h.char.posX - pc.posX, dz = h.char.posZ - pc.posZ, d = Math.hypot(dx, dz) || 1;
-        R.W.cursorAt([pc.posX + (dx * sc - dz * ss) / d * 3, 1.1, pc.posZ + (dx * ss + dz * sc) / d * 3]); R.step(); }
+      for (let i = 0; i < 60; i++) { const dx = h.char.pos[0] - pc.pos[0], dz = h.char.pos[2] - pc.pos[2], d = Math.hypot(dx, dz) || 1;
+        R.W.cursorAt([pc.pos[0] + (dx * sc - dz * ss) / d * 3, 1.1, pc.pos[2] + (dx * ss + dz * sc) / d * 3]); R.step(); }
       FOG.nearM = 1;
       const off = () => Math.acos(Math.max(-1, Math.min(1, lookDot()))) * 180 / Math.PI;
       const a0 = off(); FOG.fovDeg = 2 * (a0 + 12); R.step(); const a1 = off(), s1 = FW.seen(h), want1 = a1 < FOG.fovDeg / 2, cosWide = FW.frame.looks[2], fovWide = FOG.fovDeg;
@@ -285,7 +285,7 @@ export async function fogRules(): Promise<boolean> {
   }
   { // the reticle: a hidden man under the cursor is nobody to snap to — with the switch off (the game as it was) the exact ray finds him through the wall
     const Q = await rig(16, { fog: true }); const g3 = Q.game, F3 = Q.FW; Q.step(30); const h = (Q.NB.hostiles as any[])[0];
-    const chest = () => h.char.bones.chest ?? [h.char.posX, 1.2, h.char.posZ];
+    const chest = () => h.char.bones.chest ?? [h.char.pos[0], 1.2, h.char.pos[2]];
     const on = Q.W.cursorAt(chest()); Q.step(3); const hid = F3.hidden(h), aimOn = g3.aimGuard;
     F3.on = false; Q.W.cursorAt(chest()); Q.step(3); const aimOff = g3.aimGuard;
     verdict(on && hid && aimOn !== h && aimOff === h, 'the cursor over a hidden man behind the wall: no ring on him with the fog on (off, as on the base, the exact ray names him)', `hidden ${hid} · aimGuard with the fog on: ${aimOn?.callsign ?? 'nobody'} · off: ${aimOff?.callsign ?? 'nobody'}`);
@@ -298,7 +298,7 @@ export async function fogRules(): Promise<boolean> {
   }
   { // the picture's eye: over the feet at a stance height — not the head bone
     const Q = await rig(17, { fog: true }); const g4 = Q.game, F4 = Q.FW; Q.step(30); const pc = g4.player.char;
-    const eyeY = () => F4.frame.eyes[1] - pc.posY; const overFeet = () => Math.hypot(F4.frame.eyes[0] - pc.posX, F4.frame.eyes[2] - pc.posZ);
+    const eyeY = () => F4.frame.eyes[1] - pc.pos[1]; const overFeet = () => Math.hypot(F4.frame.eyes[0] - pc.pos[0], F4.frame.eyes[2] - pc.pos[2]);
     let lo = 9, hi = -9, off = 0; for (let i = 0; i < 90; i++) { Q.W.input.keys.add('KeyD'); Q.W.input.keys.add('ShiftLeft'); Q.step(); lo = Math.min(lo, eyeY()); hi = Math.max(hi, eyeY()); off = Math.max(off, overFeet()); }
     const stand = eyeY(); Q.W.input.keys.clear(); g4.player.crouch = true; for (let i = 0; i < 60; i++) { g4.player.crouch = true; pc.anim.crouchTarget = 1; Q.step(); } const low = eyeY();
     verdict(hi - lo < 1e-4 && Math.abs(stand - 1.55) < 1e-4 && off < 1e-4 && low < 1.2 && low >= 0.95 - 1e-4 && F4.frame.eyes[3] === pc.id, 'the mask\'s eye for Sam: 1.55 m over his feet through a second and a half of running (the head bone bobs; this does not), lower crouched, his id beside it', `standing / running ${lo.toFixed(3)}‥${hi.toFixed(3)} m · off his feet ${off.toFixed(3)} m · crouched ${low.toFixed(2)} m · crouch shown ${pc.anim.crouch.toFixed(2)}`);
@@ -433,7 +433,7 @@ export async function fogFiled(): Promise<boolean> {
   }
   { // a body the team has seen stays in the picture for good — through a load too
     fresh(); const { killGuard } = await import(`${ROOT}/src/game/combat.ts`); const G = () => game.guards as any[];
-    const gi = G().map((x, i) => i).filter(i => G()[i].state !== 'dead' && !FW.drawn(G()[i])).sort((a, b) => away(G()[b].char.posX, G()[b].char.posZ) - away(G()[a].char.posX, G()[a].char.posZ))[0];
+    const gi = G().map((x, i) => i).filter(i => G()[i].state !== 'dead' && !FW.drawn(G()[i])).sort((a, b) => away(G()[b].char.pos[0], G()[b].char.pos[2]) - away(G()[a].char.pos[0], G()[a].char.pos[2]))[0];
     const gd = () => G()[gi]; killGuard(game, gd(), [0, 0, 1], true, 'choked'); R.step(3); const unseen0 = !FW.drawn(gd());   // (dead where nobody looks: not in the picture)
     const f0 = save(), noRow = f0.fog?.bodies === undefined;
     const r = F.recs.get(gd()); if (r) r.body = true; R.step(2); const known = FW.drawn(gd());   // (the team has seen him lying there: the record's own word, set by hand — no eye is walked over)
@@ -663,7 +663,7 @@ export async function fogLit(): Promise<boolean> {
     const fixed = new Set<any>(); for (const t of fixtures) for (const l of lightsOf(t)) fixed.add(l);
     const all: any[] = W.engine.lights.lights; const carried = all.filter((l: any) => l.group === 'player' || l.group === 'flashlights' || l.owner > 0);
     for (const l of carried) { l.enabled = true; l.intensity = Math.max(l.intensity, 50); }
-    const fl = W.engine.lights.flash([game.player.char.posX, 1.2, game.player.char.posZ], [1, 0.8, 0.5], 400, 12, 5, 0);
+    const fl = W.engine.lights.flash([game.player.char.pos[0], 1.2, game.player.char.pos[2]], [1, 0.8, 0.5], 400, 12, 5, 0);
     const before = JSON.stringify(rows()); FW.update(DT); const after = JSON.stringify(rows());   // (the fog's own update alone: the men's lights stay as just forced)
     const strangers = rows().filter(r => ![...fixed].some((l: any) => r[0] === fr(l.pos[0]) && r[1] === fr(l.pos[1]) && r[2] === fr(l.pos[2])) && r[3] !== 2).length;
     const anyCarried = carried.some(has) || has(fl); W.engine.lights.remove(fl);
@@ -771,7 +771,7 @@ export async function fogFull(): Promise<boolean> {
   }
   { // the classes: what an enemy carries and every flash that is not a teammate's own light only what the team sees; the building's lamps, the sky and the team's own lights are as they were
     for (const gd of [...foes, ...mates]) { gd.flashlight.enabled = true; gd.flashlight.intensity = Math.max(gd.flashlight.intensity, 50); }
-    const at: [number, number, number] = [game.player.char.posX, 1.2, game.player.char.posZ];
+    const at: [number, number, number] = [game.player.char.pos[0], 1.2, game.player.char.pos[2]];
     FW.update(DT);   // (the fog's own update alone: the men's lights stay as just forced — and the three flashes below are born AFTER the fog's turn, as a tracer's ember and a blast's afterglow are: they must be classed all the same on the frame they are born)
     const blast = L.flash(at, [1, 0.8, 0.5], 400, 12, 5, 0), mine = L.flash(at, [1, 0.8, 0.5], 400, 12, 5, game.player.char.id), theirs = foes[0] ? L.flash(at, [1, 0.8, 0.5], 400, 12, 5, foes[0].char.id) : null;
     const cls = (l: any): number => L.fogClass(l);
@@ -900,7 +900,7 @@ export async function fogCone(): Promise<boolean> {
     }
     // THE ORACLE for the cone, written here: a living man is seen when some eye has a clear line to his chest or head AND he stands inside that eye's near field or
     // within half the cone of where it looks (the eyes' places and looks are the module's; the angle and the lines are asked here)
-    const coneOracle = (h: any) => { const chest = h.char.bones.chest ?? [h.char.posX, 1.1, h.char.posZ], hd = h.char.bones.head ?? [h.char.posX, 1.6, h.char.posZ];
+    const coneOracle = (h: any) => { const chest = h.char.bones.chest ?? [h.char.pos[0], 1.1, h.char.pos[2]], hd = h.char.bones.head ?? [h.char.pos[0], 1.6, h.char.pos[2]];
       const per = FW.eyes.map((e: any) => { const dx = chest[0] - e.pos[0], dz = chest[2] - e.pos[2], d = Math.hypot(dx, dz); const ang = Math.acos(Math.max(-1, Math.min(1, (dx * e.look[0] + dz * e.look[2]) / (d * Math.hypot(e.look[0], e.look[2]))))) / DEGR;
         const line = !(game.col.segmentBlocked(e.pos, chest) && game.col.segmentBlocked(e.pos, hd)); return { id: e.id, d, ang, line, sees: line && (d < FOG.coneNearM || ang < FOG.coneDeg / 2) }; });
       return { any: per.some((x: any) => x.sees), per }; };
@@ -909,8 +909,8 @@ export async function fogCone(): Promise<boolean> {
     const hs = NB.hostiles as any[]; const h = hs.find(x => x.state !== 'dead' && R.spotFor(x));
     if (!h) verdict(false, 'the cone: a living man in the line to test it on', 'no spot in the aisle with a line to a living defender through the open door');
     else {
-      game.godMode = true; const pc = game.player.char; const at = () => h.char.bones.chest ?? [h.char.posX, 1.1, h.char.posZ];
-      const face = (away: boolean) => { const c = at(); const dx = c[0] - pc.posX, dz = c[2] - pc.posZ, d = Math.hypot(dx, dz) || 1, k = away ? -3 : 1; for (let i = 0; i < 50; i++) { W.cursorAt(away ? [pc.posX + dx / d * k, 1.1, pc.posZ + dz / d * k] : c); R.step(); } };
+      game.godMode = true; const pc = game.player.char; const at = () => h.char.bones.chest ?? [h.char.pos[0], 1.1, h.char.pos[2]];
+      const face = (away: boolean) => { const c = at(); const dx = c[0] - pc.pos[0], dz = c[2] - pc.pos[2], d = Math.hypot(dx, dz) || 1, k = away ? -3 : 1; for (let i = 0; i < 50; i++) { W.cursorAt(away ? [pc.pos[0] + dx / d * k, 1.1, pc.pos[2] + dz / d * k] : c); R.step(); } };
       // Sam alone (FOG.own): facing the man, then with his back to him
       FOG.cone = true; FOG.own = true;
       face(false); const o1 = coneOracle(h), s1 = FW.seen(h), pic1 = R.inPicture(h);
@@ -927,7 +927,7 @@ export async function fogCone(): Promise<boolean> {
       // THE CALLS (rule 7): his back to the man, his own eyes alone — a teammate with the man in HIS cone says where, on the Cues object (a bubble over him, a
       // row on the strip), never as a line of the teammate's own; nothing is said of a man the player is looking at, nor with the calls off, nor on standard
       { const mates = (game.guards as any[]).filter(x => x.team === 'operative' && x.state !== 'dead'); const own0 = mates.map(x => x.bubble);
-        const turn = (away: boolean, n: number) => { for (let i = 0; i < n; i++) { const c = at(); const dx = c[0] - pc.posX, dz = c[2] - pc.posZ, d = Math.hypot(dx, dz) || 1; W.cursorAt(away ? [pc.posX - dx / d * 3, 1.1, pc.posZ - dz / d * 3] : c); R.step(); } };
+        const turn = (away: boolean, n: number) => { for (let i = 0; i < n; i++) { const c = at(); const dx = c[0] - pc.pos[0], dz = c[2] - pc.pos[2], d = Math.hypot(dx, dz) || 1; W.cursorAt(away ? [pc.pos[0] - dx / d * 3, 1.1, pc.pos[2] - dz / d * 3] : c); R.step(); } };
         const of = () => FW.callLog.filter((c: any) => c.of === h.callsign);
         FW.reset(); FOG.calls = false; turn(true, 120); const silent = FW.callLog.length;
         FOG.calls = true; FOG.cone = false; FOG.own = false; turn(true, 60); const standard = FW.callLog.length; FOG.cone = true; FOG.own = true;
@@ -938,7 +938,7 @@ export async function fogCone(): Promise<boolean> {
         const wrote = mates.some((x, i) => x.bubble !== own0[i] && x.bubble && calls.some((c: any) => c.text === x.bubble.text));
         // (the sides: his own left hand is on his left)
         const aL = pc.bones.upperArmL, aR = pc.bones.upperArmR, gz = FW.eyes[0].look; let sideL = '?';   // (his left shoulder's side of the line he looks down: the across part of right shoulder → left shoulder)
-        if (aL && aR) { const sx = aL[0] - aR[0], sz = aL[2] - aR[2], al = sx * gz[0] + sz * gz[2], px = sx - gz[0] * al, pz = sz - gz[2] * al, pl = Math.hypot(px, pz) || 1; sideL = FW.sideOf([pc.posX + px / pl * 5, 1, pc.posZ + pz / pl * 5]); }
+        if (aL && aR) { const sx = aL[0] - aR[0], sz = aL[2] - aR[2], al = sx * gz[0] + sz * gz[2], px = sx - gz[0] * al, pz = sz - gz[2] * al, pl = Math.hypot(px, pz) || 1; sideL = FW.sideOf([pc.pos[0] + px / pl * 5, 1, pc.pos[2] + pz / pl * 5]); }
         verdict(silent === 0 && standard === 0 && facing === 0 && calls.length >= 1 && calls.length <= 2 && first.kind === 'contact' && !!mate && /behind/.test(first.text) && side === 'behind' && gaps.every((x: number) => x >= FOG.callSecs - 0.05) && row.length >= 1 && !wrote && !!eyeHad,
           'the calls: nothing with the row off, on standard, or of a man he is looking at; his back turned, the teammate whose cone has the man says so — behind him — once every callSecs, on the cues\' own bubble and strip, never as the teammate\'s own line',
           `calls off ${silent} · standard ${standard} · facing him ${facing} · back turned 14 s: ${calls.map((c: any) => `${c.t.toFixed(1)} s ${c.who}: '${c.text}'`).join(' · ') || 'none'} · his side '${side}' · the strip ${row.length ? (row[0].drawn ? 'drew it' : `filed it (${row[0].why})`) : 'has no row'} · a teammate's own bubble written ${wrote} · the caller's cone had him ${eyeHad}`);
@@ -946,13 +946,13 @@ export async function fogCone(): Promise<boolean> {
         FOG.own = true; R.step(2); }
       // the team's cones (own off): the module agrees with the oracle every frame while Sam turns away and back, and at some frame a teammate's cone alone shows him
       FOG.own = false; let agree = 0, frames = 0, mateOnly = 0, none = 0; const bad: string[] = [];
-      for (const away of [true, false, true]) { const c0 = at(); const dx = c0[0] - pc.posX, dz = c0[2] - pc.posZ, d = Math.hypot(dx, dz) || 1, k = away ? -3 : 1;
-        for (let i = 0; i < 70; i++) { W.cursorAt(away ? [pc.posX + dx / d * k, 1.1, pc.posZ + dz / d * k] : at()); R.step(); if (h.state === 'dead') break; const o = coneOracle(h), s = FW.seen(h); frames++; if (o.any === s) agree++; else if (bad.length < 3) bad.push(`t ${game.time.toFixed(2)}: oracle ${o.any} module ${s} (${say(o)})`); if (o.any && !o.per[0].sees) mateOnly++; if (!o.any) none++; } }
+      for (const away of [true, false, true]) { const c0 = at(); const dx = c0[0] - pc.pos[0], dz = c0[2] - pc.pos[2], d = Math.hypot(dx, dz) || 1, k = away ? -3 : 1;
+        for (let i = 0; i < 70; i++) { W.cursorAt(away ? [pc.pos[0] + dx / d * k, 1.1, pc.pos[2] + dz / d * k] : at()); R.step(); if (h.state === 'dead') break; const o = coneOracle(h), s = FW.seen(h); frames++; if (o.any === s) agree++; else if (bad.length < 3) bad.push(`t ${game.time.toFixed(2)}: oracle ${o.any} module ${s} (${say(o)})`); if (o.any && !o.per[0].sees) mateOnly++; if (!o.any) none++; } }
       verdict(frames > 0 && agree === frames, 'the team\'s cones together: the module agrees with the oracle every frame while Sam turns away, back and away again',
         bad.length ? bad.join('\n    ') : `${agree}/${frames} frames · a teammate\'s cone alone showed him on ${mateOnly} · nobody\'s on ${none} (the pair stand where the staging put them, facing their door)`);
       // Sam's gaze with a rifle in the shoulder lies along his aim
       { FOG.own = true; W.input.pressed.add('Digit2'); R.step(); for (let i = 0; i < 100; i++) { W.cursorAt(at()); R.step(); }
-        const e = FW.eyes[0]; const ap = game.aimPoint; const ax = ap[0] - pc.posX, az = ap[2] - pc.posZ; const wrap = (a: number) => ((a + 540) % 360) - 180, yaw = (x: number, z: number) => Math.atan2(x, z) / DEGR;
+        const e = FW.eyes[0]; const ap = game.aimPoint; const ax = ap[0] - pc.pos[0], az = ap[2] - pc.pos[2]; const wrap = (a: number) => ((a + 540) % 360) - 180, yaw = (x: number, z: number) => Math.atan2(x, z) / DEGR;
         const hdv = pc.headDir(), lerp = [(pc.chestDir[0] + hdv[0]) / 2, (pc.chestDir[2] + hdv[2]) / 2];
         const offGaze = Math.abs(wrap(yaw(e.look[0], e.look[2]) - yaw(ax, az))), offLerp = Math.abs(wrap(yaw(lerp[0], lerp[1]) - yaw(ax, az)));
         verdict(game.player.rifleUp && pc.anim.longShown === 'shoulder' && offGaze < 6 && FW.seen(h), 'a rifle in the shoulder: his cone lies along his aim (his eyes are on his sights), not along his bladed chest',
@@ -1465,14 +1465,14 @@ export async function fogEyes(): Promise<boolean> {
   { // the case it was built for: a squad of four, and cameras out
     const { g4, F4, why, step } = await stand4(5); const stickyWas = SC.STICKY.on, liveWas = SC.STICKY.live; SC.STICKY.on = true; SC.STICKY.live = 3; step(30);
     const pl = g4.player, team = F4.eyes.length, mates = (g4.guards as any[]).filter(gd => F4.onTeam(gd) && gd.state !== 'dead').length;
-    const chestOf = (gd: any) => gd.char.bones.chest ?? [gd.char.posX, gd.char.posY + 1.1, gd.char.posZ], flatCam = (x: number, z: number) => ({ pos: [x, 0.02, z], n: [0, 1, 0], vel: null, age: 1, si: -1, id: ++pl.camSeq });
+    const chestOf = (gd: any) => gd.char.bones.chest ?? [gd.char.pos[0], gd.char.pos[1] + 1.1, gd.char.pos[2]], flatCam = (x: number, z: number) => ({ pos: [x, 0.02, z], n: [0, 1, 0], vel: null, age: 1, si: -1, id: ++pl.camSeq });
     // a man nobody on the team sees, and a place on the floor by him with a clear line from a camera's lens to his chest
     let pick: any = null, at: number[] | null = null;
     for (const gd of g4.guards as any[]) { if (pick) break; if (F4.onTeam(gd) || gd.state === 'dead' || F4.seen(gd)) continue;
-      for (let k = 0; k < 12 && !pick; k++) { const a = k * Math.PI / 6, x = gd.char.posX + Math.cos(a) * 1.2, z = gd.char.posZ + Math.sin(a) * 1.2;
+      for (let k = 0; k < 12 && !pick; k++) { const a = k * Math.PI / 6, x = gd.char.pos[0] + Math.cos(a) * 1.2, z = gd.char.pos[2] + Math.sin(a) * 1.2;
         if (!g4.col.segmentBlocked(SC.camLens({ pos: [x, 0.02, z], n: [0, 1, 0] } as any), chestOf(gd))) { pick = gd; at = [x, z]; } } }
     // three cameras, the one by him the newest (the newest is served first: stickycam.ts stickyLive), two at Sam's feet before it: eight for the fog's places
-    const px = pl.char.posX, pz = pl.char.posZ; pl.cams.push(flatCam(px + 0.4, pz), flatCam(px - 0.4, pz)); const cam = at ? flatCam(at[0], at[1]) : null; if (cam) pl.cams.push(cam);
+    const px = pl.char.pos[0], pz = pl.char.pos[2]; pl.cams.push(flatCam(px + 0.4, pz), flatCam(px - 0.4, pz)); const cam = at ? flatCam(at[0], at[1]) : null; if (cam) pl.cams.push(cam);
     const look = (eyes: number, n = 4) => { SC.stickyStatsReset(); FOG.eyes = eyes; step(n); return { eyes: F4.eyes.length as number, seen: !!pick && !!F4.seen(pick), blind: SC.STICKY_STATS.blind as number, count: F4.frame.count as number }; };
     const a5 = look(5), a6 = look(brk ? 5 : 6), row = Array.from(F4.frame.eyes.slice(20, 24)) as number[], lens = cam ? SC.camLens(cam) : [0, 0, 0], atLens = Math.hypot(row[0] - lens[0], row[1] - lens[1], row[2] - lens[2]) < 1e-4;
     const a7 = look(brk ? 5 : 7), over = look(99, 2).eyes, inf = look(Infinity, 2).eyes, nan = look(NaN, 2).eyes, zero = look(0, 2).eyes, frac = look(6.9, 2).eyes;
@@ -1549,7 +1549,7 @@ export async function fogOurs(): Promise<boolean> {
   const L = game.engine.lights, PID = game.player.char.id;
   FOG.full = true; FOG.ours = !brk; R.step(60);   // (past the first half second, in which the fog takes every thing as it stands)
   const gs: any[] = game.guards.filter((x: any) => x.state !== 'dead'), hid = gs.find((x: any) => FW.hidden(x)), mate = gs.find((x: any) => FW.onTeam(x));
-  const HID = hid?.char.id ?? 0, MATE = mate?.char.id ?? 0, spot: number[] = hid ? [hid.char.posX, 1.2, hid.char.posZ] : [0, 1.2, 0];
+  const HID = hid?.char.id ?? 0, MATE = mate?.char.id ?? 0, spot: number[] = hid ? [hid.char.pos[0], 1.2, hid.char.pos[2]] : [0, 1.2, 0];
   { // whose
     const on = [FW.oursId(PID), FW.oursId(MATE), FW.oursId(HID), FW.oursId(0), FW.oursId(undefined)];
     FOG.ours = false; const off = [FW.oursId(PID), FW.oursId(MATE)]; FOG.ours = !brk;

@@ -9,7 +9,6 @@
 // checkpoint laid over a restart (a load is not a restart: a file saved in the dark, far from the start, loads dark with the camera on its man), the switch
 // off (the fault as it was), the stands and a recording from before the table.
 //   bun run tools/qa/cleanrestart-check.ts          (probes.ts cleanrestart; CLEANRESTART_BREAK=1 must FAIL — the switch is left down where the check raises it)
-//   CLEANRESTART_BREAK=men                          one man's one column nudged in the restarted game before line 5's compare: line 5 must FAIL, naming the man and the column
 // Both stands: the check raises the switch itself, and gives the stand the words that make a wall switch and a vehicle's lamp things to break on either.
 // Nothing here is a picture: the restart's first frames have not been seen on a GPU by this check (cleanrestart-page.cjs counts them on the software adapter).
 import { readFileSync } from 'node:fs';
@@ -25,10 +24,9 @@ const { VENT_DEFAULTS } = await import(`${ROOT}/src/scene/levelData.ts`);
 const { startFromQuery } = await import(`${ROOT}/src/game/scenarioRun.ts`);
 const { v3 } = await import(`${ROOT}/src/math/vec.ts`);
 
-const DT = 1 / 60, BREAK = process.env.CLEANRESTART_BREAK === '1', BREAK_MEN = process.env.CLEANRESTART_BREAK === 'men', VERBOSE = !!process.env.CLEANRESTART_VERBOSE;
+const DT = 1 / 60, BREAK = process.env.CLEANRESTART_BREAK === '1', VERBOSE = !!process.env.CLEANRESTART_VERBOSE;
 function seeded(seed: number) { let a = seed >>> 0; return () => { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
 async function hushed<T>(f: () => T | Promise<T>): Promise<T> { const log = console.log, warn = console.warn, err = console.error; if (!VERBOSE) console.log = console.warn = console.error = () => { }; try { return await f(); } finally { console.log = log; console.warn = warn; console.error = err; } }
-const { MEN_FIELDS } = await import(`${ROOT}/src/sim/men/schema.ts`);
 const WORDS = ['TPS_CARLAMPS', 'TPS_LIGHTSWITCH'];
 /** the office night on die 1, a wall switch and a vehicle's lamp things to break on either stand; `word` = the stand's own word for this switch, or none */
 async function stand(word?: '0' | '1'): Promise<any> {
@@ -50,7 +48,6 @@ const restart = async (W: any, on: boolean) => { CLEANRESTART.on = on && !BREAK;
 // counters that only ever count up, logs, caches and scratch that are rebuilt on demand, tables with an entry made the first time something is asked, and
 // the order of an object's keys.
 const ALLOW: [RegExp, string][] = [
-  [/\.S\.(home\.men\b|kept\b)/, 'the men\'s part as bytes: a row\'s generation, and the store of those who left (the columns themselves: menDiff)'],
   [/^game\.col\.(sound\.cache|stamp|stampId|cellStamp|segCells|trig(Yaw|Cos|Sin))\b/, 'the collision grid\'s visit stamps and memo tables'],
   [/^game\.(col\.dynamicBoxes|dynBoxes|targets)\[\d+\]: keys /, 'the order of an object\'s keys (a field first written by the last try)'],
   [/^world\.(?!statics\b)/, 'the host world\'s packed buffers, grids and serials (the statics themselves are compared box by box, line 3)'],
@@ -69,16 +66,7 @@ const ALLOW: [RegExp, string][] = [
   [/^(game\.wallCharge\.nearby|guards\.bodyProbeN\{|workthings\.errands\{)/, 'a scratch list, a per-tick budget and an answer asked again every second'],
   [/^(game\.destr\.furn\.mouthMemo|game\.col\.nav\.\w*[sS]cratch\w*)\b/, 'a memo of the last hole asked about and the path finder\'s scratch'],
 ];
-/** A MAN'S COLUMNS, FIELD BY FIELD (sim/men/schema.ts): his row may stand at another generation in a restarted game, and the store of those who left is a restart's alone, so the part is
- *  not compared as bytes (ALLOW); every man's every column is compared here, as the fields on his objects were */
-const menDiff = (a: any, b: any): string[] => { const out: string[] = [];
-  const named = (v: any) => (v && typeof v === 'object' && v.char ? `man ${v.char.id}` : v);
-  const one = (x: any, y: any, on: string, at: string) => { for (const f of MEN_FIELDS) if (f.on === on && !(on === 'guard' && at.startsWith('game.civilians') && f.name === 'heardUpTo')) { const u = named(x[f.name]), v = named(y[f.name]); if (JSON.stringify(u) !== JSON.stringify(v)) out.push(`${at}.${f.name}: ${JSON.stringify(u)} | ${JSON.stringify(v)}`); } };
-  const man = (x: any, y: any, on: string, at: string) => { one(x, y, on, at); one(x.char, y.char, 'man', `${at}.char`); one(x.sup, y.sup, 'sup', `${at}.sup`); one(x.aim, y.aim, 'aim', `${at}.aim`); };
-  a.seats.forEach((s: any, i: number) => man(s.view.player, b.seats[i].view.player, 'player', `game.seats[${i}].player`));
-  for (const k of ['guards', 'civilians']) { if (a[k].length !== b[k].length) out.push(`game.${k}: ${a[k].length} men | ${b[k].length}`); else a[k].forEach((x: any, i: number) => man(x, b[k][i], 'guard', `game.${k}[${i}]`)); }
-  return out; };
-const audit = (a: any, b: any) => { a.col.nav.scratch = null; b.col.nav.scratch = null; const all: string[] = RB.stateAlike(a, b, 20000); const left = [...all.filter(d => !ALLOW.some(([re]) => re.test(d))), ...menDiff(a, b)]; return { n: all.length, left }; };
+const audit = (a: any, b: any) => { a.col.nav.scratch = null; b.col.nav.scratch = null; const all: string[] = RB.stateAlike(a, b, 20000); const left = all.filter(d => !ALLOW.some(([re]) => re.test(d))); return { n: all.length, left }; };
 const group = (d: string[]) => { const m = new Map<string, number>(); for (const x of d) { const k = x.split(':')[0].replace(/\[\d+\]/g, '[]').replace(/\{[^}]*\}/g, '{}').replace(/<[^>]*>/g, '<>'); m.set(k, (m.get(k) ?? 0) + 1); } return [...m].slice(0, 8).map(([k, n]) => `${n}× ${k}`).join(' · '); };
 const group2 = (d: string[]) => { const m = new Map<string, number>(); for (const x of d) { const k = x.split(':')[0].replace(/\[\d+\]/g, '[]').replace(/\{[^}]*\}/g, '{}').replace(/<[^>]*>/g, '<>'); m.set(k, (m.get(k) ?? 0) + 1); } return [...m].map(([k, n]) => `${n}× ${k}`).join(' · '); };
 const paint = (s: any) => JSON.stringify([s.c, s.h, s.flags, s.rot ?? null, s.albedo, s.emissive, s.markGain ?? null]);
@@ -124,7 +112,7 @@ export async function cleanrestartCheck(): Promise<boolean> {
       let nb = 0; const blast = (p: number[]) => { FR.blast(g, [p[0], 0.2, p[2]], { who: 0, serial: 900 + nb++, name: 'frag grenade', destr: { radius: FR.FRAG.destrM, power: 1 } }); steps([A, B], 20); };
       for (const d of g.doors.list.slice(0, 6)) blast([d.def.hinge[0] + 0.4, 0, d.def.hinge[1] + 0.4]);
       for (const d of g.doors.list.slice(6, 12)) { g.doors.use(d, c.pos, 0); did.opened++; }
-      for (const gd of g.guards.slice(0, 4)) blast([gd.char.posX + 0.5, 0, gd.char.posZ]);
+      for (const gd of g.guards.slice(0, 4)) blast([gd.char.pos[0] + 0.5, 0, gd.char.pos[2]]);
       g.setBlackout(86400, 'hand'); steps([A, B], 60); g.setBlackout(Infinity, 'shot'); steps([A, B], 60);   // the mains by hand, then the breaker shot
     });
     did.doorsOff = g.doors.list.filter((d: any) => d.off).length; did.dead = g.guards.filter((x: any) => x.state === 'dead').length; did.decals = g.decals.count; did.items = g.items.items.length;
@@ -168,8 +156,7 @@ export async function cleanrestartCheck(): Promise<boolean> {
         `wrecked ${JSON.stringify(a)} · fresh ${JSON.stringify(f)} · smoke cleared ${smokeCleared}× · the host told ${pictures.length}× (${pictures[0] ?? '-'}) · the camera ${camA.toFixed(3)} m from a fresh boot's (${did.far.toFixed(1)} m before) · ${vents.length} vents (${ventsSlow} run down by the blackout before), ${ventsOff} off their cycle after (${ventsRest} at rest in it), one turned round by hand put back: ${ventsWrong === 0} · tally ${JSON.stringify(st1)}`); }
 
     // ---- the whole state, one tick and ten seconds on; the run by digest
-    { const nudged = BREAK_MEN ? g.guards[0] : null; if (nudged) nudged.lastSeenT += 1;   // (the red path of the field-by-field compare: nothing but this column of this man is touched)
-      const one = audit(g, gb); if (nudged) { console.log(`      CLEANRESTART_BREAK=men: ${one.left.filter(d => d.includes('.lastSeenT')).join(' · ') || 'the nudged column was NOT named'}`); nudged.lastSeenT -= 1; } const hashes: string[] = []; let split = -1, splitAt = '';
+    { const one = audit(g, gb); const hashes: string[] = []; let split = -1, splitAt = '';
       const run = (x: any) => { const d: any = digestGame(x, true); delete d.seq; for (const cv of d.civilians ?? []) delete cv.heard; return d; };   // (the digest less the event serial and each civilian's place in it: a number that counts up through a restart and names nothing that stands)
       for (let s = 0; s <= 10; s++) { const da = run(g), db = run(gb), ha = hashDigest(da) as string, hb = hashDigest(db) as string; hashes.push(ha); if (ha !== hb && split < 0) { split = s; splitAt = Object.keys(da).filter(k => JSON.stringify(da[k]) !== JSON.stringify(db[k])).join(', '); if (VERBOSE) for (const k of splitAt.split(', ')) console.log(`      digest ${k}:\n        ${JSON.stringify(da[k]).slice(0, 700)}\n        ${JSON.stringify(db[k]).slice(0, 700)}`); } if (s < 10) await hushed(() => steps([A, B], 60)); }
       const ten = audit(g, gb);

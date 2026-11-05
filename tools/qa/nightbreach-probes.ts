@@ -71,7 +71,7 @@ async function rig(seed: number, knobs: Record<string, unknown> = {}, start = tr
         const C = R.cover; if (C && C.left > 0 && game.time >= C.next) { fireWeapon(game, game.player.char, C.at, true, {}); C.left--; C.next = game.time + 0.1; }
         game.player.visibility = R.vis; W.step(DT);
         NB.hostiles.forEach((h: any, k: number) => { R.supMax[k] = Math.max(R.supMax[k], h.sup.v);
-          if (h.state !== 'dead' && h.lastKnown) R.leak = Math.min(R.leak, Math.hypot(h.lastKnown[0] - game.player.char.posX, h.lastKnown[2] - game.player.char.posZ)); });
+          if (h.state !== 'dead' && h.lastKnown) R.leak = Math.min(R.leak, Math.hypot(h.lastKnown[0] - game.player.char.pos[0], h.lastKnown[2] - game.player.char.pos[2])); });
         for (const e of game.events) { if (seen.has(e)) continue; seen.add(e);
           if (e.kind === 'guardShot') { const w = game.guards.find((x: any) => x.char.id === e.who); const k = w ? w.team : '?'; R.shots[k] = (R.shots[k] ?? 0) + 1;
             const hi = NB.hostiles.indexOf(w);
@@ -107,7 +107,7 @@ const canAsItWas = () => { FLASH.on = false; };
 const everyManFires = () => { FIGHT_SKILL.hostile.bangBreak = 0; };
 /** living defenders still INSIDE the break room: with roomfight.ts a beaten man may leave by another door, and the drill calls the room taken once nobody
  *  hostile is left in it — so 'clear' is judged on the room, not on the cast */
-const inRoom = (NB: any, g: any) => { const B = g.level.breach.bounds; return NB.hostiles.filter((h: any) => h.state !== 'dead' && h.char.posX > B.x0 && h.char.posX < B.x1 && h.char.posZ > B.z0 && h.char.posZ < B.z1).length; };
+const inRoom = (NB: any, g: any) => { const B = g.level.breach.bounds; return NB.hostiles.filter((h: any) => h.state !== 'dead' && h.char.pos[0] > B.x0 && h.char.pos[0] < B.x1 && h.char.pos[2] > B.z0 && h.char.pos[2] < B.z1).length; };
 
 export const nightbreachOff = guarded(async () => {
   const { verdict, done } = family('nightbreach-off: with the flag off nothing of it runs');
@@ -136,7 +136,7 @@ export const nightbreachStage = guarded(async () => {
   verdict(opsOk && hosOk, 'the cast: two operatives on the approach marks, three hostiles held and pinned on theirs, left to the fight AI (no script)',
     `ops ${NB.ops.map((o: any) => `${o.callsign}/${o.team}@${o.char.pos.map(f2)}`).join(' ')} · hostiles ${NB.hostiles.map((h: any) => `${h.callsign}/${h.team} hold ${h.hold} pinned ${h.pinned} script ${!!h.script}`).join(' ')}`);
   const pl = g.player; const door = g.doors.byName(P.door), next = P.next ? g.doors.byName(P.next.door) : null;
-  verdict(dist(pl.char.pos, NIGHTBREACH.samAt) < 0.3 && pl.slot === 'rifle' && !pl.holstered && !pl.down && !g.col.nav.isBlocked(pl.char.posX, pl.char.posZ), 'Sam beside the pair on open floor, the rifle in his hands',
+  verdict(dist(pl.char.pos, NIGHTBREACH.samAt) < 0.3 && pl.slot === 'rifle' && !pl.holstered && !pl.down && !g.col.nav.isBlocked(pl.char.pos[0], pl.char.pos[2]), 'Sam beside the pair on open floor, the rifle in his hands',
     `Sam @${pl.char.pos.map(f2)} · slot ${pl.slot} holstered ${pl.holstered} · ${f2(dist(pl.char.pos, NB.ops[0].char.pos))} m from Blue One`);
   verdict(Math.abs(door.angle) < 0.02 && (!next || Math.abs(next.angle) < 0.02), 'the breach door and the room\'s other door are shut', `${P.door} ${f2(door.angle)} · ${P.next?.door} ${next ? f2(next.angle) : '—'}`);
   W.engine.lights.upload(g.time);
@@ -145,13 +145,13 @@ export const nightbreachStage = guarded(async () => {
   const at0 = [...NB.ops, ...NB.hostiles].map((x: any) => [...x.char.pos]);
   R.step(60 * 5);
   const moved = [...NB.ops, ...NB.hostiles].map((x: any, i: number) => dist(x.char.pos, at0[i]));
-  const aim = NB.hostiles.map((h: any, i: number) => { const m = P.hostiles[i]; const want = Math.atan2(m.aimAt[0] - h.char.posX, m.aimAt[2] - h.char.posZ); const d = h.char.aimYaw - want; return Math.abs(Math.atan2(Math.sin(d), Math.cos(d))) * 57.3; });
+  const aim = NB.hostiles.map((h: any, i: number) => { const m = P.hostiles[i]; const want = Math.atan2(m.aimAt[0] - h.char.pos[0], m.aimAt[2] - h.char.pos[2]); const d = h.char.aimYaw - want; return Math.abs(Math.atan2(Math.sin(d), Math.cos(d))) * 57.3; });
   const fired = Object.values(R.shots).reduce((a, b) => a + b, 0);
   verdict(NB.state === 'staged' && Math.max(...moved) < 0.3 && fired === 0 && up(NB.ops) === 2 && up(NB.hostiles) === 3 && !R.samHit && !R.bad, 'five seconds with no order: nobody moves, nobody fires, the pair waits',
     `state ${NB.state} · furthest moved ${f2(Math.max(...moved))} m · rounds ${fired} · Sam hit ${R.samHit}${R.bad ? ' · NaN ' + R.bad : ''}`);
   verdict(Math.max(...aim) < 20 && NB.hostiles.every((h: any) => h.drawn !== false), 'the defenders\' guns are on the door while they are calm', `aim off the plan's door point: ${aim.map((a: number) => a.toFixed(0) + '°').join(' ')}`);
   { // Sam close behind a teammate: his own side offers no grab row and no takedown click, and he does not creep round him
-    const b = NB.ops[1], f = b.char.forward(); g.teleportPlayer([b.char.posX - f[0] * 0.8, 0, b.char.posZ - f[2] * 0.8]); R.step(3);
+    const b = NB.ops[1], f = b.char.forward(); g.teleportPlayer([b.char.pos[0] - f[0] * 0.8, 0, b.char.pos[2] - f[2] * 0.8]); R.step(3);
     const rows = [...g.nearby, ...(g.interactables ?? [])].filter((it: any) => it.kind === 'guard');
     verdict(rows.length === 0 && g.threatProximity === 0, 'a teammate is nobody Sam grabs: no guard row 0.8 m behind Blue Two, no creeping round him', `guard rows ${rows.length} · threat proximity ${f2(g.threatProximity)}`); }
   NB.stop();

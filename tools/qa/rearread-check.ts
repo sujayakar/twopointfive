@@ -43,14 +43,14 @@ const say = (men: Man[]) => men.map(m => `${m.name} ${fmt(m.pos)}${m.spare ? ' r
 async function standOff(on: boolean, both: boolean): Promise<Out> {
   const R = await rig('floodlit-four', 5), g = R.game, O = R.O, C = R.C;
   COVER.rearRead = on;   // (after the stand-up: the frozen stand pins it off)
-  for (const h of R.hostiles) if (h.state !== 'dead') R.put(h, [h.char.posX + 400, 0, h.char.posZ]);
+  for (const h of R.hostiles) if (h.state !== 'dead') R.put(h, [h.char.pos[0] + 400, 0, h.char.pos[2]]);
   R.gather([7.6, 0, 12.6], 40); R.step(120);
   const zs = [12.4, 13.3, 14.2, 15.1]; (R.up as any[]).forEach((m, i) => R.put(m, [5.6, 0, zs[i]])); R.step(30);
   const why = O.give(WALL_ORDER, O.targetAt([8.88, 1.05, 9.0]), 'all');
   if (why) return { ok: false, why: `order refused: ${why}`, men: [], reads: 0, say: '' };
   if (!R.until(() => C.ops[0]?.phase === 'armed', 40)) return { ok: false, why: 'the charge was never armed', men: [], reads: 0, say: '' };
   R.step(240);
-  if (both) { const n = (R.up as any[]).find(m => O.of(m)?.spare && m.char.posZ < 9); if (!n) return { ok: false, why: 'no rear man north of the charge to move', men: [], reads: 0, say: '' };
+  if (both) { const n = (R.up as any[]).find(m => O.of(m)?.spare && m.char.pos[2] < 9); if (!n) return { ok: false, why: 'no rear man north of the charge to move', men: [], reads: 0, say: '' };
     const A = O.of(n), at = [8.3, 0, 15.0]; A.post = at; A.goal = at; A.from = [5.6, 0, 14.6]; R.put(n, at); R.step(180); }
   const men = watch(R);
   return { ok: true, why: '', men, reads: g.cover.stats.rearRead, say: say(men) };
@@ -59,7 +59,7 @@ async function standOff(on: boolean, both: boolean): Promise<Out> {
 async function stack(on: boolean): Promise<Out> {
   const R = await rig('floodlit-four', 5), g = R.game, O = R.O;
   COVER.rearRead = on;
-  for (const h of R.hostiles) if (h.state !== 'dead') R.put(h, [h.char.posX + 400, 0, h.char.posZ]);
+  for (const h of R.hostiles) if (h.state !== 'dead') R.put(h, [h.char.pos[0] + 400, 0, h.char.pos[2]]);
   const d = g.doors.list.find((x: any) => x.def.name === 'front'); if (!d) return { ok: false, why: 'no front door', men: [], reads: 0, say: '' };
   R.gather([17, 0, 15.5], 40); R.step(120);
   const why = O.give('stack', O.targetAt(d.frameCentre), 'all'); if (why) return { ok: false, why: `stack refused: ${why}`, men: [], reads: 0, say: '' };

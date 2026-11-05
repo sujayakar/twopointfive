@@ -12,7 +12,7 @@
 //   bun run tools/qa/tickcost.ts --each                       the box list made again after EVERY update, as a networked game's tick does (the play-through's own cadence is every 4th:
 //                                                             another run, so its bits are compared with another --each run's only)
 //   bun run tools/qa/tickcost.ts --list                       … and made by BoxWorld.relist() (the half the game reads) instead of upload(): the same run to the bit as without it
-//   TPS_RUST<ROW>=0|1                                         which systems tick in the Rust module (src/sim/sim.ts RUST; the shipped stand has RUST_ON's on): the first line says which were
+//   QA_HOLD=rows=0 | <row>=0                                  a check's own arm (tools/qa/headless.ts hold): the cost with a system's TypeScript ticking, while it has one; the first line says which rows were up
 //   TICKCOST_BREAK=1                                          the red path: a run is played with the last bit of one float flipped once, after the warm-up; --compare must then FAIL
 // EXIT 0 = every run left its ticks (and, under --compare, every run's bits agree) · 1 = a run left none / bits differ / a run is in one file only · 2 = unknown flag
 import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
@@ -47,7 +47,7 @@ async function one(scn: string, seed: number): Promise<Row> {
     if (ticks === WARM) rust = Object.keys(RUST).filter(k => (RUST as Record<string, boolean>)[k]).join(' ') || 'none';   // (read while it runs: the play-through puts every knob table back at its end)
     if (ticks > WARM) { stp.push(upMs); } upMs = 0;   // (the upload that followed the LAST update: the harness packs the box list after the game's step)
     const t0 = performance.now(); const r = (update as (...x: unknown[]) => unknown).apply(this, a); const ms = performance.now() - t0;
-    if (BREAK && ticks === WARM) { const f = new Float64Array([this.player.char.posX]); new BigUint64Array(f.buffer)[0] ^= 1n; this.player.char.posX = f[0]; }   // (the red path: one float, its last bit)
+    if (BREAK && ticks === WARM) { const f = new Float64Array([this.player.char.pos[0]]); new BigUint64Array(f.buffer)[0] ^= 1n; this.player.char.pos[0] = f[0]; }   // (the red path: one float, its last bit)
     if (EACH) packNow();   // (a networked game's tick: the list is made again after every update)
     h = rawBits(this as never, h); if (++ticks > WARM) upd.push(ms); return r; } as typeof update;
   const r = await (PT as any).play(scn, seed, 300, false, {}) as any;

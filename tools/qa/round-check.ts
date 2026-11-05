@@ -197,7 +197,7 @@ export async function roundCheck(): Promise<boolean> {
 
     // (4b) the game's own: Sam put inside the barrel is stood outside it, a round thing the wall engine can chew (wood: never a drum) is one cell, and a save
     { const pl = game.player.char, c = drum.c; let lo = Infinity, hi = 0;
-      for (let k = 0; k < 8; k++) { const a = (k + 0.3) / 8 * Math.PI * 2; game.teleportPlayer([c[0] + Math.cos(a) * 0.1, 0, c[2] + Math.sin(a) * 0.1]); for (let i = 0; i < 3; i++) W.step(DT); const d = Math.hypot(pl.posX - c[0], pl.posZ - c[2]); lo = Math.min(lo, d); hi = Math.max(hi, d); }
+      for (let k = 0; k < 8; k++) { const a = (k + 0.3) / 8 * Math.PI * 2; game.teleportPlayer([c[0] + Math.cos(a) * 0.1, 0, c[2] + Math.sin(a) * 0.1]); for (let i = 0; i < 3; i++) W.step(DT); const d = Math.hypot(pl.pos[0] - c[0], pl.pos[2] - c[2]); lo = Math.min(lo, d); hi = Math.max(hi, d); }
       const want = drum.h[0] + pl.radius;
       // (A ROUND THING OF WOOD, STOOD BY THE CHECK: a post of poplar a drum's size, written as the kit writes a round, on clear ground in the pass's yard. No
       // level file has to hold one for this line to ask: until 11-05 twenty levels' olive drums were such things by their colour alone, and a drum is

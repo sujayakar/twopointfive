@@ -40,7 +40,7 @@ interface Stage { W: any; game: any; D: any; gd: any; p0: Vec3; dir: [number, nu
 async function stage(on: boolean, seed = 7107): Promise<Stage> {
   Math.random = seeded(seed); RUBBLE.on = on;
   const W: any = await quiet(() => standUp({ uploadEvery: 1 })); const game = W.game; game.godMode = true; game.playerInvisible = true; game.aiEnabled = true;
-  const gd = game.guards[0]; gd.hold = true; const p0: Vec3 = [gd.char.posX, 0, gd.char.posZ];
+  const gd = game.guards[0]; gd.hold = true; const p0: Vec3 = [gd.char.pos[0], 0, gd.char.pos[2]];
   let dir: [number, number] = [1, 0], free = 0; for (const d of [[1, 0], [-1, 0], [0, 1], [0, -1]] as [number, number][]) { const h = game.col.raycast([p0[0], 0.5, p0[2]], [d[0], 0, d[1]], 12); const t = h ? h.t : 12; if (t > free) { free = t; dir = d; } }
   const D = game.destr.debris; const S: Stage = { W, game, D, gd, p0, dir, free, events: [], seen: new Set(game.events), kicked: 0, landedHook: 0 };
   // spies: every hearing event filed from here on, and every word to the break table
@@ -130,7 +130,7 @@ export async function kickOffMan(): Promise<boolean> {
   const lay = plank.rest && lump.rest && flat(plank.box.c, here) < 0.15 && flat(lump.box.c, here) < 0.25; RUBBLE.on = true; S.events.length = 0; const landed0 = S.D.stats.landed; run(S, 360);
   const clear = (c: any) => flat(c.box.c, S.gd.char.pos);
   /** the nearest he stands to any point of a piece's long axis (11 stations end to end), less its half width: how far its footprint is from his middle */
-  const edge = (c: any, h: Vec3) => { const q = c.box.rot, yaw = q ? 2 * Math.atan2(q[1], q[3]) : c.box.yaw; const ax = [Math.cos(yaw), -Math.sin(yaw)]; let m = 9; for (let i = -5; i <= 5; i++) m = Math.min(m, Math.hypot(c.box.c[0] + ax[0] * h[0] * i / 5 - S.gd.char.posX, c.box.c[2] + ax[1] * h[0] * i / 5 - S.gd.char.posZ)); return m - h[2]; };
+  const edge = (c: any, h: Vec3) => { const q = c.box.rot, yaw = q ? 2 * Math.atan2(q[1], q[3]) : c.box.yaw; const ax = [Math.cos(yaw), -Math.sin(yaw)]; let m = 9; for (let i = -5; i <= 5; i++) m = Math.min(m, Math.hypot(c.box.c[0] + ax[0] * h[0] * i / 5 - S.gd.char.pos[0], c.box.c[2] + ax[1] * h[0] * i / 5 - S.gd.char.pos[2])); return m - h[2]; };
   Fm.verdict(lay && plank.rest && lump.rest && S.D.feetStats.offMan >= 2 && S.D.feetStats.kicked === 0, 'both were pushed off him (he was not walking: no kick)', `${JSON.stringify(S.D.feetStats)} · plank's middle now ${f2(clear(plank))} m from him, the lump's ${f2(clear(lump))} m`);
   const need = RUBBLE.radius - RUBBLE.inside - 0.02;
   Fm.verdict(edge(lump, LUMP) >= need && edge(plank, PLANK) >= need, 'no part of either lies in him any more', `nearest part of the plank ${f2(edge(plank, PLANK))} m from his middle, of the lump ${f2(edge(lump, LUMP))} m · his circle is ${RUBBLE.radius} m (a piece may rest ${RUBBLE.inside} m into it)`);
@@ -146,7 +146,7 @@ export async function kickWall(): Promise<boolean> {
   // the corridor's nearer side wall from where he stands
   let wd: [number, number] = [0, 1], wt = 99; for (const d of [[S.dir[1], S.dir[0]], [-S.dir[1], -S.dir[0]]] as [number, number][]) { const h = g.col.raycast([S.p0[0], 0.3, S.p0[2]], [d[0], 0, d[1]], 8); if (h && h.t < wt) { wt = h.t; wd = d; } }
   const wallAt = (p: Vec3) => (p[0] - S.p0[0]) * wd[0] + (p[2] - S.p0[2]) * wd[1];   // metres toward the wall from his first place; the wall's face is at wt
-  const stand: Vec3 = [S.p0[0] + wd[0] * (wt - 0.34), 0, S.p0[2] + wd[1] * (wt - 0.34)]; S.gd.char.posX = stand[0]; S.gd.char.posZ = stand[2];
+  const stand: Vec3 = [S.p0[0] + wd[0] * (wt - 0.34), 0, S.p0[2] + wd[1] * (wt - 0.34)]; S.gd.char.pos[0] = stand[0]; S.gd.char.pos[2] = stand[2];
   const c = piece(S, [S.p0[0] + wd[0] * (wt - 0.1), 0.2, S.p0[2] + wd[1] * (wt - 0.1)], LUMP, 0); run(S, 600);
   Fm.verdict(wt < 8 && wallAt(c.box.c) < wt - 0.02, 'the piece is still on his side of the wall', `wall face ${f2(wt)} m off · the piece's middle at ${f2(wallAt(c.box.c))} m · ${JSON.stringify(S.D.feetStats)}`);
   const tries = S.D.shoves;
@@ -158,7 +158,7 @@ export async function kickWall(): Promise<boolean> {
     const wallFrom = (a: number) => { const h = g.col.raycast([S.p0[0] + S.dir[0] * a, 0.05, S.p0[2] + S.dir[1] * a], [wd[0], 0, wd[1]], 8); return h ? h.t : 99; };
     let a0 = -1; for (let a = 1; a < S.free - 2.4 && a0 < 0; a += 0.2) { let even = true; for (let k = -0.8; k <= 2.0; k += 0.1) if (Math.abs(wallFrom(a + k) - wt) > 0.005) even = false; if (even) a0 = a; }
     for (const h of [[0.3, 0.012, 0.2], [0.25, 0.012, 0.25], [0.2, 0.05, 0.15], [0.5, 0.012, 0.06]] as Vec3[]) for (const deg of [15, 30, 50]) for (const gap of [0.05, 0.15]) {
-      S.D.clear(); S.gd.char.posX = S.p0[0]; S.gd.char.posZ = S.p0[2]; const yaw = (trials * 0.7) % 3;
+      S.D.clear(); S.gd.char.pos[0] = S.p0[0]; S.gd.char.pos[2] = S.p0[2]; const yaw = (trials * 0.7) % 3;
       const reach = Math.abs(Math.cos(yaw) * wd[0] - Math.sin(yaw) * wd[1]) * h[0] + Math.abs(Math.sin(yaw) * wd[0] + Math.cos(yaw) * wd[1]) * h[2];   // its half width toward the wall
       const along: [number, number] = [S.dir[0], S.dir[1]]; const pc = piece(S, [S.p0[0] + along[0] * a0 + wd[0] * (wt - gap - reach), 0.1, S.p0[2] + along[1] * a0 + wd[1] * (wt - gap - reach)], h, yaw); run(S, 90);
       const a = deg * Math.PI / 180, vx = (along[0] * Math.cos(a) + wd[0] * Math.sin(a)) * 1.5, vz = (along[1] * Math.cos(a) + wd[1] * Math.sin(a)) * 1.5;
@@ -188,15 +188,15 @@ export async function kickLeft(): Promise<boolean> {
     let ed = 0; while (ed < 2 && Math.abs(topAt(spot.x + spot.sx * (ed + 0.02), spot.z + spot.sz * (ed + 0.02)) - spot.top) < 0.01) ed += 0.02;
     const SH: Vec3 = [0.2, 0.012, 0.05]; const yaw = Math.atan2(-spot.sz, spot.sx);
     const lay = async (T: Stage) => { RUBBLE.on = false; const c = piece(T, [spot!.x + spot!.sx * (ed - 0.06), spot!.top + 0.1, spot!.z + spot!.sz * (ed - 0.06)], SH, yaw); run(T, 150);
-      T.gd.hold = true; T.gd.char.posX = spot!.x + spot!.sx * (ed + 0.3); T.gd.char.posZ = spot!.z + spot!.sz * (ed + 0.3); run(T, 2);
-      const tip = [c.box.c[0] + spot!.sx * SH[0], c.box.c[2] + spot!.sz * SH[0]]; const into = RUBBLE.radius - Math.hypot(tip[0] - T.gd.char.posX, tip[1] - T.gd.char.posZ);
+      T.gd.hold = true; T.gd.char.pos[0] = spot!.x + spot!.sx * (ed + 0.3); T.gd.char.pos[2] = spot!.z + spot!.sz * (ed + 0.3); run(T, 2);
+      const tip = [c.box.c[0] + spot!.sx * SH[0], c.box.c[2] + spot!.sz * SH[0]]; const into = RUBBLE.radius - Math.hypot(tip[0] - T.gd.char.pos[0], tip[1] - T.gd.char.pos[2]);
       return { c, on: c.rest && Math.abs(c.box.c[1] - spot!.top - SH[1]) < 0.01, into, p0: pose(c) }; };
     // the twin with the floor rule widened: there the same man, standing the same, DOES push it — he is in reach of it in plan, so the rule is what holds
     const T2 = await stage(true); const floor0 = RUBBLE.floor; let twin = 0, twinInto = 0;
     try { const B = await lay(T2); RUBBLE.floor = 5; RUBBLE.on = true; run(T2, 120); twin = T2.D.shoves; twinInto = B.into; } finally { RUBBLE.floor = floor0; }
     const A = await lay(S); const c = A.c; RUBBLE.on = true; S.events.length = 0; const l0 = S.D.stats.landed; run(S, 240);
     Fm.verdict(A.on && A.into > RUBBLE.inside && twin > 0 && pose(c) === A.p0 && S.D.shoves === 0, 'a plank lying on a desk top and out over its edge INTO the man standing there is not at his feet', `top ${f2(spot.top)} m at (${f2(spot.x)}, ${f2(spot.z)}), edge ${f2(ed)} m on · it reaches ${f2(A.into)} m into his circle in plan (pushed off past ${RUBBLE.inside}) · pose ${pose(c) === A.p0 ? 'bit-equal' : 'CHANGED'}, shoves ${S.D.shoves} · the twin with the floor rule widened (in ${f2(twinInto)} m): ${twin} shoves`);
-    S.gd.char.posX = spot.x + spot.sx * (ed + 0.3) - spot.sz * 1.2; S.gd.char.posZ = spot.z + spot.sz * (ed + 0.3) + spot.sx * 1.2; S.gd.hold = false; const from = [...S.gd.char.pos] as Vec3;
+    S.gd.char.pos[0] = spot.x + spot.sx * (ed + 0.3) - spot.sz * 1.2; S.gd.char.pos[2] = spot.z + spot.sz * (ed + 0.3) + spot.sx * 1.2; S.gd.hold = false; const from = [...S.gd.char.pos] as Vec3;
     order(S.gd, { goal: [spot.x + spot.sx * (ed + 0.3) + spot.sz * 1.2, 0, spot.z + spot.sz * (ed + 0.3) - spot.sx * 1.2] as any }); run(S, 360);
     Fm.verdict(flat(from, S.gd.char.pos) > 1.5 && pose(c) === A.p0 && S.D.shoves === 0 && S.D.stats.landed === l0 && !S.events.some((e: any) => e.kind === 'prop'), '…nor of the man walking through its overhang: it does not slide off, fall and bring the shift', `he walked ${f2(flat(from, S.gd.char.pos))} m along the top's edge, 0.3 m off it · pose ${pose(c) === A.p0 ? 'bit-equal' : 'CHANGED'} · shoves ${S.D.shoves} · landings +${S.D.stats.landed - l0}`);
     // a slider never leaves its floor: slid by hand (the mark and a boot's speed set on it) off each of the top's four sides, it stops on the top

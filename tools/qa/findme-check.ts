@@ -117,7 +117,7 @@ export async function findmeCheck(): Promise<boolean> {
           stepFrame(ctx, DT); findMeOutline(OF, W.game, DT); outlineBox(OF, p => W.cam.project(p, 1, 1)); if (on && findMeRing(W.game) && OF.on) asked++;
         }
         FINDME.ring = FINDME.outline = false;
-        return { d: digestGame(W.game), view: [...W.cam.viewProj], asked, moved: Math.hypot(W.game.player.char.posX - 5.1, W.game.player.char.posZ - 15.2) };
+        return { d: digestGame(W.game), view: [...W.cam.viewProj], asked, moved: Math.hypot(W.game.player.char.pos[0] - 5.1, W.game.player.char.pos[2] - 15.2) };
       };
       const A = await run(false), B = await run(true), diff = diffDigest(A.d, B.d);
       line(!diff.length && same(A.view, B.view) && B.asked === 480 && A.moved > 1, 'the ring and the outline on and asked every frame: the same game digest for digest, the same view to the bit',
@@ -193,7 +193,7 @@ export async function findmeCheck(): Promise<boolean> {
         // a key that may read the cursor
         t = sideTap(); const heldK = ctx.carry != null; I.pressed.add('KeyX'); run(1); const key = heldK && ctx.carry == null && real(t.m);
         // walking does not let go: he walks a second with his facing kept
-        t = sideTap(); const p0 = [C.posX, C.posZ]; I.keys.add('KeyW'); I.pressed.add('KeyW'); run(60); I.keys.delete('KeyW'); const went = Math.hypot(C.posX - p0[0], C.pos[1 + 1] - p0[1]), walkOff = deg(C.aimYaw, t.a), walk = ctx.carry != null && went > 0.5 && walkOff < 2;
+        t = sideTap(); const p0 = [C.pos[0], C.pos[2]]; I.keys.add('KeyW'); I.pressed.add('KeyW'); run(60); I.keys.delete('KeyW'); const went = Math.hypot(C.pos[0] - p0[0], C.pos[1 + 1] - p0[1]), walkOff = deg(C.aimYaw, t.a), walk = ctx.carry != null && went > 0.5 && walkOff < 2;
         // the row put off, and the pause card: the mouse back at once
         I.mouseX = t.m[0]; I.mouseY = t.m[1]; run(1); t = sideTap(); set('behind', false); run(1); const rowOff = ctx.carry == null && real(t.m); set('behind', true);
         t = sideTap(); frozen = true; run(1); const card = ctx.carry == null && real(t.m); frozen = false;
@@ -240,7 +240,7 @@ export async function findmeCheck(): Promise<boolean> {
       const fill = (n: number, dt = DT, shown = true) => { for (let i = 0; i < n; i++) findMeOutline(Fm, g, dt, shown); outlineBox(Fm, proj); return Fm.strength; };
       fill(1); const offRow = !Fm.on;
       set('outline', true); pl.nvAmount = 0; pl.visibility = 0.04; const s1 = fill(1), dark = fill(120);
-      const [hx, hy] = proj([pl.char.posX, pl.char.posY + 1, pl.char.posZ]), r = [...Fm.rect];
+      const [hx, hy] = proj([pl.char.pos[0], pl.char.pos[1] + 1, pl.char.pos[2]]), r = [...Fm.rect];
       const inBox = hx > r[0] && hx < r[2] && hy > r[1] && hy < r[3], share = Math.max(0, Math.min(1, r[2]) - Math.max(0, r[0])) * Math.max(0, Math.min(1, r[3]) - Math.max(0, r[1]));
       const frameOk = Fm.on && Fm.owner === pl.char.id && Fm.owner > 0 && s1 > 0 && s1 < 0.5 && dark > 0.99 && inBox && share > 0 && share < 0.2;
       pl.visibility = 0.9; const lit = fill(120); pl.visibility = 0.04; pl.nvAmount = 1; const nv = fill(120); pl.nvAmount = 0; fill(120);
@@ -320,7 +320,7 @@ export async function findmeCheck(): Promise<boolean> {
         const dark = () => { p2.visibility = 0.04; p2.nvAmount = 0; for (const gd of men) gd.visibility = 0.04; }, fillM = (dt = 0) => { findMeOutline(M, g2, dt); outlineBoxes(M, proj2); return M.mates.filter(m => m.on); };
         const mix = (hue: 'you' | 'red' | 'blue', s: number) => INK.pale.map((v: number, i: number) => v + (INK[hue][i] - v) * s), inkIs = (m: { ink: number[] }, hue: 'you' | 'red' | 'blue', s: number) => m.ink.every((v, i) => Math.abs(v - mix(hue, s)[i]) < 1e-9);
         const d0 = JSON.stringify(digestGame(g2)); set('outline', true); dark(); const on = fillM(), pairOf = (id: number) => g2.orders.pairOf(men.find(gd => gd.char.id === id));
-        const each = men.length === 4 && on.length === 4 && on.every(m => m.owner !== p2.char.id && m.strength === 1 && m.wide === FINDME.width && m.times === FINDME.mates && m.alpha === FINDME.opacity && men.some(gd => gd.char.id === m.owner && gd.char.posX === m.at[0] && gd.char.posZ === m.at[2])) && new Set(on.map(m => m.owner)).size === 4;
+        const each = men.length === 4 && on.length === 4 && on.every(m => m.owner !== p2.char.id && m.strength === 1 && m.wide === FINDME.width && m.times === FINDME.mates && m.alpha === FINDME.opacity && men.some(gd => gd.char.id === m.owner && gd.char.pos[0] === m.at[0] && gd.char.pos[2] === m.at[2])) && new Set(on.map(m => m.owner)).size === 4;
         const hues = g2.orders.paired && inkIs(M, 'you', FINDME.colour) && on.filter(m => pairOf(m.owner) === 'red').length === 2 && on.every(m => inkIs(m, pairOf(m.owner) === 'red' ? 'red' : 'blue', FINDME.colour));
         set('colour', 0); fillM(); const pale = [M, ...M.mates].every(m => inkIs(m, 'you', 0)); set('colour', 1); fillM(); const full = inkIs(M, 'you', 1) && M.mates.every(m => inkIs(m, pairOf(m.owner) === 'red' ? 'red' : 'blue', 1)); set('colour', FINDME_START.colour); fillM();
         men[0].visibility = 0.9; const oneLit = fillM().filter(m => m.strength === 0).map(m => m.owner), ownLight = oneLit.length === 1 && oneLit[0] === men[0].char.id; dark();   // (each man by his own light)

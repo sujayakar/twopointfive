@@ -59,7 +59,7 @@ export async function retakeCheck(): Promise<boolean> {
 
     // (3) the row's words: no bearing while the dialogue pass is on, the bearing as it was with it off
     { const BEAR = /\b(north|south|east|west)\b/; const ask = (on: boolean) => { WORDS.on = on; O.give('fallIn', O.targetAt(pl.char.pos), 'all'); step(120);
-        let p: number[] | null = null; for (const [dx, dz] of [[-4, 0], [4, 0], [0, 4], [0, -4]]) { const q = [pl.char.posX + dx, 0, pl.char.posZ + dz]; const t = O.targetAt(q); if (t?.kind === 'floor' && team.some(m => O.whyNot(O.defs.find((d: any) => d.id === 'cover'), t, [m]) === null)) { p = q; break; } }
+        let p: number[] | null = null; for (const [dx, dz] of [[-4, 0], [4, 0], [0, 4], [0, -4]]) { const q = [pl.char.pos[0] + dx, 0, pl.char.pos[2] + dz]; const t = O.targetAt(q); if (t?.kind === 'floor' && team.some(m => O.whyNot(O.defs.find((d: any) => d.id === 'cover'), t, [m]) === null)) { p = q; break; } }
         if (!p) return null; const n0 = O.log.length; O.give('cover', O.targetAt(p), 'all'); step(30);
         return { given: O.log.length > n0, rows: team.filter(m => O.of(m)?.order === 'cover').map(m => String(O.statusOf(m))) }; };
       const a = ask(true), b = ask(false); WORDS.on = words0;

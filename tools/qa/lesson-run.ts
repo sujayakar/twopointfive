@@ -184,7 +184,7 @@ async function playLessonAs(name: string, o: LessonRunOpts = {}, loud = false): 
   const was = new Map<any, string>(); let downSaid = false, downT = 0;
   const say = (s: string) => { lines.push(`${t.toFixed(1).padStart(6)}  ${s}`); };
   class Stop extends Error { }
-  const eyeOf = (c: any): Vec3 => c.bones?.head ?? [c.posX, c.posY + 1.6, c.posZ], chestOf = (c: any): Vec3 => c.bones?.chest ?? [c.posX, c.posY + 1.2, c.posZ];
+  const eyeOf = (c: any): Vec3 => c.bones?.head ?? [c.pos[0], c.pos[1] + 1.6, c.pos[2]], chestOf = (c: any): Vec3 => c.bones?.chest ?? [c.pos[0], c.pos[1] + 1.2, c.pos[2]];
   const pos = (): number[] => g.player.char.pos;
   /** the moon's direct light on a point (--moon): nothing solid up its own direction, and the meter's best face of it */
   const moon = o.moon ? g.engine.lights.lights.find((l: any) => l.kind === 2 && l.enabled && l.intensity > 0 && !inEstimate(g, l)) : null;   // (an hour's own sun is in the estimate already: hours.ts hourLight — added here too it lit a midday man twice)

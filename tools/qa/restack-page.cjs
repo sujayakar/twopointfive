@@ -25,7 +25,7 @@ const ON_DOOR = (name) => { const g = window.__game, O = window.__orders, c = do
 // in the page: who is stacked and arrived on that door, the orders written, the door tools' entries, what the men have said, the rule's own count
 const READ = (name) => { const g = window.__game, O = window.__orders, men = O.men('all'), on = men.filter(m => { const A = O.of(m); return A && A.order === 'stack' && A.door && A.door.def.name === name; });
   return { men: men.length, on: on.length, set: on.filter(m => O.of(m).arrived).length, n: O.log.length, ops: g.doorTools.ops.map(o => `${o.kind} ${o.door.def.name}`), said: (window.__said ?? []).slice(), again: window.__autopilot.stats.again,
-    restack: window.__autopilot.knobs.restack, at: men.map(m => [m.char.posX, m.char.posZ]) }; };
+    restack: window.__autopilot.knobs.restack, at: men.map(m => [m.char.pos[0], m.char.pos[2]]) }; };
 
 (async () => {
   const browser = await chromium.launch({ headless: true, channel: 'chromium', args: FLAGS });

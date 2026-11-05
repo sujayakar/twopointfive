@@ -44,7 +44,7 @@ const DIRS = Array.from({ length: 8 }, (_, i) => [Math.sin(i * Math.PI / 4), Mat
 async function stand() {
   const R = await rig(SCN, 5), g = R.game;
   for (const k of Object.keys(NOSHOVE_STATS)) (NOSHOVE_STATS as any)[k] = 0;
-  for (const h of R.hostiles) if (h.state !== 'dead') R.put(h, [h.char.posX + 400, 0, h.char.posZ]);
+  for (const h of R.hostiles) if (h.state !== 'dead') R.put(h, [h.char.pos[0] + 400, 0, h.char.pos[2]]);
   const home = [...g.player.char.pos]; R.gather(home, 20); R.step(60);
   const nav = g.col.nav, free = (p: V) => !nav.isBlocked(p[0], p[2]);
   const cells: V[] = []; for (let x = home[0] - 14; x <= home[0] + 14; x += 0.25) for (let z = home[2] - 14; z <= home[2] + 14; z += 0.25) { const p = [x, 0, z]; if (free(p) && Number.isFinite(R.pathLen(home, p))) cells.push(p); }
@@ -101,7 +101,7 @@ async function close(on: boolean) {
   S.deal(p, spread); R.step(90);
   const m = S.men()[0]; let under = NaN, underSam = NaN;
   if (m.script) { const s0 = [...sam()], x0 = s0[0] - ax * (NOSHOVE.ring + 0.02), z0 = s0[2] - az * (NOSHOVE.ring + 0.02), goal = m.script.goal;
-    m.script.goal = [s0[0], 0, s0[2]]; m.path = []; m.char.posX = x0 + ax * 0.1; m.char.posZ = z0 + az * 0.1;
+    m.script.goal = [s0[0], 0, s0[2]]; m.path = []; m.char.pos[0] = x0 + ax * 0.1; m.char.pos[2] = z0 + az * 0.1;
     noShoveKeep(g, m, x0, z0, 1 / 60); under = flat(m.char.pos, s0); underSam = flat(sam(), s0); m.script.goal = goal; }
   // 5. set down on top of each other: the man 0.3 m from the player, on the others' side of him (his place is not across the player)
   S.deal(p, i => i === 0 ? [p[0] + ax * 0.3, 0, p[2] + az * 0.3] : spread(i));
@@ -141,7 +141,7 @@ async function keeper(mode: 'off' | 'own' | 'on') {
   for (const k of Object.keys(NOSHOVE_STATS)) (NOSHOVE_STATS as any)[k] = 0;
   NOSHOVE.on = false; REARWATCH.room = true; const aside0 = ORDERS.asideClear; ORDERS.asideClear = false;   // (the finding as it was found: the keeper's step out of the shoved player's 'way' is a step aside INTO the door he keeps, which ORDERS.asideClear — on on the page's stand — no longer lets him take)
   try {
-    for (const h of R.hostiles) if (h.state !== 'dead') R.put(h, [h.char.posX + 400, 0, h.char.posZ]);
+    for (const h of R.hostiles) if (h.state !== 'dead') R.put(h, [h.char.pos[0] + 400, 0, h.char.pos[2]]);
     R.step(30); const men = R.up as any[], d = g.doors.list.find((x: any) => x.def.name === 'k_p'), side = 1; if (!d || men.length < 3) return null;
     const F = stackRoomProbe(g, d, side); if (!F.floor) return null;
     const spots: V[] = []; for (const band of [[5, 14], [2, 30]]) for (const q of F.spots(band[0], band[1]) as V[]) { if (spots.length > men.length) break; if (spots.some(x => flat(x, q) < 1.1) || g.doors.list.some((x: any) => x !== d && flat(q, x.frameCentre) < 1.6)) continue; spots.push(q); }

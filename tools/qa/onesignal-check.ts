@@ -95,7 +95,7 @@ async function playMate(seed: number, inside: boolean): Promise<MateRun> {
   out.who = mate.callsign; out.kit0 = D.bangs + (op.bangHeld ? 1 : 0);
   const seen = new Set<any>(g.events); let crossT = NaN;
   R.post = () => { for (const e of g.events) { if (seen.has(e)) continue; seen.add(e); if (e.kind === 'bang') out.bursts++; }
-    if (inside && !isNaN(op.openT)) { mate.char.posX = at![0]; mate.char.posZ = at![2]; }   // (he went in by the room's other door since the row was given: there from the tick this door opens)
+    if (inside && !isNaN(op.openT)) { mate.char.pos[0] = at![0]; mate.char.pos[2] = at![2]; }   // (he went in by the room's other door since the row was given: there from the tick this door opens)
     if (g.time < mate.dazzledUntil) out.dazzled = true;
     if (isNaN(crossT) && op.men.some((m: any) => m.state !== 'dead' && offOf(d, m.char.pos, side) < -0.15)) crossT = g.time; };
   R.until(() => g.time - crossT >= 3, 60); R.post = null;

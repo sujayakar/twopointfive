@@ -164,9 +164,9 @@ export const rescueStage = guarded(async () => {
   F.verdict(!g.guards.some((x: any) => !x.unit) && g.civilians.length === 2 && g.civilians.every((c: any) => R.isHostage(c)), 'the shift benched, the building\'s own civilians off the floor',
     `staff on the list ${g.guards.filter((x: any) => !x.unit).length} · civilians ${g.civilians.map((c: any) => c.callsign).join(', ')}`);
   const [cap, door, roam] = R.hostiles;
-  F.verdict(R.hostiles.length === 3 && inRoom(cap.char.pos) && !inRoom(door.char.pos) && Math.abs(door.char.posZ - 11.1) < 0.6 && roam.char.posZ > 12.5 && R.hostiles.every((h: any) => h.team === 'hostile' && h.hold && h.pinned && h.state === 'patrol'),
+  F.verdict(R.hostiles.length === 3 && inRoom(cap.char.pos) && !inRoom(door.char.pos) && Math.abs(door.char.pos[2] - 11.1) < 0.6 && roam.char.pos[2] > 12.5 && R.hostiles.every((h: any) => h.team === 'hostile' && h.hold && h.pinned && h.state === 'patrol'),
     'captor in the office, door man in the corridor, roamer in the break room — held, pinned, calm', R.hostiles.map((h: any) => `${h.callsign} ${h.char.pos.map((v: number) => v.toFixed(1))} ${h.state}`).join(' · '));
-  { const at: string[] = []; for (const sd of [1, 2, 3, 4, 5, 6, 7, 8]) { const T3 = await rig(sd, { seedRoamers: true }, false); const same = SAMESTART.on; SAMESTART.on = false; T3.R.start(); SAMESTART.on = same;   /* (the draw is the deal behind 'every mission starts the same', which the shipped stand has on) */ const r = T3.R.hostiles[2]; at.push(!r ? '?' : r.char.posZ > 12.5 ? 'break' : r.char.posZ < 9 && r.char.posX < 10 ? 'conf' : '?'); T3.R.stop(); }
+  { const at: string[] = []; for (const sd of [1, 2, 3, 4, 5, 6, 7, 8]) { const T3 = await rig(sd, { seedRoamers: true }, false); const same = SAMESTART.on; SAMESTART.on = false; T3.R.start(); SAMESTART.on = same;   /* (the draw is the deal behind 'every mission starts the same', which the shipped stand has on) */ const r = T3.R.hostiles[2]; at.push(!r ? '?' : r.char.pos[2] > 12.5 ? 'break' : r.char.pos[2] < 9 && r.char.pos[0] < 10 ? 'conf' : '?'); T3.R.stop(); }
     F.verdict(at.every(x => x !== '?') && at.includes('break') && at.includes('conf'), 'seedRoamers (the default): the roamer\'s room is drawn at each staging — the break room or the conference room, both turn up over eight seeds', at.join(' ')); }
   { const T2 = await rig(7, { captorSet: false }); const s1 = T.at('set:Captor') !== undefined, s2 = T2.at('set:Captor') !== undefined; T2.R.stop();
     F.verdict(s1 && !s2 && T.at('set:Door man') === undefined, 'a hot start: the captor begins set on the corridor door, the others unset (captorSet off: he starts unset too)', `default: captor set at staging ${s1} · captorSet off: ${s2}`); }
@@ -208,9 +208,9 @@ export const rescueClock = staged(['RESCUEEND.on'], async () => {
   { const T = await rig(21, K); const R = T.R, h = R.hostages[0]; hold(T); T.secs(18.5);   // (and one broken mid-act: the captor killed with his gun on her)
     const cap = R.hostiles[0], Fg = T.game.fight, rec0 = Fg.defs.find((d: any) => d.gd === cap);
     T.secs(4, () => T.at('act') !== undefined); const acted = T.at('act') !== undefined; T.secs(0.8);
-    const want = Math.atan2(h.char.posX - cap.char.posX, h.char.posZ - cap.char.posZ), fw = cap.char.forward(), off = Math.abs(Math.atan2(Math.sin(Math.atan2(fw[0], fw[2]) - want), Math.cos(Math.atan2(fw[0], fw[2]) - want)));
+    const want = Math.atan2(h.char.pos[0] - cap.char.pos[0], h.char.pos[2] - cap.char.pos[2]), fw = cap.char.forward(), off = Math.abs(Math.atan2(Math.sin(Math.atan2(fw[0], fw[2]) - want), Math.cos(Math.atan2(fw[0], fw[2]) - want)));
     const nearest = R.hostages.reduce((a: any, b: any) => dist(a.char.pos, cap.char.pos) <= dist(b.char.pos, cap.char.pos) ? a : b);
-    const fwN = Math.atan2(nearest.char.posX - cap.char.posX, nearest.char.posZ - cap.char.posZ), offN = Math.abs(Math.atan2(Math.sin(Math.atan2(fw[0], fw[2]) - fwN), Math.cos(Math.atan2(fw[0], fw[2]) - fwN)));
+    const fwN = Math.atan2(nearest.char.pos[0] - cap.char.pos[0], nearest.char.pos[2] - cap.char.pos[2]), offN = Math.abs(Math.atan2(Math.sin(Math.atan2(fw[0], fw[2]) - fwN), Math.cos(Math.atan2(fw[0], fw[2]) - fwN)));
     F.verdict(acted && !!cap.script && !Fg.defs.some((d: any) => d.gd === cap) && offN < 0.35, 'the act: for that second he is on the scenario\'s script and off the room fight\'s roster, his body turned on the hostage nearest him (the tell)',
       `script ${!!cap.script} · on the roster ${Fg.defs.some((d: any) => d.gd === cap)} · ${(offN * 180 / Math.PI).toFixed(0)}° off her`); void off;
     { const T2 = await rig(21, { ...K, clock: true }); const R2 = T2.R, c2 = R2.hostiles[0], F2 = T2.game.fight; hold(T2); T2.secs(2); const r0 = F2.defs.find((d: any) => d.gd === c2); T2.secs(30, () => T2.at(/^executed:/) !== undefined); T2.secs(0.3);
@@ -228,7 +228,7 @@ export const rescueClock = staged(['RESCUEEND.on'], async () => {
     F.verdict(kept && cap2 === roam && r2 <= want + 0.02 && r2 > want - 0.05, 'a second man walking in takes nothing over while the captor lives; the captor dead, the clock is his — secondHostageSecs from the shot at the soonest',
       `resolve ${r0.toFixed(2)} → ${R.resolve.toFixed(2)} with ${cap2?.callsign} now holding it (kept by the captor while he lived: ${kept}; expected about ${want.toFixed(2)})`); }
   { const T = await rig(21, { ...K, clock: false, roamers: 0, doorMan: 'inside' }); const R = T.R, g = T.game, [cap, dm] = R.hostiles, [h0, h1] = R.hostages; hold(T); T.secs(1);   // REAL ROUNDS at the hostages
-    const chest = (x: any) => x.char.bones.chest ?? [x.char.posX, 1.0, x.char.posZ];
+    const chest = (x: any) => x.char.bones.chest ?? [x.char.pos[0], 1.0, x.char.pos[2]];
     for (let i = 0; i < 6; i++) { fireWeapon(g, cap.char, chest(h0), false, { steady: true, spread: 0 }); fireWeapon(g, dm.char, chest(h1), false, { steady: true, spread: 0 }); T.step(6); }
     const afterTheirs = up(R.hostages);
     killGuard(g, cap, [1, 0, 0], false, 'shot', 'player'); killGuard(g, dm, [1, 0, 0], false, 'shot', 'player'); T.step(2);
@@ -236,12 +236,12 @@ export const rescueClock = staged(['RESCUEEND.on'], async () => {
     for (let i = 0; i < 6; i++) { fireWeapon(g, op.char, chest(h0), false, { steady: true, spread: 0 }); T.step(6); }
     F.verdict(afterTheirs === 2 && up(R.hostages) === 2 && !R.result, 'the captor\'s side\'s rounds and an operative\'s, fired straight at the hostages, pass them (only the captor\'s own act and Sam\'s rounds can kill one)',
       `hostages after 12 hostile rounds ${afterTheirs}/2 · after 6 of an operative's ${up(R.hostages)}/2 · state ${R.state}`);
-    g.teleportPlayer([27.3, 0, 7.4]); g.player.char.aimYaw = g.player.char.bodyYaw = Math.atan2(h1.char.posX - 27.3, h1.char.posZ - 7.4); T.secs(0.4);
+    g.teleportPlayer([27.3, 0, 7.4]); g.player.char.aimYaw = g.player.char.bodyYaw = Math.atan2(h1.char.pos[0] - 27.3, h1.char.pos[2] - 7.4); T.secs(0.4);
     for (let i = 0; i < 4 && !R.result; i++) { fireWeapon(g, g.player.char, chest(h1), true, {}); T.step(8); }
     F.verdict(R.state === 'lost' && /own fire/.test(R.result?.why ?? '') && T.at(/^teamfire:/) !== undefined && h1.state === 'dead', 'a hostage hit by Sam\'s own round — a real one, fired from two metres — loses the run at once', `state ${R.state} — ${R.result?.why}`); }
   { const T = await rig(21, { ...K, clock: false, roamers: 0 }); const R = T.R, g = T.game, dm = R.hostiles[1]; hold(T); T.secs(0.5);   // SAM DOWN: a real round from the door man down the corridor
     g.teleportPlayer([24, 0, 11.1]); T.secs(0.3);
-    for (let i = 0; i < 5 && !g.player.down; i++) { const c = g.player.char; fireWeapon(g, dm.char, c.bones.chest ?? [c.posX, 1.2, c.posZ], false, { steady: true, spread: 0 }); T.step(4); }
+    for (let i = 0; i < 5 && !g.player.down; i++) { const c = g.player.char; fireWeapon(g, dm.char, c.bones.chest ?? [c.pos[0], 1.2, c.pos[2]], false, { steady: true, spread: 0 }); T.step(4); }
     T.secs(0.2);
     F.verdict(g.player.down && R.state === 'lost' && R.result?.grade === 'failed' && /down/.test(R.result?.why ?? ''), 'Sam shot down: the run is failed', `down ${g.player.down} · state ${R.state} — ${R.result?.why}`); }
   return F.done();
@@ -271,14 +271,14 @@ export const rescueOrders = staged(['DOORMANNERS.on', 'DARKFOE.on', 'RESCUEEND.o
     const did = R.orderDoor(); F.verdict(did === null, 'F after the end does nothing', `did ${did}`); }
   { const T = await rig(12, { doorMan: 'inside', roamers: 0, clock: false, flow: false }); const R = T.R; T.secs(0.3);   // (the flow off: the pair only follow — rescueflow-probes.ts has it on)
     let inConf = false, minZ = 99; const B = { x0: 4.12, x1: 13.94, z1: 9.94 };   // (the conference room, south of the corridor's west half; its door stands open at x ≈ 9.6)
-    const watch = () => { for (const o of R.ops) { minZ = Math.min(minZ, o.char.posZ); if (o.char.posX > B.x0 && o.char.posX < B.x1 && o.char.posZ < B.z1) inConf = true; } };
+    const watch = () => { for (const o of R.ops) { minZ = Math.min(minZ, o.char.pos[2]); if (o.char.pos[0] > B.x0 && o.char.pos[0] < B.x1 && o.char.pos[2] < B.z1) inConf = true; } };
     const walk = (to: number[]) => { const p = T.game.player.char.pos, from = [p[0], 0, p[2]], n = Math.ceil(dist(from, to) / (3.2 * DT)); for (let i = 1; i <= n; i++) { T.game.teleportPlayer([from[0] + (to[0] - from[0]) * i / n, 0, from[2] + (to[2] - from[2]) * i / n]); T.step(); watch(); } };
     walk([8.2, 0, 11.2]); walk([20, 0, 11.2]); for (let i = 0; i < 90; i++) { T.step(); watch(); }
     const near = R.ops.map((o: any) => dist(o.char.pos, T.game.player.char.pos));
     const maxLag = Math.max(...near);
     // (5.5 m, was 5: with doorway.ts on, the second man no longer stops 'near enough' touching his mate 3.9 m back — he walks on to his own place in the file, 5.2 m back)
-    F.verdict(R.ops.every((o: any) => orderOf(T, o) === 'fallIn') && maxLag < 5.5 && !inConf && R.ops.every((o: any) => o.char.posX > 14), 'fall in (unasked, the flow off): Sam walks the corridor past the conference room — the pair are on his trail, past it, and never in it',
-      `orders ${R.ops.map((o: any) => orderOf(T, o)).join(' / ')} · the pair ${near.map((d: number) => d.toFixed(1)).join(' / ')} m from Sam at x ${T.game.player.char.posX.toFixed(1)} · ops ${R.ops.map((o: any) => o.char.pos.map((v: number) => v.toFixed(1))).join(' / ')} · furthest south either went z ${minZ.toFixed(1)}`);
+    F.verdict(R.ops.every((o: any) => orderOf(T, o) === 'fallIn') && maxLag < 5.5 && !inConf && R.ops.every((o: any) => o.char.pos[0] > 14), 'fall in (unasked, the flow off): Sam walks the corridor past the conference room — the pair are on his trail, past it, and never in it',
+      `orders ${R.ops.map((o: any) => orderOf(T, o)).join(' / ')} · the pair ${near.map((d: number) => d.toFixed(1)).join(' / ')} m from Sam at x ${T.game.player.char.pos[0].toFixed(1)} · ops ${R.ops.map((o: any) => o.char.pos.map((v: number) => v.toFixed(1))).join(' / ')} · furthest south either went z ${minZ.toFixed(1)}`);
     const w1 = give(T, 'hold'); T.secs(0.5); const p0 = R.ops.map((o: any) => [...o.char.pos]); T.walkSam([14, 0, 11.2]); T.secs(6);
     const drift = Math.max(...R.ops.map((o: any, i: number) => dist(o.char.pos, p0[i])));
     F.verdict(w1 === null && R.ops.every((o: any) => orderOf(T, o) === 'hold') && drift < 0.6, 'the menu\'s hold: Sam walks off and they stay', `given ${w1 ?? 'yes'} · orders ${R.ops.map((o: any) => orderOf(T, o)).join(' / ')} · moved ${drift.toFixed(2)} m`);

@@ -102,7 +102,7 @@ export async function squadthrowCheck(): Promise<boolean> {
       const R = await rig(7, ON), { O, game } = R, team = R.team;
       // a spot a man has a frag throw to with nobody of ours inside it; Sam stood well away from it first
       const fragOk = (at: number[]) => { const th = ST.squadThrower(game, team, at, 'frag'); return !!th && !ST.squadFragCatches(game, th.rest, at); };
-      let spot = find(R, [10, 10.5, 11, 9.5, 11.5], at => { const th = ST.squadThrower(game, team, at, 'frag'); if (!th) return false; const inIt = team.some((m: any) => dist(m.char.pos, at) < 9.5 && !game.col.solidBlocked([at[0], 0.9, at[2]], [m.char.posX, 1.1, m.char.posZ])); return !inIt; });
+      let spot = find(R, [10, 10.5, 11, 9.5, 11.5], at => { const th = ST.squadThrower(game, team, at, 'frag'); if (!th) return false; const inIt = team.some((m: any) => dist(m.char.pos, at) < 9.5 && !game.col.solidBlocked([at[0], 0.9, at[2]], [m.char.pos[0], 1.1, m.char.pos[2]])); return !inIt; });
       if (!spot) { verdict(false, 'a spot of floor a teammate has a frag throw to with no teammate inside its reach', `none found round ${team.map((m: any) => `${m.callsign} ${p2(m.char.pos)}`).join(' ')}`); return; }
       const away = samSpot(R, spot, null); if (away) R.sam(away);
       if (!floorAt(R, spot) || (ON && !fragOk(spot))) { verdict(false, 'the spot is in the camera\'s view with Sam stood away from it, and still a clear frag', `spot ${p2(spot)} · Sam ${p2(game.player.char.pos)} · ${ST.squadThrower(game, team, spot, 'frag') ? ST.squadFragCatches(game, spot, spot) : 'no throw'}`); return; }
@@ -145,7 +145,7 @@ export async function squadthrowCheck(): Promise<boolean> {
       // …and one close by with a wall between it and every man
       let walled: number[] | null = null;
       for (let x = 2; x <= 38 && !walled; x += 0.5) for (let z = 2; z <= 26 && !walled; z += 0.5) { const t = O.targetAt([x, 0, z]); if (t.kind !== 'floor') continue; const d = Math.min(...team.map((m: any) => dist(m.char.pos, t.at)));
-        if (d > 3 && d < 8 && team.every((m: any) => game.col.solidBlocked([m.char.posX, 1.3, m.char.posZ], [t.at[0], 0.3, t.at[2]]) && game.col.solidBlocked([m.char.posX, 2.3, m.char.posZ], [t.at[0], 2.3, t.at[2]])) && !ST.squadThrower(game, team, t.at, 'stun')) walled = t.at; }
+        if (d > 3 && d < 8 && team.every((m: any) => game.col.solidBlocked([m.char.pos[0], 1.3, m.char.pos[2]], [t.at[0], 0.3, t.at[2]]) && game.col.solidBlocked([m.char.pos[0], 2.3, m.char.pos[2]], [t.at[0], 2.3, t.at[2]])) && !ST.squadThrower(game, team, t.at, 'stun')) walled = t.at; }
       const gw = walled ? O.give(STUN_THERE, O.targetAt(walled)) : '—';
       verdict(!!far && gf === 'no throw from here.' && gs === 'no throw from here.' && !!walled && gw === 'no throw from here.' && game.doorTools.frags === 2 && game.doorTools.bangs === 3 && game.items.items.length === n0,
         'a spot more than 14 m from every man, and one a few metres off behind a wall floor to ceiling: "no throw from here." for both kinds, nothing thrown, nothing spent',
@@ -255,7 +255,7 @@ export async function squadthrowCheck(): Promise<boolean> {
       const R = await rig(7, ON), { O, game } = R, team = R.team, quick = QUICKTHROW.on;
       try {
         const clear = (at: number[]) => { const th = ST.squadThrower(game, team, at, 'frag'); return !!th && !ST.squadFragCatches(game, th.rest, at); };
-        const spot = find(R, [10, 10.5, 11, 9.5, 11.5], at => !!ST.squadThrower(game, team, at, 'frag') && !team.some((m: any) => dist(m.char.pos, at) < 9.5 && !game.col.solidBlocked([at[0], 0.9, at[2]], [m.char.posX, 1.1, m.char.posZ])));
+        const spot = find(R, [10, 10.5, 11, 9.5, 11.5], at => !!ST.squadThrower(game, team, at, 'frag') && !team.some((m: any) => dist(m.char.pos, at) < 9.5 && !game.col.solidBlocked([at[0], 0.9, at[2]], [m.char.pos[0], 1.1, m.char.pos[2]])));
         if (!spot) { verdict(false, 'a spot of floor a teammate has a frag throw to with no teammate inside its reach', 'none found'); return; }
         const away = samSpot(R, spot, null); if (away) R.sam(away);
         if (!floorAt(R, spot) || !clear(spot)) { verdict(false, 'the spot is in the camera\'s view with Sam stood away from it, and still a clear frag', `spot ${p2(spot)}`); return; }

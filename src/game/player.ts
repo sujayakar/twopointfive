@@ -181,7 +181,6 @@ export function collideMan(g: Game, pl: { char: { pos: Vec3 }; safe: Vec3 | null
   }
   for (let k = 0; k < 4; k++) { col.collideCircle(p, bodyR(g, p), 0.2, y1, 6); if (!col.clampToWorld(p, BODY_R)) break; }   // (6 passes: three walls and a shelf end meeting in a pocket left him centimetres inside one of them at 3; and where the world edge and a static leave less than his width — the van's corner on the lot's rim — the two are alternated until they agree on the mouth of the wedge instead of each undoing the other)
   if (s) { s[0] = p[0]; s[1] = 0; s[2] = p[2]; } else pl.safe = [p[0], 0, p[2]];
-  pl.char.pos = p;
 }
 /** May he stand up here? Anything static in the column between crouched head height and standing head height (a counter top's overhang, a shelf, a desk he
  *  crept under) says no — otherwise standing switches the collision headroom 1.0 → 1.7 and the sweep would shove him a foot out through the slab in one frame
@@ -290,12 +289,12 @@ function cancelReloads(pl: Player) { pl.pistol.cancelReload(); pl.rifle.cancelRe
  *  his feet — upright, hunched by a flash, folded — is aimed at exactly as before. */
 const LOW_AT = 1.25, LOW_UNDER = 0.25, LOW_TOP = 0.15;
 function manAim(g: Game, gd: Guard, h: number): Vec3 {
-  const m = gd.char, p: Vec3 = [m.posX, m.posY + h, m.posZ]; if (!(AIM.player.low > 0)) return p;
-  const top = m.bones.headTop?.[1], chest = m.bones.chest; if (top === undefined || !chest || m.posY + LOW_AT <= top - LOW_UNDER) return p;
-  const y = Math.max(m.posY + 0.15, Math.min(p[1], top - LOW_TOP)), at: Vec3 = [chest[0], y, chest[2]];
+  const m = gd.char, p: Vec3 = [m.pos[0], m.pos[1] + h, m.pos[2]]; if (!(AIM.player.low > 0)) return p;
+  const top = m.bones.headTop?.[1], chest = m.bones.chest; if (top === undefined || !chest || m.pos[1] + LOW_AT <= top - LOW_UNDER) return p;
+  const y = Math.max(m.pos[1] + 0.15, Math.min(p[1], top - LOW_TOP)), at: Vec3 = [chest[0], y, chest[2]];
   const from = g.player.char.muzzle, d = v3.sub(at, from), L = v3.len(d);
   if (L > 1e-3 && m.rayHit(from, v3.scale(d, 1 / L), L + 1) >= 0) return at;
-  const hips = m.bones.hips; return [hips?.[0] ?? m.posX, y, hips?.[2] ?? m.posZ];
+  const hips = m.bones.hips; return [hips?.[0] ?? m.pos[0], y, hips?.[2] ?? m.pos[2]];
 }
 /** LEVEL AIM (AIM.player.level, the shipped default; 0 = the gun on the world point under the cursor, floor included, as it was): with NOTHING under the reticle —
  *  no fixture, no man — Sam's gun is not on the patch of floor the cursor's ray happens to end on (two metres out that was the muzzle, the rail light and his whole
@@ -310,9 +309,9 @@ const LEVEL_REACH = 20;
  *  rule in updatePlayer; the hold turns the pair only past 0.6 m). */
 function freeAim(g: Game, keep = 0.25): Vec3 {
   const c = g.player.char, ap = g.aimPoint; if (!levelOn(g)) return [ap[0], ap[1] + 0.03, ap[2]];
-  const dx = ap[0] - c.posX, dz = ap[2] - c.posZ, d = Math.hypot(dx, dz);
+  const dx = ap[0] - c.pos[0], dz = ap[2] - c.pos[2], d = Math.hypot(dx, dz);
   const yaw = d > keep ? Math.atan2(dx, dz) : c.aimYaw, R = Math.max(d, LEVEL_REACH);
-  return [c.posX + Math.sin(yaw) * R, c.posY + clamp(c.muzzle[1] - c.posY, 0.6, 1.6), c.posZ + Math.cos(yaw) * R];
+  return [c.pos[0] + Math.sin(yaw) * R, c.pos[1] + clamp(c.muzzle[1] - c.pos[1], 0.6, 1.6), c.pos[2] + Math.cos(yaw) * R];
 }
 /** The one weapon light Sam owns as a light (Player.light), posed off whichever gun is in the hand and lit by THAT gun's switch: the Five-seveN's rail light, or the
  *  FN2000's fore-end light. Dark while sprinting (gun down), while the hands are on the lock tools or both round a man (hideHeldItem: the gun is on the thigh / the
@@ -581,7 +580,7 @@ export function updatePlayer(g: Game, dt: number, input: Input, cam: FollowCamer
   if (stalk) { mx = stalk.mx; mz = stalk.mz; pl.crouch = true; }
   if (g.puppet) {   // scripted movement: straight at the goal (the tour picks goals with a clear line), stop within 10 cm
     mx = 0; mz = 0; const gl = g.puppet.goal;
-    if (gl) { const dx = gl[0] - c.posX, dz = gl[2] - c.posZ; const dl = Math.hypot(dx, dz); if (dl > 0.1) { mx = dx / dl; mz = dz / dl; } }
+    if (gl) { const dx = gl[0] - c.pos[0], dz = gl[2] - c.pos[2]; const dl = Math.hypot(dx, dz); if (dl > 0.1) { mx = dx / dl; mz = dz / dl; } }
     if (g.puppet.crouch !== undefined && !pl.dragging && (g.puppet.crouch || canStand(g))) pl.crouch = g.puppet.crouch;
   }
   if (!pl.dragging && (pl.haul || c.anim.haul)) { pl.haul = null; c.anim.haul = null; }   // (a body taken out of his hands by a reset: guards.ts)
@@ -610,9 +609,9 @@ export function updatePlayer(g: Game, dt: number, input: Input, cam: FollowCamer
     if (pl.sprinting && rifle.reloading) { rifle.cancelReload(); c.anim.cancelReload(); }
     strideStep(g, pl, mx, mz, ml, tap, stalk, dt);
   }
-  const speed = Math.hypot(c.velX, c.velZ);
+  const speed = Math.hypot(c.vel[0], c.vel[2]);
   // aim
-  const ap = stalk ? stalk.at : g.aimPoint; const toAim: Vec3 = [ap[0] - c.posX, 0, ap[2] - c.posZ];   // (stalking, he faces the man: the cursor is free once the button is down)
+  const ap = stalk ? stalk.at : g.aimPoint; const toAim: Vec3 = [ap[0] - c.pos[0], 0, ap[2] - c.pos[2]];   // (stalking, he faces the man: the cursor is free once the button is down)
   const aimDist = Math.hypot(toAim[0], toAim[2]);
   pl.aimHeld = false;   // (RMB is the OCP now; the gun comes up on firing, with the rail light, or from the ready carry — see `aiming`)
   const gunUp = pl.pistolUp;      // the pistol actually in the hand
@@ -623,7 +622,7 @@ export function updatePlayer(g: Game, dt: number, input: Input, cam: FollowCamer
     if (g.aimTarget) targetY = clamp(g.aimTarget.pos[1], 0.3, 2.95);
     else if (g.aimGuard) targetY = g.aimGuard.wound && g.aimSnap ? g.aimSnap[1] : manAim(g, g.aimGuard, 1.2)[1];   // (manAim: a man who is low is aimed at where he is)
     else if (levelOn(g)) return 0;
-    const gunY = c.posY + (pl.crouch ? 0.95 : 1.4);
+    const gunY = c.pos[1] + (pl.crouch ? 0.95 : 1.4);
     return clamp(Math.atan2(targetY - gunY, Math.max(aimDist, 0.5)), -60 * DEG, 70 * DEG);
   };
   if (pl.dragging) {
@@ -632,13 +631,13 @@ export function updatePlayer(g: Game, dt: number, input: Input, cam: FollowCamer
     // its hips, so moving away from it IS a backward crouch-walk. Torn out of your hands if it wedges (the legs cannot follow the hands any more:
     // Ragdoll.strain) or if it somehow got away from you.
     const body = pl.dragging.char; const rag = body.ragdoll;
-    const hips = body.bones.hips ?? body.pos; const dx = hips[0] - c.posX, dz = hips[2] - c.posZ; const d = Math.hypot(dx, dz);
+    const hips = body.bones.hips ?? body.pos; const dx = hips[0] - c.pos[0], dz = hips[2] - c.pos[2]; const d = Math.hypot(dx, dz);
     if (d > 1e-4) pl.dragYaw = Math.atan2(dx, dz);
     pl.dragStuckT = rag && (rag.strain > 0.2 || haulSlack(g)) ? pl.dragStuckT + dt : 0;
     if (!rag || d > 2.2 || pl.dragStuckT > 0.25) { const wedged = rag && pl.dragStuckT > 0.25; g.toggleDrag(); if (wedged) g.msg('body dropped — it was wedged'); }
     else if (haulSetDone(g)) { releaseBody(g, true); g.msg('body set down'); }   // (hands.ts: the 'let go of him' row laid it down first)
     else {
-      const DRAG_HANDS = 0.35, f = c.forward(); const hx = c.posX + f[0] * DRAG_HANDS, hz = c.posZ + f[2] * DRAG_HANDS;
+      const DRAG_HANDS = 0.35, f = c.forward(); const hx = c.pos[0] + f[0] * DRAG_HANDS, hz = c.pos[2] + f[2] * DRAG_HANDS;
       if (!haulPins(g, dt)) { rag.setPin(RAG.ankL, [hx + f[2] * 0.1, 0.42, hz - f[0] * 0.1]); rag.setPin(RAG.ankR, [hx - f[2] * 0.1, 0.42, hz + f[0] * 0.1]); }   // an ankle in each hand, 20 cm apart across your facing (hands.ts, its switch on: taken up from whichever end he is at, by its own beats — the pins are its then)
       if (haulUpright(g)) {   // carried on his shoulder (hands.ts): he walks with it, facing the way he goes, head up; nothing slides
         if (speed > 0.2) c.bodyYaw = approachAngle(c.bodyYaw, v3.yawOf(c.vel), HANDS.carryTurn * dt);
@@ -689,7 +688,7 @@ export function updatePlayer(g: Game, dt: number, input: Input, cam: FollowCamer
     // nobody backs through a door he is pushing, and the free hand only reaches wood in front of him (character.ts doorLayer) — the hips turn INTO the face he
     // pushes (up to 20° off the line of travel), the chest comes round with them (the animator lets the aim twist go while the hand is on), the eyes stay on the aim
     const dp = c.anim.doorPush; const byHand = !!pl.doorMove && !!dp && dp.w >= 1 && !aiming;   // (hands.ts: a leaf he is working by hand — he faces the spot his hand goes to, wherever his feet are taking him)
-    const intoDoor = byHand ? Math.atan2(dp!.p[0] - c.posX, dp!.p[2] - c.posZ) : leafFacing(dp, aiming);   // (a leaf its closer merely rests on him while he stands scanning the room does not turn him round to it)
+    const intoDoor = byHand ? Math.atan2(dp!.p[0] - c.pos[0], dp!.p[2] - c.pos[2]) : leafFacing(dp, aiming);   // (a leaf its closer merely rests on him while he stands scanning the room does not turn him round to it)
     hipsTurn(pl, speed, aiming, !!(stalk && STALK.orbit), intoDoor, byHand, dt); c.anim.reverse = pl.backpedal;
   }
   c.anim.speed = speed; c.anim.crouchTarget = pl.crouch ? 1 : 0; c.anim.dash = pl.dash ? 1 : 0;
@@ -855,15 +854,15 @@ export function rifleSpread(g: Game, speed: number): number {
  *    of him frame after frame. In live play a man coming on has seen you long before he touches you; this is what the tour's unseen Sam and the sandbox get.
  *  `y1` = the headroom updatePlayer collided you with this frame. */
 function keepOffGuards(g: Game, dt: number, y1: number, m: Legs = g.player) {   // (`m`: the body kept off them — the player's own, or a look ahead's copy of him, walkahead.ts)
-  let p = m.char.pos;   // (a copy: written back before anyone else reads his place, and read again after)
+  const p = m.char.pos;
   const room = (sx: number, sz: number) => { const hit = g.col.raycast([p[0], 0.45, p[2]], [sx, 0, sz], 1.5); return (hit ? hit.t : 1.5) - BODY_R; };   // how far your centre can travel that way before your circle meets a static (or a leaf) at shin height
   for (const gd of g.guards) {
     if (gd.state === 'dead' || gd.held) continue;   // (the man in his arm is placed off him, not kept off him: updateHold)
-    const dx = p[0] - gd.char.posX, dz = p[2] - gd.char.posZ; const l = Math.hypot(dx, dz);
+    const dx = p[0] - gd.char.pos[0], dz = p[2] - gd.char.pos[2]; const l = Math.hypot(dx, dz);
     if (l >= KEEP_OFF) continue;
     if (noShoveMan(g, gd)) {   // (noshove.ts: a man of his own falling in is the one who yields — only what his own legs closed on the man is taken back)
-      const back = l > 1e-4 ? noShoveBack(g, gd.char.posX, gd.char.posZ, l, m) : 0;
-      if (back > 0) { const bx = p[0], bz = p[2]; p[0] += dx / l * back; p[2] += dz / l * back; m.char.pos = p; collideMan(g, m, y1); p = m.char.pos; noShoveNote(g, p[0] - bx, p[2] - bz, m); }
+      const back = l > 1e-4 ? noShoveBack(g, gd.char.pos[0], gd.char.pos[2], l, m) : 0;
+      if (back > 0) { const bx = p[0], bz = p[2]; p[0] += dx / l * back; p[2] += dz / l * back; collideMan(g, m, y1); noShoveNote(g, p[0] - bx, p[2] - bz, m); }
       continue;
     }
     const gv = gd.char.vel; const gs = Math.hypot(gv[0], gv[2]); const walking = gs > 0.2;
@@ -871,7 +870,7 @@ function keepOffGuards(g: Game, dt: number, y1: number, m: Legs = g.player) {   
     if (l > 1e-4) { nx = dx / l; nz = dz / l; } else if (gs > 1e-3) { nx = gv[2] / gs; nz = -gv[0] / gs; } else { nx = 1; nz = 0; }
     let cap = 6, fx = 0, fz = 0, ahead = 0;   // his line of travel — the leg to his next waypoint (steady while he pivots onto it through you), else his velocity — and how squarely you are in front on it (cos)
     if (walking) {
-      const wp = gd.pathI < gd.path.length ? gd.path[gd.pathI] : null; const wx = wp ? wp[0] - gd.char.posX : 0, wz = wp ? wp[2] - gd.char.posZ : 0, wl = Math.hypot(wx, wz);
+      const wp = gd.pathI < gd.path.length ? gd.path[gd.pathI] : null; const wx = wp ? wp[0] - gd.char.pos[0] : 0, wz = wp ? wp[2] - gd.char.pos[2] : 0, wl = Math.hypot(wx, wz);
       if (wl > 0.3) { fx = wx / wl; fz = wz / wl; } else { fx = gv[0] / gs; fz = gv[2] / gs; }
       ahead = nx * fx + nz * fz;
       if (ahead > 0.64) {
@@ -885,8 +884,8 @@ function keepOffGuards(g: Game, dt: number, y1: number, m: Legs = g.player) {   
     const push = Math.min(KEEP_OFF - l, cap * dt); const bx = p[0], bz = p[2];
     p[0] += nx * push; p[2] += nz * push;
     if (ahead > 0) { const his = ahead * Math.min(push, gs * dt * ahead); p[0] -= fx * his; p[2] -= fz * his; }   // (the forward share of a straight shove that is only his stride closing on you this frame is not yours to travel: half beside him you would still ride along)
-    m.char.pos = p; collideMan(g, m, y1); p = m.char.pos;
-    if (walking && (p[0] - bx) * nx + (p[2] - bz) * nz < 0.5 * push) { p[0] = bx; p[2] = bz; m.char.pos = p; const s = m.safe; if (s) { s[0] = bx; s[2] = bz; } }   // the statics ate it: pinned — stay put (bx, bz is already a settled spot) and let him brush through
+    collideMan(g, m, y1);
+    if (walking && (p[0] - bx) * nx + (p[2] - bz) * nz < 0.5 * push) { p[0] = bx; p[2] = bz; const s = m.safe; if (s) { s[0] = bx; s[2] = bz; } }   // the statics ate it: pinned — stay put (bx, bz is already a settled spot) and let him brush through
     noShoveNote(g, p[0] - bx, p[2] - bz, m);   // (noshove.ts: what a man moved him by is not his walking — nothing with its switch off)
   }
 }
@@ -1020,7 +1019,7 @@ function clearOfProps(g: Game, q: Vec3, r: number): boolean {
  *  keeps him off it (the words differ). */
 function findWall(g: Game, quick = false, why?: { blocked: boolean }, only?: Vec3): { n: Vec3; t: Vec3; d: number; lo: number; hi: number; u: number } | null {
   const pl = g.player, p = pl.char.pos, col = g.col; const f = pl.char.forward();
-  const sp = Math.hypot(pl.char.velX, pl.char.velZ), far = WALLSNAP.on && sp > 0.5;   // WALLSNAP: a face he is walking AT is in reach from further off, and outranks a nearer one he is merely passing
+  const sp = Math.hypot(pl.char.vel[0], pl.char.vel[2]), far = WALLSNAP.on && sp > 0.5;   // WALLSNAP: a face he is walking AT is in reach from further off, and outranks a nearer one he is merely passing
   const reach = far ? Math.max(WALL_REACH, WALLSNAP.reachMoving) : WALL_REACH;
   const cands: { n: Vec3; d: number; score: number }[] = [];
   for (let k = 0; k < 16; k++) {
@@ -1032,7 +1031,7 @@ function findWall(g: Game, quick = false, why?: { blocked: boolean }, only?: Vec
     if (n[0] * dir[0] + n[2] * dir[2] > -0.35) continue;                                       // a face only glanced side-on: the ray square to it finds it if it faces him at all
     const d = (p[0] + dir[0] * hit.t) * n[0] + (p[2] + dir[2] * hit.t) * n[2];
     const dist = p[0] * n[0] + p[2] * n[2] - d;                                                 // how far his centre stands off that plane
-    const heading = far ? -(pl.char.velX * n[0] + pl.char.velZ * n[2]) / sp : 0, at = heading > WALLSNAP.headingMin;
+    const heading = far ? -(pl.char.vel[0] * n[0] + pl.char.vel[2] * n[2]) / sp : 0, at = heading > WALLSNAP.headingMin;
     if (dist < BODY_R - 0.06 || dist > BODY_R + (at ? reach : WALL_REACH)) continue;
     const dup = cands.find(c => c.n[0] * n[0] + c.n[2] * n[2] > 0.99 && Math.abs(c.d - d) < 0.02);
     if (dup) { if (d < dup.d) dup.d = d; continue; }                                            // one plane per face — and of two a centimetre apart (a jamb standing proud of its wall, met first by one ray) the deeper is the wall: traced along the jamb's, the wall a centimetre behind fell outside COPLANAR here and there and Q found 'nothing' a hand from where it held
@@ -1076,7 +1075,7 @@ export function wallSnap(g: Game, cam: FollowCamera, why?: { blocked: boolean },
   if (pl.wall || pl.down || pl.dragging || pl.takedown || pl.holding || pl.kick || pl.picking || pl.wanding) return false;
   const f = findWall(g, false, why, only); if (!f) return false;
   const { n, t } = f;
-  const vt = c.velX * t[0] + c.velZ * t[2], ft = Math.sin(c.bodyYaw) * t[0] + Math.cos(c.bodyYaw) * t[2], rt = cam.planarBasis().right;
+  const vt = c.vel[0] * t[0] + c.vel[2] * t[2], ft = Math.sin(c.bodyYaw) * t[0] + Math.cos(c.bodyYaw) * t[2], rt = cam.planarBasis().right;
   const side: -1 | 1 = Math.abs(vt) > 0.3 ? (vt > 0 ? 1 : -1) : Math.abs(ft) > 0.4 ? (ft > 0 ? 1 : -1) : rt[0] * t[0] + rt[2] * t[2] >= 0 ? 1 : -1;
   const uLo = f.lo + BODY_R, uHi = f.hi - BODY_R;
   pl.wall = { n, along: t, d: f.d, lo: f.lo, hi: f.hi, openLo: endOpen(g.col, n, f.d, t, uLo, -1), openHi: endOpen(g.col, n, f.d, t, uHi, 1),
@@ -1087,7 +1086,7 @@ export function wallSnap(g: Game, cam: FollowCamera, why?: { blocked: boolean },
     let yd = wrapAngle((stack ? awayYaw - side * Math.PI / 2 : awayYaw) - c.bodyYaw);
     if (!stack && Math.abs(yd) > Math.PI - 0.3) yd = side * Math.abs(yd);   // nose to the plaster: he comes round through the side he will look
     w.yaw0 = c.bodyYaw; w.yawD = yd; w.hitT = 0;
-    w.takeT = wsTakeSecs(Math.hypot(t[0] * f.u + n[0] * base - c.posX, t[2] * f.u + n[2] * base - c.posZ), yd);
+    w.takeT = wsTakeSecs(Math.hypot(t[0] * f.u + n[0] * base - c.pos[0], t[2] * f.u + n[2] * base - c.pos[2]), yd);
     { const b = c.bones, ft = (a?: Vec3, toe?: Vec3) => a && toe ? { p: v3.copy(a), yaw: Math.atan2(toe[0] - a[0], toe[2] - a[2]) } : null, L = ft(b.footL, b.toeL), R = ft(b.footR, b.toeR); c.anim.wallTakeFeet = L && R ? { L, R } : null; }   // (where his soles are drawn this moment: they stay there until each steps)
     if (stack) { w.kind = 'stack'; w.up = 0; w.lean = 0; w.leanWant = false; w.leanDir = side; w.leanDwell = 0; w.leanOutT = 0; w.leanOff = 0; }
     wsPend.delete(pl);
@@ -1286,8 +1285,8 @@ export function launchCancel(g: Game): boolean { const pl = g.player; if (!pl.la
  *  fire site already honours. Nothing leaves the low ready either: for WALLSNAP.upRise after it starts up the click is held (equipT again) and given to the
  *  fire sites on the frame the rise is over — the first round leaves with the rifle most of the way to the shoulder, a sixth of a second after the click, not level from the thigh. */
 function stackInWay(g: Game): boolean {
-  const pl = g.player, c = pl.char, ap = g.aimPoint, dx = ap[0] - c.posX, dz = ap[2] - c.posZ, d = Math.hypot(dx, dz);
-  const hit = d > 0.25 ? g.col.raycast([c.posX, pl.crouch ? 0.85 : 1.3, c.posZ], [dx / d, 0, dz / d], WALLSNAP.bore) : null;
+  const pl = g.player, c = pl.char, ap = g.aimPoint, dx = ap[0] - c.pos[0], dz = ap[2] - c.pos[2], d = Math.hypot(dx, dz);
+  const hit = d > 0.25 ? g.col.raycast([c.pos[0], pl.crouch ? 0.85 : 1.3, c.pos[2]], [dx / d, 0, dz / d], WALLSNAP.bore) : null;
   return !!hit && hit.index < 1e6;
 }
 /** HIS GUN CANNOT GET A ROUND OUT THIS FRAME (GUNWALL.mark; overlay.ts bars the aim ring with it — the words a dead click files are in no list the page
@@ -1340,14 +1339,14 @@ function stackLean(g: Game, dt: number, cam: FollowCamera, w: WallHold, dir: -1 
     // …and only where stepping out buys a line: from where he would stand, the first stretch toward the point is open (a shut door at the end is a wall carried on)
     if (want && !w.leanWant && W.leanClearM > 0) {
       const c = pl.char, h = pl.crouch ? 0.85 : 1.3, k = edge * W.leanAlong - (w.leanOff ?? 0);   // (from his STATION: he may still be on his way back in — by what he really stands past it, which a body in the way can cut short)
-      const a: Vec3 = [c.posX + t[0] * k, h, c.posZ + t[2] * k], d = Math.hypot(ap[0] - a[0], ap[2] - a[2]), r = Math.min(1, W.leanClearM / Math.max(d, 1e-3));
+      const a: Vec3 = [c.pos[0] + t[0] * k, h, c.pos[2] + t[2] * k], d = Math.hypot(ap[0] - a[0], ap[2] - a[2]), r = Math.min(1, W.leanClearM / Math.max(d, 1e-3));
       if (d < 0.2 || g.col.shotBlocked(a, [a[0] + (ap[0] - a[0]) * r, h + (ap[1] - h) * r, a[2] + (ap[2] - a[2]) * r])) want = false;
     }
     // THE GUN'S SHARE (WALLSNAP.leanGun): the least further step from which the rifle and the start of its round's way are clear; it grows at the
     // step-out's own speed and is kept until he is back in (a cursor that wanders does not walk him to and fro)
     if (want && W.leanGun > 0) {
       const c = pl.char, k0 = edge * W.leanAlong - (w.leanOff ?? 0); let need = 0;
-      if ((w.leanMore ?? 0) < W.leanGun) for (let m = 0; m <= W.leanGun + 1e-6; m += Math.max(0.02, W.leanGunStep)) if (gunClearFrom(g, c, c.posX + t[0] * (k0 + edge * m), c.posZ + t[2] * (k0 + edge * m), ap, W.leanClearM)) { need = m; break; }
+      if ((w.leanMore ?? 0) < W.leanGun) for (let m = 0; m <= W.leanGun + 1e-6; m += Math.max(0.02, W.leanGunStep)) if (gunClearFrom(g, c, c.pos[0] + t[0] * (k0 + edge * m), c.pos[2] + t[2] * (k0 + edge * m), ap, W.leanClearM)) { need = m; break; }
       if (need > (w.leanMore ?? 0)) w.leanMore = Math.min(need, (w.leanMore ?? 0) + dt * W.leanAlong / W.leanOut);
     }
   }
@@ -1429,7 +1428,7 @@ function moveOnWall(g: Game, dt: number, cam: FollowCamera, mx: number, mz: numb
   /** read where he actually is back into the hold: shoved off it or past its end → let go (false). `firm`: held back against the stick by a man → that way shuts
    *  for a beat (else he would tread on the spot pressing into the man's back); not firm (furniture): just take the station — a bin he keeps pushing along, as a walk does */
   const take = (firm: boolean): boolean => {
-    const uReal = c.posX * t[0] + c.posZ * t[2] - (w.leanOff ?? 0), offReal = c.posX * n[0] + c.posZ * n[2] - base;
+    const uReal = c.pos[0] * t[0] + c.pos[2] * t[2] - (w.leanOff ?? 0), offReal = c.pos[0] * n[0] + c.pos[2] * n[2] - base;
     if (uReal < uLo - 0.25 || uReal > uHi + 0.25 || offReal > WALL_SHOVE_OFF) { g.msg(w.seated ? 'pushed off the wall' : "can't get to the wall here"); if (w.seated) wallVoice(g, w, false); releaseWall(g); return false; }
     w.seated = true;
     if (Math.abs(uReal - w.u) > 0.003) {
@@ -1475,16 +1474,16 @@ function moveOnWall(g: Game, dt: number, cam: FollowCamera, mx: number, mz: numb
   if (ePrev < 1) {
     // (WALLSNAP.slow: a key held along the wall moves the station under the take. The body rides it — the glide then closes on a place that holds still
     //  for it, instead of trailing a hand behind one that runs on and landing short of it, which the read-back below took for a man in his way)
-    if (WALLSNAP.on && WALLSNAP.slow && u !== uWas) c.pos = [c.posX + t[0] * (u - uWas), c.posY, c.posZ + t[2] * (u - uWas)];
+    if (WALLSNAP.on && WALLSNAP.slow && u !== uWas) c.pos = [c.pos[0] + t[0] * (u - uWas), c.pos[1], c.pos[2] + t[2] * (u - uWas)];
     const e0 = ease(w.settle);
     const k = e0 < 1 ? (e0 - ePrev) / (1 - ePrev) : 1;                             // the curve's share of what is LEFT this frame (all of it on the last)
-    let sx = (tx - c.posX) * k, sz = (tz - c.posZ) * k; const sl = Math.hypot(sx, sz);
+    let sx = (tx - c.pos[0]) * k, sz = (tz - c.pos[2]) * k; const sl = Math.hypot(sx, sz);
     const cap = Math.hypot(tx - w.from[0], tz - w.from[2]) * (e0 - ePrev) + 0.02;   // the unobstructed stride this frame, and a hair
     if (sl > cap) { sx *= cap / sl; sz *= cap / sl; }
-    c.pos = [c.posX + sx, c.posY, c.posZ + sz];
-  } else c.pos = [tx, c.posY, tz];
+    c.pos = [c.pos[0] + sx, c.pos[1], c.pos[2] + sz];
+  } else c.pos = [tx, c.pos[1], tz];
   collidePlayer(g, y1); keepOffGuards(g, dt, y1);
-  if (lo !== 0 || w.leanOff) { const got = c.posX * t[0] + c.posZ * t[2] - w.u; w.leanOff = lo > 0 ? clamp(got, 0, lo) : lo < 0 ? clamp(got, lo, 0) : 0; }   // (what of the step-out he actually got: the read-back below is of his station, not of where he leans)
+  if (lo !== 0 || w.leanOff) { const got = c.pos[0] * t[0] + c.pos[2] * t[2] - w.u; w.leanOff = lo > 0 ? clamp(got, 0, lo) : lo < 0 ? clamp(got, lo, 0) : 0; }   // (what of the step-out he actually got: the read-back below is of his station, not of where he leans)
   if (w.settle >= 1 && !take(true)) return false;
   c.vel = [t[0] * w.v, 0, t[2] * w.v]; pl.speedSm = Math.abs(w.v);
   // the ends, and peeking round an open one
@@ -1505,14 +1504,14 @@ export function startTakedown(g: Game, gd: Guard, way?: CloseKind, lethal = fals
   const pl = g.player; if (gd.state === 'dead' || pl.down) return;   // (F + fire in the same frame: the round got there first)
   // closer than ever (close.ts): the way in the row offered — from a side or the front he strikes from where he stands, a seated man is put out in his chair
   const kind: CloseKind | undefined = closeLive(g) ? way ?? closeKindOf(closeAt(g, gd, pl.char.pos)) : undefined;
-  const from = kind && kind !== 'behind' ? wrapAngle(Math.atan2(pl.char.posX - gd.char.posX, pl.char.posZ - gd.char.posZ) - gd.char.bodyYaw) : 0;
+  const from = kind && kind !== 'behind' ? wrapAngle(Math.atan2(pl.char.pos[0] - gd.char.pos[0], pl.char.pos[2] - gd.char.pos[2]) - gd.char.bodyYaw) : 0;
   if (pl.wall) pl.wall.drawn = false;   // offered from the wall: he steps off it into the lunge with the empty hands he had on it — and keeps them empty after, as every takedown leaves him
   releaseWall(g);
   if (pl.dragging) g.toggleDrag();
   pl.takedown = kind && kind !== 'behind' ? { g: gd, t: 0, kind, from, alert: gd.state === 'alert', at: closeStation(gd, kind, from).pos } : { g: gd, t: 0 }; pl.sprinting = false;
   if (loud) pl.takedown.loud = true;   // (close.ts CLOSE.rmbHold: the quick knockout is heard further)
   if (lethal) { pl.takedown.lethal = true; pl.char.anim.strike(kind === 'front' ? 'jab' : 'cross', true); } else pl.char.anim.strike(kind === 'front' ? 'jab' : 'cross'); takeBegin(g, pl.char, gd, kind, lethal); cancelReloads(pl);   // (lethal: the knife comes out of its sheath in the blow — close.ts CLOSE.lethal, the left click)
-  if (kind) closeTook(g, gd, 'take', kind, from, Math.hypot(pl.char.posX - gd.char.posX, pl.char.posZ - gd.char.posZ));
+  if (kind) closeTook(g, gd, 'take', kind, from, Math.hypot(pl.char.pos[0] - gd.char.pos[0], pl.char.pos[2] - gd.char.pos[2]));
   if (THROWBACK.on) throwOff(pl);   // (throwback.ts: the can it counted off the belt at the click is not lost with the wind-up)
   pl.throwHeld = false; pl.throwPreview = null; pl.pendingThrow = null;   // a wind-up does not survive the lunge
   gd.speed = 0; gd.char.vel = [0, 0, 0]; gd.path = []; gd.pathGoal = null; gd.reactT = Math.max(gd.reactT, 1.0);   // he freezes for the beat it takes
@@ -1528,9 +1527,9 @@ export function updateTakedown(g: Game, dt: number) {
   if (td.kind) {   // (close.ts) from a side, the front, or over a chair: his station is on his own bearing off the man, facing him — and the man goes down away from the blow
     // (the spot is fixed in the WORLD at the click: a man who turns toward the blow does not drag Sam round him)
     const at = td.at ?? closeStation(gd, td.kind, td.from ?? 0).pos;
-    if (gd.state !== 'dead') { c.pos = v3.lerp(c.pos, at, 1 - Math.exp(-14 * dt)); collidePlayer(g, pl.crouch ? 1.0 : 1.7); td.yaw = Math.atan2(gd.char.posX - c.posX, gd.char.posZ - c.posZ); }
+    if (gd.state !== 'dead') { c.pos = v3.lerp(c.pos, at, 1 - Math.exp(-14 * dt)); collidePlayer(g, pl.crouch ? 1.0 : 1.7); td.yaw = Math.atan2(gd.char.pos[0] - c.pos[0], gd.char.pos[2] - c.pos[2]); }
     yaw = td.yaw ?? c.bodyYaw;
-  } else if (gd.state !== 'dead') { const want: Vec3 = [gd.char.posX - Math.sin(yaw) * 0.55, 0, gd.char.posZ - Math.cos(yaw) * 0.55]; c.pos = v3.lerp(c.pos, want, 1 - Math.exp(-14 * dt)); collidePlayer(g, pl.crouch ? 1.0 : 1.7); }
+  } else if (gd.state !== 'dead') { const want: Vec3 = [gd.char.pos[0] - Math.sin(yaw) * 0.55, 0, gd.char.pos[2] - Math.cos(yaw) * 0.55]; c.pos = v3.lerp(c.pos, want, 1 - Math.exp(-14 * dt)); collidePlayer(g, pl.crouch ? 1.0 : 1.7); }
   c.bodyYaw = approachAngle(c.bodyYaw, yaw, 14 * dt); c.aimYaw = c.bodyYaw; c.aimPitch = damp(c.aimPitch, 0.1, 8, dt);
   td.t += dt;
   if (td.t >= 0.28 && gd.state !== 'dead') {                    // the cross lands
@@ -1563,7 +1562,7 @@ export function startGrab(g: Game, gd: Guard, way?: CloseKind) {
   const pl = g.player, c = pl.char;
   // closer than ever (close.ts): the way in the row offered (behind him, or behind his chair), for the tallies
   const kind: CloseKind | undefined = closeLive(g) ? way ?? closeKindOf(closeAt(g, gd, c.pos)) : undefined;
-  const b0 = kind ? wrapAngle(Math.atan2(c.posX - gd.char.posX, c.posZ - gd.char.posZ) - gd.char.bodyYaw) : 0, r0 = Math.hypot(c.posX - gd.char.posX, c.posZ - gd.char.posZ);
+  const b0 = kind ? wrapAngle(Math.atan2(c.pos[0] - gd.char.pos[0], c.pos[2] - gd.char.pos[2]) - gd.char.bodyYaw) : 0, r0 = Math.hypot(c.pos[0] - gd.char.pos[0], c.pos[2] - gd.char.pos[2]);
   if (gd.state === 'dead' || gd.state === 'alert' || gd.held || pl.down || pl.holding || pl.takedown || pl.kick || pl.picking || pl.wanding) return;
   if (pl.crouch && !canStand(g)) { g.msg('no room to stand up behind him here'); return; }
   if (pl.rifleUp) setHolstered(g, true, true);   // the rifle in his hands goes to the sling as the arm goes round the man (Chaos Theory slings it: both hands are for him — the arm variant, the knife in the fist); it stays there when the hold is over
@@ -1635,7 +1634,7 @@ export function updateHold(g: Game, dt: number, input: Input, cam: FollowCamera)
   if (H.phase === 'grab') {
     // easing in to HOLD.dist behind him on HIS facing (he has not been turned yet), squaring up to his back — through Sam's own collision: squeezed behind a man by a
     // wall, the arm goes round him from as close as the wall allows and the hold proper settles the rest
-    const yaw = hc.bodyYaw; const want: Vec3 = [hc.posX - Math.sin(yaw) * HOLD.dist, 0, hc.posZ - Math.cos(yaw) * HOLD.dist];
+    const yaw = hc.bodyYaw; const want: Vec3 = [hc.pos[0] - Math.sin(yaw) * HOLD.dist, 0, hc.pos[2] - Math.cos(yaw) * HOLD.dist];
     if (H.from && STALK.catchSecs > 0) {   // (stalk.ts: the step in — his legs take it, at no more than a walk's stride — and then the yank)
       // (a longer way in — off a wall, the wait at a corner — takes a little longer, never so long that the haul back has no time left)
       if (H.stepM === undefined) { H.stepM = Math.hypot(want[0] - H.from[0], want[2] - H.from[2]); H.yaw0 = c.bodyYaw; }
@@ -1643,14 +1642,14 @@ export function updateHold(g: Game, dt: number, input: Input, cam: FollowCamera)
       if (u >= 1 && STALK.yank > 0 && !gd.civ) {   // landed: the man comes back with him, as far as there is room behind the pair
         if (H.hitAt === undefined) { H.hitAt = g.time; const hit = g.col.raycast([want[0], 1.0, want[2]], [-Math.sin(yaw), 0, -Math.cos(yaw)], STALK.yank + STALK.yankRoom); H.yankM = hit ? Math.max(0, hit.t - STALK.yankRoom) : STALK.yank; H.yanked = 0; }
         const v = clamp((H.t - T) / Math.max(0.05, K.grab - T), 0, 1), y = H.yankM! * (1 - (1 - v) * (1 - v)), d = y - H.yanked!;
-        if (d > 0) { hc.pos = [hc.posX - Math.sin(yaw) * d, hc.posY, hc.posZ - Math.cos(yaw) * d]; H.yanked = y; to = [want[0] - Math.sin(yaw) * d, 0, want[2] - Math.cos(yaw) * d];
-          if (STALK.yankWith) c.pos = [c.posX - Math.sin(yaw) * d, c.posY, c.posZ - Math.cos(yaw) * d]; }   // (he goes back WITH the man, by the man's own step: chasing him at 14 /s the man came 11 cm into Sam's chest and Sam jumped 7 cm clear of him on the hold's first frame)
+        if (d > 0) { hc.pos = [hc.pos[0] - Math.sin(yaw) * d, hc.pos[1], hc.pos[2] - Math.cos(yaw) * d]; H.yanked = y; to = [want[0] - Math.sin(yaw) * d, 0, want[2] - Math.cos(yaw) * d];
+          if (STALK.yankWith) c.pos = [c.pos[0] - Math.sin(yaw) * d, c.pos[1], c.pos[2] - Math.cos(yaw) * d]; }   // (he goes back WITH the man, by the man's own step: chasing him at 14 /s the man came 11 cm into Sam's chest and Sam jumped 7 cm clear of him on the hold's first frame)
       } else if (u >= 1 && H.hitAt === undefined) H.hitAt = g.time;
       // (by the step's own delta from where the collision last left him, never the straight line's point: behind a man with his back near a wall that
       //  point is in the wall, and a push-out from past its middle comes out the far side)
       const e = stepEase(u), e0 = H.stepE ?? 0, d0 = v3.sub(v3.lerp(H.from, to, e), v3.lerp(H.from, to, e0)); H.stepE = e;
-      c.pos = u >= 1 ? v3.lerp(c.pos, to, 1 - Math.exp(-14 * dt)) : [c.posX + d0[0], c.posY, c.posZ + d0[2]];
-      own = STALK.yankWith && u >= 1 ? 0 : Math.min(STALK.catchStride, Math.hypot(c.posX - was[0], c.posZ - was[2]) / Math.max(dt, 1e-4)); c.vel = [0, 0, 0]; collidePlayer(g, 1.7); }   // (landed, his feet are planted: fed the yank's speed the legs snapped from the stance into a walk's mid stride on its first frame — a foot 19 cm up in one tick — and back on the hold's)
+      c.pos = u >= 1 ? v3.lerp(c.pos, to, 1 - Math.exp(-14 * dt)) : [c.pos[0] + d0[0], c.pos[1], c.pos[2] + d0[2]];
+      own = STALK.yankWith && u >= 1 ? 0 : Math.min(STALK.catchStride, Math.hypot(c.pos[0] - was[0], c.pos[2] - was[2]) / Math.max(dt, 1e-4)); c.vel = [0, 0, 0]; collidePlayer(g, 1.7); }   // (landed, his feet are planted: fed the yank's speed the legs snapped from the stance into a walk's mid stride on its first frame — a foot 19 cm up in one tick — and back on the hold's)
     else { c.vel = [0, 0, 0]; c.pos = v3.lerp(c.pos, want, 1 - Math.exp(-14 * dt)); collidePlayer(g, 1.7); }
     // (the stalk's step in: he comes round to the man's back THROUGH the step, not in its first four frames — off a wall that was a quarter turn on the spot)
     if (STALK.turnIn && stepU >= 0 && stepU < 1 && H.yaw0 !== undefined) { const e = clamp(stepU / 0.85, 0, 1); c.bodyYaw = H.yaw0 + wrapAngle(yaw - H.yaw0) * e * e * (3 - 2 * e); } else c.bodyYaw = approachAngle(c.bodyYaw, yaw, 14 * dt);
@@ -1719,11 +1718,11 @@ export function updateHold(g: Game, dt: number, input: Input, cam: FollowCamera)
     } else { H.fireQueued = false; H.gunOut = damp(H.gunOut, 0, 6, dt); }
     // ---- turning: the pair comes round toward the cursor, rate-limited; no chest twist of Sam's own (his arms are where the man is). The gun, when it comes off his
     //      head, is presented at the pitch of what the reticle has (the layer reads aimPitch as HoldPose.gunPitch); otherwise level.
-    const ap = g.aimPoint; const tx = ap[0] - c.posX, tz = ap[2] - c.posZ; const ad = Math.hypot(tx, tz);
+    const ap = g.aimPoint; const tx = ap[0] - c.pos[0], tz = ap[2] - c.pos[2]; const ad = Math.hypot(tx, tz);
     const settle = STALK.yankWith && H.hitAt !== undefined ? smoothstep(0.3, 0.75, g.time - H.hitAt) : 1;   // (the stalk's catch settles before the pair comes round: the button was held ON the man, so the cursor is at Sam's own feet when the hold lands, and a hand's width of it either side swung the pair a quarter turn on the hold's first frames)
     if (ad > 0.6) c.bodyYaw = approachAngle(c.bodyYaw, Math.atan2(tx, tz), HOLD_TURN * settle * dt);
     c.aimYaw = c.bodyYaw;
-    if (gun) { const ty = g.aimTarget ? clamp(g.aimTarget.pos[1], 0.3, 2.95) : g.aimGuard && g.aimGuard !== gd ? (g.aimGuard.wound && g.aimSnap ? g.aimSnap[1] : manAim(g, g.aimGuard, 1.2)[1]) : levelOn(g) ? c.posY + 1.5 : ap[1] + 0.03; c.aimPitch = damp(c.aimPitch, clamp(Math.atan2(ty - (c.posY + 1.5), Math.max(ad, 0.5)), -45 * DEG, 45 * DEG) * H.gunOut, 12, dt); }   // (nothing under the reticle: presented level — levelOn)
+    if (gun) { const ty = g.aimTarget ? clamp(g.aimTarget.pos[1], 0.3, 2.95) : g.aimGuard && g.aimGuard !== gd ? (g.aimGuard.wound && g.aimSnap ? g.aimSnap[1] : manAim(g, g.aimGuard, 1.2)[1]) : levelOn(g) ? c.pos[1] + 1.5 : ap[1] + 0.03; c.aimPitch = damp(c.aimPitch, clamp(Math.atan2(ty - (c.pos[1] + 1.5), Math.max(ad, 0.5)), -45 * DEG, 45 * DEG) * H.gunOut, 12, dt); }   // (nothing under the reticle: presented level — levelOn)
     else c.aimPitch = damp(c.aimPitch, -0.05, 8, dt);
     // ---- the pair's movement (rooted while the choke / the whip is on: you plant to finish it — a step then is what stops it, interact.ts; feet still while the selector is open)
     let mx = 0, mz = 0;
@@ -1733,19 +1732,19 @@ export function updateHold(g: Game, dt: number, input: Input, cam: FollowCamera)
         if (input.down('KeyW')) { mx += fwd[0]; mz += fwd[2]; } if (input.down('KeyS')) { mx -= fwd[0]; mz -= fwd[2]; }
         if (input.down('KeyD')) { mx += right[0]; mz += right[2]; } if (input.down('KeyA')) { mx -= right[0]; mz -= right[2]; }
       }
-      if (g.puppet) { mx = 0; mz = 0; const gl = g.puppet.goal; if (gl) { const dx = gl[0] - c.posX, dz = gl[2] - c.posZ; const dl = Math.hypot(dx, dz); if (dl > 0.1) { mx = dx / dl; mz = dz / dl; } } }
+      if (g.puppet) { mx = 0; mz = 0; const gl = g.puppet.goal; if (gl) { const dx = gl[0] - c.pos[0], dz = gl[2] - c.pos[2]; const dl = Math.hypot(dx, dz); if (dl > 0.1) { mx = dx / dl; mz = dz / dl; } } }
     }
     const ml = Math.hypot(mx, mz); if (ml > 0) { mx /= ml; mz /= ml; }
     const f = c.forward(); const back = ml > 0 && mx * f[0] + mz * f[2] < -0.3;   // into the rear half: hauling him backwards
     const maxSpeed = samLoadPace(g, ml === 0 ? 0 : (back ? HOLD_PACE_BACK : HOLD_PACE) * pl.pace * (g.puppet?.walk ?? 1));   // (kitload.ts: what his card weighs, as his walk)
     pl.speedSm = damp(pl.speedSm, maxSpeed, maxSpeed > pl.speedSm ? 6 : 12, dt);
     if (ml > 0) c.vel = [mx * pl.speedSm, 0, mz * pl.speedSm]; else c.vel = v3.scale(c.vel, Math.exp(-14 * dt));
-    const bx = c.posX, bz = c.posZ;
+    const bx = c.pos[0], bz = c.pos[2];
     c.pos = v3.mad(c.pos, c.vel, dt);
     collidePlayer(g, 1.7); keepOffGuards(g, dt, 1.7); keepHeldOffGuards(g, dt);
     placeHeld(g);
-    speed = Math.min(Math.hypot(c.posX - bx, c.posZ - bz) / Math.max(dt, 1e-4), Math.hypot(c.velX, c.velZ));   // the ground the pair actually covered (pressed to a wall ahead of the man, the legs stand rather than tread on the spot)
-    pl.backpedal = speed > 0.2 && (c.velX * f[0] + c.velZ * f[2]) / Math.max(1e-4, Math.hypot(c.velX, c.velZ)) < -0.3; c.anim.reverse = pl.backpedal;
+    speed = Math.min(Math.hypot(c.pos[0] - bx, c.pos[2] - bz) / Math.max(dt, 1e-4), Math.hypot(c.vel[0], c.vel[2]));   // the ground the pair actually covered (pressed to a wall ahead of the man, the legs stand rather than tread on the spot)
+    pl.backpedal = speed > 0.2 && (c.vel[0] * f[0] + c.vel[2] * f[2]) / Math.max(1e-4, Math.hypot(c.vel[0], c.vel[2])) < -0.3; c.anim.reverse = pl.backpedal;
     hc.vel = v3.copy(c.vel); gd.speed = speed; hc.bodyYaw = c.bodyYaw;
     if (gd.held) gd.held.reverse = pl.backpedal;
   }
@@ -1763,7 +1762,7 @@ function holdTail(g: Game, dt: number, speed: number, own = -1) {
   const strip = H?.strip ? disarmPose(H.strip) : undefined;   // (disarm.ts: both poses or neither)
   const yank = H && H.hitAt !== undefined && g.time - H.hitAt < 1 ? g.time - H.hitAt : undefined;   // (character.ts HOLD.yank: both poses or neither)
   c.anim.holdPose = H ? { yank, step: H.from && H.phase === 'grab' ? H.t : undefined, phase: H.phase, t: H.t, variant: H.variant, gunOut: H.gunOut, gunPitch: c.aimPitch, low, kill, beats, haul, strip } : null;
-  if (H && HOLD.catchShape && H.phase === 'grab' && c.anim.holdPose) c.anim.holdPose.man = [H.g.char.posX, H.g.char.posY, H.g.char.posZ];   // (HOLD.catch: the arm's keys ride the man — fed only with it up, so the pose is what it was with it down)
+  if (H && HOLD.catchShape && H.phase === 'grab' && c.anim.holdPose) c.anim.holdPose.man = [H.g.char.pos[0], H.g.char.pos[1], H.g.char.pos[2]];   // (HOLD.catch: the arm's keys ride the man — fed only with it up, so the pose is what it was with it down)
   if (H && STALK.yankWith && H.yanked !== undefined && c.anim.holdPose) c.anim.holdPose.pull = H.yanked;   // (HOLD.catch.samFeet: his feet step the haul he goes back with)
   if (H) {
     const gd = H.g, hc = gd.char, an = hc.anim;
@@ -1876,28 +1875,28 @@ function startKill(g: Game) {
  *  keepHeldOffGuards); door leaves push the pair through their own contacts (game.ts updateDoors — his carries a key). */
 function placeHeld(g: Game) {
   const pl = g.player, c = pl.char, H = pl.holding; if (!H) return;
-  const hc = H.g.char, col = g.col, r = hc.radius; let hp = hc.pos;
+  const hc = H.g.char, hp = hc.pos, col = g.col, r = hc.radius;
   for (let k = 0; k < 3; k++) {
-    const f = c.forward(); const wx = c.posX + f[0] * HOLD.dist, wz = c.posZ + f[2] * HOLD.dist;
+    const f = c.forward(); const wx = c.pos[0] + f[0] * HOLD.dist, wz = c.pos[2] + f[2] * HOLD.dist;
     hp[0] = wx; hp[1] = 0; hp[2] = wz;
-    col.collideCircle(hp, r, 0.2, 1.5, 4); col.clampToWorld(hp, r); hc.pos = hp;
+    col.collideCircle(hp, r, 0.2, 1.5, 4); col.clampToWorld(hp, r);
     const dx = hp[0] - wx, dz = hp[2] - wz;
     if (dx * dx + dz * dz < 1e-8) break;
-    c.posX += dx; c.posZ += dz; collidePlayer(g, 1.7);
+    c.pos[0] += dx; c.pos[2] += dz; collidePlayer(g, 1.7);
   }
 }
 /** living guards are as solid to the man in his arm as to Sam himself: one closer than KEEP_OFF to the held man's centre pushes the PAIR back (Sam moved, re-settled; placeHeld re-places the man) */
 function keepHeldOffGuards(g: Game, dt: number) {
   const pl = g.player, c = pl.char, H = pl.holding; if (!H) return;
-  const f = c.forward(); const hx = c.posX + f[0] * HOLD.dist, hz = c.posZ + f[2] * HOLD.dist;
+  const f = c.forward(); const hx = c.pos[0] + f[0] * HOLD.dist, hz = c.pos[2] + f[2] * HOLD.dist;
   for (const o of g.guards) {
     if (o === H.g || o.state === 'dead' || o.held) continue;
-    const dx = hx - o.char.posX, dz = hz - o.char.posZ; const l = Math.hypot(dx, dz);
+    const dx = hx - o.char.pos[0], dz = hz - o.char.pos[2]; const l = Math.hypot(dx, dz);
     if (l >= KEEP_OFF || l < 1e-4) continue;
     if (noShoveMan(g, o)) continue;   // (noshove.ts: a man of his own falling in does not move the pair either)
-    const bx = c.posX, bz = c.posZ;
-    const push = Math.min(KEEP_OFF - l, 6 * dt); c.posX += dx / l * push; c.posZ += dz / l * push;
-    collidePlayer(g, 1.7); noShoveNote(g, c.posX - bx, c.posZ - bz);
+    const bx = c.pos[0], bz = c.pos[2];
+    const push = Math.min(KEEP_OFF - l, 6 * dt); c.pos[0] += dx / l * push; c.pos[2] += dz / l * push;
+    collidePlayer(g, 1.7); noShoveNote(g, c.pos[0] - bx, c.pos[2] - bz);
   }
 }
 /** Where the exchange with the man in his arm stands: `asking` — Sam's own line is up and the answer is on its way (H.ask: a tap does nothing); `samUp` — a line
@@ -1962,9 +1961,9 @@ export function takeKey(g: Game, gd: Guard, rnd: () => number = simRandom) {
 export function settleHeld(g: Game) {
   const pl = g.player, H = pl.holding; if (!H || H.phase === 'grab') return;
   const c = pl.char, hc = H.g.char, hp = hc.pos, f = c.forward();
-  const dx = hp[0] - (c.posX + f[0] * HOLD.dist), dz = hp[2] - (c.posZ + f[2] * HOLD.dist);
+  const dx = hp[0] - (c.pos[0] + f[0] * HOLD.dist), dz = hp[2] - (c.pos[2] + f[2] * HOLD.dist);
   if (dx * dx + dz * dz < 1e-6) return;
-  c.posX += dx; c.posZ += dz; collidePlayer(g, 1.7); placeHeld(g);
+  c.pos[0] += dx; c.pos[2] += dz; collidePlayer(g, 1.7); placeHeld(g);
   hc.update(0); c.update(0);
 }
 /** The choke run through HOLD.secs.choke: he goes limp in the arm and folds forward at Sam's feet — killGuard's quiet path ('choked': out cold, breathing, a knockout on
@@ -2129,9 +2128,9 @@ function updateWanding(g: Game, dt: number) {
  *  the plate, nothing in the sights, the rifle low; nothing here reads the movement keys or the buttons (interact.ts stops the verb on a fresh key). */
 function updateCodingPlant(g: Game, dt: number) {
   const pl = g.player, c = pl.char; const K = g.devices.padOf(pl.coding!);
-  c.vel = [0, 0, 0]; const x0 = c.posX, z0 = c.posZ; if (K && handworkOn('work')) { if (pl.wall) releaseWall(g); workStand(c, K.def.pos, K.n, dt, samWorkHand(g)); }   // (handwork.ts: the step in to arm's length of the plate)
+  c.vel = [0, 0, 0]; const x0 = c.pos[0], z0 = c.pos[2]; if (K && handworkOn('work')) { if (pl.wall) releaseWall(g); workStand(c, K.def.pos, K.n, dt, samWorkHand(g)); }   // (handwork.ts: the step in to arm's length of the plate)
   collidePlayer(g, 1.0); keepOffGuards(g, dt, 1.0);
-  const stepV = K && handworkOn('work') && dt > 0 ? Math.hypot(c.posX - x0, c.posZ - z0) / dt : 0;   // (his legs take the step he is walked: 0 with the switch off)
+  const stepV = K && handworkOn('work') && dt > 0 ? Math.hypot(c.pos[0] - x0, c.pos[2] - z0) / dt : 0;   // (his legs take the step he is walked: 0 with the switch off)
   if (K) { c.bodyYaw = approachAngle(c.bodyYaw, Math.atan2(-K.n[0], -K.n[2]), 10 * dt); c.aimYaw = c.bodyYaw; }
   c.aimPitch = damp(c.aimPitch, 0, 8, dt); pl.sprinting = false; pl.backpedal = false; c.anim.reverse = false; c.anim.speed = stepV > 0.2 ? Math.min(stepV, 1.7) : 0; c.anim.upper = 'none';
   armRifle(g, pl.rifleUp, 'lowLong'); c.update(dt); poseGunLight(g);
@@ -2142,9 +2141,9 @@ function updateCodingPlant(g: Game, dt: number) {
 function updateWorkPlant(g: Game, dt: number, W: SamWork) {
   const pl = g.player, c = pl.char;
   if (pl.wall) releaseWall(g);   // (pressed to the wall beside the thing: he comes off it to work — as for a pick or a kick)
-  c.vel = [0, 0, 0]; const x0 = c.posX, z0 = c.posZ; const yaw = workStand(c, W.p, W.n, dt, samWorkHand(g)); collidePlayer(g, 1.0); keepOffGuards(g, dt, 1.0);
-  if (W.at) { W.at[0] += c.posX - x0; W.at[2] += c.posZ - z0; }   // (the spot he must not shift from goes with the step HE IS WALKED here, and only that: anything else that moves him — a shove, a blast — still breaks the work off)
-  const stepV = dt > 0 ? Math.hypot(c.posX - x0, c.posZ - z0) / dt : 0;   // (his legs take the step he is walked)
+  c.vel = [0, 0, 0]; const x0 = c.pos[0], z0 = c.pos[2]; const yaw = workStand(c, W.p, W.n, dt, samWorkHand(g)); collidePlayer(g, 1.0); keepOffGuards(g, dt, 1.0);
+  if (W.at) { W.at[0] += c.pos[0] - x0; W.at[2] += c.pos[2] - z0; }   // (the spot he must not shift from goes with the step HE IS WALKED here, and only that: anything else that moves him — a shove, a blast — still breaks the work off)
+  const stepV = dt > 0 ? Math.hypot(c.pos[0] - x0, c.pos[2] - z0) / dt : 0;   // (his legs take the step he is walked)
   c.bodyYaw = approachAngle(c.bodyYaw, yaw, WORK_TURN * dt); c.aimYaw = c.bodyYaw;
   c.aimPitch = damp(c.aimPitch, 0, 8, dt); pl.sprinting = false; pl.backpedal = false; c.anim.reverse = false; c.anim.speed = stepV > 0.2 ? Math.min(stepV, 1.7) : 0; c.anim.upper = 'none'; c.anim.lockpick = false;
   armRifle(g, pl.rifleUp, 'lowLong'); c.update(dt); poseGunLight(g);
@@ -2185,11 +2184,11 @@ export function updateKick(g: Game, dt: number) {
   const pl = g.player, c = pl.char, d = pl.kick!.door;
   const spot = pl.kick!;
   c.vel = [0, 0, 0];
-  const walked = !!spot.tool?.moves, x0 = c.posX, z0 = c.posZ; let yaw = spot.yaw;
+  const walked = !!spot.tool?.moves, x0 = c.pos[0], z0 = c.pos[2]; let yaw = spot.yaw;
   if (walked) { yaw = samBigWalk(g, dt); collidePlayer(g, 1.7); }   // (bigkit.ts, BIGSLOT.moves: he walks onto his place beside the frame, the tool coming into his hands on the way)
   else if (c.anim.kickTime < 0.45) { c.pos = v3.lerp(c.pos, spot.spot, 1 - Math.exp(-12 * dt)); collidePlayer(g, 1.7); }   // set the distance during the chamber; from the strike on, the planted foot stays where it is
   keepOffGuards(g, dt, 1.7);
-  const stepV = walked && dt > 0 ? Math.hypot(c.posX - x0, c.posZ - z0) / dt : 0;   // (his legs take the steps he is walked)
+  const stepV = walked && dt > 0 ? Math.hypot(c.pos[0] - x0, c.pos[2] - z0) / dt : 0;   // (his legs take the steps he is walked)
   c.bodyYaw = approachAngle(c.bodyYaw, yaw, (walked ? 9 : 16) * dt); c.aimYaw = c.bodyYaw; c.aimPitch = damp(c.aimPitch, 0, 8, dt);
   pl.sprinting = false; pl.crouch = false; pl.backpedal = false; c.anim.reverse = false; c.anim.lockpick = false;
   c.anim.speed = stepV > 0.2 ? Math.min(stepV, 1.7) : 0; c.anim.crouchTarget = 0; c.anim.upper = pl.pistolUp ? 'relaxed' : 'none';   // (the carry arms only with the gun actually out: holstered — the default now — the kick keeps the hands free instead of pulling an empty high-ready)
@@ -2216,7 +2215,7 @@ export function bodyDist(g: Game, gd: Guard, within = Infinity): number {
 }
 
 /** Throw origin (right hand-ish) */
-export function throwOrigin(g: Game): Vec3 { const c = g.player.char; const f = c.forward(); return [c.posX + f[0] * 0.32, c.posY + (g.player.crouch ? 1.05 : 1.5), c.posZ + f[2] * 0.32]; }
+export function throwOrigin(g: Game): Vec3 { const c = g.player.char; const f = c.forward(); return [c.pos[0] + f[0] * 0.32, c.pos[1] + (g.player.crouch ? 1.05 : 1.5), c.pos[2] + f[2] * 0.32]; }
 
 export function doThrow(g: Game, sol: ThrowSolution, kind: ThrowKind) {
   const pl = g.player; if (g.throwCount(kind) <= 0) { g.msg(kind === 'frag' ? 'no frag grenades left' : kind === 'flash' ? 'no flashbangs left' : 'no smoke canisters left'); return; }

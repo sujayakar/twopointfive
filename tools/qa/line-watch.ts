@@ -91,9 +91,9 @@ export class LineWatch {
   }
   /** a friend in this teammate's line to that man, by the game's own tests (see the head) — null: the line is open */
   private friendIn(m: any, h: any): { f: any; to: number[] } | null {
-    const g = this.g, c = m.char, hc = h.char, p = c.pos; const chest = hc.bones.chest ?? [hc.posX, hc.posY + 1.1, hc.posZ];
+    const g = this.g, c = m.char, hc = h.char, p = c.pos; const chest = hc.bones.chest ?? [hc.pos[0], hc.pos[1] + 1.1, hc.pos[2]];
     let to: number[] | null = null;
-    if (clearShot(g, c, chest)) to = chest; else { const head = hc.bones.head ?? [hc.posX, hc.posY + 1.6, hc.posZ]; if (clearShot(g, c, head)) to = head; }
+    if (clearShot(g, c, chest)) to = chest; else { const head = hc.bones.head ?? [hc.pos[0], hc.pos[1] + 1.6, hc.pos[2]]; if (clearShot(g, c, head)) to = head; }
     if (!to) return null;
     const carry = g.fight.friendInLine(c.bones.upperArmR ?? [p[0], p[1] + 1.4, p[2]], chest, m);   // (roomfight.ts samInLine: the carry line lowers the gun for the PLAYER alone — a mate there is the discipline's question, asked next)
     const f = g.fight.friendInLine(c.muzzle, to, m) ?? (carry === 'player' ? carry : null) ?? colleagueInLine(g, m, chest as any);
@@ -123,7 +123,7 @@ export class LineWatch {
 
   /** once a frame, after the game's step. `drive`: what the driver has the commander doing this frame */
   tick(t: number, team: any[], drive: 'post' | 'walk' | 'off', dt = 1 / 60) {
-    const g = this.g, sam = g.player.char, samV = Math.hypot(sam.velX, sam.velZ);
+    const g = this.g, sam = g.player.char, samV = Math.hypot(sam.vel[0], sam.vel[2]);
     this.notes(team);
     // hostile rounds of this frame: who fired, the segment flown
     const shots: { who: number; from: number[]; to: number[] }[] = [];
@@ -147,7 +147,7 @@ export class LineWatch {
         S.was = m.state; continue;
       }
       S.was = m.state; this.out.up += dt;
-      { const s0 = m.script, v0 = Math.hypot(c.velX, c.velZ), A0 = g.orders.of(m); S.snap = { feet: s0 && O?.step && s0.goal === O.step.mine ? 'step' : s0 && s0.goal && !s0.arrived ? 'walk' : v0 > 0.3 ? 'drift' : 'still', low: !!m.muzzleDown, order: A0 ? `${A0.order}${A0.arrived ? ' (on his mark)' : ''}` : m.script ? 'scripted' : `no order, ${m.state}`, tgt: O?.tgt ?? (!m.script && m.foe && m.foe !== 'player' ? m.foe : null) }; }
+      { const s0 = m.script, v0 = Math.hypot(c.vel[0], c.vel[2]), A0 = g.orders.of(m); S.snap = { feet: s0 && O?.step && s0.goal === O.step.mine ? 'step' : s0 && s0.goal && !s0.arrived ? 'walk' : v0 > 0.3 ? 'drift' : 'still', low: !!m.muzzleDown, order: A0 ? `${A0.order}${A0.arrived ? ' (on his mark)' : ''}` : m.script ? 'scripted' : `no order, ${m.state}`, tgt: O?.tgt ?? (!m.script && m.foe && m.foe !== 'player' ? m.foe : null) }; }
       // the game's own moves since last frame (read off its records, nothing asked of it)
       let stepOk = S.evStep, stepNo = 0, letGo = S.evLetGo, aiStep = 0; S.evStep = S.evLetGo = 0;
       if (O) { const d = O.stepUntil - S.stepUntil; if (d > 0.05 && !stepOk && Math.abs(O.stepUntil - g.time - 1) < 0.06) stepNo = 1;   // (sideStep's own 'no spot from here': it bars itself for a second and leaves no note; a doorway step bars 1.5 s, its miss 0.5)
@@ -189,11 +189,11 @@ export class LineWatch {
         if (drive === 'post') { r.samPost += dt; const k = this.samCase(c.pos, hc.pos); if (k === 'free') r.samFree += dt; else if (k === 'boxed') r.samBoxed += dt; else r.samUnseen += dt; } else if (drive === 'walk') r.samWalk += dt; else r.samOff += dt; }
       else { if (kind === 'mate') { r.byMate += dt; this.out.byMate += dt; } else { r.byOther += dt; this.out.byOther += dt; }
         if (Math.hypot(fc.vel[0], fc.vel[2]) < 0.3) r.mateStill += dt; const fs = f.script; if (fs && fs.goal && !fs.arrived) r.mateWalk += dt; }
-      const s = m.script, speed = Math.hypot(c.velX, c.velZ);
+      const s = m.script, speed = Math.hypot(c.vel[0], c.vel[2]);
       if (s && O?.step && s.goal === O.step.mine) r.step += dt; else if (s && s.goal && !s.arrived) r.walk += dt; else if (speed > 0.3) r.drift += dt; else r.still += dt;
       r.stepOk += stepOk; r.stepNo += stepNo; r.letGo += letGo; r.aiStep += aiStep; if (g.fight?.short?.(m)) r.short += dt;
       if (m.muzzleDown) r.low += dt; r.held += heldNow * dt;
-      if (Math.abs(wrap(Math.atan2(p[0] - hc.posX, p[2] - hc.posZ) - hc.aimYaw)) < 0.35) r.onMe += dt;
+      if (Math.abs(wrap(Math.atan2(p[0] - hc.pos[0], p[2] - hc.pos[2]) - hc.aimYaw)) < 0.35) r.onMe += dt;
       if (h.foe === m) r.foeMe += dt;
       { const a = c.muzzle, b = FI.to, dx = b[0] - a[0], dz = b[2] - a[2], L2 = dx * dx + dz * dz || 1, hp = fc.bones.hips ?? fc.pos, tr = ((hp[0] - a[0]) * dx + (hp[2] - a[2]) * dz) / L2;   // the friend's body against the round's own line: past the man, or really in the way (inside 0.35 m of it between gun and man)
         if (tr > 1) r.past += dt; else if (tr > 0 && Math.hypot(a[0] + dx * tr - hp[0], a[2] + dz * tr - hp[2]) < 0.35) r.tight += dt; }

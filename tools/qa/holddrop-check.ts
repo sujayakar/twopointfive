@@ -46,7 +46,7 @@ export async function holdDropCheck(): Promise<boolean> {
         `rig ${before.rig} · in his hand before ${before.hand}, at the grab ${atGrab}, 1.5 s on ${inHand(A)} · guns on the floor ${guns(g).length} · held ${!!g.player.holding}`); }
     // ---- the rifleman
     const on = await take('rifle', rule);
-    { const { g, A, atGrab } = on, G = guns(g), it = G[0], d = it ? Math.hypot(it.pos[0] - A.char.posX, it.pos[2] - A.char.posZ) : -1, fewer = props(off.g) - props(g);
+    { const { g, A, atGrab } = on, G = guns(g), it = G[0], d = it ? Math.hypot(it.pos[0] - A.char.pos[0], it.pos[2] - A.char.pos[2]) : -1, fewer = props(off.g) - props(g);
       verdict(on.before.lit && off.A.flashlight.enabled && atGrab === null && inHand(A) === null && G.length === 1 && it.kind === 'rifle' && A.dropped === it && d < 2.5 && A.gunLostAt >= 0 && !A.flashlight.enabled && fewer > 0 && g.player.holding?.g === A,
         'the rule on: the rifle leaves his hands on the grab\'s own frame and lies on the floor by him, one gun and no more; his light is out; the picture draws no gun in his hands',
         `in his hand at the grab ${atGrab}, 1.5 s on ${inHand(A)} · guns on the floor ${G.map((x: any) => x.kind).join(', ') || 'none'}${it ? `, ${d.toFixed(2)} m from him` : ''} · his light was ${on.before.lit ? 'on' : 'OFF'}, is ${A.flashlight.enabled ? 'on' : 'out'} (rule off: ${off.A.flashlight.enabled ? 'on' : 'out'}) · hand-prop boxes ${fewer} fewer than with the rule off`); }

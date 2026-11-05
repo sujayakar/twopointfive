@@ -317,9 +317,9 @@ export function floorPlan(g: Game, kept: PlanKept = planKept(), who: PlanFor = M
       const age = g.time - o.t, k = mode ? 1 : age >= 0 && age < PLAN.freshSecs ? Math.min(1, (1 - age / PLAN.freshSecs) / 0.4) : 0; if (k <= 0) continue;
       const men = layMen(g, o); if (!men.length) continue;
       const at = layPoint(g, o), door = o.kind === 'door' ? g.doors.list[o.door ?? -1] : null;
-      const L: PlanLaid = { tone: toneFor(g, men, toneOf), feet: men.map((m): Vec3 => [m.char.posX, 0, m.char.posZ]), ways: [], at, a: null, b: null, key: F, k };
+      const L: PlanLaid = { tone: toneFor(g, men, toneOf), feet: men.map((m): Vec3 => [m.char.pos[0], 0, m.char.pos[2]]), ways: [], at, a: null, b: null, key: F, k };
       if (door) [L.a, L.b] = jambs(door);
-      if (at && PLAN.paths) for (const m of men) { const pts = leg(g, kept, m, 9, m.char.pos, at, 20000).pts; if (pts) L.ways.push([[m.char.posX, 0, m.char.posZ], ...pts.map((q): Vec3 => [q[0], 0, q[2]]), at]); }
+      if (at && PLAN.paths) for (const m of men) { const pts = leg(g, kept, m, 9, m.char.pos, at, 20000).pts; if (pts) L.ways.push([[m.char.pos[0], 0, m.char.pos[2]], ...pts.map((q): Vec3 => [q[0], 0, q[2]]), at]); }
       out.laid.push(L);
     }
   }
@@ -334,7 +334,7 @@ export function floorPlan(g: Game, kept: PlanKept = planKept(), who: PlanFor = M
   }
   if (!who.own) return out;
   const M = S.menu;   // (the SEAT's: see the head)
-  if (M && PLAN.who) for (const gd of M.men) if (gd.state !== 'dead') out.who.push({ gd, at: [gd.char.posX, 0, gd.char.posZ], tone: toneOf(gd) });
+  if (M && PLAN.who) for (const gd of M.men) if (gd.state !== 'dead') out.who.push({ gd, at: [gd.char.pos[0], 0, gd.char.pos[2]], tone: toneOf(gd) });
   if (M && PLAN.who && !g.player.down) { const p = g.player.char.pos; out.you = [p[0], 0, p[2]]; }   // (the SEAT's own man)
   return out;
 }

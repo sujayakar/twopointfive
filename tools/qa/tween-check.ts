@@ -105,7 +105,7 @@ const script = (g: any, k: number, input: any, cam: any, direct: boolean) => {
   if (k === 100) cam.zoom(300); if (k === 135) cam.zoom(-420);
   if (k === 30) input.keys.add('KeyW'); if (k === 120) input.keys.delete('KeyW'); if (k === 150) input.pressed.add('KeyC');
   if (k === 40) { const p = g.player.char.pos; let best: any = null, bd = 1e9; for (const d of g.doors.list) { const q = d.hinge ?? d.pos ?? d.c; if (!q) continue; const dd = Math.hypot(q[0] - p[0], q[2] - p[2]); if (dd < bd) { bd = dd; best = d; } } if (best) g.doors.use(best, p, g.player.char.id); }
-  if (k === 180) { const gd = g.guards[0]; g.godMode = true; const yaw = gd.char.bodyYaw; g.teleportPlayer([gd.char.posX + Math.sin(yaw) * 3.5, 0, gd.char.posZ + Math.cos(yaw) * 3.5]); }
+  if (k === 180) { const gd = g.guards[0]; g.godMode = true; const yaw = gd.char.bodyYaw; g.teleportPlayer([gd.char.pos[0] + Math.sin(yaw) * 3.5, 0, gd.char.pos[2] + Math.cos(yaw) * 3.5]); }
 };
 const SECS = 8, TICKS = SECS * 60;
 

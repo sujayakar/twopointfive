@@ -49,16 +49,15 @@ export async function replaySession(F: any, name: string, opts: ReplayOpts = {})
   // ---- stand up as recorded: env → settings / particles / canister row; the checkpoint; the knobs; the staggers; the seed
   Math.random = simDie(0x5e55, Math.random);   // (whatever the fresh boot draws before the load: nothing after it depends on it)
   if (!(F.knobs as any)?.tables?.DOORWAY) (await import(`${ROOT}/src/game/doors.ts`)).DOORWAY.oneWay = false;   // (a recording from before the doors had one side carries no table: it was made on the double-acting leaves, whatever the last file in this process left)
-  // (the maths the file was recorded on — src/math/exact.ts — said as the stand's own word for this one stand-up, so the level and the game are BUILT on it:
-  //  applyKnobs below comes after the build. The word is put back at once: the next stand-up in this process is the caller's own)
-  const saidExact = process.env.TPS_EXACT; process.env.TPS_EXACT = (F.knobs as any)?.tables?.EXACT?.on ? '1' : '0';
-  // (… and whether a vehicle's lamps were light targets — src/game/carlamps.ts: the Game reads that switch as it is built, so a file from before the table, or one
+  // (a switch the Game reads as it is built is said as the stand's own word for this one stand-up, and put back at once: the next stand-up in this
+  //  process is the caller's own. The maths are no such switch any more: a file is replayed on the game's own, whatever it was recorded on)
+  // (whether a vehicle's lamps were light targets — src/game/carlamps.ts: the Game reads that switch as it is built, so a file from before the table, or one
   //  recorded with it off, is stood up with none; said the same way, put back the same way)
   const saidLamps = process.env.TPS_CARLAMPS; process.env.TPS_CARLAMPS = (F.knobs as any)?.tables?.CARLAMPS?.on ? '1' : '0';
   const saidShapes = process.env.TPS_SHAPES; process.env.TPS_SHAPES = (F.knobs as any)?.tables?.SHAPES?.on ? '1' : '0';   // (…and a box that says its shape: read as the level is stood up, too — src/scene/shapes.ts)
   const saidRound = process.env.TPS_ROUND; process.env.TPS_ROUND = (F.knobs as any)?.tables?.ROUND?.on ? '1' : '0';   // (…and round things: the level's boxes are read as it is stood up — src/scene/round.ts)
   let W: Awaited<ReturnType<typeof standUp>>;
-  try { W = await standUp({ env: F.env }); } finally { if (saidExact === undefined) delete process.env.TPS_EXACT; else process.env.TPS_EXACT = saidExact; if (saidLamps === undefined) delete process.env.TPS_CARLAMPS; else process.env.TPS_CARLAMPS = saidLamps; if (saidRound === undefined) delete process.env.TPS_ROUND; else process.env.TPS_ROUND = saidRound; if (saidShapes === undefined) delete process.env.TPS_SHAPES; else process.env.TPS_SHAPES = saidShapes; }
+  try { W = await standUp({ env: F.env }); } finally { if (saidLamps === undefined) delete process.env.TPS_CARLAMPS; else process.env.TPS_CARLAMPS = saidLamps; if (saidRound === undefined) delete process.env.TPS_ROUND; else process.env.TPS_ROUND = saidRound; if (saidShapes === undefined) delete process.env.TPS_SHAPES; else process.env.TPS_SHAPES = saidShapes; }
   const { game, input, cam, canvas } = W;
   const fp = levelFingerprint(game); if (fp.fp !== F.level?.fp) { R.bad = `another level (file ${F.level?.fp} ${F.level?.boxes} boxes, this build ${fp.fp} ${fp.boxes} boxes) — re-record`; return R; }
   const whyNot = canLoad(game, F.save); if (whyNot) { R.bad = `the checkpoint will not load: ${whyNot}`; return R; }
@@ -75,7 +74,7 @@ export async function replaySession(F: any, name: string, opts: ReplayOpts = {})
   // ---- invariants' memory
   let prevPl: Vec3 | null = null; const col = game.col;
   const violate = (f: number, kind: string, text: string) => { if (R.violations.length < 40) R.violations.push({ f, kind, text }); };
-  const finiteChar = (c: any) => [c.posX, c.posY, c.posZ, c.bodyYaw, c.aimYaw, c.aimPitch].every(Number.isFinite);
+  const finiteChar = (c: any) => [c.pos[0], c.pos[1], c.pos[2], c.bodyYaw, c.aimYaw, c.aimPitch].every(Number.isFinite);
   const p2 = (p: Vec3) => `(${p[0].toFixed(2)}, ${p[2].toFixed(2)})`;
   let playerRef = game.player;
   // ---- the frames
@@ -111,7 +110,7 @@ export async function replaySession(F: any, name: string, opts: ReplayOpts = {})
       for (const gd of game.guards) {
         const c = gd.char;
         if (!finiteChar(c) || !Number.isFinite(gd.speed) || !Number.isFinite(gd.awareness)) violate(f, 'nan', `${gd.callsign} pos ${c.pos} speed ${gd.speed} aw ${gd.awareness}`);
-        if (c.posX < -0.5 || c.posX > 40.5 || c.posZ < -0.5 || c.posZ > 28.5) violate(f, 'out-of-world', `${gd.callsign} at ${p2(c.pos)} (${gd.state})`);
+        if (c.pos[0] < -0.5 || c.pos[0] > 40.5 || c.pos[2] < -0.5 || c.pos[2] > 28.5) violate(f, 'out-of-world', `${gd.callsign} at ${p2(c.pos)} (${gd.state})`);
         if (!['patrol', 'suspicious', 'alert', 'search', 'dead'].includes(gd.state)) violate(f, 'bad-state', `${gd.callsign} state ${gd.state}`);
         if (gd.awareness < -1e-6 || gd.awareness > 1 + 1e-6) violate(f, 'awareness-range', `${gd.callsign} awareness ${gd.awareness}`);
         if (Math.abs(gd.speed) > 6) violate(f, 'speed-range', `${gd.callsign} speed ${gd.speed}`);

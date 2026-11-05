@@ -107,7 +107,7 @@ export class RescueEnd {
   objective(): { text: string; pos: Vec3 | null } {
     if (this.lead) return { text: 'objective ▸ bring them out the way you came in', pos: this.out };
     const p = who(this.g).char.pos, near = this.alive().reduce<Guard | null>((a, b) => !a || flat(b.char.pos, p) < flat(a.char.pos, p) ? b : a, null);
-    return { text: 'objective ▸ bring them out, or clear the building', pos: near ? [near.char.posX, 0, near.char.posZ] : null };
+    return { text: 'objective ▸ bring them out, or clear the building', pos: near ? [near.char.pos[0], 0, near.char.pos[2]] : null };
   }
 
   /** the state a save would hold (habit: new state the game depends on has its pair beside it; no checkpoint is reachable while a rescue is staged —

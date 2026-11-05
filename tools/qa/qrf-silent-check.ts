@@ -38,7 +38,7 @@ if (argv.includes('--staged')) {   // a child: the staged edges as one JSON line
   { g.restartEncounter(); run(0.5); g.qrf.loudT = g.time - 200; for (const gd of [...g.guards]) cold(gd); run(30);
     out.push({ name: 'old gunfire does not count', ok: g.qrf.state === 'idle' && !what().includes('radio-check'), words: `gunfire last heard 200 s before the last man fell, 30 s on: team ${g.qrf.state}, log [${what().join(', ')}]` }); }
   { g.restartEncounter(); run(0.5); const [a, b, c] = g.guards as any[]; g.qrf.loudT = g.time; cold(a); cold(b);
-    const yaw = c.char.bodyYaw; g.teleportPlayer([c.char.posX - Math.sin(yaw) * 0.7, 0, c.char.posZ - Math.cos(yaw) * 0.7]); g.player.char.bodyYaw = g.player.char.aimYaw = yaw; g.player.holstered = true;
+    const yaw = c.char.bodyYaw; g.teleportPlayer([c.char.pos[0] - Math.sin(yaw) * 0.7, 0, c.char.pos[2] - Math.cos(yaw) * 0.7]); g.player.char.bodyYaw = g.player.char.aimYaw = yaw; g.player.holstered = true;
     startGrab(g, c); const grabbed = !!c.held; run(9); const checked = what().filter(x => x === 'radio-check').length, stillIdle = g.qrf.state === 'idle';
     c.held = null; run(20); const afterLetGo = g.qrf.state as string, alive = c.state !== 'dead';   // (let go of at nine seconds: he is back on the net)
     const t0 = g.time; if (alive) cold(c); let askedAt = -1; for (let i = 0; i < 60 * 20 && askedAt < 0; i++) { W.step(1 / 60); if (g.qrf.state !== 'idle') askedAt = g.time - t0; }

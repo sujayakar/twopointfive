@@ -153,7 +153,7 @@ const RATE = 3 * 5.568327996831708 * 0.125;   // (what that canister lets out a 
     // …and a game that is never put back while it plays, stepped turn about with more games than the module has slots: its block is parked and brought
     // back all the way, other blocks stand in its slot meanwhile, and the tables follow the block. (Another fresh game handed the snapshot, so that
     // under the stamp's break this line is red by the parking and not by the put-back the lines above play from.)
-    { const slots = ST.simLayout().games, others: any[] = []; for (let i = 0; i < slots; i++) { const o = await stand(); broken(o.game); canister(o.game, [o.game.player.char.posX + 1 + i * 0.5, 0.2, o.game.player.char.posZ], 20); others.push(o); }
+    { const slots = ST.simLayout().games, others: any[] = []; for (let i = 0; i < slots; i++) { const o = await stand(); broken(o.game); canister(o.game, [o.game.player.char.pos[0] + 1 + i * 0.5, 0.2, o.game.player.char.pos[2]], 20); others.push(o); }
       const W5 = await stand(), g5 = W5.game; hush(true); R.restoreSnapshot(snap, g5); hush(false); broken(g5);
       for (let i = 0; i < 3; i++) for (const o of others) o.step(1 / 60);   // (the others have stood in every slot before it takes its first step)
       const p0 = ST.SIM_STATE_TALLY.parked, play = scriptOn(g5);
