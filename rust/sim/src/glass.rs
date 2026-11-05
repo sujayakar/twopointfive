@@ -88,15 +88,15 @@ fn hash(seed: u32, a: u32, b: u32) -> u32 {
 }
 /// gpJit
 #[inline]
-fn jit(seed: u32, a: u32, b: u32) -> f64 {
+pub fn jit(seed: u32, a: u32, b: u32) -> f64 {
     hash(seed, a, b) as f64 / 16777216.0
 }
 
 /// one site of a row (glassPattern.ts GpSite, the fields a piece is found by)
-struct Site<'a> {
-    d: &'a [f64],
-    n: i32,
-    seed: u32,
+pub struct Site<'a> {
+    pub d: &'a [f64],
+    pub n: i32,
+    pub seed: u32,
 }
 impl Site<'_> {
     /// `((k % n) + n) % n`
@@ -111,7 +111,7 @@ impl Site<'_> {
     }
     /// gpAngle
     #[inline]
-    fn angle(&self, k: i32) -> f64 {
+    pub fn angle(&self, k: i32) -> f64 {
         self.d[S_ROT] + 2.0 * PI * self.bound(k) / self.n as f64
     }
     /// gpRho: the radius at which chord b meets radial k
@@ -121,25 +121,25 @@ impl Site<'_> {
     }
     /// gpChordPt
     #[inline]
-    fn chord(&self, k: i32, b: u32) -> (f64, f64) {
+    pub fn chord(&self, k: i32, b: u32) -> (f64, f64) {
         let a = self.angle(k);
         let r = self.rho(k, b);
         (self.d[S_U] + r * cos(a), self.d[S_V] + r * sin(a))
     }
     /// gpMerged: sector s has no middle chord
     #[inline]
-    fn merged(&self, s: i32) -> bool {
+    pub fn merged(&self, s: i32) -> bool {
         jit(self.seed, s as u32, 21) < self.d[S_MERGE]
     }
     /// gpSplit: where sector s's branch crack sits, in sectors
     #[inline]
-    fn split(&self, s: i32) -> f64 {
+    pub fn split(&self, s: i32) -> f64 {
         let b0 = self.bound(s);
         let b1 = self.bound(s + 1);
         b0 + (b1 - b0) * (SPLIT_LO + SPLIT_SPAN * jit(self.seed, s as u32, 23))
     }
     /// gpCut: the snap across half h of sector s (a point on it, its unit normal away from the site); None = this dagger runs unbroken
-    fn cut(&self, s: i32, h: u32) -> Option<(f64, f64, f64, f64)> {
+    pub fn cut(&self, s: i32, h: u32) -> Option<(f64, f64, f64, f64)> {
         if jit(self.seed, s as u32, 27 + h) < CUT_NONE {
             return None;
         }
@@ -194,11 +194,11 @@ fn beyond(a: (f64, f64), b: (f64, f64), u: f64, v: f64) -> bool {
 
 /// site i of a row
 #[inline]
-fn site<'a>(d: &'a [f64], w: &[u32], i: usize) -> Site<'a> {
+pub fn site_of<'a>(d: &'a [f64], w: &[u32], i: usize) -> Site<'a> {
     Site { d: &d[i * G_SITE..i * G_SITE + G_SITE], n: w[GW_N + i] as i32, seed: w[GW_SEED + i] }
 }
 /// gpClassify: the piece (u, v) is in — its id, REMAINDER or NO_SITE
-fn classify(d: &[f64], w: &[u32], u: f64, v: f64) -> i32 {
+pub fn classify_row(d: &[f64], w: &[u32], u: f64, v: f64) -> i32 {
     let n = (w[GW_FLAGS] >> 8) as usize;
     let (mut best, mut bd) = (usize::MAX, f64::INFINITY);
     for i in 0..n {
@@ -213,7 +213,7 @@ fn classify(d: &[f64], w: &[u32], u: f64, v: f64) -> i32 {
     if best == usize::MAX {
         return NO_SITE;
     }
-    let (s, b) = site(d, w, best).sector_band(u, v);
+    let (s, b) = site_of(d, w, best).sector_band(u, v);
     if b >= 3 && w[GW_FLAGS] & G_RUN == 0 {
         return REMAINDER;
     }
@@ -235,7 +235,7 @@ fn dice_centre(d: &[f64], cols: f64, rows: f64, seed: u32, c: u32, r: u32) -> (f
 /// is the clump (u, v) belongs to out: gpDiceClump, then that clump's place in the order clumps let go against the last one out. The clumps go in the
 /// order of their keys (gpDiceKey), and of their numbers where two keys are one (glassbreak.ts startDice's sort), one at a time: so "out" is "no later
 /// in that order than the last one out", at any moment of a release.
-fn dice_out(d: &[f64], w: &[u32], u: f64, v: f64) -> bool {
+pub fn dice_out(d: &[f64], w: &[u32], u: f64, v: f64) -> bool {
     let (ci, ri, seed) = (w[GW_COLS], w[GW_ROWS], w[GW_DSEED]);
     let (cols, rows) = (ci as f64, ri as f64);
     let (hu, hv) = (d[D_HU], d[D_HV]);
@@ -283,6 +283,9 @@ fn to_uv(b: &[f64], x: f64, y: f64, z: f64) -> (f64, f64) {
 /// the view's word on a pane it may name: glass a burst would break is no glass to the man reckoning it (glassbreak.ts wouldGive, worked out by its
 /// owner into the view's rows: a pane that gives whole has a reach below nought, float glass gives within its reach of the pane's nearest point)
 fn gives(o: &World, bi: usize, x: f64, y: f64, z: f64) -> bool {
+    if o.panes_g != NO_BLOCK {
+        return crate::panes::gives(o.panes_g as usize - 1, o, bi, x, y, z);
+    }
     for k in 0..o.view_n as usize {
         if o.view_bi[k] as usize != bi {
             continue;
@@ -296,22 +299,29 @@ fn gives(o: &World, bi: usize, x: f64, y: f64, z: f64) -> bool {
 /// IS STATIC `bi`, A PANE OF GLASS, OPEN AT (x, y, z) — the game's rule (glassbreak.ts: `openAt(bi, X) || also(bi, X)`): a piece has fallen out there, or
 /// the view in hand counts the glass there out.
 pub fn open(o: &World, bi: usize, x: f64, y: f64, z: f64) -> bool {
-    let r = o.glass_of[bi] as usize;
-    if r == 0 || r > o.glass_n as usize {
-        return o.view_kind == VIEW_GIVES && gives(o, bi, x, y, z);
-    }
-    let w = &o.glass_w[(r - 1) * GW..r * GW];
+    // (where the pane's state stands: its row in the game's block, the rule being this module's own (panes.rs) — or the copy's, the rule being the host's)
+    let (d, w): (&[f64], &[u32]) = if o.panes_g != NO_BLOCK {
+        match crate::panes::row_for(o.panes_g as usize - 1, bi as u32) {
+            Some(row) => row,
+            None => return o.view_kind == VIEW_GIVES && gives(o, bi, x, y, z),
+        }
+    } else {
+        let r = o.glass_of[bi] as usize;
+        if r == 0 || r > o.glass_n as usize {
+            return o.view_kind == VIEW_GIVES && gives(o, bi, x, y, z);
+        }
+        (&o.glass[(r - 1) * GD..r * GD], &o.glass_w[(r - 1) * GW..r * GW])
+    };
     let fl = w[GW_FLAGS];
     if fl & G_GONE != 0 {
         return true;
     }
-    let d = &o.glass[(r - 1) * GD..r * GD];
     let (u, v) = to_uv(&o.rec[bi * REC..bi * REC + REC], x, y, z);
     if fl & G_DICE != 0 {
         // (a pane coming down is on its way out to a blast, and counted out by a man reckoning one)
         return dice_out(&d[G_DICE_AT..], w, u, v) || o.view_kind != VIEW_NONE;
     }
-    let fid = classify(d, w, u, v);
+    let fid = classify_row(d, w, u, v);
     if fid >= 0 && bit(w, GW_OPEN, fid as u32) {
         return true;
     }

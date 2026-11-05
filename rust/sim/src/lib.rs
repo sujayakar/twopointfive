@@ -34,6 +34,9 @@ pub mod lines;
 pub mod maths;
 pub mod men;
 pub mod nav;
+pub mod panes;
+pub mod pattern;
+pub mod pen;
 pub mod poses;
 pub mod props;
 mod pow10;
@@ -925,4 +928,336 @@ pub extern "C" fn grid_wind_cap() -> usize {
 #[no_mangle]
 pub extern "C" fn grid_trans(g: usize, stamp: f64, a0: f64, a1: f64, a2: f64, b0: f64, b1: f64, b2: f64, sigma: f64) -> f64 {
     bricks::trans(g, stamp, [a0, a1, a2], [b0, b1, b2], sigma)
+}
+
+// ---- WHAT A PANE OF GLASS IS TO PLAY (panes.rs, pen.rs): the state in the game's block, the rule, a round's toll. A rule's call names its game, its world, the leaves
+// and the time once (`panes_ctx`), and what it let go is read from `panes_out_*` and cleared before the next pane's.
+static mut PANE_CTX: panes::Ctx = panes::Ctx { g: 0, w: 0, set: -1, now: 0.0, shards: false, gravity: 9.81 };
+#[inline(always)]
+fn cx() -> panes::Ctx {
+    unsafe { PANE_CTX }
+}
+#[no_mangle]
+pub extern "C" fn panes_ctx(g: usize, w: usize, set: i32, now: f64, shards: u32, gravity: f64) {
+    unsafe { PANE_CTX = panes::Ctx { g, w, set, now, shards: shards != 0, gravity } };
+}
+/// the level's glass (scratch: a static and how far it stands from the nearest door's opening, each)
+#[no_mangle]
+pub extern "C" fn panes_boot(g: usize, n: usize) {
+    panes::boot(g, &scratch()[..2 * n]);
+}
+#[no_mangle]
+pub extern "C" fn panes_booted(g: usize) -> u32 {
+    panes::booted(g) as u32
+}
+#[no_mangle]
+pub extern "C" fn panes_world(w: usize, g: i32) {
+    world::world(w).panes_g = (g + 1) as u32;
+}
+/// a burst's view for world `w`: its kind (glass.rs VIEW_*), the point, how far, how hard, whether a man counts on it. Which face of each sheet has the sky was settled first (`panes_settle_sky`).
+#[no_mangle]
+pub extern "C" fn panes_settle_sky() {
+    panes::settle_sky(&cx());
+}
+#[no_mangle]
+pub extern "C" fn panes_view(w: usize, kind: u32, x: f64, y: f64, z: f64, radius: f64, power: f64, sure: f64) {
+    let o = world::world(w);
+    o.view_kind = kind;
+    o.view_n = 0;
+    o.view_at = [x, y, z, radius, power, sure];
+}
+/// glassbreak.ts impact: live 1 · was open 2 · punched 4 · diced 8 · cracked 16 · the glass × 32 · fragments let go × 256
+#[no_mangle]
+pub extern "C" fn panes_impact(bi: u32, x: f64, y: f64, z: f64, has_dir: u32, dx: f64, dy: f64, dz: f64, energy: f64, who: f64, through: i32) -> u32 {
+    let r = panes::impact(&cx(), bi, [x, y, z], if has_dir != 0 { Some([dx, dy, dz]) } else { None }, energy, who, through);
+    r.live as u32 | (r.was_open as u32) << 1 | (r.punched as u32) << 2 | (r.diced as u32) << 3 | (r.cracked as u32) << 4 | r.ty << 5 | r.released << 8
+}
+#[no_mangle]
+pub extern "C" fn panes_widen(bi: u32, x: f64, y: f64, z: f64) -> u32 {
+    panes::widen(&cx(), bi, [x, y, z])
+}
+#[no_mangle]
+pub extern "C" fn panes_blast_begin(x: f64, y: f64, z: f64) {
+    panes::blast_begin(&cx(), [x, y, z]);
+}
+#[no_mangle]
+pub extern "C" fn panes_blast_sheet(s: usize, x: f64, y: f64, z: f64, radius: f64, power: f64, who: f64) -> u32 {
+    panes::blast_sheet(&cx(), s, [x, y, z], radius, power, who) as u32
+}
+#[no_mangle]
+pub extern "C" fn panes_sheets(g: usize) -> u32 {
+    panes::sheet_count(g)
+}
+#[no_mangle]
+pub extern "C" fn panes_sheet_bi(g: usize, s: usize) -> u32 {
+    panes::sheet_bi(g, s)
+}
+#[no_mangle]
+pub extern "C" fn panes_frame_begin(g: usize) {
+    panes::frame_begin(g);
+}
+#[no_mangle]
+pub extern "C" fn panes_men_addr() -> usize {
+    panes::men_addr()
+}
+#[no_mangle]
+pub extern "C" fn panes_men(n: usize) {
+    panes::men_set(n);
+}
+#[no_mangle]
+pub extern "C" fn panes_step(r: usize) {
+    panes::step_row(&cx(), r);
+}
+#[no_mangle]
+pub extern "C" fn panes_reset(g: usize) {
+    panes::reset(g);
+}
+#[no_mangle]
+pub extern "C" fn panes_set_type(g: usize, bi: u32, ty: u32) {
+    panes::set_type(g, bi, ty);
+}
+#[no_mangle]
+pub extern "C" fn panes_type(bi: u32) -> u32 {
+    panes::type_of_pane(&cx(), bi)
+}
+/// glassbreak.ts typeOf: by its wall or its place, whatever word it has been given
+#[no_mangle]
+pub extern "C" fn panes_type_place(bi: u32) -> u32 {
+    panes::type_place(&cx(), bi)
+}
+/// the open threshold the renderer reads (clumps whose key is under it are out)
+#[no_mangle]
+pub extern "C" fn panes_dice_threshold(g: usize, bi: u32) -> f64 {
+    panes::dice_threshold(g, bi)
+}
+#[no_mangle]
+pub extern "C" fn panes_sky(bi: u32) -> i32 {
+    panes::sky_known(&cx(), bi)
+}
+#[no_mangle]
+pub extern "C" fn panes_open_at(g: usize, bi: u32, x: f64, y: f64, z: f64) -> u32 {
+    panes::open_at(g, bi, x, y, z) as u32
+}
+#[no_mangle]
+pub extern "C" fn panes_walkable(g: usize, bi: u32) -> u32 {
+    panes::walkable(g, bi) as u32
+}
+#[no_mangle]
+pub extern "C" fn panes_fraction(g: usize, bi: u32) -> f64 {
+    panes::open_fraction(g, bi)
+}
+#[no_mangle]
+pub extern "C" fn panes_sig(g: usize) -> i32 {
+    panes::open_sig(g)
+}
+#[no_mangle]
+pub extern "C" fn panes_out_addr() -> usize {
+    panes::out_addr()
+}
+#[no_mangle]
+pub extern "C" fn panes_out_pts_addr() -> usize {
+    panes::out_pts_addr()
+}
+#[no_mangle]
+pub extern "C" fn panes_out_n() -> usize {
+    panes::out_n()
+}
+#[no_mangle]
+pub extern "C" fn panes_out_clear() {
+    panes::out_clear();
+}
+#[no_mangle]
+pub extern "C" fn panes_take_wrote() -> u32 {
+    panes::take_wrote() as u32
+}
+#[no_mangle]
+pub extern "C" fn panes_take_gust(g: usize) -> u32 {
+    panes::take_gust(g) as u32
+}
+#[no_mangle]
+pub extern "C" fn panes_field(i: u32) -> usize {
+    panes::field(i)
+}
+#[no_mangle]
+pub extern "C" fn panes_row_addr(g: usize, r: usize) -> usize {
+    panes::row_addr(g, r)
+}
+#[no_mangle]
+pub extern "C" fn panes_q_addr(g: usize) -> usize {
+    panes::q_addr(g)
+}
+#[no_mangle]
+pub extern "C" fn panes_row_n(g: usize) -> u32 {
+    panes::row_n(g)
+}
+#[no_mangle]
+pub extern "C" fn panes_row_index(g: usize, bi: u32) -> i32 {
+    panes::row_index(g, bi)
+}
+/// which pieces of pane `bi` are held, a bit a piece (`without`: as if this piece were out, a tool's question): where the 21 words are
+#[no_mangle]
+pub extern "C" fn panes_held(g: usize, bi: u32, without: i32) -> usize {
+    panes::held_bits(g, bi, without).as_ptr() as usize
+}
+#[no_mangle]
+pub extern "C" fn panes_tally() -> usize {
+    core::ptr::addr_of!(panes::TALLY) as usize
+}
+#[no_mangle]
+pub extern "C" fn panes_heard(g: usize, pane: u32, who: f64, now: f64, gap: f64) -> u32 {
+    panes::heard_gap(g, pane, who, now, gap) as u32
+}
+#[no_mangle]
+pub extern "C" fn panes_forget_heard(g: usize) {
+    panes::forget_heard(g);
+}
+/// glass.ts boxSeed of a box of the world; pointSeed
+#[no_mangle]
+pub extern "C" fn panes_box_seed(cx0: f64, cy: f64, cz: f64, hx: f64, hy: f64, hz: f64) -> u32 {
+    let mut b = [0.0; world::REC];
+    b[world::R_C] = cx0;
+    b[world::R_C + 1] = cy;
+    b[world::R_C + 2] = cz;
+    b[world::R_H] = hx;
+    b[world::R_H + 1] = hy;
+    b[world::R_H + 2] = hz;
+    panes::box_seed(&b)
+}
+#[no_mangle]
+pub extern "C" fn panes_point_seed(word: u32, x: f64, y: f64, z: f64) -> u32 {
+    panes::point_seed(word, x, y, z)
+}
+/// falling.ts fallOf for a thing of glass (four fifths of a vacuum's reach): how long → scratch 0, where → scratch 1 … 3
+#[no_mangle]
+pub extern "C" fn panes_fall(x: f64, y: f64, z: f64, vx: f64, vy: f64, vz: f64) {
+    let c = cx();
+    let (t, p) = panes::fall_of(&c, [x, y, z], [vx, vy, vz], c.gravity, 0.8);
+    let s = scratch();
+    s[0] = t;
+    s[1] = p[0];
+    s[2] = p[1];
+    s[3] = p[2];
+}
+/// shards.ts crossed under SHARDS.byFall: the far face's jet of a round through a sheet: its glass comes down where the jet does. `amount`: m² of it.
+#[no_mangle]
+pub extern "C" fn panes_jet(x: f64, y: f64, z: f64, dx: f64, dy: f64, dz: f64, speed: f64, amount: f64, who: f64) {
+    panes::jet(&cx(), [x, y, z], [dx, dy, dz], speed, amount, who);
+}
+
+// ---- a round and a pane (pen.rs)
+/// glasspen.ts paneToll: 1 and scratch 0 … 7 (the glass, the normal, the cosine, what it takes, what is left, by a hole) · 0 spent in it
+#[no_mangle]
+pub extern "C" fn pen_toll(bi: u32, x: f64, y: f64, z: f64, dx: f64, dy: f64, dz: f64, e: f64, nth: usize) -> u32 {
+    match pen::pane_toll(&cx(), bi, [x, y, z], [dx, dy, dz], e, nth) {
+        Some(t) => {
+            let s = scratch();
+            s[0] = t.ty as f64;
+            s[1] = t.n[0];
+            s[2] = t.n[1];
+            s[3] = t.n[2];
+            s[4] = t.cos;
+            s[5] = t.take;
+            s[6] = t.e_out;
+            s[7] = t.hole as u32 as f64;
+            1
+        }
+        None => 0,
+    }
+}
+/// glasspen.ts paneCrossing: 1 and the crossing → scratch 0 … 24, what it is born in → scratch 25 · 0 spent in it
+#[no_mangle]
+pub extern "C" fn pen_cross(bi: u32, ox: f64, oy: f64, oz: f64, dx: f64, dy: f64, dz: f64, t: f64, e: f64, nth: usize) -> u32 {
+    match pen::pane_crossing(&cx(), bi, [ox, oy, oz], [dx, dy, dz], t, e, nth) {
+        Some(x) => {
+            let s = scratch();
+            pen::write_cross(&x, &mut s[..pen::CROSS]);
+            s[pen::CROSS] = x.into as f64;
+            1
+        }
+        None => 0,
+    }
+}
+/// glasspen.ts roundPath. `fi` < −1: no first ray given is no case here, the caller always has one (−1: it met nothing). → 0: it crosses no pane · 1, and what it comes to →
+/// `pen_path_head`, the legs and crossings → scratch
+#[no_mangle]
+pub extern "C" fn pen_path(x: f64, y: f64, z: f64, dx: f64, dy: f64, dz: f64, range: f64, energy: f64, nth0: usize, ft: f64, fi: i32, fnx: f64, fny: f64, fnz: f64) -> u32 {
+    let first = if fi >= 0 { Some((ft, fi, [fnx, fny, fnz])) } else { None };
+    let s = scratch();
+    match pen::round_path(&cx(), [x, y, z], [dx, dy, dz], range, energy, first, nth0, &mut s[..]) {
+        Some(p) => {
+            let head = unsafe { &mut *core::ptr::addr_of_mut!(PEN_HEAD) };
+            head[0] = p.legs as f64;
+            head[1] = p.crosses as f64;
+            head[2] = p.len;
+            match p.st {
+                Some((t, i, n)) => {
+                    head[3] = i as f64;
+                    head[4] = t;
+                    head[5] = n[0];
+                    head[6] = n[1];
+                    head[7] = n[2];
+                }
+                None => head[3] = -1.0,
+            }
+            head[8..8 + pen::MAX_CROSS].copy_from_slice(&p.into);
+            1
+        }
+        None => 0,
+    }
+}
+static mut PEN_HEAD: [f64; 8 + pen::MAX_CROSS] = [0.0; 8 + pen::MAX_CROSS];
+#[no_mangle]
+pub extern "C" fn pen_path_head() -> usize {
+    core::ptr::addr_of!(PEN_HEAD) as usize
+}
+/// glasspen.ts armThroughGlass's walk: −1 the old rule stands · n panes took, their crossings → scratch; the energy left → the last double of the scratch
+#[no_mangle]
+pub extern "C" fn pen_arm(fx: f64, fy: f64, fz: f64, mx: f64, my: f64, mz: f64, dx: f64, dy: f64, dz: f64, energy: f64) -> i32 {
+    let s = scratch();
+    let mut left = 0.0;
+    let n = pen::arm_walk(&cx(), [fx, fy, fz], [mx, my, mz], [dx, dy, dz], energy, &mut s[..SCRATCH_LEN - 1], &mut left);
+    s[SCRATCH_LEN - 1] = left;
+    n
+}
+/// glasspen.ts shotPasses over the panes in scratch (a static and how far along each)
+#[no_mangle]
+pub extern "C" fn pen_passes(ax: f64, ay: f64, az: f64, rx: f64, ry: f64, rz: f64, n: usize, energy: f64) -> u32 {
+    let s = scratch();
+    let mut list = [0.0; 2 * world::MAX_PANES];
+    let n = if n > world::MAX_PANES { world::MAX_PANES } else { n };
+    list[..2 * n].copy_from_slice(&s[..2 * n]);
+    pen::shot_passes(&cx(), [ax, ay, az], [rx, ry, rz], &list[..2 * n], energy) as u32
+}
+#[no_mangle]
+pub extern "C" fn pen_shot(ax: f64, ay: f64, az: f64, bx: f64, by: f64, bz: f64, shrink: f64, pass: u32, energy: f64) -> u32 {
+    pen::shot_blocked(&cx(), [ax, ay, az], [bx, by, bz], shrink, pass, energy) as u32
+}
+#[no_mangle]
+pub extern "C" fn pen_add_hole(g: usize, bi: u32, x: f64, y: f64, z: f64) {
+    pen::add_hole(g, bi, [x, y, z]);
+}
+/// how many rows of holes; row r's pane, how many crossings it holds, and where its points are from the block's start
+#[no_mangle]
+pub extern "C" fn pen_hole_rows(g: usize) -> u32 {
+    panes::hole_rows(g)
+}
+#[no_mangle]
+pub extern "C" fn pen_hole_bi(g: usize, r: usize) -> u32 {
+    panes::hole_bi(g, r)
+}
+#[no_mangle]
+pub extern "C" fn pen_hole_n(g: usize, r: usize) -> u32 {
+    panes::hole_n(g, r)
+}
+#[no_mangle]
+pub extern "C" fn pen_hole_pt(g: usize, r: usize, i: usize) -> f64 {
+    panes::hole_pt(g, r, i)
+}
+#[no_mangle]
+pub extern "C" fn pen_rev(g: usize) -> u32 {
+    panes::holes_rev(g)
+}
+#[no_mangle]
+pub extern "C" fn pen_clear_holes(g: usize) {
+    panes::clear_holes(g);
 }
