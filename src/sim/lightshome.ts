@@ -65,7 +65,7 @@ export interface FixtureDef {
 }
 /** A FIXTURE OF A GAME: what the level says of it, as plain fields, and its state, read from the block (never written here: `LightHome.in`). */
 export class Fixture {
-  name: string; group: string; readonly kind: FixtureDef['kind']; pos: Vec3; light?: RtLight; boxes: number[]; baseEmissive: Vec3; readonly fluorescentFlicker: boolean; readonly mains: boolean; interactive: boolean; areaLights?: { light: RtLight; base: number }[]; lens?: Vec3;
+  name: string; group: string; kind: FixtureDef['kind']; pos: Vec3; light?: RtLight; boxes: number[]; baseEmissive: Vec3; fluorescentFlicker: boolean; mains: boolean; interactive: boolean; areaLights?: { light: RtLight; base: number }[]; lens?: Vec3;
   constructor(readonly i: number, private readonly st: SimState, def: FixtureDef) {
     this.name = def.name; this.group = def.group; this.kind = def.kind; this.pos = def.pos; this.boxes = def.boxes; this.baseEmissive = def.baseEmissive; this.fluorescentFlicker = def.fluorescentFlicker; this.mains = def.mains; this.interactive = def.interactive;
     if (def.light) this.light = def.light;
@@ -156,7 +156,7 @@ export class LightHome {
     const st = this.st, n = st.w[C.n];
     if (n >= LIGHT_CAPS.targets) throw new Error(`a level of more than ${LIGHT_CAPS.targets} light fixtures got past game/levelfit.ts`);
     st.w[C.n] = n + 1;
-    st.w[C.bits + n] = (def.on ? T.on | T.authored : 0) | (def.broken ? T.broken : 0) | (def.fluorescentFlicker ? T.flicker : 0) | (def.mains ? T.mains : 0) | (def.kind === 'emissive' ? T.emissive : 0);
+    st.w[C.bits + n] = (def.on ? T.on : 0) | (def.broken ? T.broken : 0) | (def.fluorescentFlicker ? T.flicker : 0) | (def.mains ? T.mains : 0) | (def.kind === 'emissive' ? T.emissive : 0);
     st.d[C.blind_until + n] = def.disabledUntil; st.d[C.factor + n] = def.factor; st.d[C.stagger + n] = def.stagger; st.d[C.base + n] = def.baseIntensity;
     return new Fixture(n, st, def);
   }
@@ -177,16 +177,15 @@ export class LightHome {
     return s;
   }
   /** THE ROWS, STOOD ONCE as the level is built, in the list's order: every lamp a fixture feeds gets one (`RtLight.row`), and no other lamp has a row. A row's index IS its place among the rows: a lamp of the question's own is written with how many rows stand before it in the list. */
-  stand(list: readonly RtLight[], targets: readonly Fixture[], beacons: readonly BeaconFact[], cones: readonly { light: RtLight; target: Fixture; slot: number }[]): void {
+  stand(list: readonly RtLight[], targets: readonly Fixture[], beacons: readonly BeaconFact[], cones: readonly { light: RtLight | null; target: Fixture; slot: number }[]): void {
     const st = this.st, d = st.d, w = st.w;
     const who = new Map<RtLight, { role: number; t: Fixture; base: number }>();
     for (const t of targets) { if (t.light) who.set(t.light, { role: ROW_BIT.own, t, base: 0 }); for (const a of t.areaLights ?? []) who.set(a.light, { role: ROW_BIT.area, t, base: a.base }); }
     for (const b of beacons) who.set(b.light, { role: ROW_BIT.beacon, t: b.target, base: b.light.peakIntensity });
-    for (const c of cones) who.set(c.light, { role: ROW_BIT.cone, t: c.target, base: 0 });
+    for (const c of cones) if (c.light) who.set(c.light, { role: ROW_BIT.cone, t: c.target, base: 0 });
     let r = 0; this.lamps = [];
     for (const l of list) {
-      l.row = undefined; const W = who.get(l); if (!W) continue;
-      if (l.owner) throw new Error(`the lamp '${l.name}' has an owner, and a fixture feeds it: \`skipOwner\` is the question's, and only the question's own lamps have one`);
+      l.row = undefined; const W = who.get(l); if (!W || l.owner) continue;   // (a lamp with an owner gets no row: `skipOwner` is the question's, and only the question's own lamps have one)
       if (r >= LIGHT_CAPS.rows) throw new Error(`a level of more than ${LIGHT_CAPS.rows} lamps on its fixtures got past game/levelfit.ts`);
       l.row = r; this.lamps.push(l);
       d[C.row_base + r] = W.base; w[C.row_target + r] = W.t.i;
@@ -197,7 +196,7 @@ export class LightHome {
     const rowOf = (l: RtLight): number => { if (l.row === undefined) throw new Error(`the lamp '${l.name}' has an owner or is not in the list, and the module writes it: a beacon's spot and a camera's cone must each have a row`); return l.row; };
     beacons.forEach((b, i) => { d[C.beacon_phase + i] = b.phase; w[C.beacon_row + i] = rowOf(b.light); w[C.beacon_target + i] = b.target.i; });
     w[C.beacons] = beacons.length;
-    for (const c of cones) w[C.cam_row + c.slot] = rowOf(c.light);
+    for (const c of cones) if (c.light) w[C.cam_row + c.slot] = rowOf(c.light);
   }
   /** A LAMP'S WHOLE RECORD INTO ITS ROW, as the lamp stands: as the rows are stood, and each tick for a lamp somebody else moves (a fire's, game/fire.ts). A steady self
    *  (`RtLight.steady`) has the row's bit up and its columns; none leaves them zeros, and a reader takes the first self. Nothing for a lamp with no row. */
@@ -248,9 +247,9 @@ export class LightHome {
     }
   }
   /** a camera before its picture (lights.rs camera_pan), and its cone to what the picture reads. → CAM bits. */
-  cameraPan(slot: number, cone: RtLight, dt: number, live: boolean, cones: boolean): number {
+  cameraPan(slot: number, cone: RtLight | null, dt: number, live: boolean, cones: boolean): number {
     const out = X.camera_pan(this.st.bind(), slot, dt, live ? 1 : 0, cones ? 1 : 0);
-    if (cone.row !== undefined) { const st = this.st, d = st.d, r = cone.row; cone.enabled = (st.w[C.row_bits + r] & ROW_BIT.on) !== 0; cone.pos = [d[C.x + r], d[C.y + r], d[C.z + r]]; cone.dir = [d[C.dx + r], d[C.dy + r], d[C.dz + r]]; }
+    if (cone && cone.row !== undefined) { const st = this.st, d = st.d, r = cone.row; cone.enabled = (st.w[C.row_bits + r] & ROW_BIT.on) !== 0; cone.pos = [d[C.x + r], d[C.y + r], d[C.z + r]]; cone.dir = [d[C.dx + r], d[C.dy + r], d[C.dz + r]]; }
     return out;
   }
   /** …and after it (lights.rs camera_see). → CAM bits. */

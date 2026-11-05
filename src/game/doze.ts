@@ -58,7 +58,7 @@ import { CLOSE, closeSeat, closeUnseat, closeSeated, closeHasSeat } from './clos
 import { attentionLend } from './attention';
 import { simRandom } from '../math/dice';
 import { mathsEpoch } from '../math/exact';
-import { LIGHT_IN, ROW_BIT } from '../sim/lightshome';
+import { LIGHT_IN } from '../sim/lightshome';
 
 /** the switch and its numbers. `minWait` s: the shortest wait he sits one out for · `maxWait` s: the longest (a man stood somewhere longer than this is POSTED
  *  there: a picket, not a man pausing on his round) · `chairM`: how far from his waypoint the chair may stand (straight; the walk to
@@ -302,7 +302,10 @@ export function dozeTick(g: Game, dt: number) {
 /** the light on a sleeper's face that is news to him: everything but his own side's lamps — and but the room's screens (a mate sat to one across the room, or
  *  left one on: a glow, not a lamp in his eyes) */
 function faceLight(g: Game, gd: Guard, head: Vec3): number {
-  return g.visibilityOf(lightEstimateAt(g, head, owner => owner === gd.char.id || g.guards.some(x => x.char.id === owner && x.team === gd.team), false, undefined, undefined, ROW_BIT.screen));
+  const off: { enabled: boolean }[] = [];
+  for (const t of g.targets) if (t.group === 'monitors' && t.areaLights) for (const al of t.areaLights) if (al.light.enabled) { al.light.enabled = false; off.push(al.light); }
+  try { return g.visibilityOf(lightEstimateAt(g, head, owner => owner === gd.char.id || g.guards.some(x => x.char.id === owner && x.team === gd.team))); }
+  finally { for (const l of off) l.enabled = true; }
 }
 /** where the light on his face comes from: the nearest carried lamp of another side that reaches his head through clear air (whoever carries it), else his own spot */
 function lampOn(g: Game, gd: Guard, head: Vec3): Vec3 {

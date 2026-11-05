@@ -58,6 +58,17 @@ async function walk(on: boolean, at: number[], from: number[], to: number[], sec
   return { why, moved, thru, spot: spot / 60 };
 }
 
+/** how many cells of one straight leg the rule's price calls dear: the leg sampled every half cell, a cell counted once. (The check's own count. It
+ *  borrowed the TypeScript search's, which was private to that search and went with it; the module's search hands no such count out.) */
+function dearCells(nav: any, a: number[], b: number[], price: (ix: number, iz: number) => number): number {
+  const dx = b[0] - a[0], dz = b[2] - a[2], n = Math.ceil(Math.hypot(dx, dz) / (nav.cell * 0.5)) + 1; let last = -1, count = 0;
+  for (let k = 0; k <= n; k++) {
+    const t = k / n, ix = Math.floor((a[0] + dx * t) / nav.cell), iz = Math.floor((a[2] + dz * t) / nav.cell), i = iz * nav.W + ix; if (i === last) continue; last = i;
+    if (ix >= 0 && iz >= 0 && ix < nav.W && iz < nav.H && price(ix, iz) > 1) count++;
+  }
+  return count;
+}
+
 /** 3: goTo's ways from where the four start to every door of the level — [asked, pass a movable thing with the rule off, pass none but differ in length,
  *  with the rule on none laid or more than `propRoundMore` the longer, taken round] */
 async function ways(): Promise<[number, number, number, number, number]> {
@@ -67,7 +78,7 @@ async function ways(): Promise<[number, number, number, number, number]> {
     const to = nav.nearestFreePoint(d.frameCentre[0], d.frameCentre[2]); if (!to) continue;
     ORDERS.propRound = false; goTo(g, m, to, true); const a: number[][] = m.path.map((p: number[]) => [p[0], 0, p[2]]); if (!a.length) continue;
     ORDERS.propRound = true; const price = propPenalty(g, m, undefined); goTo(g, m, to, true); const b: number[][] = m.path.map((p: number[]) => [p[0], 0, p[2]]);
-    asked++; let n = 0, q: number[] = m.char.pos; if (price) for (const c of a) { n += nav.dearAlong(q, c, price); q = c; }
+    asked++; let n = 0, q: number[] = m.char.pos; if (price) for (const c of a) { n += dearCells(nav, q, c, price); q = c; }
     const thru = (w: number[][]) => { const out: string[] = []; let q: number[] = m.char.pos; for (const c of w) { for (const o of g.doors.list) if (crossesDoor(q, c, o) && !out.includes(o.def.name)) out.push(o.def.name); q = c; } return out.sort().join(); };
     const la = len(m.char.pos, a), lb = len(m.char.pos, b); if (!b.length || lb > la + ORDERS.propRoundMore + 0.01 || thru(a) !== thru(b)) bad++;
     if (n > 0) { dear++; if (Math.abs(la - lb) > 0.01) round++; } else if (Math.abs(la - lb) > 0.01) differ++;

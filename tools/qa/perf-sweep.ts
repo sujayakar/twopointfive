@@ -10,7 +10,7 @@
 export type Frame = { t: number; dt: number; fps: number; cpu: { update: number; render: number; other: number }; gpu: Record<string, number>; gpuSum: number; gpuUnion?: number; res: [number, number]; eff: number; preset: string; adaptive: boolean; cam: number[]; n: Record<string, number | string> };
 export type Ev = { t: number; frame: number; kind: string; text: string };
 export type Dump = { frames: Frame[]; events: Ev[]; smokeUnit?: number; query?: string; settingsAtStart?: Record<string, unknown> };   // smokeUnit = the recorder's stamp: bricks to one smoke count (src/ui/perfrec.ts)
-type Begin = { op: 'begin'; mode: string; rounds: number; settleMs: number; measureMs: number; settleFrames: number; measureFrames: number; preset: string; res: [number, number]; scale: number; smoke: number; timers: boolean; rows: { id: string; label: string; from: Record<string, unknown>; to: Record<string, unknown> }[]; skipped: { id: string; why: string }[] };
+type Begin = { op: 'begin'; mode: string; rounds: number; settleMs: number; measureMs: number; settleFrames: number; measureFrames: number; preset: string; res: [number, number]; scale: number; smoke: number; timers: boolean; rows: { id: string; label: string; from: Record<string, unknown>; to: Record<string, unknown> ; by?: 'frame' }[]; skipped: { id: string; why: string }[] };
 type SegEv = { op: 'seg'; i: number; of: number; round: number; id: string; state: 'base' | 'flip'; settleMs?: number };   // (settleMs: only on a segment that drops more of its start than the take's own — a slow row's flip and the baseline after it)
 const RENDER = /^(gbuffer|composite|post|fxaa|pdraw)$/;
 
@@ -86,10 +86,10 @@ export function readSweeps(D: Dump): SweepResult[] {
       const r = per.get(row.id); if (!r || !r.dd.length) continue;
       const movers = [...r.dp.entries()].map(([pass, a]) => ({ pass, back: mean(a) })).filter(m => Math.abs(m.back) >= 0.02).sort((x, y) => Math.abs(y.back) - Math.abs(x.back)).slice(0, 3);
       const union = r.du.length ? spread(r.du) : null, frame = spread(r.dd);
-      const byU = !!union && noiseU !== null, each = byU ? r.du : r.dd, disturbed = (byU ? r.gu : r.gd).map(g => g > gap), med = median(each), noise = byU ? noiseU! : noiseD;
+      const byU = !!union && noiseU !== null && row.by !== 'frame'   /* (a row that says its cost is in no pass's stamp is judged by the frame's length: ui/perfsweep.ts readBy) */, each = byU ? r.du : r.dd, disturbed = (byU ? r.gu : r.gd).map(g => g > gap), med = median(each), noise = byU ? noiseU! : noiseD;
       const inNoise = Number.isFinite(noise) ? Math.abs(med) < 2 * medianK(each.length) * noise / Math.sqrt(each.length) : false;   // (the MEDIAN round against the robust noise: one slow round decides nothing)
       disturbedRounds += disturbed.filter(Boolean).length;
-      rows.push({ id: row.id, label: row.label, change: Object.keys(row.to).map(k => `${k} ${fmtV(row.from[k])} → ${fmtV(row.to[k])}`).join(', '), rounds: r.dd.length, union, frame, fps: spread(r.df), sum: r.ds.length ? spread(r.ds) : null, movers, inNoise, per: each, disturbed, median: med });
+      rows.push({ id: row.id, label: row.by === 'frame' ? `[by frame ms] ${row.label}` : row.label   /* (its median, its rounds and its noise are the frame's, whatever the column's head says) */, change: Object.keys(row.to).map(k => `${k} ${fmtV(row.from[k])} → ${fmtV(row.to[k])}`).join(', '), rounds: r.dd.length, union, frame, fps: spread(r.df), sum: r.ds.length ? spread(r.ds) : null, movers, inNoise, per: each, disturbed, median: med });
     }
     out.push({ begin, done, why, segments: segs.length, baseFrames: bases.reduce((a, s) => a + s.n, 0), base: { union: Number.isFinite(bu) ? bu : null, dt: bdt, fps: 1000 / bdt, sum: Number.isFinite(bsum) ? bsum : null, pass: basePass }, noise: { union: noiseU, dt: noiseD, n: nd.length, rmsUnion: rmsU, rmsDt: rmsD, gap }, disturbed: disturbedRounds, rows });
   }

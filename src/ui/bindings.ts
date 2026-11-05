@@ -522,7 +522,7 @@ export function buildPanel(panel: Panel, engine: Engine, game: Game, smoke: Smok
     adv(() => {
       panel.slider(ss, 'air round smoke', 1, 8, 1, () => X.ring, v => { X.ring = v; }, 'cells of clear air simulated round the smoke (8 = all 26 neighbour bricks)');
       panel.slider(ss, 'idle brick, steps', 8, 60, 1, () => X.keep, v => { X.keep = v; }, 'steps a brick nothing needs is held before its slot goes back (never under 8 while bricks may wait)');
-      panel.slider(ss, 'whole pool from', 0, 1.05, 0.05, () => X.directAt, v => { X.directAt = v; }, 'the share of the pool stepping from which the whole pool is dispatched instead of a GPU-written count (an indirect call costs a validation dispatch); over 1 = never');
+      panel.slider(ss, 'whole pool from', 0, 1.05, 0.05, () => X.directAt, v => { X.directAt = v; }, 'read only while the solver goes by the GPU-written count (?smokeindirect=1, a software adapter, the F8 row while it is flipped): the share of the pool stepping from which the whole pool is dispatched instead; over 1 = never. A page on a real card opens on the whole pool and does not read this');
     });
   }
   // the smoke solver

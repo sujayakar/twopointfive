@@ -103,7 +103,7 @@ const plain = (g: any, P: Vec3) => GD.lightEstimateAt(g, P, undefined, false, nu
 {
   const W = await stand(), g = W.game; run(W, 6); const F = fieldOf(g); let d0 = 0, b0 = 0; for (let i = 0; i < F.n; i++) { d0 = Math.max(d0, F.D(i)); b0 = Math.max(b0, F.B(i)); }
   // (by the game's own switch where a lamp is in a group, as a breaker does it)
-  let out = 0; const groups = new Set<string>(); for (const l of g.engine.lights.lights) if (l.enabled && !l.owner) { if (l.group) groups.add(l.group); else { l.enabled = false; g.lightHome.feed(l); } out++; }   // (a lamp put out by hand is fed to its row, where it has one: a light question reads the rows)
+  let out = 0; const groups = new Set<string>(); for (const l of g.engine.lights.lights) if (l.enabled && !l.owner) { if (l.group) groups.add(l.group); else l.enabled = false; out++; }
   for (const name of groups) g.setGroup(name, false);
   const t0 = performance.now(); run(W, 0.25); const ms = performance.now() - t0; let d1 = 0, lit = 0; for (let i = 0; i < F.n; i++) { d1 = Math.max(d1, F.D(i)); if (F.D(i) > 0) lit++; }
   run(W, 0.5); let b1 = 0; for (let i = 0; i < F.n; i++) b1 = Math.max(b1, F.B(i));

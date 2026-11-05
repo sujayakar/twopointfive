@@ -436,8 +436,7 @@ pub fn step(g: usize, time: f64, dt: f64, near: bool, fumble: f64, es: f64) -> u
             l.bits[t] &= !T_ON;
         }
         let r = l.beacon_row[b] as usize;
-        // (off it stands still at its own phase: nothing reads an off lamp's direction, and a column that changes costs every snapshot the block's piece it lies in)
-        let a = if on { time * 3.3 + l.beacon_phase[b] } else { l.beacon_phase[b] };
+        let a = time * 3.3 + l.beacon_phase[b];
         let (c, s) = (cos(a), sin(a));
         let h = hypot3(c, -0.5, s);
         let h = if h != 0.0 { h } else { 1.0 };

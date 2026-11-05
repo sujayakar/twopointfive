@@ -1038,7 +1038,7 @@ async function quietPicture(names: string[]) {
       const light = g.engine.lights.add({ name: 'kitview_porch', group: 'kitview', owner: 0, fixtureBox: -1, flicker: 0, ttl: -1, age: 0, kind: lamp.kind, pos, dir: [(aim[0] - pos[0]) / dl, (aim[1] - pos[1]) / dl, (aim[2] - pos[2]) / dl], color: [...lamp.color], intensity: lamp.intensity, peakIntensity: lamp.intensity, range: lamp.range, innerDeg: lamp.innerDeg, outerDeg: lamp.outerDeg, radius: lamp.radius, volumetric: lamp.volumetric, broad: lamp.broad, enabled: true });
       const glow: [number, number, number] = [lamp.color[0] * T.glow, lamp.color[1] * T.glow, lamp.color[2] * T.glow];
       const box = F ? makeBox({ c: W(F.at), h: [T.half[0], T.half[1], T.half[2]], yaw: Math.atan2(P.s[1], P.s[0]), albedo: [0.04, 0.04, 0.04], emissive: glow, flags: BoxFlag.Emissive | BoxFlag.AreaLit }) : null; if (box) g.engine.world.addStatic(box);
-      const t = g.lightHome.add(KV.kitViewPoolTarget(light, box ? g.engine.world.statics.indexOf(box) : -1, glow, lamp.intensity)); g.targets.push(t); g.standLights();
+      const t = g.lightHome.add(KV.kitViewPoolTarget(light, box ? g.engine.world.statics.indexOf(box) : -1, glow, lamp.intensity)); g.targets.push(t);
       const S0 = at.sam ?? P.slots[0], roused = { men: 0, alarms: 0 }; let first = true;
       const park = () => { const r = KV.kitViewPark(g); if (!first) { roused.men += r.men; roused.alarms += r.alarms; } first = false; };
       const steps = (n: number) => { for (let i = 0; i < n; i++) { park(); H.step(1 / 60); park(); } };

@@ -17,7 +17,7 @@ const LAMP = /\b(t\.light|al\.light|b\.light|c\.cone|cone)\.enabled\s*=[^=]/;
 const COPY = /\b(g|game|this|G)\.(blackout|breakerFixT)\s*=[^=>]|\.\.\.g\.blackout\b|\binitialOn\b/;
 /** what may: the home itself, the kit picture's lamp (the host's still picture, followed by `feed`), and the words after a `//` are no code */
 const HOME = new Set(['src/sim/lightshome.ts']);
-const LAMP_OK = new Set(['src/host/kitView.ts', 'tools/qa/tjank-scenes.js']);   // (tjank-scenes.js: renders only, no game step follows it. kitView.ts: the still picture's, followed by `feed`)
+const LAMP_OK = new Set(['src/host/kitView.ts', 'src/game/lighting.ts', 'src/game/doze.ts', 'tools/qa/tjank-scenes.js']);   // (tjank-scenes.js: renders only, no game step follows it. lighting.ts: a lamp hung after the level was stood, which has no row. doze.ts: faceLight's screens put out around one question, until the question takes a mask of what it leaves out)
 const out: string[] = [];
 function read(file: string, text: string): void {
   text.split('\n').forEach((raw, i) => {

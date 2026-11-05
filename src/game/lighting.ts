@@ -76,7 +76,7 @@ export function updateTargets(g: Game, dt: number) {
   const time = g.time, H = g.lightHome, bo = g.blackout;
   // who is at the (intact) panel, for the module's timer (a guard who reaches it resets it after fumbling for a moment): that is one of theirs, and the hand and the words are this file's
   let near: Guard | null = null;
-  for (const gd of g.guards) if (breakerResetNear(g, gd) && theirMains(gd) && !workNotHis(gd)) near = gd;   // (words.ts: the mains are their side's business; workthings.ts: not a teammate sent to the breaker — both gates at the loop, not inside breakerResetNear, which handwork.ts reads too)
+  if (bo.active && !bo.permanent && time - bo.since > 3) for (const gd of g.guards) if (breakerResetNear(g, gd) && theirMains(gd) && !workNotHis(gd)) near = gd;   // (words.ts: the mains are their side's business; workthings.ts: not a teammate sent to the breaker — both gates at the loop, not inside breakerResetNear, which handwork.ts reads too)
   const fumble = g.level.breaker.fumble ?? 2.2, handT = bo.fixT + dt;   // (the level's own number where it gives one: a panel a man is long at)
   const ev = H.step(time, dt, near !== null, fumble, g.engine.settings.emissiveScale);   // (rust/sim/src/lights.rs: the mains' clocks, the beacons, every fixture's factor, every lamp as it burns. The emissive scale is a renderer setting an area light's strength is scaled by, an input: a recording carries it, journal.ts EnvSnap)
   if (ev & LIGHT_EV.ranOut) mainsBack(g);   // (the OCP's timed trip ran out; a hand-thrown breaker is given a day — below — so in practice only a guard's reset or Sam's own re-arm ends it)
@@ -88,6 +88,9 @@ export function updateTargets(g: Game, dt: number) {
     const f = t.factor;
     if (t.lens) carLampPaint(g, t);   // (carlamps.ts: a broken vehicle lamp's box painted dark, a whole one as the level has it)
     if (t.kind === 'breaker') { const e: Vec3 = t.broken ? [0, 0, 0] : bo.active ? [5, 0.3, 0.1] : [0.3, 4, 0.6]; for (const bi of t.boxes) g.engine.world.statics[bi].emissive = e; continue; }
+    // (a lamp with no row is the question's own, and written from the factor here: hung after the level was stood, as the kit picture's is, host/kitView.ts, or with an owner)
+    if (t.kind === 'analytic' && t.light && t.light.row === undefined) { t.light.enabled = f > 0.001; t.light.intensity = t.baseIntensity * f; }
+    if (t.areaLights) for (const al of t.areaLights) if (al.light.row === undefined) { al.light.enabled = f > 0.001; al.light.intensity = al.light.peakIntensity = al.base * f * g.engine.settings.emissiveScale; }
     for (const bi of t.boxes) { const b = g.engine.world.statics[bi]; b.emissive = [t.baseEmissive[0] * f, t.baseEmissive[1] * f, t.baseEmissive[2] * f]; b.markGain = f; }   // (markGain: the box's emissive MARKINGS follow the same supply — the vending window in a blackout, a monitor's UI bars under the OCP)
   }
 }

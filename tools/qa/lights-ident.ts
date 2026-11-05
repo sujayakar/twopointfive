@@ -15,7 +15,6 @@ import { standUp } from './headless.ts';
 const ROOT = resolve(import.meta.dir, '../..');
 const H: any = await import(`${ROOT}/src/sim/lightshome.ts`), ST: any = await import(`${ROOT}/src/sim/state.ts`), SIM: any = await import(`${ROOT}/src/sim/sim.ts`);
 const { loadLevel } = await import(`${ROOT}/src/scene/levelLoad.ts`);
-const LF: any = await import(`${ROOT}/src/game/levelfit.ts`);
 const RB: any = await import(`${ROOT}/src/game/rollback.ts`), GD: any = await import(`${ROOT}/src/game/guards.ts`);
 const LG: any = await import(`${ROOT}/src/game/lighting.ts`), LS: any = await import(`${ROOT}/src/game/lightswitch.ts`), SV: any = await import(`${ROOT}/src/game/savestate.ts`), HR: any = await import(`${ROOT}/src/game/hours.ts`);
 const LIGHT_IN = H.LIGHT_IN, LIGHT_COLS: readonly string[] = H.LIGHT_COLS, WORDS: ReadonlySet<string> = H.WORD_COLS, CAPS = H.LIGHT_CAPS;
@@ -60,7 +59,6 @@ function madeUp(seed: number, ticks: number, late = false): number {
   const cams: any[] = [], lasers: number[] = [];
   for (let i = 0; i < 3; i++) { const t = home.add(fix(NF + i, { kind: 'device', mains: i !== 1, stagger: 1.4 + 0.3 * i })); targets.push(t); const cone = lampDef(300 + i, 1, false, 1.1); list.push(cone); const slot = home.camera(t, 0.5 * i, i === 2 ? undefined : [-0.8, 0.9], 6 + i, -0.4, [i, 3, 2]); cams.push({ light: cone, target: t, slot }); }
   for (let i = 0; i < 2; i++) { const t = home.add(fix(NF + 3 + i, { kind: 'device', stagger: 1.1 + 0.3 * i })); targets.push(t); lasers.push(home.laser(t, 5 + i)); }
-  for (let i = NF; i < targets.length; i++) home.in(LIGHT_IN.authored, targets[i], 0);   // (add now says a fixture on from the start is on as authored. The kept words were recorded with these devices' bit clear; the fold holds the module's arithmetic, not that default)
   home.stand(list, targets, beacons, cams);
   let time = 3, word = 0x811c9dc5, tick = 0;
   const someF = () => targets[Math.floor(rnd() * targets.length)];
@@ -142,7 +140,6 @@ async function level(file: string): Promise<void> {
     () => { const l = g.devices?.lasers[Math.floor(rnd() * g.devices.lasers.length)]; if (l) { const a = l.def.from, b = l.def.to, p = g.col.nav.nearestFreePoint((a[0] + b[0]) / 2, (a[2] + b[2]) / 2); if (p) g.teleportPlayer([p[0], 0, p[2]]); } },
     () => { const t = someT(x => x.kind === 'device'); if (t) g.lightHome.stage(t, null, true); },
   ];
-  { const rows = g.engine.lights.lights.filter((l: any) => l.row !== undefined).length, most = LF.levelCounts(g.level).lamps; if (rows > most) fail(`${file}: ${rows} rows stood, and levelfit.ts's bound says at most ${most}`); }
   g.godMode = true;
   hush(true);
   try {
@@ -165,23 +162,17 @@ function standRefuses() {
     if (!said.includes(l.name)) fail(`a ${what} with an owner was stood as a row and no error named it (${said || 'no error'})`);
   }
 }
-/** A FIXTURE HUNG AFTER THE LEVEL WAS STOOD (the kit picture's) is stood again and has a row, and burns by the module like any other: there is no second way for a fixture's lamp to burn */
-async function hungLate() {
+/** A FIXTURE'S LAMP WITH NO ROW (hung after the level was stood, or with an owner) is still switched, by updateTargets from the factor: every area light has a row or is written there */
+async function rowLess() {
   hush(true); let W: any; try { W = await standUp({ uploadEvery: 1000, seed: SEED }); } finally { hush(false); }
   const g = W.game; hush(true);
   try {
-    const own = g.targets.find((x: any) => x.kind === 'analytic' && x.light); if (!own) { fail('hung: no lamp on the level to copy'); return; }
-    const l = g.engine.lights.add({ ...own.light, name: 'hung late', row: undefined, pos: [own.pos[0], own.pos[1], own.pos[2]], dir: [0, -1, 0], color: [1, 1, 1], steady: undefined, enabled: true, intensity: 3, peakIntensity: 3 });
-    const t = g.lightHome.add({ name: 'hung late', group: 'hung', kind: 'analytic', pos: [own.pos[0], own.pos[1], own.pos[2]], boxes: [], baseEmissive: [0, 0, 0], baseIntensity: 3, on: true, broken: false, disabledUntil: -1, fluorescentFlicker: false, factor: 1, mains: true, interactive: false, stagger: 0, light: l });
-    g.targets.push(t);
-    if (!t.authored) fail('a fixture on from the start is not on as authored');
-    if (l.row !== undefined) fail('a lamp had a row before the rows were stood again');
-    g.standLights();
-    if (l.row === undefined) { fail('a fixture hung late and stood again has no row'); return; }
+    const t = g.targets.find((x: any) => x.areaLights?.length && x.mains && x.on), own = g.targets.find((x: any) => x.kind === 'analytic' && x.light && x.mains && x.on); if (!t || !own) { fail('rowless: no lit area light and lamp on the mains in the office'); return; }
+    const al = t.areaLights[0].light, l = own.light; al.row = undefined; l.row = undefined;
     for (let i = 0; i < 10; i++) W.step(DT);
-    const up = l.enabled && l.intensity === t.baseIntensity * t.factor && t.factor > 0;
-    g.setBlackout(30, 'debug'); W.step(DT); const down = !l.enabled && l.intensity === 0;
-    if (!up || !down) fail(`a fixture hung late does not burn by the module: lit ${up}, out in a blackout ${down}`);
+    const up = al.enabled && al.intensity === t.areaLights[0].base * t.factor * g.engine.settings.emissiveScale && l.enabled && l.intensity === own.baseIntensity * own.factor;
+    g.setBlackout(30, 'debug'); W.step(DT); const down = !al.enabled && al.intensity === 0 && !l.enabled && l.intensity === 0;
+    if (!up || !down) fail(`a fixture's lamp with no row is not switched from the factor: lit ${up}, out in a blackout ${down}`);
   } finally { hush(false); }
 }
 /** A PUT-BACK ACROSS A BLACKOUT: the light question asked before the next updateTargets answers as the restored timeline did, every row is its lamp, in the same game and put into a fresh one (rollback.ts rootsOf: the light set is in a snapshot) */
@@ -217,8 +208,8 @@ for (const s of [1, 2, 3]) { const word = madeUp(s, TICKS); words[`seed${s}`] = 
   if (KEPT && KEEP[`seed${s}`] !== undefined && KEEP[`seed${s}`] !== word && !has('--write')) fail(`made-up seed ${s}: the word is ${word.toString(16)} and the kept one ${KEEP[`seed${s}`].toString(16)}`); }
 log(`made-up: 3 seeds, ${TICKS} ticks, words ${Object.values(words).map(w => w.toString(16)).join(' ')}`);
 for (const f of LEVELS) { await level(f); log(`${f.padEnd(22)} every row its lamp`); }
-standRefuses(); await hungLate(); for (const f of ['office.json', 'pass.json']) await putBack(f);
-log('a fixture\'s lamp with an owner is refused by name, a fixture hung late is stood again and burns by the module, a put-back across a blackout reads the restored timeline');
+standRefuses(); await rowLess(); for (const f of ['office.json', 'pass.json']) await putBack(f);
+log('a lamp the module writes must have a row, a lamp with no row is switched from the factor, a put-back across a blackout reads the restored timeline');
 if (has('--write')) { if (TICKS !== 2400 || BREAK || bad) { fail(`--write keeps the words of a clean run of 2400 ticks, and this one is not (${TICKS} ticks${BREAK ? ', the red path' : ''}, ${bad} difference(s))`); } else { await Bun.write(FIXTURE, JSON.stringify(words, null, 1) + '\n'); log('words written'); } }
 if (BREAK && !redWords) { log('=== lights-ident: the made-up half never went red: its words hold nothing, and this run is not the red path it says it is ==='); process.exit(0); }
 if (!bad) log('- PASS — lights-ident: the kept words stand and every row is its lamp');

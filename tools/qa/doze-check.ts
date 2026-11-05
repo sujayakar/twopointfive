@@ -41,7 +41,6 @@ export async function dozeCheck(): Promise<boolean> {
   const { CLOSE, closeAt, closeKindOf, closeSeated } = await import(`${ROOT}/src/game/close.ts`);
   const { workLit } = await import(`${ROOT}/src/game/calmtorch.ts`);
   const { raiseEscalation, lightEstimateAt, sightGain } = await import(`${ROOT}/src/game/guards.ts`);
-  const { ROW_BIT } = await import(`${ROOT}/src/sim/lightshome.ts`);
   const { killGuard } = await import(`${ROOT}/src/game/combat.ts`);
   const { digestGame, hashDigest } = await import(`${ROOT}/src/game/digest.ts`);
   const { sneakWalk } = await import(`${ROOT}/src/game/sneak.ts`);
@@ -144,8 +143,8 @@ export async function dozeCheck(): Promise<boolean> {
     // (e) light on his face
     { const m = back(), head = m.char.bones.head ?? [m.char.pos[0], 1.15, m.char.pos[2]], f = [Math.sin(m.char.bodyYaw), 0, Math.cos(m.char.bodyYaw)];
       const l = g.engine.lights.lights.find((x: any) => x.enabled && !x.owner && x.kind !== 2 && !(x.ttl >= 0)), keep = l ? { pos: [...l.pos], range: l.range, intensity: l.intensity, kind: l.kind, radius: l.radius } : null; let at = -1;
-      if (l) { for (let i = 0; i < 180 && at < 0; i++) { l.pos[0] = head[0] + f[0] * 0.8; l.pos[1] = head[1] + 0.6; l.pos[2] = head[2] + f[2] * 0.8; l.kind = 0; l.range = Math.max(l.range, 6); l.intensity = Math.max(l.intensity, 6); g.lightHome.feed(l); W.step(DT); if (!dozeAsleep(m)) at = i + 1; }   // (a lamp moved by hand is fed to its row: a light question reads the rows)
-        Object.assign(l, { range: keep!.range, intensity: keep!.intensity, kind: keep!.kind }); l.pos[0] = keep!.pos[0]; l.pos[1] = keep!.pos[1]; l.pos[2] = keep!.pos[2]; g.lightHome.feed(l); }
+      if (l) { for (let i = 0; i < 180 && at < 0; i++) { l.pos[0] = head[0] + f[0] * 0.8; l.pos[1] = head[1] + 0.6; l.pos[2] = head[2] + f[2] * 0.8; l.kind = 0; l.range = Math.max(l.range, 6); l.intensity = Math.max(l.intensity, 6); W.step(DT); if (!dozeAsleep(m)) at = i + 1; }
+        Object.assign(l, { range: keep!.range, intensity: keep!.intensity, kind: keep!.kind }); l.pos[0] = keep!.pos[0]; l.pos[1] = keep!.pos[1]; l.pos[2] = keep!.pos[2]; }
       const lim = Math.ceil((DOZE.lightSecs + 2 * DOZE.askSecs) / DT) + 2;
       line(at > 0 && at <= lim && dozeWoke(g, m) === 'light' && m.awareness >= 0.3, 'light on his face wakes him inside the dwell, suspicious', l ? `a lamp put a metre off his face: ${at < 0 ? 'SLEPT ON for three seconds' : `woke ${(at * DT).toFixed(2)} s on`} (the bar ${(lim * DT).toFixed(2)} s) · woken by ${dozeWoke(g, m)}` : 'the level has no lamp to move'); }
 
@@ -190,7 +189,7 @@ export async function dozeCheck(): Promise<boolean> {
       { const c = m.char, hips = [c.pos[0] - Math.sin(c.bodyYaw) * 0.33, 0, c.pos[2] - Math.cos(c.bodyYaw) * 0.33], onChair = flat(hips, [chair.x, 0, chair.z]);
         const to = Math.atan2(mon.pos[0] - c.pos[0], mon.pos[2] - c.pos[2]), off = Math.abs(Math.atan2(Math.sin(to - c.bodyYaw), Math.cos(to - c.bodyYaw)));
         const head: any = [c.pos[0], 1.1, c.pos[2]], lit = g5.visibilityOf(lightEstimateAt(g5, head));
-        const dark = g5.visibilityOf(lightEstimateAt(g5, head, undefined, false, undefined, undefined, ROW_BIT.screen));   // (the light there with the screens' rows left out: doze.ts faceLight's own question)
+        for (const al of mon.areaLights ?? []) al.light.enabled = false; const dark = g5.visibilityOf(lightEstimateAt(g5, head)); for (const al of mon.areaLights ?? []) al.light.enabled = true;
         line(!builtOn && mon.on && mon.factor > 0.9 && onChair < 0.2 && off < 0.3 && flat([chair.x, 0, chair.z], c0) <= DOZE.pullM + 0.02 && lit > dark + 0.02 && !m.flashlight.enabled && closeSeated(g5, m) && dozeMark(g5, m) === '♪' && dozeAt(m) === 'screen' && !dozeAsleep(m) && m.state === 'patrol' && m.route.wait[m.wp] < DOZE.napWait,
           'a man with a short wait in the dark sits to the screen there and switches it on: on the chair, facing it, its light on his face, his torch out, awake, the mark over him',
           `${m.callsign} (${m.route.name}, a ${m.route.wait[m.wp]} s wait) · screen built ${builtOn ? 'ON' : 'off'}, now ${mon.on ? 'on' : 'OFF'} (supply ${mon.factor.toFixed(2)}) · the chair pulled ${flat([chair.x, 0, chair.z], c0).toFixed(2)} m up to it · hips ${onChair.toFixed(2)} m off the chair · ${(off * 180 / Math.PI).toFixed(0)}° off the screen · the light at his face ${lit.toFixed(3)} (${dark.toFixed(3)} with the screen dark) · torch ${m.flashlight.enabled ? 'BURNING' : 'out'} · mark '${dozeMark(g5, m)}'`); }

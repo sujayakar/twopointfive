@@ -74,6 +74,54 @@ switch: it is the reading made true, not a rule of the game. Never seen on an Ap
 untimed pass (the sweep that found it), so the reading there may move less than the card's. What the check cannot see: a pass whose
 `timestampWrites` is undefined at run time (a caller that hands no `ts`); the headless device has no timer to ask.
 
+**A COST NO STAMP SEES: THE SMOKE SOLVER'S DISPATCH (2026-11-05).** On the build named that day the four snow levels drew about 42 frames a second
+for 60 on the rented card (NVIDIA A10G through Vulkan) with every stamped pass as before (10.3 ms; `smoke` 0.24 ms): 160 to 190 frames drawn of 240,
+the pacer holding 52 to 84 (`__pace().held`: the GPU had not answered), the GPU's answer for a frame 27 to 34 ms after its submit where a level with
+no smoke reads 14 to 17. The vault read as 60 until a smoke can was let off, then the same. HOW IT WAS FOUND, since no timer could: the pacer's own
+counts, the queue's answer timed from a page script (wrap the INSTANCE's `device.queue.submit` and `onSubmittedWorkDone`: the page keeps its own
+queue's methods, the prototype's are not called), and leaving one thing out of the frame at a time. Not the particles, their draw, the wind, the main
+thread (3 ms) or the picture's size: the solver, and of it only THE ABOUT TWENTY `dispatchWorkgroupsIndirect` CALLS A FRAME (per-brick kernels by a
+GPU-written count). The same kernels dispatched directly keep 60. THE GAME'S PAGE NOW OPENS ON THE WHOLE POOL (`main.ts` sets `sparse.indirect` by
+`smoke/dispatch.ts pageIndirect`; `smoke.ts encode` asks `byGpuCount`): a per-brick kernel is dispatched directly over all 4,096 workgroups. A
+workgroup past the step's own list returns at its guard, which is how the pool has always gone from `directAt` of it stepping, so the smoke is the
+same to the bit and no kernel runs that did not. The dispatches of fixed size are as they were; one pipeline set, the call is picked at encode time.
+THE SOLVER'S OWN DEFAULT IS UNCHANGED (`indirect` on): the level viewer and a tool that stands a solver of its own (`framecost-gpu.ts`) go as before.
+WHY NOT A SMALLER COUNT THE PAGE KNOWS (twice the last read-back's bricks and 256 more: built, and it kept 60 on four boxes): the read-back is a
+few frames old and a blast makes hundreds of bricks in ONE step (a frag's pall 286, a wall charge's 620 from clear air). The bricks past the count are
+listed and never linked; their neighbours read what the slot last held (the old plume's density after a restart), and a tool that steps without
+yielding never gets a read-back at all. A count that can be short of a list is a guess under kernels that take every listed brick to have run. THE
+ONE SPECIAL CASE, and why: a page on the browser's SOFTWARE ADAPTER (`gpu.adapterFallback`) opens on the GPU's count, because that adapter runs
+every idle workgroup on the CPU, a step about thirty times slower (0.2 s against 5 s). It is the adapter of the cloud's page tools, and a player's only
+where the browser has no card to give; it changes nothing a real card computes. So A PAGE CHECK IN THE CLOUD DOES NOT RUN THE PLAYER'S DISPATCH unless
+it asks `?smokeindirect=0`. What would remove the case: a solver whose step list is capped by a count the page hands it (the allocator refusing past
+it), after the port. THE WORD: `?smokeindirect=1` = the GPU's count on any card, `=0` = the whole pool on any adapter (a visit's word, not a rule of
+the game: no knob row, in `VISIT_FLAGS` so a kept link does not carry it; a benchmark asked beside it carries it). THE F8 SWEEP'S LIVE ROW 'smoke
+solver: the dispatch of before' (`ui/sweepSmoke.ts`) flips the solver's knob and puts it back; it says why when there is nothing to read (no smoke
+in the air, the solver held, the page already on the count, so much stepping that both sides go whole), its label carries the bricks in the air as
+the take began, and THE REPORT JUDGES IT BY THE FRAME'S LENGTH (`readBy: 'frame'`, `tools/qa/perf-sweep.ts`: the row is printed '[by frame ms]'),
+since by the passes' union a third of the frames lost would read 'inside the noise'. Its flip is asked ONCE, as the take begins: a can's smoke is
+gone before a whole sweep is through and a round with no smoke reads nothing, so take it where smoke stands (a snow level), or the row alone right
+after a can. Tab ▸ Smoke pool's 'whole pool from' is read only while the solver goes by the count. MEASURED on the rented card, the named build with
+`__smoke.sparse.indirect` put off from a page script (eight boxes in like pairs, 4 s takes at 60 Hz): the quiet lesson in snow 231 to 241 frames of
+240 where the way of before gave 160 to 190 on the same boxes before and after; the vault with a can 238 to 239 against 169 to 176, the pool growing
+through the take. The `smoke` stamp: 0.18 to 0.19 against 0.24 ms in snow (24 bricks); with a can 0.52 at about 1,600 bricks, between the way of
+before's 0.45 at 1,075 and 0.95 at 2,600 (the pool grew from take to take, so no like pair there). CHECKED WITH NO GPU:
+`tools/qa/perf-sweep-logic.ts` (a real card's page opens on the whole pool at any fill and a software adapter's on the count; the page and the
+solver ask those two rules, read in their source; the flip's reasons, the row on a take; `SMOKEDISPATCH_BREAK=1` must fail) and
+`tools/qa/perf-sweep-selftest.ts` (a row marked by the frame is judged by it). THIS BUILD'S OWN PAGE, SEEN ON THAT CARD (four boxes, nothing patched, no GPU error,
+no error in the console): it opens with `indirect` off and holds 221 to 240 frames of 240 with a can's smoke in the air (860 to 1,830 bricks; 0 to 2
+long) on the quiet lesson twice and on the vault; the count put on from a script on the same pages gave 158 to 169 with 67 to 72 long, and the page's
+own way again 237 to 239. `?smokeindirect=1` opened on the count (one box, of a slower kind than the others: 58 and 73 frames of 240 with 22 to 36
+bricks of breath, 202 with the whole pool put on from the script). The sweep's row taken alone, live, three rounds: armed with its bricks in the
+label, flipped and put back, 42 to 56 frames in each flipped second where a base second has 59 to 61, the passes' union level (13.0 to 13.5
+ms on both sides), which is what `readBy: 'frame'` is for. On the software adapter here the page opened on the count, on the
+whole pool with `=0` and on the count with `=1`, no error in the console (the lesson held at its first card: nothing stepped). WHAT NO DIGEST CAN
+SAY: the headless game stands no smoke solver (`nullSmoke`), so equal run digests say only that nothing the tick reads moved. NEVER SEEN on Metal or
+D3D: every box that showed the cost is NVIDIA through Vulkan, and no player of this release is on that pair, so whether a Mac ever paid it is not
+known, nor WHAT THE IDLE WORKGROUPS COST A WEAK CARD at a snow level's 24 bricks (about 18 kernels of 4,096 workgroups of 256 threads that return
+at their guard: 0.18 ms on the rented card; his Mac read the whole pool 0.14 ms a step CHEAPER, but at three quarters full, 10-10). The sweep's
+row on his machine is the answer, and the word puts the count back on any machine that pays.
+
 <!-- was CLAUDE.md lines 2403–2406 -->
 - **Markings = object legibility** — palette-indexed bitmaps on box faces, packed in the tail of `boxMat` (no texture); `settings.markings` default ON, `?nomarkings` (+ `?level=relief` = main's frame), `__mark`; emissive markings are LIGHTS; the art rules (flat colour per cell, ≤ 3 entries, no gradients, no baked lighting) — the full bullet moved word for word to `docs/internal/claude-md-renderer-systems.md`.
 - **Materials, RT reflections, the detail layer** (renderer v3 phase 4) — every box carries a finish (`Box.rough / metal / aniso`), `reflect.wgsl` traces under `settings.rtReflect` (`?nortreflect`, `frame.rtCfg.w` 0 = off), the detail layer under `settings.detail` (`?detail=0‥1`; art rule: variation from geometry, never a painted texture); `__rt`, `__hotReflect` — the full bullet moved word for word to `docs/internal/claude-md-renderer-systems.md`.
@@ -387,8 +435,9 @@ untimed pass (the sweep that found it), so the reading there may move less than 
   seven Tab rows (CAP domains, both skip-empty-bricks, flush ε, pressure at half res, fine / coarse voxel).
   ROUND TWO (10-10, each a knob of `__smoke.sparse` and a row of
   Tab ▸ Volumetrics ▸ Smoke pool, each off = the pool as first benched at 3781d45; `__spl.asBenched()` = all off; notebook §9): WHO STEPS = per BRICK, a brick whose fastest air crosses ≤ `params.calmCells` cells (`farCells` 1 out of sight; 2 left nearly twice the smoke hanging at 7 s: a brick that steps less often loses less, notebook §9.1)
-  waits 1 / 2 / 4 frames (`calmMax`; 1 = off) and then integrates what it sat out, never past `dtCap` 1/12 s, the shortest wait of its 27 neighbours, a source wakes what it reaches; the whole pool is dispatched directly from `directAt` of it
-  stepping. READS HOP (`readSkip`, SHIPS OFF since the Mac's take: eight pairs, no time saved): shadow rays, the lit marches and the froxels skip stretches the page says are clear (`smokeClearRun` / `smokeAnyIn` over a macro map) — same samples, same answers. WHO GIVES WAY (`fresh` 0.15; 0 = first
+  waits 1 / 2 / 4 frames (`calmMax`; 1 = off) and then integrates what it sat out, never past `dtCap` 1/12 s, the shortest wait of its 27 neighbours, a source wakes what it reaches; the game's page opens with a step's per-brick kernels dispatched over the whole pool (2026-11-05,
+  `smoke/dispatch.ts`); the GPU-written count, with the whole pool from `directAt` of it stepping, is the solver's own default still, and what
+  `?smokeindirect=1` and a software adapter give: the note 'A COST NO STAMP SEES' under GPU timing). READS HOP (`readSkip`, SHIPS OFF since the Mac's take: eight pairs, no time saved): shadow rays, the lit marches and the froxels skip stretches the page says are clear (`smokeClearRun` / `smokeAnyIn` over a macro map) — same samples, same answers. WHO GIVES WAY (`fresh` 0.15; 0 = first
   come): as the last 2 × fresh of the pool fills, what counts as thin rises, haze is refused the last slots, keeps less air and is let go sooner; nothing evicted, nothing for game code to count. WHAT IS IN A CELL: one word per
   coarse cell (share not canister smoke, 1 − tint) carried along the density's backtrace; `publish` lays `densityScale` / `fxDensityScale` and the tint into the atlas texel, so the two Tab rows act on smoke in the air (frozen too:
   `refreshDomains` → `publishAll`), every reader incl. the guards' probe takes the same `.x`, and the dust twin reads `shaders/dust_look.wgsl`. GUN GAS LETS GO (`fineDecay` 3 /s, `fineShare` 0.25; 0 and 1 = as benched; §9.8): a fine brick is a fifteenth of a coarse one's volume and nothing eats gun gas any more, so 1.7 s on AUTO
@@ -4027,3 +4076,37 @@ untimed pass (the sweep that found it), so the reading there may move less than 
   where the snapshot used to carry the masks back whole; a snapshot put into ANOTHER game that has a picture (no caller today) leaves that game's
   masks keyed to its own light objects, which the put-back has made other lights of; the sun's asks from `hours.ts` and `lighting.ts` are still
   worked inside the game's call where there is a picture (a few tens of ms when the hour is set or the cloud turns).
+- **THE MASKS' STEP IS ON THE CLOCK WHERE THE FRAME HAS A PACE, AND A BLAST'S MASK WORK IS NO LONGER WHOLE ON ONE FRAME** (11-05, on the bullet above;
+  `render/reachKeep.ts tickTimed`, `KEEP_MS` 2, `readSome`, `dirLightSteps`; `render/reach.ts reachMaskForDirectionalSteps`, `wallRasterDiffSteps`). With
+  the masks moved, the performance goal profiled the keeper's step cold on a real box, three wall charges: a directional light's mask WHOLE IN ONE
+  FRAME on every charge and never cheap (11.1 / 12.2 / 7.2 ms: the level's raycast under it 2.6 to 5.0, the look's way out of a solid 1.1 to 2.0); the
+  read of the walls one 9.6 ms frame on the first charge (the raster 1.7, its scan against the last 5.2); a lamp's first share 13.5 ms cold where the
+  same count of sight-line steps is 2 ms warm. A COUNT IS NOT A BUDGET IN A BROWSER, which is what the planners' pace had already found. NOW the
+  engine takes a step ON THE CLOCK where the frame has the planners' pace (`Engine.framePace`: `tickTimed`) and ON THE COUNT where it has none
+  (`tick`: a tool's stand, `?planpace=old`, a page's first frames, and under `?reachpace=old` either way): two calls, so a rig that drives two builds
+  cannot mean one by the other. On the clock a step is `KEEP_MS`, its own allowance beside the planners': the walls' reading in the scan's own steps
+  (the raster is built when the reading begins; a change noted meanwhile is its own reading after), then a lamp's mask in slices of 4,000 sight-line
+  steps with a look at the clock between, a directional light's a decided cell at a time. ONE SCAN STEP AND ONE SLICE OR CELL AT LEAST, every step:
+  a slow machine still ends, and a reading never keeps the masks waiting (a first cut gave a reading the whole step: a note a frame then starved
+  every mask, a review's count). On the count a step is what it was, to the frame and the bit (a review traced both commits through 14 blasts under
+  five settings). ONE PATH FOR A DIRECTIONAL LIGHT'S MASK (`dirLightSteps`: along its way, and over its disc where it was made for one, one reading
+  of the statics for all five directions; `sun`, `dir`, the queue and a tool's `wholeOf` are it run whole or in steps). That mended a fault older
+  than the move: a WIDE sun's mask decided again after a wall changed was decided along its centre alone and lost the cells only its rim reaches. A
+  DIRECTIONAL MASK KNOWS WHAT IT WAS MADE FOR (`made`: the disc, the way, the walls): each step one that is not waiting and whose disc or walls are
+  another now is made again, whole (the weather turned; a snapshot put the old disc back; made on a holed level since put back as authored). A job in
+  hand reads the statics as they stood when it began; asked again it begins again, and the third go is whole, as a lamp's is. A box's turn (cos and
+  sin of its yaw) is worked out once a box. THE SAME MASKS: on the count `reach-cost --against` the build before the move, 956 of 956. ON THE CLOCK
+  the evidence is `reachkeep-check` line 6 with THE CLOCK SCRIPTED (`ReachKeep.timeNow`: 0.7 ms a look, three looks a step, on any machine): one wall
+  blown and decided on the clock, on the count and with the two mixed, the same bits; a directional mask carried across steps (16 of 97); a second
+  wall blown while it is in hand; the sun's disc turned while it is in hand; and, since a partition's hole changes no directional mask, a wide low
+  sun let in through a gap cut by hand in an outer wall, the whole derivation's over its disc on the count and again with a second gap cut while its
+  job is in hand. Seven one-line breaks of the keeper: six turn a line red (a reset that leaves the queue full does not: it only costs work).
+  `REACHKEEP_BREAK=1` fails four. IN A PAGE, which steps on the clock (Chromium on the software adapter, the office, three wall charges inside the
+  tick, a quiet machine, the first cut of this): the keeper's time on the frames after the first charge 4.0 · 2.2 · 1.4 · 4.3 · 2.1 · 2.1 · 2.0 ·
+  2.0 · 1.4 · 2.6 · 2.0 · 1.8 ms where the move alone had 5.8 · 11.8 · 8.2 · 5.2 and then ones and twos; under the look none over 3.2; the masks are
+  whole 13 to 15 frames after the charge where they were 11; a hash of all 45 masks the same as the old build's after each charge. NOT YET TIMED ON A
+  REAL BOX. STILL WHOLE ON ONE STEP, each rare and none a blast's: the raster's own build on the step a reading begins (1.7 ms on that box, the
+  4.0 above); a directional mask made again because its disc or walls are another (five directions: the weather, a put-back, a reset); the walls
+  read again after a put-back; a mask asked a third time while part-decided (walls changing faster than it can be decided). LEFT: those; the sight
+  lines and rays still run the simulation's exact maths (cos and hypot swapped in for the browser's: 1 to 3 ms of a frame by that profile), which
+  the picture need not; the engine's daylight lights keep their own raster and queue (the bullet above).

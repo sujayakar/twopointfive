@@ -102,9 +102,11 @@ function jumpsFor(solid: Uint8Array): Uint8Array {
 }
 /** What differs between two wall rasters: the box of sub-cells that changed (null = none), for ReachOnly.boxes. Where walls only OPENED, the old raster's jumps
  *  are still safe on the new one (every distance only grew), so they are handed over instead of being worked out again. */
-export function wallRasterDiff(prev: Uint8Array, next: Uint8Array): [number, number, number, number] | null {
+export function wallRasterDiff(prev: Uint8Array, next: Uint8Array): [number, number, number, number] | null { return whole(wallRasterDiffSteps(prev, next)); }
+/** … in the scan's own steps (below), for a caller that reads the walls a little a frame (reachKeep.ts): the same box, and the jumps handed over when the scan ends */
+export function* wallRasterDiffSteps(prev: Uint8Array, next: Uint8Array): Generator<void, [number, number, number, number] | null, void> {
   if (prev.length !== next.length) return [0, 0, FW - 1, FH - 1];
-  const d = rasterScan(prev, next); if (!d.box) return null;
+  const d = yield* rasterScanSteps(prev, next); if (!d.box) return null;
   const j = JUMPS.get(prev); if (j && !d.closed) JUMPS.set(next, j);
   return d.box;
 }
@@ -114,7 +116,7 @@ export function rasterRect(b: readonly [number, number, number, number]): [numbe
 }
 /** one scan for both: the box of sub-cells that differ, and whether any went from open ground to a wall or a doorway's gap (`closed`: only then can a
  *  distance to the nearest of them have shrunk, and an old jump field step over something a sight line must read). IN STEPS (render/steps.ts: a quarter
- *  of a million cells, 4 to 5 ms cold in a browser), a stop every `SCAN_ROWS` rows: the game's own asks run it to its end (rasterScan). */
+ *  of a million cells, 4 to 5 ms cold in a browser), a stop every `SCAN_ROWS` rows: wallRasterDiff runs it to its end, a reading on the clock takes it a few stops a frame (reachKeep.ts). */
 const SCAN_ROWS = 32;
 function* rasterScanSteps(prev: Uint8Array, next: Uint8Array): Generator<void, { box: [number, number, number, number] | null; closed: boolean }, void> {
   let x0 = FW, z0 = FH, x1 = -1, z1 = -1, closed = false;
@@ -126,7 +128,6 @@ function* rasterScanSteps(prev: Uint8Array, next: Uint8Array): Generator<void, {
     } }
   return { box: x1 < 0 ? null : [x0, z0, x1, z1], closed };
 }
-const rasterScan = (prev: Uint8Array, next: Uint8Array) => whole(rasterScanSteps(prev, next));
 /** The same for a raster that is NOBODY'S STATE (ReachJob.own: the look page's daylight at openings keeps its own walls and their jump field, and neither
  *  side table of this file knows them): true where `next` differs from `prev`, and where its walls only OPENED (a wall holed: every blast) prev's jump
  *  field is HANDED ON to next, as wallRasterDiff hands the game's. Where any cell closed (a wall put back by a restart, a box set down) it is not, and
@@ -214,7 +215,9 @@ export const REACH_WORK = { cells: 0, steps: 0, fields: 0 };   // fields: jump f
  *  `whole` (the page's ?reachpace=old) = the pace before the shares: every mask in one go, one light a frame at least and more until `wholeCells` cells are
  *  decided — fewer, longer ticks. The masks end as the same bits either way; only the frame each lands on differs. A REGISTERED SWITCH (host/profile.ts
  *  pageSwitches reads the word, game/knobs.ts lists the table, a recording carries it). Since the masks left the tick (render/reachKeep.ts, 11-05) NOTHING IN
- *  THE GAME'S UPDATE READS IT: it paces the picture's keeper on drawn frames, and a stand with no picture never reads it. */
+ *  THE GAME'S UPDATE READS IT: it paces the picture's keeper on drawn frames, and a stand with no picture never reads it. `steps` IS THE STEP OF A FRAME
+ *  WITH NO PACE (a tool's stand, which keeps no clock; the page with `?planpace=old`; a page's first frames): where the frame has the planners' pace the
+ *  keeper's step is an allowance of TIME (reachKeep.ts KEEP_MS), since a count of steps is 2 ms warm and five times that cold in a browser. */
 export const REACH_PACE = { steps: 60000, whole: false, wholeCells: 60 };
 export interface ReachOnly { prev: Uint32Array; rects: readonly (readonly [number, number, number, number])[]; /** cells farther than this from the light keep their level too (past its range it lights nothing) */ maxDist?: number;
   /** the wall raster's changed sub-cells, as boxes (wallRasterDiff): given these, a cell is decided again only if one of its OWN sight lines touches one — the same
@@ -328,6 +331,11 @@ function derive(solid: Uint8Array, pos: Vec3, dir: Vec3, radius: number, interio
  *  the wall's outer face, and every cell along the inside of an outer wall read 'the sun reaches'. On the pass at midday that was the cells men stack in, with the
  *  hour's sun, thousands of times the room's bulb, in their fresh draw: a white speckle for every bulb pick (REACH_OPTS.solidLooks = the looks as they were). */
 export function reachMaskForDirectional(dirToLight: Vec3, interior: Uint8Array, blocked: (from: Vec3, dir: Vec3, dist: number) => boolean, only?: ReachOnly, free?: (p: Vec3) => Vec3 | null): Uint32Array {
+  return whole(reachMaskForDirectionalSteps(dirToLight, interior, blocked, only, free));
+}
+/** … IN STEPS (render/steps.ts), a stop after every cell that is decided by rays (up to 180 of them a cell; a cell that keeps its level or stands in the
+ *  open costs nothing and is no stop): the same mask, for a caller that takes a few cells a frame (reachKeep.ts) */
+export function* reachMaskForDirectionalSteps(dirToLight: Vec3, interior: Uint8Array, blocked: (from: Vec3, dir: Vec3, dist: number) => boolean, only?: ReachOnly, free?: (p: Vec3) => Vec3 | null): Generator<void, Uint32Array, void> {
   const mask = new Uint32Array(REACH_ROW_WORDS);
   const W = WORLD.gridW, H = WORLD.gridH;
   const heights = REACH_OPTS.solidLooks ? [0.05, 0.8, 1.7] : DIR_HEIGHTS;
@@ -346,6 +354,7 @@ export function reachMaskForDirectional(dirToLight: Vec3, interior: Uint8Array, 
         const dist = up > 0.05 ? Math.min(60, (WORLD.ceilingY + 1.5 - y) / up) : 60;   // nothing static stands above the roof line: once the ray is a metre over the slab it is in the clear
         if (!blocked(from, dirToLight, dist)) { lv = 3; break out; }
       }
+      yield;
     }
     if (lv) mask[ci >> 4] |= lv << ((ci & 15) * 2);
   }

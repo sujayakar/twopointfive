@@ -59,7 +59,7 @@ export const LIGHTSWITCH = {
   perRoom: 2, apartM: 4,
   /** where the door's own wall gives no place for one (glass, a corner): m about the door the room's other walls are tried within */
   scanM: 4,
-  /** put back on, a tube strikes (rust/sim/src/lights.rs supply: the restrike a fixture makes when the mains return) — off = on at once, like a bulb */
+  /** put back on, a tube strikes (lighting.ts supply: the restrike a fixture makes when the mains return) — off = on at once, like a bulb */
   strike: true,
   /** a calm defender who saw the room go dark comes to the switch, and one who stands at it puts the lights back — never sooner than `guardSecs` after
    *  the hand that put them out (the beat a man takes to know what happened and reach for it) */

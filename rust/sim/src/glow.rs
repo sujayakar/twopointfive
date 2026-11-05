@@ -24,15 +24,13 @@ use crate::light;
 use crate::world::{js_max, ASK_HOST, F_GLASS};
 use prim::floor;
 
-/// what a step is told (sense.ts SENSE.glow), and the lamps it is swept from: what the host says of the level's rows (light.rs Rows: the steady ones
-/// and their steady selves) and how many lamps of nobody's fixture it wrote beside them (light.rs LAMPS)
+/// what a step is told (sense.ts SENSE.glow), and how many lamps the host wrote for it (light.rs: the level's own steady lamps)
 pub struct K {
     pub albedo: f64,
     pub share: f64,
     pub passes: u32,
     pub sweep: f64,
     pub lamps: usize,
-    pub rows: Option<light::Rows>,
 }
 /// the height the light is read at (a man's chest), a metre of the plan, and how many of those a square of the smoke grid is across
 pub const CHEST: f64 = 1.2;
@@ -45,10 +43,10 @@ pub const MAX_PASSES: u32 = 16;
 /// one pass's answers, written before any is read back
 static mut NEXT: [f64; MAX_GLOW] = [0.0; MAX_GLOW];
 
-/// the brightest of the meter's six faces under the sweep's lamps at a point (None: a line of it is the host's to judge)
-fn lamps_on(w: usize, set: i32, k: &K, p: [f64; 3]) -> Option<f64> {
-    let (mut acc, mut at) = ([0.0; 6], 0usize);
-    if light::estimate(w, set, k.lamps, p, &light::NO_SHADE, false, k.rows, true, &mut at, &mut acc) == ASK_HOST {
+/// the brightest of the meter's six faces under the written lamps at a point (None: a line of it is the host's to judge)
+fn lamps_on(w: usize, set: i32, n: usize, p: [f64; 3]) -> Option<f64> {
+    let mut acc = [0.0; 6];
+    if light::estimate(w, set, n, p, 0.0, 0, 0.0, false, false, 0, [0.0; 4], &mut acc) == ASK_HOST {
         return None;
     }
     let mut m = acc[0];
@@ -82,7 +80,7 @@ pub fn step(w: usize, set: i32, st: &mut [f64; LEN], nbx: usize, nbz: usize, k: 
     }
     // 1. the sweep: this step's slice of the metres, by the count of steps; ALL of them where the lamps are not the ones the plan was last swept whole
     // under (a new field, a lamp shot out, a breaker thrown: the light that comes round does not outlast the lamp it came from)
-    let lamps = light::word(k.lamps, k.rows);
+    let lamps = light::word(k.lamps);
     let whole = st[O_GLOW_LAMPS] != lamps;
     st[O_GLOW_LAMPS] = lamps;
     let per = if whole { n as f64 } else { -floor(-(n as f64) / k.sweep) };
@@ -94,7 +92,7 @@ pub fn step(w: usize, set: i32, st: &mut [f64; LEN], nbx: usize, nbz: usize, k: 
         f += 1.0;
         let (ix, iz) = (i % nx, i / nx);
         let c = [(ix as f64 + 0.5) * METRE, CHEST, (iz as f64 + 0.5) * METRE];
-        if let Some(v) = lamps_on(w, set, k, c) {
+        if let Some(v) = lamps_on(w, set, k.lamps, c) {
             st[O_GLOW_D + i] = v;
         }
         st[O_GLOW_X + i] = if ix + 1 < nx && open_metre(w, set, c, [c[0] + METRE, c[1], c[2]]) { 1.0 } else { 0.0 };
