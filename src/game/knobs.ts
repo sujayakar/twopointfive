@@ -149,6 +149,10 @@ export const JOURNAL_KNOBS: readonly string[] = ['AIM', 'TAPSTEP', 'TRAINED', 'A
   'MARKCUT',
   // a blast's marks sit in the surface (render/decals.ts MARKSIT; a picture only): a recording made with it on draws its scorches and films of dust that way, one with no table for it as they were drawn before the rule
   'MARKSIT',
+  // a named coat's finish goes wherever its word goes (scene/stuff.ts COATFINISH; a picture only): a recording made with it on draws its vehicles' bodies as a clear coat, one with no table for it with the finish their files give them
+  'COATFINISH',
+  // a thing of solid glass is dark and smooth (scene/stuff.ts SOLIDGLASS; a picture only): a recording made with it on draws its vehicles' windows near black and polished, one with no table for it in the grey their files give them
+  'SOLIDGLASS',
   // the paint on a wall goes with the wall (wallskin.ts WALLSKIN): picture only — a recording made with it on shows its holed walls' bands cut, one from before shows them whole
   'WALLSKIN',
   // round things are round (scene/round.ts ROUND): a recording made with it on has its drums and tyres round to every ray and foot, one from before has the kit's octagons
@@ -286,6 +290,7 @@ import { LIGHTSWITCH } from './lightswitch';
 import { CARLAMPS } from './carlamps';
 import { HITSTUFF } from './particleFx';
 import { MARKCUT, MARKSIT } from '../render/decals';
+import { COATFINISH, SOLIDGLASS } from '../scene/stuff';
 import { WALLSKIN } from './wallskin';
 import { CLEANRESTART } from './cleanrestart';
 import { FIRELINE } from './fireline';
@@ -375,6 +380,8 @@ export function knobRegistry(): Record<string, object> {
     // a mark on a cut or a round face lies where the round met it (render/decals.ts): where a mark is drawn, never whether one is laid
     MARKCUT,
     MARKSIT,
+    COATFINISH,
+    SOLIDGLASS,
     // the paint on a wall goes with the wall (wallskin.ts): the switch, what counts as a skin (how thick, how far off the face) and the caps on its standing pieces
     WALLSKIN,
     CLEANRESTART,

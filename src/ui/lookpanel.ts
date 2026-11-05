@@ -20,6 +20,7 @@ const ROWS: readonly [keyof typeof lookAmounts, string, string, number][] = [
   ['weather', 'Weather', 'damp wall feet, bleached tops, runs, trodden ground; on what somebody keeps, use: lanes, chipped and changed pieces, knocked wall feet and worn paint where feet go', 1.5],
   ['untile', 'Break the repeat', 'a stuff made of pieces deals them from its map and is laid in bays; a plain coat is read twice and cross-faded; a kept place drifts a shade over ten metres. Past 1: stronger bays and drift', 2],
   ['edges', 'Edges', 'small boxes: rounded, rubbed corners', 1.5],
+  ['pressed', 'Pressed panels', 'what is pressed or lacquered, by its material (car paint): the edges of its panels are rolled in the shading, and its coat mirrors more than plain paint. 0 = as it was', 1],
   ['snow', 'Snow that clings', 'a snow level: blown against wall feet, lying on what was left out', 1.5],
   ['ground', 'Snow relief', '× the depth of lying snow\'s drifts, wind ridges and prints (1 = as the game draws it)', 3],
   ['crust', 'Snow crust', 'wind-glazed streaks of snow that hold a lamp\'s sheen', 1.5],

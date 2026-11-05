@@ -46,7 +46,7 @@ static mut NEXT: [f64; MAX_GLOW] = [0.0; MAX_GLOW];
 /// the brightest of the meter's six faces under the written lamps at a point (None: a line of it is the host's to judge)
 fn lamps_on(w: usize, set: i32, n: usize, p: [f64; 3]) -> Option<f64> {
     let mut acc = [0.0; 6];
-    if light::estimate(w, set, n, p, 0.0, 0, 0.0, &mut acc) == ASK_HOST {
+    if light::estimate(w, set, n, p, 0.0, 0, 0.0, false, false, 0, [0.0; 4], &mut acc) == ASK_HOST {
         return None;
     }
     let mut m = acc[0];

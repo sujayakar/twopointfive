@@ -43,9 +43,14 @@ export type LookName = typeof LOOK_NAMES[number];
  *          and a `core` where the coat has let go in patches (a mud wall: field stone, mud brick). The two are layers no box is
  *  foot    what works its way up through it at a wall's foot on ground nobody keeps (stones through earth): another stuff's layer
  *  ground  bare ground: within a stride of lying snow it freezes (ice in the low places, rime over the rest)
- *  sheds   snow does not lie on it or cling to it (bare iron on a snow level is a stove, a flue, a brazier) */
+ *  sheds   snow does not lie on it or cling to it (bare iron on a snow level is a stove, a flue, a brazier)
+ *  rolled  a thing of it is PRESSED OR MOULDED, and its arrises are rolled: metres over which a face's shading normal turns toward the face it meets (a car's
+ *          panel: a hand and a half). Shading only (look.wgsl lookRoll, the Pressed panels row): no ray and no body meets it. A flank turns up into the top and
+ *          round an upright arris, never down at its foot; a top turns out at every edge. Absent = a sharp arris (and a small thing's rubbed one, below)
+ *  mirrors how much of what it faces its outer coat mirrors seen head-on (a lacquer, a glaze). Absent = 0.04, what any coat of paint or bare stone does.
+ *          The reflection pass reads it by the box's own word (the prelude's LOOK_MIRRORS, reflect.wgsl), under the Pressed panels row */
 interface Stuff { rough: number; relief: number; built?: true; fades?: number; soaks?: true; worn?: number; untiles?: true; unit?: readonly [u: number, v: number, bond: boolean, shade: number]; bay?: readonly [along: number, up: number];
-  runs?: 'long' | 'flat'; least?: number; under?: { readonly plinth: LookName; readonly core: LookName; readonly long: number; readonly tall: number }; foot?: LookName; ground?: true; sheds?: true }
+  runs?: 'long' | 'flat'; least?: number; under?: { readonly plinth: LookName; readonly core: LookName; readonly long: number; readonly tall: number }; foot?: LookName; ground?: true; sheds?: true; rolled?: number; mirrors?: number }
 const STUFFS: Readonly<Record<LookName, Stuff>> = {
   'mud wall': { rough: 0.95, relief: 1.6, built: true, fades: 1, soaks: true, untiles: true, runs: 'flat', under: { plinth: 'field stone', core: 'mud brick', long: 0.6, tall: 0.24 } }, plaster: { rough: 0.86, relief: 1.8, built: true, fades: 1, soaks: true, worn: 1, untiles: true, runs: 'flat' },
   block: { rough: 0.93, relief: 1.5, built: true, fades: 1, soaks: true, worn: 0.8, runs: 'flat' }, earth: { rough: 0.94, relief: 1.6, built: true, fades: 1, soaks: true, untiles: true, runs: 'flat', foot: 'gravel', ground: true },
@@ -53,7 +58,7 @@ const STUFFS: Readonly<Record<LookName, Stuff>> = {
   wood: { rough: 0.84, relief: 1.6, fades: 1, runs: 'long' }, sheet: { rough: 0.5, relief: 1.0, fades: 1, soaks: true, runs: 'flat', least: 0.2 }, cloth: { rough: 0.96, relief: 1.6, fades: 1, soaks: true },
   metal: { rough: 0.75, relief: 1.6, fades: 1, soaks: true, sheds: true }, paint: { rough: 0.5, relief: 1.6, fades: 1, soaks: true },
   veneer: { rough: 0.4, relief: 1.4, fades: 0.3, runs: 'long' }, plastic: { rough: 0.5, relief: 1.4, fades: 0.3 }, fabric: { rough: 0.95, relief: 1.6, fades: 0.3 },
-  steel: { rough: 0.42, relief: 1.4, fades: 0.3 }, carpaint: { rough: 0.26, relief: 1.2, fades: 0.3 },
+  steel: { rough: 0.42, relief: 1.4, fades: 0.3 }, carpaint: { rough: 0.26, relief: 1.2, fades: 0.3, rolled: 0.16, mirrors: 0.08 },
   stucco: { rough: 0.42, relief: 1.5, built: true, worn: 1, untiles: true }, skim: { rough: 0.55, relief: 1.6, built: true, worn: 1, untiles: true },
   'gloss block': { rough: 0.4, relief: 1.4, built: true, worn: 0.6, unit: [0.4, 0.2, true, 0.02] }, 'board concrete': { rough: 0.42, relief: 1.6, built: true, worn: 0.8 },
   'cast panel': { rough: 0.68, relief: 1.4, built: true, worn: 0.8, unit: [1.0, 0.5, true, 0.07], bay: [0, 3] }, paver: { rough: 0.5, relief: 1.4, built: true, worn: 1, unit: [0.5, 0.5, false, 0.018], bay: [6, 6] },
@@ -67,6 +72,11 @@ export const LOOK_BUILT: readonly number[] = LOOK_NAMES.map(n => STUFFS[n].built
 export const LOOK_FADES: readonly number[] = LOOK_NAMES.map(n => STUFFS[n].fades ?? 0);
 export const LOOK_SOAKS: readonly number[] = LOOK_NAMES.map(n => STUFFS[n].soaks ? 1 : 0);
 export const LOOK_WORN: readonly number[] = LOOK_NAMES.map(n => STUFFS[n].worn ?? 0);
+export const LOOK_ROLLED: readonly number[] = LOOK_NAMES.map(n => STUFFS[n].rolled ?? 0);
+/** what a coat with no word of its own mirrors head-on */
+export const LOOK_MIRROR_PLAIN = 0.04;
+/** how many words a box may say of what it is made of, 0 = nothing (five bits of the look's word: gbuffer.ts LOOK_WORD, common.wgsl boxStuff) */
+export const LOOK_WORDS = 32;
 /** how a stuff is laid over more than a piece: (it untiles, pieces a bay along, pieces a bay up, which way it runs: 0 its box's own, 1 flat, 2 long) */
 export const LOOK_LAY: readonly (readonly [number, number, number, number])[] = LOOK_NAMES.map(n => { const st = STUFFS[n]; return [st.untiles ? 1 : 0, st.bay?.[0] ?? 0, st.bay?.[1] ?? 0, st.runs === 'long' ? 2 : st.runs === 'flat' ? 1 : 0]; });
 const layerOf = (n: LookName | undefined): number => n === undefined ? -1 : LOOK_NAMES.indexOf(n);
@@ -116,16 +126,32 @@ const cellOut: Cell = { f1: 0, f2: 0, id: 0, dx: 0, dy: 0 };
 /** the nearest two feature points of a jittered `p` × `p` lattice: distances in CELLS, the nearest one's hash and the offset to it (cells) */
 function cells(u: number, v: number, p: number, seed: number, jitter = 0.85): Cell { return cells2(u, v, p, p, seed, jitter); }
 /** the same on a `p` × `q` lattice (a cell wider than tall when p < q) */
-function cells2(u: number, v: number, p: number, q: number, seed: number, jitter = 0.85): Cell {
-  const x = u * p, y = v * q, ix = Math.floor(x), iy = Math.floor(y);
-  let f1 = 9, f2 = 9, id = 0, bx = 0, by = 0;
-  for (let j = -1; j <= 1; j++) for (let i = -1; i <= 1; i++) {
-    const cx = wrap(ix + i, p), cy = wrap(iy + j, q);
-    const px = ix + i + 0.5 + (hash(cx, cy, seed) - 0.5) * jitter, py = iy + j + 0.5 + (hash(cx, cy, seed + 1) - 0.5) * jitter;
-    const dx = px - x, dy = py - y, d = Math.hypot(dx, dy);
-    if (d < f1) { f2 = f1; f1 = d; id = hash(cx, cy, seed + 2); bx = dx; by = dy; } else if (d < f2) f2 = d;
+export function cells2(u: number, v: number, p: number, q: number, seed: number, jitter = 0.85): Cell {
+  const x = u * p, y = v * q, ix = Math.floor(x), iy = Math.floor(y), T = cellTable(p, q, seed, jitter);
+  let d1 = 99, d2 = 99, id = 0, bx = 0, by = 0, sx = 0, sy = 0;
+  for (let j = -1; j <= 1; j++) {
+    const row = wrap(iy + j, q) * p;
+    for (let i = -1; i <= 1; i++) {
+      const o = (row + wrap(ix + i, p)) * 3;
+      const px = ix + i + 0.5 + T[o], py = iy + j + 0.5 + T[o + 1];
+      const dx = px - x, dy = py - y, d = dx * dx + dy * dy;
+      if (d < d1) { d2 = d1; sx = bx; sy = by; d1 = d; id = T[o + 2]; bx = dx; by = dy; } else if (d < d2) { d2 = d; sx = dx; sy = dy; }
+    }
   }
-  cellOut.f1 = f1; cellOut.f2 = f2; cellOut.id = id; cellOut.dx = bx; cellOut.dy = by; return cellOut;
+  cellOut.f1 = Math.hypot(bx, by); cellOut.f2 = Math.hypot(sx, sy); cellOut.id = id; cellOut.dx = bx; cellOut.dy = by; return cellOut;
+}
+/** A LATTICE'S FEATURE POINTS, WORKED OUT ONCE. A texel asks its nine neighbouring cells where their points lie, and a cell is asked by every texel near
+ *  it: three hashes a cell a texel was most of what a layer cost. Here a lattice (its size, its seed, its jitter) hashes each cell once: two offsets and an id.
+ *  The few lattices one material asks for are found by looking down a short list; the list is emptied as a layer starts and as it ends (lookLayerSteps):
+ *  a table found is always the right one (its key is all it is made from), so two layers made in turns only make each other's again.
+ *  Only the two nearest points' distances are rooted: the nine are told apart by their squares (tools/qa/lookcells-check.ts holds this to the plain way). */
+const cellTables: { p: number; q: number; seed: number; jitter: number; t: Float64Array }[] = [];
+function cellTable(p: number, q: number, seed: number, jitter: number): Float64Array {
+  for (let k = 0; k < cellTables.length; k++) { const c = cellTables[k]; if (c.p === p && c.q === q && c.seed === seed && c.jitter === jitter) return c.t; }
+  if (!(Number.isInteger(p) && Number.isInteger(q) && p > 0 && q > 0 && Number.isFinite(seed) && Number.isFinite(jitter))) throw new Error(`look map: a lattice of ${p} by ${q} cells, seed ${seed}, jitter ${jitter} (whole cells and finite numbers only)`);
+  const t = new Float64Array(p * q * 3);
+  for (let cy = 0, o = 0; cy < q; cy++) for (let cx = 0; cx < p; cx++, o += 3) { t[o] = (hash(cx, cy, seed) - 0.5) * jitter; t[o + 1] = (hash(cx, cy, seed + 1) - 0.5) * jitter; t[o + 2] = hash(cx, cy, seed + 2); }
+  cellTables.push({ p, q, seed, jitter, t }); return t;
 }
 
 /** one texel as a material writes it: height (m), paint multiplier, roughness */
@@ -666,6 +692,9 @@ const RELIEF: readonly number[] = LOOK_NAMES.map(n => STUFFS[n].relief);
 export const LOOK_PAINTED = LOOK_NAMES.indexOf('field stone');
 /** A STUFF'S NUMBER BY ITS NAME (look.wgsl's classes; the box's word carries it): 0 for a name that is no stuff (and for the two masonry layers, which no box is) */
 export function lookStuffOf(name: string | undefined): number { const i = (LOOK_NAMES as readonly string[]).indexOf(name ?? ''); return i >= 0 && i < LOOK_PAINTED ? i + 1 : 0; }
+/** how much each word a box may say mirrors head-on, by the word's own number as lookStuffOf gives it (0 = it says nothing): the whole of the word's
+ *  room, so the reflection pass indexes it with what it read and no test */
+export const LOOK_MIRRORS: readonly number[] = Array.from({ length: LOOK_WORDS }, (_, w) => (w >= 1 && w <= LOOK_PAINTED ? STUFFS[LOOK_NAMES[w - 1]].mirrors : undefined) ?? LOOK_MIRROR_PLAIN);
 /** how a colour's value is weighed (linear rgb) */
 const lum = (r: number, g: number, b: number) => 0.2126 * r + 0.7152 * g + 0.0722 * b;
 /** one layer's two maps at full size (N² × 4 bytes each).
@@ -690,11 +719,15 @@ export async function lookLayerSliced(layer: number, N: number, even: boolean, s
   const it = lookLayerSteps(layer, N, even), now = () => typeof performance !== 'undefined' ? performance.now() : 0; let t0 = now();
   for (;;) { const r = it.next(); if (r.done) return r.value; if (now() - t0 >= sliceMs) { await breath(); t0 = now(); } }
 }
-/** lookLayer's body, stopping after every row of the material's own arithmetic (the long part) and between the passes after it */
+/** lookLayer's body, stopping after every row of the material's own arithmetic (the long part) and, in the passes after it (the evening, the two blurs, the
+ *  hollows, the normals), every few rows: those passes are 15 to 20 ms together, which made in play on the page's own thread was a frame dropped. A stop
+ *  changes no number: the same statements run in the same order. */
+const ROWS = 31, BREATH = 16384;   // (a stop every 32 rows of a pass, or every 16,384 texels of a flat one: about a tenth of a millisecond apart)
 function* lookLayerSteps(layer: number, N: number, even: boolean): Generator<void, LookMaps, void> {
   const mat = MATS[layer], H = new Float32Array(N * N), a = new Uint8Array(N * N * 4), b = new Uint8Array(N * N * 4), R = new Float32Array(N * N), P = new Float32Array(N * N * 3);
   const t: Tex = { h: 0, r: 1, g: 1, b: 1, rough: 1 };
   let lo = 1e9, hi = -1e9, sum = 0;
+  cellTables.length = 0;   // (the last layer's lattices are not this one's)
   for (let y = 0; y < N; y++) { if (y) yield; for (let x = 0; x < N; x++) {
     t.h = 0; t.r = t.g = t.b = 1; t.rough = LOOK_ROUGH[layer];
     mat((x + 0.5) / N, (y + 0.5) / N, t);
@@ -704,23 +737,24 @@ function* lookLayerSteps(layer: number, N: number, even: boolean): Generator<voi
   } }
   yield;
   const mean = sum / (N * N), tone = even && layer < LOOK_PAINTED && mean > 0 ? mean : 1, kv = 1 / tone;
-  for (let i = 0; i < N * N * 3; i++) a[(i / 3 | 0) * 4 + i % 3] = Math.round(255 * clamp01(P[i] * kv * 0.5));
+  for (let i = 0; i < N * N * 3; i++) { a[(i / 3 | 0) * 4 + i % 3] = Math.round(255 * clamp01(P[i] * kv * 0.5)); if (i % BREATH === BREATH - 1) yield; }
   // cavity: how far a texel sits under the mean of its neighbourhood (a box blur of ±R texels, periodic, two passes)
   const rad = Math.max(2, Math.round(N / 85)), tmp = new Float32Array(N * N), blur = new Float32Array(N * N), w = 1 / (2 * rad + 1);
-  for (let y = 0; y < N; y++) { let s = 0; for (let k = -rad; k <= rad; k++) s += H[y * N + wrap(k, N)]; for (let x = 0; x < N; x++) { tmp[y * N + x] = s * w; s += H[y * N + wrap(x + rad + 1, N)] - H[y * N + wrap(x - rad, N)]; } }
-  for (let x = 0; x < N; x++) { let s = 0; for (let k = -rad; k <= rad; k++) s += tmp[wrap(k, N) * N + x]; for (let y = 0; y < N; y++) { blur[y * N + x] = s * w; s += tmp[wrap(y + rad + 1, N) * N + x] - tmp[wrap(y - rad, N) * N + x]; } }
+  for (let y = 0; y < N; y++) { let s = 0; for (let k = -rad; k <= rad; k++) s += H[y * N + wrap(k, N)]; for (let x = 0; x < N; x++) { tmp[y * N + x] = s * w; s += H[y * N + wrap(x + rad + 1, N)] - H[y * N + wrap(x - rad, N)]; } if ((y & ROWS) === ROWS) yield; }
+  for (let x = 0; x < N; x++) { let s = 0; for (let k = -rad; k <= rad; k++) s += tmp[wrap(k, N) * N + x]; for (let y = 0; y < N; y++) { blur[y * N + x] = s * w; s += tmp[wrap(y + rad + 1, N) * N + x] - tmp[wrap(y - rad, N) * N + x]; } if ((x & ROWS) === ROWS) yield; }
   const open = blur; let openSum = 0;   // (in place: how open each texel is, 0‥1, 1 = not in a hollow)
-  for (let i = 0; i < N * N; i++) { open[i] = clamp01(1 - (blur[i] - H[i]) * 160); openSum += open[i] * lum(P[i * 3], P[i * 3 + 1], P[i * 3 + 2]); }
+  for (let i = 0; i < N * N; i++) { open[i] = clamp01(1 - (blur[i] - H[i]) * 160); openSum += open[i] * lum(P[i * 3], P[i * 3 + 1], P[i * 3 + 2]); if (i % BREATH === BREATH - 1) yield; }
   const hollow = even && sum > 0 ? 0.5 - 0.5 * openSum / sum : 0;   // (weighed by the paint: where a material's high places are also its pale ones, as on worn wood, an even count of texels left the two together 3 % bright)
   yield;
   const texel = LOOK_TILE / N, k = RELIEF[layer] / (2 * texel), span = Math.max(hi - lo, 1e-6);
-  for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) {
+  for (let y = 0; y < N; y++) { if (y && (y & ROWS) === 0) yield; for (let x = 0; x < N; x++) {
     const i = y * N + x;
     const sx = (H[y * N + wrap(x + 1, N)] - H[y * N + wrap(x - 1, N)]) * k, sy = (H[wrap(y + 1, N) * N + x] - H[wrap(y - 1, N) * N + x]) * k, il = 1 / Math.hypot(sx, sy, 1);
     a[i * 4 + 3] = Math.round(255 * (H[i] - lo) / span);
     b[i * 4] = Math.round(255 * (0.5 - 0.5 * sx * il)); b[i * 4 + 1] = Math.round(255 * (0.5 - 0.5 * sy * il));
     b[i * 4 + 2] = Math.round(255 * clamp01(R[i])); b[i * 4 + 3] = Math.round(255 * clamp01(0.5 * open[i] + hollow));
-  }
+  } }
+  cellTables.length = 0;
   return { a, b, tone, hollow };
 }
 /** the next mip of one map (a 2 × 2 mean; for B the normal is left SHORT where its four texels disagree, and that shortfall is put into the roughness: relief too fine

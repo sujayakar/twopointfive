@@ -1,2 +1,3 @@
 # the huts' walls say stucco (the tan partition paint's row says cloth): 32 boxes say a word, nothing else moved
-9f72ebc59e558d1ae35d0a0ab0ca15ff9c75b0ab
+# every box says what it does (the does key, src/scene/materials.ts): the words are what its colours said, and nothing else moved
+8ab51bec3e61930380056e4aa25d8ae1e29b8f40

@@ -13,7 +13,7 @@ import officeReliefData from '../../levels/office-relief.json' with { type: 'jso
 import type { WeaponId } from '../game/weapons';   // (type only: what a route may hand its man — erased at runtime, so the scene layer still loads below the game's)
 import type { LevelScriptFn } from '../game/director';   // (type only, likewise: the level's script is a plain function handed to game/director.ts)
 import type { LevelScenarios } from './scenarios';
-import { OFFICE_SCENARIOS, OFFICE_MARKS } from '../../levels/office.scenarios';   // the office's scenario data (plain literals, type-only imports): what the night breach / room clear / rescue take from this level
+import { OFFICE_SCENARIOS } from '../../levels/office.scenarios';   // the office's scenario data (plain literals, type-only imports): what the night breach / room clear / rescue take from this level
 
 export interface LightDef {
   kind: 'point' | 'spot' | 'dir';
@@ -143,7 +143,7 @@ export interface VentDef { name: string; pos: Vec3; dir: Vec3; speed: number; sp
 export type PropKind = 'chair' | 'cardboard' | 'bin' | 'plant';
 /** One box of a loose prop, in the prop's local frame: `off` from the prop origin (on the floor, y up), `yaw` relative to the prop's heading (frameAt / Box.yaw convention);
  *  `marks` = the markings on the part's faces (scene/markings.ts — the tape and glyphs on a carton), carried onto the box props.ts makes of it. */
-export interface PropPart { off: Vec3; h: Vec3; yaw: number; albedo: Vec3; marks?: MarkingDef[]; /** what the part is made of, where its paint's name does not say (Box.stuff) */ stuff?: import('./boxes').BoxStuff; }
+export interface PropPart { off: Vec3; h: Vec3; yaw: number; albedo: Vec3; marks?: MarkingDef[]; /** what the part is made of, where its paint's name does not say (Box.stuff) */ stuff?: import('./boxes').BoxStuff; /** what the part does, as Box.does (scene/materials.ts) */ does?: import('./boxes').DoesWord; }
 /** Loose furniture handed to the physics layer (src/game/props.ts) instead of `boxes`: a rigid group of parts standing on the floor at (x, z) with
  *  heading `yaw`, its collision footprint (half extents of the local XZ rectangle about the origin), overall height and mass (kg). */
 export interface PropDef { kind: PropKind; name: string; x: number; z: number; yaw: number; parts: PropPart[]; half: [number, number]; height: number; mass: number; }
@@ -223,12 +223,9 @@ export function buildBundledLevel(): Level {
   return withOfficeScript(loadLevel(OFFICE_DATA));
 }
 /** attach what the office keeps OUTSIDE its level file to a Level of the office family (the bundled file, relief, a texel variant off the dev server, the editor's document) —
- *  loadLevel itself stays pure data → Level. Today that is its scenario data and its named marks: the office's level script (the night and day showcases) was removed, so the office has no
+ *  loadLevel itself stays pure data → Level. Today that is its scenario data (its named marks are in its file, like any level's: LevelData.marks): the office's level script (the night and day showcases) was removed, so the office has no
  *  script and the Director no program (the name stays: every tool that loads a level file calls this). */
-export function withOfficeScript(level: Level): Level { return withMarks(withScenarios(level, OFFICE_SCENARIOS), OFFICE_MARKS); }
-/** … and the office's named marks (levels/office.scenarios.ts OFFICE_MARKS: where a person stands to use each thing, the ends of its `walked` ways), unless the
- *  Level came with marks of its own. The level file has no slot for a mark yet, so they ride as the scenarios do: non-enumerable, for the same reason. */
-export function withMarks(level: Level, marks: MarkDef[]): Level { if (!level.marks) Object.defineProperty(level, 'marks', { value: marks.map(m => ({ ...m, pos: [m.pos[0], m.pos[1], m.pos[2]] as Vec3 })), enumerable: false, writable: true, configurable: true }); return level; }   // (a copy a Level: two boots share no array)
+export function withOfficeScript(level: Level): Level { return withScenarios(level, OFFICE_SCENARIOS); }
 /** attach a level SCRIPT to a Level. The script is CODE, not level data: it rides on the Level as a non-enumerable property, so everything that walks the Level's keys as data
  *  (tools/qa level-identity's generator ≡ JSON diff and key order, levelToData, structuralDiff) sees the level exactly as before, while game/director.ts reads level.script like any field. */
 export function withScript(level: Level, script: LevelScriptFn): Level { Object.defineProperty(level, 'script', { value: script, enumerable: false, writable: true, configurable: true }); return level; }

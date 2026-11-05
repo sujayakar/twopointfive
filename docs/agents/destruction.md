@@ -329,7 +329,10 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   level, by `lookTidy`; hanging across the hole on a level it does not know).
   THE FAMILIES `wallskin wallbreak outerwall hungcharge fog-things shapes cleanrestart statediff journal-knobs shipped wallfurn wallreact` green on both
   stands with it, `rollback-check` on both, `dress-check`. No tour, no soak.
-  NOBODY HAS SEEN IT ON A GPU and nobody has played it: the stills are the software adapter's at verylow.
+  SEEN ON A GPU ONCE, and only so: the page script ran on a rented card (an A10G, headless Chromium, quality high) on an earlier cut of this change, on
+  a base 55 steps back: both verdicts pass with the same numbers and no page error, and in its frames the band stands to the hole's edge and under the
+  port's sill, cut clean, where under `?wallskin=0` the holed wall is bare of it. That is one wall of one level at one hour, about four frames a still.
+  The maintainer has not seen it and nobody has played it. No still of a band that carries markings.
 - **A blast's pall: a wall charge, a hand grenade and a 40 mm raise a real cloud of dust and smoke** (`CHAOS.pall`, `destruction.ts`, 10-14; his words:
   "i'd also expect much more dust/smoke from a wall charge" / "same goes for 40mm" / "and frag"). BEFORE: a blast raised the bullet's puff a few times over
   (`CHAOS.puff`: radius 0.2, a third of a second, under the round's caps of 2 a frame and 8 a second) and `WALL_BLAST.dust`, particles the picture alone
@@ -1237,7 +1240,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   one, else how bright it is), so a white car was plasterboard (pale chips and a puff of gypsum), a blue one concrete, and its dark glass and tyres
   metal. A box says what it is made of (`Box.stuff`, `scene/stuff.ts`: its own word or its paint's row's), and with the rule on THE PICTURE OF A HIT
   reads that word first (`saidSurf`, the table `STUFF_SURF`: car paint, steel, metal and sheet are metal; wood and veneer wood; plaster and skim
-  plasterboard; stucco, mud wall, block, slab and pavers concrete; fabric, the fine weave of a seat or a screen, cloth on a frame; cloth, the coarse
+  plasterboard; stucco, mud wall, block, slab, pavers and tarmac concrete; fabric, the fine weave of a seat or a screen, cloth on a frame; cloth, the coarse
   weave of a carpet, a rug, a sandbag or a tarpaulin, the soft thing that never sparks; rubber and plastic plastic; glass glass). The colour is asked
   only of a box that says nothing, or whose word is not one thing to a round ('paint' and 'enamel' are a coat on a door, a drum, a pipe or a line on
   a floor; 'plain' and 'waits' say nothing; the ground is what its paint says).
@@ -1277,9 +1280,11 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   glass: no vehicle's window is a pane), a tyre gives plastic's chips and no dent. WHAT THAT CHANGED FOR A ROUND: the windows (by their colour a kit
   vehicle's was glass that took a hole and threw nine chips, the plain car's was metal), the plain car's body and tyres in its own colours and in a
   twin's skin (plasterboard, concrete or metal by tone), and the tanker's tank. The kit vehicles' bodies were metal to a round already, by their
-  enamel's colour: for them the word changes the look page only. A NAMED COAT STAYS UNDER A PLAIN ONE (`scene/stuff.ts COAT_KIND`, `repaintWord`,
+  enamel's colour: for them the word changes the look page only. A NAMED COAT STAYS UNDER A PLAIN ONE (`scene/stuff.ts NAMED_COATS`, `repaintWord`,
   `repainted`: the one place a thing is painted again, which the default look's skin calls for boxes and for props' parts): a repaint gives a thing
-  its new paint's word, as ever, but 'carpaint' is a kind of 'paint', so a twin's plain car in one of the skin's enamels is still car paint. A rule of
+  its new paint's word, as ever, but 'carpaint' is a kind of plain coat (`PLAIN_COATS`: 'paint' and 'enamel', the two words that are a coat on
+  anything; 'enamel' joined 11-05, when a level's second palette painted its lorries in a row that says enamel and they lost the word), so a twin's
+  plain car in one of the skin's enamels is still car paint. A rule of
   words, not of cars: the next named coat is a row of the table. (203 steel things the skin gives an enamel become 'paint', as the look wants them
   drawn, and are metal to a round by their colour: carrying every word through every repaint would be wrong.) `stuff-check` line 8, `COAT_BREAK=1`.
   ALSO SOLID GLASS NOW, by the same row: a phone shop's display case top (bazaar), a solar panel (police post) and a
@@ -1339,3 +1344,9 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   what was red on the shipped stand before it (`decals-sites`, three checkpoint probes). THE PAGE CHECK ran once with the table (the yard in rain,
   software adapter): 118 of 118 pipelines, no error, the word up at boot, and moving the table changes 47 % of the picture (mean 0.457 down, 0.441
   up), the numbers of 11-01. NOT SEEN: never on a GPU, never in motion; its break run and a dry still were not run.
+- **The wall engine, a round through a wall, a wall charge, the furniture blast and the destruction index know a thing by its word** (2026-11-05;
+  `src/scene/materials.ts`, `Box.does`; no switch, the same game by digest). Where these notes say a rule reads a PAINT, a paint's NAME or a tone
+  (`paletteName`, `surfOf`, `breakClassOf(albedo)`, `steelGrey`, `STRUCT`, "by its paint", "the wall paints"), read: the box's word, through
+  `materials.ts doesOf(box)` and its columns (`wall`, `cover`, `board`, `surf`, `breaks`, `steel`, `struct`, `counter`, `casing`, `paper`, `screen`,
+  `snow`). A piece broken off a thing carries the thing's word (`boxes.ts wordOf`); a slot of the wall engine that turns from a piece into a stud
+  takes the stud's. The whole of it, with its checks and what is still asked of a paint: `docs/agents/levels.md`, "What a box does is said in a word".

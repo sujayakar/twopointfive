@@ -2,9 +2,9 @@
 // steps the ones in the air), in TypeScript and in the Rust module alike, and how they move between the two.
 //
 // THE LAYOUT IS ONE, BYTE FOR BYTE (rust/sim/src/slabs.rs Slabs), and it is the furniture's kind of layout (sim/propshome.ts, props.rs: dense rows, a
-// column a number as narrow as its values, hot before cold, every column whole vectors on a 16-byte boundary). While the row RUST.slabs is off the bytes
-// are an array of the game's own; while it is on they are the `slabs` part of the game's block of the module's memory, and a slab in the air is stepped
-// there (slabs.rs step). A column is read as `d[b8 + O.px + row]` (the doubles) or `u[b4 + O.flags + row]` (the words) either way.
+// column a number as narrow as its values, hot before cold, every column whole vectors on a 16-byte boundary). The bytes are the `slabs` part of the
+// game's block from the moment the doors are made (sim/state.ts, sim/colstore.ts), and a slab in the air is stepped over them, in the module (slabs.rs
+// step, the row RUST.slabs on) or in game/doorblast.ts. A column is read as `d[b8 + O.px + row]` (the doubles) or `u[b4 + O.flags + row]` (the words).
 //
 // ROWS. Rows 0 .. fly are the slabs in the air, IN THE ORDER OF THEIR DOORS (the order they are stepped in: a slab's rays meet the ones stepped before it
 // where this tick left them); rows fly .. n the ones lying at rest, which nothing steps. `door[row]` is whose leaf a row is; `row[door]` where a door's
@@ -14,8 +14,8 @@
 // A truth is a bit of `flags` (SLF); who is blamed is his id (an i32: read `| 0`).
 //
 // (Imports sim.ts, state.ts and colstore.ts alone: like the rest of src/sim, this is below the game.)
-import { sim, f64, RUST, type SimExports } from './sim';
-import { simTenant, simPart, P_SLABS, type SimState } from './state';
+import { sim, f64, type SimExports } from './sim';
+import { simRoom, P_SLABS, type SimState } from './state';
 import { ColStore, colsOf, colDiff, type ColsOf } from './colstore';
 
 /** slabs a level can have and still keep them in the module: one a door (rust/sim/src/slabs.rs CAP = doors.rs CAP) */
@@ -37,15 +37,19 @@ export interface SlabNow { p: [number, number, number]; v: [number, number, numb
 /** where each column starts for columns `cap` rows long (sim/colstore.ts colsOf) */
 export type SlabCols = ColsOf<(typeof SLAB_F64)[number], (typeof SLAB_U32)[number]>;
 export const slabCols = (cap: number): SlabCols => colsOf(SLAB_HEAD, SLAB_F64, SLAB_U32, cap);
+/** the slabs' bit in the head of a game's block (sim/state.ts: one a family, never reused), and how long their part is */
+const SLAB_BIT = 64;
+simRoom(P_SLABS, slabCols(SLAB_CAP).bytes);
 /** the word columns a row carries with it when it moves (`row` is the table that says where a door's slab went) */
 const SWAPPED = ['flags', 'who', 'door'] as const;
 
-/** THE COLUMNS OF ONE SET OF DOORS' SLABS (a level's, or a lone door's): sim/colstore.ts's store, and what its rows mean. `cap` is SLAB_CAP, so that the
- *  bytes are the module's part as they stand; a level of more doors than that is not loaded (the doors' own columns say so first: sim/doorshome.ts). */
+/** THE COLUMNS OF ONE SET OF DOORS' SLABS (a level's, or a lone door's), over its game's block `st`: sim/colstore.ts's store, and what its rows mean. `cap`
+ *  is SLAB_CAP, so that the bytes are the module's part as they stand; a level of more doors than that is not loaded (the doors' own columns say so first:
+ *  sim/doorshome.ts). */
 export class SlabStore extends ColStore<(typeof SLAB_F64)[number], (typeof SLAB_U32)[number]> {
-  constructor(readonly doors: number) {
+  constructor(st: SimState, readonly doors: number) {
     if (doors > SLAB_CAP) throw new Error(`a level of ${doors} doors: the game holds ${SLAB_CAP} leaves off their hinges (sim/slabshome.ts SLAB_CAP, rust/sim/src/slabs.rs CAP)`);
-    super(SLAB_HEAD, SLAB_F64, SLAB_U32, SLAB_CAP);
+    super(st, P_SLABS, SLAB_BIT, 'leaves off their hinges', SLAB_HEAD, SLAB_F64, SLAB_U32, SLAB_CAP);
   }
   /** slabs in all, and how many of them are in the air */
   get n(): number { return this.u[this.b4]; }
@@ -129,14 +133,6 @@ export const slabMem = f64;
 /** COUNTS FOR THE CHECKS (the host's: no game reads them): steps of a slab the module took, the TypeScript took, the module handed back (none in
  *  play: a ray that is no number), steps answered both ways and how many of those differed, with the first in words; and what the module's steps asked */
 export const SLABS_STEPPED = { there: 0, here: 0, host: 0, asked: 0, differ: 0, first: '', rays: 0, gathers: 0, substeps: 0, landed: 0, rested: 0 };
-
-/** what the tenant asks of a game: its doors' slabs (game/doors.ts Doors.slabs) */
-interface HasSlabs { doors?: { slabs: SlabStore } }
-// the slabs' bytes move into a game's block as its tick opens with RUST.slabs on, and out again with it off (state.ts settle): one copy each way
-simTenant({ name: 'slabs', bit: 64,
-  wants(g: HasSlabs) { const S = g.doors?.slabs; return RUST.slabs && !!S && S.doors > 0; },
-  into(g: HasSlabs, st: SimState) { g.doors!.slabs.moveIn(st, simPart(P_SLABS)); },
-  outOf(g: HasSlabs, st: SimState) { g.doors?.slabs.moveOut(st, simPart(P_SLABS)); } });
 
 /** WHERE TWO TAKES OF A STORE'S BYTES DIFFER, in words (`bytes()` of the same store, twice). → at most `most` lines, none if they are the same state */
 export function slabDiff(S: SlabStore, a: Uint8Array, b: Uint8Array, most = 4): string[] {
