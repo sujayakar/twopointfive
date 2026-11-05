@@ -7,7 +7,9 @@
 //   (ring)      522 adds → 512 kept, the ten oldest gone, serials ascending; the packed cell table lists every drawn decal in every cell its circle overlaps
 //               and nothing else; 100 holes in one square metre → that cell keeps the newest DECAL_MAX_PER_CELL; clear() / restartEncounter() /
 //               resetLevelState() empty it;
-//   (sites)     Sam's round into the corridor wall → one 'bullet' on the wall face, facing out of it, world-fixed; a guard's round likewise; a stun charge on the
+//   (sites)     Sam's round into the corridor wall → one 'bullet' on the wall face, facing out of it, world-fixed (and, where rounds go on through thin walls,
+//               the marks are counted on that wall: where it went in and one hole on its far face; DECALSITES_BREAK=1 = a mark no round owes, red on both
+//               stands, DECALSITES_BREAK=far = no hole on the far face, red wherever rounds go through); a guard's round likewise; a stun charge on the
 //               break-room lino → a 'scorch' facing up under where it went off (+ splashes on what stands within a metre, never facing up); the storage door
 //               kicked in → one 'scuff' riding the leaf, on the kicker's face at boot height, turning with the leaf as it flies; a ring airfoil off the wall →
 //               a 'chip' by the clack; a round into a torso, or through the sky → nothing;
@@ -25,6 +27,7 @@ const { fireRing } = await import(`${ROOT}/src/game/launcher.ts`);
 const { Decals, DECAL_CAP, DECAL_MAX_PER_CELL, DECAL_LIST_CAP, DECAL_ANY_BOX, WEAR_MARK } = await import(`${ROOT}/src/render/decals.ts`);
 const { WORLD } = await import(`${ROOT}/src/scene/world.ts`);
 const { wallBreakOn } = await import(`${ROOT}/src/game/wallbreak.ts`);
+const { WALLPEN_HOOKS } = await import(`${ROOT}/src/game/wallpen.ts`);
 
 type Vec3 = [number, number, number];
 const DT = 1 / 60;
@@ -132,29 +135,57 @@ export async function decalsSites() {
       if (through) { if (!(Math.abs(m.pos[2] - w.mid) < 0.003)) out.push(`z ${f3(m.pos[2])} (want the wall's mid-plane at ${f3(w.mid)})`); if (!(Math.abs(m.radius - Math.hypot(w.half, reach)) < 0.003)) out.push(`radius ${f3(m.radius)} (want hypot(half ${f3(w.half)}, reach ${f3(reach)}))`); }
       else { if (!(Math.abs(m.pos[2] - face) < 0.003)) out.push(`z ${f3(m.pos[2])} (want on the wall face at ${f3(face)})`); if (!(Math.abs(m.radius - reach) < 0.003)) out.push(`radius ${f3(m.radius)} (want its reach ${f3(reach)})`); }
       return out; };
+    // ROUNDS THROUGH THIN WALLS (game/wallpen.ts: on as the page opens, held off on the frozen stand). A round with the energy for it goes on through a partition,
+    // and that rule's contract is that a thing crossed gets a mark where the round went in AND one on its far face, as a round that stops there would leave.
+    // This family's question is the emit site: what a round leaves on THE WALL IT WAS FIRED INTO. So the marks are counted on that wall (inside its box), and
+    // which the wall is owed is asked of the round's flight through the rule's own hook: stopped in it, one mark, and nothing anywhere else; gone through it,
+    // one where it went in and one hole on the far face. What the round leaves beyond the wall (more walls, a pane, a cabinet, nothing) is the thin walls
+    // check's to hold (wallpen-check), not counted here. `own` is the mark where the round went in, which the lines below always held to the wall's face.
+    const flight = (from: Vec3, to: Vec3, fire: () => void): { own: any; through: boolean; fails: string[] } => {
+      const aim = game.col.raycast(from, v3.normalize(v3.sub(to, from)), 30); const wb = aim && aim.index < 1e6 ? game.col.boxes[aim.index] : null;
+      const n0 = dc.count; const crossed: any[] = []; const was = WALLPEN_HOOKS.crossed; WALLPEN_HOOKS.crossed = (g2: any, x: any, who: number) => { crossed.push(x); was?.(g2, x, who); };
+      try { fire(); } finally { WALLPEN_HOOKS.crossed = was; }
+      const brk = process.env.DECALSITES_BREAK;
+      if (brk === '1' && wb) dc.add('bullet', [wb.c[0], wb.c[1], wb.c[2] + wb.h[2]], [0, 0, 1], 0.025);   // (the break: a mark on the wall that no round owes)
+      const x = crossed.find((c: any) => c.index === aim?.index) ?? null;
+      let fresh: any[] = dc.list.slice(n0);
+      if (brk === 'far' && x) fresh = fresh.filter((m: any) => !(m.kind === 'bullet' && v3.dot(m.n, x.nOut) > 0.999));   // (the break: a round that goes through and leaves no hole behind)
+      if (!wb) return { own: null, through: false, fails: ['staging: the aim meets no wall'] };
+      const onWall = fresh.filter((m: any) => [0, 1, 2].every(k => Math.abs(m.pos[k] - wb.c[k]) < wb.h[k] + 0.02));
+      const fails: string[] = []; let own: any = null;
+      if (!x) {
+        if (fresh.length !== 1) fails.push(`${fresh.length} decals after one round (want 1)`); else if (onWall.length !== 1) fails.push('the one mark is not on the wall');
+        own = onWall[0] ?? fresh[0] ?? null;
+      } else {
+        own = onWall.find((m: any) => v3.dot(m.n, x.nIn) > 0.999) ?? null; const far = onWall.find((m: any) => m !== own && m.kind === 'bullet' && v3.dot(m.n, x.nOut) > 0.999);
+        if (!own) fails.push('the round went through the wall and left no mark where it went in');
+        if (!far) fails.push('the round went through the wall and left no hole on its far face');
+        if (onWall.length !== 2) fails.push(`${onWall.length} decals on the wall after one round through it (want 2: where it went in, and the far face)`);
+      }
+      return { own, through: !!x, fails };
+    };
+    const went = (through: boolean) => through ? ' · it went on through the wall (rounds through thin walls): on the wall, that mark and one hole on the far face, no more' : '';
     const wallZ = faceZ(pl.char.muzzle, wallPt), wear = wears(pl.char.muzzle, wallPt);
-    fireWeapon(game, pl.char, wallPt, true);
-    const d = dc.list[0];
-    const fails: string[] = [];
-    if (dc.count !== 1) fails.push(`${dc.count} decals after one round (want 1)`);
-    else {
+    const sam = flight(pl.char.muzzle, wallPt, () => fireWeapon(game, pl.char, wallPt, true));
+    const d = sam.own;
+    const fails: string[] = [...sam.fails];
+    if (d) {
       if (wear) fails.push(...wearFails(d, wear, wallZ)); else if (d.kind !== 'bullet') fails.push(`kind ${d.kind}`);
       if (Math.abs(d.n[2] - 1) > 1e-3) fails.push(`normal ${p2(d.n)} (want the wall's +z)`);
       if (!wear && !(Math.abs(d.pos[2] - wallZ) < 0.003)) fails.push(`z ${f3(d.pos[2])} (want on the wall face at ${f3(wallZ)})`);
       if (d.box || d.boxIdx !== DECAL_ANY_BOX) fails.push('a static wall hole is riding a box');
       if (!wear && !(d.radius > 0.02 && d.radius < 0.03)) fails.push(`radius ${d.radius}`);
     }
-    F.verdict(!fails.length, `Sam's Five-seveN into the wall → one ${wear ? 'wear mark (the wall wears)' : "'bullet'"} at ${d ? p2(d.pos) : '∅'} facing ${d ? p2(d.n) : '∅'}, r ${d ? f3(d.radius) : '?'}, world-fixed`, fails.join('; ') || 'ok');
+    F.verdict(!fails.length, `Sam's Five-seveN into the wall → one ${wear ? 'wear mark (the wall wears)' : "'bullet'"} at ${d ? p2(d.pos) : '∅'} facing ${d ? p2(d.n) : '∅'}, r ${d ? f3(d.radius) : '?'}, world-fixed${went(sam.through)}`, fails.join('; ') || 'ok');
     // a guard's round (steady, no spread) into the same wall
     const gd = game.guards[0]; gd.hold = false; place(gd, [27.0, 0, 11.4], Math.PI); W.step(DT);
     const gTarget: Vec3 = [27.2, 1.0, 10.0]; const gZ = faceZ(gd.char.muzzle, gTarget), gWear = wears(gd.char.muzzle, gTarget);
-    const n0 = dc.count; fireWeapon(game, gd.char, gTarget, false, { steady: true, spread: 0 });
-    const g1 = dc.list[dc.count - 1];
-    const gf: string[] = [];
-    if (dc.count !== n0 + 1) gf.push(`${dc.count - n0} new decals (want 1)`);
-    else if (gWear) { gf.push(...wearFails(g1, gWear, gZ)); if (Math.abs(g1.n[2] - 1) > 1e-3) gf.push(`normal ${p2(g1.n)}`); if (g1.box || g1.boxIdx !== DECAL_ANY_BOX) gf.push('riding a box'); }
-    else { if (g1.kind !== 'bullet' || Math.abs(g1.n[2] - 1) > 1e-3 || !(Math.abs(g1.pos[2] - gZ) < 0.003)) gf.push(`got ${g1.kind} at ${p2(g1.pos)} n ${p2(g1.n)} (face z ${f3(gZ)})`); if (!(g1.radius >= (d?.radius ?? 0))) gf.push(`a 9 mm hole (${f3(g1.radius)}) should be no smaller than a 5.7's (${f3(d?.radius ?? 0)})`); }
-    F.verdict(!gf.length, `a guard's 9 mm into the wall → one more ${gWear ? 'wear mark' : "'bullet' on the face"} (${g1 ? p2(g1.pos) : '∅'}), r ${g1 ? f3(g1.radius) : '?'}`, gf.join('; ') || 'ok');
+    const his = flight(gd.char.muzzle, gTarget, () => fireWeapon(game, gd.char, gTarget, false, { steady: true, spread: 0 }));
+    const g1 = his.own;
+    const gf: string[] = [...his.fails];
+    if (g1 && gWear) { gf.push(...wearFails(g1, gWear, gZ)); if (Math.abs(g1.n[2] - 1) > 1e-3) gf.push(`normal ${p2(g1.n)}`); if (g1.box || g1.boxIdx !== DECAL_ANY_BOX) gf.push('riding a box'); }
+    else if (g1) { if (g1.kind !== 'bullet' || Math.abs(g1.n[2] - 1) > 1e-3 || !(Math.abs(g1.pos[2] - gZ) < 0.003)) gf.push(`got ${g1.kind} at ${p2(g1.pos)} n ${p2(g1.n)} (face z ${f3(gZ)})`); if (!(g1.radius >= (d?.radius ?? 0))) gf.push(`a 9 mm hole (${f3(g1.radius)}) should be no smaller than a 5.7's (${f3(d?.radius ?? 0)})`); }
+    F.verdict(!gf.length, `a guard's 9 mm into the wall → one more ${gWear ? 'wear mark' : "'bullet' on the face"} (${g1 ? p2(g1.pos) : '∅'}), r ${g1 ? f3(g1.radius) : '?'}${went(his.through)}`, gf.join('; ') || 'ok');
     // flesh and sky: a round into a parked man's chest, and one straight up out over the lot → nothing new
     const n1 = dc.count; const tgt = game.guards[1]; tgt.hold = false; place(tgt, [24.5, 0, 11.4], -Math.PI / 2); W.step(DT);
     fireWeapon(game, pl.char, v3.add(tgt.char.pos, [0, 1.2, 0]), true);
