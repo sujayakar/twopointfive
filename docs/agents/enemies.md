@@ -1517,3 +1517,8 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   A post is left by the rules that always decided (rally on `noiseAt`, fall-back, press, lanes), never by a belief.
   CHECK `bun run tools/qa/belief-check.ts` (`probes.ts belief`, family roomfight; both stands); `BELIEF_BREAK=1` puts the door back into his belief and fails lines 1, 2, 4, 11, 12 and 15 on both.
   NOT SEEN: never on a GPU, never played. What to look for: held men acting on where you actually were, not on their own door.
+- **A man put on a post gives up his walk to a door** (`DOORFORCE.postEnds`, `src/game/doorforce.ts`: on in the page, `?postends=0`; off on the frozen stand, `TPS_POSTENDS=1`; a `FROZEN_HOLDS` row,
+  carried by a journal's DOORFORCE table). Before it lanes.ts stopped him every 0.2 s and doorforce.ts walked him on: a visible stop and step for 4.6 s (rescue-consulate:2, Roamer 1, 21 alternations).
+  Only the walk ends: what he believes of the door stands, so a posted man can still fire on it.
+  CHECK `bun run tools/qa/postends-check.ts` (`probes.ts postends`, family doors; both stands); `POSTENDS_BREAK=1` fails line 1 on both.
+  NOT SEEN: never on a GPU, never played.
