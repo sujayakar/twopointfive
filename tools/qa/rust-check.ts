@@ -468,6 +468,10 @@ let wordOwn = '', wordRust = '';
   const r = child(['bun', 'run', 'tools/qa/item-ident.ts', '--n', flag('--itemsteps') ?? '4000'], { ITEMS_BREAK: BREAK ? '1' : undefined });
   const rows = r.out.split('\n').filter(l => / (PASS|FAIL) — \d+ things of furniture/.test(l)), sum = r.out.split('\n').find(l => /^item-ident: /.test(l)) ?? '';
   red.items = Number(/, (\d+) differ/.exec(sum)?.[1] ?? 0) > 0;   // (the pool's own answers: steps whose rows, events or furniture differed)
+  if (BREAK) {   // …and the snow's own red path: the module told another snow than the level's must part from the game's rule (ITEMS_BREAK=snow, the tick left alone)
+    const s = child(['bun', 'run', 'tools/qa/item-ident.ts', '--n', '1500', '--levels', 'tut-road.json:snow,tut-quiet.json:snow'], { ITEMS_BREAK: 'snow', RUST_BREAK: undefined });
+    red.items = red.items && Number(/, (\d+) differ/.exec(s.out.split('\n').find(l => /^item-ident: /.test(l)) ?? '')?.[1] ?? 0) > 0 && s.status === 1;
+  }
   const fs = await import('node:fs'), rs = fs.readFileSync(resolve(ROOT, 'rust/sim/src/items.rs'), 'utf8'), home = fs.readFileSync(resolve(ROOT, 'src/sim/itemshome.ts'), 'utf8'), ts = fs.readFileSync(resolve(ROOT, 'src/game/throwables.ts'), 'utf8');
   const lines = fs.readFileSync(resolve(ROOT, 'rust/sim/src/lines.rs'), 'utf8'), props = fs.readFileSync(resolve(ROOT, 'src/game/props.ts'), 'utf8');
   const there = (name: string): number => { const m = new RegExp(`(?:pub )?const ${name}: \\w+ = ([^;]+);`).exec(rs); return m ? Number(eval(m[1].replace(/_/g, '').replace(/core::f64::consts::PI/g, 'Math.PI'))) : NaN; };
@@ -480,8 +484,13 @@ let wordOwn = '', wordRust = '';
     const fields = [...body.matchAll(/pub (\w+): \[(f64|u32|i32); CAP\]/g)].map(m => m[1]); shared += cols.length;
     if (cols.length < 26 || cols.join() !== fields.join()) off.push(`the columns ${cols.join()} here, ${fields.join()} there`); }
   table('ITF', 'F_'); table('IP', 'P_'); table('IE', 'E_'); table('IEK', 'EV_');
-  for (const [k, t] of [['ITEM_CAP', 'CAP'], ['ITEM_PARS', 'NPAR'], ['ITEM_EV', 'EV'], ['ITEM_ROW_EVENTS', 'ROW_EVENTS'], ['ITEMS_DONE', 'DONE'], ['ITEMS_HOST', 'HOST']]) { shared++; const h = Number(new RegExp(`\\b${k} = (\\d+)`).exec(home)?.[1]); if (h !== there(t)) off.push(`${k} ${h} here, ${t} ${there(t)} there`); }
+  for (const [k, t] of [['ITEM_ROWS', 'CAP'], ['ITEM_PARS', 'NPAR'], ['ITEM_EV', 'EV'], ['ITEM_ROW_EVENTS', 'ROW_EVENTS'], ['ITEMS_DONE', 'DONE'], ['ITEMS_HOST', 'HOST']]) { shared++; const h = Number(new RegExp(`\\b${k} = (\\d+)`).exec(home)?.[1]); if (h !== there(t)) off.push(`${k} ${h} here, ${t} ${there(t)} there`); }
   { const kinds = list('ITEM_KINDS'); for (const [k, t] of [['smoke', 'K_SMOKE'], ['frag', 'K_FRAG'], ['rifle', 'K_RIFLE']]) { shared++; if (kinds.indexOf(k) !== there(t)) off.push(`the kind ${k} is ${kinds.indexOf(k)} in ITEM_KINDS, ${t} ${there(t)} there`); } }
+  { // lying snow: what snow a box is (snowBog.ts SNOW_KIND against world.rs SNOW_*) and the roofs a walk is handed
+    const world = fs.readFileSync(resolve(ROOT, 'rust/sim/src/world.rs'), 'utf8'), bog = fs.readFileSync(resolve(ROOT, 'src/game/snowBog.ts'), 'utf8');
+    const kinds = [.../export const SNOW_KIND = \{([^}]*)\}/.exec(bog)?.[1].matchAll(/(\w+):\s*(\d+)/g) ?? []]; if (kinds.length !== 5) off.push('SNOW_KIND not found in snowBog.ts');
+    for (const q of kinds) { if (q[1] === 'none') continue; shared++; const t = Number(new RegExp(`pub const SNOW_${q[1].toUpperCase()}: u8 = (\\d+);`).exec(world)?.[1]); if (t !== Number(q[2])) off.push(`SNOW_KIND.${q[1]} ${q[2]} in snowBog.ts, ${t} in world.rs`); }
+    shared++; const roofs = Number(/\bITEM_ROOFS = (\d+)/.exec(home)?.[1]); if (roofs !== there('MAX_ROOFS')) off.push(`ITEM_ROOFS ${roofs} here, MAX_ROOFS ${there('MAX_ROOFS')} there`); }
   { shared += 2; const g = Number(/export const GRAVITY = ([\d.]+)/.exec(ts)?.[1]); if (g !== there('GRAVITY')) off.push(`GRAVITY ${g} in throwables.ts, ${there('GRAVITY')} in items.rs`);
     if (!/const sub = 2;/.test(ts) || there('SUB') !== 2) off.push('the substeps, sub'); }
   { // THE NUMBERS WRITTEN IN THE RULE ITSELF, function by function (as the slabs' are held): the step, the pose's key, and the furniture's ray
