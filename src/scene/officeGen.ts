@@ -282,9 +282,38 @@ export function officeKit(trace?: GeneratorTrace, opts: GeneratorOpts = {}) {
     const stop = (u0: number, u1: number) => { const m = sg * (u0 + u1) / 2, hu = (u1 - u0) / 2; return alongX ? add({ c: [d.hinge[0] + m, hy, w], h: [hu, hy, 0.02], albedo: frameCol }) : add({ c: [w, hy, d.hinge[1] + m], h: [0.02, hy, hu], albedo: frameCol }); };   // (u along the closed leaf from the hinge line)
     stop(-0.012, 0.024); stop(d.width - 0.004, d.width + 0.012);
   }
+  // ---- what is fixed to a wall's face ----
+  // A kept building's fittings (first written for the white roof, tools/levels/white-roof.ts). `axis` 'x' = the wall runs along X at `line`; a‥b along it,
+  // the same stretch whichever way the wall faces; `side` ±1 = which face (toward +z / +x is +1); `t` = the wall's thickness (0 = `line` is the face itself:
+  // the front of a cabinet, of a cast block). Each takes a paint ROW and says that row's word (scene/stuff.ts). DRAWN ONLY unless `solid`: a fitting is
+  // dressing, so no foot, round or sight line meets it; `solid` = it is traced and stands (its edge throws its line of shadow), where a level means that.
+  /** a box on a wall's face: u0‥u1 along the wall, y0‥y1 up it, d0‥d1 out from the face */
+  const onFace = (axis: 'x' | 'z', line: number, side: 1 | -1, t: number) => { const f = line + side * t / 2;
+    return (u0: number, u1: number, y0: number, y1: number, d0: number, d1: number, albedo: Vec3, solid: boolean) => { const extra = solid ? {} : { flags: BoxFlag.NoShadow };
+      return axis === 'x' ? slab(u0, y0, f + side * d0, u1, y1, f + side * d1, albedo, extra) : slab(f + side * d0, y0, u0, f + side * d1, y1, u1, albedo, extra); }; };
+  /** DECAL: a BAND on a wall's face from a to b, y0‥y1, a finger proud: a painted dado or plinth (hand it the WALL'S OWN stuff in the new colour, `saidAs`:
+   *  the wall's joints run on under the colour's edge), a plate, a door's skin. Returns its box, for what is painted on it */
+  const band = (axis: 'x' | 'z', line: number, a: number, b: number, side: 1 | -1, y0: number, y1: number, paint: Vec3, t = 0.24, proud = 0.012, solid = false) => onFace(axis, line, side, t)(a, b, y0, y1, 0, proud, paint, solid);
+  /** DECAL: a VENT on a wall's face from a to b, y0‥y1: a louvred panel two fingers proud (hand it a paint that says `louvre`) */
+  const vent = (axis: 'x' | 'z', line: number, a: number, b: number, side: 1 | -1, y0: number, y1: number, paint: Vec3, t = 0.24, proud = 0.02, solid = false) => band(axis, line, a, b, side, y0, y1, paint, t, proud, solid);
+  /** DECAL: a run of CONDUIT on a wall's face from a to b at height y, a clip (`clip`: its paint) every metre and a half; `drop` = a branch down to that
+   *  height at b, into a box that hangs under it (the box stands 11 cm past b) */
+  const conduit = (axis: 'x' | 'z', line: number, a: number, b: number, side: 1 | -1, y: number, paint: Vec3, clip: Vec3, drop?: number, t = 0.24, solid = false) => {
+    const F = onFace(axis, line, side, t);
+    F(a, b, y, y + 0.03, 0, 0.03, paint, false);
+    for (let u = a + 0.4; u < b - 0.2; u += 1.5) F(u - 0.03, u + 0.03, y - 0.02, y + 0.05, 0, 0.04, clip, false);
+    if (drop !== undefined) { F(b - 0.03, b, drop, y, 0, 0.03, paint, false); F(b - 0.14, b + 0.11, drop - 0.3, drop, 0, 0.09, paint, solid); }
+  };
+  /** a PIPE standing at (x, z) from y0 to y1, radius r: four slabs turned an eighth each, which the game stands up as one round (scene/round.ts). `rings` =
+   *  what is round it, each [y0, y1, r]: a flange at its foot, a collar half way */
+  const pipe = (x: number, z: number, y0: number, y1: number, r: number, paint: Vec3, rings: readonly (readonly [number, number, number])[] = [], solid = false) => {
+    const round = (y0: number, y1: number, r: number) => { const a = r * 0.96, w = a * 0.4142;
+      for (let k = 0; k < 4; k++) add({ c: [x, (y0 + y1 - 0.002 * k) / 2, z], h: [a, (y1 - 0.002 * k - y0) / 2, w], yaw: k * Math.PI / 4, albedo: paint, ...(solid ? {} : { flags: BoxFlag.NoShadow }) }); };
+    round(y0, y1, r); for (const [ry0, ry1, rr] of rings) round(ry0, ry1, rr);
+  };
   // the kit's lists and TOOLS, then its PIECES by name (scene/library.ts)
   return { MARKS, DEMOTE, TX, mk, boxes, lights, switchables, props, grp, add, slab, frameAt, fitProp, prop,
-    ...pieces('officeKit', { paneX, paneZ, wallX, wallZ, desk, monitor, chair, cardboardBox, rug, plant, bin, cabinet, papers, wallArt, bench, car, shelf, ceilingPanel, doorFrame }) };
+    ...pieces('officeKit', { paneX, paneZ, wallX, wallZ, desk, monitor, chair, cardboardBox, rug, plant, bin, cabinet, papers, wallArt, bench, car, shelf, ceilingPanel, doorFrame, band, vent, conduit, pipe }) };
 }
 
 export function buildOfficeProcedural(trace?: GeneratorTrace, opts: GeneratorOpts = {}): Level {

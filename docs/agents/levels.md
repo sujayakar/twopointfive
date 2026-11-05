@@ -1177,3 +1177,21 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   missions on the step it is cut on. SEEN: the look page boots on the consulate's rescue with this in, on the software adapter, with no page or GPU error; in its
   night still no frame is legible, so the varnish itself is seen by nobody, and never on a GPU. The depot shows nothing on the look page (with the look on it
   opens its look file, which does not move): its change is the picture of a hit with the look off.
+- **FOUR WALL FITTINGS OF A KEPT BUILDING ARE KIT PIECES** (11-05; `src/scene/officeGen.ts` `officeKit`: `band`, `vent`, `conduit`, `pipe`; catalogue
+  `docs/library.md`; they stand on the showroom hut's south face, `tools/levels/library-hall.ts`). They were the white roof's own helpers and are MOVED,
+  not copied: `tools/levels/white-roof.ts` keeps four one-line adapters for its own coordinates (a face at a given z) and calls the kit's, and
+  `levels/white-roof.json` is byte for byte the file it was. ARGUMENTS as the look kit's wall-face pieces have them: `axis` (`'x'` = the wall runs along
+  X at `line`), `a`‥`b` along it (the same stretch whichever way the wall faces), `side` ±1 (the face toward +z / +x is +1), then heights, then the
+  paint; `t` is the wall's thickness (0 = `line` is the face itself). `band(axis, line, a, b, side, y0, y1, paint)` is a band a finger proud: a painted
+  dado or plinth, a plate, a door's skin. For PAINT hand it the wall's own stuff in the new colour (`saidAs(<the wall's word>, colour)`: the wall's
+  joints run on under the colour's edge), never a second stuff. `vent` is the same box two fingers proud for a paint that says `louvre`.
+  `conduit(axis, line, a, b, side, y, paint, clip, drop?)` is a run with a clip every metre and a half and, with `drop`, a branch down into a box at b
+  (the box stands 11 cm past b, as the white roof's did). `pipe(x, z, y0, y1, r, paint, rings)` is a round riser written as the white roof wrote one
+  (four slabs an eighth of a turn apart, which the round rule stands up as one round), with `rings` for a flange at its foot and a collar. EACH TAKES A
+  PAINT ROW and says the row's word. EACH IS DRAWN ONLY unless its last argument `solid` is true: a fitting is dressing, so by default no foot, round or
+  sight line meets it and no place for a wall charge is lost to it; the white roof passes `solid` and keeps its traced plinths and pipes. CHECKS on the
+  step: `export.ts --check` for all 57 generators and both office files (none moves but the showroom), `library.ts --check`, `lived-check library-hall`
+  (its base file restamped: the four fittings are the showroom's own part), `round-check`, `stuff-check`, `floor-order-check`, both type checks.
+  Two reds stand on the showroom exactly as on the step before: `probes.ts glassreal` line 9 (the showroom's row of the table) and `wallfurn-check
+  --levels library-hall.json` (it has no count file; 86 places before and after on both stands). No mission's level file moves, so no play-through was
+  run for this step alone. NEVER SEEN on any adapter as laid on the showroom; on the white roof they draw as they did.
