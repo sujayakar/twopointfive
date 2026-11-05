@@ -99,7 +99,7 @@ fn shadowSample(li: Light, Po: vec3f, N: vec3f, owner: u32, k: u32, n: u32, u0: 
       if (!(part > 0.0)) { return vec2f(0.0, -1.0); }
       let soft = portalSoft(li, hh) * part; let u = vec2f(ur, ua); let ground = portalGround(li);
       var w: array<f32, PORTAL_POINTS>; var sum = 0.0;
-      if (frame.shadeCfg.z >= 1.5) { for (var i = 0; i < PORTAL_POINTS; i++) { w[i] = 1.0; sum += 1.0; } } else {
+      if (frame.shadeCfg.z >= 1.5 && frame.shadeCfg.z < 9.5) { for (var i = 0; i < PORTAL_POINTS; i++) { w[i] = 1.0; sum += 1.0; } } else {
       for (var i = 0; i < PORTAL_POINTS; i++) { let at = see.xy + portalAt(i, u) * see.zw; w[i] = luminance(portalPoint(li, toC + T * (at.x * li.cosOuter) + B * (at.y * hh), N, soft, ground)); sum += w[i]; } }
       if (sum <= 0.0) { return vec2f(0.0, -1.0); }
       var x = fract(ur * 61.0 + ua * 37.0 + 0.5) * sum; var sel = PORTAL_POINTS - 1;   // (a third number out of the two: which of the eight. A caller that passes no numbers, for the emitter's middle, gets the point half the light is under)
